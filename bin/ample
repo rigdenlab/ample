@@ -37,6 +37,52 @@ import fasta_parser
 import run_spicker
 ###############
 
+#get a program test for existsnce
+def which(program):
+    import os
+    def is_exe(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+#########
+def check_for_exe(exename, varname):
+   exepath = ''
+   print 'looking for', exename
+   if not varname:
+     print 'no '+exename+' given on the command line, looking in the PATH'
+     print which(exename)
+     if not which(exename):
+       print 'You need to give the path for '+exename
+       sys.exit()
+     else: 
+
+      exepath = which(exename)
+   
+   else:
+    exepath = varname
+    print 'using here',exepath
+
+
+    
+   
+   if not os.path.exists(exepath):
+    print 'You need to give the path for '+exename+', executable in the PATH dosnt exist'
+    sys.exit()
+   else:
+     return exepath
+
+
+
 #-------------------------------------------
 #get command line options
 #-------------------------------------------
@@ -128,8 +174,12 @@ parser.add_argument('-CLUSTER', metavar='using a cluster', type=str, nargs=1,
 parser.add_argument('-ALLATOM', metavar='using a cluster', type=str, nargs=1,
                    help='will submit jobs to a cluster')
 
-parser.add_argument('-SPICKER', metavar='spicker exe', type=str, nargs=1,
+parser.add_argument('-SPICKER', metavar='boolean', type=str, nargs=1,
                    help='path and will use spicker as alternative')
+
+parser.add_argument('-SPICKERPATH', metavar='spicker exe', type=str, nargs=1,
+                   help='path and will use spicker as alternative')
+
 
 parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', type=str, nargs=1,
                    help='fixed input to mr bump')
@@ -171,7 +221,8 @@ parser.add_argument('-usehoms', metavar='nohoms rosetta flag', type=str, nargs=1
 parser.add_argument('-ImproveTemplate', metavar='improve template', type=str, nargs=1,
                    help='give a template to imrove - NMR, homolog ')
 
-
+parser.add_argument('-DEBUG', metavar='debug option', type=str, nargs=1,
+                   help='debug option ')
 
 #convert args to dictionary
 args = parser.parse_args()
@@ -238,39 +289,31 @@ if not var_args['RunDir'] is None:
 
 
 if var_args['SCWRL'] is None:
-  SCWRL = os.environ.get("SCWRL_EXE")
+  SCWRL_path = ''
 if not var_args['SCWRL'] is None:
  if var_args['SCWRL'][0] !='none':
-  SCWRL =var_args['SCWRL'][0] 
- if var_args['SCWRL'][0] =='none':
-  SCWRL = os.environ.get("SCWRL_EXE")
+  SCWRL_path =var_args['SCWRL'][0] 
+
 
  
 
-if var_args['LGA'] is None:
-  LGA = os.environ.get("LGA_PATH")
-if not var_args['LGA'] is None:
-  if var_args['LGA'][0] != 'none':
-    LGA =var_args['LGA'][0] 
-  if var_args['LGA'][0] == 'none':
-     LGA = os.environ.get("LGA_PATH")
+
 
 if var_args['MAX'] is None:
-  MAX = os.environ.get("MAX_EXE")
+  MAX_path = ''
 if not var_args['MAX'] is None:
   if var_args['MAX'][0] != 'none':
-    MAX =var_args['MAX'][0]
-  if var_args['MAX'][0] == 'none':
-    LGA = os.environ.get("MAX_EXE")
+    MAX_path =var_args['MAX'][0]
+
 
 
 if var_args['THESEUS'] is None:
-   THESEUS = os.environ.get("THESEUS_EXE")
+   THESEUS_path = ''
 if not var_args['THESEUS'] is None:
   if var_args['THESEUS'][0] != 'none':
-   THESEUS = var_args['THESEUS'][0]
-  if var_args['THESEUS'][0] == 'none':
-   THESEUS = os.environ.get("THESEUS_EXE")
+   THESEUS_path = var_args['THESEUS'][0]
+
+
 
 
 
@@ -439,14 +482,20 @@ if not var_args['ensembles'] is None:
     ENSEMBLE_import =True
 
 
-USE_SPICKER=False
+USE_SPICKER=True
 if var_args['SPICKER'] is None:
-    USE_SPICKER=False
+    SPICKER = True
 if not var_args['SPICKER'] is None:
-    SPICKEREXE= var_args['SPICKER'][0]
-    USE_SPICKER =True
-    if not os.path.exists(SPICKEREXE):
-      SPICKEREXE = os.environ.get("SPICKER_EXE")
+    SPICKER= True
+
+
+
+if var_args['SPICKERPATH'] is None:
+    SPICKEREXE_path = ''
+if not var_args['SPICKERPATH'] is None:
+    SPICKEREXE_path= var_args['SPICKERPATH'][0]
+print 'SPICKEREXE_path ', SPICKEREXE_path
+
 
 
 noClusters=1
@@ -476,6 +525,15 @@ if var_args['FreeLunch'] is None:
 if not var_args['FreeLunch'] is None:
     FreeLunch = var_args['FreeLunch'][0]
 
+DEBUG= False
+if var_args['DEBUG'] is None:
+    DEBUG= False
+if not var_args['DEBUG'] is None:
+    D= var_args['DEBUG'][0]
+    if re.search('TRUE', D.upper()):
+       DEBUG =True
+
+
 
 
 #--------------------------------------------
@@ -483,10 +541,12 @@ if not var_args['FreeLunch'] is None:
 	#---------------------------------------------
 
 Run_params = open(RunDir +'/Params_used', "w")
-print var_args
+if DEBUG == True:
+  print var_args
 for print_user in var_args:
  if var_args[print_user] is not None:
-  print print_user +' : ' + str(var_args[print_user][0])
+  if DEBUG == True:
+    print print_user +' : ' + str(var_args[print_user][0])
 
   Run_params.write(print_user +' : ' + str(var_args[print_user][0]) + '\n')
 Run_params.close()
@@ -592,17 +652,9 @@ if not os.path.exists(RunDir):
     print 'You need to give a run directory'
     sys.exit()
 
-if not os.path.exists(str(SCWRL)):
-   SCWRL = os.environ.get("SCWRL_EXE")
-   if not os.path.exists(str(SCWRL)): 
-    print 'You need to give the path for SCWRL'
-    sys.exit()
 
-if not os.path.exists(str(MAX)):
-   SCWRL = os.environ.get("MAX_EXE")
-   if not os.path.exists(SCWRL): 
-    print 'You need to give the path for SCWRL'
-    sys.exit()
+
+
 
 #if not os.path.exists(LGA):
 #  LGA = os.environ.get("LGA_PATH")
@@ -610,11 +662,30 @@ if not os.path.exists(str(MAX)):
 #    print 'You need to give the path for LGA'
 #    sys.exit()
 
-if not os.path.exists(THESEUS):
- THESEUS = os.environ.get("THESEUS_EXE")
- if not os.path.exists(THESEUS):
-    print 'You need to give the path for THESEUS'
-    sys.exit()
+
+THESEUS = check_for_exe('theseus', THESEUS_path)
+print 'finally got', THESEUS
+SCWRL = check_for_exe('Scwrl4', SCWRL_path )
+print 'finally got', SCWRL
+SPICKEREXE = check_for_exe('spicker',SPICKEREXE_path )
+
+print 'finally got', SPICKEREXE
+MAX = check_for_exe('maxcluster', MAX_path)
+print 'finally got', MAX
+sys.exit()
+
+
+
+
+
+
+print 'Using ', THESEUS
+print 'Using ', SCWRL
+
+
+sys.exit()
+
+
 
 if len(PDB_code)>4 or len(PDB_code)<4:
    print 'name is the wrong length, use 4 chars eg ABCD, changing name'
@@ -726,7 +797,7 @@ if INSERT_DOMAIN==True:
 
 RUNNING.write('----- making models--------\n')
 RUNNING.flush()
-DEBUG = False
+
 
 
 
