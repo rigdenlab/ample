@@ -1,0 +1,20 @@
+/home/jaclyn/Program_release_version/using/HAMMER_Beta_Release.py \
+-ROSETTA /home/jaclyn/programs/rosetta3.1_Bundles/rosetta_source/bin/AbinitioRelax.linuxgccrelease  \
+-RDB /home/jaclyn/programs/rosetta3.1_Bundles/rosetta_database \
+-fragsexe /home/jaclyn/programs/rosetta3.1_Bundles/rosetta_fragments/nnmake/make_fragments.pl \
+-Rosetta_cluster /home/jaclyn/programs/rosetta3.1_Bundles/rosetta_source/bin/cluster.linuxgccrelease \
+-fasta  /home/jaclyn/Baker/test_cases/1MB1/1MB1_.fasta \
+-RunDir /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test \
+-SCWRL /home/jaclyn/programs/Scwrl/Scwrl4 \
+-LGA /home/jaclyn/Desktop/cmd/casp/LGA_package \
+-THESEUS /home/jaclyn/LARGE_RUN/1EN2/fine/THESEUS_polyala_cluster0_trunc_4/ALIGNED_rad_3/theseus \
+-name  ABCD_ \
+-NProc 1 \
+-MAX /home/jaclyn/programs/maxcluster/maxcluster \
+-MTZ /home/jaclyn/Baker/test_cases/1MB1/1mb1_files/1mb1_unique1.mtz
+
+
+
+/home/jaclyn/programs/maxcluster/maxcluster \
+-l /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_3/list  \
+rmsd 

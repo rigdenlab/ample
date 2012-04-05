@@ -1,0 +1,58 @@
+usage: HAMMER_split.py [-h] [-ROSETTA ROSETTA_path] [-RDB ROSETTA_database]
+                       [-fragsexe path to make_fragments.pl]
+                       [-Rosetta_cluster path to Rosettas cluster]
+                       [-fasta fasta_file] [-name priotein name]
+                       [-NProc NoProcessors] [-RunDir run_directory]
+                       [-SCWRL path to scwrl] [-LGA path_to_LGA dir]
+                       [-MAX Maxcluster exe] [-THESEUS Theseus exe required]
+                       [-MTZ MTZ in]
+
+Structure solution by abinitio modeling
+
+optional arguments:
+  -h, --help            			show this help message and exit
+  -ROSETTA ROSETTA_path                         path for Rosetta AbinitioRelax
+  -RDB ROSETTA_database                         path for Rosetta database
+  -fragsexe 					path to make_fragments.pl
+                        			location of make_fragments.pl
+  -Rosetta_cluster 				path to Rosettas cluster  
+  -fasta fasta_file     			protein fasta file. (required)
+  -name priotein name   			name of protien in the format ABCD_
+  -NProc NoProcessors   			number of processers (default 1)
+  -RunDir run_directory                       	directory to put files (default current dir -recomended to make a new dir)
+  -SCWRL path to scwrl  			pathway to SCWRL exe
+  -LGA path_to_LGA dir  			pathway to LGA folder (not the exe) will use the 'lga' executable
+  -MAX 						Maxcluster exe
+  -THESEUS 					Theseus exe (required)
+  -MTZ 						MTZ in
+
+
+
+
+Requirements: 
+needs some 3rd party software:
+LGA 
+Maxcluster
+Rosetta
+Theseus
+SQWRL
+
+Known Issues:
+1)The output names of the Rosetta files are hard coded, if the Rosetta naming conventions change this needs to be updated. 
+2)assumes that the number of models to make is > number of processors 
+3)crash handling by making models in different dirs, can rerun the job and Rosetta will continue from where it stopped. But if the folders are already full of models, Rosetta will hang.
+4)Theseus is also known to hang (will be caught and rerun until success)
+5)Rosetta cluster can fail (will be caught and rerun until success)
+6)Assumes paths are correct, checks for pathways to be added
+7) needs a long command line (a problem with theseus)
+8)shelx will infiniate loop if space group is P -1 (to add a check for this)
+
+
+In the release version:
+models can be directly input (eg from QUARK or custom Rosetta)
+
+
+
+
+
+
