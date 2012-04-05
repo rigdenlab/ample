@@ -826,6 +826,7 @@ if MakeModels == True:
 
       no_models_to_make = NMODELS
       no_models_have = 0 
+      finished_models = 0 
       while no_models_have !=  no_models_to_make:
         no_models_have = 0
         proc = 1
@@ -835,11 +836,14 @@ if MakeModels == True:
 
           no_models_have  += len(list_of_files)
           proc+=1
-        print 'Number of models made so far = ' + str(no_models_have)
+        if no_models_have > finished_models:
+           print 'Number of models made so far = ' + str(no_models_have)
+           finished_models = no_models_have
         if no_models_have ==  no_models_to_make:
            break
         time.sleep(5)       
    
+ 
      
    
 
