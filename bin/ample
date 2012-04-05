@@ -672,18 +672,7 @@ SPICKEREXE = check_for_exe('spicker',SPICKEREXE_path )
 print 'finally got', SPICKEREXE
 MAX = check_for_exe('maxcluster', MAX_path)
 print 'finally got', MAX
-sys.exit()
 
-
-
-
-
-
-print 'Using ', THESEUS
-print 'Using ', SCWRL
-
-
-sys.exit()
 
 
 
@@ -732,7 +721,7 @@ Run_params.write('\n---input---\nFasta '+FASTA+'\nRunDir '+RunDir+'\nMTZ '+MTZ+'
 Run_params.write('\n---fragments---\nMakeFrags '+str(MakeFrags)+'\n3mers '+frags_3_mers+'\n9mers '+frags_9_mers+'\n')
 Run_params.write('\n---modelling---\nMakeModels '+str(MakeModels)+'\nROSETTA_PATH '+ROSETTA_PATH+'\n')
 Run_params.write('ROSETTA_cluster '+ROSETTA_cluster+'\nROSETTA_DB '+ROSETTA_DB+'\nMake_fragents_exe '+Make_fragents_exe+'\n')
-Run_params.write('\n---3rd party---\nSCWRL '+SCWRL+'\nTHESEUS '+THESEUS+'\nLGA '+LGA+'\n')
+Run_params.write('\n---3rd party---\nSCWRL '+SCWRL+'\nTHESEUS '+THESEUS+'\n')
 Run_params.write('\n---Missing Domain---\nall chains fasta '+domain_all_chain_fasta+'\nall chain pdb '+domain_all_chains_pdb+'\nMISSING DOMAINS='+str(MISSING_DOMAINS)+'\n')
 Run_params.write('Is an Insert Domain '+str(INSERT_DOMAIN)+ ' termini distance '+ str(domain_termini_distance) +'\n')
 
