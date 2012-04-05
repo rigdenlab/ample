@@ -584,11 +584,11 @@ if not os.path.exists(str(MAX)):
     print 'You need to give the path for SCWRL'
     sys.exit()
 
-if not os.path.exists(LGA):
-  LGA = os.environ.get("LGA_PATH")
-  if not os.path.exists(LGA):
-    print 'You need to give the path for LGA'
-    sys.exit()
+#if not os.path.exists(LGA):
+#  LGA = os.environ.get("LGA_PATH")
+#  if not os.path.exists(LGA):
+#    print 'You need to give the path for LGA'
+ #   sys.exit()
 
 if not os.path.exists(THESEUS):
  THESEUS = os.environ.get("THESEUS_EXE")
