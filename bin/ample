@@ -235,13 +235,17 @@ var_args = vars(args)
 #Required commands:
 
 
-if var_args['ROSETTA_DIR'] is None:
-   ROSETTA_OVER_PATH = os.environ.get("ROSETTA_PATH")
+if  var_args['ROSETTA_DIR'] is None:
+     print 'you need to give the Rosetta path'
+     sys.exit()
+
 if not var_args['ROSETTA_DIR'] is None:
    if var_args['ROSETTA_DIR'][0] != 'none': 
      ROSETTA_OVER_PATH = var_args['ROSETTA_DIR'][0]
    if var_args['ROSETTA_DIR'][0] == 'none':
-     ROSETTA_OVER_PATH = os.environ.get("ROSETTA_PATH")     
+     print 'you need to give the Rosetta path'
+     sys.exit()
+
 
 if var_args['ROSETTA'] is None:
    ROSETTA_PATH = 'no_path_given'
@@ -600,7 +604,7 @@ if IMPORTING_MODELS == True:
 if MakeModels == True:  #only need Rosetta if making models 
 
  if not os.path.exists(ROSETTA_OVER_PATH):
-  ROSETTA_OVER_PATH = os.environ.get("ROSETTA_PATH")
+  print 'Give the rosetta path on the commabd line'
 
  if os.path.exists(ROSETTA_OVER_PATH):
    Version_file               =ROSETTA_OVER_PATH+'/README.version'          
