@@ -12,9 +12,20 @@
 # 3) is clustered by all atom RMSD to make fine clusters (option to cluster by CA only i included)
 # 4) ASU content is the number of search models placed by MrBUMP. -- need to set this manually
 
-import re
-import os, glob
+import os
 import sys
+
+# Test for environment variables
+
+if not "CCP4" in sorted(os.environ.keys()):
+    raise RuntimeError('CCP4 not found')
+
+# Add the ample python folder to the PYTHONPATH
+
+sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+
+import re
+import glob
 import subprocess
 import shlex
 import string
