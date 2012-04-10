@@ -145,6 +145,9 @@ parser.add_argument('-MAX', metavar='Maxcluster exe', type=str, nargs=1,
 parser.add_argument('-THESEUS', metavar='Theseus exe (required)', type=str, nargs=1,
                    help='Theseus exe')
 
+parser.add_argument('-PHENIX', metavar='PHENIX.ensembler exe', type=str, nargs=1,
+                   help='PHENIX exe')
+
 parser.add_argument('-MTZ', metavar='MTZ in', type=str, nargs=1,
                    help='MTZ in')
 
@@ -234,6 +237,9 @@ parser.add_argument('-ImproveTemplate', metavar='improve template', type=str, na
 
 parser.add_argument('-DEBUG', metavar='debug option', type=str, nargs=1,
                    help='debug option ')
+
+parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
+                   help='ensembling')
 
 #convert args to dictionary
 args = parser.parse_args()
@@ -329,6 +335,11 @@ if not var_args['THESEUS'] is None:
    THESEUS_path = var_args['THESEUS'][0]
 
 
+if var_args['PHENIX'] is None:
+   PHENIX_path = ''
+if not var_args['PHENIX'] is None:
+  if var_args['PHENIX'][0] != 'none':
+   PHENIX_path = var_args['PHENIX'][0]
 
 
 
@@ -549,7 +560,16 @@ if not var_args['DEBUG'] is None:
        DEBUG =True
 
 
+Ensembler = False   # default theseus
 
+if var_args['ensembler'] is None:
+    Ensembler = False
+if not var_args['ensembler'] is None:
+    D= var_args['ensembler'][0]
+    if re.search('FALSE', D.upper()):
+       Ensembler = False
+    if re.search('TRUE', D.upper()):
+       Ensembler = True  
 
 #--------------------------------------------
 #give the run file to check
@@ -678,8 +698,13 @@ if not os.path.exists(RunDir):
 #    sys.exit()
 
 
-THESEUS = check_for_exe('theseus', THESEUS_path)
-print 'finally got', THESEUS
+
+if Ensembler  == False:
+   THESEUS = check_for_exe('theseus', THESEUS_path)
+   print 'finally got', THESEUS
+if Ensembler  == True:
+   PHENIX = check_for_exe('phenix', PHENIX_path)
+
 SCWRL = check_for_exe('Scwrl4', SCWRL_path )
 print 'finally got', SCWRL
 SPICKEREXE = check_for_exe('spicker',SPICKEREXE_path )
@@ -687,6 +712,7 @@ SPICKEREXE = check_for_exe('spicker',SPICKEREXE_path )
 print 'finally got', SPICKEREXE
 MAX = check_for_exe('maxcluster', MAX_path)
 print 'finally got', MAX
+
 
 
 
@@ -736,7 +762,7 @@ Run_params.write('\n---input---\nFasta '+FASTA+'\nRunDir '+RunDir+'\nMTZ '+MTZ+'
 Run_params.write('\n---fragments---\nMakeFrags '+str(MakeFrags)+'\n3mers '+frags_3_mers+'\n9mers '+frags_9_mers+'\n')
 Run_params.write('\n---modelling---\nMakeModels '+str(MakeModels)+'\nROSETTA_PATH '+ROSETTA_PATH+'\n')
 Run_params.write('ROSETTA_cluster '+ROSETTA_cluster+'\nROSETTA_DB '+ROSETTA_DB+'\nMake_fragents_exe '+Make_fragents_exe+'\n')
-Run_params.write('\n---3rd party---\nSCWRL '+SCWRL+'\nTHESEUS '+THESEUS+'\n')
+Run_params.write('\n---3rd party---\nSCWRL '+SCWRL+'\n')
 Run_params.write('\n---Missing Domain---\nall chains fasta '+domain_all_chain_fasta+'\nall chain pdb '+domain_all_chains_pdb+'\nMISSING DOMAINS='+str(MISSING_DOMAINS)+'\n')
 Run_params.write('Is an Insert Domain '+str(INSERT_DOMAIN)+ ' termini distance '+ str(domain_termini_distance) +'\n')
 
@@ -960,6 +986,7 @@ RUNNING.write('\n\nModelling done\nmodels at '+PATH_TO_MODELS+'\n\n')
 #--------------------------------------
 # Do the clustering  
 #---------------------------------------
+USE_SPICKER = True
 if ENSEMBLE_import ==False:
 
  if USE_SPICKER==False:
@@ -1065,7 +1092,12 @@ if ENSEMBLE_import ==False:
          os.mkdir(RunDir+'/fine_cluster_'+str(samples))
 
       os.chdir(RunDir+'/fine_cluster_'+str(samples) )    
-      list_of_ensembles = truncateedit_MAX.truncate(THESEUS, models_path, RunDir+'/fine_cluster_'+str(samples), MAX, percent, FIXED_INTERVALS  )
+      if Ensembler == False:
+              list_of_ensembles = truncateedit_MAX.truncate(THESEUS, models_path, RunDir+'/fine_cluster_'+str(samples), MAX, percent, FIXED_INTERVALS  )
+
+      if Ensembler == True:
+              list_of_ensembles = truncateedit_MAX.truncate_Phenix(PHENIX, models_path, RunDir+'/fine_cluster_'+str(samples), MAX, percent, FIXED_INTERVALS  )
+
 
       os.system('mkdir '+RunDir+'/ensembles_'+str(samples))
       for each_ens in list_of_ensembles:

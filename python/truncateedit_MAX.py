@@ -324,8 +324,48 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ): #tr
   return all_ensembles
 
 
+###################
+def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS ):
+  print 'asembling'
+  print PHENIX
+  phenix_name = PHENIX
+
+  if not re.search('ensembler', PHENIX):
+      phenix_name = PHENIX+'.ensembler'
+  print phenix_name
+
+  print 'here'
+  all_ensembles = []
+
+  run_dir = os.getcwd()
+  if not os.path.exists(out_path):
+   os.mkdir(out_path)
+  os.chdir(out_path)
+ 
+  number_of_models = 0
+  list_of_pdbs = []
+  string = ''
+
+  os.chdir(models_path)
+  print run_dir
+
+  for infile in glob.glob( os.path.join(models_path, '*.pdb') ):
+     number_of_models +=1
+     string  = string + infile + ' '
+     list_of_pdbs.append(infile)
+
+  cmd = phenix_name+' '+string
+  print cmd
+
+  os.chdir(out_path)
+  os.system(cmd)
 
 
+
+  all_ensembles.append(os.path.join(out_path,'ensemble_merged.pdb'))
+  print all_ensembles
+  return all_ensembles
+  
 
 ###################
 #/home/jaclyn/LARGE_RUN/1EN2/fine/THESEUS_polyala_cluster0_trunc_4/ALIGNED_rad_3/theseus 
@@ -337,12 +377,12 @@ if __name__ =="__main__":
 
  #            /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0
  THESEUS =  '/home/jaclyn/LARGE_RUN/1EN2/fine/THESEUS_polyala_cluster0_trunc_4/ALIGNED_rad_3/theseus'
- models_path='/home/jaclyn/DOMAINS/testing/cluster0'
+ models_path='/home/jaclyn/BEE/new_case/olga/models'
  out_path ='/home/jaclyn/DOMAINS/testing/truncted'
  MAX = '/home/jaclyn/programs/maxcluster/maxcluster'
  percent = 5
 
- list_of_ensembles = truncate(THESEUS, models_path, out_path, MAX, percent, True )
+ list_of_ensembles = truncate_Phenix(THESEUS, models_path, out_path, MAX, percent, True )
 
 
  
