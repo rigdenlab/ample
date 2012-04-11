@@ -389,7 +389,8 @@ class ClusterRun:
                               + ' ' + str(matthews_coef.best_nmol) 
                               + ' ' + str(matthews_coef.best_solvent) 
                               + ' ' + str(self.MTZresolution) 
-                              + " PHASER\n\n" +
+                              + " PHASER" +
+                              + " " + self.LABIN["FreeR_flag"] + "\n\n" +
       'popd\n\n' +
 
       'pushd ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
@@ -398,7 +399,8 @@ class ClusterRun:
                               + ' ' + str(matthews_coef.best_nmol) 
                               + ' ' + str(matthews_coef.best_solvent) 
                               + ' ' + str(self.MTZresolution) 
-                              + " MOLREP\n\n" +
+                              + " MOLREP" +
+                              + " " + self.LABIN["FreeR_flag"] + "\n\n" +
       'popd\n\n' +
 
       'popd\n' +  

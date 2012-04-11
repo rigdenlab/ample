@@ -32,10 +32,13 @@ class Shelx:
       
       return status
 
-   def runMtz2hkl(self):
+   def runMtz2hkl(self, rfree_flag=""):
       """ Run mtz2hkl to convert the MTZ file for Shelx """
 
-      command_line='mtz2hkl -2 orig'
+      if rfree_flag != "":
+         command_line='mtz2hkl -2 orig -r %s' % rfree_flag
+      else:
+         command_line='mtz2hkl -2 orig'
 
       process_args = shlex.split(command_line)
       p = subprocess.Popen(process_args, stdin = subprocess.PIPE,
@@ -190,19 +193,28 @@ class Shelx:
 if __name__ == "__main__":
 
    
-   if len(sys.argv) != 7:
-      sys.stdout.write("Usage: python shelx_cluster.py <pdb> <mtz> <nmol> <solvent> <mtz resolution> <MR program>\n")
+   if  len(sys.argv) == 7:
+      pdbFile=sys.argv[1]
+      mtzFile=sys.argv[2]
+      nmol=int(sys.argv[3])
+      solvent=float(sys.argv[4])
+      resolution=float(sys.argv[5])
+      mrProgram=sys.argv[6]
+      FreeR_flag=""
+   elif  len(sys.argv) == 8:
+      pdbFile=sys.argv[1]
+      mtzFile=sys.argv[2]
+      nmol=int(sys.argv[3])
+      solvent=float(sys.argv[4])
+      resolution=float(sys.argv[5])
+      mrProgram=sys.argv[6]
+      FreeR_flag=sys.argv[7]
+   else:
+      sys.stdout.write("Usage: python shelx_cluster.py <pdb> <mtz> <nmol> <solvent> <mtz resolution> <MR program> <FreeR_flag (optional)>\n")
       sys.stdout.write("\n")
-      sys.stdout.write("       e.g. python shelx_cluster.py foo.pdb foo.mtz 2 45.33 1.543 PHASER\n")
+      sys.stdout.write("       e.g. python shelx_cluster.py foo.pdb foo.mtz 2 45.33 1.543 PHASER FreeR_flag\n")
       sys.stdout.write("\n")
       sys.exit()
-
-   pdbFile=sys.argv[1]
-   mtzFile=sys.argv[2]
-   nmol=int(sys.argv[3])
-   solvent=float(sys.argv[4])
-   resolution=float(sys.argv[5])
-   mrProgram=sys.argv[6]
      
    SHELX=Shelx()
 
@@ -220,7 +232,7 @@ if __name__ == "__main__":
    else:
       sys.exit(1)
 
-   SHELX.runMtz2hkl()
+   SHELX.runMtz2hkl(rfree_flag=FreeR_flag)
    SHELX.runShelxpro(1)
    SHELX.runShelxl()
    SHELX.runShelxe(solvent, resolution, mrProgram)
