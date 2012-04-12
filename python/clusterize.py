@@ -389,7 +389,7 @@ class ClusterRun:
                               + ' ' + str(matthews_coef.best_nmol) 
                               + ' ' + str(matthews_coef.best_solvent) 
                               + ' ' + str(self.MTZresolution) 
-                              + " PHASER" +
+                              + " PHASER"
                               + " " + self.LABIN["FreeR_flag"] + "\n\n" +
       'popd\n\n' +
 
@@ -399,7 +399,7 @@ class ClusterRun:
                               + ' ' + str(matthews_coef.best_nmol) 
                               + ' ' + str(matthews_coef.best_solvent) 
                               + ' ' + str(self.MTZresolution) 
-                              + " MOLREP" +
+                              + " MOLREP"
                               + " " + self.LABIN["FreeR_flag"] + "\n\n" +
       'popd\n\n' +
 
