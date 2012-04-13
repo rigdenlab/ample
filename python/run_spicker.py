@@ -30,18 +30,17 @@ def check_pid(pid):
 ###############
 def get_length(pdb):
   pdb = open(pdb)
-  counter = ''
+  counter = 0
   for line in pdb:
      pdb_pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w*)\s*(\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)')
      pdb_result = pdb_pattern.match(line)
      if pdb_result:
-      #print line
-      pdb_result2 = re.split(pdb_pattern, line )
-      #print pdb_result2
-     # print pdb_result2
-      counter = pdb_result2[5]
+          atom = line[13:16]
+          if re.search('CA', atom):
+             counter+=1
 
-  return counter
+  print counter
+  return str(counter)
 
 #################
 def run_spicker(path, outpath):
@@ -209,13 +208,13 @@ def RUN_SPICKER(models, spicker_runpath, spickerexe, no_clusters_sampled, overpa
 
 if __name__ == "__main__":
   
-  models='/home/jaclyn/LARGE_RUN/1EJG/models'
+  models='/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/11_OR8C/models'
  # models='/home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/VERIFY/Verify_spicker/SPICKER_script/models'
-  spicker_run_dir='/home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/VERIFY/Verify_spicker/SPICKER_script/run'
+  spicker_run_dir='/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/11_OR8C/ROSETTA_MR_0/spicker_run'
   spickerexe='/home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/VERIFY/Verify_spicker/test/spicker'
   no_clusters_sampled=2
   #rosetta RunDir:
-  overpath='/home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/VERIFY/Verify_spicker/SPICKER_script'
+  overpath='/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/11_OR8C/ROSETTA_MR_0/'
   
 
   RUN_SPICKER(models, spicker_run_dir, spickerexe, no_clusters_sampled, overpath)
