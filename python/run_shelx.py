@@ -13,6 +13,51 @@ import get_TFZ_resolution
 import run_refmac
 #import local_map_correlation
 ########
+def which(program):
+    import os
+    def is_exe(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
+
+
+def check_for_exe(exename, varname):
+   exepath = ''
+   print 'looking for', exename
+   if not varname:
+     print 'no '+exename+' given on the command line, looking in the PATH'
+     print which(exename)
+     if not which(exename):
+       print 'You need to give the path for '+exename
+       sys.exit()
+     else: 
+
+      exepath = which(exename)
+   
+   else:
+    exepath = varname
+    print 'using here',exepath
+
+
+    
+   
+   if not os.path.exists(exepath):
+    print 'You need to give the path for '+exename+', executable in the PATH dosnt exist'
+    sys.exit()
+   else:
+     return exepath
+
+
 def try_theseus(cmd):#  theseus can fail so try Run a command with a timeout after which it will be forcibly killed.
 
  has_worked = False
@@ -31,6 +76,10 @@ def try_theseus(cmd):#  theseus can fail so try Run a command with a timeout aft
 #######
 def mtz2hkl(mtz):
     mtz2hkl = os.environ.get("mtz2hkl")
+    mtz2hkl = check_for_exe("mtz2hkl"  , mtz2hkl )
+    print mtz2hkl
+
+
 
     cur_dir = os.getcwd()
     mtz2hkl_run = open(cur_dir + '/mtz2hkl', "w")
@@ -46,6 +95,9 @@ def mtz2hkl(mtz):
 #########
 def run_pro(ASU):
     shelxpro = os.environ.get("shelxpro")
+    shelxpro = check_for_exe("shelxpro"  , shelxpro )
+    print shelxpro
+
     cur_dir = os.getcwd()
     mtz2hkl_run = open(cur_dir + '/pro', "w")
     mtz2hkl_run.write('#!/bin/sh\n')
@@ -65,6 +117,9 @@ def run_pro(ASU):
 ########
 def shelxl():
     shelxl = os.environ.get("shelxl")
+    shelxl = check_for_exe("shelxl"  , shelxl )
+    print shelxl
+
     cur_dir = os.getcwd()
     mtz2hkl_run = open(cur_dir + '/shelxl', "w")
     mtz2hkl_run.write('#!/bin/sh\n')
@@ -79,6 +134,9 @@ def shelxl():
 #####################
 def shelxe(solvent, resolution):
     shelxe = os.environ.get("shelxe")
+
+    shelxe = check_for_exe("shelxe"  , shelxe )
+    print shelxe, 'resolution', resolution
 
     free_lunch = ' '
     if float(resolution)<2.0:
@@ -232,9 +290,11 @@ def RUN(mtz, pdb, ASU, fasta, run_dir):
   os.system('cp '+mtz +' orig.mtz')
   os.system('cp '+pdb +' orig.pdb')
   mtz2hkl(mtz)
+  resolution,FreeR  = get_TFZ_resolution.get_resolution(pdb)
   run_pro(ASU)
   shelxl()
   resolution,FreeR  = get_TFZ_resolution.get_resolution(pdb)
+  print resolution,FreeR
   CELL, SPACE = get_cell_dimentions(mtz)
   MOLWT = seqwt(fasta)
   solvent = mathews(CELL, SPACE, MOLWT, ASU)
@@ -242,7 +302,12 @@ def RUN(mtz, pdb, ASU, fasta, run_dir):
 
   return shelscore, refmacfreeR, HKLOUT, XYZOUT, SPACE
 #####
-
-
+if __name__ == "__main__":
+  pdb ='/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/data/loc0_ALL_24/pdbclip/refine/phaser/refmac_phaser_loc0_ALL_24_PDBCLP.pdb'
+  mtz = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/phaser_shelx/orig.mtz'
+  fasta = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/fasta'
+  run_dir = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/phaser_shelx'
+  ASU = '1'
+  RUN(mtz, pdb, ASU, fasta, run_dir)
 
 
