@@ -1155,6 +1155,8 @@ if ENSEMBLE_import ==False:
 # Spicker Alternative for clustering then MAX 
 #------------------------------------
  if USE_SPICKER==True:
+
+
     #noClusters=1
     ResultsPath = RunDir+'/RESULTS'
     if not os.path.exists(RunDir+'/RESULTS'):
@@ -1177,7 +1179,11 @@ if ENSEMBLE_import ==False:
       if Ensembler == True:
               list_of_ensembles = truncateedit_MAX.truncate_Phenix(PHENIX, models_path, RunDir+'/fine_cluster_'+str(samples), MAX, percent, FIXED_INTERVALS  )
 
-      
+     
+
+
+
+ 
       
       os.system('mkdir '+RunDir+'/ensembles_'+str(samples))
       for each_ens in list_of_ensembles:
@@ -1237,15 +1243,17 @@ if ENSEMBLE_import ==False:
             print 'Truncating Done for cluster '+str(samples)
             print '----- Running MRBUMP (cluster '+str(samples)+')--------\n' 
             bump_dir = os.path.join(RunDir, 'MRBUMP_cluster'+str(samples))
+            print bump_dir
+            
             os.mkdir(bump_dir) 
             os.chdir(bump_dir)
             split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoSPicker)
-            if NoSpicker == False: 
+            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx)
+            if NoShelx == False: 
                Final_display_results.make_log(bump_dir, RunDir+'/Final_results.log')
-            if NoSpicker ==  True:
+            if NoSshelx ==  True:
               print 'getting results from:'
-              print RunDir
+              print bump_dir
 
 
 

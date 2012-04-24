@@ -466,13 +466,13 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
 
      if float(phaser_shelxscore) > 25:
          print 'Found a Solution '+ phaser_pdb
-         shutil.copy(phaser_mtz, resultspath+'/phaser'+phaser_shelxscore+'_'+phaser_refmacfreeR+'.pdb'  )
+         shutil.copy(phaser_mtz, Resultspath+'/phaser'+phaser_shelxscore+'_'+phaser_refmacfreeR+'.pdb'  )
         
          if EarlyTerminate:
             sys.exit()
      if float(molrep_shelxscore) > 25:
          print 'Found a Solution '+ molrep_pdb
-         shutil.copy(phaser_mtz, resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.pdb'  )
+         shutil.copy(phaser_mtz, Resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.pdb'  )
 
          if EarlyTerminate:
             sys.exit()
