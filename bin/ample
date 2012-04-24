@@ -242,10 +242,14 @@ parser.add_argument('-DEBUG', metavar='debug option', type=str, nargs=1,
 parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
                    help='ensembling')
 
-parser.add_argument('-EarlyTerminate', metavar='EarlyTerminate', type=str, nargs=1,
+parser.add_argument('-TRYALL', metavar='TRYALL', type=str, nargs=1,
                      help='terminate early if a success')
 
 parser.add_argument('-NoShelx', metavar='NoShelx', type=str, nargs=1,
+                     help='Always use Shelx, if you cant be bothered to ask for the beta version, use this flag (but dont expect it to work)')
+
+
+parser.add_argument('-NoShelxCycles', metavar='NoShelxCycles', type=str, nargs=1,
                      help='Always use Shelx, if you cant be bothered to ask for the beta version, use this flag (but dont expect it to work)')
 
 
@@ -393,6 +397,15 @@ if not var_args['NoShelx'] is None:
 if NoShelx == False:
   print 'Rebuilding in Shelx'  
 
+
+NoShelxCycles = 15
+if var_args['NoShelxCycles'] is None:
+   NoShelxCycles = 15
+if not var_args['NoShelxCycles'] is None:
+   NoShelxCycles = var_args['NoShelxCycles'][0]
+
+
+
 ###fragments
 
 
@@ -461,13 +474,13 @@ EarlyTerminate = False
 
 
 
-if var_args['EarlyTerminate'] is None:
+if var_args['TRYALL'] is None:
     EarlyTerminate = False
 else:
-   if "TRUE" in var_args['EarlyTerminate'][0].upper():
+   if "FALSE" in var_args['TRYALL'][0].upper():
       EarlyTerminate = True
       print 'will exit at the first success'
-   elif "FALSE" in var_args['EarlyTerminate'][0].upper():
+   elif "TRUE" in var_args['TRYALL'][0].upper():
       EarlyTerminate = False
    else:
       EarlyTerminate = False   
@@ -1156,11 +1169,16 @@ if ENSEMBLE_import ==False:
 #------------------------------------
  if USE_SPICKER==True:
 
-
-    #noClusters=1
     ResultsPath = RunDir+'/RESULTS'
     if not os.path.exists(RunDir+'/RESULTS'):
        os.mkdir(RunDir+'/RESULTS')
+
+
+  
+
+
+
+    #noClusters=1
 
     print '----- Clustering models --------\n'
     run_spicker.RUN_SPICKER(PATH_TO_MODELS, RunDir+'/spicker_run', SPICKEREXE, int(noClusters) , RunDir )
@@ -1248,10 +1266,10 @@ if ENSEMBLE_import ==False:
             os.mkdir(bump_dir) 
             os.chdir(bump_dir)
             split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx)
+            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles)
             if NoShelx == False: 
                Final_display_results.make_log(bump_dir, RunDir+'/Final_results.log')
-            if NoSshelx ==  True:
+            if NoShelx ==  True:
               print 'getting results from:'
               print bump_dir
 
@@ -1392,7 +1410,7 @@ if MISSING_DOMAINS == False:
       mrBuild.monitorQueue()
    else: 
       split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx)
+      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles)
       Final_display_results.make_log(bump_dir, RunDir+'/Final_results.log')
 
 if MISSING_DOMAINS == True:

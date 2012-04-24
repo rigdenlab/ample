@@ -308,7 +308,7 @@ def pdbcur(pdb):
    return ASU
 
 ###############################
-def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, EarlyTerminate, NoShelx):
+def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles):
  
    #files to make:
    phaser_mtz = 'fail'
@@ -348,7 +348,7 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
 
         ASU = pdbcur(phaser_pdb)
 
-        phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path, EarlyTerminate)  ####### NEEDS correct ASU, solvent content!!
+        phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path, EarlyTerminate, NoShelxCycles)  ####### NEEDS correct ASU, solvent content!!
 
    #molrep output:
    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz' ):
@@ -362,7 +362,7 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
 
         ASU = pdbcur(molrep_pdb)
 
-        molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, SPACE = run_shelx.RUN(molrep_mtz, molrep_pdb, ASU, fasta, shelx_molrep_path, EarlyTerminate)  ####### NEEDS correct ASU, solvent content!!
+        molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, SPACE = run_shelx.RUN(molrep_mtz, molrep_pdb, ASU, fasta, shelx_molrep_path, EarlyTerminate, NoShelxCycles)  ####### NEEDS correct ASU, solvent content!!
 
     
    # if the data is there, return data
@@ -441,7 +441,18 @@ def split(ensembles, nproc):  #split into parallel comparisons for speed
  return chunks
 
 ##############################
-def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx): #loops through each chunk
+def isnumber(n):
+  try :
+      float(n)
+      return True
+  except:
+      return False
+
+
+
+
+############################
+def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles): #loops through each chunk
   
   log = open(log_name, "w")
 
@@ -451,7 +462,7 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
      name = re.sub('.pdb', '', name)
      #print name
     
-     phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run(mtz, each_pdb, run_dir, fasta, name,  sigf, FP, free, noASU, EarlyTerminate, NoShelx)
+     phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run(mtz, each_pdb, run_dir, fasta, name,  sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles)
      
      log.write(name+':\n'+
      '\nphaser done \n' 
@@ -463,16 +474,17 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
      '------------------------\n')
      log.flush()
 
-
-     if float(phaser_shelxscore) > 25:
+     if isnumber(phaser_shelxscore):
+       if float(phaser_shelxscore) > 25:
          print 'Found a Solution '+ phaser_pdb
-         shutil.copy(phaser_mtz, Resultspath+'/phaser'+phaser_shelxscore+'_'+phaser_refmacfreeR+'.pdb'  )
+         os.system('cp '+ phaser_mtz+'  '+ Resultspath+'/phaser'+phaser_shelxscore+'_'+phaser_refmacfreeR+'.pdb'  )
         
          if EarlyTerminate:
             sys.exit()
-     if float(molrep_shelxscore) > 25:
+     if isnumber(molrep_shelxscore): 
+      if float(molrep_shelxscore) > 25:
          print 'Found a Solution '+ molrep_pdb
-         shutil.copy(phaser_mtz, Resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.pdb'  )
+         os.system('cp ' +phaser_mtz+'   '+ Resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.pdb'  )
 
          if EarlyTerminate:
             sys.exit()
@@ -503,7 +515,7 @@ def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  fix
 
 
 ################################
-def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoSpicker):
+def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles):
       cur_dir=os.getcwd()
       inc = 1
       threads = []
@@ -511,7 +523,7 @@ def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noAS
       for each_chunk in ensembles:  
         log_name = cur_dir+'/LOG_proc'+str(inc)                        
         
-        thread = Process(target=run_parallel, args=(mtz, each_chunk, run_dir, fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoSpicker))        
+        thread = Process(target=run_parallel, args=(mtz, each_chunk, run_dir, fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles))        
         thread.start() 
         threads.append(thread)
         inc+=1
