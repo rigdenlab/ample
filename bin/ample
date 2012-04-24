@@ -249,7 +249,7 @@ parser.add_argument('-NoShelx', metavar='NoShelx', type=str, nargs=1,
                      help='Always use Shelx, if you cant be bothered to ask for the beta version, use this flag (but dont expect it to work)')
 
 
-parser.add_argument('-NoShelxCycles', metavar='NoShelxCycles', type=str, nargs=1,
+parser.add_argument('-NumShelxCyc', metavar='NoShelxCycles', type=str, nargs=1,
                      help='Always use Shelx, if you cant be bothered to ask for the beta version, use this flag (but dont expect it to work)')
 
 
@@ -399,10 +399,10 @@ if NoShelx == False:
 
 
 NoShelxCycles = 15
-if var_args['NoShelxCycles'] is None:
+if var_args['NumShelxCyc'] is None:
    NoShelxCycles = 15
-if not var_args['NoShelxCycles'] is None:
-   NoShelxCycles = var_args['NoShelxCycles'][0]
+if not var_args['NumShelxCyc'] is None:
+   NoShelxCycles = var_args['NumShelxCyc'][0]
 
 
 
