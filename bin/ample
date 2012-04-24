@@ -1272,7 +1272,10 @@ if ENSEMBLE_import ==False:
             if NoShelx ==  True:
               print 'getting results from:'
               print bump_dir
-
+              for mrbumplog in os.listdir(bump_dir):
+                  if re.search('.log', mrbumplog):
+                      print mrbumplog
+                  sys.exit()
 
 
       if MISSING_DOMAINS == True:

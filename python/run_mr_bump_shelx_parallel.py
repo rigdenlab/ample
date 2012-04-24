@@ -477,15 +477,16 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
      if isnumber(phaser_shelxscore):
        if float(phaser_shelxscore) > 25:
          print 'Found a Solution '+ phaser_pdb
-         os.system('cp '+ phaser_mtz+'  '+ Resultspath+'/phaser'+phaser_shelxscore+'_'+phaser_refmacfreeR+'.pdb'  )
-        
+         os.system('cp '+ phaser_XYZOUT+'  '+ Resultspath+'/phaser'+phaser_shelxscore+'_'+phaser_refmacfreeR+'.pdb'  )
+         os.system('cp '+ phaser_HKLOUT+'  '+ Resultspath+'/phaser'+phaser_shelxscore+'_'+phaser_refmacfreeR+'.mtz'  )        
+
          if EarlyTerminate:
             sys.exit()
      if isnumber(molrep_shelxscore): 
       if float(molrep_shelxscore) > 25:
          print 'Found a Solution '+ molrep_pdb
-         os.system('cp ' +phaser_mtz+'   '+ Resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.pdb'  )
-
+         os.system('cp ' +molrep_XYZOUT+'   '+ Resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.pdb'  )
+         os.system('cp ' +molrep_HKLOUT+'   '+ Resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.mtz' )
          if EarlyTerminate:
             sys.exit()
 
