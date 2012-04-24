@@ -160,7 +160,7 @@ def shelxe(solvent, resolution, NoShelxCycles):
     mtz2hkl_run = open(cur_dir + '/shelxe', "w")
     mtz2hkl_run.write('#!/bin/sh\n')
     mtz2hkl_run.write(shelxe +' orig -a'+str(NoShelxCycles)+' -q -s0.'+str(solvent)+' -h -z -b '+ free_lunch)
-    mtz2hkl_run.close()
+    tz2hkl_run.close()
     os.system('chmod uoga=wrx '+ cur_dir + '/shelxe')
     os.system(cur_dir + '/shelxe >RESULT')
 
@@ -311,7 +311,7 @@ def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles):
   CELL, SPACE = get_cell_dimentions(mtz)
   MOLWT = seqwt(fasta)
   solvent = mathews(CELL, SPACE, MOLWT, ASU)
-  shelscore, refmacfreeR, HKLOUT, XYZOUT = shelxe(solvent, resolution, NoShelxeCycles)
+  shelscore, refmacfreeR, HKLOUT, XYZOUT = shelxe(solvent, resolution, NoShelxCycles)
   print '\nthis rebuild has a CC='+str(shelscore)+', FreeR='+str(refmacfreeR)+'\n'+XYZOUT+'\n'+HKLOUT
  # if EarlyTerminate:
  #   if isnumber(shelscore):
