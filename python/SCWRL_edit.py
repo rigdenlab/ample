@@ -14,7 +14,7 @@ import sys
 def edit_sidechains(each_file, outpath):
 
  if os.path.exists(each_file):
-    print 'Found ',each_file
+ #   print 'Found ',each_file
     my_infile = open (each_file)
    
     name = re.split('/', each_file)

@@ -14,11 +14,12 @@ from multiprocessing import Process, Queue, JoinableQueue, Pool, Value, Array
 import pickle
 import copy
 
+from subprocess import PIPE
 #
 # This Adds All sicechains to the Pdb files
 #
 
-def add_sidechains_SCWRL(SCWRL,path, outpath, prefix ):
+def add_sidechains_SCWRL(SCWRL,path, outpath, prefix, DEBUG ):
   Path_to_SCWRL = SCWRL
 
   string = ''
@@ -100,7 +101,11 @@ def add_sidechains_SCWRL(SCWRL,path, outpath, prefix ):
 
    cmd = Path_to_SCWRL + ' -i ' + each_file + ' -o ' + outpath + '/' + prefix+ '_'+pdbname + ' -s ' + path + 'seq' ### add sidechains
 #   print cmd
-   os.system (cmd )
+   if DEBUG == True: 
+       os.system (cmd )
+   else:
+       p = subprocess.call(cmd, shell = True, stdout=PIPE, stderr=PIPE )
+
 
    edit_file=open(outpath + '/' + prefix+ '_' +pdbname)    ### remove headers
    lines_list= edit_file.readlines()

@@ -7,6 +7,7 @@ import subprocess
 import os, re, sys, glob
 import run_shelx
 from multiprocessing import Process, Queue, JoinableQueue, Pool, Value, Array
+import shutil
 
 def get_flags (mtz):
   sigf = 'SIGF='
@@ -30,8 +31,8 @@ def get_flags (mtz):
          lab = mtz_out.readline() 
 
          flags = True
-  print next
-  print lab
+#  print next
+#  print lab
 
 
 
@@ -48,7 +49,7 @@ def get_flags (mtz):
   free = lab_list.index('I')
   free = name_list[free]
 
-  print sigf, FP, free
+ # print sigf, FP, free
 
   return next, sigf, FP, free
 ###################
@@ -101,7 +102,9 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU):
 
   os.system('chmod uoga=wrx '+ path + '/'+jobid+'.sub')
 ##RUN
-  os.system(path + '/'+jobid+'.sub')
+  os.system(path + '/'+jobid+'.sub  >'+jobid+'.log')
+  
+
 
   os.chdir(path)
 ##########################
@@ -129,7 +132,6 @@ def make_mrbump_desktop_domain(sigf, fp, free, jobid, local_files, mtz, seq, fix
      mr_bump.write('FIXED_XYZIN '+fixed_pdb+' IDENTIY 0.6 \n')
   if not FIXED_INPUT:
      mr_bump.write('LOCALFILE ' +fixed_pdb + ' CHAIN ALL RMS 0.1\n')
-
 
   mr_bump.write('SCOPSEARCH False\n')
   mr_bump.write('PQSSEARCH False\n')
@@ -248,7 +250,7 @@ def get_space_group(mtz):
    space_test = get_stat1.search(line)
    if space_test:
      space_split = re.split (get_stat1, line)
-     print space_split[1]
+     #print space_split[1]
      spacegroup = space_split[1]
 
   return spacegroup
@@ -270,7 +272,7 @@ def get_ensemble(fine_path, working_dir):
        if rad !='ALL':
          ensemble = trunc_path+'/cluster_0_sup.pdb'
          if os.path.exists(ensemble):
-          print  ensemble
+          #print  ensemble
           os.system('cp ' +ensemble + ' '+ working_dir+ '/trunc'+trunc+'rad_'+rad+'.pdb')
           ensembles.append('trunc'+trunc+'rad_'+rad+'.pdb')
 
@@ -299,14 +301,14 @@ def pdbcur(pdb):
    cur_out =open( curr_dir + '/cur_out')
    for line in cur_out:
      if re.search(pattern, line):
-       print line
+       #print line
        split = re.split(pattern, line)
-       print split
+       #print split
        ASU = split[1]
    return ASU
 
 ###############################
-def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU):
+def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, EarlyTerminate, NoShelx):
  
    #files to make:
    phaser_mtz = 'fail'
@@ -338,27 +340,29 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU):
      
      phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz'
      phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/phaser/refmac_phaser_loc0_ALL_'+name+'_PDBCLP.pdb'
-     print 'got phaser'
-     shelx_phaser_path = run_dir+ '/search_' +name + '_mrbump/phaser_shelx'
-     os.system('mkdir ' +shelx_phaser_path)
-     os.chdir(shelx_phaser_path)
+     if NoShelx == False:
+        print '---found  phaser output, rebuilding---'
+        shelx_phaser_path = run_dir+ '/search_' +name + '_mrbump/phaser_shelx'
+        os.system('mkdir ' +shelx_phaser_path)
+        os.chdir(shelx_phaser_path)
 
-     ASU = pdbcur(phaser_pdb)
+        ASU = pdbcur(phaser_pdb)
 
-     phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path)  ####### NEEDS correct ASU, solvent content!!
+        phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path, EarlyTerminate)  ####### NEEDS correct ASU, solvent content!!
 
    #molrep output:
    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz' ):
      molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz'
      molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_loc0_ALL_'+name+'_PDBCLP.pdb'
-     print 'got molrep'
-     shelx_molrep_path = run_dir+ '/search_' +name + '_mrbump/molrep_shelx'
-     os.system('mkdir ' +shelx_molrep_path)
-     os.chdir(shelx_molrep_path)
+     if NoShelx == False:
+        print '---found molrep output, rebuilding---'
+        shelx_molrep_path = run_dir+ '/search_' +name + '_mrbump/molrep_shelx'
+        os.system('mkdir ' +shelx_molrep_path)
+        os.chdir(shelx_molrep_path)
 
-     ASU = pdbcur(molrep_pdb)
+        ASU = pdbcur(molrep_pdb)
 
-     molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, SPACE = run_shelx.RUN(molrep_mtz, molrep_pdb, ASU, fasta, shelx_molrep_path)  ####### NEEDS correct ASU, solvent content!!
+        molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, SPACE = run_shelx.RUN(molrep_mtz, molrep_pdb, ASU, fasta, shelx_molrep_path, EarlyTerminate)  ####### NEEDS correct ASU, solvent content!!
 
     
    # if the data is there, return data
@@ -428,15 +432,16 @@ def split(ensembles, nproc):  #split into parallel comparisons for speed
    chunks[-2].extend(chunks[-1])
    chunks.pop()
 
- print chunks
+ #print chunks
  
  
-
+ 
+ 
 
  return chunks
 
 ##############################
-def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, free, noASU): #loops through each chunk
+def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx): #loops through each chunk
   
   log = open(log_name, "w")
 
@@ -444,10 +449,10 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
      name = re.split('/', each_pdb)
      name = name.pop()
      name = re.sub('.pdb', '', name)
-     print name
+     #print name
     
-     phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run(mtz, each_pdb, run_dir, fasta, name,  sigf, FP, free, noASU)
-   
+     phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run(mtz, each_pdb, run_dir, fasta, name,  sigf, FP, free, noASU, EarlyTerminate, NoShelx)
+     
      log.write(name+':\n'+
      '\nphaser done \n' 
      'phaser PDB: '+phaser_pdb+' Phaser MTZ:'+ phaser_mtz + '\n'+
@@ -457,6 +462,22 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
      'shelx score : '+molrep_shelxscore+'\n'+
      '------------------------\n')
      log.flush()
+
+
+     if float(phaser_shelxscore) > 25:
+         print 'Found a Solution '+ phaser_pdb
+         shutil.copy(phaser_mtz, resultspath+'/phaser'+phaser_shelxscore+'_'+phaser_refmacfreeR+'.pdb'  )
+        
+         if EarlyTerminate:
+            sys.exit()
+     if float(molrep_shelxscore) > 25:
+         print 'Found a Solution '+ molrep_pdb
+         shutil.copy(phaser_mtz, resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.pdb'  )
+
+         if EarlyTerminate:
+            sys.exit()
+
+
 ################################
 def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  fixed_PDB, FIXED_INPUT): #loops through each chunk
   
@@ -466,7 +487,7 @@ def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  fix
      name = re.split('/', each_pdb)
      name = name.pop()
      name = re.sub('.pdb', '', name)
-     print name
+    # print name
 
      phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run_domain(mtz, each_pdb, run_dir, fasta, name, fixed_PDB, FIXED_INPUT)
    
@@ -482,7 +503,7 @@ def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  fix
 
 
 ################################
-def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noASU):
+def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoSpicker):
       cur_dir=os.getcwd()
       inc = 1
       threads = []
@@ -490,7 +511,7 @@ def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noAS
       for each_chunk in ensembles:  
         log_name = cur_dir+'/LOG_proc'+str(inc)                        
         
-        thread = Process(target=run_parallel, args=(mtz, each_chunk, run_dir, fasta,  log_name,  sigf, FP, free, noASU))        
+        thread = Process(target=run_parallel, args=(mtz, each_chunk, run_dir, fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoSpicker))        
         thread.start() 
         threads.append(thread)
         inc+=1

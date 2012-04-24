@@ -39,15 +39,15 @@ def refmac(xyzin, hklin):
  
   os.system('chmod uoga=wrx '+cur_dir + '/refmac_run')
   os.system(cur_dir + '/refmac_run >refmac_out')  
-  print 'Done'
+#  print 'Done'
 
   out = open(cur_dir + '/refmac_out')
   pattern = re.compile('R free\s*(\d*\.\d*)\s*(\d*\.\d*)')
   for line in out:
    if re.search(pattern, line):
-     print line
+     #print line
      split = re.split(pattern, line)
-     print split
+     #print split
      SCORE = split[2]
   
   return cur_dir + '/HKLOUT', cur_dir + '/XYZOUT'  , SCORE

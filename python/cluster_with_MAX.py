@@ -11,7 +11,7 @@ from itertools import repeat
 ###########################################
 def get_clusters_from_distances(matrix, radius):
 
-  print len(matrix)
+  #print len(matrix)
   matrix_line = 0
   best_cluster=[]
   largest = 0
@@ -35,7 +35,7 @@ def get_clusters_from_distances(matrix, radius):
 
    matrix_line +=1
    
-  print 'BEST ', best_cluster
+ # print 'BEST ', best_cluster
   return best_cluster
 ########################################## ADD ALL
 def cluster_with_MAX_FASTBAK(string, radius, MAX, no_models):
@@ -46,9 +46,9 @@ def cluster_with_MAX_FASTBAK(string, radius, MAX, no_models):
   list_string.close()  
 
   model_indeces=[]
-  print 'runing MAX'
+  #print 'runing MAX'
   os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
-  print 'MAX Done'  
+  #print 'MAX Done'  
   matrix = []
   inc = 1
   while inc < no_models+1:
@@ -79,7 +79,7 @@ def cluster_with_MAX_FASTBAK(string, radius, MAX, no_models):
 
  # for x in matrix:   ### got distance matrix
  #  print x
-  print 'GOT MATRIX'
+ # print 'GOT MATRIX'
   cluster_models = get_clusters_from_distances(matrix, radius)
   return cluster_models
 #####################################
@@ -87,7 +87,7 @@ def cluster_with_MAX_FASTBAK(string, radius, MAX, no_models):
 
 def matrix_insert(i, j, k,  matrix):
  matrix[1][2]  = 2
- print matrix
+ #print matrix
  
  return matrix
 
@@ -100,9 +100,9 @@ def cluster_with_MAX_FAST(string, radius, MAX, no_models):
   list_string.close()  
 
   models=[0]*no_models
-  print 'runing MAX'
+  #print 'runing MAX'
   os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
-  print 'MAX Done'  
+  #print 'MAX Done'  
 
 
   matrix =  [[0 for col in range(no_models)] for row in range(no_models)]
@@ -135,7 +135,7 @@ def cluster_with_MAX_FAST(string, radius, MAX, no_models):
 
  # for x in matrix:   ### got distance matrix
  #  print x
-  print 'GOT MATRIX'
+ # print 'GOT MATRIX'
 ############# get model indeces
 
 
@@ -191,7 +191,7 @@ def cluster_with_MAX(string, radius, MAX, no_models):
         if re.match(pattern, line):
        #  print line 
          split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
-         print split
+       #  print split
 
 
 
@@ -215,13 +215,13 @@ def cluster_with_MAX(string, radius, MAX, no_models):
       if COUNT > largest_size:
          largest_size = COUNT
          largest_models = models
-      print 'MODEL ',  inc,  ' ', COUNT
+     # print 'MODEL ',  inc,  ' ', COUNT
     #  for x in models:
      #     print x
 
       inc +=1
 
-  print 'LARGEST ',  largest_size
+ # print 'LARGEST ',  largest_size
   #for l in largest_models:
   #        print l
   return largest_models

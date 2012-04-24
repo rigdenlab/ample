@@ -39,7 +39,7 @@ def get_length(pdb):
           if re.search('CA', atom):
              counter+=1
 
-  print counter
+ # print counter
   return str(counter)
 
 #################
@@ -124,8 +124,8 @@ def read_log_near_centroids(clus):  #only get those closest to centroid
 
 
          index.append( [int(split[6]) , float(split[4])] )
-         print line
-         print split
+        # print line
+        # print split
          
 
   #filter and retrun
@@ -135,37 +135,35 @@ def read_log_near_centroids(clus):  #only get those closest to centroid
   K=0
   sorted_by_second = sorted(index, key=lambda tup: tup[1])
   while K<KEEP:
-    print sorted_by_second[K]
+   # print sorted_by_second[K]
     closest.append(sorted_by_second[K][0])
     K+=1
 
-  print closest
+ # print closest
 
   return closest
 
 ################
-def read_log(clus):
+def read_log():
   index = []
   cur_dir = os.getcwd()
-  log = open(cur_dir+'/str.txt')
+  log = open(cur_dir+'/rst.dat')
   pattern = re.compile('\s*(\d*)\s*.*\s*(\d*)\s*rep1.tra1')
   for line in log:
-    if re.match(pattern, line):
-      split = re.split('\s*', line)
-      if split[1] != '':
-       if len(split)>6:
+    if re.search('rep1.tra1', line):
+         line = line.strip()
+         s=re.split('(\s*)',line )
+         if len(s)>2: 
+          # print line
+          # print s
 
-        if int(split[1]) == clus:
-         index.append(int(split[6]) )
-         print line
-         print split
+           print 'cluster '+s[0]  +' has '+s[2] +' models'
 
-  return index
+  return 
 ##############################
 
 
 def RUN_SPICKER(models, spicker_runpath, spickerexe, no_clusters_sampled, overpath):
-
    run_spicker(models, spicker_runpath)
    p = subprocess.Popen(spickerexe, shell=True, stdin = subprocess.PIPE,
                                   stdout = subprocess.PIPE, stderr=subprocess.PIPE)
@@ -181,24 +179,24 @@ def RUN_SPICKER(models, spicker_runpath, spickerexe, no_clusters_sampled, overpa
 
      list_of_models = read_log_near_centroids(clus)  ### try only near centroid # use read_log for all
      models_paths = []
-
+     read_log()
      if not os.path.exists(os.path.join(overpath, "S_clusters" )):
       os.mkdir(os.path.join(overpath, "S_clusters" ))
     
      if not os.path.exists( os.path.join(overpath, "S_clusters","cluster_"+str(clus) )):
       os.mkdir(os.path.join(overpath, "S_clusters","cluster_"+str(clus) ))
 
-     print list_of_models
+   #  print list_of_models
      i = 1
      models_list = open(spicker_runpath+'/file_list')
      for line in models_list:
        
         if i in list_of_models:
-         print line
+        # print line
          models_paths.append(line.rstrip('\n'))
         i+=1
      models_list.close()
-     print models_paths
+    # print models_paths
      for eachpdb in models_paths:      
        shutil.copy(eachpdb, os.path.join(overpath, "S_clusters","cluster_"+str(clus) ))
      clus+=1

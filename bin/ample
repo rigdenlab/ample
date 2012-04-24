@@ -39,6 +39,7 @@ import copy
 import clusterize
 import shutil
 
+from  subprocess import Popen, PIPE, STDOUT
 from add_sidechains_SCWRL import *
 import cluster_entropy, truncateedit, truncateedit_MAX
 import SCWRL_edit, Final_display_results
@@ -241,9 +242,17 @@ parser.add_argument('-DEBUG', metavar='debug option', type=str, nargs=1,
 parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
                    help='ensembling')
 
+parser.add_argument('-EarlyTerminate', metavar='EarlyTerminate', type=str, nargs=1,
+                     help='terminate early if a success')
+
+parser.add_argument('-NoShelx', metavar='NoShelx', type=str, nargs=1,
+                     help='Always use Shelx, if you cant be bothered to ask for the beta version, use this flag (but dont expect it to work)')
+
+
 #convert args to dictionary
 args = parser.parse_args()
-print args
+ 
+
 
 
 var_args = vars(args)
@@ -345,7 +354,7 @@ if not var_args['PHENIX'] is None:
 
 
 
-print var_args['MTZ']
+#print var_args['MTZ']
 if var_args['MTZ'] is None:
    MTZ = 'none'
 if not var_args['MTZ'] is None:
@@ -370,6 +379,19 @@ if not var_args['MakeModels'] is None:
      MakeModels = True
      print '\nMaking Rosetta Models\n'
 
+
+NoShelx = False
+if var_args['NoShelx'] is None:
+   NoShelx = False
+if not var_args['NoShelx'] is None:
+   if var_args['NoShelx'][0] == 'False':
+     NoShelx = False
+     print '\nRebuilding in Shelx\n'
+   if var_args['NoShelx'][0] == 'True':
+     NoShelx  = True
+     print '\nWarning, you are not using Shelx\n'
+if NoShelx == False:
+  print 'Rebuilding in Shelx'  
 
 ###fragments
 
@@ -433,6 +455,27 @@ else:
      CLUSTER = False
   else:
      CLUSTER = False
+
+
+EarlyTerminate = False
+
+
+
+if var_args['EarlyTerminate'] is None:
+    EarlyTerminate = False
+else:
+   if "TRUE" in var_args['EarlyTerminate'][0].upper():
+      EarlyTerminate = True
+      print 'will exit at the first success'
+   elif "FALSE" in var_args['EarlyTerminate'][0].upper():
+      EarlyTerminate = False
+   else:
+      EarlyTerminate = False   
+         
+     
+
+ 
+
 
 if var_args['ALLATOM'] is None:
    ALLATOM= False
@@ -520,7 +563,7 @@ if var_args['SPICKERPATH'] is None:
     SPICKEREXE_path = ''
 if not var_args['SPICKERPATH'] is None:
     SPICKEREXE_path= var_args['SPICKERPATH'][0]
-print 'SPICKEREXE_path ', SPICKEREXE_path
+#print 'SPICKEREXE_path ', SPICKEREXE_path
 
 
 
@@ -576,7 +619,7 @@ if not var_args['ensembler'] is None:
 	#---------------------------------------------
 
 Run_params = open(RunDir +'/Params_used', "w")
-if DEBUG == True:
+if DEBUG == True:# if debug is on print stuff out
   print var_args
 for print_user in var_args:
  if var_args[print_user] is not None:
@@ -652,9 +695,8 @@ if MakeModels == True:  #only need Rosetta if making models
  for line in open(Version_file):
    if re.search('Rosetta', line):
        line=re.sub('Rosetta','',line)
-       print line
        Rosetta_version =  string.strip(line)
- print Rosetta_version
+ print  'Your Rosetta version is'+ line
         
  if Rosetta_version == '3.3' :
     Make_fragents_exe          =ROSETTA_OVER_PATH+'/rosetta_fragments/make_fragments.pl'
@@ -701,20 +743,27 @@ if not os.path.exists(RunDir):
 
 if Ensembler  == False:
    THESEUS = check_for_exe('theseus', THESEUS_path)
-   print 'finally got', THESEUS
+  # print 'finally got', THESEUS
 if Ensembler  == True:
+   print 'You are using Phenix ensmbler- Continue at your own risk !!'
    PHENIX = check_for_exe('phenix', PHENIX_path)
 
 SCWRL = check_for_exe('Scwrl4', SCWRL_path )
-print 'finally got', SCWRL
+#print 'finally got', SCWRL
 SPICKEREXE = check_for_exe('spicker',SPICKEREXE_path )
 
-print 'finally got', SPICKEREXE
+#print 'finally got', SPICKEREXE
 MAX = check_for_exe('maxcluster', MAX_path)
-print 'finally got', MAX
-
-
-
+#print 'finally got', MAX
+if NoShelx == False:
+   mtz2hkl = ''
+   mtz2hkl = check_for_exe('mtz2hkl', mtz2hkl)
+   shelxpro = ''
+   shelxpro = check_for_exe('shelxpro', shelxpro)
+   shelxl = ''
+   shelxl = check_for_exe('shelxl', shelxl)
+   shelxe=''
+   shelxe = check_for_exe('shelxe', shelxe)
 
 
 if len(PDB_code)>4 or len(PDB_code)<4:
@@ -738,24 +787,24 @@ if ImportTemplate:
 
 
 
-print 'continuing Run'
+print '\nAll needed programs are found, continuing Run'
 
 
 
 #----------------------------
 # params used
 #---------------------------
-
 #make a copy of params
 #
 Run_params = open(RunDir +'/Params_used', "w")
 Run_params.write('input params\n')
-print var_args
-for print_user in var_args:
- if var_args[print_user] is not None:
-  print print_user +' : ' + str(var_args[print_user][0])
+if DEBUG == True:
+  print var_args
+  for print_user in var_args:
+   if var_args[print_user] is not None:
+     print print_user +' : ' + str(var_args[print_user][0])
 
-  Run_params.write(print_user +' : ' + str(var_args[print_user][0]) + '\n')
+     Run_params.write(print_user +' : ' + str(var_args[print_user][0]) + '\n')
 
 Run_params.write('\nParams Used in this Run\n')
 Run_params.write('\n---input---\nFasta '+FASTA+'\nRunDir '+RunDir+'\nMTZ '+MTZ+'\nname '+PDB_code+'\n')
@@ -774,11 +823,11 @@ Run_params.close()
 #Do The Modelling
 #-----------------------------------
 
-
 time_start=time.time()
 RUNNING=open( RunDir +'/ROSETTA.log', "w")
 
-print PDB_code
+if DEBUG ==True:
+  print PDB_code
 os.chdir(RunDir)
   
 outfasta=os.path.join(RunDir, PDB_code+'_.fasta')
@@ -787,19 +836,32 @@ FASTA=outfasta
 #####make frags 
 
 if MakeFrags == True:
-
+  print '----- making fragments--------\n'
   RUNNING.write('----- making fragments--------\n')
   RUNNING.flush()
   frags_dir = RunDir + '/frags'
   os.system('mkdir ' + frags_dir)
-  print Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof  ' +nohoms 
-  os.system(Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof '+ nohoms    ) 
+  cmd = Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof '+ nohoms +'>frag_log' 
+  if DEBUG == True:
+    print Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof  ' +nohoms 
 
+  if DEBUG == True: 
+      os.system(Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof '+ nohoms +'>frag_log'   ) 
+
+  else:
+      p = subprocess.call(cmd, shell = True, stdout=PIPE, stderr=PIPE )
   frags_3_mers = frags_dir + '/aa' +PDB_code+'03_05.200_v1_3'
   frags_9_mers = frags_dir + '/aa' +PDB_code+'09_05.200_v1_3'
 
-  RUNNING.write('Fragments done\n3mers at: '+frags_3_mers+'\n9mers at: '+frags_9_mers+'\n\n')
+  if not os.path.exists(frags_3_mers):
+     print 'Error in making fragments'
+     sys.exit()
+  if not os.path.exists(frags_9_mers):
+     print 'Error in making fragments'
+     sys.exit()
 
+  RUNNING.write('Fragments done\n3mers at: '+frags_3_mers+'\n9mers at: '+frags_9_mers+'\n\n')
+  print' Fragments Done\n3mers at: '+frags_3_mers+'\n9mers at: '+frags_9_mers+'\n\n'
 
 
 
@@ -825,6 +887,8 @@ if INSERT_DOMAIN==True:
      
 
 
+print  '----- making Rosetta models--------\n' 
+print 'now making '+str(NMODELS)+' models'
 RUNNING.write('----- making models--------\n')
 RUNNING.flush()
 
@@ -877,8 +941,8 @@ if MakeModels == True:
         if seed_present == False:
           previous_seeds.append(new_seed)
           proc +=1
-
-      print previous_seeds
+      if DEBUG == True:
+         print previous_seeds
 
       split_jobs =  NMODELS / NProc   ### split jobs between processors
       remainder =   NMODELS % NProc
@@ -888,7 +952,7 @@ if MakeModels == True:
         jobs.insert(proc, split_jobs)
         proc +=1
       jobs[-1] = jobs[-1] + remainder    
-      print jobs  ##################################
+     # print jobs  ##################################
 
 
  
@@ -898,7 +962,8 @@ if MakeModels == True:
 
       proc = 1
       while proc < NProc +1:
-       print proc
+       if DEBUG == True:
+          print proc
  
        os.system('mkdir '+ RunDir + '/models_'+str(proc))
        os.chdir(RunDir + '/models_'+str(proc))
@@ -938,7 +1003,15 @@ if MakeModels == True:
           no_models_have  += len(list_of_files)
           proc+=1
         if no_models_have > finished_models:
-           print 'Number of models made so far = ' + str(no_models_have)
+           if DEBUG == True:
+              print 'Number of models made so far = ' + str(no_models_have)
+           else:
+              divisor = no_models_to_make/10
+              if divisor !=0:
+                if no_models_have !=0:
+                  if no_models_have%divisor == 0:  
+                     print 'Number of models made so far = ' + str(no_models_have)
+
            finished_models = no_models_have
         if no_models_have ==  no_models_to_make:
            break
@@ -962,22 +1035,23 @@ if MakeModels == True:
      # RunDir +'/models'
       proc = 1
       while proc < NProc +1:
-         print proc
+         if DEBUG == True:
+            print 'nproc', proc
          
-         add_sidechains_SCWRL(SCWRL,   RunDir + '/models_'+str(proc),   RunDir + '/models',  str(proc) )
+         add_sidechains_SCWRL(SCWRL,   RunDir + '/models_'+str(proc),   RunDir + '/models',  str(proc), DEBUG )
          cat_string += RunDir + '/OUT_' + str(proc) +'  '
          #os.system('rm -r '+RunDir + '/models_'+str(proc) )
          proc+=1
     
       os.chdir(RunDir)
-      print '\n' +cat_string
+     # print 'Your models are in: ' +cat_string
 
 
      ####### keep or delete run files
 if MakeModels == False:
   PATH_TO_MODELS = MODELS_LOCATION
 RUNNING.write('\n\nModelling done\nmodels at '+PATH_TO_MODELS+'\n\n')
-
+print '\n\nModelling Done\nmodels at '+PATH_TO_MODELS+'\n\n'
 #--------------------------------------------
 #check if models are present regardless
 #--------------------------------------------
@@ -1082,12 +1156,17 @@ if ENSEMBLE_import ==False:
 #------------------------------------
  if USE_SPICKER==True:
     #noClusters=1
+    ResultsPath = RunDir+'/RESULTS'
+    if not os.path.exists(RunDir+'/RESULTS'):
+       os.mkdir(RunDir+'/RESULTS')
+
+    print '----- Clustering models --------\n'
     run_spicker.RUN_SPICKER(PATH_TO_MODELS, RunDir+'/spicker_run', SPICKEREXE, int(noClusters) , RunDir )
-   
     samples = 1
+    print '\nClusteing Done. using the first '+str(samples)+' clusters\n'
     while samples < int(noClusters)+1:
       models_path = RunDir + '/S_clusters/cluster_'+str(samples)
-
+      print '----- Truncating models for cluster '+str(samples)+' --------\n'
       if not os.path.exists(RunDir+'/fine_cluster_'+str(samples)):
          os.mkdir(RunDir+'/fine_cluster_'+str(samples))
 
@@ -1098,7 +1177,8 @@ if ENSEMBLE_import ==False:
       if Ensembler == True:
               list_of_ensembles = truncateedit_MAX.truncate_Phenix(PHENIX, models_path, RunDir+'/fine_cluster_'+str(samples), MAX, percent, FIXED_INTERVALS  )
 
-
+      
+      
       os.system('mkdir '+RunDir+'/ensembles_'+str(samples))
       for each_ens in list_of_ensembles:
         SCWRL_edit.edit_sidechains(each_ens, RunDir+'/ensembles_'+str(samples)+'/')
@@ -1146,19 +1226,26 @@ if ENSEMBLE_import ==False:
                   os.mkdir(mrBuildOutputDir)                   
                   shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","phaser_shelx" ),mrBuildOutputDir  )
                   shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","molrep_shelx" ),mrBuildOutputDir  )  
-                  shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","data" ),mrBuildOutputDir  )               
+                  shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","data" ),mrBuildOutputDir  ) 
+                                
             shutil.rmtree(mrBuildClusterDir)
    
       # Monitor the cluster queue to see when all jobs have finished
 
           
-         if not CLUSTER: 
+         if not CLUSTER:
+            print 'Truncating Done for cluster '+str(samples)
+            print '----- Running MRBUMP (cluster '+str(samples)+')--------\n' 
             bump_dir = os.path.join(RunDir, 'MRBUMP_cluster'+str(samples))
             os.mkdir(bump_dir) 
             os.chdir(bump_dir)
             split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU)
-            Final_display_results.make_log(bump_dir, RunDir+'/Final_results.log')
+            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoSPicker)
+            if NoSpicker == False: 
+               Final_display_results.make_log(bump_dir, RunDir+'/Final_results.log')
+            if NoSpicker ==  True:
+              print 'getting results from:'
+              print RunDir
 
 
 
@@ -1225,17 +1312,17 @@ if ENSEMBLE_import ==False:
     elapsed_time= time_stop - time_start
     run_in_min=elapsed_time/60
     run_in_hours = run_in_min/60
-
+    print '\nMR and shelx DONE \n ALL DONE  (in '+str(run_in_hours)+' hours) \n----------------------------------------\n'
     RUNNING.write('\nMR and shelx ALL DONE  (in '+str(run_in_hours)+' hours) \n----------------------------------------\n')
     RUNNING.flush()
     RUNNING.close()
 
-    os.system('tar -cvf '+PDB_code+'_' + RunDir+'.tar '+RunDir)
-    os.system('gzip ' +PDB_code+'_'+ RunDir+'.tar')
-    os.system('mv '+ PDB_code+'_'+  RunDir+'.tar.gz /data2/jac45 ')
-    os.system('rm '+RunDir)
+   # os.system('tar -cvf '+PDB_code+'_' + RunDir+'.tar '+RunDir)
+   # os.system('gzip ' +PDB_code+'_'+ RunDir+'.tar')
+   # os.system('mv '+ PDB_code+'_'+  RunDir+'.tar.gz /data2/jac45 ')
+   # os.system('rm '+RunDir)
     #stop here
-    sys.exit()
+    sys.exit()  # the above is the only code that should be used
 
 
 
@@ -1264,7 +1351,7 @@ RUNNING.flush()
 bump_dir = os.path.join(RunDir, 'MRBUMP')
 os.mkdir(bump_dir)
 os.chdir(bump_dir)
-
+ResultsPath = RunDir+'/RESULTS'
 if MISSING_DOMAINS == False:
    if CLUSTER:
       sys.stdout.write("Running MR and model building on a cluster\n\n")
@@ -1296,7 +1383,7 @@ if MISSING_DOMAINS == False:
       mrBuild.monitorQueue()
    else: 
       split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU)
+      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx)
       Final_display_results.make_log(bump_dir, RunDir+'/Final_results.log')
 
 if MISSING_DOMAINS == True:

@@ -12,6 +12,15 @@ from subprocess import PIPE, Popen
 import get_TFZ_resolution
 import run_refmac
 #import local_map_correlation
+
+
+def isnumber(n):
+  try :
+      float(n)
+      return True
+  except:
+      return False
+
 ########
 def which(program):
     import os
@@ -33,12 +42,12 @@ def which(program):
 
 def check_for_exe(exename, varname):
    exepath = ''
-   print 'looking for', exename
+   #print 'looking for', exename
    if not varname:
-     print 'no '+exename+' given on the command line, looking in the PATH'
-     print which(exename)
+    # print 'no '+exename+' given on the command line, looking in the PATH'
+     #print which(exename)
      if not which(exename):
-       print 'You need to give the path for '+exename
+       print 'You need to give the path for '+exename +'or put it in the PATH' 
        sys.exit()
      else: 
 
@@ -46,7 +55,7 @@ def check_for_exe(exename, varname):
    
    else:
     exepath = varname
-    print 'using here',exepath
+    #print 'using here',exepath
 
 
     
@@ -65,19 +74,20 @@ def try_theseus(cmd):#  theseus can fail so try Run a command with a timeout aft
 
    p = subprocess.Popen(cmd, shell = True)
    time.sleep(1)
-   print p.poll()
+   #print p.poll()
    if p.poll() is None: #still running      
       p.kill()
-      print 'timed out'
+    #  print 'timed out'
    else:
-     print p.communicate()
+     #print p.communicate()
      has_worked = True
 
 #######
 def mtz2hkl(mtz):
+    print 'converting mtz tp hkl'
     mtz2hkl = os.environ.get("mtz2hkl")
     mtz2hkl = check_for_exe("mtz2hkl"  , mtz2hkl )
-    print mtz2hkl
+   # print mtz2hkl
 
 
 
@@ -86,17 +96,18 @@ def mtz2hkl(mtz):
     mtz2hkl_run.write('#!/bin/sh\n')
     mtz2hkl_run.write(mtz2hkl+' -2 orig')
     mtz2hkl_run.close()
-    os.system('chmod uoga=wrx '+ cur_dir + '/mtz2hkl')
-    os.system(cur_dir + '/mtz2hkl')
+    os.system('chmod uoga=wrx '+ cur_dir + '/mtz2hkl ')
+    os.system(cur_dir + '/mtz2hkl >mtz2hkl.log')
 
     if not os.path.exists(cur_dir + '/orig.hkl'):
       print 'NO HKL'
       sys.exit()
 #########
 def run_pro(ASU):
+    print 'running shelpro' 
     shelxpro = os.environ.get("shelxpro")
     shelxpro = check_for_exe("shelxpro"  , shelxpro )
-    print shelxpro
+    #print shelxpro
 
     cur_dir = os.getcwd()
     mtz2hkl_run = open(cur_dir + '/pro', "w")
@@ -108,7 +119,7 @@ def run_pro(ASU):
     mtz2hkl_run.close()
     os.system('chmod uoga=wrx '+ cur_dir + '/pro')
    
-    os.system(cur_dir + '/pro')
+    os.system(cur_dir + '/pro >pro.log')
 
     if not os.path.exists(cur_dir + '/orig.ins'):
       print 'NO INS'
@@ -116,9 +127,10 @@ def run_pro(ASU):
 
 ########
 def shelxl():
+    print 'runing shelxl'  
     shelxl = os.environ.get("shelxl")
     shelxl = check_for_exe("shelxl"  , shelxl )
-    print shelxl
+    #print shelxl
 
     cur_dir = os.getcwd()
     mtz2hkl_run = open(cur_dir + '/shelxl', "w")
@@ -126,18 +138,18 @@ def shelxl():
     mtz2hkl_run.write(shelxl+'  orig')
     mtz2hkl_run.close()
     os.system('chmod uoga=wrx '+ cur_dir + '/shelxl')
-    os.system(cur_dir + '/shelxl')
+    os.system(cur_dir + '/shelxl >shelxl.log')
 
     if not os.path.exists(cur_dir + '/orig.res'):
       print 'NO RES'
       sys.exit()
 #####################
 def shelxe(solvent, resolution):
+    print 'running shelxe'
     shelxe = os.environ.get("shelxe")
-
     shelxe = check_for_exe("shelxe"  , shelxe )
-    print shelxe, 'resolution', resolution
-
+   # print shelxe, 'resolution', resolution
+    
     free_lunch = ' '
     if float(resolution)<2.0:
       free_lunch = ' -e1.0'
@@ -163,7 +175,7 @@ def shelxe(solvent, resolution):
     for line in result: 
        if re.search(pattern, line):
         split= re.split(pattern, line)
-        print split
+    #    print split
         if float(split[1]) > Best_result:
           Best_result = float(split[1])
        if re.search(fail_pattern, line):
@@ -202,9 +214,9 @@ def mathews(CELL, SPACE, MOLWT, ASU):
      #print line
      result = re.search(pattern, line)
      if result:
-      print line
+      #print line
       split = re.split(pattern, line)
-      print split
+     # print split
 
       if split[1] == ASU:
          SOLVENT = split[3]
@@ -278,13 +290,14 @@ def get_cell_dimentions(mtz):
       SPACE = 'P 1'
 
    if CELL == '' or SPACE =='':
+    print 'problem getting Cell or Space group'
     sys.exit()
    return CELL, SPACE
 #####################
 
 
 #####################
-def RUN(mtz, pdb, ASU, fasta, run_dir):
+def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate):
 
   os.chdir(run_dir)
   os.system('cp '+mtz +' orig.mtz')
@@ -294,12 +307,17 @@ def RUN(mtz, pdb, ASU, fasta, run_dir):
   run_pro(ASU)
   shelxl()
   resolution,FreeR  = get_TFZ_resolution.get_resolution(pdb)
-  print resolution,FreeR
+  #print resolution,FreeR
   CELL, SPACE = get_cell_dimentions(mtz)
   MOLWT = seqwt(fasta)
   solvent = mathews(CELL, SPACE, MOLWT, ASU)
   shelscore, refmacfreeR, HKLOUT, XYZOUT = shelxe(solvent, resolution)
-
+  print '\nthis rebuild has a CC='+str(shelscore)+', FreeR='+str(refmacfreeR)+'\n'+XYZOUT+'\n'+HKLOUT
+ # if EarlyTerminate:
+ #   if isnumber(shelscore):
+ #    if float(shelscore) >25:
+ #        print 'A solution is found  -Exiting'
+  #       sys.exit()    
   return shelscore, refmacfreeR, HKLOUT, XYZOUT, SPACE
 #####
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ from multiprocessing import Process, Queue, JoinableQueue, Pool, Value, Array
 import pickle
 import copy
 import subprocess
-
+from subprocess import PIPE
 
 import cluster_with_MAX
 #############cluster_with_MAX####
@@ -59,16 +59,16 @@ def fly_threshold(theseus_out, percent): #make a list of residues to keep under 
   pattern = re.compile('^(\d*)\s*(\w*)\s*(\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)')
   result = pattern.match(line)
   if result:
-   print line
+  # print line
    #seq = re.split('\s*', line)
    seq = re.split(pattern, line)
-   print seq
+  # print seq
    if not re.search('ATOM', line):
    #if (seq[6]) != 'T':
       
 
 
-      print seq[4]
+      #print seq[4]
 
       var_list.append(float(seq[4]))
        
@@ -116,10 +116,10 @@ def Run_Rosetta(string, no_of_files, radius, Rosetta_cluster, RDB):  # rosetta c
      file_pattern = re.compile('^Clustering\s*(\d*)\s*structures')
      file_result = file_pattern.match(line)
      if file_result:
-      print line
+      #print line
 
       file_result2 = re.split(file_pattern, line )
-      print file_result2
+      #print file_result2
       if int(file_result2[1]) !=  no_of_files:
        print 'fail there are ' + str(no_of_files) + ' files, got ' + file_result2[1]
       if int(file_result2[1]) ==  no_of_files:
@@ -130,15 +130,17 @@ def try_theseus(cmd):#  theseus can fail so try Run a command with a timeout aft
 
  has_worked = False
  while has_worked == False:
+   Theseuslog=open(os.getcwd()+'/t.log', "w")
+   p = subprocess.Popen(cmd  , shell =True, stdout =PIPE, stderr=PIPE)
 
-   p = subprocess.Popen(cmd, shell = True)
+
    time.sleep(5)
-   print p.poll()
+   #print p.poll()
    if p.poll() is None: #still running      
       p.kill()
-      print 'timed out'
+      #print 'timed out'
    else:
-     print p.communicate()
+     #print p.communicate()
      has_worked = True
 
 
@@ -162,7 +164,7 @@ def Align_rosetta_fine_clusters_with_theseus(Rad_path, THESEUS, ):  #if a cluste
       string  = string + infile + ' '
       no_of_files = no_of_files + 1
 
-  print no_of_files
+  #print no_of_files
   if no_of_files >5:
      try_theseus(THESEUS + ' -r ' + 'cluster_' + str(0) + ' -a0 ' +string)
 
@@ -194,7 +196,7 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
     os.system('mkdir ' +trunc_out + '/fine_clusters_'+str(RAD))
     os.chdir(trunc_out + '/fine_clusters_'+str(RAD))
 
-    print 'no_files to sub cluster', no_files
+    #print 'no_files to sub cluster', no_files
     #print string, RAD, MAX, no_files
     cluster_files = cluster_with_MAX.cluster_with_MAX_FAST(string, RAD, MAX, no_files)  # use fastest method
 
@@ -210,10 +212,11 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
     os.system('mkdir '+ensemble_path )
     os.chdir(ensemble_path)
     Align_rosetta_fine_clusters_with_theseus(Rad_path, THESEUS, )
-    os.system('mv ' +ensemble_path + '/cluster_0_sup.pdb '+ensemble_path + '/trunc_'+str(threshold)+'_rad_' +str(RAD)+'.pdb')
+    if os.path.exists(ensemble_path + '/cluster_0_sup.pdb'):
+      os.system('mv ' +ensemble_path + '/cluster_0_sup.pdb '+ensemble_path + '/trunc_'+str(threshold)+'_rad_' +str(RAD)+'.pdb')
     ensembles_made.append(ensemble_path + '/trunc_'+str(threshold)+'_rad_' +str(RAD)+'.pdb')
 
-  print ensembles_made
+  #print ensembles_made
 
   return ensembles_made
 
@@ -248,12 +251,12 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ): #tr
   # get variations between pdbs
   #--------------------------------  
   os.chdir(models_path)
-  print run_dir
+  #print run_dir
 
   os.system (THESEUS + ' -a0 `ls *.pdb | xargs`  >theseus_data')
-  print 'done'
+  #print 'done'
   os.system('mv theseus* '+run_dir)
-  print run_dir
+  #print run_dir
   T_data = out_path + '/theseus_variances.txt'
 
   #--------------------------------
@@ -267,7 +270,7 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ): #tr
   else:
     thresholds =fly_threshold(T_data, percent)
 
-  print thresholds, len(thresholds)
+ # print thresholds, len(thresholds)
   
   
      
@@ -291,7 +294,7 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ): #tr
 
  
     if continue_trunc == True:
-     print '-----truncatung at '+str(threshold)+'------'
+     print 'truncating at '+str(threshold)
      trunc_out = out_path + '/trunc_files_' + str(threshold)
      #print trunc_out
      os.system('mkdir ' +trunc_out)
@@ -316,7 +319,7 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ): #tr
                pdb_out.write(pdbline)
       
       pdb_out.close()
-     print 'making ensembles', threshold
+     #print 'making ensembles', threshold
      made_ens = make_ensembles(trunc_out, threshold, THESEUS, MAX )  ### MAKE ensemble for this trucnation level
      for a_ens in made_ens:
        all_ensembles.append(a_ens)
@@ -326,7 +329,7 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ): #tr
 
 ###################
 def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS ):
-  print 'asembling'
+  print 'asembling with Phenix'
   print PHENIX
   phenix_name = PHENIX
 
@@ -334,7 +337,7 @@ def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS 
       phenix_name = PHENIX+'.ensembler'
   print phenix_name
 
-  print 'here'
+  #print 'here'
   all_ensembles = []
 
   run_dir = os.getcwd()
@@ -347,7 +350,7 @@ def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS 
   string = ''
 
   os.chdir(models_path)
-  print run_dir
+  #print run_dir
 
   for infile in glob.glob( os.path.join(models_path, '*.pdb') ):
      number_of_models +=1
@@ -355,7 +358,7 @@ def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS 
      list_of_pdbs.append(infile)
 
   cmd = phenix_name+' '+string
-  print cmd
+  #print cmd
 
   os.chdir(out_path)
   os.system(cmd)
@@ -363,7 +366,7 @@ def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS 
 
 
   all_ensembles.append(os.path.join(out_path,'ensemble_merged.pdb'))
-  print all_ensembles
+  #print all_ensembles
   return all_ensembles
   
 

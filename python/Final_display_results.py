@@ -59,16 +59,18 @@ def make_log(mr_bump_path, final_log):
      shelx_molrep = mr_bump_path + '/'+a_dir+'/molrep_shelx/RESULT'
 
      if os.path.exists(phaser_pdb):
-      phaser_FreeR =   get_rfree(phaser_pdb)  
-      phaser_shelx =   get_shelx_score(shelx_phaser)
-      final_log.write('Ensembe ' + name+'  phaser FreeR: '+phaser_FreeR +  '  shelx score: '+str(phaser_shelx) + '\n')
-      final_log.flush()
+      if os.path.exists(shelx_phaser):
+        phaser_FreeR =   get_rfree(phaser_pdb)  
+        phaser_shelx =   get_shelx_score(shelx_phaser)
+        final_log.write('Ensembe ' + name+'  phaser FreeR: '+phaser_FreeR +  '  shelx score: '+str(phaser_shelx) + '\n')
+        final_log.flush()
   
      if os.path.exists(molrep_pdb):
-      molrep_FreeR =   get_rfree(molrep_pdb) 
-      molrep_shelx =   get_shelx_score(shelx_molrep)  
-      final_log.write('Ensembe ' + name+'  molrep FreeR: '+molrep_FreeR +  '  shelx score: '+str(molrep_shelx) + '\n')
-      final_log.flush()
+      if os.path.exists(shelx_molrep):
+        molrep_FreeR =   get_rfree(molrep_pdb) 
+        molrep_shelx =   get_shelx_score(shelx_molrep)  
+        final_log.write('Ensembe ' + name+'  molrep FreeR: '+molrep_FreeR +  '  shelx score: '+str(molrep_shelx) + '\n')
+        final_log.flush()
      
 
    
