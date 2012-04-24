@@ -1373,6 +1373,12 @@ if ENSEMBLE_import ==True:
  for infile in glob.glob( os.path.join(ENSEMBLES, '*.pdb') ):
    final_ensembles.append(infile)
 
+ResultsPath = RunDir+'/RESULTS'
+if not os.path.exists(RunDir+'/RESULTS'):
+       os.mkdir(RunDir+'/RESULTS')
+
+
+
 #--------------Import into MrBUMP here-------------------
 RUNNING.write('Running MrBUMP\nMR LOGS in '+RunDir+'/MRBUMP')
 RUNNING.flush()
