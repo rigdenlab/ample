@@ -312,7 +312,7 @@ def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles):
   MOLWT = seqwt(fasta)
   solvent = mathews(CELL, SPACE, MOLWT, ASU)
   shelscore, refmacfreeR, HKLOUT, XYZOUT = shelxe(solvent, resolution, NoShelxCycles)
-  print '\nthis rebuild has a CC='+str(shelscore)+', FreeR='+str(refmacfreeR)+'\n'+XYZOUT+'\n'+HKLOUT
+  print '\nthis rebuild has a CC='+str(shelscore)+' (a CC>=25 is a success), final FreeR='+str(refmacfreeR)+'\n'+XYZOUT+'\n'+HKLOUT
  # if EarlyTerminate:
  #   if isnumber(shelscore):
  #    if float(shelscore) >25:

@@ -308,7 +308,7 @@ def pdbcur(pdb):
    return ASU
 
 ###############################
-def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles):
+def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles, Resultspath):
  
    #files to make:
    phaser_mtz = 'fail'
@@ -340,6 +340,10 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
      
      phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz'
      phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/phaser/refmac_phaser_loc0_ALL_'+name+'_PDBCLP.pdb'
+     if NoShelx == True:
+       os.system('cp '+phaser_mtz + '  '+Resultspath    )
+       os.system('cp '+phaser_pdb + '  '+Resultspath    )
+
      if NoShelx == False:
         print '---found  phaser output, rebuilding---'
         shelx_phaser_path = run_dir+ '/search_' +name + '_mrbump/phaser_shelx'
@@ -354,7 +358,11 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz' ):
      molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz'
      molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_loc0_ALL_'+name+'_PDBCLP.pdb'
-     if NoShelx == False:
+   if NoShelx == True:  
+      os.system('cp '+molrep_mtz + '  '+Resultspath    )
+      os.system('cp '+molrep_pdb + '  '+Resultspath    )
+
+   if NoShelx == False:
         print '---found molrep output, rebuilding---'
         shelx_molrep_path = run_dir+ '/search_' +name + '_mrbump/molrep_shelx'
         os.system('mkdir ' +shelx_molrep_path)
@@ -462,7 +470,7 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
      name = re.sub('.pdb', '', name)
      #print name
     
-     phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run(mtz, each_pdb, run_dir, fasta, name,  sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles)
+     phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run(mtz, each_pdb, run_dir, fasta, name,  sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles, Resultspath)
      
      log.write(name+':\n'+
      '\nphaser done \n' 
@@ -477,14 +485,20 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
      if isnumber(phaser_shelxscore):
        if float(phaser_shelxscore) > 25:
          print 'Found a Solution '+ phaser_pdb
-         os.system('cp '+ phaser_XYZOUT+'  '+ Resultspath+'/phaser'+phaser_shelxscore+'_'+phaser_refmacfreeR+'.pdb'  )
-         os.system('cp '+ phaser_HKLOUT+'  '+ Resultspath+'/phaser'+phaser_shelxscore+'_'+phaser_refmacfreeR+'.mtz'  )        
+         #phaser_shelxscore =re.sub('\.','_', phaser_shelxscore)
+         #phaser_refmacfreeR=re.sub('\.','_', phaser_refmacfreeR)
+
+         os.system('cp '+ phaser_XYZOUT+'  '+ Resultspath+'/phaser'+phaser_shelxscore+'__'+phaser_refmacfreeR+'.pdb'  )
+         os.system('cp '+ phaser_HKLOUT+'  '+ Resultspath+'/phaser'+phaser_shelxscore+'__'+phaser_refmacfreeR+'.mtz'  )        
 
          if EarlyTerminate:
             sys.exit()
      if isnumber(molrep_shelxscore): 
       if float(molrep_shelxscore) > 25:
          print 'Found a Solution '+ molrep_pdb
+         #molrep_shelxscore =re.sub('\.','_', molrep_shelxscore)
+         #molrep_refmacfreeR=re.sub('\.','_', molrep_refmacfreeR)
+
          os.system('cp ' +molrep_XYZOUT+'   '+ Resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.pdb'  )
          os.system('cp ' +molrep_HKLOUT+'   '+ Resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.mtz' )
          if EarlyTerminate:
