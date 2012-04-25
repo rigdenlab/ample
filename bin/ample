@@ -652,15 +652,11 @@ LOG.write('The authors of specific programs should be referenced where applicabl
            
            'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n'+
            
-           'Theseus: Empirical Bayes hierarchical models for regularizing maximum likelihood estimation in the matrix Gaussian Procrustes problem.\n'+
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2006a) PNAS 103(49):18521-18527 [Open Access]\n'+
 
-           'THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n'+
+           'Theseus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n'+
            'Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]\n'+ 
            'Supplementary Materials for Theobald and Wuttke 2006b.\n'+
 
-           'Accurate structural correlations from maximum likelihood superpositions.\n'+
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2008) PLOS Computational Biology 4(2):e43 [Open Access] \n\n'+
 
            'MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457\n'+
             
@@ -889,14 +885,10 @@ RUNNING.write('#################################################################
 
            'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n'+
 
-           'Theseus: Empirical Bayes hierarchical models for regularizing maximum likelihood estimation in the matrix Gaussian Procrustes problem.\n'+
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2006a) PNAS 103(49):18521-18527 [Open Access]\n'+
 
-           'THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n'+
+           'Theseus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n'+
            'Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]\n'+
            'Supplementary Materials for Theobald and Wuttke 2006b.\n'+
-           'Accurate structural correlations from maximum likelihood superpositions.\n'+
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2008) PLOS Computational Biology 4(2):e43 [Open Access] \n\n'+
 
            'MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457\n'+
 
@@ -1440,15 +1432,11 @@ if ENSEMBLE_import ==False:
 
            'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n'+
 
-           'Theseus: Empirical Bayes hierarchical models for regularizing maximum likelihood estimation in the matrix Gaussian Procrustes problem.\n'+
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2006a) PNAS 103(49):18521-18527 [Open Access]\n'+
 
-           'THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n'+
+           'Thsesus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n'+
            'Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]\n'+
            'Supplementary Materials for Theobald and Wuttke 2006b.\n'+
 
-           'Accurate structural correlations from maximum likelihood superpositions.\n'+
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2008) PLOS Computational Biology 4(2):e43 [Open Access] \n\n'+
 
            'MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457\n'+
 
