@@ -33,9 +33,9 @@ def refmac(xyzin, hklin):
   mr_bump = open(cur_dir + '/refmac_run', "w") 
   mr_bump.write('#!/bin/sh\n')
   mr_bump.write('refmac5 xyzin ' + xyzin + ' hklin ' + hklin + '<<eof\n')
-  mr_bump.write('ncyc 1')
-  mr_bump.write('END')
-  mr_bump.write('eof')
+  mr_bump.write('ncyc 1\n')
+  mr_bump.write('END\n')
+  mr_bump.write('eof\n')
   mr_bump.close()
  
   os.system('chmod uoga=wrx '+cur_dir + '/refmac_run')
