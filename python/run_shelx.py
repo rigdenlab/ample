@@ -4,6 +4,7 @@
 
 import signal, time
 import subprocess
+import shutil
 import os
 import sys, re
 #from signal import alarm, signal, SIGALRM, SIGKILL
@@ -164,7 +165,7 @@ def shelxe(solvent, resolution, NoShelxCycles):
     os.system('chmod uoga=wrx '+ cur_dir + '/shelxe')
     os.system(cur_dir + '/shelxe >RESULT')
 
-    if not os.path.exists(cur_dir + '/orig.phs'):
+    if not os.path.exists(os.path.join(cur_dir,'orig.phs')):
       print 'NO PHS'
 
 
@@ -183,7 +184,10 @@ def shelxe(solvent, resolution, NoShelxCycles):
 
 
     HKLOUT, XYZOUT, SCORE = run_refmac.refmac('orig.pdb', 'orig.mtz')
-    os.system('mv  orig.phs shel.phs') 
+    if os.path.isfile("orig.phs"):
+       shutil.copyfile('orig.phs', 'shel.phs') 
+    else:
+       sys.stdout.write("Warning: No output '.phs' file found for this Shelxe run\n")
     #os.system('rm orig.*')
     return str(Best_result), SCORE, HKLOUT, XYZOUT
     

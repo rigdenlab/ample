@@ -35,6 +35,7 @@ def refmac(xyzin, hklin):
   mr_bump.write('refmac5 xyzin ' + xyzin + ' hklin ' + hklin + '<<eof\n')
   mr_bump.write('ncyc 1')
   mr_bump.write('END')
+  mr_bump.write('eof')
   mr_bump.close()
  
   os.system('chmod uoga=wrx '+cur_dir + '/refmac_run')
