@@ -648,7 +648,7 @@ Run_params.close()
 LOG = open(RunDir+'/Ample.log', "a")
 LOG.write('The authors of specific programs should be referenced where applicable::\n\n'+
            'AMPLE: To be added\n'+
-           'SHELX: "SHELX..." is used: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n'+ 
+           'SHELX: is used: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n'+ 
            
            'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n'+
            
@@ -885,7 +885,7 @@ RUNNING.write('#################################################################
            '#########################################################################\n'+
            'The authors of specific programs should be referenced where applicable::\n\n'+
            'AMPLE: To be added\n'+
-           'SHELX: "SHELX..." is used: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n'+
+           'SHELX:  "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n'+
 
            'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n'+
 
@@ -1436,7 +1436,7 @@ if ENSEMBLE_import ==False:
     RUNNING.flush()
     RUNNING.write('The authors of specific programs should be referenced where applicable::\n\n'+
            'AMPLE: To be added\n'+
-           'SHELX: "SHELX..." is used: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n'+
+           'SHELX: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n'+
 
            'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n'+
 
