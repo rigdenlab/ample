@@ -1259,7 +1259,9 @@ if ENSEMBLE_import ==False:
           
          if not CLUSTER:
             print 'Truncating Done for cluster '+str(samples)
-            print '----- Running MRBUMP (cluster '+str(samples)+')--------\n' 
+            print '----- Running MRBUMP (cluster '+str(samples)+')--------\n'
+            print 'Created '+str(len(final_ensembles))+' ensembles,   running '+str(len(final_ensembles))+' jobs for cluster '+str(samples) 
+
             bump_dir = os.path.join(RunDir, 'MRBUMP_cluster'+str(samples))
             print bump_dir
             
