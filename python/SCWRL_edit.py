@@ -60,5 +60,5 @@ def edit_sidechains(each_file, outpath):
    
     my_outfile2.close()
  else:
-    print 'Cant Find: ',each_file
+    print 'Could not create ensemble for files (models too diverse): ',each_file
    
