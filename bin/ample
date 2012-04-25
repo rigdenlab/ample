@@ -928,7 +928,7 @@ if MakeFrags == True:
   frags_dir = RunDir + '/frags'
   os.system('mkdir ' + frags_dir)
   cmd = Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof '+ nohoms +'>frag_log' 
-  if DEBUG == True:
+  if DEBUG == False:
     print Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof  ' +nohoms 
 
   if DEBUG == True: 
