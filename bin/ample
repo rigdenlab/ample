@@ -1268,15 +1268,21 @@ if ENSEMBLE_import ==False:
             split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
             run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles)
             if NoShelx == False: 
-               Final_display_results.make_log(bump_dir, RunDir+'/Final_results.log')
+              Final_display_results.make_log(bump_dir, RunDir+'/Final_results.log')
             if NoShelx ==  True:
+              resultslog = open(ResultsPath+'/Results.log', "w")
               print 'getting results from:'
               print bump_dir
               for mrbumplog in os.listdir(bump_dir):
                   if re.search('.log', mrbumplog):
-                      print mrbumplog
-                  sys.exit()
-
+                      #print mrbumplog
+                      for line in open(mrbumplog):
+                        if re.search('^(\d)\s*loc0_', line):
+                         if not re.search('method', line):
+                           print line
+                           resultslog.write(line)
+              resultslog.close()
+              sys.exit()
 
       if MISSING_DOMAINS == True:
         if  CLUSTER:
@@ -1421,6 +1427,26 @@ if MISSING_DOMAINS == False:
       split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
       run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles)
       Final_display_results.make_log(bump_dir, RunDir+'/Final_results.log')
+
+      if NoShelx == False:
+               Final_display_results.make_log(bump_dir, RunDir+'/Final_results.log')
+      if NoShelx ==  True:
+              resultslog = open(ResultsPath+'/Results.log', "w")
+              print 'getting results from:'
+              print bump_dir
+              for mrbumplog in os.listdir(bump_dir):
+                  if re.search('.log', mrbumplog):
+                      #print mrbumplog
+                      for line in open(mrbumplog):
+                        if re.search('^(\d)\s*loc0_', line):
+                         if not re.search('method', line):
+                           print line
+                           resultslog.write(line)
+              resultslog.close()
+              sys.exit()
+
+
+
 
 if MISSING_DOMAINS == True:
   if  CLUSTER:
