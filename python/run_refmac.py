@@ -51,7 +51,7 @@ def refmac(xyzin, hklin):
      #print split
      SCORE = split[2]
   
-  return os.path.join(cur_dir, 'refind.mtz'), os.path.join(cur_dir, 'refind.pdb'), SCORE
+  return os.path.join(cur_dir, 'refined.mtz'), os.path.join(cur_dir, 'refined.pdb'), SCORE
 
 
 #########
