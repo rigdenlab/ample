@@ -367,6 +367,7 @@ class ClusterRun:
       'FIXSG True\n' +
     
       'CHECK False\n' +
+      'PICKLE False\n' +
       'UPDATE False\n' +
       'TRYALL True\n' +
       'USEACORN False\n' +
