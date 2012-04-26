@@ -302,10 +302,14 @@ def get_cell_dimentions(mtz):
 
 #####################
 def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles):
+  """ Run Shelxe to do a c-alpha trace of the output map from MR """
 
+  # Change directory to the shelx directory
   os.chdir(run_dir)
-  os.system('cp '+mtz +' orig.mtz')
-  os.system('cp '+pdb +' orig.pdb')
+  # Copy the mtz and pdb files to this location 
+  shutil.copyfile(mtz, 'orig.mtz')
+  shutil.copyfile(pdb, 'orig.pdb')
+  # Run mtz2hkl to convert mtz file
   mtz2hkl(mtz)
   resolution,FreeR  = get_TFZ_resolution.get_resolution(pdb)
   run_pro(ASU)
@@ -316,7 +320,15 @@ def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles):
   MOLWT = seqwt(fasta)
   solvent = mathews(CELL, SPACE, MOLWT, ASU)
   shelscore, refmacfreeR, HKLOUT, XYZOUT = shelxe(solvent, resolution, NoShelxCycles)
-  print '\nthis rebuild has a CC='+str(shelscore)+' (a CC>=25 is a success), final FreeR='+str(refmacfreeR)+'\n'+XYZOUT+'\n'+HKLOUT
+  # Output the resutlts and the location of the output files
+  sys.stdout.write('\n')
+  if "unable" in str(shelscore).lower():
+     sys.stdout.write('Shelxe was not able to do a c-alpha trace, final FreeR=' + str(refmacfreeR) + '\n')
+  else:
+     sys.stdout.write('This rebuild has a CC=' + str(shelscore) + ' (a CC>=25 is a success), final FreeR=' + str(refmacfreeR) + '\n')
+     sys.stdout.write('Output PDB file:\n    ' + XYZOUT + '\n')
+     sys.stdout.write('Output MTZ file:\n    ' + HKLOUT + '\n')
+  sys.stdout.write('\n')
  # if EarlyTerminate:
  #   if isnumber(shelscore):
  #    if float(shelscore) >25:
@@ -331,5 +343,4 @@ if __name__ == "__main__":
   run_dir = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/phaser_shelx'
   ASU = '1'
   RUN(mtz, pdb, ASU, fasta, run_dir)
-
 
