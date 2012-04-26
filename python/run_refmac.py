@@ -13,13 +13,13 @@ def parse_file(filename):
     """
     
     f = open(filename,'r')
-    
 
     tags = []
     
     for line in f:
         tags.append( line )
         
+    f.close()
     return tags
 ##########
 def refmac(xyzin, hklin):
@@ -29,10 +29,10 @@ def refmac(xyzin, hklin):
   tags = parse_file(xyzin)
   if len(tags) == 0:
 
-    return cur_dir + '/HKLOUT', SCORE
+    return os.path.join(cur_dir, 'refined.mtz'), SCORE
   mr_bump = open(cur_dir + '/refmac_run', "w") 
   mr_bump.write('#!/bin/sh\n')
-  mr_bump.write('refmac5 xyzin ' + xyzin + ' hklin ' + hklin + '<<eof\n')
+  mr_bump.write('refmac5 xyzin ' + xyzin + ' hklin ' + hklin + ' hklout refined.mtz xyzout refined.pdb <<eof\n')
   mr_bump.write('ncyc 1\n')
   mr_bump.write('END\n')
   mr_bump.write('eof\n')
@@ -51,7 +51,7 @@ def refmac(xyzin, hklin):
      #print split
      SCORE = split[2]
   
-  return cur_dir + '/HKLOUT', cur_dir + '/XYZOUT'  , SCORE
+  return os.path.join(cur_dir, 'refind.mtz'), os.path.join(cur_dir, 'refind.pdb'), SCORE
 
 
 #########
