@@ -493,7 +493,7 @@ bump_dir = RunDir+'/MRBUMP'
 
 split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
 run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc)
-Final_display_results.make_log(os.path.join(bump_dir, RunDir, 'Final_results.log'))
+Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
 
 time_stop=time.time()
 elapsed_time= time_stop - time_start
