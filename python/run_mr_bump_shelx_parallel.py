@@ -94,6 +94,7 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU):
   mr_bump.write('FIXSG True\n')
 
   mr_bump.write('CHECK False\n')
+  mr_bump.write('LITE True\n')
   mr_bump.write('PICKLE False\n')
   mr_bump.write('TRYALL True\n')
   mr_bump.write('USEACORN False\n')
@@ -153,6 +154,7 @@ def make_mrbump_desktop_domain(sigf, fp, free, jobid, local_files, mtz, seq, fix
   mr_bump.write('FIXSG True\n')
 
   mr_bump.write('CHECK False\n')
+  mr_bump.write('LITE True\n')
   mr_bump.write('PICKLE False\n')
   mr_bump.write('TRYALL True\n')
   mr_bump.write('USEACORN False\n')
@@ -212,6 +214,7 @@ def make_mrbump_Cluster(sigf, fp, free, jobid, local_files, mtz, seq):
   mr_bump.write('FIXSG True\n')
 
   mr_bump.write('CHECK False\n')
+  mr_bump.write('LITE True\n')
   mr_bump.write('PICKLE False\n')
   mr_bump.write('TRYALL True\n')
   mr_bump.write('USEACORN False\n')
