@@ -14,7 +14,6 @@ import get_TFZ_resolution
 import run_refmac
 #import local_map_correlation
 
-
 def isnumber(n):
   try :
       float(n)

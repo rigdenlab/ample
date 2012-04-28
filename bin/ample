@@ -94,7 +94,6 @@ def check_for_exe(exename, varname):
      return exepath
 
 
-
 #-------------------------------------------
 #get command line options
 #-------------------------------------------
@@ -629,7 +628,7 @@ if not var_args['ensembler'] is None:
 
 #--------------------------------------------
 #give the run file to check
-	#---------------------------------------------
+#---------------------------------------------
 
 Run_params = open(RunDir +'/Params_used', "w")
 if DEBUG == True:# if debug is on print stuff out
@@ -1500,6 +1499,7 @@ bump_dir = os.path.join(RunDir, 'MRBUMP')
 os.mkdir(bump_dir)
 os.chdir(bump_dir)
 ResultsPath = RunDir+'/RESULTS'
+
 if MISSING_DOMAINS == False:
    if CLUSTER:
       sys.stdout.write("Running MR and model building on a cluster\n\n")
