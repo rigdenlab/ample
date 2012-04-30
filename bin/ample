@@ -94,6 +94,7 @@ def check_for_exe(exename, varname):
      return exepath
 
 
+
 #-------------------------------------------
 #get command line options
 #-------------------------------------------
@@ -628,7 +629,7 @@ if not var_args['ensembler'] is None:
 
 #--------------------------------------------
 #give the run file to check
-#---------------------------------------------
+	#---------------------------------------------
 
 Run_params = open(RunDir +'/Params_used', "w")
 if DEBUG == True:# if debug is on print stuff out
@@ -843,6 +844,7 @@ print '\nAll needed programs are found, continuing Run\n'
 #---------------------------
 #make a copy of params
 #
+
 Run_params = open(RunDir +'/Params_used', "w")
 Run_params.write('input params\n')
 if DEBUG == True:
@@ -869,7 +871,7 @@ Run_params.close()
 #-----------------------------------
 #Do The Modelling
 #-----------------------------------
-
+seedlog = open(RunDir+'/seedlist', "w")
 time_start=time.time()
 RUNNING=open( RunDir +'/ROSETTA.log', "w")
 
@@ -1139,6 +1141,18 @@ if MakeModels == False:
 RUNNING.write('\nModelling complete - models stored in:\n   '+PATH_TO_MODELS+'\n\n')
 sys.stdout.write('\n\nModelling complete - models stored in:\n   '+PATH_TO_MODELS+'\n\n')
 
+###############get seedlist
+if CLUSTER:
+   for seed in seed_list:
+     seedlog.write(str(seed) + '\n')
+
+   seedlog.close()
+else:
+   for seed in  previous_seeds:
+      seedlog.write(str(seed) + '\n')
+   seedlog.close()
+
+
 #--------------------------------------------
 #check if models are present regardless
 #--------------------------------------------
@@ -1314,17 +1328,26 @@ if ENSEMBLE_import ==False:
                jobID=jobID+1
             mrBuild.monitorQueue()
 
+            shutil.rmtree(RunDir+'/fine_cluster_'+str(samples))
+            shutil.rmtree(RunDir+'/pre_models')
+            for l in os.listdir(RunDir+'/spicker_run'):
+              if os.path.splitext(l)[1] == 'pdb':
+                   os.remove(RunDir+'/spicker_run/'+l)
+            os.remove(RunDir+'/spicker_run/rep1.tra1')
+
+
+
             #cleanup
-            for each_run in os.listdir(mrBuildClusterDir ):
-               if os.path.isdir(  os.path.join(mrBuildClusterDir, each_run)):
-                  name=re.split('_', each_run)
-                  mrBuildOutputDir=os.path.join(bump_dir, "cluster_run"+str(samples)+"result"+name[1]) 
-                  os.mkdir(mrBuildOutputDir)                   
-                  shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","phaser_shelx" ),mrBuildOutputDir  )
-                  shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","molrep_shelx" ),mrBuildOutputDir  )  
-                  shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","data" ),mrBuildOutputDir  )               
-                  shutil.move (os.path.join(mrBuildClusterDir, each_run, "logs" ),mrBuildOutputDir  )               
-            shutil.rmtree(mrBuildClusterDir)
+           # for each_run in os.listdir(mrBuildClusterDir ):
+            #   if os.path.isdir(  os.path.join(mrBuildClusterDir, each_run)):
+            #      name=re.split('_', each_run)
+            #      mrBuildOutputDir=os.path.join(bump_dir, "cluster_run"+str(samples)+"result"+name[1]) 
+            #      os.mkdir(mrBuildOutputDir)                   
+            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","phaser_shelx" ),mrBuildOutputDir  )
+            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","molrep_shelx" ),mrBuildOutputDir  )  
+            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","data" ),mrBuildOutputDir  )               
+            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "logs" ),mrBuildOutputDir  )               
+            #shutil.rmtree(mrBuildClusterDir)
    
       # Monitor the cluster queue to see when all jobs have finished
 
@@ -1391,17 +1414,27 @@ if ENSEMBLE_import ==False:
                jobID=jobID+1
             mrBuild.monitorQueue()
 
+            shutil.rmtree(RunDir+'/fine_cluster_'+str(samples))
+            shutil.rmtree(RunDir+'/pre_models')
+            for l in os.listdir(RunDir+'/spicker_run'):
+              if os.path.splitext(l)[1] == 'pdb':
+                   os.remove(RunDir+'/spicker_run/'+l)
+            os.remove(RunDir+'/spicker_run/rep1.tra1')
+
+
+
+
             #cleanup
-            for each_run in os.listdir(mrBuildClusterDir ):
-               if os.path.isdir(  os.path.join(mrBuildClusterDir, each_run)):
-                  name=re.split('_', each_run)
-                  mrBuildOutputDir=os.path.join(bump_dir, "cluster_run"+str(samples)+"result"+name[1]) 
-                  os.mkdir(mrBuildOutputDir)                   
-                  shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","phaser_shelx" ),mrBuildOutputDir  )
-                  shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","molrep_shelx" ),mrBuildOutputDir  )  
-                  shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","data" ),mrBuildOutputDir  )               
-                  shutil.move (os.path.join(mrBuildClusterDir, each_run, "logs" ),mrBuildOutputDir  )               
-            shutil.rmtree(mrBuildClusterDir)
+            #for each_run in os.listdir(mrBuildClusterDir ):
+            #   if os.path.isdir(  os.path.join(mrBuildClusterDir, each_run)):
+            #      name=re.split('_', each_run)
+            #      mrBuildOutputDir=os.path.join(bump_dir, "cluster_run"+str(samples)+"result"+name[1]) 
+            #      os.mkdir(mrBuildOutputDir)                   
+            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","phaser_shelx" ),mrBuildOutputDir  )
+            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","molrep_shelx" ),mrBuildOutputDir  )  
+            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","data" ),mrBuildOutputDir  )               
+            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "logs" ),mrBuildOutputDir  )               
+            #shutil.rmtree(mrBuildClusterDir)
    
 #-------------------------------------
         else:
@@ -1499,7 +1532,6 @@ bump_dir = os.path.join(RunDir, 'MRBUMP')
 os.mkdir(bump_dir)
 os.chdir(bump_dir)
 ResultsPath = RunDir+'/RESULTS'
-
 if MISSING_DOMAINS == False:
    if CLUSTER:
       sys.stdout.write("Running MR and model building on a cluster\n\n")
