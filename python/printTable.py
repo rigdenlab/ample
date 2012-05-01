@@ -54,7 +54,7 @@ class Table:
 
 
 
-
+   
 
 
 
@@ -136,24 +136,65 @@ class Table:
 
 
        if self.cluster == True:
-
+           table = []
            for run in os.listdir(self.bumppath):
-             if os.path.exists():
-               if re.search('search', run): 
-                   print run 
-                   name = re.split('_', run)
-                   sidechains = name[1]
-                   if sidechains == 'SCWRL':
-                       trunc = name[5]
-                       rad = name[7]
-                   else:
-                       trunc = name[4]
-                       rad = name[6] 
-                   trunc = str(round(float(trunc)))
+            if os.path.isdir(os.path.join(self.bumppath, run  )):
+             #phaser
+             #print os.path.join(self.bumppath, run  )
+             for search in os.listdir(os.path.join(self.bumppath, run  )):
+                   if re.search('search' , search):
+                         phaser = ''
+                         molrep = ''
+                         phaserCC ='none'
+                         phasersucc = ''
+                         phaserFreeR = ''
+                         molrepFreeR = ''
+                         if os.path.exists(os.path.join(self.bumppath, run , search, 'phaser_shelx' )):
+                            print 'got' , os.path.join(self.bumppath, run , search, 'phaser_shelx' )
+                            for pdb in os.listdir(os.path.join(self.bumppath, run , search, 'phaser_shelx' )):
+                                     if re.search('refmac_phaser', pdb):
+                                         print pdb  
+
+                                         name = re.split('_', pdb)
+                                         print name                  
+                                         sidechains = name[4]
+                                         if sidechains == 'SCWRL':
+                                               trunc = name[8]
+                                         else:
+                                               trunc = name[7]
+                                         print trunc
+                                         trunc = str(round(float(trunc)))
+                                         if os.path.exists(os.path.join(self.bumppath, run , search, 'phaser_shelx', 'orig.pdb' )):
+                                                 
+                                             for line in  open(os.path.join(self.bumppath, run,search, 'phaser_shelx', 'orig.pdb' )):
+                                                 if re.search('CC', line):
+                                                     split = re.split('CC\s*=\s*(\d*\.\d*)',line)
+                                                     score = split[1]
+                                                     phaserCC = score
+                                         if phaserCC != 'none':
+                                            if float(phaserCC) > 25:
+                                                phasersucc = 'Solution'
+                                            else:
+                                                phasersucc = ''
+                                            table.append([phasersucc,'',trunc, sidechains, 'Phaser',phaserFreeR,float(phaserCC)])  
 
 
+                                         if os.path.exists(os.path.join(self.bumppath, run , search, 'molrep_shelx', 'orig.pdb' )):
+                                                 
+                                             for line in  open(os.path.join(self.bumppath, run, search, 'molrep_shelx', 'orig.pdb' )):
+                                                 if re.search('CC', line):
+                                                     split = re.split('CC\s*=\s*(\d*\.\d*)',line)
+                                                     score = split[1]
+                                                     molrepCC = score
 
+                                         if molrepCC != 'none':
+                                            if float(molrepCC) > 25:
+                                                molrepsucc = 'Solution'
+                                            else:
+                                                molrepsucc = ''
+                                            table.append([molrepsucc,'',trunc, sidechains, 'Molrep',molrepFreeR,float(molrepCC)])
 
+    
 
 
        table.sort(key=lambda x: x[6])
@@ -177,12 +218,12 @@ class Table:
 
 if __name__ == "__main__":
     T=Table()
-    T.bumppath = '/home/jaclyn/Ample_tests/toxd-example/ROSETTA_MR_1/MRBUMP_cluster1'
-    T.cluster = False
+    T.bumppath = '/data2/jac45/tox/toxd-example/ROSETTA_MR_0/MRBUMP/cluster_run1'
+    T.cluster = True
     table = T.maketable()
     out = sys.stdout
     T.pprint_table(out, table)  
-    
+    print 'done'    
 
     table = [["", "Ensemble No", "Truncation level", "Side chain type", "MR program", "Final Rfree", "Shelxe CC"],
         ["spam", 1, 2, "All", "Phaser", 0.25, 23.51],
