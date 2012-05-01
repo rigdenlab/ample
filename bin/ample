@@ -47,7 +47,7 @@ import SCWRL_edit, Final_display_results
 import run_mr_bump_shelx_parallel
 import fasta_parser
 import run_spicker
-
+import printTable
 ###############
 
 #get a program test for existsnce
@@ -1337,8 +1337,13 @@ if ENSEMBLE_import ==False:
               if os.path.splitext(l)[1] == 'pdb':
                    os.remove(RunDir+'/spicker_run/'+l)
             os.remove(RunDir+'/spicker_run/rep1.tra1')
-
-
+            T=printTable.Table()
+           
+            T.bumppath = mrBuildClusterDir
+            T.cluster = True
+            table = T.maketable()
+            out = sys.stdout
+            T.pprint_table(out, table)
 
             #cleanup
            # for each_run in os.listdir(mrBuildClusterDir ):
@@ -1369,6 +1374,13 @@ if ENSEMBLE_import ==False:
             run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles)
             if NoShelx == False: 
               Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
+              T=printTable.Table()
+              T.bumppath = RunDir +'/MRBUMP_cluster'+str(samples)
+              T.cluster = False
+              table = T.maketable()
+              out = sys.stdout
+              T.pprint_table(out, table)
+
             if NoShelx ==  True:
               resultslog = open(ResultsPath+'/Results.log', "w")
               print 'getting results from:'
@@ -1491,6 +1503,9 @@ if ENSEMBLE_import ==False:
            'SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871\n'+
 
            'MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/\n')
+
+
+
     RUNNING.flush()
     RUNNING.close()
 
