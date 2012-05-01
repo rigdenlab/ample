@@ -47,6 +47,7 @@ import SCWRL_edit, Final_display_results
 import run_mr_bump_shelx_parallel
 import fasta_parser
 import run_spicker
+
 ###############
 
 #get a program test for existsnce
@@ -1137,11 +1138,13 @@ if MakeModels == True:
      ####### keep or delete run files
 if MakeModels == False:
   PATH_TO_MODELS = MODELS_LOCATION
-
+  previous_seeds = []
+  seed_list = []
 RUNNING.write('\nModelling complete - models stored in:\n   '+PATH_TO_MODELS+'\n\n')
 sys.stdout.write('\n\nModelling complete - models stored in:\n   '+PATH_TO_MODELS+'\n\n')
 
 ###############get seedlist
+
 if CLUSTER:
    for seed in seed_list:
      seedlog.write(str(seed) + '\n')
