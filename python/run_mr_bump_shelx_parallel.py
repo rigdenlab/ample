@@ -363,7 +363,7 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
 
         ASU = pdbcur(phaser_pdb)
 
-        phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path, EarlyTerminate, NoShelxCycles)  ####### NEEDS correct ASU, solvent content!!
+        phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path, EarlyTerminate, NoShelxCycles, run_dir)  ####### NEEDS correct ASU, solvent content!!
 
    #molrep output:
    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz' ):
@@ -381,7 +381,7 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
 
         ASU = pdbcur(molrep_pdb)
 
-        molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, SPACE = run_shelx.RUN(molrep_mtz, molrep_pdb, ASU, fasta, shelx_molrep_path, EarlyTerminate, NoShelxCycles)  ####### NEEDS correct ASU, solvent content!!
+        molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, SPACE = run_shelx.RUN(molrep_mtz, molrep_pdb, ASU, fasta, shelx_molrep_path, EarlyTerminate, NoShelxCycles, run_dir)  ####### NEEDS correct ASU, solvent content!!
 
     
    # if the data is there, return data
@@ -496,7 +496,7 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
 
      if isnumber(phaser_shelxscore):
        if float(phaser_shelxscore) > 25:
-         print 'Found a Solution '+ phaser_pdb
+         #print 'Found a Solution '+ phaser_pdb
          #phaser_shelxscore =re.sub('\.','_', phaser_shelxscore)
          #phaser_refmacfreeR=re.sub('\.','_', phaser_refmacfreeR)
 
@@ -508,7 +508,7 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
             sys.exit()
      if isnumber(molrep_shelxscore): 
       if float(molrep_shelxscore) > 25:
-         print 'Found a Solution '+ molrep_pdb
+         #print 'Found a Solution '+ molrep_pdb
          #molrep_shelxscore =re.sub('\.','_', molrep_shelxscore)
          #molrep_refmacfreeR=re.sub('\.','_', molrep_refmacfreeR)
 
@@ -586,22 +586,27 @@ def split_into_runs_domains(mtz, ensembles, run_dir, fasta,  nProc, fixed_PDB, F
 
 if __name__ == "__main__":
  ensembles=[]
- for infile in glob.glob( os.path.join('/home/jaclyn/BEE/new_case/jerome_dabin/first_run/tests/ROSETTA_MR_1/ensembles_1', '*.pdb') ):
+ for infile in glob.glob( os.path.join('/home/jaclyn/Ample_tests/toxd-example/ensembles_1', '*.pdb') ):
+  print infile
   ensembles.append(infile)
 
- mtz = '/home/jaclyn/BEE/new_case/jerome_dabin/first_run/tests/peclysna-oP_roscoff_res18_unique1.mtz'
- fasta = '/home/jaclyn/BEE/new_case/jerome_dabin/first_run/hom_section/hom.fas'
- run_dir = '/home/jaclyn/BEE/new_case/jerome_dabin/first_run/tests/ROSETTA_MR_1/MRBUMP'
+ mtz = '/home/jaclyn/Ample_tests/toxd-example/1dtx.mtz'
+ fasta = '/home/jaclyn/Ample_tests/toxd-example/toxd_.fasta'
+ run_dir = '/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP'
  nproc = 1
  #'fixed_pdb='/home/jaclyn/DOMAINS/ample/TEST/1al6/Known.pdb'
- sigf = 'SIGF_nat'
- FP = 'F_nat'
+ sigf = 'SIGFP'
+ FP = 'FP'
  free = 'FreeR_flag'
+ EarlyTerminate = False
+ Resultspath = '/home/jaclyn/Ample_tests/toxd-example/Ro'
+ NoShelx = False
+ NoShelxCycles = 1
+ noASU = '1'
 
- 
  chunk = split(ensembles, nproc)
  #'split_into_runs_domains(mtz, chunk, run_dir, fasta, nproc, fixed_pdb)
- split_into_runs(mtz, chunk, run_dir, fasta, nproc,  sigf, FP, free)
+ split_into_runs(mtz,chunk  , run_dir, fasta,  nproc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles)
 ###s
 
 

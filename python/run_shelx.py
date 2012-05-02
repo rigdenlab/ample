@@ -13,7 +13,7 @@ from subprocess import PIPE, Popen
 import get_TFZ_resolution
 import run_refmac
 #import local_map_correlation
-
+import printTable
 
 def isnumber(n):
   try :
@@ -85,7 +85,7 @@ def try_theseus(cmd):#  theseus can fail so try Run a command with a timeout aft
 
 #######
 def mtz2hkl(mtz):
-    print 'converting mtz tp hkl'
+    print 'converting mtz to hkl'
     mtz2hkl = os.environ.get("mtz2hkl")
     mtz2hkl = check_for_exe("mtz2hkl"  , mtz2hkl )
    # print mtz2hkl
@@ -301,7 +301,7 @@ def get_cell_dimentions(mtz):
 
 
 #####################
-def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles):
+def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles, BumpDir):
   """ Run Shelxe to do a c-alpha trace of the output map from MR """
 
   # Change directory to the shelx directory
@@ -322,13 +322,47 @@ def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles):
   shelscore, refmacfreeR, HKLOUT, XYZOUT = shelxe(solvent, resolution, NoShelxCycles)
   # Output the resutlts and the location of the output files
   sys.stdout.write('\n')
+
+  sys.stdout.write('###########################################################################################\n')
+  sys.stdout.write('###########################################################################################\n')
+  sys.stdout.write('##                                                                                       ##\n')
+  sys.stdout.write('##                                                                                       ##\n')
+
+  sys.stdout.write('  Job complete: ')
   if "unable" in str(shelscore).lower():
      sys.stdout.write('Shelxe was not able to do a c-alpha trace, final FreeR=' + str(refmacfreeR) + '\n')
   else:
      sys.stdout.write('This rebuild has a CC=' + str(shelscore) + ' (a CC>=25 is a success), final FreeR=' + str(refmacfreeR) + '\n')
-     sys.stdout.write('Output PDB file:\n    ' + XYZOUT + '\n')
-     sys.stdout.write('Output MTZ file:\n    ' + HKLOUT + '\n')
+
+  T=printTable.Table()
+  T.bumppath = BumpDir
+  T.cluster = False
+  table = T.maketable()
+  out = sys.stdout
+  sys.stdout.write('\n\n  Overall Summary:\n\n')
+  T.pprint_table(out, table)
+  sys.stdout.write('\n\n') 
+
+
+  if "unable" in str(shelscore).lower():
+     sys.stdout.write('\n')
+  else:
+     sys.stdout.write('  Output files for best solution: \n\n')
+     sys.stdout.write('  Output PDB file:\n      ' + XYZOUT + '\n')
+     sys.stdout.write('  Output MTZ file:\n      ' + HKLOUT + '\n')
+
+  sys.stdout.write('##                                                                                       ##\n')
+  sys.stdout.write('##                                                                                       ##\n')
+  sys.stdout.write('###########################################################################################\n')
+  sys.stdout.write('###########################################################################################\n')
+
+
+
   sys.stdout.write('\n')
+
+
+
+
  # if EarlyTerminate:
  #   if isnumber(shelscore):
  #    if float(shelscore) >25:
@@ -342,5 +376,8 @@ if __name__ == "__main__":
   fasta = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/fasta'
   run_dir = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/phaser_shelx'
   ASU = '1'
+  EarlyTerminate = False
+  NoShelxCycles = 1
+  BumpDir = '/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP'
   RUN(mtz, pdb, ASU, fasta, run_dir)
 

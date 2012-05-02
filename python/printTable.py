@@ -65,7 +65,7 @@ class Table:
        if self.cluster == False:
            for run in os.listdir(self.bumppath):
                if re.search('search', run): 
-                   print run 
+                  # print run 
                    name = re.split('_', run)
                    sidechains = name[1]
                    if sidechains == 'SCWRL':
@@ -95,7 +95,7 @@ class Table:
                                                  phaserFreeR = score  
 
                       
-                   print phaserCC 
+                   #print phaserCC 
                    if phaserCC != 'none': 
                       if float(phaserCC) > 25:
                          phasersucc = 'Solution'
@@ -125,7 +125,7 @@ class Table:
                                                  score = split[2]
                                                  molrepFreeR = score   
                       
-                   print molrepCC 
+                   #print molrepCC 
                    if molrepCC  != 'none':
                       if float(molrepCC) > 25:
                          molrepsucc = 'Solution'
@@ -201,7 +201,7 @@ class Table:
        table = table[::-1]
        x=1
        for i in table:
-           print i
+          # print i
            i[1] = x
            x+=1
        table.insert(0,["", "Ensemble No", "Truncation level", "Side chain type", "MR program", "Final Rfree", "Shelxe CC"] )
@@ -218,8 +218,8 @@ class Table:
 
 if __name__ == "__main__":
     T=Table()
-    T.bumppath = '/data2/jac45/tox/toxd-example/ROSETTA_MR_0/MRBUMP/cluster_run1'
-    T.cluster = True
+    T.bumppath = '/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP'
+    T.cluster = False
     table = T.maketable()
     out = sys.stdout
     T.pprint_table(out, table)  
