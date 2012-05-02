@@ -85,7 +85,7 @@ def try_theseus(cmd):#  theseus can fail so try Run a command with a timeout aft
 
 #######
 def mtz2hkl(mtz):
-    print 'converting mtz to hkl'
+    #print 'converting mtz to hkl'
     mtz2hkl = os.environ.get("mtz2hkl")
     mtz2hkl = check_for_exe("mtz2hkl"  , mtz2hkl )
    # print mtz2hkl
@@ -105,7 +105,7 @@ def mtz2hkl(mtz):
       sys.exit()
 #########
 def run_pro(ASU):
-    print 'running shelpro' 
+    #print 'running shelpro' 
     shelxpro = os.environ.get("shelxpro")
     shelxpro = check_for_exe("shelxpro"  , shelxpro )
     #print shelxpro
@@ -128,7 +128,7 @@ def run_pro(ASU):
 
 ########
 def shelxl():
-    print 'runing shelxl'  
+    #print 'runing shelxl'  
     shelxl = os.environ.get("shelxl")
     shelxl = check_for_exe("shelxl"  , shelxl )
     #print shelxl
@@ -146,7 +146,7 @@ def shelxl():
       sys.exit()
 #####################
 def shelxe(solvent, resolution, NoShelxCycles):
-    print 'running shelxe'
+    #print 'running shelxe'
     shelxe = os.environ.get("shelxe")
     shelxe = check_for_exe("shelxe"  , shelxe )
    # print shelxe, 'resolution', resolution

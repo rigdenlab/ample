@@ -356,7 +356,7 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
        os.system('cp '+phaser_pdb + '  '+Resultspath    )
 
      if NoShelx == False:
-        print '---found  phaser output, rebuilding---'
+        print '---found  phaser output, rebuilding in shelx---'
         shelx_phaser_path = run_dir+ '/search_' +name + '_mrbump/phaser_shelx'
         os.system('mkdir ' +shelx_phaser_path)
         os.chdir(shelx_phaser_path)
@@ -374,7 +374,7 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
          os.system('cp '+molrep_pdb + '  '+Resultspath    )
 
      if NoShelx == False:
-        print '---found molrep output, rebuilding---'
+        print '---found molrep output, rebuilding in shelx---'
         shelx_molrep_path = run_dir+ '/search_' +name + '_mrbump/molrep_shelx'
         os.system('mkdir ' +shelx_molrep_path)
         os.chdir(shelx_molrep_path)
