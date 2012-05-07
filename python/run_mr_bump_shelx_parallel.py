@@ -70,7 +70,7 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU):
 
   mr_bump.write('LABIN ' + sigf + ' ' + fp + ' ' + free + '\n')
   mr_bump.write('JOBID '+ jobid+ '_mrbump\n')
-  mr_bump.write('MRPROGRAM phaser molrep\n')
+  mr_bump.write('MRPROGRAM molrep phaser\n')
   mr_bump.write('LOCALFILE ' + local_files + ' CHAIN ALL RMS 0.1\n')
 
 
@@ -129,7 +129,7 @@ def make_mrbump_desktop_domain(sigf, fp, free, jobid, local_files, mtz, seq, fix
 
   mr_bump.write('LABIN ' + sigf + ' ' + fp + ' ' + free + '\n')
   mr_bump.write('JOBID '+ jobid+ '_mrbump\n')
-  mr_bump.write('MRPROGRAM phaser molrep\n')
+  mr_bump.write('MRPROGRAM molrep phaser\n')
   mr_bump.write('LOCALFILE ' + local_files + ' CHAIN ALL RMS 0.1\n')
 
   if FIXED_INPUT:

@@ -1332,7 +1332,7 @@ if ENSEMBLE_import ==False:
             mrBuild.monitorQueue()
 
             shutil.rmtree(RunDir+'/fine_cluster_'+str(samples))
-            shutil.rmtree(RunDir+'/pre_models')
+            #shutil.rmtree(RunDir+'/pre_models')
             for l in os.listdir(RunDir+'/spicker_run'):
               if os.path.splitext(l)[1] == 'pdb':
                    os.remove(RunDir+'/spicker_run/'+l)

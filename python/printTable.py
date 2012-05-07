@@ -146,6 +146,7 @@ class Table:
                          phaser = ''
                          molrep = ''
                          phaserCC ='none'
+                         molrepCC ='none'
                          phasersucc = ''
                          phaserFreeR = ''
                          molrepFreeR = ''

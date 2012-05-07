@@ -43,7 +43,8 @@ class ClusterRun:
       self.MTZresolution=0.0
       self.MTZcolLabels=dict([])
 
-      self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
+      #self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
+      self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
 
       self.ALLATOM=False
       self.debug=True
@@ -350,7 +351,7 @@ class ClusterRun:
       file.write('mrbump HKLIN ' + self.HKLIN + ' SEQIN ' + self.SEQIN +' HKLOUT ' + 'OUT.mtz  XYZOUT OUT.pdb << eof\n' +
       'LABIN ' + "F=" + self.LABIN["F"] + ' ' + "SIGF=" + self.LABIN["SIGF"] + ' ' + "FreeR_flag=" + self.LABIN["FreeR_flag"] + '\n' +
       'JOBID '+ str(jobID) + '_mrbump\n' +
-      'MRPROGRAM phaser molrep\n' +
+      'MRPROGRAM molrep phaser\n' +
       'LOCALFILE ' + ensemblePDB + ' CHAIN ALL RMS 0.1\n' +
     
       'SCOPSEARCH False\n' +
@@ -394,6 +395,8 @@ class ClusterRun:
                               + ' ' + str(matthews_coef.best_solvent) 
                               + ' ' + str(self.MTZresolution) 
                               + " PHASER"
+                              + " " + self.LABIN["F"] 
+                              + " " + self.LABIN["SIGF"] 
                               + " " + self.LABIN["FreeR_flag"] + "\n\n" +
       'popd\n\n' +
       'cp ' + phaserPDB +' ' +os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n' +
@@ -405,42 +408,44 @@ class ClusterRun:
                               + ' ' + str(matthews_coef.best_solvent) 
                               + ' ' + str(self.MTZresolution) 
                               + " MOLREP"
+                              + " " + self.LABIN["F"] 
+                              + " " + self.LABIN["SIGF"] 
                               + " " + self.LABIN["FreeR_flag"] + "\n\n" +
       'popd\n\n' +
       'cp ' + molrepPDB+' ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
     
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'logs')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'input')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'models')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'PDB_files')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'results')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'scratch') +'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'sequences')+'\n\n' +
-
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.ins')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.mtz') +'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.pro')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.ps')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.fcf')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.hkl')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.res')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.phs')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.hat')+'\n\n' +
-
-
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.ins')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.mtz')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.pro')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.ps')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.fcf')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.hkl')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.res')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.phs')+'\n\n' + 
-      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.hat')+'\n\n' +
-
-      'rm -r '+os.path.join(jobDir, 'OUT.pdb')+'\n\n' +
-      'rm -r '+os.path.join(jobDir, 'OUT.mtz')+'\n\n' +
+      #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data')+'\n\n' +
+      #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'logs')+'\n\n' +
+      #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'input')+'\n\n' +
+      #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'models')+'\n\n' +
+      #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'PDB_files')+'\n\n' +
+      #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'results')+'\n\n' +
+      #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'scratch') +'\n\n' +
+      #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'sequences')+'\n\n' +
+#
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.ins')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.mtz') +'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.pro')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.ps')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.fcf')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.hkl')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.res')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.phs')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.hat')+'\n\n' +
+#
+#
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.ins')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.mtz')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.pro')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.ps')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.fcf')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.hkl')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.res')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.phs')+'\n\n' + 
+#      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.hat')+'\n\n' +
+#
+#      'rm -r '+os.path.join(jobDir, 'OUT.pdb')+'\n\n' +
+#      'rm -r '+os.path.join(jobDir, 'OUT.mtz')+'\n\n' +
       'popd\n' +  
       
       '\n\n')
