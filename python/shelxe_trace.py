@@ -57,7 +57,11 @@ class Shelx:
       self.script=""
 
       self.labin=dict([])
-      self.debug=False
+
+      try:
+         self.debug=eval(os.environ['AMPLE_DEBUG'])
+      except:
+         self.debug=False
 
       self.mtz2variousLogfile="mtz2various.log"
       self.shelxeLogfile="shelxe.log"
@@ -249,7 +253,7 @@ class Shelx:
 
       if self.debug == False:
         for file in self.hklinFile, "shelxe-input.hkl", "shelxe-input.pdb", \
-                    "shelxe-input.pha", "shelxe-input.lst", "shelxe-input.hat", \
+                    "shelxe-input.pha", "shelxe-input.hat", \
                     phsoutFile, "shelxe-input.pda": 
            if os.path.isfile(file):
               os.remove(file) 
