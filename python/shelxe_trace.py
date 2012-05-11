@@ -93,7 +93,7 @@ class Shelx:
 
       self.script += command_line + " << eof\n"
 
-      key  = "LABIN FP=%s SIGFP=%s FREE=%s\n" % (FP, SIGFP, FREE)
+      key  = "LABIN FP=%s SIGFP=%s FREE=%s\n" % (fp, sigfp, free)
       key += "OUTPUT SHELX\n"
       key += "FSQUARED\n"
       key += "END\n"
