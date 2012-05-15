@@ -55,6 +55,8 @@ class Shelx:
       self.molrepShelxPDB="Not set"
       self.shelxScriptFile="shelx-script.sh"
       self.script=""
+      self.PDBspacegroup=""
+      self.PDBCRYST1Line=""
 
       self.labin=dict([])
 
@@ -83,6 +85,41 @@ class Shelx:
       
       return status
 
+   def parsePDBfileSG(self, pdbfile):
+      """ Check to see if the space group is P -1 """
+   
+      cryst1Line=""
+      if os.path.isfile(pdbfile):
+         f=open(pdbfile, "r")
+         line=f.readline()
+         while line:
+            if "CRYST1" in line[0:6]:
+               self.PDBspacegroup=string.join(string.split(line)[7:]).replace(" ","").upper()
+               self.PDBCRYST1Line=line
+               if self.PDBspacegroup == "P-1":
+                  sys.stdout.write("Warning: Shelxe - changing input spacegroup in pda file from P -1 to P 1\n")
+                  cryst1Line=line.replace("-1", "1")
+            line=f.readline()
+   
+         f.close()
+         if self.PDBspacegroup == "P-1":
+            f=open(pdbfile, "r")
+            lines=f.readlines()
+            f.close()
+            import random
+            tempfile=os.path.join(os.environ["CCP4_SCR"], "shelxe-pdb_sgp1_" + str(random.random()).replace(".","") + ".tmp")
+            o=open(tempfile,"w")
+            for line in lines:
+               if "CRYST1" not in line[0:6]:
+                  o.write(line)
+               else:
+                  o.write(cryst1Line)
+            o.close()
+            os.remove(pdbfile)
+            shutil.move(tempfile, pdbfile)
+      else:
+         sys.stdout.write("Warning: Shelxe pdb file correction - pdb file could not be found\n")
+   
    def runMtz2Various(self, mtzinFile, fp="FP", sigfp="SIGFP", free="FreeR_flag"):
       """ Run mtz2various to convert the MTZ file for Shelxe """
 
@@ -185,6 +222,8 @@ class Shelx:
       if os.path.isfile("shelxe-input.pda"):
          os.remove("shelxe-input.pda")
       shutil.copyfile(self.pdbinFile, "shelxe-input.pda")
+      #Check the input PDA file for SG P -1
+      self.parsePDBfileSG("shelxe-input.pda")
       self.script += "cp %s shelxe-input.pda\n\n" % self.pdbinFile
 
       command_line='shelxe shelxe-input.pda -a' + str(traceCycles) + ' -q -s' + str(frac_solvent) + ' -h -z -b -l5' + free_lunch
@@ -250,6 +289,24 @@ class Shelx:
             self.phaserBestCC=score 
          if mrProgram.upper() == "MOLREP": 
             self.molrepBestCC=score 
+
+         # Set SG back to P -1 if that what is what it was originally
+         if self.PDBspacegroup=="P-1":
+            f=open(self.pdboutFile, "r")
+            lines=f.readlines()
+            f.close()
+            import random
+            tempfile=os.path.join(os.environ["CCP4_SCR"], "shelxe-pdb_sgp-1_" + str(random.random()).replace(".","") + ".tmp")
+            o=open(tempfile, "w")
+            for line in lines:
+               if "CRYST1" not in line:
+                  o.write(line)
+               else:
+                  o.write(self.PDBCRYST1Line)
+            o.close()
+            os.remove(self.pdboutFile)
+            shutil.move(tempfile, self.pdboutFile)
+
 
       if self.debug == False:
         for file in self.hklinFile, "shelxe-input.hkl", "shelxe-input.pdb", \
