@@ -9,6 +9,7 @@ import run_shelx
 from multiprocessing import Process, Queue, JoinableQueue, Pool, Value, Array
 import shutil
 
+
 def get_flags (mtz):
   sigf = 'SIGF='
   FP = 'F='
@@ -363,7 +364,11 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
 
         ASU = pdbcur(phaser_pdb)
 
-        phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path, EarlyTerminate, NoShelxCycles, run_dir)  ####### NEEDS correct ASU, solvent content!!
+        phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path, EarlyTerminate, NoShelxCycles, run_dir)  ####### NEEDS correct ASU, solvent content!! 
+
+       
+
+
 
    #molrep output:
    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz' ):

@@ -160,7 +160,7 @@ def shelxe(solvent, resolution, NoShelxCycles):
     cur_dir = os.getcwd()
     mtz2hkl_run = open(cur_dir + '/shelxe', "w")
     mtz2hkl_run.write('#!/bin/sh\n')
-    mtz2hkl_run.write(shelxe +' orig -a'+str(NoShelxCycles)+' -q -s0.'+str(solvent)+' -h -z -l5 -b '+ free_lunch)
+    mtz2hkl_run.write(shelxe +' orig.pda -a'+str(NoShelxCycles)+' -q -s0.'+str(solvent)+' -h -z -l5 -b '+ free_lunch)
     mtz2hkl_run.close()
     os.system('chmod uoga=wrx '+ cur_dir + '/shelxe')
     os.system(cur_dir + '/shelxe >RESULT')
@@ -202,7 +202,7 @@ def mathews(CELL, SPACE, MOLWT, ASU):
    mat.write ('#!/bin/sh\n'+
    'matthews_coef <<eof\n'+
    'MOLW ' + MOLWT + '\n'+
-   'CELL ' + CELL +'\n'+
+   'CELL ' + CELL.rstrip('\n') +'\n'+
    'SYMMETRY ' + SPACE+'\n'+
    'AUTO \n'+
    'END\n'+
@@ -308,13 +308,12 @@ def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles, BumpDir):
   os.chdir(run_dir)
   # Copy the mtz and pdb files to this location 
   shutil.copyfile(mtz, 'orig.mtz')
-  shutil.copyfile(pdb, 'orig.pdb')
+  shutil.copyfile(pdb, 'orig.pda')
   # Run mtz2hkl to convert mtz file
   mtz2hkl(mtz)
   resolution,FreeR  = get_TFZ_resolution.get_resolution(pdb)
-  run_pro(ASU)
-  shelxl()
-  resolution,FreeR  = get_TFZ_resolution.get_resolution(pdb)
+  #run_pro(ASU)
+  #shelxl()
   #print resolution,FreeR
   CELL, SPACE = get_cell_dimentions(mtz)
   MOLWT = seqwt(fasta)
@@ -371,13 +370,13 @@ def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles, BumpDir):
   return shelscore, refmacfreeR, HKLOUT, XYZOUT, SPACE
 #####
 if __name__ == "__main__":
-  pdb ='/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/data/loc0_ALL_24/pdbclip/refine/phaser/refmac_phaser_loc0_ALL_24_PDBCLP.pdb'
-  mtz = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/phaser_shelx/orig.mtz'
-  fasta = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/fasta'
-  run_dir = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/phaser_shelx'
+  pdb ='/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP/search_All_atom_trunc_26.441364_rad_3_mrbump/data/loc0_ALL_All_atom_trunc_26.441364_rad_3/pdbclip/refine/phaser/refmac_phaser_loc0_ALL_All_atom_trunc_26.441364_rad_3_PDBCLP.pdb'
+  mtz = '/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP/search_All_atom_trunc_26.441364_rad_3_mrbump/data/loc0_ALL_All_atom_trunc_26.441364_rad_3/pdbclip/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_All_atom_trunc_26.441364_rad_3_PDBCLP.mtz'
+  fasta = '/home/jaclyn/Ample_tests/toxd-example/toxd_.fasta'
+  run_dir = '/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP/search_All_atom_trunc_26.441364_rad_3_mrbump/phaser_shelx'
   ASU = '1'
   EarlyTerminate = False
   NoShelxCycles = 1
   BumpDir = '/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP'
-  RUN(mtz, pdb, ASU, fasta, run_dir)
+  RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles, BumpDir)
 
