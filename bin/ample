@@ -746,10 +746,11 @@ if MakeModels == True:  #only need Rosetta if making models
        line=re.sub('Rosetta','',line)
        Rosetta_version =  string.strip(line)
  print  'Your Rosetta version is'+ line
-        
+ Make_fragents_flags = ''
+      
  if Rosetta_version == '3.3' :
     Make_fragents_exe          =ROSETTA_OVER_PATH+'/rosetta_fragments/make_fragments.pl'
-
+    Make_fragents_flags = ' -noporter '
  if Rosetta_version == '3.4' :
     Make_fragents_exe          =ROSETTA_OVER_PATH+'/rosetta_tools/fragment_tools/make_fragments.pl'
 
@@ -929,12 +930,12 @@ if MakeFrags == True:
   RUNNING.flush()
   frags_dir = RunDir + '/frags'
   os.system('mkdir ' + frags_dir)
-  cmd = Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof '+ nohoms +'>frag_log' 
+  cmd = Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof '+ Make_fragents_flags+' ' + nohoms +'>frag_log' 
   if DEBUG == False:
-    print Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof  ' +nohoms 
+    print Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof  ' + Make_fragents_flags+' ' +nohoms 
 
   if DEBUG == True: 
-      os.system(Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof '+ nohoms +'>frag_log'   ) 
+      os.system(Make_fragents_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof '+ Make_fragents_flags+' ' + nohoms +'>frag_log'   ) 
 
   else:
       p = subprocess.call(cmd, shell = True, stdout=PIPE, stderr=PIPE )
