@@ -373,6 +373,6 @@ if __name__ == "__main__":
       sys.exit(1)
 
    SHELX.runMtz2Various(mtzinFile, fp=FP, sigfp=SIGFP, free=FREE)
-   SHELX.runShelxe(solvent, resolution, mrProgram, pdbinFile, traceCycles=1)
+   SHELX.runShelxe(solvent, resolution, mrProgram, pdbinFile, traceCycles=15)
    SHELX.results(mrProgram)
 
