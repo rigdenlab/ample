@@ -1366,7 +1366,7 @@ if ENSEMBLE_import ==False:
             mrBuild.qList=[]
             jobID=0
             for pdbfile in final_ensembles:
-               mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID)
+               mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, mrbump_programs)
                jobID=jobID+1
             mrBuild.monitorQueue()
 
@@ -1465,7 +1465,7 @@ if ENSEMBLE_import ==False:
             mrBuild.qList=[]
             jobID=0
             for pdbfile in final_ensembles:
-               mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID ,  domain_all_chains_pdb , '0.6')
+               mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID , mrbump_programs,  domain_all_chains_pdb , '0.6')
                jobID=jobID+1
             mrBuild.monitorQueue()
 
@@ -1666,7 +1666,7 @@ if MISSING_DOMAINS == True:
       mrBuild.qList=[]
       jobID=0
       for pdbfile in final_ensembles:
-         mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, domain_all_chains_pdb, 0.6)
+         mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, mrbump_programs, domain_all_chains_pdb, 0.6)
          jobID=jobID+1
 
 
