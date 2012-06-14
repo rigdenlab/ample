@@ -298,7 +298,7 @@ class ClusterRun:
   
       os.chdir(curDir)
   
-   def mrBuildOnCluster(self, clusterDir, ensemblePDB, jobID, fixedPDB="", fixedIDEN=""):
+   def mrBuildOnCluster(self, clusterDir, ensemblePDB, jobID,mrbump_programs, fixedPDB="", fixedIDEN="", ):
       """ Run the molecular replacement and model building on a cluster node """
 
       # Create a cluster submission script for this modelling job
@@ -351,7 +351,7 @@ class ClusterRun:
       file.write('mrbump HKLIN ' + self.HKLIN + ' SEQIN ' + self.SEQIN +' HKLOUT ' + 'OUT.mtz  XYZOUT OUT.pdb << eof\n' +
       'LABIN ' + "F=" + self.LABIN["F"] + ' ' + "SIGF=" + self.LABIN["SIGF"] + ' ' + "FreeR_flag=" + self.LABIN["FreeR_flag"] + '\n' +
       'JOBID '+ str(jobID) + '_mrbump\n' +
-      'MRPROGRAM molrep phaser\n' +
+      'MRPROGRAM '+mrbump_programs+'\n' +
       'LOCALFILE ' + ensemblePDB + ' CHAIN ALL RMS 0.1\n' +
     
       'SCOPSEARCH False\n' +

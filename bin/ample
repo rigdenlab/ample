@@ -254,6 +254,12 @@ parser.add_argument('-NumShelxCyc', metavar='NoShelxCycles', type=str, nargs=1,
                      help='Always use Shelx, if you cant be bothered to ask for the beta version, use this flag (but dont expect it to work)')
 
 
+parser.add_argument('-molreponly', metavar='molreponly', type=str, nargs=1,
+                   help='molreponly')
+
+parser.add_argument('-phaseronly', metavar='phaseronly', type=str, nargs=1,
+                   help='phaseronly')
+
 #convert args to dictionary
 args = parser.parse_args()
  
@@ -627,6 +633,38 @@ if not var_args['ensembler'] is None:
        Ensembler = False
     if re.search('TRUE', D.upper()):
        Ensembler = True  
+
+
+if var_args['molreponly'] is None:
+    molreponly = False
+if not var_args['molreponly'] is None:
+    D= var_args['molreponly'][0]
+    if re.search('FALSE', D.upper()):
+       molreponly= False
+    if re.search('TRUE', D.upper()):
+       molreponly = True 
+
+if var_args['phaseronly'] is None:
+    phaseronly = False
+if not var_args['phaseronly'] is None:
+    D= var_args['phaseronly'][0]
+    if re.search('FALSE', D.upper()):
+       phaseronly= False
+    if re.search('TRUE', D.upper()):
+       phaseronly = True 
+mrbump_programs = ' molrep phaser '
+
+if molreponly == False:
+  if phaseronly == False:
+    mrbump_programs = ' molrep phaser '
+if molreponly == True:
+    mrbump_programs = ' molrep  '
+if phaseronly == True:
+    mrbump_programs = ' phaser  '
+if molreponly == True:
+    if phaseronly == True:
+       print 'you say you want molrep only AND phaser only, choose one or both'
+       sys.exit()
 
 #--------------------------------------------
 #give the run file to check
@@ -1573,7 +1611,7 @@ if MISSING_DOMAINS == False:
       mrBuild.qList=[]
       jobID=0
       for pdbfile in final_ensembles:
-         mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID)
+         mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, mrbump_programs)
          jobID=jobID+1
 
 
