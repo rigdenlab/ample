@@ -311,7 +311,7 @@ class Shelx:
       if self.debug == False:
         for file in self.hklinFile, "shelxe-input.hkl", "shelxe-input.pdb", \
                     "shelxe-input.pha", "shelxe-input.hat", \
-                    phsoutFile, "shelxe-input.pda": 
+                    "shelxe-input.pda": 
            if os.path.isfile(file):
               os.remove(file) 
 
