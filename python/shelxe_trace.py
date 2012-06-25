@@ -37,8 +37,8 @@ if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 if not which("mtz2various"):
     raise RuntimeError('mtz2various not found')
-if not which("shelxe"):
-    raise RuntimeError('shelxe not found')
+#if not which("shelxe"):
+#    raise RuntimeError('shelxe not found')
 
 class Shelx:
 
@@ -201,7 +201,34 @@ class Shelx:
          sys.stdout.write("Error: No output file from mtz2hkl\n")
 
    def runShelxe(self, solvent, resolution, mrProgram, pdbinFile, pdboutFile="shelxe-output.pdb", phsoutFile="shelxe-output.phs", traceCycles=20):
-      """ Run shelxe """
+      """ Run shelxe
+          -aN - N cycles autotracing [off]
+          -bX - B-value to weight anomalous map (xx.pha and xx.hat) [-b5.0]
+          -cX - fraction of pixels in crossover region [-c0.4]
+          -dX - truncate reflection data to X Angstroms [off]
+          -eX - add missing 'free lunch' data up to X Angstroms [dmin+0.2]
+          -f  - read F rather than intensity from native .hkl file [off]
+          -gX - solvent gamma flipping factor [-g1.1]
+          -h or -hN - (N) heavy atoms also present in native structure [-h0]
+          -i  - invert space group and input (sub)structure or phases [off]
+          -j  - not yet used
+          -kX - minimum height/sigma for heavy atom sites in xx.hat [-k4.5]
+          -lN - reserve space for 1000000N reflections [-l2]
+          -mN - N iterations of density modification per global cycle [-m20]
+          -n or -nN - apply N-fold NCS to traces [off]
+          -o or -oN - prune up to N residues to optimize CC for xx.pda [off]
+          -pX - threshold for fitting density when tracing [-p0.7]
+          -q  - search for alpha-helices as well as tripeptides [off]
+          -rX - FFT grid set to X times maximum indices [-r3.0]
+          -sX - solvent fraction [-s0.45]
+          -tX - time factor for helix and peptide search [-t1.0]
+          -u  - not yet used
+          -vX - density sharpening factor [default dependent on resolution]
+          -wX - add experimental phases with weight X each iteration [-w0.2]
+          -x  - diagnostics, requires PDB file xx.ent with same origin [off]
+          -yX - highest resol. in Ang. for calc. phases from xx.pda [-y1.8]
+          -z or -zN - optimize substructure (-z = -z2) [off]
+     """
 
       self.pdbinFile=pdbinFile
       self.pdboutFile=pdboutFile
@@ -226,7 +253,7 @@ class Shelx:
       self.parsePDBfileSG("shelxe-input.pda")
       self.script += "cp %s shelxe-input.pda\n\n" % self.pdbinFile
 
-      command_line='shelxe shelxe-input.pda -a' + str(traceCycles) + ' -q -s' + str(frac_solvent) + ' -h -z -b -l5' + free_lunch
+      command_line='shelxe shelxe-input.pda -a' + str(traceCycles) + ' -o -q -s' + str(frac_solvent) + ' -f -t2' + free_lunch
       self.script += command_line + "\n\n"
 
       file=open(self.shelxScriptFile, "w")
