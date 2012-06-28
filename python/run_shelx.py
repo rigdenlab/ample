@@ -160,7 +160,7 @@ def shelxe(solvent, resolution, NoShelxCycles):
     cur_dir = os.getcwd()
     mtz2hkl_run = open(cur_dir + '/shelxe', "w")
     mtz2hkl_run.write('#!/bin/sh\n')
-    mtz2hkl_run.write(shelxe +' orig.pda -a'+str(NoShelxCycles)+' -q -s0.'+str(solvent)+' -h -z -l5 -b '+ free_lunch)
+    mtz2hkl_run.write(shelxe +' orig.pda -a'+str(NoShelxCycles)+' -q -s0.'+str(solvent)+' -h -z -l5 -b -f '+ free_lunch)
     mtz2hkl_run.close()
     os.system('chmod uoga=wrx '+ cur_dir + '/shelxe')
     os.system(cur_dir + '/shelxe >RESULT')
