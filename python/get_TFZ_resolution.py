@@ -54,6 +54,6 @@ def get_TFZ(pdb):
 
   return TFZ
 
-#tfz  = get_TFZ('/home/jaclyn/TASSER/RESULT/ITASSER_run/1OKS/search_1OKS_mrbump/data/loc0_ALL_1OKSA_3/pdbclip/mr/phaser/phaser_loc0_ALL_1OKSA_3_PDBCLP.1.pdb')
+#tfz  = get_TFZ('/home/jaclyn/TASSER/RESULT/ITASSER_run/1OKS/search_1OKS_mrbump/data/loc0_ALL_1OKSA_3/unmod/mr/phaser/phaser_loc0_ALL_1OKSA_3_UNMOD.1.pdb')
 
 #print ' GOT ' + resolution + ' ' +free_r

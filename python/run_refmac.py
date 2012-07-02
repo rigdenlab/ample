@@ -56,6 +56,6 @@ def refmac(xyzin, hklin):
 
 #########
 #xyzin = '/home/jaclyn/Rosetta_bucc/rosetta_warp/1EJG_1/molrep_ALL_ATOM_trunc1_Rad3residue_buccaneer1.pdb' 
-#hklin = '/home/jaclyn/Rosetta_bucc/rosetta_warp/1EJG_1/refmac_phaser_HKLOUT_loc0_ALL_POLYALA_trunc1rad_ALIGNED_rad_1_PDBCLP.mtz' 
+#hklin = '/home/jaclyn/Rosetta_bucc/rosetta_warp/1EJG_1/refmac_phaser_HKLOUT_loc0_ALL_POLYALA_trunc1rad_ALIGNED_rad_1_UNMOD.mtz' 
 
 #refmac(xyzin, hklin)

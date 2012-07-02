@@ -330,12 +330,12 @@ class ClusterRun:
         
       modelName=os.path.split(ensemblePDB)[1].replace(".pdb","")
 
-      phaserPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'pdbclip', 'refine', 'phaser', 'refmac_phaser_loc0_ALL_'+ modelName +'_PDBCLP.pdb')
-      phaserMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'pdbclip', 'refine', 'phaser', 'refmac_phaser_HKLOUT_loc0_ALL_'+ modelName +'_PDBCLP.mtz')
-      molrepPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'pdbclip', 'refine', 'molrep', 'refmac_molrep_loc0_ALL_'+ modelName +'_PDBCLP.pdb')
-      molrepMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'pdbclip', 'refine', 'molrep', 'refmac_molrep_HKLOUT_loc0_ALL_'+ modelName +'_PDBCLP.mtz')
+      phaserPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'refine', 'phaser', 'refmac_phaser_loc0_ALL_'+ modelName +'_UNMOD.pdb')
+      phaserMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'refine', 'phaser', 'refmac_phaser_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
+      molrepPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'refine', 'molrep', 'refmac_molrep_loc0_ALL_'+ modelName +'_UNMOD.pdb')
+      molrepMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'refine', 'molrep', 'refmac_molrep_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
        
-      phaserTFZPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'pdbclip', 'refine', 'phaser', 'phaser_loc0_ALL_'+ modelName +'_PDBCLP.1.pdb')
+      phaserTFZPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'refine', 'phaser', 'phaser_loc0_ALL_'+ modelName +'_UNMOD.1.pdb')
      
       file=open(sub_script, "w")
       file.write('#!/bin/sh\n'

@@ -299,9 +299,9 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name):
    #runshelx - beta version on refmac and phaser output:
    #Phaser output:
 
-   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz' ):
-     phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz'
-     phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/phaser/refmac_phaser_loc0_ALL_'+name+'_PDBCLP.pdb'
+   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
+     phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
+     phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
      print 'got phaser'
      shelx_phaser_path = run_dir+ '/search_' +name + '_mrbump/phaser_shelx'
      os.system('mkdir ' +shelx_phaser_path)
@@ -312,9 +312,9 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name):
      phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path)  ####### NEEDS correct ASU, solvent content!!
 
    #molrep output:
-   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz' ):
-     molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_PDBCLP.mtz'
-     molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/pdbclip/refine/molrep/refmac_molrep_loc0_ALL_'+name+'_PDBCLP.pdb'
+   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
+     molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
+     molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
      print 'got molrep'
      shelx_molrep_path = run_dir+ '/search_' +name + '_mrbump/molrep_shelx'
      os.system('mkdir ' +shelx_molrep_path)
