@@ -109,6 +109,7 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq):
   mr_bump.write('MDLM False\n')
   mr_bump.write('MDLP False\n')
   mr_bump.write('MDLS False\n')
+  mr_bump.write('MDLU True\n')
 
   mr_bump.write('FIXSG True\n')
 
@@ -161,6 +162,7 @@ def make_mrbump_Cluster(sigf, fp, free, jobid, local_files, mtz, seq):
   mr_bump.write('MDLD False\n')
   mr_bump.write('MDLC False\n')
   mr_bump.write('MDLS False\n')
+  mr_bump.write('MDLU True\n')
   mr_bump.write('MDLM False\n')
   mr_bump.write('MDLP False\n')
 
