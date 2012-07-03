@@ -665,7 +665,8 @@ if molreponly == True:
     if phaseronly == True:
        print 'you say you want molrep only AND phaser only, choose one or both'
        sys.exit()
-
+print mrbump_programs
+  
 #--------------------------------------------
 #give the run file to check
 	#---------------------------------------------
