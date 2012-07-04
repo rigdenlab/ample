@@ -260,6 +260,10 @@ parser.add_argument('-molreponly', metavar='molreponly', type=str, nargs=1,
 parser.add_argument('-phaseronly', metavar='phaseronly', type=str, nargs=1,
                    help='phaseronly')
 
+parser.add_argument('-clusterimport', metavar='clusterimport', type=str, nargs=1,
+                   help='clusterimport')
+
+
 #convert args to dictionary
 args = parser.parse_args()
  
@@ -666,7 +670,16 @@ if molreponly == True:
        print 'you say you want molrep only AND phaser only, choose one or both'
        sys.exit()
 print mrbump_programs
-  
+
+
+
+
+if var_args['clusterimport'] is None:
+   clusterimport = False
+if not var_args['clusterimport'] is None:
+    clusterimport= var_args['clusterimport'][0]
+
+
 #--------------------------------------------
 #give the run file to check
 	#---------------------------------------------
@@ -758,7 +771,9 @@ if IMPORTING_MODELS == True:
    print 'you have chosen to import models, but path does not exist, looking for ensembles'
    if not os.path.exists(ENSEMBLES):
     print 'you have chosen to import ensembles, but path does not exist'
-    sys.exit()
+    if not os.path.exists(clusterimport ):
+      print 'you have chosen to import a cluster, the clusterpath does not exist'
+      sys.exit()
 
 
  
@@ -1200,7 +1215,17 @@ else:
 #check if models are present regardless
 #--------------------------------------------
 
+if os.path.exists(clusterimport):
+  cluster_path =  clusterimport
+  if not os.path.exists(RunDir+'/fine_cluster_1'): 
+    os.mkdir(RunDir+'/fine_cluster_1')
+  os.chdir(RunDir+'/fine_cluster_1')
+  list_of_ensembles = truncateedit_MAX.truncate(THESEUS,cluster_path , RunDir+'/fine_cluster_1', MAX, percent, False  )
 
+  os.system('mkdir '+RunDir+'/ensembles_1')
+  for each_ens in list_of_ensembles:
+        SCWRL_edit.edit_sidechains(each_ens, RunDir+'/ensembles_1/')
+  sys.exit()
 #--------------------------------------
 # Do the clustering  
 #---------------------------------------
