@@ -1214,8 +1214,8 @@ else:
 #--------------------------------------------
 #check if models are present regardless
 #--------------------------------------------
-
-if os.path.exists(clusterimport):
+if clusterimport:
+ if os.path.exists(clusterimport):
   cluster_path =  clusterimport
   if not os.path.exists(RunDir+'/fine_cluster_1'): 
     os.mkdir(RunDir+'/fine_cluster_1')
