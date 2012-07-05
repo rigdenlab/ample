@@ -93,8 +93,43 @@ def check_for_exe(exename, varname):
     sys.exit()
    else:
      return exepath
+########
+def get_psipred_prediction(psipred):
+ string = ''
+ for line in open(psipred):
+        get_stat1 = re.compile('^Pred\:\s*(\w*)')
+        result_stat1 = get_stat1.match(line)
+        if result_stat1:
+         stat1_get = re.split(get_stat1, line)
+         #print stat1_get[1]
+         string = string + stat1_get[1]
 
 
+ C = 0
+ H = 0
+ E = 0
+ length = len(string)
+
+ for c in string:
+  if c == 'C':
+   C = C+1
+  if c == 'H':
+   H = H+1  
+  if c == 'E':
+   E = E+1
+
+
+ H_percent = float(H)/length*100
+ E_percent = float(E)/length*100
+
+ if H >0 and E >0:
+    print  'Your protein is predicted to be mixed alpha beta, your chances of success are moderate'
+ if H ==0 and E >0:
+    print  'Your protein is predicted to be all beta, your chances of success are low'
+ if H >0 and E ==0:
+    print  'Your protein is predicted to be all alpha, your chances of success are high'
+ if  H ==0 and E ==0:
+    print  'Your protein is has no predicted secondary structure, your chances of success are low'
 
 #-------------------------------------------
 #get command line options
@@ -1006,6 +1041,8 @@ if MakeFrags == True:
   RUNNING.write('Fragments done\n3mers at: '+frags_3_mers+'\n9mers at: '+frags_9_mers+'\n\n')
   print' Fragments Done\n3mers at: '+frags_3_mers+'\n9mers at: '+frags_9_mers+'\n\n'
 
+  if os.path.exists(frags_dir +'/'+PDB_code+'.psipred'):
+    get_psipred_prediction(frags_dir +'/'+PDB_code+'.psipred')
 
 
 ###modeling
