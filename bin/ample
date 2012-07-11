@@ -123,7 +123,7 @@ def get_psipred_prediction(psipred):
  E_percent = float(E)/length*100
 
  if H >0 and E >0:
-    print  'Your protein is predicted to be mixed alpha beta, your chances of success are moderate'
+    print  'Your protein is predicted to be mixed alpha beta, your chances of success are intermediate'
  if H ==0 and E >0:
     print  'Your protein is predicted to be all beta, your chances of success are low'
  if H >0 and E ==0:
@@ -297,6 +297,9 @@ parser.add_argument('-phaseronly', metavar='phaseronly', type=str, nargs=1,
 
 parser.add_argument('-clusterimport', metavar='clusterimport', type=str, nargs=1,
                    help='clusterimport')
+
+parser.add_argument('-OLD_shelx', metavar='OLD_shelx', type=str, nargs=1,
+                   help='OLD_shelx')
 
 
 #convert args to dictionary
@@ -545,6 +548,19 @@ else:
      ALLATOM = False
   else:
      ALLATOM = False
+
+
+
+
+if var_args['OLD_shelx'] is None:
+   OLD_shelx= True
+else:
+  if "TRUE" in var_args['OLD_shelx'][0].upper():
+      OLD_shelx= True
+  elif "FALSE" in var_args['OLD_shelx'][0].upper():
+     OLD_shelx = False
+
+
 
 #----------missing domains
 
@@ -1473,7 +1489,7 @@ if ENSEMBLE_import ==False:
             os.mkdir(bump_dir) 
             os.chdir(bump_dir)
             split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles)
+            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles, OLD_shelx)
             if NoShelx == False: 
               Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
               print '\n\nFinal Results:\n\n'
@@ -1673,6 +1689,12 @@ if MISSING_DOMAINS == False:
       # Reset the queue list
       mrBuild.qList=[]
       jobID=0
+
+      if OLD_shelx == True:
+           mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
+      if OLD_shelx == False:
+           mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
+
       for pdbfile in final_ensembles:
          mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, mrbump_programs)
          jobID=jobID+1
@@ -1684,7 +1706,7 @@ if MISSING_DOMAINS == False:
       mrBuild.monitorQueue()
    else: 
       split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles)
+      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles, OLD_shelx)
       Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
 
       if NoShelx == False:
