@@ -31,7 +31,7 @@
 <p class="p3"><b>AMPLE </b>- automated de novo search model generation for molecular replacement</p>
 <h2 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 18.0px Times"><b>SYNOPSIS</b></h2>
 <p class="p4">Utilises programs like Rosetta to generate ab initio models to be used in molecular replacement:</p>
-<p class="p4"><b>HAMMER_Beta_Release.py</b> [-h] [-ROSETTA <i>ROSETTA_path</i>] [-RDB <i>ROSETTA_database</i>] [-fragsexe <i>path to make_fragments.pl</i>] [-Rosetta_cluster <i>path to Rosettas cluster</i>] [-fasta <i>fasta_file</i>] [-name <i>priotein name</i>] [-NProc <i>NoProcessors</i>] [-RunDir <i>run_directory</i>] [-SCWRL <i>path to scwrl</i>] [-LGA <i>path_to_LGA dir</i>] [-MAX <i>Maxcluster exe</i>] [-THESEUS <i>Theseus exe required</i>] [-MTZ <i>MTZ in</i>] [-MODELS <i>folder of decoys</i>] [-MakeModels <i>Do the modelling</i>] [-ROSETTA_DIR <i>Rosetta_dir</i>] [<a href="file:///Users/jac45/Downloads/hammer_doc.html#options"><span class="s1">Command line options</span></a>]</p>
+<p class="p4"><b>ample.py</b> [-h] [-ROSETTA <i>ROSETTA_path</i>] [-RDB <i>ROSETTA_database</i>] [-fragsexe <i>path to make_fragments.pl</i>] [-Rosetta_cluster <i>path to Rosettas cluster</i>] [-fasta <i>fasta_file</i>] [-name <i>priotein name</i>] [-NProc <i>NoProcessors</i>] [-RunDir <i>run_directory</i>] [-SCWRL <i>path to scwrl</i>] [-LGA <i>path_to_LGA dir</i>] [-MAX <i>Maxcluster exe</i>] [-THESEUS <i>Theseus exe required</i>] [-MTZ <i>MTZ in</i>] [-MODELS <i>folder of decoys</i>] [-MakeModels <i>Do the modelling</i>] [-ROSETTA_DIR <i>Rosetta_dir</i>] [<a href=""><span class="s1">Command line options</span></a>]</p>
 <h2 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 18.0px Times"><b>DESCRIPTION</b></h2>
 <p class="p4">AMPLE has three main parts:</p>
 <ol class="ol1">
@@ -43,29 +43,19 @@
 <h2 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 18.0px Times"><b>DEPENDENCIES</b></h2>
 <p class="p4">Before AMPLE can be used, the following dependencies should be installed on the local system.</p>
 <ul class="ul1">
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times"><b>SCWRL</b> (version 4.0) available from: <a href="http://dunbrack.fccc.edu/scwrl4/#installation"><span class="s1">SCWRL</span></a></li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times"><b>LGA</b> (Local-Global Alignment)(ver. 10/2009) only available by contacting the author <a href="http://proteinmodel.org/AS2TS/system.html"><span class="s1">LGA</span></a></li>
+  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times"><b>SCWRL</b> (version 4.0) available from: <a href="http://dunbrack.fccc.edu/scwrl4/#installation"><span 
   <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times"><b>Rosetta</b> (tested with versions 3.2 and 3.3) <a href="http://www.rosettacommons.org/"><span class="s1">Rosetta</span></a></li>
   <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times"><b>Theseus</b> (ver. 1.4.3) <a href="http://www.theseus3d.org/src/theseus_align"><span class="s1">Theseus</span></a></li>
   <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times"><b>Maxcluster</b> (ver 0.6.6) (as a replacement for LGA) <a href="http://www.sbg.bio.ic.ac.uk/%7Emaxcluster/download.html"><span class="s1">Maxcluster</span></a></li>
   <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times"><b>SHELX </b>(Beta version of shelxe)</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">phenix_MR_Rosetta (optional)</li>
+  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">phenix (optional)</li>
 </ul>
-<p class="p6"><br></p>
-<p class="p7"><b>Editing the Setup File</b></p>
-<p class="p3">AMPLE comes with a setup file that needs to be modified with the paths of the dependancies:</p>
-<p class="p8"><br></p>
-<p class="p3">export LGA_PATH=&lt;path to LGA install directory&gt;</p>
-<p class="p3">export THESEUS_EXE=&lt;path to theseus executable&gt;</p>
-<p class="p3">export SCWRL_EXE=&lt;path to SCWRL executable&gt;</p>
-<p class="p3">export PYTHONPATH=$PYTHONPATH:$CCP4/share/ample/using</p>
-<p class="p3">export ROSETTA_PATH=&lt;path to Rosetta install directory&gt;</p>
-<p class="p8"><br></p>
-<p class="p3">Also needs the shelx paths</p>
-<p class="p8"><br></p>
 <h2 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 18.0px Times"><b>INPUT AND OUTPUT FILES</b></h2>
 <h3 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 14.0px Times"><b>HKLIN</b></h3>
-<p class="p3">Input structure factor file for target structure. Must include a FreeR_flag column.</p>
+<p class="p3">Input structure factor file for target structure. Must include a FreeR flag column.</p>
+<p class="p8"><br></p>
+<h3 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 14.0px Times"><b>FASTA</b></h3>
+<p class="p3">Fasta of the target, followed by a new line.</p>
 <p class="p8"><br></p>
 <p class="p8"><br></p>
 <p class="p9"><b>Intermediate Output files</b></p>
@@ -76,7 +66,7 @@
 <p class="p3">SHELX will run in each MRBUMP run directory</p>
 <p class="p8"><br></p>
 <p class="p9"><b>Final Output files</b></p>
-<p class="p10">Final outputs will be placed in the "RESULTS" directory</p>
+<p class="p10">Potential solutions will be placed in the "RESULTS" directory</p>
 <h2 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 18.0px Times"><b>COMMAND LINE INPUT</b></h2>
 <p class="p4">optional arguments:</p>
 <ul class="ul1">
@@ -176,30 +166,12 @@
 </span>make_fragments.pl (executable)<span class="s2"><br>
 </span>cluster.linuxgccrelease (executable)</p>
 <h3 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 14.0px Times"><b>3rd Party Locations</b></h3>
-<p class="p4">For some functions some 3rd party executables are needed, give the pathways (if not set by setup.sh):<span class="s2"><br>
+<p class="p4">For some functions some 3rd party executables are needed, give the pathways if not in PATH:<span class="s2"><br>
 </span>maxcluster (executable)<span class="s2"><br>
 </span>Scwrl4 (executable)<span class="s2"><br>
 </span>theseus (executable)<span class="s2"><br>
-</span>LGA (install folder)</p>
-<h2 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 18.0px Times"><b>Known Issues:</b></h2>
-<p class="p5"><br></p>
-<ol class="ol1">
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">The output names of the Rosetta files are hard coded, if the Rosetta naming conventions change this needs to be updated.</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">Assumes that the number of models to make is &gt; number of processors</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">Crash handling by making models in different dirs, can rerun the job and Rosetta will continue from where it stopped. But if the folders are already full of models, Rosetta will hang- advise rerunning in a different folder and imputing if modelling complete.</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">Theseus is also known to hang (will be caught and rerun until success)</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">Rosetta cluster can fail (will be caught and rerun until success)</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">Assumes paths are correct, checks for pathways to be added</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">Needs a long command line (a problem with theseus)</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">Shelx will not run if the spacegroup is P-1, this is changed to P 1</li>
 </ol>
 <p class="p5"><br></p>
-<p class="p4">The final version will include:</p>
-<ul class="ul1">
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">user feedback about performance of modelling</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">on the fly clustering/truncation to optimise successes</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">a normal mode (to remove run files) and a debug mode (all files kept)</li>
-  <li style="margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Times">Missing Domain modeling</li>
 </ul>
 <p class="p5"><br></p>
 <h2 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 18.0px Times"><b>EXAMPLE USAGE</b></h2>
@@ -210,7 +182,7 @@
 <p class="p4">Daniel Rigden, Martyn Winn, Olga Mayans.</p>
 <h3 style="margin: 0.0px 0.0px 14.0px 0.0px; font: 14.0px Times"><b>AMPLE Program References</b></h3>
 <p class="p4">Any publication arising from use of AMPLE should include the following reference:</p>
-<p class="p4">???????????????????</p>
+<p class="p4">AMPLE: a cluster-and-truncate approach to solve crystal structures of small proteins using rapidly computed ab initio models </p>
 <p class="p3">In addition, authors of specific programs should be referenced where applicable:</p>
 <p class="p3">MrBUMP</p>
 <p class="p3">R.M.Keegan and M.D.Winn (2007) <i>Acta Cryst.</i> <b>D63</b>, 447-457</p>
