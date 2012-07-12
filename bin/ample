@@ -1578,7 +1578,7 @@ if ENSEMBLE_import ==False:
          os.mkdir(bump_dir) 
          os.chdir(bump_dir)
          split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-         run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, domain_all_chains_pdb)
+         run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx)
          Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
 
 
@@ -1763,7 +1763,8 @@ if MISSING_DOMAINS == True:
 
 
    split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-   run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, domain_all_chains_pdb, FIXED_INPUT)
+
+   run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx)
    Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
 
 

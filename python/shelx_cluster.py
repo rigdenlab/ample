@@ -39,7 +39,11 @@ class Shelx:
          command_line='mtz2hkl -2 orig -r %s' % rfree_flag
       else:
          command_line='mtz2hkl -2 orig'
+<<<<<<< TREE
+    
+=======
       
+>>>>>>> MERGE-SOURCE
       process_args = shlex.split(command_line)
       p = subprocess.Popen(process_args, stdin = subprocess.PIPE,
                                   stdout = subprocess.PIPE, stderr=subprocess.STDOUT)

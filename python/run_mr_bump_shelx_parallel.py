@@ -398,7 +398,8 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
    os.chdir(run_dir)
    return phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT
 ################
-def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, FIXED_INPUT):
+
+def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP, free, FIXED_INPUT, SHELX_OLD):
 
    #files to make:
    phaser_mtz = 'fail'
@@ -409,8 +410,12 @@ def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, FIXED_INP
    phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = 'none'
 
    #get names of flags
-   next, sigf, FP, free = get_flags(mtz)  
+
    os.chdir(run_dir)
+
+   sigf = 'SIGF='+sigf
+   FP = 'F='+FP
+   free =  'FreeR_flag='+free
 
    make_mrbump_desktop_domain(sigf, FP, free, name, pdb, mtz, fasta, fixed_pdb,FIXED_INPUT )
 
@@ -424,8 +429,17 @@ def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, FIXED_INP
      os.chdir(shelx_phaser_path)
 
      ASU = pdbcur(phaser_pdb)
+     
+     EarlyTerminate = False
+     NoShelxCycles = 20
 
-     phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path)  ####### NEEDS correct ASU, solvent content!!
+     if SHELX_OLD == False:
+            phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path, EarlyTerminate, NoShelxCycles, run_dir)  ####### NEEDS correct ASU, solvent content!! 
+     if SHELX_OLD == True:
+            phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx_OLD.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path, EarlyTerminate, NoShelxCycles, run_dir)    
+
+
+     #phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT, SPACE = run_shelx.RUN(phaser_mtz, phaser_pdb, ASU, fasta, shelx_phaser_path)  ####### NEEDS correct ASU, solvent content!!
 
    #molrep output:
    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
@@ -530,7 +544,7 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
 
 
 ################################
-def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  fixed_PDB, FIXED_INPUT): #loops through each chunk
+def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc,  fixed_PDB, FIXED_INPUT, SHELX_OLD): #loops through each chunk
   
   log = open(log_name, "w")
 
@@ -540,7 +554,7 @@ def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  fix
      name = re.sub('.pdb', '', name)
     # print name
 
-     phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run_domain(mtz, each_pdb, run_dir, fasta, name, fixed_PDB, FIXED_INPUT)
+     phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run_domain(mtz, each_pdb, run_dir, fasta, name, fixed_PDB, sigf, FP, free, FIXED_INPUT, SHELX_OLD)
    
      log.write(name+':\n'+
      '\nphaser done \n' 
@@ -572,7 +586,7 @@ def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noAS
 
         thread.join()
 #############################################
-def split_into_runs_domains(mtz, ensembles, run_dir, fasta,  nProc, fixed_PDB, FIXED_INPUT):
+def split_into_runs_domains(mtz, ensembles, run_dir, domain_all_chain_fasta , NProc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, SHELX_OLD):
       cur_dir=os.getcwd()
       inc = 1
       threads = []
@@ -580,7 +594,7 @@ def split_into_runs_domains(mtz, ensembles, run_dir, fasta,  nProc, fixed_PDB, F
       for each_chunk in ensembles:  
         log_name = cur_dir+'/LOG_proc'+str(inc)                        
         
-        thread = Process(target=run_parallel_domain, args=(mtz, each_chunk, run_dir, fasta,  log_name, fixed_PDB, FIXED_INPUT))        
+        thread = Process(target=run_parallel_domain, args=(mtz, each_chunk, run_dir, domain_all_chain_fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc, domain_all_chains_pdb , FIXED_INPUT, SHELX_OLD) )     
         thread.start() 
         threads.append(thread)
         inc+=1
