@@ -39,7 +39,7 @@ class Shelx:
          command_line='mtz2hkl -2 orig -r %s' % rfree_flag
       else:
          command_line='mtz2hkl -2 orig'
-
+      
       process_args = shlex.split(command_line)
       p = subprocess.Popen(process_args, stdin = subprocess.PIPE,
                                   stdout = subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -210,9 +210,9 @@ if __name__ == "__main__":
       solvent=float(sys.argv[4])
       resolution=float(sys.argv[5])
       mrProgram=sys.argv[6]
-      FreeR_flag=sys.argv[7]
+      FP=sys.argv[7]
       SIGFP=sys.argv[8]
-      FREE=sys.argv[9]
+      FreeR_flag=sys.argv[9]
    else:
       sys.stdout.write("Usage: python shelx_cluster.py <pdb> <mtz> <nmol> <solvent> <mtz resolution> <MR program> <FreeR_flag (optional)>\n")
       sys.stdout.write("\n")
