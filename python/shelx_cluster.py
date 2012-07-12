@@ -206,7 +206,7 @@ if __name__ == "__main__":
       mrProgram=sys.argv[6]
       FP="FP"
       SIGFP="SIGFP"
-      FREE="FREE"
+      FreeR_flag="FREE"
    elif  len(sys.argv) == 10:
       pdbFile=sys.argv[1]
       mtzFile=sys.argv[2]
