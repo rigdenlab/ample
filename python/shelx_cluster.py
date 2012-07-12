@@ -203,7 +203,7 @@ if __name__ == "__main__":
       FP="FP"
       SIGFP="SIGFP"
       FREE="FREE"
-   elif  len(sys.argv) == 8:
+   elif  len(sys.argv) == 10:
       pdbFile=sys.argv[1]
       mtzFile=sys.argv[2]
       nmol=int(sys.argv[3])
