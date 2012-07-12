@@ -200,7 +200,9 @@ if __name__ == "__main__":
       solvent=float(sys.argv[4])
       resolution=float(sys.argv[5])
       mrProgram=sys.argv[6]
-      FreeR_flag=""
+      FP="FP"
+      SIGFP="SIGFP"
+      FREE="FREE"
    elif  len(sys.argv) == 8:
       pdbFile=sys.argv[1]
       mtzFile=sys.argv[2]
@@ -209,6 +211,8 @@ if __name__ == "__main__":
       resolution=float(sys.argv[5])
       mrProgram=sys.argv[6]
       FreeR_flag=sys.argv[7]
+      SIGFP=sys.argv[8]
+      FREE=sys.argv[9]
    else:
       sys.stdout.write("Usage: python shelx_cluster.py <pdb> <mtz> <nmol> <solvent> <mtz resolution> <MR program> <FreeR_flag (optional)>\n")
       sys.stdout.write("\n")
