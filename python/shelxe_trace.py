@@ -252,8 +252,10 @@ class Shelx:
       #Check the input PDA file for SG P -1
       self.parsePDBfileSG("shelxe-input.pda")
       self.script += "cp %s shelxe-input.pda\n\n" % self.pdbinFile
-
-      command_line='shelxe shelxe-input.pda -a' + str(traceCycles) + ' -o -q -s' + str(frac_solvent) + ' -f -t2' + free_lunch
+       #  MR settings
+       #command_line='shelxe shelxe-input.pda -a' + str(traceCycles) + ' -o -q -s' + str(frac_solvent) + ' -f -t2' + free_lunch
+      # Experimental settings 
+      command_line='shelxe shelxe-input.pda -a' + str(traceCycles) + '  -q -s' + str(frac_solvent) + ' -h -z -l5 -b ' + free_lunch
       self.script += command_line + "\n\n"
 
       file=open(self.shelxScriptFile, "w")
