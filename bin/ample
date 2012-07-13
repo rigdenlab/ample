@@ -553,7 +553,7 @@ else:
 
 
 if var_args['OLD_shelx'] is None:
-   OLD_shelx= True
+   OLD_shelx= False
 else:
   if "TRUE" in var_args['OLD_shelx'][0].upper():
       OLD_shelx= True
