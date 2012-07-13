@@ -17,6 +17,30 @@ import subprocess
 from subprocess import PIPE
 
 import cluster_with_MAX
+
+def One_model_only(list_of_ensembles, rundir):
+ if not os.path.exists(rundir + '/Top_model_ensembles'):
+   os.mkdir(rundir + '/Top_model_ensembles')  
+
+ 
+ for pdb in list_of_ensembles:
+   name = os.path.split(pdb)
+   print name
+   print pdb
+   outpdb = open(rundir + '/Top_model_ensembles/'+name[-1], "w")
+
+   for line in open(pdb):
+       if re.search('ENDMDL', line):
+           done = True
+           break
+       outpdb.write(line)
+   outpdb.close()
+
+ outlist = []
+ for outpdb in os.listdir(rundir + '/Top_model_ensembles'):
+     outlist.append( rundir + '/Top_model_ensembles/'+ outpdb)
+ return  outlist
+
 #############cluster_with_MAX####
 def make_list_to_keep(theseus_out, THESEUS_threthold): #make a list of residues to keep under variance threshold
  add_list =[]
@@ -385,11 +409,12 @@ if __name__ =="__main__":
  MAX = '/home/jaclyn/programs/maxcluster/maxcluster'
  percent = 5
 
- list_of_ensembles = truncate_Phenix(THESEUS, models_path, out_path, MAX, percent, True )
+ #list_of_ensembles = truncate_Phenix(THESEUS, models_path, out_path, MAX, percent, True )
 
-
+ rundir = '/home/jaclyn/BEE/ample_test/RO'
+ list_of_ensembles = ['/home/jaclyn/BEE/ample_test/MODEL.pdb', '/home/jaclyn/BEE/ample_test/MODEL (copy).pdb']
  
-
+ One_model_only(list_of_ensembles, rundir)
 
 
 

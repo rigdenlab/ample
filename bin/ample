@@ -301,6 +301,8 @@ parser.add_argument('-clusterimport', metavar='clusterimport', type=str, nargs=1
 parser.add_argument('-OLD_shelx', metavar='OLD_shelx', type=str, nargs=1,
                    help='OLD_shelx')
 
+parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
+                   help='top_model_only')
 
 #convert args to dictionary
 args = parser.parse_args()
@@ -536,7 +538,17 @@ else:
          
      
 
- 
+if var_args['top_model_only'] is None:
+     top_model_only  = False
+else:
+   if "FALSE" in var_args['top_model_only'][0].upper():
+      top_model_only = False
+
+   elif "TRUE" in var_args['top_model_only'][0].upper():
+      top_model_only = True
+   else:
+      top_model_only = False   
+
 
 
 if var_args['ALLATOM'] is None:
@@ -1371,6 +1383,8 @@ if ENSEMBLE_import ==False:
     for infile in glob.glob( os.path.join(RunDir+'/ensembles', '*.pdb') ):
       final_ensembles.append(infile)
 
+     
+
 #-------------------------------------
 # Spicker Alternative for clustering then MAX 
 #------------------------------------
@@ -1404,7 +1418,8 @@ if ENSEMBLE_import ==False:
       if Ensembler == True:
               list_of_ensembles = truncateedit_MAX.truncate_Phenix(PHENIX, models_path, RunDir+'/fine_cluster_'+str(samples), MAX, percent, FIXED_INTERVALS  )
 
-     
+      if top_model_only  == True:
+              list_of_ensembles = truncateedit_MAX.One_model_only( list_of_ensembles,   RunDir  )
 
 
 
@@ -1653,6 +1668,9 @@ if ENSEMBLE_import ==True:
  final_ensembles =[]
  for infile in glob.glob( os.path.join(ENSEMBLES, '*.pdb') ):
    final_ensembles.append(infile)
+
+ if top_model_only  == True:
+            final_ensembles   = truncateedit_MAX.One_model_only(final_ensembles ,   RunDir  )
 
 ResultsPath = RunDir+'/RESULTS'
 if not os.path.exists(RunDir+'/RESULTS'):
