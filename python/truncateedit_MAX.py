@@ -24,9 +24,10 @@ def One_model_only(list_of_ensembles, rundir):
 
  
  for pdb in list_of_ensembles:
+  if os.path.exists(pdb):
    name = os.path.split(pdb)
-   print name
-   print pdb
+   #print name
+   #print pdb
    outpdb = open(rundir + '/Top_model_ensembles/'+name[-1], "w")
 
    for line in open(pdb):
