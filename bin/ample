@@ -1532,7 +1532,7 @@ if ENSEMBLE_import ==False:
 
       if MISSING_DOMAINS == True:
         if  CLUSTER:
-            print 'this needs to be added'
+            #print 'this needs to be added'
 # --------------- missing domains cluster
 
       if MISSING_DOMAINS == True:
@@ -1765,6 +1765,12 @@ if MISSING_DOMAINS == True:
       mrBuild.SEQIN = domain_all_chain_fasta
       mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
    
+
+      if OLD_shelx == True:
+           mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
+      if OLD_shelx == False:
+           mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
+
       # Reset the queue list
       mrBuild.qList=[]
       jobID=0
