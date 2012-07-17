@@ -1532,7 +1532,7 @@ if ENSEMBLE_import ==False:
 
       if MISSING_DOMAINS == True:
         if  CLUSTER:
-            #print 'this needs to be added'
+            print ''
 # --------------- missing domains cluster
 
       if MISSING_DOMAINS == True:
