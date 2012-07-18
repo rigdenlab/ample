@@ -831,13 +831,15 @@ if MakeModels == True:
 
 if IMPORTING_MODELS == True:
   if not os.path.exists(MODELS_LOCATION):
-   print 'you have chosen to import models, but path does not exist, looking for ensembles'
+   print 'you have chosen to import models, but path does not exist, looking for ensembles : '+MODELS_LOCATION
    if not os.path.exists(ENSEMBLES):
-    print 'you have chosen to import ensembles, but path does not exist'
-    if not os.path.exists(clusterimport ):
+    print 'you have chosen to import ensembles, but path does not exist : ' + ENSEMBLES
+    if clusterimport != False:
+     print 'you are importing a cluster of models from :' + clusterimport
+     if not os.path.exists(clusterimport ):
       print 'you have chosen to import a cluster, the clusterpath does not exist'
       sys.exit()
-
+     
 
  
  
