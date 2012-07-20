@@ -463,7 +463,8 @@ def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP,
 def split(ensembles, nproc):  #split into parallel comparisons for speed
 
  divide= len(ensembles) / nproc
-
+ if divide == 0 :
+   divide = 1
  chunks = []
 
  for i in xrange(0, len(ensembles), divide):
