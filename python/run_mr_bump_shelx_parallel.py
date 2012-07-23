@@ -466,6 +466,11 @@ def split(ensembles, nproc):  #split into parallel comparisons for speed
  if divide == 0 :
    divide = 1
  chunks = []
+ print ensembles
+ if len(ensembles) == 0:
+   print 'no ensembles '
+   sys.exit()
+   
 
  for i in xrange(0, len(ensembles), divide):
         a_chunk =  ensembles[i:i+divide]
