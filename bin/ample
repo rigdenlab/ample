@@ -885,9 +885,10 @@ if MakeModels == True:  #only need Rosetta if making models
  if not os.path.exists(ROSETTA_DB) :
    print ' cant find Rosetta DB, check path names'
    sys.exit()
- if not os.path.exists(Make_fragents_exe):
-   print ' cant find make fragments, check path names'
-   sys.exit()
+ if MakeFrags:
+    if not os.path.exists(Make_fragents_exe):
+       print ' cant find make fragments, check path names'
+       sys.exit()
 
 
 if not os.path.exists(FASTA):
