@@ -76,7 +76,7 @@ def get_flags (mtz):
 
   return next, sigf, FP, free
 ###################
-def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq):
+def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, mrbump_programs):
   path = os.getcwd()
 
   i_name = local_files.rstrip(',pdb')
@@ -93,7 +93,7 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq):
 
   mr_bump.write('LABIN ' + sigf + ' ' + fp + ' ' + free + '\n')
   mr_bump.write('JOBID '+ jobid+ '_mrbump\n')
-  mr_bump.write('MRPROGRAM phaser molrep\n')
+  mr_bump.write('MRPROGRAM ' + mrbump_programs + '\n')
   mr_bump.write('LOCALFILE ' + local_files + ' CHAIN ALL RMS 0.1\n')
 
 
@@ -129,7 +129,7 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq):
 
   os.chdir(path)
 ###################
-def make_mrbump_Cluster(sigf, fp, free, jobid, local_files, mtz, seq):
+def make_mrbump_Cluster(sigf, fp, free, jobid, local_files, mtz, seq, mrbump_programs):
   path = os.getcwd()
 
   i_name = local_files.rstrip(',pdb')
@@ -148,7 +148,7 @@ def make_mrbump_Cluster(sigf, fp, free, jobid, local_files, mtz, seq):
 
   mr_bump.write('LABIN ' + sigf + ' ' + fp + ' ' + free + '\n')
   mr_bump.write('JOBID '+ jobid+ '_mrbump\n')
-  mr_bump.write('MRPROGRAM phaser\n')
+  mr_bump.write('MRPROGRAM ' + mrbump_programs + '\n')
   mr_bump.write('LOCALFILE ' + local_files + ' CHAIN A RMS 1.0\n')
 
 
@@ -273,7 +273,7 @@ def pdbcur(pdb):
    return ASU
 
 ###############################
-def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name):
+def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, mrbump_programs):
   
    #files to make:
    phaser_mtz = 'fail'
@@ -293,7 +293,7 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name):
   # os.system('mkdir ' +run_dir + '/' +name)
    os.chdir(run_dir)
 
-   make_mrbump_desktop(sigf, FP, free, name, pdb, mtz, fasta)
+   make_mrbump_desktop(sigf, FP, free, name, pdb, mtz, fasta, mrbump_programs)
 
    
    #runshelx - beta version on refmac and phaser output:
@@ -341,6 +341,7 @@ if __name__ == "__main__":
   mtz = '/home/jaclyn/Baker/test_cases/1AAR/1aar_unique1.mtz'
   fasta = '/home/jaclyn/Baker/test_cases/1AAR/1AAR_.fasta'
   run_dir = '/home/jaclyn/Baker/test_cases/1AAR/Mr_BUMP'
+  mrbump_programs = 'molrep'
   ###
   for each_ensemble in final_ensembles:
     name = re.split('/', each_ensemble)
@@ -349,7 +350,7 @@ if __name__ == "__main__":
     pdb= each_ensemble
   
   
-    phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run(mtz, pdb, run_dir, fasta, name)
+    phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, mrbump_programs)
   
     RUNNING.write(name+':\n'+
     '\nphaser done \n' 
