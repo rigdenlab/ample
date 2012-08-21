@@ -43,6 +43,7 @@ from  subprocess import Popen, PIPE, STDOUT
 from add_sidechains_SCWRL import *
 import cluster_entropy, truncateedit, truncateedit_MAX
 import SCWRL_edit, Final_display_results
+import split_models, nmr
 
 import run_mr_bump_shelx_parallel
 import fasta_parser
@@ -304,6 +305,23 @@ parser.add_argument('-OLD_shelx', metavar='OLD_shelx', type=str, nargs=1,
 parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
                    help='top_model_only')
 
+parser.add_argument('-USE_SCWRL', metavar='USE_SCWRL', type=str, nargs=1,
+                   help='if using scwrl true if not false')
+
+parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
+                   help='alignment between homolog and target fastas')
+
+parser.add_argument('-NMR_model_in', metavar='NMR_model_in', type=str, nargs=1,
+                   help='use nmr input')
+
+parser.add_argument('-NMR_process', metavar='NMR_process', type=str, nargs=1,
+                   help='number of times to process the models')
+
+parser.add_argument('-NMR_remodel_fasta', metavar='-NMR_remodel_fasta', type=str, nargs=1,
+                   help='fasta_for_remodeling')
+
+parser.add_argument('-NMR_Truncate_only', metavar='-NMR_Truncate_only', type=str, nargs=1,
+                   help='do no remodelling only truncate the NMR')
 #convert args to dictionary
 args = parser.parse_args()
  
@@ -379,9 +397,16 @@ if not var_args['SCWRL'] is None:
  if var_args['SCWRL'][0] !='none':
   SCWRL_path =var_args['SCWRL'][0] 
 
-
- 
-
+USE_SCWRL = False
+if var_args['USE_SCWRL'] is None:
+  USE_SCWRL = False
+if not var_args['USE_SCWRL'] is None:
+ if var_args['USE_SCWRL'][0] !='none':
+    if re.search('TRUE', var_args['USE_SCWRL'][0].upper() ):
+         USE_SCWRL == True
+    if re.search('FALSE', var_args['USE_SCWRL'][0].upper() ): 
+         USE_SCWRL == False
+         
 
 
 if var_args['MAX'] is None:
@@ -454,6 +479,41 @@ if var_args['NumShelxCyc'] is None:
    NoShelxCycles = 15
 if not var_args['NumShelxCyc'] is None:
    NoShelxCycles = var_args['NumShelxCyc'][0]
+
+###NMR
+
+if var_args['NMR_model_in'] is None:
+   NMR_model_in = ''
+   NMR_PROTOCOL = False 
+if not var_args['NMR_model_in'] is None:
+   NMR_model_in = var_args['NMR_model_in'][0]
+   NMR_PROTOCOL = True    
+
+
+if var_args['NMR_process'] is None:
+   NMR_process = '10' 
+if not var_args['NMR_process'] is None:
+   NMR_process = var_args['NMR_process'][0]
+  
+
+if var_args['alignment_file'] is None:
+   alignment_file = ''
+if not var_args['alignment_file'] is None:
+   alignment_file = var_args['alignment_file'][0]
+
+if var_args['NMR_remodel_fasta'] is None:
+   NMR_remodel_fasta = FASTA   
+if not var_args['NMR_remodel_fasta'] is None:
+   NMR_remodel_fasta = var_args['NMR_remodel_fasta'][0]
+   
+if var_args['NMR_Truncate_only'] is None:
+   NMR_Truncate_only = False
+if not var_args['NMR_Truncate_only'] is None:
+   if TRUE in var_args['NMR_Truncate_only'][0].upper():
+      NMR_Truncate_only = True
+   if False in var_args['NMR_Truncate_only'][0].upper():
+      NMR_Truncate_only = False
+  
 
 
 
@@ -809,6 +869,9 @@ RunDir = RunDir + '/ROSETTA_MR_'+str(run_inc -1)
 
 
 
+
+
+
 if MakeFrags==False:
  if MakeModels == True:
   if not os.path.exists(frags_3_mers):
@@ -911,15 +974,19 @@ if not os.path.exists(RunDir):
 
 
 
+
+
 if Ensembler  == False:
    THESEUS = check_for_exe('theseus', THESEUS_path)
   # print 'finally got', THESEUS
 if Ensembler  == True:
    print 'You are using Phenix ensmbler- Continue at your own risk !!'
    PHENIX = check_for_exe('phenix', PHENIX_path)
-
-SCWRL = check_for_exe('Scwrl4', SCWRL_path )
-#print 'finally got', SCWRL
+if USE_SCWRL == True:
+   SCWRL = check_for_exe('Scwrl4', SCWRL_path )
+   #print 'finally got', SCWRL
+if USE_SCWRL == False:
+   SCWRL = ''
 SPICKEREXE = check_for_exe('spicker',SPICKEREXE_path )
 
 #print 'finally got', SPICKEREXE
@@ -982,7 +1049,8 @@ Run_params.write('\n---input---\nFasta '+FASTA+'\nRunDir '+RunDir+'\nMTZ '+MTZ+'
 Run_params.write('\n---fragments---\nMakeFrags '+str(MakeFrags)+'\n3mers '+frags_3_mers+'\n9mers '+frags_9_mers+'\n')
 Run_params.write('\n---modelling---\nMakeModels '+str(MakeModels)+'\nROSETTA_PATH '+ROSETTA_PATH+'\n')
 Run_params.write('ROSETTA_cluster '+ROSETTA_cluster+'\nROSETTA_DB '+ROSETTA_DB+'\nMake_fragents_exe '+Make_fragents_exe+'\n')
-Run_params.write('\n---3rd party---\nSCWRL '+SCWRL+'\n')
+if USE_SCWRL == True:
+  Run_params.write('\n---3rd party---\nSCWRL '+SCWRL+'\n')
 Run_params.write('\n---Missing Domain---\nall chains fasta '+domain_all_chain_fasta+'\nall chain pdb '+domain_all_chains_pdb+'\nMISSING DOMAINS='+str(MISSING_DOMAINS)+'\n')
 Run_params.write('Is an Insert Domain '+str(INSERT_DOMAIN)+ ' termini distance '+ str(domain_termini_distance) +'\n')
 
@@ -1074,6 +1142,35 @@ if MakeFrags == True:
 
   if os.path.exists(frags_dir +'/'+PDB_code+'.psipred'):
     get_psipred_prediction(frags_dir +'/'+PDB_code+'.psipred')
+
+### break here for NMR (frags needed but not modelling
+#if NMR process models first
+if NMR_PROTOCOL == True:
+   if CLUSTER == False:
+       os.mkdir(RunDir + '/orig_models')
+       split_models.split(NMR_model_in,  RunDir+ '/orig_models')
+       os.mkdir(RunDir+ '/models')
+ 
+       homolog = RunDir+ '/orig_models'
+
+       if NMR_Truncate_only == False:   
+ 
+           for hom in os.listdir(homolog):
+              pdbs =  re.split('\.', hom)
+              
+              if pdbs[-1] == 'pdb':
+                   nmr. RUN_FORMAT_HOMS(homolog+'/'+hom, int(NMR_process),NMR_remodel_fasta , ROSETTA_OVER_PATH, frags_9_mers, frags_3_mers, int(NProc), hom, alignment_file, RunDir+ '/models')
+              MakeModels = False
+              PATH_TO_MODELS = RunDir+ '/models'
+              MODELS_LOCATION = RunDir+ '/models'
+       if NMR_Truncate_only == True:
+             MakeModels = False
+             PATH_TO_MODELS = RunDir+ '/orig_models'
+             MODELS_LOCATION = RunDir+ '/orig_models'
+print 'using models from ' + PATH_TO_MODELS
+  
+
+# return from nmr with models already made
 
 
 ###modeling
@@ -1248,8 +1345,15 @@ if MakeModels == True:
       while proc < NProc +1:
          if DEBUG == True:
             print 'nproc', proc
-         
-         add_sidechains_SCWRL(SCWRL,   RunDir + '/models_'+str(proc),   RunDir + '/models',  str(proc), DEBUG )
+         if USE_SCWRL == True: 
+             add_sidechains_SCWRL(SCWRL,   RunDir + '/models_'+str(proc),   RunDir + '/models',  str(proc), DEBUG )
+         if USE_SCWRL == False:
+             for file in glob.glob( os.path.join(RunDir + '/models_'+str(proc), '*.pdb') ):
+
+                 name = re.split('/', file)
+                 pdbname = str(name.pop())
+                 shutil.copyfile(RunDir + '/models_'+str(proc) +'/'+pdbname, RunDir + '/models/'+str(proc)+'_'+pdbname )
+
          cat_string += RunDir + '/OUT_' + str(proc) +'  '
          #os.system('rm -r '+RunDir + '/models_'+str(proc) )
          proc+=1
@@ -1392,7 +1496,7 @@ if ENSEMBLE_import ==False:
 # Spicker Alternative for clustering then MAX 
 #------------------------------------
  if USE_SPICKER==True:
-
+   
     ResultsPath = RunDir+'/RESULTS'
     if not os.path.exists(RunDir+'/RESULTS'):
        os.mkdir(RunDir+'/RESULTS')
@@ -1403,8 +1507,9 @@ if ENSEMBLE_import ==False:
 
 
     #noClusters=1
-
+    
     print '----- Clustering models --------\n'
+    
     run_spicker.RUN_SPICKER(PATH_TO_MODELS, RunDir+'/spicker_run', SPICKEREXE, int(noClusters) , RunDir )
     samples = 1
     print '\nClusteing Done. using the first '+str(samples)+' clusters\n'

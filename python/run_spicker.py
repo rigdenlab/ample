@@ -32,7 +32,7 @@ def get_length(pdb):
   pdb = open(pdb)
   counter = 0
   for line in pdb:
-     pdb_pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w*)\s*(\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)')
+     pdb_pattern = re.compile('^ATOM')
      pdb_result = pdb_pattern.match(line)
      if pdb_result:
           atom = line[13:16]
@@ -45,7 +45,7 @@ def get_length(pdb):
 #################
 def run_spicker(path, outpath):
 
-
+ 
 
  curr_dir = os.getcwd()
  working_dir = outpath 
@@ -60,6 +60,7 @@ def run_spicker(path, outpath):
  file_list = open(working_dir + '/file_list', "w")
  for infile in glob.glob( os.path.join(path,  '*.pdb') ):
   name = re.split('/', infile)
+  print name
   pdbname = str(name.pop())
   file_list.write(infile + '\n')
   list_string = list_string + pdbname+ '\n'
@@ -85,6 +86,7 @@ def run_spicker(path, outpath):
  #print list_string
 #make rmsinp
 # length = get_length(path + '/' + pdbname)
+ 
  rmsinp = open('rmsinp', "w")
  rmsinp.write('1  ' + length + '\n\n')
  rmsinp.write(length + '\n')
