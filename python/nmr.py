@@ -368,7 +368,7 @@ def RUN_FORMAT_HOMS(homolog, NProcess, fasta, ROSETTA_PATH, a9mers, a3mers, NPro
          #os.system('rm -r '+RunDir + '/models_'+str(proc) )
          proc+=1
 
- os.chdir(RunDir)
+ os.chdir(curdir)
  
 
 
