@@ -505,7 +505,8 @@ if var_args['NMR_remodel_fasta'] is None:
    NMR_remodel_fasta = FASTA   
 if not var_args['NMR_remodel_fasta'] is None:
    NMR_remodel_fasta = var_args['NMR_remodel_fasta'][0]
-   
+  
+ 
 if var_args['NMR_Truncate_only'] is None:
    NMR_Truncate_only = False
 if not var_args['NMR_Truncate_only'] is None:

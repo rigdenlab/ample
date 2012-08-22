@@ -270,7 +270,7 @@ def MAFFT(homolog_seq, fasta,  name):
 
 ######################
 def RUN_FORMAT_HOMS(homolog, NProcess, fasta, ROSETTA_PATH, a9mers, a3mers, NProc, homname, alignment_file, Models_dir ):
-
+ 
  curdir = os.getcwd()
  os.mkdir(curdir+'/RUN_'+homname)
  os.chdir(curdir+'/RUN_'+homname)
