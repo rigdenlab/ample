@@ -491,7 +491,7 @@ if not var_args['NMR_model_in'] is None:
 
 
 if var_args['NMR_process'] is None:
-   NMR_process = '10' 
+   NMR_process = '100' 
 if not var_args['NMR_process'] is None:
    NMR_process = var_args['NMR_process'][0]
   
