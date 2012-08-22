@@ -322,6 +322,21 @@ parser.add_argument('-NMR_remodel_fasta', metavar='-NMR_remodel_fasta', type=str
 
 parser.add_argument('-NMR_Truncate_only', metavar='-NMR_Truncate_only', type=str, nargs=1,
                    help='do no remodelling only truncate the NMR')
+
+parser.add_argument('-Buccaneer', metavar='-Buccaneer', type=str, nargs=1,
+                   help='True to use Buccaneer')
+
+parser.add_argument('-Buccaneer_cycles', metavar='-Buccaneer_cycles', type=str, nargs=1,
+                   help='number of cycles ')
+
+parser.add_argument('-arpwarp_cycles', metavar='-arpwarp_cycles', type=str, nargs=1,
+                   help='number of cycles ')
+
+parser.add_argument('-arpwarps', metavar='-arpwarp', type=str, nargs=1,
+                   help='True to use arpwarp ')
+
+
+
 #convert args to dictionary
 args = parser.parse_args()
  
@@ -329,6 +344,9 @@ args = parser.parse_args()
 
 
 var_args = vars(args)
+
+
+
 
 
 #Required commands:
@@ -515,6 +533,44 @@ if not var_args['NMR_Truncate_only'] is None:
    if False in var_args['NMR_Truncate_only'][0].upper():
       NMR_Truncate_only = False
   
+###  arpwarp and buccaneer
+
+if var_args['Buccaneer'] is None:
+   Buccaneer = True
+   print 'Rebuilding in Bucaneer'
+if not var_args['Buccaneer'] is None:
+   if TRUE in var_args['Buccaneer'][0].upper():
+      Buccaneer = True
+      print 'Rebuilding in Bucaneer'
+   if False in var_args['Buccaneer'][0].upper():
+      Buccaneer = False
+      print 'Not rebuilding in Bucaneer'
+
+
+if var_args['Buccaneer_cycles'] is None:
+   Buccaneer_cycles = 5
+if not var_args['Buccaneer_cycles'] is None:
+   Buccaneer_cycles = var_args['Buccaner_cycles'][0]
+
+
+
+if var_args['arpwarp_cycles'] is None:
+   arpwarp_cycles = 10
+if not var_args['arpwarp_cycles'] is None:
+   Buccaneer_cycles = var_args['arpwarp_cycles'][0]
+
+
+if var_args['arpwarp'] is None:
+   arpwarp = True
+   print 'Rebuilding in ARP/wARP'
+if not var_args['arpwarp'] is None:
+   if TRUE in var_args['arpwarp'][0].upper():
+      arpwarp = True
+      print 'Rebuilding in ARP/wARP'
+   if False in var_args['arpwarp'][0].upper():
+      arpwarp = False
+      print 'Not rebuilding in ARP/wARP'
+
 
 
 
