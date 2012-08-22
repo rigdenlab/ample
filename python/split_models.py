@@ -55,8 +55,8 @@ def split(model, path ):
  for line in open(model):
      if  re.search('^MODEL', line):
         SPLIT = True 
-        splitNMR(model, path)
-        return
+        modno = splitNMR(model, path)
+        return modno
      
  if SPLIT == False:
     n = os.path.split(model)
@@ -64,11 +64,12 @@ def split(model, path ):
     ISNMR, temp  = try_NMR(model)
     if ISNMR == False:
        print 'Only remodelingin one model'   
-       shutil.copyfile(model, path+'/'+n[-1])     
+       shutil.copyfile(model, path+'/'+n[-1])  
+       return 1   
     if ISNMR == True:
        model = temp
-       splitNMR(model, path)
-
+       modno = splitNMR(model, path)
+       return modno
 def splitNMR(model, path): 
 
  name = '.pdb'
@@ -109,5 +110,4 @@ def splitNMR(model, path):
       print 'min length = ', mina, ' max length = ', maxa
       print 'All of the models need to be the same length, edit them and try again' 
       sys.exit() 
- return
-
+ return modno
