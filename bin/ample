@@ -282,12 +282,8 @@ parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
 parser.add_argument('-TRYALL', metavar='TRYALL', type=str, nargs=1,
                      help='terminate early if a success')
 
-parser.add_argument('-NoShelx', metavar='NoShelx', type=str, nargs=1,
-                     help='Always use Shelx, if you cant be bothered to ask for the beta version, use this flag (but dont expect it to work)')
-
-
 parser.add_argument('-NumShelxCyc', metavar='NoShelxCycles', type=str, nargs=1,
-                     help='Always use Shelx, if you cant be bothered to ask for the beta version, use this flag (but dont expect it to work)')
+                     help='number of shelx sycles')
 
 
 parser.add_argument('-molreponly', metavar='molreponly', type=str, nargs=1,
@@ -332,10 +328,11 @@ parser.add_argument('-Buccaneer_cycles', metavar='-Buccaneer_cycles', type=str, 
 parser.add_argument('-arpwarp_cycles', metavar='-arpwarp_cycles', type=str, nargs=1,
                    help='number of cycles ')
 
-parser.add_argument('-arpwarps', metavar='-arpwarp', type=str, nargs=1,
+parser.add_argument('-arpwarp', metavar='-arpwarp', type=str, nargs=1,
                    help='True to use arpwarp ')
 
-
+parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
+                   help='True to use shelx ')
 
 #convert args to dictionary
 args = parser.parse_args()
@@ -478,20 +475,6 @@ if not var_args['MakeModels'] is None:
      print '\nMaking Rosetta Models\n'
 
 
-NoShelx = False
-if var_args['NoShelx'] is None:
-   NoShelx = False
-if not var_args['NoShelx'] is None:
-   if var_args['NoShelx'][0] == 'False':
-     NoShelx = False
-     print '\nRebuilding in Shelx\n'
-   if var_args['NoShelx'][0] == 'True':
-     NoShelx  = True
-     print '\nWarning, you are not using Shelx\n'
-if NoShelx == False:
-  print 'Rebuilding in Shelx'  
-
-
 NoShelxCycles = 15
 if var_args['NumShelxCyc'] is None:
    NoShelxCycles = 15
@@ -528,9 +511,9 @@ if not var_args['NMR_remodel_fasta'] is None:
 if var_args['NMR_Truncate_only'] is None:
    NMR_Truncate_only = False
 if not var_args['NMR_Truncate_only'] is None:
-   if TRUE in var_args['NMR_Truncate_only'][0].upper():
+   if "TRUE" in var_args['NMR_Truncate_only'][0].upper():
       NMR_Truncate_only = True
-   if False in var_args['NMR_Truncate_only'][0].upper():
+   if "FALSE" in var_args['NMR_Truncate_only'][0].upper():
       NMR_Truncate_only = False
   
 ###  arpwarp and buccaneer
@@ -539,10 +522,10 @@ if var_args['Buccaneer'] is None:
    Buccaneer = True
    print 'Rebuilding in Bucaneer'
 if not var_args['Buccaneer'] is None:
-   if TRUE in var_args['Buccaneer'][0].upper():
+   if "TRUE" in var_args['Buccaneer'][0].upper():
       Buccaneer = True
       print 'Rebuilding in Bucaneer'
-   if False in var_args['Buccaneer'][0].upper():
+   if "FALSE" in var_args['Buccaneer'][0].upper():
       Buccaneer = False
       print 'Not rebuilding in Bucaneer'
 
@@ -564,14 +547,26 @@ if var_args['arpwarp'] is None:
    arpwarp = True
    print 'Rebuilding in ARP/wARP'
 if not var_args['arpwarp'] is None:
-   if TRUE in var_args['arpwarp'][0].upper():
+   if "TRUE" in var_args['arpwarp'][0].upper():
       arpwarp = True
       print 'Rebuilding in ARP/wARP'
-   if False in var_args['arpwarp'][0].upper():
+   if "FALSE" in var_args['arpwarp'][0].upper():
       arpwarp = False
       print 'Not rebuilding in ARP/wARP'
 
 
+if var_args['use_shelxe'] is None:
+   use_shelxe = False
+   print 'Not ebuilding in shelxe'
+if not var_args['use_shelxe'] is None:
+   if "TRUE" in var_args['use_shelxe'][0].upper():
+      use_shelxe = True
+      print 'Rebuilding in shelxe'
+   if "FALSE" in var_args['use_shelxe'][0].upper():
+      use_shelxe = False
+      print 'Not rebuilding in shelxe'
+
+NoShelx = not use_shelxe
 
 
 ###fragments
@@ -1230,7 +1225,7 @@ if NMR_PROTOCOL == True:
              MakeModels = False
              PATH_TO_MODELS = RunDir+ '/orig_models'
              MODELS_LOCATION = RunDir+ '/orig_models'
-print 'using models from ' + PATH_TO_MODELS
+       print 'using models from ' + PATH_TO_MODELS
   
 
 # return from nmr with models already made
@@ -1467,95 +1462,6 @@ if clusterimport:
 USE_SPICKER = True
 if ENSEMBLE_import ==False:
 
- if USE_SPICKER==False:
-    noClusters=1
-
-    levels = [20,25,30,40,50,60]   # clustering levels
-    if NMODELS > 1000:
-     levels = [20,25,30,40,50,60,70,80,90,95] 
-
-    sys.stdout.write('----------CLUSTERING---------\n')
-    RUNNING.write('----------CLUSTERING---------\n')
-    RUNNING.write('Default clustering to find only the largest cluster (see developemnt version for alternate clustering methods)')
-    RUNNING.flush()
-    cluster_path = RunDir + '/clusters/'  # outpath for clusters
-    os.system('mkdir '+ RunDir + '/clusters')
-
-
-    cluster_results = cluster_entropy.RUN_CLUSTER(levels, PATH_TO_MODELS, LGA, cluster_path,  NProc, NMODELS)
-
-
-    sys.stdout.write('Clustering Done!\n')
-    RUNNING.write('Clustering Done! your results:\n')
-    i = 0
-    while i < len(cluster_results):
-     RUNNING.write('at level ' +str(levels[i]) + ' cluster size is ' + str(cluster_results[i])+'\n' )
-     i+=1
-    RUNNING.flush()
-
-
-#----------------------------------------
-#pick a clustering level
-#----------------------------------------
-#  default method of picking a cluster  cutoffs <50 >5:
-
-
-    trunc_level = 'nan'
-    print levels, cluster_results
-    i = 0
-    while i < len(cluster_results):
-     if  cluster_results[i] <50 and cluster_results[i] >2:
-      trunc_level = levels[i]
-      break
-     i+=1
-    print trunc_level
-
-
-#if none exist in range, go higher:
-    if trunc_level == 'nan':
-      i = 0
-      while i < len(cluster_results):
-        if  cluster_results[i] >2 :
-          trunc_level = levels[i]
-        i+=1
-
-    print trunc_level
-
-#-------------------------------------
-#Truncate
-#-------------------------------------
-    RUNNING.write('\n----------Truncating---------\n')
-    RUNNING.flush()
-    os.system('mkdir '+RunDir+'/fine')
-    os.chdir( RunDir+'/fine')
-    models_path = RunDir + '/clusters/cluster_'+str(trunc_level)+'/sorted_cluster_0'
-
-    print THESEUS, models_path, RunDir+'/fine', ROSETTA_cluster 
-
-    Strict= False #  Default = True
-    if Strict== True:
-     list_of_ensembles = truncateedit.truncate(THESEUS, models_path, RunDir+'/fine', ROSETTA_cluster, ROSETTA_DB )
-    if Strict== False:
-      
-      list_of_ensembles = truncateedit_MAX.truncate(THESEUS, models_path, RunDir+'/fine', MAX, percent, FIXED_INTERVALS )
-
-    RUNNING.write('Truncating done!\n')
-    RUNNING.flush()
-
-#-------------------------------------
-#fix sidechains
-#------------------------------------
-    os.system('mkdir '+RunDir+'/ensembles')
-    for each_ens in list_of_ensembles:
-     SCWRL_edit.edit_sidechains(each_ens, RunDir+'/ensembles/')
-
-    final_ensembles =[]
-    for infile in glob.glob( os.path.join(RunDir+'/ensembles', '*.pdb') ):
-      final_ensembles.append(infile)
-
-     
-
-#-------------------------------------
 # Spicker Alternative for clustering then MAX 
 #------------------------------------
  if USE_SPICKER==True:
@@ -1626,7 +1532,13 @@ if ENSEMBLE_import ==False:
             mrBuild.LABIN["FreeR_flag"] = flag_FREE
             mrBuild.SEQIN = FASTA
             mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
-   
+  
+            mrBuild.BCYCLES = Buccaneer_cycles
+            mrBuild.BUCC = Buccaneer
+            mrBuild.SCYLCLES = NoShelxCycles
+            mrBuild.SHELXE = use_shelxe
+
+ 
             # Reset the queue list
             mrBuild.qList=[]
             jobID=0
@@ -1675,7 +1587,7 @@ if ENSEMBLE_import ==False:
             os.mkdir(bump_dir) 
             os.chdir(bump_dir)
             split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles, OLD_shelx, mrbump_programs)
+            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles)
             if NoShelx == False: 
               Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
               print '\n\nFinal Results:\n\n'
@@ -1724,6 +1636,14 @@ if ENSEMBLE_import ==False:
             mrBuild.SEQIN = domain_all_chain_fasta
             mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
 
+
+            mrBuild.BCYCLES = Buccaneer_cycles
+            mrBuild.BUCC = Buccaneer
+            mrBuild.SCYLCLES = NoShelxCycles
+            mrBuild.SHELXE = use_shelxe
+
+
+
 #            mrBuild.FIXEDIN='FIXED_XYZIN '+domain_all_chains_pdb+' IDENTIY 0.6 \n'
 
             # Reset the queue list
@@ -1764,7 +1684,7 @@ if ENSEMBLE_import ==False:
          os.mkdir(bump_dir) 
          os.chdir(bump_dir)
          split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-         run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs)
+         run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles )
          Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
 
 
@@ -1874,7 +1794,12 @@ if MISSING_DOMAINS == False:
       mrBuild.LABIN["FreeR_flag"] = flag_FREE
       mrBuild.SEQIN = FASTA
       mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
-   
+     
+      mrBuild.BCYCLES = Buccaneer_cycles
+      mrBuild.BUCC = Buccaneer
+      mrBuild.SCYLCLES = NoShelxCycles
+      mrBuild.SHELXE = NoShelx  
+  
       # Reset the queue list
       mrBuild.qList=[]
       jobID=0
@@ -1895,7 +1820,7 @@ if MISSING_DOMAINS == False:
       mrBuild.monitorQueue()
    else: 
       split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles, OLD_shelx, mrbump_programs)
+      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles)
       Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
 
       if NoShelx == False:
@@ -1935,6 +1860,11 @@ if MISSING_DOMAINS == True:
       mrBuild.LABIN["FreeR_flag"] = flag_FREE
       mrBuild.SEQIN = domain_all_chain_fasta
       mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
+
+      mrBuild.BCYCLES = Buccaneer_cycles
+      mrBuild.BUCC = Buccaneer
+      mrBuild.SCYLCLES = NoShelxCycles
+      mrBuild.SHELXE = use_shelxe
    
 
       if OLD_shelx == True:
@@ -1959,7 +1889,7 @@ if MISSING_DOMAINS == True:
 
    split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
 
-   run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, NoShelx, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs)
+   run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles)
    Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
 
 

@@ -42,6 +42,12 @@ class ClusterRun:
       self.MTZspacegroup=""
       self.MTZresolution=0.0
       self.MTZcolLabels=dict([])
+      
+      self.BCYCLES  = 5
+      self.BUCC = True
+      self.SHELXE = False
+      self.SCYCLES = 5
+
 
       #self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
       self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
@@ -369,6 +375,11 @@ class ClusterRun:
     
       'FIXSG True\n' +
     
+      'BCYCLES '+     str(  self.BCYCLES )+'\n'+
+      'BUCC '  +       str(   self.BUCC )+'\n'+
+      'SHELXE ' +      str(self.SHELXE)+'\n'+
+      'SCYCLES '+       str( self.SCYCLES) +'\n' + 
+
       'CHECK False\n' +
       'LITE True\n' +
       'PICKLE False\n' +
