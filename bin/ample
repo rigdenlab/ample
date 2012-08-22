@@ -1045,12 +1045,6 @@ SPICKEREXE = check_for_exe('spicker',SPICKEREXE_path )
 MAX = check_for_exe('maxcluster', MAX_path)
 #print 'finally got', MAX
 if NoShelx == False:
-   mtz2hkl = ''
-   mtz2hkl = check_for_exe('mtz2hkl', mtz2hkl)
-   shelxpro = ''
-   shelxpro = check_for_exe('shelxpro', shelxpro)
-   shelxl = ''
-   shelxl = check_for_exe('shelxl', shelxl)
    shelxe=''
    shelxe = check_for_exe('shelxe', shelxe)
 
