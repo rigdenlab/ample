@@ -60,7 +60,7 @@ def run_spicker(path, outpath):
  file_list = open(working_dir + '/file_list', "w")
  for infile in glob.glob( os.path.join(path,  '*.pdb') ):
   name = re.split('/', infile)
-  print name
+ 
   pdbname = str(name.pop())
   file_list.write(infile + '\n')
   list_string = list_string + pdbname+ '\n'

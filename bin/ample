@@ -906,7 +906,7 @@ if IMPORTING_MODELS == True:
 
  
  
-if MakeModels == True:  #only need Rosetta if making models 
+if MakeModels == True or MakeFrags == True:  #only need Rosetta if making models 
 
  if not os.path.exists(ROSETTA_OVER_PATH):
   print 'Give the rosetta path on the commabd line'
