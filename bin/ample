@@ -664,7 +664,7 @@ else:
 
 
 if var_args['ALLATOM'] is None:
-   ALLATOM= False
+   ALLATOM= True
 else:
   if "TRUE" in var_args['ALLATOM'][0].upper():
      ALLATOM = True
