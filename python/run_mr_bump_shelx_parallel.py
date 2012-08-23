@@ -390,16 +390,16 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
   sys.stdout.write('###########################################################################################\n')
   sys.stdout.write('##                                                                                       ##\n')
   sys.stdout.write('##                                                                                       ##\n')
-  print 'Resuts for this Run: '
+  print 'Results for this Run: '
     
 
   header = '' 
   for line in open(table):
       if not re.search('PHASER', line)  and not re.search('MOLREP', line):
-          print  line
+          sys.stdout.write(line)
           header = line
       else:     
-          print line 
+          sys.stdout.write(line)
    
   # Set up the results table headers
   resultsTable = []
