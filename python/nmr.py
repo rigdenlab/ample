@@ -265,7 +265,37 @@ def MAFFT(homolog_seq, fasta,  name):
               '0 ' + seqs[2])
    ali.close
    return curdir+'/ali'
+######################
+def CLUSTER_RUN_FORMAT_HOMS(homolog, NProcess, fasta, ROSETTA_PATH, a9mers, a3mers, NProc, homname, alignment_file, Models_dir ):
+ curdir = os.getcwd()
+ os.mkdir(curdir+'/RUN_'+homname)
+ os.chdir(curdir+'/RUN_'+homname)
+ RunDir = curdir+'/RUN_'+homname
 
+ ROSETTA_OVER_PATH = ROSETTA_PATH
+# ROSETTA_OVER_PATH = '/home/jaclyn/programs/rosetta3.3_bundles'
+ if os.path.exists(ROSETTA_OVER_PATH):
+   ROSETTA_PATH               =ROSETTA_OVER_PATH+'/rosetta_source/bin/AbinitioRelax.linuxgccrelease'
+   ROSETTA_cluster            =ROSETTA_OVER_PATH+'/rosetta_source/bin/cluster.linuxgccrelease'
+   ROSETTA_DB                 =ROSETTA_OVER_PATH+'/rosetta_database'
+   Make_fragents_exe          =ROSETTA_OVER_PATH+'/rosetta_fragments/nnmake/make_fragments.pl'
+   MR_ROSETTA                 =ROSETTA_OVER_PATH+'/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
+#   IDEALIZE                   =ROSETTA_OVER_PATH+'/rosetta_source/bin/idealize.linuxgccrelease'
+   IDEALIZE                   =ROSETTA_OVER_PATH+'/rosetta_source/bin/idealize_jd2.default.linuxgccrelease'
+
+
+ #/home/jaclyn/programs/rosetta-3.2/rosetta_source/bin/mr_protocols.default.linuxgccrelease
+
+ homolog, name = idealise(homolog, IDEALIZE, ROSETTA_DB )
+
+
+
+ homolog_seq = get_sequence(homolog, 'homolog.fasta')
+ if os.path.exists(alignment_file):
+     ALI = alignment_file
+ if not os.path.exists(alignment_file):
+     ALI =  MAFFT(homolog_seq, fasta,  name)
+ return homolog,  ALI
 
 
 ######################

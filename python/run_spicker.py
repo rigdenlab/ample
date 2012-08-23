@@ -1,4 +1,4 @@
-#!/usr/bin/python2.6
+#!/usr/bin/env python
 
 #
 
@@ -46,7 +46,8 @@ def get_length(pdb):
 def run_spicker(path, outpath):
 
  
-
+ 
+  
  curr_dir = os.getcwd()
  working_dir = outpath 
  os.system('mkdir ' + working_dir)
@@ -60,7 +61,7 @@ def run_spicker(path, outpath):
  file_list = open(working_dir + '/file_list', "w")
  for infile in glob.glob( os.path.join(path,  '*.pdb') ):
   name = re.split('/', infile)
- 
+  
   pdbname = str(name.pop())
   file_list.write(infile + '\n')
   list_string = list_string + pdbname+ '\n'
@@ -68,6 +69,7 @@ def run_spicker(path, outpath):
   read = open(infile)
   
   length = get_length(infile)
+  
   read_out.write('\t' + length + '\t926.917       '+str(counter)+'       '+str(counter)+'\n')
   for line in read:
      #print line
@@ -85,7 +87,10 @@ def run_spicker(path, outpath):
  file_list.close()
  #print list_string
 #make rmsinp
-# length = get_length(path + '/' + pdbname)
+ #length = get_length(path + '/' + pdbname)
+
+ 
+ 
  
  rmsinp = open('rmsinp', "w")
  rmsinp.write('1  ' + length + '\n\n')
@@ -208,13 +213,13 @@ def RUN_SPICKER(models, spicker_runpath, spickerexe, no_clusters_sampled, overpa
 
 if __name__ == "__main__":
   
-  models='/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/11_OR8C/models'
+  models='/data2/jac45/nmr/ROSETTA_MR_3/models'
  # models='/home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/VERIFY/Verify_spicker/SPICKER_script/models'
-  spicker_run_dir='/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/11_OR8C/ROSETTA_MR_0/spicker_run'
-  spickerexe='/home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/VERIFY/Verify_spicker/test/spicker'
-  no_clusters_sampled=2
+  spicker_run_dir='/data2/jac45/nmr/ROSETTA_MR_3/spicker_run'
+  spickerexe='spicker'
+  no_clusters_sampled=1
   #rosetta RunDir:
-  overpath='/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/11_OR8C/ROSETTA_MR_0/'
+  overpath='/data2/jac45/nmr/ROSETTA_MR_3'
   
 
   RUN_SPICKER(models, spicker_run_dir, spickerexe, no_clusters_sampled, overpath)

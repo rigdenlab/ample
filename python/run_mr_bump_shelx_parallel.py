@@ -9,7 +9,7 @@ import run_shelx
 import run_shelx_OLD
 from multiprocessing import Process, Queue, JoinableQueue, Pool, Value, Array
 import shutil
-
+import printTable
 
 def get_flags (mtz):
   sigf = 'SIGF='
@@ -413,22 +413,25 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
                 if  re.search('PHASER', line)  or re.search('MOLREP', line):
                    print line
                      
-                   split =re.split('     ', line)
+                   split =re.split('\s*', line)
                 
                    table.append(split)
                  
-
-
-
+  header  =re.split('\s*', header)
   
+
+  for x in  header :
+     print x
 
   print 'best so far: '
+  for x in table:
+     print x 
+
+  i=0
   
-
-  #print table
-  #for x in table:
-  #   print x
-
+     
+  for x in  header :
+     print x
   
    
 
@@ -621,10 +624,11 @@ if __name__ == "__main__":
  Buccaneer = True
  arpwarp = False
  use_shelx = True
+ run_dir = '/data2/jac45/tox/toxd-example/ROSETTA_MR_0/MRBUMP_cluster1/'
  #chunk = split(ensembles, nproc)
  #'split_into_runs_domains(mtz, chunk, run_dir, fasta, nproc, fixed_pdb)
  #split_into_runs(mtz,chunk  , run_dir, fasta,  nproc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, mrbump_programs)
- get_table('/data2/jac45/ROSETTA_MR_0/MRBUMP/search_SCWRL_Reliable_sidechains_trunc_2.28831_rad_3_mrbump/results/resultsTable.dat','/data2/jac45/ROSETTA_MR_0/MRBUMP', Buccaneer, arpwarp, use_shelx )
+ get_table('/data2/jac45/tox/toxd-example/ROSETTA_MR_0/MRBUMP_cluster1/search_All_atom_trunc_0.524367_rad_3_mrbump/results/resultsTable.dat', run_dir,  Buccaneer, arpwarp, use_shelx )
  # make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles)
 ###s
 

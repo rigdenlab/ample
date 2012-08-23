@@ -969,7 +969,7 @@ if MakeModels == True or MakeFrags == True:  #only need Rosetta if making models
    ROSETTA_cluster            =ROSETTA_OVER_PATH+'/rosetta_source/bin/cluster.linuxgccrelease'
    ROSETTA_DB                 =ROSETTA_OVER_PATH+'/rosetta_database'
    Make_fragments_exe          =ROSETTA_OVER_PATH+'/rosetta_fragments/nnmake/make_fragments.pl'
-
+   ROSETTA_CM                 =ROSETTA_OVER_PATH+'/rosetta_source/bin/idealize_jd2.default.linuxgccrelease' 
  if not os.path.exists(Version_file):
    print 'version not found'
    sys.exit()
@@ -989,6 +989,9 @@ if MakeModels == True or MakeFrags == True:  #only need Rosetta if making models
     Make_fragments_exe          =ROSETTA_OVER_PATH+'/rosetta_tools/fragment_tools/make_fragments.pl'
 
 
+
+
+
  if not os.path.exists(ROSETTA_PATH)  :
    print ' cant find Rosetta abinitio, check path names'
    print ROSETTA_PATH  
@@ -1004,6 +1007,19 @@ if MakeModels == True or MakeFrags == True:  #only need Rosetta if making models
     if not os.path.exists(Make_fragments_exe):
        print ' cant find make fragments, check path names'
        sys.exit()
+
+
+if NMR_PROTOCOL == True:
+   ROSETTA_CM                 =ROSETTA_OVER_PATH+'/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
+   ROSETTA_DB                 =ROSETTA_OVER_PATH+'/rosetta_database'
+
+   if not os.path.exists(ROSETTA_DB) :
+     print ' cant find '+ROSETTA_DB+' check path names'
+     sys.exit()
+
+   if not os.path.exists(ROSETTA_CM) :
+    print ' cant find '+ROSETTA_CM+' check path names'
+    sys.exit()
 
 
 if not os.path.exists(FASTA):
@@ -1032,7 +1048,7 @@ if Ensembler  == False:
    THESEUS = check_for_exe('theseus', THESEUS_path)
   # print 'finally got', THESEUS
 if Ensembler  == True:
-   print 'You are using Phenix ensmbler- Continue at your own risk !!'
+   print 'You are using Phenix ensmbler'
    PHENIX = check_for_exe('phenix', PHENIX_path)
 if USE_SCWRL == True:
    SCWRL = check_for_exe('Scwrl4', SCWRL_path )
@@ -1220,7 +1236,40 @@ if NMR_PROTOCOL == True:
              PATH_TO_MODELS = RunDir+ '/orig_models'
              MODELS_LOCATION = RunDir+ '/orig_models'
        print 'using models from ' + PATH_TO_MODELS
-  
+   if CLUSTER:
+      PATH_TO_MODELS = RunDir+ '/models'
+      MODELS_LOCATION = RunDir+ '/models'
+      os.mkdir(RunDir + '/orig_models')
+      modno = split_models.split(NMR_model_in,  RunDir+ '/orig_models')
+      os.mkdir(RunDir+ '/models')
+      homolog = RunDir+ '/orig_models' 
+      for hom in os.listdir(homolog):
+              pdbs =  re.split('\.', hom)
+              if pdbs[-1] == 'pdb':
+                     ideal_homolog,  ALI = nmr.CLUSTER_RUN_FORMAT_HOMS(homolog+'/'+hom, int(NMR_process),NMR_remodel_fasta , ROSETTA_OVER_PATH, frags_9_mers, frags_3_mers, int(NProc), hom, alignment_file, RunDir+ '/models' )
+                                         
+
+
+                     # Invoke the cluster run class
+                     cluster_run=clusterize.ClusterRun()
+                     cluster_run.QTYPE="SGE"
+                     cluster_run.ALLATOM=ALLATOM
+                     cluster_run.setupModellingDir(RunDir)
+                     if USE_SCWRL:
+                       cluster_run.setScwrlEXE(SCWRL)
+                     cluster_run.set_USE_SCWRL(USE_SCWRL)
+                     # loop over the number of models and submit a job to the cluster
+                     for i in range(int(NMR_process)):
+                       cluster_run.NMRmodelOnCluster(RunDir, 1, i+1, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI,  i, ROSETTA_CM)
+
+                     # Monitor the cluster queue to see when all jobs have finished
+                     cluster_run.monitorQueue()
+
+
+
+
+
+
 
 # return from nmr with models already made
 

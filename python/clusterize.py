@@ -193,6 +193,135 @@ class ClusterRun:
          for i in log_lines:
             self.runningQueueList.append(string.split(i)[0])
 
+   def NMRmodelOnCluster(self, RunDir, proc, jobNumber, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI, seed, MR_ROSETTA ):
+      """ Farm out the modelling step on a cluster (SGE) """
+      # Set the file number according to the job number
+      if jobNumber<10:
+         fileNumber="0000000" + str(jobNumber)
+      elif jobNumber>=10 and jobNumber<100:
+         fileNumber="000000" + str(jobNumber)
+      elif jobNumber>=100 and jobNumber<1000:
+         fileNumber="00000" + str(jobNumber)
+      elif jobNumber>=1000 and jobNumber<10000:
+         fileNumber="0000" + str(jobNumber)
+      elif jobNumber>=10000 and jobNumber<100000:
+         fileNumber="000" + str(jobNumber)
+      elif jobNumber>=100000 and jobNumber<1000000:
+         fileNumber="00" + str(jobNumber)
+      else:
+         sys.stdout.write("No. of Models exceeds program limits (Max=999999)\n")
+         sys.exit()
+      preModelDir=os.path.join(RunDir, "pre_models", "model_" + str(jobNumber))
+
+      if os.path.isdir(preModelDir) == False:
+         os.mkdir(preModelDir)
+
+      n = os.path.split(ideal_homolog)
+      n ='S_' +n[-1].rstrip('.pdb')+'_0001.pdb'
+        
+
+      PDBInFile     = os.path.join(preModelDir, n)
+      PDBSetOutFile = os.path.join(preModelDir, "pdbsetOut_" + str(jobNumber) + ".pdb")
+      PDBScwrlFile  = os.path.join(preModelDir, "scwrlOut_" + str(jobNumber) + ".pdb")
+      SEQFile       = os.path.join(preModelDir, "S_" + fileNumber + ".seq")
+      PDBOutFile    = os.path.join(RunDir, "models", "1_S_" + fileNumber + ".pdb")
+
+     # Create a cluster submission script for this modelling job
+      jobName="model_" + str(proc) + "_" + str(seed)
+      sub_script=os.path.join(RunDir, "pre_models", "sge_scripts", "job_" + jobName + ".sub")
+
+      self.jobLogsList.append(os.path.join(RunDir, "pre_models", "logs", jobName + '.log'))
+
+      file=open(sub_script, "w")
+      file.write('#!/bin/sh\n'
+         '#$ -j y\n' +
+         '#$ -cwd\n' +
+         '#$ -w e\n' +
+         '#$ -V\n' +
+         '#$ -o ' + os.path.join(RunDir, "pre_models", "logs", jobName + '.log') + '\n' +
+         '#$ -N ' + jobName + '\n\n')
+
+      
+      file.write('cd '+ os.path.join(RunDir, "pre_models", "model_" + str(jobNumber)) +'\n\n'+
+           MR_ROSETTA +' \\\n'+
+           '-database '+ROSETTA_DB+' \\\n'+
+           '-MR:mode cm \\\n'+
+           '-in:file:extended_pose 1 \\\n'+
+           '-in:file:fasta '+FASTA+' \\\n'+
+           '-in:file:alignment '+ALI+' \\\n'+
+           '-in:file:template_pdb '+ideal_homolog+' \\\n'+
+           '-loops:frag_sizes 9 3 1 \\\n'+
+           '-loops:frag_files '+frags_9_mers+' '+frags_3_mers+' none \\\n'+
+           '-loops:random_order \\\n'+
+           '-loops:random_grow_loops_by 5 \\\n'+
+           '-loops:extended \\\n'+
+           '-loops:remodel quick_ccd \\\n'+
+           '-loops:relax relax \\\n'+
+           '-relax:default_repeats 4 \\\n'+
+           '-relax:jump_move true    \\\n'+
+           '-cm:aln_format grishin \\\n'+
+           '-MR:max_gaplength_to_model 8 \\\n'+
+           '-nstruct 1  \\\n'+
+           '-ignore_unrecognized_res \\\n'+
+           '-overwrite \n\n')
+           
+
+      file.write("pushd " + os.path.join(preModelDir) + "\n\n" +
+
+      self.pdbsetEXE + " xyzin " + PDBInFile + " xyzout " + PDBSetOutFile + "<<eof\n" +
+      "sequence single\n" +
+      "eof\n\n" +
+
+      "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" +
+      "popd\n\n"  )
+      if self.USE_SCWRL :
+
+          file.write(self.SCWRL_EXE + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
+          "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" +
+           "\n")
+      if not self.USE_SCWRL :
+          file.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )
+
+      # Clean up non-essential files unless we are debugging
+      if self.debug == False:
+         file.write("rm " + PDBSetOutFile + "\n" +
+         "rm " + os.path.join(preModelDir, "SEQUENCE") + "\n" +
+         "rm " + PDBScwrlFile + "\n\n")
+
+      file.close()
+      
+      # Submit the job
+      curDir=os.getcwd()
+      os.chdir(os.path.join(RunDir, "pre_models", "sge_scripts"))
+      command_line='qsub -V %s' % sub_script
+
+      process_args = shlex.split(command_line)
+      p = subprocess.Popen(process_args, stdin = subprocess.PIPE,
+                                    stdout = subprocess.PIPE)
+
+      (child_stdout, child_stdin) = (p.stdout, p.stdin)
+
+      # Write the keyword input
+      child_stdin.close()
+
+      # Watch the output for successful termination
+      out=child_stdout.readline()
+
+      qNumber=0
+
+      while out:
+         #sys.stdout.write(out)
+         if self.QTYPE=="SGE":
+            if "Your job" in out:
+               qNumber=int(string.split(out)[2])
+               self.qList.append(qNumber)
+         out=child_stdout.readline()
+
+      child_stdout.close()
+
+      os.chdir(curDir)
+
+
 
    def modelOnCluster(self, RunDir, proc, jobNumber, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, seed, rosetta_string):
       """ Farm out the modelling step on a cluster (SGE) """
