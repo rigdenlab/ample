@@ -1277,8 +1277,9 @@ if MakeModels == True:
       cluster_run.QTYPE="SGE"
       cluster_run.ALLATOM=ALLATOM
       cluster_run.setupModellingDir(RunDir)
-      cluster_run.setScwrlEXE(SCWRL)
-  
+      if USE_SCWRL:
+        cluster_run.setScwrlEXE(SCWRL)
+      cluster_run.set_USE_SCWRL(USE_SCWRL) 
       # loop over the number of models and submit a job to the cluster
       for i in range(NMODELS):
         cluster_run.modelOnCluster(RunDir, 1, i+1, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, seed_list[i], insert_Rosetta_command+CCline)

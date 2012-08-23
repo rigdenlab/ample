@@ -31,6 +31,7 @@ class ClusterRun:
       self.runningQueueList=[]
       self.QTYPE=""
       self.SCWRL_EXE=""
+      self.USE_SCWRL=False
 
       self.RunDir=""
       self.jobLogsList=[]
@@ -60,6 +61,9 @@ class ClusterRun:
       else:
          self.pdbsetEXE=os.path.join(os.environ["CCP4"], "bin", "pdbset")
 
+   def set_USE_SCWRL(self, bool):
+      self.USE_SCWRL=bool
+      
    def setScwrlEXE(self, exePath):
       self.SCWRL_EXE=exePath
 
@@ -257,13 +261,14 @@ class ClusterRun:
       "eof\n\n" +
 
       "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" + 
-      "popd\n\n"  +
-
-      self.SCWRL_EXE + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
-     
-      "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" + 
-
-      "\n")
+      "popd\n\n"  )
+      if self.USE_SCWRL :
+      
+          file.write(self.SCWRL_EXE + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
+          "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" + 
+           "\n")
+      if not self.USE_SCWRL :
+          file.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )  
   
       # Clean up non-essential files unless we are debugging
       if self.debug == False:

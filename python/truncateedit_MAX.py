@@ -284,6 +284,15 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ): #tr
   #print run_dir
   T_data = out_path + '/theseus_variances.txt'
 
+  # for alternate versions of theseus remove RES cards'
+  tmp=open(out_path+'/tmp', "w")
+  for line in open(out_path + '/theseus_variances.txt'):
+      line = re.sub('RES ', '', line)
+      tmp.write(line)
+  tmp.close()
+  os.system('mv '+out_path + '/theseus_variances.txt  '+  out_path + '/theseus_variances.txt_BAK')
+  os.system('mv '+out_path+'/tmp '+  out_path + '/theseus_variances.txt')  
+
   #--------------------------------
   # choose threshold type
   #-------------------------------

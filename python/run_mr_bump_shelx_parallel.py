@@ -329,7 +329,7 @@ def pdbcur(pdb):
      if re.search(pattern, line):
        #print line
        split = re.split(pattern, line)
-       #print split
+  
        ASU = split[1]
    return ASU
 
@@ -357,8 +357,8 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
    os.chdir(run_dir)
 
    make_mrbump_desktop(sigf, FP, free, name, pdb, mtz, fasta, noASU, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, NoShelx, NoShelxCycles)
-
-   
+   table = run_dir + '/search_'+name+'_mrbump/results/resultsTable.dat'
+   DIE = get_table(table, run_dir, Buccaneer, arpwarp, NoShelx) 
    # get data for printtable
    #Phaser output:
 
@@ -367,81 +367,76 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
      
      phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
      phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
-     if NoShelx:
-        if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/shelxe_phaser_oc0_ALL_'+name+'_UNMOD.pdb'):
-            for line in open(run_dir +'/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/shelxe_phaser_oc0_ALL_'+name+'_UNMOD.pdb'):
-              if re.search('Cycle', line):
-               phaser_shelxscore  =  re.findall('CC = (\d*\.\d*)%', line)  
-     else:
-        print 'cant find shelx output', run_dir +'/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/shelxe_phaser_oc0_ALL_'+name+'_UNMOD.pdb'   
 
    #molrep output:
    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
      molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
      molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
    
-     if NoShelx:
-        if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/shelxe_molrep_oc0_ALL_'+name+'_UNMOD.pdb'):
-            for line in open(run_dir +'/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/shelxe_molrep_oc0_ALL_'+name+'_UNMOD.pdb'):
-              if re.search('Cycle', line):
-               phaser_shelxscore  =  re.findall('CC = (\d*\.\d*)%', line)  
-     else:
-        print 'cant find shelx output', run_dir +'/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/shelxe_molrep_oc0_ALL_'+name+'_UNMOD.pdb'
 
 
 
-   print phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT
    os.chdir(run_dir)
-   sys.exit()
-   return phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT
+   
+   return DIE 
 ################
 def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
   
-    
+  DIE = False
 
   sys.stdout.write('\n')
   sys.stdout.write('###########################################################################################\n')
   sys.stdout.write('###########################################################################################\n')
   sys.stdout.write('##                                                                                       ##\n')
   sys.stdout.write('##                                                                                       ##\n')
-  print 'Resuts for this Run: '  
+  print 'Resuts for this Run: '
+    
+
+  header = '' 
   for line in open(table):
       if not re.search('PHASER', line)  and not re.search('MOLREP', line):
           print  line
+          header = line
       else:     
           print line 
-
+   
   
 
   table = []
   sys.stdout.write('\n\n  Overall Summary:\n\n')
+  print header
   for search in os.listdir(run_dir):
       if os.path.isdir(run_dir+'/'+search):
           res = run_dir+'/'+search+'/results/resultsTable.dat'
           if os.path.exists(res):
                for line in open(res):
+                if  re.search('PHASER', line)  or re.search('MOLREP', line):
                    print line
-                  
-                   split =re.split('\t', line)
-                   print split
+                     
+                   split =re.split('     ', line)
+                
                    table.append(split)
-          else:
-             print 'cant find ', res       
+                 
 
 
 
   
 
   print 'best so far: '
-  print table
-  for x in table:
-     print x
+  
+
+  #print table
+  #for x in table:
+  #   print x
+
+  
+   
 
   sys.stdout.write('##                                                                                       ##\n')
   sys.stdout.write('##                                                                                       ##\n')
   sys.stdout.write('###########################################################################################\n')
   sys.stdout.write('###########################################################################################\n')
- 
+  return DIE 
 
 def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles):
 
@@ -464,12 +459,11 @@ def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP,
    make_mrbump_desktop_domain(sigf, FP, free, name, pdb, mtz, fasta, fixed_pdb, FIXED_INPUT, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles)
    
    if os.path.exists(run_dir + '/search_'+name+'_mrbump/results/resultsTable.dat'):
-       print 'GOT'
-       get_table(run_dir + '/search_'+name+'_mrbump/results/resultsTable.dat')
-       sys.exit()
-   else :
-       print 'not got'
-       sys.exit()
+       
+       DIE = get_table(run_dir + '/search_'+name+'_mrbump/results/resultsTable.dat', run_dir, Buccaneer, arpwarp, NoShelx)
+      
+   
+       
 
 
    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
@@ -483,7 +477,7 @@ def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP,
 
     
    os.chdir(run_dir)
-   return phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT
+   return DIE 
      
 ############
 def split(ensembles, nproc):  #split into parallel comparisons for speed
@@ -537,42 +531,11 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
      #print name
      print '=== In batch '+str(batchname)+' running job '+str(inc)+' of '+str(len(chunk_of_ensembles))+'. '+str(len(chunk_of_ensembles)-inc)  +' left to go'
      inc +=1 
-     phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run(mtz, each_pdb, run_dir, fasta, name,  sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles, Resultspath, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles)
-     
-     log.write(name+':\n'+
-     '\nphaser done \n' 
-     'phaser PDB: '+phaser_pdb+' Phaser MTZ:'+ phaser_mtz + '\n'+
-     'shelx score : '+phaser_shelxscore+'\n' +
-     '\nMolrep done \n' 
-     'molrep PDB: '+molrep_pdb+' Phaser MTZ:'+ molrep_mtz+ '\n'+
-     'shelx score : '+molrep_shelxscore+'\n'+
-     '------------------------\n')
-     log.flush()
-
-     if isnumber(phaser_shelxscore):
-       if float(phaser_shelxscore) > 25:
-         #print 'Found a Solution '+ phaser_pdb
-         #phaser_shelxscore =re.sub('\.','_', phaser_shelxscore)
-         #phaser_refmacfreeR=re.sub('\.','_', phaser_refmacfreeR)
-
-         os.system('cp '+ phaser_XYZOUT+'  '+ Resultspath+'/phaser'+phaser_shelxscore+'__'+phaser_refmacfreeR+'.pdb'  )
-         os.system('cp '+ phaser_HKLOUT+'  '+ Resultspath+'/phaser'+phaser_shelxscore+'__'+phaser_refmacfreeR+'.mtz'  )        
-
-         if EarlyTerminate:
-           # return True
-            sys.exit()
-     if isnumber(molrep_shelxscore): 
-      if float(molrep_shelxscore) > 25:
-         #print 'Found a Solution '+ molrep_pdb
-         #molrep_shelxscore =re.sub('\.','_', molrep_shelxscore)
-         #molrep_refmacfreeR=re.sub('\.','_', molrep_refmacfreeR)
-
-         os.system('cp ' +molrep_XYZOUT+'   '+ Resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.pdb'  )
-         os.system('cp ' +molrep_HKLOUT+'   '+ Resultspath+'/molrep'+molrep_shelxscore+'_'+molrep_refmacfreeR+'.mtz' )
-         if EarlyTerminate:
-           # return True
-            sys.exit()
-
+     DIE = make_MRBUMP_run(mtz, each_pdb, run_dir, fasta, name,  sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles, Resultspath, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles)
+     if DIE:
+      if EarlyTerminate:
+       print 'solution found, exiting' 
+       sys.exit()
 
 ################################
 def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc,  fixed_PDB, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles): #loops through each chunk
@@ -585,17 +548,11 @@ def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  sig
      name = re.sub('.pdb', '', name)
     # print name
 
-     phaser_mtz, phaser_pdb, molrep_mtz, molrep_pdb,  molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT, phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = make_MRBUMP_run_domain(mtz, each_pdb, run_dir, fasta, name, fixed_PDB, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles)
-   
-     log.write(name+':\n'+
-     '\nphaser done \n' 
-     'phaser PDB: '+phaser_pdb+' Phaser MTZ:'+ phaser_mtz + '\n'+
-     'shelx score : '+phaser_shelxscore+'\n' +
-     '\nMolrep done \n' 
-     'molrep PDB: '+molrep_pdb+' Phaser MTZ:'+ molrep_mtz+ '\n'+
-     'shelx score : '+molrep_shelxscore+'\n'+
-     '------------------------\n')
-     log.flush()
+     DIE = make_MRBUMP_run_domain(mtz, each_pdb, run_dir, fasta, name, fixed_PDB, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles)
+     if DIE:
+      if EarlyTerminate:
+       print 'solution found, exiting'
+       sys.exit()
 
 
 ################################
