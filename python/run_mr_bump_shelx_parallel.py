@@ -10,6 +10,7 @@ import run_shelx_OLD
 from multiprocessing import Process, Queue, JoinableQueue, Pool, Value, Array
 import shutil
 import printTable
+import string
 
 def get_flags (mtz):
   sigf = 'SIGF='
