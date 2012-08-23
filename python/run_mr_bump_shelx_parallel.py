@@ -406,7 +406,7 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
 
   table = []
   sys.stdout.write('\n\n  Overall Summary:\n\n')
-  print header
+  #print header
   for search in os.listdir(run_dir):
       if os.path.isdir(run_dir+'/'+search):
           res = run_dir+'/'+search+'/results/resultsTable.dat'
@@ -429,6 +429,7 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
 
   out = sys.stdout
   T.pprint_table(out, resultsTable)
+  sys.stdout.write("\n")
 
 
  # for x in  header :
