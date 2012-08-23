@@ -420,18 +420,18 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
   header  =re.split('\s*', header)
   
 
-  for x in  header :
-     print x
+ # for x in  header :
+ #    print x
+#
+#  print 'best so far: '
+#  for x in table:
+#     print x 
 
-  print 'best so far: '
-  for x in table:
-     print x 
-
-  i=0
+ # i=0
   
      
-  for x in  header :
-     print x
+ # for x in  header :
+ #    print x
   
    
 
