@@ -400,7 +400,8 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
       else:     
           print line 
    
-  
+  # Set up the results table headers
+  resultsTable = []
 
   table = []
   sys.stdout.write('\n\n  Overall Summary:\n\n')
@@ -410,15 +411,24 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
           res = run_dir+'/'+search+'/results/resultsTable.dat'
           if os.path.exists(res):
                for line in open(res):
+                if  'MR_PROGRAM' in line.upper() and 'SOLUTION' in line.upper():
+                   resultsTable.append(string.split(line))
                 if  re.search('PHASER', line)  or re.search('MOLREP', line):
-                   print line
+                   resultsTable.append(string.split(line))
+                   #print line
                      
                    split =re.split('\s*', line)
                 
                    table.append(split)
                  
   header  =re.split('\s*', header)
-  
+   
+  # Output the results table
+  T=printTable.Table()
+
+  out = sys.stdout
+  T.pprint_table(out, resultsTable)
+
 
  # for x in  header :
  #    print x
