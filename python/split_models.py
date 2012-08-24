@@ -10,9 +10,11 @@ import time
 import shutil
 #######  EDIT 
 def fix(pdb):
+
   cur = open(os.getcwd()+'/cur', 'w')
-  cur.write('pdbset xyzin '+ pdb+' xyzout '+pdb+' <<EOF'+
+  cur.write('pdbset xyzin '+os.getcwd()+'/tmp' +' xyzout '+pdb+' <<EOF'+
              'OCCUPANCY 1 \n'+
+             'EXCLUDE WATER \n'+
              'CHAIN A')
   cur.close()
 ####### 

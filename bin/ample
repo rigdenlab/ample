@@ -1208,6 +1208,14 @@ if MakeFrags == True:
 ### break here for NMR (frags needed but not modelling
 #if NMR process models first
 if NMR_PROTOCOL == True:
+   tmp = open(os.getcwd()+'/tmp.pdb', "w")
+   for line in open(NMR_model_in):
+     if not re.search('^HETATM', line):
+        tmp.write(line)
+   tmp.close
+   NMR_model_in = os.getcwd()+'/tmp.pdb'
+   print 'using NMR model ' + os.getcwd()+'/tmp.pdb' 
+
    if CLUSTER == False:
        os.mkdir(RunDir + '/orig_models')
        modno = split_models.split(NMR_model_in,  RunDir+ '/orig_models')
@@ -1238,7 +1246,7 @@ if NMR_PROTOCOL == True:
        print 'using models from ' + PATH_TO_MODELS
    if CLUSTER:
       if NMR_process == 'none':
-         NMR_process =1000
+         NMR_process =1000 /modno
   
       PATH_TO_MODELS = RunDir+ '/models'
       MODELS_LOCATION = RunDir+ '/models'
@@ -1267,7 +1275,7 @@ if NMR_PROTOCOL == True:
                      cluster_run.set_USE_SCWRL(USE_SCWRL)
                      # loop over the number of models and submit a job to the cluster
                      for i in range(int(NMR_process)):
-                       cluster_run.NMRmodelOnCluster(RunDir+'/Run_'+str(hom_index), 1, i+1, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI,  i, ROSETTA_CM)
+                       cluster_run.NMRmodelOnCluster(RunDir+'/Run_'+str(hom_index), 1, i, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI,  i, ROSETTA_CM)
 
                      # Monitor the cluster queue to see when all jobs have finished
                      cluster_run.monitorQueue()
