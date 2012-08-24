@@ -1210,6 +1210,8 @@ if MakeFrags == True:
 ### break here for NMR (frags needed but not modelling
 #if NMR process models first
 if NMR_PROTOCOL == True:
+  
+
    tmp = open(os.getcwd()+'/tmp.pdb', "w")
    for line in open(NMR_model_in):
      if not re.search('^HETATM', line):
@@ -1231,8 +1233,10 @@ if NMR_PROTOCOL == True:
        else:
            print ' processing each model ', NMR_process, ' times'
        homolog = RunDir+ '/orig_models'
-
+       print 'you have ', modno, ' models in your nmr'
        if modno <2:
+          if NMR_Truncate_only == True : 
+             print 'cannot truncate, doing rebuilding'
           NMR_Truncate_only = False
 
 
@@ -1247,6 +1251,7 @@ if NMR_PROTOCOL == True:
               PATH_TO_MODELS = RunDir+ '/models'
               MODELS_LOCATION = RunDir+ '/models'
        if NMR_Truncate_only == True:
+         print 'Truncating NMR'          
          if modno <2:
              print 'cant trucate less than 2 models, use NMR_truncate_only False'
              sys.exit()
@@ -1256,11 +1261,26 @@ if NMR_PROTOCOL == True:
              MODELS_LOCATION = RunDir+ '/orig_models'
        print 'using models from ' + PATH_TO_MODELS
    if CLUSTER:
+    os.mkdir(RunDir + '/orig_models')
+    modno = split_models.split(NMR_model_in,  RunDir+ '/orig_models')
+    if modno <2:
+          if NMR_Truncate_only == True :
+             print 'cannot truncate, doing rebuilding'
+          NMR_Truncate_only = False    
+
+
+    if NMR_Truncate_only == True:  
+       MakeModels = False
+       PATH_TO_MODELS = RunDir+ '/orig_models'
+       MODELS_LOCATION = RunDir+ '/orig_models'
+       print 'using models from ' + PATH_TO_MODELS
+
+
+
+    if NMR_Truncate_only == False:
       MakeModels = False 
       PATH_TO_MODELS = RunDir+ '/models'
       MODELS_LOCATION = RunDir+ '/models'
-      os.mkdir(RunDir + '/orig_models')
-      modno = split_models.split(NMR_model_in,  RunDir+ '/orig_models')
       os.mkdir(RunDir+ '/models')
       homolog = RunDir+ '/orig_models' 
       hom_index=1 
