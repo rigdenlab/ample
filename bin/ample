@@ -1270,6 +1270,10 @@ if NMR_PROTOCOL == True:
 
 
                      # Invoke the cluster run class
+
+
+
+
                      cluster_run=clusterize.ClusterRun()
                      cluster_run.QTYPE="SGE"
                      cluster_run.ALLATOM=ALLATOM

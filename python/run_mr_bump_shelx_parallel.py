@@ -427,11 +427,11 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
   header  =re.split('\s*', header)
    
   # Output the results table
-  # T=printTable.Table()
+  T=printTable.Table()
 
-  # out = sys.stdout
-  # T.pprint_table(out, resultsTable)
-  #sys.stdout.write("\n")
+  out = sys.stdout
+  T.pprint_table(out, resultsTable)
+  sys.stdout.write("\n")
 
 
  # for x in  header :

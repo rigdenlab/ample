@@ -98,13 +98,16 @@ def splitNMR(model, path):
        if line[21:22] == 'A':
           #print line[21:22] 
           new_model.write(line)
-          new_model.close()
+          new_model.flush()
+       new_model.close()
 
  lengths = []
  for model in os.listdir(path):
   fix(path+'/'+model)
   l =  check(path+'/'+model)
   lengths.append(l)
+
+  
  if len(lengths) >1:
     mina  = min(lengths, key = int)
     maxa  = max(lengths, key = int)
@@ -113,3 +116,9 @@ def splitNMR(model, path):
       print 'All of the models need to be the same length, edit them and try again' 
       sys.exit() 
  return modno
+
+
+if __name__ == "__main__":
+  model = '/data2/jac45/ex/2JQN.pdb'
+  path = '/data2/jac45/ex/m'
+  split(model, path )
