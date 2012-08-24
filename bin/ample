@@ -1243,6 +1243,10 @@ if NMR_PROTOCOL == True:
               PATH_TO_MODELS = RunDir+ '/models'
               MODELS_LOCATION = RunDir+ '/models'
        if NMR_Truncate_only == True:
+         if modno <2:
+             print 'cant trucate less than 2 models, use NMR_truncate_only False'
+             sys.exit()
+         if modno >=2: 
              MakeModels = False
              PATH_TO_MODELS = RunDir+ '/orig_models'
              MODELS_LOCATION = RunDir+ '/orig_models'

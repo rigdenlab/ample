@@ -426,8 +426,8 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
                  
   header  =string.split(header)
   
-     
-
+  Best = 'none'   
+  
   # sort results
   if use_shelx:
     y = header.index('SHEXLE_CC')  
@@ -435,6 +435,8 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
    # print y 
     resultsTable.sort(key=lambda x: float(x[y]))
     resultsTable.reverse()
+    best = resultsTable[0][0]
+    prog = resultsTable[0][1] 
    # print resultsTable 
   if not use_shelx: 
     y = header.index('init/final_Rfree')
@@ -445,9 +447,16 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
     resultsTable.sort(key=lambda x: float(x[y][-6:-1]))
    #  resultsTable.reverse()
    #  print resultsTable
-        
+    best = resultsTable[0][0]    
+    prog = resultsTable[0][1]
+  
+  n= re.sub('loc0_ALL','search', best)
+  n = re.sub('UNMOD','mrbump', n)
+  Best = run_dir +n+'/data/'+re.sub('_UNMOD','', best)+'/unmod/refine/'+prog.lower()
+  
 
-
+# /data2/jac45/tox/toxd-example/ROSETTA_MR_1/MRBUMP/loc0_ALL_poly_ala_trunc_0.248362_rad_1_UNMOD/data/loc0_ALL_poly_ala_trunc_0.248362_rad_1 
+# /data2/jac45/tox/toxd-example/ROSETTA_MR_1/MRBUMP/search_poly_ala_trunc_0.248362_rad_1_mrbump/data/loc0_ALL_poly_ala_trunc_0.248362_rad_1                              ROSETTA_MR_1/MRBUMP/
   resultsTable.insert(0, header)  
   # for x in resultsTable:
    #   print x  
@@ -457,8 +466,9 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
 
   out = sys.stdout
   T.pprint_table(out, resultsTable)
-  sys.stdout.write("\n")
-
+  sys.stdout.write("\n\n\n")
+  print 'Best results so far are in : '
+  print Best
 
    
 
