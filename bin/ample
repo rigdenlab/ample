@@ -38,6 +38,7 @@ import pickle
 import copy
 import clusterize
 import shutil
+import collections 
 
 from  subprocess import Popen, PIPE, STDOUT
 from add_sidechains_SCWRL import *
@@ -944,7 +945,8 @@ if MakeModels == True:
   print 'you have chosen to both import models and to make them, choose only one\nSet Make Models to \"True\" to make them, \"False\" to import them'
   sys.exit()
 
-if IMPORTING_MODELS == True:
+if not  NMR_PROTOCOL :
+ if IMPORTING_MODELS == True:
   if not os.path.exists(MODELS_LOCATION):
    print 'you have chosen to import models, but path does not exist, looking for ensembles : '+MODELS_LOCATION
    if not os.path.exists(ENSEMBLES):
@@ -1247,7 +1249,7 @@ if NMR_PROTOCOL == True:
    if CLUSTER:
       if NMR_process == 'none':
          NMR_process =1000 /modno
-  
+      MakeModels = False 
       PATH_TO_MODELS = RunDir+ '/models'
       MODELS_LOCATION = RunDir+ '/models'
       os.mkdir(RunDir + '/orig_models')
@@ -1286,8 +1288,31 @@ if NMR_PROTOCOL == True:
                      hom_index+=1
                      
 
+   # check for same length
+   l = []
+   for pdb in os.listdir(MODELS_LOCATION):
+      i =  split_models.check(MODELS_LOCATION+'/'+pdb)
+      l.append(i)
+      if len(l) >1:
+          mina  = min(l,  key = int)
+          maxa  = max(l,  key = int)
+   if mina != maxa:
+      print 'min length = ', mina, ' max length = ', maxa,  'models are not equal length'
+      print 'All of the models need to be the same length, All long and short models will be deleted, next time  maybe try one model at a time '
 
+      lVals = l
+      modeal_l = max(map(lambda val: (lVals.count(val), val), set(lVals)))
+      print modeal_l
+      modeal_l =modeal_l[1]
+      print modeal_l
 
+      for pdb in os.listdir(MODELS_LOCATION):
+        i =  split_models.check(MODELS_LOCATION+'/'+pdb)
+        if i != modeal_l:
+           os.remove(MODELS_LOCATION+'/'+pdb)
+ 
+      
+  
 
 # return from nmr with models already made
 
