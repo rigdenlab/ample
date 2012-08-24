@@ -1232,6 +1232,10 @@ if NMR_PROTOCOL == True:
            print ' processing each model ', NMR_process, ' times'
        homolog = RunDir+ '/orig_models'
 
+       if modno <2:
+          NMR_Truncate_only = False
+
+
        if NMR_Truncate_only == False:   
  
            for hom in os.listdir(homolog):
