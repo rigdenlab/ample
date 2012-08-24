@@ -1247,8 +1247,6 @@ if NMR_PROTOCOL == True:
              MODELS_LOCATION = RunDir+ '/orig_models'
        print 'using models from ' + PATH_TO_MODELS
    if CLUSTER:
-      if NMR_process == 'none':
-         NMR_process =1000 /modno
       MakeModels = False 
       PATH_TO_MODELS = RunDir+ '/models'
       MODELS_LOCATION = RunDir+ '/models'
@@ -1257,6 +1255,10 @@ if NMR_PROTOCOL == True:
       os.mkdir(RunDir+ '/models')
       homolog = RunDir+ '/orig_models' 
       hom_index=1 
+      if NMR_process == 'none':
+         NMR_process =1000 /modno
+
+
       for hom in os.listdir(homolog):
  
               os.mkdir(RunDir+'/Run_'+str(hom_index))
