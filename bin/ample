@@ -1302,7 +1302,6 @@ if NMR_PROTOCOL == True:
 
       lVals = l
       modeal_l = max(map(lambda val: (lVals.count(val), val), set(lVals)))
-      print modeal_l
       modeal_l =modeal_l[1]
       print modeal_l
 
