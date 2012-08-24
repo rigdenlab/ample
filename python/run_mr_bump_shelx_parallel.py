@@ -414,7 +414,7 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
           if os.path.exists(res):
                for line in open(res):
                 if  'MR_PROGRAM' in line.upper() and 'SOLUTION' in line.upper() and HEADER:
-                   resultsTable.append(string.split(line))
+                  # resultsTable.append(string.split(line))
                    HEADER=False
                 if  re.search('PHASER', line)  or re.search('MOLREP', line):
                    resultsTable.append(string.split(line))
@@ -424,8 +424,34 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
                 
                    table.append(split)
                  
-  header  =re.split('\s*', header)
-   
+  header  =string.split(header)
+  
+     
+
+  # sort results
+  if use_shelx:
+    y = header.index('SHEXLE_CC')  
+   # print resultsTable
+   # print y 
+    resultsTable.sort(key=lambda x: float(x[y]))
+    resultsTable.reverse()
+   # print resultsTable 
+  if not use_shelx: 
+    y = header.index('init/final_Rfree')
+   # print resultsTable
+   #  print y
+
+    #print 'HERE',  resultsTable[0][y][-6:-1]
+    resultsTable.sort(key=lambda x: float(x[y][-6:-1]))
+   #  resultsTable.reverse()
+   #  print resultsTable
+        
+
+
+  resultsTable.insert(0, header)  
+  # for x in resultsTable:
+   #   print x  
+ 
   # Output the results table
   T=printTable.Table()
 
@@ -434,19 +460,6 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
   sys.stdout.write("\n")
 
 
- # for x in  header :
- #    print x
-#
-#  print 'best so far: '
-#  for x in table:
-#     print x 
-
- # i=0
-  
-     
- # for x in  header :
- #    print x
-  
    
 
   sys.stdout.write('##                                                                                       ##\n')
@@ -638,11 +651,11 @@ if __name__ == "__main__":
  Buccaneer = True
  arpwarp = False
  use_shelx = True
- run_dir = '/data2/jac45/tox/toxd-example/ROSETTA_MR_0/MRBUMP_cluster1/'
+ run_dir = '/data2/jac45/tox/toxd-example/ROSETTA_MR_1/MRBUMP/'
  #chunk = split(ensembles, nproc)
  #'split_into_runs_domains(mtz, chunk, run_dir, fasta, nproc, fixed_pdb)
  #split_into_runs(mtz,chunk  , run_dir, fasta,  nproc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, mrbump_programs)
- get_table('/data2/jac45/tox/toxd-example/ROSETTA_MR_0/MRBUMP_cluster1/search_All_atom_trunc_0.524367_rad_3_mrbump/results/resultsTable.dat', run_dir,  Buccaneer, arpwarp, use_shelx )
+ get_table('/data2/jac45/tox/toxd-example/ROSETTA_MR_1/MRBUMP/search_SCWRL_Reliable_sidechains_trunc_31.024398_rad_3_mrbump/results/resultsTable.dat', run_dir,  Buccaneer, arpwarp, use_shelx )
  # make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles)
 ###s
 
