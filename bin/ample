@@ -1263,7 +1263,7 @@ if NMR_PROTOCOL == True:
       if NMR_process == 'none':
          NMR_process =1000 /modno
 
-
+      homindeces = []
       for hom in os.listdir(homolog):
  
               os.mkdir(RunDir+'/Run_'+str(hom_index))
@@ -1291,13 +1291,17 @@ if NMR_PROTOCOL == True:
                        cluster_run.NMRmodelOnCluster(RunDir+'/Run_'+str(hom_index), 1, i, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI,  i, ROSETTA_CM)
 
                      # Monitor the cluster queue to see when all jobs have finished
-                     cluster_run.monitorQueue()
+                    # cluster_run.monitorQueue()
                      
-                     for remodelled in os.listdir(RunDir+'/Run_'+str(hom_index) + '/models'):
-                          remodelled_n = remodelled.rstrip('.pdb')
-                          shutil.copyfile(RunDir+'/Run_'+str(hom_index) + '/models/'+ remodelled, RunDir+ '/models/'+remodelled_n+'_'+str(hom_index)+'.pdb') 
+                     homindeces.append(hom_index) 
                      hom_index+=1
-                     
+      cluster_run.monitorQueue()
+      print homindeces      
+      for homindex in homindeces:                 
+         for remodelled in os.listdir(RunDir+'/Run_'+str(homindex) + '/models'):
+                          remodelled_n = remodelled.rstrip('.pdb')
+                          shutil.copyfile(RunDir+'/Run_'+str(homindex) + '/models/'+ remodelled, RunDir+ '/models/'+remodelled_n+'_'+str(homindex)+'.pdb') 
+
 
    # check for same length
    l = []
