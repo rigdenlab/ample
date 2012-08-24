@@ -1214,6 +1214,7 @@ if NMR_PROTOCOL == True:
    for line in open(NMR_model_in):
      if not re.search('^HETATM', line):
         tmp.write(line)
+        tmp.flush()
    tmp.close
    NMR_model_in = os.getcwd()+'/tmp.pdb'
    print 'using NMR model ' + os.getcwd()+'/tmp.pdb' 
