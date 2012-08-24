@@ -1318,7 +1318,7 @@ if NMR_PROTOCOL == True:
            cluster_run.NMRmodelOnCluster(RunDir+'/Run_'+str(hom_index), 1, i, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI,  i, ROSETTA_CM)
 
       # Monitor the cluster queue to see when all jobs have finished
-           cluster_run.monitorQueue()
+         cluster_run.monitorQueue()
                      
                     #  homindeces.append(hom_index) 
                     #  hom_index+=1
