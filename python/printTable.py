@@ -52,16 +52,9 @@ class Table:
            print >> out
 
 
-
-
-   
-
-
-
    def maketable(self):
        table = []
        
-
        if self.cluster == False:
            for run in os.listdir(self.bumppath):
                if re.search('search', run): 

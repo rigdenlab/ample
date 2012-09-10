@@ -101,6 +101,7 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU, mrb
 
 
   mr_bump.write('FIXSG True\n')
+  mr_bump.write('PJOBS 1\n')
 
   mr_bump.write('CHECK False\n')
   mr_bump.write('LITE True\n')
@@ -167,6 +168,7 @@ def make_mrbump_desktop_domain(sigf, fp, free, jobid, local_files, mtz, seq, fix
   mr_bump.write('SHELXE  '+str(NoShelx)+'\n')
 
   mr_bump.write('FIXSG True\n')
+  mr_bump.write('PJOBS 1\n')
 
   mr_bump.write('CHECK False\n')
   mr_bump.write('LITE True\n')
@@ -228,6 +230,7 @@ def make_mrbump_Cluster(sigf, fp, free, jobid, local_files, mtz, seq, mrbump_pro
 
 
   mr_bump.write('FIXSG True\n')
+  mr_bump.write('PJOBS 1\n')
 
   mr_bump.write('CHECK False\n')
   mr_bump.write('LITE True\n')

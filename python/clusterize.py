@@ -508,6 +508,7 @@ class ClusterRun:
       'MDLP False\n' +
     
       'FIXSG True\n' +
+      'PJOBS 1\n' +
     
       'BCYCLES '+     str(  self.BCYCLES )+'\n'+
       'BUCC '  +       str(   self.BUCC )+'\n'+
