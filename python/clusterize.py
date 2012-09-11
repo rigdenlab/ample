@@ -241,6 +241,7 @@ class ClusterRun:
          '#$ -o ' + os.path.join(RunDir, "pre_models", "logs", jobName + '.log') + '\n' +
          '#$ -N ' + jobName + '\n\n')
 
+      file.write("setenv CCP4_SCR $TMPDIR\n\n")
       
       file.write('cd '+ os.path.join(RunDir, "pre_models", "model_" + str(jobNumber)) +'\n\n'+
            MR_ROSETTA +' \\\n'+
@@ -369,6 +370,7 @@ class ClusterRun:
          '#$ -o ' + os.path.join(RunDir, "pre_models", "logs", jobName + '.log') + '\n' +
          '#$ -N ' + jobName + '\n\n')
   
+      file.write("setenv CCP4_SCR $TMPDIR\n\n")
       
       if self.ALLATOM:
          file.write(ROSETTA_PATH +' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA +
@@ -487,6 +489,8 @@ class ClusterRun:
          '#$ -N ' + jobName + '\n\n' +
   
       "pushd " + jobDir + "\n\n") 
+
+      file.write("setenv CCP4_SCR $TMPDIR\n\n")
 
       file.write('mrbump HKLIN ' + self.HKLIN + ' SEQIN ' + self.SEQIN +' HKLOUT ' + 'OUT.mtz  XYZOUT OUT.pdb << eof\n' +
       'LABIN ' + "F=" + self.LABIN["F"] + ' ' + "SIGF=" + self.LABIN["SIGF"] + ' ' + "FreeR_flag=" + self.LABIN["FreeR_flag"] + '\n' +
