@@ -47,7 +47,7 @@ class ClusterRun:
       self.BCYCLES  = 5
       self.BUCC = True
       self.SHELXE = False
-      self.SCYCLES = 5
+      self.SCYCLES = 15
 
 
       #self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
