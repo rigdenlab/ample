@@ -46,6 +46,8 @@ class ClusterRun:
       
       self.BCYCLES  = 5
       self.BUCC = True
+      self.ACYCLES  = 5
+      self.ARPWARP = True
       self.SHELXE = False
       self.SCYCLES = 15
 
@@ -472,12 +474,12 @@ class ClusterRun:
         
       modelName=os.path.split(ensemblePDB)[1].replace(".pdb","")
 
-      phaserPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'refine', 'phaser', 'refmac_phaser_loc0_ALL_'+ modelName +'_UNMOD.pdb')
-      phaserMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'refine', 'phaser', 'refmac_phaser_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
-      molrepPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'refine', 'molrep', 'refmac_molrep_loc0_ALL_'+ modelName +'_UNMOD.pdb')
-      molrepMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'refine', 'molrep', 'refmac_molrep_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
+      phaserPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'refmac_phaser_loc0_ALL_'+ modelName +'_UNMOD.pdb')
+      phaserMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'refmac_phaser_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
+      molrepPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'molrep', 'refine', 'refmac_molrep_loc0_ALL_'+ modelName +'_UNMOD.pdb')
+      molrepMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'molrep', 'refine', 'refmac_molrep_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
        
-      phaserTFZPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'refine', 'phaser', 'phaser_loc0_ALL_'+ modelName +'_UNMOD.1.pdb')
+      phaserTFZPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'phaser_loc0_ALL_'+ modelName +'_UNMOD.1.pdb')
      
       file=open(sub_script, "w")
       file.write('#!/bin/sh\n'
@@ -514,8 +516,10 @@ class ClusterRun:
       'FIXSG True\n' +
       'PJOBS 1\n' +
     
-      'BCYCLES '+     str(  self.BCYCLES )+'\n'+
       'BUCC '  +       str(   self.BUCC )+'\n'+
+      'BCYCLES '+     str(  self.BCYCLES )+'\n'+
+      'ARPWARP '+       str(   self.ARPWARP )+'\n'+
+      'ACYCLES '+     str(  self.ACYCLES )+'\n'+
       'SHELXE ' +      str(self.SHELXE)+'\n'+
       'SCYCLES '+       str( self.SCYCLES) +'\n' + 
 

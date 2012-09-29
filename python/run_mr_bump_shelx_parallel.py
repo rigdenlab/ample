@@ -96,8 +96,10 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU, mrb
 
   mr_bump.write('BUCC  '+str(Buccaneer)+'\n')
   mr_bump.write('BCYCLES  '+str(Buccaneer_cycles)+'\n')
-  mr_bump.write('SCYCLES  '+str(NoShelxCycles)+'\n')
+  mr_bump.write('ARPWARP  '+str(arpwarp)+'\n')
+  mr_bump.write('ACYCLES  '+str(arpwarp_cycles)+'\n')
   mr_bump.write('SHELXE  '+str(NoShelx)+'\n')
+  mr_bump.write('SCYCLES  '+str(NoShelxCycles)+'\n')
 
 
   mr_bump.write('FIXSG True\n')
@@ -164,8 +166,10 @@ def make_mrbump_desktop_domain(sigf, fp, free, jobid, local_files, mtz, seq, fix
 
   mr_bump.write('BUCC  '+str(Buccaneer)+'\n')
   mr_bump.write('BCYCLES  '+str(Buccaneer_cycles)+'\n')
-  mr_bump.write('SCYCLES  '+str(NoShelxCycles)+'\n')
+  mr_bump.write('ARPWARP  '+str(arpwarp)+'\n')
+  mr_bump.write('ACYCLES  '+str(arpwarp_cycles)+'\n')
   mr_bump.write('SHELXE  '+str(NoShelx)+'\n')
+  mr_bump.write('SCYCLES  '+str(NoShelxCycles)+'\n')
 
   mr_bump.write('FIXSG True\n')
   mr_bump.write('PJOBS 1\n')
@@ -366,16 +370,16 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
    # get data for printtable
    #Phaser output:
 
-   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
+   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
      phaser_shelxscore ='none'
      
-     phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
-     phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
+     phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
+     phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
 
    #molrep output:
-   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
-     molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
-     molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
+   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
+     molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
+     molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
    
 
 
@@ -433,7 +437,7 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
   
   # sort results
   if use_shelx:
-    y = header.index('SHEXLE_CC')  
+    y = header.index('SHELXE_CC')  
    # print resultsTable
    # print y 
     resultsTable.sort(key=lambda x: float(x[y]))
@@ -445,15 +449,15 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
 
    # print resultsTable 
   if not use_shelx: 
-    y = header.index('init/final_Rfree')
+    y = header.index('final_Rfree')
 
-    resultsTable.sort(key=lambda x: float(x[y][-6:-1]))
+    resultsTable.sort(key=lambda x: float(x[y]))
     best = resultsTable[0][0]    
     prog = resultsTable[0][1]
   
   n= re.sub('loc0_ALL','search', best)
   n = re.sub('UNMOD','mrbump', n)
-  Best = run_dir +n+'/data/'+re.sub('_UNMOD','', best)+'/unmod/refine/'+prog.lower()
+  Best = run_dir +n+'/data/'+re.sub('_UNMOD','', best)+'/unmod/mr/'+prog.lower()+'/refine'
   
 
   resultsTable.insert(0, header)  
@@ -505,14 +509,14 @@ def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP,
        
 
 
-   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
-     phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
-     phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
+   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
+     phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
+     phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
 
    #molrep output:
-   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
-     molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
-     molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
+   if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
+     molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
+     molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
 
     
    os.chdir(run_dir)

@@ -51,8 +51,8 @@ def make_log(mr_bump_path, final_log):
      name=re.sub('search_', '', a_dir)
      name=re.sub('_mrbump', '', name)
      
-     phaser_pdb = mr_bump_path + '/'+a_dir+'/data/loc0_ALL_'+name+'/unmod/refine/phaser/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
-     molrep_pdb = mr_bump_path + '/'+a_dir+'/data/loc0_ALL_'+name+'/unmod/refine/molrep/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
+     phaser_pdb = mr_bump_path + '/'+a_dir+'/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
+     molrep_pdb = mr_bump_path + '/'+a_dir+'/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
      phaser_log = mr_bump_path + '/'+a_dir+'/data/loc0_ALL_'+name+'/unmod/mr/phaser/phaser_loc0_ALL_'+name+'_UNMOD.1.pdb'
 
      shelx_phaser = mr_bump_path + '/'+a_dir+'/phaser_shelx/RESULT'

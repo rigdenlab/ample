@@ -371,7 +371,7 @@ def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles, BumpDir):
   return shelscore, refmacfreeR, HKLOUT, XYZOUT, SPACE
 #####
 if __name__ == "__main__":
-  pdb ='/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/data/loc0_ALL_24/pdbclip/refine/phaser/refmac_phaser_loc0_ALL_24_PDBCLP.pdb'
+  pdb ='/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/data/loc0_ALL_24/pdbclip/mr/phaser/refine/refmac_phaser_loc0_ALL_24_PDBCLP.pdb'
   mtz = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/phaser_shelx/orig.mtz'
   fasta = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/fasta'
   run_dir = '/media/524b3881-b165-47ea-8359-adc8cda82e0a/BACKUP/TEST_CASES/homs/8_HR3646E/ROSETTA_MR_0/MRBUMP/search_24_mrbump/phaser_shelx'

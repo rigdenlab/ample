@@ -541,7 +541,7 @@ if not var_args['Buccaneer_cycles'] is None:
 if var_args['arpwarp_cycles'] is None:
    arpwarp_cycles = 10
 if not var_args['arpwarp_cycles'] is None:
-   Buccaneer_cycles = var_args['arpwarp_cycles'][0]
+   arpwarp_cycles = var_args['arpwarp_cycles'][0]
 
 
 if var_args['arpwarp'] is None:
@@ -1718,13 +1718,13 @@ if ENSEMBLE_import ==False:
             run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles)
             if NoShelx == False: 
               Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
-              print '\n\nFinal Results:\n\n'
-              T=printTable.Table()
-              T.bumppath = RunDir +'/MRBUMP_cluster'+str(samples)
-              T.cluster = False
-              table = T.maketable()
-              out = sys.stdout
-              T.pprint_table(out, table)
+              #print '\n\nFinal Results:\n\n'
+              #T=printTable.Table()
+              #T.bumppath = RunDir +'/MRBUMP_cluster'+str(samples)
+              #T.cluster = False
+              #table = T.maketable()
+              #out = sys.stdout
+              #T.pprint_table(out, table)
 
             if NoShelx ==  True:
               resultslog = open(ResultsPath+'/Results.log', "w")
