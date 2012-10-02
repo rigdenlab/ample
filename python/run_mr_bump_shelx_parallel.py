@@ -74,7 +74,7 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU, mrb
   mr_bump.write('LABIN ' + sigf + ' ' + fp + ' ' + free + '\n')
   mr_bump.write('JOBID '+ jobid+ '_mrbump\n')
   mr_bump.write('MRPROGRAM ' + mrbump_programs + '\n')
-  mr_bump.write('LOCALFILE ' + local_files + ' CHAIN ALL RMS 0.1\n')
+  mr_bump.write('LOCALFILE ' + local_files + ' CHAIN ALL RMS 1.2\n')
 
 
   mr_bump.write('SCOPSEARCH False\n')
@@ -142,12 +142,12 @@ def make_mrbump_desktop_domain(sigf, fp, free, jobid, local_files, mtz, seq, fix
   mr_bump.write('LABIN ' + sigf + ' ' + fp + ' ' + free + '\n')
   mr_bump.write('JOBID '+ jobid+ '_mrbump\n')
   mr_bump.write('MRPROGRAM ' + mrbump_programs + '\n')
-  mr_bump.write('LOCALFILE ' + local_files + ' CHAIN ALL RMS 0.1\n')
+  mr_bump.write('LOCALFILE ' + local_files + ' CHAIN ALL RMS 1.2\n')
 
   if FIXED_INPUT:
      mr_bump.write('FIXED_XYZIN '+fixed_pdb+' IDENTIY 0.6 \n')
   if not FIXED_INPUT:
-     mr_bump.write('LOCALFILE ' +fixed_pdb + ' CHAIN ALL RMS 0.1\n')
+     mr_bump.write('LOCALFILE ' +fixed_pdb + ' CHAIN ALL RMS 1.2\n')
 
   mr_bump.write('SCOPSEARCH False\n')
   mr_bump.write('PQSSEARCH False\n')
@@ -214,7 +214,7 @@ def make_mrbump_Cluster(sigf, fp, free, jobid, local_files, mtz, seq, mrbump_pro
   mr_bump.write('LABIN ' + sigf + ' ' + fp + ' ' + free + '\n')
   mr_bump.write('JOBID '+ jobid+ '_mrbump\n')
   mr_bump.write('MRPROGRAM ' + mrbump_programs + '\n')
-  mr_bump.write('LOCALFILE ' + local_files + ' CHAIN A RMS 1.0\n')
+  mr_bump.write('LOCALFILE ' + local_files + ' CHAIN A RMS 1.2\n')
 
 
   mr_bump.write('SCOPSEARCH False\n')

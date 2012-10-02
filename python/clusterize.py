@@ -498,7 +498,7 @@ class ClusterRun:
       'LABIN ' + "F=" + self.LABIN["F"] + ' ' + "SIGF=" + self.LABIN["SIGF"] + ' ' + "FreeR_flag=" + self.LABIN["FreeR_flag"] + '\n' +
       'JOBID '+ str(jobID) + '_mrbump\n' +
       'MRPROGRAM '+mrbump_programs+'\n' +
-      'LOCALFILE ' + ensemblePDB + ' CHAIN ALL RMS 0.1\n' +
+      'LOCALFILE ' + ensemblePDB + ' CHAIN ALL RMS 1.2\n' +
     
       'SCOPSEARCH False\n' +
       'PQSSEARCH False\n' +
