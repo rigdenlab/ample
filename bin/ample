@@ -345,11 +345,11 @@ args = parser.parse_args()
 #get MRBUMP keywords direct
 MRkeys = []
 
-print sys.argv
+#print sys.argv
 
 keycount = 0
 while keycount < len(sys.argv):
-   print sys.argv[keycount] ,  keycount
+   #print sys.argv[keycount] ,  keycount
    if sys.argv[keycount]  == "-MRkeys":
        MRkeys.append(sys.argv[keycount + 1])
    keycount += 1
