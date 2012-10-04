@@ -50,7 +50,8 @@ class ClusterRun:
       self.ARPWARP = True
       self.SHELXE = False
       self.SCYCLES = 15
-
+      
+      self.MRKEYS = []
 
       #self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
       self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
@@ -533,8 +534,12 @@ class ClusterRun:
       'CLEAN False\n' +
       'DEBUG True\n') 
 
+
       if fixedPDB!="":
         file.write('FIXED_XYZIN ' + fixedPDB + ' IDEN ' + str(fixedIDEN) + '\n')
+
+      for k in self.MRKEYS:
+        file.write(k + '\n') 
 
       file.write('END\n' +
       'eof\n\n' +

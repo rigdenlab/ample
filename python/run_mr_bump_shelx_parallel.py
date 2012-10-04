@@ -56,7 +56,7 @@ def get_flags (mtz):
 
   return next, sigf, FP, free
 ###################
-def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, NoShelx, NoShelxCycles):
+def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, NoShelx, NoShelxCycles, MRkeys):
   path = os.getcwd()
 
   i_name = local_files.rstrip(',pdb')
@@ -112,6 +112,10 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU, mrb
   mr_bump.write('USEACORN False\n')
   mr_bump.write('USEENSEM False\n')
   mr_bump.write('DEBUG True\n')
+
+  for k in MRkeys:
+     mr_bump.write(k + '\n')   
+
   mr_bump.write('END\n')
   mr_bump.write('eof')
   mr_bump.close()
@@ -124,7 +128,7 @@ def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU, mrb
 
   os.chdir(path)
 ##########################
-def make_mrbump_desktop_domain(sigf, fp, free, jobid, local_files, mtz, seq, fixed_pdb, FIXED_INPUT, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles):
+def make_mrbump_desktop_domain(sigf, fp, free, jobid, local_files, mtz, seq, fixed_pdb, FIXED_INPUT, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles, MRkeys):
   path = os.getcwd()
 
   i_name = local_files.rstrip(',pdb')
@@ -181,6 +185,10 @@ def make_mrbump_desktop_domain(sigf, fp, free, jobid, local_files, mtz, seq, fix
   mr_bump.write('USEACORN False\n')
   mr_bump.write('USEENSEM False\n')
   mr_bump.write('DEBUG True\n')
+
+  for k in MRkeys:
+     mr_bump.write(k + '\n') 
+
   mr_bump.write('END\n')
   mr_bump.write('eof')
   mr_bump.close()
@@ -342,7 +350,7 @@ def pdbcur(pdb):
    return ASU
 
 ###############################
-def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles, Resultspath, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles):
+def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles, Resultspath, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys):
    SolutionFound = False 
    #files to make:
    phaser_mtz = 'fail'
@@ -364,7 +372,7 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
   # os.system('mkdir ' +run_dir + '/' +name)
    os.chdir(run_dir)
 
-   make_mrbump_desktop(sigf, FP, free, name, pdb, mtz, fasta, noASU, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, NoShelx, NoShelxCycles)
+   make_mrbump_desktop(sigf, FP, free, name, pdb, mtz, fasta, noASU, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, NoShelx, NoShelxCycles, MRkeys)
    table = run_dir + '/search_'+name+'_mrbump/results/resultsTable.dat'
    DIE = get_table(table, run_dir, Buccaneer, arpwarp, NoShelx) 
    # get data for printtable
@@ -481,7 +489,7 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
   sys.stdout.write('###########################################################################################\n')
   return DIE 
 
-def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles):
+def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles, MRkeys):
 
    #files to make:
    phaser_mtz = 'fail'
@@ -499,7 +507,7 @@ def  make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP,
    FP = 'F='+FP
    free =  'FreeR_flag='+free
 
-   make_mrbump_desktop_domain(sigf, FP, free, name, pdb, mtz, fasta, fixed_pdb, FIXED_INPUT, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles)
+   make_mrbump_desktop_domain(sigf, FP, free, name, pdb, mtz, fasta, fixed_pdb, FIXED_INPUT, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles, MRkeys)
    
    if os.path.exists(run_dir + '/search_'+name+'_mrbump/results/resultsTable.dat'):
        
@@ -563,7 +571,7 @@ def isnumber(n):
 
 
 ############################
-def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, batchname, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles): #loops through each chunk
+def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, batchname, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys): #loops through each chunk
   
   log = open(log_name, "w")
   inc = 1
@@ -574,14 +582,14 @@ def run_parallel(mtz, chunk_of_ensembles, run_dir, fasta,  log_name, sigf, FP, f
      #print name
      print '=== In batch '+str(batchname)+' running job '+str(inc)+' of '+str(len(chunk_of_ensembles))+'. '+str(len(chunk_of_ensembles)-inc)  +' left to go'
      inc +=1 
-     DIE = make_MRBUMP_run(mtz, each_pdb, run_dir, fasta, name,  sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles, Resultspath, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles)
+     DIE = make_MRBUMP_run(mtz, each_pdb, run_dir, fasta, name,  sigf, FP, free, noASU, EarlyTerminate, NoShelx, NoShelxCycles, Resultspath, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
      if DIE:
       if EarlyTerminate:
        print 'solution found, exiting' 
        sys.exit()
 
 ################################
-def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc,  fixed_PDB, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles): #loops through each chunk
+def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc,  fixed_PDB, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys): #loops through each chunk
   
   log = open(log_name, "w")
 
@@ -591,7 +599,7 @@ def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  sig
      name = re.sub('.pdb', '', name)
     # print name
 
-     DIE = make_MRBUMP_run_domain(mtz, each_pdb, run_dir, fasta, name, fixed_PDB, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles)
+     DIE = make_MRBUMP_run_domain(mtz, each_pdb, run_dir, fasta, name, fixed_PDB, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles, MRkeys)
      if DIE:
       if EarlyTerminate:
        print 'solution found, exiting'
@@ -599,7 +607,7 @@ def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  sig
 
 
 ################################
-def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles):
+def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys):
       cur_dir=os.getcwd()
       inc = 1
       threads = []
@@ -608,7 +616,7 @@ def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noAS
 
         #print '===now running job '+str(inc) +' containing  '+str(len(each_chunk)) +'ensembles. '+str(len(ensembles)-inc) +' jobs left to do==='
         log_name = cur_dir+'/LOG_proc'+str(inc)                        
-        thread = Process(target=run_parallel, args=(mtz, each_chunk, run_dir, fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles))        
+        thread = Process(target=run_parallel, args=(mtz, each_chunk, run_dir, fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys))        
         thread.start() 
         threads.append(thread)
         inc+=1
@@ -617,7 +625,7 @@ def split_into_runs(mtz, ensembles, run_dir, fasta,  nProc, sigf, FP, free, noAS
 
         thread.join()
 #############################################
-def split_into_runs_domains(mtz, ensembles, run_dir, domain_all_chain_fasta , NProc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles):
+def split_into_runs_domains(mtz, ensembles, run_dir, domain_all_chain_fasta , NProc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys):
       cur_dir=os.getcwd()
       inc = 1
       threads = []
@@ -625,7 +633,7 @@ def split_into_runs_domains(mtz, ensembles, run_dir, domain_all_chain_fasta , NP
       for each_chunk in ensembles:  
         log_name = cur_dir+'/LOG_proc'+str(inc)                        
         
-        thread = Process(target=run_parallel_domain, args=(mtz, each_chunk, run_dir, domain_all_chain_fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc, domain_all_chains_pdb , FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles) )     
+        thread = Process(target=run_parallel_domain, args=(mtz, each_chunk, run_dir, domain_all_chain_fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc, domain_all_chains_pdb , FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys) )     
         thread.start() 
         threads.append(thread)
         inc+=1

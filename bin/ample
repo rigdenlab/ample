@@ -335,14 +335,30 @@ parser.add_argument('-arpwarp', metavar='-arpwarp', type=str, nargs=1,
 parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
                    help='True to use shelx ')
 
+parser.add_argument('-MRkeys', metavar='-MRkeys', type=str, nargs=1,
+                   help='mrbump keywords ')
+
+
 #convert args to dictionary
 args = parser.parse_args()
  
+#get MRBUMP keywords direct
+MRkeys = []
+
+print sys.argv
+
+keycount = 0
+while keycount < len(sys.argv):
+   print sys.argv[keycount] ,  keycount
+   if sys.argv[keycount]  == "-MRkeys":
+       MRkeys.append(sys.argv[keycount + 1])
+   keycount += 1
+
+
 
 
 
 var_args = vars(args)
-
 
 
 
@@ -1559,11 +1575,13 @@ sys.stdout.write('\n\nModelling complete - models stored in:\n   '+PATH_TO_MODEL
 ###############get seedlist
 
 if CLUSTER:
+ if MakeModels == True:
    for seed in seed_list:
      seedlog.write(str(seed) + '\n')
 
    seedlog.close()
 else:
+ if MakeModels == True:
    for seed in  previous_seeds:
       seedlog.write(str(seed) + '\n')
    seedlog.close()
@@ -1666,6 +1684,7 @@ if ENSEMBLE_import ==False:
             mrBuild.SCYLCLES = NoShelxCycles
             mrBuild.SHELXE = use_shelxe
 
+            mrBuild.MRKEYS = MRkeys
  
             # Reset the queue list
             mrBuild.qList=[]
@@ -1715,7 +1734,7 @@ if ENSEMBLE_import ==False:
             os.mkdir(bump_dir) 
             os.chdir(bump_dir)
             split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles)
+            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
             if NoShelx == False: 
               Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
               #print '\n\nFinal Results:\n\n'
@@ -1770,6 +1789,7 @@ if ENSEMBLE_import ==False:
             mrBuild.SCYLCLES = NoShelxCycles
             mrBuild.SHELXE = use_shelxe
 
+            mrBuild.MRKEYS = MRkeys 
 
 
 #            mrBuild.FIXEDIN='FIXED_XYZIN '+domain_all_chains_pdb+' IDENTIY 0.6 \n'
@@ -1812,7 +1832,7 @@ if ENSEMBLE_import ==False:
          os.mkdir(bump_dir) 
          os.chdir(bump_dir)
          split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-         run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles )
+         run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys )
          Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
 
 
@@ -1927,7 +1947,9 @@ if MISSING_DOMAINS == False:
       mrBuild.BUCC = Buccaneer
       mrBuild.SCYLCLES = NoShelxCycles
       mrBuild.SHELXE = NoShelx  
-  
+ 
+      mrBuild.MRKEYS = MRkeys
+ 
       # Reset the queue list
       mrBuild.qList=[]
       jobID=0
@@ -1948,7 +1970,7 @@ if MISSING_DOMAINS == False:
       mrBuild.monitorQueue()
    else: 
       split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles)
+      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
       Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
 
       if NoShelx == False:
@@ -1993,8 +2015,9 @@ if MISSING_DOMAINS == True:
       mrBuild.BUCC = Buccaneer
       mrBuild.SCYLCLES = NoShelxCycles
       mrBuild.SHELXE = use_shelxe
-   
-
+  
+      mrBuild.MRKEYS = MRkeys 
+      print MRkeys
       if OLD_shelx == True:
            mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
       if OLD_shelx == False:
@@ -2017,7 +2040,7 @@ if MISSING_DOMAINS == True:
 
    split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
 
-   run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles)
+   run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
    Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
 
 
