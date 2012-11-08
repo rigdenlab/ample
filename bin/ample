@@ -981,9 +981,13 @@ if MakeModels == True or MakeFrags == True:  #only need Rosetta if making models
  if not os.path.exists(ROSETTA_OVER_PATH):
   print 'Give the rosetta path on the commabd line'
 
+ import platform
  if os.path.exists(ROSETTA_OVER_PATH):
    Version_file               =ROSETTA_OVER_PATH+'/README.version'          
-   ROSETTA_PATH               =ROSETTA_OVER_PATH+'/rosetta_source/bin/AbinitioRelax.linuxgccrelease'
+   if platform.mac_ver()== ('', ('', '', ''), ''):
+      ROSETTA_PATH               =ROSETTA_OVER_PATH+'/rosetta_source/bin/AbinitioRelax.linuxgccrelease'
+   else:
+      ROSETTA_PATH               =ROSETTA_OVER_PATH+'/rosetta_source/bin/AbinitioRelax'
    ROSETTA_cluster            =ROSETTA_OVER_PATH+'/rosetta_source/bin/cluster.linuxgccrelease'
    ROSETTA_DB                 =ROSETTA_OVER_PATH+'/rosetta_database'
    Make_fragments_exe          =ROSETTA_OVER_PATH+'/rosetta_fragments/nnmake/make_fragments.pl'
