@@ -993,7 +993,7 @@ if MakeModels == True or MakeFrags == True:  #only need Rosetta if making models
    Make_fragments_exe          =ROSETTA_OVER_PATH+'/rosetta_fragments/nnmake/make_fragments.pl'
    ROSETTA_CM                 =ROSETTA_OVER_PATH+'/rosetta_source/bin/idealize_jd2.default.linuxgccrelease' 
  if not os.path.exists(Version_file):
-   print 'version not found'
+   print 'version file for Rosetta not found'
    sys.exit()
 
  Rosetta_version = '3.2'
