@@ -93,66 +93,84 @@ def matrix_insert(i, j, k,  matrix):
 
 ##########
 def cluster_with_MAX_FAST(string, radius, MAX, no_models):
-  cur_dir = os.getcwd()
-  string = re.sub(' ', '\n', string)
-  list_string = open(cur_dir + '/list', "w")
-  list_string.write(string)
-  list_string.close()  
+    """
+    Cluster the models in the current directory with maxcluster
+    INPUTS:
+    string:
+    radius:
+    MAX:
+    no_models:
+    
+    OUTPUTS:
+    returns ...
+    """
+    cur_dir = os.getcwd()
+    
+    # Create the input file for maxcluster with the list of fragments
+    string = re.sub(' ', '\n', string)
+    list_string = open(cur_dir + '/list', "w")
+    list_string.write(string)
+    list_string.close()  
+    
+    models=[0]*no_models
+    #print 'runing MAX'
+    
+    # Maxcluster arguments
+    # -l [file]   File containing a list of PDB model fragments
+    # -L [n]      Log level (default is 4 for single MaxSub, 1 for lists)
+    # -d [f]      The distance cut-off for search (default auto-calibrate)
+    # -bb         Perform RMSD fit using backbone atoms
+    #     -C [n]      Cluster method: 0 - No clustering
+    # -rmsd???
 
-  models=[0]*no_models
-  #print 'runing MAX'
-  os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
-  #print 'MAX Done'  
-
-
-  matrix =  [[0 for col in range(no_models)] for row in range(no_models)]
-  max_log = open(cur_dir+'/MAX_LOG')
-  pattern = re.compile('INFO  \: Model')
-  for line in max_log:
-        if re.match(pattern, line):
-
-
-         split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
-         #print split 
-#         int(split[3])
-
-        # print split[1], split[3], split[5]
-         matrix[  int(split[1]) -1 ][  int(split[3]) -1]  = split[5]
-
-         if split[2]+'.pdb' not  in models:
-                models[int(split[1]) -1]  =  split[2]+'.pdb'
-
-         if split[4]+'.pdb' not  in models:
-                models[int(split[3]) -1]  =  split[4]+'.pdb'
-
-  x = 0
-  while x < len(matrix):
-    y = 0
-    while y < len(matrix):
-     matrix[y][x] = matrix [x][y]
-     y+=1
-    x+=1
-
- # for x in matrix:   ### got distance matrix
- #  print x
- # print 'GOT MATRIX'
-############# get model indeces
-
-
-  CLUSTER = []
-
-  cluster_models = get_clusters_from_distances(matrix, radius)
-  #print cluster_models
-  #for i in cluster_models:
-  #  print 'using', i
-
-  for index in cluster_models:
-    CLUSTER.append(models[index])
-  #print CLUSTER
-  return CLUSTER
-
-
-
+    os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
+    #print 'MAX Done'  
+    
+    
+    matrix =  [[0 for col in range(no_models)] for row in range(no_models)]
+    max_log = open(cur_dir+'/MAX_LOG')
+    pattern = re.compile('INFO  \: Model')
+    for line in max_log:
+          if re.match(pattern, line):
+    
+    
+           split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
+           #print split 
+    #         int(split[3])
+    
+          # print split[1], split[3], split[5]
+           matrix[  int(split[1]) -1 ][  int(split[3]) -1]  = split[5]
+    
+           if split[2]+'.pdb' not  in models:
+                  models[int(split[1]) -1]  =  split[2]+'.pdb'
+    
+           if split[4]+'.pdb' not  in models:
+                  models[int(split[3]) -1]  =  split[4]+'.pdb'
+    
+    x = 0
+    while x < len(matrix):
+      y = 0
+      while y < len(matrix):
+       matrix[y][x] = matrix [x][y]
+       y+=1
+      x+=1
+    
+    # for x in matrix:   ### got distance matrix
+    #  print x
+    # print 'GOT MATRIX'
+    ############# get model indeces
+    
+    CLUSTER = []
+    
+    cluster_models = get_clusters_from_distances(matrix, radius)
+    #print cluster_models
+    #for i in cluster_models:
+    #  print 'using', i
+    
+    for index in cluster_models:
+      CLUSTER.append(models[index])
+    #print CLUSTER
+    return CLUSTER
 
 #  1 2 3 4
 #1
