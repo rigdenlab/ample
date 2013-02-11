@@ -463,7 +463,7 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
     best = resultsTable[0][0]    
     prog = resultsTable[0][1]
   
-  n= re.sub('loc0_ALL','search', best)
+  n= re.sub('loc0_ALL','/search', best)
   n = re.sub('UNMOD','mrbump', n)
   Best = run_dir +n+'/data/'+re.sub('_UNMOD','', best)+'/unmod/mr/'+prog.lower()+'/refine'
   
