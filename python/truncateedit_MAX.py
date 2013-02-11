@@ -80,64 +80,65 @@ def chunks(a_list, percent_interval):
  for i in xrange(0, len(a_list), percent_interval):
         yield a_list[i:i+percent_interval ]
 ##############################
-def fly_threshold(theseus_out, percent): #make a list of residues to keep under variance threshold
-                                 #threshold is chosen based on number of residues kept
- add_list =[]
- var_list=[]
+def fly_threshold(theseus_out, percent):
+    """
+    Make a list of residues to keep under variance threshold
+    Threshold is chosen based on number of residues kept
+    
+    INPUT:
+    theseus_out: theseus_variances.txt output file
+    percent: 
+    
+    """
+    add_list =[]
+    
+    # List of variances ordered by residue index
+    var_list=[]
+    
+    # print theseus_out
+    theseus_out = open(theseus_out)
+    #jmht - build up a list of the variances of each residue
+    for line in theseus_out:
+     #print line
+     line = re.sub('RES\s*', '', line)  #jmht - this probably not needed as we removed them earlier
+     pattern = re.compile('^(\d*)\s*(\w*)\s*(\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)')
+     result = pattern.match(line)
+     if result:
+     # print line
+      #seq = re.split('\s*', line)
+      seq = re.split(pattern, line)
+     # print seq
+     #jmht - I think this is just to skip the header line so should just do that at the start
+      if not re.search('ATOM', line):
+      #if (seq[6]) != 'T':
+         #print seq[4]
+    
+         var_list.append(float(seq[4]))
+    
+    length = len(var_list)
+    #print length
+    #try 10 percent 
+    percent_interval=(float(length)/100) *float(percent)
+    #print int(percent_interval)
+    
+    #lowest=min(var_list)
+    #highest=max(var_list)
+    # print lowest, highest
+    
+    ## try to find intervals for truncation
+    try_list=copy.deepcopy(var_list)
+    try_list.sort()
+    
+    Thresholds = []
+    # print list(chunks(try_list, int(percent_interval)))
+    
+    for x in list(chunks(try_list, int(percent_interval))):
+     # print x[-1]
+      Thresholds.append(x[-1])
+    
+    return  Thresholds
 
-
-# print theseus_out
- theseus_out = open(theseus_out)
- #jmht - build up a list of the variances of each residue
- for line in theseus_out:
-  #print line
-  line = re.sub('RES\s*', '', line)
-  pattern = re.compile('^(\d*)\s*(\w*)\s*(\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)')
-  result = pattern.match(line)
-  if result:
-  # print line
-   #seq = re.split('\s*', line)
-   seq = re.split(pattern, line)
-  # print seq
-   if not re.search('ATOM', line):
-   #if (seq[6]) != 'T':
-      
-
-
-      #print seq[4]
-
-      var_list.append(float(seq[4]))
-       
-
-
- length = len(var_list)
- #print length
- #try 10 percent 
- percent_interval=(float(length)/100) *float(percent)
- #print int(percent_interval)
-
- lowest=min(var_list)
- highest=max(var_list)
-
-# print lowest, highest
-
- ## try to find intervals for truncation
- try_list=copy.deepcopy(var_list)
- try_list.sort()
-
- 
- Thresholds = []
-# print list(chunks(try_list, int(percent_interval)))
-
- for x in list(chunks(try_list, int(percent_interval))):
-  # print x[-1]
-   Thresholds.append(x[-1])
- 
-
-
-
- return  Thresholds 
-
+###End fly_threshold
 
 ################################
 def Run_Rosetta(string, no_of_files, radius, Rosetta_cluster, RDB):  # rosetta can fail so repeat job
@@ -162,27 +163,38 @@ def Run_Rosetta(string, no_of_files, radius, Rosetta_cluster, RDB):  # rosetta c
        print ' SUCCESS there are ' + str(no_of_files) + ' files, got ' + file_result2[1] 
        condition = 1
 ####################################
-def try_theseus(cmd):#  theseus can fail so try Run a command with a timeout after which it will be forcibly killed.
-
- has_worked = False
- while has_worked == False:
-   Theseuslog=open(os.getcwd()+'/t.log', "w")
-   p = subprocess.Popen(cmd  , shell =True, stdout =PIPE, stderr=PIPE)
-
-
-   time.sleep(5)
-   #print p.poll()
-   if p.poll() is None: #still running      
-      p.kill()
-      #print 'timed out'
-   else:
-     #print p.communicate()
-     has_worked = True
+def try_theseus(cmd):
+    """
+    #  theseus can fail so try Run a command with a timeout after which it will be forcibly killed.
+    """
+    has_worked = False
+    while has_worked == False:
+      Theseuslog=open(os.getcwd()+'/t.log', "w")
+      p = subprocess.Popen(cmd  , shell =True, stdout =PIPE, stderr=PIPE)
+    
+    
+      time.sleep(5)
+      #print p.poll()
+      if p.poll() is None: #still running      
+         p.kill()
+         #print 'timed out'
+      else:
+        #print p.communicate()
+        has_worked = True
 ###END try_theseus
 
 def Align_rosetta_fine_clusters_with_theseus(Rad_path, THESEUS, ):
     """
     If a cluster is present: align cluster  if no cluster is present: try to align most similar
+    INPUT:
+    Rad_path: directory with clustered PDB files, named C.0.X.pdb
+    
+    OUTPUT:
+    Generates files named cluster_X..., but doesn't actually process them
+    
+    Theseus run with arguments:
+     -a0  include alpha carbons and phosphorous atoms in superposition
+     -r root name for output files
     """
     no_of_files=0
     
@@ -218,9 +230,13 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
     """
     Given a directory of truncated PDB files, use maxcluster to cluster them
     according to the three radius thresholds in RADS
+    If there are more than 2 clusters returned by maxcluster copy them to the '/fine_clusters_'+str(RAD)
+    directory, named as C.0.X, where X is the number of the cluster
+    Theseus is then used to align the clusters and the path of the file containing the cluster is appended
+    to the list ensembles_made, which is returned
     
     INPUTS:
-    trunc_out: directory with truncated PDB files (fine_cluster_2/trunc_files_2)
+    trunc_out: directory with truncated PDB files (e.g. fine_cluster_2/trunc_files_2)
     threshold: a float with the threshold the files were truncated with - used for file naming
     THESUS: path to theseus executable
     MAX: path to maxcluster executable
@@ -256,7 +272,10 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
       ensemble_path = trunc_out + '/fine_clusters_'+str(RAD)+'_ensemble'
       os.system('mkdir '+ensemble_path )
       os.chdir(ensemble_path)
+      
+      # Run theseus to generate a  
       Align_rosetta_fine_clusters_with_theseus(Rad_path, THESEUS, )
+      # Check if theseus worked and if so rename the file with the aligned files and append the path to the ensembles
       if os.path.exists(ensemble_path + '/cluster_0_sup.pdb'):
         os.system('mv ' +ensemble_path + '/cluster_0_sup.pdb '+ensemble_path + '/trunc_'+str(threshold)+'_rad_' +str(RAD)+'.pdb')
       ensembles_made.append(ensemble_path + '/trunc_'+str(threshold)+'_rad_' +str(RAD)+'.pdb')
@@ -269,6 +288,9 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
 def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ):
     """
     Truncate the models in one folder
+    * Run theseus to find the variances
+    * For each truncation level, create a directory containing the truncated PDB files
+    * Use maxcluster to cluster the truncated PDB
     
     INPUTS:
     THESUS: path to theseus
@@ -313,7 +335,8 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ):
     #print run_dir
     T_data = out_path + '/theseus_variances.txt'
     
-    # for alternate versions of theseus remove RES cards'
+    # for alternate versions of theseus remove RES cards
+    # jmht - should probably just use a regular expression when we are processing the file
     tmp=open(out_path+'/tmp', "w")
     for line in open(out_path + '/theseus_variances.txt'):
         line = re.sub('RES ', '', line)

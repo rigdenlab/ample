@@ -96,10 +96,10 @@ def cluster_with_MAX_FAST(string, radius, MAX, no_models):
     """
     Cluster the models in the current directory with maxcluster
     INPUTS:
-    string:
-    radius:
-    MAX:
-    no_models:
+    string: a string with the list of PDB files separated by spaces
+    radius: radius threshold (currently [1,2,3])
+    MAX: path to maxcluster executable
+    no_models: the number of models (could get this from the list of files)
     
     OUTPUTS:
     returns ...
@@ -121,19 +121,26 @@ def cluster_with_MAX_FAST(string, radius, MAX, no_models):
     # -d [f]      The distance cut-off for search (default auto-calibrate)
     # -bb         Perform RMSD fit using backbone atoms
     #     -C [n]      Cluster method: 0 - No clustering
-    # -rmsd???
-
+    # -rmsd ???
     os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
     #print 'MAX Done'  
     
     
+    # Create a square matrix no_models in size filled with zeros
     matrix =  [[0 for col in range(no_models)] for row in range(no_models)]
+    
+    #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
     max_log = open(cur_dir+'/MAX_LOG')
     pattern = re.compile('INFO  \: Model')
     for line in max_log:
           if re.match(pattern, line):
     
-    
+           # Split so that we get a list with
+           # 0: model 1 index
+           # 1: path to model 1 without .pdb suffix
+           # 2: model 2 index
+           # 3: path to model 2 without .pdb suffix
+           # 4: distance metric
            split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
            #print split 
     #         int(split[3])
