@@ -351,12 +351,24 @@ parser.add_argument('-MRkeys', metavar='-MRkeys', type=str, nargs=1,
 # SCRWL -> SCWRL_path
 # MAX -> MAX_path
 parser.set_defaults( 
+                    alignment_file = '',
+                    arpwarp_cycles = 10,
+                    Buccaneer_cycles = 5,
+                    CC = '',
+                    domain_all_chains_pdb = 'none',
+                    domain_all_chains_fasta = 'none',
+                    domain_termini_distance = 0,
                     fasta = 'no_fasta_given',
                     MAX = '',
                     MODELS = '',
                     MTZ = 'none',
                     name = 'ABCD',
+                    NMODELS = 1000,
+                    NMR_model_in = '',
+                    NMR_process = 'none',
+                    NMR_remodel_fasta = '',
                     NProc = 1,
+                    NumShelxCyc = 15,
                     PHENIX = '',
                     ROSETTA_cluster = 'no_path_given',
                     ROSETTA_DB  = 'no_path_given',
@@ -411,13 +423,67 @@ MAX_path = amopt.d['MAX']
 THESEUS_path = amopt.d['THESEUS']
 PHENIX_path = amopt.d['PHENIX']
 MTZ = amopt.d['MTZ']
+NoShelxCycles = amopt.d['NumShelxCyc']
+Buccaneer_cycles = amopt.d['Buccaneer_cycles']
+arpwarp_cycles = amopt.d['arpwarp_cycles']
+# default?
+frags_3_mers = amopt.d['3mers']
+frags_9_mers = amopt.d['9mers']
+NMODELS = amopt.d['NMODELS']
+
+
 
 
 IMPORTING_MODELS = False
 if os.path.isdir( amopt.d['MODELS'] ):
     MODELS_LOCATION = amopt.d['MODELS']
     IMPORTING_MODELS = True
+#
+# NMR variables
+#
+NMR_PROTOCOL = False
+if os.path.isfile( amopt.d['NMR_model_in'] ):
+    NMR_PROTOCOL = True
+NMR_process = amopt.d['NMR_process']
+alignment_file = amopt.d['alignment_file']
 
+# ##NMR
+if os.path.isfile( amopt.d['NMR_remodel_fasta'] ):
+    NMR_remodel_fasta = amopt.d['NMR_remodel_fasta']
+else:
+    NMR_remodel_fasta = amopt.d['fasta']
+    
+
+
+#----------missing domains
+
+MISSING_DOMAINS = False
+domain_all_chains_pdb = amopt.d['domain_all_chains_pdb']
+if not amopt.d['domain_all_chains_pdb'] == 'none':
+    MISSING_DOMAINS = True
+
+domain_all_chain_fasta = amopt.d['domain_all_chains_fasta']
+if not amopt.d['domain_all_chains_fasta'] == 'none':
+    MISSING_DOMAINS = True
+
+# jmht - seems to be unchanging
+FIXED_INPUT = True
+
+#-------------\missing domains
+
+
+
+INSERT_DOMAIN = False
+domain_termini_distance = amopt.d['domain_termini']
+if amopt.d['domain_termini'] > 0:
+    INSERT_DOMAIN = True
+    
+
+
+if "none" in amopt.d['CC'].lower():
+    CCline = ' -rg_reweight 0 '
+else:
+    CCline = amopt.d['CC']
 
 #
 # Need to think about true/false ones later
@@ -432,10 +498,7 @@ if not var_args['USE_SCWRL'] is None:
         if re.search('FALSE', var_args['USE_SCWRL'][0].upper()):
             USE_SCWRL == False
 
-
-    
 MakeModels = True
-
 if var_args['MakeModels'] is None:
     MakeModels = True
 if not var_args['MakeModels'] is None:
@@ -447,39 +510,6 @@ if not var_args['MakeModels'] is None:
         print '\nMaking Rosetta Models\n'
 
 
-NoShelxCycles = 15
-if var_args['NumShelxCyc'] is None:
-    NoShelxCycles = 15
-if not var_args['NumShelxCyc'] is None:
-    NoShelxCycles = var_args['NumShelxCyc'][0]
-
-# ##NMR
-
-if var_args['NMR_model_in'] is None:
-    NMR_model_in = ''
-    NMR_PROTOCOL = False
-if not var_args['NMR_model_in'] is None:
-    NMR_model_in = var_args['NMR_model_in'][0]
-    NMR_PROTOCOL = True
-
-
-if var_args['NMR_process'] is None:
-    NMR_process = 'none'
-if not var_args['NMR_process'] is None:
-    NMR_process = var_args['NMR_process'][0]
-
-
-if var_args['alignment_file'] is None:
-    alignment_file = ''
-if not var_args['alignment_file'] is None:
-    alignment_file = var_args['alignment_file'][0]
-
-if var_args['NMR_remodel_fasta'] is None:
-    NMR_remodel_fasta = FASTA
-if not var_args['NMR_remodel_fasta'] is None:
-    NMR_remodel_fasta = var_args['NMR_remodel_fasta'][0]
-
-
 if var_args['NMR_Truncate_only'] is None:
     NMR_Truncate_only = False
 if not var_args['NMR_Truncate_only'] is None:
@@ -487,6 +517,7 @@ if not var_args['NMR_Truncate_only'] is None:
         NMR_Truncate_only = True
     if "FALSE" in var_args['NMR_Truncate_only'][0].upper():
         NMR_Truncate_only = False
+
 
 # ##  arpwarp and buccaneer
 
@@ -501,18 +532,6 @@ if not var_args['Buccaneer'] is None:
         Buccaneer = False
         print 'Not rebuilding in Bucaneer'
 
-
-if var_args['Buccaneer_cycles'] is None:
-    Buccaneer_cycles = 5
-if not var_args['Buccaneer_cycles'] is None:
-    Buccaneer_cycles = var_args['Buccaner_cycles'][0]
-
-
-
-if var_args['arpwarp_cycles'] is None:
-    arpwarp_cycles = 10
-if not var_args['arpwarp_cycles'] is None:
-    arpwarp_cycles = var_args['arpwarp_cycles'][0]
 
 
 if var_args['arpwarp'] is None:
@@ -554,19 +573,6 @@ if not var_args['make_frags'] is None:
         MakeFrags = True
         print '\nMaking non homologusFragments\n'
 
-
-if var_args['3mers'] is None:
-    frags_3_mers = ''
-if not var_args['3mers'] is None:
-    frags_3_mers = var_args['3mers'][0]
-
-
-if var_args['9mers'] is None:
-    frags_9_mers = ''
-if not var_args['9mers'] is None:
-    frags_9_mers = var_args['9mers'][0]
-
-
 if var_args['usehoms'] is None:
     nohoms = ' -nohoms '
 if not var_args['usehoms'] is None:
@@ -575,6 +581,8 @@ if not var_args['usehoms'] is None:
     elif "FALSE" in var_args['usehoms'][0].upper():
         nohoms = ' -nohoms '
 
+
+# jmht - do this at separate stage and use MTZ_DUMP stuff in mrBUMP
 # #flags
 if var_args['F'] is None:
     notused, flag_SIGF, flag_F , flag_FREE = run_mr_bump_shelx_parallel.get_flags (MTZ)
@@ -594,6 +602,8 @@ if not var_args['FREE'] is None:
 
 print flag_F, flag_SIGF, flag_FREE
 
+
+
 if var_args['CLUSTER'] is None:
     CLUSTER = False
 else:
@@ -606,9 +616,6 @@ else:
 
 
 EarlyTerminate = False
-
-
-
 if var_args['TRYALL'] is None:
     EarlyTerminate = False
 else:
@@ -646,8 +653,6 @@ else:
         ALLATOM = False
 
 
-
-
 if var_args['OLD_shelx'] is None:
     OLD_shelx = False
 else:
@@ -658,34 +663,6 @@ else:
 
 
 
-#----------missing domains
-
-MISSING_DOMAINS = False
-
-if var_args['domain_all_chains_pdb'] is None:
-    domain_all_chains_pdb = 'none'
-if not var_args['domain_all_chains_pdb'] is None:
-    domain_all_chains_pdb = var_args['domain_all_chains_pdb'][0]
-    MISSING_DOMAINS = True
-
-
-if var_args['domain_all_chain_fasta'] is None:
-    domain_all_chain_fasta = 'none'
-if not var_args['domain_all_chain_fasta'] is None:
-    domain_all_chain_fasta = var_args['domain_all_chain_fasta'][0]
-    MISSING_DOMAINS = True
-
-
-FIXED_INPUT = True
-
-
-#-------------\missing domains
-
-if var_args['NMODELS'] is None:
-    NMODELS = 1000
-if not var_args['NMODELS'] is None:
-    NMODELS = var_args['NMODELS'][0]
-
 
 if var_args['percent'] is None:
     percent = 5
@@ -693,25 +670,6 @@ if var_args['percent'] is None:
 if not var_args['percent'] is None:
     percent = var_args['percent'][0]
     FIXED_INTERVALS = False
-
-
-INSERT_DOMAIN = False
-if var_args['domain_termini'] is None:
-
-    domain_termini_distance = 0
-if not var_args['domain_termini'] is None:
-    domain_termini_distance = var_args['domain_termini'][0]
-    INSERT_DOMAIN = True
-
-
-CCline = ''
-if var_args['CC'] is None:
-    CCline = ''
-if not var_args['CC'] is None:
-    if "none" in var_args[''][0].upper():
-        CCline = ''
-    else:
-        CCline = ' -rg_reweight 0 '
 
 
 ENSEMBLE_import = False
