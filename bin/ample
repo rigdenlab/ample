@@ -266,8 +266,9 @@ parser.add_argument('-ASU', metavar='no in ASU', type=int, nargs=1,
                    help='no in ASU')
 
 
-parser.add_argument('-FreeLunch', metavar='free lunch', type=int, nargs=1,
-                   help='true to use free lunch, false to not use it')
+# jmht - not used?
+#parser.add_argument('-FreeLunch', metavar='free lunch', type=int, nargs=1,
+#                   help='true to use free lunch, false to not use it')
 
 parser.add_argument('-usehoms', metavar='nohoms rosetta flag', type=str, nargs=1,
                    help='True =use nhomologs, False= dont use them ')
@@ -303,11 +304,6 @@ parser.add_argument('-OLD_shelx', metavar='OLD_shelx', type=str, nargs=1,
 parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
                    help='top_model_only')
 
-#jmht
-#parser.add_argument('-USE_SCWRL', action='store_true',
-#                   help='if using scwrl true if not false')
-#parser.add_argument('-DUSE_SCWRL', action='store_false',
-#                   help='if using scwrl true if not false')
 parser.add_argument('-USE_SCWRL', metavar='USE_SCWRL', type=str, nargs=1,
                    help='if using scwrl true if not false')
 
@@ -352,30 +348,55 @@ parser.add_argument('-MRkeys', metavar='-MRkeys', type=str, nargs=1,
 # MAX -> MAX_path
 parser.set_defaults( 
                     alignment_file = '',
+                    ALLATOM = "true",
+                    arpwarp = "true",
                     arpwarp_cycles = 10,
+                    ASU = 0,
+                    Buccaneer = "true",
                     Buccaneer_cycles = 5,
                     CC = '',
+                    CLUSTER = "false",
+                    clusterimport = "false",
+                    DEBUG = "false",
                     domain_all_chains_pdb = 'none',
                     domain_all_chains_fasta = 'none',
                     domain_termini_distance = 0,
+                    ensembles = '',
+                    ensembler = "false",
                     fasta = 'no_fasta_given',
+                    ImproveTemplate = '',
                     MAX = '',
+                    make_frags = "true",
+                    MakeModels = "true",
                     MODELS = '',
+                    molreponly = "false",
                     MTZ = 'none',
                     name = 'ABCD',
+                    noClusters = 1,
                     NMODELS = 1000,
                     NMR_model_in = '',
                     NMR_process = 'none',
                     NMR_remodel_fasta = '',
+                    NMR_Truncate_only = "false",
                     NProc = 1,
                     NumShelxCyc = 15,
+                    OLD_shelx = "false",
+                    percent = 5,
+                    phaseronly = "false",
                     PHENIX = '',
                     ROSETTA_cluster = 'no_path_given',
                     ROSETTA_DB  = 'no_path_given',
                     ROSETTA_PATH =  'no_path_given',
                     RunDir = os.getcwd(),
                     SCWRL = '',
-                    THESEUS = ''
+                    SPICKER = "true",
+                    SPICKERPATH = '',
+                    usehoms = "false",
+                    USE_SCWRL = 'false',
+                    use_shelxe = "false",
+                    top_model_only = "false",
+                    THESEUS = '',
+                    TRYALL = "true"
                     )
 
 # convert args to dictionary
@@ -396,192 +417,146 @@ while keycount < len(sys.argv):
 # jmht will remove
 var_args = vars(args)
 
-# Required commands:
-
 # Populate the options from the parser
 amopt = ample_options.AmpleOptions( )
 amopt.populate( args )
 
-# Now go through and set everything up
-if not args.ROSETTA_DIR:
-    print 'you need to give the Rosetta path'
-    sys.exit()
-else:
-    ROSETTA_OVER_PATH = amopt.d['ROSETTA_DIR']
 
+#
 # Set variables - will use dict directly in future
-ROSETTA_PATH = amopt.d['ROSETTA_PATH']
-ROSETTA_DB = amopt.d['ROSETTA_DB']
-Make_fragments_exe = amopt.d['fragsexe']
-ROSETTA_cluster = amopt.d['ROSETTA_cluster']
-FASTA = amopt.d['fasta']
-PDB_code = amopt.d['name']
-NProc = amopt.d['NProc']
-RunDir = amopt.d['RunDir']
-SCWRL_path = amopt.d['SCWRL']
-MAX_path = amopt.d['MAX']
-THESEUS_path = amopt.d['THESEUS']
-PHENIX_path = amopt.d['PHENIX']
-MTZ = amopt.d['MTZ']
-NoShelxCycles = amopt.d['NumShelxCyc']
-Buccaneer_cycles = amopt.d['Buccaneer_cycles']
+#
+alignment_file = amopt.d['alignment_file']
+ALLATOM = amopt.d['ALLATOM']
+arpwarp = amopt.d['arpwarp']
 arpwarp_cycles = amopt.d['arpwarp_cycles']
-# default?
+Buccaneer = amopt.d['Buccaneer']
+Buccaneer_cycles = amopt.d['Buccaneer_cycles']
+CLUSTER = amopt.d['CLUSTER']
+DEBUG = amopt.d['DEBUG']
+EarlyTerminate = not amopt.d['TRYALL']
+Ensembler = amopt.d['ensembler']
+FASTA = amopt.d['fasta']
+FIXED_INPUT = True
+MakeFrags = amopt.d['make_frags']
+Make_fragments_exe = amopt.d['fragsexe']
+MakeModels = amopt.d['MakeModels']
+MAX_path = amopt.d['MAX']
+molreponly = amopt.d['molreponly'] 
+MTZ = amopt.d['MTZ']
+NProc = amopt.d['NProc']
+noClusters = amopt.d['noClusters']
+NoShelxCycles = amopt.d['NumShelxCyc']
+NMODELS = amopt.d['NMODELS']
+NMR_process = amopt.d['NMR_process']
+NMR_Truncate_only = amopt.d['NMR_Truncate_only']
+OLD_shelx = amopt.d['OLD_shelx']
+PDB_code = amopt.d['name']
+phaseronly = amopt.d['phaseronly']
+PHENIX_path = amopt.d['PHENIX']
+RunDir = amopt.d['RunDir']
+ROSETTA_cluster = amopt.d['ROSETTA_cluster']
+ROSETTA_DB = amopt.d['ROSETTA_DB']
+ROSETTA_OVER_PATH = amopt.d['ROSETTA_DIR']
+ROSETTA_PATH = amopt.d['ROSETTA_PATH']
+SCWRL_path = amopt.d['SCWRL']
+SPICKER = amopt.d['SPICKER']
+SPICKEREXE_path = amopt.d['SPICKERPATH']
+THESEUS_path = amopt.d['THESEUS']
+top_model_only = amopt.d['top_model_only']
+USE_SCWRL = amopt.d['USE_SCWRL']
+USE_SPICKER = True
+
+
+# jmht - need to think about defaults as couldnt' as as varname starts with a number
 frags_3_mers = amopt.d['3mers']
 frags_9_mers = amopt.d['9mers']
-NMODELS = amopt.d['NMODELS']
 
 
+#
+# All the variables set below here need some sort of processing
+# Should probably think of sensible ways to set defaults or
+# run the checks in a different place
+#
+use_shelxe = amopt.d['use_shelxe']
+NoShelx = not use_shelxe
 
 
+if amopt.d['ASU'] > 0:
+    noASU = 'NMASU ' + str( amopt.d['ASU']  )
+else:
+    noASU = amopt.d['ASU']
+    
+if "none" in amopt.d['CC'].lower():
+    CCline = ' -rg_reweight 0 '
+else:
+    CCline = amopt.d['CC']   
+
+ENSEMBLE_import = False
+if os.path.isdir( amopt.d['ensembles'] ):
+    ENSEMBLES = amopt.d['ensembles']
+    ENSEMBLE_import = True
+    
+FIXED_INTERVALS = True
+if amopt.d['percent'] != 5:
+    percent = amopt.d['percent']
+    FIXED_INTERVALS = False
+    
 IMPORTING_MODELS = False
 if os.path.isdir( amopt.d['MODELS'] ):
     MODELS_LOCATION = amopt.d['MODELS']
     IMPORTING_MODELS = True
-#
-# NMR variables
-#
-NMR_PROTOCOL = False
-if os.path.isfile( amopt.d['NMR_model_in'] ):
-    NMR_PROTOCOL = True
-NMR_process = amopt.d['NMR_process']
-alignment_file = amopt.d['alignment_file']
-
-# ##NMR
-if os.path.isfile( amopt.d['NMR_remodel_fasta'] ):
-    NMR_remodel_fasta = amopt.d['NMR_remodel_fasta']
-else:
-    NMR_remodel_fasta = amopt.d['fasta']
-    
-
-
-#----------missing domains
-
-MISSING_DOMAINS = False
-domain_all_chains_pdb = amopt.d['domain_all_chains_pdb']
-if not amopt.d['domain_all_chains_pdb'] == 'none':
-    MISSING_DOMAINS = True
-
-domain_all_chain_fasta = amopt.d['domain_all_chains_fasta']
-if not amopt.d['domain_all_chains_fasta'] == 'none':
-    MISSING_DOMAINS = True
-
-# jmht - seems to be unchanging
-FIXED_INPUT = True
-
-#-------------\missing domains
-
-
 
 INSERT_DOMAIN = False
 domain_termini_distance = amopt.d['domain_termini']
 if amopt.d['domain_termini'] > 0:
     INSERT_DOMAIN = True
+
+ImportTemplate = False 
+if len( amopt.d['ImproveTemplate'] ):
+    ImportTemplate = True
+template = amopt.d['ImproveTemplate']
+
+MISSING_DOMAINS = False
+
+domain_all_chains_pdb = amopt.d['domain_all_chains_pdb']
+if not amopt.d['domain_all_chains_pdb'] == 'none':
+    MISSING_DOMAINS = True
     
+domain_all_chain_fasta = amopt.d['domain_all_chains_fasta']
+if not amopt.d['domain_all_chains_fasta'] == 'none':
+    MISSING_DOMAINS = True
 
+NMR_PROTOCOL = False
+if os.path.isfile( amopt.d['NMR_model_in'] ):
+    NMR_PROTOCOL = True
 
-if "none" in amopt.d['CC'].lower():
-    CCline = ' -rg_reweight 0 '
+if os.path.isfile( amopt.d['NMR_remodel_fasta'] ):
+    NMR_remodel_fasta = amopt.d['NMR_remodel_fasta']
 else:
-    CCline = amopt.d['CC']
+    NMR_remodel_fasta = amopt.d['fasta']
 
-#
-# Need to think about true/false ones later
-#
-USE_SCWRL = False
-if var_args['USE_SCWRL'] is None:
-    USE_SCWRL = False
-if not var_args['USE_SCWRL'] is None:
-    if var_args['USE_SCWRL'][0] != 'none':
-        if re.search('TRUE', var_args['USE_SCWRL'][0].upper()):
-            USE_SCWRL == True
-        if re.search('FALSE', var_args['USE_SCWRL'][0].upper()):
-            USE_SCWRL == False
-
-MakeModels = True
-if var_args['MakeModels'] is None:
-    MakeModels = True
-if not var_args['MakeModels'] is None:
-    if var_args['MakeModels'][0] == 'False':
-        MakeModels = False
-        print '\nNOT Making Rosetta Models\n'
-    if var_args['MakeModels'][0] == 'True':
-        MakeModels = True
-        print '\nMaking Rosetta Models\n'
-
-
-if var_args['NMR_Truncate_only'] is None:
-    NMR_Truncate_only = False
-if not var_args['NMR_Truncate_only'] is None:
-    if "TRUE" in var_args['NMR_Truncate_only'][0].upper():
-        NMR_Truncate_only = True
-    if "FALSE" in var_args['NMR_Truncate_only'][0].upper():
-        NMR_Truncate_only = False
-
-
-# ##  arpwarp and buccaneer
-
-if var_args['Buccaneer'] is None:
-    Buccaneer = True
-    print 'Rebuilding in Bucaneer'
-if not var_args['Buccaneer'] is None:
-    if "TRUE" in var_args['Buccaneer'][0].upper():
-        Buccaneer = True
-        print 'Rebuilding in Bucaneer'
-    if "FALSE" in var_args['Buccaneer'][0].upper():
-        Buccaneer = False
-        print 'Not rebuilding in Bucaneer'
-
-
-
-if var_args['arpwarp'] is None:
-    arpwarp = True
-    print 'Rebuilding in ARP/wARP'
-if not var_args['arpwarp'] is None:
-    if "TRUE" in var_args['arpwarp'][0].upper():
-        arpwarp = True
-        print 'Rebuilding in ARP/wARP'
-    if "FALSE" in var_args['arpwarp'][0].upper():
-        arpwarp = False
-        print 'Not rebuilding in ARP/wARP'
-
-
-if var_args['use_shelxe'] is None:
-    use_shelxe = False
-    print 'Not ebuilding in shelxe'
-if not var_args['use_shelxe'] is None:
-    if "TRUE" in var_args['use_shelxe'][0].upper():
-        use_shelxe = True
-        print 'Rebuilding in shelxe'
-    if "FALSE" in var_args['use_shelxe'][0].upper():
-        use_shelxe = False
-        print 'Not rebuilding in shelxe'
-
-NoShelx = not use_shelxe
-
-
-# ##fragments
-
-
-if var_args['make_frags'] is None:
-    MakeFrags = True
-if not var_args['make_frags'] is None:
-    if var_args['make_frags'][0] == 'False':
-        MakeFrags = False
-        print '\nNOT Making Fragments\n'
-    if var_args['make_frags'][0] == 'True':
-        MakeFrags = True
-        print '\nMaking non homologusFragments\n'
-
-if var_args['usehoms'] is None:
+if amopt.d['usehoms']:
+    nohoms = ' '
+else:
     nohoms = ' -nohoms '
-if not var_args['usehoms'] is None:
-    if "TRUE" in var_args['usehoms'][0].upper():
-        nohoms = ' '
-    elif "FALSE" in var_args['usehoms'][0].upper():
-        nohoms = ' -nohoms '
 
 
+mrbump_programs = ' molrep phaser '
+if molreponly == False:
+    if phaseronly == False:
+        mrbump_programs = ' molrep phaser '
+if molreponly == True:
+    mrbump_programs = ' molrep  '
+if phaseronly == True:
+    mrbump_programs = ' phaser  '
+if molreponly == True:
+    if phaseronly == True:
+        print 'you say you want molrep only AND phaser only, choose one or both'
+        sys.exit()
+print mrbump_programs
+
+    
+    
 # jmht - do this at separate stage and use MTZ_DUMP stuff in mrBUMP
 # #flags
 if var_args['F'] is None:
@@ -603,186 +578,43 @@ if not var_args['FREE'] is None:
 print flag_F, flag_SIGF, flag_FREE
 
 
+#jmht
+#for k, v in amopt.d.iteritems():
+#    print "{} | {}".format( k, v )
+#sys.exit()
 
-if var_args['CLUSTER'] is None:
-    CLUSTER = False
+
+#
+# End of setting variables
+#
+if not args.ROSETTA_DIR:
+    print 'you need to give the Rosetta path'
+    sys.exit()
 else:
-    if "TRUE" in var_args['CLUSTER'][0].upper():
-        CLUSTER = True
-    elif "FALSE" in var_args['CLUSTER'][0].upper():
-        CLUSTER = False
-    else:
-        CLUSTER = False
+    ROSETTA_OVER_PATH = amopt.d['ROSETTA_DIR']
+    
 
-
-EarlyTerminate = False
-if var_args['TRYALL'] is None:
-    EarlyTerminate = False
+# Print out what is being done - sorta..
+if Buccaneer:
+    print 'Rebuilding in Bucaneer'
 else:
-    if "FALSE" in var_args['TRYALL'][0].upper():
-        EarlyTerminate = True
-        print 'will exit at the first success'
-    elif "TRUE" in var_args['TRYALL'][0].upper():
-        EarlyTerminate = False
-    else:
-        EarlyTerminate = False
+    print 'Not rebuilding in Bucaneer'
 
-
-
-if var_args['top_model_only'] is None:
-    top_model_only = False
+if arpwarp:
+   print 'Rebuilding in ARP/wARP'
 else:
-    if "FALSE" in var_args['top_model_only'][0].upper():
-        top_model_only = False
+    print 'Not rebuilding in ARP/wARP' 
 
-    elif "TRUE" in var_args['top_model_only'][0].upper():
-        top_model_only = True
-    else:
-        top_model_only = False
-
-
-
-if var_args['ALLATOM'] is None:
-    ALLATOM = True
+if MakeFrags:
+    print '\nMaking non homologusFragments\n'
 else:
-    if "TRUE" in var_args['ALLATOM'][0].upper():
-        ALLATOM = True
-    elif "FALSE" in var_args['ALLATOM'][0].upper():
-        ALLATOM = False
-    else:
-        ALLATOM = False
+    print '\nNOT Making Fragments\n'
 
-
-if var_args['OLD_shelx'] is None:
-    OLD_shelx = False
+if MakeModels:
+    print '\nMaking Rosetta Models\n'
 else:
-    if "TRUE" in var_args['OLD_shelx'][0].upper():
-        OLD_shelx = True
-    elif "FALSE" in var_args['OLD_shelx'][0].upper():
-        OLD_shelx = False
-
-
-
-
-if var_args['percent'] is None:
-    percent = 5
-    FIXED_INTERVALS = True
-if not var_args['percent'] is None:
-    percent = var_args['percent'][0]
-    FIXED_INTERVALS = False
-
-
-ENSEMBLE_import = False
-if var_args['ensembles'] is None:
-    ENSEMBLES = ''
-if not var_args['ensembles'] is None:
-    ENSEMBLES = var_args['ensembles'][0]
-    ENSEMBLE_import = True
-
-
-USE_SPICKER = True
-if var_args['SPICKER'] is None:
-    SPICKER = True
-if not var_args['SPICKER'] is None:
-    SPICKER = True
-
-
-
-if var_args['SPICKERPATH'] is None:
-    SPICKEREXE_path = ''
-if not var_args['SPICKERPATH'] is None:
-    SPICKEREXE_path = var_args['SPICKERPATH'][0]
-# print 'SPICKEREXE_path ', SPICKEREXE_path
-
-
-
-noClusters = 1
-if var_args['noClusters'] is None:
-    noClusters = 1
-if not var_args['noClusters'] is None:
-    noClusters = var_args['noClusters'][0]
-
-
-noASU = ''
-if var_args['ASU'] is None:
-    noASU = ''
-if not var_args['ASU'] is None:
-    noASU = 'NMASU ' + str(var_args['ASU'][0])
-
-
-if var_args['ImproveTemplate'] is None:
-    template = ''
-    ImportTemplate = False
-if not var_args['ImproveTemplate'] is None:
-    template = var_args['ImproveTemplate'][0]
-    ImportTemplate = True
-
-
-if var_args['FreeLunch'] is None:
-    FreeLunch = True
-if not var_args['FreeLunch'] is None:
-    FreeLunch = var_args['FreeLunch'][0]
-
-DEBUG = False
-if var_args['DEBUG'] is None:
-    DEBUG = False
-if not var_args['DEBUG'] is None:
-    D = var_args['DEBUG'][0]
-    if re.search('TRUE', D.upper()):
-        DEBUG = True
-
-
-Ensembler = False  # default theseus
-
-if var_args['ensembler'] is None:
-    Ensembler = False
-if not var_args['ensembler'] is None:
-    D = var_args['ensembler'][0]
-    if re.search('FALSE', D.upper()):
-        Ensembler = False
-    if re.search('TRUE', D.upper()):
-        Ensembler = True
-
-
-if var_args['molreponly'] is None:
-    molreponly = False
-if not var_args['molreponly'] is None:
-    D = var_args['molreponly'][0]
-    if re.search('FALSE', D.upper()):
-        molreponly = False
-    if re.search('TRUE', D.upper()):
-        molreponly = True
-
-if var_args['phaseronly'] is None:
-    phaseronly = False
-if not var_args['phaseronly'] is None:
-    D = var_args['phaseronly'][0]
-    if re.search('FALSE', D.upper()):
-        phaseronly = False
-    if re.search('TRUE', D.upper()):
-        phaseronly = True
-mrbump_programs = ' molrep phaser '
-
-if molreponly == False:
-    if phaseronly == False:
-        mrbump_programs = ' molrep phaser '
-if molreponly == True:
-    mrbump_programs = ' molrep  '
-if phaseronly == True:
-    mrbump_programs = ' phaser  '
-if molreponly == True:
-    if phaseronly == True:
-        print 'you say you want molrep only AND phaser only, choose one or both'
-        sys.exit()
-print mrbump_programs
-
-
-
-
-if var_args['clusterimport'] is None:
-    clusterimport = False
-if not var_args['clusterimport'] is None:
-    clusterimport = var_args['clusterimport'][0]
+    print '\nNOT Making Rosetta Models\n'
+    
 
 
 #--------------------------------------------
