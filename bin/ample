@@ -21,7 +21,6 @@ if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
 # Add the ample python folder to the PYTHONPATH
-
 sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
 
 # python imports
@@ -35,6 +34,8 @@ import string
 import subprocess
 import time
 
+# Our imports
+import ample_options
 import SCWRL_edit, Final_display_results
 import split_models, nmr
 import truncateedit_MAX
@@ -45,8 +46,6 @@ import fasta_parser
 import run_spicker
 import printTable
 
-# jmht
-# import ample_options
 ###############
 
 # get a program test for existsnce
@@ -135,25 +134,34 @@ def get_psipred_prediction(psipred):
 
 parser = argparse.ArgumentParser(description='Structure solution by abinitio modeling', prefix_chars="-")
 
+
+
+
+#
+# Rosetta arguments
+#
+parser.add_argument('-ROSETTA_DB', metavar='ROSETTA_database', type=str, nargs=1,
+                   help='path for Rosetta database')
+
+parser.add_argument('-ROSETTA_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
+                   help='location of rosetta cluster')
+
 parser.add_argument('-ROSETTA', metavar='ROSETTA_path', type=str, nargs=1,
                    help='path for Rosetta AbinitioRelax')
 
-parser.add_argument('-RDB', metavar='ROSETTA_database', type=str, nargs=1,
-                   help='path for Rosetta database')
+parser.add_argument('-ROSETTA_DIR', metavar='Rosetta_dir', type=str, nargs=1,
+                   help='the Rosetta install directory')
 
-parser.add_argument('-fragsexe', metavar='path to make_fragments.pl', type=str, nargs=1,
-                   help='location of make_fragments.pl')
-
-parser.add_argument('-Rosetta_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
-                   help='location of rosetta cluster')
 
 
 parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
                    help='protein fasta file. (required)')
 
+parser.add_argument('-fragsexe', metavar='path to make_fragments.pl', type=str, nargs=1,
+                   help='location of make_fragments.pl')
+
 parser.add_argument('-name', metavar='priotein name', type=str, nargs=1,
                    help='name of protien in the format ABCD ')
-
 
 parser.add_argument('-NProc', metavar='NoProcessors', type=int, nargs=1,
                    help='number of processers (default 1)')
@@ -163,10 +171,8 @@ parser.add_argument('-RunDir', metavar='run_directory', type=str, nargs=1,
                    help='directory to put files (default current dir)')
 
 
-
 parser.add_argument('-SCWRL', metavar='path to scwrl', type=str, nargs=1,
                    help='pathway to SCWRL exe')
-
 
 
 parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
@@ -193,8 +199,7 @@ parser.add_argument('-MODELS', metavar='folder of decoys', type=str, nargs=1,
 parser.add_argument('-MakeModels', metavar='Do the modelling', type=str, nargs=1,
                    help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
 
-parser.add_argument('-ROSETTA_DIR', metavar='Rosetta_dir', type=str, nargs=1,
-                   help='the Rosetta install directory')
+
 
 # # fragments
 
@@ -298,6 +303,11 @@ parser.add_argument('-OLD_shelx', metavar='OLD_shelx', type=str, nargs=1,
 parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
                    help='top_model_only')
 
+#jmht
+#parser.add_argument('-USE_SCWRL', action='store_true',
+#                   help='if using scwrl true if not false')
+#parser.add_argument('-DUSE_SCWRL', action='store_false',
+#                   help='if using scwrl true if not false')
 parser.add_argument('-USE_SCWRL', metavar='USE_SCWRL', type=str, nargs=1,
                    help='if using scwrl true if not false')
 
@@ -334,15 +344,35 @@ parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
 parser.add_argument('-MRkeys', metavar='-MRkeys', type=str, nargs=1,
                    help='mrbump keywords ')
 
+#
+# jmht - set the default values here
+#
+# name -> PDB_code
+# SCRWL -> SCWRL_path
+# MAX -> MAX_path
+parser.set_defaults( 
+                    fasta = 'no_fasta_given',
+                    MAX = '',
+                    MODELS = '',
+                    MTZ = 'none',
+                    name = 'ABCD',
+                    NProc = 1,
+                    PHENIX = '',
+                    ROSETTA_cluster = 'no_path_given',
+                    ROSETTA_DB  = 'no_path_given',
+                    ROSETTA_PATH =  'no_path_given',
+                    RunDir = os.getcwd(),
+                    SCWRL = '',
+                    THESEUS = ''
+                    )
 
 # convert args to dictionary
 args = parser.parse_args()
 
+
 # get MRBUMP keywords direct
 MRkeys = []
-
 # print sys.argv
-
 keycount = 0
 while keycount < len(sys.argv):
             # print sys.argv[keycount] ,  keycount
@@ -351,83 +381,47 @@ while keycount < len(sys.argv):
     keycount += 1
 
 
-
+# jmht will remove
 var_args = vars(args)
 
 # Required commands:
 
-# jmht
-# AMPLE_OPTFILE="JENS.jens"
-# amopt = ample_options.AmpleOptions( AMPLE_OPTFILE )
-# amopt.populate( args )
+# Populate the options from the parser
+amopt = ample_options.AmpleOptions( )
+amopt.populate( args )
 
-
+# Now go through and set everything up
 if not args.ROSETTA_DIR:
     print 'you need to give the Rosetta path'
     sys.exit()
-# if  var_args['ROSETTA_DIR'] is None:
-#     print 'you need to give the Rosetta path'
-#     sys.exit()
+else:
+    ROSETTA_OVER_PATH = amopt.d['ROSETTA_DIR']
 
-if not var_args['ROSETTA_DIR'] is None:
-    if var_args['ROSETTA_DIR'][0] != 'none':
-        ROSETTA_OVER_PATH = var_args['ROSETTA_DIR'][0]
-    if var_args['ROSETTA_DIR'][0] == 'none':
-        print 'you need to give the Rosetta path'
-        sys.exit()
-
-
-if var_args['ROSETTA'] is None:
-    ROSETTA_PATH = 'no_path_given'
-if not var_args['ROSETTA'] is None:
-    ROSETTA_PATH = var_args['ROSETTA'][0]
-
-if var_args['RDB'] is None:
-    ROSETTA_DB = 'no_path_given'
-if not var_args['RDB'] is None:
-    ROSETTA_DB = var_args['RDB'][0]
+# Set variables - will use dict directly in future
+ROSETTA_PATH = amopt.d['ROSETTA_PATH']
+ROSETTA_DB = amopt.d['ROSETTA_DB']
+Make_fragments_exe = amopt.d['fragsexe']
+ROSETTA_cluster = amopt.d['ROSETTA_cluster']
+FASTA = amopt.d['fasta']
+PDB_code = amopt.d['name']
+NProc = amopt.d['NProc']
+RunDir = amopt.d['RunDir']
+SCWRL_path = amopt.d['SCWRL']
+MAX_path = amopt.d['MAX']
+THESEUS_path = amopt.d['THESEUS']
+PHENIX_path = amopt.d['PHENIX']
+MTZ = amopt.d['MTZ']
 
 
-if var_args['fragsexe'] is None:
-    Make_fragments_exe = ' '
-if not var_args['fragsexe'] is None:
-    Make_fragments_exe = var_args['fragsexe'][0]
-
-if var_args['Rosetta_cluster'] is None:
-    ROSETTA_cluster = 'no_path_given'
-if not var_args['Rosetta_cluster'] is None:
-    ROSETTA_cluster = var_args['Rosetta_cluster'][0]
+IMPORTING_MODELS = False
+if os.path.isdir( amopt.d['MODELS'] ):
+    MODELS_LOCATION = amopt.d['MODELS']
+    IMPORTING_MODELS = True
 
 
-if var_args['fasta'] is None:
-    FASTA = 'no_fasta_given'
-if not var_args['fasta'] is None:
-    FASTA = var_args['fasta'][0]
-
-if var_args['name'] is None:
-    PDB_code = 'ABCD'
-if not var_args['name'] is None:
-    PDB_code = var_args['name'][0]
-
-if var_args['NProc'] is None:
-    NProc = 1
-if not var_args['NProc'] is None:
-    NProc = var_args['NProc'][0]
-
-
-if var_args['RunDir'] is None:
-    RunDir = os.getcwd()
-if not var_args['RunDir'] is None:
-    RunDir = var_args['RunDir'][0]
-
-
-
-if var_args['SCWRL'] is None:
-    SCWRL_path = ''
-if not var_args['SCWRL'] is None:
-    if var_args['SCWRL'][0] != 'none':
-        SCWRL_path = var_args['SCWRL'][0]
-
+#
+# Need to think about true/false ones later
+#
 USE_SCWRL = False
 if var_args['USE_SCWRL'] is None:
     USE_SCWRL = False
@@ -439,45 +433,7 @@ if not var_args['USE_SCWRL'] is None:
             USE_SCWRL == False
 
 
-
-if var_args['MAX'] is None:
-    MAX_path = ''
-if not var_args['MAX'] is None:
-    if var_args['MAX'][0] != 'none':
-        MAX_path = var_args['MAX'][0]
-
-
-
-if var_args['THESEUS'] is None:
-    THESEUS_path = ''
-if not var_args['THESEUS'] is None:
-    if var_args['THESEUS'][0] != 'none':
-        THESEUS_path = var_args['THESEUS'][0]
-
-
-if var_args['PHENIX'] is None:
-    PHENIX_path = ''
-if not var_args['PHENIX'] is None:
-    if var_args['PHENIX'][0] != 'none':
-        PHENIX_path = var_args['PHENIX'][0]
-
-
-
-
-
-# print var_args['MTZ']
-if var_args['MTZ'] is None:
-    MTZ = 'none'
-if not var_args['MTZ'] is None:
-    MTZ = var_args['MTZ'][0]
-
-IMPORTING_MODELS = False
-if var_args['MODELS'] is None:
-    MODELS_LOCATION = ''
-if not var_args['MODELS'] is None:
-    MODELS_LOCATION = var_args['MODELS'][0]
-    IMPORTING_MODELS = True
-
+    
 MakeModels = True
 
 if var_args['MakeModels'] is None:
