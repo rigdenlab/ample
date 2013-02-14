@@ -45,97 +45,15 @@ import run_mr_bump_shelx_parallel
 import fasta_parser
 import run_spicker
 import printTable
-
+import util
 ###############
 
-# get a program test for existsnce
-def which(program):
-    def is_exe(fpath):
-        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-
-    return None
-#########
-def check_for_exe(exename, varname):
-    exepath = ''
-    print 'looking for', exename
-    if not varname:
-        print 'no ' + exename + ' given on the command line, looking in the PATH'
-        print which(exename)
-        if not which(exename):
-            print 'You need to give the path for ' + exename
-            sys.exit()
-        else:
-
-            exepath = which(exename)
-
-    else:
-        exepath = varname
-        print 'using here', exepath
-
-
-
-
-    if not os.path.exists(exepath):
-        print 'You need to give the path for ' + exename + ', executable in the PATH dosnt exist'
-        sys.exit()
-    else:
-        return exepath
-########
-def get_psipred_prediction(psipred):
-    string = ''
-    for line in open(psipred):
-        get_stat1 = re.compile('^Pred\:\s*(\w*)')
-        result_stat1 = get_stat1.match(line)
-        if result_stat1:
-            stat1_get = re.split(get_stat1, line)
-            # print stat1_get[1]
-            string = string + stat1_get[1]
-
-
-    C = 0
-    H = 0
-    E = 0
-    length = len(string)
-
-    for c in string:
-        if c == 'C':
-            C = C + 1
-        if c == 'H':
-            H = H + 1
-        if c == 'E':
-            E = E + 1
-
-
-    H_percent = float(H) / length * 100
-    E_percent = float(E) / length * 100
-
-    if H > 0 and E > 0:
-        print  'Your protein is predicted to be mixed alpha beta, your chances of success are intermediate'
-    if H == 0 and E > 0:
-        print  'Your protein is predicted to be all beta, your chances of success are low'
-    if H > 0 and E == 0:
-        print  'Your protein is predicted to be all alpha, your chances of success are high'
-    if  H == 0 and E == 0:
-        print  'Your protein is has no predicted secondary structure, your chances of success are low'
 
 #-------------------------------------------
 # get command line options
 #-------------------------------------------
 
-parser = argparse.ArgumentParser(description='Structure solution by abinitio modeling', prefix_chars="-")
-
-
-
+parser = argparse.ArgumentParser(description='Structure solution by abinitio modelling', prefix_chars="-")
 
 #
 # Rosetta arguments
@@ -364,6 +282,7 @@ parser.set_defaults(
                     ensembles = '',
                     ensembler = "false",
                     fasta = 'no_fasta_given',
+                    fragsexe = '',
                     ImproveTemplate = '',
                     MAX = '',
                     make_frags = "true",
@@ -432,6 +351,7 @@ arpwarp_cycles = amopt.d['arpwarp_cycles']
 Buccaneer = amopt.d['Buccaneer']
 Buccaneer_cycles = amopt.d['Buccaneer_cycles']
 CLUSTER = amopt.d['CLUSTER']
+clusterimport = amopt.d['clusterimport']
 DEBUG = amopt.d['DEBUG']
 EarlyTerminate = not amopt.d['TRYALL']
 Ensembler = amopt.d['ensembler']
@@ -468,9 +388,15 @@ USE_SPICKER = True
 
 
 # jmht - need to think about defaults as couldnt' as as varname starts with a number
-frags_3_mers = amopt.d['3mers']
-frags_9_mers = amopt.d['9mers']
-
+if not amopt.d['3mers']:
+    frags_3_mers = ''
+else:
+    frags_3_mers = amopt.d['3mers']
+    
+if not amopt.d['9mers']:
+    frags_9_mers = ''
+else:
+    frags_9_mers = amopt.d['9mers']
 
 #
 # All the variables set below here need some sort of processing
@@ -484,7 +410,7 @@ NoShelx = not use_shelxe
 if amopt.d['ASU'] > 0:
     noASU = 'NMASU ' + str( amopt.d['ASU']  )
 else:
-    noASU = amopt.d['ASU']
+    noASU = str(amopt.d['ASU'])
     
 if "none" in amopt.d['CC'].lower():
     CCline = ' -rg_reweight 0 '
@@ -505,6 +431,9 @@ IMPORTING_MODELS = False
 if os.path.isdir( amopt.d['MODELS'] ):
     MODELS_LOCATION = amopt.d['MODELS']
     IMPORTING_MODELS = True
+    # jmht FIX need to not make them
+    MakeModels = False
+
 
 INSERT_DOMAIN = False
 domain_termini_distance = amopt.d['domain_termini']
@@ -552,30 +481,29 @@ if phaseronly == True:
 if molreponly == True:
     if phaseronly == True:
         print 'you say you want molrep only AND phaser only, choose one or both'
-        sys.exit()
-print mrbump_programs
+        sys.exit()    
+    
 
-    
-    
-# jmht - do this at separate stage and use MTZ_DUMP stuff in mrBUMP
 # #flags
-if var_args['F'] is None:
-    notused, flag_SIGF, flag_F , flag_FREE = run_mr_bump_shelx_parallel.get_flags (MTZ)
-if not var_args['F'] is None:
-    flag_F = var_args['F'][0]
-
-
-if var_args['SIGF'] is None:
-    notused, flag_SIGF, flag_F , flag_FREE = run_mr_bump_shelx_parallel.get_flags (MTZ)
-if not var_args['SIGF'] is None:
-    flag_SIGF = var_args['SIGF'][0]
-
-if var_args['FREE'] is None:
-    notused, flag_SIGF, flag_F , flag_FREE = run_mr_bump_shelx_parallel.get_flags (MTZ)
-if not var_args['FREE'] is None:
-    flag_FREE = var_args['FREE'][0]
-
-print flag_F, flag_SIGF, flag_FREE
+# Check if we need to get any of the flags from the MTZ file
+if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
+    t_flag_F , t_flag_SIGF, t_flag_FREE = util.get_mtz_flags( MTZ )
+    
+if not amopt.d['F']:
+    flag_F = t_flag_F
+else:
+    flag_F = amopt.d['F']
+    
+if not amopt.d['SIGF']:
+    flag_SIGF = t_flag_SIGF
+else:
+    flag_SIGF = amopt.d['SIGF']
+    
+if not amopt.d['FREE']:
+    flag_FREE = t_flag_FREE
+else:
+    flag_FREE = amopt.d['FREE']
+    
 
 
 #jmht
@@ -686,8 +614,8 @@ RunDir = RunDir + '/ROSETTA_MR_' + str(run_inc - 1)
 
 
 
-if MakeFrags == False:
-    if MakeModels == True:
+if not MakeFrags:
+    if MakeModels:
         if not os.path.exists(frags_3_mers):
             print 'Cant find 3mers'
             sys.exit()
@@ -697,7 +625,7 @@ if MakeFrags == False:
 
 
 # check if got all the programs
-if MakeModels == False:
+if not MakeModels:
     IMPORTING_MODELS = True
 
 if MakeModels == True:
@@ -812,24 +740,24 @@ if not os.path.exists(RunDir):
 
 
 if Ensembler == False:
-    THESEUS = check_for_exe('theseus', THESEUS_path)
+    THESEUS = util.check_for_exe('theseus', THESEUS_path)
         # print 'finally got', THESEUS
 if Ensembler == True:
     print 'You are using Phenix ensmbler'
-    PHENIX = check_for_exe('phenix', PHENIX_path)
+    PHENIX = util.check_for_exe('phenix', PHENIX_path)
 if USE_SCWRL == True:
-    SCWRL = check_for_exe('Scwrl4', SCWRL_path)
+    SCWRL = util.check_for_exe('Scwrl4', SCWRL_path)
     # print 'finally got', SCWRL
 if USE_SCWRL == False:
     SCWRL = ''
-SPICKEREXE = check_for_exe('spicker', SPICKEREXE_path)
+SPICKEREXE = util.check_for_exe('spicker', SPICKEREXE_path)
 
 # print 'finally got', SPICKEREXE
-MAX = check_for_exe('maxcluster', MAX_path)
+MAX = util.check_for_exe('maxcluster', MAX_path)
 # print 'finally got', MAX
 if NoShelx == False:
     shelxe = ''
-    shelxe = check_for_exe('shelxe', shelxe)
+    shelxe = util.check_for_exe('shelxe', shelxe)
 
 
 if len(PDB_code) > 4 or len(PDB_code) < 4:
@@ -854,7 +782,6 @@ if ImportTemplate:
 
 
 print '\nAll needed programs are found, continuing Run\n'
-
 
 
 #----------------------------
@@ -970,7 +897,7 @@ if MakeFrags == True:
     print' Fragments Done\n3mers at: ' + frags_3_mers + '\n9mers at: ' + frags_9_mers + '\n\n'
 
     if os.path.exists(frags_dir + '/' + PDB_code + '.psipred'):
-        get_psipred_prediction(frags_dir + '/' + PDB_code + '.psipred')
+        util.get_psipred_prediction(frags_dir + '/' + PDB_code + '.psipred')
 
 # ## break here for NMR (frags needed but not modelling
 # if NMR process models first
@@ -1297,7 +1224,7 @@ if MakeModels == True:
             if DEBUG == True:
                 print 'nproc', proc
             if USE_SCWRL == True:
-                add_sidechains_SCWRL(SCWRL, RunDir + '/models_' + str(proc), RunDir + '/models', str(proc), DEBUG)
+                add_sidechains_SCWRL.add_sidechains_SCWRL(SCWRL, RunDir + '/models_' + str(proc), RunDir + '/models', str(proc), DEBUG)
             if USE_SCWRL == False:
                 for file in glob.glob(os.path.join(RunDir + '/models_' + str(proc), '*.pdb')):
 
