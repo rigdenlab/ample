@@ -12,49 +12,7 @@ import shutil
 import printTable
 import string
 
-def get_flags (mtz):
-  sigf = 'SIGF='
-  FP = 'F='
-  free = 'FreeR_flag=Unassigned'
 
-  path = os.getcwd()
-  os.system('mtzdmp ' + mtz + ' >mtzdmp_out')
-  mtz_out = open(path + '/mtzdmp_out')
-  flags = False
-  while flags == False:
-      line = mtz_out.readline()
-      get_stat1 = re.compile('Column Labels')
-      result_stat1 = get_stat1.search(line)
-      if result_stat1:
-         #print line
-         next = mtz_out.readline()
-         next = mtz_out.readline()
-      if  re.search('Column Types', line):
-         lab = mtz_out.readline()
-         lab = mtz_out.readline() 
-
-         flags = True
-#  print next
-#  print lab
-
-
-
-
-  lab_list=re.split('\s*', lab)
-  name_list=re.split('\s*', next)
-  
-  sigf = lab_list.index('Q')
-  sigf = name_list[sigf]
-  
-  FP = lab_list.index('F')
-  FP = name_list[FP]
-
-  free = lab_list.index('I')
-  free = name_list[free]
-
- # print sigf, FP, free
-
-  return next, sigf, FP, free
 ###################
 def make_mrbump_desktop(sigf, fp, free, jobid, local_files, mtz, seq, noASU, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, NoShelx, NoShelxCycles, MRkeys):
   path = os.getcwd()
@@ -362,7 +320,7 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, sigf, FP, free, noASU, Earl
 
    #get names of flags
    
-  # next, sigf, FP, free = get_flags(mtz)  
+  # next, sigf, FP, free = get_mtz_flags(mtz)  
    sigf = 'SIGF='+sigf
    FP = 'F='+FP
    free =  'FreeR_flag='+free
