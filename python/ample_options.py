@@ -14,20 +14,32 @@ class AmpleOptions(object):
         """
         Fill ourselves with the options from the parser
         """
+        
+        tmpv = None
         for k, v in vars(parser_args).iteritems():
             #print "{} | {}".format( k, v )   
             if isinstance(v,list):
                 # All values are in a list
-                self.d[k] = v[0]
+                tmpv  = v[0]
             else:
-                self.d[k] = v
+                tmpv = v
+                
+            # Bit of a hack for true/false
+            if isinstance( tmpv, str ):
+                if tmpv.lower() == "true":
+                    tmpv = True
+                elif tmpv.lower() == "false":
+                    tmpv = False
+                
+            self.d[k] = tmpv
+            
             #if v == False:
             #    self.d[k] = False
         
         # end of loop
         
-        for k, v in self.d.iteritems():
-            print "{} | {}".format( k, v )   
+        #for k, v in self.d.iteritems():
+        #    print "{} | {}".format( k, v )   
         
     def write_parameter_logfile(self, filename=None):
         """
