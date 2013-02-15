@@ -232,6 +232,7 @@ parser.add_argument('-NMR_model_in', metavar='NMR_model_in', type=str, nargs=1,
                    help='use nmr input')
 
 parser.add_argument('-NMR_process', metavar='NMR_process', type=str, nargs=1,
+
                    help='number of times to process the models')
 
 parser.add_argument('-NMR_remodel_fasta', metavar='-NMR_remodel_fasta', type=str, nargs=1,
@@ -487,7 +488,11 @@ if molreponly == True:
 # #flags
 # Check if we need to get any of the flags from the MTZ file
 if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
-    t_flag_F , t_flag_SIGF, t_flag_FREE = util.get_mtz_flags( MTZ )
+    try:
+        t_flag_F , t_flag_SIGF, t_flag_FREE = util.get_mtz_flags( MTZ )
+    except KeyError,e:
+        print "Error generating flags from MTZ file: {}\n{}\nYou may need to run the CCP4 uniqueify on the MTZ file".format(MTZ,e)
+        sys.exit(1)
     
 if not amopt.d['F']:
     flag_F = t_flag_F
@@ -815,6 +820,8 @@ Run_params.write('Is an Insert Domain ' + str(INSERT_DOMAIN) + ' termini distanc
 
 Run_params.close()
 
+
+sys.exit()
 
 
 #-----------------------------------
