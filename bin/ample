@@ -796,9 +796,12 @@ if DEBUG == True:
     print var_args
     for print_user in var_args:
         if var_args[print_user] is not None:
-            print print_user + ' : ' + str(var_args[print_user][0])
+            try:
+                print print_user + ' : ' + str(var_args[print_user][0])
+                Run_params.write(print_user + ' : ' + str(var_args[print_user][0]) + '\n')
+            except:
+                pass
 
-            Run_params.write(print_user + ' : ' + str(var_args[print_user][0]) + '\n')
 
 Run_params.write('\nParams Used in this Run\n')
 Run_params.write('\n---input---\nFasta ' + FASTA + '\nRunDir ' + RunDir + '\nMTZ ' + MTZ + '\nname ' + PDB_code + '\n')
