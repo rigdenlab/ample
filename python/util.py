@@ -200,6 +200,11 @@ class TestCell(unittest.TestCase):
         self.assertEqual(sigf, t_flag_SIGF, "Correct SIGF")
         self.assertEqual(free, t_flag_FREE, "Correct FREE")
         
+    def testGetMtzFlagsNoFree(self):
+        """Get MTZ flags when there are no free flags"""
+        
+        mtz = self.testfilesdir + os.sep + "2uui_sigmaa.mtz"
+        self.assertRaises(KeyError, get_mtz_flags, mtz )
 #
 # Run unit tests
 if __name__ == "__main__":
