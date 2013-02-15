@@ -424,8 +424,8 @@ if os.path.isdir( amopt.d['ensembles'] ):
     
 FIXED_INTERVALS = True
 if amopt.d['percent'] != 5:
-    percent = amopt.d['percent']
     FIXED_INTERVALS = False
+percent = amopt.d['percent']
     
 IMPORTING_MODELS = False
 if os.path.isdir( amopt.d['MODELS'] ):
