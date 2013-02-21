@@ -2,12 +2,15 @@
 Various miscellaneous functions.
 Might end up somewhere else at somepoint.
 '''
-import os
-import sys
-import re
 
+# Python modules
+import logging
+import os
+import re
+import sys
 import unittest
 
+# Our modules
 import MTZParse
 
 # get a program test for existsnce
@@ -39,13 +42,9 @@ def check_for_exe(exename, varname):
         else:
 
             exepath = which(exename)
-
     else:
         exepath = varname
         print 'using here', exepath
-
-
-
 
     if not os.path.exists(exepath):
         print 'You need to give the path for ' + exename + ', executable in the PATH dosnt exist'
@@ -53,6 +52,21 @@ def check_for_exe(exename, varname):
     else:
         return exepath
 ########
+
+def make_workdir(work_dir, rootname='ROSETTA_MR_'):
+    """
+    Make a work directory rooted at work_dir and return its path
+    """
+    print 'Making a Run Directory  -checking for previous runs'
+    run_inc = 0
+    run_making_done = False
+    while not run_making_done:
+        if not os.path.exists(work_dir + os.sep + rootname + str(run_inc)):
+            run_making_done = True
+            os.mkdir(work_dir + os.sep +rootname + str(run_inc))
+        run_inc += 1
+    work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
+    return work_dir
 
 def get_mtz_flags( mtzfile ):
     """
@@ -168,8 +182,47 @@ def get_psipred_prediction(psipred):
         print  'Your protein is has no predicted secondary structure, your chances of success are low'
         
 
+def setup_logging():
+    """
+    Set up the various log files/console logging
+    and return the logger
+    """
+    
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    
+    # create file handler and set level to debug
+    fl = logging.FileHandler("JENS_AMPLE.log")
+    fl.setLevel(logging.DEBUG)
+    
+    # create formatter for fl
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    
+    # add formatter to fl
+    fl.setFormatter(formatter)
+    
+    # add fl to logger
+    logger.addHandler(fl)
+    
+    # Now create console logger for outputting stuff
+    # create file handler and set level to debug
+    cl = logging.StreamHandler(stream=sys.stdout)
+    cl.setLevel(logging.INFO)
+    
+    # create formatter for fl
+    formatter = logging.Formatter('%(message)s')
+    
+    # add formatter to fl
+    cl.setFormatter(formatter)
+    
+    # add fl to logger
+    logger.addHandler(cl)
+    
+    return logger
+        
 
-class TestCell(unittest.TestCase):
+
+class TestUtil(unittest.TestCase):
     """
     Unit test
     """

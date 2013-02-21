@@ -39,14 +39,46 @@ class AmpleOptions(object):
         # end of loop
         
         #for k, v in self.d.iteritems():
-        #    print "{} | {}".format( k, v )   
+        #    print "{} | {}".format( k, v )
         
-    def write_parameter_logfile(self, filename=None):
-        """
-        Write out the parameters we contain
-        """
-        
-        pass
+#    def prettify_parameters(self):
+#        """
+#        Return the parameters nicely formated as a list of strings suitable for writing out to a file
+#        """
+#        
+#    def write_parameter_logfile(self, filename=None):
+#        """
+#        Write out the parameters we contain
+#        """
+# 
+#        params = []
+#        params.append('input params')
+#        if self.d['DEBUG']:
+#            params.append('** ALL PARAMETERS: **')
+#            for k,v in self.d.iteritems():
+#                params.append( "{} : {}".format(k,v) )
+#            params.append('** END ALL PARAMETERS **')
+#        
+#        params.append( '\nParams Used in this Run\n')
+#        params.append( '\n---input---\n')
+#        params.append( "Fasta {}".format( self.d['fasta'] ) )
+#        params.append( "RunDir {}".format( self.d['RunDit'] )
+#                      
+#                      
+#                      
+#                      \nRunDir {}\nMTZ {}\nname {}\n'.format(FASTA, RunDir, MTZ, PDB_code ) )
+#        params.append('\n---fragments---\nMakeFrags '+str(MakeFrags)+'\n3mers '+frags_3_mers+'\n9mers '+frags_9_mers+'\n')
+#        params.append('\n---modelling---\nMakeModels '+str(MakeModels)+'\nROSETTA_PATH '+ROSETTA_PATH+'\n')
+#        params.append('ROSETTA_cluster '+ROSETTA_cluster+'\nROSETTA_DB '+ROSETTA_DB+'\nMake_fragments_exe '+Make_fragments_exe+'\n')
+#        if USE_SCWRL == True:
+#          params.append(('\n---3rd party---\nSCWRL '+SCWRL+'\n')
+#        params.append('\n---Missing Domain---\nall chains fasta '+domain_all_chain_fasta+'\nall chain pdb '+domain_all_chains_pdb+'\nMISSING DOMAINS='+str(MISSING_DOMAINS)+'\n')
+#        params.append('Is an Insert Domain '+str(INSERT_DOMAIN)+ ' termini distance '+ str(domain_termini_distance) +'\n')
+#        
+#        Run_params.close()
+#
+#        
+#        pass
         
 #        if not filename:
 #            filename="Params_used"
@@ -74,6 +106,7 @@ class AmpleOptions(object):
 #        Run_params.write('Is an Insert Domain '+str(INSERT_DOMAIN)+ ' termini distance '+ str(domain_termini_distance) +'\n')
 #        
 #        Run_params.close()
+
               
     #def __str__(self):
     #    return "Ample Options"
