@@ -9,8 +9,8 @@ import glob
 import logging
 import os
 import random
+import re
 import shutil
-import stat
 import subprocess
 import time
 import unittest
@@ -39,8 +39,14 @@ class RosettaModel(object):
         self.allatom = None
         self.use_scwrl = None
         self.scwrl_exe = None
-        #insert_Rosetta_command
+        
+        # Extra options
+        self.domain_termini_distance = None
+        self.rad_gyr_reweight = None
+        self.improve_template = None
         #CCline
+        
+        self.logger = logging.getLogger()
     
     def generate_seeds(self):
         """
@@ -61,6 +67,12 @@ class RosettaModel(object):
             if seed_present == False:
                 previous_seeds.append(new_seed)
                 proc += 1
+                
+        # Keep a log of the seeds
+        seedlog = open( self.work_dir + os.sep +'seedlist', "w")
+        for seed in  previous_seeds:
+            seedlog.write(str(seed) + '\n')
+        seedlog.close()
                 
         return previous_seeds
     ##End generate_seeds
@@ -98,17 +110,39 @@ class RosettaModel(object):
                '-out:pdb',
                '-out:nstruct', nstruct,
                '-out:file:silent', wdir + '/OUT',
-               '-run:constant_seed'
+               '-run:constant_seed',
                '-run:jran', seed 
                 ]
-            
-        #insert_Rosetta_command ,
-        #CCline +
             
         if self.allatom:
             cmd += [ '-return_full_atom true', '-abinitio:relax' ]
         else:
             cmd += [ '-return_full_atom false' ]
+            
+        # Domain constraints
+        if self.domain_termini_distance > 0:
+            dcmd = self.setup_domain_constraints()
+            cmd += dcmd
+            
+        # Radius of gyration reweight
+        if self.rad_gyr_reweight:
+            if "none" in self.rad_gyr_reweight.lower():
+                cmd+= ['-rg_reweight', '0']
+                
+        # Improve Template
+        if self.improve_template:
+            tcmd = ['-in:file:native',
+                    self.improve_template,
+                    '-abinitio:steal_3mers',
+                    'True',
+                    '-abinitio:steal9mers',
+                    'True',
+                    '-abinitio:start_native',
+                    'True',
+                    '-templates:force_native_topology',
+                    'True' ]
+            cmd += tcmd
+
 
         return cmd
     ##End make_rosetta_cmd
@@ -116,10 +150,10 @@ class RosettaModel(object):
     
     def doModelling(self):
         """
-        Run the modelling
+        Run the modelling and return the path to the models directory
         """
 
-        logger = logging.getLogger()
+       
 
         # Make modelling directory and get stuff required for run
         os.mkdir(self.models_dir)
@@ -142,8 +176,8 @@ class RosettaModel(object):
             nstruct = str(jobs[proc])
             cmd = self.rosetta_cmd( wdir, nstruct, seed )
             
-            logger.debug('Making {} models in directory: {}'.format(nstruct,wdir) )
-            logger.debug('Executing cmd: {}'.format( " ".join(cmd)) )
+            self.logger.debug('Making {} models in directory: {}'.format(nstruct,wdir) )
+            self.logger.debug('Executing cmd: {}'.format( " ".join(cmd)) )
             
             print 'Executing cmd: {}'.format( " ".join(cmd))
             
@@ -163,10 +197,8 @@ class RosettaModel(object):
             time.sleep(5)
             for i, p in enumerate(processes):
                 ret = p.poll()
-                print "Got ret {}".format(ret)
                 retcodes[i] = ret
                 if ret != None:
-                    print "completed: {}".format(completed)
                     completed+=1
             
             if completed == len(processes):
@@ -174,15 +206,15 @@ class RosettaModel(object):
     
         # Check the return codes
         for i, ret in enumerate(retcodes):
-            print "Got return code: {}".format(ret)
             if ret != 0:
-                logging.warn( "Got error for processor: {}".format(i) )  
-                
+                msg = "Error generating models with Rosetta!Got error for processor: {}".format(i)
+                logging.critical( msg )  
+                raise RuntimeError, msg
         
         if self.use_scwrl:
             # Add sidechains using SCRWL - loop over each directory and output files into the models directory
             for wdir,proc in directories.iteritems():
-                add_sidechains_SCWRL.add_sidechains_SCWRL(self.scwrl_exe, wd, self.models_dir, str(proc), False)
+                add_sidechains_SCWRL.add_sidechains_SCWRL(self.scwrl_exe, wdir, self.models_dir, str(proc), False)
         else:
         # Just copy all modelling files into models directory
             for wd in directories.keys():
@@ -191,7 +223,33 @@ class RosettaModel(object):
                     pdbname = os.path.split(pfile)[1]
                     shutil.copyfile( wd + os.sep + pdbname, self.models_dir + os.sep + str(proc) + '_' + pdbname)
 
+        return self.models_dir
     ##End doModelling
+    
+    def setup_domain_constraints(self):
+        """
+        Create the file for restricting the domain termini and return a list suitable
+        for adding to the rosetta command
+        """
+        
+        fas = open(self.fasta)
+        seq = ''
+        for line in fas:
+            if not re.search('>', line):
+                seq += line.rstrip('\n')
+        length = 0
+        for x in seq:
+            if re.search('\w', x):
+                length += 1
+    
+    
+        self.logger.info('restricting termini distance: {}'.format( self.domain_termini_distance ))
+        constraints_file = os.path.join(self.work_dir, 'constraints')
+        conin = open(constraints_file, "w")
+        conin.write('AtomPair CA 1 CA ' + str(length) + ' GAUSSIANFUNC ' + str(self.domain_termini_distance) + ' 5.0 TAG')
+        cmd = '-constraints:cst_fa_file', constraints_file, '-constraints:cst_file', constraints_file
+        
+        return cmd
 
     def set_from_amopt(self, amopt ):
         """
@@ -201,15 +259,26 @@ class RosettaModel(object):
         self.nproc = amopt.d['nproc']
         self.nmodels = amopt.d['nmodels']
         self.work_dir = amopt.d['work_dir']
-        self.models_dir = amopt.d['models_dir']
+        
+        # Set models directory
+        if not amopt.d['models_dir']:
+            self.models_dir = amopt.d['work_dir'] + os.sep + "models"
+        else:
+            self.models_dir = amopt.d['models_dir']
+            
         self.rosetta_path = amopt.d['rosetta_path']
         self.rosetta_db = amopt.d['rosetta_db']
         self.frags3mers = amopt.d['frags3mers']
         self.frags9mers = amopt.d['frags9mers']
         self.fasta = amopt.d['fasta']
-        self.allatom = amopt.d['allatom']
         self.use_scwrl = amopt.d['use_scwrl']
         self.scwrl_exe = amopt.d['scwrl_exe']
+        
+        # Extra options
+        self.allatom = amopt.d['allatom']
+        self.domain_termini_distance = amopt.d['domain_termini_distance']
+        self.rad_gyr_reweight = amopt.d['CC']
+        self.improve_template = amopt.d['improve_template']
 
 
 class Test(unittest.TestCase):
@@ -235,7 +304,7 @@ for i in range(10):
         pass
 
 
-    def XtestNoRosetta(self):
+    def testNoRosetta(self):
         """
         Test without Rosetta
         """
@@ -252,10 +321,16 @@ for i in range(10):
         amopt.d['allatom'] = True
         amopt.d['use_scwrl'] = False
         amopt.d['scwrl_exe'] = ""
+        
+        amopt.d['domain_termini_distance'] = None
+        amopt.d['CC'] = None
+        amopt.d['improve_template'] = None
+
 
         rm = RosettaModel()
         rm.set_from_amopt( amopt )
-        rm.doModelling()
+        mdir = rm.doModelling()
+        print "models in: {}".format(mdir)
 
 
 

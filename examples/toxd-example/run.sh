@@ -24,22 +24,22 @@ ${AMPLEDIR}/bin/ample \
       -fasta ${PWD}/toxd_.fasta \
       -MTZ ${PWD}/1dtx.mtz \
       -name TOXD \
-      -3mers ${PWD}/aat000_03_05.200_v1_3 \
-      -9mers ${PWD}/aat000_09_05.200_v1_3 \
+      -frags3mers ${PWD}/aat000_03_05.200_v1_3 \
+      -frags9mers ${PWD}/aat000_09_05.200_v1_3 \
       -ROSETTA_DIR $ROSETTA_DIR \
-      -RunDir $PWD/tmp \
+      -run_dir $PWD \
       -make_frags False \
       -CLUSTER False \
       -NumShelxCyc 10 \
-      -NMODELS 30 \
+      -nmodels 30 \
       -TRYALL False  \
       -percent 50 \
       -use_shelxe True \
       -arpwarp False \
       -Buccaneer False \
       -molreponly True \
-      -NProc 1 \
-      -ALLATOM True \
+      -nproc 1 \
+      -allatom True \
       -noClusters 1
 
 #      -MakeModels False \

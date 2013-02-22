@@ -18,9 +18,6 @@ make_fragments
 make_models
 
 nmr_modelling_step
-
-if INSERT_DOMAIN
-  create constraints file
   
 make_models
 
@@ -73,19 +70,18 @@ import subprocess
 import time
 
 # Our imports
+import add_sidechains_SCWRL
 import ample_options
+import ample_util
+import fasta_parser
+import printTable
+import rosetta_model
+import rosetta_fragments
+import run_mr_bump_shelx_parallel
+import run_spicker
 import SCWRL_edit, Final_display_results
 import split_models, nmr
 import truncateedit_MAX
-import add_sidechains_SCWRL
-
-import run_mr_bump_shelx_parallel
-import fasta_parser
-import run_spicker
-import printTable
-import rosetta_fragments
-import ample_util
-###############
 
 
 #-------------------------------------------
@@ -97,7 +93,7 @@ parser = argparse.ArgumentParser(description='Structure solution by abinitio mod
 #
 # Rosetta arguments
 #
-parser.add_argument('-ROSETTA_DB', metavar='ROSETTA_database', type=str, nargs=1,
+parser.add_argument('-rosetta_db', metavar='ROSETTA_database', type=str, nargs=1,
                    help='path for Rosetta database')
 
 parser.add_argument('-ROSETTA_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
@@ -133,7 +129,7 @@ parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
 parser.add_argument('-name', metavar='priotein name', type=str, nargs=1,
                    help='name of protien in the format ABCD ')
 
-parser.add_argument('-NProc', metavar='NoProcessors', type=int, nargs=1,
+parser.add_argument('-nproc', metavar='NoProcessors', type=int, nargs=1,
                    help='number of processers (default 1)')
 
 
@@ -141,7 +137,7 @@ parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
                    help='directory to put files (default current dir)')
 
 
-parser.add_argument('-SCWRL', metavar='path to scwrl', type=str, nargs=1,
+parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
                    help='pathway to SCWRL exe')
 
 
@@ -163,7 +159,7 @@ parser.add_argument('-MTZ', metavar='MTZ in', type=str, nargs=1,
                    help='MTZ in')
 
 
-parser.add_argument('-MODELS', metavar='folder of decoys', type=str, nargs=1,
+parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
                    help='folder of decoys')
 
 parser.add_argument('-MakeModels', metavar='Do the modelling', type=str, nargs=1,
@@ -186,7 +182,7 @@ parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
 parser.add_argument('-CLUSTER', metavar='using a cluster', type=str, nargs=1,
                    help='will submit jobs to a cluster')
 
-parser.add_argument('-ALLATOM', metavar='using a cluster', type=str, nargs=1,
+parser.add_argument('-allatom', metavar='using a cluster', type=str, nargs=1,
                    help='will submit jobs to a cluster')
 
 parser.add_argument('-SPICKER', metavar='boolean', type=str, nargs=1,
@@ -202,11 +198,11 @@ parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', t
 parser.add_argument('-domain_all_chain_fasta', metavar='domain_all_chain_fasta', type=str, nargs=1,
                    help='fasta for all ASU')
 
-parser.add_argument('-domain_termini', metavar='termini', type=str, nargs=1,
-                   help='distacne between termini for insert domains')
+parser.add_argument('-domain_termini_distance', metavar='termini', type=str, nargs=1,
+                   help='distance between termini for insert domains')
 
 
-parser.add_argument('-NMODELS', metavar='no models', type=int, nargs=1,
+parser.add_argument('-nmodels', metavar='no models', type=int, nargs=1,
                    help='number of models to make (1000)')
 
 
@@ -234,7 +230,7 @@ parser.add_argument('-ASU', metavar='no in ASU', type=int, nargs=1,
 parser.add_argument('-usehoms', metavar='nohoms rosetta flag', type=str, nargs=1,
                    help='True =use nhomologs, False= dont use them ')
 
-parser.add_argument('-ImproveTemplate', metavar='improve template', type=str, nargs=1,
+parser.add_argument('-improve_template', metavar='improve template', type=str, nargs=1,
                    help='give a template to imrove - NMR, homolog ')
 
 parser.add_argument('-DEBUG', metavar='debug option', type=str, nargs=1,
@@ -265,7 +261,7 @@ parser.add_argument('-OLD_shelx', metavar='OLD_shelx', type=str, nargs=1,
 parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
                    help='top_model_only')
 
-parser.add_argument('-USE_SCWRL', metavar='USE_SCWRL', type=str, nargs=1,
+parser.add_argument('-use_scwrl', metavar='USE_SCWRL', type=str, nargs=1,
                    help='if using scwrl true if not false')
 
 parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
@@ -310,7 +306,7 @@ parser.add_argument('-MRkeys', metavar='-MRkeys', type=str, nargs=1,
 # MAX -> MAX_path
 parser.set_defaults( 
                     alignment_file = '',
-                    ALLATOM = "true",
+                    allatom = "true",
                     arpwarp = "true",
                     arpwarp_cycles = 10,
                     ASU = 0,
@@ -329,35 +325,35 @@ parser.set_defaults(
                     frags3mers=None,
                     frags9mers=None,
                     rosetta_fragments_exe = None,
-                    ImproveTemplate = '',
+                    improve_template = None,
                     MAX = '',
                     make_frags = "true",
                     MakeModels = "true",
-                    MODELS = '',
+                    models_dir = '',
                     molreponly = "false",
                     MTZ = 'none',
                     name = 'ABCD',
                     noClusters = 1,
-                    NMODELS = 1000,
+                    nmodels = 1000,
                     NMR_model_in = '',
                     NMR_process = 'none',
                     NMR_remodel_fasta = '',
                     NMR_Truncate_only = "false",
-                    NProc = 1,
+                    nproc = 1,
                     NumShelxCyc = 15,
                     OLD_shelx = "false",
                     percent = 5,
                     phaseronly = "false",
                     PHENIX = '',
                     ROSETTA_cluster = 'no_path_given',
-                    ROSETTA_DB  = 'no_path_given',
-                    ROSETTA_PATH =  'no_path_given',
+                    rosetta_db  = 'no_path_given',
+                    rosetta_path =  'no_path_given',
                     run_dir = os.getcwd(),
-                    SCWRL = '',
+                    scwrl_exe = '',
                     SPICKER = "true",
                     SPICKERPATH = '',
                     usehoms = "false",
-                    USE_SCWRL = 'false',
+                    use_scwrl = 'false',
                     use_shelxe = "false",
                     top_model_only = "false",
                     THESEUS = '',
@@ -395,7 +391,7 @@ amopt.populate( args )
 # Set variables - will use dict directly in future
 #
 alignment_file = amopt.d['alignment_file']
-ALLATOM = amopt.d['ALLATOM']
+ALLATOM = amopt.d['allatom']
 arpwarp = amopt.d['arpwarp']
 arpwarp_cycles = amopt.d['arpwarp_cycles']
 Buccaneer = amopt.d['Buccaneer']
@@ -412,10 +408,10 @@ MakeModels = amopt.d['MakeModels']
 MAX_path = amopt.d['MAX']
 molreponly = amopt.d['molreponly'] 
 MTZ = amopt.d['MTZ']
-NProc = amopt.d['NProc']
+NProc = amopt.d['nproc']
 noClusters = amopt.d['noClusters']
 NoShelxCycles = amopt.d['NumShelxCyc']
-NMODELS = amopt.d['NMODELS']
+nmodels = amopt.d['nmodels']
 NMR_process = amopt.d['NMR_process']
 NMR_Truncate_only = amopt.d['NMR_Truncate_only']
 OLD_shelx = amopt.d['OLD_shelx']
@@ -426,15 +422,15 @@ phaseronly = amopt.d['phaseronly']
 PHENIX_path = amopt.d['PHENIX']
 run_dir = amopt.d['run_dir']
 ROSETTA_cluster = amopt.d['ROSETTA_cluster']
-ROSETTA_DB = amopt.d['ROSETTA_DB']
+ROSETTA_DB = amopt.d['rosetta_db']
 rosetta_dir = amopt.d['ROSETTA_DIR']
-ROSETTA_PATH = amopt.d['ROSETTA_PATH']
-SCWRL_path = amopt.d['SCWRL']
+ROSETTA_PATH = amopt.d['rosetta_path']
+SCWRL_path = amopt.d['scwrl_exe']
 SPICKER = amopt.d['SPICKER']
 SPICKEREXE_path = amopt.d['SPICKERPATH']
 THESEUS_path = amopt.d['THESEUS']
 top_model_only = amopt.d['top_model_only']
-USE_SCWRL = amopt.d['USE_SCWRL']
+USE_SCWRL = amopt.d['use_scwrl']
 USE_SPICKER = True
 
 
@@ -456,11 +452,7 @@ if amopt.d['ASU'] > 0:
     noASU = 'NMASU ' + str( amopt.d['ASU']  )
 else:
     noASU = str(amopt.d['ASU'])
-    
-if "none" in amopt.d['CC'].lower():
-    CCline = ' -rg_reweight 0 '
-else:
-    CCline = amopt.d['CC']   
+
 
 ENSEMBLE_import = False
 if os.path.isdir( amopt.d['ensembles'] ):
@@ -473,25 +465,13 @@ if amopt.d['percent'] != 5:
 percent = amopt.d['percent']
     
 IMPORTING_MODELS = False
-if os.path.isdir( amopt.d['MODELS'] ):
-    MODELS_LOCATION = amopt.d['MODELS']
+if os.path.isdir( amopt.d['models_dir'] ):
+    MODELS_LOCATION = amopt.d['models_dir']
     IMPORTING_MODELS = True
     # jmht FIX need to not make them
     MakeModels = False
 
-
-INSERT_DOMAIN = False
-domain_termini_distance = amopt.d['domain_termini']
-if amopt.d['domain_termini'] > 0:
-    INSERT_DOMAIN = True
-
-ImportTemplate = False 
-if len( amopt.d['ImproveTemplate'] ):
-    ImportTemplate = True
-template = amopt.d['ImproveTemplate']
-
 MISSING_DOMAINS = False
-
 domain_all_chains_pdb = amopt.d['domain_all_chains_pdb']
 if not amopt.d['domain_all_chains_pdb'] == 'none':
     MISSING_DOMAINS = True
@@ -520,7 +500,7 @@ if phaseronly == True:
     mrbump_programs = ' phaser  '
 if molreponly == True:
     if phaseronly == True:
-        print 'you say you want molrep only AND phaser only, choose one or both'
+        logger.critical('you say you want molrep only AND phaser only, choose one or both')
         sys.exit()    
     
 
@@ -529,12 +509,12 @@ if molreponly == True:
 if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
     
     if not os.path.isfile( amopt.d['MTZ'] ):
-        print "Cannot find MTZ file: {}".format( amopt.d['MTZ'] )
+        logger.critical("Cannot find MTZ file: {}".format( amopt.d['MTZ'] ) )
         sys.exit(1)
     try:
         t_flag_F , t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( MTZ )
     except KeyError,e:
-        print "Error generating flags from MTZ file: {}\n{}\nYou may need to run the CCP4 uniqueify on the MTZ file".format(MTZ,e)
+        logger.critical("Error generating flags from MTZ file: {}\n{}\nYou may need to run the CCP4 uniqueify on the MTZ file".format(MTZ,e) )
         sys.exit(1)
     
 if not amopt.d['F']:
@@ -564,7 +544,7 @@ else:
 # End of setting variables
 #
 if not args.ROSETTA_DIR:
-    print 'you need to give the Rosetta path'
+    logger.critical('you need to give the Rosetta path')
     sys.exit()
 else:
     rosetta_dir = amopt.d['ROSETTA_DIR']
@@ -572,25 +552,25 @@ else:
 
 # Print out what is being done - sorta..
 if Buccaneer:
-    logging.info('Rebuilding in Bucaneer')
+    logger.info('Rebuilding in Bucaneer')
 else:
-    logging.info('Not rebuilding in Bucaneer')
+    logger.info('Not rebuilding in Bucaneer')
 
 if arpwarp:
-    print 'Rebuilding in ARP/wARP'
+    logger.info('Rebuilding in ARP/wARP')
 else:
-    print 'Not rebuilding in ARP/wARP' 
+    logger.info('Not rebuilding in ARP/wARP')
 
 
 if amopt.d['make_frags']:
-    print '\nMaking non homologusFragments\n'
+    logger.info('Making non homologusFragments')
 else:
-    print '\nNOT Making Fragments\n'
+    logger.info('NOT Making Fragments')
 
 if MakeModels:
-    print '\nMaking Rosetta Models\n'
+    logger.info('\nMaking Rosetta Models\n')
 else:
-    print '\nNOT Making Rosetta Models\n'
+    logger.info('NOT Making Rosetta Models\n')
     
 
 
@@ -649,10 +629,10 @@ LOG.flush()
 if not amopt.d['make_frags']:
     if MakeModels:
         if not os.path.exists(amopt.d['frags3mers']):
-            print 'Cant find 3mers'
+            logger.critical('Cant find 3mers')
             sys.exit()
         if not os.path.exists(amopt.d['frags9mers']):
-            print 'Cant find 9mers'
+            logger.critical('Cant find 9mers')
             sys.exit()
 
 
@@ -660,22 +640,22 @@ if not amopt.d['make_frags']:
 if not MakeModels:
     IMPORTING_MODELS = True
 
-if MakeModels == True:
-    if IMPORTING_MODELS == True:
+if MakeModels:
+    if IMPORTING_MODELS:
         print MODELS_LOCATION
-        print 'you have chosen to both import models and to make them, choose only one\nSet Make Models to \"True\" to make them, \"False\" to import them'
+        logger.critical('you have chosen to both import models and to make them, choose only one\nSet Make Models to \"True\" to make them, \"False\" to import them')
         sys.exit()
 
 if not  NMR_PROTOCOL :
-    if IMPORTING_MODELS == True:
+    if IMPORTING_MODELS:
         if not os.path.exists(MODELS_LOCATION):
-            print 'you have chosen to import models, but path does not exist, looking for ensembles : ' + MODELS_LOCATION
+            logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + MODELS_LOCATION)
             if not os.path.exists(ENSEMBLES):
-                print 'you have chosen to import ensembles, but path does not exist : ' + ENSEMBLES
+                logger.warn('you have chosen to import ensembles, but path does not exist : ' + ENSEMBLES)
                 if clusterimport != False:
-                    print 'you are importing a cluster of models from :' + clusterimport
+                    logger.info('you are importing a cluster of models from :' + clusterimport)
                     if not os.path.exists(clusterimport):
-                        print 'you have chosen to import a cluster, the clusterpath does not exist'
+                        logger.critical('you have chosen to import a cluster, the clusterpath does not exist')
                         sys.exit()
 
 
@@ -698,7 +678,7 @@ if MakeModels or amopt.d['make_frags']:  # only need Rosetta if making models
         ROSETTA_CM = rosetta_dir + '/rosetta_source/bin/idealize_jd2.default.linuxgccrelease'
         
     if not os.path.exists(Version_file):
-        print 'version file for Rosetta not found'
+        logger.critical('version file for Rosetta not found')
         sys.exit()
 
     Rosetta_version = '3.2'
@@ -706,26 +686,33 @@ if MakeModels or amopt.d['make_frags']:  # only need Rosetta if making models
         if re.search('Rosetta', line):
             line = re.sub('Rosetta', '', line)
             Rosetta_version = string.strip(line)
-    logging.info( 'Your Rosetta version is: {}'.format( Rosetta_version ) )
+    logger.info( 'Your Rosetta version is: {}'.format( Rosetta_version ) )
     
     amopt.d['rosetta_version'] = Rosetta_version
     amopt.d['rosetta_dir'] = rosetta_dir
+    amopt.d['rosetta_path'] = ROSETTA_PATH
+    amopt.d['rosetta_db'] = ROSETTA_DB
     
     if not os.path.exists(ROSETTA_PATH)  :
-        print ' cant find Rosetta abinitio, check path names'
+        logger.critical(' cant find Rosetta abinitio, check path names')
         print ROSETTA_PATH
         sys.exit()
 
     if not os.path.exists(ROSETTA_cluster):
-        print ' cant find Rosetta cluster, check path names'
+        logger.critical(' cant find Rosetta cluster, check path names')
         sys.exit()
     if not os.path.exists(ROSETTA_DB) :
-        print ' cant find Rosetta DB, check path names'
+        logger.critical(' cant find Rosetta DB, check path names')
         sys.exit()
+        
+    if amopt.d['improve_template']:
+        if not os.path.exists( amopt.d['improve_template'] ):
+            logger.critical('cant find template to improve')
+            sys.exit()
 
 
 
-if NMR_PROTOCOL == True:
+if NMR_PROTOCOL:
     ROSETTA_CM = rosetta_dir + '/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
     ROSETTA_DB = rosetta_dir + '/rosetta_database'
 
@@ -784,14 +771,10 @@ if not os.path.exists(MTZ):
     print 'need mtz or no MR will be carried out'
     sys.exit()
 
-if ImportTemplate:
-    if not os.path.exists(template):
-        print 'cant find template to improve'
-        sys.exit()
 
 
 
-logging.info('All needed programs are found, continuing Run')
+logger.info('All needed programs are found, continuing Run')
 
 
 #----------------------------
@@ -821,7 +804,11 @@ Run_params.write('ROSETTA_cluster ' + ROSETTA_cluster + '\nROSETTA_DB ' + ROSETT
 if USE_SCWRL == True:
     Run_params.write('\n---3rd party---\nSCWRL ' + SCWRL + '\n')
 Run_params.write('\n---Missing Domain---\nall chains fasta ' + domain_all_chain_fasta + '\nall chain pdb ' + domain_all_chains_pdb + '\nMISSING DOMAINS=' + str(MISSING_DOMAINS) + '\n')
-Run_params.write('Is an Insert Domain ' + str(INSERT_DOMAIN) + ' termini distance ' + str(domain_termini_distance) + '\n')
+# This only used for printing
+INSERT_DOMAIN = False
+if amopt.d['domain_termini_distance'] > 0:
+    INSERT_DOMAIN = True
+Run_params.write('Is an Insert Domain ' + str(INSERT_DOMAIN) + ' termini distance ' + str(amopt.d['domain_termini_distance']) + '\n')
 
 Run_params.close()
 
@@ -830,7 +817,6 @@ Run_params.close()
 #-----------------------------------
 # Do The Modelling
 #-----------------------------------
-seedlog = open(work_dir + '/seedlist', "w")
 time_start = time.time()
 RUNNING = open(work_dir + '/ROSETTA.log', "w")
 
@@ -870,7 +856,7 @@ RUNNING.write('#################################################################
 RUNNING.flush()
 
 
-logging.debug('Parsing FASTA file')
+logger.debug('Parsing FASTA file')
 outfasta = os.path.join(work_dir, pdb_code + '_.fasta')
 fasta_parser.parse_fasta(FASTA, outfasta)
 FASTA = outfasta
@@ -950,7 +936,6 @@ if NMR_PROTOCOL:
             print 'using models from ' + PATH_TO_MODELS
 
 
-
         if NMR_Truncate_only == False:
             MakeModels = False
             PATH_TO_MODELS = work_dir + '/models'
@@ -972,11 +957,7 @@ if NMR_PROTOCOL:
                     homindeces.append(hom_index)
                     hom_index += 1
 
-
-
                     # Invoke the cluster run class
-
-
 
             for  hom_index in homindeces:
                 cluster_run = clusterize.ClusterRun()
@@ -1027,57 +1008,28 @@ if NMR_PROTOCOL:
                 os.remove(MODELS_LOCATION + '/' + pdb)
 
 
-
-
 # return from nmr with models already made
 
 
-# ##modeling
-insert_Rosetta_command = ''
-if INSERT_DOMAIN == True:
-    fas = open(FASTA)
-    seq = ''
-    for line in fas:
-        if not re.search('>', line):
-            seq += line.rstrip('\n')
-    length = 0
-    for x in seq:
-        if re.search('\w', x):
-            length += 1
-
-
-    print 'restricting termini distance', domain_termini_distance
-    constraints_file = os.path.join(work_dir, 'constraints')
-    conin = open(constraints_file, "w")
-    conin.write('AtomPair CA 1 CA ' + str(length) + ' GAUSSIANFUNC ' + str(domain_termini_distance) + ' 5.0 TAG')
-    insert_Rosetta_command = ' -constraints:cst_fa_file ' + constraints_file + ' -constraints:cst_file ' + constraints_file + ' '
-
-
-
 print  '----- making Rosetta models--------\n'
-print 'making ' + str(NMODELS) + ' models...'
+print 'making ' + str(nmodels) + ' models...'
 RUNNING.write('----- making models--------\n')
 RUNNING.flush()
-
-
-
-
-if ImportTemplate:
-    CCline += ' -in:file:native ' + template + ' -abinitio:steal_3mers True -abinitio:steal_9mers True -abinitio:start_native True -templates:force_native_topology True'
-
 
 if MakeModels:
     PATH_TO_MODELS = work_dir + '/models'
 
     # If we are running with cluster support submit all modelling jobs to the cluster queue
     if CLUSTER:
+        raise RuntimeError,"JENS NEEDS TO FIX THIS FOR THE CCLINE AND INSERT COMMAND"
         seed_list = []
 
         # Generate the list of random seeds
-        while len(seed_list) < NMODELS:
+        while len(seed_list) < nmodels:
             seed = random.randint(1000000, 4000000)
             if seed not in seed_list:
                 seed_list.append(seed)
+                
 
         # Invoke the cluster run class
         cluster_run = clusterize.ClusterRun()
@@ -1088,162 +1040,29 @@ if MakeModels:
             cluster_run.setScwrlEXE(SCWRL)
         cluster_run.set_USE_SCWRL(USE_SCWRL)
         # loop over the number of models and submit a job to the cluster
-        for i in range(NMODELS):
+        for i in range(nmodels):
             cluster_run.modelOnCluster(work_dir, 1, i + 1, ROSETTA_PATH, ROSETTA_DB, FASTA, amopt.d['frags3mers'], amopt.d['frags9mers'], seed_list[i], insert_Rosetta_command + CCline)
 
         # Monitor the cluster queue to see when all jobs have finished
         cluster_run.monitorQueue()
-
-    else:
-        previous_seeds = [0]  #make random seeds  (1000000, 6000000) ! Must be unique seeds!!!!
-        proc = 1
-        while proc < NProc + 1:
-            new_seed = random.randint(1000000, 4000000)
-            seed_present = False
-
-            for seed in previous_seeds:
-                if new_seed == seed:
-                    seed_present = True
-                    break
-
-            if seed_present == False:
-                previous_seeds.append(new_seed)
-                proc += 1
-        if DEBUG == True:
-            print previous_seeds
-
-        split_jobs = NMODELS / NProc  # ## split jobs between processors
-        remainder = NMODELS % NProc
-        jobs = [0]
-        proc = 1
-        while proc < NProc + 1:
-            jobs.insert(proc, split_jobs)
-            proc += 1
-        jobs[-1] = jobs[-1] + remainder
-        # print jobs  ##################################
-
-
-
-
-        os.system('mkdir ' + work_dir + '/models')
-        PATH_TO_MODELS = work_dir + '/models'
-
-        proc = 1
-        while proc < NProc + 1:
-            if DEBUG == True:
-                print proc
-
-            os.system('mkdir ' + work_dir + '/models_' + str(proc))
-            os.chdir(work_dir + '/models_' + str(proc))
-
-
-
-            if ALLATOM == False:
-                RUNNING.write(ROSETTA_PATH + ' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA + ' -in:file:frag3 ' + amopt.d['frags3mers'] + ' -in:file:frag9 ' + amopt.d['frags9mers'] + ' -out:path ' + work_dir + '/models_' + str(proc) + ' -out:pdb -out:nstruct ' + str(jobs[proc]) + ' -out:file:silent ' + work_dir + '/models_' + str(proc) + '/OUT -return_full_atom false   -run:constant_seed -run:jran ' + str(previous_seeds[proc]) + insert_Rosetta_command + CCline + ' > rosetta_' + str(proc) + '.log  &')
-                RUNNING.flush()
-
-                os.system(ROSETTA_PATH + ' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA + ' -in:file:frag3 ' + amopt.d['frags3mers'] + ' -in:file:frag9 ' + amopt.d['frags9mers'] + ' -out:path ' + work_dir + '/models_' + str(proc) + ' -out:pdb -out:nstruct ' + str(jobs[proc]) + ' -out:file:silent ' + work_dir + '/models_' + str(proc) + '/OUT -return_full_atom false   -run:constant_seed -run:jran ' + str(previous_seeds[proc]) + insert_Rosetta_command + CCline + ' > rosetta_' + str(proc) + '.log  &')
-
-            else:
-                RUNNING.write(ROSETTA_PATH + ' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA + ' -in:file:frag3 ' + amopt.d['frags3mers'] + ' -in:file:frag9 ' + amopt.d['frags9mers'] + ' -out:path ' + work_dir + '/models_' + str(proc) + ' -out:pdb -out:nstruct ' + str(jobs[proc]) + ' -out:file:silent ' + work_dir + '/models_' + str(proc) + '/OUT -return_full_atom true -abinitio:relax  -run:constant_seed -run:jran ' + str(previous_seeds[proc]) + insert_Rosetta_command + CCline + ' > rosetta_' + str(proc) + '.log  &')
-                RUNNING.flush()
-
-                os.system(ROSETTA_PATH + ' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA + ' -in:file:frag3 ' + amopt.d['frags3mers'] + ' -in:file:frag9 ' + amopt.d['frags9mers'] + ' -out:path ' + work_dir + '/models_' + str(proc) + ' -out:pdb -out:nstruct ' + str(jobs[proc]) + ' -out:file:silent ' + work_dir + '/models_' + str(proc) + '/OUT -return_full_atom true -abinitio:relax   -run:constant_seed -run:jran ' + str(previous_seeds[proc]) + insert_Rosetta_command + CCline + ' > rosetta_' + str(proc) + '.log  &')
-
-
-            proc += 1
-
-
-
-
-# ## wait for all models to be made, check number for each job
-
-        no_models_to_make = NMODELS
-        no_models_have = 0
-        finished_models = 0
-        while no_models_have != no_models_to_make:
-            no_models_have = 0
-            proc = 1
-            while proc < NProc + 1:
-                list_of_files = [file for file in os.listdir(work_dir + '/models_' + str(proc)) if file.lower().endswith('.pdb')]
-
-
-                no_models_have += len(list_of_files)
-                proc += 1
-            if no_models_have > finished_models:
-                if DEBUG == True:
-                    print 'Number of models made so far = ' + str(no_models_have)
-                else:
-                    divisor = no_models_to_make / 10
-                    if divisor != 0:
-                        if no_models_have != 0:
-                            if no_models_have % divisor == 0:
-                                print 'Number of models made so far = ' + str(no_models_have)
-
-                finished_models = no_models_have
-            if no_models_have == no_models_to_make:
-                break
-            time.sleep(5)
-
-
-
-
-
-
-
-        LOG = open(work_dir + '/LOG', "a")
-        print 'MODELLING DONE'
-## got them all   Must Delete Models or job will hang -----------
-
-
-
-        MODELLING_time_stop = time.time()
-        cat_string = ''
-
-        # work_dir +'/models'
-        proc = 1
-        while proc < NProc + 1:
-            if DEBUG == True:
-                print 'nproc', proc
-            if USE_SCWRL == True:
-                add_sidechains_SCWRL.add_sidechains_SCWRL(SCWRL, work_dir + '/models_' + str(proc), work_dir + '/models', str(proc), DEBUG)
-            if USE_SCWRL == False:
-                for file in glob.glob(os.path.join(work_dir + '/models_' + str(proc), '*.pdb')):
-
-                    name = re.split('/', file)
-                    pdbname = str(name.pop())
-                    shutil.copyfile(work_dir + '/models_' + str(proc) + '/' + pdbname, work_dir + '/models/' + str(proc) + '_' + pdbname)
-
-            cat_string += work_dir + '/OUT_' + str(proc) + '  '
-            # os.system('rm -r '+work_dir + '/models_'+str(proc) )
-            proc += 1
-
-        os.chdir(work_dir)
-        # print 'Your models are in: ' +cat_string
-
-
-        ####### keep or delete run files
-if not MakeModels:
-    PATH_TO_MODELS = MODELS_LOCATION
-    previous_seeds = []
-    seed_list = []
-    
-RUNNING.write('\nModelling complete - models stored in:\n   ' + PATH_TO_MODELS + '\n\n')
-sys.stdout.write('\n\nModelling complete - models stored in:\n   ' + PATH_TO_MODELS + '\n\n')
-
-###############get seedlist
-
-if CLUSTER:
-    if MakeModels:
+        
+        seedlog = open(work_dir+'/seedlist', "w")
         for seed in seed_list:
             seedlog.write(str(seed) + '\n')
 
-        seedlog.close()
+    else:
+        # Run locally
+        rosettaModeller = rosetta_model.RosettaModel()
+        rosettaModeller.set_from_amopt( amopt )
+        PATH_TO_MODELS = rosettaModeller.doModelling()
+        
+    ##End IF CLUSTER
 else:
-    if MakeModels:
-        for seed in  previous_seeds:
-            seedlog.write(str(seed) + '\n')
-        seedlog.close()
+    # Get existing models
+    PATH_TO_MODELS = MODELS_LOCATION
+    
+RUNNING.write('\nModelling complete - models stored in:\n   ' + PATH_TO_MODELS + '\n\n')
+logger.info('Modelling complete - models stored in:\n   ' + PATH_TO_MODELS + '\n\n')
 
 
 #--------------------------------------------
