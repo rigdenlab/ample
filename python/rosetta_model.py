@@ -39,6 +39,8 @@ class RosettaModel(object):
         self.allatom = None
         self.use_scwrl = None
         self.scwrl_exe = None
+        # List of seeds
+        self.seeds = None
         
         # Extra options
         self.domain_termini_distance = None
@@ -48,33 +50,27 @@ class RosettaModel(object):
         
         self.logger = logging.getLogger()
     
-    def generate_seeds(self):
+    def generate_seeds(self, nseeds):
         """
-        Generate the list of seeds and return
+        Generate a list of nseed seeds
         """
         
-        previous_seeds = [0]  #make random seeds  (1000000, 6000000) ! Must be unique seeds!!!!
-        proc = 1
-        while proc < self.nproc + 1:
-            new_seed = random.randint(1000000, 4000000)
-            seed_present = False
+        seed_list = []
 
-            for seed in previous_seeds:
-                if new_seed == seed:
-                    seed_present = True
-                    break
-
-            if seed_present == False:
-                previous_seeds.append(new_seed)
-                proc += 1
+        # Generate the list of random seeds
+        while len(seed_list) < nseeds:
+            seed = random.randint(1000000, 4000000)
+            if seed not in seed_list:
+                seed_list.append(seed)
                 
         # Keep a log of the seeds
         seedlog = open( self.work_dir + os.sep +'seedlist', "w")
-        for seed in  previous_seeds:
+        for seed in  seed_list:
             seedlog.write(str(seed) + '\n')
         seedlog.close()
-                
-        return previous_seeds
+        
+        self.seeds = seed_list
+        return
     ##End generate_seeds
     
     def split_jobs(self):
@@ -143,7 +139,6 @@ class RosettaModel(object):
                     'True' ]
             cmd += tcmd
 
-
         return cmd
     ##End make_rosetta_cmd
     
@@ -153,11 +148,10 @@ class RosettaModel(object):
         Run the modelling and return the path to the models directory
         """
 
-       
-
         # Make modelling directory and get stuff required for run
         os.mkdir(self.models_dir)
-        seeds = self.generate_seeds()
+        # Now generate the seeds
+        self.generate_seeds( self.nproc )
         jobs = self.split_jobs()
 
         # List of processes so we can check when they are done
@@ -172,7 +166,7 @@ class RosettaModel(object):
             os.mkdir(wdir)
             
             # Generate the command for this processor
-            seed = str(seeds[proc])
+            seed = str(self.seeds[proc-1])
             nstruct = str(jobs[proc])
             cmd = self.rosetta_cmd( wdir, nstruct, seed )
             
@@ -184,8 +178,6 @@ class RosettaModel(object):
             logf = open(wdir+os.sep+"rosetta_{}.log".format(proc),"w")
             p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT, cwd=wdir )
             processes.append(p)
-
-            #proc += 1
             
         #End spawning loop
         

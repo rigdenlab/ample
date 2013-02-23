@@ -1019,41 +1019,33 @@ RUNNING.flush()
 if MakeModels:
     PATH_TO_MODELS = work_dir + '/models'
 
+    #Create modller instance
+    rosettaModeller = rosetta_model.RosettaModel()
+    rosettaModeller.set_from_amopt( amopt )
+    
     # If we are running with cluster support submit all modelling jobs to the cluster queue
     if CLUSTER:
-        raise RuntimeError,"JENS NEEDS TO FIX THIS FOR THE CCLINE AND INSERT COMMAND"
-        seed_list = []
-
         # Generate the list of random seeds
-        while len(seed_list) < nmodels:
-            seed = random.randint(1000000, 4000000)
-            if seed not in seed_list:
-                seed_list.append(seed)
-                
+        rosettaModeller.generate_seeds()
 
         # Invoke the cluster run class
         cluster_run = clusterize.ClusterRun()
         cluster_run.QTYPE = "SGE"
-        cluster_run.ALLATOM = ALLATOM
+        cluster_run.setModeller(rosettaModeller)
         cluster_run.setupModellingDir(work_dir)
-        if USE_SCWRL:
-            cluster_run.setScwrlEXE(SCWRL)
-        cluster_run.set_USE_SCWRL(USE_SCWRL)
+        
         # loop over the number of models and submit a job to the cluster
         for i in range(nmodels):
-            cluster_run.modelOnCluster(work_dir, 1, i + 1, ROSETTA_PATH, ROSETTA_DB, FASTA, amopt.d['frags3mers'], amopt.d['frags9mers'], seed_list[i], insert_Rosetta_command + CCline)
+            #cluster_run.modelOnCluster(work_dir, 1, i + 1, ROSETTA_PATH, ROSETTA_DB, FASTA, amopt.d['frags3mers'], amopt.d['frags9mers'], seed_list[i], insert_Rosetta_command + CCline)
+            nproc=1
+            jobNumber=i+1
+            cluster_run.modelOnCluster( nproc, jobNumber )
 
         # Monitor the cluster queue to see when all jobs have finished
         cluster_run.monitorQueue()
-        
-        seedlog = open(work_dir+'/seedlist', "w")
-        for seed in seed_list:
-            seedlog.write(str(seed) + '\n')
 
     else:
         # Run locally
-        rosettaModeller = rosetta_model.RosettaModel()
-        rosettaModeller.set_from_amopt( amopt )
         PATH_TO_MODELS = rosettaModeller.doModelling()
         
     ##End IF CLUSTER

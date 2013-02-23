@@ -30,6 +30,9 @@ class ClusterRun:
       self.qList=[]
       self.runningQueueList=[]
       self.QTYPE=""
+      
+      #jmht
+      self.modeller = None
       self.SCWRL_EXE=""
       self.USE_SCWRL=False
 
@@ -69,6 +72,10 @@ class ClusterRun:
       
    def setScwrlEXE(self, exePath):
       self.SCWRL_EXE=exePath
+      
+   def setModeller(self, modeller):
+       """Set the Rosetta Modeller object"""
+       self.modeller=modeller
 
    def getMTZInfo(self, HKLIN, workingDir):
       """ Extract useful information from an MTZ file """
@@ -327,7 +334,8 @@ class ClusterRun:
 
 
 
-   def modelOnCluster(self, RunDir, proc, jobNumber, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, seed, rosetta_string):
+   #def modelOnCluster(self, RunDir, proc, jobNumber, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, seed, rosetta_string):
+   def modelOnCluster(self, proc, jobNumber):
       """ Farm out the modelling step on a cluster (SGE) """
 
       # Set the file number according to the job number
@@ -347,7 +355,7 @@ class ClusterRun:
          sys.stdout.write("No. of Models exceeds program limits (Max=999999)\n")
          sys.exit()
 
-      preModelDir=os.path.join(RunDir, "pre_models", "model_" + str(jobNumber))
+      preModelDir=os.path.join(self.modeler.work_dir, "pre_models", "model_" + str(jobNumber))
       
       if os.path.isdir(preModelDir) == False:
          os.mkdir(preModelDir)
@@ -356,13 +364,16 @@ class ClusterRun:
       PDBSetOutFile = os.path.join(preModelDir, "pdbsetOut_" + str(jobNumber) + ".pdb")
       PDBScwrlFile  = os.path.join(preModelDir, "scwrlOut_" + str(jobNumber) + ".pdb")
       SEQFile       = os.path.join(preModelDir, "S_" + fileNumber + ".seq")
-      PDBOutFile    = os.path.join(RunDir, "models", "1_S_" + fileNumber + ".pdb")
+      PDBOutFile    = os.path.join(self.modeler.work_dir, "models", "1_S_" + fileNumber + ".pdb")
+      
+      # Get the seed for this job
+      seed = self.modeller.seeds[jobNumber]
 
       # Create a cluster submission script for this modelling job
       jobName="model_" + str(proc) + "_" + str(seed)
-      sub_script=os.path.join(RunDir, "pre_models", "sge_scripts", "job_" + jobName + ".sub")
+      sub_script=os.path.join(self.modeler.work_dir, "pre_models", "sge_scripts", "job_" + jobName + ".sub")
 
-      self.jobLogsList.append(os.path.join(RunDir, "pre_models", "logs", jobName + '.log'))
+      self.jobLogsList.append(os.path.join(self.modeler.work_dir, "pre_models", "logs", jobName + '.log'))
 
       file=open(sub_script, "w")
       file.write('#!/bin/sh\n'
@@ -370,23 +381,17 @@ class ClusterRun:
          '#$ -cwd\n' +
          '#$ -w e\n' +
          '#$ -V\n' +
-         '#$ -o ' + os.path.join(RunDir, "pre_models", "logs", jobName + '.log') + '\n' +
+         '#$ -o ' + os.path.join(self.modeler.work_dir, "pre_models", "logs", jobName + '.log') + '\n' +
          '#$ -N ' + jobName + '\n\n')
   
       file.write("setenv CCP4_SCR $TMPDIR\n\n")
       
-      if self.ALLATOM:
-         file.write(ROSETTA_PATH +' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA +
-         ' -in:file:frag3 '+ frags_3_mers +' -in:file:frag9 '+ frags_9_mers +
-         ' -out:path ' + preModelDir +' -out:pdb -out:nstruct 1' +
-         ' -out:file:silent '+ preModelDir +
-         '/OUT -return_full_atom true -abinitio:relax -run:constant_seed -run:jran ' + str(seed) + rosetta_string + "\n\n")
-      else:
-         file.write(ROSETTA_PATH +' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA +
-         ' -in:file:frag3 '+ frags_3_mers +' -in:file:frag9 '+ frags_9_mers +
-         ' -out:path ' + preModelDir +' -out:pdb -out:nstruct 1' +
-         ' -out:file:silent '+ preModelDir +
-         '/OUT -return_full_atom false -run:constant_seed -run:jran ' + str(seed) + rosetta_string + "\n\n") 
+      # Build up the rosetta command
+      # 1 structure
+      nstruct=1
+      rcmd = self.modeller.rosetta_cmd(self, preModelDir, nstruct, seed)
+      cmdstr = " ".join(rcmd) + "\n\n"
+      file.write( cmdstr )
 
       file.write("pushd " + os.path.join(preModelDir) + "\n\n" +
  
@@ -396,16 +401,15 @@ class ClusterRun:
 
       "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" + 
       "popd\n\n"  )
-      if self.USE_SCWRL :
-      
+      if self.modeller.use_scwrl:
           file.write(self.SCWRL_EXE + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
           "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" + 
            "\n")
-      if not self.USE_SCWRL :
+      if not self.modeller.use_scwrl:
           file.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )  
   
       # Clean up non-essential files unless we are debugging
-      if self.debug == False:
+      if not self.debug:
          file.write("rm " + PDBSetOutFile + "\n" + 
          "rm " + os.path.join(preModelDir, "SEQUENCE") + "\n" +
          "rm " + PDBScwrlFile + "\n\n")
@@ -414,7 +418,7 @@ class ClusterRun:
   
       # Submit the job
       curDir=os.getcwd()
-      os.chdir(os.path.join(RunDir, "pre_models", "sge_scripts"))
+      os.chdir(os.path.join(self.modeler.work_dir, "pre_models", "sge_scripts"))
       command_line='qsub -V %s' % sub_script
   
       process_args = shlex.split(command_line)
