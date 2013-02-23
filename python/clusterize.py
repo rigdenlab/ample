@@ -357,7 +357,7 @@ class ClusterRun:
 
       preModelDir=os.path.join(self.modeler.work_dir, "pre_models", "model_" + str(jobNumber))
       
-      if os.path.isdir(preModelDir) == False:
+      if not os.path.isdir(preModelDir):
          os.mkdir(preModelDir)
 
       PDBInFile     = os.path.join(preModelDir, "S_00000001.pdb")
@@ -367,7 +367,7 @@ class ClusterRun:
       PDBOutFile    = os.path.join(self.modeler.work_dir, "models", "1_S_" + fileNumber + ".pdb")
       
       # Get the seed for this job
-      seed = self.modeller.seeds[jobNumber]
+      seed = self.modeller.seeds[jobNumber-1]
 
       # Create a cluster submission script for this modelling job
       jobName="model_" + str(proc) + "_" + str(seed)
@@ -389,7 +389,7 @@ class ClusterRun:
       # Build up the rosetta command
       # 1 structure
       nstruct=1
-      rcmd = self.modeller.rosetta_cmd(self, preModelDir, nstruct, seed)
+      rcmd = self.modeller.rosetta_cmd( preModelDir, nstruct, seed )
       cmdstr = " ".join(rcmd) + "\n\n"
       file.write( cmdstr )
 
@@ -402,7 +402,7 @@ class ClusterRun:
       "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" + 
       "popd\n\n"  )
       if self.modeller.use_scwrl:
-          file.write(self.SCWRL_EXE + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
+          file.write(self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
           "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" + 
            "\n")
       if not self.modeller.use_scwrl:
