@@ -31,23 +31,24 @@ def which(program):
     return None
 #########
 def check_for_exe(exename, varname):
+    logger = logging.getLogger()
     exepath = ''
-    print 'looking for', exename
+    logger.debug('looking for: {}'.format(exename) )
     if not varname:
-        print 'no ' + exename + ' given on the command line, looking in the PATH'
-        print which(exename)
+        logger.debug( 'no {} given on the command line, looking in the PATH'.format(exename) )
+        logger.debug( "{}".format(which(exename)) )
         if not which(exename):
-            print 'You need to give the path for ' + exename
+            logger.critical('You need to give the path for: {}'.format(exename))
             sys.exit()
         else:
 
             exepath = which(exename)
     else:
         exepath = varname
-        print 'using here', exepath
+        logger.debug( 'using here {}'.format(exepath) )
 
     if not os.path.exists(exepath):
-        print 'You need to give the path for ' + exename + ', executable in the PATH dosnt exist'
+        logger.critical( 'You need to give the path for {}, executable in the PATH dosnt exist'.format(exename) )
         sys.exit()
     else:
         return exepath
