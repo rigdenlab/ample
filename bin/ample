@@ -71,7 +71,6 @@ import ample_util
 import fasta_parser
 import printTable
 import rosetta_model
-import rosetta_fragments
 import run_mr_bump_shelx_parallel
 import run_spicker
 import SCWRL_edit, Final_display_results
@@ -546,11 +545,9 @@ if not  NMR_PROTOCOL :
                     sys.exit()
 
 # Create the rosetta modeller - this runs all the checks required
-
 if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
     rosetta_modeller = rosetta_model.RosettaModel()
     rosetta_modeller.set_from_amopt( amopt )
-
 
 if NMR_PROTOCOL:
     ROSETTA_CM = amopt.d['rosetta_dir'] + '/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
@@ -563,10 +560,6 @@ if NMR_PROTOCOL:
         print ' cant find ' + ROSETTA_CM + ' check path names'
         sys.exit()
 
-
-if not os.path.exists(FASTA):
-    print 'You need to give the path for the fasta'
-    sys.exit()
 
 if not os.path.exists(work_dir):
     print 'You need to give a run directory'
@@ -605,6 +598,9 @@ if len(pdb_code) == 4:
     pdb_code += '_'
 
 logger.debug('Parsing FASTA file')
+if not os.path.exists(FASTA):
+    print 'You need to give the path for the fasta'
+    sys.exit()
 outfasta = os.path.join(work_dir, pdb_code + '_.fasta')
 fasta_parser.parse_fasta(FASTA, outfasta)
 FASTA = outfasta
@@ -824,7 +820,7 @@ if NMR_PROTOCOL:
                 pdbs = re.split('\.', hom)
 
                 if pdbs[-1] == 'pdb':
-                    nmr. RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , rosetta_dir, amopt.d['frags9mers'], amopt.d['frags3mers'], int(NProc), hom, alignment_file, work_dir + '/models')
+                    nmr. RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(NProc), hom, alignment_file, work_dir + '/models')
                 amopt.d['make_models'] = False
                 PATH_TO_MODELS = work_dir + '/models'
                 MODELS_LOCATION = work_dir + '/models'
@@ -872,7 +868,7 @@ if NMR_PROTOCOL:
 
                 pdbs = re.split('\.', hom)
                 if pdbs[-1] == 'pdb':
-                    ideal_homolog, ALI = nmr.CLUSTER_RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , rosetta_dir, amopt.d['frags9mers'], amopt.d['frags3mers'], int(NProc), hom, alignment_file, work_dir + '/models')
+                    ideal_homolog, ALI = nmr.CLUSTER_RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(NProc), hom, alignment_file, work_dir + '/models')
                     homindeces.append(hom_index)
                     hom_index += 1
 
@@ -889,7 +885,7 @@ if NMR_PROTOCOL:
             # loop over the number of models and submit a job to the cluster
 
                 for i in range(int(NMR_process)):
-                    cluster_run.NMRmodelOnCluster(work_dir + '/Run_' + str(hom_index), 1, i, ROSETTA_PATH, ROSETTA_DB, FASTA, amopt.d['frags3mers'], amopt.d['frags9mers'], ideal_homolog, ALI, i, ROSETTA_CM)
+                    cluster_run.NMRmodelOnCluster(work_dir + '/Run_' + str(hom_index), 1, i, amopt.d['rosetta_path'], amopt.d['rosetta_db'], FASTA, amopt.d['frags3mers'], amopt.d['frags9mers'], ideal_homolog, ALI, i, ROSETTA_CM)
 
             # Monitor the cluster queue to see when all jobs have finished
                 cluster_run.monitorQueue()
