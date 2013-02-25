@@ -26,7 +26,7 @@ ${AMPLEDIR}/bin/ample \
       -name TOXD \
       -frags3mers ${PWD}/aat000_03_05.200_v1_3 \
       -frags9mers ${PWD}/aat000_09_05.200_v1_3 \
-      -ROSETTA_DIR $ROSETTA_DIR \
+      -rosetta_dir $ROSETTA_DIR \
       -run_dir $PWD \
       -make_frags False \
       -CLUSTER False \
