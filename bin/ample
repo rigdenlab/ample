@@ -12,13 +12,10 @@ Issues:
 3) is clustered by all atom RMSD to make fine clusters (option to cluster by CA only i included)
 4) ASU content is the number of search models placed by MrBUMP. -- need to set this manually
 
-jmht - how to split
+jmht
 
 make_fragments
-make_models
-
 nmr_modelling_step
-  
 make_models
 
 clusterimport step - does this do anything?
@@ -41,8 +38,6 @@ The reruns again with imported clusters below
 
 so...
 Only data passed between different stages are the pdb files, so each stage could just start from a directory of files
- 
-
 
 """
 
@@ -102,7 +97,7 @@ parser.add_argument('-ROSETTA_cluster', metavar='path to Rosettas cluster', type
 parser.add_argument('-ROSETTA', metavar='ROSETTA_path', type=str, nargs=1,
                    help='path for Rosetta AbinitioRelax')
 
-parser.add_argument('-ROSETTA_DIR', metavar='Rosetta_dir', type=str, nargs=1,
+parser.add_argument('-rosetta_dir', metavar='Rosetta_dir', type=str, nargs=1,
                    help='the Rosetta install directory')
 
 # Rosetta fragments
@@ -162,7 +157,7 @@ parser.add_argument('-MTZ', metavar='MTZ in', type=str, nargs=1,
 parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
                    help='folder of decoys')
 
-parser.add_argument('-MakeModels', metavar='Do the modelling', type=str, nargs=1,
+parser.add_argument('-make_models', metavar='Do the modelling', type=str, nargs=1,
                    help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
 
 
@@ -324,11 +319,10 @@ parser.set_defaults(
                     fasta = 'no_fasta_given',
                     frags3mers=None,
                     frags9mers=None,
-                    rosetta_fragments_exe = None,
                     improve_template = None,
                     MAX = '',
                     make_frags = "true",
-                    MakeModels = "true",
+                    make_models = "true",
                     models_dir = '',
                     molreponly = "false",
                     MTZ = 'none',
@@ -345,9 +339,10 @@ parser.set_defaults(
                     percent = 5,
                     phaseronly = "false",
                     PHENIX = '',
-                    ROSETTA_cluster = 'no_path_given',
-                    rosetta_db  = 'no_path_given',
-                    rosetta_path =  'no_path_given',
+                    rosetta_cluster = None,
+                    rosetta_db  = None,
+                    rosetta_fragments_exe = None,
+                    rosetta_path =  None,
                     run_dir = os.getcwd(),
                     scwrl_exe = '',
                     SPICKER = "true",
@@ -404,7 +399,6 @@ EarlyTerminate = not amopt.d['TRYALL']
 Ensembler = amopt.d['ensembler']
 FASTA = amopt.d['fasta']
 FIXED_INPUT = True
-MakeModels = amopt.d['MakeModels']
 MAX_path = amopt.d['MAX']
 molreponly = amopt.d['molreponly'] 
 MTZ = amopt.d['MTZ']
@@ -422,9 +416,6 @@ phaseronly = amopt.d['phaseronly']
 PHENIX_path = amopt.d['PHENIX']
 run_dir = amopt.d['run_dir']
 ROSETTA_cluster = amopt.d['ROSETTA_cluster']
-ROSETTA_DB = amopt.d['rosetta_db']
-rosetta_dir = amopt.d['ROSETTA_DIR']
-ROSETTA_PATH = amopt.d['rosetta_path']
 SCWRL_path = amopt.d['scwrl_exe']
 SPICKER = amopt.d['SPICKER']
 SPICKEREXE_path = amopt.d['SPICKERPATH']
@@ -464,12 +455,12 @@ if amopt.d['percent'] != 5:
     FIXED_INTERVALS = False
 percent = amopt.d['percent']
     
-IMPORTING_MODELS = False
+amopt.d['importing_models'] = False
 if os.path.isdir( amopt.d['models_dir'] ):
     MODELS_LOCATION = amopt.d['models_dir']
-    IMPORTING_MODELS = True
+    amopt.d['importing_models'] = True
     # jmht FIX need to not make them
-    MakeModels = False
+    amopt.d['make_models'] = False
 
 MISSING_DOMAINS = False
 domain_all_chains_pdb = amopt.d['domain_all_chains_pdb']
@@ -534,21 +525,100 @@ else:
     
 
 
-#jmht
-#for k, v in amopt.d.iteritems():
-#    print "{} | {}".format( k, v )
-#sys.exit()
+# check if got all the programs
+if not amopt.d['make_models']:
+    amopt.d['importing_models'] = True
+
+if amopt.d['make_models'] and amopt.d['importing_models']:
+    print MODELS_LOCATION
+    logger.critical('you have chosen to both import models and to make them, choose only one\nSet Make Models to \"True\" to make them, \"False\" to import them')
+    sys.exit()
+
+if not  NMR_PROTOCOL :
+    if amopt.d['importing_models'] and not os.path.exists(MODELS_LOCATION):
+        logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + MODELS_LOCATION)
+        if not os.path.exists(ENSEMBLES):
+            logger.warn('you have chosen to import ensembles, but path does not exist : ' + ENSEMBLES)
+            if clusterimport:
+                logger.info('you are importing a cluster of models from :' + clusterimport)
+                if not os.path.exists(clusterimport):
+                    logger.critical('you have chosen to import a cluster, the clusterpath does not exist')
+                    sys.exit()
+
+# Create the rosetta modeller - this runs all the checks required
+
+if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
+    rosetta_modeller = rosetta_model.RosettaModel()
+    rosetta_modeller.set_from_amopt( amopt )
+
+
+if NMR_PROTOCOL:
+    ROSETTA_CM = amopt.d['rosetta_dir'] + '/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
+
+    if not os.path.exists(amopt.d['rosetta_db']) :
+        print ' cant find ' + amopt.d['rosetta_db'] + ' check path names'
+        sys.exit()
+
+    if not os.path.exists(ROSETTA_CM) :
+        print ' cant find ' + ROSETTA_CM + ' check path names'
+        sys.exit()
+
+
+if not os.path.exists(FASTA):
+    print 'You need to give the path for the fasta'
+    sys.exit()
+
+if not os.path.exists(work_dir):
+    print 'You need to give a run directory'
+    sys.exit()
+
+
+if not Ensembler:
+    THESEUS = ample_util.check_for_exe('theseus', THESEUS_path)
+        # print 'finally got', THESEUS
+if Ensembler:
+    print 'You are using Phenix ensmbler'
+    PHENIX = ample_util.check_for_exe('phenix', PHENIX_path)
+    
+if USE_SCWRL:
+    SCWRL = ample_util.check_for_exe('Scwrl4', SCWRL_path)
+    # print 'finally got', SCWRL
+if not USE_SCWRL:
+    SCWRL = ''
+    
+SPICKEREXE = ample_util.check_for_exe('spicker', SPICKEREXE_path)
+
+# print 'finally got', SPICKEREXE
+MAX = ample_util.check_for_exe('maxcluster', MAX_path)
+# print 'finally got', MAX
+if not NoShelx:
+    shelxe = ''
+    shelxe = ample_util.check_for_exe('shelxe', shelxe)
+
+
+if len(pdb_code) > 4 or len(pdb_code) < 4:
+    print 'name is the wrong length, use 4 chars eg ABCD, changing name'
+    pdb_code = 'ABCD'
+
+
+if len(pdb_code) == 4:
+    pdb_code += '_'
+
+logger.debug('Parsing FASTA file')
+outfasta = os.path.join(work_dir, pdb_code + '_.fasta')
+fasta_parser.parse_fasta(FASTA, outfasta)
+FASTA = outfasta
+
+
+
+if not os.path.exists(MTZ):
+    print 'need mtz or no MR will be carried out'
+    sys.exit()
 
 
 #
 # End of setting variables
 #
-if not args.ROSETTA_DIR:
-    logger.critical('you need to give the Rosetta path')
-    sys.exit()
-else:
-    rosetta_dir = amopt.d['ROSETTA_DIR']
-    
 
 # Print out what is being done - sorta..
 if Buccaneer:
@@ -567,7 +637,7 @@ if amopt.d['make_frags']:
 else:
     logger.info('NOT Making Fragments')
 
-if MakeModels:
+if amopt.d['make_models']:
     logger.info('\nMaking Rosetta Models\n')
 else:
     logger.info('NOT Making Rosetta Models\n')
@@ -626,154 +696,6 @@ LOG.write('The authors of specific programs should be referenced where applicabl
 LOG.flush()
 
 
-if not amopt.d['make_frags']:
-    if MakeModels:
-        if not os.path.exists(amopt.d['frags3mers']):
-            logger.critical('Cant find 3mers')
-            sys.exit()
-        if not os.path.exists(amopt.d['frags9mers']):
-            logger.critical('Cant find 9mers')
-            sys.exit()
-
-
-# check if got all the programs
-if not MakeModels:
-    IMPORTING_MODELS = True
-
-if MakeModels:
-    if IMPORTING_MODELS:
-        print MODELS_LOCATION
-        logger.critical('you have chosen to both import models and to make them, choose only one\nSet Make Models to \"True\" to make them, \"False\" to import them')
-        sys.exit()
-
-if not  NMR_PROTOCOL :
-    if IMPORTING_MODELS:
-        if not os.path.exists(MODELS_LOCATION):
-            logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + MODELS_LOCATION)
-            if not os.path.exists(ENSEMBLES):
-                logger.warn('you have chosen to import ensembles, but path does not exist : ' + ENSEMBLES)
-                if clusterimport != False:
-                    logger.info('you are importing a cluster of models from :' + clusterimport)
-                    if not os.path.exists(clusterimport):
-                        logger.critical('you have chosen to import a cluster, the clusterpath does not exist')
-                        sys.exit()
-
-
-
-
-if MakeModels or amopt.d['make_frags']:  # only need Rosetta if making models
-
-    if not os.path.exists(rosetta_dir):
-        print 'Give the rosetta path on the command line'
-
-    import platform
-    if os.path.exists(rosetta_dir):
-        Version_file = rosetta_dir + '/README.version'
-        if platform.mac_ver() == ('', ('', '', ''), ''):
-            ROSETTA_PATH = rosetta_dir + '/rosetta_source/bin/AbinitioRelax.linuxgccrelease'
-        else:
-            ROSETTA_PATH = rosetta_dir + '/rosetta_source/bin/AbinitioRelax'
-        ROSETTA_cluster = rosetta_dir + '/rosetta_source/bin/cluster.linuxgccrelease'
-        ROSETTA_DB = rosetta_dir + '/rosetta_database'
-        ROSETTA_CM = rosetta_dir + '/rosetta_source/bin/idealize_jd2.default.linuxgccrelease'
-        
-    if not os.path.exists(Version_file):
-        logger.critical('version file for Rosetta not found')
-        sys.exit()
-
-    Rosetta_version = '3.2'
-    for line in open(Version_file):
-        if re.search('Rosetta', line):
-            line = re.sub('Rosetta', '', line)
-            Rosetta_version = string.strip(line)
-    logger.info( 'Your Rosetta version is: {}'.format( Rosetta_version ) )
-    
-    amopt.d['rosetta_version'] = Rosetta_version
-    amopt.d['rosetta_dir'] = rosetta_dir
-    amopt.d['rosetta_path'] = ROSETTA_PATH
-    amopt.d['rosetta_db'] = ROSETTA_DB
-    
-    if not os.path.exists(ROSETTA_PATH)  :
-        logger.critical(' cant find Rosetta abinitio, check path names')
-        print ROSETTA_PATH
-        sys.exit()
-
-    if not os.path.exists(ROSETTA_cluster):
-        logger.critical(' cant find Rosetta cluster, check path names')
-        sys.exit()
-    if not os.path.exists(ROSETTA_DB) :
-        logger.critical(' cant find Rosetta DB, check path names')
-        sys.exit()
-        
-    if amopt.d['improve_template']:
-        if not os.path.exists( amopt.d['improve_template'] ):
-            logger.critical('cant find template to improve')
-            sys.exit()
-
-
-
-if NMR_PROTOCOL:
-    ROSETTA_CM = rosetta_dir + '/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
-    ROSETTA_DB = rosetta_dir + '/rosetta_database'
-
-    if not os.path.exists(ROSETTA_DB) :
-        print ' cant find ' + ROSETTA_DB + ' check path names'
-        sys.exit()
-
-    if not os.path.exists(ROSETTA_CM) :
-        print ' cant find ' + ROSETTA_CM + ' check path names'
-        sys.exit()
-
-
-if not os.path.exists(FASTA):
-    print 'You need to give the path for the fasta'
-    sys.exit()
-
-if not os.path.exists(work_dir):
-    print 'You need to give a run directory'
-    sys.exit()
-
-
-if not Ensembler:
-    THESEUS = ample_util.check_for_exe('theseus', THESEUS_path)
-        # print 'finally got', THESEUS
-if Ensembler:
-    print 'You are using Phenix ensmbler'
-    PHENIX = ample_util.check_for_exe('phenix', PHENIX_path)
-    
-if USE_SCWRL:
-    SCWRL = ample_util.check_for_exe('Scwrl4', SCWRL_path)
-    # print 'finally got', SCWRL
-if not USE_SCWRL:
-    SCWRL = ''
-    
-SPICKEREXE = ample_util.check_for_exe('spicker', SPICKEREXE_path)
-
-# print 'finally got', SPICKEREXE
-MAX = ample_util.check_for_exe('maxcluster', MAX_path)
-# print 'finally got', MAX
-if not NoShelx:
-    shelxe = ''
-    shelxe = ample_util.check_for_exe('shelxe', shelxe)
-
-
-if len(pdb_code) > 4 or len(pdb_code) < 4:
-    print 'name is the wrong length, use 4 chars eg ABCD, changing name'
-    pdb_code = 'ABCD'
-
-
-if len(pdb_code) == 4:
-    pdb_code += '_'
-
-
-
-if not os.path.exists(MTZ):
-    print 'need mtz or no MR will be carried out'
-    sys.exit()
-
-
-
-
 logger.info('All needed programs are found, continuing Run')
 
 
@@ -799,8 +721,8 @@ if DEBUG:
 Run_params.write('\nParams Used in this Run\n')
 Run_params.write('\n---input---\nFasta ' + FASTA + '\nrun_dir ' + work_dir + '\nMTZ ' + MTZ + '\nname ' + pdb_code + '\n')
 Run_params.write('\n---fragments---\nMakeFrags ' + str(amopt.d['make_frags']) + '\n3mers ' + amopt.d['frags3mers'] + '\n9mers ' + amopt.d['frags9mers'] + '\n')
-Run_params.write('\n---modelling---\nMakeModels ' + str(MakeModels) + '\nROSETTA_PATH ' + ROSETTA_PATH + '\n')
-Run_params.write('ROSETTA_cluster ' + ROSETTA_cluster + '\nROSETTA_DB ' + ROSETTA_DB + '\nMake_fragments_exe ' + str(amopt.d['rosetta_fragments_exe']) + '\n')
+Run_params.write('\n---modelling---\nmake_models ' + str(amopt.d['make_models']) + '\nROSETTA_PATH ' +  str(amopt.d['rosetta_path']) + '\n')
+Run_params.write('ROSETTA_cluster ' + str(ROSETTA_cluster) + '\nROSETTA_DB ' + str(amopt.d['rosetta_db']) + '\nMake_fragments_exe ' + str(amopt.d['rosetta_fragments_exe']) + '\n')
 if USE_SCWRL == True:
     Run_params.write('\n---3rd party---\nSCWRL ' + SCWRL + '\n')
 Run_params.write('\n---Missing Domain---\nall chains fasta ' + domain_all_chain_fasta + '\nall chain pdb ' + domain_all_chains_pdb + '\nMISSING DOMAINS=' + str(MISSING_DOMAINS) + '\n')
@@ -855,18 +777,15 @@ RUNNING.write('#################################################################
            'MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/\n')
 RUNNING.flush()
 
-
-logger.debug('Parsing FASTA file')
-outfasta = os.path.join(work_dir, pdb_code + '_.fasta')
-fasta_parser.parse_fasta(FASTA, outfasta)
-FASTA = outfasta
-#####make frags
+#######################################################
+#
+# SCRIPT PROPER STARTS HERE
+#
+######################################################
 
 # Make Rosetta fragments
 if amopt.d['make_frags']:
-    fg = rosetta_fragments.FragmentGenerator()
-    fg.set_from_amopt( amopt )
-    fg.generate_fragments()
+    rosetta_modeller.generate_fragments()
            
 
 # ## break here for NMR (frags needed but not modelling
@@ -906,7 +825,7 @@ if NMR_PROTOCOL:
 
                 if pdbs[-1] == 'pdb':
                     nmr. RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , rosetta_dir, amopt.d['frags9mers'], amopt.d['frags3mers'], int(NProc), hom, alignment_file, work_dir + '/models')
-                MakeModels = False
+                amopt.d['make_models'] = False
                 PATH_TO_MODELS = work_dir + '/models'
                 MODELS_LOCATION = work_dir + '/models'
                 
@@ -916,7 +835,7 @@ if NMR_PROTOCOL:
                 print 'cant trucate less than 2 models, use NMR_truncate_only False'
                 sys.exit()
             if modno >= 2:
-                MakeModels = False
+                amopt.d['make_models'] = False
                 PATH_TO_MODELS = work_dir + '/orig_models'
                 MODELS_LOCATION = work_dir + '/orig_models'
         print 'using models from ' + PATH_TO_MODELS
@@ -930,14 +849,14 @@ if NMR_PROTOCOL:
 
 
         if NMR_Truncate_only == True:
-            MakeModels = False
+            amopt.d['make_models'] = False
             PATH_TO_MODELS = work_dir + '/orig_models'
             MODELS_LOCATION = work_dir + '/orig_models'
             print 'using models from ' + PATH_TO_MODELS
 
 
         if NMR_Truncate_only == False:
-            MakeModels = False
+            amopt.d['make_models'] = False
             PATH_TO_MODELS = work_dir + '/models'
             MODELS_LOCATION = work_dir + '/models'
             os.mkdir(work_dir + '/models')
@@ -1016,22 +935,18 @@ print 'making ' + str(nmodels) + ' models...'
 RUNNING.write('----- making models--------\n')
 RUNNING.flush()
 
-if MakeModels:
+if amopt.d['make_models']:
     PATH_TO_MODELS = work_dir + '/models'
-
-    #Create modller instance
-    rosettaModeller = rosetta_model.RosettaModel()
-    rosettaModeller.set_from_amopt( amopt )
     
     # If we are running with cluster support submit all modelling jobs to the cluster queue
     if CLUSTER:
         # Generate the list of random seeds
-        rosettaModeller.generate_seeds()
+        rosetta_modeller.generate_seeds()
 
         # Invoke the cluster run class
         cluster_run = clusterize.ClusterRun()
         cluster_run.QTYPE = "SGE"
-        cluster_run.setModeller(rosettaModeller)
+        cluster_run.setModeller(rosetta_modeller)
         cluster_run.setupModellingDir(work_dir)
         
         # loop over the number of models and submit a job to the cluster
@@ -1046,7 +961,7 @@ if MakeModels:
 
     else:
         # Run locally
-        PATH_TO_MODELS = rosettaModeller.doModelling()
+        PATH_TO_MODELS = rosetta_modeller.doModelling()
         
     ##End IF CLUSTER
 else:
