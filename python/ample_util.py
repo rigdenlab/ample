@@ -13,6 +13,40 @@ import unittest
 # Our modules
 import MTZParse
 
+references = """
+AMPLE: To be added
+SHELX: is used: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122
+
+SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein
+side-chain conformations with SCWRL4. Proteins (2009).
+
+
+Theseus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.
+Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]
+Supplementary Materials for Theobald and Wuttke 2006b.
+
+
+MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457
+
+
+CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs
+for Protein Crystallography. Acta Cryst. D50, 760-763\n
+
+MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025\n
+
+PHASER: McCoy, A.J., Grosse-Kunstleve, R.W., Adams, P.D., Winn, M.D.,
+Storoni, L.C. & Read, R.J. (2007)
+Phaser crystallographic software J. Appl. Cryst. 40, 658-674
+
+REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromolecular
+Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255
+
+SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for
+near-native model selection, 
+Journal of Computational Chemistry, 2004 25: 865-871
+
+MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/"""
+
 # get a program test for existsnce
 def which(program):
     def is_exe(fpath):

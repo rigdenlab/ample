@@ -639,58 +639,22 @@ else:
     logger.info('NOT Making Rosetta Models\n')
     
 
-
-#--------------------------------------------
-# give the run file to check
-#---------------------------------------------
-# jmht - think this is redundant
-# Run_params = open(work_dir +'/Params_used', "w")
-# if DEBUG == True:# if debug is on print stuff out
-#  print var_args
-# for print_user in var_args:
-# if var_args[print_user] is not None:
-#  if DEBUG == True:
-#    print print_user +' : ' + str(var_args[print_user][0])
-#
-#  Run_params.write(print_user +' : ' + str(var_args[print_user][0]) + '\n')
-# Run_params.close()
-
-#---------------------------------------
-# check for errors
-#---------------------------------------
+# This should go somewhere else
 LOG = open(work_dir + '/Ample.log', "a")
-LOG.write('The authors of specific programs should be referenced where applicable::\n\n' +
-           'AMPLE: To be added\n' +
-           'SHELX: is used: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n' +
+LOG.write('The authors of specific programs should be referenced where applicable::\n')
+LOG.write(ample_util.references)
+LOG.close()
 
-           'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n' +
+RUNNING = open(work_dir + '/ROSETTA.log', "w")
 
-
-           'Theseus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n' +
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]\n' +
-           'Supplementary Materials for Theobald and Wuttke 2006b.\n' +
-
-
-           'MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457\n' +
-
-
-           'CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs\n' +
-           'for Protein Crystallography. Acta Cryst. D50, 760-763\n\n' +
-
-           'MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025\n\n' +
-
-           'PHASER: McCoy, A.J., Grosse-Kunstleve, R.W., Adams, P.D., Winn, M.D.,\n' +
-           'Storoni, L.C. & Read, R.J. (2007)\n' +
-           'Phaser crystallographic software J. Appl. Cryst. 40, 658-674\n\n' +
-
-           'REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromolecular\n' +
-           'Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255\n\n' +
-
-           'SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871\n' +
-
-           'MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/\n')
-LOG.flush()
-
+RUNNING.write("""#########################################################################
+#########################################################################
+#########################################################################
+# CCP4: AMPLE -Ab Initio Modelling Molecular Replacement (Beta version) #
+#########################################################################
+The authors of specific programs should be referenced where applicable:""")
+RUNNING.write(ample_util.references)
+RUNNING.flush()
 
 logger.info('All needed programs are found, continuing Run')
 
@@ -730,48 +694,10 @@ Run_params.write('Is an Insert Domain ' + str(INSERT_DOMAIN) + ' termini distanc
 
 Run_params.close()
 
-
-
 #-----------------------------------
 # Do The Modelling
 #-----------------------------------
 time_start = time.time()
-RUNNING = open(work_dir + '/ROSETTA.log', "w")
-
-RUNNING.write('#########################################################################\n' +
-           '#########################################################################\n' +
-           '#########################################################################\n' +
-           '# CCP4: AMPLE -Ab Initio Modelling Molecular Replacement (Beta version) #\n' +
-           '#########################################################################\n' +
-           'The authors of specific programs should be referenced where applicable::\n\n' +
-           'AMPLE: To be added\n' +
-           'SHELX:  "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n' +
-
-           'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n' +
-
-
-           'Theseus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n' +
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]\n' +
-           'Supplementary Materials for Theobald and Wuttke 2006b.\n' +
-
-           'MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457\n' +
-
-
-           'CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs\n' +
-           'for Protein Crystallography. Acta Cryst. D50, 760-763\n\n' +
-           'MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025\n\n' +
-
-           'PHASER: McCoy, A.J., Grosse-Kunstleve, R.W., Adams, P.D., Winn, M.D.,\n' +
-           'Storoni, L.C. & Read, R.J. (2007)\n' +
-           'Phaser crystallographic software J. Appl. Cryst. 40, 658-674\n\n' +
-
-           'REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromolecular\n' +
-           'Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255\n\n' +
-
-           'SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871\n' +
-
-           'MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/\n')
-RUNNING.flush()
 
 #######################################################
 #
@@ -1014,16 +940,13 @@ if not ENSEMBLE_import:
             #
             # Truncate models and return the path to the ensembled models - each ensemble is a single pdb file
             # containing multiple models
-            if Ensembler == False:
+            if Ensembler:
+                list_of_ensembles = truncateedit_MAX.truncate_Phenix(PHENIX, models_path, work_dir + '/fine_cluster_' + str(samples), MAX, percent, FIXED_INTERVALS)
+            else:
                 list_of_ensembles = truncateedit_MAX.truncate(THESEUS, models_path, work_dir + '/fine_cluster_' + str(samples), MAX, percent, FIXED_INTERVALS)
 
-            if Ensembler == True:
-                list_of_ensembles = truncateedit_MAX.truncate_Phenix(PHENIX, models_path, work_dir + '/fine_cluster_' + str(samples), MAX, percent, FIXED_INTERVALS)
-
-            if top_model_only == True:
+            if top_model_only:
                 list_of_ensembles = truncateedit_MAX.One_model_only(list_of_ensembles, work_dir)
-
-
 
             os.system('mkdir ' + work_dir + '/ensembles_' + str(samples))
             for each_ens in list_of_ensembles:
@@ -1039,7 +962,7 @@ if not ENSEMBLE_import:
             if not os.path.exists(bump_dir):
                 os.mkdir(bump_dir)
             os.chdir(bump_dir)
-            if MISSING_DOMAINS == False:
+            if not MISSING_DOMAINS:
                 if CLUSTER:
                     sys.stdout.write("Running MR and model building on a cluster\n\n")
 
@@ -1137,12 +1060,10 @@ if not ENSEMBLE_import:
                         resultslog.close()
                         sys.exit()
 
-            if MISSING_DOMAINS == True:
-                if  CLUSTER:
-                    print ''
+#
 # --------------- missing domains cluster
-
-            if MISSING_DOMAINS == True:
+#
+            if MISSING_DOMAINS:
                 if  CLUSTER:
                     sys.stdout.write("Running MR and model building on a cluster\n\n")
 
@@ -1220,42 +1141,9 @@ if not ENSEMBLE_import:
         elapsed_time = time_stop - time_start
         run_in_min = elapsed_time / 60
         run_in_hours = run_in_min / 60
-        print '\nMR and shelx DONE \n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
-        RUNNING.write('\nMR and shelx ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n')
-        RUNNING.flush()
-        RUNNING.write('The authors of specific programs should be referenced where applicable::\n\n' +
-               'AMPLE: To be added\n' +
-               'SHELX: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n' +
-
-               'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n' +
-
-
-               'Thsesus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n' +
-               'Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]\n' +
-               'Supplementary Materials for Theobald and Wuttke 2006b.\n' +
-
-
-               'MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457\n' +
-
-
-               'CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs\n' +
-               'for Protein Crystallography. Acta Cryst. D50, 760-763\n\n' +
-
-               'MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025\n\n' +
-
-               'PHASER: McCoy, A.J., Grosse-Kunstleve, R.W., Adams, P.D., Winn, M.D.,\n' +
-               'Storoni, L.C. & Read, R.J. (2007)\n' +
-               'Phaser crystallographic software J. Appl. Cryst. 40, 658-674\n\n' +
-
-               'REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromolecular\n' +
-               'Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255\n\n' +
-
-               'SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871\n' +
-
-               'MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/\n')
-
-
-
+        msg = '\nMR and shelx DONE \n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
+        logging.info(msg)
+        RUNNING.write(msg)
         RUNNING.flush()
         RUNNING.close()
 
