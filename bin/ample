@@ -112,13 +112,8 @@ parser.add_argument('-frags3mers', metavar='frags3mers', type=str, nargs=1,
 parser.add_argument('-frags9mers', metavar='frags9mers', type=str, nargs=1,
                    help='path of imported 9mers')
 
-
-
-
 parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
                    help='protein fasta file. (required)')
-
-
 
 parser.add_argument('-name', metavar='priotein name', type=str, nargs=1,
                    help='name of protien in the format ABCD ')
@@ -149,7 +144,7 @@ parser.add_argument('-THESEUS', metavar='Theseus exe (required)', type=str, narg
 parser.add_argument('-PHENIX', metavar='PHENIX.ensembler exe', type=str, nargs=1,
                    help='PHENIX exe')
 
-parser.add_argument('-MTZ', metavar='MTZ in', type=str, nargs=1,
+parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
                    help='MTZ in')
 
 
@@ -158,9 +153,6 @@ parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1
 
 parser.add_argument('-make_models', metavar='Do the modelling', type=str, nargs=1,
                    help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
-
-
-
 
 
 # # FLAGS
@@ -233,10 +225,10 @@ parser.add_argument('-DEBUG', metavar='debug option', type=str, nargs=1,
 parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
                    help='ensembling')
 
-parser.add_argument('-TRYALL', metavar='TRYALL', type=str, nargs=1,
+parser.add_argument('-early_terminate', metavar='early_terminate', type=str, nargs=1,
                      help='terminate early if a success')
 
-parser.add_argument('-NumShelxCyc', metavar='NoShelxCycles', type=str, nargs=1,
+parser.add_argument('-shelx_cycles', metavar='shelx_cycles', type=str, nargs=1,
                      help='number of shelx sycles')
 
 
@@ -249,8 +241,8 @@ parser.add_argument('-phaseronly', metavar='phaseronly', type=str, nargs=1,
 parser.add_argument('-clusterimport', metavar='clusterimport', type=str, nargs=1,
                    help='clusterimport')
 
-parser.add_argument('-OLD_shelx', metavar='OLD_shelx', type=str, nargs=1,
-                   help='OLD_shelx')
+parser.add_argument('-old_shelx', metavar='old_shelx', type=str, nargs=1,
+                   help='old_shelx')
 
 parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
                    help='top_model_only')
@@ -274,22 +266,22 @@ parser.add_argument('-NMR_remodel_fasta', metavar='-NMR_remodel_fasta', type=str
 parser.add_argument('-NMR_Truncate_only', metavar='-NMR_Truncate_only', type=str, nargs=1,
                    help='do no remodelling only truncate the NMR')
 
-parser.add_argument('-Buccaneer', metavar='-Buccaneer', type=str, nargs=1,
+parser.add_argument('-use_buccaneer', metavar='use_buccaneer', type=str, nargs=1,
                    help='True to use Buccaneer')
 
-parser.add_argument('-Buccaneer_cycles', metavar='-Buccaneer_cycles', type=str, nargs=1,
+parser.add_argument('-buccaneer_cycles', metavar='buccaneer_cycles', type=int, nargs=1,
                    help='number of cycles ')
 
-parser.add_argument('-arpwarp_cycles', metavar='-arpwarp_cycles', type=str, nargs=1,
+parser.add_argument('-arpwarp_cycles', metavar='arpwarp_cycles', type=int, nargs=1,
                    help='number of cycles ')
 
-parser.add_argument('-arpwarp', metavar='-arpwarp', type=str, nargs=1,
+parser.add_argument('-use_arpwarp', metavar='-use_arpwarp', type=str, nargs=1,
                    help='True to use arpwarp ')
 
 parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
                    help='True to use shelx ')
 
-parser.add_argument('-MRkeys', metavar='-MRkeys', type=str, nargs=1,
+parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
                    help='mrbump keywords ')
 
 #
@@ -301,19 +293,17 @@ parser.add_argument('-MRkeys', metavar='-MRkeys', type=str, nargs=1,
 parser.set_defaults( 
                     alignment_file = '',
                     allatom = "true",
-                    arpwarp = "true",
                     arpwarp_cycles = 10,
                     ASU = 0,
-                    Buccaneer = "true",
-                    Buccaneer_cycles = 5,
+                    buccaneer_cycles = 5,
                     CC = '',
                     CLUSTER = "false",
                     clusterimport = "false",
                     DEBUG = "false",
-                    domain_all_chains_pdb = 'none',
-                    domain_all_chains_fasta = 'none',
+                    domain_all_chains_pdb = None,
+                    domain_all_chains_fasta = None,
                     domain_termini_distance = 0,
-                    ensembles = '',
+                    ensembles = None,
                     ensembler = "false",
                     fasta = 'no_fasta_given',
                     frags3mers=None,
@@ -324,7 +314,7 @@ parser.set_defaults(
                     make_models = "true",
                     models_dir = '',
                     molreponly = "false",
-                    MTZ = 'none',
+                    mtz = None,
                     name = 'ABCD',
                     noClusters = 1,
                     nmodels = 1000,
@@ -334,7 +324,7 @@ parser.set_defaults(
                     NMR_Truncate_only = "false",
                     nproc = 1,
                     NumShelxCyc = 15,
-                    OLD_shelx = "false",
+                    old_shelx = "false",
                     percent = 5,
                     phaseronly = "false",
                     PHENIX = '',
@@ -347,16 +337,18 @@ parser.set_defaults(
                     SPICKER = "true",
                     SPICKERPATH = '',
                     usehoms = "false",
+                    use_arpwarp = "true",
+                    use_buccaneer = "true",
                     use_scwrl = 'false',
                     use_shelxe = "false",
                     top_model_only = "false",
                     THESEUS = '',
-                    TRYALL = "true"
+                    early_terminate = "true"
                     )
+
 
 # convert args to dictionary
 args = parser.parse_args()
-
 
 # Set up logging
 logger = ample_util.setup_logging()
@@ -368,7 +360,7 @@ MRkeys = []
 keycount = 0
 while keycount < len(sys.argv):
             # print sys.argv[keycount] ,  keycount
-    if sys.argv[keycount] == "-MRkeys":
+    if sys.argv[keycount] == "-mr_keys":
         MRkeys.append(sys.argv[keycount + 1])
     keycount += 1
 
@@ -380,34 +372,27 @@ var_args = vars(args)
 amopt = ample_options.AmpleOptions( )
 amopt.populate( args )
 
+# Now set MRKeys
+amopt.d['mr_keys'] = MRkeys
 
 #
 # Set variables - will use dict directly in future
 #
 alignment_file = amopt.d['alignment_file']
 ALLATOM = amopt.d['allatom']
-arpwarp = amopt.d['arpwarp']
-arpwarp_cycles = amopt.d['arpwarp_cycles']
-Buccaneer = amopt.d['Buccaneer']
-Buccaneer_cycles = amopt.d['Buccaneer_cycles']
 # jmht - runon_cluster
 CLUSTER = amopt.d['CLUSTER']
 clusterimport = amopt.d['clusterimport']
 DEBUG = amopt.d['DEBUG']
-EarlyTerminate = not amopt.d['TRYALL']
 Ensembler = amopt.d['ensembler']
 FASTA = amopt.d['fasta']
 FIXED_INPUT = True
 MAX_path = amopt.d['MAX']
 molreponly = amopt.d['molreponly'] 
-MTZ = amopt.d['MTZ']
-NProc = amopt.d['nproc']
 noClusters = amopt.d['noClusters']
-NoShelxCycles = amopt.d['NumShelxCyc']
 nmodels = amopt.d['nmodels']
 NMR_process = amopt.d['NMR_process']
 NMR_Truncate_only = amopt.d['NMR_Truncate_only']
-OLD_shelx = amopt.d['OLD_shelx']
 pdb_code = amopt.d['name']
 #jmht - fix
 amopt.d['pdb_code'] = amopt.d['name']
@@ -434,44 +419,23 @@ os.chdir(work_dir)
 # Should probably think of sensible ways to set defaults or
 # run the checks in a different place
 #
-use_shelxe = amopt.d['use_shelxe']
-NoShelx = not use_shelxe
-
-
 if amopt.d['ASU'] > 0:
-    noASU = 'NMASU ' + str( amopt.d['ASU']  )
+    amopt.d['ASU'] = 'NMASU ' + str( amopt.d['ASU']  )
 else:
-    noASU = str(amopt.d['ASU'])
+    amopt.d['ASU'] = str(amopt.d['ASU'])
 
-
-ENSEMBLE_import = False
-if os.path.isdir( amopt.d['ensembles'] ):
-    ENSEMBLES = amopt.d['ensembles']
-    ENSEMBLE_import = True
-    
 FIXED_INTERVALS = True
 if amopt.d['percent'] != 5:
     FIXED_INTERVALS = False
 percent = amopt.d['percent']
-    
-amopt.d['importing_models'] = False
-if os.path.isdir( amopt.d['models_dir'] ):
-    MODELS_LOCATION = amopt.d['models_dir']
-    amopt.d['importing_models'] = True
-    # jmht FIX need to not make them
-    amopt.d['make_models'] = False
 
 MISSING_DOMAINS = False
-domain_all_chains_pdb = amopt.d['domain_all_chains_pdb']
-if not amopt.d['domain_all_chains_pdb'] == 'none':
-    MISSING_DOMAINS = True
-    
-domain_all_chain_fasta = amopt.d['domain_all_chains_fasta']
-if not amopt.d['domain_all_chains_fasta'] == 'none':
+if amopt.d['domain_all_chains_pdb'] or amopt.d['domain_all_chains_fasta']:
     MISSING_DOMAINS = True
 
 NMR_PROTOCOL = False
 if os.path.isfile( amopt.d['NMR_model_in'] ):
+    NMR_model_in = amopt.d['NMR_model_in']
     NMR_PROTOCOL = True
 
 if os.path.isfile( amopt.d['NMR_remodel_fasta'] ):
@@ -480,16 +444,14 @@ else:
     NMR_remodel_fasta = amopt.d['fasta']
 
 
-mrbump_programs = ' molrep phaser '
-if molreponly == False:
-    if phaseronly == False:
-        mrbump_programs = ' molrep phaser '
-if molreponly == True:
-    mrbump_programs = ' molrep  '
-if phaseronly == True:
-    mrbump_programs = ' phaser  '
-if molreponly == True:
-    if phaseronly == True:
+amopt.d['mrbump_programs'] = ' molrep phaser '
+if not molreponly and not phaseronly:
+    amopt.d['mrbump_programs'] = ' molrep phaser '
+if molreponly:
+    amopt.d['mrbump_programs'] = ' molrep  '
+if phaseronly:
+    amopt.d['mrbump_programs'] = ' phaser  '
+if molreponly and phaseronly:
         logger.critical('you say you want molrep only AND phaser only, choose one or both')
         sys.exit()    
     
@@ -498,46 +460,52 @@ if molreponly == True:
 # Check if we need to get any of the flags from the MTZ file
 if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
     
-    if not os.path.isfile( amopt.d['MTZ'] ):
-        logger.critical("Cannot find MTZ file: {}".format( amopt.d['MTZ'] ) )
+    if not os.path.isfile( amopt.d['mtz'] ):
+        logger.critical("Cannot find MTZ file: {}".format( amopt.d['mtz'] ) )
         sys.exit(1)
     try:
-        t_flag_F , t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( MTZ )
+        t_flag_F, t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( amopt.d['mtz'] )
     except KeyError,e:
-        logger.critical("Error generating flags from MTZ file: {}\n{}\nYou may need to run the CCP4 uniqueify on the MTZ file".format(MTZ,e) )
+        logger.critical("Error generating flags from MTZ file: {}\n{}\nYou may need to run the CCP4 uniqueify on the MTZ file".format(amopt.d['mtz'],e) )
         sys.exit(1)
     
 if not amopt.d['F']:
-    flag_F = t_flag_F
-else:
-    flag_F = amopt.d['F']
+    amopt.d['F'] = t_flag_F
     
 if not amopt.d['SIGF']:
-    flag_SIGF = t_flag_SIGF
-else:
-    flag_SIGF = amopt.d['SIGF']
+    amopt.d['SIGF'] = t_flag_SIGF
     
 if not amopt.d['FREE']:
-    flag_FREE = t_flag_FREE
-else:
-    flag_FREE = amopt.d['FREE']
-    
+    amopt.d['FREE'] = t_flag_FREE
 
+
+ENSEMBLE_import = False
+if os.path.isdir( amopt.d['ensembles'] ):
+    ENSEMBLE_import = True
+    logger.info("Found directory with ensemble files: {}\nSetting make_models to False".format( amopt.d['ensembles'] ) )
+    amopt.d['make_frags'] = False
+    amopt.d['make_models'] = False
+    
+amopt.d['importing_models'] = False
+if os.path.isdir( amopt.d['models_dir'] ):
+    amopt.d['importing_models'] = True
+    # jmht FIX need to not make them
+    amopt.d['make_models'] = False
 
 # check if got all the programs
 if not amopt.d['make_models']:
     amopt.d['importing_models'] = True
 
 if amopt.d['make_models'] and amopt.d['importing_models']:
-    print MODELS_LOCATION
+    print amopt.d['models_dir']
     logger.critical('you have chosen to both import models and to make them, choose only one\nSet Make Models to \"True\" to make them, \"False\" to import them')
     sys.exit()
 
 if not  NMR_PROTOCOL :
-    if amopt.d['importing_models'] and not os.path.exists(MODELS_LOCATION):
-        logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + MODELS_LOCATION)
-        if not os.path.exists(ENSEMBLES):
-            logger.warn('you have chosen to import ensembles, but path does not exist : ' + ENSEMBLES)
+    if amopt.d['importing_models'] and not os.path.exists(amopt.d['models_dir']):
+        logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + amopt.d['models_dir'])
+        if not os.path.exists(amopt.d['ensembles']):
+            logger.warn('you have chosen to import ensembles, but path does not exist : ' + amopt.d['ensembles'])
             if clusterimport:
                 logger.info('you are importing a cluster of models from :' + clusterimport)
                 if not os.path.exists(clusterimport):
@@ -584,7 +552,7 @@ SPICKEREXE = ample_util.check_for_exe('spicker', SPICKEREXE_path)
 # print 'finally got', SPICKEREXE
 MAX = ample_util.check_for_exe('maxcluster', MAX_path)
 # print 'finally got', MAX
-if not NoShelx:
+if amopt.d['use_shelxe']:
     shelxe = ''
     shelxe = ample_util.check_for_exe('shelxe', shelxe)
 
@@ -607,7 +575,7 @@ FASTA = outfasta
 
 
 
-if not os.path.exists(MTZ):
+if not os.path.exists(amopt.d['mtz']):
     print 'need mtz or no MR will be carried out'
     sys.exit()
 
@@ -617,12 +585,12 @@ if not os.path.exists(MTZ):
 #
 
 # Print out what is being done - sorta..
-if Buccaneer:
+if amopt.d['use_buccaneer']:
     logger.info('Rebuilding in Bucaneer')
 else:
     logger.info('Not rebuilding in Bucaneer')
 
-if arpwarp:
+if amopt.d['use_arpwarp']:
     logger.info('Rebuilding in ARP/wARP')
 else:
     logger.info('Not rebuilding in ARP/wARP')
@@ -679,13 +647,13 @@ if DEBUG:
 
 
 Run_params.write('\nParams Used in this Run\n')
-Run_params.write('\n---input---\nFasta ' + FASTA + '\nrun_dir ' + work_dir + '\nMTZ ' + MTZ + '\nname ' + pdb_code + '\n')
+Run_params.write('\n---input---\nFasta ' + FASTA + '\nrun_dir ' + work_dir + '\nMTZ ' + amopt.d['mtz'] + '\nname ' + pdb_code + '\n')
 Run_params.write('\n---fragments---\nMakeFrags ' + str(amopt.d['make_frags']) + '\n3mers ' + amopt.d['frags3mers'] + '\n9mers ' + amopt.d['frags9mers'] + '\n')
 Run_params.write('\n---modelling---\nmake_models ' + str(amopt.d['make_models']) + '\nROSETTA_PATH ' +  str(amopt.d['rosetta_path']) + '\n')
 Run_params.write('ROSETTA_cluster ' + str(ROSETTA_cluster) + '\nROSETTA_DB ' + str(amopt.d['rosetta_db']) + '\nMake_fragments_exe ' + str(amopt.d['rosetta_fragments_exe']) + '\n')
 if USE_SCWRL == True:
     Run_params.write('\n---3rd party---\nSCWRL ' + SCWRL + '\n')
-Run_params.write('\n---Missing Domain---\nall chains fasta ' + domain_all_chain_fasta + '\nall chain pdb ' + domain_all_chains_pdb + '\nMISSING DOMAINS=' + str(MISSING_DOMAINS) + '\n')
+Run_params.write('\n---Missing Domain---\nall chains fasta ' + str(amopt.d['domain_all_chains_fasta']) + '\nall chain pdb ' + str(amopt.d['domain_all_chains_pdb']) + '\nMISSING DOMAINS=' + str(MISSING_DOMAINS) + '\n')
 # This only used for printing
 INSERT_DOMAIN = False
 if amopt.d['domain_termini_distance'] > 0:
@@ -746,10 +714,10 @@ if NMR_PROTOCOL:
                 pdbs = re.split('\.', hom)
 
                 if pdbs[-1] == 'pdb':
-                    nmr. RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(NProc), hom, alignment_file, work_dir + '/models')
+                    nmr. RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(amopt.d['nproc']), hom, alignment_file, work_dir + '/models')
                 amopt.d['make_models'] = False
                 PATH_TO_MODELS = work_dir + '/models'
-                MODELS_LOCATION = work_dir + '/models'
+                amopt.d['models_dir'] = work_dir + '/models'
                 
         if NMR_Truncate_only:
             print 'Truncating NMR'
@@ -759,7 +727,7 @@ if NMR_PROTOCOL:
             if modno >= 2:
                 amopt.d['make_models'] = False
                 PATH_TO_MODELS = work_dir + '/orig_models'
-                MODELS_LOCATION = work_dir + '/orig_models'
+                amopt.d['models_dir'] = work_dir + '/orig_models'
         print 'using models from ' + PATH_TO_MODELS
     if CLUSTER:
         os.mkdir(work_dir + '/orig_models')
@@ -773,14 +741,14 @@ if NMR_PROTOCOL:
         if NMR_Truncate_only == True:
             amopt.d['make_models'] = False
             PATH_TO_MODELS = work_dir + '/orig_models'
-            MODELS_LOCATION = work_dir + '/orig_models'
+            amopt.d['models_dir'] = work_dir + '/orig_models'
             print 'using models from ' + PATH_TO_MODELS
 
 
         if NMR_Truncate_only == False:
             amopt.d['make_models'] = False
             PATH_TO_MODELS = work_dir + '/models'
-            MODELS_LOCATION = work_dir + '/models'
+            amopt.d['models_dir'] = work_dir + '/models'
             os.mkdir(work_dir + '/models')
             homolog = work_dir + '/orig_models'
             hom_index = 1
@@ -794,7 +762,7 @@ if NMR_PROTOCOL:
 
                 pdbs = re.split('\.', hom)
                 if pdbs[-1] == 'pdb':
-                    ideal_homolog, ALI = nmr.CLUSTER_RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(NProc), hom, alignment_file, work_dir + '/models')
+                    ideal_homolog, ALI = nmr.CLUSTER_RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(amopt.d['nproc']), hom, alignment_file, work_dir + '/models')
                     homindeces.append(hom_index)
                     hom_index += 1
 
@@ -828,8 +796,8 @@ if NMR_PROTOCOL:
 
     # check for same length
     l = []
-    for pdb in os.listdir(MODELS_LOCATION):
-        i = split_models.check(MODELS_LOCATION + '/' + pdb)
+    for pdb in os.listdir(amopt.d['models_dir']):
+        i = split_models.check(amopt.d['models_dir'] + '/' + pdb)
         l.append(i)
         if len(l) > 1:
             mina = min(l, key=int)
@@ -843,10 +811,10 @@ if NMR_PROTOCOL:
         modeal_l = modeal_l[1]
         print modeal_l
 
-        for pdb in os.listdir(MODELS_LOCATION):
-            i = split_models.check(MODELS_LOCATION + '/' + pdb)
+        for pdb in os.listdir(amopt.d['models_dir']):
+            i = split_models.check(amopt.d['models_dir'] + '/' + pdb)
             if i != modeal_l:
-                os.remove(MODELS_LOCATION + '/' + pdb)
+                os.remove(amopt.d['models_dir'] + '/' + pdb)
 
 
 # return from nmr with models already made
@@ -888,7 +856,7 @@ if amopt.d['make_models']:
     ##End IF CLUSTER
 else:
     # Get existing models
-    PATH_TO_MODELS = MODELS_LOCATION
+    PATH_TO_MODELS = amopt.d['models_dir']
     
 RUNNING.write('\nModelling complete - models stored in:\n   ' + PATH_TO_MODELS + '\n\n')
 logger.info('Modelling complete - models stored in:\n   ' + PATH_TO_MODELS + '\n\n')
@@ -898,7 +866,7 @@ logger.info('Modelling complete - models stored in:\n   ' + PATH_TO_MODELS + '\n
 # check if models are present regardless
 #--------------------------------------------
 if clusterimport:
-    if os.path.exists(clusterimport):
+    if os.path.exists(clusterimport): 
         cluster_path = clusterimport
         if not os.path.exists(work_dir + '/fine_cluster_1'):
             os.mkdir(work_dir + '/fine_cluster_1')
@@ -956,8 +924,6 @@ if not ENSEMBLE_import:
             for infile in glob.glob(os.path.join(work_dir + '/ensembles_' + str(samples), '*.pdb')):
                 final_ensembles.append(infile)
 
-
-
             bump_dir = os.path.join(work_dir, 'MRBUMP')
             if not os.path.exists(bump_dir):
                 os.mkdir(bump_dir)
@@ -972,25 +938,25 @@ if not ENSEMBLE_import:
                     mrBuildClusterDir = os.path.join(bump_dir, "cluster_run" + str(samples))
                     os.mkdir(mrBuildClusterDir)
 
-                    mrBuild.HKLIN = MTZ
-                    mrBuild.LABIN["F"] = flag_F
-                    mrBuild.LABIN["SIGF"] = flag_SIGF
-                    mrBuild.LABIN["FreeR_flag"] = flag_FREE
+                    mrBuild.HKLIN = amopt.d['mtz']
+                    mrBuild.LABIN["F"] = amopt.d['F']
+                    mrBuild.LABIN["SIGF"] = amopt.d['SIGF']
+                    mrBuild.LABIN["FreeR_flag"] = amopt.d['FREE']
                     mrBuild.SEQIN = FASTA
                     mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
 
-                    mrBuild.BCYCLES = Buccaneer_cycles
-                    mrBuild.BUCC = Buccaneer
-                    mrBuild.SCYLCLES = NoShelxCycles
-                    mrBuild.SHELXE = use_shelxe
+                    mrBuild.BCYCLES = amopt.d['buccaneer_cycles']
+                    mrBuild.BUCC = amopt.d['use_buccaneer']
+                    mrBuild.SCYLCLES = amopt.d['shelx_cycles']
+                    mrBuild.SHELXE = amopt.d['use_shelxe']
 
-                    mrBuild.MRKEYS = MRkeys
+                    mrBuild.MRKEYS = amopt.d['mr_keys']
 
                     # Reset the queue list
                     mrBuild.qList = []
                     jobID = 0
                     for pdbfile in final_ensembles:
-                        mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, mrbump_programs)
+                        mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, amopt.d['mrbump_programs'])
                         jobID = jobID + 1
                     mrBuild.monitorQueue()
 
@@ -1033,9 +999,10 @@ if not ENSEMBLE_import:
 
                     os.mkdir(bump_dir)
                     os.chdir(bump_dir)
-                    split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-                    run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
-                    if NoShelx == False:
+                    split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, amopt.d['nproc'])
+                    run_mr_bump_shelx_parallel.split_into_runs(amopt.d['mtz'], split_ensembles, bump_dir, FASTA, amopt.d['nproc'], amopt.d['SIGF'], amopt.d['F'], amopt.d['FREE'], amopt.d['ASU'], amopt.d['early_terminate'], ResultsPath, amopt.d['use_shelxe'], amopt.d['shelx_cycles'], amopt.d['old_shelx'], amopt.d['mrbump_programs'], amopt.d['use_buccaneer'], amopt.d['buccaneer_cycles'], amopt.d['use_arpwarp'], amopt.d['arpwarp_cycles'], amopt.d['mr_keys'])
+
+                    if amopt.d['use_shelxe']:
                         Final_display_results.make_log(bump_dir, os.path.join(work_dir, 'Final_results.log'))
                         # print '\n\nFinal Results:\n\n'
                         # T=printTable.Table()
@@ -1044,11 +1011,9 @@ if not ENSEMBLE_import:
                         # table = T.maketable()
                         # out = sys.stdout
                         # T.pprint_table(out, table)
-
-                    if NoShelx == True:
+                    else:
                         resultslog = open(ResultsPath + '/Results.log', "w")
-                        print 'getting results from:'
-                        print bump_dir
+                        print 'getting results from: {}',format( bump_dir )
                         for mrbumplog in os.listdir(bump_dir):
                             if re.search('.log', mrbumplog):
                                 # print mrbumplog
@@ -1074,20 +1039,20 @@ if not ENSEMBLE_import:
                     os.mkdir(mrBuildClusterDir)
 
 
-                    mrBuild.HKLIN = MTZ
-                    mrBuild.LABIN["F"] = flag_F
-                    mrBuild.LABIN["SIGF"] = flag_SIGF
-                    mrBuild.LABIN["FreeR_flag"] = flag_FREE
-                    mrBuild.SEQIN = domain_all_chain_fasta
+                    mrBuild.HKLIN = amopt.d['mtz']
+                    mrBuild.LABIN["F"] = amopt.d['F']
+                    mrBuild.LABIN["SIGF"] = amopt.d['SIGF']
+                    mrBuild.LABIN["FreeR_flag"] = amopt.d['FREE']
+                    mrBuild.SEQIN = amopt.d['domain_all_chains_fasta']
                     mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
 
 
-                    mrBuild.BCYCLES = Buccaneer_cycles
-                    mrBuild.BUCC = Buccaneer
-                    mrBuild.SCYLCLES = NoShelxCycles
-                    mrBuild.SHELXE = use_shelxe
+                    mrBuild.BCYCLES = amopt.d['buccaneer_cycles']
+                    mrBuild.BUCC = amopt.d['use_buccaneer']
+                    mrBuild.SCYLCLES = amopt.d['shelx_cycles']
+                    mrBuild.SHELXE = amopt.d['use_shelxe']
 
-                    mrBuild.MRKEYS = MRkeys
+                    mrBuild.MRKEYS = amopt.d['mr_keys']
 
 
 #            mrBuild.FIXEDIN='FIXED_XYZIN '+domain_all_chains_pdb+' IDENTIY 0.6 \n'
@@ -1096,7 +1061,7 @@ if not ENSEMBLE_import:
                     mrBuild.qList = []
                     jobID = 0
                     for pdbfile in final_ensembles:
-                        mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID , mrbump_programs, domain_all_chains_pdb , '0.6')
+                        mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID , amopt.d['mrbump_programs'], amopt.d['domain_all_chains_pdb'] , '0.6')
                         jobID = jobID + 1
                     mrBuild.monitorQueue()
 
@@ -1106,8 +1071,6 @@ if not ENSEMBLE_import:
                         if os.path.splitext(l)[1] == 'pdb':
                             os.remove(work_dir + '/spicker_run/' + l)
                     os.remove(work_dir + '/spicker_run/rep1.tra1')
-
-
 
 
                     # cleanup
@@ -1124,13 +1087,14 @@ if not ENSEMBLE_import:
 
 #-------------------------------------
                 else:
-                    print domain_all_chains_pdb
-                    print domain_all_chain_fasta
+                    # Running locally
+                    #print domain_all_chains_pdb
+                    #print domain_all_chain_fasta
                     bump_dir = os.path.join(work_dir, 'MRBUMP_cluster' + str(samples))
                     os.mkdir(bump_dir)
                     os.chdir(bump_dir)
-                    split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-                    run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
+                    split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, amopt.d['nproc'])
+                    run_mr_bump_shelx_parallel.split_into_runs_domains(amopt.d['mtz'], split_ensembles, bump_dir, amopt.d['domain_all_chains_fasta'] , amopt.d['nproc'], amopt.d['SIGF'], amopt.d['F'], amopt.d['FREE'], amopt.d['ASU'], amopt.d['early_terminate'], ResultsPath, amopt.d['use_shelxe'], amopt.d['shelx_cycles'], amopt.d['domain_all_chains_pdb'], FIXED_INPUT, amopt.d['old_shelx'], amopt.d['mrbump_programs'], amopt.d['use_buccaneer'], amopt.d['buccaneer_cycles'], amopt.d['use_arpwarp'], amopt.d['arpwarp_cycles'], amopt.d['mr_keys'])
                     Final_display_results.make_log(bump_dir, os.path.join(work_dir, 'Final_results.log'))
 
 
@@ -1170,7 +1134,7 @@ RUNNING.flush()
 
 if ENSEMBLE_import:
     final_ensembles = []
-    for infile in glob.glob(os.path.join(ENSEMBLES, '*.pdb')):
+    for infile in glob.glob(os.path.join(amopt.d['ensembles'], '*.pdb')):
         final_ensembles.append(infile)
 
     if top_model_only == True:
@@ -1180,71 +1144,67 @@ ResultsPath = work_dir + '/RESULTS'
 if not os.path.exists(work_dir + '/RESULTS'):
     os.mkdir(work_dir + '/RESULTS')
 
-
-
 #--------------Import into MrBUMP here-------------------
 RUNNING.write('Running MrBUMP\nMR LOGS in ' + work_dir + '/MRBUMP')
 RUNNING.flush()
 
 # os.system('mkdir ' + work_dir+'/MRBUMP')
-bump_dir = os.path.join(work_dir, 'MRBUMP')
-os.mkdir(bump_dir)
-os.chdir(bump_dir)
+amopt.d['mrbump_dir'] = os.path.join(work_dir, 'MRBUMP')
+if not os.path.isdir( amopt.d['mrbump_dir'] ):
+    os.mkdir(amopt.d['mrbump_dir'])
+os.chdir(amopt.d['mrbump_dir'])
 ResultsPath = work_dir + '/RESULTS'
-if MISSING_DOMAINS == False:
+if not MISSING_DOMAINS:
     if CLUSTER:
         sys.stdout.write("Running MR and model building on a cluster\n\n")
 
         mrBuild = clusterize.ClusterRun()
         mrBuild.QTYPE = "SGE"
 
-        mrBuildClusterDir = os.path.join(bump_dir, "cluster_run")
+        mrBuildClusterDir = os.path.join(amopt.d['mrbump_dir'], "cluster_run")
         os.mkdir(mrBuildClusterDir)
 
-        mrBuild.HKLIN = MTZ
-        mrBuild.LABIN["F"] = flag_F
-        mrBuild.LABIN["SIGF"] = flag_SIGF
-        mrBuild.LABIN["FreeR_flag"] = flag_FREE
+        mrBuild.HKLIN = amopt.d['mtz']
+        mrBuild.LABIN["F"] = amopt.d['F']
+        mrBuild.LABIN["SIGF"] = amopt.d['SIGF']
+        mrBuild.LABIN["FreeR_flag"] = amopt.d['FREE']
         mrBuild.SEQIN = FASTA
         mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
 
-        mrBuild.BCYCLES = Buccaneer_cycles
-        mrBuild.BUCC = Buccaneer
-        mrBuild.SCYLCLES = NoShelxCycles
-        mrBuild.SHELXE = NoShelx
+        mrBuild.BCYCLES = amopt.d['buccaneer_cycles']
+        mrBuild.BUCC = amopt.d['use_buccaneer']
+        mrBuild.SCYLCLES = amopt.d['shelx_cycles']
+        mrBuild.SHELXE = amopt.d['use_shelxe']
 
-        mrBuild.MRKEYS = MRkeys
+        mrBuild.MRKEYS = amopt.d['mr_keys']
 
         # Reset the queue list
         mrBuild.qList = []
         jobID = 0
 
-        if OLD_shelx == True:
+        if amopt.d['old_shelx']:
             mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
-        if OLD_shelx == False:
+        else:
             mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
 
         for pdbfile in final_ensembles:
-            mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, mrbump_programs)
+            mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, amopt.d['mrbump_programs'])
             jobID = jobID + 1
-
-
-
 
         # Monitor the cluster queue to see when all jobs have finished
         mrBuild.monitorQueue()
     else:
-        split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-        run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
-        Final_display_results.make_log(bump_dir, os.path.join(work_dir, 'Final_results.log'))
+        split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, amopt.d['nproc'])
+        run_mr_bump_shelx_parallel.split_into_runs(split_ensembles, amopt)
+        Final_display_results.make_log(amopt.d['mrbump_dir'], os.path.join(work_dir, 'Final_results.log'))
 
-        if NoShelx == False:
-            Final_display_results.make_log(bump_dir, os.path.join(work_dir, 'Final_results.log'))
-        if NoShelx == True:
+        if amopt.d['use_shelxe']:
+            Final_display_results.make_log(amopt.d['mrbump_dir'], os.path.join(work_dir, 'Final_results.log'))
+        else:
             resultslog = open(ResultsPath + '/Results.log', "w")
             print 'getting results from:'
-            print bump_dir
-            for mrbumplog in os.listdir(bump_dir):
+            print amopt.d['mrbump_dir']
+            for mrbumplog in os.listdir(amopt.d['mrbump_dir']):
                 if re.search('.log', mrbumplog):
                                 # print mrbumplog
                     for line in open(mrbumplog):
@@ -1255,10 +1215,7 @@ if MISSING_DOMAINS == False:
             resultslog.close()
             sys.exit()
 
-
-
-
-if MISSING_DOMAINS == True:
+if MISSING_DOMAINS:
     if  CLUSTER:
 
         sys.stdout.write("Running MR and model building on a cluster\n\n")
@@ -1266,49 +1223,42 @@ if MISSING_DOMAINS == True:
         mrBuild = clusterize.ClusterRun()
         mrBuild.QTYPE = "SGE"
 
-        mrBuildClusterDir = os.path.join(bump_dir, "cluster_run")
+        mrBuildClusterDir = os.path.join(amopt.d['mrbump_dir'], "cluster_run")
         os.mkdir(mrBuildClusterDir)
 
-        mrBuild.HKLIN = MTZ
-        mrBuild.LABIN["F"] = flag_F
-        mrBuild.LABIN["SIGF"] = flag_SIGF
-        mrBuild.LABIN["FreeR_flag"] = flag_FREE
-        mrBuild.SEQIN = domain_all_chain_fasta
+        mrBuild.HKLIN = amopt.d['mtz']
+        mrBuild.LABIN["F"] = amopt.d['F']
+        mrBuild.LABIN["SIGF"] = amopt.d['SIGF']
+        mrBuild.LABIN["FreeR_flag"] = amopt.d['FREE']
+        mrBuild.SEQIN = str(amopt.d['domain_all_chains_fasta'])
         mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
 
-        mrBuild.BCYCLES = Buccaneer_cycles
-        mrBuild.BUCC = Buccaneer
-        mrBuild.SCYLCLES = NoShelxCycles
-        mrBuild.SHELXE = use_shelxe
+        mrBuild.BCYCLES = amopt.d['buccaneer_cycles']
+        mrBuild.BUCC = amopt.d['use_buccaneer']
+        mrBuild.SCYLCLES = amopt.d['shelx_cycles']
+        mrBuild.SHELXE = amopt.d['use_shelxe']
 
-        mrBuild.MRKEYS = MRkeys
-        print MRkeys
-        if OLD_shelx == True:
+        mrBuild.MRKEYS = amopt.d['mr_keys']
+        print amopt.d['mr_keys']
+        if amopt.d['old_shelx']:
             mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
-        if OLD_shelx == False:
+        else:
             mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
 
         # Reset the queue list
         mrBuild.qList = []
         jobID = 0
         for pdbfile in final_ensembles:
-            mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, mrbump_programs, domain_all_chains_pdb, 0.6)
+            mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, amopt.d['mrbump_programs'], amopt.d['domain_all_chains_pdb'], 0.6)
             jobID = jobID + 1
 
-
-
     else:
-        print domain_all_chains_pdb
-        print domain_all_chain_fasta
+        print amopt.d['domain_all_chains_pdb']
+        print amopt.d['domain_all_chains_fasta']
         print 'the input is fixed ', FIXED_INPUT
-
-
-        split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-
-        run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
-        Final_display_results.make_log(bump_dir, os.path.join(work_dir, 'Final_results.log'))
-
-
+        split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, amopt.d['nproc'])
+        run_mr_bump_shelx_parallel.split_into_runs_domains(amopt.d['mtz'], split_ensembles, amopt.d['mrbump_dir'], amopt.d['domain_all_chains_fasta'] , amopt.d['nproc'], amopt.d['SIGF'], amopt.d['F'], amopt.d['FREE'], amopt.d['ASU'], amopt.d['early_terminate'], ResultsPath, amopt.d['use_shelxe'], amopt.d['shelx_cycles'], amopt.d['domain_all_chains_pdb'], FIXED_INPUT, amopt.d['old_shelx'], amopt.d['mrbump_programs'], amopt.d['use_buccaneer'], amopt.d['buccaneer_cycles'], amopt.d['use_arpwarp'], amopt.d['arpwarp_cycles'], amopt.d['mr_keys'])
+        Final_display_results.make_log(amopt.d['mrbump_dir'], os.path.join(work_dir, 'Final_results.log'))
 
 
 time_stop = time.time()

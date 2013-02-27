@@ -22,7 +22,7 @@ export PYTHONPATH=${AMPLEDIR}/python:$PYTHONPATH
 
 ${AMPLEDIR}/bin/ample \
       -fasta ${PWD}/toxd_.fasta \
-      -MTZ ${PWD}/1dtx.mtz \
+      -mtz ${PWD}/1dtx.mtz \
       -name TOXD \
       -frags3mers ${PWD}/aat000_03_05.200_v1_3 \
       -frags9mers ${PWD}/aat000_09_05.200_v1_3 \
@@ -30,13 +30,13 @@ ${AMPLEDIR}/bin/ample \
       -run_dir $PWD \
       -make_frags False \
       -CLUSTER False \
-      -NumShelxCyc 10 \
+      -shelx_cycles 10 \
       -nmodels 30 \
-      -TRYALL False  \
+      -early_terminate True  \
       -percent 50 \
       -use_shelxe True \
-      -arpwarp False \
-      -Buccaneer False \
+      -use_arpwarp False \
+      -use_buccaneer False \
       -molreponly True \
       -nproc 1 \
       -allatom True \
