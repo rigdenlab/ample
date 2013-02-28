@@ -12,10 +12,10 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     jmht - check fixed_iden - 0.6 if not specified
     """
     
-    if amopt.d['domain_all_chains_fasta']:
-        fasta = amopt.d['domain_all_chains_fasta']
+    if adict['domain_all_chains_fasta']:
+        fasta = adict['domain_all_chains_fasta']
     else:
-        fasta = amopt.d['fasta']
+        fasta = adict['fasta']
     
     mrs = ""
     mrs+='mrbump HKLIN {} SEQIN {} HKLOUT OUT.mtz  XYZOUT OUT.pdb << eof\n'.format( adict['mtz'], fasta )
