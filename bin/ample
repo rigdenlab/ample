@@ -57,23 +57,18 @@ import argparse
 import clusterize
 import glob
 import logging
-import random
 import re
 import shutil
-import string
-import subprocess
 import time
 
 # Our imports
-import add_sidechains_SCWRL
 import ample_options
 import ample_util
 import fasta_parser
-import printTable
+import mrbump_ensemble
 import rosetta_model
-import run_mr_bump_shelx_parallel
 import run_spicker
-import SCWRL_edit, Final_display_results
+import SCWRL_edit
 import split_models, nmr
 import truncateedit_MAX
 
@@ -134,15 +129,17 @@ parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
                    help='pathway to LGA folder (not the exe) will use the \'lga\' executable')
 
 
-parser.add_argument('-MAX', metavar='Maxcluster exe', type=str, nargs=1,
+parser.add_argument('-maxcluster_exe', metavar='Maxcluster exe', type=str, nargs=1,
                    help='Maxcluster exe')
 
+parser.add_argument('-spicker_exe', metavar='boolean', type=str, nargs=1,
+                   help='path to spicker executable')
 
-parser.add_argument('-THESEUS', metavar='Theseus exe (required)', type=str, nargs=1,
-                   help='Theseus exe')
+parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', type=str, nargs=1,
+                   help='path to theseus executable')
 
-parser.add_argument('-PHENIX', metavar='PHENIX.ensembler exe', type=str, nargs=1,
-                   help='PHENIX exe')
+parser.add_argument('-phenix_exe', metavar='PHENIX.ensembler exe', type=str, nargs=1,
+                   help='path to phenix executable')
 
 parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
                    help='MTZ in')
@@ -171,13 +168,6 @@ parser.add_argument('-CLUSTER', metavar='using a cluster', type=str, nargs=1,
 parser.add_argument('-allatom', metavar='using a cluster', type=str, nargs=1,
                    help='will submit jobs to a cluster')
 
-parser.add_argument('-SPICKER', metavar='boolean', type=str, nargs=1,
-                   help='path and will use spicker as alternative')
-
-parser.add_argument('-SPICKERPATH', metavar='spicker exe', type=str, nargs=1,
-                   help='path and will use spicker as alternative')
-
-
 parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', type=str, nargs=1,
                    help='fixed input to mr bump')
 
@@ -198,7 +188,7 @@ parser.add_argument('-CC', metavar='rad of gyration', type=str, nargs=1,
 parser.add_argument('-ensembles', metavar='enembles', type=str, nargs=1,
                    help='path to ensembles')
 
-parser.add_argument('-noClusters', metavar='no clus to sample', type=str, nargs=1,
+parser.add_argument('-num_clusters', metavar='num clusters to sample', type=int, nargs=1,
                    help='number of clusters to sample')
 
 
@@ -207,7 +197,6 @@ parser.add_argument('-percent', metavar='no clus to sample', type=str, nargs=1,
 
 parser.add_argument('-ASU', metavar='no in ASU', type=int, nargs=1,
                    help='no in ASU')
-
 
 # jmht - not used?
 #parser.add_argument('-FreeLunch', metavar='free lunch', type=int, nargs=1,
@@ -289,7 +278,7 @@ parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
 #
 # name -> pdb_code
 # SCRWL -> SCWRL_path
-# MAX -> MAX_path
+# maxcluster_exe -> maxcluster_exe_path
 parser.set_defaults( 
                     alignment_file = '',
                     allatom = "true",
@@ -309,14 +298,14 @@ parser.set_defaults(
                     frags3mers=None,
                     frags9mers=None,
                     improve_template = None,
-                    MAX = '',
+                    maxcluster_exe = None,
                     make_frags = "true",
                     make_models = "true",
-                    models_dir = '',
+                    models_dir = None,
                     molreponly = "false",
                     mtz = None,
                     name = 'ABCD',
-                    noClusters = 1,
+                    num_clusters = 1,
                     nmodels = 1000,
                     NMR_model_in = '',
                     NMR_process = 'none',
@@ -327,32 +316,27 @@ parser.set_defaults(
                     old_shelx = "false",
                     percent = 5,
                     phaseronly = "false",
-                    PHENIX = '',
+                    phenix_exe = None,
                     rosetta_cluster = None,
                     rosetta_db  = None,
                     rosetta_fragments_exe = None,
                     rosetta_path =  None,
                     run_dir = os.getcwd(),
-                    scwrl_exe = '',
-                    SPICKER = "true",
-                    SPICKERPATH = '',
+                    scwrl_exe = None,
+                    spicker_exe = None,
                     usehoms = "false",
                     use_arpwarp = "true",
                     use_buccaneer = "true",
                     use_scwrl = 'false',
                     use_shelxe = "false",
                     top_model_only = "false",
-                    THESEUS = '',
+                    theseus_exe = None,
                     early_terminate = "true"
                     )
 
 
 # convert args to dictionary
 args = parser.parse_args()
-
-# Set up logging
-logger = ample_util.setup_logging()
-
 
 # get MRBUMP keywords direct
 MRkeys = []
@@ -364,9 +348,6 @@ while keycount < len(sys.argv):
         MRkeys.append(sys.argv[keycount + 1])
     keycount += 1
 
-
-# jmht will remove
-var_args = vars(args)
 
 # Populate the options from the parser
 amopt = ample_options.AmpleOptions( )
@@ -387,9 +368,7 @@ DEBUG = amopt.d['DEBUG']
 Ensembler = amopt.d['ensembler']
 FASTA = amopt.d['fasta']
 FIXED_INPUT = True
-MAX_path = amopt.d['MAX']
 molreponly = amopt.d['molreponly'] 
-noClusters = amopt.d['noClusters']
 nmodels = amopt.d['nmodels']
 NMR_process = amopt.d['NMR_process']
 NMR_Truncate_only = amopt.d['NMR_Truncate_only']
@@ -397,28 +376,93 @@ pdb_code = amopt.d['name']
 #jmht - fix
 amopt.d['pdb_code'] = amopt.d['name']
 phaseronly = amopt.d['phaseronly']
-PHENIX_path = amopt.d['PHENIX']
 run_dir = amopt.d['run_dir']
 ROSETTA_cluster = amopt.d['ROSETTA_cluster']
-SCWRL_path = amopt.d['scwrl_exe']
-SPICKER = amopt.d['SPICKER']
-SPICKEREXE_path = amopt.d['SPICKERPATH']
-THESEUS_path = amopt.d['THESEUS']
 top_model_only = amopt.d['top_model_only']
-USE_SCWRL = amopt.d['use_scwrl']
-USE_SPICKER = True
 
+# Make a work directory and go there - this way all output goes into this directory
+if not os.path.exists(run_dir):
+    print 'You need to give a run directory'
+    sys.exit()
 
-# Make a work directory and go there
 work_dir = ample_util.make_workdir( run_dir )
 amopt.d['work_dir'] = work_dir
 os.chdir(work_dir)
 
+# Set up logging
+logger = ample_util.setup_logging()
+
+# Check if importing models
+amopt.d['importing_models'] = False
+if  amopt.d['models_dir']:
+    
+    if not os.path.isdir( amopt.d['models_dir'] ):
+        msg = "Trying to import models from the directory:\n{}\nBut it is not a directory!"
+        logger.critical(msg)
+        raise RuntimeError,msg
+    
+    amopt.d['importing_models'] = True
+    amopt.d['make_frags'] = False
+    amopt.d['make_models'] = False
+
+else:
+    amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
+
+# models
+if not amopt.d['make_models']:
+    amopt.d['importing_models'] = True
+
+if amopt.d['make_models'] and amopt.d['importing_models']:
+    logger.critical('you have chosen to both import models and to make them, choose only one\nSet Make Models to \"True\" to make them, \"False\" to import them')
+    sys.exit()
+
+# NMR Checks
+NMR_PROTOCOL = False
+if os.path.isfile( amopt.d['NMR_model_in'] ):
+    NMR_model_in = amopt.d['NMR_model_in']
+    NMR_PROTOCOL = True
+    ROSETTA_CM = amopt.d['rosetta_dir'] + '/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
+    if not os.path.exists(ROSETTA_CM) :
+        print ' cant find ' + ROSETTA_CM + ' check path names'
+        sys.exit()
+    
+if os.path.isfile( amopt.d['NMR_remodel_fasta'] ):
+    NMR_remodel_fasta = amopt.d['NMR_remodel_fasta']
+else:
+    NMR_remodel_fasta = amopt.d['fasta']
+
+if not  NMR_PROTOCOL :
+    if amopt.d['importing_models'] and not os.path.exists(amopt.d['models_dir']):
+        logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + amopt.d['models_dir'])
+        if not os.path.exists(amopt.d['ensembles']):
+            logger.warn('you have chosen to import ensembles, but path does not exist : ' + amopt.d['ensembles'])
+            if clusterimport:
+                logger.info('you are importing a cluster of models from :' + clusterimport)
+                if not os.path.exists(clusterimport):
+                    logger.critical('you have chosen to import a cluster, the clusterpath does not exist')
+                    sys.exit()
+
+# Create the rosetta modeller - this runs all the checks required
+if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
+    rosetta_modeller = rosetta_model.RosettaModel()
+    rosetta_modeller.set_from_amopt( amopt )
+
+# Check if importing ensembles
+amopt.d['ensemble_import'] = False
+if os.path.isdir( str(amopt.d['ensembles']) ):
+    
+    if amopt.d['importing_models']:
+        msg = "Cannot import both models and ensembles!"
+        logger.critical(msg)
+        raise RuntimeError, msg
+    
+    amopt.d['ensemble_import'] = True
+    logger.info("Found directory with ensemble files: {}\nSetting make_models to False".format( amopt.d['ensembles'] ) )
+    amopt.d['make_frags'] = False
+    amopt.d['make_models'] = False
+
 #
-# All the variables set below here need some sort of processing
-# Should probably think of sensible ways to set defaults or
-# run the checks in a different place
-#
+# Variables for running MRBUMP
 if amopt.d['ASU'] > 0:
     amopt.d['ASU'] = 'NMASU ' + str( amopt.d['ASU']  )
 else:
@@ -428,21 +472,6 @@ FIXED_INTERVALS = True
 if amopt.d['percent'] != 5:
     FIXED_INTERVALS = False
 percent = amopt.d['percent']
-
-MISSING_DOMAINS = False
-if amopt.d['domain_all_chains_pdb'] or amopt.d['domain_all_chains_fasta']:
-    MISSING_DOMAINS = True
-
-NMR_PROTOCOL = False
-if os.path.isfile( amopt.d['NMR_model_in'] ):
-    NMR_model_in = amopt.d['NMR_model_in']
-    NMR_PROTOCOL = True
-
-if os.path.isfile( amopt.d['NMR_remodel_fasta'] ):
-    NMR_remodel_fasta = amopt.d['NMR_remodel_fasta']
-else:
-    NMR_remodel_fasta = amopt.d['fasta']
-
 
 amopt.d['mrbump_programs'] = ' molrep phaser '
 if not molreponly and not phaseronly:
@@ -454,9 +483,23 @@ if phaseronly:
 if molreponly and phaseronly:
         logger.critical('you say you want molrep only AND phaser only, choose one or both')
         sys.exit()    
-    
 
-# #flags
+#
+#Check we can find all the required programs
+#
+if Ensembler:
+    logger.info('You are using Phenix ensembler')
+    amopt.d['phenix_exe'] = ample_util.check_for_exe('phenix', amopt.d['phenix_exe'])
+else:
+    amopt.d['theseus_exe'] = ample_util.check_for_exe('theseus', amopt.d['theseus_exe'])
+
+if amopt.d['use_scwrl']:
+    amopt.d['scwrl_exe'] = ample_util.check_for_exe('Scwrl4', amopt.d['scwrl_exe'] )
+
+amopt.d['maxcluster_exe'] = ample_util.check_for_exe('maxcluster', amopt.d['maxcluster_exe'])
+amopt.d['spicker_exe'] = ample_util.check_for_exe('spicker', amopt.d['spicker_exe'])
+
+
 # Check if we need to get any of the flags from the MTZ file
 if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
     
@@ -478,113 +521,21 @@ if not amopt.d['SIGF']:
 if not amopt.d['FREE']:
     amopt.d['FREE'] = t_flag_FREE
 
-
-ENSEMBLE_import = False
-if os.path.isdir( str(amopt.d['ensembles']) ):
-    ENSEMBLE_import = True
-    logger.info("Found directory with ensemble files: {}\nSetting make_models to False".format( amopt.d['ensembles'] ) )
-    amopt.d['make_frags'] = False
-    amopt.d['make_models'] = False
-    
-amopt.d['importing_models'] = False
-if os.path.isdir( amopt.d['models_dir'] ):
-    amopt.d['importing_models'] = True
-    # jmht FIX need to not make them
-    amopt.d['make_models'] = False
-
-# check if got all the programs
-if not amopt.d['make_models']:
-    amopt.d['importing_models'] = True
-
-if amopt.d['make_models'] and amopt.d['importing_models']:
-    print amopt.d['models_dir']
-    logger.critical('you have chosen to both import models and to make them, choose only one\nSet Make Models to \"True\" to make them, \"False\" to import them')
-    sys.exit()
-
-if not  NMR_PROTOCOL :
-    if amopt.d['importing_models'] and not os.path.exists(amopt.d['models_dir']):
-        logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + amopt.d['models_dir'])
-        if not os.path.exists(amopt.d['ensembles']):
-            logger.warn('you have chosen to import ensembles, but path does not exist : ' + amopt.d['ensembles'])
-            if clusterimport:
-                logger.info('you are importing a cluster of models from :' + clusterimport)
-                if not os.path.exists(clusterimport):
-                    logger.critical('you have chosen to import a cluster, the clusterpath does not exist')
-                    sys.exit()
-
-# Create the rosetta modeller - this runs all the checks required
-if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
-    rosetta_modeller = rosetta_model.RosettaModel()
-    rosetta_modeller.set_from_amopt( amopt )
-
-if NMR_PROTOCOL:
-    ROSETTA_CM = amopt.d['rosetta_dir'] + '/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
-
-    if not os.path.exists(amopt.d['rosetta_db']) :
-        print ' cant find ' + amopt.d['rosetta_db'] + ' check path names'
-        sys.exit()
-
-    if not os.path.exists(ROSETTA_CM) :
-        print ' cant find ' + ROSETTA_CM + ' check path names'
-        sys.exit()
-
-
-if not os.path.exists(work_dir):
-    print 'You need to give a run directory'
-    sys.exit()
-
-
-if not Ensembler:
-    THESEUS = ample_util.check_for_exe('theseus', THESEUS_path)
-        # print 'finally got', THESEUS
-if Ensembler:
-    print 'You are using Phenix ensmbler'
-    PHENIX = ample_util.check_for_exe('phenix', PHENIX_path)
-    
-if USE_SCWRL:
-    SCWRL = ample_util.check_for_exe('Scwrl4', SCWRL_path)
-    # print 'finally got', SCWRL
-if not USE_SCWRL:
-    SCWRL = ''
-    
-SPICKEREXE = ample_util.check_for_exe('spicker', SPICKEREXE_path)
-
-# print 'finally got', SPICKEREXE
-MAX = ample_util.check_for_exe('maxcluster', MAX_path)
-# print 'finally got', MAX
-if amopt.d['use_shelxe']:
-    shelxe = ''
-    shelxe = ample_util.check_for_exe('shelxe', shelxe)
-
-
-if len(pdb_code) > 4 or len(pdb_code) < 4:
+#
+# Other checks
+#
+if len(pdb_code) != 4:
     print 'name is the wrong length, use 4 chars eg ABCD, changing name'
     pdb_code = 'ABCD'
-
-
-if len(pdb_code) == 4:
+else:
     pdb_code += '_'
-
-logger.debug('Parsing FASTA file')
-if not os.path.exists(FASTA):
-    print 'You need to give the path for the fasta'
-    sys.exit()
-outfasta = os.path.join(work_dir, pdb_code + '_.fasta')
-fasta_parser.parse_fasta(FASTA, outfasta)
-FASTA = outfasta
-
-
 
 if not os.path.exists(amopt.d['mtz']):
     print 'need mtz or no MR will be carried out'
     sys.exit()
 
 
-#
-# End of setting variables
-#
-
-# Print out what is being done - sorta..
+# Print out what is being done
 if amopt.d['use_buccaneer']:
     logger.info('Rebuilding in Bucaneer')
 else:
@@ -594,7 +545,6 @@ if amopt.d['use_arpwarp']:
     logger.info('Rebuilding in ARP/wARP')
 else:
     logger.info('Not rebuilding in ARP/wARP')
-
 
 if amopt.d['make_frags']:
     logger.info('Making non homologusFragments')
@@ -606,77 +556,50 @@ if amopt.d['make_models']:
 else:
     logger.info('NOT Making Rosetta Models\n')
     
-
-# This should go somewhere else
-LOG = open(work_dir + '/Ample.log', "a")
-LOG.write('The authors of specific programs should be referenced where applicable::\n')
-LOG.write(ample_util.references)
-LOG.close()
-
-RUNNING = open(work_dir + '/ROSETTA.log', "w")
-
-RUNNING.write("""#########################################################################
-#########################################################################
-#########################################################################
-# CCP4: AMPLE -Ab Initio Modelling Molecular Replacement (Beta version) #
-#########################################################################
-The authors of specific programs should be referenced where applicable:""")
-RUNNING.write(ample_util.references)
-RUNNING.flush()
+if amopt.d['domain_all_chains_pdb'] or amopt.d['domain_all_chains_fasta']:
+    logger.info('Processing missing domain\n')
 
 logger.info('All needed programs are found, continuing Run')
 
+#----------------------------
+# Running is the 'official' output file 
+#----------------------------
+RUNNING = open(work_dir + '/ROSETTA.log', "w")
+RUNNING.write(ample_util.header)
+RUNNING.flush()
 
 #----------------------------
 # params used
 #---------------------------
-# make a copy of params
-#
-
 Run_params = open(work_dir + '/Params_used', "w")
-Run_params.write('input params\n')
-if DEBUG:
-    print var_args
-    for print_user in var_args:
-        if var_args[print_user] is not None:
-            try:
-                print print_user + ' : ' + str(var_args[print_user][0])
-                Run_params.write(print_user + ' : ' + str(var_args[print_user][0]) + '\n')
-            except:
-                pass
-
-
-Run_params.write('\nParams Used in this Run\n')
-Run_params.write('\n---input---\nFasta ' + FASTA + '\nrun_dir ' + work_dir + '\nMTZ ' + amopt.d['mtz'] + '\nname ' + pdb_code + '\n')
-Run_params.write('\n---fragments---\nMakeFrags ' + str(amopt.d['make_frags']) + '\n3mers ' + amopt.d['frags3mers'] + '\n9mers ' + amopt.d['frags9mers'] + '\n')
-Run_params.write('\n---modelling---\nmake_models ' + str(amopt.d['make_models']) + '\nROSETTA_PATH ' +  str(amopt.d['rosetta_path']) + '\n')
-Run_params.write('ROSETTA_cluster ' + str(ROSETTA_cluster) + '\nROSETTA_DB ' + str(amopt.d['rosetta_db']) + '\nMake_fragments_exe ' + str(amopt.d['rosetta_fragments_exe']) + '\n')
-if USE_SCWRL == True:
-    Run_params.write('\n---3rd party---\nSCWRL ' + SCWRL + '\n')
-Run_params.write('\n---Missing Domain---\nall chains fasta ' + str(amopt.d['domain_all_chains_fasta']) + '\nall chain pdb ' + str(amopt.d['domain_all_chains_pdb']) + '\nMISSING DOMAINS=' + str(MISSING_DOMAINS) + '\n')
-# This only used for printing
-INSERT_DOMAIN = False
-if amopt.d['domain_termini_distance'] > 0:
-    INSERT_DOMAIN = True
-Run_params.write('Is an Insert Domain ' + str(INSERT_DOMAIN) + ' termini distance ' + str(amopt.d['domain_termini_distance']) + '\n')
-
+param_str = amopt.prettify_parameters()
+Run_params.write( param_str )
 Run_params.close()
-
-#-----------------------------------
-# Do The Modelling
-#-----------------------------------
-time_start = time.time()
 
 #######################################################
 #
 # SCRIPT PROPER STARTS HERE
 #
 ######################################################
+time_start = time.time()
 
+logger.debug('Parsing FASTA file')
+if not os.path.exists(FASTA):
+    print 'You need to give the path for the fasta'
+    sys.exit()
+outfasta = os.path.join(work_dir, pdb_code + '_.fasta')
+fasta_parser.parse_fasta(FASTA, outfasta)
+FASTA = outfasta
+
+#-----------------------------------
+# Do The Modelling
+#-----------------------------------
+
+#-----------------------------------
 # Make Rosetta fragments
+#-----------------------------------
 if amopt.d['make_frags']:
     rosetta_modeller.generate_fragments()
-           
 
 # ## break here for NMR (frags needed but not modelling
 # if NMR process models first
@@ -716,7 +639,7 @@ if NMR_PROTOCOL:
                 if pdbs[-1] == 'pdb':
                     nmr. RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(amopt.d['nproc']), hom, alignment_file, work_dir + '/models')
                 amopt.d['make_models'] = False
-                PATH_TO_MODELS = work_dir + '/models'
+                amopt.d['models_dir'] = work_dir + '/models'
                 amopt.d['models_dir'] = work_dir + '/models'
                 
         if NMR_Truncate_only:
@@ -726,9 +649,9 @@ if NMR_PROTOCOL:
                 sys.exit()
             if modno >= 2:
                 amopt.d['make_models'] = False
-                PATH_TO_MODELS = work_dir + '/orig_models'
                 amopt.d['models_dir'] = work_dir + '/orig_models'
-        print 'using models from ' + PATH_TO_MODELS
+                amopt.d['models_dir'] = work_dir + '/orig_models'
+        print 'using models from ' + amopt.d['models_dir']
     if CLUSTER:
         os.mkdir(work_dir + '/orig_models')
         modno = split_models.split(NMR_model_in, work_dir + '/orig_models')
@@ -740,14 +663,14 @@ if NMR_PROTOCOL:
 
         if NMR_Truncate_only == True:
             amopt.d['make_models'] = False
-            PATH_TO_MODELS = work_dir + '/orig_models'
             amopt.d['models_dir'] = work_dir + '/orig_models'
-            print 'using models from ' + PATH_TO_MODELS
+            amopt.d['models_dir'] = work_dir + '/orig_models'
+            print 'using models from ' + amopt.d['models_dir']
 
 
         if NMR_Truncate_only == False:
             amopt.d['make_models'] = False
-            PATH_TO_MODELS = work_dir + '/models'
+            amopt.d['models_dir'] = work_dir + '/models'
             amopt.d['models_dir'] = work_dir + '/models'
             os.mkdir(work_dir + '/models')
             homolog = work_dir + '/orig_models'
@@ -773,9 +696,9 @@ if NMR_PROTOCOL:
                 cluster_run.QTYPE = "SGE"
                 cluster_run.ALLATOM = ALLATOM
                 cluster_run.setupModellingDir(work_dir + '/Run_' + str(hom_index))
-                if USE_SCWRL:
-                    cluster_run.setScwrlEXE(SCWRL)
-                cluster_run.set_USE_SCWRL(USE_SCWRL)
+                if amopt.d['use_scwrl']:
+                    cluster_run.setScwrlEXE(amopt.d['scwrl_exe'])
+                cluster_run.set_USE_SCWRL(amopt.d['use_scwrl'])
             # loop over the number of models and submit a job to the cluster
 
                 for i in range(int(NMR_process)):
@@ -820,14 +743,15 @@ if NMR_PROTOCOL:
 # return from nmr with models already made
 
 
-print  '----- making Rosetta models--------\n'
-print 'making ' + str(nmodels) + ' models...'
-RUNNING.write('----- making models--------\n')
+logger.info('----- making Rosetta models--------\n')
+logger.info('making ' + str(nmodels) + ' models...')
+RUNNING.write('\n----- making models--------\n')
 RUNNING.flush()
 
+#-----------------------------------
+# Make the models
+#-----------------------------------
 if amopt.d['make_models']:
-    PATH_TO_MODELS = work_dir + '/models'
-    
     # If we are running with cluster support submit all modelling jobs to the cluster queue
     if CLUSTER:
         # Generate the list of random seeds
@@ -841,7 +765,6 @@ if amopt.d['make_models']:
         
         # loop over the number of models and submit a job to the cluster
         for i in range(nmodels):
-            #cluster_run.modelOnCluster(work_dir, 1, i + 1, ROSETTA_PATH, ROSETTA_DB, FASTA, amopt.d['frags3mers'], amopt.d['frags9mers'], seed_list[i], insert_Rosetta_command + CCline)
             nproc=1
             jobNumber=i+1
             cluster_run.modelOnCluster( nproc, jobNumber )
@@ -851,15 +774,12 @@ if amopt.d['make_models']:
 
     else:
         # Run locally
-        PATH_TO_MODELS = rosetta_modeller.doModelling()
+        amopt.d['models_dir'] = rosetta_modeller.doModelling()
         
     ##End IF CLUSTER
-else:
-    # Get existing models
-    PATH_TO_MODELS = amopt.d['models_dir']
     
-RUNNING.write('\nModelling complete - models stored in:\n   ' + PATH_TO_MODELS + '\n\n')
-logger.info('Modelling complete - models stored in:\n   ' + PATH_TO_MODELS + '\n\n')
+RUNNING.write('\nModelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n')
+logger.info('Modelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n')
 
 
 #--------------------------------------------
@@ -871,168 +791,119 @@ if clusterimport:
         if not os.path.exists(work_dir + '/fine_cluster_1'):
             os.mkdir(work_dir + '/fine_cluster_1')
         os.chdir(work_dir + '/fine_cluster_1')
-        list_of_ensembles = truncateedit_MAX.truncate(THESEUS, cluster_path , work_dir + '/fine_cluster_1', MAX, percent, False)
+        list_of_ensembles = truncateedit_MAX.truncate(amopt.d['theseus_exe'], cluster_path , work_dir + '/fine_cluster_1', amopt.d['maxcluster_exe'], percent, False)
 
         os.system('mkdir ' + work_dir + '/ensembles_1')
         for each_ens in list_of_ensembles:
             SCWRL_edit.edit_sidechains(each_ens, work_dir + '/ensembles_1/')
         sys.exit()
+        
+        
+
+# Importing pre-made ensembles so no need to do the clustering
+if amopt.d['ensemble_import']:
+    final_ensembles = []
+    for infile in glob.glob(os.path.join(amopt.d['ensembles'], '*.pdb')):
+        final_ensembles.append(infile)
+
+    if top_model_only:
+        final_ensembles = truncateedit_MAX.One_model_only(final_ensembles , amopt.d['work_dir'])
+
+    # Start MR BUMP analysis of ensemble
+    bump_dir = os.path.join(work_dir, 'MRBUMP')
+    if not os.path.exists(bump_dir):
+        os.mkdir(bump_dir)
+    os.chdir(bump_dir)
+    amopt.d['mrbump_dir'] = bump_dir
+    
+    if CLUSTER:
+        mrbump_ensemble.mrbump_ensemble_cluster( final_ensembles, amopt)
+    else:
+        mrbump_ensemble.mrbump_ensemble_local( final_ensembles, amopt)
+        
+    # Finish here so timing etc..
+    time_stop = time.time()
+    elapsed_time = time_stop - time_start
+    run_in_min = elapsed_time / 60
+    run_in_hours = run_in_min / 60
+
+    RUNNING.write('\nMR and shelx ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n')
+    RUNNING.flush()
+    sys.exit(0)
+
+
+    
 #--------------------------------------
 # Do the clustering
 #---------------------------------------
-USE_SPICKER = True
-if not ENSEMBLE_import:
-
+#
 # Spicker Alternative for clustering then MAX
-#------------------------------------
-    if USE_SPICKER == True:
+#
+logger.info('----- Clustering models --------')
 
-        ResultsPath = work_dir + '/RESULTS'
-        if not os.path.exists(work_dir + '/RESULTS'):
-            os.mkdir(work_dir + '/RESULTS')
+run_spicker.RUN_SPICKER(amopt.d['models_dir'], work_dir + '/spicker_run', amopt.d['spicker_exe'], amopt.d['num_clusters'] , work_dir)
 
-        # noClusters=1
+# Generate list of clusters to sample
+clusters = [ i for i in range(1,amopt.d['num_clusters']+1)]
 
-        print '----- Clustering models --------\n'
+logger.info('Clusteing Done. using the first ' + str(clusters) + ' clusters')
 
-        run_spicker.RUN_SPICKER(PATH_TO_MODELS, work_dir + '/spicker_run', SPICKEREXE, int(noClusters) , work_dir)
-        samples = 1
-        print '\nClusteing Done. using the first ' + str(samples) + ' clusters\n'
-        while samples < int(noClusters) + 1:
-            models_path = work_dir + '/S_clusters/cluster_' + str(samples)
-            print '----- Truncating models for cluster ' + str(samples) + ' --------\n'
-            if not os.path.exists(work_dir + '/fine_cluster_' + str(samples)):
-                os.mkdir(work_dir + '/fine_cluster_' + str(samples))
+for cluster in clusters:
+    models_path = work_dir + '/S_clusters/cluster_' + str(cluster)
+    logger.info('----- Truncating models for cluster ' + str(cluster) + ' --------\n')
+    if not os.path.exists(work_dir + '/fine_cluster_' + str(cluster)):
+        os.mkdir(work_dir + '/fine_cluster_' + str(cluster))
 
-            os.chdir(work_dir + '/fine_cluster_' + str(samples))
-            #
-            # Truncate models and return the path to the ensembled models - each ensemble is a single pdb file
-            # containing multiple models
-            if Ensembler:
-                list_of_ensembles = truncateedit_MAX.truncate_Phenix(PHENIX, models_path, work_dir + '/fine_cluster_' + str(samples), MAX, percent, FIXED_INTERVALS)
-            else:
-                list_of_ensembles = truncateedit_MAX.truncate(THESEUS, models_path, work_dir + '/fine_cluster_' + str(samples), MAX, percent, FIXED_INTERVALS)
+    os.chdir(work_dir + '/fine_cluster_' + str(cluster))
+    #
+    # Truncate models and return the path to the ensembled models - each ensemble is a single pdb file
+    # containing multiple models
+    if Ensembler:
+        list_of_ensembles = truncateedit_MAX.truncate_Phenix(amopt.d['phenix_exe'], models_path, work_dir + '/fine_cluster_' + str(cluster), amopt.d['maxcluster_exe'], percent, FIXED_INTERVALS)
+    else:
+        list_of_ensembles = truncateedit_MAX.truncate(amopt.d['theseus_exe'], models_path, work_dir + '/fine_cluster_' + str(cluster), amopt.d['maxcluster_exe'], percent, FIXED_INTERVALS)
 
-            if top_model_only:
-                list_of_ensembles = truncateedit_MAX.One_model_only(list_of_ensembles, work_dir)
+    if top_model_only:
+        list_of_ensembles = truncateedit_MAX.One_model_only(list_of_ensembles, work_dir)
 
-            os.system('mkdir ' + work_dir + '/ensembles_' + str(samples))
-            for each_ens in list_of_ensembles:
-                SCWRL_edit.edit_sidechains(each_ens, work_dir + '/ensembles_' + str(samples) + '/')
+    os.mkdir(work_dir + '/ensembles_' + str(cluster))
+    for each_ens in list_of_ensembles:
+        SCWRL_edit.edit_sidechains(each_ens, work_dir + '/ensembles_' + str(cluster) + '/')
 
-            final_ensembles = []
-            for infile in glob.glob(os.path.join(work_dir + '/ensembles_' + str(samples), '*.pdb')):
-                final_ensembles.append(infile)
+    final_ensembles = []
+    for infile in glob.glob(os.path.join(work_dir + '/ensembles_' + str(cluster), '*.pdb')):
+        final_ensembles.append(infile)
+    
+    logger.info('Truncating Done for cluster ' + str(cluster) + "\n\n")
+    logger.info('----- Running MRBUMP (cluster ' + str(cluster) + ')--------\n\n')
+    logger.info('Created ' + str(len(final_ensembles)) + ' ensembles,   running ' + str(len(final_ensembles)) + ' jobs for cluster ' + str(cluster) + '\n')
 
-            bump_dir = os.path.join(work_dir, 'MRBUMP')
-            if not os.path.exists(bump_dir):
-                os.mkdir(bump_dir)
-            os.chdir(bump_dir)
-            amopt.d['mrbump_dir'] = bump_dir
-            
-            if CLUSTER:
-                sys.stdout.write("Running MR and model building on a cluster\n\n")
+    # Start MR BUMP analysis of ensemble
+    bump_dir = os.path.join(work_dir, 'MRBUMP')
+    if not os.path.exists(bump_dir):
+        os.mkdir(bump_dir)
+    os.chdir(bump_dir)
+    amopt.d['mrbump_dir'] = bump_dir
+    
+    if CLUSTER:
+        mrbump_ensemble.mrbump_ensemble_cluster( final_ensembles, amopt, clusterID=cluster)
+    else:
+        mrbump_ensemble.mrbump_ensemble_local( final_ensembles, amopt, clusterID=cluster)
+    # End loop over clusters
 
-                mrBuild = clusterize.ClusterRun()
-                mrBuild.QTYPE = "SGE"
+time_stop = time.time()
+elapsed_time = time_stop - time_start
+run_in_min = elapsed_time / 60
+run_in_hours = run_in_min / 60
+msg = '\nMR and shelx DONE \n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
+logging.info(msg)
+RUNNING.write(msg)
+RUNNING.flush()
 
-                mrBuildClusterDir = os.path.join(bump_dir, "cluster_run" + str(samples))
-                os.mkdir(mrBuildClusterDir)
-                mrBuild.getMTZInfo(amopt.d['mtz'], mrBuildClusterDir)
-
-                # Reset the queue list
-                mrBuild.qList = []
-                jobID = 0
-                for pdbfile in final_ensembles:
-                    mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, amopt)
-                    jobID = jobID + 1
-                mrBuild.monitorQueue()
-
-                shutil.rmtree(work_dir + '/fine_cluster_' + str(samples))
-                # shutil.rmtree(work_dir+'/pre_models')
-                for l in os.listdir(work_dir + '/spicker_run'):
-                    if os.path.splitext(l)[1] == 'pdb':
-                        os.remove(work_dir + '/spicker_run/' + l)
-                os.remove(work_dir + '/spicker_run/rep1.tra1')
-                T = printTable.Table()
-
-                T.bumppath = mrBuildClusterDir
-                T.cluster = True
-                table = T.maketable()
-                out = sys.stdout
-                T.pprint_table(out, table)
-
-                # cleanup
-            # for each_run in os.listdir(mrBuildClusterDir ):
-                #   if os.path.isdir(  os.path.join(mrBuildClusterDir, each_run)):
-                #      name=re.split('_', each_run)
-                #      mrBuildOutputDir=os.path.join(bump_dir, "cluster_run"+str(samples)+"result"+name[1])
-                #      os.mkdir(mrBuildOutputDir)
-                #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","phaser_shelx" ),mrBuildOutputDir  )
-                #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","molrep_shelx" ),mrBuildOutputDir  )
-                #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","data" ),mrBuildOutputDir  )
-                #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "logs" ),mrBuildOutputDir  )
-                # shutil.rmtree(mrBuildClusterDir)
-
-        # Monitor the cluster queue to see when all jobs have finished
-
-
-            else:
-                sys.stdout.write('Truncating Done for cluster ' + str(samples) + "\n\n")
-                sys.stdout.write('----- Running MRBUMP (cluster ' + str(samples) + ')--------\n\n')
-                sys.stdout.write('Created ' + str(len(final_ensembles)) + ' ensembles,   running ' + str(len(final_ensembles)) + ' jobs for cluster ' + str(samples) + '\n')
-
-                # Split ensembles and rum mrbump
-                split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, amopt.d['nproc'])
-                run_mr_bump_shelx_parallel.split_into_runs(split_ensembles, amopt)
-
-                # Process results
-                if amopt.d['use_shelxe']:
-                    Final_display_results.make_log(bump_dir, os.path.join(work_dir, 'Final_results.log'))
-                    # print '\n\nFinal Results:\n\n'
-                    # T=printTable.Table()
-                    # T.bumppath = work_dir +'/MRBUMP_cluster'+str(samples)
-                    # T.cluster = False
-                    # table = T.maketable()
-                    # out = sys.stdout
-                    # T.pprint_table(out, table)
-                else:
-                    resultslog = open(ResultsPath + '/Results.log', "w")
-                    print 'getting results from: {}',format( bump_dir )
-                    for mrbumplog in os.listdir(bump_dir):
-                        if re.search('.log', mrbumplog):
-                            # print mrbumplog
-                            for line in open(mrbumplog):
-                                if re.search('^(\d)\s*loc0_', line):
-                                    if not re.search('method', line):
-                                        print line
-                                        resultslog.write(line)
-                    resultslog.close()
-                    sys.exit()
-
-            samples += 1
-            # End loop over clusters
-
-
-        time_stop = time.time()
-        elapsed_time = time_stop - time_start
-        run_in_min = elapsed_time / 60
-        run_in_hours = run_in_min / 60
-        msg = '\nMR and shelx DONE \n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
-        logging.info(msg)
-        RUNNING.write(msg)
-        RUNNING.flush()
-        RUNNING.close()
-
-        # os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
-        # os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')
-        # os.system('mv '+ pdb_code+'_'+  work_dir+'.tar.gz /data2/jac45 ')
-        # os.system('rm '+work_dir)
-        # stop here
-        sys.exit()  # the above is the only code that should be used
-
-## End not ENSEMBLE_import
-
+# os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
+# os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')
+# os.system('mv '+ pdb_code+'_'+  work_dir+'.tar.gz /data2/jac45 ')
+# os.system('rm '+work_dir)
 #------------------------------------
 # END
 #----------------------------------
@@ -1042,97 +913,6 @@ elapsed_time = time_stop - time_start
 run_in_min = elapsed_time / 60
 run_in_hours = run_in_min / 60
 
-RUNNING.write('\nMODELLING and ASSEMBLY ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n')
-RUNNING.flush()
-
-if ENSEMBLE_import:
-    final_ensembles = []
-    for infile in glob.glob(os.path.join(amopt.d['ensembles'], '*.pdb')):
-        final_ensembles.append(infile)
-
-    if top_model_only == True:
-        final_ensembles = truncateedit_MAX.One_model_only(final_ensembles , work_dir)
-
-ResultsPath = work_dir + '/RESULTS'
-if not os.path.exists(work_dir + '/RESULTS'):
-    os.mkdir(work_dir + '/RESULTS')
-
-#--------------Import into MrBUMP here-------------------
-RUNNING.write('Running MrBUMP\nMR LOGS in ' + work_dir + '/MRBUMP')
-RUNNING.flush()
-
-# os.system('mkdir ' + work_dir+'/MRBUMP')
-amopt.d['mrbump_dir'] = os.path.join(work_dir, 'MRBUMP')
-if not os.path.isdir( amopt.d['mrbump_dir'] ):
-    os.mkdir(amopt.d['mrbump_dir'])
-os.chdir(amopt.d['mrbump_dir'])
-
-ResultsPath = work_dir + '/RESULTS'
-if CLUSTER:
-    sys.stdout.write("Running MR and model building on a cluster\n\n")
-
-    mrBuild = clusterize.ClusterRun()
-    mrBuild.QTYPE = "SGE"
-
-    mrBuildClusterDir = os.path.join(amopt.d['mrbump_dir'], "cluster_run")
-    os.mkdir(mrBuildClusterDir)
-
-    mrBuild.HKLIN = amopt.d['mtz']
-    mrBuild.LABIN["F"] = amopt.d['F']
-    mrBuild.LABIN["SIGF"] = amopt.d['SIGF']
-    mrBuild.LABIN["FreeR_flag"] = amopt.d['FREE']
-    mrBuild.SEQIN = FASTA
-    mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
-
-    mrBuild.BCYCLES = amopt.d['buccaneer_cycles']
-    mrBuild.BUCC = amopt.d['use_buccaneer']
-    mrBuild.SCYLCLES = amopt.d['shelx_cycles']
-    mrBuild.SHELXE = amopt.d['use_shelxe']
-
-    mrBuild.MRKEYS = amopt.d['mr_keys']
-
-    # Reset the queue list
-    mrBuild.qList = []
-    jobID = 0
-
-    if amopt.d['old_shelx']:
-        mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
-    else:
-        mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
-
-    for pdbfile in final_ensembles:
-        mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, amopt.d['mrbump_programs'])
-        jobID = jobID + 1
-
-    # Monitor the cluster queue to see when all jobs have finished
-    mrBuild.monitorQueue()
-else:
-    split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, amopt.d['nproc'])
-    run_mr_bump_shelx_parallel.split_into_runs(split_ensembles, amopt)
-    Final_display_results.make_log(amopt.d['mrbump_dir'], os.path.join(work_dir, 'Final_results.log'))
-
-    if amopt.d['use_shelxe']:
-        Final_display_results.make_log(amopt.d['mrbump_dir'], os.path.join(work_dir, 'Final_results.log'))
-    else:
-        resultslog = open(ResultsPath + '/Results.log', "w")
-        print 'getting results from:'
-        print amopt.d['mrbump_dir']
-        for mrbumplog in os.listdir(amopt.d['mrbump_dir']):
-            if re.search('.log', mrbumplog):
-                            # print mrbumplog
-                for line in open(mrbumplog):
-                    if re.search('^(\d)\s*loc0_', line):
-                        if not re.search('method', line):
-                            print line
-                            resultslog.write(line)
-        resultslog.close()
-        sys.exit()
-
-
-time_stop = time.time()
-elapsed_time = time_stop - time_start
-run_in_min = elapsed_time / 60
-run_in_hours = run_in_min / 60
-
-RUNNING.write('\nMR and shelx ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n')
-RUNNING.flush()
+msg = '\nMODELLING and ASSEMBLY ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
+logger.info(msg)
+RUNNING.write(msg)

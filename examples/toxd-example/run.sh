@@ -17,7 +17,7 @@ $PATH
 
 # This is only required if you are running ample from outside
 # the standard CCP4 directory
-AMPLEDIR=/opt/ample-dev1
+AMPLEDIR=/home/jmht/Dropbox/ample-dev1
 export PYTHONPATH=${AMPLEDIR}/python:$PYTHONPATH
 
 ${AMPLEDIR}/bin/ample \
@@ -40,7 +40,7 @@ ${AMPLEDIR}/bin/ample \
       -molreponly True \
       -nproc 1 \
       -allatom True \
-      -noClusters 1
+      -num_clusters 1 \
 
-#      -MakeModels False \
-#      -F FP -SIGF SIGFP -FREE FreeR_flag \
+      #-models /home/jmht/Dropbox/ample-dev1/examples/toxd-example/ROSETTA_MR_3/models \
+      #-ensembles /home/jmht/Dropbox/ample-dev1/examples/toxd-example/ROSETTA_MR_3/ensembles_1 \

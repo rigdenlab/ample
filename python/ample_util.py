@@ -13,6 +13,7 @@ import unittest
 # Our modules
 import MTZParse
 
+# Reference string
 references = """AMPLE: To be added
 SHELX: is used: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122
 
@@ -43,6 +44,15 @@ Journal of Computational Chemistry, 2004 25: 865-871
 
 MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/"""
 
+# Header string
+header ="""#########################################################################
+#########################################################################
+#########################################################################
+# CCP4: AMPLE -Ab Initio Modelling Molecular Replacement (Beta version) #
+#########################################################################
+The authors of specific programs should be referenced where applicable:""" + \
+"\n\n" + references
+
 # get a program test for existsnce
 def which(program):
     def is_exe(fpath):
@@ -71,7 +81,6 @@ def check_for_exe(exename, varname):
             logger.critical('You need to give the path for: {}'.format(exename))
             sys.exit()
         else:
-
             exepath = which(exename)
     else:
         exepath = varname

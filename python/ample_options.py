@@ -41,72 +41,41 @@ class AmpleOptions(object):
         #for k, v in self.d.iteritems():
         #    print "{} | {}".format( k, v )
         
-#    def prettify_parameters(self):
-#        """
-#        Return the parameters nicely formated as a list of strings suitable for writing out to a file
-#        """
-#        
-#    def write_parameter_logfile(self, filename=None):
-#        """
-#        Write out the parameters we contain
-#        """
-# 
-#        params = []
-#        params.append('input params')
-#        if self.d['DEBUG']:
-#            params.append('** ALL PARAMETERS: **')
-#            for k,v in self.d.iteritems():
-#                params.append( "{} : {}".format(k,v) )
-#            params.append('** END ALL PARAMETERS **')
-#        
-#        params.append( '\nParams Used in this Run\n')
-#        params.append( '\n---input---\n')
-#        params.append( "Fasta {}".format( self.d['fasta'] ) )
-#        params.append( "RunDir {}".format( self.d['RunDit'] )
-#                      
-#                      
-#                      
-#                      \nRunDir {}\nMTZ {}\nname {}\n'.format(FASTA, RunDir, MTZ, PDB_code ) )
-#        params.append('\n---fragments---\nMakeFrags '+str(MakeFrags)+'\n3mers '+frags_3_mers+'\n9mers '+frags_9_mers+'\n')
-#        params.append('\n---modelling---\nMakeModels '+str(MakeModels)+'\nROSETTA_PATH '+ROSETTA_PATH+'\n')
-#        params.append('ROSETTA_cluster '+ROSETTA_cluster+'\nROSETTA_DB '+ROSETTA_DB+'\nMake_fragments_exe '+Make_fragments_exe+'\n')
-#        if USE_SCWRL == True:
-#          params.append(('\n---3rd party---\nSCWRL '+SCWRL+'\n')
-#        params.append('\n---Missing Domain---\nall chains fasta '+domain_all_chain_fasta+'\nall chain pdb '+domain_all_chains_pdb+'\nMISSING DOMAINS='+str(MISSING_DOMAINS)+'\n')
-#        params.append('Is an Insert Domain '+str(INSERT_DOMAIN)+ ' termini distance '+ str(domain_termini_distance) +'\n')
-#        
-#        Run_params.close()
-#
-#        
-#        pass
+    def prettify_parameters(self):
+        """
+        Return the parameters nicely formated as a list of strings suitable for writing out to a file
+        """
+        pstr = ""
+        pstr +='Params Used in this Run\n'
         
-#        if not filename:
-#            filename="Params_used"
-#         
-#        Run_params = open( filename, "w")
-#        
-#        Run_params.write('input params\n')
-#        if self.d['DEBUG']:
-#        #if DEBUG == True:
-#          #print var_args
-#          for print_user in var_args:
-#           if var_args[print_user] is not None:
-#             print print_user +' : ' + str(var_args[print_user][0])
-#        
-#             Run_params.write(print_user +' : ' + str(var_args[print_user][0]) + '\n')
-#        
-#        Run_params.write('\nParams Used in this Run\n')
-#        Run_params.write('\n---input---\nFasta '+FASTA+'\nRunDir '+RunDir+'\nMTZ '+MTZ+'\nname '+PDB_code+'\n')
-#        Run_params.write('\n---fragments---\nMakeFrags '+str(MakeFrags)+'\n3mers '+frags_3_mers+'\n9mers '+frags_9_mers+'\n')
-#        Run_params.write('\n---modelling---\nMakeModels '+str(MakeModels)+'\nROSETTA_PATH '+ROSETTA_PATH+'\n')
-#        Run_params.write('ROSETTA_cluster '+ROSETTA_cluster+'\nROSETTA_DB '+ROSETTA_DB+'\nMake_fragments_exe '+Make_fragments_exe+'\n')
-#        if USE_SCWRL == True:
-#          Run_params.write('\n---3rd party---\nSCWRL '+SCWRL+'\n')
-#        Run_params.write('\n---Missing Domain---\nall chains fasta '+domain_all_chain_fasta+'\nall chain pdb '+domain_all_chains_pdb+'\nMISSING DOMAINS='+str(MISSING_DOMAINS)+'\n')
-#        Run_params.write('Is an Insert Domain '+str(INSERT_DOMAIN)+ ' termini distance '+ str(domain_termini_distance) +'\n')
-#        
-#        Run_params.close()
+        tkeys = ['fasta','work_dir','mtz','pdb_code']
+        pstr += '---input---\n'
+        for k in tkeys:
+            pstr += "{}: {}\n".format(k, self.d[k])
 
-              
-    #def __str__(self):
-    #    return "Ample Options"
+        tkeys = ['make_frags','rosetta_fragments_exe','frags3mers','frags9mers','pdb_code']
+        pstr+= '---fragments---\n'
+        for k in tkeys:
+            pstr += "{}: {}\n".format(k, self.d[k])
+            
+        tkeys = ['make_models','rosetta_path','rosetta_db','pdb_code']
+        pstr+= '---modelling---\n'
+        for k in tkeys:
+            pstr += "{}: {}\n".format(k, self.d[k])
+        
+        if self.d['use_scwrl']:
+            pstr+= '\n---3rd party---\nSCWRL {}\n'.format( self.d['scwrl'] )
+
+        tkeys = ['domain_all_chains_fasta','domain_all_chains_pdb']
+        if tkeys[0] or tkeys[1]:
+            pstr+= '---Missing Domain---\n'
+            for k in tkeys:
+                pstr += "{}: {}\n".format(k, self.d[k])
+        
+        # This only used for printing
+        INSERT_DOMAIN = False
+        if self.d['domain_termini_distance'] > 0:
+            INSERT_DOMAIN = True
+        pstr += 'Is an Insert Domain {} termini distance {}\n'.format( INSERT_DOMAIN, self.d['domain_termini_distance'] )
+        
+        return pstr

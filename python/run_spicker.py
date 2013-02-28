@@ -195,10 +195,7 @@ def RUN_SPICKER(models, spicker_runpath, spickerexe, no_clusters_sampled, overpa
                                   stdout = subprocess.PIPE, stderr=subprocess.PIPE)
    p.wait()
 
-
    os.chdir(spicker_runpath)
-
-
 
    clus=1
    while clus < no_clusters_sampled+1:

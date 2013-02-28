@@ -16,148 +16,6 @@ import printTable
 
 ###################
 
-
-
-def make_mrbump_desktop( jobid, ensemble_pdb, amopt ):
-    
-    path = os.getcwd()
-    mr_bump = open(path+'/'+jobid+'.sub', "w")
-    mr_bump.write('#!/bin/sh\n')
-    jobstr = mrbump_cmd.mrbump_cmd( amopt.d, jobid=jobid, ensemble_pdb=ensemble_pdb )
-    mr_bump.write(jobstr)
-    mr_bump.close()
-    os.system('chmod uoga=wrx '+ path + '/'+jobid+'.sub')
-    os.system(path + '/'+jobid+'.sub  >'+jobid+'.log')
-    os.chdir(path)
-    
-##End make_mrbump_desktop
-
-##########################
-def make_mrbump_desktop_domain(sigf, fp, free, jobid, local_files, mtz, seq, fixed_pdb, FIXED_INPUT, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles, MRkeys):
-    path = os.getcwd()
-
-    mr_bump = open(path+'/'+jobid+'.sub', "w")
-    mr_bump.write('#!/bin/sh\n')
-
-
-    mr_bump.write('mrbump HKLIN ' +mtz + ' SEQIN ' + seq+' HKLOUT ' + 'OUT.mtz  XYZOUT OUT.pdb << eof\n'  )
-
-    mr_bump.write('LABIN ' + sigf + ' ' + fp + ' ' + free + '\n')
-    mr_bump.write('JOBID '+ jobid+ '_mrbump\n')
-    mr_bump.write('MRPROGRAM ' + mrbump_programs + '\n')
-    mr_bump.write('LOCALFILE ' + local_files + ' CHAIN ALL RMS 1.2\n')
-
-    if FIXED_INPUT:
-        mr_bump.write('FIXED_XYZIN '+fixed_pdb+' IDENTIY 0.6 \n')
-    if not FIXED_INPUT:
-        mr_bump.write('LOCALFILE ' +fixed_pdb + ' CHAIN ALL RMS 1.2\n')
-
-    mr_bump.write('SCOPSEARCH False\n')
-    mr_bump.write('PQSSEARCH False\n')
-    mr_bump.write('SSMSEARCH False\n')
-
-    mr_bump.write('FAST False\n')
-    mr_bump.write('DOFASTA False\n')
-
-    mr_bump.write('MDLD False\n')
-    mr_bump.write('MDLC False\n')
-    mr_bump.write('MDLM False\n')
-    mr_bump.write('MDLP False\n')
-    mr_bump.write('MDLS False\n')
-    mr_bump.write('MDLU True\n')
-    mr_bump.write('UPDATE False\n')
-
-    mr_bump.write('BUCC  '+str(Buccaneer)+'\n')
-    mr_bump.write('BCYCLES  '+str(Buccaneer_cycles)+'\n')
-    mr_bump.write('ARPWARP  '+str(arpwarp)+'\n')
-    mr_bump.write('ACYCLES  '+str(arpwarp_cycles)+'\n')
-    mr_bump.write('SHELXE  '+str(NoShelx)+'\n')
-    mr_bump.write('SCYCLES  '+str(NoShelxCycles)+'\n')
-
-    mr_bump.write('FIXSG True\n')
-    mr_bump.write('PJOBS 1\n')
-
-    mr_bump.write('CHECK False\n')
-    mr_bump.write('LITE True\n')
-    mr_bump.write('PICKLE False\n')
-    mr_bump.write('TRYALL True\n')
-    mr_bump.write('USEACORN False\n')
-    mr_bump.write('USEENSEM False\n')
-    mr_bump.write('DEBUG True\n')
-
-    for k in MRkeys:
-        mr_bump.write(k + '\n')
-
-    mr_bump.write('END\n')
-    mr_bump.write('eof')
-    mr_bump.close()
-
-    os.system('chmod uoga=wrx '+ path + '/'+jobid+'.sub' )
-##RUN
-    os.system(path + '/'+jobid+'.sub &>'+jobid+'_log')
-
-    os.chdir(path)
-
-
-###################
-def make_mrbump_Cluster(sigf, fp, free, jobid, local_files, mtz, seq, mrbump_programs):
-    path = os.getcwd()
-
-    mr_bump = open(path+'/jobid.sub', "w")
-    mr_bump.write('#!/bin/sh\n'
-     '#$ -j y\n' +
-     '#$ -cwd\n' +
-     '#$ -w e\n' +
-     '#$ -V\n' +
-     '#$ -o '+jobid+'.log\n' +
-     '#$ -N Z'+jobid+'\n\n')
-
-    mr_bump.write('mrbump HKLIN ' + jobid.lower() + '.mtz' + ' SEQIN ' + jobid + '_.fasta HKLOUT ' + 'MRBUMP_OUT/OUT.mtz  XYZOUT /MRBUMP_OUT/OUT.pdb << eof\n'  )
-
-    mr_bump.write('LABIN ' + sigf + ' ' + fp + ' ' + free + '\n')
-    mr_bump.write('JOBID '+ jobid+ '_mrbump\n')
-    mr_bump.write('MRPROGRAM ' + mrbump_programs + '\n')
-    mr_bump.write('LOCALFILE ' + local_files + ' CHAIN A RMS 1.2\n')
-
-
-    mr_bump.write('SCOPSEARCH False\n')
-    mr_bump.write('PQSSEARCH False\n')
-    mr_bump.write('SSMSEARCH False\n')
-
-    mr_bump.write('FAST False\n')
-    mr_bump.write('DOFASTA False\n')
-
-    mr_bump.write('MDLD False\n')
-    mr_bump.write('MDLC False\n')
-    mr_bump.write('MDLM False\n')
-    mr_bump.write('MDLP False\n')
-    mr_bump.write('MDLS False\n')
-    mr_bump.write('MDLU True\n')
-    mr_bump.write('UPDATE False\n')
-
-
-    mr_bump.write('FIXSG True\n')
-    mr_bump.write('PJOBS 1\n')
-
-    mr_bump.write('CHECK False\n')
-    mr_bump.write('LITE True\n')
-    mr_bump.write('PICKLE False\n')
-    mr_bump.write('TRYALL True\n')
-    mr_bump.write('USEACORN False\n')
-    mr_bump.write('USEENSEM False\n')
-    mr_bump.write('DEBUG True\n')
-    mr_bump.write('END\n')
-    mr_bump.write('eof')
-    mr_bump.close()
-
-    os.system('chmod uoga=wrx '+ path + '/'+ jobid +'/mr_bump_' + jobid +' >mrbump_log')
-##RUN
-    #os.system(path + '/'+ jobid +'/mr_bump_' + jobid)
-
-    os.chdir(path)
-
-##################################
-
 def remove_hires(mtz, newpath, name):
     path = os.getcwd()
 
@@ -172,9 +30,9 @@ def remove_hires(mtz, newpath, name):
 ##RUN
     os.system(path + '/hires')
 
+##End remove_hires
 
 
-################################
 def get_space_group(mtz):
     spacegroup = ''
 
@@ -191,8 +49,8 @@ def get_space_group(mtz):
             spacegroup = space_split[1]
 
     return spacegroup
+##End get_space_group
 
-################################
 def get_ensemble(fine_path, working_dir):
     truncs = ['1','2','3','4','5','6']
     rads = ['ALIGNED_rad_1','ALIGNED_rad_2','ALIGNED_rad_3','ALL']
@@ -220,7 +78,16 @@ def get_ensemble(fine_path, working_dir):
                         ensembles.append('trunc'+trunc+'rad_'+rad+'.pdb')
 
     return ensembles
-###############################
+##End get_ensemble
+
+def isnumber(n):
+    try :
+        float(n)
+        return True
+    except:
+        return False
+##End isnumber
+
 def pdbcur(pdb):
 
     ASU = 'nan'
@@ -243,83 +110,7 @@ def pdbcur(pdb):
 
             ASU = split[1]
     return ASU
-
-###############################
-def  make_MRBUMP_run( pdb, name, amopt ):
-
-    #make script
-    run_dir = amopt.d['mrbump_dir']
-    os.chdir(run_dir)
-
-    make_mrbump_desktop(name, pdb, amopt)
-    table = run_dir + '/search_'+name+'_mrbump/results/resultsTable.dat'
-    DIE = get_table(table, run_dir, amopt.d['use_buccaneer'],  amopt.d['use_arpwarp'],  amopt.d['use_shelxe'])
-    
-    # Nothing below here seems to be used
-    # get data for printtable
-    SolutionFound = False
-    #files to make:
-    phaser_mtz = 'fail'
-    phaser_pdb = 'fail'
-    molrep_mtz = 'fail'
-    molrep_pdb = 'fail'
-    molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT = 'none'
-    phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = 'none'
-    #Phaser output:
-    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
-        phaser_shelxscore ='none'
-
-        phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
-        phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
-
-    #molrep output:
-    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
-        molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
-        molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
-
-    os.chdir(run_dir)
-
-    return DIE
-##End make_MRBUMP_run
-
-
-def make_MRBUMP_run_domain(mtz, pdb, run_dir, fasta, name, fixed_pdb, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles, MRkeys):
-
-    #files to make:
-    phaser_mtz = 'fail'
-    phaser_pdb = 'fail'
-    molrep_mtz = 'fail'
-    molrep_pdb = 'fail'
-    molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT = 'none'
-    phaser_shelxscore, molrep_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = 'none'
-
-    #get names of flags
-
-    os.chdir(run_dir)
-
-    sigf = 'SIGF='+sigf
-    FP = 'F='+FP
-    free =  'FreeR_flag='+free
-
-    make_mrbump_desktop_domain(sigf, FP, free, name, pdb, mtz, fasta, fixed_pdb, FIXED_INPUT, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles, MRkeys)
-
-    if os.path.exists(run_dir + '/search_'+name+'_mrbump/results/resultsTable.dat'):
-
-        DIE = get_table(run_dir + '/search_'+name+'_mrbump/results/resultsTable.dat', run_dir, Buccaneer, arpwarp, NoShelx)
-
-    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
-        phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
-        phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
-
-    #molrep output:
-    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
-        molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
-        molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
-
-
-    os.chdir(run_dir)
-    return DIE
-##End make_MRBUMP_run_domain
+##End pdbcur
 
 def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
 
@@ -415,8 +206,6 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
 
 #End get_table
 
-
-############
 def split(ensembles, nproc):  #split into parallel comparisons for speed
 
     divide= len(ensembles) / nproc
@@ -427,36 +216,71 @@ def split(ensembles, nproc):  #split into parallel comparisons for speed
         print 'no ensembles '
         sys.exit()
 
-
     for i in xrange(0, len(ensembles), divide):
         a_chunk =  ensembles[i:i+divide]
         chunks.append(a_chunk)
-
 
     if len(chunks)>nproc:
         chunks[-2].extend(chunks[-1])
         chunks.pop()
 
     #print chunks
-
-
-
-
-
     return chunks
-
-##############################
-def isnumber(n):
-    try :
-        float(n)
-        return True
-    except:
-        return False
+##End split
 
 
+def make_mrbump_desktop( jobid, ensemble_pdb, amopt ):
+    
+    path = os.getcwd()
+    
+    mr_bump = open(path+'/'+jobid+'.sub', "w")
+    mr_bump.write('#!/bin/sh\n')
+    jobstr = mrbump_cmd.mrbump_cmd( amopt.d, jobid=jobid, ensemble_pdb=ensemble_pdb )
+    mr_bump.write(jobstr)
+    mr_bump.close()
+    os.system('chmod uoga=wrx '+ path + '/'+jobid+'.sub')
+    os.system(path + '/'+jobid+'.sub  >'+jobid+'.log')
+    os.chdir(path)
+    
+##End make_mrbump_desktop
 
+def  make_MRBUMP_run( pdb, name, amopt ):
 
-############################
+    #make script
+    run_dir = amopt.d['mrbump_dir']
+    os.chdir(run_dir)
+
+    make_mrbump_desktop(name, pdb, amopt)
+    table = run_dir + '/search_'+name+'_mrbump/results/resultsTable.dat'
+    DIE = get_table(table, run_dir, amopt.d['use_buccaneer'],  amopt.d['use_arpwarp'],  amopt.d['use_shelxe'])
+    
+    # Nothing below here seems to be used
+    # get data for printtable
+    SolutionFound = False
+    #files to make:
+    phaser_mtz = 'fail'
+    phaser_pdb = 'fail'
+    molrep_mtz = 'fail'
+    molrep_pdb = 'fail'
+    molrep_shelxscore, molrep_refmacfreeR, molrep_HKLOUT, molrep_XYZOUT = 'none'
+    phaser_shelxscore, phaser_refmacfreeR, phaser_HKLOUT, phaser_XYZOUT = 'none'
+    #Phaser output:
+    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
+        phaser_shelxscore ='none'
+
+        phaser_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
+        phaser_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
+
+    #molrep output:
+    if os.path.exists(run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz' ):
+        molrep_mtz = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_HKLOUT_loc0_ALL_'+name+'_UNMOD.mtz'
+        molrep_pdb = run_dir + '/search_'+name+'_mrbump/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
+
+    os.chdir(run_dir)
+
+    return DIE
+##End make_MRBUMP_run
+
 def run_parallel( chunk_of_ensembles, batchnum, amopt ):
     """
     #loops through each chunk
@@ -474,25 +298,8 @@ def run_parallel( chunk_of_ensembles, batchnum, amopt ):
             print 'solution found, exiting'
             sys.exit()
 
-################################
-def run_parallel_domain(mtz, chunk_of_ensembles, run_dir, fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc,  fixed_PDB, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys): #loops through each chunk
+##End run_parallel
 
-    log = open(log_name, "w")
-
-    for each_pdb in chunk_of_ensembles:
-        name = re.split('/', each_pdb)
-        name = name.pop()
-        name = re.sub('.pdb', '', name)
-        # print name
-
-        DIE = make_MRBUMP_run_domain(mtz, each_pdb, run_dir, fasta, name, fixed_PDB, sigf, FP, free, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles,  NoShelx, NoShelxCycles, MRkeys)
-        if DIE:
-            if EarlyTerminate:
-                print 'solution found, exiting'
-                sys.exit()
-
-
-################################
 def split_into_runs( ensembles, amopt ):
     
     print 'the ensembles will be divided into '+str(amopt.d['nproc']) +' batches, each job will contain '+str(len(ensembles[0])) +' ensembles'
@@ -510,22 +317,6 @@ def split_into_runs( ensembles, amopt ):
         thread.join()
         
 ##End split_into_runs
-
-def split_into_runs_domains(mtz, ensembles, run_dir, domain_all_chain_fasta , NProc, sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys):
-    cur_dir=os.getcwd()
-    inc = 1
-    threads = []
-
-    for each_chunk in ensembles:
-        log_name = cur_dir+'/LOG_proc'+str(inc)
-
-        thread = multiprocessing.Process(target=run_parallel_domain, args=(mtz, each_chunk, run_dir, domain_all_chain_fasta,  log_name,  sigf, FP, free, noASU, EarlyTerminate, Resultspath, NoShelx, NoShelxCycles, inc, domain_all_chains_pdb , FIXED_INPUT, SHELX_OLD, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys) )
-        thread.start()
-        threads.append(thread)
-        inc+=1
-
-    for thread in threads:
-        thread.join()
 
 class TestCases(unittest.TestCase):
     """
