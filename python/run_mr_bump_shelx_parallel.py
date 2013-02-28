@@ -11,64 +11,19 @@ import multiprocessing
 import unittest
 
 # our imports
+import mrbump_cmd
 import printTable
 
 ###################
 
 
-def mrbump_input( amopt, jobid=None, pdbfile=None ):
-    """
-    Return a MRBUMP input string based on the variables in the amopt object
-    """
-    
-    mrs = ""
-    mrs+='mrbump HKLIN {} SEQIN {} HKLOUT OUT.mtz  XYZOUT OUT.pdb << eof\n'.format(amopt.d['mtz'],amopt.d['fasta'])
-    mrs+='LABIN SIGF={} F={} FreeR_flag={}\n'.format(amopt.d['SIGF'],amopt.d['F'],amopt.d['FREE'])
-    mrs+='JOBID {}_mrbump\n'.format(jobid)
-    mrs+='MRPROGRAM {}\n'.format(amopt.d['mrbump_programs'])
-    mrs+='LOCALFILE {} CHAIN ALL RMS 1.2\n'.format(pdbfile)
-    mrs+='SCOPSEARCH False\n'
-    mrs+='PQSSEARCH False\n'
-    mrs+='SSMSEARCH False\n'
-    mrs+='{}\n'.format(amopt.d['ASU'])
-    mrs+='FAST False\n'
-    mrs+='DOFASTA False\n'
-    mrs+='MDLD False\n'
-    mrs+='MDLC False\n'
-    mrs+='MDLM False\n'
-    mrs+='MDLP False\n'
-    mrs+='MDLS False\n'
-    mrs+='MDLU True\n'
-    mrs+='UPDATE False\n'
-    mrs+='BUCC  {}\n'.format(amopt.d['use_buccaneer'])
-    mrs+='BCYCLES  {}\n'.format(amopt.d['buccaneer_cycles'])
-    mrs+='ARPWARP  {}\n'.format(amopt.d['use_arpwarp'])
-    mrs+='ACYCLES  {}\n'.format(amopt.d['arpwarp_cycles'])
-    mrs+='SHELXE  {}\n'.format(amopt.d['use_shelxe'])
-    mrs+='SCYCLES  {}\n'.format(amopt.d['shelx_cycles'])
-    mrs+='FIXSG True\n'
-    mrs+='PJOBS 1\n'
-    mrs+='CHECK False\n'
-    mrs+='LITE True\n'
-    mrs+='PICKLE False\n'
-    mrs+='TRYALL True\n'
-    mrs+='USEACORN False\n'
-    mrs+='USEENSEM False\n'
-    mrs+='DEBUG True\n'
-    for k in amopt.d['mr_keys']:
-        mrs+='{}\n'.format(k)
-    mrs+='END\n'
-    mrs+='eof'
-    
-    return mrs
-    
 
-def make_mrbump_desktop( jobid, pdbfile, amopt ):
+def make_mrbump_desktop( jobid, ensemble_pdb, amopt ):
     
     path = os.getcwd()
     mr_bump = open(path+'/'+jobid+'.sub', "w")
     mr_bump.write('#!/bin/sh\n')
-    jobstr = mrbump_input( amopt, jobid=jobid, pdbfile=pdbfile )
+    jobstr = mrbump_cmd.mrbump_cmd( amopt.d, jobid=jobid, ensemble_pdb=ensemble_pdb )
     mr_bump.write(jobstr)
     mr_bump.close()
     os.system('chmod uoga=wrx '+ path + '/'+jobid+'.sub')
