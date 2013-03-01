@@ -312,7 +312,7 @@ parser.set_defaults(
                     NMR_remodel_fasta = '',
                     NMR_Truncate_only = "false",
                     nproc = 1,
-                    NumShelxCyc = 15,
+                    shelx_cycles = 15,
                     old_shelx = "false",
                     percent = 5,
                     phaseronly = "false",

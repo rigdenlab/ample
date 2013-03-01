@@ -489,32 +489,32 @@ class ClusterRun:
         os.mkdir(os.path.join(jobDir, "logs"))
         sub_script=os.path.join(jobDir, "sge_scripts", "job_" + str(jobID) + ".sub")
 
-        # Get details about mol weight and solvent content and number of molecules in the ASU
-        matthews_coef=MatthewsCoef.MattCoef()
+#        # Get details about mol weight and solvent content and number of molecules in the ASU
+#        matthews_coef=MatthewsCoef.MattCoef()
+#
+#        CELLstring=" ".join(map(str, self.MTZcell))
+#
+#        matthews_coef.setCELL(CELLstring)
+#        matthews_coef.setSYMM(self.MTZspacegroup)
+#        matthews_coef.setRESO(self.MTZresolution)
+#
+#        MOLWT = float(run_shelx.seqwt(self.SEQIN))
+#        matthews_coef.runMC(MOLWT, os.path.join(jobDir, "logs", "matthes_coef.log"))
 
-        CELLstring=" ".join(map(str, self.MTZcell))
-
-        matthews_coef.setCELL(CELLstring)
-        matthews_coef.setSYMM(self.MTZspacegroup)
-        matthews_coef.setRESO(self.MTZresolution)
-
-        MOLWT = float(run_shelx.seqwt(self.SEQIN))
-        matthews_coef.runMC(MOLWT, os.path.join(jobDir, "logs", "matthes_coef.log"))
-
-        if self.MTZresolution<2.0:
-            free_lunch = ' -e1.0 -l8'
-
-        else:
-            free_lunch = ' '
+#        if self.MTZresolution<2.0:
+#            free_lunch = ' -e1.0 -l8'
+#
+#        else:
+#            free_lunch = ' '
 
         modelName=os.path.split(ensemblePDB)[1].replace(".pdb","")
 
-        phaserPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'refmac_phaser_loc0_ALL_'+ modelName +'_UNMOD.pdb')
-        phaserMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'refmac_phaser_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
-        molrepPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'molrep', 'refine', 'refmac_molrep_loc0_ALL_'+ modelName +'_UNMOD.pdb')
-        molrepMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'molrep', 'refine', 'refmac_molrep_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
-
-        phaserTFZPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'phaser_loc0_ALL_'+ modelName +'_UNMOD.1.pdb')
+#        phaserPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'refmac_phaser_loc0_ALL_'+ modelName +'_UNMOD.pdb')
+#        phaserMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'refmac_phaser_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
+#        molrepPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'molrep', 'refine', 'refmac_molrep_loc0_ALL_'+ modelName +'_UNMOD.pdb')
+#        molrepMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'molrep', 'refine', 'refmac_molrep_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
+#
+#        phaserTFZPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'phaser_loc0_ALL_'+ modelName +'_UNMOD.1.pdb')
 
         file=open(sub_script, "w")
         file.write('#!/bin/sh\n'
@@ -533,34 +533,34 @@ class ClusterRun:
         mrbCmd = mrbump_cmd.mrbump_cmd( amopt.d, jobid=jobID, ensemble_pdb=ensemblePDB )
         file.write(mrbCmd+'\n\n')
         
-        file.write('mkdir ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n' +
-        'mkdir ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
-
-        'pushd ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n\n' +
-
-        self.shelxClusterScript + ' ' + phaserPDB + ' ' + self.HKLIN
-                                + ' ' + str(matthews_coef.best_nmol)
-                                + ' ' + str(matthews_coef.best_solvent)
-                                + ' ' + str(self.MTZresolution)
-                                + " PHASER"
-                                + " " + self.LABIN["F"]
-                                + " " + self.LABIN["SIGF"]
-                                + " " + self.LABIN["FreeR_flag"] + "\n\n" +
-        'popd\n\n' +
-        'cp ' + phaserPDB +' ' +os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n' +
-        'cp ' + phaserTFZPDB + ' '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n\n' +
-        'pushd ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
-
-        self.shelxClusterScript + ' ' + molrepPDB + ' ' + self.HKLIN
-                                + ' ' + str(matthews_coef.best_nmol)
-                                + ' ' + str(matthews_coef.best_solvent)
-                                + ' ' + str(self.MTZresolution)
-                                + " MOLREP"
-                                + " " + self.LABIN["F"]
-                                + " " + self.LABIN["SIGF"]
-                                + " " + self.LABIN["FreeR_flag"] + "\n\n" +
-        'popd\n\n' +
-        'cp ' + molrepPDB+' ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
+#        file.write('mkdir ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n' +
+#        'mkdir ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
+#
+#        'pushd ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n\n' +
+#
+#        self.shelxClusterScript + ' ' + phaserPDB + ' ' + self.HKLIN
+#                                + ' ' + str(matthews_coef.best_nmol)
+#                                + ' ' + str(matthews_coef.best_solvent)
+#                                + ' ' + str(self.MTZresolution)
+#                                + " PHASER"
+#                                + " " + self.LABIN["F"]
+#                                + " " + self.LABIN["SIGF"]
+#                                + " " + self.LABIN["FreeR_flag"] + "\n\n" +
+#        'popd\n\n' +
+#        'cp ' + phaserPDB +' ' +os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n' +
+#        'cp ' + phaserTFZPDB + ' '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n\n' +
+#        'pushd ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
+#
+#        self.shelxClusterScript + ' ' + molrepPDB + ' ' + self.HKLIN
+#                                + ' ' + str(matthews_coef.best_nmol)
+#                                + ' ' + str(matthews_coef.best_solvent)
+#                                + ' ' + str(self.MTZresolution)
+#                                + " MOLREP"
+#                                + " " + self.LABIN["F"]
+#                                + " " + self.LABIN["SIGF"]
+#                                + " " + self.LABIN["FreeR_flag"] + "\n\n" +
+#        'popd\n\n' +
+#        'cp ' + molrepPDB+' ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
 
         #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data')+'\n\n' +
         #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'logs')+'\n\n' +
@@ -594,7 +594,7 @@ class ClusterRun:
   #
   #      'rm -r '+os.path.join(jobDir, 'OUT.pdb')+'\n\n' +
   #      'rm -r '+os.path.join(jobDir, 'OUT.mtz')+'\n\n' +
-        'popd\n' +
+        file.write('popd\n' +
 
         '\n\n')
 
