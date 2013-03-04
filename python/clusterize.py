@@ -469,10 +469,10 @@ class ClusterRun:
         self.SHELXE = amopt.d['use_shelxe']
 
         self.MRKEYS = amopt.d['mr_keys']
-        if amopt.d['old_shelx']:
-            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
-        else:
-            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")        
+#        if amopt.d['old_shelx']:
+#            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
+#        else:
+#            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")        
 
     def mrBuildOnCluster(self, clusterDir, ensemblePDB, jobID, amopt ):
         """ Run the molecular replacement and model building on a cluster node """
