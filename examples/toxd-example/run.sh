@@ -17,7 +17,7 @@ $PATH
 
 # This is only required if you are running ample from outside
 # the standard CCP4 directory
-AMPLEDIR=/home/jmht/Dropbox/ample-dev1
+AMPLEDIR=/opt/ample-dev1
 export PYTHONPATH=${AMPLEDIR}/python:$PYTHONPATH
 
 ${AMPLEDIR}/bin/ample \
