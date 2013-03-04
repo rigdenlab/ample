@@ -35,7 +35,7 @@ def mrbump_ensemble_cluster( ensembles, amopt, clusterID="X" ):
 
     mrBuildClusterDir = os.path.join(amopt.d['mrbump_dir'], "cluster_run" + str(clusterID))
     os.mkdir(mrBuildClusterDir)
-    mrBuild.getMTZInfo(amopt.d['mtz'], mrBuildClusterDir)
+    #mrBuild.getMTZInfo(amopt.d['mtz'], mrBuildClusterDir)
 
     # Reset the queue list
     mrBuild.qList = []
