@@ -171,7 +171,7 @@ parser.add_argument('-allatom', metavar='using a cluster', type=str, nargs=1,
 parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', type=str, nargs=1,
                    help='fixed input to mr bump')
 
-parser.add_argument('-domain_all_chain_fasta', metavar='domain_all_chain_fasta', type=str, nargs=1,
+parser.add_argument('-domain_all_chains_fasta', metavar='domain_all_chains_fasta', type=str, nargs=1,
                    help='fasta for all ASU')
 
 parser.add_argument('-domain_termini_distance', metavar='termini', type=str, nargs=1,
@@ -208,7 +208,7 @@ parser.add_argument('-usehoms', metavar='nohoms rosetta flag', type=str, nargs=1
 parser.add_argument('-improve_template', metavar='improve template', type=str, nargs=1,
                    help='give a template to imrove - NMR, homolog ')
 
-parser.add_argument('-DEBUG', metavar='debug option', type=str, nargs=1,
+parser.add_argument('-debug', metavar='debug option', type=str, nargs=1,
                    help='debug option ')
 
 parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
@@ -288,13 +288,13 @@ parser.set_defaults(
                     CC = '',
                     CLUSTER = "false",
                     clusterimport = "false",
-                    DEBUG = "false",
+                    debug = "false",
                     domain_all_chains_pdb = None,
                     domain_all_chains_fasta = None,
                     domain_termini_distance = 0,
                     ensembles = None,
                     ensembler = "false",
-                    fasta = 'no_fasta_given',
+                    fasta = None,
                     frags3mers=None,
                     frags9mers=None,
                     improve_template = None,
@@ -364,9 +364,7 @@ ALLATOM = amopt.d['allatom']
 # jmht - runon_cluster
 CLUSTER = amopt.d['CLUSTER']
 clusterimport = amopt.d['clusterimport']
-DEBUG = amopt.d['DEBUG']
 Ensembler = amopt.d['ensembler']
-FASTA = amopt.d['fasta']
 FIXED_INPUT = True
 molreponly = amopt.d['molreponly'] 
 nmodels = amopt.d['nmodels']
@@ -392,9 +390,18 @@ os.chdir(work_dir)
 # Set up logging
 logger = ample_util.setup_logging()
 
+# Check if importing ensembles
+amopt.d['importing_ensembles'] = False
+if os.path.isdir( str(amopt.d['ensembles']) ):
+    
+    amopt.d['importing_ensembles'] = True
+    logger.info("Found directory with ensemble files: {}\nSetting make_models to False".format( amopt.d['ensembles'] ) )
+    amopt.d['make_frags'] = False
+    amopt.d['make_models'] = False
+    
 # Check if importing models
 amopt.d['importing_models'] = False
-if  amopt.d['models_dir']:
+if amopt.d['models_dir']:
     
     if not os.path.isdir( amopt.d['models_dir'] ):
         msg = "Trying to import models from the directory:\n{}\nBut it is not a directory!"
@@ -408,13 +415,12 @@ if  amopt.d['models_dir']:
 else:
     amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
 
-# models
-if not amopt.d['make_models']:
-    amopt.d['importing_models'] = True
+# Check models and ensembles
+if amopt.d['importing_ensembles'] and amopt.d['importing_models']:
+        msg = "Cannot import both models and ensembles!"
+        logger.critical(msg)
+        raise RuntimeError, msg
 
-if amopt.d['make_models'] and amopt.d['importing_models']:
-    logger.critical('you have chosen to both import models and to make them, choose only one\nSet Make Models to \"True\" to make them, \"False\" to import them')
-    sys.exit()
 
 # NMR Checks
 NMR_PROTOCOL = False
@@ -442,24 +448,30 @@ if not  NMR_PROTOCOL :
                     logger.critical('you have chosen to import a cluster, the clusterpath does not exist')
                     sys.exit()
 
+# Missing domains
+if amopt.d['domain_all_chains_pdb'] or amopt.d['domain_all_chains_fasta']:
+    #jmht - fix
+    amopt.d['fasta'] = amopt.d['domain_all_chains_fasta']
+    logger.info('Processing missing domain\n')
+    if not ( os.path.exists(amopt.d['domain_all_chains_fasta']) or \
+         os.path.exists(amopt.d['domain_all_chains_pdb']) ):
+        logger.critical(' Cannot find either domain_all_chain_fasta: {}\n or domain_all_chain_pdb: {}'.format(amopt.d['domain_all_chains_fasta'],amopt.d['domain_all_chains_pdb'] )  )
+        sys.exit(1)
+elif not ( os.path.exists(str(amopt.d['fasta'])) or \
+         os.path.exists(str(amopt.d['NMR_remodel_fasta'])) ):
+    logger.critical('You need to give the path for the fasta')
+    sys.exit(1)
+    
+# jmht - dont' think this used/needed
+#logger.debug('Parsing FASTA file')
+#outfasta = os.path.join(work_dir, pdb_code + '_.fasta')
+#fasta_parser.parse_fasta(FASTA, outfasta)
+#FASTA = outfasta
+
 # Create the rosetta modeller - this runs all the checks required
 if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
     rosetta_modeller = rosetta_model.RosettaModel()
     rosetta_modeller.set_from_amopt( amopt )
-
-# Check if importing ensembles
-amopt.d['ensemble_import'] = False
-if os.path.isdir( str(amopt.d['ensembles']) ):
-    
-    if amopt.d['importing_models']:
-        msg = "Cannot import both models and ensembles!"
-        logger.critical(msg)
-        raise RuntimeError, msg
-    
-    amopt.d['ensemble_import'] = True
-    logger.info("Found directory with ensemble files: {}\nSetting make_models to False".format( amopt.d['ensembles'] ) )
-    amopt.d['make_frags'] = False
-    amopt.d['make_models'] = False
 
 #
 # Variables for running MRBUMP
@@ -555,9 +567,6 @@ if amopt.d['make_models']:
     logger.info('\nMaking Rosetta Models\n')
 else:
     logger.info('NOT Making Rosetta Models\n')
-    
-if amopt.d['domain_all_chains_pdb'] or amopt.d['domain_all_chains_fasta']:
-    logger.info('Processing missing domain\n')
 
 logger.info('All needed programs are found, continuing Run')
 
@@ -582,14 +591,6 @@ Run_params.close()
 #
 ######################################################
 time_start = time.time()
-
-logger.debug('Parsing FASTA file')
-if not os.path.exists(FASTA):
-    print 'You need to give the path for the fasta'
-    sys.exit()
-outfasta = os.path.join(work_dir, pdb_code + '_.fasta')
-fasta_parser.parse_fasta(FASTA, outfasta)
-FASTA = outfasta
 
 #-----------------------------------
 # Do The Modelling
@@ -637,7 +638,7 @@ if NMR_PROTOCOL:
                 pdbs = re.split('\.', hom)
 
                 if pdbs[-1] == 'pdb':
-                    nmr. RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(amopt.d['nproc']), hom, alignment_file, work_dir + '/models')
+                    nmr.RUN_FORMAT_HOMS(homolog + '/' + hom, int(NMR_process), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(amopt.d['nproc']), hom, alignment_file, work_dir + '/models')
                 amopt.d['make_models'] = False
                 amopt.d['models_dir'] = work_dir + '/models'
                 amopt.d['models_dir'] = work_dir + '/models'
@@ -702,7 +703,7 @@ if NMR_PROTOCOL:
             # loop over the number of models and submit a job to the cluster
 
                 for i in range(int(NMR_process)):
-                    cluster_run.NMRmodelOnCluster(work_dir + '/Run_' + str(hom_index), 1, i, amopt.d['rosetta_path'], amopt.d['rosetta_db'], FASTA, amopt.d['frags3mers'], amopt.d['frags9mers'], ideal_homolog, ALI, i, ROSETTA_CM)
+                    cluster_run.NMRmodelOnCluster(work_dir + '/Run_' + str(hom_index), 1, i, amopt.d['rosetta_path'], amopt.d['rosetta_db'], amopt.d['fasta'], amopt.d['frags3mers'], amopt.d['frags9mers'], ideal_homolog, ALI, i, ROSETTA_CM)
 
             # Monitor the cluster queue to see when all jobs have finished
                 cluster_run.monitorQueue()
@@ -801,7 +802,7 @@ if clusterimport:
         
 
 # Importing pre-made ensembles so no need to do the clustering
-if amopt.d['ensemble_import']:
+if amopt.d['importing_ensembles']:
     final_ensembles = []
     for infile in glob.glob(os.path.join(amopt.d['ensembles'], '*.pdb')):
         final_ensembles.append(infile)
@@ -846,7 +847,7 @@ run_spicker.RUN_SPICKER(amopt.d['models_dir'], work_dir + '/spicker_run', amopt.
 # Done like this so it's easy to run specific clusters
 clusters = [ i for i in range(1,amopt.d['num_clusters']+1)]
 
-logger.info('Clusteing Done. using the first ' + str(clusters) + ' clusters')
+logger.info('Clustering Done. using the first ' + str(clusters) + ' clusters')
 
 for cluster in clusters:
     models_path = work_dir + '/S_clusters/cluster_' + str(cluster)
