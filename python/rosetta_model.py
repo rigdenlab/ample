@@ -43,7 +43,7 @@ class RosettaModel(object):
         self.make_models = None
         self.make_fragments = None
 
-        self.fasta =None
+        self.fasta = None
         self.allatom = None
         self.use_scwrl = None
         self.scwrl_exe = None
@@ -260,7 +260,7 @@ class RosettaModel(object):
                     '-templates:force_native_topology',
                     'True' ]
             cmd += tcmd
-
+        
         return cmd
     ##End make_rosetta_cmd
     
@@ -295,7 +295,7 @@ class RosettaModel(object):
             cmd = self.modelling_cmd( wdir, nstruct, seed )
             
             self.logger.debug('Making {} models in directory: {}'.format(nstruct,wdir) )
-            self.logger.debug('Executing cmd: {}'.format( " ".join(cmd)) )
+            self.logger.debug('Executing cmd: {}'.format( " ".join(cmd) ) )
             
             logf = open(wdir+os.sep+"rosetta_{}.log".format(proc),"w")
             p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT, cwd=wdir )
