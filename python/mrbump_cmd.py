@@ -26,7 +26,8 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     mrs+='SCOPSEARCH False\n'
     mrs+='PQSSEARCH False\n'
     mrs+='SSMSEARCH False\n'
-    mrs+='{}\n'.format( adict['ASU'] )
+    if adict['ASU']:
+        mrs+='{}\n'.format( adict['ASU'] )
     mrs+='FAST False\n'
     mrs+='DOFASTA False\n'
     mrs+='MDLD False\n'
