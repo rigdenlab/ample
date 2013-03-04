@@ -78,22 +78,22 @@ class ClusterRun:
         """Set the Rosetta Modeller object"""
         self.modeller=modeller
 
-    def getMTZInfo(self, HKLIN, workingDir):
-        """ Extract useful information from an MTZ file """
-
-        mtz_info=MTZParse.Mtzdump()
-
-        mtz_info.setHKLIN(HKLIN)
-        mtz_info.setMTZdumpLogfile(workingDir)
-        mtz_info.go()
-        mtz_info.getColumnData()
-
-        self.MTZcell=mtz_info.getCell()
-        self.MTZspacegroup=mtz_info.getSpacegroup()
-        if string.strip(self.MTZspacegroup.replace(" ", ""))=="P-1":
-            self.MTZspacegroup="P 1"
-        self.MTZresolution=float(mtz_info.getResolution())
-        self.MTZcolLabels=mtz_info.colLabels
+#    def getMTZInfo(self, HKLIN, workingDir):
+#        """ Extract useful information from an MTZ file """
+#
+#        mtz_info=MTZParse.Mtzdump()
+#
+#        mtz_info.setHKLIN(HKLIN)
+#        mtz_info.setMTZdumpLogfile(workingDir)
+#        mtz_info.go()
+#        mtz_info.getColumnData()
+#
+#        self.MTZcell=mtz_info.getCell()
+#        self.MTZspacegroup=mtz_info.getSpacegroup()
+#        if string.strip(self.MTZspacegroup.replace(" ", ""))=="P-1":
+#            self.MTZspacegroup="P 1"
+#        self.MTZresolution=float(mtz_info.getResolution())
+#        self.MTZcolLabels=mtz_info.colLabels
 
 
 
