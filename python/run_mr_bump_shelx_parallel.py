@@ -180,7 +180,7 @@ def get_table(table, run_dir, Buccaneer, arpwarp, use_shelx):
 
     n= re.sub('loc0_ALL','search', best)
     n = re.sub('UNMOD','mrbump', n)
-    Best = run_dir +n+'/data/'+re.sub('_UNMOD','', best)+'/unmod/mr/'+prog.lower()+'/refine'
+    Best = run_dir + os.sep + n + '/data/'+re.sub('_UNMOD','', best)+'/unmod/mr/'+prog.lower()+'/refine'
 
 
     resultsTable.insert(0, header)
