@@ -78,24 +78,6 @@ class ClusterRun:
         """Set the Rosetta Modeller object"""
         self.modeller=modeller
 
-#    def getMTZInfo(self, HKLIN, workingDir):
-#        """ Extract useful information from an MTZ file """
-#
-#        mtz_info=MTZParse.Mtzdump()
-#
-#        mtz_info.setHKLIN(HKLIN)
-#        mtz_info.setMTZdumpLogfile(workingDir)
-#        mtz_info.go()
-#        mtz_info.getColumnData()
-#
-#        self.MTZcell=mtz_info.getCell()
-#        self.MTZspacegroup=mtz_info.getSpacegroup()
-#        if string.strip(self.MTZspacegroup.replace(" ", ""))=="P-1":
-#            self.MTZspacegroup="P 1"
-#        self.MTZresolution=float(mtz_info.getResolution())
-#        self.MTZcolLabels=mtz_info.colLabels
-
-
 
     def setupModellingDir(self, RunDir):
         """ A function to create the necessary directories for the modelling step """
@@ -243,17 +225,15 @@ class ClusterRun:
 
         self.jobLogsList.append(os.path.join(RunDir, "pre_models", "logs", jobName + '.log'))
 
+        logFile = os.path.join(RunDir, "pre_models", "logs", jobName + '.log')
         file=open(sub_script, "w")
-        file.write('#!/bin/sh\n'
-           '#$ -j y\n' +
-           '#$ -cwd\n' +
-           '#$ -w e\n' +
-           '#$ -V\n' +
-           '#$ -o ' + os.path.join(RunDir, "pre_models", "logs", jobName + '.log') + '\n' +
-           '#$ -N ' + jobName + '\n\n')
+        
+        script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
+        file.write(script_header)
 
         file.write("setenv CCP4_SCR $TMPDIR\n\n")
 
+        # jmht - this needs to go in the rosetta object
         file.write('cd '+ os.path.join(RunDir, "pre_models", "model_" + str(jobNumber)) +'\n\n'+
              MR_ROSETTA +' \\\n'+
              '-database '+ROSETTA_DB+' \\\n'+
@@ -302,40 +282,10 @@ class ClusterRun:
 
         file.close()
 
-        # Submit the job
-        curDir=os.getcwd()
-        os.chdir(os.path.join(RunDir, "pre_models", "sge_scripts"))
-        command_line='qsub -V %s' % sub_script
+        jobDir = os.path.join(self.modeler.work_dir, "pre_models", "sge_scripts")
+        
+        job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
 
-        process_args = shlex.split(command_line)
-        p = subprocess.Popen(process_args, stdin = subprocess.PIPE,
-                                      stdout = subprocess.PIPE)
-
-        (child_stdout, child_stdin) = (p.stdout, p.stdin)
-
-        # Write the keyword input
-        child_stdin.close()
-
-        # Watch the output for successful termination
-        out=child_stdout.readline()
-
-        qNumber=0
-
-        while out:
-            #sys.stdout.write(out)
-            if self.QTYPE=="SGE":
-                if "Your job" in out:
-                    qNumber=int(string.split(out)[2])
-                    self.qList.append(qNumber)
-            out=child_stdout.readline()
-
-        child_stdout.close()
-
-        os.chdir(curDir)
-
-
-
-    #def modelOnCluster(self, RunDir, proc, jobNumber, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, seed, rosetta_string):
     def modelOnCluster(self, proc, jobNumber):
         """ Farm out the modelling step on a cluster (SGE) """
 
@@ -376,20 +326,14 @@ class ClusterRun:
 
         self.jobLogsList.append(os.path.join(self.modeler.work_dir, "pre_models", "logs", jobName + '.log'))
 
+        logFile = os.path.join(self.modeler.work_dir, "pre_models", "logs", jobName + '.log')
         file=open(sub_script, "w")
-        file.write('#!/bin/sh\n'
-           '#$ -j y\n' +
-           '#$ -cwd\n' +
-           '#$ -w e\n' +
-           '#$ -V\n' +
-           '#$ -o ' + os.path.join(self.modeler.work_dir, "pre_models", "logs", jobName + '.log') + '\n' +
-           '#$ -N ' + jobName + '\n\n')
-
+        script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
+        file.write(script_header+"\n\n")
         file.write("setenv CCP4_SCR $TMPDIR\n\n")
 
         # Build up the rosetta command
-        # 1 structure
-        nstruct=1
+        nstruct=1 # 1 structure
         rcmd = self.modeller.rosetta_cmd( preModelDir, nstruct, seed )
         cmdstr = " ".join(rcmd) + "\n\n"
         file.write( cmdstr )
@@ -417,40 +361,15 @@ class ClusterRun:
 
         file.close()
 
-        # Submit the job
-        curDir=os.getcwd()
-        os.chdir(os.path.join(self.modeler.work_dir, "pre_models", "sge_scripts"))
-        command_line='qsub -V %s' % sub_script
-
-        process_args = shlex.split(command_line)
-        p = subprocess.Popen(process_args, stdin = subprocess.PIPE,
-                                      stdout = subprocess.PIPE)
-
-        (child_stdout, child_stdin) = (p.stdout, p.stdin)
-
-        # Write the keyword input
-        child_stdin.close()
-
-        # Watch the output for successful termination
-        out=child_stdout.readline()
-
-        qNumber=0
-
-        while out:
-            #sys.stdout.write(out)
-            if self.QTYPE=="SGE":
-                if "Your job" in out:
-                    qNumber=int(string.split(out)[2])
-                    self.qList.append(qNumber)
-            out=child_stdout.readline()
-
-        child_stdout.close()
-
-        os.chdir(curDir)
+        jobDir = os.path.join(self.modeler.work_dir, "pre_models", "sge_scripts")
+        
+        job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
         
     def setMrFromAmopt(self, amopt):
         """
-        Set the variables form the amopt dictionary
+        Set the class variables form the amopt dictionary.
+        
+        Will not be required when the NMR stuff has been fixed 
         """
         
         self.HKLIN = amopt.d['mtz']
@@ -472,138 +391,57 @@ class ClusterRun:
 #        if amopt.d['old_shelx']:
 #            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
 #        else:
-#            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")        
+#            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
 
-    def mrBuildOnCluster(self, clusterDir, ensemblePDB, jobID, amopt ):
-        """ Run the molecular replacement and model building on a cluster node """
+    def subScriptHeader(self, logFile=None, jobName=None):
+        """
+        Create a string suitable for writing out as the header of the submission script
+        for submitting to a particular queueing system
+        """
         
-        # First set all the variables
-        self.setMrFromAmopt(amopt)
-
-        # Create a cluster submission script for this modelling job
-        jobName="mrBuild_" + str(jobID)
-
-        jobDir=os.path.join(clusterDir, "mrbuild_" + str(jobID))
-        os.mkdir(jobDir)
-        os.mkdir(os.path.join(jobDir, "sge_scripts"))
-        os.mkdir(os.path.join(jobDir, "logs"))
-        sub_script=os.path.join(jobDir, "sge_scripts", "job_" + str(jobID) + ".sub")
-
-#        # Get details about mol weight and solvent content and number of molecules in the ASU
-#        matthews_coef=MatthewsCoef.MattCoef()
-#
-#        CELLstring=" ".join(map(str, self.MTZcell))
-#
-#        matthews_coef.setCELL(CELLstring)
-#        matthews_coef.setSYMM(self.MTZspacegroup)
-#        matthews_coef.setRESO(self.MTZresolution)
-#
-#        MOLWT = float(run_shelx.seqwt(self.SEQIN))
-#        matthews_coef.runMC(MOLWT, os.path.join(jobDir, "logs", "matthes_coef.log"))
-
-#        if self.MTZresolution<2.0:
-#            free_lunch = ' -e1.0 -l8'
-#
-#        else:
-#            free_lunch = ' '
-
-        modelName=os.path.split(ensemblePDB)[1].replace(".pdb","")
-
-#        phaserPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'refmac_phaser_loc0_ALL_'+ modelName +'_UNMOD.pdb')
-#        phaserMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'refmac_phaser_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
-#        molrepPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'molrep', 'refine', 'refmac_molrep_loc0_ALL_'+ modelName +'_UNMOD.pdb')
-#        molrepMTZ = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'molrep', 'refine', 'refmac_molrep_HKLOUT_loc0_ALL_'+ modelName +'_UNMOD.mtz')
-#
-#        phaserTFZPDB = os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data', 'loc0_ALL_'+ modelName +'', 'unmod', 'mr', 'phaser', 'refine', 'phaser_loc0_ALL_'+ modelName +'_UNMOD.1.pdb')
-
-        file=open(sub_script, "w")
-        file.write('#!/bin/sh\n'
-           '#$ -j y\n' +
-           '#$ -cwd\n' +
-           '#$ -w e\n' +
-           '#$ -V\n' +
-           '#$ -o ' + os.path.join(jobDir, "logs", "job_" + str(jobID) + '.log') + '\n' +
-           '#$ -N ' + jobName + '\n\n' +
-
-        "pushd " + jobDir + "\n\n")
-
-        file.write("setenv CCP4_SCR $TMPDIR\n\n")
+        sh = ""
+        if self.QTYPE=="SGE":
+            sh += '#!/bin/sh\n'
+            sh += '#$ -j y\n'
+            sh += '#$ -cwd\n'
+            sh += '#$ -w e\n'
+            sh += '#$ -V\n'
+            sh += '#$ -o {}\n'.format(logFile) 
+            sh += '#$ -N {}\n\n'.format(jobName)
+        elif self.QTYPE=="LSF":
+            sh += '#!/bin/sh\n'
+            sh += '#BSUB -R "span[ptile=16]"'
+            sh += '#BSUB -o {}\n'.format(logFile) 
+            sh += '#BSUB -J {}\n\n'.format(jobName)         
+        else:
+            raise RuntimeError,"Unrecognised QTYPE: ".format(self.QTYPE)
         
-        # Generate the MRBUMP command - up to eof
-        mrbCmd = mrbump_cmd.mrbump_cmd( amopt.d, jobid=jobID, ensemble_pdb=ensemblePDB )
-        file.write(mrbCmd+'\n\n')
+        return sh+'\n\n'
+    
+    def submitJob(self, subScript=None,jobDir=None):
+        """
+        Submit the job to the queue and return the job number.
         
-#        file.write('mkdir ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n' +
-#        'mkdir ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
-#
-#        'pushd ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n\n' +
-#
-#        self.shelxClusterScript + ' ' + phaserPDB + ' ' + self.HKLIN
-#                                + ' ' + str(matthews_coef.best_nmol)
-#                                + ' ' + str(matthews_coef.best_solvent)
-#                                + ' ' + str(self.MTZresolution)
-#                                + " PHASER"
-#                                + " " + self.LABIN["F"]
-#                                + " " + self.LABIN["SIGF"]
-#                                + " " + self.LABIN["FreeR_flag"] + "\n\n" +
-#        'popd\n\n' +
-#        'cp ' + phaserPDB +' ' +os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n' +
-#        'cp ' + phaserTFZPDB + ' '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx') +'\n\n' +
-#        'pushd ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
-#
-#        self.shelxClusterScript + ' ' + molrepPDB + ' ' + self.HKLIN
-#                                + ' ' + str(matthews_coef.best_nmol)
-#                                + ' ' + str(matthews_coef.best_solvent)
-#                                + ' ' + str(self.MTZresolution)
-#                                + " MOLREP"
-#                                + " " + self.LABIN["F"]
-#                                + " " + self.LABIN["SIGF"]
-#                                + " " + self.LABIN["FreeR_flag"] + "\n\n" +
-#        'popd\n\n' +
-#        'cp ' + molrepPDB+' ' + os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx') +'\n\n' +
-
-        #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'data')+'\n\n' +
-        #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'logs')+'\n\n' +
-        #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'input')+'\n\n' +
-        #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'models')+'\n\n' +
-        #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'PDB_files')+'\n\n' +
-        #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'results')+'\n\n' +
-        #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'scratch') +'\n\n' +
-        #'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'sequences')+'\n\n' +
-  #
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.ins')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.mtz') +'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.pro')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.ps')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.fcf')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.hkl')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.res')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.phs')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'phaser_shelx', 'orig.hat')+'\n\n' +
-  #
-  #
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.ins')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.mtz')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.pro')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.ps')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.fcf')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.hkl')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.res')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.phs')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'search_' + str(jobID) + '_mrbump', 'molrep_shelx', 'orig.hat')+'\n\n' +
-  #
-  #      'rm -r '+os.path.join(jobDir, 'OUT.pdb')+'\n\n' +
-  #      'rm -r '+os.path.join(jobDir, 'OUT.mtz')+'\n\n' +
-        file.write('popd\n' +
-
-        '\n\n')
-
-        file.close()
-
-        # Submit the job
+        Args:
+        subScript -- the path to the submission script
+        jobDir -- the directory the job is submitted from - will run in
+        
+        Returns:
+        job number as a string
+        
+         We cd to the job directory, submit and then cd back to where we came from
+        """
+        
         curDir=os.getcwd()
         os.chdir(jobDir)
-        command_line='qsub -V %s' % sub_script
+        
+        command_line=None
+        if self.QTYPE=="SGE":
+            command_line='qsub -V %s' % sub_script
+        elif self.QTYPE=="LSF":
+            command_line='bsub %s' % sub_script
+        else:
+            raise RuntimeError,"Unrecognised QTYPE: ".format(self.QTYPE)            
 
         process_args = shlex.split(command_line)
         p = subprocess.Popen(process_args, stdin = subprocess.PIPE,
@@ -623,13 +461,56 @@ class ClusterRun:
             #sys.stdout.write(out)
             if self.QTYPE=="SGE":
                 if "Your job" in out:
-                    qNumber=int(string.split(out)[2])
+                    qNumber=int(out.split()[2])
                     self.qList.append(qNumber)
+            elif self.QTYPE=="LSF":
+                if "is submitted to queue" in out:
+                    qStr=out.split()[1]
+                    qNumber=int(qStr.strip("<>"))
+                    self.qList.append(qNumber)                
             out=child_stdout.readline()
 
         child_stdout.close()
 
         os.chdir(curDir)
+        
+        return str(qNumber)    
+        
+
+    def mrBuildOnCluster(self, clusterDir, ensemblePDB, jobID, amopt ):
+        """ Run the molecular replacement and model building on a cluster node """
+        
+        # First set all the variables
+        self.setMrFromAmopt(amopt)
+
+        # Create a cluster submission script for this modelling job
+        jobName="mrBuild_" + str(jobID)
+
+        jobDir=os.path.join(clusterDir, "mrbuild_" + str(jobID))
+        os.mkdir(jobDir)
+        os.mkdir(os.path.join(jobDir, "sge_scripts"))
+        os.mkdir(os.path.join(jobDir, "logs"))
+        sub_script=os.path.join(jobDir, "sge_scripts", "job_" + str(jobID) + ".sub")
+
+        modelName=os.path.split(ensemblePDB)[1].replace(".pdb","")
+        logFile = os.path.join(jobDir, "logs", "job_" + str(jobID) + '.log')
+
+        # Create the submission script
+        file=open(sub_script, "w")
+        script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
+        file.write(script_header)
+
+        file.write("pushd " + jobDir + "\n\n" + 
+        "setenv CCP4_SCR $TMPDIR\n\n")
+        
+        # Generate the MRBUMP command - up to eof
+        mrbCmd = mrbump_cmd.mrbump_cmd( amopt.d, jobid=jobID, ensemble_pdb=ensemblePDB )
+        file.write(mrbCmd+'\n\n')
+        file.write('popd\n\n')
+
+        file.close()
+
+        job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
 
     def makeResultsFile(self):
         """ Create final results summary file """
