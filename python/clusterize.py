@@ -103,13 +103,13 @@ class ClusterRun:
         self.RunDir=RunDir
 
         # Create the directories for the submission scripts
-        if os.path.isdir(os.path.join(RunDir, "models")) == False:
+        if not os.path.isdir(os.path.join(RunDir, "models")):
             os.mkdir(os.path.join(RunDir, "models"))
-        if os.path.isdir(os.path.join(RunDir, "pre_models")) == False:
+        if not os.path.isdir(os.path.join(RunDir, "pre_models")):
             os.mkdir(os.path.join(RunDir, "pre_models"))
-        if os.path.isdir(os.path.join(RunDir, "pre_models", "sge_scripts")) == False:
+        if not os.path.isdir(os.path.join(RunDir, "pre_models", "sge_scripts")):
             os.mkdir(os.path.join(RunDir, "pre_models", "sge_scripts"))
-        if os.path.isdir(os.path.join(RunDir, "pre_models", "logs")) == False:
+        if not os.path.isdir(os.path.join(RunDir, "pre_models", "logs")):
             os.mkdir(os.path.join(RunDir, "pre_models", "logs"))
 
 
