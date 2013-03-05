@@ -721,18 +721,19 @@ RUNNING.flush()
 if amopt.d['make_models']:
     # If we are running with cluster support submit all modelling jobs to the cluster queue
     if amopt.d['cluster_submit']:
+        
         # Generate the list of random seeds
         rosetta_modeller.generate_seeds()
 
         # Invoke the cluster run class
         cluster_run = clusterize.ClusterRun()
-        cluster_run.QTYPE = "SGE"
+        cluster_run.QTYPE = amopt.d['submit_qtype']
         cluster_run.setModeller(rosetta_modeller)
         cluster_run.setupModellingDir(work_dir)
         
         # loop over the number of models and submit a job to the cluster
         for i in range(amopt.d['nmodels']):
-            nproc=1
+            nproc=1 # each modelling job runs on a single processor
             jobNumber=i+1
             cluster_run.modelOnCluster( nproc, jobNumber )
 
