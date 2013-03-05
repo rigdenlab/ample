@@ -31,7 +31,7 @@ def mrbump_ensemble_cluster( ensembles, amopt, clusterID="X" ):
     logger.info("Running MR and model building on a cluster\n\n")
 
     mrBuild = clusterize.ClusterRun()
-    mrBuild.QTYPE = "SGE"
+    mrBuild.QTYPE = amopt.d['submit_qtype']
 
     mrBuildClusterDir = os.path.join(amopt.d['mrbump_dir'], "cluster_run" + str(clusterID))
     os.mkdir(mrBuildClusterDir)
