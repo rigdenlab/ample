@@ -29,7 +29,7 @@ ${AMPLEDIR}/bin/ample \
       -rosetta_dir $ROSETTA_DIR \
       -run_dir $PWD \
       -make_frags False \
-      -CLUSTER False \
+      -cluster_submit False \
       -shelx_cycles 10 \
       -nmodels 30 \
       -early_terminate True  \
@@ -42,5 +42,5 @@ ${AMPLEDIR}/bin/ample \
       -allatom True \
       -num_clusters 1 \
 
-      #-models /home/jmht/Dropbox/ample-dev1/examples/toxd-example/ROSETTA_MR_3/models \
-      #-ensembles /home/jmht/Dropbox/ample-dev1/examples/toxd-example/ROSETTA_MR_3/ensembles_1 \
+      #-models /opt/ample-dev1/examples/toxd-example/ROSETTA_MR_3/models \
+      #-ensembles /opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/ensembles_1 \
