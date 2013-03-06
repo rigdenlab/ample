@@ -365,30 +365,30 @@ class ClusterRun:
         
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
         
-    def setMrFromAmopt(self, amopt):
+    def setFromDict(self, amoptd):
         """
         Set the class variables form the amopt dictionary.
         
         Will not be required when the NMR stuff has been fixed 
         """
         
-        self.HKLIN = amopt.d['mtz']
-        self.LABIN["F"] = amopt.d['F']
-        self.LABIN["SIGF"] = amopt.d['SIGF']
-        self.LABIN["FreeR_flag"] = amopt.d['FREE']
+        self.HKLIN = amoptd['mtz']
+        self.LABIN["F"] = amoptd['F']
+        self.LABIN["SIGF"] = amoptd['SIGF']
+        self.LABIN["FreeR_flag"] = amoptd['FREE']
         
-        if amopt.d['domain_all_chains_fasta']:
-            self.SEQIN = str(amopt.d['domain_all_chains_fasta'])
+        if amoptd['domain_all_chains_fasta']:
+            self.SEQIN = str(amoptd['domain_all_chains_fasta'])
         else:
-            self.SEQIN = str(amopt.d['fasta'])
+            self.SEQIN = str(amoptd['fasta'])
             
-        self.BCYCLES = amopt.d['buccaneer_cycles']
-        self.BUCC = amopt.d['use_buccaneer']
-        self.SCYLCLES = amopt.d['shelx_cycles']
-        self.SHELXE = amopt.d['use_shelxe']
+        self.BCYCLES = amoptd['buccaneer_cycles']
+        self.BUCC = amoptd['use_buccaneer']
+        self.SCYLCLES = amoptd['shelx_cycles']
+        self.SHELXE = amoptd['use_shelxe']
 
-        self.MRKEYS = amopt.d['mr_keys']
-#        if amopt.d['old_shelx']:
+        self.MRKEYS = amoptd['mr_keys']
+#        if amoptd['old_shelx']:
 #            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
 #        else:
 #            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
@@ -477,11 +477,20 @@ class ClusterRun:
         return str(qNumber)    
         
 
-    def mrBuildOnCluster(self, clusterDir, ensemblePDB, jobID, amopt ):
-        """ Run the molecular replacement and model building on a cluster node """
+    def mrBuildOnCluster(self, clusterDir, ensemblePDB, jobID, amoptd ):
+        """
+        Run the molecular replacement and model building on a cluster node.
+        
+        Args:
+        clusterDir --
+        ensemblePDB --
+        jobID --
+        amoptd -- dictionary containing job options
+        
+        """
         
         # First set all the variables
-        self.setMrFromAmopt(amopt)
+        self.setFromDict(amoptd)
 
         # Create a cluster submission script for this modelling job
         jobName="mrBuild_" + str(jobID)
@@ -504,7 +513,7 @@ class ClusterRun:
         "setenv CCP4_SCR $TMPDIR\n\n")
         
         # Generate the MRBUMP command - up to eof
-        mrbCmd = mrbump_cmd.mrbump_cmd( amopt.d, jobid=jobID, ensemble_pdb=ensemblePDB )
+        mrbCmd = mrbump_cmd.mrbump_cmd( amoptd, jobid=jobID, ensemble_pdb=ensemblePDB )
         file.write(mrbCmd+'\n\n')
         file.write('popd\n\n')
 
