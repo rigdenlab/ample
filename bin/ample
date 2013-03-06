@@ -785,9 +785,9 @@ if amopt.d['import_ensembles']:
     amopt.d['mrbump_dir'] = bump_dir
     
     if amopt.d['cluster_submit']:
-        mrbump_ensemble.mrbump_ensemble_cluster( final_ensembles, amopt)
+        mrbump_ensemble.mrbump_ensemble_cluster( final_ensembles, amopt.d)
     else:
-        mrbump_ensemble.mrbump_ensemble_local( final_ensembles, amopt)
+        mrbump_ensemble.mrbump_ensemble_local( final_ensembles, amopt.d)
         
     # Finish here so timing etc..
     time_stop = time.time()
@@ -854,9 +854,9 @@ for cluster in clusters:
     amopt.d['mrbump_dir'] = bump_dir
     
     if amopt.d['cluster_submit']:
-        mrbump_ensemble.mrbump_ensemble_cluster( final_ensembles, amopt, clusterID=cluster)
+        mrbump_ensemble.mrbump_ensemble_cluster( final_ensembles, amopt.d, clusterID=cluster)
     else:
-        mrbump_ensemble.mrbump_ensemble_local( final_ensembles, amopt, clusterID=cluster)
+        mrbump_ensemble.mrbump_ensemble_local( final_ensembles, amopt.d, clusterID=cluster)
     # End loop over clusters
 
 time_stop = time.time()
