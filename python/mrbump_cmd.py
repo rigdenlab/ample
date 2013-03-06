@@ -7,11 +7,15 @@ import unittest
 
 def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     """
-    Return a MRBUMP input string based on the variables in the adict dictionary and given keyword parameters
+    Create MRBUMP input string based on given variables
+    
+    Args:
+    adict -- amopt dictionary
     
     jmht - check fixed_iden - 0.6 if not specified
     """
     
+    #jmht - this needs to be changed
     if adict['domain_all_chains_fasta']:
         fasta = adict['domain_all_chains_fasta']
     else:
