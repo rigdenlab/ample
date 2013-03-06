@@ -710,15 +710,18 @@ if NMR_PROTOCOL:
 # return from nmr with models already made
 
 
-logger.info('----- making Rosetta models--------\n')
-logger.info('making ' + str(amopt.d['nmodels']) + ' models...')
-RUNNING.write('\n----- making models--------\n')
-RUNNING.flush()
+
 
 #-----------------------------------
 # Make the models
 #-----------------------------------
 if amopt.d['make_models']:
+    
+    logger.info('----- making Rosetta models--------\n')
+    logger.info('making ' + str(amopt.d['nmodels']) + ' models...')
+    RUNNING.write('\n----- making models--------\n')
+    RUNNING.flush()
+    
     # If we are running with cluster support submit all modelling jobs to the cluster queue
     if amopt.d['cluster_submit']:
         
@@ -770,11 +773,14 @@ if amopt.d['import_cluster']:
 
 # Importing pre-made ensembles so no need to do the clustering
 if amopt.d['import_ensembles']:
+    
+    logger.info("Importing existing ensembles from: {}".format( amopt.d['ensembles'] ) )
     final_ensembles = []
     for infile in glob.glob(os.path.join(amopt.d['ensembles'], '*.pdb')):
         final_ensembles.append(infile)
 
     if amopt.d['top_model_only']:
+        logger.info("Only using the top model" )
         final_ensembles = truncateedit_MAX.One_model_only(final_ensembles , amopt.d['work_dir'])
 
     # Start MR BUMP analysis of ensemble
@@ -783,6 +789,7 @@ if amopt.d['import_ensembles']:
         os.mkdir(bump_dir)
     os.chdir(bump_dir)
     amopt.d['mrbump_dir'] = bump_dir
+    logger.info("Running MRBUMP in directory: {}".format( bump_dir ) )
     
     if amopt.d['cluster_submit']:
         mrbump_ensemble.mrbump_ensemble_cluster( final_ensembles, amopt.d)
