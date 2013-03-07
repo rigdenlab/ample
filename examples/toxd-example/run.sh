@@ -42,5 +42,5 @@ ${AMPLEDIR}/bin/ample \
       -allatom True \
       -num_clusters 1 \
 
-      #-models /opt/ample-dev1/examples/toxd-example/ROSETTA_MR_3/models \
-      #-ensembles /opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/ensembles_1 \
+      #-models ${AMPLEDIR}/examples/toxd-example/ROSETTA_MR_3/models \
+      #-ensembles ${AMPLEDIR}/examples/toxd-example/ROSETTA_MR_0/ensembles_1 \
