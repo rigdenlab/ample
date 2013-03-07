@@ -73,21 +73,21 @@ def which(program):
 def check_for_exe(exename, varname):
     logger = logging.getLogger()
     exepath = ''
-    logger.debug('looking for: {}'.format(exename) )
+    logger.debug('looking for: {0}'.format(exename) )
     if not varname:
-        logger.debug( 'no {} given on the command line, looking in the PATH'.format(exename) )
-        logger.debug( "{}".format(which(exename)) )
+        logger.debug( 'no {0} given on the command line, looking in the PATH'.format(exename) )
+        logger.debug( "{0}".format(which(exename)) )
         if not which(exename):
-            logger.critical('You need to give the path for: {}'.format(exename))
+            logger.critical('You need to give the path for: {0}'.format(exename))
             sys.exit()
         else:
             exepath = which(exename)
     else:
         exepath = varname
-        logger.debug( 'using here {}'.format(exepath) )
+        logger.debug( 'using here {0}'.format(exepath) )
 
     if not os.path.exists(exepath):
-        logger.critical( 'You need to give the path for {}, executable in the PATH dosnt exist'.format(exename) )
+        logger.critical( 'You need to give the path for {0}, executable in the PATH dosnt exist'.format(exename) )
         sys.exit()
     else:
         return exepath
@@ -246,7 +246,12 @@ def setup_logging():
     
     # Now create console logger for outputting stuff
     # create file handler and set level to debug
-    cl = logging.StreamHandler(stream=sys.stdout)
+    # Seems they changed the api in python 2.6->2.7
+    try:
+        cl = logging.StreamHandler(stream=sys.stdout)
+    except TypeError:
+        cl = logging.StreamHandler(strm=sys.stdout)
+
     cl.setLevel(logging.INFO)
     
     # create formatter for fl

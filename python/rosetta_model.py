@@ -158,7 +158,7 @@ class RosettaModel(object):
         shutil.copy2( self.fasta, self.fragments_directory + os.sep + fasta )
             
         cmd = self.fragment_cmd()
-        self.logger.info('Executing cmd: {}'.format( " ".join(cmd)) )
+        self.logger.info('Executing cmd: {0}'.format( " ".join(cmd)) )
 
         try:
             output = subprocess.check_output( cmd, stderr=subprocess.STDOUT, cwd=self.fragments_directory )
@@ -166,7 +166,7 @@ class RosettaModel(object):
             f.writelines( output )
             f.close()
         except subprocess.CalledProcessError,e:
-            self.logger.critical("Error generating fragments:\n{}".format(e.output))
+            self.logger.critical("Error generating fragments:\n{0}".format(e.output))
             raise RuntimeError,e
             
         # old_name_format
@@ -174,7 +174,7 @@ class RosettaModel(object):
         self.frags9mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '09_05.200_v1_3'
     
         if not os.path.exists( self.frags3mers ) or not os.path.exists( self.frags9mers ):
-            raise RuntimeError, "Error making fragments - could not find fragment files:\n{}\n{}\n".format(self.frags3mers,self.frags9mers)
+            raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\n".format(self.frags3mers,self.frags9mers)
         
     
         #RUNNING.write('Fragments done\n3mers at: ' + frags_3_mers + '\n9mers at: ' + frags_9_mers + '\n\n')
@@ -192,7 +192,7 @@ class RosettaModel(object):
             # Get version
             version_file = self.rosetta_dir + '/README.version'
             if not os.path.exists(version_file):
-                self.logger.critical('version file for Rosetta not found')
+                self.logger.critical('Version file for Rosetta not found')
                 sys.exit()
                 
             version = '3.2'
@@ -201,10 +201,10 @@ class RosettaModel(object):
                     line.strip()
                     if line.startswith('Rosetta'):
                         version = line.split()[1].strip()
-                self.logger.info( 'Your Rosetta version is: {}'.format( version ) )
+                self.logger.info( 'Your Rosetta version is: {0}'.format( version ) )
             except Exception,e:
                 print e
-                self.logger.critical("Error determining rosetta version")
+                self.logger.critical("Error determining rosetta version: {0}".format(e))
                 sys.exit(1)
             self.rosetta_version = version
             
@@ -294,10 +294,10 @@ class RosettaModel(object):
             nstruct = str(jobs[proc])
             cmd = self.modelling_cmd( wdir, nstruct, seed )
             
-            self.logger.debug('Making {} models in directory: {}'.format(nstruct,wdir) )
-            self.logger.debug('Executing cmd: {}'.format( " ".join(cmd) ) )
+            self.logger.debug('Making {0} models in directory: {1}'.format(nstruct,wdir) )
+            self.logger.debug('Executing cmd: {0}'.format( " ".join(cmd) ) )
             
-            logf = open(wdir+os.sep+"rosetta_{}.log".format(proc),"w")
+            logf = open(wdir+os.sep+"rosetta_{0}.log".format(proc),"w")
             p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT, cwd=wdir )
             processes.append(p)
             
@@ -321,7 +321,7 @@ class RosettaModel(object):
         # Check the return codes
         for i, ret in enumerate(retcodes):
             if ret != 0:
-                msg = "Error generating models with Rosetta!Got error for processor: {}".format(i)
+                msg = "Error generating models with Rosetta!Got error for processor: {0}".format(i)
                 logging.critical( msg )  
                 raise RuntimeError, msg
         
@@ -357,7 +357,7 @@ class RosettaModel(object):
                 length += 1
     
     
-        self.logger.info('restricting termini distance: {}'.format( self.domain_termini_distance ))
+        self.logger.info('restricting termini distance: {0}'.format( self.domain_termini_distance ))
         constraints_file = os.path.join(self.work_dir, 'constraints')
         conin = open(constraints_file, "w")
         conin.write('AtomPair CA 1 CA ' + str(length) + ' GAUSSIANFUNC ' + str(self.domain_termini_distance) + ' 5.0 TAG')
@@ -399,7 +399,7 @@ class RosettaModel(object):
             
             if not amopt.d['make_frags']:
                 if not os.path.exists(self.frags3mers) or not os.path.exists(self.frags9mers):
-                    msg = "Cannot find both fragment files:\n{}\n{}\n".format(self.frags3mers,self.frags9mers)
+                    msg = "Cannot find both fragment files:\n{0}\n{1}\n".format(self.frags3mers,self.frags9mers)
                     self.logger.critical(msg)
                     raise RuntimeError,msg
                     
@@ -414,7 +414,7 @@ class RosettaModel(object):
             self.rosetta_path = amopt.d['rosetta_path']
             
             if not os.path.exists(self.rosetta_path):
-                logger.critical(' cant find Rosetta abinitio: {}'.format(self.rosetta_path) )
+                logger.critical(' cant find Rosetta abinitio: {0}'.format(self.rosetta_path) )
                 raise RuntimeError,msg
     
             #jmht not used
@@ -424,7 +424,7 @@ class RosettaModel(object):
             self.rosetta_db = amopt.d['rosetta_db']
             
             if not os.path.exists(self.rosetta_db):
-                msg = ' cant find Rosetta DB: {}'.format(self.rosetta_db)
+                msg = ' cant find Rosetta DB: {0}'.format(self.rosetta_db)
                 self.logger.critical( msg )
                 raise RuntimeError,msg
             
@@ -507,8 +507,8 @@ class Test(unittest.TestCase):
         f = open(script,"w")
         content = """#!/usr/bin/env python
 for i in range(10):
-    f = open( "rosy_{}.pdb".format(i), "w")
-    f.write( "rosy_{}.pdb".format(i) )
+    f = open( "rosy_{0}.pdb".format(i), "w")
+    f.write( "rosy_{0}.pdb".format(i) )
     f.close()"""
         f.write(content)
         f.close()
@@ -545,7 +545,7 @@ for i in range(10):
         rm = RosettaModel()
         rm.set_from_amopt( amopt )
         mdir = rm.doModelling()
-        print "models in: {}".format(mdir)
+        print "models in: {0}".format(mdir)
         
 
 

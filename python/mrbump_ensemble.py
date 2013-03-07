@@ -149,7 +149,7 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
 #        # T.pprint_table(out, table)
 #    else:
 #        resultslog = open(amopt.d['work_dir'] + os.sep + 'Results.log', "w")
-#        print 'getting results from: {}',format( bump_dir )
+#        print 'getting results from: {0}',format( bump_dir )
 #        for mrbumplog in os.listdir(bump_dir):
 #            if re.search('.log', mrbumplog):
 #                # print mrbumplog
@@ -213,9 +213,9 @@ def  worker( queue, early_terminate=False ):
         try:
             # We use false to generate an exception when the Queue is empty
             mrb_script = queue.get(False)
-            #print "worker {} got script {}".format(os.getpid(), mrb_script )
+            #print "worker {0} got script {1}".format(os.getpid(), mrb_script )
         except Queue.Empty:
-            #print "worker {} got empty queue {}".format(os.getpid(),e)
+            #print "worker {0} got empty queue {1}".format(os.getpid(),e)
             break
         
         # Got a script so run
@@ -227,7 +227,7 @@ def  worker( queue, early_terminate=False ):
         
         # Can we use the retcode to check?
         # REM - is retcode object
-        #print "worker {} GOT retcode!".format(os.getpid(), retcode )
+        #print "worker {0} GOT retcode!".format(os.getpid(), retcode )
         
         # Run directory is name of script with search_ prepended and _mrbump appended
         directory = "search_" + name + "_mrbump"
@@ -235,10 +235,10 @@ def  worker( queue, early_terminate=False ):
         # Now check the result if early terminate
         if early_terminate:
             if check_success( directory ):
-                #print "worker {} GOT SUCCESS!".format(os.getpid() )
+                #print "worker {0} GOT SUCCESS!".format(os.getpid() )
                 return 0
         
-    #print "worker {} FAILED!".format(os.getpid() )  
+    #print "worker {0} FAILED!".format(os.getpid() )  
     return
     
 ##End worker

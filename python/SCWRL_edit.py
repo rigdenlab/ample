@@ -23,7 +23,7 @@ def edit_sidechains(each_file, outpath):
     """
 
     if not os.path.exists(each_file):
-        print 'Could not create ensemble for files (models too diverse): {}'.format(each_file)
+        print 'Could not create ensemble for files (models too diverse): {0}'.format(each_file)
         return
     
     #   print 'Found ',each_file

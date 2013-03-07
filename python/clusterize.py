@@ -406,13 +406,13 @@ class ClusterRun:
             sh += '#$ -cwd\n'
             sh += '#$ -w e\n'
             sh += '#$ -V\n'
-            sh += '#$ -o {}\n'.format(logFile) 
-            sh += '#$ -N {}\n\n'.format(jobName)
+            sh += '#$ -o {0}\n'.format(logFile) 
+            sh += '#$ -N {0}\n\n'.format(jobName)
         elif self.QTYPE=="LSF":
             sh += '#!/bin/sh\n'
             sh += '#BSUB -R "span[ptile=16]"'
-            sh += '#BSUB -o {}\n'.format(logFile) 
-            sh += '#BSUB -J {}\n\n'.format(jobName)         
+            sh += '#BSUB -o {0}\n'.format(logFile) 
+            sh += '#BSUB -J {0}\n\n'.format(jobName)         
         else:
             raise RuntimeError,"Unrecognised QTYPE: ".format(self.QTYPE)
         

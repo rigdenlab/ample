@@ -51,31 +51,31 @@ class AmpleOptions(object):
         tkeys = ['fasta','work_dir','mtz','pdb_code']
         pstr += '---input---\n'
         for k in tkeys:
-            pstr += "{}: {}\n".format(k, self.d[k])
+            pstr += "{0}: {1}\n".format(k, self.d[k])
 
         tkeys = ['make_frags','rosetta_fragments_exe','frags3mers','frags9mers','pdb_code']
         pstr+= '---fragments---\n'
         for k in tkeys:
-            pstr += "{}: {}\n".format(k, self.d[k])
+            pstr += "{0}: {1}\n".format(k, self.d[k])
             
         tkeys = ['make_models','rosetta_path','rosetta_db','pdb_code']
         pstr+= '---modelling---\n'
         for k in tkeys:
-            pstr += "{}: {}\n".format(k, self.d[k])
+            pstr += "{0}: {1}\n".format(k, self.d[k])
         
         if self.d['use_scwrl']:
-            pstr+= '\n---3rd party---\nSCWRL {}\n'.format( self.d['scwrl'] )
+            pstr+= '\n---3rd party---\nSCWRL {0}\n'.format( self.d['scwrl'] )
 
         tkeys = ['domain_all_chains_fasta','domain_all_chains_pdb']
         if tkeys[0] or tkeys[1]:
             pstr+= '---Missing Domain---\n'
             for k in tkeys:
-                pstr += "{}: {}\n".format(k, self.d[k])
+                pstr += "{0}: {1}\n".format(k, self.d[k])
         
         # This only used for printing
         INSERT_DOMAIN = False
         if self.d['domain_termini_distance'] > 0:
             INSERT_DOMAIN = True
-        pstr += 'Is an Insert Domain {} termini distance {}\n'.format( INSERT_DOMAIN, self.d['domain_termini_distance'] )
+        pstr += 'Is an Insert Domain {0} termini distance {1}\n'.format( INSERT_DOMAIN, self.d['domain_termini_distance'] )
         
         return pstr
