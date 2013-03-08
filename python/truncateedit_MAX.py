@@ -337,6 +337,9 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ):
     #print run_dir
     T_data = out_path + '/theseus_variances.txt'
     
+    #jmht - pause as it sometimes seem to take a while
+    time.sleep(2)
+    
     # for alternate versions of theseus remove RES cards
     # jmht - should probably just use a regular expression when we are processing the file
     tmp=open(out_path+'/tmp', "w")
