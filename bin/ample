@@ -770,8 +770,29 @@ if amopt.d['import_cluster']:
 # Do the clustering
 #---------------------------------------
 ensembles = [] # List of ensembles - 1 per cluster
-if not amopt.d['import_ensembles']:
-    #
+
+if amopt.d['import_ensembles']:
+    #---------------------------------------
+    # Importing pre-made ensembles
+    #---------------------------------------
+    # Set list of ensembles to the one we are importing
+    logger.info("Importing existing ensembles from: {0}".format( amopt.d['ensembles'] ) )
+    final_ensembles = []
+    for infile in glob.glob(os.path.join(amopt.d['ensembles'], '*.pdb')):
+        final_ensembles.append(infile)
+
+    if amopt.d['top_model_only']:
+        logger.info("Only using the top model" )
+        final_ensembles = truncateedit_MAX.One_model_only(final_ensembles , amopt.d['work_dir'])
+        
+    # Set ensembles
+    ensembles = [ final_ensembles ]
+
+else:
+
+    #---------------------------------------
+    # Generating  ensembles
+    #---------------------------------------
     logger.info('----- Clustering models --------')
     
     # Spicker Alternative for clustering then MAX
@@ -813,45 +834,15 @@ if not amopt.d['import_ensembles']:
         ensembles.append(final_ensembles)
         
         logger.info('Truncating Done for cluster ' + str(cluster) + "\n\n")
-        logger.info('----- Running MRBUMP (cluster ' + str(cluster) + ')--------\n\n')
-        logger.info('Created ' + str(len(final_ensembles)) + ' ensembles,   running ' + str(len(final_ensembles)) + ' jobs for cluster ' + str(cluster) + '\n')
-    
-        # Start MR BUMP analysis of ensemble
-        bump_dir = os.path.join(work_dir, 'MRBUMP')
-        if not os.path.exists(bump_dir):
-            os.mkdir(bump_dir)
-        os.chdir(bump_dir)
-        amopt.d['mrbump_dir'] = bump_dir
-        
-        if amopt.d['cluster_submit']:
-            mrbump_ensemble.mrbump_ensemble_cluster( final_ensembles, amopt.d, clusterID=cluster)
-        else:
-            mrbump_ensemble.mrbump_ensemble_local( final_ensembles, amopt.d, clusterID=cluster)
-        # End loop over clusters
+        logger.info('Created ' + str(len(final_ensembles)) + ' ensembles\n')
+ 
 
-#---------------------------------------
-# Importing pre-made ensembles
-#---------------------------------------
-if amopt.d['import_ensembles']:
-    
-    # Set list of ensembles to the one we are importing
-    logger.info("Importing existing ensembles from: {0}".format( amopt.d['ensembles'] ) )
-    final_ensembles = []
-    for infile in glob.glob(os.path.join(amopt.d['ensembles'], '*.pdb')):
-        final_ensembles.append(infile)
-
-    if amopt.d['top_model_only']:
-        logger.info("Only using the top model" )
-        final_ensembles = truncateedit_MAX.One_model_only(final_ensembles , amopt.d['work_dir'])
-        
-    # Set ensembles
-    ensembles = [ final_ensembles ]
 
 #---------------------------------------
 # MR BUMP analysis of the ensembles
 #---------------------------------------
 bump_dir = os.path.join(work_dir, 'MRBUMP')
-logger.info("Running MRBUMP in directory: {0}".format( bump_dir ) )
+logger.info("Running MRBUMP jobs in directory: {0}".format( bump_dir ) )
 if not os.path.exists(bump_dir):
     os.mkdir(bump_dir)
 os.chdir(bump_dir)
@@ -859,12 +850,21 @@ amopt.d['mrbump_dir'] = bump_dir
 
 # Loop over clusters
 for i, ensemble in enumerate(ensembles):
-    logger.info("Running MRBUMP for cluster: {0}".format( i ) )
+    
+    logger.info('----- Running MRBUMP (cluster ' + str(i+1) + ')--------\n\n')
+    logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble),  i+1 ) )
+    
+    job_dir = os.path.join(amopt.d['mrbump_dir'], 'cluster_'+str(i+1) )
+    logger.info("Running cluster {0} in directory: {1}".format( i+1, job_dir ) )
+    if not os.path.exists(job_dir):
+        os.mkdir(job_dir)
+    os.chdir(job_dir)
+    
     if amopt.d['cluster_submit']:
         mrbump_ensemble.mrbump_ensemble_cluster( ensemble, amopt.d)
     else:
         mrbump_ensemble.mrbump_ensemble_local( ensemble, amopt.d)
-
+        
 # Timing data
 time_stop = time.time()
 elapsed_time = time_stop - time_start

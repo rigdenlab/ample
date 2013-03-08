@@ -93,14 +93,17 @@ class RosettaModel(object):
         """
         Return a list of number of jobs to run on each processor
         """
-        split_jobs = self.nmodels / self.nproc  # ## split jobs between processors
+        split_jobs = self.nmodels / self.nproc  # split jobs between processors
         remainder = self.nmodels % self.nproc
-        jobs = [0]
-        proc = 1
-        while proc < self.nproc + 1:
-            jobs.insert(proc, split_jobs)
-            proc += 1
-        jobs[-1] = jobs[-1] + remainder
+        jobs = []
+ 
+	for i in range(self.nproc):
+            njobs = split_jobs
+            # Separate out remainder over jobs
+            if remainder > 0:
+                njobs += 1
+                remainder -= 1
+            jobs.append( njobs )
         
         return jobs
     ##End split_jobs
@@ -272,6 +275,7 @@ class RosettaModel(object):
 
         # Make modelling directory and get stuff required for run
         os.mkdir(self.models_dir)
+
         # Now generate the seeds
         self.generate_seeds( self.nproc )
         jobs = self.split_jobs()
@@ -282,16 +286,14 @@ class RosettaModel(object):
         directories = {}
         for proc in range(1,self.nproc+1):
             
-            print "proc ",proc
-
             # Get directory to run job in 
-            wdir = self.work_dir + os.sep + 'models_' + str(proc)
+            wdir = self.models_dir + os.sep + 'models_' + str(proc)
             directories[wdir] = proc
             os.mkdir(wdir)
             
             # Generate the command for this processor
             seed = str(self.seeds[proc-1])
-            nstruct = str(jobs[proc])
+            nstruct = str(jobs[proc-1])
             cmd = self.modelling_cmd( wdir, nstruct, seed )
             
             self.logger.debug('Making {0} models in directory: {1}'.format(nstruct,wdir) )
@@ -310,9 +312,11 @@ class RosettaModel(object):
         while not done:
             time.sleep(5)
             for i, p in enumerate(processes):
+                if retcodes[i] != None:
+                    continue
                 ret = p.poll()
-                retcodes[i] = ret
                 if ret != None:
+                    retcodes[i] = ret
                     completed+=1
             
             if completed == len(processes):
@@ -321,7 +325,8 @@ class RosettaModel(object):
         # Check the return codes
         for i, ret in enumerate(retcodes):
             if ret != 0:
-                msg = "Error generating models with Rosetta!Got error for processor: {0}".format(i)
+                #print "CHECK RET {0} : {1}".format(i,ret)
+                msg = "Error generating models with Rosetta!\nGot return code {0} for processor: {1}".format(ret,i+1)
                 logging.critical( msg )  
                 raise RuntimeError, msg
         
@@ -336,7 +341,7 @@ class RosettaModel(object):
                 for pfile in glob.glob( os.path.join(wd, '*.pdb') ):
                     pdbname = os.path.split(pfile)[1]
                     shutil.copyfile( wd + os.sep + pdbname, self.models_dir + os.sep + str(proc) + '_' + pdbname)
-
+        
         return self.models_dir
     ##End doModelling
     
@@ -414,7 +419,7 @@ class RosettaModel(object):
             self.rosetta_path = amopt.d['rosetta_path']
             
             if not os.path.exists(self.rosetta_path):
-                logger.critical(' cant find Rosetta abinitio: {0}'.format(self.rosetta_path) )
+                self.logger.critical(' cant find Rosetta abinitio: {0}'.format(self.rosetta_path) )
                 raise RuntimeError,msg
     
             #jmht not used
@@ -450,7 +455,7 @@ class RosettaModel(object):
             
             if amopt.d['improve_template'] and not os.path.exists( amopt.d['improve_template'] ):
                 msg = 'cant find template to improve'
-                logger.critical( msg)
+                self.logger.critical( msg)
                 raise RuntimeError(msg)
             self.improve_template = amopt.d['improve_template']
                 

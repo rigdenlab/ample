@@ -437,9 +437,9 @@ class ClusterRun:
         
         command_line=None
         if self.QTYPE=="SGE":
-            command_line='qsub -V %s' % sub_script
+            command_line='qsub -V %s' % subScript
         elif self.QTYPE=="LSF":
-            command_line='bsub %s' % sub_script
+            command_line='bsub %s' % subScript
         else:
             raise RuntimeError,"Unrecognised QTYPE: ".format(self.QTYPE)            
 

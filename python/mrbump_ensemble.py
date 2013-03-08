@@ -9,17 +9,16 @@ import logging
 import multiprocessing
 import subprocess
 import os
-import Queue
 import re
 import shutil
 import sys
+import time
 import unittest
 
 # our imports
-#import clusterize
+import clusterize
 import Final_display_results
 import printTable
-import run_mr_bump_shelx_parallel
 import mrbump_cmd
 
 
@@ -38,7 +37,7 @@ def mrbump_ensemble_cluster( ensembles, amoptd, clusterID="X" ):
     mrBuild = clusterize.ClusterRun()
     mrBuild.QTYPE = amoptd['submit_qtype']
 
-    mrBuildClusterDir = os.path.join(amopt.d['mrbump_dir'], "cluster_run" + str(clusterID))
+    mrBuildClusterDir = os.path.join(amoptd['mrbump_dir'], "cluster_run" + str(clusterID))
     os.mkdir(mrBuildClusterDir)
     #mrBuild.getMTZInfo(amopt.d['mtz'], mrBuildClusterDir)
 
@@ -50,7 +49,7 @@ def mrbump_ensemble_cluster( ensembles, amoptd, clusterID="X" ):
         jobID = jobID + 1
     mrBuild.monitorQueue()
     
-    work_dir = amopt.d['work_dir']
+    work_dir = amoptd['work_dir']
     shutil.rmtree(work_dir + '/fine_cluster_' + str(clusterID))
     # shutil.rmtree(work_dir+'/pre_models')
     for l in os.listdir(work_dir + '/spicker_run'):
@@ -113,25 +112,37 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
     timeout=10*60
     timeout=1*60
     killall=False # if we early terminate we check this to see if we kill any remaining jobs
-    while done != len(processes):
+    killcheck=0 # to make sure we don't loop forever when killing processes
+    
+    while done < len(processes):
         
         for process in processes:
             
             if killall:
-                process.terminate()
+                # Make sure we don't loop forever
+                killcheck+=1
+                if killcheck > len(processes):
+                    done=len(processes)
+                    break
+
+                if process.is_alive():
+                    #print "Killing process ",process.name
+                    process.terminate()
+                    time.sleep(0.1)
+                    done+=1
             else:
                 # Join process for timeout seconds and if we haven't finished by then
                 # move onto the next process
                 process.join(timeout)
                 
-            if not process.is_alive():
-                # Finished so see what happened
-                if process.exitcode == 0 and amoptd['early_terminate']:
-                    # Got a successful completion                    
-                    #print "EARLY TERMINATE"
-                    killall=True
-                done+=1
-                
+                if not process.is_alive():
+                    done+=1
+                    # Finished so see what happened
+                    if process.exitcode == 0 and amoptd['early_terminate']:
+                        # Got a successful completion         
+                        print "Process {0} was successful so killing other jobs as early_terminate option is active".format(process.name)           
+                        killall=True
+        
     print results_summary( os.getcwd() )
     
     
@@ -210,36 +221,37 @@ def  worker( queue, early_terminate=False ):
     """
     
     while True:
-        try:
-            # We use false to generate an exception when the Queue is empty
-            mrb_script = queue.get(False)
-            #print "worker {0} got script {1}".format(os.getpid(), mrb_script )
-        except Queue.Empty:
+        if queue.empty():
             #print "worker {0} got empty queue {1}".format(os.getpid(),e)
             break
+
+        mrb_script = queue.get()
         
         # Got a script so run
         # Get name from script
         name = os.path.splitext( os.path.split(mrb_script)[1] )[0]
         logfile = name + ".log"
         f = open( logfile, "w")
+        print "Worker {0} running job {1}".format(multiprocessing.current_process().name, name)
         retcode = subprocess.call( [ mrb_script ], stdout=f, stderr=subprocess.STDOUT, cwd=None )
         
         # Can we use the retcode to check?
         # REM - is retcode object
-        #print "worker {0} GOT retcode!".format(os.getpid(), retcode )
+        if retcode != 0:
+            print "WARNING! Worker {0} got retcode {1}".format(multiprocessing.current_process().name, retcode )
         
         # Run directory is name of script with search_ prepended and _mrbump appended
-        directory = "search_" + name + "_mrbump"
+        directory = os.path.join( os.getcwd(), "search_" + name + "_mrbump" )
         
         # Now check the result if early terminate
         if early_terminate:
             if check_success( directory ):
-                #print "worker {0} GOT SUCCESS!".format(os.getpid() )
+                #print "Worker {0} job succeeded".format(multiprocessing.current_process().name)
                 return 0
         
     #print "worker {0} FAILED!".format(os.getpid() )  
-    return
+    return 1
+
     
 ##End worker
 
@@ -258,7 +270,12 @@ def check_success( directory ):
     
     SHELXSUCCESS = 25.0
     
-    rfile = directory + os.sep + 'results/resultsTable.dat' 
+    rfile = os.path.join(directory, 'results/resultsTable.dat')
+    #print "{0} checking for file: {1}".format(multiprocessing.current_process().name,rfile)
+    if not os.path.isfile(rfile):
+        print "{0} cannot find results file: {1}".format(multiprocessing.current_process().name,rfile)
+        return False
+        
     f = open(rfile, 'r')
     
     # First line is
@@ -419,11 +436,11 @@ class Test(unittest.TestCase):
     
     def XtestSuccess(self):
         
-        dir = "/home/Shared/ample-dev1/examples/toxd-example/ROSETTA_MR_0/MRBUMP_cluster1/search_All_atom_trunc_21.848434_rad_2_mrbump"
+        dir = "/home/jmht/t/ample-dev1/examples/toxd-example/ROSETTA_MR_3/MRBUMP/cluster_2/search_All_atom_trunc_0.551637_rad_3_mrbump"
         
         self.assertTrue( check_success( dir ) )
         
-    def testResultsSummary(self):
+    def XtestResultsSummary(self):
         
         dir = "/opt/ample-dev1/python"
         dir = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_1/MRBUMP_cluster1"
