@@ -143,6 +143,8 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
                         print "Process {0} was successful so killing other jobs as early_terminate option is active".format(process.name)           
                         killall=True
         
+    # need to wait here as sometimes it takes a while for the results files to get written
+    time.sleep(3)
     print results_summary( os.getcwd() )
     
     
@@ -444,6 +446,7 @@ class Test(unittest.TestCase):
         
         dir = "/opt/ample-dev1/python"
         dir = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_1/MRBUMP_cluster1"
+        dir = "/gpfs/home/HCEA041/djr01/jxt15-djr01/ample-dev1/examples/toxd-example/ROSETTA_MR_0/MRBUMP/cluster_1"
         
         
 #        T = printTable.Table()
