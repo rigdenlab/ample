@@ -252,6 +252,9 @@ parser.add_argument('-use_arpwarp', metavar='-use_arpwarp', type=str, nargs=1,
 parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
                    help='True to use shelx ')
 
+parser.add_argument('-shelxe_exe', metavar='-shelxe_exe', type=str, nargs=1,
+                   help='Set shelxe executable name (default "shelxe")')
+
 parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
                    help='mrbump keywords ')
 
@@ -312,6 +315,7 @@ parser.set_defaults(
                     use_buccaneer = "true",
                     use_scwrl = 'false',
                     use_shelxe = "false",
+                    shelxe_exe = "shelxe",
                     top_model_only = "false",
                     theseus_exe = None,
                     early_terminate = "true"

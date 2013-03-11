@@ -46,6 +46,7 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     mrs+='ARPWARP  {0}\n'.format( adict['use_arpwarp'] )
     mrs+='ACYCLES  {0}\n'.format( adict['arpwarp_cycles'] )
     mrs+='SHELXE  {0}\n'.format( adict['use_shelxe'] )
+    mrs+='SHELXEEXE  {0}\n'.format( adict['shelxe_exe'] )
     mrs+='SCYCLES  {0}\n'.format( adict['shelx_cycles'] )
     mrs+='FIXSG True\n'
     mrs+='PJOBS 1\n'
