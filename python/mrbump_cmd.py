@@ -26,7 +26,7 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     mrs+='LABIN SIGF={0} F={1} FreeR_flag={2}\n'.format( adict['SIGF'], adict['F'], adict['FREE'] )
     mrs+='JOBID {0}_mrbump\n'.format( jobid )
     mrs+='MRPROGRAM {0}\n'.format( adict['mrbump_programs'] )
-    mrs+='LOCALFILE {0} CHAIN ALL RMS 1.2\n'.format( ensemble_pdb )
+    mrs+='LOCALFILE {0} CHAIN ALL RMS 0.1\n'.format( ensemble_pdb )
     mrs+='SCOPSEARCH False\n'
     mrs+='PQSSEARCH False\n'
     mrs+='SSMSEARCH False\n'
@@ -46,7 +46,7 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     mrs+='ARPWARP  {0}\n'.format( adict['use_arpwarp'] )
     mrs+='ACYCLES  {0}\n'.format( adict['arpwarp_cycles'] )
     mrs+='SHELXE  {0}\n'.format( adict['use_shelxe'] )
-    mrs+='SHELXEEXE  {0}\n'.format( adict['shelxe_exe'] )
+    mrs+='SHLXEXE  {0}\n'.format( adict['shelxe_exe'] )
     mrs+='SCYCLES  {0}\n'.format( adict['shelx_cycles'] )
     mrs+='FIXSG True\n'
     mrs+='PJOBS 1\n'
