@@ -143,14 +143,14 @@ class OctopusPredict(object):
             msg ="Error accessing nnprf file: {}\n{}\nTransmembrane prediction may have failed!".format(self.nnprf_url,e)
             self.logger.warn(msg)
         
-        fname = directory + os.sep + name + ".topo"
+        fname = os.path.join(directory, name + ".topo")
         f = open( fname, "w" )
         f.writelines( topo_req.readlines() )
         self.logger.debug("Wrote topo file: {}".format( fname ) )
         f.close()
         self.topo=fname
         
-        fname = directory + os.sep + name + ".nnprf"
+        fname = os.path.join(directory, name + ".nnprf")
         f = open( fname, "w" )
         f.writelines( nnprf_req.readlines() )
         self.logger.debug("Wrote nnprf file: {}".format( fname ) )
@@ -160,7 +160,6 @@ class OctopusPredict(object):
         
     def getFasta(self, fastafile ):
         """
-        CURRENTLY UNUSED
         Given a fastafile, extract the first sequence
         and return it as \n separated string
         """
