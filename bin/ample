@@ -58,88 +58,26 @@ import truncateedit_MAX
 
 parser = argparse.ArgumentParser(description='Structure solution by abinitio modelling', prefix_chars="-")
 
-#
-# Rosetta arguments
-#
-parser.add_argument('-rosetta_db', metavar='ROSETTA_database', type=str, nargs=1,
-                   help='path for Rosetta database')
+parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
+                   help='alignment between homolog and target fastas')
 
-parser.add_argument('-ROSETTA_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
-                   help='location of rosetta cluster')
+parser.add_argument('-allatom', metavar='allatom', type=str, nargs=1,
+                   help='allatom')
 
-parser.add_argument('-ROSETTA', metavar='ROSETTA_path', type=str, nargs=1,
-                   help='path for Rosetta AbinitioRelax')
+parser.add_argument('-arpwarp_cycles', metavar='arpwarp_cycles', type=int, nargs=1,
+                   help='number of cycles ')
 
-parser.add_argument('-rosetta_dir', metavar='Rosetta_dir', type=str, nargs=1,
-                   help='the Rosetta install directory')
+parser.add_argument('-ASU', metavar='no in ASU', type=int, nargs=1,
+                   help='no in ASU')
 
-# Rosetta fragments
-parser.add_argument('-rosetta_fragments_exe', metavar='path to make_fragments.pl', type=str, nargs=1,
-                   help='location of make_fragments.pl')
+parser.add_argument('-blast_dir', metavar='blast_dir', type=str, nargs=1,
+                   help='Directory where ncbi blast is installed (binaries in bin)')
 
-parser.add_argument('-make_frags', metavar='bool to make fragments', type=str, nargs=1,
-                   help='Bool, True to make non homologous framents, False to import fragments')
+parser.add_argument('-buccaneer_cycles', metavar='buccaneer_cycles', type=int, nargs=1,
+                   help='number of cycles ')
 
-parser.add_argument('-frags3mers', metavar='frags3mers', type=str, nargs=1,
-                   help='path of imported 3mers')
-
-parser.add_argument('-frags9mers', metavar='frags9mers', type=str, nargs=1,
-                   help='path of imported 9mers')
-
-parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
-                   help='protein fasta file. (required)')
-
-parser.add_argument('-name', metavar='priotein name', type=str, nargs=1,
-                   help='name of protien in the format ABCD ')
-
-parser.add_argument('-nproc', metavar='NoProcessors', type=int, nargs=1,
-                   help='number of processers (default 1)')
-
-
-parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
-                   help='directory to put files (default current dir)')
-
-
-parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
-                   help='pathway to SCWRL exe')
-
-
-parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
-                   help='pathway to LGA folder (not the exe) will use the \'lga\' executable')
-
-
-parser.add_argument('-maxcluster_exe', metavar='Maxcluster exe', type=str, nargs=1,
-                   help='Maxcluster exe')
-
-parser.add_argument('-spicker_exe', metavar='boolean', type=str, nargs=1,
-                   help='path to spicker executable')
-
-parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', type=str, nargs=1,
-                   help='path to theseus executable')
-
-parser.add_argument('-phenix_exe', metavar='PHENIX.ensembler exe', type=str, nargs=1,
-                   help='path to phenix executable')
-
-parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
-                   help='MTZ in')
-
-
-parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
-                   help='folder of decoys')
-
-parser.add_argument('-make_models', metavar='Do the modelling', type=str, nargs=1,
-                   help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
-
-
-# # FLAGS
-parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
-                   help='Flag for F')
-
-parser.add_argument('-SIGF', metavar='flag for SIGF', type=str, nargs=1,
-                   help='Flag for SIGF')
-
-parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
-                   help='Flag for FREE')
+parser.add_argument('-CC', metavar='rad of gyration', type=str, nargs=1,
+                   help='radius of gyration reweight ')
 
 parser.add_argument('-cluster_submit', metavar='using a cluster', type=str, nargs=1,
                    help='will submit jobs to a cluster')
@@ -147,8 +85,8 @@ parser.add_argument('-cluster_submit', metavar='using a cluster', type=str, narg
 parser.add_argument('-cluster_qtype', metavar='cluster_qtype', type=str, nargs=1,
                    help='cluster submission queue type')
 
-parser.add_argument('-allatom', metavar='allatom', type=str, nargs=1,
-                   help='allatom')
+parser.add_argument('-debug', metavar='debug option', type=str, nargs=1,
+                   help='debug option ')
 
 parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', type=str, nargs=1,
                    help='fixed input to mr bump')
@@ -159,76 +97,76 @@ parser.add_argument('-domain_all_chains_fasta', metavar='domain_all_chains_fasta
 parser.add_argument('-domain_termini_distance', metavar='termini', type=str, nargs=1,
                    help='distance between termini for insert domains')
 
-
-parser.add_argument('-nmodels', metavar='no models', type=int, nargs=1,
-                   help='number of models to make (1000)')
-
-
-parser.add_argument('-CC', metavar='rad of gyration', type=str, nargs=1,
-                   help='radius of gyration reweight ')
-
-parser.add_argument('-ensembles', metavar='enembles', type=str, nargs=1,
-                   help='path to ensembles')
-
-parser.add_argument('-num_clusters', metavar='num clusters to sample', type=int, nargs=1,
-                   help='number of clusters to sample')
-
-
-parser.add_argument('-percent', metavar='no clus to sample', type=str, nargs=1,
-                   help='percent interval for truncation')
-
-parser.add_argument('-ASU', metavar='no in ASU', type=int, nargs=1,
-                   help='no in ASU')
-
-# jmht - not used?
-#parser.add_argument('-FreeLunch', metavar='free lunch', type=int, nargs=1,
-#                   help='true to use free lunch, false to not use it')
-
-parser.add_argument('-usehoms', metavar='nohoms rosetta flag', type=str, nargs=1,
-                   help='True =use nhomologs, False= dont use them ')
-
-parser.add_argument('-improve_template', metavar='improve template', type=str, nargs=1,
-                   help='give a template to imrove - NMR, homolog ')
-
-parser.add_argument('-debug', metavar='debug option', type=str, nargs=1,
-                   help='debug option ')
+parser.add_argument('-early_terminate', metavar='early_terminate', type=str, nargs=1,
+                     help='terminate early if a success')
 
 parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
                    help='ensembling')
 
-parser.add_argument('-early_terminate', metavar='early_terminate', type=str, nargs=1,
-                     help='terminate early if a success')
+parser.add_argument('-ensembles', metavar='enembles', type=str, nargs=1,
+                   help='path to ensembles')
 
-parser.add_argument('-shelx_cycles', metavar='shelx_cycles', type=str, nargs=1,
-                     help='number of shelx sycles')
+parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
+                   help='protein fasta file. (required)')
 
+parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
+                   help='Flag for F')
 
-parser.add_argument('-molreponly', metavar='molreponly', type=str, nargs=1,
-                   help='molreponly')
+parser.add_argument('-frags3mers', metavar='frags3mers', type=str, nargs=1,
+                   help='path of imported 3mers')
 
-parser.add_argument('-phaseronly', metavar='phaseronly', type=str, nargs=1,
-                   help='phaseronly')
+parser.add_argument('-frags9mers', metavar='frags9mers', type=str, nargs=1,
+                   help='path of imported 9mers')
+
+parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
+                   help='Flag for FREE')
 
 parser.add_argument('-import_cluster', metavar='import_cluster', type=str, nargs=1,
                    help='import_cluster')
 
+parser.add_argument('-improve_template', metavar='improve template', type=str, nargs=1,
+                   help='give a template to imrove - NMR, homolog ')
+
+parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
+                   help='pathway to LGA folder (not the exe) will use the \'lga\' executable')
+
+parser.add_argument('-make_frags', metavar='bool to make fragments', type=str, nargs=1,
+                   help='Bool, True to make non homologous framents, False to import fragments')
+
+parser.add_argument('-make_models', metavar='Do the modelling', type=str, nargs=1,
+                   help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
+
+parser.add_argument('-maxcluster_exe', metavar='Maxcluster exe', type=str, nargs=1,
+                   help='Maxcluster exe')
+
+parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
+                   help='folder of decoys')
+
+parser.add_argument('-molreponly', metavar='molreponly', type=str, nargs=1,
+                   help='molreponly')
+
+parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
+                   help='mrbump keywords ')
+
+parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
+                   help='MTZ in')
+
+parser.add_argument('-name', metavar='priotein name', type=str, nargs=1,
+                   help='name of protien in the format ABCD ')
+
+parser.add_argument('-nmodels', metavar='no models', type=int, nargs=1,
+                   help='number of models to make (1000)')
+
+parser.add_argument('-nr', metavar='nr', type=str, nargs=1,
+                   help='Path to the nr non-redundant sequence database')
+
 parser.add_argument('-old_shelx', metavar='old_shelx', type=str, nargs=1,
                    help='old_shelx')
-
-parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
-                   help='top_model_only')
-
-parser.add_argument('-use_scwrl', metavar='USE_SCWRL', type=str, nargs=1,
-                   help='if using scwrl true if not false')
-
-parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
-                   help='alignment between homolog and target fastas')
 
 parser.add_argument('-NMR_model_in', metavar='NMR_model_in', type=str, nargs=1,
                    help='use nmr input')
 
 parser.add_argument('-NMR_process', metavar='NMR_process', type=str, nargs=1,
-
                    help='number of times to process the models')
 
 parser.add_argument('-NMR_remodel_fasta', metavar='-NMR_remodel_fasta', type=str, nargs=1,
@@ -237,26 +175,78 @@ parser.add_argument('-NMR_remodel_fasta', metavar='-NMR_remodel_fasta', type=str
 parser.add_argument('-NMR_Truncate_only', metavar='-NMR_Truncate_only', type=str, nargs=1,
                    help='do no remodelling only truncate the NMR')
 
-parser.add_argument('-use_buccaneer', metavar='use_buccaneer', type=str, nargs=1,
-                   help='True to use Buccaneer')
+parser.add_argument('-nproc', metavar='NoProcessors', type=int, nargs=1,
+                   help='number of processers (default 1)')
 
-parser.add_argument('-buccaneer_cycles', metavar='buccaneer_cycles', type=int, nargs=1,
-                   help='number of cycles ')
+parser.add_argument('-num_clusters', metavar='num clusters to sample', type=int, nargs=1,
+                   help='number of clusters to sample')
 
-parser.add_argument('-arpwarp_cycles', metavar='arpwarp_cycles', type=int, nargs=1,
-                   help='number of cycles ')
+parser.add_argument('-percent', metavar='no clus to sample', type=str, nargs=1,
+                   help='percent interval for truncation')
 
-parser.add_argument('-use_arpwarp', metavar='-use_arpwarp', type=str, nargs=1,
-                   help='True to use arpwarp ')
+parser.add_argument('-phaseronly', metavar='phaseronly', type=str, nargs=1,
+                   help='phaseronly')
 
-parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
-                   help='True to use shelx ')
+parser.add_argument('-phenix_exe', metavar='PHENIX.ensembler exe', type=str, nargs=1,
+                   help='path to phenix executable')
+
+
+parser.add_argument('-ROSETTA', metavar='ROSETTA_path', type=str, nargs=1,
+                   help='path for Rosetta AbinitioRelax')
+
+parser.add_argument('-ROSETTA_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
+                   help='location of rosetta cluster')
+
+parser.add_argument('-rosetta_db', metavar='ROSETTA_database', type=str, nargs=1,
+                   help='path for Rosetta database')
+
+parser.add_argument('-rosetta_dir', metavar='Rosetta_dir', type=str, nargs=1,
+                   help='the Rosetta install directory')
+
+parser.add_argument('-rosetta_fragments_exe', metavar='path to make_fragments.pl', type=str, nargs=1,
+                   help='location of make_fragments.pl')
+
+parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
+                   help='directory to put files (default current dir)')
+
+parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
+                   help='pathway to SCWRL exe')
+
+parser.add_argument('-shelx_cycles', metavar='shelx_cycles', type=str, nargs=1,
+                     help='number of shelx sycles')
 
 parser.add_argument('-shelxe_exe', metavar='-shelxe_exe', type=str, nargs=1,
                    help='Set shelxe executable name (default "shelxe")')
 
-parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
-                   help='mrbump keywords ')
+parser.add_argument('-SIGF', metavar='flag for SIGF', type=str, nargs=1,
+                   help='Flag for SIGF')
+
+parser.add_argument('-spicker_exe', metavar='boolean', type=str, nargs=1,
+                   help='path to spicker executable')
+
+parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', type=str, nargs=1,
+                   help='path to theseus executable')
+
+parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
+                   help='top_model_only')
+
+parser.add_argument('-transmembrane', metavar='transmembrane', type=str, nargs=1,
+                   help='Do modelling for transmembrane proteins')
+
+parser.add_argument('-usehoms', metavar='nohoms rosetta flag', type=str, nargs=1,
+                   help='True =use nhomologs, False= dont use them ')
+
+parser.add_argument('-use_arpwarp', metavar='-use_arpwarp', type=str, nargs=1,
+                   help='True to use arpwarp ')
+
+parser.add_argument('-use_buccaneer', metavar='use_buccaneer', type=str, nargs=1,
+                   help='True to use Buccaneer')
+
+parser.add_argument('-use_scwrl', metavar='USE_SCWRL', type=str, nargs=1,
+                   help='if using scwrl true if not false')
+
+parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
+                   help='True to use shelx ')
 
 #
 # jmht - set the default values here
@@ -443,7 +433,7 @@ elif not ( os.path.exists(str(amopt.d['fasta'])) or \
 # Create the rosetta modeller - this runs all the checks required
 if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
     rosetta_modeller = rosetta_model.RosettaModel()
-    rosetta_modeller.set_from_amopt( amopt )
+    rosetta_modeller.set_from_dict( amopt.d )
 
 #
 # Variables for running MRBUMP
