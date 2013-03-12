@@ -67,30 +67,32 @@ def which(program):
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file
-
     return None
 #########
 def check_for_exe(exename, varname):
     logger = logging.getLogger()
     exepath = ''
-    logger.debug('looking for: {0}'.format(exename) )
-    if not varname:
-        logger.debug( 'no {0} given on the command line, looking in the PATH'.format(exename) )
-        logger.debug( "{0}".format(which(exename)) )
-        if not which(exename):
-            logger.critical('You need to give the path for: {0}'.format(exename))
+    logger.debug('Looking for executable: {0}'.format(exename) )
+    
+    if varname:
+         logger.debug( 'Using executable path from command-line {0}'.format(varname) )
+         exepath = which(varname)
+         if not exepath:
+             msg = "Cannot find valid executable from given path: {0}".format(varname)
+             logger.critical(msg)
+             raise RuntimeError.msg
+    else:
+        logger.debug( 'No {0} given on the command line, looking in PATH'.format(exename) )
+        exepath = which(exename)
+        if not exepath:
+            msg = "Cannot find valid executable from given path: {0}".format(varname)
+            logger.critical(msg)
+            raise RuntimeError.msg
+            logger.critical('You need to give the path for: {0}'.format(exename) )
             sys.exit()
-        else:
-            exepath = which(exename)
-    else:
-        exepath = varname
-        logger.debug( 'using here {0}'.format(exepath) )
 
-    if not os.path.exists(exepath):
-        logger.critical( 'You need to give the path for {0}, executable in the PATH dosnt exist'.format(exename) )
-        sys.exit()
-    else:
-        return exepath
+    logger.debug( "Using executable {0}".format( exepath ) )
+    return exepath
 ########
 
 def make_workdir(work_dir, rootname='ROSETTA_MR_'):
