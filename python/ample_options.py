@@ -46,36 +46,44 @@ class AmpleOptions(object):
         Return the parameters nicely formated as a list of strings suitable for writing out to a file
         """
         pstr = ""
-        pstr +='Params Used in this Run\n'
+        pstr +='Params Used in this Run\n\n'
         
-        tkeys = ['fasta','work_dir','mtz','pdb_code']
+        keys1 = ['fasta','work_dir','mtz','pdb_code']
         pstr += '---input---\n'
-        for k in tkeys:
+        for k in keys1:
             pstr += "{0}: {1}\n".format(k, self.d[k])
 
-        tkeys = ['make_frags','rosetta_fragments_exe','frags3mers','frags9mers','pdb_code']
-        pstr+= '---fragments---\n'
-        for k in tkeys:
+        keys2 = ['make_frags','rosetta_fragments_exe','frags3mers','frags9mers']
+        pstr+= '\n---fragments---\n'
+        for k in keys2:
             pstr += "{0}: {1}\n".format(k, self.d[k])
             
-        tkeys = ['make_models','rosetta_path','rosetta_db','pdb_code']
-        pstr+= '---modelling---\n'
-        for k in tkeys:
+        keys3 = ['make_models','rosetta_path','rosetta_db']
+        pstr+= '\n---modelling---\n'
+        for k in keys3:
             pstr += "{0}: {1}\n".format(k, self.d[k])
         
         if self.d['use_scwrl']:
             pstr+= '\n---3rd party---\nSCWRL {0}\n'.format( self.d['scwrl'] )
 
-        tkeys = ['domain_all_chains_fasta','domain_all_chains_pdb']
-        if tkeys[0] or tkeys[1]:
-            pstr+= '---Missing Domain---\n'
-            for k in tkeys:
+        keys4 = ['domain_all_chains_fasta','domain_all_chains_pdb']
+        if keys4[0] or keys4[1]:
+            pstr+= '\n---Missing Domain---\n'
+            for k in keys4:
                 pstr += "{0}: {1}\n".format(k, self.d[k])
         
         # This only used for printing
         INSERT_DOMAIN = False
         if self.d['domain_termini_distance'] > 0:
             INSERT_DOMAIN = True
-        pstr += 'Is an Insert Domain {0} termini distance {1}\n'.format( INSERT_DOMAIN, self.d['domain_termini_distance'] )
+        pstr += '\nIs an Insert Domain {0} termini distance {1}\n'.format( INSERT_DOMAIN, self.d['domain_termini_distance'] )
         
+        # Now print out everything else
+        pstr += "\n---Other parameters---\n"
+        
+        done_keys = keys1 + keys2 + keys3 + keys4 + [ 'use_scwrl', 'domain_termini_distance'  ]
+        for k, v in sorted(self.d.items()):
+            if k not in done_keys:
+                pstr += "{} : {}\n".format( k, v )
+                
         return pstr
