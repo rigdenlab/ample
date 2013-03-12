@@ -18,8 +18,8 @@ import unittest
 
 # Our modules
 import add_sidechains_SCWRL
-import ample_options
 import ample_util
+import octopus_predict
 
 
 class RosettaModel(object):
@@ -55,6 +55,15 @@ class RosettaModel(object):
         self.usehoms = None
         self.fragments_directory = None
         self.fragments_exe = None
+        
+        # Transmembrane variables
+        self.octopus2span = None
+        self.run_lips = None
+        self.align_blast = None
+        self.nr = None
+        self.blastpgp = None
+        self.spanfile = None
+        self.lipofile = None
         
         # List of seeds
         self.seeds = None
@@ -159,6 +168,9 @@ class RosettaModel(object):
         # so we need to copy the fasta file into the fragments directory
         fasta = os.path.split(  self.fasta )[1]
         shutil.copy2( self.fasta, self.fragments_directory + os.sep + fasta )
+        
+        if self.transmembrane:
+            self.generate_tm_predict( fasta )        
             
         cmd = self.fragment_cmd()
         self.logger.info('Executing cmd: {0}'.format( " ".join(cmd)) )
@@ -186,7 +198,66 @@ class RosettaModel(object):
         if os.path.exists( self.fragments_directory + os.sep + self.fragments_directory + '.psipred'):
             ample_util.get_psipred_prediction( self.fragments_directory + os.sep + self.pdb_code + '.psipred')
        
+        return
     ##End fragment_cmd
+    
+    
+    def generate_tm_predict(self):
+        """
+        Generate the various files need for generate the transmembrane fragments
+        
+        REM the fasta as it needs to reside in this directory or the script may fail 
+        due to probelms with parsing directory names with 'funny' characters
+        """
+        
+        # Need to just use name due to problems with directory names - should
+        # already have been copied into the fragments directory
+        fasta = os.path.split(  self.fasta )[1]
+        
+        # Query octopus server for prediction
+        octo = octopus_predict.OctopusPredict()
+        self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
+        fastaseq = octo.getFasta(self.fasta)
+        octo.getPredict(self.pdb_code,fastaseq, directory=self.fragments_directory)
+        topo_file = octo.topo
+        self.logger.debug("Got topology prediction file: {0}".format(topo_file))
+
+        
+        # Generate span file from predict
+        self.spanfile = os.path.join(self.fragments_directory, self.pdb_code + ".span")
+        span = open(self.spanfile,"w")
+        args = [ self.octopus2span, topo_file ]
+        self.logger.debug('Generating span file {0} from topo with cmd: {1}'.format( self.spanfile, " ".join(args)))
+        retcode = subprocess.call( args, stdout=span, stderr=subprocess.STDOUT, cwd=self.fragments_directory)
+        if retcode != 0:
+            msg = "Error generating span file. Please check the log in {0}".format(self.spanfile)
+            self.logger.critical(msg)
+            raise RuntimeError,msg
+        
+        
+        # Now generate lips file
+        logfile = self.fragments_directory + os.sep + "run_lips.log"
+        l = open(logfile,"w")
+        
+        args = [ self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast ]
+        self.logger.debug('Generating lips file from span with cmd: {0}'.format( " ".join(args)))
+        retcode = subprocess.call( args, stdout=l, stderr=subprocess.STDOUT, cwd=self.fragments_directory)
+        
+        # Script only uses first 4 chars to name files
+        lipofile = os.path.join(self.fragments_directory, self.pdb_code[0:4] + ".lips4")
+        
+        if retcode != 0 or not os.path.exists(lipofile):
+            msg = "Error generating lips file {0}. Please check the log in {1}".format(lipofile,logfile)
+            self.logger.critical(msg)
+            raise RuntimeError,msg
+        
+        # Set the variable
+        self.lipofile = lipofile
+        
+        print self.spanfile
+        print self.lipofile
+        
+        return
     
     def get_version(self):
         """ Return the Rosetta version as a string"""
@@ -370,53 +441,86 @@ class RosettaModel(object):
         
         return cmd
 
-    def set_from_amopt(self, amopt ):
+    def set_from_dict(self, optd ):
         """
-        Set the values from the amopt object
+        Set the values from a dictionary
         """
 
-
-        if not amopt.d['rosetta_dir'] or not os.path.isdir( amopt.d['rosetta_dir'] ):
+        if not optd['rosetta_dir'] or not os.path.isdir( optd['rosetta_dir'] ):
             msg = "You need to set the rosetta_dir variable to where rosetta is installed"
             self.logger.critical(msg)
             raise RuntimeError,msg
         
-        self.rosetta_dir = amopt.d['rosetta_dir']
-    
-        # Determin version
-        amopt.d['rosetta_version'] = self.get_version()
+        self.rosetta_dir = optd['rosetta_dir']
+        
+        # Determine version
+        optd['rosetta_version'] = self.get_version()
 
         # Common variables
-        self.fasta = amopt.d['fasta']
-        self.work_dir = amopt.d['work_dir']
-        self.pdb_code = amopt.d['pdb_code']
+        self.fasta = optd['fasta']
+        self.work_dir = optd['work_dir']
+        self.pdb_code = optd['pdb_code']
         
         # Fragment variables
-        self.fragments_exe = amopt.d['rosetta_fragments_exe']
-        self.frags3mers = amopt.d['frags3mers']
-        self.frags9mers = amopt.d['frags9mers']
-        self.usehoms = amopt.d['usehoms']
-        self.fragments_directory = amopt.d['work_dir'] + os.sep + "rosetta_fragments"
+        self.fragments_exe = optd['rosetta_fragments_exe']
+        self.usehoms = optd['usehoms']
+        self.fragments_directory = optd['work_dir'] + os.sep + "rosetta_fragments"
+        
+        if optd['transmembrane']:
+            self.transmembrane = True
+            if optd['make_frags']:
+                
+                script_dir = self.rosetta_dir + os.sep + "rosetta_source/src/apps/public/membrane_abinitio"
+                self.octopus2span = script_dir + os.sep + "octopus2span.pl"
+                self.run_lips = script_dir + os.sep + "run_lips.pl"
+                self.align_blast = script_dir + os.sep + "alignblast.pl"
+                
+                if not os.path.exists(self.octopus2span) or not os.path.exists(self.run_lips) or not os.path.exists(self.align_blast):
+                    msg = "Cannot find the required executables: octopus2span.pl ,run_lips.pl and align_blast.pl in the directory\n" +\
+                    "{0}\nPlease check these files are in place".format( script_dir )
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg
+                                
+                if optd['blast_dir']:
+                    blastpgp = optd['blast_dir'] + os.sep + "bin/blastpgp"
+                    blastpgp = ample_util.check_for_exe( 'blastpgp', blastpgp )
+                else:
+                    blastpgp = ample_util.check_for_exe( 'blastpgp', None )
+                    
+                # Found so set
+                optd['blastpgp'] = blastpgp
+                self.blastpgp = blastpgp                  
+                
+                # nr database
+                if not os.path.exists( optd['nr'] ) and not os.path.exists( optd['nr']+".pal" ):
+                    msg = "Cannot find the nr database: {0}".format( optd['nr'] )
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg
+                
+                # Found it
+                self.nr = optd['nr']       
+                
 
-
-        # Modelling variabls
-        if amopt.d['make_models']:
+        # Modelling variables
+        if optd['make_models']:
             
-            if not amopt.d['make_frags']:
+            if not optd['make_frags']:
+                self.frags3mers = optd['frags3mers']
+                self.frags9mers = optd['frags9mers']
                 if not os.path.exists(self.frags3mers) or not os.path.exists(self.frags9mers):
                     msg = "Cannot find both fragment files:\n{0}\n{1}\n".format(self.frags3mers,self.frags9mers)
                     self.logger.critical(msg)
                     raise RuntimeError,msg
                     
             import platform
-            if not amopt.d['rosetta_path']: 
+            if not optd['rosetta_path']: 
                 if platform.mac_ver() == ('', ('', '', ''), ''):
-                    amopt.d['rosetta_path'] = self.rosetta_dir + '/rosetta_source/bin/AbinitioRelax.linuxgccrelease'
+                    optd['rosetta_path'] = self.rosetta_dir + '/rosetta_source/bin/AbinitioRelax.linuxgccrelease'
                 else:
-                    amopt.d['rosetta_path'] = self.rosetta_dir + '/rosetta_source/bin/AbinitioRelax'
+                    optd['rosetta_path'] = self.rosetta_dir + '/rosetta_source/bin/AbinitioRelax'
             
             # Always save everything back to the amopt object so we can print it out
-            self.rosetta_path = amopt.d['rosetta_path']
+            self.rosetta_path = optd['rosetta_path']
             
             if not os.path.exists(self.rosetta_path):
                 self.logger.critical(' cant find Rosetta abinitio: {0}'.format(self.rosetta_path) )
@@ -424,43 +528,43 @@ class RosettaModel(object):
     
             #jmht not used
             # ROSETTA_cluster = rosetta_dir + '/rosetta_source/bin/cluster.linuxgccrelease'
-            if not amopt.d['rosetta_db']:
-                amopt.d['rosetta_db'] = self.rosetta_dir + '/rosetta_database' 
-            self.rosetta_db = amopt.d['rosetta_db']
+            if not optd['rosetta_db']:
+                optd['rosetta_db'] = self.rosetta_dir + '/rosetta_database' 
+            self.rosetta_db = optd['rosetta_db']
             
             if not os.path.exists(self.rosetta_db):
                 msg = ' cant find Rosetta DB: {0}'.format(self.rosetta_db)
                 self.logger.critical( msg )
                 raise RuntimeError,msg
             
-            #if not amopt.d['rosetta_cm']:
-            #    amopt.d['rosetta_cm'] = self.rosetta_dir + '/rosetta_source/bin/idealize_jd2.default.linuxgccrelease'
-            #self.rosetta_cm = amopt.d['rosetta_cm']
+            #if not optd['rosetta_cm']:
+            #    optd['rosetta_cm'] = self.rosetta_dir + '/rosetta_source/bin/idealize_jd2.default.linuxgccrelease'
+            #self.rosetta_cm = optd['rosetta_cm']
             #if not os.path.exists(ROSETTA_cluster):
             #    logger.critical(' cant find Rosetta cluster, check path names')
             #    sys.exit()
             
-            self.nproc = amopt.d['nproc']
-            self.nmodels = amopt.d['nmodels']
+            self.nproc = optd['nproc']
+            self.nmodels = optd['nmodels']
             # Set models directory
-            if not amopt.d['models_dir']:
-                self.models_dir = amopt.d['work_dir'] + os.sep + "models"
+            if not optd['models_dir']:
+                self.models_dir = optd['work_dir'] + os.sep + "models"
             else:
-                self.models_dir = amopt.d['models_dir']
+                self.models_dir = optd['models_dir']
             
             # Extra modelling options
-            self.allatom = amopt.d['allatom']
-            self.domain_termini_distance = amopt.d['domain_termini_distance']
-            self.rad_gyr_reweight = amopt.d['CC']
+            self.allatom = optd['allatom']
+            self.domain_termini_distance = optd['domain_termini_distance']
+            self.rad_gyr_reweight = optd['CC']
             
-            if amopt.d['improve_template'] and not os.path.exists( amopt.d['improve_template'] ):
+            if optd['improve_template'] and not os.path.exists( optd['improve_template'] ):
                 msg = 'cant find template to improve'
                 self.logger.critical( msg)
                 raise RuntimeError(msg)
-            self.improve_template = amopt.d['improve_template']
+            self.improve_template = optd['improve_template']
                 
-            self.use_scwrl = amopt.d['use_scwrl']
-            self.scwrl_exe = amopt.d['scwrl_exe']        
+            self.use_scwrl = optd['use_scwrl']
+            self.scwrl_exe = optd['scwrl_exe']        
 
 
 class Test(unittest.TestCase):
@@ -476,33 +580,33 @@ class Test(unittest.TestCase):
         self.ampledir = os.path.abspath( thisdir+os.sep+"..")
 
 
-    def testMakeFragments(self):
+    def XtestMakeFragments(self):
         """See we can create fragments"""
         
         print "testing FragmentGenerator"
         
-        amopt = ample_options.AmpleOptions()
-        amopt.d['rosetta_dir'] = "/opt/rosetta3.4"
-        amopt.d['pdb_code'] = "TOXD_"
-        amopt.d['work_dir'] =  os.getcwd()
-        amopt.d['usehoms'] =  True
-        amopt.d['make_frags'] = True
-        amopt.d['rosetta_db'] = None
-        amopt.d['rosetta_fragments_exe'] =  "/tmp/make_fragments.pl"
-        #amopt.d['rosetta_fragments_exe'] =  None
-        amopt.d['fasta'] = self.ampledir + "/examples/toxd-example/toxd_.fasta"
+        optd = {}
+        optd['rosetta_dir'] = "/opt/rosetta3.4"
+        optd['pdb_code'] = "TOXD_"
+        optd['work_dir'] =  os.getcwd()
+        optd['usehoms'] =  True
+        optd['make_frags'] = True
+        optd['rosetta_db'] = None
+        optd['rosetta_fragments_exe'] =  "/tmp/make_fragments.pl"
+        #optd['rosetta_fragments_exe'] =  None
+        optd['fasta'] = self.ampledir + "/examples/toxd-example/toxd_.fasta"
         
-        amopt.d['make_models'] = False
-        amopt.d['frags3mers'] = None
-        amopt.d['frags9mers'] = None
-        amopt.d['improve_template'] = None
+        optd['make_models'] = False
+        optd['frags3mers'] = None
+        optd['frags9mers'] = None
+        optd['improve_template'] = None
         
         m = RosettaModel()
-        m.set_from_amopt( amopt )
+        m.set_from_dict( amopt )
         m.generate_fragments()
 
 
-    def testNoRosetta(self):
+    def XtestNoRosetta(self):
         """
         Test without Rosetta
         """
@@ -521,38 +625,65 @@ for i in range(10):
         
           
         # Set options
-        amopt = ample_options.AmpleOptions()
-        amopt.d['nproc'] = 3
-        amopt.d['nmodels'] = 30
-        amopt.d['work_dir'] = os.getcwd()
-        amopt.d['models_dir'] = os.getcwd() + os.sep + "models"
-        amopt.d['rosetta_dir'] = "/opt/rosetta3.4"
-        amopt.d['rosetta_path'] = os.getcwd() + os.sep + "dummy_rosetta.sh"
-        amopt.d['rosetta_db'] = None
-        amopt.d['frags3mers'] = '3mers'
-        amopt.d['frags9mers'] = '9mers'
-        amopt.d['rosetta_fragments_exe'] = None
-        amopt.d['usehoms'] = None
-        amopt.d['make_models'] = True
-        amopt.d['make_frags'] =  True
-        amopt.d['fasta'] = "FASTA"
-        amopt.d['pdb_code'] = "TOXD_"
-        amopt.d['improve_template'] = None
-        amopt.d['allatom'] = True
-        amopt.d['use_scwrl'] = False
-        amopt.d['scwrl_exe'] = ""
+        optd={}
+        optd['nproc'] = 3
+        optd['nmodels'] = 30
+        optd['work_dir'] = os.getcwd()
+        optd['models_dir'] = os.getcwd() + os.sep + "models"
+        optd['rosetta_dir'] = "/opt/rosetta3.4"
+        optd['rosetta_path'] = os.getcwd() + os.sep + "dummy_rosetta.sh"
+        optd['rosetta_db'] = None
+        optd['frags3mers'] = '3mers'
+        optd['frags9mers'] = '9mers'
+        optd['rosetta_fragments_exe'] = None
+        optd['usehoms'] = None
+        optd['make_models'] = True
+        optd['make_frags'] =  True
+        optd['fasta'] = "FASTA"
+        optd['pdb_code'] = "TOXD_"
+        optd['improve_template'] = None
+        optd['allatom'] = True
+        optd['use_scwrl'] = False
+        optd['scwrl_exe'] = ""
         
-        amopt.d['domain_termini_distance'] = None
-        amopt.d['CC'] = None
-        amopt.d['improve_template'] = None
+        optd['domain_termini_distance'] = None
+        optd['CC'] = None
+        optd['improve_template'] = None
 
 
         rm = RosettaModel()
-        rm.set_from_amopt( amopt )
+        rm.set_from_dict( amopt )
         mdir = rm.doModelling()
         print "models in: {0}".format(mdir)
         
-
+        
+    def testTransmembraneFragments(self):
+        """
+        Test for generating transmembrane fragments
+        """       
+        
+        optd = {}
+        optd['work_dir'] = os.getcwd()
+        optd['rosetta_dir'] = "/opt/rosetta3.4"
+        optd['rosetta_fragments_exe'] = None
+        optd['usehoms'] = None
+        optd['make_models'] = False
+        optd['make_frags'] =  True
+        optd['fasta'] = "/home/Shared/2UUI/2uui.fasta"
+        optd['pdb_code'] = "2uui_"
+        optd['transmembrane'] = True
+        optd['blast_dir'] = "/opt/blast-2.2.26"
+        optd['nr'] = "/opt/nr/nr"
+        
+        fragdir=os.getcwd()+os.sep+"fragments"
+        import shutil
+        shutil.copy2(optd['fasta'], fragdir)
+        
+        rm = RosettaModel()
+        rm.set_from_dict( optd )
+        rm.fragments_directory = os.getcwd()+os.sep+"fragments"
+        rm.generate_tm_predict()
+        
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
