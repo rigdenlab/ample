@@ -376,12 +376,7 @@ class ClusterRun:
         self.LABIN["F"] = amoptd['F']
         self.LABIN["SIGF"] = amoptd['SIGF']
         self.LABIN["FreeR_flag"] = amoptd['FREE']
-        
-        if amoptd['domain_all_chains_fasta']:
-            self.SEQIN = str(amoptd['domain_all_chains_fasta'])
-        else:
-            self.SEQIN = str(amoptd['fasta'])
-            
+        self.SEQIN = str(amoptd['fasta'])
         self.BCYCLES = amoptd['buccaneer_cycles']
         self.BUCC = amoptd['use_buccaneer']
         self.SCYLCLES = amoptd['shelx_cycles']

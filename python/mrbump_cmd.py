@@ -15,14 +15,8 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     jmht - check fixed_iden - 0.6 if not specified
     """
     
-    #jmht - this needs to be changed
-    if adict['domain_all_chains_fasta']:
-        fasta = adict['domain_all_chains_fasta']
-    else:
-        fasta = adict['fasta']
-    
     mrs = ""
-    mrs+='mrbump HKLIN {0} SEQIN {1} HKLOUT OUT.mtz  XYZOUT OUT.pdb << eof\n'.format( adict['mtz'], fasta )
+    mrs+='mrbump HKLIN {0} SEQIN {1} HKLOUT OUT.mtz  XYZOUT OUT.pdb << eof\n'.format( adict['mtz'], adict['fasta'] )
     mrs+='LABIN SIGF={0} F={1} FreeR_flag={2}\n'.format( adict['SIGF'], adict['F'], adict['FREE'] )
     mrs+='JOBID {0}_mrbump\n'.format( jobid )
     mrs+='MRPROGRAM {0}\n'.format( adict['mrbump_programs'] )

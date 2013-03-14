@@ -91,9 +91,6 @@ parser.add_argument('-debug', metavar='debug option', type=str, nargs=1,
 parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', type=str, nargs=1,
                    help='fixed input to mr bump')
 
-parser.add_argument('-domain_all_chains_fasta', metavar='domain_all_chains_fasta', type=str, nargs=1,
-                   help='fasta for all ASU')
-
 parser.add_argument('-domain_termini_distance', metavar='termini', type=str, nargs=1,
                    help='distance between termini for insert domains')
 
@@ -138,6 +135,9 @@ parser.add_argument('-make_models', metavar='Do the modelling', type=str, nargs=
 
 parser.add_argument('-maxcluster_exe', metavar='Maxcluster exe', type=str, nargs=1,
                    help='Maxcluster exe')
+
+parser.add_argument('-missing_domain', metavar='missing_domain', type=str, nargs=1,
+                   help='Modelling a missing domain - requires domain_all_chains_pdb argument')
 
 parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
                    help='folder of decoys')
@@ -266,7 +266,6 @@ parser.set_defaults(
                     import_cluster = "false",
                     debug = "false",
                     domain_all_chains_pdb = None,
-                    domain_all_chains_fasta = None,
                     domain_termini_distance = 0,
                     ensembles = None,
                     ensembler = "false",
@@ -277,6 +276,7 @@ parser.set_defaults(
                     maxcluster_exe = None,
                     make_frags = "true",
                     make_models = "true",
+                    missing_domain = "false",
                     models_dir = None,
                     molreponly = "false",
                     mtz = None,
@@ -411,18 +411,19 @@ if not  NMR_PROTOCOL :
                     sys.exit()
 
 # Missing domains
-if amopt.d['domain_all_chains_pdb'] or amopt.d['domain_all_chains_fasta']:
-    #jmht - fix
-    amopt.d['fasta'] = amopt.d['domain_all_chains_fasta']
+if amopt.d['missing_domain']:
     logger.info('Processing missing domain\n')
-    if not ( os.path.exists(amopt.d['domain_all_chains_fasta']) or \
-         os.path.exists(amopt.d['domain_all_chains_pdb']) ):
-        logger.critical(' Cannot find either domain_all_chain_fasta: {0}\n or domain_all_chain_pdb: {1}'.format(amopt.d['domain_all_chains_fasta'],amopt.d['domain_all_chains_pdb'] )  )
-        sys.exit(1)
-elif not ( os.path.exists(str(amopt.d['fasta'])) or \
-         os.path.exists(str(amopt.d['NMR_remodel_fasta'])) ):
-    logger.critical('You need to give the path for the fasta')
-    sys.exit(1)
+    amopt.d['domain_all_chains_pdb'] 
+    if not os.path.exists( amopt.d['domain_all_chains_pdb'] ):
+        msg = 'Cannot find file domain_all_chain_pdb: {0}'.format( amopt.d['domain_all_chains_pdb'] )
+        logger.critical( msg )
+        
+    
+# Check we can find the input fasta
+if not ( os.path.exists(str(amopt.d['fasta'])) or os.path.exists(str(amopt.d['NMR_remodel_fasta'])) ):
+    msg = 'You need to give the path for the fasta'
+    logger.critical(msg)
+    raise RuntimeError, msg
     
 # jmht - dont' think this used/needed
 #logger.debug('Parsing FASTA file')
@@ -740,8 +741,13 @@ if amopt.d['make_models']:
         
     ##End IF amopt.d['cluster_submit']
     
-RUNNING.write('\nModelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n')
-logger.info('Modelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n')
+    msg = '\nModelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n'
+else:
+    msg = '\nImporting models from directory:\n   ' + amopt.d['models_dir'] + '\n\n'
+    
+RUNNING.write(msg)
+logger.info(msg)
+    
 
 #--------------------------------------------
 # check if models are present regardless
@@ -830,7 +836,6 @@ else:
         logger.info('Truncating Done for cluster ' + str(cluster) + "\n\n")
         logger.info('Created ' + str(len(final_ensembles)) + ' ensembles\n')
  
-
 
 #---------------------------------------
 # MR BUMP analysis of the ensembles

@@ -421,7 +421,6 @@ class Test(unittest.TestCase):
              'F' : 'FP',
              'SIGF' : 'SIGFP',
              'nproc' : 3,
-             'domain_all_chains_fasta' : None,
              'domain_all_chains_pdb' : None,
              'ASU': None,
              'mr_keys': [],
