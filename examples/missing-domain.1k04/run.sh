@@ -21,15 +21,15 @@ AMPLEDIR=/opt/ample-dev1
 export PYTHONPATH=${AMPLEDIR}/python:$PYTHONPATH
 
 ${AMPLEDIR}/bin/ample \
-      -mtz ${PWD}/1k04_cad.mtz \
-      -domain_all_chains_fasta ${PWD}/1k04_.fasta  \
+      -mtz ${PWD}/1k04_cad-unique.mtz \
+      -fasta ${PWD}/1k04_.fasta  \
       -domain_all_chains_pdb  ${PWD}/Known_40.pdb \
+      -missing_domain True \
       -frags3mers ${PWD}/aa1k04_03_05.200_v1_3 \
       -frags9mers ${PWD}/aa1k04_09_05.200_v1_3 \
       -rosetta_dir $ROSETTA_DIR \
       -make_frags False \
       -make_models True \
-      -CLUSTER False \
       -shelx_cycles 10 \
       -nmodels 30 \
       -early_terminate True  \
@@ -38,6 +38,6 @@ ${AMPLEDIR}/bin/ample \
       -use_arpwarp False \
       -use_buccaneer False \
       -molreponly True \
-      -nproc 1 \
+      -nproc 5 \
       -num_clusters 1 \
       -allatom True \
