@@ -66,8 +66,8 @@ class AmpleOptions(object):
         if self.d['use_scwrl']:
             pstr+= '\n---3rd party---\nSCWRL {0}\n'.format( self.d['scwrl'] )
 
-        keys4 = ['domain_all_chains_fasta','domain_all_chains_pdb']
-        if keys4[0] or keys4[1]:
+        keys4 = ['missing_domain','domain_all_chains_pdb']
+        if keys4[0]:
             pstr+= '\n---Missing Domain---\n'
             for k in keys4:
                 pstr += "{0}: {1}\n".format(k, self.d[k])
