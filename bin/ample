@@ -233,6 +233,12 @@ parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs
 parser.add_argument('-transmembrane', metavar='transmembrane', type=str, nargs=1,
                    help='Do modelling for transmembrane proteins')
 
+parser.add_argument('-transmembrane_spanfile', metavar='transmembrane_spanfile', type=str, nargs=1,
+                   help='span file for modelling transmembrane proteins')
+
+parser.add_argument('-transmembrane_lipofile', metavar='transmembrane_lipofile', type=str, nargs=1,
+                   help='lips4 file for modelling transmembrane proteins')
+
 parser.add_argument('-usehoms', metavar='nohoms rosetta flag', type=str, nargs=1,
                    help='True =use nhomologs, False= dont use them ')
 
@@ -341,6 +347,7 @@ if not os.path.exists(amopt.d['run_dir']):
     print 'You need to give a run directory'
     sys.exit()
 
+print 'Making a Run Directory  -checking for previous runs\n'
 amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'] )
 os.chdir( amopt.d['work_dir'] )
 
@@ -450,6 +457,7 @@ if amopt.d['missing_domain']:
 
 # Create the rosetta modeller - this runs all the checks required
 if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
+    logger.info('Making models or fragments so checking ROSETTA options')
     rosetta_modeller = rosetta_model.RosettaModel()
     rosetta_modeller.set_from_dict( amopt.d )
 

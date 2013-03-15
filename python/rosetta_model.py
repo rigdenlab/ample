@@ -57,6 +57,7 @@ class RosettaModel(object):
         self.fragments_exe = None
         
         # Transmembrane variables
+        self.transmembrane = None
         self.octopus2span = None
         self.run_lips = None
         self.align_blast = None
@@ -120,12 +121,13 @@ class RosettaModel(object):
     def fragment_cmd(self):
         """
         Return the command to make the fragments as a list
+        
         """
         # Set path to script
         if not self.fragments_exe: 
-            if self.rosetta_version == '3.3':
+            if self.rosetta_version == 3.3:
                 self.fragments_exe = self.rosetta_dir + '/rosetta_fragments/make_fragments.pl'
-            elif self.rosetta_version  == '3.4':
+            elif self.rosetta_version  == 3.4:
                 self.fragments_exe = self.rosetta_dir + '/rosetta_tools/fragment_tools/make_fragments.pl'
         
         # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
@@ -136,16 +138,19 @@ class RosettaModel(object):
                '-rundir', self.fragments_directory,
                '-id', self.pdb_code, fasta ] 
         
-        # version dependent flags
-        if self.rosetta_version == '3.3':
-            # jmht the last 3 don't seem to work with 3.4
-            cmd += ['-noporter', '-nojufo', '-nosam','-noprof' ]
-        elif self.rosetta_version == '3.4':
-            cmd += ['-old_name_format']
-            
+        if self.transmembrane:
+            cmd += [ '-noporter', '-nopsipred','-sam'] 
+        else:
+            # version dependent flags
+            if self.rosetta_version == 3.3:
+                # jmht the last 3 don't seem to work with 3.4
+                cmd += ['-noporter', '-nojufo', '-nosam','-noprof' ]
+            elif self.rosetta_version == 3.4:
+                cmd += ['-noporter' ]
+
         # Whether to exclude homologs
-        if self.usehoms:
-            cmd.append('-nohoms')
+        if not self.usehoms:
+            cmd.append('-nohoms')           
         
         return cmd
     ##End fragment_cmd
@@ -170,7 +175,7 @@ class RosettaModel(object):
         shutil.copy2( self.fasta, self.fragments_directory + os.sep + fasta )
         
         if self.transmembrane:
-            self.generate_tm_predict( fasta )        
+            self.generate_tm_predict()        
             
         cmd = self.fragment_cmd()
         self.logger.info('Executing cmd: {0}'.format( " ".join(cmd)) )
@@ -183,11 +188,17 @@ class RosettaModel(object):
         except subprocess.CalledProcessError,e:
             self.logger.critical("Error generating fragments:\n{0}".format(e.output))
             raise RuntimeError,e
+        
+        if self.rosetta_version >= 3.4:
+            # new name format: $options{runid}.$options{n_frags}.$size" . "mers
+            self.frags3mers = self.fragments_directory + os.sep + self.pdb_code + '.200.3mers'
+            self.frags9mers = self.fragments_directory + os.sep + self.pdb_code + '.200.9mers'      
+        else:
+            # old_name_format: aa$options{runid}$fragsize\_05.$options{n_frags}\_v1_3"
+            self.frags3mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '03_05.200_v1_3'
+            self.frags9mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '09_05.200_v1_3'
             
-        # old_name_format
-        self.frags3mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '03_05.200_v1_3'
-        self.frags9mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '09_05.200_v1_3'
-    
+            
         if not os.path.exists( self.frags3mers ) or not os.path.exists( self.frags9mers ):
             raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\n".format(self.frags3mers,self.frags9mers)
         
@@ -207,7 +218,7 @@ class RosettaModel(object):
         Generate the various files need for generate the transmembrane fragments
         
         REM the fasta as it needs to reside in this directory or the script may fail 
-        due to probelms with parsing directory names with 'funny' characters
+        due to problems with parsing directory names with 'funny' characters
         """
         
         # Need to just use name due to problems with directory names - should
@@ -254,9 +265,6 @@ class RosettaModel(object):
         # Set the variable
         self.lipofile = lipofile
         
-        print self.spanfile
-        print self.lipofile
-        
         return
     
     def get_version(self):
@@ -269,12 +277,12 @@ class RosettaModel(object):
                 self.logger.critical('Version file for Rosetta not found')
                 sys.exit()
                 
-            version = '3.2'
+            version = 3.2
             try:
                 for line in open(version_file,'r'):
                     line.strip()
                     if line.startswith('Rosetta'):
-                        version = line.split()[1].strip()
+                        version = float( line.split()[1].strip() )
                 self.logger.info( 'Your Rosetta version is: {0}'.format( version ) )
             except Exception,e:
                 print e
@@ -311,6 +319,21 @@ class RosettaModel(object):
         else:
             cmd += [ '-return_full_atom false' ]
             
+        
+        if self.transmembrane:
+            cmd += [ '-in:file:spanfile', self.spanfile,
+                     '-in:file:lipofile', self.lipofile,
+                     '-abinitio:membrane',
+                     '-membrane:no_interpolate_Mpair',
+                     '-membrane:Menv_penalties',
+                     '-score:find_neighbors_3dgrid',
+                     '-membrane:normal_cycles', '40',
+                     '-membrane:normal_mag', '15',
+                     '-membrane:center_mag', '2',
+                     '-mute core.io.database',
+                     '-mute core.scoring.MembranePotential' 
+                    ]
+            
         # Domain constraints
         if self.domain_termini_distance > 0:
             dcmd = self.setup_domain_constraints()
@@ -323,7 +346,7 @@ class RosettaModel(object):
                 
         # Improve Template
         if self.improve_template:
-            tcmd = ['-in:file:native',
+            cmd += ['-in:file:native',
                     self.improve_template,
                     '-abinitio:steal_3mers',
                     'True',
@@ -333,7 +356,6 @@ class RosettaModel(object):
                     'True',
                     '-templates:force_native_topology',
                     'True' ]
-            cmd += tcmd
         
         return cmd
     ##End make_rosetta_cmd
@@ -432,7 +454,6 @@ class RosettaModel(object):
             if re.search('\w', x):
                 length += 1
     
-    
         self.logger.info('restricting termini distance: {0}'.format( self.domain_termini_distance ))
         constraints_file = os.path.join(self.work_dir, 'constraints')
         conin = open(constraints_file, "w")
@@ -492,13 +513,27 @@ class RosettaModel(object):
                 self.blastpgp = blastpgp                  
                 
                 # nr database
-                if not os.path.exists( optd['nr'] ) and not os.path.exists( optd['nr']+".pal" ):
-                    msg = "Cannot find the nr database: {0}".format( optd['nr'] )
+                if not os.path.exists( str(optd['nr']) ) and not os.path.exists( str(optd['nr'])+".pal" ):
+                    msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format( optd['nr'] )
                     self.logger.critical(msg)
                     raise RuntimeError, msg
                 
                 # Found it
                 self.nr = optd['nr']       
+            else:
+                
+                print "JENS"
+                
+                # Not making fragments so read in files
+                if not ( os.path.isfile(str(optd['transmembrane_spanfile'])) and os.path.isfile(str(optd['transmembrane_lipofile'])) ):
+                    msg = "Making transmembrane models and not making fragments, but cannot find the files\n" +\
+                    "transmembrane_spanfile: {0}\nor\ntransmembrane_lipofile: {1}".format( optd['transmembrane_spanfile'],optd['transmembrane_lipofile'] )
+                    
+                    self.logger.critical(msg)
+                    raise RuntimeError,msg
+                
+                self.spanfile = optd['transmembrane_spanfile']
+                self.lipofile = optd['transmembrane_lipofile']
                 
 
         # Modelling variables

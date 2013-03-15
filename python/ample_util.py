@@ -99,7 +99,6 @@ def make_workdir(work_dir, rootname='ROSETTA_MR_'):
     """
     Make a work directory rooted at work_dir and return its path
     """
-    print 'Making a Run Directory  -checking for previous runs'
     run_inc = 0
     run_making_done = False
     while not run_making_done:
@@ -257,7 +256,8 @@ def setup_logging():
     cl.setLevel(logging.INFO)
     
     # create formatter for fl
-    formatter = logging.Formatter('%(message)s')
+    # Always add a blank line after every print
+    formatter = logging.Formatter('%(message)s\n')
     
     # add formatter to fl
     cl.setFormatter(formatter)
