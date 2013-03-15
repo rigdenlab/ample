@@ -280,10 +280,10 @@ parser.set_defaults(
                     models_dir = None,
                     molreponly = "false",
                     mtz = None,
-                    name = 'ABCD',
+                    name = None,
                     num_clusters = 1,
                     nmodels = 1000,
-                    NMR_model_in = '',
+                    NMR_model_in = None,
                     NMR_process = None,
                     NMR_remodel_fasta = '',
                     NMR_Truncate_only = "false",
@@ -300,7 +300,7 @@ parser.set_defaults(
                     run_dir = os.getcwd(),
                     scwrl_exe = None,
                     spicker_exe = None,
-                    usehoms = "false",
+                    usehoms = "true",
                     use_arpwarp = "true",
                     use_buccaneer = "true",
                     use_scwrl = 'false',
@@ -332,10 +332,6 @@ amopt.populate( args )
 
 # Now set MRKeys
 amopt.d['mr_keys'] = MRkeys
-#jmht - fix these
-FIXED_INPUT = True
-pdb_code = amopt.d['name']
-amopt.d['pdb_code'] = amopt.d['name']
 
 # qtype always use uppercase
 amopt.d['cluster_qtype'] = amopt.d['cluster_qtype'].upper()
@@ -352,6 +348,18 @@ os.chdir(work_dir)
 # Set up logging
 logger = ample_util.setup_logging()
 
+#jmht - fix these
+FIXED_INPUT = True
+pdb_code = amopt.d['name']
+amopt.d['pdb_code'] = amopt.d['name']
+
+if not amopt.d['pdb_code'] or len(pdb_code) != 4:
+    msg = 'Name is the wrong length, use 4 chars eg ABCD'
+    logger.critical(msg)
+    raise RuntimeError, msg
+else:
+    amopt.d['pdb_code'] += '_'
+
 # Check if importing ensembles
 amopt.d['import_ensembles'] = False
 if os.path.isdir( str(amopt.d['ensembles']) ):
@@ -364,7 +372,6 @@ if os.path.isdir( str(amopt.d['ensembles']) ):
 # Check if importing models
 amopt.d['import_models'] = False
 if amopt.d['models_dir']:
-    
     if not os.path.isdir( amopt.d['models_dir'] ):
         msg = "Trying to import models from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['models_dir'])
         logger.critical(msg)
@@ -383,16 +390,28 @@ if amopt.d['import_ensembles'] and amopt.d['import_models']:
         logger.critical(msg)
         raise RuntimeError, msg
 
+if amopt.d['make_frags'] and (  amopt.d['frags3mers'] or  amopt.d['frags9mers'] ):
+    msg = "make_frags set to true, but you have given the path to the frags3mers or frags9mers"
+    logger.critical(msg)
+    raise RuntimeError, msg
+
 
 # NMR Checks
 NMR_PROTOCOL = False
-if os.path.isfile( amopt.d['NMR_model_in'] ):
+if amopt.d['NMR_model_in']:
+    
+    if not os.path.isfile( amopt.d['NMR_model_in'] ):
+        msg = "NMR_model_in flag given, but cannot find file: {0}".format( amopt.d['NMR_model_in'] )
+        logger.critical(msg)
+        raise RuntimeError,msg     
+       
     NMR_model_in = amopt.d['NMR_model_in']
     NMR_PROTOCOL = True
     ROSETTA_CM = amopt.d['rosetta_dir'] + '/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
     if not os.path.exists(ROSETTA_CM) :
         print ' cant find ' + ROSETTA_CM + ' check path names'
         sys.exit()
+
     
 if os.path.isfile( amopt.d['NMR_remodel_fasta'] ):
     NMR_remodel_fasta = amopt.d['NMR_remodel_fasta']
@@ -413,11 +432,10 @@ if not  NMR_PROTOCOL :
 # Missing domains
 if amopt.d['missing_domain']:
     logger.info('Processing missing domain\n')
-    amopt.d['domain_all_chains_pdb'] 
     if not os.path.exists( amopt.d['domain_all_chains_pdb'] ):
-        msg = 'Cannot find file domain_all_chain_pdb: {0}'.format( amopt.d['domain_all_chains_pdb'] )
+        msg = 'Cannot find file domain_all_chains_pdb: {0}'.format( amopt.d['domain_all_chains_pdb'] )
         logger.critical( msg )
-        
+        raise RuntimeError, msg
     
 # Check we can find the input fasta
 if not ( os.path.exists(str(amopt.d['fasta'])) or os.path.exists(str(amopt.d['NMR_remodel_fasta'])) ):
@@ -499,12 +517,6 @@ if not amopt.d['FREE']:
 #
 # Other checks
 #
-if len(pdb_code) != 4:
-    print 'name is the wrong length, use 4 chars eg ABCD, changing name'
-    pdb_code = 'ABCD'
-else:
-    pdb_code += '_'
-
 if not os.path.exists(amopt.d['mtz']):
     print 'need mtz or no MR will be carried out'
     sys.exit()
@@ -577,7 +589,7 @@ if NMR_PROTOCOL:
             tmp.flush()
     tmp.close
     NMR_model_in = os.getcwd() + '/tmp.pdb'
-    print 'using NMR model ' + os.getcwd() + '/tmp.pdb'
+    logger.info('using NMR model ' + os.getcwd() + '/tmp.pdb')
 
     if not amopt.d['cluster_submit']:
         os.mkdir(work_dir + '/orig_models')
@@ -585,13 +597,13 @@ if NMR_PROTOCOL:
         os.mkdir(work_dir + '/models')
         if not amopt.d['NMR_process']:
             amopt.d['NMR_process'] = 1000 / modno
-        print ' processing each model ', amopt.d['NMR_process'], ' times'
+        logger.info(' processing each model {0} times'.format(amopt.d['NMR_process']) )
             
         homolog = work_dir + '/orig_models'
-        print 'you have ', modno, ' models in your nmr'
+        logger.info('you have {0} models in your nmr'.format(modno) )
         if modno < 2:
             if amopt.d['NMR_Truncate_only']:
-                print 'cannot truncate, doing rebuilding'
+                logger.info('cannot truncate, doing rebuilding')
             amopt.d['NMR_Truncate_only'] = False
 
 
@@ -607,21 +619,21 @@ if NMR_PROTOCOL:
                 amopt.d['models_dir'] = work_dir + '/models'
                 
         if amopt.d['NMR_Truncate_only']:
-            print 'Truncating NMR'
+            logger.info('Truncating NMR')
             if modno < 2:
-                print 'cant trucate less than 2 models, use NMR_truncate_only False'
+                logger.critical('cant trucate less than 2 models, use NMR_truncate_only False')
                 sys.exit()
             if modno >= 2:
                 amopt.d['make_models'] = False
                 amopt.d['models_dir'] = work_dir + '/orig_models'
                 amopt.d['models_dir'] = work_dir + '/orig_models'
-        print 'using models from ' + amopt.d['models_dir']
+        logger.info('using models from ' + amopt.d['models_dir'] )
     if amopt.d['cluster_submit']:
         os.mkdir(work_dir + '/orig_models')
         modno = split_models.split(NMR_model_in, work_dir + '/orig_models')
         if modno < 2:
             if amopt.d['NMR_Truncate_only']:
-                print 'cannot truncate, doing rebuilding'
+                logger.info('cannot truncate, doing rebuilding')
             amopt.d['NMR_Truncate_only'] = False
 
 
@@ -629,7 +641,7 @@ if NMR_PROTOCOL:
             amopt.d['make_models'] = False
             amopt.d['models_dir'] = work_dir + '/orig_models'
             amopt.d['models_dir'] = work_dir + '/orig_models'
-            print 'using models from ' + amopt.d['models_dir']
+            logger.info('using models from ' + amopt.d['models_dir'])
 
 
         if not amopt.d['NMR_Truncate_only']:
