@@ -43,7 +43,7 @@ import time
 # Our imports
 import ample_options
 import ample_util
-#import fasta_parser
+import fasta_parser
 import mrbump_ensemble
 import rosetta_model
 import run_spicker
@@ -341,9 +341,8 @@ if not os.path.exists(amopt.d['run_dir']):
     print 'You need to give a run directory'
     sys.exit()
 
-work_dir = ample_util.make_workdir( amopt.d['run_dir'] )
-amopt.d['work_dir'] = work_dir
-os.chdir(work_dir)
+amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'] )
+os.chdir( amopt.d['work_dir'] )
 
 # Set up logging
 logger = ample_util.setup_logging()
@@ -359,7 +358,19 @@ if not amopt.d['pdb_code'] or len(pdb_code) != 4:
     raise RuntimeError, msg
 else:
     amopt.d['pdb_code'] += '_'
+    
+# Check we can find the input fasta
+if not ( os.path.exists(str(amopt.d['fasta'])) or os.path.exists(str(amopt.d['NMR_remodel_fasta'])) ):
+    msg = 'You need to give the path for the fasta'
+    logger.critical(msg)
+    raise RuntimeError, msg
 
+# Reformat to what we need    
+logger.debug('Parsing FASTA file')
+outfasta = os.path.join( amopt.d['work_dir'], amopt.d['pdb_code'] + '_.fasta')
+fasta_parser.parse_fasta( amopt.d['fasta'], outfasta )
+amopt.d['fasta'] = outfasta
+    
 # Check if importing ensembles
 amopt.d['import_ensembles'] = False
 if os.path.isdir( str(amopt.d['ensembles']) ):
@@ -412,11 +423,10 @@ if amopt.d['NMR_model_in']:
         print ' cant find ' + ROSETTA_CM + ' check path names'
         sys.exit()
 
-    
-if os.path.isfile( amopt.d['NMR_remodel_fasta'] ):
-    NMR_remodel_fasta = amopt.d['NMR_remodel_fasta']
-else:
-    NMR_remodel_fasta = amopt.d['fasta']
+    if os.path.isfile( amopt.d['NMR_remodel_fasta'] ):
+        NMR_remodel_fasta = amopt.d['NMR_remodel_fasta']
+    else:
+        NMR_remodel_fasta = amopt.d['fasta']
 
 if not  NMR_PROTOCOL :
     if amopt.d['import_models'] and not os.path.exists(amopt.d['models_dir']):
@@ -436,18 +446,7 @@ if amopt.d['missing_domain']:
         msg = 'Cannot find file domain_all_chains_pdb: {0}'.format( amopt.d['domain_all_chains_pdb'] )
         logger.critical( msg )
         raise RuntimeError, msg
-    
-# Check we can find the input fasta
-if not ( os.path.exists(str(amopt.d['fasta'])) or os.path.exists(str(amopt.d['NMR_remodel_fasta'])) ):
-    msg = 'You need to give the path for the fasta'
-    logger.critical(msg)
-    raise RuntimeError, msg
-    
-# jmht - dont' think this used/needed
-#logger.debug('Parsing FASTA file')
-#outfasta = os.path.join(work_dir, pdb_code + '_.fasta')
-#fasta_parser.parse_fasta(FASTA, outfasta)
-#FASTA = outfasta
+
 
 # Create the rosetta modeller - this runs all the checks required
 if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
@@ -548,17 +547,19 @@ logger.info('All needed programs are found, continuing Run')
 #----------------------------
 # Running is the 'official' output file 
 #----------------------------
-RUNNING = open(work_dir + '/ROSETTA.log', "w")
+RUNNING = open( amopt.d['work_dir'] + '/ROSETTA.log', "w")
 RUNNING.write(ample_util.header)
 RUNNING.flush()
 
 #----------------------------
 # params used
 #---------------------------
-Run_params = open(work_dir + '/Params_used', "w")
+Run_params = open( amopt.d['work_dir'] + '/Params_used', "w")
 param_str = amopt.prettify_parameters()
 Run_params.write( param_str )
 Run_params.close()
+# Echo to log too
+logger.debug( param_str )
 
 #######################################################
 #
@@ -592,14 +593,14 @@ if NMR_PROTOCOL:
     logger.info('using NMR model ' + os.getcwd() + '/tmp.pdb')
 
     if not amopt.d['cluster_submit']:
-        os.mkdir(work_dir + '/orig_models')
-        modno = split_models.split(NMR_model_in, work_dir + '/orig_models')
-        os.mkdir(work_dir + '/models')
+        os.mkdir(amopt.d['work_dir'] + '/orig_models')
+        modno = split_models.split(NMR_model_in, amopt.d['work_dir'] + '/orig_models')
+        os.mkdir(amopt.d['work_dir'] + '/models')
         if not amopt.d['NMR_process']:
             amopt.d['NMR_process'] = 1000 / modno
         logger.info(' processing each model {0} times'.format(amopt.d['NMR_process']) )
             
-        homolog = work_dir + '/orig_models'
+        homolog = amopt.d['work_dir'] + '/orig_models'
         logger.info('you have {0} models in your nmr'.format(modno) )
         if modno < 2:
             if amopt.d['NMR_Truncate_only']:
@@ -613,10 +614,10 @@ if NMR_PROTOCOL:
                 pdbs = re.split('\.', hom)
 
                 if pdbs[-1] == 'pdb':
-                    nmr.RUN_FORMAT_HOMS(homolog + '/' + hom, int(amopt.d['NMR_process']), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(amopt.d['nproc']), hom, amopt.d['alignment_file'], work_dir + '/models')
+                    nmr.RUN_FORMAT_HOMS(homolog + '/' + hom, int(amopt.d['NMR_process']), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(amopt.d['nproc']), hom, amopt.d['alignment_file'], amopt.d['work_dir'] + '/models')
                 amopt.d['make_models'] = False
-                amopt.d['models_dir'] = work_dir + '/models'
-                amopt.d['models_dir'] = work_dir + '/models'
+                amopt.d['models_dir'] = amopt.d['work_dir'] + '/models'
+                amopt.d['models_dir'] = amopt.d['work_dir'] + '/models'
                 
         if amopt.d['NMR_Truncate_only']:
             logger.info('Truncating NMR')
@@ -625,12 +626,12 @@ if NMR_PROTOCOL:
                 sys.exit()
             if modno >= 2:
                 amopt.d['make_models'] = False
-                amopt.d['models_dir'] = work_dir + '/orig_models'
-                amopt.d['models_dir'] = work_dir + '/orig_models'
+                amopt.d['models_dir'] = amopt.d['work_dir'] + '/orig_models'
+                amopt.d['models_dir'] = amopt.d['work_dir'] + '/orig_models'
         logger.info('using models from ' + amopt.d['models_dir'] )
     if amopt.d['cluster_submit']:
-        os.mkdir(work_dir + '/orig_models')
-        modno = split_models.split(NMR_model_in, work_dir + '/orig_models')
+        os.mkdir(amopt.d['work_dir'] + '/orig_models')
+        modno = split_models.split(NMR_model_in, amopt.d['work_dir'] + '/orig_models')
         if modno < 2:
             if amopt.d['NMR_Truncate_only']:
                 logger.info('cannot truncate, doing rebuilding')
@@ -639,17 +640,16 @@ if NMR_PROTOCOL:
 
         if amopt.d['NMR_Truncate_only']:
             amopt.d['make_models'] = False
-            amopt.d['models_dir'] = work_dir + '/orig_models'
-            amopt.d['models_dir'] = work_dir + '/orig_models'
+            amopt.d['models_dir'] = amopt.d['work_dir'] + '/orig_models'
+            amopt.d['models_dir'] = amopt.d['work_dir'] + '/orig_models'
             logger.info('using models from ' + amopt.d['models_dir'])
-
 
         if not amopt.d['NMR_Truncate_only']:
             amopt.d['make_models'] = False
-            amopt.d['models_dir'] = work_dir + '/models'
-            amopt.d['models_dir'] = work_dir + '/models'
-            os.mkdir(work_dir + '/models')
-            homolog = work_dir + '/orig_models'
+            amopt.d['models_dir'] = amopt.d['work_dir'] + '/models'
+            amopt.d['models_dir'] = amopt.d['work_dir'] + '/models'
+            os.mkdir(amopt.d['work_dir'] + '/models')
+            homolog = amopt.d['work_dir'] + '/orig_models'
             hom_index = 1
             if not amopt.d['NMR_process']:
                 amopt.d['NMR_process'] = 1000 / modno
@@ -657,11 +657,11 @@ if NMR_PROTOCOL:
             homindeces = []
             for hom in os.listdir(homolog):
 
-                os.mkdir(work_dir + '/Run_' + str(hom_index))
+                os.mkdir(amopt.d['work_dir'] + '/Run_' + str(hom_index))
 
                 pdbs = re.split('\.', hom)
                 if pdbs[-1] == 'pdb':
-                    ideal_homolog, ALI = nmr.CLUSTER_RUN_FORMAT_HOMS(homolog + '/' + hom, int(amopt.d['NMR_process']), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(amopt.d['nproc']), hom, amopt.d['alignment_file'], work_dir + '/models')
+                    ideal_homolog, ALI = nmr.CLUSTER_RUN_FORMAT_HOMS(homolog + '/' + hom, int(amopt.d['NMR_process']), NMR_remodel_fasta , amopt.d['rosetta_dir'], amopt.d['frags9mers'], amopt.d['frags3mers'], int(amopt.d['nproc']), hom, amopt.d['alignment_file'], amopt.d['work_dir'] + '/models')
                     homindeces.append(hom_index)
                     hom_index += 1
 
@@ -671,14 +671,14 @@ if NMR_PROTOCOL:
                 cluster_run = clusterize.ClusterRun()
                 cluster_run.QTYPE = "SGE"
                 cluster_run.ALLATOM = amopt.d['allatom']
-                cluster_run.setupModellingDir(work_dir + '/Run_' + str(hom_index))
+                cluster_run.setupModellingDir(amopt.d['work_dir'] + '/Run_' + str(hom_index))
                 if amopt.d['use_scwrl']:
                     cluster_run.setScwrlEXE(amopt.d['scwrl_exe'])
                 cluster_run.set_USE_SCWRL(amopt.d['use_scwrl'])
             # loop over the number of models and submit a job to the cluster
 
                 for i in range(int(amopt.d['NMR_process'])):
-                    cluster_run.NMRmodelOnCluster(work_dir + '/Run_' + str(hom_index), 1, i, amopt.d['rosetta_path'], amopt.d['rosetta_db'], amopt.d['fasta'], amopt.d['frags3mers'], amopt.d['frags9mers'], ideal_homolog, ALI, i, ROSETTA_CM)
+                    cluster_run.NMRmodelOnCluster(amopt.d['work_dir'] + '/Run_' + str(hom_index), 1, i, amopt.d['rosetta_path'], amopt.d['rosetta_db'], amopt.d['fasta'], amopt.d['frags3mers'], amopt.d['frags9mers'], ideal_homolog, ALI, i, ROSETTA_CM)
 
             # Monitor the cluster queue to see when all jobs have finished
                 cluster_run.monitorQueue()
@@ -688,9 +688,9 @@ if NMR_PROTOCOL:
             # cluster_run.monitorQueue()
             print homindeces
             for homindex in homindeces:
-                for remodelled in os.listdir(work_dir + '/Run_' + str(homindex) + '/models'):
+                for remodelled in os.listdir(amopt.d['work_dir'] + '/Run_' + str(homindex) + '/models'):
                     remodelled_n = remodelled.rstrip('.pdb')
-                    shutil.copyfile(work_dir + '/Run_' + str(homindex) + '/models/' + remodelled, work_dir + '/models/' + remodelled_n + '_' + str(homindex) + '.pdb')
+                    shutil.copyfile(amopt.d['work_dir'] + '/Run_' + str(homindex) + '/models/' + remodelled, amopt.d['work_dir'] + '/models/' + remodelled_n + '_' + str(homindex) + '.pdb')
 
 
     # check for same length
@@ -736,7 +736,7 @@ if amopt.d['make_models']:
         cluster_run = clusterize.ClusterRun()
         cluster_run.QTYPE = amopt.d['submit_qtype']
         cluster_run.setModeller(rosetta_modeller)
-        cluster_run.setupModellingDir(work_dir)
+        cluster_run.setupModellingDir(amopt.d['work_dir'])
         
         # loop over the number of models and submit a job to the cluster
         for i in range(amopt.d['nmodels']):
@@ -767,14 +767,14 @@ logger.info(msg)
 if amopt.d['import_cluster']:
     if os.path.exists(amopt.d['import_cluster']): 
         cluster_path = amopt.d['import_cluster']
-        if not os.path.exists(work_dir + '/fine_cluster_1'):
-            os.mkdir(work_dir + '/fine_cluster_1')
-        os.chdir(work_dir + '/fine_cluster_1')
-        list_of_ensembles = truncateedit_MAX.truncate(amopt.d['theseus_exe'], cluster_path , work_dir + '/fine_cluster_1', amopt.d['maxcluster_exe'], percent, False)
+        if not os.path.exists(amopt.d['work_dir'] + '/fine_cluster_1'):
+            os.mkdir(amopt.d['work_dir'] + '/fine_cluster_1')
+        os.chdir(amopt.d['work_dir'] + '/fine_cluster_1')
+        list_of_ensembles = truncateedit_MAX.truncate(amopt.d['theseus_exe'], cluster_path , amopt.d['work_dir'] + '/fine_cluster_1', amopt.d['maxcluster_exe'], percent, False)
 
-        os.system('mkdir ' + work_dir + '/ensembles_1')
+        os.system('mkdir ' + amopt.d['work_dir'] + '/ensembles_1')
         for each_ens in list_of_ensembles:
-            SCWRL_edit.edit_sidechains(each_ens, work_dir + '/ensembles_1/')
+            SCWRL_edit.edit_sidechains(each_ens, amopt.d['work_dir'] + '/ensembles_1/')
         sys.exit()
 
 
@@ -808,7 +808,7 @@ else:
     logger.info('----- Clustering models --------')
     
     # Spicker Alternative for clustering then MAX
-    run_spicker.RUN_SPICKER(amopt.d['models_dir'], work_dir + '/spicker_run', amopt.d['spicker_exe'], amopt.d['num_clusters'] , work_dir)
+    run_spicker.RUN_SPICKER(amopt.d['models_dir'], amopt.d['work_dir'] + '/spicker_run', amopt.d['spicker_exe'], amopt.d['num_clusters'] , amopt.d['work_dir'])
     
     # Generate list of clusters to sample
     # Done like this so it's easy to run specific clusters
@@ -817,29 +817,29 @@ else:
     logger.info('Clustering Done. Using the following clusters: {0}'.format(cluster_nums) )
     
     for cluster in cluster_nums:
-        models_path = work_dir + '/S_clusters/cluster_' + str(cluster)
+        models_path = amopt.d['work_dir'] + '/S_clusters/cluster_' + str(cluster)
         logger.info('----- Truncating models for cluster ' + str(cluster) + ' --------\n')
-        if not os.path.exists(work_dir + '/fine_cluster_' + str(cluster)):
-            os.mkdir(work_dir + '/fine_cluster_' + str(cluster))
+        if not os.path.exists(amopt.d['work_dir'] + '/fine_cluster_' + str(cluster)):
+            os.mkdir(amopt.d['work_dir'] + '/fine_cluster_' + str(cluster))
     
-        os.chdir(work_dir + '/fine_cluster_' + str(cluster))
+        os.chdir(amopt.d['work_dir'] + '/fine_cluster_' + str(cluster))
         #
         # Truncate models and return the path to the ensembled models - each ensemble is a single pdb file
         # containing multiple models
         if amopt.d['ensembler']:
-            list_of_ensembles = truncateedit_MAX.truncate_Phenix(amopt.d['phenix_exe'], models_path, work_dir + '/fine_cluster_' + str(cluster), amopt.d['maxcluster_exe'], percent, FIXED_INTERVALS)
+            list_of_ensembles = truncateedit_MAX.truncate_Phenix(amopt.d['phenix_exe'], models_path, amopt.d['work_dir'] + '/fine_cluster_' + str(cluster), amopt.d['maxcluster_exe'], percent, FIXED_INTERVALS)
         else:
-            list_of_ensembles = truncateedit_MAX.truncate(amopt.d['theseus_exe'], models_path, work_dir + '/fine_cluster_' + str(cluster), amopt.d['maxcluster_exe'], percent, FIXED_INTERVALS)
+            list_of_ensembles = truncateedit_MAX.truncate(amopt.d['theseus_exe'], models_path, amopt.d['work_dir'] + '/fine_cluster_' + str(cluster), amopt.d['maxcluster_exe'], percent, FIXED_INTERVALS)
     
         if amopt.d['top_model_only']:
-            list_of_ensembles = truncateedit_MAX.One_model_only(list_of_ensembles, work_dir)
+            list_of_ensembles = truncateedit_MAX.One_model_only(list_of_ensembles, amopt.d['work_dir'])
     
-        os.mkdir(work_dir + '/ensembles_' + str(cluster))
+        os.mkdir(amopt.d['work_dir'] + '/ensembles_' + str(cluster))
         for each_ens in list_of_ensembles:
-            SCWRL_edit.edit_sidechains(each_ens, work_dir + '/ensembles_' + str(cluster) + '/')
+            SCWRL_edit.edit_sidechains(each_ens, amopt.d['work_dir'] + '/ensembles_' + str(cluster) + '/')
     
         final_ensembles = []
-        for infile in glob.glob(os.path.join(work_dir + '/ensembles_' + str(cluster), '*.pdb')):
+        for infile in glob.glob(os.path.join(amopt.d['work_dir'] + '/ensembles_' + str(cluster), '*.pdb')):
             final_ensembles.append(infile)
             
         # Add to the total list
@@ -852,7 +852,7 @@ else:
 #---------------------------------------
 # MR BUMP analysis of the ensembles
 #---------------------------------------
-bump_dir = os.path.join(work_dir, 'MRBUMP')
+bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
 logger.info("Running MRBUMP jobs in directory: {0}".format( bump_dir ) )
 if not os.path.exists(bump_dir):
     os.mkdir(bump_dir)
