@@ -228,7 +228,9 @@ class RosettaModel(object):
         # Query octopus server for prediction
         octo = octopus_predict.OctopusPredict()
         self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
-        fastaseq = octo.getFasta(self.fasta)
+        #fastaseq = octo.getFasta(self.fasta)
+        # Problem with 3LBW predicition when remove X
+        fastaseq = octo.getFasta(self.orig_fasta)
         octo.getPredict(self.pdb_code,fastaseq, directory=self.fragments_directory)
         topo_file = octo.topo
         self.logger.debug("Got topology prediction file: {0}".format(topo_file))
@@ -489,6 +491,8 @@ class RosettaModel(object):
         
         if optd['transmembrane']:
             self.transmembrane = True
+            # TM - octopus bug
+            self.orig_fasta = optd['orig_fasta']
             if optd['make_frags']:
                 
                 script_dir = self.rosetta_dir + os.sep + "rosetta_source/src/apps/public/membrane_abinitio"

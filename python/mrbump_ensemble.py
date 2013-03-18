@@ -207,7 +207,7 @@ def create_jobscript( name, pdb, amoptd, directory=None ):
     return script_path
 ##End create_jobscript
 
-def  worker( queue, early_terminate=False ):
+def worker( queue, early_terminate=False ):
     """
     Worker process to run MrBump jobs until no more left.
     
