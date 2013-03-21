@@ -89,16 +89,20 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
     clusterId -- number/id of the cluster that is being processed
     """
 
+    logger = logging.getLogger()
+    logger.info("Running MR and model building on a local machine")
+
     # Queue to hold the jobs we want to run
     queue = multiprocessing.Queue()
     
     # Create all the run scripts and add to the queue
+    logger.info("Generating MRBUMP runscripts in: {0}".format( os.getcwd() ) )
     for pdbfile in ensembles:
         # Name is filename without extension
         name = os.path.splitext( os.path.split(pdbfile)[1] )[0]
         script_path = create_jobscript(name, pdbfile, amoptd)
         queue.put(script_path)
-    
+
     # Now start the jobs
     processes = []
     for i in range( amoptd['nproc'] ):
@@ -113,7 +117,7 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
     timeout=1*60
     killall=False # if we early terminate we check this to see if we kill any remaining jobs
     killcheck=0 # to make sure we don't loop forever when killing processes
-    
+
     while done < len(processes):
         
         for process in processes:
@@ -136,16 +140,17 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
                 process.join(timeout)
                 
                 if not process.is_alive():
+                    #print "CHECKING COMPLETED PROCESS {0} WITH EXITCODE {1}".format(process,process.exitcode)
                     done+=1
                     # Finished so see what happened
                     if process.exitcode == 0 and amoptd['early_terminate']:
                         # Got a successful completion         
-                        print "Process {0} was successful so killing other jobs as early_terminate option is active".format(process.name)           
+                        logger.info( "Process {0} was successful so killing other jobs as early_terminate option is active".format(process.name) )
                         killall=True
         
     # need to wait here as sometimes it takes a while for the results files to get written
     time.sleep(3)
-    print results_summary( os.getcwd() )
+    logger.info( results_summary( os.getcwd() ) )
     
     
 #    # At this point all jobs have finished
@@ -248,10 +253,10 @@ def worker( queue, early_terminate=False ):
         # Now check the result if early terminate
         if early_terminate:
             if check_success( directory ):
-                #print "Worker {0} job succeeded".format(multiprocessing.current_process().name)
+                print "Worker {0} job succeeded".format(multiprocessing.current_process().name)
                 return 0
         
-    #print "worker {0} FAILED!".format(os.getpid() )  
+    #print "worker {0} FAILED!".format(multiprocessing.current_process().name)
     return 1
 
     
@@ -308,6 +313,9 @@ def results_summary( run_dir ):
     results results_file as a string
     """
     
+    logger = logging.getLogger()
+    logger.debug("Checking for results in directory: {0}".format( run_dir ) )
+
     # Criteria for success with shelx
     SHELXSUCCESS = 25.0
 
@@ -317,6 +325,7 @@ def results_summary( run_dir ):
     hline = None
 
     # Check all results files and add their contents to the resultsTable
+    processed=0
     for search in os.listdir(run_dir):
         if os.path.isdir(run_dir+os.sep+search):
             res = run_dir + os.sep + search + '/results/resultsTable.dat'
@@ -330,6 +339,13 @@ def results_summary( run_dir ):
                         continue
                     if  re.search('PHASER', line)  or re.search('MOLREP', line):
                         resultsTable.append(line.split())
+
+                processed+=1
+
+    if processed == 0:
+        msg =  "NO RESULTS FOUND!\nPlease check the log files in the directory: {0}".format( run_dir )
+        logger.warn(msg)
+        return msg
 
     # sort results
     use_shelx=True # For time being assume we always use shelx
