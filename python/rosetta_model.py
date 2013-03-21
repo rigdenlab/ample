@@ -284,7 +284,9 @@ class RosettaModel(object):
                 for line in open(version_file,'r'):
                     line.strip()
                     if line.startswith('Rosetta'):
-                        version = float( line.split()[1].strip() )
+                        tversion = line.split()[1].strip()
+                        # version can be 3 digits - e.g. 3.2.4 - we only care about 2
+                        version = float( ".".join(tversion.split(".")[0:2]) )
                 self.logger.info( 'Your Rosetta version is: {0}'.format( version ) )
             except Exception,e:
                 print e
