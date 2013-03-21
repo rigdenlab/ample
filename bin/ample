@@ -79,11 +79,11 @@ parser.add_argument('-buccaneer_cycles', metavar='buccaneer_cycles', type=int, n
 parser.add_argument('-CC', metavar='rad of gyration', type=str, nargs=1,
                    help='radius of gyration reweight ')
 
-parser.add_argument('-cluster_submit', metavar='using a cluster', type=str, nargs=1,
+parser.add_argument('-submit_cluster', metavar='submit_cluster', type=str, nargs=1,
                    help='will submit jobs to a cluster')
 
-parser.add_argument('-cluster_qtype', metavar='cluster_qtype', type=str, nargs=1,
-                   help='cluster submission queue type')
+parser.add_argument('-submit_qtype', metavar='submit_qtype', type=str, nargs=1,
+                   help='cluster submission queue type:SGE, LSF...')
 
 parser.add_argument('-debug', metavar='debug option', type=str, nargs=1,
                    help='debug option ')
@@ -267,8 +267,6 @@ parser.set_defaults(
                     ASU = 0,
                     buccaneer_cycles = 5,
                     CC = '',
-                    cluster_submit = "false",
-                    cluster_qtype = "SGE",
                     import_cluster = "false",
                     debug = "false",
                     domain_all_chains_pdb = None,
@@ -306,6 +304,8 @@ parser.set_defaults(
                     run_dir = os.getcwd(),
                     scwrl_exe = None,
                     spicker_exe = None,
+                    submit_cluster = "false",
+                    submit_qtype = "SGE",
                     usehoms = "true",
                     use_arpwarp = "true",
                     use_buccaneer = "true",
@@ -340,7 +340,7 @@ amopt.populate( args )
 amopt.d['mr_keys'] = MRkeys
 
 # qtype always use uppercase
-amopt.d['cluster_qtype'] = amopt.d['cluster_qtype'].upper()
+amopt.d['submit_qtype'] = amopt.d['submit_qtype'].upper()
 
 # Make a work directory and go there - this way all output goes into this directory
 if not os.path.exists(amopt.d['run_dir']):
@@ -606,7 +606,7 @@ if NMR_PROTOCOL:
     NMR_model_in = os.getcwd() + '/tmp.pdb'
     logger.info('using NMR model ' + os.getcwd() + '/tmp.pdb')
 
-    if not amopt.d['cluster_submit']:
+    if not amopt.d['submit_cluster']:
         os.mkdir(amopt.d['work_dir'] + '/orig_models')
         modno = split_models.split(NMR_model_in, amopt.d['work_dir'] + '/orig_models')
         os.mkdir(amopt.d['work_dir'] + '/models')
@@ -643,7 +643,7 @@ if NMR_PROTOCOL:
                 amopt.d['models_dir'] = amopt.d['work_dir'] + '/orig_models'
                 amopt.d['models_dir'] = amopt.d['work_dir'] + '/orig_models'
         logger.info('using models from ' + amopt.d['models_dir'] )
-    if amopt.d['cluster_submit']:
+    if amopt.d['submit_cluster']:
         os.mkdir(amopt.d['work_dir'] + '/orig_models')
         modno = split_models.split(NMR_model_in, amopt.d['work_dir'] + '/orig_models')
         if modno < 2:
@@ -683,7 +683,7 @@ if NMR_PROTOCOL:
 
             for  hom_index in homindeces:
                 cluster_run = clusterize.ClusterRun()
-                cluster_run.QTYPE = "SGE"
+                cluster_run.QTYPE = amopt.d['submit_qtype']
                 cluster_run.ALLATOM = amopt.d['allatom']
                 cluster_run.setupModellingDir(amopt.d['work_dir'] + '/Run_' + str(hom_index))
                 if amopt.d['use_scwrl']:
@@ -741,10 +741,10 @@ if amopt.d['make_models']:
     RUNNING.flush()
     
     # If we are running with cluster support submit all modelling jobs to the cluster queue
-    if amopt.d['cluster_submit']:
+    if amopt.d['submit_cluster']:
         
         # Generate the list of random seeds
-        rosetta_modeller.generate_seeds()
+        rosetta_modeller.generate_seeds(amopt.d['nmodels'])
 
         # Invoke the cluster run class
         cluster_run = clusterize.ClusterRun()
@@ -765,7 +765,7 @@ if amopt.d['make_models']:
         # Run locally
         amopt.d['models_dir'] = rosetta_modeller.doModelling()
         
-    ##End IF amopt.d['cluster_submit']
+    ##End IF amopt.d['submit_cluster']
     
     msg = '\nModelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n'
 else:
@@ -876,19 +876,20 @@ amopt.d['mrbump_dir'] = bump_dir
 # Loop over clusters
 for i, ensemble in enumerate(ensembles):
     
-    logger.info('----- Running MRBUMP (cluster ' + str(i+1) + ')--------\n\n')
-    logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble),  i+1 ) )
+    clusterID=str(i+1)
+    logger.info('----- Running MRBUMP (cluster ' + clusterID+ ')--------\n\n')
+    logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble),  clusterID ) )
     
-    job_dir = os.path.join(amopt.d['mrbump_dir'], 'cluster_'+str(i+1) )
-    logger.info("Running cluster {0} in directory: {1}".format( i+1, job_dir ) )
+    job_dir = os.path.join(amopt.d['mrbump_dir'], 'cluster_'+clusterID )
+    logger.info("Running cluster {0} in directory: {1}".format( clusterID, job_dir ) )
     if not os.path.exists(job_dir):
         os.mkdir(job_dir)
     os.chdir(job_dir)
     
-    if amopt.d['cluster_submit']:
-        mrbump_ensemble.mrbump_ensemble_cluster( ensemble, amopt.d)
+    if amopt.d['submit_cluster']:
+        mrbump_ensemble.mrbump_ensemble_cluster( ensemble, amopt.d, clusterID=clusterID )
     else:
-        mrbump_ensemble.mrbump_ensemble_local( ensemble, amopt.d)
+        mrbump_ensemble.mrbump_ensemble_local( ensemble, amopt.d, clusterID=clusterID )
         
 # Timing data
 time_stop = time.time()
