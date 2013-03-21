@@ -49,20 +49,21 @@ def mrbump_ensemble_cluster( ensembles, amoptd, clusterID="X" ):
         jobID = jobID + 1
     mrBuild.monitorQueue()
     
-    work_dir = amoptd['work_dir']
-    shutil.rmtree(work_dir + '/fine_cluster_' + str(clusterID))
-    # shutil.rmtree(work_dir+'/pre_models')
-    for l in os.listdir(work_dir + '/spicker_run'):
-        if os.path.splitext(l)[1] == 'pdb':
-            os.remove(work_dir + '/spicker_run/' + l)
-    os.remove(work_dir + '/spicker_run/rep1.tra1')
     T = printTable.Table()
-
     T.bumppath = mrBuildClusterDir
     T.cluster = True
     table = T.maketable()
     out = sys.stdout
     T.pprint_table(out, table)
+
+    # Cleanup code
+    #shutil.rmtree(work_dir + '/fine_cluster_' + str(clusterID))
+    # shutil.rmtree(work_dir+'/pre_models')
+    #for l in os.listdir(work_dir + '/spicker_run'):
+    #    if os.path.splitext(l)[1] == 'pdb':
+    #        os.remove(work_dir + '/spicker_run/' + l)
+    #os.remove(work_dir + '/spicker_run/rep1.tra1')
+
 
         # cleanup
     # for each_run in os.listdir(mrBuildClusterDir ):

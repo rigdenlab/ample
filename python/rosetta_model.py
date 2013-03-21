@@ -312,10 +312,10 @@ class RosettaModel(object):
                '-in:file:frag9', self.frags9mers,
                '-out:path', wdir,
                '-out:pdb',
-               '-out:nstruct', nstruct,
+               '-out:nstruct', str(nstruct),
                '-out:file:silent', wdir + '/OUT',
                '-run:constant_seed',
-               '-run:jran', seed 
+               '-run:jran', str(seed) 
                 ]
             
         if self.allatom:

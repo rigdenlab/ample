@@ -282,7 +282,7 @@ class ClusterRun:
 
         file.close()
 
-        jobDir = os.path.join(self.modeler.work_dir, "pre_models", "sge_scripts")
+        jobDir = os.path.join(self.modeller.work_dir, "pre_models", "sge_scripts")
         
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
 
@@ -306,7 +306,7 @@ class ClusterRun:
             sys.stdout.write("No. of Models exceeds program limits (Max=999999)\n")
             sys.exit()
 
-        preModelDir=os.path.join(self.modeler.work_dir, "pre_models", "model_" + str(jobNumber))
+        preModelDir=os.path.join(self.modeller.work_dir, "pre_models", "model_" + str(jobNumber))
 
         if not os.path.isdir(preModelDir):
             os.mkdir(preModelDir)
@@ -315,18 +315,18 @@ class ClusterRun:
         PDBSetOutFile = os.path.join(preModelDir, "pdbsetOut_" + str(jobNumber) + ".pdb")
         PDBScwrlFile  = os.path.join(preModelDir, "scwrlOut_" + str(jobNumber) + ".pdb")
         SEQFile       = os.path.join(preModelDir, "S_" + fileNumber + ".seq")
-        PDBOutFile    = os.path.join(self.modeler.work_dir, "models", "1_S_" + fileNumber + ".pdb")
+        PDBOutFile    = os.path.join(self.modeller.work_dir, "models", "1_S_" + fileNumber + ".pdb")
 
         # Get the seed for this job
         seed = self.modeller.seeds[jobNumber-1]
 
         # Create a cluster submission script for this modelling job
         jobName="model_" + str(proc) + "_" + str(seed)
-        sub_script=os.path.join(self.modeler.work_dir, "pre_models", "sge_scripts", "job_" + jobName + ".sub")
+        sub_script=os.path.join(self.modeller.work_dir, "pre_models", "sge_scripts", "job_" + jobName + ".sub")
 
-        self.jobLogsList.append(os.path.join(self.modeler.work_dir, "pre_models", "logs", jobName + '.log'))
+        self.jobLogsList.append(os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log'))
 
-        logFile = os.path.join(self.modeler.work_dir, "pre_models", "logs", jobName + '.log')
+        logFile = os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log')
         file=open(sub_script, "w")
         script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
         file.write(script_header+"\n\n")
@@ -334,7 +334,7 @@ class ClusterRun:
 
         # Build up the rosetta command
         nstruct=1 # 1 structure
-        rcmd = self.modeller.rosetta_cmd( preModelDir, nstruct, seed )
+        rcmd = self.modeller.modelling_cmd( preModelDir, nstruct, seed )
         cmdstr = " ".join(rcmd) + "\n\n"
         file.write( cmdstr )
 
@@ -361,7 +361,7 @@ class ClusterRun:
 
         file.close()
 
-        jobDir = os.path.join(self.modeler.work_dir, "pre_models", "sge_scripts")
+        jobDir = os.path.join(self.modeller.work_dir, "pre_models", "sge_scripts")
         
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
         

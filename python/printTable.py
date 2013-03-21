@@ -55,7 +55,7 @@ class Table:
    def maketable(self):
        table = []
        
-       if self.cluster == False:
+       if not self.cluster:
            for run in os.listdir(self.bumppath):
                if re.search('search', run): 
                   # print run 
@@ -128,7 +128,7 @@ class Table:
 
 
 
-       if self.cluster == True:
+       if self.cluster:
            table = []
            for run in os.listdir(self.bumppath):
             if os.path.isdir(os.path.join(self.bumppath, run  )):
@@ -212,18 +212,18 @@ class Table:
 
 if __name__ == "__main__":
     T=Table()
-    T.bumppath = '/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP'
-    T.cluster = False
+    T.bumppath = '/home/jmht/ample-dev1/examples/toxd-example/ROSETTA_MR_3/MRBUMP/cluster_run1'
+    T.cluster = True
     table = T.maketable()
     out = sys.stdout
     T.pprint_table(out, table)  
     print 'done'    
 
-    table = [["", "Ensemble No", "Truncation level", "Side chain type", "MR program", "Final Rfree", "Shelxe CC"],
-        ["spam", 1, 2, "All", "Phaser", 0.25, 23.51],
-        ["eggs", 2, 6, "Reliable", "Molrep", 0.45, 4.56],
-        ["lumberjacks", 3, 10, "Poly", "Phaser", 0.53, 12.12]]
-    import sys
-    out = sys.stdout
-
-    T.pprint_table(out, table)
+#    table = [["", "Ensemble No", "Truncation level", "Side chain type", "MR program", "Final Rfree", "Shelxe CC"],
+#        ["spam", 1, 2, "All", "Phaser", 0.25, 23.51],
+#        ["eggs", 2, 6, "Reliable", "Molrep", 0.45, 4.56],
+#        ["lumberjacks", 3, 10, "Poly", "Phaser", 0.53, 12.12]]
+#    import sys
+#    out = sys.stdout
+#
+#    T.pprint_table(out, table)
