@@ -84,6 +84,6 @@ class AmpleOptions(object):
         done_keys = keys1 + keys2 + keys3 + keys4 + [ 'use_scwrl', 'domain_termini_distance'  ]
         for k, v in sorted(self.d.items()):
             if k not in done_keys:
-                pstr += "{} : {}\n".format( k, v )
+                pstr += "{0} : {1}\n".format( k, v )
                 
         return pstr
