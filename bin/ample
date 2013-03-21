@@ -382,8 +382,12 @@ amopt.d['fasta'] = outfasta
     
 # Check if importing ensembles
 amopt.d['import_ensembles'] = False
-if os.path.isdir( str(amopt.d['ensembles']) ):
-    
+if amopt.d['ensembles']:
+    if not os.path.isdir( amopt.d['ensembles'] ):
+        msg = "Trying to import ensembles from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['ensembles'])
+        logger.critical(msg)
+        raise RuntimeError,msg
+
     amopt.d['import_ensembles'] = True
     logger.info("Found directory with ensemble files: {0}\nSetting make_models to False".format( amopt.d['ensembles'] ) )
     amopt.d['make_frags'] = False
