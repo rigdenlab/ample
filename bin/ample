@@ -318,22 +318,38 @@ parser.set_defaults(
                     )
 
 
+# Create amopt object to hold options
+amopt = ample_options.AmpleOptions( )
+
+# MRkeys hack - get MRBUMP keywords direct as there can be multiple arguments
+# to each one
+MRkeys = []
+#print sys.argv
+keycount = 0
+toRemove = [] # We remove all the mrkeywords
+while keycount < len(sys.argv):
+    #print sys.argv[keycount] ,  keycount
+    if sys.argv[keycount] == "-mr_keys":
+        toRemove.append(keycount)
+        keycount += 1
+        while not sys.argv[keycount].startswith("-"):
+            if keycount > len(sys.argv):
+                break
+            MRkeys.append( sys.argv[keycount] )
+            toRemove.append( keycount )
+            keycount += 1
+    keycount += 1
+
+# Need to decrement the index of the items to remove
+# as we remove them
+for count, i in enumerate(toRemove):
+    del sys.argv[i-count]
+## End MRKeys hack..
+
 # convert args to dictionary
 args = parser.parse_args()
 
-# get MRBUMP keywords direct
-MRkeys = []
-# print sys.argv
-keycount = 0
-while keycount < len(sys.argv):
-            # print sys.argv[keycount] ,  keycount
-    if sys.argv[keycount] == "-mr_keys":
-        MRkeys.append(sys.argv[keycount + 1])
-    keycount += 1
-
-
-# Populate the options from the parser
-amopt = ample_options.AmpleOptions( )
+# Now put them in the amopt object
 amopt.populate( args )
 
 # Now set MRKeys
@@ -466,13 +482,6 @@ if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if maki
     logger.info('Making models or fragments so checking ROSETTA options')
     rosetta_modeller = rosetta_model.RosettaModel()
     rosetta_modeller.set_from_dict( amopt.d )
-
-#
-# Variables for running MRBUMP
-if amopt.d['ASU'] > 0:
-    amopt.d['ASU'] = 'NMASU ' + str( amopt.d['ASU']  )
-else:
-    amopt.d['ASU'] = str(amopt.d['ASU'])
 
 FIXED_INTERVALS = True
 if amopt.d['percent'] != 5:
@@ -754,6 +763,7 @@ if amopt.d['make_models']:
         cluster_run.setModeller(rosetta_modeller)
         cluster_run.setupModellingDir(amopt.d['work_dir'])
         
+        logger.info('Submitting {0} jobs to a queueing system of type: {1}\n'.format( amopt.d['nmodels'],  amopt.d['submit_qtype'] ))
         # loop over the number of models and submit a job to the cluster
         for i in range(amopt.d['nmodels']):
             nproc=1 # each modelling job runs on a single processor

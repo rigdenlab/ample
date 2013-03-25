@@ -24,8 +24,6 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     mrs+='SCOPSEARCH False\n'
     mrs+='PQSSEARCH False\n'
     mrs+='SSMSEARCH False\n'
-    if adict['ASU']:
-        mrs+='{0}\n'.format( adict['ASU'] )
     mrs+='FAST False\n'
     mrs+='DOFASTA False\n'
     mrs+='MDLD False\n'
@@ -52,12 +50,17 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     mrs+='USEENSEM False\n'
     mrs+='CLEAN False\n'
     mrs+='DEBUG True\n'
-    
-    for k in adict['mr_keys']:
-        mrs+='{0}\n'.format(k)
-        
+
+    if adict['ASU'] > 0:
+        mrs+='NMASU  {0}\n'.format( adict['ASU'] )
     if adict['domain_all_chains_pdb']:
         mrs+='FIXED_XYZIN {0} IDEN {1}\n'.format( adict['domain_all_chains_pdb'], fixed_iden )
+    
+    # Extra keywords
+    # This assumes everything is a pair KEYWORD: VALUE
+    # Will need to have special checks for anything with more then 1 value
+    for i in range( 0, len(adict['mr_keys']), 2 ):
+        mrs+='{0}  {1}\n'.format( adict['mr_keys'][i], adict['mr_keys'][i+1]  )
         
     mrs+='END\n'
     mrs+='eof'
