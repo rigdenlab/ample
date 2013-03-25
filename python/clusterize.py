@@ -10,7 +10,6 @@ import os
 import sys
 import subprocess
 import shlex
-import string
 import time
 
 # our imports
@@ -38,24 +37,7 @@ class ClusterRun:
         self.USE_SCWRL=False
 
         self.RunDir=""
-        self.jobLogsList=[]
-
-        self.SEQIN=""
-        self.HKLIN=""
-        self.LABIN=dict([])
-        self.MTZcell=[]
-        self.MTZspacegroup=""
-        self.MTZresolution=0.0
-        self.MTZcolLabels=dict([])
-
-        self.BCYCLES  = 5
-        self.BUCC = True
-        self.ACYCLES  = 5
-        self.ARPWARP = True
-        self.SHELXE = False
-        self.SCYCLES = 15
-
-        self.MRKEYS = []
+        #self.jobLogsList=[]
 
         #self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
         self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
@@ -89,8 +71,8 @@ class ClusterRun:
             os.mkdir(os.path.join(RunDir, "models"))
         if not os.path.isdir(os.path.join(RunDir, "pre_models")):
             os.mkdir(os.path.join(RunDir, "pre_models"))
-        if not os.path.isdir(os.path.join(RunDir, "pre_models", "sge_scripts")):
-            os.mkdir(os.path.join(RunDir, "pre_models", "sge_scripts"))
+        if not os.path.isdir(os.path.join(RunDir, "pre_models", "submit_scripts")):
+            os.mkdir(os.path.join(RunDir, "pre_models", "submit_scripts"))
         if not os.path.isdir(os.path.join(RunDir, "pre_models", "logs")):
             os.mkdir(os.path.join(RunDir, "pre_models", "logs"))
 
@@ -117,7 +99,8 @@ class ClusterRun:
             runningList=newRunningList
             newRunningList=[]
 
-    def getJobStatus(self, qNumber):
+    # Currently unused
+    def XgetJobStatus(self, qNumber):
         """ Check a job status int the cluster queue """
 
         status=1
@@ -150,41 +133,51 @@ class ClusterRun:
         return status
 
     def getRunningJobList(self, user=""):
-        """ Check a job status int the cluster queue """
+        """ Check a job status int the cluster queue 
 
-        if user == "":
-            command_line='qstat'
-        else:
-            command_line='qstat -u ' + user
+            For LSF output is of form:
+JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
+35340   jxt15-d RUN   q1h32      ida7c42     ida2a40     *ep 5;done Mar 25 13:23
+                                             ida2a40
+                                             ida2a40
+"""
+
+        if self.QTYPE=="SGE":
+            if user == "":
+                command_line='qstat'
+            else:
+                command_line='qstat -u ' + user
+        elif self.QTYPE=="LSF":
+            if user == "":
+                command_line='bjobs'
+            else:
+                command_line='bjobs -u ' + user
 
         log_lines=[]
         self.runningQueueList=[]
 
         process_args = shlex.split(command_line)
-        p = subprocess.Popen(process_args, stdin = subprocess.PIPE,
-                                    stdout = subprocess.PIPE)
+        p = subprocess.Popen(process_args, stdout = subprocess.PIPE)
 
-        (child_stdout, child_stdin) = (p.stdout, p.stdin)
-
-        # Write the keyword input
-        child_stdin.close()
+        child_stdout = p.stdout
 
         # Read the output
         out=child_stdout.readline()
 
         while out:
             #sys.stdout.write(out)
-            if self.QTYPE=="SGE":
-                log_lines.append(string.strip(out))
+            log_lines.append( out.strip() )
             out=child_stdout.readline()
 
         child_stdout.close()
 
         if log_lines != []:
             log_lines.pop(0)
-            log_lines.pop(0)
+            # SGE has extra header
+            if self.QTYPE=="SGE":
+                log_lines.pop(0)
             for i in log_lines:
-                self.runningQueueList.append(string.split(i)[0])
+                self.runningQueueList.append(i.split()[0])
 
     def NMRmodelOnCluster(self, RunDir, proc, jobNumber, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI, seed, MR_ROSETTA ):
         """ Farm out the modelling step on a cluster (SGE) """
@@ -221,9 +214,9 @@ class ClusterRun:
 
        # Create a cluster submission script for this modelling job
         jobName="model_" + str(proc) + "_" + str(seed)
-        sub_script=os.path.join(RunDir, "pre_models", "sge_scripts", "job_" + jobName + ".sub")
+        sub_script=os.path.join(RunDir, "pre_models", "submit_scripts", "job_" + jobName + ".sub")
 
-        self.jobLogsList.append(os.path.join(RunDir, "pre_models", "logs", jobName + '.log'))
+        #self.jobLogsList.append(os.path.join(RunDir, "pre_models", "logs", jobName + '.log'))
 
         logFile = os.path.join(RunDir, "pre_models", "logs", jobName + '.log')
         file=open(sub_script, "w")
@@ -282,7 +275,7 @@ class ClusterRun:
 
         file.close()
 
-        jobDir = os.path.join(self.modeller.work_dir, "pre_models", "sge_scripts")
+        jobDir = os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts")
         
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
 
@@ -322,9 +315,9 @@ class ClusterRun:
 
         # Create a cluster submission script for this modelling job
         jobName="model_" + str(proc) + "_" + str(seed)
-        sub_script=os.path.join(self.modeller.work_dir, "pre_models", "sge_scripts", "job_" + jobName + ".sub")
+        sub_script=os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts", "job_" + jobName + ".sub")
 
-        self.jobLogsList.append(os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log'))
+        #self.jobLogsList.append(os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log'))
 
         logFile = os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log')
         file=open(sub_script, "w")
@@ -361,34 +354,11 @@ class ClusterRun:
 
         file.close()
 
-        jobDir = os.path.join(self.modeller.work_dir, "pre_models", "sge_scripts")
+        jobDir = os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts")
         
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
         
-    def setFromDict(self, amoptd):
-        """
-        Set the class variables form the amopt dictionary.
-        
-        Will not be required when the NMR stuff has been fixed 
-        """
-        
-        self.HKLIN = amoptd['mtz']
-        self.LABIN["F"] = amoptd['F']
-        self.LABIN["SIGF"] = amoptd['SIGF']
-        self.LABIN["FreeR_flag"] = amoptd['FREE']
-        self.SEQIN = str(amoptd['fasta'])
-        self.BCYCLES = amoptd['buccaneer_cycles']
-        self.BUCC = amoptd['use_buccaneer']
-        self.SCYLCLES = amoptd['shelx_cycles']
-        self.SHELXE = amoptd['use_shelxe']
-
-        self.MRKEYS = amoptd['mr_keys']
-#        if amoptd['old_shelx']:
-#            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
-#        else:
-#            self.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
-
-    def subScriptHeader(self, logFile=None, jobName=None):
+    def subScriptHeader(self, nProcs=None, logFile=None, jobName=None):
         """
         Create a string suitable for writing out as the header of the submission script
         for submitting to a particular queueing system
@@ -405,7 +375,11 @@ class ClusterRun:
             sh += '#$ -N {0}\n\n'.format(jobName)
         elif self.QTYPE=="LSF":
             sh += '#!/bin/sh\n'
-            sh += '#BSUB -R "span[ptile=16]"'
+            # jmht - hard-wired for hartree wonder
+            sh += '#BSUB -R "span[ptile=16]"\n'
+            sh += '#BSUB -W 12:00\n'
+            if nProcs:
+                sh += '#BSUB -n {0}\n'.format(nProcs) 
             sh += '#BSUB -o {0}\n'.format(logFile) 
             sh += '#BSUB -J {0}\n\n'.format(jobName)         
         else:
@@ -431,27 +405,25 @@ class ClusterRun:
         os.chdir(jobDir)
         
         command_line=None
+        stdin = None
         if self.QTYPE=="SGE":
             command_line='qsub -V %s' % subScript
         elif self.QTYPE=="LSF":
-            command_line='bsub %s' % subScript
+            command_line='bsub'
+            stdin = open( subScript, "r")
         else:
             raise RuntimeError,"Unrecognised QTYPE: ".format(self.QTYPE)            
 
         process_args = shlex.split(command_line)
-        p = subprocess.Popen(process_args, stdin = subprocess.PIPE,
+        p = subprocess.Popen(process_args, stdin = stdin,
                                       stdout = subprocess.PIPE)
 
-        (child_stdout, child_stdin) = (p.stdout, p.stdin)
-
-        # Write the keyword input
-        child_stdin.close()
+        child_stdout = p.stdout
 
         # Watch the output for successful termination
         out=child_stdout.readline()
 
         qNumber=0
-
         while out:
             #sys.stdout.write(out)
             if self.QTYPE=="SGE":
@@ -459,6 +431,7 @@ class ClusterRun:
                     qNumber=int(out.split()[2])
                     self.qList.append(qNumber)
             elif self.QTYPE=="LSF":
+                # Job <35339> is submitted to queue <q1h32>.
                 if "is submitted to queue" in out:
                     qStr=out.split()[1]
                     qNumber=int(qStr.strip("<>"))
@@ -484,24 +457,21 @@ class ClusterRun:
         
         """
         
-        # First set all the variables
-        self.setFromDict(amoptd)
-
         # Create a cluster submission script for this modelling job
         jobName="mrBuild_" + str(jobID)
 
         jobDir=os.path.join(clusterDir, "mrbuild_" + str(jobID))
         os.mkdir(jobDir)
-        os.mkdir(os.path.join(jobDir, "sge_scripts"))
+        os.mkdir(os.path.join(jobDir, "submit_scripts"))
         os.mkdir(os.path.join(jobDir, "logs"))
-        sub_script=os.path.join(jobDir, "sge_scripts", "job_" + str(jobID) + ".sub")
+        sub_script=os.path.join(jobDir, "submit_scripts", "job_" + str(jobID) + ".sub")
 
         modelName=os.path.split(ensemblePDB)[1].replace(".pdb","")
         logFile = os.path.join(jobDir, "logs", "job_" + str(jobID) + '.log')
 
         # Create the submission script
         file=open(sub_script, "w")
-        script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
+        script_header = self.subScriptHeader( nProcs=amoptd['nproc'], logFile=logFile, jobName=jobName)
         file.write(script_header)
 
         file.write("pushd " + jobDir + "\n\n" + 
@@ -516,27 +486,27 @@ class ClusterRun:
 
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
 
-    def makeResultsFile(self):
-        """ Create final results summary file """
-
-        resultsFile=os.path.join(self.RunDir, "Final_results.log")
-
-        resfile=open(resultsFile, "w")
-
-        for ofile in self.jobLogsList:
-            if os.path.isfile(ofile):
-                f=open(ofile, "r")
-                line=f.readline()
-                while line:
-                    if "SHELX>>>" in line:
-                        resfile.write(line).replace("SHELX>>> ", "")
-                    line=f.readline()
-
-                ofile.close()
-            else:
-                resfile.write("Log file not found:\n   " + ofile + "\n")
-
-        resfile.close()
+#    def makeResultsFile(self):
+#        """ Create final results summary file """
+#
+#        resultsFile=os.path.join(self.RunDir, "Final_results.log")
+#
+#        resfile=open(resultsFile, "w")
+#
+#        for ofile in self.jobLogsList:
+#            if os.path.isfile(ofile):
+#                f=open(ofile, "r")
+#                line=f.readline()
+#                while line:
+#                    if "SHELX>>>" in line:
+#                        resfile.write(line).replace("SHELX>>> ", "")
+#                    line=f.readline()
+#
+#                ofile.close()
+#            else:
+#                resfile.write("Log file not found:\n   " + ofile + "\n")
+#
+#        resfile.close()
 
 
 if __name__ == "__main__":
