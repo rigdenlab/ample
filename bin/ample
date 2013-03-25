@@ -512,6 +512,8 @@ if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
     if not os.path.isfile( amopt.d['mtz'] ):
         logger.critical("Cannot find MTZ file: {0}".format( amopt.d['mtz'] ) )
         sys.exit(1)
+
+    logger.info("Determining MTZ flags using mtzdump from file: {0}".format( amopt.d['mtz'] ) )
     try:
         t_flag_F, t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( amopt.d['mtz'] )
     except KeyError,e:

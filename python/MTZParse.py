@@ -9,10 +9,12 @@
 #
 #
 
-import os,sys,string
-import time
-import subprocess
+import logging
+import os
 import shlex
+import subprocess
+import sys
+import time
 
 
 class Mtzdump:
@@ -31,6 +33,8 @@ class Mtzdump:
         self.debug=eval(os.environ['MRBUMP_DEBUG'])
      except:
         self.debug=False
+
+     self.logger = logging.getLogger()
    
    def setMTZdumpLogfile(self, dir):
      """ Set the name of the mtzdump logfile. Try to make it unique to the user
@@ -52,13 +56,15 @@ class Mtzdump:
       # Set the command line
       command_line = self.mtzdumpEXE + ' HKLIN ' + self.hklin
          
-      if self.debug:
-         sys.stdout.write("\n")
-         sys.stdout.write("======================\n")
-         sys.stdout.write("MTZDUMP command line:\n")
-         sys.stdout.write("======================\n")
-         sys.stdout.write(command_line + "\n")
-         sys.stdout.write("\n")
+#      if self.debug:
+#         sys.stdout.write("\n")
+#         sys.stdout.write("======================\n")
+#         sys.stdout.write("MTZDUMP command line:\n")
+#         sys.stdout.write("======================\n")
+#         sys.stdout.write(command_line + "\n")
+#         sys.stdout.write("\n")
+
+      self.logger.debug("Executing MTZDUMP with command-line: {0}".format( command_line ) )
  
       # Launch
       if os.name == "nt":
@@ -104,7 +110,7 @@ class Mtzdump:
        if 'Cell Dimensions' in logline:
          logline = f.readline()
          logline = f.readline()
-         cell = string.split(logline)
+         cell = logline.split()
          f.close()
          return cell
        logline = f.readline()
@@ -119,7 +125,7 @@ class Mtzdump:
      # don't know why!
      while 1:
        if 'Space group' in logline:
-         l = string.split(logline)
+         l = logline.split()
          symmetryNumber = int(l[-1].rstrip(')'))
          f.close()
          return symmetryNumber
@@ -134,7 +140,7 @@ class Mtzdump:
  
      while logline:
        if 'Space group' in logline:
-         l = string.split(logline, "'")
+         l = logline.split("'")
          spacegroup = l[-2].replace(" ","")
          f.close()
          return spacegroup
@@ -152,7 +158,7 @@ class Mtzdump:
        if 'Resolution Range' in logline:
          logline = f.readline()
          logline = f.readline()
-         resline = string.split(logline)
+         resline = logline.split()
          resolution = float(resline[-3].rstrip(')'))
          f.close()
          return resolution
@@ -169,18 +175,25 @@ class Mtzdump:
      logline = f.readline()
  
      # Loop over the lines in the logfile and save the column data information
- 
+     col_labels = None 
      while logline:
        if 'Column Labels' in logline:
          logline = f.readline()
          logline = f.readline()
-         col_labels = string.split(string.strip(logline))
+         col_labels = logline.strip().split()
        #if 'Column Types' in logline:
        #  logline = f.readline()
        #  logline = f.readline()
        #  ctypes = string.split(string.strip(logline))
          break
        logline = f.readline()
+
+     if not col_labels:
+         msg = """Error parsing MTZDUMP logfile, could not find "Column Labels" header.
+Please check the logfile: {0} for any errors.""".format( self.logfile )
+         self.logger.critical(msg)
+         raise RuntimeError,msg
+
      for col in col_labels:
         if col == "F":
            self.colLabels["F"]="F"
