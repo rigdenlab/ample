@@ -224,7 +224,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
         file.write(script_header)
 
-        file.write("setenv CCP4_SCR $TMPDIR\n\n")
+        file.write("export CCP4_SCR $TMPDIR\n\n")
 
         # jmht - this needs to go in the rosetta object
         file.write('cd '+ os.path.join(RunDir, "pre_models", "model_" + str(jobNumber)) +'\n\n'+
@@ -323,7 +323,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         file=open(sub_script, "w")
         script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
         file.write(script_header+"\n\n")
-        file.write("setenv CCP4_SCR $TMPDIR\n\n")
+        file.write("export CCP4_SCR $TMPDIR\n\n")
 
         # Build up the rosetta command
         nstruct=1 # 1 structure
@@ -475,7 +475,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         file.write(script_header)
 
         file.write("pushd " + jobDir + "\n\n" + 
-        "setenv CCP4_SCR $TMPDIR\n\n")
+        "export CCP4_SCR $TMPDIR\n\n")
         
         # Generate the MRBUMP command - up to eof
         mrbCmd = mrbump_cmd.mrbump_cmd( amoptd, jobid=jobID, ensemble_pdb=ensemblePDB )
