@@ -52,7 +52,11 @@ class Table:
            print >> out
 
 
-   def maketable(self):
+   def Xmaketable(self):
+       """
+       DEPRECATED - we just use the resultsTable.dat files
+       Go through the MRBUMP directories and parse the output files to get the results
+       """
        table = []
        
        if not self.cluster:
