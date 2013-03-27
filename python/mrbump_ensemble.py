@@ -17,10 +17,7 @@ import unittest
 
 # our imports
 import clusterize
-import Final_display_results
-import printTable
 import mrbump_cmd
-
 
 def mrbump_ensemble_cluster( ensembles, amoptd, clusterID="X" ):
     """
@@ -47,15 +44,10 @@ def mrbump_ensemble_cluster( ensembles, amoptd, clusterID="X" ):
     for pdbfile in ensembles:
         mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, amoptd )
         jobID = jobID + 1
+    
+    # Monitor the cluster queue to see when all jobs have finished
     mrBuild.monitorQueue()
     
-    T = printTable.Table()
-    T.bumppath = mrBuildClusterDir
-    T.cluster = True
-    table = T.maketable()
-    out = sys.stdout
-    T.pprint_table(out, table)
-
     # Cleanup code
     #shutil.rmtree(work_dir + '/fine_cluster_' + str(clusterID))
     # shutil.rmtree(work_dir+'/pre_models')
@@ -64,8 +56,6 @@ def mrbump_ensemble_cluster( ensembles, amoptd, clusterID="X" ):
     #        os.remove(work_dir + '/spicker_run/' + l)
     #os.remove(work_dir + '/spicker_run/rep1.tra1')
 
-
-        # cleanup
     # for each_run in os.listdir(mrBuildClusterDir ):
         #   if os.path.isdir(  os.path.join(mrBuildClusterDir, each_run)):
         #      name=re.split('_', each_run)
@@ -77,7 +67,6 @@ def mrbump_ensemble_cluster( ensembles, amoptd, clusterID="X" ):
         #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "logs" ),mrBuildOutputDir  )
         # shutil.rmtree(mrBuildClusterDir)
     
-    # Monitor the cluster queue to see when all jobs have finished
 ##End mrbump_ensemble_cluster
 
 def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
@@ -151,34 +140,6 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
         
     # need to wait here as sometimes it takes a while for the results files to get written
     time.sleep(3)
-    logger.info( results_summary( os.getcwd() ) )
-    
-    
-#    # At this point all jobs have finished
-#    bump_dir = amopt.d['mrbump_dir']
-#    # Process results
-#    if amopt.d['use_shelxe']:
-#        Final_display_results.make_log(bump_dir, os.path.join(amopt.d['work_dir'], 'Final_results.log'))
-#        # print '\n\nFinal Results:\n\n'
-#        # T=printTable.Table()
-#        # T.bumppath = work_dir +'/MRBUMP_cluster'+str(cluster)
-#        # T.cluster = False
-#        # table = T.maketable()
-#        # out = sys.stdout
-#        # T.pprint_table(out, table)
-#    else:
-#        resultslog = open(amopt.d['work_dir'] + os.sep + 'Results.log', "w")
-#        print 'getting results from: {0}',format( bump_dir )
-#        for mrbumplog in os.listdir(bump_dir):
-#            if re.search('.log', mrbumplog):
-#                # print mrbumplog
-#                for line in open(mrbumplog):
-#                    if re.search('^(\d)\s*loc0_', line):
-#                        if not re.search('method', line):
-#                            print line
-#                            resultslog.write(line)
-#        resultslog.close()
-        
 ##End mrbump_ensemble_local
 
 def create_jobscript( name, pdb, amoptd, directory=None ):
@@ -259,8 +220,6 @@ def worker( queue, early_terminate=False ):
         
     #print "worker {0} FAILED!".format(multiprocessing.current_process().name)
     return 1
-
-    
 ##End worker
 
 def check_success( directory ):
@@ -303,120 +262,6 @@ def check_success( directory ):
     # Nothing good enough
     return False
 
-def results_summary( run_dir ):
-    """
-    Generate a summary of the MR BUMP results
-    
-    Args:
-    run_dir -- the directory the jobs were run from
-    
-    Returns:
-    results results_file as a string
-    """
-    
-    logger = logging.getLogger()
-    logger.debug("Checking for results in directory: {0}".format( run_dir ) )
-
-    # Criteria for success with shelx
-    SHELXSUCCESS = 25.0
-
-    # Set up the results results_file headers
-    resultsTable = []
-    
-    hline = None
-
-    # Check all results files and add their contents to the resultsTable
-    processed=0
-    for search in os.listdir(run_dir):
-        if os.path.isdir(run_dir+os.sep+search):
-            res = run_dir + os.sep + search + '/results/resultsTable.dat'
-            if os.path.exists(res):
-                firstline=True
-                for line in open(res):
-                    if firstline:
-                        if not hline:
-                            hline = line.strip().split()
-                        firstline=False
-                        continue
-                    if  re.search('PHASER', line)  or re.search('MOLREP', line):
-                        resultsTable.append(line.split())
-
-                processed+=1
-
-    if processed == 0:
-        msg =  "NO RESULTS FOUND!\nPlease check the log files in the directory: {0}".format( run_dir )
-        logger.warn(msg)
-        return msg
-
-    # sort results
-    use_shelx=True # For time being assume we always use shelx
-    if use_shelx:
-        y = hline.index('SHELXE_CC')
-    # print resultsTable
-    # print y
-        resultsTable.sort(key=lambda x: float(x[y]))
-        resultsTable.reverse()
-        best = resultsTable[0][0]
-        prog = resultsTable[0][1]
-        if float( resultsTable[0][y]) >=25:
-            DIE = True
-
-    else:
-        y = hline.index('final_Rfree')
-
-        resultsTable.sort(key=lambda x: float(x[y]))
-        best = resultsTable[0][0]
-        prog = resultsTable[0][1]
-
-
-    # Rebuild the path that generated the result
-    n= re.sub('loc0_ALL','search', best)
-    n = re.sub('UNMOD','mrbump', n)
-    Best = run_dir + os.sep + n + '/data/'+re.sub('_UNMOD','', best)+'/unmod/mr/'+prog.lower()+'/refine'
-
-    resultsTable.insert(0, hline)
-
-    # Currently a hack - need a list with a write method
-    class WriteList(list):
-        def write(self,line):
-            self.append(line)
-
-    # Output the results results_file
-    T=printTable.Table()
-    #out = sys.stdout
-    out = WriteList()
-    T.pprint_table(out, resultsTable)
-    
-    
-    header = """###########################################################################################
-###########################################################################################
-##                                                                                       ##
-##                                                                                       ##
-
-Overall Summary
-
-"""
-    
-    r = header
-    # now add list to string
-    r += "".join(out)
-    
-    r += '\nBest results so far are in :\n'
-    r +=  Best
-
-    footer = """
-
-##                                                                                       ##
-##                                                                                       ##
-###########################################################################################
-###########################################################################################
-"""
-    
-    r+= footer
-        
-    return r
-
-
 class Test(unittest.TestCase):
 
 
@@ -458,23 +303,6 @@ class Test(unittest.TestCase):
         
         self.assertTrue( check_success( dir ) )
         
-    def XtestResultsSummary(self):
-        
-        dir = "/opt/ample-dev1/python"
-        dir = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_1/MRBUMP_cluster1"
-        dir = "/gpfs/home/HCEA041/djr01/jxt15-djr01/ample-dev1/examples/toxd-example/ROSETTA_MR_0/MRBUMP/cluster_1"
-        
-        
-#        T = printTable.Table()
-#        T.bumppath = dir
-#        T.cluster = False
-#        table = T.maketable()
-#        out = sys.stdout
-#        T.pprint_table(out, table)
-
-        print results_summary( dir )
-
-
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

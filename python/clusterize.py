@@ -42,7 +42,6 @@ class ClusterRun:
         #self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
         self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
 
-        self.ALLATOM=False
         self.debug=True
 
         if os.name == "nt":
@@ -485,28 +484,6 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         file.close()
 
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
-
-#    def makeResultsFile(self):
-#        """ Create final results summary file """
-#
-#        resultsFile=os.path.join(self.RunDir, "Final_results.log")
-#
-#        resfile=open(resultsFile, "w")
-#
-#        for ofile in self.jobLogsList:
-#            if os.path.isfile(ofile):
-#                f=open(ofile, "r")
-#                line=f.readline()
-#                while line:
-#                    if "SHELX>>>" in line:
-#                        resfile.write(line).replace("SHELX>>> ", "")
-#                    line=f.readline()
-#
-#                ofile.close()
-#            else:
-#                resfile.write("Log file not found:\n   " + ofile + "\n")
-#
-#        resfile.close()
 
 
 if __name__ == "__main__":

@@ -46,6 +46,7 @@ import ample_util
 import fasta_parser
 import mrbump_ensemble
 import rosetta_model
+import mrbump_results
 import run_spicker
 import SCWRL_edit
 import split_models, nmr
@@ -892,17 +893,27 @@ for i, ensemble in enumerate(ensembles):
     logger.info('----- Running MRBUMP (cluster ' + clusterID+ ')--------\n\n')
     logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble),  clusterID ) )
     
-    job_dir = os.path.join(amopt.d['mrbump_dir'], 'cluster_'+clusterID )
+    job_dir = os.path.join( amopt.d['mrbump_dir'], 'cluster_'+clusterID )
     logger.info("Running cluster {0} in directory: {1}".format( clusterID, job_dir ) )
-    if not os.path.exists(job_dir):
-        os.mkdir(job_dir)
-    os.chdir(job_dir)
+    if not os.path.exists( job_dir ):
+        os.mkdir( job_dir )
+    os.chdir( job_dir )
     
     if amopt.d['submit_cluster']:
         mrbump_ensemble.mrbump_ensemble_cluster( ensemble, amopt.d, clusterID=clusterID )
     else:
         mrbump_ensemble.mrbump_ensemble_local( ensemble, amopt.d, clusterID=clusterID )
         
+    # Show what happened
+    resultsSummary = mrbump_results.ResultsSummary()   
+    
+    if amopt.d['submit_cluster']:    
+        summary = resultsSummary.summariseResults( job_dir, cluster=True )
+    else:
+        summary = resultsSummary.summariseResults( job_dir, cluster=False )
+        
+    logger.info( summary )
+    
 # Timing data
 time_stop = time.time()
 elapsed_time = time_stop - time_start
