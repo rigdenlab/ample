@@ -51,8 +51,9 @@ class ResultsSummary(object):
             for pd in os.listdir( self.mrbump_dir ):
                 if os.path.isdir( pd ):
                     for d in os.listdir( os.path.join(self.mrbump_dir, pd) ):
-                        if dir_re.match( d ) and os.path.isdir( d ):
-                            jobDirs.append( os.path.join( self.mrbump_dir, pd, d )  )
+                        dpath = os.path.join( self.mrbump_dir, pd, d )
+                        if dir_re.match( d ) and os.path.isdir( dpath ):
+                            jobDirs.append( dpath )
         else:
             jobDirs = glob.glob( os.path.join( self.mrbump_dir, "search_*_mrbump" ) )
         
@@ -63,8 +64,10 @@ class ResultsSummary(object):
         header = None
         for jobDir in jobDirs:
             
+            self.logger.debug(" -- checking directory for results: {0}".format( jobDir ) )
             resultsTable = os.path.join( jobDir,"results", "resultsTable.dat" )
             if not os.path.exists(resultsTable):
+                self.logger.debug(" -- Could not find file: {0}".format( resultsTable ) )
                 continue
             
             firstLine = True
@@ -188,7 +191,7 @@ class ResultsSummary(object):
         
         r = "\n\nOverall Summary:\n\n"
         r += summary
-        r += '\nBest results so far are in :\n'
+        r += '\nBest results so far are in :\n\n'
         r +=  self.results[0].resultDir
             
         return r
@@ -342,7 +345,11 @@ class ResultsSummary(object):
 if __name__ == "__main__":
     mrbump_dir = "/Users/jmht/Documents/AMPLE/res.test/cluster_run1"
     mrbump_dir = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/MRBUMP/cluster_1"
+    mrbump_dir = "/gpfs/home/HCEA041/djr01/jxt15-djr01/TM/3OUF/ROSETTA_MR_1/MRBUMP/cluster_run1"
     
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
+
     r = ResultsSummary()
-    print r.summariseResults( mrbump_dir, cluster=False )
+    print r.summariseResults( mrbump_dir, cluster=True )
     

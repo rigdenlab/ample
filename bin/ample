@@ -894,13 +894,14 @@ for i, ensemble in enumerate(ensembles):
     logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble),  clusterID ) )
     
     job_dir = os.path.join( amopt.d['mrbump_dir'], 'cluster_'+clusterID )
+
     logger.info("Running cluster {0} in directory: {1}".format( clusterID, job_dir ) )
     if not os.path.exists( job_dir ):
         os.mkdir( job_dir )
     os.chdir( job_dir )
     
     if amopt.d['submit_cluster']:
-        mrbump_ensemble.mrbump_ensemble_cluster( ensemble, amopt.d, clusterID=clusterID )
+        mrbump_ensemble.mrbump_ensemble_cluster( ensemble, job_dir, amopt.d, clusterID=clusterID )
     else:
         mrbump_ensemble.mrbump_ensemble_local( ensemble, amopt.d, clusterID=clusterID )
         
@@ -919,7 +920,7 @@ time_stop = time.time()
 elapsed_time = time_stop - time_start
 run_in_min = elapsed_time / 60
 run_in_hours = run_in_min / 60
-msg = '\nMR and shelx DONE \n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
+msg = '\nMR and shelx DONE\n\n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
 logging.info(msg)
 RUNNING.write(msg)
 RUNNING.flush()

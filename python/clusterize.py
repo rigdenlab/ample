@@ -6,6 +6,7 @@
 # Ronan Keegan 25/10/2011
 #
 
+import logging
 import os
 import sys
 import subprocess
@@ -49,6 +50,8 @@ class ClusterRun:
         else:
             self.pdbsetEXE=os.path.join(os.environ["CCP4"], "bin", "pdbset")
 
+        self.logger =  logging.getLogger()
+
     def set_USE_SCWRL(self, bool):
         self.USE_SCWRL=bool
 
@@ -79,7 +82,7 @@ class ClusterRun:
     def monitorQueue(self, user=""):
         """ Monitor the Cluster queue to see when all jobs are completed """
 
-        sys.stdout.write("Jobs submitted to cluster queue, awaiting their completion...\n")
+        self.logger.info("Jobs submitted to cluster queue, awaiting their completion...")
 
         # set a holder for the qlist
         runningList=self.qList
@@ -92,9 +95,9 @@ class ClusterRun:
                 if str(job) in self.runningQueueList:
                     newRunningList.append(job)
             if len(runningList) > len(newRunningList):
-                sys.stdout.write("Queue Monitor: %d out of %d jobs remaining in cluster queue...\n" %  (len(newRunningList),len(self.qList)))
+                self.logger.info("Queue Monitor: %d out of %d jobs remaining in cluster queue..." %  (len(newRunningList),len(self.qList)))
             if len(newRunningList) == 0:
-                sys.stdout.write("Queue Monitor: All jobs complete!\n")
+                self.logger.info("Queue Monitor: All jobs complete!")
             runningList=newRunningList
             newRunningList=[]
 
@@ -424,7 +427,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 
         qNumber=0
         while out:
-            #sys.stdout.write(out)
+            qNumber = None
             if self.QTYPE=="SGE":
                 if "Your job" in out:
                     qNumber=int(out.split()[2])
@@ -435,6 +438,10 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                     qStr=out.split()[1]
                     qNumber=int(qStr.strip("<>"))
                     self.qList.append(qNumber)                
+
+            if qNumber:
+                self.logger.debug("Submission script {0} submitted to queue as job {1}".format( subScript, qNumber ) )
+
             out=child_stdout.readline()
 
         child_stdout.close()

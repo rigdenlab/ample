@@ -19,7 +19,7 @@ import unittest
 import clusterize
 import mrbump_cmd
 
-def mrbump_ensemble_cluster( ensembles, amoptd, clusterID="X" ):
+def mrbump_ensemble_cluster( ensembles, mrBuildClusterDir, amoptd, clusterID="X" ):
     """
     Process the list of ensembles using MrBump on a cluster.
     
@@ -33,10 +33,6 @@ def mrbump_ensemble_cluster( ensembles, amoptd, clusterID="X" ):
 
     mrBuild = clusterize.ClusterRun()
     mrBuild.QTYPE = amoptd['submit_qtype']
-
-    mrBuildClusterDir = os.path.join(amoptd['mrbump_dir'], "cluster_run" + str(clusterID))
-    os.mkdir(mrBuildClusterDir)
-    #mrBuild.getMTZInfo(amopt.d['mtz'], mrBuildClusterDir)
 
     # Reset the queue list
     mrBuild.qList = []
