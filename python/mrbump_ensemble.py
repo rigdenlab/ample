@@ -98,28 +98,27 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
 
     
     # Loop through the processes checking if any are done
-    done=0
     timeout=10*60
     timeout=1*60
     killall=False # if we early terminate we check this to see if we kill any remaining jobs
-    killcheck=0 # to make sure we don't loop forever when killing processes
-
-    while done < len(processes):
+    killed=0 # just to make sure we don't loop forever when killing processes
+    
+    while len(processes) or not killed > len(processes):
         
-        for process in processes:
+        for i, process in enumerate(processes):
             
             if killall:
-                # Make sure we don't loop forever
-                killcheck+=1
-                if killcheck > len(processes):
-                    done=len(processes)
+                if killed > len(processes):
                     break
 
                 if process.is_alive():
-                    #print "Killing process ",process.name
+                    print "Killing process {0}".format(process.name)
                     process.terminate()
-                    time.sleep(0.1)
-                    done+=1
+                    killed+=1
+                    time.sleep(1)
+                else:
+                    del processes[i]
+                    
             else:
                 # Join process for timeout seconds and if we haven't finished by then
                 # move onto the next process
@@ -127,12 +126,14 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
                 
                 if not process.is_alive():
                     #print "CHECKING COMPLETED PROCESS {0} WITH EXITCODE {1}".format(process,process.exitcode)
-                    done+=1
+                    # Remove from processes to check
+                    del processes[i]
                     # Finished so see what happened
                     if process.exitcode == 0 and amoptd['early_terminate']:
                         # Got a successful completion         
                         logger.info( "Process {0} was successful so killing other jobs as early_terminate option is active".format(process.name) )
                         killall=True
+                        
         
     # need to wait here as sometimes it takes a while for the results files to get written
     time.sleep(3)
@@ -183,6 +184,9 @@ def worker( queue, early_terminate=False ):
     1 if nothing found
     
     We keep looping, removing jobs from the queue until there are no more left.
+    
+    REM: This needs to import the main module that it lives in so maybe this should
+    live in a separate module?
     """
     
     while True:
@@ -301,5 +305,7 @@ class Test(unittest.TestCase):
         
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+    #unittest.main()
+    # Nothing here - see notes in worker
+    pass
     
