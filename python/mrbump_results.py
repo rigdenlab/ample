@@ -343,13 +343,17 @@ class ResultsSummary(object):
 
 
 if __name__ == "__main__":
-    mrbump_dir = "/Users/jmht/Documents/AMPLE/res.test/cluster_run1"
-    mrbump_dir = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/MRBUMP/cluster_1"
-    mrbump_dir = "/gpfs/home/HCEA041/djr01/jxt15-djr01/TM/3OUF/ROSETTA_MR_1/MRBUMP/cluster_run1"
+    import sys
+    if len(sys.argv) == 2:
+        mrbump_dir = sys.argv[1]
+    else:
+        mrbump_dir = "/Users/jmht/Documents/AMPLE/res.test/cluster_run1"
+        mrbump_dir = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/MRBUMP/cluster_1"
+        mrbump_dir = "/gpfs/home/HCEA041/djr01/jxt15-djr01/TM/3OUF/ROSETTA_MR_1/MRBUMP/cluster_run1"
     
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
     r = ResultsSummary()
-    print r.summariseResults( mrbump_dir, cluster=True )
+    print r.summariseResults( mrbump_dir, cluster=False )
     
