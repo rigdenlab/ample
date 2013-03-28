@@ -100,40 +100,28 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
     # Loop through the processes checking if any are done
     timeout=10*60
     timeout=1*60
-    killall=False # if we early terminate we check this to see if we kill any remaining jobs
-    killcheck=len(processes) # just to make sure we don't loop forever when killing processes
-    
     while len(processes):
-        
-        if killcheck <= 0:
-            logger.warn("mrbump_ensemble_local - problems killing processes!")
-            break
         
         for i, process in enumerate(processes):
             
-            if killall:
-                if process.is_alive():
-                    print "Killing process {0}".format(process.name)
-                    process.terminate()
-                    killcheck-=1
-                    time.sleep(1)
-                else:
-                    del processes[i]
-                    
-            else:
-                # Join process for timeout seconds and if we haven't finished by then
-                # move onto the next process
-                process.join(timeout)
+            # Join process for timeout seconds and if we haven't finished by then
+            # move onto the next process
+            process.join(timeout)
+            
+            if not process.is_alive():
+                #print "CHECKING COMPLETED PROCESS {0} WITH EXITCODE {1}".format(process,process.exitcode)
+                # Remove from processes to check
+                del processes[i]
                 
-                if not process.is_alive():
-                    #print "CHECKING COMPLETED PROCESS {0} WITH EXITCODE {1}".format(process,process.exitcode)
-                    # Remove from processes to check
-                    del processes[i]
-                    # Finished so see what happened
-                    if process.exitcode == 0 and amoptd['early_terminate']:
-                        # Got a successful completion         
-                        logger.info( "Process {0} was successful so killing other jobs as early_terminate option is active".format(process.name) )
-                        killall=True
+                # Finished so see what happened
+                if process.exitcode == 0 and amoptd['early_terminate']:
+                    logger.info( "Process {0} was successful so removing remaining jobs from queue".format(process.name) )
+                    # Remove all remaining processes from the queue. We do this rather than terminate the processes
+                    # as terminating leaves the MRBUMP processes running. This way we hang around until all our
+                    # running processes have finished
+                    while not queue.empty():
+                        job = queue.get()
+                        logger.debug( "Removed job [{0}] from queue",format(job) )
                         
         
     # need to wait here as sometimes it takes a while for the results files to get written
