@@ -101,20 +101,21 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
     timeout=10*60
     timeout=1*60
     killall=False # if we early terminate we check this to see if we kill any remaining jobs
-    killed=0 # just to make sure we don't loop forever when killing processes
+    killcheck=len(processes) # just to make sure we don't loop forever when killing processes
     
-    while len(processes) or not killed > len(processes):
+    while len(processes):
+        
+        if killcheck <= 0:
+            logger.warn("mrbump_ensemble_local - problems killing processes!")
+            break
         
         for i, process in enumerate(processes):
             
             if killall:
-                if killed > len(processes):
-                    break
-
                 if process.is_alive():
                     print "Killing process {0}".format(process.name)
                     process.terminate()
-                    killed+=1
+                    killcheck-=1
                     time.sleep(1)
                 else:
                     del processes[i]
