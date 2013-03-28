@@ -29,7 +29,7 @@ ${AMPLEDIR}/bin/ample \
       -rosetta_dir $ROSETTA_DIR \
       -run_dir $PWD \
       -make_frags False \
-      -cluster_submit False \
+      -submit_cluster False \
       -shelx_cycles 10 \
       -nmodels 30 \
       -early_terminate True  \
@@ -38,7 +38,7 @@ ${AMPLEDIR}/bin/ample \
       -use_arpwarp False \
       -use_buccaneer False \
       -molreponly True \
-      -nproc 1 \
+      -nproc 5 \
       -allatom True \
       -num_clusters 1 \
 
