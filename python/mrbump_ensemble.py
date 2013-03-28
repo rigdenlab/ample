@@ -9,9 +9,6 @@ import logging
 import multiprocessing
 import subprocess
 import os
-import re
-import shutil
-import sys
 import time
 import unittest
 
@@ -115,15 +112,15 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
                 
                 # Finished so see what happened
                 if process.exitcode == 0 and amoptd['early_terminate']:
-                    logger.info( "Process {0} was successful so removing remaining jobs from queue".format(process.name) )
-                    # Remove all remaining processes from the queue. We do this rather than terminate the processes
-                    # as terminating leaves the MRBUMP processes running. This way we hang around until all our
-                    # running processes have finished
-                    while not queue.empty():
-                        job = queue.get()
-                        logger.debug( "Removed job [{0}] from queue",format(job) )
+                    if not queue.empty():
+                        logger.info( "Process {0} was successful so removing remaining jobs from queue".format(process.name) )
+                        # Remove all remaining processes from the queue. We do this rather than terminate the processes
+                        # as terminating leaves the MRBUMP processes running. This way we hang around until all our
+                        # running processes have finished
+                        while not queue.empty():
+                            job = queue.get()
+                            logger.debug( "Removed job [{0}] from queue".format(job) )
                         
-        
     # need to wait here as sometimes it takes a while for the results files to get written
     time.sleep(3)
 ##End mrbump_ensemble_local
