@@ -287,7 +287,7 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
     return ensembles_made
 ###END make_ensembles
 
-def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS=False ):
+def truncate( THESEUS, models_path, out_path, MAX, percent, FIXED_INTERVALS=False ):
     """
     Truncate the models in one folder
     * Run theseus to find the variances
@@ -357,9 +357,7 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS=False 
       thresholds = [1, 1.5, 2 , 2.5, 3, 3.5 ,4, 4.5, 5, 5.5, 6, 7 , 8]
     else:
       thresholds =fly_threshold(T_data, percent)
-    
     # print thresholds, len(thresholds)
-    
     
     #-------------------------------
     #truncate
@@ -376,9 +374,7 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS=False 
     
       continue_trunc = True
       if len(add_list) < 1:  #######   limit to size of pdb to keep, if files are too variable, all residues are removed
-         
          continue_trunc = False
-    
     
       if continue_trunc == True:
        print 'truncating at '+str(threshold)
