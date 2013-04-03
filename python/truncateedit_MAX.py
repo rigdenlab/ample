@@ -287,7 +287,7 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
     return ensembles_made
 ###END make_ensembles
 
-def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ):
+def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS=False ):
     """
     Truncate the models in one folder
     * Run theseus to find the variances
@@ -353,9 +353,6 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ):
     #--------------------------------
     # choose threshold type
     #-------------------------------
-    
-    #FIXED_INTERVALS = False
-    
     if FIXED_INTERVALS:
       thresholds = [1, 1.5, 2 , 2.5, 3, 3.5 ,4, 4.5, 5, 5.5, 6, 7 , 8]
     else:
@@ -422,7 +419,7 @@ def truncate(THESEUS, models_path, out_path, MAX, percent,FIXED_INTERVALS ):
 
 ###END truncate
 
-def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS ):
+def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS=False ):
   print 'asembling with Phenix'
   print PHENIX
   phenix_name = PHENIX

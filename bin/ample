@@ -484,11 +484,6 @@ if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if maki
     rosetta_modeller = rosetta_model.RosettaModel()
     rosetta_modeller.set_from_dict( amopt.d )
 
-FIXED_INTERVALS = True
-if amopt.d['percent'] != 5:
-    FIXED_INTERVALS = False
-percent = amopt.d['percent']
-
 amopt.d['mrbump_programs'] = ' molrep phaser '
 if not amopt.d['molreponly'] and not amopt.d['phaseronly']:
     amopt.d['mrbump_programs'] = ' molrep phaser '
@@ -797,7 +792,7 @@ if amopt.d['import_cluster']:
         if not os.path.exists(amopt.d['work_dir'] + '/fine_cluster_1'):
             os.mkdir(amopt.d['work_dir'] + '/fine_cluster_1')
         os.chdir(amopt.d['work_dir'] + '/fine_cluster_1')
-        list_of_ensembles = truncateedit_MAX.truncate(amopt.d['theseus_exe'], cluster_path , amopt.d['work_dir'] + '/fine_cluster_1', amopt.d['maxcluster_exe'], percent, False)
+        list_of_ensembles = truncateedit_MAX.truncate(amopt.d['theseus_exe'], cluster_path , amopt.d['work_dir'] + '/fine_cluster_1', amopt.d['maxcluster_exe'],  amopt.d['percent'], False)
 
         os.system('mkdir ' + amopt.d['work_dir'] + '/ensembles_1')
         for each_ens in list_of_ensembles:
@@ -854,9 +849,9 @@ else:
         # Truncate models and return the path to the ensembled models - each ensemble is a single pdb file
         # containing multiple models
         if amopt.d['ensembler']:
-            list_of_ensembles = truncateedit_MAX.truncate_Phenix(amopt.d['phenix_exe'], models_path, amopt.d['work_dir'] + '/fine_cluster_' + str(cluster), amopt.d['maxcluster_exe'], percent, FIXED_INTERVALS)
+            list_of_ensembles = truncateedit_MAX.truncate_Phenix(amopt.d['phenix_exe'], models_path, amopt.d['work_dir'] + '/fine_cluster_' + str(cluster), amopt.d['maxcluster_exe'],  amopt.d['percent'] )
         else:
-            list_of_ensembles = truncateedit_MAX.truncate(amopt.d['theseus_exe'], models_path, amopt.d['work_dir'] + '/fine_cluster_' + str(cluster), amopt.d['maxcluster_exe'], percent, FIXED_INTERVALS)
+            list_of_ensembles = truncateedit_MAX.truncate(amopt.d['theseus_exe'], models_path, amopt.d['work_dir'] + '/fine_cluster_' + str(cluster), amopt.d['maxcluster_exe'],  amopt.d['percent'] )
     
         if amopt.d['top_model_only']:
             list_of_ensembles = truncateedit_MAX.One_model_only(list_of_ensembles, amopt.d['work_dir'])
