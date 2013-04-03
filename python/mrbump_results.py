@@ -42,15 +42,16 @@ class ResultsSummary(object):
         """
         Find the results from running MRBUMP
         """
-        
+
         # how we recognise a job directory
         dir_re = re.compile("^search_.*_mrbump$")
         
         jobDirs = []
         if self.cluster:
             for pd in os.listdir( self.mrbump_dir ):
+                pd = os.path.join( self.mrbump_dir, pd )
                 if os.path.isdir( pd ):
-                    for d in os.listdir( os.path.join(self.mrbump_dir, pd) ):
+                    for d in os.listdir( pd ):
                         dpath = os.path.join( self.mrbump_dir, pd, d )
                         if dir_re.match( d ) and os.path.isdir( dpath ):
                             jobDirs.append( dpath )
@@ -344,8 +345,12 @@ class ResultsSummary(object):
 
 if __name__ == "__main__":
     import sys
-    if len(sys.argv) == 2:
-        mrbump_dir = sys.argv[1]
+    if len(sys.argv) == 3:
+        cluster = True
+        mrbump_dir = os.path.join( os.getcwd(), sys.argv[2] )
+    elif len(sys.argv) == 2:
+        mrbump_dir = os.path.join( os.getcwd(), sys.argv[1] )
+        cluster=False
     else:
         mrbump_dir = "/Users/jmht/Documents/AMPLE/res.test/cluster_run1"
         mrbump_dir = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/MRBUMP/cluster_1"
@@ -355,5 +360,5 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
 
     r = ResultsSummary()
-    print r.summariseResults( mrbump_dir, cluster=False )
+    print r.summariseResults( mrbump_dir, cluster=cluster )
     
