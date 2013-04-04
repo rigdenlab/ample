@@ -23,7 +23,7 @@ ${AMPLEDIR}/bin/ample \
       -name 1t00 \
       -mtz ${PWD}/1t00.mtz \
       -fasta ${PWD}/1T00_.fasta  \
-      -NMR_model_in ${PWD}/1t00.pdb \
+      -NMR_model_in ${PWD}/1OKD.pdb \
       -frags3mers ${PWD}/1t00_.200.3mers \
       -frags9mers ${PWD}/1t00_.200.9mers \
       -rosetta_dir $ROSETTA_DIR \

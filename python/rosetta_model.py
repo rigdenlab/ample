@@ -370,8 +370,9 @@ class RosettaModel(object):
         Run the modelling and return the path to the models directory
         """
 
-        # Make modelling directory and get stuff required for run
-        os.mkdir(self.models_dir)
+        # Should be done by main script
+        if not os.path.isdir( self.models_dir ):
+            os.mkdir(self.models_dir)
 
         # Now generate the seeds
         self.generate_seeds( self.nproc )
@@ -527,8 +528,6 @@ class RosettaModel(object):
                 # Found it
                 self.nr = optd['nr']       
             else:
-                
-                print "JENS"
                 
                 # Not making fragments so read in files
                 if not ( os.path.isfile(str(optd['transmembrane_spanfile'])) and os.path.isfile(str(optd['transmembrane_lipofile'])) ):
