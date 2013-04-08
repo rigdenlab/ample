@@ -161,6 +161,8 @@ class ResultsSummary(object):
         self.mrbump_dir = mrbump_dir
         self.cluster = cluster
         
+        # reset any results
+        self.results = []
         got = self.extractResults()
         if got:
             self.sortResults()
