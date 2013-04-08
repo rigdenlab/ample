@@ -379,12 +379,12 @@ amopt.d['pdb_code'] = amopt.d['name']
 if not amopt.d['pdb_code'] or len(pdb_code) != 4:
     msg = 'Name is the wrong length, use 4 chars eg ABCD'
     logger.critical(msg)
-    raise RuntimeError, msg
+    sys.exit(1)
 else:
     amopt.d['pdb_code'] += '_'
     
 # Check we can find the input fasta
-if not ( os.path.exists(str(amopt.d['fasta'])) or os.path.exists(str(amopt.d['NMR_remodel_fasta'])) ):
+if not ( os.path.exists(str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d['NMR_remodel_fasta'] ) ) ):
     msg = 'You need to give the path for the fasta'
     logger.critical(msg)
     sys.exit(1)
