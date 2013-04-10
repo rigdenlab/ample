@@ -193,19 +193,21 @@ class SpickerCluster( object ):
         
         return
                 
-    def process_log( self ):
+    def process_log( self, logfile=None ):
         """Read the spicker str.txt file and return a list of SpickerResults for each cluster.
         
         We use the R_nat value to order the files in the cluster
         """
         
+        if not logfile:
+            logfile = os.path.join(self.rundir, 'str.txt')
+            
         clusterCounts = []
         index2rnats = []
         
         # File with the spicker results for each cluster
-        sout = os.path.join(self.rundir, 'str.txt')
-        self.logger.debug("Processing spicker output file: {0}".format(sout))
-        f = open( sout, 'r' )
+        self.logger.debug("Processing spicker output file: {0}".format(logfile))
+        f = open( logfile, 'r' )
         line = f.readline()
         while line:
             line = line.strip()
@@ -219,7 +221,7 @@ class SpickerCluster( object ):
                 
                 line = f.readline().strip()
                 if not line.startswith("Nstr="):
-                    raise RuntimeError,"Problem reading file: {0}".format( sout )
+                    raise RuntimeError,"Problem reading file: {0}".format( logfile )
                 
                 ccount = int( line.split()[1] )
                 clusterCounts.append( ccount )
