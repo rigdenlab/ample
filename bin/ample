@@ -785,13 +785,12 @@ for i, ensemble in enumerate(ensembles):
         mrbump_ensemble.mrbump_ensemble_local( ensemble, amopt.d, clusterID=clusterID )
         
     # Show what happened
-    resultsSummary = mrbump_results.ResultsSummary()   
-    
-    if amopt.d['submit_cluster']:    
-        summary = resultsSummary.summariseResults( job_dir, cluster=True )
-    else:
-        summary = resultsSummary.summariseResults( job_dir, cluster=False )
+    cflag=False
+    if amopt.d['submit_cluster']:
+        cFlag=True
         
+    resultsSummary = mrbump_results.ResultsSummary( job_dir, cluster=cFlag )
+    summary = resultsSummary.summariseResults()
     logger.info( summary )
     
 # Timing data

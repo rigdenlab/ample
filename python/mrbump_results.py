@@ -30,19 +30,22 @@ class ResultsSummary(object):
     Summarise the results for a series of MRBUMP runs
     """
     
-    def __init__(self):
+    def __init__(self, mrbump_dir, cluster=False ):
         
-        self.mrbump_dir = None
-        self.cluster = None # whether jobs were run on a cluster
+        self.mrbump_dir = mrbump_dir
+        self.cluster = cluster # whether jobs were run on a cluster
         self.results = []
         
         self.logger = logging.getLogger()
 
     def extractResults( self ):
         """
-        Find the results from running MRBUMP
+        Find the results from running MRBUMP and sort them
         """
 
+        # reset any results
+        self.results = []
+        
         # how we recognise a job directory
         dir_re = re.compile("^search_.*_mrbump$")
         
@@ -114,6 +117,9 @@ class ResultsSummary(object):
             self.logger.warn("Could not extract any results from directory: {0}".format( self.mrbump_dir ) )
             return False
         
+        # Sort the results
+        self.sortResults()
+        
         return True
  
     def resultsTable(self, table):
@@ -143,7 +149,7 @@ class ResultsSummary(object):
     
     def sortResults( self ):
         """
-        Sort the results and return an ordered list
+        Sort the results
         """
         
         use_shelx=True # For time being assume we always use shelx
@@ -155,17 +161,11 @@ class ResultsSummary(object):
         self.results.sort(key=sortf)
         self.results.reverse()
     
-    def summariseResults(self, mrbump_dir, cluster=False ):
+    def summariseResults( self ):
         """Return a string summarising the results"""
         
-        self.mrbump_dir = mrbump_dir
-        self.cluster = cluster
-        
-        # reset any results
-        self.results = []
         got = self.extractResults()
         if got:
-            self.sortResults()
             return self.summaryString()
         else:
             return "\n!!! No results found in directory: {0}\n".format( mrbump_dir )
@@ -360,6 +360,6 @@ if __name__ == "__main__":
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    r = ResultsSummary()
-    print r.summariseResults( mrbump_dir, cluster=cluster )
+    r = ResultsSummary( mrbump_dir, cluster=cluster )
+    print r.summariseResults()
     
