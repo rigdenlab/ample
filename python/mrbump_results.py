@@ -171,8 +171,7 @@ class ResultsSummary(object):
             return "\n!!! No results found in directory: {0}\n".format( mrbump_dir )
     
     def summaryString( self ):
-        """
-        Return a string suitable for printing the sorted results"""
+        """Return a string suitable for printing the sorted results"""
         
         resultsTable = []
         
