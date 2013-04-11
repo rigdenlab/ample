@@ -21,7 +21,7 @@ class SpickerResult( object ):
         self.cluster_centroid = None
         self.pdb = [] # ordered list of the pdbs in their results directory
         self.rosetta_pdb = [] # ordered list of the pdbs in the rosetta directory
-        self.r_nat = [] # ordered list of the rnat values for each pdb
+        self.r_cen = [] # ordered list of the distance from the cluster centroid for each pdb
 
 
 class SpickerCluster( object ):
@@ -77,7 +77,8 @@ class SpickerCluster( object ):
         read_out = open( 'rep1.tra1', "w")
     
         #jmht - a list of the full path of all PDBs - used so we can loop through it and copy the selected
-        # ones to the relevant directory after we have run spicker
+        # ones to the relevant directory after we have run spicker - the order of these must match the order
+        # of the structures in the rep1.tra1 file 
         file_list = open( 'file_list', "w")
     
         for infile in glob.glob( os.path.join(self.models_dir,  '*.pdb') ):
@@ -90,8 +91,10 @@ class SpickerCluster( object ):
             read = open(infile)
     
             length = self.get_length(infile)
-    
+            # 1st field is length, 2nd energy, 3rd & 4th don't seem to be used for anything
             read_out.write('\t' + length + '\t926.917       '+str(counter)+'       '+str(counter)+'\n')
+            
+            # Write out the coordinates of the CA atoms 
             for line in read:
                 #print line
                 pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s*(.\d*.\d*)\s*(.\d*.\d*)\s*(.\d*.\d*)\s*(.\d*.\d*)')
@@ -110,18 +113,32 @@ class SpickerCluster( object ):
         #make rmsinp
         #length = get_length(path + '/' + pdbname)
     
-    
+# from spicker.f
+#*       'rmsinp'---Mandatory, length of protein & piece for RMSD calculation;
         rmsinp = open('rmsinp', "w")
         rmsinp.write('1  ' + length + '\n\n')
         rmsinp.write(length + '\n')
         rmsinp.close()
+        
         #make tra.in
+# from spicker.f
+#*       'tra.in'---Mandatory, list of trajectory names used for clustering.
+#*                  In the first line of 'tra.in', there are 3 parameters:
+#*                  par1: number of decoy files
+#*                  par2: 1, default cutoff, best for decoys from template-based
+#*                           modeling;
+#*                       -1, cutoff based on variation, best for decoys from
+#*                           ab initio modeling.
+#*                  par3: 1, closc from all decoys; -1, closc clustered decoys
+#*                  From second lines are the file names which contain coordinates
+#*                  of 3D structure decoys. All these files are mandatory
         tra = open('tra.in', "w")
         tra.write('1 -1 1 \nrep1.tra1')
     
         tra.close()
-    
         # Create the file with the sequence of the PDB structures
+# from spicker.f
+#*       'seq.dat'--Mandatory, sequence file, for output of PDB models.
         seq = open('seq.dat', "w")
         a_pdb = open( os.path.join( self.models_dir, pdbname ), 'r' )
         for line in a_pdb:
@@ -203,7 +220,7 @@ class SpickerCluster( object ):
             logfile = os.path.join(self.rundir, 'str.txt')
             
         clusterCounts = []
-        index2rnats = []
+        index2rcens = []
         
         # File with the spicker results for each cluster
         self.logger.debug("Processing spicker output file: {0}".format(logfile))
@@ -227,21 +244,24 @@ class SpickerCluster( object ):
                 clusterCounts.append( ccount )
                 
                 # Loop through this cluster
-                i2rnat = []
+                i2rcen = []
                 line = f.readline().strip()
                 while not line.startswith("------"):
                     fields = line.split()
-                    i2rnat.append( ( int(fields[5]), float( fields[3] ) ) )
+                    #  i_cl   i_str  R_nat   R_cen  E    #str     traj
+                    # tuple of: ( index in file , distance from centroid )
+                    i2rcen.append( ( int(fields[5]), float( fields[3] ) ) )
                     line = f.readline().strip()
                     
-                index2rnats.append( i2rnat )
+                index2rcens.append( i2rcen )
             
             line = f.readline()
                 
-        # Sort clusters by the R_nat
-        for i,l in enumerate(index2rnats):
-            sorted_by_rnat = sorted(l, key=lambda tup: tup[1])
-            index2rnats[i] = sorted_by_rnat
+        # Sort clusters by the R_cen - distance from cluster centroid
+        for i,l in enumerate(index2rcens):
+            # Sort by the distance form the centroid, so first becomes centroid
+            sorted_by_rcen = sorted(l, key=lambda tup: tup[1])
+            index2rcens[i] = sorted_by_rcen
     
         # Now map the indices to their files
         
@@ -254,10 +274,10 @@ class SpickerCluster( object ):
         for c in range( len( clusterCounts ) ):
             r = SpickerResult()
             r.cluster_size = clusterCounts[ c ]
-            for i, rnat in index2rnats[ c ]:
+            for i, rcen in index2rcens[ c ]:
                 pdb = pdb_list[i-1]
                 r.rosetta_pdb.append( pdb )
-                r.r_nat.append( rnat )
+                r.r_cen.append( rcen )
             
             results.append( r )
             
