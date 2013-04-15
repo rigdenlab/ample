@@ -16,10 +16,10 @@ class SpickerResult( object ):
 
     def __init__(self):
 
-        self.cluster_directory = None
+        self.pdb_file = None # Path to a list of the pdbs for this cluster
         self.cluster_size = None
         self.cluster_centroid = None
-        self.pdb = [] # ordered list of the pdbs in their results directory
+        self.pdb_list = [] # ordered list of the pdbs in their results directory
         self.rosetta_pdb = [] # ordered list of the pdbs in the rosetta directory
         self.r_cen = [] # ordered list of the distance from the cluster centroid for each pdb
 
@@ -30,7 +30,7 @@ class SpickerCluster( object ):
         """Initialise from a dictionary of options"""
         
         self.rundir = amoptd['spicker_rundir']
-        self.clusterdir = amoptd['spicker_clusterdir']
+        #self.clusterdir = amoptd['spicker_clusterdir']
         self.spicker_exe =  amoptd['spicker_exe']
         self.models_dir = amoptd['models_dir']
         self.num_clusters = amoptd['num_clusters']
@@ -82,9 +82,8 @@ class SpickerCluster( object ):
         file_list = open( 'file_list', "w")
     
         for infile in glob.glob( os.path.join(self.models_dir,  '*.pdb') ):
-            name = re.split('/', infile)
-    
-            pdbname = str(name.pop())
+            
+            pdbname = os.path.basename(infile)
             file_list.write(infile + '\n')
             list_string = list_string + pdbname+ '\n'
             counter +=1
@@ -173,11 +172,6 @@ class SpickerCluster( object ):
                                        stdout = subprocess.PIPE, stderr=subprocess.PIPE)
         p.wait()
     
-        
-        # Create directory to hold all clusters
-        if not os.path.exists( self.clusterdir ):
-            os.mkdir( self.clusterdir )   
-        
         # Read the log and generate the results
         results = self.process_log()
         
@@ -186,25 +180,25 @@ class SpickerCluster( object ):
         MAXCLUSTER=200 # max number of pdbs in a cluster
         for cluster in range( self.num_clusters ):
             
-            cur_clusterdir = os.path.join( self.clusterdir, "cluster_"+str(cluster+1) )
-            if not os.path.exists( cur_clusterdir ):
-                os.mkdir( cur_clusterdir )
                 
             result = results[ cluster ]
-            result.cluster_directory = cur_clusterdir
+            result.pdb_file = os.path.join( self.rundir, "spicker_cluster_{0}.list".format(cluster+1)  )
+            
+            f = open( result.pdb_file, "w" )
             for i, pdb in enumerate( result.rosetta_pdb ):
                 
                 if i > MAXCLUSTER:
                     result.cluster_size = MAXCLUSTER
                     break
                 
-                fname = os.path.split( pdb )[1]
-                shutil.copy( pdb, result.cluster_directory )
-                
-                result.pdb.append( fname )
+                result.pdb_list.append( pdb )
+                f.write( pdb + "\n" )
                 
                 if i == 0:
-                    result.cluster_centroid = fname
+                    result.cluster_centroid = pdb
+            
+            f.close()
+                
         
         self.results = results
         
@@ -296,7 +290,7 @@ class SpickerCluster( object ):
             rstr += "Cluster: {0}\n".format(i+1)
             rstr += "* number of models: {0}\n".format( r.cluster_size )
             if i <= self.num_clusters-1:
-                rstr += "* files are in directory: {0}\n".format( r.cluster_directory )
+                rstr += "* files are listed in file: {0}\n".format( r.pdb_file )
                 rstr += "* centroid model is: {0}\n".format( r.cluster_centroid )
             rstr += "\n"
             

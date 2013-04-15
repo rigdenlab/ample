@@ -695,9 +695,7 @@ else:
     logger.info('----- Clustering models --------')
     
     # Spicker Alternative for clustering then MAX
-    amopt.d['spicker_rundir']     =  os.path.join( amopt.d['work_dir'], 'spicker_run')
-    amopt.d['spicker_clusterdir'] =  os.path.join( amopt.d['work_dir'], 'S_clusters')
-    
+    amopt.d['spicker_rundir'] = os.path.join( amopt.d['work_dir'], 'spicker_run')
     spickerer = run_spicker.SpickerCluster( amopt.d )
     spickerer.run_spicker()
 
@@ -713,7 +711,6 @@ else:
         
         logger.info('----- Truncating models for cluster {0} --------'.format(cluster)   )
         
-        models_path = os.path.join( amopt.d['work_dir'], 'S_clusters', 'cluster_{0}'.format(cluster) )
         fcluster_dir =  os.path.join( amopt.d['work_dir'], 'fine_cluster_{0}'.format(cluster) )
         if not os.path.exists( fcluster_dir ):
             os.mkdir( fcluster_dir )
@@ -724,7 +721,10 @@ else:
         # Truncate models and return the path to the ensembled models - each ensemble is a single pdb file
         # containing multiple models
         list_of_ensembles = []
-        models_list = spickerer.results[ cluster-1 ].rosetta_pdb
+        
+        # Get list of models from spicker results
+        models_list = spickerer.results[ cluster-1 ].pdb_list
+        
         if amopt.d['ensembler']:
             list_of_ensembles = truncateedit_MAX.truncate_Phenix( amopt.d['phenix_exe'],
                                                                   models_list,
