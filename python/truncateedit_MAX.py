@@ -3,13 +3,16 @@
 # python imports
 import copy
 import glob
+import logging
 import os
 import re
 import subprocess
+import sys
 import time
 
 # Our imports
 import cluster_with_MAX
+import pdb_edit
 
 def One_model_only(list_of_ensembles, rundir):
     if not os.path.exists(rundir + '/Top_model_ensembles'):
@@ -34,7 +37,7 @@ def One_model_only(list_of_ensembles, rundir):
     return  outlist
 
 #############cluster_with_MAX####
-def make_list_to_keep(theseus_out, THESEUS_threthold):
+def make_list_to_keep( theseus_out, THESEUS_threthold ):
     """
     Make a list of residues to keep under variance threshold
     INPUTS:
@@ -48,6 +51,7 @@ def make_list_to_keep(theseus_out, THESEUS_threthold):
 
     theseus_out = open(theseus_out)
     for line in theseus_out:
+        # for alternate versions of theseus remove RES cards
         line = re.sub('RES\s*', '', line)
         pattern = re.compile('^(\d*)\s*(\w*)\s*(\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)')
         result = pattern.match(line)
@@ -59,7 +63,7 @@ def make_list_to_keep(theseus_out, THESEUS_threthold):
                 if float(seq[4]) <= float(THESEUS_threthold):
                     if seq[1] != '':
                 #  print 'GOT ' + str(seq[4]) + '  thresh ' + str(THESEUS_threthold) + ' KEEP ' + str(seq[3])
-                        add_list.append(seq[3])
+                        add_list.append( int(seq[3]) )
 
     #print add_list
     return add_list
@@ -76,33 +80,35 @@ def fly_threshold(theseus_out, percent):
     Make a list of residues to keep under variance threshold
     Threshold is chosen based on number of residues kept
 
-    INPUT:
+    Args:
     theseus_out: theseus_variances.txt output file
-    percent:
-
+    percent: % of resdiues to have under each truncation level
+    
+    Return:
+    list of the thresholds to truncate at
     """
     # List of variances ordered by residue index
     var_list=[]
 
     # print theseus_out
     theseus_out = open(theseus_out)
+    
     #jmht - build up a list of the variances of each residue
-    for line in theseus_out:
+    for i, line in enumerate(theseus_out):
+        
+        # Skip header
+        if i==0:
+            continue
+        
         #print line
-        line = re.sub('RES\s*', '', line)  #jmht - this probably not needed as we removed them earlier
+        # Different versions of theseus may have a RES card first, so remove
+        line = re.sub('RES\s*', '', line)
         pattern = re.compile('^(\d*)\s*(\w*)\s*(\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)')
         result = pattern.match(line)
         if result:
-        # print line
-            #seq = re.split('\s*', line)
+            #print line
             seq = re.split(pattern, line)
-        # print seq
-        #jmht - I think this is just to skip the header line so should just do that at the start
-            if not re.search('ATOM', line):
-            #if (seq[6]) != 'T':
-                        #print seq[4]
-
-                var_list.append(float(seq[4]))
+            var_list.append(float(seq[4]))
 
     length = len(var_list)
     #print length
@@ -279,7 +285,7 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
     return ensembles_made
 ###END make_ensembles
 
-def truncate( THESEUS, models_path, out_path, MAX, percent, FIXED_INTERVALS=False ):
+def truncate( theseus_exe, models_list, work_dir, percent, FIXED_INTERVALS=False ):
     """
     Truncate the models in one folder
     * Run theseus to find the variances
@@ -287,10 +293,9 @@ def truncate( THESEUS, models_path, out_path, MAX, percent, FIXED_INTERVALS=Fals
     * Use maxcluster to cluster the truncated PDB
 
     INPUTS:
-    THESUS: path to theseus
-    models_path: RunDir + '/S_clusters/cluster_'+str(samples) [where clusters from spicker run are placed]
-    out_path: RunDir+'/fine_cluster_'+str(samples) [ root directory where truncated clusters will go ]
-    MAX: maxcluster executable
+    theseus_exe: path to theseus
+    models_list: list of paths to the PDBs to be truncated
+    work_dir: RunDir+'/fine_cluster_'+str(samples) [ root directory where truncated clusters will go ]
     percent: (var_args['percent'] or 5 ) - mutually exclusive with FIXED_INTERVALS. Truncate models so that "percent"
              residues are kept each cycle
     FIXED_INTERVALS: use the hard-coded intervals for truncation: [1, 1.5, 2 , 2.5, 3, 3.5 ,4, 4.5, 5, 5.5, 6, 7 , 8]
@@ -320,107 +325,73 @@ def truncate( THESEUS, models_path, out_path, MAX, percent, FIXED_INTERVALS=Fals
 
     all_ensembles = []
 
-    run_dir = os.getcwd()
-    if not os.path.exists(out_path):
-        os.mkdir(out_path)
-    os.chdir(out_path)
-
-    # for infile in glob.glob( os.path.join(models_path, '*.pdb') ):
-    #    number_of_models +=1
-    #    string  = string + infile + ' '
-    #    list_of_pdbs.append(infile)
-
+    work_dir = os.path.abspath( work_dir )
+    if not os.path.exists(work_dir):
+        os.mkdir(work_dir)
+    os.chdir(work_dir)
 
     #--------------------------------
     # get variations between pdbs
     #--------------------------------
-    os.chdir(models_path)
-    #print run_dir
-
-    os.system (THESEUS + ' -a0 `ls *.pdb | xargs`  >theseus_data')
-    #print 'done'
-    os.system('mv theseus* '+run_dir)
-    #print run_dir
-    T_data = out_path + '/theseus_variances.txt'
-
-    #jmht - pause as it sometimes seem to take a while
-    time.sleep(2)
-
-    # for alternate versions of theseus remove RES cards
-    # jmht - should probably just use a regular expression when we are processing the file
-    tmp=open(out_path+'/tmp', "w")
-    for line in open(out_path + '/theseus_variances.txt'):
-        line = re.sub('RES ', '', line)
-        tmp.write(line)
-    tmp.close()
-    os.system('mv '+out_path + '/theseus_variances.txt  '+  out_path + '/theseus_variances.txt_BAK')
-    os.system('mv '+out_path+'/tmp '+  out_path + '/theseus_variances.txt')
+    log_name = "theseus.log"
+    logf = open( log_name, "w" )
+    
+    cmd = [ theseus_exe, "-a0" ] + models_list
+    
+    logging.debug("In directory {0} running command: {1}\n in directory: {1}".format( work_dir, " ".join(cmd)  ) )
+    
+    p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT )
+    p.wait()
+    logf.close()
 
     #--------------------------------
     # choose threshold type
     #-------------------------------
+    T_data = os.path.join( work_dir, 'theseus_variances.txt' )
     if FIXED_INTERVALS:
-        thresholds = [1, 1.5, 2 , 2.5, 3, 3.5 ,4, 4.5, 5, 5.5, 6, 7 , 8]
+        thresholds = [ 1, 1.5, 2 , 2.5, 3, 3.5 ,4, 4.5, 5, 5.5, 6, 7, 8 ]
     else:
-        thresholds =fly_threshold(T_data, percent)
-    # print thresholds, len(thresholds)
+        thresholds = fly_threshold(T_data, percent)
+    
+    logging.debug("Got {0} thresholds: {1}".format( len(thresholds), thresholds ))
 
     #-------------------------------
     #truncate
     #----------------------------------
-    truncate_log = open(out_path + '/truncate_log', "w")
+    truncate_log = open(work_dir + '/truncate.log', "w")
     truncate_log.write('This is the number of residues kept under each truncation threshold\n\nthreshold\tnumber of residues\n')
+    truncation_result = []
     for threshold in thresholds:
-        T_data = out_path + '/theseus_variances.txt'
 
         # Get a list of the indexes of the residues to keep
         add_list = make_list_to_keep(T_data, threshold)
+        
         truncate_log.write( str(threshold) +'\t' + str(len(add_list)) + '\n' )
-        trunc_out=''
-
+        logging.info( 'Keeping: {0} residues at truncation level: {1}'.format( len(add_list), threshold ) )
+        
         if len(add_list) < 1:
             #######   limit to size of pdb to keep, if files are too variable, all residues are removed
             continue
 
-        print 'truncating at '+str(threshold)
-        trunc_out = out_path + '/trunc_files_' + str(threshold)
-        #print trunc_out
-        os.system('mkdir ' +trunc_out)
-
-        for infile in glob.glob( os.path.join(models_path,  '*.pdb') ):
-
-            name = re.split('/', infile)
-            pdbname = str(name.pop())
-
-            my_infile = open(infile, "r")
-            pdbout = trunc_out+'/' + pdbname
-            pdb_out = open (pdbout , "w")
+        trunc_out = os.path.join( work_dir, 'trunc_files_' + str(threshold) )
+        os.mkdir(trunc_out)
+        logging.info( 'truncating at: {0} in directory {1}'.format( threshold, trunc_out ) )
+        
+        pdbed = pdb_edit.PDBEdit()
+        for infile in models_list:
+            pdbname = os.path.split( infile )[1]
+            pdbout = os.path.join( trunc_out, pdbname )
 
             # Loop through PDB files and create new ones that only contain the residues left after truncation
-            # Place the truncated PDB files in trunc_out
-            for pdbline in my_infile:
-                pdb_pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s')
-                pdb_result = pdb_pattern.match(pdbline)
-                if pdb_result:
-                    pdb_result2 = re.split(pdb_pattern, pdbline )
-
-                    for i in add_list : #convert to ints to compare
-
-                        if int(pdb_result2[5]) == int(i):
-
-                            pdb_out.write(pdbline)
-
-            pdb_out.close()
-        #print 'making ensembles', threshold
-        made_ens = make_ensembles(trunc_out, threshold, THESEUS, MAX )  ### MAKE ensemble for this trucnation level
-        for a_ens in made_ens:
-            all_ensembles.append(a_ens)
-    #print 'got ensembles', all_ensembles
-    return all_ensembles
+            pdbed.select_residues( infile=infile, outfile=pdbout, residues=add_list )
+        
+        truncation_result.append( ( threshold, trunc_out ) )
+            
+    return truncation_result
 
 ###END truncate
 
-def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS=False ):
+def truncate_Phenix(PHENIX, models_list, work_dir ):
     print 'asembling with Phenix'
     print PHENIX
     phenix_name = PHENIX
@@ -429,34 +400,24 @@ def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS=
         phenix_name = PHENIX+'.ensembler'
     print phenix_name
 
-    #print 'here'
-    all_ensembles = []
-
-    if not os.path.exists(out_path):
-        os.mkdir(out_path)
-    os.chdir(out_path)
+    if not os.path.exists(work_dir):
+        os.mkdir(work_dir)
+        
+    os.chdir(work_dir)
 
     number_of_models = 0
     list_of_pdbs = []
     string = ''
-
-    os.chdir(models_path)
-    #print run_dir
-
-    for infile in glob.glob( os.path.join(models_path, '*.pdb') ):
+    for infile in models_list:
         number_of_models +=1
         string  = string + infile + ' '
         list_of_pdbs.append(infile)
 
     cmd = phenix_name+' '+string
     #print cmd
-
-    os.chdir(out_path)
     os.system(cmd)
 
-    all_ensembles.append(os.path.join(out_path,'ensemble_merged.pdb'))
-    #print all_ensembles
-    return all_ensembles
+    return[ os.path.join(work_dir,'ensemble_merged.pdb') ]
 
 ###END truncate_Phenix
 
@@ -466,16 +427,52 @@ def truncate_Phenix(PHENIX, models_path, out_path, MAX, percent,FIXED_INTERVALS=
 
 if __name__ =="__main__":
 
-    #            /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0
-    THESEUS =  '/home/jaclyn/LARGE_RUN/1EN2/fine/THESEUS_polyala_cluster0_trunc_4/ALIGNED_rad_3/theseus'
-    models_path='/home/jaclyn/BEE/new_case/olga/models'
-    out_path ='/home/jaclyn/DOMAINS/testing/truncted'
-    MAX = '/home/jaclyn/programs/maxcluster/maxcluster'
-    percent = 5
-
-    #list_of_ensembles = truncate_Phenix(THESEUS, models_path, out_path, MAX, percent, True )
-
-    rundir = '/home/jaclyn/BEE/ample_test/RO'
-    list_of_ensembles = ['/home/jaclyn/BEE/ample_test/MODEL.pdb', '/home/jaclyn/BEE/ample_test/MODEL (copy).pdb']
-
-    One_model_only(list_of_ensembles, rundir)
+#    #            /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0
+#    THESEUS =  '/home/jaclyn/LARGE_RUN/1EN2/fine/THESEUS_polyala_cluster0_trunc_4/ALIGNED_rad_3/theseus'
+#    models_path='/home/jaclyn/BEE/new_case/olga/models'
+#    work_dir ='/home/jaclyn/DOMAINS/testing/truncted'
+#    MAX = '/home/jaclyn/programs/maxcluster/maxcluster'
+#    percent = 5
+#
+#    #list_of_ensembles = truncate_Phenix(THESEUS, models_path, work_dir, MAX, percent, True )
+#
+#    rundir = '/home/jaclyn/BEE/ample_test/RO'
+#    list_of_ensembles = ['/home/jaclyn/BEE/ample_test/MODEL.pdb', '/home/jaclyn/BEE/ample_test/MODEL (copy).pdb']
+#
+#    One_model_only(list_of_ensembles, rundir)
+    
+    
+        
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.DEBUG)
+    
+    trunc_dir = "fine_cluster_X"
+    spicker_cluster = ["/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/1_S_00000003.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/1_S_00000005.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/2_S_00000002.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/2_S_00000005.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/2_S_00000006.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/3_S_00000001.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/3_S_00000002.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/3_S_00000004.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/3_S_00000005.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/4_S_00000004.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/5_S_00000002.pdb",
+                        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/models/5_S_00000003.pdb" ]
+    
+    theseus_exe = "/opt/theseus_src/theseus"
+    work_dir = trunc_dir
+    maxcluster_exe = "/opt/maxcluster/maxcluster"
+    percent = 50
+    
+    #print " ".join( spicker_cluster )
+    trunc_list = truncate( theseus_exe, spicker_cluster, work_dir, percent )
+    
+    list_of_ensembles = []
+    for threshold, tdir in trunc_list:
+        list_of_ensembles += make_ensembles( tdir,
+                                            threshold,
+                                            theseus_exe,
+                                            maxcluster_exe )
+    
+    

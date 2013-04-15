@@ -723,21 +723,26 @@ else:
         
         # Truncate models and return the path to the ensembled models - each ensemble is a single pdb file
         # containing multiple models
+        list_of_ensembles = []
+        models_list = spickerer.results[ cluster-1 ].rosetta_pdb
         if amopt.d['ensembler']:
             list_of_ensembles = truncateedit_MAX.truncate_Phenix( amopt.d['phenix_exe'],
-                                                                  models_path,
-                                                                  fcluster_dir,
-                                                                  amopt.d['maxcluster_exe'], 
-                                                                  amopt.d['percent'] )
-        elif amopt.d['top_model_only']:
-            list_of_ensembles = truncateedit_MAX.One_model_only( list_of_ensembles, amopt.d['work_dir'] )
+                                                                  models_list,
+                                                                  fcluster_dir )
         else:
-            list_of_ensembles = truncateedit_MAX.truncate( amopt.d['theseus_exe'],
-                                                           models_path,
+            trunc_result = truncateedit_MAX.truncate( amopt.d['theseus_exe'],
+                                                           models_list,
                                                            fcluster_dir,
-                                                           amopt.d['maxcluster_exe'],
                                                            amopt.d['percent'] )
-    
+            for threshold, trunc_dir in trunc_result:
+                list_of_ensembles += truncateedit_MAX.make_ensembles( trunc_dir,
+                                                                      threshold,
+                                                                       amopt.d['theseus_exe'],
+                                                                       amopt.d['maxcluster_exe'] )
+                
+        # Prune down to the top model        
+        if amopt.d['top_model_only']:
+            list_of_ensembles = truncateedit_MAX.One_model_only( list_of_ensembles, amopt.d['work_dir'] )
     
         ensemble_dir = os.path.join( amopt.d['work_dir'], 'ensembles_{0}'.format(cluster) )
         os.mkdir( ensemble_dir )
