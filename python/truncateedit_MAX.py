@@ -238,6 +238,8 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
 
     RADS = [1,2,3] # radius thresholds
     no_files = 0
+    
+    # jmht - use a list of files here to pass through to maxcluster
     string = ''
     for infile in glob.glob( os.path.join(trunc_out, '*.pdb') ):
         string  = string + infile + ' '
@@ -250,6 +252,7 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
 
         #print 'no_files to sub cluster', no_files
         #print string, RAD, MAX, no_files
+        # A list of the files that have been clustered together with maxcluster
         cluster_files = cluster_with_MAX.cluster_with_MAX_FAST(string, RAD, MAX, no_files)  # use fastest method
 
 
@@ -295,6 +298,24 @@ def truncate( THESEUS, models_path, out_path, MAX, percent, FIXED_INTERVALS=Fals
     OUTPUTS:
     truncate_log: file listing how many residues kept under each truncation threshold
     List of PDB files in trunc_out (e.g. fine_cluster_2/trunc_files_2.5) that contain the PDBs truncated to this level
+    
+    
+    Algorithm
+    NB- can probably skip much of the file copying & just pass around lists
+    Run theseus to find the variances of the AA [return sorted tuple (AA -> variance]
+    Create a list of AA to keep under a particular criteria (currently % under each truncation level) [ return list of list of AA indices ]
+    Create a directory of the truncated pds for each truncation level
+    For each truncation level:
+       Cluster the files under one of the radius thresholds using maxcluster & get a list of which pdbs belong to each level
+       Align the listed files into a single pdb file using theseus
+       for the 3 different sidechain treatments
+          prune down each pdb in the ensemble
+       
+    create module (for SCWRL_edit, run_spicker & truncate )
+    pdb_edit:
+    return list of coordinates for selected residues
+    prune certain residues/atoms
+    
     """
 
     all_ensembles = []
@@ -357,44 +378,43 @@ def truncate( THESEUS, models_path, out_path, MAX, percent, FIXED_INTERVALS=Fals
         truncate_log.write( str(threshold) +'\t' + str(len(add_list)) + '\n' )
         trunc_out=''
 
-        continue_trunc = True
-        if len(add_list) < 1:  #######   limit to size of pdb to keep, if files are too variable, all residues are removed
-            continue_trunc = False
+        if len(add_list) < 1:
+            #######   limit to size of pdb to keep, if files are too variable, all residues are removed
+            continue
 
-        if continue_trunc == True:
-            print 'truncating at '+str(threshold)
-            trunc_out = out_path + '/trunc_files_' + str(threshold)
-            #print trunc_out
-            os.system('mkdir ' +trunc_out)
+        print 'truncating at '+str(threshold)
+        trunc_out = out_path + '/trunc_files_' + str(threshold)
+        #print trunc_out
+        os.system('mkdir ' +trunc_out)
 
-            for infile in glob.glob( os.path.join(models_path,  '*.pdb') ):
+        for infile in glob.glob( os.path.join(models_path,  '*.pdb') ):
 
-                name = re.split('/', infile)
-                pdbname = str(name.pop())
+            name = re.split('/', infile)
+            pdbname = str(name.pop())
 
-                my_infile = open(infile, "r")
-                pdbout = trunc_out+'/' + pdbname
-                pdb_out = open (pdbout , "w")
+            my_infile = open(infile, "r")
+            pdbout = trunc_out+'/' + pdbname
+            pdb_out = open (pdbout , "w")
 
-                # Loop through PDB files and create new ones that only contain the residues left after truncation
-                # Place the truncated PDB files in trunc_out
-                for pdbline in my_infile:
-                    pdb_pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s')
-                    pdb_result = pdb_pattern.match(pdbline)
-                    if pdb_result:
-                        pdb_result2 = re.split(pdb_pattern, pdbline )
+            # Loop through PDB files and create new ones that only contain the residues left after truncation
+            # Place the truncated PDB files in trunc_out
+            for pdbline in my_infile:
+                pdb_pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s')
+                pdb_result = pdb_pattern.match(pdbline)
+                if pdb_result:
+                    pdb_result2 = re.split(pdb_pattern, pdbline )
 
-                        for i in add_list : #convert to ints to compare
+                    for i in add_list : #convert to ints to compare
 
-                            if int(pdb_result2[5]) == int(i):
+                        if int(pdb_result2[5]) == int(i):
 
-                                pdb_out.write(pdbline)
+                            pdb_out.write(pdbline)
 
-                pdb_out.close()
-            #print 'making ensembles', threshold
-            made_ens = make_ensembles(trunc_out, threshold, THESEUS, MAX )  ### MAKE ensemble for this trucnation level
-            for a_ens in made_ens:
-                all_ensembles.append(a_ens)
+            pdb_out.close()
+        #print 'making ensembles', threshold
+        made_ens = make_ensembles(trunc_out, threshold, THESEUS, MAX )  ### MAKE ensemble for this trucnation level
+        for a_ens in made_ens:
+            all_ensembles.append(a_ens)
     #print 'got ensembles', all_ensembles
     return all_ensembles
 
