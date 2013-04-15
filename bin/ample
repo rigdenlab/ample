@@ -785,7 +785,7 @@ for i, ensemble in enumerate(ensembles):
         mrbump_ensemble.mrbump_ensemble_local( ensemble, amopt.d, clusterID=clusterID )
         
     # Show what happened
-    cflag=False
+    cFlag=False
     if amopt.d['submit_cluster']:
         cFlag=True
         
