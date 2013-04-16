@@ -368,9 +368,11 @@ def truncate( theseus_exe, models_list, work_dir, percent, FIXED_INTERVALS=False
         
         truncate_log.write( str(threshold) +'\t' + str(len(add_list)) + '\n' )
         logging.info( 'Keeping: {0} residues at truncation level: {1}'.format( len(add_list), threshold ) )
+        logging.debug( 'The following residues will be kept: {0}'.format( add_list ) )
         
         if len(add_list) < 1:
             #######   limit to size of pdb to keep, if files are too variable, all residues are removed
+            logging.debug( 'No residues kept at this truncation level.' )
             continue
 
         trunc_out = os.path.join( work_dir, 'trunc_files_' + str(threshold) )

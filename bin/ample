@@ -36,8 +36,6 @@ import argparse
 import clusterize
 import glob
 import logging
-import re
-import shutil
 import time
 
 # Our imports
@@ -648,6 +646,7 @@ logger.info(msg)
 # check if models are present regardless
 #--------------------------------------------
 if amopt.d['import_cluster']:
+    raise RuntimeError,"import_cluster needs to be updated!"
     if os.path.exists(amopt.d['import_cluster']): 
         cluster_path = amopt.d['import_cluster']
         fcluster_dir = os.path.join( amopt.d['work_dir'], 'fine_cluster_1' )
