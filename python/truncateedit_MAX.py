@@ -6,6 +6,7 @@ import glob
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -246,40 +247,50 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
     no_files = 0
     
     # jmht - use a list of files here to pass through to maxcluster
-    string = ''
-    for infile in glob.glob( os.path.join(trunc_out, '*.pdb') ):
-        string  = string + infile + ' '
-        no_files +=1
+#    string = ''
+#    for infile in glob.glob( os.path.join(trunc_out, '*.pdb') ):
+#        string  = string + infile + ' '
+#        no_files +=1
+    
+    file_list = glob.glob( os.path.join( trunc_out, '*.pdb' ) )
 
     for RAD in RADS:
-        Rad_path = trunc_out + '/fine_clusters_'+str(RAD)
-        os.system('mkdir ' +trunc_out + '/fine_clusters_'+str(RAD))
-        os.chdir(trunc_out + '/fine_clusters_'+str(RAD))
+        
+        rad_path = os.path.join( trunc_out, 'fine_clusters_{0}'.format(RAD) )
+        os.mkdir( rad_path )
+        os.chdir( rad_path )
 
         #print 'no_files to sub cluster', no_files
         #print string, RAD, MAX, no_files
         # A list of the files that have been clustered together with maxcluster
-        cluster_files = cluster_with_MAX.cluster_with_MAX_FAST(string, RAD, MAX, no_files)  # use fastest method
-
-
-        if cluster_files > 2:
-            temp_name = 0
-            for each_file in cluster_files:
-                os.system('cp ' + each_file+' '+trunc_out + '/fine_clusters_'+str(RAD)+'/C.0.' + str(temp_name)+'.pdb' )
-                temp_name+=1
+        cluster_files = cluster_with_MAX.cluster_with_MAX_FAST( file_list, RAD, MAX )  # use fastest method
+        if cluster_files < 2:
+            logging.info( 'Could not create ensemble for radius {0} (models too diverse)'.format( RAD ) )
+            continue
+            
+        temp_name = None
+        for i, each_file in enumerate( cluster_files ):
+            temp_name = os.path.join( trunc_out, rad_path, 'C.0.{0}.pdb'.format( i ) )
+            shutil.copy( each_file, temp_name )
         #Run_Rosetta(string, no_files,  RAD, Rosetta_cluster, RDB)
 
-        ensemble_path = trunc_out + '/fine_clusters_'+str(RAD)+'_ensemble'
-        os.system('mkdir '+ensemble_path )
-        os.chdir(ensemble_path)
+        ensemble_dir = os.path.join( trunc_out, 'fine_clusters_'+str(RAD)+'_ensemble' )
+        os.mkdir( ensemble_dir )
+        os.chdir( ensemble_dir )
 
         # Run theseus to generate a
-        Align_rosetta_fine_clusters_with_theseus(Rad_path, THESEUS, )
+        Align_rosetta_fine_clusters_with_theseus(rad_path, THESEUS, )
+        
         # Check if theseus worked and if so rename the file with the aligned files and append the path to the ensembles
-        if os.path.exists(ensemble_path + '/cluster_0_sup.pdb'):
-            os.system('mv ' +ensemble_path + '/cluster_0_sup.pdb '+ensemble_path + '/trunc_'+str(threshold)+'_rad_' +str(RAD)+'.pdb')
-        ensembles_made.append(ensemble_path + '/trunc_'+str(threshold)+'_rad_' +str(RAD)+'.pdb')
-
+        cluster_file = os.path.join(  ensemble_dir, 'cluster_0_sup.pdb' )
+        ensemble_file = os.path.join( ensemble_dir, 'trunc_{0}_rad_{1}.pdb'.format( threshold, RAD ) )
+        
+        if os.path.exists( cluster_file ):
+            shutil.move( cluster_file, ensemble_file )
+            ensembles_made.append( ensemble_file )
+        else:
+            logging.info( 'Could not create ensemble for files (models too diverse): {0}'.format( ensemble_file ) )
+            
     #print ensembles_made
 
     return ensembles_made
@@ -385,7 +396,7 @@ def truncate( theseus_exe, models_list, work_dir, percent, FIXED_INTERVALS=False
             pdbout = os.path.join( trunc_out, pdbname )
 
             # Loop through PDB files and create new ones that only contain the residues left after truncation
-            pdbed.select_residues( infile=infile, outfile=pdbout, residues=add_list )
+            pdbed.select_residues( inpath=infile, outpath=pdbout, residues=add_list )
         
         truncation_result.append( ( threshold, trunc_out ) )
             

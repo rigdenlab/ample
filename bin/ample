@@ -36,6 +36,7 @@ import argparse
 import clusterize
 import glob
 import logging
+import shutil
 import time
 
 # Our imports
@@ -46,8 +47,8 @@ import mrbump_ensemble
 import nmr
 import rosetta_model
 import mrbump_results
+import pdb_edit
 import run_spicker
-import SCWRL_edit
 import truncateedit_MAX
 
 
@@ -745,15 +746,33 @@ else:
     
         ensemble_dir = os.path.join( amopt.d['work_dir'], 'ensembles_{0}'.format(cluster) )
         os.mkdir( ensemble_dir )
-        for each_ens in list_of_ensembles:
-            SCWRL_edit.edit_sidechains(each_ens, ensemble_dir + '/')
-    
+        
+        pdbed = pdb_edit.PDBEdit()
+        
         final_ensembles = []
-        for infile in glob.glob( os.path.join( ensemble_dir, '*.pdb' ) ):
-            final_ensembles.append(infile)
+        for each_ens in list_of_ensembles:
             
+            # 3 different side-chain treaments
+            #SCWRL_edit.edit_sidechains(each_ens, ensemble_dir + '/')
+            pdbname = os.path.basename( each_ens )
+            
+            # For all atom just copy the file
+            ename = os.path.join( ensemble_dir, 'All_atom_{0}'.format(pdbname) )
+            shutil.copy2( each_ens, ename  )
+            final_ensembles.append( ename )
+            
+            # Reliable side chains
+            ename = os.path.join( ensemble_dir, 'SCWRL_Reliable_sidechains_{0}'.format(pdbname) )
+            pdbed.reliable_sidechains( each_ens, ename )
+            final_ensembles.append( ename )
+            
+            # Backbone
+            ename = os.path.join( ensemble_dir, 'poly_ala_{0}'.format(pdbname) )
+            pdbed.backbone( each_ens, ename )            
+            final_ensembles.append( ename )
+    
         # Add to the total list
-        ensembles.append(final_ensembles)
+        ensembles.append( final_ensembles )
         
         logger.info("Truncating Done for cluster {0}".format( cluster ) )
         logger.info('Created {0} ensembles'.format( len(final_ensembles) ) )
