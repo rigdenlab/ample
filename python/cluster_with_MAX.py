@@ -2,6 +2,7 @@
 
 #edit the sidechains to make polyala, all and reliable
 
+import ample_util
 import logging
 import re
 import os
@@ -128,13 +129,8 @@ def cluster_with_MAX_FAST( file_list, radius, MAX ):
     #print 'MAX Done'
 
     log_name = "maxcluster_radius_{0}.log".format(radius)
-    logf = open( log_name, "w" )
     cmd = [ MAX, "-l", file_list, "-L", "4", "-rmsd", "-d", "1000", "-bb", "-C0" ]
-    
-    logging.debug("In directory {0}\nRunning command: {1}".format( cur_dir, " ".join(cmd)  ) )
-    p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT )
-    p.wait()
-    logf.close()   
+    retcode = ample_util.run_command( cmd, logfile=log_name )
     
     # Create a square matrix no_models in size filled with zeros
     matrix =  [[0 for col in range(no_models)] for row in range(no_models)]

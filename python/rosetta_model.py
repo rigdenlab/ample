@@ -178,16 +178,12 @@ class RosettaModel(object):
             self.generate_tm_predict()        
             
         cmd = self.fragment_cmd()
-        self.logger.info('Executing cmd: {0}'.format( " ".join(cmd)) )
-
-        try:
-            output = subprocess.check_output( cmd, stderr=subprocess.STDOUT, cwd=self.fragments_directory )
-            f = open( self.fragments_directory + os.sep + "make_fragments.log","w")
-            f.writelines( output )
-            f.close()
-        except subprocess.CalledProcessError,e:
-            self.logger.critical("Error generating fragments:\n{0}".format(e.output))
-            raise RuntimeError,e
+        logfile = os.path.join( self.fragments_directory, "make_fragments.log" )
+        retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.fragments_directory )
+        if retcode != 0:
+            msg = "Error generating fragments!\nPlease check the logfile {0}".format( logfile )
+            self.logger.critical( msg )
+            raise RuntimeError, msg
         
         if self.rosetta_version >= 3.4:
             # new name format: $options{runid}.$options{n_frags}.$size" . "mers
@@ -198,11 +194,9 @@ class RosettaModel(object):
             self.frags3mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '03_05.200_v1_3'
             self.frags9mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '09_05.200_v1_3'
             
-            
         if not os.path.exists( self.frags3mers ) or not os.path.exists( self.frags9mers ):
             raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\n".format(self.frags3mers,self.frags9mers)
         
-    
         #RUNNING.write('Fragments done\n3mers at: ' + frags_3_mers + '\n9mers at: ' + frags_9_mers + '\n\n')
         self.logger.info('Fragments Done\n3mers at: ' + self.frags3mers + '\n9mers at: ' + self.frags9mers + '\n\n')
     
@@ -235,30 +229,24 @@ class RosettaModel(object):
         topo_file = octo.topo
         self.logger.debug("Got topology prediction file: {0}".format(topo_file))
 
-        
         # Generate span file from predict
         self.spanfile = os.path.join(self.fragments_directory, self.pdb_code + ".span")
-        span = open(self.spanfile,"w")
-        args = [ self.octopus2span, topo_file ]
-        self.logger.debug('Generating span file {0} from topo with cmd: {1}'.format( self.spanfile, " ".join(args)))
-        retcode = subprocess.call( args, stdout=span, stderr=subprocess.STDOUT, cwd=self.fragments_directory)
+        self.logger.debug( 'Generating span file {0}'.format( self.spanfile ) )
+        cmd = [ self.octopus2span, topo_file ]
+        retcode = ample_util.run_command( cmd, logfile=self.spanfile, directory=self.fragments_directory )
         if retcode != 0:
             msg = "Error generating span file. Please check the log in {0}".format(self.spanfile)
             self.logger.critical(msg)
             raise RuntimeError,msg
         
-        
         # Now generate lips file
+        self.logger.debug('Generating lips file from span')
         logfile = self.fragments_directory + os.sep + "run_lips.log"
-        l = open(logfile,"w")
-        
-        args = [ self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast ]
-        self.logger.debug('Generating lips file from span with cmd: {0}'.format( " ".join(args)))
-        retcode = subprocess.call( args, stdout=l, stderr=subprocess.STDOUT, cwd=self.fragments_directory)
+        cmd = [ self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast ]
+        retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.fragments_directory )
         
         # Script only uses first 4 chars to name files
         lipofile = os.path.join(self.fragments_directory, self.pdb_code[0:4] + ".lips4")
-        
         if retcode != 0 or not os.path.exists(lipofile):
             msg = "Error generating lips file {0}. Please check the log in {1}".format(lipofile,logfile)
             self.logger.critical(msg)
@@ -642,7 +630,7 @@ class Test(unittest.TestCase):
         optd['improve_template'] = None
         
         m = RosettaModel()
-        m.set_from_dict( amopt )
+        m.set_from_dict( optd )
         m.generate_fragments()
 
 
@@ -692,7 +680,7 @@ for i in range(10):
 
 
         rm = RosettaModel()
-        rm.set_from_dict( amopt )
+        rm.set_from_dict( optd )
         mdir = rm.doModelling()
         print "models in: {0}".format(mdir)
         

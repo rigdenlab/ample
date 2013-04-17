@@ -749,6 +749,7 @@ else:
         
         pdbed = pdb_edit.PDBEdit()
         
+        # Now add the side chains
         final_ensembles = []
         for each_ens in list_of_ensembles:
             

@@ -1,12 +1,15 @@
 #!/usr/bin/env python
 
-
+# python imports
 import glob
 import logging
 import os
 import re
 import shutil
 import subprocess
+
+# our imports
+import ample_util
 
 
 class SpickerResult( object ):
@@ -157,20 +160,14 @@ class SpickerCluster( object ):
         """
         Run spicker to cluster the models
         """
-    
-    
+        
         if not os.path.isdir( self.rundir ):
             os.mkdir( self.rundir )
-        
         os.chdir(self.rundir)
         
         self.logger.debug("Running spicker in directory: {0}".format( self.rundir ) )
-            
         self.create_input_files()
-        
-        p = subprocess.Popen( self.spicker_exe, shell=True, stdin = subprocess.PIPE,
-                                       stdout = subprocess.PIPE, stderr=subprocess.PIPE)
-        p.wait()
+        ample_util.run_command([ self.spicker_exe ], logfile="spicker.log" )
     
         # Read the log and generate the results
         results = self.process_log()
@@ -179,7 +176,6 @@ class SpickerCluster( object ):
         # We only process the clusters we will be using
         MAXCLUSTER=200 # max number of pdbs in a cluster
         for cluster in range( self.num_clusters ):
-            
                 
             result = results[ cluster ]
             result.pdb_file = os.path.join( self.rundir, "spicker_cluster_{0}.list".format(cluster+1)  )
@@ -198,10 +194,8 @@ class SpickerCluster( object ):
                     result.cluster_centroid = pdb
             
             f.close()
-                
         
         self.results = results
-        
         return
                 
     def process_log( self, logfile=None ):

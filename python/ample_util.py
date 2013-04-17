@@ -7,7 +7,9 @@ Might end up somewhere else at somepoint.
 import logging
 import os
 import re
+import subprocess
 import sys
+import tempfile
 import unittest
 
 # Our modules
@@ -93,21 +95,7 @@ def check_for_exe(exename, varname):
 
     logger.debug( "Using executable {0}".format( exepath ) )
     return exepath
-########
 
-def make_workdir(work_dir, rootname='ROSETTA_MR_'):
-    """
-    Make a work directory rooted at work_dir and return its path
-    """
-    run_inc = 0
-    run_making_done = False
-    while not run_making_done:
-        if not os.path.exists(work_dir + os.sep + rootname + str(run_inc)):
-            run_making_done = True
-            os.mkdir(work_dir + os.sep +rootname + str(run_inc))
-        run_inc += 1
-    work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
-    return work_dir
 
 def get_mtz_flags( mtzfile ):
     """
@@ -136,55 +124,6 @@ def get_mtz_flags( mtzfile ):
     
 ##End get_mtz_flags
 
-def XXXget_mtz_flags(mtz):
-    """
-    Old version of get_flags
-    """
-    sigf = 'SIGF='
-    FP = 'F='
-    free = 'FreeR_flag=Unassigned'
-    
-    path = os.getcwd()
-    os.system('mtzdmp ' + mtz + ' >mtzdmp_out')
-    mtz_out = open(path + '/mtzdmp_out')
-    flags = False
-    while flags == False:
-        line = mtz_out.readline()
-        get_stat1 = re.compile('Column Labels')
-        result_stat1 = get_stat1.search(line)
-        if result_stat1:
-           #print line
-           next = mtz_out.readline()
-           next = mtz_out.readline()
-        if  re.search('Column Types', line):
-           lab = mtz_out.readline()
-           lab = mtz_out.readline() 
-    
-           flags = True
-    #  print next
-    #  print lab
-    
-    
-    
-    
-    lab_list=re.split('\s*', lab)
-    name_list=re.split('\s*', next)
-    
-    sigf = lab_list.index('Q')
-    sigf = name_list[sigf]
-    
-    FP = lab_list.index('F')
-    FP = name_list[FP]
-    
-    free = lab_list.index('I')
-    free = name_list[free]
-    
-    # print sigf, FP, free
-    
-    #jmht return next, sigf, FP, free
-    return next, FP, sigf, free
-
-
 def get_psipred_prediction(psipred):
     string = ''
     for line in open(psipred):
@@ -194,7 +133,6 @@ def get_psipred_prediction(psipred):
             stat1_get = re.split(get_stat1, line)
             # print stat1_get[1]
             string = string + stat1_get[1]
-
 
     C = 0
     H = 0
@@ -209,7 +147,6 @@ def get_psipred_prediction(psipred):
         if c == 'E':
             E = E + 1
 
-
     H_percent = float(H) / length * 100
     E_percent = float(E) / length * 100
 
@@ -221,7 +158,53 @@ def get_psipred_prediction(psipred):
         print  'Your protein is predicted to be all alpha, your chances of success are high'
     if  H == 0 and E == 0:
         print  'Your protein is has no predicted secondary structure, your chances of success are low'
-        
+
+########
+
+def make_workdir(work_dir, rootname='ROSETTA_MR_'):
+    """
+    Make a work directory rooted at work_dir and return its path
+    """
+    run_inc = 0
+    run_making_done = False
+    while not run_making_done:
+        if not os.path.exists(work_dir + os.sep + rootname + str(run_inc)):
+            run_making_done = True
+            os.mkdir(work_dir + os.sep +rootname + str(run_inc))
+        run_inc += 1
+    work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
+    return work_dir
+
+def run_command( cmd, logfile=None, directory=None, dolog=True ):
+    """Execute a command and return the exit code.
+    
+    We take care of outputting stuff to the logs and opening/closing logfiles
+    
+    Args:
+    cmd - command to run as a list
+    logfile (optional) - the path to the logfile
+    directory (optional) - the directory to run the job in (cwd assumed)
+    dolog: bool - whether to output info to the system log
+    """
+    
+    if not directory:
+        directory = os.getcwd()
+    if dolog:
+        logging.debug("In directory {0}\nRunning command: {1}".format( directory, " ".join(cmd)  ) )
+    
+    if logfile:
+        if dolog:
+            logging.debug("Logfile is: {0}".format( logfile ) )
+        logf = open( logfile, "w" )
+    else:
+        logf = tempfile.TemporaryFile()
+    
+    p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT, cwd=directory )
+    
+    p.wait()
+    logf.close()
+    
+    return p.returncode
 
 def setup_logging():
     """

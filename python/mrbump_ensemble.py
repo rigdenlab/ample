@@ -13,6 +13,7 @@ import time
 import unittest
 
 # our imports
+import ample_util
 import clusterize
 import mrbump_cmd
 
@@ -185,10 +186,12 @@ def worker( queue, early_terminate=False ):
         # Got a script so run
         # Get name from script
         name = os.path.splitext( os.path.split(mrb_script)[1] )[0]
-        logfile = name + ".log"
-        f = open( logfile, "w")
+        #logfile = name + ".log"
+        #f = open( logfile, "w")
         print "Worker {0} running job {1}".format(multiprocessing.current_process().name, name)
-        retcode = subprocess.call( [ mrb_script ], stdout=f, stderr=subprocess.STDOUT, cwd=None )
+        
+        retcode = ample_util.run_command( [ mrb_script ], logfile=name + ".log", dolog=False)
+        #retcode = subprocess.call( [ mrb_script ], stdout=f, stderr=subprocess.STDOUT, cwd=None )
         
         # Can we use the retcode to check?
         # REM - is retcode object

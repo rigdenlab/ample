@@ -12,6 +12,7 @@ import sys
 import time
 
 # Our imports
+import ample_util
 import cluster_with_MAX
 import pdb_edit
 
@@ -133,7 +134,6 @@ def fly_threshold(theseus_out, percent):
         Thresholds.append(x[-1])
 
     return  Thresholds
-
 ###End fly_threshold
 
 ################################
@@ -158,90 +158,20 @@ def Run_Rosetta(string, no_of_files, radius, Rosetta_cluster, RDB):  # rosetta c
                 if int(file_result2[1]) ==  no_of_files:
                     print ' SUCCESS there are ' + str(no_of_files) + ' files, got ' + file_result2[1]
                     condition = 1
-####################################
-#def try_theseus(cmd):
-#    """
-#    #  theseus can fail so try Run a command with a timeout after which it will be forcibly killed.
-#    """
-#    has_worked = False
-#    while has_worked == False:
-#        Theseuslog=open(os.getcwd()+'/t.log', "w")
-#        #p = subprocess.Popen(cmd  , shell =True, stdout =subprocess.PIPE, stderr=subprocess.PIPE)
-#        print "Running thesesus command: ",cmd
-#        p = subprocess.Popen(cmd  , shell =True, stdout =Theseuslog, stderr=subprocess.PIPE)
-#
-#
-#        time.sleep(5)
-#        #print p.poll()
-#        if p.poll() is None: #still running
-#            p.kill()
-#            #print 'timed out'
-#        else:
-#        #print p.communicate()
-#            has_worked = True
-####END try_theseus
-#
-#def Align_rosetta_fine_clusters_with_theseus(Rad_path, THESEUS, ):
-#    """
-#    If a cluster is present: align cluster  if no cluster is present: try to align most similar
-#    INPUT:
-#    Rad_path: directory with clustered PDB files, named C.0.X.pdb
-#
-#    OUTPUT:
-#    Generates files named cluster_X..., but doesn't actually process them
-#
-#    Theseus run with arguments:
-#     -a0  include alpha carbons and phosphorous atoms in superposition
-#     -r root name for output files
-#    """
-#    
-#    # jmht - this makes no sense to me...
-#    no_of_files=0
-#
-#    string = ''
-#    for infile in glob.glob( os.path.join(Rad_path, '*.pdb') ):  #check how in top cluster
-#        name = re.split('/', infile)
-#        pdbname = str(name.pop())
-#        #print pdbname
-#        cluster_name = re.split('\.', pdbname)
-#
-#        if int(cluster_name[1]) == 0:
-#            if no_of_files < 30: ######################### LIMIT number in ensemble
-#                string  = string + infile + ' '
-#                no_of_files = no_of_files + 1
-#
-#    #print no_of_files
-#    if no_of_files >5:
-#        try_theseus(THESEUS + ' -r ' + 'cluster_' + str(0) + ' -a0 ' +string)
-#
-#    #   if clustering has failed, try anyway
-#    no_of_files=0
-#    string = ''
-#    if no_of_files <5:
-#        for infile in glob.glob( os.path.join(Rad_path, '*.pdb') ):
-#            no_of_files = no_of_files + 1
-#            if no_of_files < 30: ######################### LIMIT number in ensemble
-#                string  = string + infile + ' '
-#        try_theseus(THESEUS + ' -r ' + 'cluster_' + str(0) + ' -a0 ' +string)
-#
-####END Align_rosetta_fine_clusters_with_theseus
+    return
 
-def make_ensembles(trunc_out, threshold, theseus_exe, MAX ):
+def make_ensembles(trunc_out, threshold, theseus_exe, maxcluster_exe ):
     """
     Given a directory of truncated PDB files, use maxcluster to cluster them
     according to the three radius thresholds in RADS
 
-    If there are more than 2 clusters returned by maxcluster copy them to the '/fine_clusters_'+str(RAD)
-    directory, named as C.0.X, where X is the number of the cluster
-
-    Theseus is then used to align the clusters and the path of the file containing the cluster is appended
-    to the list ensembles_made, which is returned
+    If there are more than 2 clusters returned by maxcluster used theseus to align them
 
     INPUTS:
     trunc_out: directory with truncated PDB files (e.g. fine_cluster_2/trunc_files_2)
     threshold: a float with the threshold the files were truncated with - used for file naming
     THESUS: path to theseus executable
-    MAX: path to maxcluster executable
+    maxcluster_exe: path to maxcluster executable
 
     """
 
@@ -268,7 +198,7 @@ def make_ensembles(trunc_out, threshold, theseus_exe, MAX ):
         os.chdir( ensemble_dir )
 
         # A list of the files that have been clustered together with maxcluster
-        cluster_files = cluster_with_MAX.cluster_with_MAX_FAST( fname, RAD, MAX )  # use fastest method
+        cluster_files = cluster_with_MAX.cluster_with_MAX_FAST( fname, RAD, maxcluster_exe )  # use fastest method
         logging.debug("Maxcluster clustered {0} files".format ( len( cluster_files ) ) )
         if cluster_files < 2:
             logging.info( 'Could not create ensemble for radius {0} (models too diverse)'.format( RAD ) )
@@ -283,16 +213,8 @@ def make_ensembles(trunc_out, threshold, theseus_exe, MAX ):
         basename='trunc_{0}_rad_{1}'.format( threshold, RAD ) 
 
         # Run theseus to generate a file containing the aligned clusters
-        log_name = basename+"_theseus.log"
-        logf = open( log_name, "w" )
         cmd = [ theseus_exe, "-r", basename, "-a0" ] + cluster_files
-        
-        logging.debug("In directory {0}\nRunning command: {1}".format( ensemble_dir, " ".join(cmd)  ) )
-        logging.debug("Logfile is: {0}".format( log_name ) )
-        
-        p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT )
-        p.wait()
-        logf.close()
+        retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
         
         # jmht - the previous Align_rosetta_fine_clusters_with_theseus routine was running theseus twice and adding the averaged
         # ensemble from the first run to the ensemble. This seems to improve the results for the TOXD test case - maybe something to
@@ -341,16 +263,8 @@ def truncate( theseus_exe, models_list, work_dir, percent, FIXED_INTERVALS=False
     #--------------------------------
     # get variations between pdbs
     #--------------------------------
-    log_name = "theseus.log"
-    logf = open( log_name, "w" )
-    
     cmd = [ theseus_exe, "-a0" ] + models_list
-    
-    logging.debug("In directory {0} running command: {1}".format( work_dir, " ".join(cmd)  ) )
-    
-    p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT )
-    p.wait()
-    logf.close()
+    retcode = ample_util.run_command( cmd, logfile="theseus.log" )
 
     #--------------------------------
     # choose threshold type
