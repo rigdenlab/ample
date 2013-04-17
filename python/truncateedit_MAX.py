@@ -159,70 +159,74 @@ def Run_Rosetta(string, no_of_files, radius, Rosetta_cluster, RDB):  # rosetta c
                     print ' SUCCESS there are ' + str(no_of_files) + ' files, got ' + file_result2[1]
                     condition = 1
 ####################################
-def try_theseus(cmd):
-    """
-    #  theseus can fail so try Run a command with a timeout after which it will be forcibly killed.
-    """
-    has_worked = False
-    while has_worked == False:
-        Theseuslog=open(os.getcwd()+'/t.log', "w")
-        p = subprocess.Popen(cmd  , shell =True, stdout =subprocess.PIPE, stderr=subprocess.PIPE)
+#def try_theseus(cmd):
+#    """
+#    #  theseus can fail so try Run a command with a timeout after which it will be forcibly killed.
+#    """
+#    has_worked = False
+#    while has_worked == False:
+#        Theseuslog=open(os.getcwd()+'/t.log', "w")
+#        #p = subprocess.Popen(cmd  , shell =True, stdout =subprocess.PIPE, stderr=subprocess.PIPE)
+#        print "Running thesesus command: ",cmd
+#        p = subprocess.Popen(cmd  , shell =True, stdout =Theseuslog, stderr=subprocess.PIPE)
+#
+#
+#        time.sleep(5)
+#        #print p.poll()
+#        if p.poll() is None: #still running
+#            p.kill()
+#            #print 'timed out'
+#        else:
+#        #print p.communicate()
+#            has_worked = True
+####END try_theseus
+#
+#def Align_rosetta_fine_clusters_with_theseus(Rad_path, THESEUS, ):
+#    """
+#    If a cluster is present: align cluster  if no cluster is present: try to align most similar
+#    INPUT:
+#    Rad_path: directory with clustered PDB files, named C.0.X.pdb
+#
+#    OUTPUT:
+#    Generates files named cluster_X..., but doesn't actually process them
+#
+#    Theseus run with arguments:
+#     -a0  include alpha carbons and phosphorous atoms in superposition
+#     -r root name for output files
+#    """
+#    
+#    # jmht - this makes no sense to me...
+#    no_of_files=0
+#
+#    string = ''
+#    for infile in glob.glob( os.path.join(Rad_path, '*.pdb') ):  #check how in top cluster
+#        name = re.split('/', infile)
+#        pdbname = str(name.pop())
+#        #print pdbname
+#        cluster_name = re.split('\.', pdbname)
+#
+#        if int(cluster_name[1]) == 0:
+#            if no_of_files < 30: ######################### LIMIT number in ensemble
+#                string  = string + infile + ' '
+#                no_of_files = no_of_files + 1
+#
+#    #print no_of_files
+#    if no_of_files >5:
+#        try_theseus(THESEUS + ' -r ' + 'cluster_' + str(0) + ' -a0 ' +string)
+#
+#    #   if clustering has failed, try anyway
+#    no_of_files=0
+#    string = ''
+#    if no_of_files <5:
+#        for infile in glob.glob( os.path.join(Rad_path, '*.pdb') ):
+#            no_of_files = no_of_files + 1
+#            if no_of_files < 30: ######################### LIMIT number in ensemble
+#                string  = string + infile + ' '
+#        try_theseus(THESEUS + ' -r ' + 'cluster_' + str(0) + ' -a0 ' +string)
+#
+####END Align_rosetta_fine_clusters_with_theseus
 
-
-        time.sleep(5)
-        #print p.poll()
-        if p.poll() is None: #still running
-            p.kill()
-            #print 'timed out'
-        else:
-        #print p.communicate()
-            has_worked = True
-###END try_theseus
-
-def Align_rosetta_fine_clusters_with_theseus(Rad_path, THESEUS, ):
-    """
-    If a cluster is present: align cluster  if no cluster is present: try to align most similar
-    INPUT:
-    Rad_path: directory with clustered PDB files, named C.0.X.pdb
-
-    OUTPUT:
-    Generates files named cluster_X..., but doesn't actually process them
-
-    Theseus run with arguments:
-     -a0  include alpha carbons and phosphorous atoms in superposition
-     -r root name for output files
-    """
-    no_of_files=0
-
-    string = ''
-    for infile in glob.glob( os.path.join(Rad_path, '*.pdb') ):  #check how in top cluster
-        name = re.split('/', infile)
-        pdbname = str(name.pop())
-        #print pdbname
-        cluster_name = re.split('\.', pdbname)
-
-        if int(cluster_name[1]) == 0:
-            if no_of_files < 30: ######################### LIMIT number in ensemble
-                string  = string + infile + ' '
-                no_of_files = no_of_files + 1
-
-    #print no_of_files
-    if no_of_files >5:
-        try_theseus(THESEUS + ' -r ' + 'cluster_' + str(0) + ' -a0 ' +string)
-
-    #   if clustering has failed, try anyway
-    no_of_files=0
-    string = ''
-    if no_of_files <5:
-        for infile in glob.glob( os.path.join(Rad_path, '*.pdb') ):
-            no_of_files = no_of_files + 1
-            if no_of_files < 30: ######################### LIMIT number in ensemble
-                string  = string + infile + ' '
-        try_theseus(THESEUS + ' -r ' + 'cluster_' + str(0) + ' -a0 ' +string)
-
-###END Align_rosetta_fine_clusters_with_theseus
-
-def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
+def make_ensembles(trunc_out, threshold, theseus_exe, MAX ):
     """
     Given a directory of truncated PDB files, use maxcluster to cluster them
     according to the three radius thresholds in RADS
@@ -243,48 +247,62 @@ def make_ensembles(trunc_out, threshold, THESEUS, MAX ):
 
     ensembles_made = []
 
-    RADS = [1,2,3] # radius thresholds
-    no_files = 0
-    
-    # jmht - use a list of files here to pass through to maxcluster
-#    string = ''
-#    for infile in glob.glob( os.path.join(trunc_out, '*.pdb') ):
-#        string  = string + infile + ' '
-#        no_files +=1
-    
+    RADS = [ 1, 2, 3 ] # radius thresholds
+        
+    # We make a list of all the files truncated at this level and use
+    # this as input to all the programs
     file_list = glob.glob( os.path.join( trunc_out, '*.pdb' ) )
+    
+    # Create file holdings a list  of all files (needed by maxcluster)
+    fname = os.path.join( trunc_out, "files.list" )
+    f = open( fname, 'w' )
+    f.write( "\n".join( file_list )+"\n" )
+    f.close()
 
     for RAD in RADS:
         
-        rad_path = os.path.join( trunc_out, 'fine_clusters_{0}'.format(RAD) )
-        os.mkdir( rad_path )
-        os.chdir( rad_path )
-
-        #print 'no_files to sub cluster', no_files
-        #print string, RAD, MAX, no_files
-        # A list of the files that have been clustered together with maxcluster
-        cluster_files = cluster_with_MAX.cluster_with_MAX_FAST( file_list, RAD, MAX )  # use fastest method
-        if cluster_files < 2:
-            logging.info( 'Could not create ensemble for radius {0} (models too diverse)'.format( RAD ) )
-            continue
-            
-        temp_name = None
-        for i, each_file in enumerate( cluster_files ):
-            temp_name = os.path.join( trunc_out, rad_path, 'C.0.{0}.pdb'.format( i ) )
-            shutil.copy( each_file, temp_name )
-        #Run_Rosetta(string, no_files,  RAD, Rosetta_cluster, RDB)
-
+        logging.debug("Clustering files under radius: {0}".format(RAD) )
+        
         ensemble_dir = os.path.join( trunc_out, 'fine_clusters_'+str(RAD)+'_ensemble' )
         os.mkdir( ensemble_dir )
         os.chdir( ensemble_dir )
 
-        # Run theseus to generate a
-        Align_rosetta_fine_clusters_with_theseus(rad_path, THESEUS, )
+        # A list of the files that have been clustered together with maxcluster
+        cluster_files = cluster_with_MAX.cluster_with_MAX_FAST( fname, RAD, MAX )  # use fastest method
+        logging.debug("Maxcluster clustered {0} files".format ( len( cluster_files ) ) )
+        if cluster_files < 2:
+            logging.info( 'Could not create ensemble for radius {0} (models too diverse)'.format( RAD ) )
+            continue
+        
+        # Restrict cluster to 30
+        if len( cluster_files ) > 30:
+            logging.debug("More than 30 files clustered so truncating list to first 30")
+            cluster_files = cluster_files[:30]
+            
+        # For naming all files
+        basename='trunc_{0}_rad_{1}'.format( threshold, RAD ) 
+
+        # Run theseus to generate a file containing the aligned clusters
+        log_name = basename+"_theseus.log"
+        logf = open( log_name, "w" )
+        cmd = [ theseus_exe, "-r", basename, "-a0" ] + cluster_files
+        
+        logging.debug("In directory {0}\nRunning command: {1}".format( ensemble_dir, " ".join(cmd)  ) )
+        logging.debug("Logfile is: {0}".format( log_name ) )
+        
+        p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT )
+        p.wait()
+        logf.close()
+        
+        # jmht - the previous Align_rosetta_fine_clusters_with_theseus routine was running theseus twice and adding the averaged
+        # ensemble from the first run to the ensemble. This seems to improve the results for the TOXD test case - maybe something to
+        # look at?
         
         # Check if theseus worked and if so rename the file with the aligned files and append the path to the ensembles
-        cluster_file = os.path.join(  ensemble_dir, 'cluster_0_sup.pdb' )
-        ensemble_file = os.path.join( ensemble_dir, 'trunc_{0}_rad_{1}.pdb'.format( threshold, RAD ) )
-        
+        cluster_file = os.path.join(  ensemble_dir, basename+'_sup.pdb' )
+        ensemble_file = os.path.join( ensemble_dir, basename+'.pdb' )
+
+        #same from here     
         if os.path.exists( cluster_file ):
             shutil.move( cluster_file, ensemble_file )
             ensembles_made.append( ensemble_file )
@@ -301,7 +319,6 @@ def truncate( theseus_exe, models_list, work_dir, percent, FIXED_INTERVALS=False
     Truncate the models in one folder
     * Run theseus to find the variances
     * For each truncation level, create a directory containing the truncated PDB files
-    * Use maxcluster to cluster the truncated PDB
 
     INPUTS:
     theseus_exe: path to theseus
@@ -314,27 +331,7 @@ def truncate( theseus_exe, models_list, work_dir, percent, FIXED_INTERVALS=False
     OUTPUTS:
     truncate_log: file listing how many residues kept under each truncation threshold
     List of PDB files in trunc_out (e.g. fine_cluster_2/trunc_files_2.5) that contain the PDBs truncated to this level
-    
-    
-    Algorithm
-    NB- can probably skip much of the file copying & just pass around lists
-    Run theseus to find the variances of the AA [return sorted tuple (AA -> variance]
-    Create a list of AA to keep under a particular criteria (currently % under each truncation level) [ return list of list of AA indices ]
-    Create a directory of the truncated pds for each truncation level
-    For each truncation level:
-       Cluster the files under one of the radius thresholds using maxcluster & get a list of which pdbs belong to each level
-       Align the listed files into a single pdb file using theseus
-       for the 3 different sidechain treatments
-          prune down each pdb in the ensemble
-       
-    create module (for SCWRL_edit, run_spicker & truncate )
-    pdb_edit:
-    return list of coordinates for selected residues
-    prune certain residues/atoms
-    
     """
-
-    all_ensembles = []
 
     work_dir = os.path.abspath( work_dir )
     if not os.path.exists(work_dir):
@@ -349,7 +346,7 @@ def truncate( theseus_exe, models_list, work_dir, percent, FIXED_INTERVALS=False
     
     cmd = [ theseus_exe, "-a0" ] + models_list
     
-    logging.debug("In directory {0} running command: {1}\n in directory: {1}".format( work_dir, " ".join(cmd)  ) )
+    logging.debug("In directory {0} running command: {1}".format( work_dir, " ".join(cmd)  ) )
     
     p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT )
     p.wait()
@@ -360,7 +357,7 @@ def truncate( theseus_exe, models_list, work_dir, percent, FIXED_INTERVALS=False
     #-------------------------------
     T_data = os.path.join( work_dir, 'theseus_variances.txt' )
     if FIXED_INTERVALS:
-        thresholds = [ 1, 1.5, 2 , 2.5, 3, 3.5 ,4, 4.5, 5, 5.5, 6, 7, 8 ]
+        thresholds = [ 1, 1.5, 2 , 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8 ]
     else:
         thresholds = fly_threshold(T_data, percent)
     

@@ -2,8 +2,10 @@
 
 #edit the sidechains to make polyala, all and reliable
 
+import logging
 import re
 import os
+import subprocess
 
 ###########################################
 def get_clusters_from_distances(matrix, radius):
@@ -91,23 +93,26 @@ def matrix_insert(i, j, k,  matrix):
 ##########
 def cluster_with_MAX_FAST( file_list, radius, MAX ):
     """
-    Cluster the models in the current directory with maxcluster
+    Cluster the models in the file_list with the given radius using maxcluster
     INPUTS:
-    file_list: a list of PDB files
+    file_list: a file with a list of PDB files to compare
     radius: radius threshold (currently [1,2,3])
     MAX: path to maxcluster executable
 
-    OUTPUTS:
-    returns ...
+    Returns:
+    A list of the clustered files.
     """
     cur_dir = os.getcwd()
 
-    no_models = len( file_list )
+    no_models = 0
+    for pdb in open( file_list, 'r' ):
+        no_models+=1
+    #no_models = len( file_list )
 
     # Create the input file for maxcluster with the list of fragments
-    list_string = open(cur_dir + '/list', "w")
-    list_string.write( "\n".join( file_list ) )
-    list_string.close()
+    #list_string = open(cur_dir + '/list', "w")
+    #list_string.write( "\n".join( file_list ) )
+    #list_string.close()
 
     models=[0]*no_models
     #print 'runing MAX'
@@ -119,15 +124,24 @@ def cluster_with_MAX_FAST( file_list, radius, MAX ):
     # -bb         Perform RMSD fit using backbone atoms
     #     -C [n]      Cluster method: 0 - No clustering
     # -rmsd ???
-    os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
+    #os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
     #print 'MAX Done'
 
-
+    log_name = "maxcluster_radius_{0}.log".format(radius)
+    logf = open( log_name, "w" )
+    cmd = [ MAX, "-l", file_list, "-L", "4", "-rmsd", "-d", "1000", "-bb", "-C0" ]
+    
+    logging.debug("In directory {0}\nRunning command: {1}".format( cur_dir, " ".join(cmd)  ) )
+    p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT )
+    p.wait()
+    logf.close()   
+    
     # Create a square matrix no_models in size filled with zeros
     matrix =  [[0 for col in range(no_models)] for row in range(no_models)]
 
     #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
-    max_log = open(cur_dir+'/MAX_LOG')
+    #max_log = open(cur_dir+'/MAX_LOG')
+    max_log = open( log_name, 'r')
     pattern = re.compile('INFO  \: Model')
     for line in max_log:
         if re.match(pattern, line):

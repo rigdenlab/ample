@@ -777,7 +777,6 @@ else:
         logger.info("Truncating Done for cluster {0}".format( cluster ) )
         logger.info('Created {0} ensembles'.format( len(final_ensembles) ) )
  
-
 #---------------------------------------
 # MR BUMP analysis of the ensembles
 #---------------------------------------
