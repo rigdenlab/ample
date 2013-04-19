@@ -204,6 +204,14 @@ def make_ensembles(trunc_out, threshold, theseus_exe, maxcluster_exe ):
             logging.info( 'Could not create ensemble for radius {0} (models too diverse)'.format( RAD ) )
             continue
         
+        # Write out the files
+        file_list = "maxcluster_radius_{0}_files.list".format( RAD )
+        f = open(file_list, "w")
+        for c in cluster_files:
+            f.write( c+"\n")
+        f.write("\n")
+        f.close()
+        
         # Restrict cluster to 30
         if len( cluster_files ) > 30:
             logging.debug("More than 30 files clustered so truncating list to first 30")
