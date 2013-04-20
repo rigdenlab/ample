@@ -69,9 +69,19 @@ class ResultsSummary(object):
         for jobDir in jobDirs:
             
             self.logger.debug(" -- checking directory for results: {0}".format( jobDir ) )
+            
+            # Check if finished
+            if not os.path.exists( os.path.join( jobDir, "results", "finished.txt" ) ):
+                self.logger.debug(" Found unfinished job: {0}".format( jobDir ) )
+                result = self.getUnfinishedResult( jobDir, jtype="unfinished" )
+                self.results.append( result )
+                continue
+            
             resultsTable = os.path.join( jobDir,"results", "resultsTable.dat" )
             if not os.path.exists(resultsTable):
                 self.logger.debug(" -- Could not find file: {0}".format( resultsTable ) )
+                result = self.getUnfinishedResult( jobDir, jtype="no-resultsTable.dat" )
+                self.results.append( result )
                 continue
             
             firstLine = True
@@ -121,6 +131,27 @@ class ResultsSummary(object):
         self.sortResults()
         
         return True
+    
+    def getUnfinishedResult(self, jobDir, jtype="unfinished" ):
+        """Return a result for an unfinished job"""
+        
+        result = MrBumpResult()
+        result.jobDir = jobDir
+        
+        # Use directory name for job name
+        dlist = os.listdir( os.path.join( jobDir, "data") )
+        if len( dlist ) != 1:
+            result.name = "Error with dir: {0}".format( jobDir )
+        # Use dirname but remove "loc0_ALL_" from front
+        result.name = os.path.basename( dlist[0] )[9:]
+        
+        result.program = "unknown"
+        result.solution = jtype
+        result.rfact = -1
+        result.rfree = -1
+        result.shelxCC = -1
+        
+        return result
  
     def resultsTable(self, table):
         """Returns a string of table data, padded for alignment
