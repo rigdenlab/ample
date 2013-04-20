@@ -34,6 +34,7 @@ sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
 # python imports
 import argparse
 import clusterize
+import cPickle
 import glob
 import logging
 import shutil
@@ -42,6 +43,7 @@ import time
 # Our imports
 import ample_options
 import ample_util
+import ensemble
 import fasta_parser
 import mrbump_ensemble
 import nmr
@@ -700,6 +702,8 @@ else:
     spickerer.run_spicker()
 
     logger.info( spickerer.results_summary() )
+
+    amopt.d['spicker_results'] = spickerer.results
     
     # Generate list of clusters to sample
     # Done like this so it's easy to run specific clusters
@@ -707,76 +711,39 @@ else:
     
     logger.info('Clustering Done. Using the following clusters: {0}'.format(cluster_nums) )
     
+    ensemble_results = [] 
     for cluster in cluster_nums:
         
         logger.info('----- Truncating models for cluster {0} --------'.format(cluster)   )
         
-        fcluster_dir =  os.path.join( amopt.d['work_dir'], 'fine_cluster_{0}'.format(cluster) )
-        if not os.path.exists( fcluster_dir ):
-            os.mkdir( fcluster_dir )
-        os.chdir( fcluster_dir )
-        
-        logger.info("Truncating models in directory: {0}".format( fcluster_dir ) )
-        
-        # Truncate models and return the path to the ensembled models - each ensemble is a single pdb file
-        # containing multiple models
-        list_of_ensembles = []
-        
         # Get list of models from spicker results
-        models_list = spickerer.results[ cluster-1 ].pdb_list
+        cluster_models = spickerer.results[ cluster-1 ].pdb_list
         
-        if amopt.d['ensembler']:
-            list_of_ensembles = truncateedit_MAX.truncate_Phenix( amopt.d['phenix_exe'],
-                                                                  models_list,
-                                                                  fcluster_dir )
-        else:
-            trunc_result = truncateedit_MAX.truncate( amopt.d['theseus_exe'],
-                                                           models_list,
-                                                           fcluster_dir,
-                                                           amopt.d['percent'] )
-            for threshold, trunc_dir in trunc_result:
-                list_of_ensembles += truncateedit_MAX.make_ensembles( trunc_dir,
-                                                                      threshold,
-                                                                       amopt.d['theseus_exe'],
-                                                                       amopt.d['maxcluster_exe'] )
-                
+        ensembler = ensemble.Ensembler()
+        ensembler.maxcluster_exe = amopt.d['maxcluster_exe']
+        ensembler.theseus_exe =  amopt.d['theseus_exe']
+        ensembler.generate_ensembles( cluster_models=cluster_models,
+                                      root_dir=amopt.d['work_dir'],
+                                      ensemble_id=cluster,
+                                      percent=amopt.d['percent'] )
+        final_ensembles = ensembler.as_list()
+        
         # Prune down to the top model        
         if amopt.d['top_model_only']:
+            raise RuntimeError, "Need to fix top_model_only"
             list_of_ensembles = truncateedit_MAX.One_model_only( list_of_ensembles, amopt.d['work_dir'] )
-    
-        ensemble_dir = os.path.join( amopt.d['work_dir'], 'ensembles_{0}'.format(cluster) )
-        os.mkdir( ensemble_dir )
-        
-        pdbed = pdb_edit.PDBEdit()
-        
-        # Now add the side chains
-        final_ensembles = []
-        for each_ens in list_of_ensembles:
-            
-            # 3 different side-chain treaments
-            #SCWRL_edit.edit_sidechains(each_ens, ensemble_dir + '/')
-            pdbname = os.path.basename( each_ens )
-            
-            # For all atom just copy the file
-            ename = os.path.join( ensemble_dir, 'All_atom_{0}'.format(pdbname) )
-            shutil.copy2( each_ens, ename  )
-            final_ensembles.append( ename )
-            
-            # Reliable side chains
-            ename = os.path.join( ensemble_dir, 'SCWRL_Reliable_sidechains_{0}'.format(pdbname) )
-            pdbed.reliable_sidechains( each_ens, ename )
-            final_ensembles.append( ename )
-            
-            # Backbone
-            ename = os.path.join( ensemble_dir, 'poly_ala_{0}'.format(pdbname) )
-            pdbed.backbone( each_ens, ename )            
-            final_ensembles.append( ename )
-    
+
         # Add to the total list
         ensembles.append( final_ensembles )
+
+        # Add results to ampopt
+        ensemble_results.append( ensembler.ensembles )
         
         logger.info("Truncating Done for cluster {0}".format( cluster ) )
         logger.info('Created {0} ensembles'.format( len(final_ensembles) ) )
+
+    # Add results to amoptd
+    amopt.d['ensemble_results'] = ensemble_results
  
 #---------------------------------------
 # MR BUMP analysis of the ensembles
@@ -788,6 +755,7 @@ if not os.path.exists(bump_dir):
 os.chdir(bump_dir)
 amopt.d['mrbump_dir'] = bump_dir
 
+mrbump_result_list = []
 # Loop over clusters
 for i, ensemble in enumerate(ensembles):
     
@@ -814,7 +782,10 @@ for i, ensemble in enumerate(ensembles):
         
     resultsSummary = mrbump_results.ResultsSummary( job_dir, cluster=cFlag )
     summary = resultsSummary.summariseResults()
+    mrbump_result_list.append( resultsSummary.results )
     logger.info( summary )
+
+amopt.d['mrbump_results'] = mrbump_result_list
     
 # Timing data
 time_stop = time.time()
@@ -825,6 +796,13 @@ msg = '\nMR and shelx DONE\n\n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n
 logging.info(msg)
 RUNNING.write(msg)
 RUNNING.flush()
+
+# Save results
+rfile = os.path.join( amopt.d['work_dir'], "results.pkl" )
+f = open( rfile, 'w' )
+cPickle.dump( amopt.d, f )
+f.close()
+logging.info("Saved results as file: {0}".format(rfile))
 
 # os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
 # os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')
