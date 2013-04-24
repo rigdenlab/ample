@@ -719,6 +719,11 @@ else:
         # Get list of models from spicker results
         cluster_models = spickerer.results[ cluster-1 ].pdb_list
         
+        if len( cluster_models ) < 2:
+            msg = "Could not create ensemble for cluster {0} as less than 2 models!".format( cluster )
+            logger.critical(msg)
+            raise RuntimeError, msg
+        
         ensembler = ensemble.Ensembler()
         ensembler.maxcluster_exe = amopt.d['maxcluster_exe']
         ensembler.theseus_exe =  amopt.d['theseus_exe']
@@ -744,7 +749,7 @@ else:
 
     # Add results to amoptd
     amopt.d['ensemble_results'] = ensemble_results
- 
+
 #---------------------------------------
 # MR BUMP analysis of the ensembles
 #---------------------------------------
