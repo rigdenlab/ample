@@ -304,7 +304,7 @@ class Ensembler(object):
                 cluster_files = cluster_with_MAX.cluster_with_MAX_FAST( fname, radius, self.maxcluster_exe )  # use fastest method
                 logging.debug("Maxcluster clustered {0} files".format ( len( cluster_files ) ) )
                 if cluster_files < 2:
-                    logging.info( 'Could not create ensemble for radius {0} (models too diverse)'.format( radius ) )
+                    logging.info( 'Could not cluster files using radius {0}'.format( radius ) )
                     continue
                 
                 # Write out the files for reference
