@@ -768,6 +768,11 @@ for i, ensemble in enumerate(ensembles):
     logger.info('----- Running MRBUMP (cluster ' + clusterID+ ')--------\n\n')
     logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble),  clusterID ) )
     
+    if len(ensembles) < 1:
+        msg = "ERROR! Cannot run MRBUMP for cluster {0} as there are no ensembles!".format( clusterID )
+        logger.critical( msg )
+        continue
+    
     job_dir = os.path.join( amopt.d['mrbump_dir'], 'cluster_'+clusterID )
 
     logger.info("Running cluster {0} in directory: {1}".format( clusterID, job_dir ) )
