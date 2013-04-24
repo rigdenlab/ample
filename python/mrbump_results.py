@@ -6,6 +6,9 @@ import logging
 import os
 import re
 
+# Our imports
+import printTable
+
 class MrBumpResult(object):
     """
     Class to hold the result of running a MRBUMP job
@@ -103,6 +106,9 @@ class ResultsSummary(object):
                 
                 fields = line.split()
                 
+                # Strip loc0_ALL_ from front and strip  _UNMOD from end from (e.g.): loc0_ALL_All_atom_trunc_0.34524_rad_1_UNMOD
+                #result.name = fields[0][9:-6]
+                # Don't do the above yet till we've finsihed the next set of runs
                 result.name = fields[0]
                 result.program = fields[1].lower()
                 result.solution = fields[2]
@@ -115,7 +121,9 @@ class ResultsSummary(object):
                     raise RuntimeError,"getResult, unrecognised program in line: {0}".format(line)
                 
                 # Rebuild the path that generated the result
-                # Strip  _UNMOD from (e.g.): loc0_ALL_All_atom_trunc_0.34524_rad_1_UNMOD 
+                # Add loc0_ALL_ and strip  _UNMOD from (e.g.): loc0_ALL_All_atom_trunc_0.34524_rad_1_UNMOD 
+                #dirName = "loc0_ALL_" + result.name + "_UNMOD"
+                # While using old names - just strip _UNMOD
                 dirName = result.name[:-6]
                 resultDir = os.path.join( result.jobDir,'data',dirName,'unmod','mr',result.program,'refine' )
                 #print resultDir
@@ -142,9 +150,9 @@ class ResultsSummary(object):
         dlist = os.listdir( os.path.join( jobDir, "data") )
         if len( dlist ) != 1:
             result.name = "Error with dir: {0}".format( jobDir )
+
         # Use dirname but remove "loc0_ALL_" from front
         result.name = os.path.basename( dlist[0] )[9:]
-        
         result.program = "unknown"
         result.solution = jtype
         result.rfact = -1
@@ -152,31 +160,6 @@ class ResultsSummary(object):
         result.shelxCC = -1
         
         return result
- 
-    def resultsTable(self, table):
-        """Returns a string of table data, padded for alignment
-        @param table: The table to print. A list of lists.
-        Each row must have the same number of columns. 
-        
-        """
-        
-        col_paddings = []
-        
-        out = ""
-    
-        for i in range(len(table[0])):
-            col_paddings.append(self._get_max_width(table, i))
-    
-        for row in table:
-            # left col
-            out += row[0].ljust(col_paddings[0] + 1)
-            # rest of the cols
-            for i in range(1, len(row)):
-                col = self._format_num(row[i]).rjust(col_paddings[i] + 2)
-                out +=  col
-            out += "\n"
-                
-        return out
     
     def sortResults( self ):
         """
@@ -220,34 +203,15 @@ class ResultsSummary(object):
             resultsTable.append( rl )
     
         # Format the results
-        summary = self.resultsTable( resultsTable )
+        table = printTable.Table()
+        summary = table.pprint_table( resultsTable )
         
         r = "\n\nOverall Summary:\n\n"
         r += summary
         r += '\nBest results so far are in :\n\n'
         r +=  self.results[0].resultDir
             
-        return r
-
-    def _format_num(self, num):
-        """Format a number according to given places.
-        Adds commas, etc. Will truncate floats into ints!"""
-    
-        try:
-            if "." in num:
-                inum = float(num)
-                return locale.format("%.2f", (0, inum), True)
-            else:
-                inum = int(num)
-                return locale.format("%.*f", (0, inum), True)
-    
-        except (ValueError, TypeError):
-            return str(num)
-    
-    def _get_max_width(self, table, index):
-        """Get the maximum width of the given column index"""
-        return max([len(self._format_num(row[index])) for row in table])
-    
+        return r    
 #
 # DEPRECATED CODE BELOW HERE
 #
