@@ -36,13 +36,13 @@ class Mtzdump:
 
      self.logger = logging.getLogger()
    
-   def setMTZdumpLogfile(self, dir):
+   def setMTZdumpLogfile(self, tdir):
      """ Set the name of the mtzdump logfile. Try to make it unique to the user
          by appending their username to the start of the file name. """
      if os.name == "nt":
-        self.logfile = os.path.join(dir, os.environ["USERNAME"] + '_junk_mtzdump.log')
+        self.logfile = os.path.join(tdir, os.environ["USERNAME"] + '_junk_mtzdump.log')
      else:
-        self.logfile = os.path.join(dir, os.environ["USER"] + '_junk_mtzdump.log')
+        self.logfile = os.path.join(tdir, os.environ["USER"] + '_junk_mtzdump.log')
     
    def setProgramParameters(self,inputline):
      self.programParameters = inputline + '\n' + self.programParameters

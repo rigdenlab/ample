@@ -288,9 +288,9 @@ class Test(unittest.TestCase):
     
     def XtestSuccess(self):
         
-        dir = "/home/jmht/t/ample-dev1/examples/toxd-example/ROSETTA_MR_3/MRBUMP/cluster_2/search_All_atom_trunc_0.551637_rad_3_mrbump"
+        tdir = "/home/jmht/t/ample-dev1/examples/toxd-example/ROSETTA_MR_3/MRBUMP/cluster_2/search_All_atom_trunc_0.551637_rad_3_mrbump"
         
-        self.assertTrue( check_success( dir ) )
+        self.assertTrue( check_success( tdir ) )
         
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
