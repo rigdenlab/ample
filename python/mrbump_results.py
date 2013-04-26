@@ -152,7 +152,9 @@ class ResultsSummary(object):
             result.name = "Error with dir: {0}".format( jobDir )
 
         # Use dirname but remove "loc0_ALL_" from front
-        result.name = os.path.basename( dlist[0] )[9:]
+        #result.name = os.path.basename( dlist[0] )[9:]
+        # Use dirname but add "_UNMOD" to back
+        result.name = os.path.basename( dlist[0] )+"_UNMOD"
         result.program = "unknown"
         result.solution = jtype
         result.rfact = -1
