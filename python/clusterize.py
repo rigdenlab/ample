@@ -226,7 +226,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
         file.write(script_header)
 
-        file.write("setenv CCP4_SCR $TMPDIR\n\n")
+        file.write("export CCP4_SCR $TMPDIR\n\n")
 
         # jmht - this needs to go in the rosetta object
         file.write('cd '+ os.path.join(RunDir, "pre_models", "model_" + str(jobNumber)) +'\n\n'+
@@ -325,7 +325,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         file=open(sub_script, "w")
         script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
         file.write(script_header+"\n\n")
-        file.write("setenv CCP4_SCR $TMPDIR\n\n")
+        file.write("export CCP4_SCR $TMPDIR\n\n")
 
         # Build up the rosetta command
         nstruct=1 # 1 structure
@@ -389,7 +389,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         return sh+'\n\n'
     
-    def submitJob(self, subScript=None,jobDir=None):
+    def submitJob(self, subScript=None, jobDir=None):
         """
         Submit the job to the queue and return the job number.
         
@@ -403,8 +403,8 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
          We cd to the job directory, submit and then cd back to where we came from
         """
         
-        curDir=os.getcwd()
-        os.chdir(jobDir)
+        if jobDir:
+            os.chdir(jobDir)
         
         command_line=None
         stdin = None
@@ -450,47 +450,51 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         return str(qNumber)    
         
-
-    def mrBuildOnCluster(self, clusterDir, ensemblePDB, jobID, amoptd ):
-        """
-        Run the molecular replacement and model building on a cluster node.
-        
-        Args:
-        clusterDir --
-        ensemblePDB --
-        jobID --
-        amoptd -- dictionary containing job options
-        
-        """
-        
-        # Create a cluster submission script for this modelling job
-        jobName="mrBuild_" + str(jobID)
-
-        jobDir=os.path.join(clusterDir, "mrbuild_" + str(jobID))
-        os.mkdir(jobDir)
-        os.mkdir(os.path.join(jobDir, "submit_scripts"))
-        os.mkdir(os.path.join(jobDir, "logs"))
-        sub_script=os.path.join(jobDir, "submit_scripts", "job_" + str(jobID) + ".sub")
-
-        modelName=os.path.split(ensemblePDB)[1].replace(".pdb","")
-        logFile = os.path.join(jobDir, "logs", "job_" + str(jobID) + '.log')
-
-        # Create the submission script
-        file=open(sub_script, "w")
-        script_header = self.subScriptHeader( nProcs=amoptd['nproc'], logFile=logFile, jobName=jobName)
-        file.write(script_header)
-
-        file.write("pushd " + jobDir + "\n\n" + 
-        "setenv CCP4_SCR $TMPDIR\n\n")
-        
-        # Generate the MRBUMP command - up to eof
-        mrbCmd = mrbump_cmd.mrbump_cmd( amoptd, jobid=jobID, ensemble_pdb=ensemblePDB )
-        file.write(mrbCmd+'\n\n')
-        file.write('popd\n\n')
-
-        file.close()
-
-        job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
+#    def mrBuildOnCluster(self, clusterDir, ensemblePDB, jobID, amoptd ):
+#        """
+#        Run the molecular replacement and model building on a cluster node.
+#        
+#        Args:
+#        clusterDir --
+#        ensemblePDB --
+#        jobID --
+#        amoptd -- dictionary containing job options
+#        
+#        """
+#        
+#        # Create a cluster submission script for this modelling job
+#        jobName="mrBuild_" + str(jobID)
+#        jobName = os.path.splitext( os.path.basename(ensemblePDB) )[0]
+#
+#        #jobDir=os.path.join(clusterDir, "mrbuild_" + str(jobID))
+#        jobDir=clusterDir
+#        #os.mkdir(jobDir)
+#        #os.mkdir(os.path.join(jobDir, "submit_scripts"))
+#        #os.mkdir(os.path.join(jobDir, "logs"))
+#        #sub_script=os.path.join(jobDir, "submit_scripts", "job_" + str(jobID) + ".sub")
+#        sub_script=os.path.join(clusterDir, "job_" + jobName + ".sub")
+#
+#        #modelName=os.path.split(ensemblePDB)[1].replace(".pdb","")
+#        #logFile = os.path.join(jobDir, "logs", "job_" + str(jobID) + '.log')
+#        logFile = os.path.join(clusterDir, "job_" + jobName + '.log')
+#
+#        # Create the submission script
+#        file=open(sub_script, "w")
+#        script_header = self.subScriptHeader( nProcs=amoptd['nproc'], logFile=logFile, jobName=jobName)
+#        file.write(script_header)
+#
+#        file.write("pushd " + jobDir + "\n\n" + 
+#        "export CCP4_SCR $TMPDIR\n\n")
+#        
+#        # Generate the MRBUMP command - up to eof
+#        #mrbCmd = mrbump_cmd.mrbump_cmd( amoptd, jobid=jobID, ensemble_pdb=ensemblePDB )
+#        mrbCmd = mrbump_cmd.mrbump_cmd( amoptd, jobid=jobName, ensemble_pdb=ensemblePDB )
+#        file.write(mrbCmd+'\n\n')
+#        file.write('popd\n\n')
+#
+#        file.close()
+#
+#        job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
 
 
 if __name__ == "__main__":

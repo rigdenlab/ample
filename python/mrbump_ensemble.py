@@ -17,28 +17,122 @@ import ample_util
 import clusterize
 import mrbump_cmd
 
-def mrbump_ensemble_cluster( ensembles, mrBuildClusterDir, amoptd, clusterID="X" ):
+
+def generate_jobscripts( ensemble_pdbs, amoptd ):
+    """Write the MRBUMP shell scripts for all the ensembles.
+
+    Args:
+    ensemble_pdbs -- list of the ensembles, each a single pdb file
+    amoptd -- dictionary with job options
+    
+    The split_mr option used here was added for running on the hartree
+    wonder machine where job times were limited to 12 hours, but is left
+    in in case it's of use elsewhere.
+    """
+    
+    # Remember programs = also used for looping
+    if amoptd['split_mr']:
+        mrbump_programs = amoptd['mrbump_programs']
+    
+    job_scripts = []
+    for ensemble_pdb in ensemble_pdbs:
+        
+        # Get name from pdb path
+        name = os.path.splitext( os.path.basename( ensemble_pdb ) )[0]
+        
+        # May need to run MR separately
+        if amoptd['split_mr']:
+            # create multiple jobs
+            for program in mrbump_programs:
+                jname = "{0}_{1}".format( name, program )
+                amoptd['mrbump_programs'] = [ program ]
+                script = write_jobscript( name=jname, pdb=ensemble_pdb, amoptd=amoptd )
+                job_scripts.append( script )
+        else:
+            # Just run as usual
+            script = write_jobscript( name=name, pdb=ensemble_pdb, amoptd=amoptd )
+            job_scripts.append( script )
+            
+    # Reset amoptd
+    if amoptd['split_mr']:
+       amoptd['mrbump_programs'] = mrbump_programs
+            
+    if not len( job_scripts ):
+        msg = "No job scripts created!"
+        logging.critical( msg )
+        raise RuntimeError, msg
+    
+    return job_scripts
+        
+def write_jobscript( name, pdb, amoptd, directory=None ):
+    """
+    Create the script to run MrBump for this PDB.
+    
+    Args:
+    name -- used to identify job and name the run script
+    pdb -- the path to the pdb file for this job
+    amoptd -- dictionary with job options
+    directory -- directory to write script to - defaults to cwd
+    
+    Returns:
+    path to the script
+    
+    There is an issue here as the code to add the parallel job submission
+    script header is required here, so we create a ClusterRun object.
+    Should think about a neater way to do this rather then split the parallel stuff
+    across two modules.
+    """
+    
+    # Path
+    if not directory:
+        directory = os.getcwd()
+    script_path = directory + os.sep + name + '.sub'
+    
+    # Write script
+    job_script = open(script_path, "w")
+    
+    # If on cluster, insert queue header 
+    if amoptd['submit_cluster']:
+        # Messy - create an instance to get the script header. Could pass one in to save creating one each time
+        mrBuild = clusterize.ClusterRun()
+        mrBuild.QTYPE = amoptd['submit_qtype']
+        logFile=os.path.join( directory, name + ".log" )
+        script_header = mrBuild.subScriptHeader( nProcs=amoptd['nproc'], logFile=logFile, jobName=name)
+        job_script.write( script_header )
+        job_script.write("pushd " + directory + "\n\n" + "export CCP4_SCR $TMPDIR\n\n")
+    else:
+        job_script.write('#!/bin/sh\n')
+    
+    jobstr = mrbump_cmd.mrbump_cmd( amoptd, jobid=name, ensemble_pdb=pdb )
+    job_script.write(jobstr)
+    
+    if amoptd['submit_cluster']:
+        job_script.write('\n\npopd\n\n')
+        
+    job_script.close()
+    
+    # Make executable
+    os.chmod(script_path, 0o777)
+    
+    return script_path
+##End create_jobscript
+
+def mrbump_ensemble_cluster( job_scripts, amoptd ):
     """
     Process the list of ensembles using MrBump on a cluster.
     
     Args:
-    ensembles -- list of pdb files, each file containing a group of ensembles
+    job_scripts -- list of scripts to run mrbump
     amoptd -- dictionary object containing options
-    clusterId -- number/id of the cluster that is being processed
     """
     logger = logging.getLogger()
     logger.info("Running MR and model building on a cluster\n\n")
 
     mrBuild = clusterize.ClusterRun()
     mrBuild.QTYPE = amoptd['submit_qtype']
+    for script in job_scripts:
+        job_number = mrBuild.submitJob( subScript=script )
 
-    # Reset the queue list
-    mrBuild.qList = []
-    jobID = 0
-    for pdbfile in ensembles:
-        mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, amoptd )
-        jobID = jobID + 1
-    
     # Monitor the cluster queue to see when all jobs have finished
     mrBuild.monitorQueue()
     
@@ -63,14 +157,13 @@ def mrbump_ensemble_cluster( ensembles, mrBuildClusterDir, amoptd, clusterID="X"
     
 ##End mrbump_ensemble_cluster
 
-def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
+def mrbump_ensemble_local( job_scripts, amoptd ):
     """
     Process the list of ensembles using MrBump on a local machine
     
     Args:
-    ensembles -- list of pdb files, each file containing a group of ensembles
+    job_scripts -- list of scripts to run mrbump
     amoptd -- dictionary with job options
-    clusterId -- number/id of the cluster that is being processed
     """
 
     logger = logging.getLogger()
@@ -79,13 +172,10 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
     # Queue to hold the jobs we want to run
     queue = multiprocessing.Queue()
     
-    # Create all the run scripts and add to the queue
-    logger.info("Generating MRBUMP runscripts in: {0}".format( os.getcwd() ) )
-    for pdbfile in ensembles:
-        # Name is filename without extension
-        name = os.path.splitext( os.path.split(pdbfile)[1] )[0]
-        script_path = create_jobscript(name, pdbfile, amoptd)
-        queue.put(script_path)
+    # Add jobs to the queue
+    #logger.info("Generating MRBUMP runscripts in: {0}".format( os.getcwd() ) )
+    for script in job_scripts:
+        queue.put(script)
 
     # Now start the jobs
     processes = []
@@ -126,38 +216,6 @@ def mrbump_ensemble_local( ensembles, amoptd, clusterID="X" ):
     time.sleep(3)
 ##End mrbump_ensemble_local
 
-def create_jobscript( name, pdb, amoptd, directory=None ):
-    """
-    Create the script to run MrBump for this PDB.
-    
-    Args:
-    name -- used to identify job and name the run script
-    pdb -- the path to the pdb file for this job
-    amoptd -- dictionary with job options
-    directory -- directory to write script to - defaults to cwd
-    
-    Returns:
-    path to the script
-    """
-    
-    # Path
-    if not directory:
-        directory = os.getcwd()
-    script_path = directory + os.sep + name + '.sub'
-    
-    # Write script
-    job_script = open(script_path, "w")
-    job_script.write('#!/bin/sh\n')
-    jobstr = mrbump_cmd.mrbump_cmd( amoptd, jobid=name, ensemble_pdb=pdb )
-    job_script.write(jobstr)
-    job_script.close()
-    
-    # Make executable
-    os.chmod(script_path, 0o777)
-    
-    return script_path
-##End create_jobscript
-
 def worker( queue, early_terminate=False ):
     """
     Worker process to run MrBump jobs until no more left.
@@ -185,7 +243,7 @@ def worker( queue, early_terminate=False ):
         
         # Got a script so run
         # Get name from script
-        name = os.path.splitext( os.path.split(mrb_script)[1] )[0]
+        name = os.path.splitext( os.path.basename(mrb_script) )[0]
         #logfile = name + ".log"
         #f = open( logfile, "w")
         print "Worker {0} running job {1}".format(multiprocessing.current_process().name, name)

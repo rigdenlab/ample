@@ -33,10 +33,9 @@ class ResultsSummary(object):
     Summarise the results for a series of MRBUMP runs
     """
     
-    def __init__(self, mrbump_dir, cluster=False ):
+    def __init__(self, mrbump_dir):
         
         self.mrbump_dir = mrbump_dir
-        self.cluster = cluster # whether jobs were run on a cluster
         self.results = []
         
         self.logger = logging.getLogger()
@@ -51,18 +50,13 @@ class ResultsSummary(object):
         
         # how we recognise a job directory
         dir_re = re.compile("^search_.*_mrbump$")
-        
         jobDirs = []
-        if self.cluster:
-            for pd in os.listdir( self.mrbump_dir ):
-                pd = os.path.join( self.mrbump_dir, pd )
-                if os.path.isdir( pd ):
-                    for d in os.listdir( pd ):
-                        dpath = os.path.join( self.mrbump_dir, pd, d )
-                        if dir_re.match( d ) and os.path.isdir( dpath ):
-                            jobDirs.append( dpath )
-        else:
-            jobDirs = glob.glob( os.path.join( self.mrbump_dir, "search_*_mrbump" ) )
+        #jobDirs = glob.glob( os.path.join( self.mrbump_dir, "search_*_mrbump" ) )
+        for adir in os.listdir( self.mrbump_dir ):
+            # REM only returns relative path
+            dpath = os.path.join( self.mrbump_dir, adir )
+            if dir_re.match( adir ) and os.path.isdir( dpath ):
+                jobDirs.append( dpath )
         
         if not len(jobDirs):
             self.logger.warn("Could not extract any results from directory: {0}".format( self.mrbump_dir ) )
@@ -343,12 +337,8 @@ class ResultsSummary(object):
 
 if __name__ == "__main__":
     import sys
-    if len(sys.argv) == 3:
-        cluster = True
-        mrbump_dir = os.path.join( os.getcwd(), sys.argv[2] )
-    elif len(sys.argv) == 2:
+    if len(sys.argv) == 2:
         mrbump_dir = os.path.join( os.getcwd(), sys.argv[1] )
-        cluster=False
     else:
         mrbump_dir = "/Users/jmht/Documents/AMPLE/res.test/cluster_run1"
         mrbump_dir = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/MRBUMP/cluster_1"
@@ -357,6 +347,6 @@ if __name__ == "__main__":
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    r = ResultsSummary( mrbump_dir, cluster=cluster )
+    r = ResultsSummary( mrbump_dir )
     print r.summariseResults()
     

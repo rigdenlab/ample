@@ -226,6 +226,9 @@ parser.add_argument('-SIGF', metavar='flag for SIGF', type=str, nargs=1,
 parser.add_argument('-spicker_exe', metavar='boolean', type=str, nargs=1,
                    help='path to spicker executable')
 
+parser.add_argument('-split_mr', metavar='boolean', type=str, nargs=1,
+                   help='whether to split MRBUMP MR jobs into separate jobs')
+
 parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', type=str, nargs=1,
                    help='path to theseus executable')
 
@@ -306,6 +309,7 @@ parser.set_defaults(
                     run_dir = os.getcwd(),
                     scwrl_exe = None,
                     spicker_exe = None,
+                    split_mr = "false",
                     submit_cluster = "false",
                     submit_qtype = "SGE",
                     usehoms = "true",
@@ -484,16 +488,16 @@ if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if maki
     rosetta_modeller = rosetta_model.RosettaModel()
     rosetta_modeller.set_from_dict( amopt.d )
 
-amopt.d['mrbump_programs'] = ' molrep phaser '
-if not amopt.d['molreponly'] and not amopt.d['phaseronly']:
-    amopt.d['mrbump_programs'] = ' molrep phaser '
-if amopt.d['molreponly']:
-    amopt.d['mrbump_programs'] = ' molrep  '
-if amopt.d['phaseronly']:
-    amopt.d['mrbump_programs'] = ' phaser  '
+# MR programs
 if amopt.d['molreponly'] and amopt.d['phaseronly']:
         logger.critical('you say you want molrep only AND phaser only, choose one or both')
-        sys.exit(1)    
+        sys.exit(1)
+if amopt.d['molreponly']:
+    amopt.d['mrbump_programs'] = [ 'molrep' ]
+elif amopt.d['phaseronly']:
+    amopt.d['mrbump_programs'] = [ 'phaser' ]
+else:
+    amopt.d['mrbump_programs'] = ['molrep', 'phaser']
 
 #
 #Check we can find all the required programs
@@ -742,6 +746,7 @@ else:
         ensembles.append( final_ensembles )
 
         # Add results to ampopt
+        # FIX  - NEED ONE LIST PER CLUSTER
         ensemble_results.append( ensembler.ensembles )
         
         logger.info("Truncating Done for cluster {0}".format( cluster ) )
@@ -762,13 +767,13 @@ amopt.d['mrbump_dir'] = bump_dir
 
 mrbump_result_list = []
 # Loop over clusters
-for i, ensemble in enumerate(ensembles):
+for i, ensemble_pdbs in enumerate(ensembles):
     
     clusterID=str(i+1)
     logger.info('----- Running MRBUMP (cluster ' + clusterID+ ')--------\n\n')
-    logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble),  clusterID ) )
+    logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble_pdbs),  clusterID ) )
     
-    if len(ensembles) < 1:
+    if len(ensemble_pdbs) < 1:
         msg = "ERROR! Cannot run MRBUMP for cluster {0} as there are no ensembles!".format( clusterID )
         logger.critical( msg )
         continue
@@ -780,17 +785,17 @@ for i, ensemble in enumerate(ensembles):
         os.mkdir( job_dir )
     os.chdir( job_dir )
     
+    # Create job scripts
+    logger.info("Generating MRBUMP runscripts in: {0}".format( job_dir ) )
+    job_scripts = mrbump_ensemble.generate_jobscripts( ensemble_pdbs, amopt.d )
+    
     if amopt.d['submit_cluster']:
-        mrbump_ensemble.mrbump_ensemble_cluster( ensemble, job_dir, amopt.d, clusterID=clusterID )
+        mrbump_ensemble.mrbump_ensemble_cluster( job_scripts, amopt.d )
     else:
-        mrbump_ensemble.mrbump_ensemble_local( ensemble, amopt.d, clusterID=clusterID )
+        mrbump_ensemble.mrbump_ensemble_local( job_scripts, amopt.d )
         
     # Show what happened
-    cFlag=False
-    if amopt.d['submit_cluster']:
-        cFlag=True
-        
-    resultsSummary = mrbump_results.ResultsSummary( job_dir, cluster=cFlag )
+    resultsSummary = mrbump_results.ResultsSummary( job_dir )
     summary = resultsSummary.summariseResults()
     mrbump_result_list.append( resultsSummary.results )
     logger.info( summary )
