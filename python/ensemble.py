@@ -80,7 +80,7 @@ class Ensembler(object):
         
         self.maxcluster_exe = None
 
-    def as_list(self):
+    def pdb_list(self):
         """Return the final ensembles as a list of pdb files"""
         ensembles = []
         for ensemble in self.ensembles:

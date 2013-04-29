@@ -371,6 +371,7 @@ if not os.path.exists(amopt.d['run_dir']):
 
 print 'Making a Run Directory  -checking for previous runs\n'
 amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'] )
+#amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], rootname="ENSEMBLES_" )
 os.chdir( amopt.d['work_dir'] )
 
 # Set up logging
@@ -555,9 +556,9 @@ else:
     logger.info('NOT Making Fragments')
 
 if amopt.d['make_models']:
-    logger.info('\nMaking Rosetta Models\n')
+    logger.info('\nMaking Rosetta Models')
 else:
-    logger.info('NOT Making Rosetta Models\n')
+    logger.info('NOT Making Rosetta Models')
 
 logger.info('All needed programs are found, continuing Run')
 
@@ -608,9 +609,9 @@ if NMR_PROTOCOL:
 #-----------------------------------
 if amopt.d['make_models']:
     
-    logger.info('----- making Rosetta models--------\n')
+    logger.info('----- making Rosetta models--------')
     logger.info('making ' + str(amopt.d['nmodels']) + ' models...')
-    RUNNING.write('\n----- making models--------\n')
+    RUNNING.write('----- making models--------')
     RUNNING.flush()
     
     # If we are running with cluster support submit all modelling jobs to the cluster queue
@@ -735,18 +736,17 @@ else:
                                       root_dir=amopt.d['work_dir'],
                                       ensemble_id=cluster,
                                       percent=amopt.d['percent'] )
-        final_ensembles = ensembler.as_list()
-        
+
+        final_ensembles = ensembler.pdb_list()
         # Prune down to the top model        
         if amopt.d['top_model_only']:
             raise RuntimeError, "Need to fix top_model_only"
-            list_of_ensembles = truncateedit_MAX.One_model_only( list_of_ensembles, amopt.d['work_dir'] )
+            final_ensembles = truncateedit_MAX.One_model_only( final_ensembles, amopt.d['work_dir'] )
 
         # Add to the total list
         ensembles.append( final_ensembles )
 
-        # Add results to ampopt
-        # FIX  - NEED ONE LIST PER CLUSTER
+        # Add results to amopt
         ensemble_results.append( ensembler.ensembles )
         
         logger.info("Truncating Done for cluster {0}".format( cluster ) )
@@ -813,7 +813,7 @@ RUNNING.write(msg)
 RUNNING.flush()
 
 # Save results
-rfile = os.path.join( amopt.d['work_dir'], "results.pkl" )
+rfile = os.path.join( amopt.d['work_dir'], "ample_results.pkl" )
 f = open( rfile, 'w' )
 cPickle.dump( amopt.d, f )
 f.close()

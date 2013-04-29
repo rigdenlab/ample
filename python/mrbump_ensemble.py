@@ -97,7 +97,7 @@ def write_jobscript( name, pdb, amoptd, directory=None ):
         mrBuild = clusterize.ClusterRun()
         mrBuild.QTYPE = amoptd['submit_qtype']
         logFile=os.path.join( directory, name + ".log" )
-        script_header = mrBuild.subScriptHeader( nProcs=amoptd['nproc'], logFile=logFile, jobName=name)
+        script_header = mrBuild.subScriptHeader( nProc=amoptd['nproc'], logFile=logFile, jobName=name)
         job_script.write( script_header )
         job_script.write("pushd " + directory + "\n\n" + "export CCP4_SCR $TMPDIR\n\n")
     else:

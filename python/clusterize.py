@@ -281,7 +281,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
 
-    def modelOnCluster(self, proc, jobNumber):
+    def modelOnCluster(self, nProc, jobNumber):
         """ Farm out the modelling step on a cluster (SGE) """
 
         # Set the file number according to the job number
@@ -316,14 +316,14 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         seed = self.modeller.seeds[jobNumber-1]
 
         # Create a cluster submission script for this modelling job
-        jobName="model_" + str(proc) + "_" + str(seed)
+        jobName="model_" + str(nProc) + "_" + str(seed)
         sub_script=os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts", "job_" + jobName + ".sub")
 
         #self.jobLogsList.append(os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log'))
 
         logFile = os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log')
         file=open(sub_script, "w")
-        script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
+        script_header = self.subScriptHeader( nProc=nProc, logFile=logFile, jobName=jobName)
         file.write(script_header+"\n\n")
         file.write("export CCP4_SCR $TMPDIR\n\n")
 
@@ -360,7 +360,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
         
-    def subScriptHeader(self, nProcs=None, logFile=None, jobName=None):
+    def subScriptHeader(self, nProc=None, logFile=None, jobName=None):
         """
         Create a string suitable for writing out as the header of the submission script
         for submitting to a particular queueing system
@@ -378,10 +378,13 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         elif self.QTYPE=="LSF":
             sh += '#!/bin/sh\n'
             # jmht - hard-wired for hartree wonder
-            sh += '#BSUB -R "span[ptile=16]"\n'
+            if nProc and nProc < 16:
+                sh += '#BSUB -R "span[ptile={0}]"\n'.format(nProc)
+            else:
+                sh += '#BSUB -R "span[ptile=16]"\n'
             sh += '#BSUB -W 12:00\n'
-            if nProcs:
-                sh += '#BSUB -n {0}\n'.format(nProcs) 
+            if nProc:
+                sh += '#BSUB -n {0}\n'.format(nProc) 
             sh += '#BSUB -o {0}\n'.format(logFile) 
             sh += '#BSUB -J {0}\n\n'.format(jobName)         
         else:
