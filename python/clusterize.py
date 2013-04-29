@@ -403,6 +403,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
          We cd to the job directory, submit and then cd back to where we came from
         """
         
+        curDir=os.getcwd()
         if jobDir:
             os.chdir(jobDir)
         
