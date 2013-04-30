@@ -2,6 +2,9 @@
 Class to hold the options for ample
 '''
 
+# Our imports
+import printTable
+
 class AmpleOptions(object):
     
     def __init__(self):
@@ -9,6 +12,77 @@ class AmpleOptions(object):
         # The dictionary with all the options
         self.d = {}
         pass
+    
+    def final_summary(self, cluster=None):
+        """Return a string summarising the results of the run.
+        
+        Args:
+        cluster -- the number of the cluster to summarise (COUNTING FROM 0)
+                   otherwise all clusters are summarised
+        """
+        
+        if not cluster:
+            # Get number of clusters from the length of the mrbump results lists
+            clusters = [ i for i in range( len( self.d['mrbump_results'] ) ) ]
+        else:
+            if cluster >= len( self.d['mrbump_results'] ):
+                raise RuntimeError, "Cluster number is not in results list"
+            clusters = [ cluster ]
+            
+        # String to hold the results summary
+        summary = ""
+        for cluster in clusters:
+            
+            summary+="\n\nResults for cluster: {0}\n\n".format( cluster+1 )
+            
+            
+            # Table for results with header
+            results_table = []
+            results_table.append( ("Name", "MR_program", "Solution", "final_Rfact", "final_Rfree", "SHELXE_CC", "#Models", "#Residues") )
+
+            # Assume mrbump_results are already sorted
+            mrbump_results = self.d['mrbump_results'][ cluster ]
+            ensemble_results = self.d['ensemble_results'][ cluster ]
+            
+            name2e = {}
+            # Get map of name -> ensemble result
+            for i, e in enumerate( ensemble_results ):
+                if name2e.has_key( e.name ):
+                    raise RuntimeError, "Duplicate key: {0}".format( e.name )
+                name2e[ e.name ] = ensemble_results[ i ]
+            
+            best=None
+            for i, result in enumerate( mrbump_results ):
+                
+                # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
+                name = result.name[9:-6]
+                
+                # Remember best result
+                if i == 0:
+                    best = mrbump_results[i]
+                
+                result_summary = [ result.name,
+                                   result.program,
+                                   result.solution,
+                                   result.rfact,
+                                   result.rfree,
+                                   result.shelxCC,
+                                   name2e[ name ].num_models,
+                                   name2e[ name ].num_residues
+                                ]
+            
+                results_table.append( result_summary )
+                
+            # Get nicely formatted string summarising the results
+            table = printTable.Table()
+            summary += table.pprint_table( results_table )
+            
+            # Show where it happened
+            summary += '\nBest results so far are in :\n\n'
+            summary +=  best.resultDir
+        
+        return summary
+        
         
     def populate( self, parser_args ):
         """
@@ -87,3 +161,23 @@ class AmpleOptions(object):
                 pstr += "{0} : {1}\n".format( k, v )
                 
         return pstr
+    
+
+if __name__ == "__main__":
+    
+    import sys
+    import cPickle
+    
+    if len(sys.argv) == 2:
+        pfile = sys.argv[1]
+    else:
+        pfile = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_15/ample_results.pkl"
+    
+    f = open(pfile)
+    d = cPickle.load(f)
+    
+    AD = AmpleOptions()
+    for k,v in d.iteritems():
+        AD.d[k] = v
+        
+    print AD.final_summary()

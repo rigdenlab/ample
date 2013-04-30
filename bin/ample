@@ -716,7 +716,7 @@ else:
     
     logger.info('Clustering Done. Using the following clusters: {0}'.format(cluster_nums) )
     
-    ensemble_results = [] 
+    amopt.d['ensemble_results'] = [] 
     for cluster in cluster_nums:
         
         logger.info('----- Truncating models for cluster {0} --------'.format(cluster)   )
@@ -736,8 +736,12 @@ else:
                                       root_dir=amopt.d['work_dir'],
                                       ensemble_id=cluster,
                                       percent=amopt.d['percent'] )
-
+        # Add results to amopt
+        amopt.d['ensemble_results'].append( ensembler.ensembles )
+        
+        # List of pdbs
         final_ensembles = ensembler.pdb_list()
+        
         # Prune down to the top model        
         if amopt.d['top_model_only']:
             raise RuntimeError, "Need to fix top_model_only"
@@ -745,15 +749,9 @@ else:
 
         # Add to the total list
         ensembles.append( final_ensembles )
-
-        # Add results to amopt
-        ensemble_results.append( ensembler.ensembles )
         
         logger.info("Truncating Done for cluster {0}".format( cluster ) )
         logger.info('Created {0} ensembles'.format( len(final_ensembles) ) )
-
-    # Add results to amoptd
-    amopt.d['ensemble_results'] = ensemble_results
 
 #---------------------------------------
 # MR BUMP analysis of the ensembles
@@ -764,8 +762,8 @@ if not os.path.exists(bump_dir):
     os.mkdir(bump_dir)
 os.chdir(bump_dir)
 amopt.d['mrbump_dir'] = bump_dir
+amopt.d['mrbump_results'] = []
 
-mrbump_result_list = []
 # Loop over clusters
 for i, ensemble_pdbs in enumerate(ensembles):
     
@@ -794,13 +792,12 @@ for i, ensemble_pdbs in enumerate(ensembles):
     else:
         mrbump_ensemble.mrbump_ensemble_local( job_scripts, amopt.d )
         
-    # Show what happened
-    resultsSummary = mrbump_results.ResultsSummary( job_dir )
-    summary = resultsSummary.summariseResults()
-    mrbump_result_list.append( resultsSummary.results )
-    logger.info( summary )
-
-amopt.d['mrbump_results'] = mrbump_result_list
+    # Collect the MRBUMP results
+    results_summary = mrbump_results.ResultsSummary( job_dir )
+    results_summary.extractResults()
+    amopt.d['mrbump_results'].append( results_summary.results )
+    #summary = results_summary.summariseResults()
+    
     
 # Timing data
 time_stop = time.time()
@@ -817,7 +814,12 @@ rfile = os.path.join( amopt.d['work_dir'], "ample_results.pkl" )
 f = open( rfile, 'w' )
 cPickle.dump( amopt.d, f )
 f.close()
-logging.info("Saved results as file: {0}".format(rfile))
+logging.info("Saved results as file: {0}\n".format(rfile))
+
+# Now print out the final summary
+summary = amopt.final_summary()
+logger.info( summary )
+
 
 # os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
 # os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')
