@@ -35,27 +35,28 @@ class AmpleOptions(object):
             
             summary+="\n\nResults for cluster: {0}\n\n".format( cluster+1 )
             
-            
             # Table for results with header
             results_table = []
-            results_table.append( ("Name", "MR_program", "Solution", "final_Rfact", "final_Rfree", "SHELXE_CC", "#Models", "#Residues") )
+
+            ensemble_results = None
+            if self.d.has_key('ensemble_results'):
+                ensemble_results = self.d['ensemble_results'][ cluster ]
+            
+                name2e = {}
+                # Get map of name -> ensemble result
+                for i, e in enumerate( ensemble_results ):
+                    if name2e.has_key( e.name ):
+                        raise RuntimeError, "Duplicate key: {0}".format( e.name )
+                    name2e[ e.name ] = ensemble_results[ i ]
+
+                results_table.append( ("Name", "MR_program", "Solution", "final_Rfact", "final_Rfree", "SHELXE_CC", "#Models", "#Residues") )
+            else:
+                results_table.append( ("Name", "MR_program", "Solution", "final_Rfact", "final_Rfree", "SHELXE_CC" ) )
 
             # Assume mrbump_results are already sorted
             mrbump_results = self.d['mrbump_results'][ cluster ]
-            ensemble_results = self.d['ensemble_results'][ cluster ]
-            
-            name2e = {}
-            # Get map of name -> ensemble result
-            for i, e in enumerate( ensemble_results ):
-                if name2e.has_key( e.name ):
-                    raise RuntimeError, "Duplicate key: {0}".format( e.name )
-                name2e[ e.name ] = ensemble_results[ i ]
-            
             best=None
             for i, result in enumerate( mrbump_results ):
-                
-                # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
-                name = result.name[9:-6]
                 
                 # Remember best result
                 if i == 0:
@@ -67,9 +68,12 @@ class AmpleOptions(object):
                                    result.rfact,
                                    result.rfree,
                                    result.shelxCC,
-                                   name2e[ name ].num_models,
-                                   name2e[ name ].num_residues
                                 ]
+
+                if ensemble_results:
+                    # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
+                    name = result.name[9:-6]
+                    result_summary += [ name2e[ name ].num_models, name2e[ name ].num_residues ]
             
                 results_table.append( result_summary )
                 
