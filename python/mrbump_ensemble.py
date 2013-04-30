@@ -33,6 +33,7 @@ def generate_jobscripts( ensemble_pdbs, amoptd ):
     # Remember programs = also used for looping
     if amoptd['split_mr']:
         mrbump_programs = amoptd['mrbump_programs']
+        nproc = amoptd['nproc']
     
     job_scripts = []
     for ensemble_pdb in ensemble_pdbs:
@@ -46,7 +47,11 @@ def generate_jobscripts( ensemble_pdbs, amoptd ):
             for program in mrbump_programs:
                 jname = "{0}_{1}".format( name, program )
                 amoptd['mrbump_programs'] = [ program ]
+                # HACK - molrep only runs on a single processor
+                if program == "molrep":
+                    amoptd['nproc'] = 1
                 script = write_jobscript( name=jname, pdb=ensemble_pdb, amoptd=amoptd )
+                amoptd['nproc'] = nproc
                 job_scripts.append( script )
         else:
             # Just run as usual
