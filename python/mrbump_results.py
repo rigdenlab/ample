@@ -90,7 +90,11 @@ class ResultsSummary(object):
                 if firstLine:
                     # probably overkill...
                     if line != "Model_Name   MR_Program   Solution_Type   final_Rfact   final_Rfree   SHELXE_CC":
-                        raise RuntimeError,"Problem getting headerline: {0}".format(line)
+                        #raise RuntimeError,"jobDir {0}: Problem getting headerline: {1}".format(jobDir,line)
+                        self.logger.critical("jobDir {0}: Problem getting headerline: {1}".format(jobDir,line) )
+                        result = self.getUnfinishedResult( jobDir, jtype="corrupted-resultsTable.dat" )
+                        self.results.append( result )
+                        break
                     header = line
                     firstLine=False
                     continue
@@ -143,14 +147,23 @@ class ResultsSummary(object):
         # Use directory name for job name
         dlist = os.listdir( os.path.join( jobDir, "data") )
         if len( dlist ) != 1:
-            result.name = "Error with dir: {0}".format( jobDir )
+            # something has gone really wrong...
+            # Need to work out name from MRBUMP directory structure - search_poly_ala_trunc_6.344502_rad_3_phaser_mrbump
+            dname = os.path.basename(jobDir)[7:-7]
+            # Horrible - check if we were run with split_mr - in which case _phaser or _molrep are appended to the name
+            if dname.endswith("_molrep") or dname.endswith("_phaser"):
+                dname = dname[:-7]
+            # Add loc0_ALL_ and append _UNMOD. shudder...
+            result.name = "loc0_ALL_" + dname + "_UNMOD"
+            result.solution = "ERROR"
+        else:
+            # Use dirname but remove "loc0_ALL_" from front
+            #result.name = os.path.basename( dlist[0] )[9:]
+            # Use dirname but add "_UNMOD" to back
+            result.name = os.path.basename( dlist[0] )+"_UNMOD"
+            result.solution = jtype
 
-        # Use dirname but remove "loc0_ALL_" from front
-        #result.name = os.path.basename( dlist[0] )[9:]
-        # Use dirname but add "_UNMOD" to back
-        result.name = os.path.basename( dlist[0] )+"_UNMOD"
         result.program = "unknown"
-        result.solution = jtype
         result.rfact = -1
         result.rfree = -1
         result.shelxCC = -1
