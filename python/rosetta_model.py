@@ -209,31 +209,37 @@ class RosettaModel(object):
     
     def generate_tm_predict(self):
         """
-        Generate the various files need for generate the transmembrane fragments
+        Generate the various files needed for modelling transmembrane proteins
         
         REM the fasta as it needs to reside in this directory or the script may fail 
         due to problems with parsing directory names with 'funny' characters
         """
         
-        # Need to just use name due to problems with directory names - should
-        # already have been copied into the fragments directory
+        # Files have already been created
+        if os.path.isfile( str(self.spanfile) ) and os.path.isfile( str(self.lipofile) ):
+            self.logger.debug("Using given span file: {0}\n and given lipo file: {1}".format( self.spanfile, self.lipofile ) )
+            return
+        
+        # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
+        # so we need to copy the fasta file into the fragments directory
         fasta = os.path.split(  self.fasta )[1]
+        shutil.copy2( self.fasta, self.models_dir + os.sep + fasta )
         
         # Query octopus server for prediction
         octo = octopus_predict.OctopusPredict()
         self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
         #fastaseq = octo.getFasta(self.fasta)
         # Problem with 3LBW predicition when remove X
-        fastaseq = octo.getFasta(self.orig_fasta)
-        octo.getPredict(self.pdb_code,fastaseq, directory=self.fragments_directory)
+        fastaseq = octo.getFasta(self.fasta)
+        octo.getPredict(self.pdb_code,fastaseq, directory=self.models_dir )
         topo_file = octo.topo
         self.logger.debug("Got topology prediction file: {0}".format(topo_file))
 
         # Generate span file from predict
-        self.spanfile = os.path.join(self.fragments_directory, self.pdb_code + ".span")
+        self.spanfile = os.path.join(self.models_dir, self.pdb_code + ".span")
         self.logger.debug( 'Generating span file {0}'.format( self.spanfile ) )
         cmd = [ self.octopus2span, topo_file ]
-        retcode = ample_util.run_command( cmd, logfile=self.spanfile, directory=self.fragments_directory )
+        retcode = ample_util.run_command( cmd, logfile=self.spanfile, directory=self.models_dir )
         if retcode != 0:
             msg = "Error generating span file. Please check the log in {0}".format(self.spanfile)
             self.logger.critical(msg)
@@ -241,12 +247,12 @@ class RosettaModel(object):
         
         # Now generate lips file
         self.logger.debug('Generating lips file from span')
-        logfile = self.fragments_directory + os.sep + "run_lips.log"
+        logfile = self.models_dir + os.sep + "run_lips.log"
         cmd = [ self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast ]
-        retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.fragments_directory )
+        retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.models_dir )
         
         # Script only uses first 4 chars to name files
-        lipofile = os.path.join(self.fragments_directory, self.pdb_code[0:4] + ".lips4")
+        lipofile = os.path.join(self.models_dir, self.pdb_code[0:4] + ".lips4")
         if retcode != 0 or not os.path.exists(lipofile):
             msg = "Error generating lips file {0}. Please check the log in {1}".format(lipofile,logfile)
             self.logger.critical(msg)
@@ -484,53 +490,62 @@ class RosettaModel(object):
         self.fragments_directory = optd['work_dir'] + os.sep + "rosetta_fragments"
         
         if optd['transmembrane']:
-            self.transmembrane = True
-            # TM - octopus bug
-            self.orig_fasta = optd['orig_fasta']
-            if optd['make_frags']:
-                
-                script_dir = self.rosetta_dir + os.sep + "rosetta_source/src/apps/public/membrane_abinitio"
-                self.octopus2span = script_dir + os.sep + "octopus2span.pl"
-                self.run_lips = script_dir + os.sep + "run_lips.pl"
-                self.align_blast = script_dir + os.sep + "alignblast.pl"
-                
-                if not os.path.exists(self.octopus2span) or not os.path.exists(self.run_lips) or not os.path.exists(self.align_blast):
-                    msg = "Cannot find the required executables: octopus2span.pl ,run_lips.pl and align_blast.pl in the directory\n" +\
-                    "{0}\nPlease check these files are in place".format( script_dir )
-                    self.logger.critical(msg)
-                    raise RuntimeError, msg
-                                
-                if optd['blast_dir']:
-                    blastpgp = optd['blast_dir'] + os.sep + "bin/blastpgp"
-                    blastpgp = ample_util.check_for_exe( 'blastpgp', blastpgp )
-                else:
-                    blastpgp = ample_util.check_for_exe( 'blastpgp', None )
-                    
-                # Found so set
-                optd['blastpgp'] = blastpgp
-                self.blastpgp = blastpgp                  
-                
-                # nr database
-                if not os.path.exists( str(optd['nr']) ) and not os.path.exists( str(optd['nr'])+".pal" ):
-                    msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format( optd['nr'] )
-                    self.logger.critical(msg)
-                    raise RuntimeError, msg
-                
-                # Found it
-                self.nr = optd['nr']       
-            #else:
-                
-#            # Not making fragments so read in files
-#            if not ( os.path.isfile(str(optd['transmembrane_spanfile'])) and os.path.isfile(str(optd['transmembrane_lipofile'])) ):
-#                msg = "Making transmembrane models and not making fragments, but cannot find the files\n" +\
-#                "transmembrane_spanfile: {0}\nor\ntransmembrane_lipofile: {1}".format( optd['transmembrane_spanfile'],optd['transmembrane_lipofile'] )
-#                
-#                self.logger.critical(msg)
-#                raise RuntimeError,msg
             
+            self.transmembrane = True
+            
+            script_dir = self.rosetta_dir + os.sep + "rosetta_source/src/apps/public/membrane_abinitio"
+            self.octopus2span = script_dir + os.sep + "octopus2span.pl"
+            self.run_lips = script_dir + os.sep + "run_lips.pl"
+            self.align_blast = script_dir + os.sep + "alignblast.pl"
+            
+            if not os.path.exists(self.octopus2span) or not os.path.exists(self.run_lips) or not os.path.exists(self.align_blast):
+                msg = "Cannot find the required executables: octopus2span.pl ,run_lips.pl and align_blast.pl in the directory\n" +\
+                "{0}\nPlease check these files are in place".format( script_dir )
+                self.logger.critical(msg)
+                raise RuntimeError, msg
+                            
+            if optd['blast_dir']:
+                blastpgp = optd['blast_dir'] + os.sep + "bin/blastpgp"
+                blastpgp = ample_util.check_for_exe( 'blastpgp', blastpgp )
+            else:
+                blastpgp = ample_util.check_for_exe( 'blastpgp', None )
+                
+            # Found so set
+            optd['blastpgp'] = blastpgp
+            self.blastpgp = blastpgp                  
+            
+            # nr database
+            if not os.path.exists( str(optd['nr']) ) and not os.path.exists( str(optd['nr'])+".pal" ):
+                msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format( optd['nr'] )
+                self.logger.critical(msg)
+                raise RuntimeError, msg
+            
+            # Found it
+            self.nr = optd['nr']
+                
             self.spanfile = optd['transmembrane_spanfile']
             self.lipofile = optd['transmembrane_lipofile']
-                
+            
+            # Check if we've been given files
+            if  self.spanfile:
+                if not ( os.path.isfile( self.spanfile ) ):
+                     msg = "Cannot find provided transmembrane spanfile: {0}".format(  self.spanfile )
+                     self.logger.critical(msg)
+                     raise RuntimeError, msg
+                 
+            if self.lipofile:
+                if not ( os.path.isfile( self.lipofile ) ):
+                     msg = "Cannot find provided transmembrane lipofile: {0}".format( self.lipofile )
+                     self.logger.critical(msg)
+                     raise RuntimeError, msg                 
+                   
+            
+            if (  self.spanfile and not self.lipofile ) or ( self.lipofile and not self.spanfile ):
+                msg="You need to provide both a spanfile and a lipofile"
+                self.logger.critical(msg)
+                raise RuntimeError, msg
+        # End transmembrane checks          
+            
 
         # Modelling variables
         if optd['make_models']:
