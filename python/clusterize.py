@@ -312,6 +312,9 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         SEQFile       = os.path.join(preModelDir, "S_" + fileNumber + ".seq")
         PDBOutFile    = os.path.join(self.modeller.work_dir, "models", "1_S_" + fileNumber + ".pdb")
 
+        if self.modeller.transmembrane:
+            self.modeller.generate_tm_predict()    
+
         # Get the seed for this job
         seed = self.modeller.seeds[jobNumber-1]
 

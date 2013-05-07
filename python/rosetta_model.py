@@ -174,8 +174,8 @@ class RosettaModel(object):
         fasta = os.path.split(  self.fasta )[1]
         shutil.copy2( self.fasta, self.fragments_directory + os.sep + fasta )
         
-        if self.transmembrane:
-            self.generate_tm_predict()        
+#        if self.transmembrane:
+#            self.generate_tm_predict()        
             
         cmd = self.fragment_cmd()
         logfile = os.path.join( self.fragments_directory, "make_fragments.log" )
@@ -361,6 +361,9 @@ class RosettaModel(object):
         # Should be done by main script
         if not os.path.isdir( self.models_dir ):
             os.mkdir(self.models_dir)
+            
+        if self.transmembrane:
+            self.generate_tm_predict()    
 
         # Now generate the seeds
         self.generate_seeds( self.nproc )
