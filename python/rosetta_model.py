@@ -518,18 +518,18 @@ class RosettaModel(object):
                 
                 # Found it
                 self.nr = optd['nr']       
-            else:
+            #else:
                 
-                # Not making fragments so read in files
-                if not ( os.path.isfile(str(optd['transmembrane_spanfile'])) and os.path.isfile(str(optd['transmembrane_lipofile'])) ):
-                    msg = "Making transmembrane models and not making fragments, but cannot find the files\n" +\
-                    "transmembrane_spanfile: {0}\nor\ntransmembrane_lipofile: {1}".format( optd['transmembrane_spanfile'],optd['transmembrane_lipofile'] )
-                    
-                    self.logger.critical(msg)
-                    raise RuntimeError,msg
-                
-                self.spanfile = optd['transmembrane_spanfile']
-                self.lipofile = optd['transmembrane_lipofile']
+#            # Not making fragments so read in files
+#            if not ( os.path.isfile(str(optd['transmembrane_spanfile'])) and os.path.isfile(str(optd['transmembrane_lipofile'])) ):
+#                msg = "Making transmembrane models and not making fragments, but cannot find the files\n" +\
+#                "transmembrane_spanfile: {0}\nor\ntransmembrane_lipofile: {1}".format( optd['transmembrane_spanfile'],optd['transmembrane_lipofile'] )
+#                
+#                self.logger.critical(msg)
+#                raise RuntimeError,msg
+            
+            self.spanfile = optd['transmembrane_spanfile']
+            self.lipofile = optd['transmembrane_lipofile']
                 
 
         # Modelling variables
