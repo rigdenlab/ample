@@ -88,8 +88,10 @@ class ResultsSummary(object):
                 line = line.strip()
                 
                 if firstLine:
-                    # probably overkill...
-                    if line != "Model_Name   MR_Program   Solution_Type   final_Rfact   final_Rfree   SHELXE_CC":
+                    # probably overkill... - check first 5
+                    fields = line.split()
+                    if fields[0] != "Model_Name":
+                    #if line != "Model_Name   MR_Program   Solution_Type   final_Rfact   final_Rfree   SHELXE_CC":
                         #raise RuntimeError,"jobDir {0}: Problem getting headerline: {1}".format(jobDir,line)
                         self.logger.critical("jobDir {0}: Problem getting headerline: {1}".format(jobDir,line) )
                         result = self.getUnfinishedResult( jobDir, jtype="corrupted-resultsTable.dat" )
