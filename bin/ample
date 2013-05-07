@@ -397,8 +397,6 @@ if not ( os.path.exists(str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d[
 
 # Reformat to what we need    
 logger.debug('Parsing FASTA file')
-#jmht - for TM test case - not sure if we should leave this in
-amopt.d['orig_fasta'] = amopt.d['fasta']
 outfasta = os.path.join( amopt.d['work_dir'], amopt.d['pdb_code'] + '_.fasta')
 fasta_parser.parse_fasta( amopt.d['fasta'], outfasta )
 amopt.d['fasta'] = outfasta
