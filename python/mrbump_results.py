@@ -24,9 +24,13 @@ class MrBumpResult(object):
         self.solution = None
         self.rfact = None
         self.rfree = None
+        self.buccRfact = None # Bucc_final_Rfact
+        self.buccRfree = None
+        self.arpWarpRfact = None # ARP_final_Rfact/Rfree
+        self.arpWarpRfree = None
         self.shelxCC = None
         
-        self.header = None # The header format for this table
+        self.header = [] # The header format for this table
 
 class ResultsSummary(object):
     """
@@ -38,6 +42,30 @@ class ResultsSummary(object):
         self.mrbump_dir = mrbump_dir
         self.results = []
         
+        # List of all the possible column titles
+        self.columnTitles = [ 'Model_Name',
+                             'MR_Program',
+                             'Solution_Type',
+                             'final_Rfact',
+                             'final_Rfree',
+                             'Bucc_final_Rfact',
+                             'Bucc_final_Rfree',
+                             'ARP_final_Rfact',
+                             'ARP_final_Rfree',
+                             'SHELXE_CC' ]
+        
+        # list of attributes of the result object that match the columnTitles (same order)
+        self.resultAttr = [ 'name',
+                           'program',
+                           'solution',
+                           'rfact',
+                           'rfree',
+                           'buccRfact',
+                           'buccRfree',
+                           'arpWarpRfact',
+                           'arpWarpRfree',
+                           'shelxCC' ]
+        
         self.logger = logging.getLogger()
 
     def extractResults( self ):
@@ -45,9 +73,6 @@ class ResultsSummary(object):
         Find the results from running MRBUMP and sort them
         """
 
-        # reset any results
-        self.results = []
-        
         # how we recognise a job directory
         dir_re = re.compile("^search_.*_mrbump$")
         jobDirs = []
@@ -62,61 +87,92 @@ class ResultsSummary(object):
             self.logger.warn("Could not extract any results from directory: {0}".format( self.mrbump_dir ) )
             return False
         
+        # reset any results
+        self.results = []
         header = None
+        nfields=None
         for jobDir in jobDirs:
             
             self.logger.debug(" -- checking directory for results: {0}".format( jobDir ) )
-            
+                        
             # Check if finished
             if not os.path.exists( os.path.join( jobDir, "results", "finished.txt" ) ):
                 self.logger.debug(" Found unfinished job: {0}".format( jobDir ) )
-                result = self.getUnfinishedResult( jobDir, jtype="unfinished" )
-                self.results.append( result )
+                if header:
+                    result = MrBumpResult()
+                    result.jobDir = jobDir
+                    result.solution = "unfinished"
+                    self.getUnfinishedResult( result )
+                    self.results.append( result )
+                else:
+                    self.logger.critical(" Cannot provide result for: {0}".format( jobDir ) )
                 continue
             
             resultsTable = os.path.join( jobDir,"results", "resultsTable.dat" )
             if not os.path.exists(resultsTable):
                 self.logger.debug(" -- Could not find file: {0}".format( resultsTable ) )
-                result = self.getUnfinishedResult( jobDir, jtype="no-resultsTable.dat" )
-                self.results.append( result )
+                if header:
+                    result = MrBumpResult()
+                    result.jobDir = jobDir
+                    result.solution = "no-resultsTable.dat"
+                    self.getUnfinishedResult( result )
+                    self.results.append( result )
+                else:
+                    self.logger.critical(" Cannot provide result for: {0}".format( jobDir ) )
                 continue
             
             firstLine = True
+            # This maps the index of data field to the index of the columnTitle and resultAttr 
+            fieldIndex = [ None ] * len( self.columnTitles )
             # Read results table to get the results
             for line in open(resultsTable):
-                
                 line = line.strip()
-                
                 if firstLine:
-                    # probably overkill... - check first 5
-                    fields = line.split()
-                    if fields[0] != "Model_Name":
-                    #if line != "Model_Name   MR_Program   Solution_Type   final_Rfact   final_Rfree   SHELXE_CC":
-                        #raise RuntimeError,"jobDir {0}: Problem getting headerline: {1}".format(jobDir,line)
-                        self.logger.critical("jobDir {0}: Problem getting headerline: {1}".format(jobDir,line) )
-                        result = self.getUnfinishedResult( jobDir, jtype="corrupted-resultsTable.dat" )
-                        self.results.append( result )
-                        break
-                    header = line
                     firstLine=False
+                        
+                    # Processing header
+                    header = line.split()
+                    nfields = len(header) # count as check
+                    herror=None
+                    for i, f in enumerate( header ):
+                        # Map the data fields to their titles
+                        try:
+                            findex = self.columnTitles.index( f )
+                            fieldIndex[ findex ] = i
+                        except ValueError:
+                            self.logger.critical("jobDir {0}: Problem getting headerline: {1}".format( jobDir, line ) )
+                            result.solution = "corrupted-header-resultsTable.dat"
+                            self.getUnfinishedResult( result )
+                            self.results.append( result )
+                            break
                     continue
+                    # End header processing
                 
+                # Create result object
                 result = MrBumpResult()
+                result.header = header
                 result.jobDir = jobDir
                 
                 fields = line.split()
+                if len(fields) != nfields:
+                    msg = "jobDir {0}: Problem getting dataline: {1}".format( jobDir, line )
+                    result.solution = "corrupted-data-resultsTable.dat"
+                    self.getUnfinishedResult( result )
+                    self.results.append( result )
+                    break
                 
-                # Strip loc0_ALL_ from front and strip  _UNMOD from end from (e.g.): loc0_ALL_All_atom_trunc_0.34524_rad_1_UNMOD
-                #result.name = fields[0][9:-6]
-                # Don't do the above yet till we've finsihed the next set of runs
-                result.name = fields[0]
-                result.program = fields[1].lower()
-                result.solution = fields[2]
-                result.rfact = fields[3]
-                result.rfree = fields[4]
-                result.shelxCC = fields[5]
-                result.header = header
-                
+                # Now set all attributes of the result object
+                for i, f in enumerate( fields ):
+                    # Strip loc0_ALL_ from front and strip  _UNMOD from end from (e.g.): loc0_ALL_All_atom_trunc_0.34524_rad_1_UNMOD
+                    #result.name = fields[0][9:-6]
+                    # Don't do the above yet till we've finsihed the next set of runs
+                    findex = fieldIndex.index( i )
+                    attr = self.resultAttr[findex]
+                    if attr == 'program':
+                        setattr( result, attr, f.lower() )
+                    else:
+                        setattr( result, attr, f )
+
                 if result.program not in ['phaser','molrep']:
                     raise RuntimeError,"getResult, unrecognised program in line: {0}".format(line)
                 
@@ -128,7 +184,6 @@ class ResultsSummary(object):
                 resultDir = os.path.join( result.jobDir,'data',dirName,'unmod','mr',result.program,'refine' )
                 #print resultDir
                 result.resultDir = resultDir
-                
                 self.results.append( result )
                 
         if not len(self.results):
@@ -140,18 +195,16 @@ class ResultsSummary(object):
         
         return True
     
-    def getUnfinishedResult(self, jobDir, jtype="unfinished" ):
+    def getUnfinishedResult(self, result ):
         """Return a result for an unfinished job"""
         
-        result = MrBumpResult()
-        result.jobDir = jobDir
         
         # Use directory name for job name
-        dlist = os.listdir( os.path.join( jobDir, "data") )
+        dlist = os.listdir( os.path.join( result.jobDir, "data") )
         if len( dlist ) != 1:
             # something has gone really wrong...
             # Need to work out name from MRBUMP directory structure - search_poly_ala_trunc_6.344502_rad_3_phaser_mrbump
-            dname = os.path.basename(jobDir)[7:-7]
+            dname = os.path.basename(result.jobDir)[7:-7]
             # Horrible - check if we were run with split_mr - in which case _phaser or _molrep are appended to the name
             if dname.endswith("_molrep") or dname.endswith("_phaser"):
                 dname = dname[:-7]
@@ -163,15 +216,18 @@ class ResultsSummary(object):
             #result.name = os.path.basename( dlist[0] )[9:]
             # Use dirname but add "_UNMOD" to back
             result.name = os.path.basename( dlist[0] )+"_UNMOD"
-            result.solution = jtype
 
         result.program = "unknown"
         result.rfact = -1
         result.rfree = -1
         result.shelxCC = -1
+        self.buccRfact = -1
+        self.buccRfree = -1
+        self.arpWarpRfact = -1
+        self.arpWarpRfree = -1
+        self.buccRfact = -1
+        self.buccRfree = -1 
         
-        return result
-    
     def sortResults( self ):
         """
         Sort the results
@@ -201,18 +257,16 @@ class ResultsSummary(object):
         resultsTable = []
         
         #Header
-        resultsTable.append( self.results[0].header.split() )
+        resultsTable.append( self.results[0].header )
         
         for result in self.results:
-            rl = [ result.name,
-                    result.program,
-                    result.solution,
-                    result.rfact,
-                    result.rfree,
-                    result.shelxCC,
-                  ]
-            resultsTable.append( rl )
-    
+            resultLine = []
+            for h in result.header:
+                i = self.columnTitles.index( h )
+                resultLine.append( getattr( result, self.resultAttr[i] ) )
+            
+            resultsTable.append( resultLine )
+
         # Format the results
         table = printTable.Table()
         summary = table.pprint_table( resultsTable )
