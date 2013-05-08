@@ -102,6 +102,7 @@ class ResultsSummary(object):
                     result = MrBumpResult()
                     result.jobDir = jobDir
                     result.solution = "unfinished"
+                    result.header = header
                     self.getUnfinishedResult( result )
                     self.results.append( result )
                 else:
@@ -114,6 +115,7 @@ class ResultsSummary(object):
                 if header:
                     result = MrBumpResult()
                     result.jobDir = jobDir
+                    result.header = header
                     result.solution = "no-resultsTable.dat"
                     self.getUnfinishedResult( result )
                     self.results.append( result )
@@ -141,6 +143,7 @@ class ResultsSummary(object):
                             fieldIndex[ findex ] = i
                         except ValueError:
                             self.logger.critical("jobDir {0}: Problem getting headerline: {1}".format( jobDir, line ) )
+                            result.header = header
                             result.solution = "corrupted-header-resultsTable.dat"
                             self.getUnfinishedResult( result )
                             self.results.append( result )
@@ -264,7 +267,6 @@ class ResultsSummary(object):
             for h in result.header:
                 i = self.columnTitles.index( h )
                 resultLine.append( getattr( result, self.resultAttr[i] ) )
-            
             resultsTable.append( resultLine )
 
         # Format the results
