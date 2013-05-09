@@ -40,7 +40,7 @@ class Table:
         
         for row in table:
             # left col
-            out += row[0].ljust(col_paddings[0] + 1)
+            out += str(row[0]).ljust(col_paddings[0] + 1)
             # rest of the cols
             for i in range(1, len(row)):
                 col = self.format_num(row[i]).rjust(col_paddings[i] + 2)
