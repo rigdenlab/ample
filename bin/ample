@@ -288,6 +288,7 @@ while keycount < len(sys.argv):
             keycount += 1
             if keycount == len(sys.argv):
                 break
+        continue
     keycount += 1
 
 # Need to decrement the index of the items to remove
@@ -312,7 +313,7 @@ if not os.path.exists(amopt.d['run_dir']):
 
 print 'Making a Run Directory  -checking for previous runs\n'
 amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'] )
-#amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], rootname="ENSEMBLES_" )
+#amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], rootname="ENSEMBLE_2_" )
 os.chdir( amopt.d['work_dir'] )
 
 # Set up logging
