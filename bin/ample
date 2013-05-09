@@ -283,11 +283,11 @@ while keycount < len(sys.argv):
         toRemove.append(keycount)
         keycount += 1
         while not sys.argv[keycount].startswith("-"):
-            if keycount > len(sys.argv):
-                break
             MRkeys.append( sys.argv[keycount] )
             toRemove.append( keycount )
             keycount += 1
+            if keycount == len(sys.argv):
+                break
     keycount += 1
 
 # Need to decrement the index of the items to remove
