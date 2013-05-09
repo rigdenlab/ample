@@ -50,7 +50,6 @@ import nmr
 import rosetta_model
 import mrbump_results
 import pdb_edit
-import run_spicker
 import truncateedit_MAX
 
 
@@ -322,7 +321,23 @@ parser.set_defaults(
                     theseus_exe = None,
                     early_terminate = "true"
                     )
+#
+# speedy
+# no arpwarp or buccaneer or molrep
+# models = 200
+# phaser pkill 5
+# shelx cycles 5
+# percent 20
+# num_clusters 1
+# refmac - mrkeys ncyc 10
+# early_terminate
+# num ensemble clusters 10
+#
 
+# development
+# shelxe
+# scwrl
+# 
 
 # Create amopt object to hold options
 amopt = ample_options.AmpleOptions( )
@@ -377,11 +392,13 @@ os.chdir( amopt.d['work_dir'] )
 # Set up logging
 logger = ample_util.setup_logging()
 
+# Path for pickling results
+amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
+
 #jmht - fix these
 FIXED_INPUT = True
 pdb_code = amopt.d['name']
 amopt.d['pdb_code'] = amopt.d['name']
-
 if not amopt.d['pdb_code'] or len(pdb_code) != 4:
     msg = 'Name is the wrong length, use 4 chars eg ABCD'
     logger.critical(msg)
@@ -675,6 +692,14 @@ if amopt.d['import_cluster']:
 #---------------------------------------
 ensembles = [] # List of ensembles - 1 per cluster
 
+## Save results
+#f = open( amopt.d['results_path'], 'w' )
+#cPickle.dump( amopt.d, f )
+#f.close()
+#logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
+#
+#sys.exit(1)
+
 if amopt.d['import_ensembles']:
     #---------------------------------------
     # Importing pre-made ensembles
@@ -693,63 +718,24 @@ if amopt.d['import_ensembles']:
     ensembles = [ final_ensembles ]
 
 else:
-
-    #---------------------------------------
-    # Generating  ensembles
-    #---------------------------------------
-    logger.info('----- Clustering models --------')
+    if amopt.d['submit_cluster']:
+            mrBuild = clusterize.ClusterRun()
+            mrBuild.QTYPE = amopt.d['submit_qtype']
+            mrBuild.ensembleOnCluster( amopt.d )
+            mrBuild.monitorQueue()
+            # queue finished so unpickle results
+            f = open( amopt.d['results_path'] )
+            amopt.d = cPickle.load( f )
+            f.close()
+    else:
+        ensemble.create_ensembles( amopt.d )
     
-    # Spicker Alternative for clustering then MAX
-    amopt.d['spicker_rundir'] = os.path.join( amopt.d['work_dir'], 'spicker_run')
-    spickerer = run_spicker.SpickerCluster( amopt.d )
-    spickerer.run_spicker()
-
-    logger.info( spickerer.results_summary() )
-
-    amopt.d['spicker_results'] = spickerer.results
-    
-    # Generate list of clusters to sample
-    # Done like this so it's easy to run specific clusters
-    cluster_nums = [ i for i in range(1,amopt.d['num_clusters']+1)]
-    
-    logger.info('Clustering Done. Using the following clusters: {0}'.format(cluster_nums) )
-    
-    amopt.d['ensemble_results'] = [] 
-    for cluster in cluster_nums:
-        
-        logger.info('----- Truncating models for cluster {0} --------'.format(cluster)   )
-        
-        # Get list of models from spicker results
-        cluster_models = spickerer.results[ cluster-1 ].pdb_list
-        
-        if len( cluster_models ) < 2:
-            msg = "Could not create ensemble for cluster {0} as less than 2 models!".format( cluster )
-            logger.critical(msg)
-            raise RuntimeError, msg
-        
-        ensembler = ensemble.Ensembler()
-        ensembler.maxcluster_exe = amopt.d['maxcluster_exe']
-        ensembler.theseus_exe =  amopt.d['theseus_exe']
-        ensembler.generate_ensembles( cluster_models=cluster_models,
-                                      root_dir=amopt.d['work_dir'],
-                                      ensemble_id=cluster,
-                                      percent=amopt.d['percent'] )
-        # Add results to amopt
-        amopt.d['ensemble_results'].append( ensembler.ensembles )
-        
-        # List of pdbs
-        final_ensembles = ensembler.pdb_list()
-        
-        # Prune down to the top model        
-        if amopt.d['top_model_only']:
-            raise RuntimeError, "Need to fix top_model_only"
-            final_ensembles = truncateedit_MAX.One_model_only( final_ensembles, amopt.d['work_dir'] )
-
-        # Add to the total list
-        ensembles.append( final_ensembles )
-        
-        logger.info("Truncating Done for cluster {0}".format( cluster ) )
-        logger.info('Created {0} ensembles'.format( len(final_ensembles) ) )
+    # Extract list of pdbs from ensemble results
+    for eresult in amopt.d['ensemble_results']:
+        ensemble_pdbs = []
+        for ensemble in eresult:
+            ensemble_pdbs.append( ensemble.pdb )
+        ensembles.append( ensemble_pdbs )
 
 #---------------------------------------
 # MR BUMP analysis of the ensembles
@@ -808,11 +794,10 @@ RUNNING.write(msg)
 RUNNING.flush()
 
 # Save results
-rfile = os.path.join( amopt.d['work_dir'], "ample_results.pkl" )
-f = open( rfile, 'w' )
+f = open( amopt.d['results_path'], 'w' )
 cPickle.dump( amopt.d, f )
 f.close()
-logging.info("Saved results as file: {0}\n".format(rfile))
+logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
 
 # Now print out the final summary
 summary = amopt.final_summary()

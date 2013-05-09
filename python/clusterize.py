@@ -181,6 +181,32 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             for i in log_lines:
                 self.runningQueueList.append(i.split()[0])
 
+    def ensembleOnCluster(self, amoptd):
+        """ Run the modelling step on a cluster """
+
+        # write out script
+        work_dir = amoptd['work_dir']
+        script_path = os.path.join( work_dir, "submit_ensemble.sh" )
+        job_script = open(script_path, "w")
+
+        logFile= script_path+".log"
+        script_header = self.subScriptHeader( nProc=1, logFile=logFile, jobName="ensemble")
+        job_script.write( script_header )
+
+        # Find path to this directory to get path to python ensemble.py script
+        pydir=os.path.abspath( os.path.dirname( __file__ ) )
+        ensemble_script = os.path.join( pydir, "ensemble.py" )
+
+        job_script.write("python {0} {1}\n".format( ensemble_script, amoptd['results_path'] ) )
+        job_script.close()
+
+        # Make executable
+        os.chmod(script_path, 0o777)
+  
+        job_number = self.submitJob( subScript=script_path, jobDir=amoptd['work_dir'] )
+
+        return
+
     def NMRmodelOnCluster(self, RunDir, proc, jobNumber, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI, seed, MR_ROSETTA ):
         """ Farm out the modelling step on a cluster (SGE) """
         # Set the file number according to the job number

@@ -5,15 +5,18 @@ Created on Apr 18, 2013
 '''
 
 import copy
+import cPickle
 import logging
 import os
 import re
 import shutil
+import sys
 
 # our imports
 import ample_util
 import cluster_with_MAX
 import pdb_edit
+import run_spicker
 
 class EnsembleData(object):
     """Class to hold data about an ensemble"""
@@ -408,55 +411,148 @@ class Ensembler(object):
             self.truncated_models.append( truncated_models )
                 
         return
-
-if __name__ == "__main__":
     
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
+def create_ensembles( amoptd ):
+    """Create the ensembles using the values in the amoptd dictionary"""
 
-    ensembler = Ensembler()
-    ensembler.maxcluster_exe = "/opt/maxcluster/maxcluster"
-    ensembler.theseus_exe = "/opt/theseus_src/theseus"
-    ensembler.work_dir = "/opt/ample-dev1/python/TEST"
-    os.chdir( ensembler.work_dir    )
-    cf = "/home/Shared/TM/3LBW/ENSEMBLES_0/spicker_run/spicker_cluster_1.list"
-    ensembler.cluster_models = [ re.sub( "^/gpfs/home/HCEA041/djr01/jxt15-djr01", "/home/Shared", m.strip() ) for m in open( cf, "r" ) ]
-    ensembler.percent = 10
-    ensembler.generate_thresholds()       
+    #---------------------------------------
+    # Generating  ensembles
+    #---------------------------------------
+    logger = logging.getLogger()
+    logger.info('----- Clustering models --------')
+    
+    # Spicker Alternative for clustering then MAX
+    amoptd['spicker_rundir'] = os.path.join( amoptd['work_dir'], 'spicker_run')
+    spickerer = run_spicker.SpickerCluster( amoptd )
+    spickerer.run_spicker()
+
+    logger.info( spickerer.results_summary() )
+
+    amoptd['spicker_results'] = spickerer.results
+    
+    # Generate list of clusters to sample
+    # Done like this so it's easy to run specific clusters
+    cluster_nums = [ i for i in range(1,amoptd['num_clusters']+1)]
+    
+    logger.info('Clustering Done. Using the following clusters: {0}'.format(cluster_nums) )
+    
+    amoptd['ensemble_results'] = [] 
+    for cluster in cluster_nums:
         
-    if False:    
-        #cf="/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/spicker_run/spicker_cluster_1.list"
-        #cluster_models = [ m.strip() for m in open( cf, "r" ) ]
-        #d = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/S_clusters/cluster_1"
-        #import glob
-        #cluster_models = [ m for m in glob.glob( os.path.join( d, "*.pdb") ) ]
+        logger.info('----- Truncating models for cluster {0} --------'.format(cluster)   )
         
-        cluster_models = [ "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000001.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/5_S_00000003.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000005.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000006.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000005.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000003.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000002.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/5_S_00000002.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000004.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000003.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/3_S_00000003.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/3_S_00000005.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000001.pdb",
-    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000004.pdb" ]
+        # Get list of models from spicker results
+        cluster_models = spickerer.results[ cluster-1 ].pdb_list
         
-        root_dir="/opt/ample-dev1/examples/toxd-example/jtest"
-        percent=50
-        ensemble_id="FOO"
+        if len( cluster_models ) < 2:
+            msg = "Could not create ensemble for cluster {0} as less than 2 models!".format( cluster )
+            logger.critical(msg)
+            raise RuntimeError, msg
         
         ensembler = Ensembler()
-        ensembler.maxcluster_exe = "/opt/maxcluster/maxcluster"
-        ensembler.theseus_exe = "/opt/theseus_src/theseus"
-        ensembler.generate_ensembles( cluster_models=cluster_models, root_dir=root_dir, ensemble_id=ensemble_id, percent=percent )
-        ensembles = ensembler.as_list()
-        print ensembles
-        print len(ensembles)
+        ensembler.maxcluster_exe = amoptd['maxcluster_exe']
+        ensembler.theseus_exe =  amoptd['theseus_exe']
+        ensembler.generate_ensembles( cluster_models=cluster_models,
+                                      root_dir=amoptd['work_dir'],
+                                      ensemble_id=cluster,
+                                      percent=amoptd['percent'] )
+        # Add results to amopt
+        amoptd['ensemble_results'].append( ensembler.ensembles )
+        
+        # List of pdbs
+        #final_ensembles = ensembler.pdb_list()
+        
+        # Prune down to the top model        
+        if amoptd['top_model_only']:
+            raise RuntimeError, "Need to fix top_model_only"
+            final_ensembles = truncateedit_MAX.One_model_only( final_ensembles, amoptd['work_dir'] )
+
+        # Add to the total list
+        #ensembles.append( final_ensembles )
+        
+        logger.info("Truncating Done for cluster {0}".format( cluster ) )
+        logger.info('Created {0} ensembles'.format( len(  amoptd['ensemble_results'][-1]  ) ) )
+        
+    # Write out pickle file
+    f = open( amoptd['results_path'], 'w' )
+    cPickle.dump( amoptd, f )
+    f.close()
+    logging.info("Saved results as file: {0}\n".format( amoptd['results_path'] ) )
+        
+    return
+    
+            
+if __name__ == "__main__":
+    
+    if len(sys.argv) != 2 or not os.path.isfile( sys.argv[1]):
+        print "ensemble script requires the path to a pickled amopt dictionary!"
+        sys.exit(1)
+    
+    fpath = sys.argv[1]
+    f = open( fpath, "r" )
+    amoptd = cPickle.load( f )
+    f.close()
+    
+    #if os.path.abspath(fpath) != os.path.abspath(amoptd['results_path']):
+    #    print "results_path must match the path to the pickle file"
+    #    sys.exit(1)
+        
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    fl = logging.FileHandler("ensemble.log")
+    fl.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fl.setFormatter(formatter)
+    logger.addHandler(fl)
+    
+    create_ensembles( amoptd )
+    
+#    logging.basicConfig()
+#    logging.getLogger().setLevel(logging.DEBUG)
+#
+#    ensembler = Ensembler()
+#    ensembler.maxcluster_exe = "/opt/maxcluster/maxcluster"
+#    ensembler.theseus_exe = "/opt/theseus_src/theseus"
+#    ensembler.work_dir = "/opt/ample-dev1/python/TEST"
+#    os.chdir( ensembler.work_dir    )
+#    cf = "/home/Shared/TM/3LBW/ENSEMBLES_0/spicker_run/spicker_cluster_1.list"
+#    ensembler.cluster_models = [ re.sub( "^/gpfs/home/HCEA041/djr01/jxt15-djr01", "/home/Shared", m.strip() ) for m in open( cf, "r" ) ]
+#    ensembler.percent = 10
+#    ensembler.generate_thresholds()       
+#        
+#    if False:    
+#        #cf="/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/spicker_run/spicker_cluster_1.list"
+#        #cluster_models = [ m.strip() for m in open( cf, "r" ) ]
+#        #d = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/S_clusters/cluster_1"
+#        #import glob
+#        #cluster_models = [ m for m in glob.glob( os.path.join( d, "*.pdb") ) ]
+#        
+#        cluster_models = [ "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000001.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/5_S_00000003.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000005.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000006.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000005.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000003.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000002.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/5_S_00000002.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000004.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000003.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/3_S_00000003.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/3_S_00000005.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000001.pdb",
+#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000004.pdb" ]
+#        
+#        root_dir="/opt/ample-dev1/examples/toxd-example/jtest"
+#        percent=50
+#        ensemble_id="FOO"
+#        
+#        ensembler = Ensembler()
+#        ensembler.maxcluster_exe = "/opt/maxcluster/maxcluster"
+#        ensembler.theseus_exe = "/opt/theseus_src/theseus"
+#        ensembler.generate_ensembles( cluster_models=cluster_models, root_dir=root_dir, ensemble_id=ensemble_id, percent=percent )
+#        ensembles = ensembler.as_list()
+#        print ensembles
+#        print len(ensembles)
 
 
 
