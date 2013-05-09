@@ -79,6 +79,9 @@ class Ensembler(object):
         # The list of final ensembles
         self.ensembles = []
         
+        # The maximum number of models in an ensemble
+        self.max_ensemble_models = None
+        
         # Programs we use
         self.theseus_exe = None
         
@@ -320,9 +323,9 @@ class Ensembler(object):
                 f.close()
                 
                 # Restrict cluster to 30
-                if len( cluster_files ) > 30:
+                if len( cluster_files ) > self.max_ensemble_models:
                     logging.debug("More than 30 files clustered so truncating list to first 30")
-                    cluster_files = cluster_files[:30]
+                    cluster_files = cluster_files[ :self.max_ensemble_models ]
                     
                 # For naming all files
                 basename='trunc_{0}_rad_{1}'.format( truncation_threshold, radius ) 
@@ -453,6 +456,7 @@ def create_ensembles( amoptd ):
         ensembler = Ensembler()
         ensembler.maxcluster_exe = amoptd['maxcluster_exe']
         ensembler.theseus_exe =  amoptd['theseus_exe']
+        ensembler.max_ensemble_models = amoptd['max_ensemble_models']
         ensembler.generate_ensembles( cluster_models=cluster_models,
                                       root_dir=amoptd['work_dir'],
                                       ensemble_id=cluster,
