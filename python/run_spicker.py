@@ -21,7 +21,7 @@ class SpickerResult( object ):
 
         self.pdb_file = None # Path to a list of the pdbs for this cluster
         self.cluster_size = None
-        self.cluster_centroid = None
+        self.cluster_centroid = "N/A"
         self.pdb_list = [] # ordered list of the pdbs in their results directory
         self.rosetta_pdb = [] # ordered list of the pdbs in the rosetta directory
         self.r_cen = [] # ordered list of the distance from the cluster centroid for each pdb
