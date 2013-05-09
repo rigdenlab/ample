@@ -140,8 +140,8 @@ def doNMR( amopt, logger ):
                                          int(amopt.d['NMR_process']),
                                          amopt.d['NMR_remodel_fasta'] ,
                                          amopt.d['rosetta_dir'],
-                                         amopt.d['frags9mers'],
-                                         amopt.d['frags3mers'],
+                                         amopt.d['frags_9mers'],
+                                         amopt.d['frags_3mers'],
                                          int(amopt.d['nproc']),
                                          hom,
                                          amopt.d['alignment_file'],
@@ -158,8 +158,8 @@ def doNMR( amopt, logger ):
                                                                       int(amopt.d['NMR_process']),
                                                                       amopt.d['NMR_remodel_fasta'] ,
                                                                       amopt.d['rosetta_dir'],
-                                                                      amopt.d['frags9mers'],
-                                                                      amopt.d['frags3mers'],
+                                                                      amopt.d['frags_9mers'],
+                                                                      amopt.d['frags_3mers'],
                                                                       int(amopt.d['nproc']),
                                                                       hom,
                                                                       amopt.d['alignment_file'],
@@ -172,7 +172,7 @@ def doNMR( amopt, logger ):
             for  hom_index in homindeces:
                 cluster_run = clusterize.ClusterRun()
                 cluster_run.QTYPE = amopt.d['submit_qtype']
-                cluster_run.ALLATOM = amopt.d['allatom']
+                cluster_run.ALLATOM = amopt.d['all_atom']
                 cluster_run.setupModellingDir(amopt.d['work_dir'] + '/Run_' + str(hom_index))
                 if amopt.d['use_scwrl']:
                     cluster_run.setScwrlEXE(amopt.d['scwrl_exe'])
@@ -186,8 +186,8 @@ def doNMR( amopt, logger ):
                                                    amopt.d['rosetta_path'],
                                                    amopt.d['rosetta_db'],
                                                    amopt.d['fasta'],
-                                                   amopt.d['frags3mers'],
-                                                   amopt.d['frags9mers'],
+                                                   amopt.d['frags_3mers'],
+                                                   amopt.d['frags_9mers'],
                                                    ideal_homolog,
                                                    ALI,
                                                    i,

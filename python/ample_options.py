@@ -1,6 +1,8 @@
 '''
 Class to hold the options for ample
 '''
+# python imports
+import os
 
 # Our imports
 import printTable
@@ -9,10 +11,107 @@ class AmpleOptions(object):
     
     def __init__(self):
         
+
+        
         # The dictionary with all the options
         self.d = {}
-        pass
+        
+        # dictionary with the default arguments
+        self.defaults = {
+                            'alignment_file' : None,
+                            'all_atom' : True,
+                            'arpwarp_cycles' : 10,
+                            'ASU' : 0,
+                            'blast_dir' : None,
+                            'buccaneer_cycles' : 5,
+                            'CC' : None,
+                            'debug' : None,
+                            'domain_all_chains_pdb' : None,
+                            'domain_termini_distance' : 0,
+                            'early_terminate' : True,
+                            'ensembler' : False,
+                            'ensembles' : None,
+                            'F' : None,
+                            'fasta' : None,
+                            'frags_3mers' : None,
+                            'frags_9mers' : None,
+                            'FREE' : None,
+                            'import_cluster' : False,
+                            'improve_template' : None,
+                            'LGA' : None,
+                            'make_frags' : True,
+                            'make_models' : True,
+                            'maxcluster_exe' : None,
+                            'max_ensemble_models' : 30,
+                            'missing_domain' : False,
+                            'models_dir' : None,
+                            'molrep_only' : False,
+                            'mr_keys' : None,
+                            'mtz' : None,
+                            'name' : None,
+                            'nmodels' : 1000,
+                            'NMR_model_in' : None,
+                            'NMR_process' : None,
+                            'NMR_remodel_fasta' : None,
+                            'NMR_Truncate_only' : None,
+                            'nproc' : 1,
+                            'nr' : None,
+                            'num_clusters' : 1,
+                            'old_shelx' : False,
+                            'percent' : 5,
+                            'phaser_only' : False,
+                            'phenix_exe' : None,
+                            #'ROSETTA' : None,
+                            'ROSETTA_cluster' : None,
+                            'rosetta_db' : None,
+                            'rosetta_dir' : None,
+                            'rosetta_fragments_exe' : None,
+                            'rosetta_path' : None,
+                            'run_dir' : os.getcwd(),
+                            'scwrl_exe' : None,
+                            'shelx_cycles' : 15,
+                            'shelxe_exe' : None,
+                            'SIGF' : None,
+                            'spicker_exe' : None,
+                            'split_mr' : False,
+                            'submit_cluster' : False,
+                            'submit_qtype' : None,
+                            'theseus_exe' : None,
+                            'top_model_only' : False,
+                            'transmembrane' : False,
+                            'transmembrane_lipofile' : None,
+                            'transmembrane_spanfile' : None,
+                            'use_arpwarp' : True,
+                            'use_buccaneer' : True,
+                            'use_homs' : True,
+                            'use_scwrl' : False,
+                            'use_shelxe' : False,
+
+                         }
+        
+        self.quick_mode = {
+                           'max_ensemble_models' : 10,
+                           'nmodels' : 200,
+                           'percent' : 20,
+                           'phaser_only' : True,
+                           'shelx_cycles' : 5,
+                           'use_arpwarp' : True,
+                           'use_buccaneer' : True,
+                        }
     
+        # Test use scrwl
+        self.devel_mode = {
+                           'early_terminate': False,
+                           'use_shelxe' : True,
+                           'use_scwrl' : False,
+                           'use_arpwarp' : False,
+                           'use_buccaneer' : False,
+                        }
+    
+        # We have a debug mode as the logger isn't activated when we run
+        self.debug = False
+        
+        
     def final_summary(self, cluster=None):
         """Return a string summarising the results of the run.
         
@@ -110,14 +209,68 @@ class AmpleOptions(object):
                     tmpv = False
                 
             self.d[k] = tmpv
-            
-            #if v == False:
-            #    self.d[k] = False
-        
         # end of loop
         
-        #for k, v in self.d.iteritems():
-        #    print "{} | {}".format( k, v )
+#        print "After populate"
+#        for k, v in self.d.iteritems():
+#            print "{} | {}".format( k, v )
+            
+        # Handle any defaults and any preset options
+        self.process_options()
+        
+ 
+    def process_options(self):
+        """Check the options and process any preset defaults"""
+        
+        # First set anything that hasn't been set to its default option
+        for k, v in self.defaults.iteritems():
+            if self.d[k] == None:
+                #if self.debug:
+                #    print "Setting default value: {0} : {1}".format(k,v)
+                self.d[k] = v
+            else:
+                if self.debug and self.d[k] != v:
+                    print "Changed default value: {0} : {1}".format(k, self.d[k])
+        
+        # Any changes here
+        if self.d['submit_qtype']:
+            self.d['submit_qtype'] = self.d['submit_qtype'].upper()
+        
+        
+        # Check if using any preset options
+        if self.d['devel_mode']:
+            for k, v in self.devel_mode.iteritems():
+                # Set any that haven't been set
+                if self.d[k] == None:
+                    self.d[k] = v
+                else:
+                    # Already set - only overwrite if it's set to a default value, otherwise we
+                    # let the user go with what they've chosen but warn
+                    if self.d[k] != self.defaults[k] and self.d[k] != v  :
+                        print "WARNING! Overriding devel_mode setting: {0} : {1} with user setting {2}".format( k, v, self.d[k] )
+                    else:
+                        # We overwrite the default with our value
+                        if self.debug:
+                            print "Overriding default setting: {0} : {1} with devel_mode setting {2}".format( k, self.defaults[k], v )
+                        self.d[k] = v
+
+        if self.d['quick_mode']:
+            for k, v in self.quick_mode.iteritems():
+                # Set any that haven't been set
+                if self.d[k] == None:
+                    self.d[k] = v
+                else:
+                    # Already set - only overwrite if it's set to a default value, otherwise we
+                    # let the user go with what they've chosen but warn
+                    if self.d[k] != self.defaults[k] and self.d[k] != v  :
+                        print "WARNING! Overriding quick_mode setting: {0} : {1} with user setting {2}".format( k, v, self.d[k] )
+                    else:
+                        # We overwrite the default with our value
+                        if self.debug:
+                            print "Overriding default setting: {0} : {1} with quick_mode setting {2}".format( k, self.defaults[k], v )
+                        self.d[k] = v
+        
+        return
         
     def prettify_parameters(self):
         """
@@ -131,7 +284,7 @@ class AmpleOptions(object):
         for k in keys1:
             pstr += "{0}: {1}\n".format(k, self.d[k])
 
-        keys2 = ['make_frags','rosetta_fragments_exe','frags3mers','frags9mers']
+        keys2 = ['make_frags','rosetta_fragments_exe','frags_3mers','frags_9mers']
         pstr+= '\n---fragments---\n'
         for k in keys2:
             pstr += "{0}: {1}\n".format(k, self.d[k])

@@ -16,6 +16,7 @@ import sys
 import ample_util
 import cluster_with_MAX
 import pdb_edit
+import printTable
 import run_spicker
 
 class EnsembleData(object):
@@ -70,7 +71,7 @@ class Ensembler(object):
         self.truncated_models = []
         
         # radius thresholds to cluster the models
-        self.radius_thresholds = [ 1, 2,3 ]
+        self.radius_thresholds = [ 1, 2, 3 ]
         
         # The list of ensembles before side-chain treatment
         self.truncated_ensembles = []
@@ -480,14 +481,117 @@ def create_ensembles( amoptd ):
     logging.info("Saved results as file: {0}\n".format( amoptd['results_path'] ) )
         
     return
+
+def ensemble_summary( amoptd ):
+    """Print a summary of the ensembling process"""
+    
+    tableFormat = printTable.Table()
+    rstr=""
+    
+    if amoptd.has_key('spicker_results'):
+        rstr = "---- Clustering Results ----\n\n"
+        tdata = [ ( "Cluster", "Num Models", "Centroid" ) ]
+        for i, r in enumerate( amoptd['spicker_results'] ):
+            tdata.append( ( i+1, r.cluster_size, r.cluster_centroid ) )
+        rstr += tableFormat.pprint_table( tdata )
+    
+    if amoptd.has_key('ensemble_results') and len( amoptd['ensemble_results'] ):
+        rstr += "\n---- Truncation Results ----\n\n"
+        # Reconstruct trunction data
+        for i, clusterEnsemble in enumerate( amoptd['ensemble_results'] ):
+            
+            rstr += "---- Cluster {0} ----\n".format( i+1 )
+            nensembles = 0
+            truncation_thresholds = {}
+            
+            for ensemble in clusterEnsemble:
+                
+                nensembles += 1
+                if ensemble.truncation_threshold not in truncation_thresholds.keys():
+                    truncation_thresholds[ ensemble.truncation_threshold ] = ( ensemble.num_residues,
+                                                                               { ensemble.radius_threshold : ensemble.num_models } )
+                else:
+                    # Already got this truncation level so add radius
+                    if ensemble.radius_threshold not in truncation_thresholds[ ensemble.truncation_threshold ][1].keys():
+                        truncation_thresholds[ ensemble.truncation_threshold ][1][ ensemble.radius_threshold ] = ensemble.num_models
+            
+            
+            rstr += "\n"
+            tdata = [ ( "Truncation Threshold", "Num Residues", "Radius Treshold", "Num Models" ) ]
+            for threshold in sorted( truncation_thresholds.keys() ):
+                nresidues = truncation_thresholds[ threshold ][0] 
+                for i, radius in enumerate( sorted( truncation_thresholds[ threshold ][1].keys() ) ):
+                    nmodels = truncation_thresholds[ threshold ][1][radius ]
+                    if i == 0:
+                        tdata.append( ( threshold, nresidues, radius, nmodels  ) )
+                    else:
+                        tdata.append( ( "", "", radius, nmodels  ) )
+                    
+            rstr += tableFormat.pprint_table( tdata )
+            
+            rstr += "\nGenerated {0} ensembles\n\n".format( nensembles )
+                
+    return rstr
+
+#    def XtestEnsemble():
+#        logging.basicConfig()
+#        logging.getLogger().setLevel(logging.DEBUG)
+#    
+#        ensembler = Ensembler()
+#        ensembler.maxcluster_exe = "/opt/maxcluster/maxcluster"
+#        ensembler.theseus_exe = "/opt/theseus_src/theseus"
+#        ensembler.work_dir = "/opt/ample-dev1/python/TEST"
+#        os.chdir( ensembler.work_dir    )
+#        cf = "/home/Shared/TM/3LBW/ENSEMBLES_0/spicker_run/spicker_cluster_1.list"
+#        ensembler.cluster_models = [ re.sub( "^/gpfs/home/HCEA041/djr01/jxt15-djr01", "/home/Shared", m.strip() ) for m in open( cf, "r" ) ]
+#        ensembler.percent = 10
+#        ensembler.generate_thresholds()       
+#            
+#        if False:    
+#            #cf="/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/spicker_run/spicker_cluster_1.list"
+#            #cluster_models = [ m.strip() for m in open( cf, "r" ) ]
+#            #d = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/S_clusters/cluster_1"
+#            #import glob
+#            #cluster_models = [ m for m in glob.glob( os.path.join( d, "*.pdb") ) ]
+#            
+#            cluster_models = [ "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000001.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/5_S_00000003.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000005.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000006.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000005.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000003.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000002.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/5_S_00000002.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000004.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000003.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/3_S_00000003.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/3_S_00000005.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000001.pdb",
+#        "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000004.pdb" ]
+#            
+#            root_dir="/opt/ample-dev1/examples/toxd-example/jtest"
+#            percent=50
+#            ensemble_id="FOO"
+#            
+#            ensembler = Ensembler()
+#            ensembler.maxcluster_exe = "/opt/maxcluster/maxcluster"
+#            ensembler.theseus_exe = "/opt/theseus_src/theseus"
+#            ensembler.generate_ensembles( cluster_models=cluster_models, root_dir=root_dir, ensemble_id=ensemble_id, percent=percent )
+#            ensembles = ensembler.as_list()
+#            print ensembles
+#            print len(ensembles)        
     
             
 if __name__ == "__main__":
     
-    if len(sys.argv) != 2 or not os.path.isfile( sys.argv[1]):
+    # This runs the ensembling starting from a pickled file containing an amopt dictionary.
+    # - used when submitting the modelling jobs to a cluster
+    
+    if len(sys.argv) != 2 or not os.path.isfile( sys.argv[1] ):
         print "ensemble script requires the path to a pickled amopt dictionary!"
         sys.exit(1)
     
+    # Get the amopt dictionary
     fpath = sys.argv[1]
     f = open( fpath, "r" )
     amoptd = cPickle.load( f )
@@ -496,7 +600,8 @@ if __name__ == "__main__":
     #if os.path.abspath(fpath) != os.path.abspath(amoptd['results_path']):
     #    print "results_path must match the path to the pickle file"
     #    sys.exit(1)
-        
+    
+    # Set up logging - could append to an existing log?
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
     fl = logging.FileHandler("ensemble.log")
@@ -505,54 +610,5 @@ if __name__ == "__main__":
     fl.setFormatter(formatter)
     logger.addHandler(fl)
     
+    # Create the ensembles
     create_ensembles( amoptd )
-    
-#    logging.basicConfig()
-#    logging.getLogger().setLevel(logging.DEBUG)
-#
-#    ensembler = Ensembler()
-#    ensembler.maxcluster_exe = "/opt/maxcluster/maxcluster"
-#    ensembler.theseus_exe = "/opt/theseus_src/theseus"
-#    ensembler.work_dir = "/opt/ample-dev1/python/TEST"
-#    os.chdir( ensembler.work_dir    )
-#    cf = "/home/Shared/TM/3LBW/ENSEMBLES_0/spicker_run/spicker_cluster_1.list"
-#    ensembler.cluster_models = [ re.sub( "^/gpfs/home/HCEA041/djr01/jxt15-djr01", "/home/Shared", m.strip() ) for m in open( cf, "r" ) ]
-#    ensembler.percent = 10
-#    ensembler.generate_thresholds()       
-#        
-#    if False:    
-#        #cf="/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/spicker_run/spicker_cluster_1.list"
-#        #cluster_models = [ m.strip() for m in open( cf, "r" ) ]
-#        #d = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0/S_clusters/cluster_1"
-#        #import glob
-#        #cluster_models = [ m for m in glob.glob( os.path.join( d, "*.pdb") ) ]
-#        
-#        cluster_models = [ "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000001.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/5_S_00000003.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000005.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000006.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000005.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000003.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000002.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/5_S_00000002.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/4_S_00000004.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000003.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/3_S_00000003.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/3_S_00000005.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/2_S_00000001.pdb",
-#    "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_5/models/1_S_00000004.pdb" ]
-#        
-#        root_dir="/opt/ample-dev1/examples/toxd-example/jtest"
-#        percent=50
-#        ensemble_id="FOO"
-#        
-#        ensembler = Ensembler()
-#        ensembler.maxcluster_exe = "/opt/maxcluster/maxcluster"
-#        ensembler.theseus_exe = "/opt/theseus_src/theseus"
-#        ensembler.generate_ensembles( cluster_models=cluster_models, root_dir=root_dir, ensemble_id=ensemble_id, percent=percent )
-#        ensembles = ensembler.as_list()
-#        print ensembles
-#        print len(ensembles)
-
-
-

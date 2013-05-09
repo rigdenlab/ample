@@ -44,15 +44,15 @@ class RosettaModel(object):
         self.make_fragments = None
 
         self.fasta = None
-        self.allatom = None
+        self.all_atom = None
         self.use_scwrl = None
         self.scwrl_exe = None
         
         # Fragment variables
         self.pdb_code = None
-        self.frags3mers = None
-        self.frags9mers = None
-        self.usehoms = None
+        self.frags_3mers = None
+        self.frags_9mers = None
+        self.use_homs = None
         self.fragments_directory = None
         self.fragments_exe = None
         
@@ -149,7 +149,7 @@ class RosettaModel(object):
                 cmd += ['-noporter' ]
 
         # Whether to exclude homologs
-        if not self.usehoms:
+        if not self.use_homs:
             cmd.append('-nohoms')           
         
         return cmd
@@ -187,18 +187,18 @@ class RosettaModel(object):
         
         if self.rosetta_version >= 3.4:
             # new name format: $options{runid}.$options{n_frags}.$size" . "mers
-            self.frags3mers = self.fragments_directory + os.sep + self.pdb_code + '.200.3mers'
-            self.frags9mers = self.fragments_directory + os.sep + self.pdb_code + '.200.9mers'      
+            self.frags_3mers = self.fragments_directory + os.sep + self.pdb_code + '.200.3mers'
+            self.frags_9mers = self.fragments_directory + os.sep + self.pdb_code + '.200.9mers'      
         else:
             # old_name_format: aa$options{runid}$fragsize\_05.$options{n_frags}\_v1_3"
-            self.frags3mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '03_05.200_v1_3'
-            self.frags9mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '09_05.200_v1_3'
+            self.frags_3mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '03_05.200_v1_3'
+            self.frags_9mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '09_05.200_v1_3'
             
-        if not os.path.exists( self.frags3mers ) or not os.path.exists( self.frags9mers ):
-            raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\n".format(self.frags3mers,self.frags9mers)
+        if not os.path.exists( self.frags_3mers ) or not os.path.exists( self.frags_9mers ):
+            raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\n".format(self.frags_3mers,self.frags_9mers)
         
         #RUNNING.write('Fragments done\n3mers at: ' + frags_3_mers + '\n9mers at: ' + frags_9_mers + '\n\n')
-        self.logger.info('Fragments Done\n3mers at: ' + self.frags3mers + '\n9mers at: ' + self.frags9mers + '\n\n')
+        self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
     
         if os.path.exists( self.fragments_directory + os.sep + self.fragments_directory + '.psipred'):
             ample_util.get_psipred_prediction( self.fragments_directory + os.sep + self.pdb_code + '.psipred')
@@ -302,8 +302,8 @@ class RosettaModel(object):
         cmd = [ self.rosetta_path,
                '-database', self.rosetta_db,
                '-in::file::fasta', self.fasta,
-               '-in:file:frag3', self.frags3mers,
-               '-in:file:frag9', self.frags9mers,
+               '-in:file:frag3', self.frags_3mers,
+               '-in:file:frag9', self.frags_9mers,
                '-out:path', wdir,
                '-out:pdb',
                '-out:nstruct', str(nstruct),
@@ -312,7 +312,7 @@ class RosettaModel(object):
                '-run:jran', str(seed) 
                 ]
             
-        if self.allatom:
+        if self.all_atom:
             cmd += [ '-return_full_atom true', '-abinitio:relax' ]
         else:
             cmd += [ '-return_full_atom false' ]
@@ -486,7 +486,7 @@ class RosettaModel(object):
         
         # Fragment variables
         self.fragments_exe = optd['rosetta_fragments_exe']
-        self.usehoms = optd['usehoms']
+        self.use_homs = optd['use_homs']
         self.fragments_directory = optd['work_dir'] + os.sep + "rosetta_fragments"
         
         if optd['transmembrane']:
@@ -551,10 +551,10 @@ class RosettaModel(object):
         if optd['make_models']:
             
             if not optd['make_frags']:
-                self.frags3mers = optd['frags3mers']
-                self.frags9mers = optd['frags9mers']
-                if not os.path.exists(self.frags3mers) or not os.path.exists(self.frags9mers):
-                    msg = "Cannot find both fragment files:\n{0}\n{1}\n".format(self.frags3mers,self.frags9mers)
+                self.frags_3mers = optd['frags_3mers']
+                self.frags_9mers = optd['frags_9mers']
+                if not os.path.exists(self.frags_3mers) or not os.path.exists(self.frags_9mers):
+                    msg = "Cannot find both fragment files:\n{0}\n{1}\n".format(self.frags_3mers,self.frags_9mers)
                     self.logger.critical(msg)
                     raise RuntimeError,msg
                     
@@ -599,7 +599,7 @@ class RosettaModel(object):
                 self.models_dir = optd['models_dir']
             
             # Extra modelling options
-            self.allatom = optd['allatom']
+            self.all_atom = optd['all_atom']
             self.domain_termini_distance = optd['domain_termini_distance']
             self.rad_gyr_reweight = optd['CC']
             
@@ -635,7 +635,7 @@ class Test(unittest.TestCase):
         optd['rosetta_dir'] = "/opt/rosetta3.4"
         optd['pdb_code'] = "TOXD_"
         optd['work_dir'] =  os.getcwd()
-        optd['usehoms'] =  True
+        optd['use_homs'] =  True
         optd['make_frags'] = True
         optd['rosetta_db'] = None
         optd['rosetta_fragments_exe'] =  "/tmp/make_fragments.pl"
@@ -643,8 +643,8 @@ class Test(unittest.TestCase):
         optd['fasta'] = self.ampledir + "/examples/toxd-example/toxd_.fasta"
         
         optd['make_models'] = False
-        optd['frags3mers'] = None
-        optd['frags9mers'] = None
+        optd['frags_3mers'] = None
+        optd['frags_9mers'] = None
         optd['improve_template'] = None
         
         m = RosettaModel()
@@ -679,16 +679,16 @@ for i in range(10):
         optd['rosetta_dir'] = "/opt/rosetta3.4"
         optd['rosetta_path'] = os.getcwd() + os.sep + "dummy_rosetta.sh"
         optd['rosetta_db'] = None
-        optd['frags3mers'] = '3mers'
-        optd['frags9mers'] = '9mers'
+        optd['frags_3mers'] = '3mers'
+        optd['frags_9mers'] = '9mers'
         optd['rosetta_fragments_exe'] = None
-        optd['usehoms'] = None
+        optd['use_homs'] = None
         optd['make_models'] = True
         optd['make_frags'] =  True
         optd['fasta'] = "FASTA"
         optd['pdb_code'] = "TOXD_"
         optd['improve_template'] = None
-        optd['allatom'] = True
+        optd['all_atom'] = True
         optd['use_scwrl'] = False
         optd['scwrl_exe'] = ""
         
@@ -712,7 +712,7 @@ for i in range(10):
         optd['work_dir'] = os.getcwd()
         optd['rosetta_dir'] = "/opt/rosetta3.4"
         optd['rosetta_fragments_exe'] = None
-        optd['usehoms'] = None
+        optd['use_homs'] = None
         optd['make_models'] = False
         optd['make_frags'] =  True
         optd['fasta'] = "/home/Shared/2UUI/2uui.fasta"

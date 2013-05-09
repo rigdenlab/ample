@@ -62,8 +62,8 @@ parser = argparse.ArgumentParser(description='Structure solution by abinitio mod
 parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
                    help='alignment between homolog and target fastas')
 
-parser.add_argument('-allatom', metavar='allatom', type=str, nargs=1,
-                   help='allatom')
+parser.add_argument('-all_atom', metavar='all_atom', type=str, nargs=1,
+                   help='all_atom')
 
 parser.add_argument('-arpwarp_cycles', metavar='arpwarp_cycles', type=int, nargs=1,
                    help='number of cycles ')
@@ -110,10 +110,10 @@ parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
 parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
                    help='Flag for F')
 
-parser.add_argument('-frags3mers', metavar='frags3mers', type=str, nargs=1,
+parser.add_argument('-frags_3mers', metavar='frags_3mers', type=str, nargs=1,
                    help='path of imported 3mers')
 
-parser.add_argument('-frags9mers', metavar='frags9mers', type=str, nargs=1,
+parser.add_argument('-frags_9mers', metavar='frags_9mers', type=str, nargs=1,
                    help='path of imported 9mers')
 
 parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
@@ -137,14 +137,14 @@ parser.add_argument('-make_models', metavar='Do the modelling', type=str, nargs=
 parser.add_argument('-maxcluster_exe', metavar='Maxcluster exe', type=str, nargs=1,
                    help='Maxcluster exe')
 
+parser.add_argument('-max_ensemble_models', metavar='max_ensemble_models', type=str, nargs=1,
+                   help='Maximum number of models permitted in an ensemble')
+
 parser.add_argument('-missing_domain', metavar='missing_domain', type=str, nargs=1,
                    help='Modelling a missing domain - requires domain_all_chains_pdb argument')
 
 parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
                    help='folder of decoys')
-
-parser.add_argument('-molreponly', metavar='molreponly', type=str, nargs=1,
-                   help='molreponly')
 
 parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
                    help='mrbump keywords ')
@@ -185,14 +185,10 @@ parser.add_argument('-num_clusters', metavar='num clusters to sample', type=int,
 parser.add_argument('-percent', metavar='no clus to sample', type=str, nargs=1,
                    help='percent interval for truncation')
 
-parser.add_argument('-phaseronly', metavar='phaseronly', type=str, nargs=1,
-                   help='phaseronly')
-
 parser.add_argument('-phenix_exe', metavar='PHENIX.ensembler exe', type=str, nargs=1,
                    help='path to phenix executable')
 
-
-parser.add_argument('-ROSETTA', metavar='ROSETTA_path', type=str, nargs=1,
+parser.add_argument('-rosetta_path', metavar='rosetta_path', type=str, nargs=1,
                    help='path for Rosetta AbinitioRelax')
 
 parser.add_argument('-ROSETTA_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
@@ -243,7 +239,7 @@ parser.add_argument('-transmembrane_spanfile', metavar='transmembrane_spanfile',
 parser.add_argument('-transmembrane_lipofile', metavar='transmembrane_lipofile', type=str, nargs=1,
                    help='lips4 file for modelling transmembrane proteins')
 
-parser.add_argument('-usehoms', metavar='nohoms rosetta flag', type=str, nargs=1,
+parser.add_argument('-use_homs', metavar='nohoms rosetta flag', type=str, nargs=1,
                    help='True =use nhomologs, False= dont use them ')
 
 parser.add_argument('-use_arpwarp', metavar='-use_arpwarp', type=str, nargs=1,
@@ -258,86 +254,19 @@ parser.add_argument('-use_scwrl', metavar='USE_SCWRL', type=str, nargs=1,
 parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
                    help='True to use shelx ')
 
-#
-# jmht - set the default values here
-#
-# name -> pdb_code
-# SCRWL -> SCWRL_path
-# maxcluster_exe -> maxcluster_exe_path
-parser.set_defaults( 
-                    alignment_file = '',
-                    allatom = "true",
-                    arpwarp_cycles = 10,
-                    ASU = 0,
-                    buccaneer_cycles = 5,
-                    CC = '',
-                    import_cluster = "false",
-                    debug = "false",
-                    domain_all_chains_pdb = None,
-                    domain_termini_distance = 0,
-                    ensembles = None,
-                    ensembler = "false",
-                    fasta = None,
-                    frags3mers=None,
-                    frags9mers=None,
-                    improve_template = None,
-                    maxcluster_exe = None,
-                    make_frags = "true",
-                    make_models = "true",
-                    missing_domain = "false",
-                    models_dir = None,
-                    molreponly = "false",
-                    mtz = None,
-                    name = None,
-                    num_clusters = 1,
-                    nmodels = 1000,
-                    NMR_model_in = None,
-                    NMR_process = None,
-                    NMR_remodel_fasta = None,
-                    NMR_Truncate_only = "false",
-                    nproc = 1,
-                    shelx_cycles = 15,
-                    old_shelx = "false",
-                    percent = 5,
-                    phaseronly = "false",
-                    phenix_exe = None,
-                    rosetta_cluster = None,
-                    rosetta_db  = None,
-                    rosetta_fragments_exe = None,
-                    rosetta_path =  None,
-                    run_dir = os.getcwd(),
-                    scwrl_exe = None,
-                    spicker_exe = None,
-                    split_mr = "false",
-                    submit_cluster = "false",
-                    submit_qtype = "SGE",
-                    usehoms = "true",
-                    use_arpwarp = "true",
-                    use_buccaneer = "true",
-                    use_scwrl = 'false',
-                    use_shelxe = "false",
-                    shelxe_exe = "shelxe",
-                    top_model_only = "false",
-                    theseus_exe = None,
-                    early_terminate = "true"
-                    )
-#
-# speedy
-# no arpwarp or buccaneer or molrep
-# models = 200
-# phaser pkill 5
-# shelx cycles 5
-# percent 20
-# num_clusters 1
-# refmac - mrkeys ncyc 10
-# early_terminate
-# num ensemble clusters 10
-#
+# Mutually exclusive options
+group = parser.add_mutually_exclusive_group()
+group.add_argument('-devel_mode', metavar='devel_mode', type=str, nargs=1,
+                   help='preset options to run in development mode - takes longer')
+group.add_argument('-quick_mode', metavar='quick_mode', type=str, nargs=1,
+                   help='preset options to run quickly, but less thoroughly')
 
-# development
-# shelxe
-# scwrl
-# 
+group = parser.add_mutually_exclusive_group()
+group.add_argument('-molrep_only', metavar='molrep_only', type=str, nargs=1,
+                   help='molrep_only')
+group.add_argument('-phaser_only', metavar='phaser_only', type=str, nargs=1,
+                   help='phaser_only')
+
 
 # Create amopt object to hold options
 amopt = ample_options.AmpleOptions( )
@@ -370,14 +299,11 @@ for count, i in enumerate(toRemove):
 # convert args to dictionary
 args = parser.parse_args()
 
-# Now put them in the amopt object
+# Now put them in the amopt object - this also sets/checks any defaults
 amopt.populate( args )
 
 # Now set MRKeys
 amopt.d['mr_keys'] = MRkeys
-
-# qtype always use uppercase
-amopt.d['submit_qtype'] = amopt.d['submit_qtype'].upper()
 
 # Make a work directory and go there - this way all output goes into this directory
 if not os.path.exists(amopt.d['run_dir']):
@@ -453,8 +379,8 @@ if amopt.d['import_ensembles'] and amopt.d['import_models']:
         logger.critical(msg)
         sys.exit(1)
 
-if amopt.d['make_frags'] and (  amopt.d['frags3mers'] or  amopt.d['frags9mers'] ):
-    msg = "make_frags set to true, but you have given the path to the frags3mers or frags9mers"
+if amopt.d['make_frags'] and (  amopt.d['frags_3mers'] or  amopt.d['frags_9mers'] ):
+    msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
     logger.critical(msg)
     sys.exit(1)
 
@@ -505,12 +431,12 @@ if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if maki
     rosetta_modeller.set_from_dict( amopt.d )
 
 # MR programs
-if amopt.d['molreponly'] and amopt.d['phaseronly']:
+if amopt.d['molrep_only'] and amopt.d['phaser_only']:
         logger.critical('you say you want molrep only AND phaser only, choose one or both')
         sys.exit(1)
-if amopt.d['molreponly']:
+if amopt.d['molrep_only']:
     amopt.d['mrbump_programs'] = [ 'molrep' ]
-elif amopt.d['phaseronly']:
+elif amopt.d['phaser_only']:
     amopt.d['mrbump_programs'] = [ 'phaser' ]
 else:
     amopt.d['mrbump_programs'] = ['molrep', 'phaser']
@@ -581,16 +507,16 @@ logger.info('All needed programs are found, continuing Run')
 # Running is the 'official' output file 
 #----------------------------
 RUNNING = open( amopt.d['work_dir'] + '/ROSETTA.log', "w")
-RUNNING.write(ample_util.header)
+RUNNING.write( ample_util.header )
 RUNNING.flush()
 
 #----------------------------
 # params used
 #---------------------------
-Run_params = open( amopt.d['work_dir'] + '/Params_used', "w")
+f = open( os.path.join( amopt.d['work_dir'], 'params_used.txt' ), "w") 
 param_str = amopt.prettify_parameters()
-Run_params.write( param_str )
-Run_params.close()
+f.write( param_str )
+f.close()
 # Echo to log too
 logger.debug( param_str )
 
@@ -626,8 +552,6 @@ if amopt.d['make_models']:
     
     logger.info('----- making Rosetta models--------')
     logger.info('making ' + str(amopt.d['nmodels']) + ' models...')
-    RUNNING.write('----- making models--------')
-    RUNNING.flush()
     
     # If we are running with cluster support submit all modelling jobs to the cluster queue
     if amopt.d['submit_cluster']:
@@ -718,11 +642,13 @@ if amopt.d['import_ensembles']:
     ensembles = [ final_ensembles ]
 
 else:
+    
     if amopt.d['submit_cluster']:
             mrBuild = clusterize.ClusterRun()
             mrBuild.QTYPE = amopt.d['submit_qtype']
             mrBuild.ensembleOnCluster( amopt.d )
             mrBuild.monitorQueue()
+            
             # queue finished so unpickle results
             f = open( amopt.d['results_path'] )
             amopt.d = cPickle.load( f )
@@ -733,9 +659,14 @@ else:
     # Extract list of pdbs from ensemble results
     for eresult in amopt.d['ensemble_results']:
         ensemble_pdbs = []
-        for ensemble in eresult:
-            ensemble_pdbs.append( ensemble.pdb )
+        for result in eresult:
+            ensemble_pdbs.append( result.pdb )
         ensembles.append( ensemble_pdbs )
+
+ensemble_summary = ensemble.ensemble_summary(amopt.d)
+RUNNING.write(ensemble_summary)
+RUNNING.flush()
+logger.info(ensemble_summary)
 
 #---------------------------------------
 # MR BUMP analysis of the ensembles
@@ -802,7 +733,9 @@ logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
 # Now print out the final summary
 summary = amopt.final_summary()
 logger.info( summary )
-
+RUNNING.write(summary)
+RUNNING.flush()
+RUNNING.close()
 
 # os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
 # os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')

@@ -24,8 +24,8 @@ ${AMPLEDIR}/bin/ample \
       -fasta ${PWD}/toxd_.fasta \
       -mtz ${PWD}/1dtx.mtz \
       -name TOXD \
-      -frags3mers ${PWD}/aat000_03_05.200_v1_3 \
-      -frags9mers ${PWD}/aat000_09_05.200_v1_3 \
+      -frags_3mers ${PWD}/aat000_03_05.200_v1_3 \
+      -frags_9mers ${PWD}/aat000_09_05.200_v1_3 \
       -rosetta_dir $ROSETTA_DIR \
       -run_dir $PWD \
       -make_frags False \
@@ -37,9 +37,9 @@ ${AMPLEDIR}/bin/ample \
       -use_shelxe True \
       -use_arpwarp False \
       -use_buccaneer False \
-      -molreponly True \
+      -molrep_only True \
       -nproc 5 \
-      -allatom True \
+      -all_atom True \
       -num_clusters 1 \
 
       #-models ${AMPLEDIR}/examples/toxd-example/ROSETTA_MR_0/models \

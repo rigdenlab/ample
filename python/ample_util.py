@@ -17,6 +17,7 @@ import MTZParse
 
 # Reference string
 references = """AMPLE: To be added
+
 SHELX: is used: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122
 
 SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein
@@ -29,9 +30,9 @@ Supplementary Materials for Theobald and Wuttke 2006b.
 MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457
 
 CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs
-for Protein Crystallography. Acta Cryst. D50, 760-763\n
+for Protein Crystallography. Acta Cryst. D50, 760-763
 
-MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025\n
+MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025
 
 PHASER: McCoy, A.J., Grosse-Kunstleve, R.W., Adams, P.D., Winn, M.D.,
 Storoni, L.C. & Read, R.J. (2007)
@@ -53,7 +54,7 @@ header ="""#####################################################################
 # CCP4: AMPLE -Ab Initio Modelling Molecular Replacement (Beta version) #
 #########################################################################
 The authors of specific programs should be referenced where applicable:""" + \
-"\n\n" + references
+"\n\n" + references + "\n\n"
 
 # get a program test for existsnce
 def which(program):
@@ -216,7 +217,7 @@ def setup_logging():
     logger.setLevel(logging.DEBUG)
     
     # create file handler and set level to debug
-    fl = logging.FileHandler("JENS_AMPLE.log")
+    fl = logging.FileHandler("debug.log")
     fl.setLevel(logging.DEBUG)
     
     # create formatter for fl
