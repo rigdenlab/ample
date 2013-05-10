@@ -655,15 +655,21 @@ if amopt.d['import_ensembles']:
 else:
     
     if amopt.d['submit_cluster']:
-            mrBuild = clusterize.ClusterRun()
-            mrBuild.QTYPE = amopt.d['submit_qtype']
-            mrBuild.ensembleOnCluster( amopt.d )
-            mrBuild.monitorQueue()
+
+        # Pickle dictionary so it can be opened by the job to get the parameters
+        f = open( amopt.d['results_path'], 'w' )
+        cPickle.dump( amopt.d, f )
+        f.close()
+
+        mrBuild = clusterize.ClusterRun()
+        mrBuild.QTYPE = amopt.d['submit_qtype']
+        mrBuild.ensembleOnCluster( amopt.d )
+        mrBuild.monitorQueue()
             
-            # queue finished so unpickle results
-            f = open( amopt.d['results_path'] )
-            amopt.d = cPickle.load( f )
-            f.close()
+        # queue finished so unpickle results
+        f = open( amopt.d['results_path'], "r" )
+        amopt.d = cPickle.load( f )
+        f.close()
     else:
         ensemble.create_ensembles( amopt.d )
     
@@ -678,7 +684,6 @@ ensemble_summary = ensemble.ensemble_summary(amopt.d)
 RUNNING.write(ensemble_summary)
 RUNNING.flush()
 logger.info(ensemble_summary)
-
 
 #---------------------------------------
 # MR BUMP analysis of the ensembles
