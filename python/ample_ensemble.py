@@ -11,6 +11,8 @@ import os
 import re
 import shutil
 import sys
+import types
+
 
 # our imports
 import ample_util
@@ -36,7 +38,17 @@ class EnsembleData(object):
         
         self.pdb = None # path to the ensemble file
 
-
+    def __str__(self):
+        """List the data attributes of this object"""
+        me = {}
+        for slot in dir(self):
+            attr = getattr(self, slot)
+            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
+              isinstance(attr, types.FunctionType) ):
+                me[slot] = attr
+            
+        return "{0} : {1}".format(self.__repr__(),str(me))
+    
 class Ensembler(object):
     """Class to generate ensembles from cluster of models"""
     
