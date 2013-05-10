@@ -5,6 +5,7 @@ import locale
 import logging
 import os
 import re
+import types
 
 # Our imports
 import printTable
@@ -31,6 +32,17 @@ class MrBumpResult(object):
         self.shelxCC = None
         
         self.header = [] # The header format for this table
+        
+    def __str__(self):
+        """List the data attributes of this object"""
+        me = {}
+        for slot in dir(self):
+            attr = getattr(self, slot)
+            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
+              isinstance(attr, types.FunctionType) ):
+                me[slot] = attr
+            
+        return "{0} : {1}".format(self.__repr__(),str(me))
 
 class ResultsSummary(object):
     """
@@ -236,7 +248,12 @@ class ResultsSummary(object):
         Sort the results
         """
         
-        use_shelx=True # For time being assume we always use shelx
+        # Check if we can use shelx
+        if self.results[0].shelxCC:
+            use_shelx=True 
+        else:
+            use_shelx=False
+        
         if use_shelx:
             sortf = lambda x: float( x.shelxCC )
         else:
