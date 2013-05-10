@@ -48,10 +48,11 @@ def generate_jobscripts( ensemble_pdbs, amoptd ):
                 jname = "{0}_{1}".format( name, program )
                 amoptd['mrbump_programs'] = [ program ]
                 # HACK - molrep only runs on a single processor
-                if program == "molrep":
-                    amoptd['nproc'] = 1
+                # Can't do this any more as any job < 16 can't run on the 12 hour queue
+                #if program == "molrep":
+                #    amoptd['nproc'] = 1
                 script = write_jobscript( name=jname, pdb=ensemble_pdb, amoptd=amoptd )
-                amoptd['nproc'] = nproc
+                #amoptd['nproc'] = nproc
                 job_scripts.append( script )
         else:
             # Just run as usual
