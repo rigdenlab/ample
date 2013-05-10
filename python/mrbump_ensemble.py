@@ -288,7 +288,7 @@ def check_success( directory ):
     Success is assumed as a SHELX CC score of >= SHELXSUCCESS
     """
     
-    SHELXSUCCESS = 25.0
+    SHELX_SUCCESS = 25.0
     
     rfile = os.path.join(directory, 'results/resultsTable.dat')
     #print "{0} checking for file: {1}".format(multiprocessing.current_process().name,rfile)
@@ -304,12 +304,15 @@ def check_success( directory ):
     
     # For now we assume we are using SHELXE to check results
     # otherwise we would check 'final_Rfree'
-    scol = headers.index('SHELXE_CC')
+    if 'SHELXE_CC' in headers:
+        scol = headers.index('SHELXE_CC')
+    else:
+        return False
     
     for line in f:
         fields = line.strip().split()
         score = float(fields[scol])
-        if score >= SHELXSUCCESS:
+        if score >= SHELX_SUCCESS:
             return True
     
     # Nothing good enough
