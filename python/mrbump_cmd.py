@@ -58,10 +58,11 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
         mrs+='FIXED_XYZIN {0} IDEN {1}\n'.format( adict['domain_all_chains_pdb'], fixed_iden )
     
     # Extra keywords
-    # This assumes everything is a pair KEYWORD: VALUE
-    # Will need to have special checks for anything with more then 1 value
-    for i in range( 0, len(adict['mr_keys']), 2 ):
-        mrs+='{0}  {1}\n'.format( adict['mr_keys'][i], adict['mr_keys'][i+1]  )
+    # This assumes everything in mr_keys is a list of [ KEYWORD, VALUE0, VALUE1, ...]
+    for l in adict['mr_keys']:
+        mrs += "  ".join( l ) + "\n"
+    #for i in range( 0, len(adict['mr_keys']), 2 ):
+    #    mrs+='{0}  {1}\n'.format( adict['mr_keys'][i], adict['mr_keys'][i+1]  )
         
     mrs+='END\n'
     mrs+='eof'

@@ -97,6 +97,7 @@ class AmpleOptions(object):
                            'shelx_cycles' : 5,
                            'use_arpwarp' : True,
                            'use_buccaneer' : True,
+                           'mr_keys' : [['PKILL','3600']],
                         }
     
         # Test use scrwl

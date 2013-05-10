@@ -282,12 +282,16 @@ while keycount < len(sys.argv):
     if sys.argv[keycount] == "-mr_keys":
         toRemove.append(keycount)
         keycount += 1
+        tmp = []
         while not sys.argv[keycount].startswith("-"):
-            MRkeys.append( sys.argv[keycount] )
+            #MRkeys.append( sys.argv[keycount] )
+            tmp.append( sys.argv[keycount] )
             toRemove.append( keycount )
             keycount += 1
             if keycount == len(sys.argv):
                 break
+        # Got last of list so add to MRkeys
+        MRkeys.append( tmp )
         continue
     keycount += 1
 
@@ -303,8 +307,11 @@ args = parser.parse_args()
 # Now put them in the amopt object - this also sets/checks any defaults
 amopt.populate( args )
 
-# Now set MRKeys
-amopt.d['mr_keys'] = MRkeys
+# Now set MRKeys - might already have pre-set values so check if None or a list
+if isinstance( amopt.d['mr_keys'],list ):
+    amopt.d['mr_keys'] += MRkeys
+else:
+    amopt.d['mr_keys'] = MRkeys
 
 # Make a work directory and go there - this way all output goes into this directory
 if not os.path.exists(amopt.d['run_dir']):
@@ -370,9 +377,10 @@ if amopt.d['models_dir']:
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
 else:
-    # Create the models_dir
-    amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
-    os.mkdir( amopt.d['models_dir'] ) 
+    if amopt.d['make_models']:
+        # Create the models_dir
+        amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
+        os.mkdir( amopt.d['models_dir'] ) 
 
 # Check models and ensembles
 if amopt.d['import_ensembles'] and amopt.d['import_models']:
@@ -583,8 +591,11 @@ if amopt.d['make_models']:
     ##End IF amopt.d['submit_cluster']
     
     msg = '\nModelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n'
-else:
+elif amopt.d['import_models']:
     msg = '\nImporting models from directory:\n   ' + amopt.d['models_dir'] + '\n\n'
+elif amopt.d['import_ensembles']:
+    msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles'] + '\n\n'
+
     
 RUNNING.write(msg)
 logger.info(msg)
@@ -623,7 +634,6 @@ ensembles = [] # List of ensembles - 1 per cluster
 #f.close()
 #logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
 #
-#sys.exit(1)
 
 if amopt.d['import_ensembles']:
     #---------------------------------------
@@ -668,6 +678,7 @@ ensemble_summary = ensemble.ensemble_summary(amopt.d)
 RUNNING.write(ensemble_summary)
 RUNNING.flush()
 logger.info(ensemble_summary)
+
 
 #---------------------------------------
 # MR BUMP analysis of the ensembles
