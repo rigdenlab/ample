@@ -388,10 +388,23 @@ if amopt.d['import_ensembles'] and amopt.d['import_models']:
         logger.critical(msg)
         sys.exit(1)
 
+# If the user has given both fragment files we check they are ok and unset make_frags
+if amopt.d['frags_3mers'] and amopt.d['frags_9mers']:
+    if not os.path.isfile( amopt.d['frags_3mers'] ) or not os.path.isfile( amopt.d['frags_9mers'] ):
+        msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format( amopt.d['frags_3mers'], amopt.d['frags_9mers'] )   
+        logger.critical(msg)
+        sys.exit(1)
+    amopt.d['make_frags'] = False
+    
 if amopt.d['make_frags'] and (  amopt.d['frags_3mers'] or  amopt.d['frags_9mers'] ):
     msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
     logger.critical(msg)
     sys.exit(1)
+    
+if not amopt.d['make_frags'] and not (  amopt.d['frags_3mers'] and  amopt.d['frags_9mers'] ):
+    msg = "make_frags set to false, but you have not given the paths to the frags_3mers or frags_9mers"
+    logger.critical(msg)
+    sys.exit(1)   
 
 
 # NMR Checks
