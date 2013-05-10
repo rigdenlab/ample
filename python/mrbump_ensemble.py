@@ -105,7 +105,7 @@ def write_jobscript( name, pdb, amoptd, directory=None ):
         logFile=os.path.join( directory, name + ".log" )
         script_header = mrBuild.subScriptHeader( nProc=amoptd['nproc'], logFile=logFile, jobName=name)
         job_script.write( script_header )
-        job_script.write("pushd " + directory + "\n\n" + "export CCP4_SCR $TMPDIR\n\n")
+        job_script.write("pushd " + directory + "\n\n" + "export CCP4_SCR=$TMPDIR\n\n")
     else:
         job_script.write('#!/bin/sh\n')
     
@@ -220,7 +220,7 @@ def mrbump_ensemble_local( job_scripts, amoptd ):
                         
     # need to wait here as sometimes it takes a while for the results files to get written
     time.sleep(3)
-##End mrbump_ensemble_local
+    return
 
 def worker( queue, early_terminate=False ):
     """
