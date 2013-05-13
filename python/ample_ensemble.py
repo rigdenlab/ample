@@ -321,6 +321,9 @@ class Ensembler(object):
                 os.chdir( ensemble_dir )
         
                 # A list of the files that have been clustered together with maxcluster
+                # NB - FIXME! we dont' need to run maxcluster each time. We should just run it once for each truncation threshold
+                # and output the distance matrix (using the -R flag) and then read this in and generate the clusters for 
+                # each radius threshold
                 cluster_files = cluster_with_MAX.cluster_with_MAX_FAST( fname, radius, self.maxcluster_exe )  # use fastest method
                 logging.debug("Maxcluster clustered {0} files".format ( len( cluster_files ) ) )
                 if cluster_files < 2:
@@ -341,7 +344,7 @@ class Ensembler(object):
                 # Check if there are the same number of models in this ensemble as the previous one - if so
                 # the ensembles will be identical and we can skip this one
                 if num_previous_models == len( cluster_files ) and len( cluster_files ) < self.max_ensemble_models:
-                    logging.info( 'Number of decoys in cluster is the same as under previous threshold so excluding cluster {0}'.format( basename ) )
+                    logging.info( 'Number of decoys in cluster ({0}) is the same as under previous threshold so excluding cluster {1}'.format( len( cluster_files ), basename ) )
                     continue
                 else:
                     num_previous_models = len( cluster_files )
