@@ -338,19 +338,19 @@ class Ensembler(object):
                 # For naming all files
                 basename='trunc_{0}_rad_{1}'.format( truncation_threshold, radius ) 
                 
-                # Restrict cluster to self.max_ensemble_models
-                if len( cluster_files ) > self.max_ensemble_models:
-                    logging.debug("More than 30 files clustered so truncating list to first 30")
-                    cluster_files = cluster_files[ :self.max_ensemble_models ]
-                    
                 # Check if there are the same number of models in this ensemble as the previous one - if so
                 # the ensembles will be identical and we can skip this one
-                if num_previous_models == len( cluster_files ):
+                if num_previous_models == len( cluster_files ) and len( cluster_files ) < self.max_ensemble_models:
                     logging.info( 'Number of decoys in cluster is the same as under previous threshold so excluding cluster {0}'.format( basename ) )
                     continue
                 else:
                     num_previous_models = len( cluster_files )
-
+                    
+                # Restrict cluster to self.max_ensemble_models
+                if len( cluster_files ) > self.max_ensemble_models:
+                    logging.debug("{0} files in cluster so truncating list to first {0}".format( len( cluster_files ), self.max_ensemble_models)  )
+                    cluster_files = cluster_files[ :self.max_ensemble_models ]
+                    
                 # Run theseus to generate a file containing the aligned clusters
                 cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files
                 retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
