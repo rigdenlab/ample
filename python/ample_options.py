@@ -97,7 +97,9 @@ class AmpleOptions(object):
                            'shelx_cycles' : 5,
                            'use_arpwarp' : True,
                            'use_buccaneer' : True,
-                           'mr_keys' : [['PKILL','3600']],
+                           # Needs to be a list of lists as there can be multiple mr_keys
+                           # This kills phaser after 15 min - add when the CCP4 version of phaser supports it
+                           # 'mr_keys' : [ [ 'PKEY', 'KILL','TIME','15'  ] ],
                         }
     
         # Test use scrwl
