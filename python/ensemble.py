@@ -104,6 +104,7 @@ def ensemble_summary( amoptd ):
         rstr += tableFormat.pprint_table( tdata )
     
     if amoptd.has_key('ensemble_results') and len( amoptd['ensemble_results'] ):
+        
         rstr += "\n---- Truncation Results ----\n\n"
         # Reconstruct trunction data
         for i, clusterEnsemble in enumerate( amoptd['ensemble_results'] ):
@@ -112,9 +113,14 @@ def ensemble_summary( amoptd ):
             nensembles = 0
             truncation_thresholds = {}
             
+            side_chain_treatments = []
             for ensemble in clusterEnsemble:
                 
                 nensembles += 1
+                
+                if ensemble.side_chain_treatment not in side_chain_treatments:
+                    side_chain_treatments.append( ensemble.side_chain_treatment )
+                
                 if ensemble.truncation_threshold not in truncation_thresholds.keys():
                     truncation_thresholds[ ensemble.truncation_threshold ] = ( ensemble.num_residues,
                                                                                { ensemble.radius_threshold : ensemble.num_models } )
@@ -125,10 +131,12 @@ def ensemble_summary( amoptd ):
             
             
             rstr += "\n"
-            tdata = [ ( "Truncation Threshold", "Num Residues", "Radius Treshold", "Num Models" ) ]
+            tdata = [ ( "Truncation Threshold (A)", "No. Residues", "Radius Threshold (A^2)", "No. Decoys" ) ]
+            raw_ensemble_count=0
             for threshold in sorted( truncation_thresholds.keys() ):
                 nresidues = truncation_thresholds[ threshold ][0] 
                 for i, radius in enumerate( sorted( truncation_thresholds[ threshold ][1].keys() ) ):
+                    raw_ensemble_count+=1
                     nmodels = truncation_thresholds[ threshold ][1][radius ]
                     if i == 0:
                         tdata.append( ( threshold, nresidues, radius, nmodels  ) )
@@ -137,8 +145,13 @@ def ensemble_summary( amoptd ):
                     
             rstr += tableFormat.pprint_table( tdata )
             
-            rstr += "\nGenerated {0} ensembles\n\n".format( nensembles )
-                
+            rstr += "\nGenerated {0} raw ensembles\n\n".format( raw_ensemble_count )
+            
+            rstr += "Each raw ensemble will be subject to the following {0} sidechain treatments: {1}\n\n".format( len(side_chain_treatments),  ", ".join(side_chain_treatments) )
+            rstr += "{0} ensembles in total have been generated\n\n".format( nensembles )
+            
+            assert raw_ensemble_count * len(side_chain_treatments) == nensembles, "Error generating correct number of ensembles!"
+            
     return rstr
 
             
