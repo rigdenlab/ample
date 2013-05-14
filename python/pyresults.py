@@ -20,6 +20,7 @@ def len_ensemble( epdb ):
     f = open( epdb, 'r' )
 
     nmodels = 0
+    residues = 0
     # Find where first model starts
     line = f.readline().strip()
     while line:
@@ -61,12 +62,15 @@ def len_ensemble( epdb ):
 
 #sys.exit()
 
-root="/gpfs/home/HCEA041/djr01/jxt15-djr01/TM"
 root="/home/Shared/TM"
+root="/gpfs/home/HCEA041/djr01/jxt15-djr01/TM"
 
 dirs = [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3TX3", "3U2F", "4DVE" ]
 dirs = [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]
-dirs = [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP",  "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]
+# Need to think about 3LBW
+#dirs = [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]
+#dirs = [ "2BL2" ]
+#dirs = [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP",  "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]
 #dirs = [ "1GU8", "2BHW", "2EVU", "2O9G", "2UUI", "2XOV", "3GD8", "3HAP",  "3RLB"]
 #dirs = [ "2WIE"]
 
@@ -84,11 +88,11 @@ with open( os.path.join(root, "misc/TM_Data.csv"), "r" ) as inputf:
         TMdict[ fields[0] ] = fields[1:]
 
 epkl = "ENSEMBLES_0/ensemble_results.pkl"
-mpkl = "ENSEMBLE_1_MOLREP_0/ensemble_results.pkl"
-ppkl = "ENSEMBLE_1_PHASER0/ensemble_results.pkl"
+bpkl = "ENSEMBLE_2_0/ample_results.pkl"
 
 logging.basicConfig()
 logging.getLogger().setLevel(logging.CRITICAL)
+#logging.getLogger().setLevel(logging.DEBUG)
 
 # Want
 # sizes of all spicker clusters (centroid model?)
@@ -103,14 +107,18 @@ logging.getLogger().setLevel(logging.CRITICAL)
 def qensemble(name, ensemble_results):
     """Get nmodels & nresidues for the given model form the ensemble results"""
     for r in ensemble_results:
-        if r.name == name:
+        #print "Checking {0} against {1}".format(name, r.name)
+        #print "Checking {0} against {1}".format(name[9:-6], r.name)
+        if r.name == name[9:-6]:
             # if only...
             #return r.num_models, r.num_residues
             # Horrible, but I got the nmodels wrong...            
             pdb = r.pdb
             s = pdb.split(os.sep)
             path =  os.path.join( root, os.sep.join( s[7:] ) )
+            #print "checking path ",path
             return len_ensemble( path )
+
 
 table = printTable.Table()
 
@@ -132,42 +140,26 @@ for tdir in dirs:
     clusters=clusters[:-1]
     print "Spicker clusters: "+clusters
     
-    # Take first cluster
-    eresults = rdict['ensemble_results'][0]
-    
-    #for e in eresults:
-    #    print e.num_models
+    # Take second cluster
+    eresults = rdict['ensemble_results'][1]
     
     # MRBUMP molrep
-    if os.path.exists( os.path.join( dpath, mpkl ) ):
-        pklf = open( os.path.join( dpath, mpkl ) )
+    #if False and os.path.exists( os.path.join( dpath, bpkl ) ):
+    if os.path.exists( os.path.join( dpath, bpkl ) ):
+        pklf = open( os.path.join( dpath, bpkl ) )
         rdict = cPickle.load( pklf  )
         pklf.close()
-        mrb_molrep = rdict['mrbump_results'][0]
+        mrb_results = rdict['mrbump_results'][0]
         # We changed things while doing this run
-        for i,res in enumerate(mrb_molrep):
-            mrb_molrep[i].name = res.name[9:-6]
+        for i,res in enumerate(mrb_results):
+            #mrb_results[i].name = res.name[9:-6]
+            pass
     else:
         # unfinished run
-        r = mrbump_results.ResultsSummary( os.path.join(dpath,"ENSEMBLE_1_MOLREP_0/MRBUMP/cluster_1"), cluster=False )
+        r = mrbump_results.ResultsSummary( os.path.join(dpath,"ENSEMBLE_2_0/MRBUMP/cluster_1") )
         #print r.summariseResults()
         r.extractResults()
-        mrb_molrep = r.results
-    
-    # MRBUMP phaser
-    if os.path.exists( os.path.join( dpath, ppkl ) ):
-        pklf = open( os.path.join( dpath, ppkl ) )
-        rdict = cPickle.load( pklf  )
-        pklf.close()
-        mrb_phaser = rdict['mrbump_results'][0]
-        # We changed things while doing this run
-        for i,res in enumerate(mrb_phaser):
-            mrb_phaser[i].name = res.name[9:-6]
-    else:
-        # unfinished run
-        r = mrbump_results.ResultsSummary( os.path.join(dpath,"ENSEMBLE_1_PHASER0/MRBUMP/cluster_1"), cluster=False )
-        r.extractResults()
-        mrb_phaser = r.results
+        mrb_results = r.results
     
     
     # Combine and resort
@@ -197,31 +189,9 @@ for tdir in dirs:
     resultsTable = []
     resultsTable.append( ("name", "MR_program", "Solution", "final_Rfact", "final_Rfree", "SHELXE_CC", "#Models", "#Residues") )
     
-    print "RESULTS FOR MOLREP"
-    for result in mrb_molrep:
+    for result in mrb_results:
         #name = result.name[9:-6]
-        nmodels, nresidues = qensemble( result.name, eresults)
-        rl = [ result.name,
-              result.program,
-              result.solution,
-              result.rfact,
-              result.rfree,
-              result.shelxCC,
-              nmodels,
-              nresidues
-              ]
-        resultsTable.append( rl )
-
-    
-    print table.pprint_table( resultsTable )
-    
-    resultsTable = []
-    resultsTable.append( ("name", "MR_program", "Solution", "final_Rfact", "final_Rfree", "SHELXE_CC", "#Models", "#Residues") )
-    
-    print "RESULTS FOR PHASER"
-    for result in mrb_phaser:
-        #name = result.name[9:-6]
-        nmodels, nresidues = qensemble( result.name, eresults)
+        (nmodels, nresidues) = qensemble( result.name, eresults)
         rl = [ result.name,
               result.program,
               result.solution,
