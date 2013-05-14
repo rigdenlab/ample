@@ -79,75 +79,91 @@ class ResultsSummary(object):
                            'shelxCC' ]
         
         self.logger = logging.getLogger()
+        
+    def _addFailedResults(self, failed, header):
+        """Add failures to self.results
+        
+        Args:
+        failed: dict of {ensemble : result}
+        header: list with header for results table
+        """
+        assert failed and header
+        
+        count=0
+        for ensemble, reason in failed.iteritems():
+            result = MrBumpResult()
+            # name hard-coded
+            result.name = "loc0_ALL_" + ensemble + "_UNMOD"
+            result.jobDir = os.path.join( self.mrbump_dir, 'search_'+ensemble+'_mrbump' )
+            result.header = header
+            result.solution = reason
+            self._getUnfinishedResult( result )
+            self.results.append( result )
+            count += 1
+        
+        self.logger.debug("Added {0} MRBUMP result failures".format(count) )
+        return
 
     def extractResults( self ):
         """
         Find the results from running MRBUMP and sort them
         """
 
-        # how we recognise a job directory
-        dir_re = re.compile("^search_.*_mrbump$")
-        jobDirs = []
-        #jobDirs = glob.glob( os.path.join( self.mrbump_dir, "search_*_mrbump" ) )
-        for adir in os.listdir( self.mrbump_dir ):
-            # REM only returns relative path
-            dpath = os.path.join( self.mrbump_dir, adir )
-            if dir_re.match( adir ) and os.path.isdir( dpath ):
-                jobDirs.append( dpath )
-        
-        if not len(jobDirs):
+        # Get a list of the ensembles (could get this from the amopt dictionary)
+        # For now we just use the submission scripts and assume all have .sub extension
+        ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( self.mrbump_dir, "*.sub") ) ]
+
+        if not len(ensembles):
             self.logger.warn("Could not extract any results from directory: {0}".format( self.mrbump_dir ) )
             return False
         
         # reset any results
         self.results = []
+        failed = {} # dict mapping failures to what went wrong - need to process at the end
         header = None
         nfields=None
-        for jobDir in jobDirs:
+        #for jobDir in jobDirs:
+        for ensemble in ensembles:
             
+            # Check job directory
+            jobDir = os.path.join( self.mrbump_dir, 'search_'+ensemble+'_mrbump' )
+            if not os.path.isdir(jobDir):
+                self.logger.critical("Missing job directory: {0}".format( jobDir ) )
+                failed[ ensemble ] = "no_job_directory"
+                continue
+
             self.logger.debug(" -- checking directory for results: {0}".format( jobDir ) )
-                        
+
             # Check if finished
             if not os.path.exists( os.path.join( jobDir, "results", "finished.txt" ) ):
                 self.logger.debug(" Found unfinished job: {0}".format( jobDir ) )
-                if header:
-                    result = MrBumpResult()
-                    result.jobDir = jobDir
-                    result.solution = "unfinished"
-                    result.header = header
-                    self.getUnfinishedResult( result )
-                    self.results.append( result )
-                else:
-                    self.logger.critical(" Cannot provide result for: {0}".format( jobDir ) )
+                failed[ ensemble ] = "unfinished"
                 continue
             
+            # Check resultsTable.dat
             resultsTable = os.path.join( jobDir,"results", "resultsTable.dat" )
             if not os.path.exists(resultsTable):
                 self.logger.debug(" -- Could not find file: {0}".format( resultsTable ) )
-                if header:
-                    result = MrBumpResult()
-                    result.jobDir = jobDir
-                    result.header = header
-                    result.solution = "no-resultsTable.dat"
-                    self.getUnfinishedResult( result )
-                    self.results.append( result )
-                else:
-                    self.logger.critical(" Cannot provide result for: {0}".format( jobDir ) )
+                failed[ ensemble ] = "missing-resultsTable.dat"
                 continue
+            
+            # Should have something viable, so create result object
+            result = MrBumpResult()
+            result.jobDir = jobDir
             
             firstLine = True
             # This maps the index of data field to the index of the columnTitle and resultAttr 
             fieldIndex = [ None ] * len( self.columnTitles )
             # Read results table to get the results
             for line in open(resultsTable):
+                
                 line = line.strip()
+                
                 if firstLine:
-                    firstLine=False
-                        
                     # Processing header
+                    firstLine=False
                     header = line.split()
                     nfields = len(header) # count as check
-                    herror=None
                     for i, f in enumerate( header ):
                         # Map the data fields to their titles
                         try:
@@ -157,22 +173,19 @@ class ResultsSummary(object):
                             self.logger.critical("jobDir {0}: Problem getting headerline: {1}".format( jobDir, line ) )
                             result.header = header
                             result.solution = "corrupted-header-resultsTable.dat"
-                            self.getUnfinishedResult( result )
+                            self._getUnfinishedResult( result )
                             self.results.append( result )
                             break
                     continue
                     # End header processing
-                
-                # Create result object
-                result = MrBumpResult()
                 result.header = header
-                result.jobDir = jobDir
                 
                 fields = line.split()
                 if len(fields) != nfields:
                     msg = "jobDir {0}: Problem getting dataline: {1}".format( jobDir, line )
+                    self.logger.debug(msg)
                     result.solution = "corrupted-data-resultsTable.dat"
-                    self.getUnfinishedResult( result )
+                    self._getUnfinishedResult( result )
                     self.results.append( result )
                     break
                 
@@ -200,37 +213,45 @@ class ResultsSummary(object):
                 #print resultDir
                 result.resultDir = resultDir
                 self.results.append( result )
+
+        if not len(header):
+            self.logger.warn("Could not extract any results from directory - no header: {0}".format( self.mrbump_dir ) )
+            return False
+
+        # Process the failed results
+        if failed:
+            self._addFailedResults( failed, header )
                 
         if not len(self.results):
             self.logger.warn("Could not extract any results from directory: {0}".format( self.mrbump_dir ) )
             return False
-        
+
         # Sort the results
         self.sortResults()
         
         return True
     
-    def getUnfinishedResult(self, result ):
+    def _getUnfinishedResult(self, result ):
         """Return a result for an unfinished job"""
         
-        
-        # Use directory name for job name
-        dlist = os.listdir( os.path.join( result.jobDir, "data") )
-        if len( dlist ) != 1:
-            # something has gone really wrong...
-            # Need to work out name from MRBUMP directory structure - search_poly_ala_trunc_6.344502_rad_3_phaser_mrbump
-            dname = os.path.basename(result.jobDir)[7:-7]
-            # Horrible - check if we were run with split_mr - in which case _phaser or _molrep are appended to the name
-            if dname.endswith("_molrep") or dname.endswith("_phaser"):
-                dname = dname[:-7]
-            # Add loc0_ALL_ and append _UNMOD. shudder...
-            result.name = "loc0_ALL_" + dname + "_UNMOD"
-            result.solution = "ERROR"
-        else:
-            # Use dirname but remove "loc0_ALL_" from front
-            #result.name = os.path.basename( dlist[0] )[9:]
-            # Use dirname but add "_UNMOD" to back
-            result.name = os.path.basename( dlist[0] )+"_UNMOD"
+        if not result.name:
+            # Use directory name for job name
+            dlist = os.listdir( os.path.join( result.jobDir, "data") )
+            if len( dlist ) != 1:
+                # something has gone really wrong...
+                # Need to work out name from MRBUMP directory structure - search_poly_ala_trunc_6.344502_rad_3_phaser_mrbump
+                dname = os.path.basename(result.jobDir)[7:-7]
+                # Horrible - check if we were run with split_mr - in which case _phaser or _molrep are appended to the name
+                if dname.endswith("_molrep") or dname.endswith("_phaser"):
+                    dname = dname[:-7]
+                # Add loc0_ALL_ and append _UNMOD. shudder...
+                result.name = "loc0_ALL_" + dname + "_UNMOD"
+                result.solution = "ERROR"
+            else:
+                # Use dirname but remove "loc0_ALL_" from front
+                #result.name = os.path.basename( dlist[0] )[9:]
+                # Use dirname but add "_UNMOD" to back
+                result.name = os.path.basename( dlist[0] )+"_UNMOD"
 
         result.program = "unknown"
         result.rfact = -1
