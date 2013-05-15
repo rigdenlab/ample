@@ -347,8 +347,23 @@ if not ( os.path.exists(str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d[
 # Reformat to what we need    
 logger.debug('Parsing FASTA file')
 outfasta = os.path.join( amopt.d['work_dir'], amopt.d['pdb_code'] + '_.fasta')
-fasta_parser.parse_fasta( amopt.d['fasta'], outfasta )
+fp = fasta_parser.FastaParser()
+fp.reformat_fasta( amopt.d['fasta'], outfasta )
 amopt.d['fasta'] = outfasta
+amopt.d['fasta_length'] = fp.length
+logger.info( "Fasta is {0} amino acids long".format( amopt.d['fasta_length'] ) )
+
+# Check we have a decent length
+if amopt.d['fasta_length'] < 9:
+    msg = "Fasta is of length {0}. Please check this is correct".format( amopt.d['fasta_length'] )
+    logger.critical(msg)
+    sys.exit(1)   
+
+# Check we will be able to truncate at this level
+if ( float( amopt.d['fasta_length'] ) / 100 ) * float( amopt.d['percent'] ) < 1:
+    msg = "Cannot truncate a fasta sequence of length {0} with {1} percent intervals. Please select a larger interval.".format( amopt.d['fasta_length'], amopt.d['percent'] )
+    logger.critical(msg)
+    sys.exit(1)
     
 # Check if importing ensembles
 amopt.d['import_ensembles'] = False
@@ -493,7 +508,7 @@ if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
     try:
         t_flag_F, t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( amopt.d['mtz'] )
     except Exception,e:
-        logger.critical("Error generating flags from MTZ file: {0}\n{1}\n\nYou may need to run the CCP4 uniqueify on the MTZ file".format(amopt.d['mtz'],e) )
+        logger.critical("Error generating flags from MTZ file: {0}\n{1}\n\nDo you need to run the CCP4 uniqueify program on the MTZ file?".format(amopt.d['mtz'],e) )
         sys.exit(1)
     
 if not amopt.d['F']:
@@ -504,8 +519,6 @@ if not amopt.d['SIGF']:
     
 if not amopt.d['FREE']:
     amopt.d['FREE'] = t_flag_FREE
-
-sys.exit(1)
 
 # Print out what is being done
 if amopt.d['use_buccaneer']:
@@ -546,8 +559,6 @@ f.write( param_str )
 f.close()
 # Echo to log too
 logger.debug( param_str )
-
-sys.exit(1)
 
 #######################################################
 #
