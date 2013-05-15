@@ -21,26 +21,23 @@ AMPLEDIR=/opt/ample-dev1
 export PYTHONPATH=${AMPLEDIR}/python:$PYTHONPATH
 
 ${AMPLEDIR}/bin/ample \
+      -rosetta_dir $ROSETTA_DIR \
+      -run_dir $PWD \
       -fasta ${PWD}/toxd_.fasta \
       -mtz ${PWD}/1dtx.mtz \
       -name TOXD \
+      -make_frags False \
       -frags_3mers ${PWD}/aat000_03_05.200_v1_3 \
       -frags_9mers ${PWD}/aat000_09_05.200_v1_3 \
-      -rosetta_dir $ROSETTA_DIR \
-      -run_dir $PWD \
-      -make_frags False \
-      -submit_cluster False \
-      -shelx_cycles 10 \
       -nmodels 30 \
-      -early_terminate True  \
       -percent 50 \
       -use_shelxe True \
+      -shelx_cycles 10 \
       -use_arpwarp False \
       -use_buccaneer False \
       -molrep_only True \
       -nproc 5 \
-      -all_atom True \
       -num_clusters 1 \
 
-      #-models ${AMPLEDIR}/examples/toxd-example/ROSETTA_MR_0/models \
-      #-ensembles ${AMPLEDIR}/examples/toxd-example/ROSETTA_MR_0/ensembles_1 \
+      #-models_dir ${AMPLEDIR}/examples/toxd-example/ROSETTA_MR_0/models \
+      #-ensembles_dir ${AMPLEDIR}/examples/toxd-example/ROSETTA_MR_0/ensembles_1 \
