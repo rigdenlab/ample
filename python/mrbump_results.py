@@ -122,9 +122,8 @@ class ResultsSummary(object):
         failed = {} # dict mapping failures to what went wrong - need to process at the end
         header = None
         nfields=None
-        #for jobDir in jobDirs:
         for ensemble in ensembles:
-            
+
             # Check job directory
             jobDir = os.path.join( self.mrbump_dir, 'search_'+ensemble+'_mrbump' )
             if not os.path.isdir(jobDir):
@@ -214,7 +213,7 @@ class ResultsSummary(object):
                 result.resultDir = resultDir
                 self.results.append( result )
 
-        if not len(header):
+        if not header or not len(header):
             self.logger.warn("Could not extract any results from directory - no header: {0}".format( self.mrbump_dir ) )
             return False
 
