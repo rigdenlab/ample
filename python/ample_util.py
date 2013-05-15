@@ -78,21 +78,19 @@ def check_for_exe(exename, varname):
     logger.debug('Looking for executable: {0}'.format(exename) )
     
     if varname:
-         logger.debug( 'Using executable path from command-line {0}'.format(varname) )
-         exepath = which(varname)
-         if not exepath:
-             msg = "Cannot find valid executable from given path: {0}".format(varname)
-             logger.critical(msg)
-             raise RuntimeError.msg
+        logger.debug( 'Using executable path from command-line {0}'.format(varname) )
+        exepath = which(varname)
+        if not exepath:
+            msg = "Cannot find valid {0} executable from given path: {1}".format(exename,varname)
+            logger.critical(msg)
+            raise RuntimeError,msg
     else:
-        logger.debug( 'No {0} given on the command line, looking in PATH'.format(exename) )
+        logger.debug( 'No path for {0} given on the command line, looking in PATH'.format(exename) )
         exepath = which(exename)
         if not exepath:
-            msg = "Cannot find valid executable from given path: {0}".format(varname)
+            msg = "Cannot find executable {0} in PATH. Please give the path to {0}".format(exename)
             logger.critical(msg)
-            raise RuntimeError.msg
-            logger.critical('You need to give the path for: {0}'.format(exename) )
-            sys.exit()
+            raise RuntimeError,msg
 
     logger.debug( "Using executable {0}".format( exepath ) )
     return exepath
@@ -116,12 +114,20 @@ def get_mtz_flags( mtzfile ):
     # Extract column data
     md.getColumnData()
     
-    F =  md.colLabels['F']
-    SIGF =  md.colLabels['SIGF']
-    FREE =  md.colLabels['FREE']
-
-    return (F, SIGF, FREE)
+    try:
+        F =  md.colLabels['F']
+    except KeyError:
+        raise RuntimeError,"Cannot find column label: {0} in MTZ file".format('F')
+    try:
+        SIGF =  md.colLabels['SIGF']
+    except KeyError:
+        raise RuntimeError,"Cannot find column label: {0} in MTZ file".format('SIGF')
+    try:
+        FREE =  md.colLabels['FREE']
+    except KeyError:
+        raise RuntimeError,"Cannot find column label: {0} in MTZ file".format('FREE')
     
+    return (F, SIGF, FREE)
     
 ##End get_mtz_flags
 
