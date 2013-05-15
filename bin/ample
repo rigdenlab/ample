@@ -491,11 +491,12 @@ if amopt.d['ensembler']:
 else:
     amopt.d['theseus_exe'] = ample_util.check_for_exe('theseus', amopt.d['theseus_exe'])
 
-if amopt.d['use_scwrl']:
-    amopt.d['scwrl_exe'] = ample_util.check_for_exe('Scwrl4', amopt.d['scwrl_exe'] )
-
 amopt.d['maxcluster_exe'] = ample_util.check_for_exe('maxcluster', amopt.d['maxcluster_exe'])
 amopt.d['spicker_exe'] = ample_util.check_for_exe('spicker', amopt.d['spicker_exe'])
+if amopt.d['use_scwrl']:
+    amopt.d['scwrl_exe'] = ample_util.check_for_exe('Scwrl4', amopt.d['scwrl_exe'] )
+if amopt.d['use_shelxe']:
+    amopt.d['shelxe_exe'] = ample_util.check_for_exe('shelxe', amopt.d['shelxe_exe'])
 
 # Check if we need to get any of the flags from the MTZ file
 if not os.path.isfile( amopt.d['mtz'] ):
