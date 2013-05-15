@@ -131,7 +131,7 @@ def ensemble_summary( amoptd ):
             
             
             rstr += "\n"
-            tdata = [ ( "Truncation Threshold (A)", "No. Residues", "Radius Threshold (A^2)", "No. Decoys" ) ]
+            tdata = [ ( "Truncation Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys" ) ]
             raw_ensemble_count=0
             for threshold in sorted( truncation_thresholds.keys() ):
                 nresidues = truncation_thresholds[ threshold ][0] 
