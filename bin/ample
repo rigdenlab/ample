@@ -24,7 +24,6 @@ import os
 import sys
 
 # Test for environment variables
-
 if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
@@ -37,7 +36,6 @@ import clusterize
 import cPickle
 import glob
 import logging
-import shutil
 import time
 
 # Our imports
@@ -101,8 +99,8 @@ parser.add_argument('-early_terminate', metavar='early_terminate', type=str, nar
 parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
                    help='ensembling')
 
-parser.add_argument('-ensembles', metavar='enembles', type=str, nargs=1,
-                   help='path to ensembles')
+parser.add_argument('-ensembles_dir', metavar='ensembles_dir', type=str, nargs=1,
+                   help='path to directory containing existing ensembles')
 
 parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
                    help='protein fasta file. (required)')
@@ -354,58 +352,64 @@ amopt.d['fasta'] = outfasta
     
 # Check if importing ensembles
 amopt.d['import_ensembles'] = False
-if amopt.d['ensembles']:
-    if not os.path.isdir( amopt.d['ensembles'] ):
-        msg = "Trying to import ensembles from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['ensembles'])
+if amopt.d['ensembles_dir']:
+    msg=None
+    if not os.path.isdir( amopt.d['ensembles_dir'] ):
+        msg = "Trying to import ensembles from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['ensembles_dir'])
+    elif not len( glob.glob( os.path.join( amopt.d['ensembles_dir'], "*.pdb" ) ) ):
+        msg = "Trying to import ensembles from the directory:\n{0}\nBut cannot find any pdb files!".format(amopt.d['ensembles_dir'])
+    if msg:
         logger.critical(msg)
         sys.exit(1)
 
     amopt.d['import_ensembles'] = True
-    logger.info("Found directory with ensemble files: {0}\nSetting make_models to False".format( amopt.d['ensembles'] ) )
+    logger.info("Found directory with ensemble files: {0}\nSetting make_models to False".format( amopt.d['ensembles_dir'] ) )
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
     
 # Check if importing models
 amopt.d['import_models'] = False
 if amopt.d['models_dir']:
+    msg=None
     if not os.path.isdir( amopt.d['models_dir'] ):
         msg = "Trying to import models from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['models_dir'])
+    elif not len( glob.glob( os.path.join( amopt.d['models_dir'], "*.pdb" ) ) ):
+        msg = "Trying to import models from the directory:\n{0}\nBut cannot find any pdb files!".format(amopt.d['models_dir'])
+    if msg:
         logger.critical(msg)
         sys.exit(1)
     
     amopt.d['import_models'] = True
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
-else:
-    if amopt.d['make_models']:
-        # Create the models_dir
-        amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
-        os.mkdir( amopt.d['models_dir'] ) 
+
+if amopt.d['make_models']:
+    # Create the models_dir
+    amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
+    os.mkdir( amopt.d['models_dir'] ) 
+    # If the user has given both fragment files we check they are ok and unset make_frags
+    if amopt.d['frags_3mers'] and amopt.d['frags_9mers']:
+        if not os.path.isfile( amopt.d['frags_3mers'] ) or not os.path.isfile( amopt.d['frags_9mers'] ):
+            msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format( amopt.d['frags_3mers'], amopt.d['frags_9mers'] )   
+            logger.critical(msg)
+            sys.exit(1)
+        amopt.d['make_frags'] = False
+    
+    if amopt.d['make_frags'] and (  amopt.d['frags_3mers'] or  amopt.d['frags_9mers'] ):
+        msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
+        logger.critical(msg)
+        sys.exit(1)
+    
+    if not amopt.d['make_frags'] and not (  amopt.d['frags_3mers'] and  amopt.d['frags_9mers'] ):
+        msg = "make_frags set to false, but you have not given the paths to the frags_3mers or frags_9mers"
+        logger.critical(msg)
+        sys.exit(1)   
 
 # Check models and ensembles
 if amopt.d['import_ensembles'] and amopt.d['import_models']:
         msg = "Cannot import both models and ensembles!"
         logger.critical(msg)
         sys.exit(1)
-
-# If the user has given both fragment files we check they are ok and unset make_frags
-if amopt.d['frags_3mers'] and amopt.d['frags_9mers']:
-    if not os.path.isfile( amopt.d['frags_3mers'] ) or not os.path.isfile( amopt.d['frags_9mers'] ):
-        msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format( amopt.d['frags_3mers'], amopt.d['frags_9mers'] )   
-        logger.critical(msg)
-        sys.exit(1)
-    amopt.d['make_frags'] = False
-    
-if amopt.d['make_frags'] and (  amopt.d['frags_3mers'] or  amopt.d['frags_9mers'] ):
-    msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
-    logger.critical(msg)
-    sys.exit(1)
-    
-if not amopt.d['make_frags'] and not (  amopt.d['frags_3mers'] and  amopt.d['frags_9mers'] ):
-    msg = "make_frags set to false, but you have not given the paths to the frags_3mers or frags_9mers"
-    logger.critical(msg)
-    sys.exit(1)   
-
 
 # NMR Checks
 NMR_PROTOCOL = False
@@ -429,8 +433,8 @@ if amopt.d['NMR_model_in']:
 if not  NMR_PROTOCOL :
     if amopt.d['import_models'] and not os.path.exists(amopt.d['models_dir']):
         logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + amopt.d['models_dir'])
-        if not os.path.exists(amopt.d['ensembles']):
-            logger.warn('you have chosen to import ensembles, but path does not exist : ' + amopt.d['ensembles'])
+        if not os.path.exists(amopt.d['ensembles_dir']):
+            logger.warn('you have chosen to import ensembles, but path does not exist : ' + amopt.d['ensembles_dir'])
             if amopt.d['import_cluster']:
                 logger.info('you are importing a cluster of models from :' + amopt.d['import_cluster'])
                 if not os.path.exists(amopt.d['import_cluster']):
@@ -488,8 +492,8 @@ if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
     logger.info("Determining MTZ flags using mtzdump from file: {0}".format( amopt.d['mtz'] ) )
     try:
         t_flag_F, t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( amopt.d['mtz'] )
-    except KeyError,e:
-        logger.critical("Error generating flags from MTZ file: {0}\n{1}\nYou may need to run the CCP4 uniqueify on the MTZ file".format(amopt.d['mtz'],e) )
+    except Exception,e:
+        logger.critical("Error generating flags from MTZ file: {0}\n{1}\n\nYou may need to run the CCP4 uniqueify on the MTZ file".format(amopt.d['mtz'],e) )
         sys.exit(1)
     
 if not amopt.d['F']:
@@ -501,6 +505,7 @@ if not amopt.d['SIGF']:
 if not amopt.d['FREE']:
     amopt.d['FREE'] = t_flag_FREE
 
+sys.exit(1)
 
 # Print out what is being done
 if amopt.d['use_buccaneer']:
@@ -541,6 +546,8 @@ f.write( param_str )
 f.close()
 # Echo to log too
 logger.debug( param_str )
+
+sys.exit(1)
 
 #######################################################
 #
@@ -607,7 +614,7 @@ if amopt.d['make_models']:
 elif amopt.d['import_models']:
     msg = '\nImporting models from directory:\n   ' + amopt.d['models_dir'] + '\n\n'
 elif amopt.d['import_ensembles']:
-    msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles'] + '\n\n'
+    msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
 
     
 RUNNING.write(msg)
@@ -632,9 +639,9 @@ if amopt.d['import_cluster']:
                                                        amopt.d['percent'] )
 
         os.system('mkdir ' + amopt.d['work_dir'] + '/ensembles_1')
-        for each_ens in list_of_ensembles:
-            SCWRL_edit.edit_sidechains(each_ens, amopt.d['work_dir'] + '/ensembles_1/')
-        sys.exit()
+        #for each_ens in list_of_ensembles:
+        #    pdb_edit.edit_sidechains(each_ens, amopt.d['work_dir'] + '/ensembles_1/')
+        #sys.exit()
 
 #---------------------------------------
 # Do the clustering
@@ -653,9 +660,9 @@ if amopt.d['import_ensembles']:
     # Importing pre-made ensembles
     #---------------------------------------
     # Set list of ensembles to the one we are importing
-    logger.info("Importing existing ensembles from: {0}".format( amopt.d['ensembles'] ) )
+    logger.info("Importing existing ensembles from: {0}".format( amopt.d['ensembles_dir'] ) )
     final_ensembles = []
-    for infile in glob.glob(os.path.join(amopt.d['ensembles'], '*.pdb')):
+    for infile in glob.glob(os.path.join(amopt.d['ensembles_dir'], '*.pdb')):
         final_ensembles.append(infile)
 
     if amopt.d['top_model_only']:
@@ -685,6 +692,12 @@ else:
         f.close()
     else:
         ensemble.create_ensembles( amopt.d )
+
+    # Check we have something to work with
+    if not amopt.d.has_key('ensemble_results') or not len( amopt.d['ensemble_results'] ):
+        msg = "Could not load any ensembles after running create_ensembles!"
+        logger.critical( msg )
+        sys.exit(1)
     
     # Extract list of pdbs from ensemble results
     for eresult in amopt.d['ensemble_results']:

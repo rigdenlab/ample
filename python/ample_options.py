@@ -30,7 +30,7 @@ class AmpleOptions(object):
                             'domain_termini_distance' : 0,
                             'early_terminate' : True,
                             'ensembler' : False,
-                            'ensembles' : None,
+                            'ensembles_dir' : None,
                             'F' : None,
                             'fasta' : None,
                             'frags_3mers' : None,
