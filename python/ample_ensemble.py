@@ -228,6 +228,10 @@ class Ensembler(object):
         
         
         percent_interval=( float(length)/100 ) *float(self.percent)
+        if percent_interval < 1:
+            msg = "Error generating thresholds, got > 1 AA in percent_interval"
+            logging.critical(msg)
+            raise RuntimeError,msg
 #        lowest=min(var_list)
 #        highest=max(var_list)
 #        print length
