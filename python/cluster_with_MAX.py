@@ -6,7 +6,136 @@ import ample_util
 import logging
 import re
 import os
-import subprocess
+
+
+class MaxClusterer(object):
+    """Class to cluster files with maxcluster"""
+    
+    def __init__(self, maxcluster_exe ):
+        
+        self.maxcluster_exe = maxcluster_exe
+        self.distance_matrix = None
+        self.index2pdb = []
+        
+        return
+    
+    def generate_distance_matrix(self, pdb_list ):
+        """Run maxcluster to generate the distance distance_matrix"""
+        
+        
+        cur_dir = os.getcwd()
+        
+        no_models = len( pdb_list )
+        if not no_models:
+            msg = "generate_distance_matrix got empty pdb_list!"
+            logging.critical( msg )
+            raise RuntimeError, msg
+        
+        self.index2pdb=[0]*no_models
+    
+        # Maxcluster arguments
+        # -l [file]   File containing a list of PDB model fragments
+        # -L [n]      Log level (default is 4 for single MaxSub, 1 for lists)
+        # -d [f]      The distance cut-off for search (default auto-calibrate)
+        # -bb         Perform RMSD fit using backbone atoms
+        #     -C [n]      Cluster method: 0 - No clustering
+        # -rmsd ???
+        #os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
+        #print 'MAX Done'
+        
+        # Create the list of files for maxcluster
+        fname = os.path.join( cur_dir, "files.list" )
+        f = open( fname, 'w' )
+        f.write( "\n".join( pdb_list )+"\n" )
+        f.close()
+            
+        #log_name = "maxcluster_radius_{0}.log".format(radius)
+        log_name = "maxcluster.log"
+        cmd = [ self.maxcluster_exe, "-l", fname, "-L", "4", "-rmsd", "-d", "1000", "-bb", "-C0" ]
+        retcode = ample_util.run_command( cmd, logfile=log_name )
+        
+        if retcode != 0:
+            msg = "non-zero return code for maxcluster in generate_distance_matrix!"
+            logging.critical( msg )
+            raise RuntimeError, msg
+        
+        # Create a square distance_matrix no_models in size filled with zeros
+        self.distance_matrix =  [[0 for col in range(no_models)] for row in range(no_models)]
+    
+        #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
+        #max_log = open(cur_dir+'/MAX_LOG')
+        max_log = open( log_name, 'r')
+        pattern = re.compile('INFO  \: Model')
+        for line in max_log:
+            if re.match(pattern, line):
+    
+                # Split so that we get a list with
+                # 0: model 1 index
+                # 1: path to model 1 without .pdb suffix
+                # 2: model 2 index
+                # 3: path to model 2 without .pdb suffix
+                # 4: distance metric
+                split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
+                #print split
+        #         int(split[3])
+    
+            # print split[1], split[3], split[5]
+                self.distance_matrix[  int(split[1]) -1 ][  int(split[3]) -1]  = split[5]
+    
+                if split[2]+'.pdb' not  in self.index2pdb:
+                    self.index2pdb[int(split[1]) -1]  =  split[2]+'.pdb'
+    
+                if split[4]+'.pdb' not  in self.index2pdb:
+                    self.index2pdb[int(split[3]) -1]  =  split[4]+'.pdb'
+    
+        x = 0
+        while x < len(self.distance_matrix):
+            y = 0
+            while y < len(self.distance_matrix):
+                self.distance_matrix[y][x] = self.distance_matrix [x][y]
+                y+=1
+            x+=1
+            
+        return
+
+    def cluster_by_radius(self, radius):
+        """Return a list of pdbs clustered by the given radius"""
+        
+        cluster = []
+        cluster_indices = self._get_indices_from_distances( radius )
+        for index in cluster_indices:
+            cluster.append( self.index2pdb[index] )
+        
+        return cluster
+    
+    def _get_indices_from_distances( self, radius ):
+        """Return the indices of the pdb files when clustering by radius"""
+    
+        #print len(matrix)
+        matrix_line = 0
+        best_cluster=[]
+        largest = 0
+    
+        while matrix_line<len(self.distance_matrix):
+            cluster=0
+            current_cluster_models = []
+    
+            each_model = 0
+    
+            while each_model < len(self.distance_matrix[matrix_line]):
+                if float(self.distance_matrix[matrix_line][each_model])<radius:
+                    current_cluster_models.append(each_model)
+                    cluster+=1
+                each_model+=1
+        # print 'MODEL ', matrix_line+1, cluster
+            if len(current_cluster_models) > largest:
+                largest = len(current_cluster_models)
+                best_cluster = current_cluster_models
+    
+            matrix_line +=1
+    
+        # print 'BEST ', best_cluster
+        return best_cluster
 
 ###########################################
 def get_clusters_from_distances(matrix, radius):
@@ -254,6 +383,30 @@ def cluster_with_MAX(string, radius, MAX, no_models):
     #for l in largest_models:
     #        print l
     return largest_models
+
+if __name__ == "__main__":
+    
+    maxcluster_exe = "/Users/jmht/Documents/AMPLE/programs/maxcluster"
+    radius = 0.5
+    fname = "/Users/jmht/Documents/AMPLE/ample-dev1/examples/toxd-example/ROSETTA_MR_0/fine_cluster_1/trunc_files_0.308182/files.list"
+    
+    clusterer = MaxClusterer( maxcluster_exe )
+    pdb_list = [ f.strip() for f in open( fname ) ]
+    clusterer.generate_distance_matrix( pdb_list )
+    cluster_files1 = clusterer.cluster_by_radius( 3 )
+    cluster_files1 = clusterer.cluster_by_radius( 2 )
+    cluster_files1 = clusterer.cluster_by_radius( radius )
+    print cluster_files1
+    
+    cluster_files2 = cluster_with_MAX_FAST( fname, radius, maxcluster_exe )
+    print cluster_files2
+    
+    for f in cluster_files1:
+        if f not in cluster_files2:
+            print "MISSING ",f
+            
+    if len(cluster_files1) != len(cluster_files2):
+        print "WRONG LENGTH"
 
 ###################
 #string ='/home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/8_S_00000002.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/8_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/2_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/5_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/1_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/3_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/8_S_00000003.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/4_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/7_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/6_S_00000001.pdb'

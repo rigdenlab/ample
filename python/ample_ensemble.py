@@ -5,21 +5,16 @@ Created on Apr 18, 2013
 '''
 
 import copy
-import cPickle
 import logging
 import os
 import re
 import shutil
-import sys
 import types
-
 
 # our imports
 import ample_util
 import cluster_with_MAX
 import pdb_edit
-import printTable
-import run_spicker
 
 class EnsembleData(object):
     """Class to hold data about an ensemble"""
@@ -194,7 +189,11 @@ class Ensembler(object):
         #--------------------------------
         cmd = [ self.theseus_exe, "-a0" ] + self.cluster_models
         retcode = ample_util.run_command( cmd, logfile="theseus.log" )
-    
+        if retcode != 0:
+            msg = "non-zero return code for theseus in generate_thresholds!"
+            logging.critical( msg )
+            raise RuntimeError, msg
+
         # print theseus_out
         self.variance_log = os.path.join( self.work_dir, 'theseus_variances.txt' )
         theseus_out = open( self.variance_log  )
@@ -229,7 +228,7 @@ class Ensembler(object):
         
         percent_interval=( float(length)/100 ) *float(self.percent)
         if percent_interval < 1:
-            msg = "Error generating thresholds, got > 1 AA in percent_interval"
+            msg = "Error generating thresholds, got < 1 AA in percent_interval"
             logging.critical(msg)
             raise RuntimeError,msg
 #        lowest=min(var_list)
@@ -308,11 +307,9 @@ class Ensembler(object):
             truncation_dir = self.truncation_dirs[tcount]
             os.chdir( truncation_dir )
             
-            # Create the list of files for maxcluster            
-            fname = os.path.join( truncation_dir, "files.list" )
-            f = open( fname, 'w' )
-            f.write( "\n".join( self.truncated_models[tcount] )+"\n" )
-            f.close()
+            # Run maxcluster to generate the distance matrix
+            clusterer = cluster_with_MAX.MaxClusterer( self.maxcluster_exe )
+            clusterer.generate_distance_matrix( self.truncated_models[tcount] )
     
             # Loop through the radius thresholds
             num_previous_models=-1 # set to -1 so comparison always false on first pass
@@ -320,19 +317,17 @@ class Ensembler(object):
                 
                 logging.debug("Clustering files under radius: {0}".format( radius ) )
                 
-                ensemble_dir = os.path.join( truncation_dir, 'fine_clusters_'+str(radius)+'_ensemble' )
-                os.mkdir( ensemble_dir )
-                os.chdir( ensemble_dir )
-        
-                # A list of the files that have been clustered together with maxcluster
-                # NB - FIXME! we dont' need to run maxcluster each time. We should just run it once for each truncation threshold
-                # and output the distance matrix (using the -R flag) and then read this in and generate the clusters for 
-                # each radius threshold
-                cluster_files = cluster_with_MAX.cluster_with_MAX_FAST( fname, radius, self.maxcluster_exe )  # use fastest method
+                # Get list of pdbs clustered according to radius threshold
+                cluster_files = clusterer.cluster_by_radius( radius )
                 logging.debug("Maxcluster clustered {0} files".format ( len( cluster_files ) ) )
                 if cluster_files < 2:
                     logging.info( 'Could not cluster files using radius {0}'.format( radius ) )
                     continue
+                
+                # Got files so create the directories
+                ensemble_dir = os.path.join( truncation_dir, 'fine_clusters_'+str(radius)+'_ensemble' )
+                os.mkdir( ensemble_dir )
+                os.chdir( ensemble_dir )
                 
                 # Write out the files for reference
                 file_list = "maxcluster_radius_{0}_files.list".format( radius )
@@ -361,23 +356,23 @@ class Ensembler(object):
                 # Run theseus to generate a file containing the aligned clusters
                 cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files
                 retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
-                
+                if retcode != 0:
+                    logging.info( 'Could not create ensemble for files (models too diverse): {0}'.format( ensemble_file ) )
+                    continue
+               
+                #if not os.path.exists( cluster_file ):
+                #    logging.info( 'Could not create ensemble for files (models too diverse): {0}'.format( ensemble_file ) )
+                #    continue
+
                 # jmht - the previous Align_rosetta_fine_clusters_with_theseus routine was running theseus twice and adding the averaged
                 # ensemble from the first run to the ensemble. This seems to improve the results for the TOXD test case - maybe something to
                 # look at?
                 #cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files + [ basename+"run1_ave.pdb" ]
                 #retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
                 
-                # Check if theseus worked and if so rename the file with the aligned files and append the path to the ensembles
+                # Rename the file with the aligned files and append the path to the ensembles
                 cluster_file = os.path.join(  ensemble_dir, basename+'_sup.pdb' )
                 ensemble_file = os.path.join( ensemble_dir, basename+'.pdb' )
-        
-                #same from here     
-                if not os.path.exists( cluster_file ):
-                    logging.info( 'Could not create ensemble for files (models too diverse): {0}'.format( ensemble_file ) )
-                    continue
-
-                # Rename the file                
                 shutil.move( cluster_file, ensemble_file )
                 
                 # Generate the ensemble
