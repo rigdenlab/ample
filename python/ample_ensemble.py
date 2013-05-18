@@ -316,14 +316,25 @@ class Ensembler(object):
             for radius in self.radius_thresholds:
                 
                 logging.debug("Clustering files under radius: {0}".format( radius ) )
-                
+            
                 # Get list of pdbs clustered according to radius threshold
                 cluster_files = clusterer.cluster_by_radius( radius )
                 logging.debug("Maxcluster clustered {0} files".format ( len( cluster_files ) ) )
                 if cluster_files < 2:
                     logging.info( 'Could not cluster files using radius {0}'.format( radius ) )
                     continue
+
+                # For naming all files
+                basename='trunc_{0}_rad_{1}'.format( truncation_threshold, radius ) 
                 
+                # Check if there are the same number of models in this ensemble as the previous one - if so
+                # the ensembles will be identical and we can skip this one
+                if num_previous_models == len( cluster_files ):
+                    logging.info( 'Number of decoys in cluster ({0}) is the same as under previous threshold so excluding cluster {1}'.format( len( cluster_files ), basename ) )
+                    continue
+                else:
+                    num_previous_models = len( cluster_files )
+
                 # Got files so create the directories
                 ensemble_dir = os.path.join( truncation_dir, 'fine_clusters_'+str(radius)+'_ensemble' )
                 os.mkdir( ensemble_dir )
@@ -337,27 +348,16 @@ class Ensembler(object):
                 f.write("\n")
                 f.close()
                 
-                # For naming all files
-                basename='trunc_{0}_rad_{1}'.format( truncation_threshold, radius ) 
-                
-                # Check if there are the same number of models in this ensemble as the previous one - if so
-                # the ensembles will be identical and we can skip this one
-                if num_previous_models == len( cluster_files ) and len( cluster_files ) < self.max_ensemble_models:
-                    logging.info( 'Number of decoys in cluster ({0}) is the same as under previous threshold so excluding cluster {1}'.format( len( cluster_files ), basename ) )
-                    continue
-                else:
-                    num_previous_models = len( cluster_files )
-                    
                 # Restrict cluster to self.max_ensemble_models
                 if len( cluster_files ) > self.max_ensemble_models:
-                    logging.debug("{0} files in cluster so truncating list to first {0}".format( len( cluster_files ), self.max_ensemble_models)  )
+                    logging.debug("{0} files in cluster so truncating list to first {0}".format( len( cluster_files ), self.max_ensemble_models) )
                     cluster_files = cluster_files[ :self.max_ensemble_models ]
-                    
+                
                 # Run theseus to generate a file containing the aligned clusters
                 cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files
                 retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
                 if retcode != 0:
-                    logging.info( 'Could not create ensemble for files (models too diverse): {0}'.format( ensemble_file ) )
+                    logging.info( 'Could not create ensemble for files (models too diverse): {0}'.format( basename ) )
                     continue
                
                 #if not os.path.exists( cluster_file ):
