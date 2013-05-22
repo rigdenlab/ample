@@ -8,7 +8,7 @@ import os, glob
 import sys
 import subprocess
 import time
-import pp
+#import pp
 #import threading
 from multiprocessing import Process, Queue, JoinableQueue
 

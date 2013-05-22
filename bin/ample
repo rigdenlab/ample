@@ -1,312 +1,166 @@
 #!/usr/bin/env python
 
-#
-#  Version 0.1  
-#  no speed buffs, no extra functionality, no optimisation
-#  Basic Pipeline
-#  for multi core desktops, not clusters
+"""
+Version 0.1
+no speed buffs, no extra functionality, no optimisation
+Basic Pipeline
+for multi core desktops, not clusters
 
-# issues:
-# 1) if this script is killed, the rosetta will continue
-# 2) Theseus can hang, this is killed after a timeout 
-# 3) is clustered by all atom RMSD to make fine clusters (option to cluster by CA only i included)
-# 4) ASU content is the number of search models placed by MrBUMP. -- need to set this manually
+Issues:
+1) if this script is killed, the rosetta will continue
+2) Theseus can hang, this is killed after a timeout
+3) is clustered by all atom RMSD to make fine clusters (option to cluster by CA only i included)
+4) ASU content is the number of search models placed by MrBUMP. -- need to set this manually
+
+
+================================
+
+so...
+Only data passed between different stages are the pdb files, so each stage could just start from a directory of files
+
+"""
 
 import os
 import sys
 
 # Test for environment variables
-
 if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
 # Add the ample python folder to the PYTHONPATH
-
 sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
 
-import re
-import glob
-import subprocess
-import shlex
-import string
-import time
-import operator
+# python imports
 import argparse
-import random
-from multiprocessing import Process, Queue, JoinableQueue, Pool, Value, Array
-import pickle
-import copy
 import clusterize
-import shutil
-import collections 
+import cPickle
+import glob
+import logging
+import time
 
-from  subprocess import Popen, PIPE, STDOUT
-from add_sidechains_SCWRL import *
-import cluster_entropy, truncateedit, truncateedit_MAX
-import SCWRL_edit, Final_display_results
-import split_models, nmr
-
-import run_mr_bump_shelx_parallel
+# Our imports
+import ample_options
+import ample_util
+import ensemble
 import fasta_parser
-import run_spicker
-import printTable
-###############
+import mrbump_ensemble
+import nmr
+import rosetta_model
+import mrbump_results
+import pdb_edit
+import truncateedit_MAX
 
-#get a program test for existsnce
-def which(program):
-    import os
-    def is_exe(fpath):
-        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-
-    return None
-#########
-def check_for_exe(exename, varname):
-   exepath = ''
-   print 'looking for', exename
-   if not varname:
-     print 'no '+exename+' given on the command line, looking in the PATH'
-     print which(exename)
-     if not which(exename):
-       print 'You need to give the path for '+exename
-       sys.exit()
-     else: 
-
-      exepath = which(exename)
-   
-   else:
-    exepath = varname
-    print 'using here',exepath
-
-
-    
-   
-   if not os.path.exists(exepath):
-    print 'You need to give the path for '+exename+', executable in the PATH dosnt exist'
-    sys.exit()
-   else:
-     return exepath
-########
-def get_psipred_prediction(psipred):
- string = ''
- for line in open(psipred):
-        get_stat1 = re.compile('^Pred\:\s*(\w*)')
-        result_stat1 = get_stat1.match(line)
-        if result_stat1:
-         stat1_get = re.split(get_stat1, line)
-         #print stat1_get[1]
-         string = string + stat1_get[1]
-
-
- C = 0
- H = 0
- E = 0
- length = len(string)
-
- for c in string:
-  if c == 'C':
-   C = C+1
-  if c == 'H':
-   H = H+1  
-  if c == 'E':
-   E = E+1
-
-
- H_percent = float(H)/length*100
- E_percent = float(E)/length*100
-
- if H >0 and E >0:
-    print  'Your protein is predicted to be mixed alpha beta, your chances of success are intermediate'
- if H ==0 and E >0:
-    print  'Your protein is predicted to be all beta, your chances of success are low'
- if H >0 and E ==0:
-    print  'Your protein is predicted to be all alpha, your chances of success are high'
- if  H ==0 and E ==0:
-    print  'Your protein is has no predicted secondary structure, your chances of success are low'
 
 #-------------------------------------------
-#get command line options
+# get command line options
 #-------------------------------------------
 
-parser = argparse.ArgumentParser(description='Structure solution by abinitio modeling', prefix_chars="-")
+parser = argparse.ArgumentParser(description='Structure solution by abinitio modelling', prefix_chars="-")
 
-parser.add_argument('-ROSETTA', metavar='ROSETTA_path', type=str, nargs=1,
-                   help='path for Rosetta AbinitioRelax')
+parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
+                   help='alignment between homolog and target fastas')
 
-parser.add_argument('-RDB', metavar='ROSETTA_database', type=str, nargs=1,
-                   help='path for Rosetta database')
+parser.add_argument('-all_atom', metavar='all_atom', type=str, nargs=1,
+                   help='all_atom')
 
-parser.add_argument('-fragsexe', metavar='path to make_fragments.pl', type=str, nargs=1,
-                   help='location of make_fragments.pl')
-
-parser.add_argument('-Rosetta_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
-                   help='location of rosetta cluster')
-
-
-parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
-                   help='protein fasta file. (required)')
-
-parser.add_argument('-name', metavar='priotein name', type=str, nargs=1,
-                   help='name of protien in the format ABCD ')
-
-
-parser.add_argument('-NProc', metavar='NoProcessors', type=int, nargs=1,
-                   help='number of processers (default 1)')
-
-
-parser.add_argument('-RunDir', metavar='run_directory', type=str, nargs=1,
-                   help='directory to put files (default current dir)')
-
-
-
-parser.add_argument('-SCWRL', metavar='path to scwrl', type=str, nargs=1,
-                   help='pathway to SCWRL exe')
-
-
-
-parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
-                   help='pathway to LGA folder (not the exe) will use the \'lga\' executable')
-
-
-parser.add_argument('-MAX', metavar='Maxcluster exe', type=str, nargs=1,
-                   help='Maxcluster exe')
-
-
-parser.add_argument('-THESEUS', metavar='Theseus exe (required)', type=str, nargs=1,
-                   help='Theseus exe')
-
-parser.add_argument('-PHENIX', metavar='PHENIX.ensembler exe', type=str, nargs=1,
-                   help='PHENIX exe')
-
-parser.add_argument('-MTZ', metavar='MTZ in', type=str, nargs=1,
-                   help='MTZ in')
-
-
-parser.add_argument('-MODELS', metavar='folder of decoys', type=str, nargs=1,
-                   help='folder of decoys')
-
-parser.add_argument('-MakeModels', metavar='Do the modelling', type=str, nargs=1,
-                   help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
-
-parser.add_argument('-ROSETTA_DIR', metavar='Rosetta_dir', type=str, nargs=1,
-                   help='the Rosetta install directory')
-
-## fragments
-
-parser.add_argument('-make_frags', metavar='bool to make fragments', type=str, nargs=1,
-                   help='Bool, True to make non homologous framents, False to import fragments')
-
-parser.add_argument('-3mers', metavar='3mers', type=str, nargs=1,
-                   help='path of imported 3mers')
-
-parser.add_argument('-9mers', metavar='9mers', type=str, nargs=1,
-                   help='path of imported 9mers') 
-
-## FLAGS
-parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
-                   help='Flag for F')
-
-parser.add_argument('-SIGF', metavar='flag for SIGF', type=str, nargs=1,
-                   help='Flag for SIGF')
-
-parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
-                   help='Flag for FREE')
-
-parser.add_argument('-CLUSTER', metavar='using a cluster', type=str, nargs=1,
-                   help='will submit jobs to a cluster')
-
-parser.add_argument('-ALLATOM', metavar='using a cluster', type=str, nargs=1,
-                   help='will submit jobs to a cluster')
-
-parser.add_argument('-SPICKER', metavar='boolean', type=str, nargs=1,
-                   help='path and will use spicker as alternative')
-
-parser.add_argument('-SPICKERPATH', metavar='spicker exe', type=str, nargs=1,
-                   help='path and will use spicker as alternative')
-
-
-parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', type=str, nargs=1,
-                   help='fixed input to mr bump')
-
-parser.add_argument('-domain_all_chain_fasta', metavar='domain_all_chain_fasta', type=str, nargs=1,
-                   help='fasta for all ASU')
-
-parser.add_argument('-domain_termini', metavar='termini', type=str, nargs=1,
-                   help='distacne between termini for insert domains')
-
-
-parser.add_argument('-NMODELS', metavar='no models', type=int, nargs=1,
-                   help='number of models to make (1000)')
-
-
-parser.add_argument('-CC', metavar='rad of gyration', type=str, nargs=1,
-                   help='radius of gyration reweight ')
-
-parser.add_argument('-ensembles', metavar='enembles', type=str, nargs=1,
-                   help='path to ensembles')
-
-parser.add_argument('-noClusters', metavar='no clus to sample', type=str, nargs=1,
-                   help='number of clusters to sample')
-
-
-parser.add_argument('-percent', metavar='no clus to sample', type=str, nargs=1,
-                   help='percent interval for truncation')
+parser.add_argument('-arpwarp_cycles', metavar='arpwarp_cycles', type=int, nargs=1,
+                   help='number of cycles ')
 
 parser.add_argument('-ASU', metavar='no in ASU', type=int, nargs=1,
                    help='no in ASU')
 
+parser.add_argument('-blast_dir', metavar='blast_dir', type=str, nargs=1,
+                   help='Directory where ncbi blast is installed (binaries in bin)')
 
-parser.add_argument('-FreeLunch', metavar='free lunch', type=int, nargs=1,
-                   help='true to use free lunch, false to not use it')
+parser.add_argument('-buccaneer_cycles', metavar='buccaneer_cycles', type=int, nargs=1,
+                   help='number of cycles ')
 
-parser.add_argument('-usehoms', metavar='nohoms rosetta flag', type=str, nargs=1,
-                   help='True =use nhomologs, False= dont use them ')
+parser.add_argument('-CC', metavar='rad of gyration', type=str, nargs=1,
+                   help='radius of gyration reweight ')
 
-parser.add_argument('-ImproveTemplate', metavar='improve template', type=str, nargs=1,
-                   help='give a template to imrove - NMR, homolog ')
+parser.add_argument('-submit_cluster', metavar='submit_cluster', type=str, nargs=1,
+                   help='will submit jobs to a cluster')
 
-parser.add_argument('-DEBUG', metavar='debug option', type=str, nargs=1,
+parser.add_argument('-submit_qtype', metavar='submit_qtype', type=str, nargs=1,
+                   help='cluster submission queue type:SGE, LSF...')
+
+parser.add_argument('-debug', metavar='debug option', type=str, nargs=1,
                    help='debug option ')
+
+parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', type=str, nargs=1,
+                   help='fixed input to mr bump')
+
+parser.add_argument('-domain_termini_distance', metavar='termini', type=str, nargs=1,
+                   help='distance between termini for insert domains')
+
+parser.add_argument('-early_terminate', metavar='early_terminate', type=str, nargs=1,
+                     help='terminate early if a success')
 
 parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
                    help='ensembling')
 
-parser.add_argument('-TRYALL', metavar='TRYALL', type=str, nargs=1,
-                     help='terminate early if a success')
+parser.add_argument('-ensembles_dir', metavar='ensembles_dir', type=str, nargs=1,
+                   help='path to directory containing existing ensembles')
 
-parser.add_argument('-NumShelxCyc', metavar='NoShelxCycles', type=str, nargs=1,
-                     help='number of shelx sycles')
+parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
+                   help='protein fasta file. (required)')
 
+parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
+                   help='Flag for F')
 
-parser.add_argument('-molreponly', metavar='molreponly', type=str, nargs=1,
-                   help='molreponly')
+parser.add_argument('-frags_3mers', metavar='frags_3mers', type=str, nargs=1,
+                   help='path of imported 3mers')
 
-parser.add_argument('-phaseronly', metavar='phaseronly', type=str, nargs=1,
-                   help='phaseronly')
+parser.add_argument('-frags_9mers', metavar='frags_9mers', type=str, nargs=1,
+                   help='path of imported 9mers')
 
-parser.add_argument('-clusterimport', metavar='clusterimport', type=str, nargs=1,
-                   help='clusterimport')
+parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
+                   help='Flag for FREE')
 
-parser.add_argument('-OLD_shelx', metavar='OLD_shelx', type=str, nargs=1,
-                   help='OLD_shelx')
+parser.add_argument('-import_cluster', metavar='import_cluster', type=str, nargs=1,
+                   help='import_cluster')
 
-parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
-                   help='top_model_only')
+parser.add_argument('-improve_template', metavar='improve template', type=str, nargs=1,
+                   help='give a template to imrove - NMR, homolog ')
 
-parser.add_argument('-USE_SCWRL', metavar='USE_SCWRL', type=str, nargs=1,
-                   help='if using scwrl true if not false')
+parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
+                   help='pathway to LGA folder (not the exe) will use the \'lga\' executable')
 
-parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
-                   help='alignment between homolog and target fastas')
+parser.add_argument('-make_frags', metavar='bool to make fragments', type=str, nargs=1,
+                   help='Bool, True to make non homologous framents, False to import fragments')
+
+parser.add_argument('-make_models', metavar='Do the modelling', type=str, nargs=1,
+                   help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
+
+parser.add_argument('-maxcluster_exe', metavar='Maxcluster exe', type=str, nargs=1,
+                   help='Maxcluster exe')
+
+parser.add_argument('-max_ensemble_models', metavar='max_ensemble_models', type=str, nargs=1,
+                   help='Maximum number of models permitted in an ensemble')
+
+parser.add_argument('-missing_domain', metavar='missing_domain', type=str, nargs=1,
+                   help='Modelling a missing domain - requires domain_all_chains_pdb argument')
+
+parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
+                   help='folder of decoys')
+
+parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
+                   help='mrbump keywords ')
+
+parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
+                   help='MTZ in')
+
+parser.add_argument('-name', metavar='priotein name', type=str, nargs=1,
+                   help='name of protien in the format ABCD ')
+
+parser.add_argument('-nmodels', metavar='no models', type=int, nargs=1,
+                   help='number of models to make (1000)')
+
+parser.add_argument('-nr', metavar='nr', type=str, nargs=1,
+                   help='Path to the nr non-redundant sequence database')
+
+parser.add_argument('-old_shelx', metavar='old_shelx', type=str, nargs=1,
+                   help='old_shelx')
 
 parser.add_argument('-NMR_model_in', metavar='NMR_model_in', type=str, nargs=1,
                    help='use nmr input')
@@ -320,1741 +174,629 @@ parser.add_argument('-NMR_remodel_fasta', metavar='-NMR_remodel_fasta', type=str
 parser.add_argument('-NMR_Truncate_only', metavar='-NMR_Truncate_only', type=str, nargs=1,
                    help='do no remodelling only truncate the NMR')
 
-parser.add_argument('-Buccaneer', metavar='-Buccaneer', type=str, nargs=1,
+parser.add_argument('-nproc', metavar='NoProcessors', type=int, nargs=1,
+                   help='number of processers (default 1)')
+
+parser.add_argument('-num_clusters', metavar='num clusters to sample', type=int, nargs=1,
+                   help='number of clusters to sample')
+
+parser.add_argument('-percent', metavar='no clus to sample', type=str, nargs=1,
+                   help='percent interval for truncation')
+
+parser.add_argument('-phenix_exe', metavar='PHENIX.ensembler exe', type=str, nargs=1,
+                   help='path to phenix executable')
+
+parser.add_argument('-rosetta_path', metavar='rosetta_path', type=str, nargs=1,
+                   help='path for Rosetta AbinitioRelax')
+
+parser.add_argument('-ROSETTA_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
+                   help='location of rosetta cluster')
+
+parser.add_argument('-rosetta_db', metavar='ROSETTA_database', type=str, nargs=1,
+                   help='path for Rosetta database')
+
+parser.add_argument('-rosetta_dir', metavar='Rosetta_dir', type=str, nargs=1,
+                   help='the Rosetta install directory')
+
+parser.add_argument('-rosetta_fragments_exe', metavar='path to make_fragments.pl', type=str, nargs=1,
+                   help='location of make_fragments.pl')
+
+parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
+                   help='directory to put files (default current dir)')
+
+parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
+                   help='pathway to SCWRL exe')
+
+parser.add_argument('-shelx_cycles', metavar='shelx_cycles', type=str, nargs=1,
+                     help='number of shelx sycles')
+
+parser.add_argument('-shelxe_exe', metavar='-shelxe_exe', type=str, nargs=1,
+                   help='Set shelxe executable name (default "shelxe")')
+
+parser.add_argument('-SIGF', metavar='flag for SIGF', type=str, nargs=1,
+                   help='Flag for SIGF')
+
+parser.add_argument('-spicker_exe', metavar='boolean', type=str, nargs=1,
+                   help='path to spicker executable')
+
+parser.add_argument('-split_mr', metavar='boolean', type=str, nargs=1,
+                   help='whether to split MRBUMP MR jobs into separate jobs')
+
+parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', type=str, nargs=1,
+                   help='path to theseus executable')
+
+parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
+                   help='top_model_only')
+
+parser.add_argument('-transmembrane', metavar='transmembrane', type=str, nargs=1,
+                   help='Do modelling for transmembrane proteins')
+
+parser.add_argument('-transmembrane_spanfile', metavar='transmembrane_spanfile', type=str, nargs=1,
+                   help='span file for modelling transmembrane proteins')
+
+parser.add_argument('-transmembrane_lipofile', metavar='transmembrane_lipofile', type=str, nargs=1,
+                   help='lips4 file for modelling transmembrane proteins')
+
+parser.add_argument('-use_homs', metavar='nohoms rosetta flag', type=str, nargs=1,
+                   help='True =use nhomologs, False= dont use them ')
+
+parser.add_argument('-use_arpwarp', metavar='-use_arpwarp', type=str, nargs=1,
+                   help='True to use arpwarp ')
+
+parser.add_argument('-use_buccaneer', metavar='use_buccaneer', type=str, nargs=1,
                    help='True to use Buccaneer')
 
-parser.add_argument('-Buccaneer_cycles', metavar='-Buccaneer_cycles', type=str, nargs=1,
-                   help='number of cycles ')
-
-parser.add_argument('-arpwarp_cycles', metavar='-arpwarp_cycles', type=str, nargs=1,
-                   help='number of cycles ')
-
-parser.add_argument('-arpwarp', metavar='-arpwarp', type=str, nargs=1,
-                   help='True to use arpwarp ')
+parser.add_argument('-use_scwrl', metavar='USE_SCWRL', type=str, nargs=1,
+                   help='if using scwrl true if not false')
 
 parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
                    help='True to use shelx ')
 
-parser.add_argument('-MRkeys', metavar='-MRkeys', type=str, nargs=1,
-                   help='mrbump keywords ')
+# Mutually exclusive options
+group = parser.add_mutually_exclusive_group()
+group.add_argument('-devel_mode', metavar='devel_mode', type=str, nargs=1,
+                   help='preset options to run in development mode - takes longer')
+group.add_argument('-quick_mode', metavar='quick_mode', type=str, nargs=1,
+                   help='preset options to run quickly, but less thoroughly')
+
+group = parser.add_mutually_exclusive_group()
+group.add_argument('-molrep_only', metavar='molrep_only', type=str, nargs=1,
+                   help='molrep_only')
+group.add_argument('-phaser_only', metavar='phaser_only', type=str, nargs=1,
+                   help='phaser_only')
 
 
-#convert args to dictionary
-args = parser.parse_args()
- 
-#get MRBUMP keywords direct
+# Create amopt object to hold options
+amopt = ample_options.AmpleOptions( )
+
+# MRkeys hack - get MRBUMP keywords direct as there can be multiple arguments
+# to each one
 MRkeys = []
-
 #print sys.argv
-
 keycount = 0
+toRemove = [] # We remove all the mrkeywords
 while keycount < len(sys.argv):
-   #print sys.argv[keycount] ,  keycount
-   if sys.argv[keycount]  == "-MRkeys":
-       MRkeys.append(sys.argv[keycount + 1])
-   keycount += 1
-
-
-
-
-
-var_args = vars(args)
-
-
-
-
-#Required commands:
-
-
-if  var_args['ROSETTA_DIR'] is None:
-     print 'you need to give the Rosetta path'
-     sys.exit()
-
-if not var_args['ROSETTA_DIR'] is None:
-   if var_args['ROSETTA_DIR'][0] != 'none': 
-     ROSETTA_OVER_PATH = var_args['ROSETTA_DIR'][0]
-   if var_args['ROSETTA_DIR'][0] == 'none':
-     print 'you need to give the Rosetta path'
-     sys.exit()
-
-
-if var_args['ROSETTA'] is None:
-   ROSETTA_PATH = 'no_path_given'
-if not var_args['ROSETTA'] is None: 
-   ROSETTA_PATH = var_args['ROSETTA'][0]
-
-if var_args['RDB'] is None:
-   ROSETTA_DB = 'no_path_given'
-if not var_args['RDB'] is None: 
-   ROSETTA_DB = var_args['RDB'][0]
-
-
-if var_args['fragsexe'] is None:
-  Make_fragments_exe = ' '
-if not var_args['fragsexe'] is None:
-  Make_fragments_exe = var_args['fragsexe'][0] 
-
-if var_args['Rosetta_cluster'] is None:
-   ROSETTA_cluster = 'no_path_given'
-if not var_args['Rosetta_cluster'] is None: 
-   ROSETTA_cluster = var_args['Rosetta_cluster'][0]
-
-
-if var_args['fasta'] is None:
-    FASTA = 'no_fasta_given'
-if not var_args['fasta'] is None:
-    FASTA = var_args['fasta'][0] 
-
-if var_args['name'] is None:
-   PDB_code = 'ABCD'
-if not var_args['name'] is None:
-   PDB_code =var_args['name'][0]
-
-if var_args['NProc'] is None:
-   NProc = 1
-if not var_args['NProc'] is None:
-   NProc = var_args['NProc'][0]
-
-
-if var_args['RunDir'] is None:
-   RunDir = os.getcwd()
-if not var_args['RunDir'] is None:
-   RunDir = var_args['RunDir'][0]
-
-
-
-if var_args['SCWRL'] is None:
-  SCWRL_path = ''
-if not var_args['SCWRL'] is None:
- if var_args['SCWRL'][0] !='none':
-  SCWRL_path =var_args['SCWRL'][0] 
-
-USE_SCWRL = False
-if var_args['USE_SCWRL'] is None:
-  USE_SCWRL = False
-if not var_args['USE_SCWRL'] is None:
- if var_args['USE_SCWRL'][0] !='none':
-    if re.search('TRUE', var_args['USE_SCWRL'][0].upper() ):
-         USE_SCWRL == True
-    if re.search('FALSE', var_args['USE_SCWRL'][0].upper() ): 
-         USE_SCWRL == False
-         
-
-
-if var_args['MAX'] is None:
-  MAX_path = ''
-if not var_args['MAX'] is None:
-  if var_args['MAX'][0] != 'none':
-    MAX_path =var_args['MAX'][0]
-
-
-
-if var_args['THESEUS'] is None:
-   THESEUS_path = ''
-if not var_args['THESEUS'] is None:
-  if var_args['THESEUS'][0] != 'none':
-   THESEUS_path = var_args['THESEUS'][0]
-
-
-if var_args['PHENIX'] is None:
-   PHENIX_path = ''
-if not var_args['PHENIX'] is None:
-  if var_args['PHENIX'][0] != 'none':
-   PHENIX_path = var_args['PHENIX'][0]
-
-
-
-
-
-#print var_args['MTZ']
-if var_args['MTZ'] is None:
-   MTZ = 'none'
-if not var_args['MTZ'] is None:
-   MTZ = var_args['MTZ'][0]
-
-IMPORTING_MODELS=False
-if var_args['MODELS'] is None:
-   MODELS_LOCATION = ''
-if not var_args['MODELS'] is None:
-   MODELS_LOCATION = var_args['MODELS'][0]
-   IMPORTING_MODELS=True
-
-MakeModels = True
-
-if var_args['MakeModels'] is None:
-   MakeModels = True
-if not var_args['MakeModels'] is None:
-   if var_args['MakeModels'][0] == 'False':
-     MakeModels = False
-     print '\nNOT Making Rosetta Models\n'
-   if var_args['MakeModels'][0] == 'True':
-     MakeModels = True
-     print '\nMaking Rosetta Models\n'
-
-
-NoShelxCycles = 15
-if var_args['NumShelxCyc'] is None:
-   NoShelxCycles = 15
-if not var_args['NumShelxCyc'] is None:
-   NoShelxCycles = var_args['NumShelxCyc'][0]
-
-###NMR
-
-if var_args['NMR_model_in'] is None:
-   NMR_model_in = ''
-   NMR_PROTOCOL = False 
-if not var_args['NMR_model_in'] is None:
-   NMR_model_in = var_args['NMR_model_in'][0]
-   NMR_PROTOCOL = True    
-
-
-if var_args['NMR_process'] is None:
-   NMR_process = 'none' 
-if not var_args['NMR_process'] is None:
-   NMR_process = var_args['NMR_process'][0]
-  
-
-if var_args['alignment_file'] is None:
-   alignment_file = ''
-if not var_args['alignment_file'] is None:
-   alignment_file = var_args['alignment_file'][0]
-
-if var_args['NMR_remodel_fasta'] is None:
-   NMR_remodel_fasta = FASTA   
-if not var_args['NMR_remodel_fasta'] is None:
-   NMR_remodel_fasta = var_args['NMR_remodel_fasta'][0]
-  
- 
-if var_args['NMR_Truncate_only'] is None:
-   NMR_Truncate_only = False
-if not var_args['NMR_Truncate_only'] is None:
-   if "TRUE" in var_args['NMR_Truncate_only'][0].upper():
-      NMR_Truncate_only = True
-   if "FALSE" in var_args['NMR_Truncate_only'][0].upper():
-      NMR_Truncate_only = False
-  
-###  arpwarp and buccaneer
-
-if var_args['Buccaneer'] is None:
-   Buccaneer = True
-   print 'Rebuilding in Bucaneer'
-if not var_args['Buccaneer'] is None:
-   if "TRUE" in var_args['Buccaneer'][0].upper():
-      Buccaneer = True
-      print 'Rebuilding in Bucaneer'
-   if "FALSE" in var_args['Buccaneer'][0].upper():
-      Buccaneer = False
-      print 'Not rebuilding in Bucaneer'
-
-
-if var_args['Buccaneer_cycles'] is None:
-   Buccaneer_cycles = 5
-if not var_args['Buccaneer_cycles'] is None:
-   Buccaneer_cycles = var_args['Buccaner_cycles'][0]
-
-
-
-if var_args['arpwarp_cycles'] is None:
-   arpwarp_cycles = 10
-if not var_args['arpwarp_cycles'] is None:
-   arpwarp_cycles = var_args['arpwarp_cycles'][0]
-
-
-if var_args['arpwarp'] is None:
-   arpwarp = True
-   print 'Rebuilding in ARP/wARP'
-if not var_args['arpwarp'] is None:
-   if "TRUE" in var_args['arpwarp'][0].upper():
-      arpwarp = True
-      print 'Rebuilding in ARP/wARP'
-   if "FALSE" in var_args['arpwarp'][0].upper():
-      arpwarp = False
-      print 'Not rebuilding in ARP/wARP'
-
-
-if var_args['use_shelxe'] is None:
-   use_shelxe = False
-   print 'Not ebuilding in shelxe'
-if not var_args['use_shelxe'] is None:
-   if "TRUE" in var_args['use_shelxe'][0].upper():
-      use_shelxe = True
-      print 'Rebuilding in shelxe'
-   if "FALSE" in var_args['use_shelxe'][0].upper():
-      use_shelxe = False
-      print 'Not rebuilding in shelxe'
-
-NoShelx = not use_shelxe
-
-
-###fragments
-
-
-if var_args['make_frags'] is None:
-   MakeFrags = True
-if not var_args['make_frags'] is None:
-   if var_args['make_frags'][0] == 'False':
-     MakeFrags = False
-     print '\nNOT Making Fragments\n'
-   if var_args['make_frags'][0] == 'True':   
-     MakeFrags = True
-     print '\nMaking non homologusFragments\n'
-
-
-if var_args['3mers'] is None:
-   frags_3_mers = ''
-if not var_args['3mers'] is None:
-   frags_3_mers = var_args['3mers'][0]
-
-
-if var_args['9mers'] is None:
-   frags_9_mers = ''
-if not var_args['9mers'] is None:
-   frags_9_mers = var_args['9mers'][0]
-
-
-if var_args['usehoms'] is None:
-   nohoms = ' -nohoms '
-if not var_args['usehoms'] is None:
-  if "TRUE" in var_args['usehoms'][0].upper():
-      nohoms = ' '
-  elif "FALSE" in var_args['usehoms'][0].upper():
-      nohoms = ' -nohoms '
-
-##flags
-if var_args['F'] is None:
-   notused, flag_SIGF, flag_F , flag_FREE  = run_mr_bump_shelx_parallel.get_flags (MTZ)
-if not var_args['F'] is None:
-   flag_F = var_args['F'][0]
-   
-
-if var_args['SIGF'] is None:
-   notused, flag_SIGF, flag_F , flag_FREE  = run_mr_bump_shelx_parallel.get_flags (MTZ)
-if not var_args['SIGF'] is None:
-   flag_SIGF = var_args['SIGF'][0]
-
-if var_args['FREE'] is None:
-   notused, flag_SIGF, flag_F , flag_FREE = run_mr_bump_shelx_parallel.get_flags (MTZ)
-if not var_args['FREE'] is None:
-   flag_FREE = var_args['FREE'][0]
-
-print flag_F, flag_SIGF, flag_FREE
-
-if var_args['CLUSTER'] is None:
-   CLUSTER= False
+    #print sys.argv[keycount] ,  keycount
+    if sys.argv[keycount] == "-mr_keys":
+        toRemove.append(keycount)
+        keycount += 1
+        tmp = []
+        while not sys.argv[keycount].startswith("-"):
+            #MRkeys.append( sys.argv[keycount] )
+            tmp.append( sys.argv[keycount] )
+            toRemove.append( keycount )
+            keycount += 1
+            if keycount == len(sys.argv):
+                break
+        # Got last of list so add to MRkeys
+        MRkeys.append( tmp )
+        continue
+    keycount += 1
+
+# Need to decrement the index of the items to remove
+# as we remove them
+for count, i in enumerate(toRemove):
+    del sys.argv[i-count]
+## End MRKeys hack..
+
+# convert args to dictionary
+args = parser.parse_args()
+
+# Now put them in the amopt object - this also sets/checks any defaults
+amopt.populate( args )
+
+# Now set MRKeys - might already have pre-set values so check if None or a list
+if isinstance( amopt.d['mr_keys'],list ):
+    amopt.d['mr_keys'] += MRkeys
 else:
-  if "TRUE" in var_args['CLUSTER'][0].upper():
-     CLUSTER = True
-  elif "FALSE" in var_args['CLUSTER'][0].upper():
-     CLUSTER = False
-  else:
-     CLUSTER = False
+    amopt.d['mr_keys'] = MRkeys
 
-
-EarlyTerminate = False
-
-
-
-if var_args['TRYALL'] is None:
-    EarlyTerminate = False
-else:
-   if "FALSE" in var_args['TRYALL'][0].upper():
-      EarlyTerminate = True
-      print 'will exit at the first success'
-   elif "TRUE" in var_args['TRYALL'][0].upper():
-      EarlyTerminate = False
-   else:
-      EarlyTerminate = False   
-         
-     
-
-if var_args['top_model_only'] is None:
-     top_model_only  = False
-else:
-   if "FALSE" in var_args['top_model_only'][0].upper():
-      top_model_only = False
-
-   elif "TRUE" in var_args['top_model_only'][0].upper():
-      top_model_only = True
-   else:
-      top_model_only = False   
-
-
-
-if var_args['ALLATOM'] is None:
-   ALLATOM= True
-else:
-  if "TRUE" in var_args['ALLATOM'][0].upper():
-     ALLATOM = True
-  elif "FALSE" in var_args['ALLATOM'][0].upper():
-     ALLATOM = False
-  else:
-     ALLATOM = False
-
-
-
-
-if var_args['OLD_shelx'] is None:
-   OLD_shelx= False
-else:
-  if "TRUE" in var_args['OLD_shelx'][0].upper():
-      OLD_shelx= True
-  elif "FALSE" in var_args['OLD_shelx'][0].upper():
-     OLD_shelx = False
-
-
-
-#----------missing domains
-
-MISSING_DOMAINS = False
-
-if var_args['domain_all_chains_pdb'] is None:
-   domain_all_chains_pdb='none'
-if not var_args['domain_all_chains_pdb'] is None:
-    domain_all_chains_pdb= var_args['domain_all_chains_pdb'][0]
-    MISSING_DOMAINS = True
-
-
-if var_args['domain_all_chain_fasta'] is None:
-   domain_all_chain_fasta='none'
-if not var_args['domain_all_chain_fasta'] is None:
-    domain_all_chain_fasta= var_args['domain_all_chain_fasta'][0]
-    MISSING_DOMAINS = True
-
-
-FIXED_INPUT = True
-
-
-#-------------\missing domains
-
-if var_args['NMODELS'] is None:
-    NMODELS = 1000
-if not var_args['NMODELS'] is None:
-    NMODELS= var_args['NMODELS'][0]
-
-
-if var_args['percent'] is None:
-    percent = 5
-    FIXED_INTERVALS = True
-if not var_args['percent'] is None:
-    percent= var_args['percent'][0]
-    FIXED_INTERVALS = False
-
-
-INSERT_DOMAIN=False
-if var_args['domain_termini'] is None:
-   
-    domain_termini_distance=0
-if not var_args['domain_termini'] is None:
-    domain_termini_distance= var_args['domain_termini'][0]
-    INSERT_DOMAIN=True
-
-
-CCline=''
-if var_args['CC'] is None:
-    CCline = ''
-if not var_args['CC'] is None:
-  if "none" in var_args[''][0].upper():
-    CCline= ''
-  else:
-    CCline= ' -rg_reweight 0 '
-
-
-ENSEMBLE_import=False
-if var_args['ensembles'] is None:
-    ENSEMBLES=''
-if not var_args['ensembles'] is None:
-    ENSEMBLES= var_args['ensembles'][0]
-    ENSEMBLE_import =True
-
-
-USE_SPICKER=True
-if var_args['SPICKER'] is None:
-    SPICKER = True
-if not var_args['SPICKER'] is None:
-    SPICKER= True
-
-
-
-if var_args['SPICKERPATH'] is None:
-    SPICKEREXE_path = ''
-if not var_args['SPICKERPATH'] is None:
-    SPICKEREXE_path= var_args['SPICKERPATH'][0]
-#print 'SPICKEREXE_path ', SPICKEREXE_path
-
-
-
-noClusters=1
-if var_args['noClusters'] is None:
-    noClusters=1 
-if not var_args['noClusters'] is None:
-    noClusters= var_args['noClusters'][0]
-
-
-noASU=''
-if var_args['ASU'] is None:
-    noASU = ''
-if not var_args['ASU'] is None:
-    noASU = 'NMASU '+ str(var_args['ASU'][0])
-
-
-if var_args['ImproveTemplate'] is None:
-    template = ''
-    ImportTemplate =False
-if not var_args['ImproveTemplate'] is None:
-    template =  var_args['ImproveTemplate'][0]
-    ImportTemplate =True
-
-
-if var_args['FreeLunch'] is None:
-    FreeLunch= True
-if not var_args['FreeLunch'] is None:
-    FreeLunch = var_args['FreeLunch'][0]
-
-DEBUG= False
-if var_args['DEBUG'] is None:
-    DEBUG= False
-if not var_args['DEBUG'] is None:
-    D= var_args['DEBUG'][0]
-    if re.search('TRUE', D.upper()):
-       DEBUG =True
-
-
-Ensembler = False   # default theseus
-
-if var_args['ensembler'] is None:
-    Ensembler = False
-if not var_args['ensembler'] is None:
-    D= var_args['ensembler'][0]
-    if re.search('FALSE', D.upper()):
-       Ensembler = False
-    if re.search('TRUE', D.upper()):
-       Ensembler = True  
-
-
-if var_args['molreponly'] is None:
-    molreponly = False
-if not var_args['molreponly'] is None:
-    D= var_args['molreponly'][0]
-    if re.search('FALSE', D.upper()):
-       molreponly= False
-    if re.search('TRUE', D.upper()):
-       molreponly = True 
-
-if var_args['phaseronly'] is None:
-    phaseronly = False
-if not var_args['phaseronly'] is None:
-    D= var_args['phaseronly'][0]
-    if re.search('FALSE', D.upper()):
-       phaseronly= False
-    if re.search('TRUE', D.upper()):
-       phaseronly = True 
-mrbump_programs = ' molrep phaser '
-
-if molreponly == False:
-  if phaseronly == False:
-    mrbump_programs = ' molrep phaser '
-if molreponly == True:
-    mrbump_programs = ' molrep  '
-if phaseronly == True:
-    mrbump_programs = ' phaser  '
-if molreponly == True:
-    if phaseronly == True:
-       print 'you say you want molrep only AND phaser only, choose one or both'
-       sys.exit()
-print mrbump_programs
-
-
-
-
-if var_args['clusterimport'] is None:
-   clusterimport = False
-if not var_args['clusterimport'] is None:
-    clusterimport= var_args['clusterimport'][0]
-
-
-#--------------------------------------------
-#give the run file to check
-	#---------------------------------------------
-
-Run_params = open(RunDir +'/Params_used', "w")
-if DEBUG == True:# if debug is on print stuff out
-  print var_args
-for print_user in var_args:
- if var_args[print_user] is not None:
-  if DEBUG == True:
-    print print_user +' : ' + str(var_args[print_user][0])
-
-  Run_params.write(print_user +' : ' + str(var_args[print_user][0]) + '\n')
-Run_params.close()
-
-#---------------------------------------
-#check for errors
-#---------------------------------------
-LOG = open(RunDir+'/Ample.log', "a")
-LOG.write('The authors of specific programs should be referenced where applicable::\n\n'+
-           'AMPLE: To be added\n'+
-           'SHELX: is used: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n'+ 
-           
-           'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n'+
-           
-
-           'Theseus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n'+
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]\n'+ 
-           'Supplementary Materials for Theobald and Wuttke 2006b.\n'+
-
-
-           'MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457\n'+
-            
-             
-           'CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs\n'+ 
-           'for Protein Crystallography. Acta Cryst. D50, 760-763\n\n'+
-           
-           'MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025\n\n'+
-           
-           'PHASER: McCoy, A.J., Grosse-Kunstleve, R.W., Adams, P.D., Winn, M.D.,\n'+
-           'Storoni, L.C. & Read, R.J. (2007)\n'+
-           'Phaser crystallographic software J. Appl. Cryst. 40, 658-674\n\n'+
-           
-           'REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromolecular\n'+ 
-           'Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255\n\n'+
-
-           'SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871\n'+           
-           
-           'MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/\n')
-LOG.flush()              
- 
-            
-
-
-print 'Making a Run Directory  -checking for previous runs'
-run_inc = 0
-run_making_done = False
-while run_making_done  == False:
- if not os.path.exists(RunDir + '/ROSETTA_MR_'+str(run_inc)):
-  run_making_done = True
-  os.mkdir(RunDir + '/ROSETTA_MR_'+str(run_inc))
- run_inc+=1
-RunDir = RunDir + '/ROSETTA_MR_'+str(run_inc -1)
-
-
-
-
-
-
-if MakeFrags==False:
- if MakeModels == True:
-  if not os.path.exists(frags_3_mers):
-    print 'Cant find 3mers'
-    sys.exit()
-  if not os.path.exists(frags_9_mers):
-    print 'Cant find 9mers'
-    sys.exit()
-
-
-#check if got all the programs
-if MakeModels == False:
- IMPORTING_MODELS = True
-
-if MakeModels == True:
- if IMPORTING_MODELS == True:
-  print MODELS_LOCATION
-  print 'you have chosen to both import models and to make them, choose only one\nSet Make Models to \"True\" to make them, \"False\" to import them'
-  sys.exit()
-
-if not  NMR_PROTOCOL :
- if IMPORTING_MODELS == True:
-  if not os.path.exists(MODELS_LOCATION):
-   print 'you have chosen to import models, but path does not exist, looking for ensembles : '+MODELS_LOCATION
-   if not os.path.exists(ENSEMBLES):
-    print 'you have chosen to import ensembles, but path does not exist : ' + ENSEMBLES
-    if clusterimport != False:
-     print 'you are importing a cluster of models from :' + clusterimport
-     if not os.path.exists(clusterimport ):
-      print 'you have chosen to import a cluster, the clusterpath does not exist'
-      sys.exit()
-     
-
- 
- 
-if MakeModels == True or MakeFrags == True:  #only need Rosetta if making models 
-
- if not os.path.exists(ROSETTA_OVER_PATH):
-  print 'Give the rosetta path on the commabd line'
-
- import platform
- if os.path.exists(ROSETTA_OVER_PATH):
-   Version_file               =ROSETTA_OVER_PATH+'/README.version'          
-   if platform.mac_ver()== ('', ('', '', ''), ''):
-      ROSETTA_PATH               =ROSETTA_OVER_PATH+'/rosetta_source/bin/AbinitioRelax.linuxgccrelease'
-   else:
-      ROSETTA_PATH               =ROSETTA_OVER_PATH+'/rosetta_source/bin/AbinitioRelax'
-   ROSETTA_cluster            =ROSETTA_OVER_PATH+'/rosetta_source/bin/cluster.linuxgccrelease'
-   ROSETTA_DB                 =ROSETTA_OVER_PATH+'/rosetta_database'
-   Make_fragments_exe          =ROSETTA_OVER_PATH+'/rosetta_fragments/nnmake/make_fragments.pl'
-   ROSETTA_CM                 =ROSETTA_OVER_PATH+'/rosetta_source/bin/idealize_jd2.default.linuxgccrelease' 
- if not os.path.exists(Version_file):
-   print 'version file for Rosetta not found'
-   sys.exit()
-
- Rosetta_version = '3.2'
- for line in open(Version_file):
-   if re.search('Rosetta', line):
-       line=re.sub('Rosetta','',line)
-       Rosetta_version =  string.strip(line)
- print  'Your Rosetta version is'+ line
- Make_fragments_flags = ''
-      
- if Rosetta_version == '3.3' :
-    Make_fragments_exe          =ROSETTA_OVER_PATH+'/rosetta_fragments/make_fragments.pl'
-    Make_fragments_flags = ' -noporter '
- if Rosetta_version == '3.4' :
-    Make_fragments_exe          =ROSETTA_OVER_PATH+'/rosetta_tools/fragment_tools/make_fragments.pl'
-
-
-
-
-
- if not os.path.exists(ROSETTA_PATH)  :
-   print ' cant find Rosetta abinitio, check path names'
-   print ROSETTA_PATH  
-   sys.exit()
-
- if not os.path.exists(ROSETTA_cluster): 
-   print ' cant find Rosetta cluster, check path names'
-   sys.exit()
- if not os.path.exists(ROSETTA_DB) :
-   print ' cant find Rosetta DB, check path names'
-   sys.exit()
- if MakeFrags:
-    if not os.path.exists(Make_fragments_exe):
-       print ' cant find make fragments, check path names'
-       sys.exit()
-
-
-if NMR_PROTOCOL == True:
-   ROSETTA_CM                 =ROSETTA_OVER_PATH+'/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
-   ROSETTA_DB                 =ROSETTA_OVER_PATH+'/rosetta_database'
-
-   if not os.path.exists(ROSETTA_DB) :
-     print ' cant find '+ROSETTA_DB+' check path names'
-     sys.exit()
-
-   if not os.path.exists(ROSETTA_CM) :
-    print ' cant find '+ROSETTA_CM+' check path names'
-    sys.exit()
-
-
-if not os.path.exists(FASTA):
-    print 'You need to give the path for the fasta'
-    sys.exit()
-
-if not os.path.exists(RunDir):
+# Make a work directory and go there - this way all output goes into this directory
+if not os.path.exists(amopt.d['run_dir']):
     print 'You need to give a run directory'
     sys.exit()
 
+print 'Making a Run Directory  -checking for previous runs\n'
+amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'] )
+#amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], rootname="ENSEMBLE_2_" )
+os.chdir( amopt.d['work_dir'] )
+
+# Set up logging
+logger = ample_util.setup_logging()
+
+# Path for pickling results
+amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
+
+#jmht - fix these
+FIXED_INPUT = True
+pdb_code = amopt.d['name']
+amopt.d['pdb_code'] = amopt.d['name']
+if not amopt.d['pdb_code'] or len(pdb_code) != 4:
+    msg = 'Name is the wrong length, use 4 chars eg ABCD'
+    logger.critical(msg)
+    sys.exit(1)
+else:
+    amopt.d['pdb_code'] += '_'
+    
+# Check we can find the input fasta
+if not ( os.path.exists(str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d['NMR_remodel_fasta'] ) ) ):
+    msg = 'You need to give the path for the fasta'
+    logger.critical(msg)
+    sys.exit(1)
+
+# Reformat to what we need    
+logger.debug('Parsing FASTA file')
+outfasta = os.path.join( amopt.d['work_dir'], amopt.d['pdb_code'] + '_.fasta')
+fp = fasta_parser.FastaParser()
+fp.reformat_fasta( amopt.d['fasta'], outfasta )
+amopt.d['fasta'] = outfasta
+amopt.d['fasta_length'] = fp.length
+logger.info( "Fasta is {0} amino acids long".format( amopt.d['fasta_length'] ) )
+
+# Check we have a decent length
+if amopt.d['fasta_length'] < 9:
+    msg = "Fasta is of length {0}. Please check this is correct".format( amopt.d['fasta_length'] )
+    logger.critical(msg)
+    sys.exit(1)   
+
+# Check we will be able to truncate at this level
+if ( float( amopt.d['fasta_length'] ) / 100 ) * float( amopt.d['percent'] ) < 1:
+    msg = "Cannot truncate a fasta sequence of length {0} with {1} percent intervals. Please select a larger interval.".format( amopt.d['fasta_length'], amopt.d['percent'] )
+    logger.critical(msg)
+    sys.exit(1)
+    
+# Check if importing ensembles
+amopt.d['import_ensembles'] = False
+if amopt.d['ensembles_dir']:
+    msg=None
+    if not os.path.isdir( amopt.d['ensembles_dir'] ):
+        msg = "Trying to import ensembles from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['ensembles_dir'])
+    elif not len( glob.glob( os.path.join( amopt.d['ensembles_dir'], "*.pdb" ) ) ):
+        msg = "Trying to import ensembles from the directory:\n{0}\nBut cannot find any pdb files!".format(amopt.d['ensembles_dir'])
+    if msg:
+        logger.critical(msg)
+        sys.exit(1)
+
+    amopt.d['import_ensembles'] = True
+    logger.info("Found directory with ensemble files: {0}\nSetting make_models to False".format( amopt.d['ensembles_dir'] ) )
+    amopt.d['make_frags'] = False
+    amopt.d['make_models'] = False
+    
+# Check if importing models
+amopt.d['import_models'] = False
+if amopt.d['models_dir']:
+    msg=None
+    if not os.path.isdir( amopt.d['models_dir'] ):
+        msg = "Trying to import models from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['models_dir'])
+    elif not len( glob.glob( os.path.join( amopt.d['models_dir'], "*.pdb" ) ) ):
+        msg = "Trying to import models from the directory:\n{0}\nBut cannot find any pdb files!".format(amopt.d['models_dir'])
+    if msg:
+        logger.critical(msg)
+        sys.exit(1)
+    
+    amopt.d['import_models'] = True
+    amopt.d['make_frags'] = False
+    amopt.d['make_models'] = False
+
+if amopt.d['make_models']:
+    # Create the models_dir
+    amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
+    os.mkdir( amopt.d['models_dir'] ) 
+    # If the user has given both fragment files we check they are ok and unset make_frags
+    if amopt.d['frags_3mers'] and amopt.d['frags_9mers']:
+        if not os.path.isfile( amopt.d['frags_3mers'] ) or not os.path.isfile( amopt.d['frags_9mers'] ):
+            msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format( amopt.d['frags_3mers'], amopt.d['frags_9mers'] )   
+            logger.critical(msg)
+            sys.exit(1)
+        amopt.d['make_frags'] = False
+    
+    if amopt.d['make_frags'] and (  amopt.d['frags_3mers'] or  amopt.d['frags_9mers'] ):
+        msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
+        logger.critical(msg)
+        sys.exit(1)
+    
+    if not amopt.d['make_frags'] and not (  amopt.d['frags_3mers'] and  amopt.d['frags_9mers'] ):
+        msg = "make_frags set to false, but you have not given the paths to the frags_3mers or frags_9mers"
+        logger.critical(msg)
+        sys.exit(1)   
+
+# Check models and ensembles
+if amopt.d['import_ensembles'] and amopt.d['import_models']:
+        msg = "Cannot import both models and ensembles!"
+        logger.critical(msg)
+        sys.exit(1)
+
+# NMR Checks
+NMR_PROTOCOL = False
+if amopt.d['NMR_model_in']:
+    
+    if not os.path.isfile( amopt.d['NMR_model_in'] ):
+        msg = "NMR_model_in flag given, but cannot find file: {0}".format( amopt.d['NMR_model_in'] )
+        logger.critical(msg)
+        sys.exit(1)    
+       
+    NMR_PROTOCOL = True
+    ROSETTA_CM = amopt.d['rosetta_dir'] + '/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
+    if not os.path.exists(ROSETTA_CM) :
+        msg = 'Cannot find {0} check path names'.format( ROSETTA_CM )
+        logger.critical( msg )
+        sys.exit(1)
+
+    if not os.path.isfile( str(amopt.d['NMR_remodel_fasta']) ):
+        amopt.d['NMR_remodel_fasta'] =  amopt.d['fasta']
+
+if not  NMR_PROTOCOL :
+    if amopt.d['import_models'] and not os.path.exists(amopt.d['models_dir']):
+        logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + amopt.d['models_dir'])
+        if not os.path.exists(amopt.d['ensembles_dir']):
+            logger.warn('you have chosen to import ensembles, but path does not exist : ' + amopt.d['ensembles_dir'])
+            if amopt.d['import_cluster']:
+                logger.info('you are importing a cluster of models from :' + amopt.d['import_cluster'])
+                if not os.path.exists(amopt.d['import_cluster']):
+                    logger.critical('you have chosen to import a cluster, the clusterpath does not exist')
+                    sys.exit(1)
+
+# Missing domains
+if amopt.d['missing_domain']:
+    logger.info('Processing missing domain\n')
+    if not os.path.exists( amopt.d['domain_all_chains_pdb'] ):
+        msg = 'Cannot find file domain_all_chains_pdb: {0}'.format( amopt.d['domain_all_chains_pdb'] )
+        logger.critical( msg )
+        sys.exit(1)
 
 
+# Create the rosetta modeller - this runs all the checks required
+if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
+    logger.info('Making models or fragments so checking ROSETTA options')
+    rosetta_modeller = rosetta_model.RosettaModel()
+    rosetta_modeller.set_from_dict( amopt.d )
 
+# MR programs
+if amopt.d['molrep_only'] and amopt.d['phaser_only']:
+        logger.critical('you say you want molrep only AND phaser only, choose one or both')
+        sys.exit(1)
+if amopt.d['molrep_only']:
+    amopt.d['mrbump_programs'] = [ 'molrep' ]
+elif amopt.d['phaser_only']:
+    amopt.d['mrbump_programs'] = [ 'phaser' ]
+else:
+    amopt.d['mrbump_programs'] = ['molrep', 'phaser']
 
-#if not os.path.exists(LGA):
-#  LGA = os.environ.get("LGA_PATH")
-#  if not os.path.exists(LGA):
-#    print 'You need to give the path for LGA'
-#    sys.exit()
+#
+#Check we can find all the required programs
+#
+if amopt.d['ensembler']:
+    logger.info('You are using Phenix ensembler')
+    amopt.d['phenix_exe'] = ample_util.check_for_exe('phenix', amopt.d['phenix_exe'])
+else:
+    amopt.d['theseus_exe'] = ample_util.check_for_exe('theseus', amopt.d['theseus_exe'])
 
+amopt.d['maxcluster_exe'] = ample_util.check_for_exe('maxcluster', amopt.d['maxcluster_exe'])
+amopt.d['spicker_exe'] = ample_util.check_for_exe('spicker', amopt.d['spicker_exe'])
+if amopt.d['use_scwrl']:
+    amopt.d['scwrl_exe'] = ample_util.check_for_exe('Scwrl4', amopt.d['scwrl_exe'] )
+if amopt.d['use_shelxe']:
+    amopt.d['shelxe_exe'] = ample_util.check_for_exe('shelxe', amopt.d['shelxe_exe'])
 
+# Check if we need to get any of the flags from the MTZ file
+if not os.path.isfile( amopt.d['mtz'] ):
+    logger.critical("Cannot find MTZ file: {0}".format( amopt.d['mtz'] ) )
+    sys.exit(1)
 
+if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
+    
+    logger.info("Determining MTZ flags using mtzdump from file: {0}".format( amopt.d['mtz'] ) )
+    try:
+        t_flag_F, t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( amopt.d['mtz'] )
+    except Exception,e:
+        logger.critical("Error generating flags from MTZ file: {0}\n{1}\n\nDo you need to run the CCP4 uniqueify program on the MTZ file?".format(amopt.d['mtz'],e) )
+        sys.exit(1)
+    
+if not amopt.d['F']:
+    amopt.d['F'] = t_flag_F
+    
+if not amopt.d['SIGF']:
+    amopt.d['SIGF'] = t_flag_SIGF
+    
+if not amopt.d['FREE']:
+    amopt.d['FREE'] = t_flag_FREE
 
+# Print out what is being done
+if amopt.d['use_buccaneer']:
+    logger.info('Rebuilding in Bucaneer')
+else:
+    logger.info('Not rebuilding in Bucaneer')
 
-if Ensembler  == False:
-   THESEUS = check_for_exe('theseus', THESEUS_path)
-  # print 'finally got', THESEUS
-if Ensembler  == True:
-   print 'You are using Phenix ensmbler'
-   PHENIX = check_for_exe('phenix', PHENIX_path)
-if USE_SCWRL == True:
-   SCWRL = check_for_exe('Scwrl4', SCWRL_path )
-   #print 'finally got', SCWRL
-if USE_SCWRL == False:
-   SCWRL = ''
-SPICKEREXE = check_for_exe('spicker',SPICKEREXE_path )
+if amopt.d['use_arpwarp']:
+    logger.info('Rebuilding in ARP/wARP')
+else:
+    logger.info('Not rebuilding in ARP/wARP')
 
-#print 'finally got', SPICKEREXE
-MAX = check_for_exe('maxcluster', MAX_path)
-#print 'finally got', MAX
-if NoShelx == False:
-   shelxe=''
-   shelxe = check_for_exe('shelxe', shelxe)
+if amopt.d['make_frags']:
+    logger.info('Making non homologusFragments')
+else:
+    logger.info('NOT Making Fragments')
 
+if amopt.d['make_models']:
+    logger.info('\nMaking Rosetta Models')
+else:
+    logger.info('NOT Making Rosetta Models')
 
-if len(PDB_code)>4 or len(PDB_code)<4:
-   print 'name is the wrong length, use 4 chars eg ABCD, changing name'
-   PDB_code='ABCD'
+logger.info('All needed programs are found, continuing Run')
 
-     
-if len(PDB_code)==4: 
-   PDB_code +='_'
-
-
-
-if not os.path.exists(MTZ):
-    print 'need mtz or no MR will be carried out'
-    sys.exit()
-
-if ImportTemplate:
-   if not os.path.exists(template):
-      print 'cant find template to improve'
-      sys.exit()
-
-
-
-print '\nAll needed programs are found, continuing Run\n'
-
-
+#----------------------------
+# Running is the 'official' output file 
+#----------------------------
+RUNNING = open( amopt.d['work_dir'] + '/ROSETTA.log', "w")
+RUNNING.write( ample_util.header )
+RUNNING.flush()
 
 #----------------------------
 # params used
 #---------------------------
-#make a copy of params
+f = open( os.path.join( amopt.d['work_dir'], 'params_used.txt' ), "w") 
+param_str = amopt.prettify_parameters()
+f.write( param_str )
+f.close()
+# Echo to log too
+logger.debug( param_str )
+
+#######################################################
 #
-
-Run_params = open(RunDir +'/Params_used', "w")
-Run_params.write('input params\n')
-if DEBUG == True:
-  print var_args
-  for print_user in var_args:
-   if var_args[print_user] is not None:
-     print print_user +' : ' + str(var_args[print_user][0])
-
-     Run_params.write(print_user +' : ' + str(var_args[print_user][0]) + '\n')
-
-Run_params.write('\nParams Used in this Run\n')
-Run_params.write('\n---input---\nFasta '+FASTA+'\nRunDir '+RunDir+'\nMTZ '+MTZ+'\nname '+PDB_code+'\n')
-Run_params.write('\n---fragments---\nMakeFrags '+str(MakeFrags)+'\n3mers '+frags_3_mers+'\n9mers '+frags_9_mers+'\n')
-Run_params.write('\n---modelling---\nMakeModels '+str(MakeModels)+'\nROSETTA_PATH '+ROSETTA_PATH+'\n')
-Run_params.write('ROSETTA_cluster '+ROSETTA_cluster+'\nROSETTA_DB '+ROSETTA_DB+'\nMake_fragments_exe '+Make_fragments_exe+'\n')
-if USE_SCWRL == True:
-  Run_params.write('\n---3rd party---\nSCWRL '+SCWRL+'\n')
-Run_params.write('\n---Missing Domain---\nall chains fasta '+domain_all_chain_fasta+'\nall chain pdb '+domain_all_chains_pdb+'\nMISSING DOMAINS='+str(MISSING_DOMAINS)+'\n')
-Run_params.write('Is an Insert Domain '+str(INSERT_DOMAIN)+ ' termini distance '+ str(domain_termini_distance) +'\n')
-
-Run_params.close()
-
-
+# SCRIPT PROPER STARTS HERE
+#
+######################################################
+time_start = time.time()
 
 #-----------------------------------
-#Do The Modelling
+# Do The Modelling
 #-----------------------------------
-seedlog = open(RunDir+'/seedlist', "w")
-time_start=time.time()
-RUNNING=open( RunDir +'/ROSETTA.log', "w")
 
-RUNNING.write('#########################################################################\n'+
-           '#########################################################################\n'+
-           '#########################################################################\n'+
-           '# CCP4: AMPLE -Ab Initio Modelling Molecular Replacement (Beta version) #\n'+
-           '#########################################################################\n'+
-           'The authors of specific programs should be referenced where applicable::\n\n'+
-           'AMPLE: To be added\n'+
-           'SHELX:  "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n'+
+#-----------------------------------
+# Make Rosetta fragments
+#-----------------------------------
+if amopt.d['make_frags']:
+    rosetta_modeller.generate_fragments()
 
-           'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n'+
-
-
-           'Theseus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n'+
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]\n'+
-           'Supplementary Materials for Theobald and Wuttke 2006b.\n'+
-
-           'MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457\n'+
-
-
-           'CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs\n'+
-           'for Protein Crystallography. Acta Cryst. D50, 760-763\n\n'+
-           'MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025\n\n'+
-
-           'PHASER: McCoy, A.J., Grosse-Kunstleve, R.W., Adams, P.D., Winn, M.D.,\n'+
-           'Storoni, L.C. & Read, R.J. (2007)\n'+
-           'Phaser crystallographic software J. Appl. Cryst. 40, 658-674\n\n'+
-
-           'REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromolecular\n'+
-           'Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255\n\n'+
-
-           'SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871\n'+
-
-           'MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/\n')
-RUNNING.flush()
-
-
-
-
-if DEBUG ==True:
-  print PDB_code
-os.chdir(RunDir)
-  
-outfasta=os.path.join(RunDir, PDB_code+'_.fasta')
-fasta_parser.parse_fasta(FASTA, outfasta)
-FASTA=outfasta
-#####make frags 
-
-if MakeFrags == True:
-  print '----- making fragments--------\n'
-  RUNNING.write('----- making fragments--------\n')
-  RUNNING.flush()
-  frags_dir = RunDir + '/frags'
-  os.system('mkdir ' + frags_dir)
-  cmd = Make_fragments_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof '+ Make_fragments_flags+' ' + nohoms +'>frag_log' 
-  if DEBUG == False:
-    print Make_fragments_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof  ' + Make_fragments_flags+' ' +nohoms 
-
-  if DEBUG == True: 
-      os.system(Make_fragments_exe + ' -rundir ' + frags_dir + ' -id ' + PDB_code + ' '+FASTA+ ' -nojufo -nosam -noprof '+ Make_fragments_flags+' ' + nohoms +'>frag_log'   ) 
-
-  else:
-      p = subprocess.call(cmd, shell = True, stdout=PIPE, stderr=PIPE )
-  frags_3_mers = frags_dir + '/aa' +PDB_code+'03_05.200_v1_3'
-  frags_9_mers = frags_dir + '/aa' +PDB_code+'09_05.200_v1_3'
-
-  if not os.path.exists(frags_3_mers):
-     print 'Error in making fragments'
-     sys.exit()
-  if not os.path.exists(frags_9_mers):
-     print 'Error in making fragments'
-     sys.exit()
-
-  RUNNING.write('Fragments done\n3mers at: '+frags_3_mers+'\n9mers at: '+frags_9_mers+'\n\n')
-  print' Fragments Done\n3mers at: '+frags_3_mers+'\n9mers at: '+frags_9_mers+'\n\n'
-
-  if os.path.exists(frags_dir +'/'+PDB_code+'.psipred'):
-    get_psipred_prediction(frags_dir +'/'+PDB_code+'.psipred')
-
-### break here for NMR (frags needed but not modelling
-#if NMR process models first
-if NMR_PROTOCOL == True:
-  
-
-   tmp = open(os.getcwd()+'/tmp.pdb', "w")
-   for line in open(NMR_model_in):
-     if not re.search('^HETATM', line):
-        tmp.write(line)
-        tmp.flush()
-   tmp.close
-   NMR_model_in = os.getcwd()+'/tmp.pdb'
-   print 'using NMR model ' + os.getcwd()+'/tmp.pdb' 
-
-   if CLUSTER == False:
-       os.mkdir(RunDir + '/orig_models')
-       modno = split_models.split(NMR_model_in,  RunDir+ '/orig_models')
-       os.mkdir(RunDir+ '/models')
-       if NMR_process == 'none': 
-           NMR_process = 1000 /modno 
-           
-
-           print ' processing each model ', NMR_process, ' times'
-       else:
-           print ' processing each model ', NMR_process, ' times'
-       homolog = RunDir+ '/orig_models'
-       print 'you have ', modno, ' models in your nmr'
-       if modno <2:
-          if NMR_Truncate_only == True : 
-             print 'cannot truncate, doing rebuilding'
-          NMR_Truncate_only = False
-
-
-       if NMR_Truncate_only == False:   
- 
-           for hom in os.listdir(homolog):
-              pdbs =  re.split('\.', hom)
-              
-              if pdbs[-1] == 'pdb':
-                   nmr. RUN_FORMAT_HOMS(homolog+'/'+hom, int(NMR_process),NMR_remodel_fasta , ROSETTA_OVER_PATH, frags_9_mers, frags_3_mers, int(NProc), hom, alignment_file, RunDir+ '/models')
-              MakeModels = False
-              PATH_TO_MODELS = RunDir+ '/models'
-              MODELS_LOCATION = RunDir+ '/models'
-       if NMR_Truncate_only == True:
-         print 'Truncating NMR'          
-         if modno <2:
-             print 'cant trucate less than 2 models, use NMR_truncate_only False'
-             sys.exit()
-         if modno >=2: 
-             MakeModels = False
-             PATH_TO_MODELS = RunDir+ '/orig_models'
-             MODELS_LOCATION = RunDir+ '/orig_models'
-       print 'using models from ' + PATH_TO_MODELS
-   if CLUSTER:
-    os.mkdir(RunDir + '/orig_models')
-    modno = split_models.split(NMR_model_in,  RunDir+ '/orig_models')
-    if modno <2:
-          if NMR_Truncate_only == True :
-             print 'cannot truncate, doing rebuilding'
-          NMR_Truncate_only = False    
-
-
-    if NMR_Truncate_only == True:  
-       MakeModels = False
-       PATH_TO_MODELS = RunDir+ '/orig_models'
-       MODELS_LOCATION = RunDir+ '/orig_models'
-       print 'using models from ' + PATH_TO_MODELS
-
-
-
-    if NMR_Truncate_only == False:
-      MakeModels = False 
-      PATH_TO_MODELS = RunDir+ '/models'
-      MODELS_LOCATION = RunDir+ '/models'
-      os.mkdir(RunDir+ '/models')
-      homolog = RunDir+ '/orig_models' 
-      hom_index=1 
-      if NMR_process == 'none':
-         NMR_process =1000 /modno
-
-      homindeces = []
-      for hom in os.listdir(homolog):
- 
-              os.mkdir(RunDir+'/Run_'+str(hom_index))
-
-              pdbs =  re.split('\.', hom)
-              if pdbs[-1] == 'pdb':
-                     ideal_homolog,  ALI = nmr.CLUSTER_RUN_FORMAT_HOMS(homolog+'/'+hom, int(NMR_process),NMR_remodel_fasta , ROSETTA_OVER_PATH, frags_9_mers, frags_3_mers, int(NProc), hom, alignment_file, RunDir+ '/models' )
-                     homindeces.append(hom_index)
-                     hom_index+=1
-                    
-
-
-                     # Invoke the cluster run class
-
-
-
-      for  hom_index in homindeces:
-         cluster_run=clusterize.ClusterRun()
-         cluster_run.QTYPE="SGE"
-         cluster_run.ALLATOM=ALLATOM
-         cluster_run.setupModellingDir(RunDir+'/Run_'+str(hom_index))
-         if USE_SCWRL:
-              cluster_run.setScwrlEXE(SCWRL)
-         cluster_run.set_USE_SCWRL(USE_SCWRL)
-      # loop over the number of models and submit a job to the cluster
-         
-         for i in range(int(NMR_process)):
-           cluster_run.NMRmodelOnCluster(RunDir+'/Run_'+str(hom_index), 1, i, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI,  i, ROSETTA_CM)
-
-      # Monitor the cluster queue to see when all jobs have finished
-         cluster_run.monitorQueue()
-                     
-                    #  homindeces.append(hom_index) 
-                    #  hom_index+=1
-      #cluster_run.monitorQueue()
-      print homindeces      
-      for homindex in homindeces:                 
-         for remodelled in os.listdir(RunDir+'/Run_'+str(homindex) + '/models'):
-                          remodelled_n = remodelled.rstrip('.pdb')
-                          shutil.copyfile(RunDir+'/Run_'+str(homindex) + '/models/'+ remodelled, RunDir+ '/models/'+remodelled_n+'_'+str(homindex)+'.pdb') 
-
-
-   # check for same length
-   l = []
-   for pdb in os.listdir(MODELS_LOCATION):
-      i =  split_models.check(MODELS_LOCATION+'/'+pdb)
-      l.append(i)
-      if len(l) >1:
-          mina  = min(l,  key = int)
-          maxa  = max(l,  key = int)
-   if mina != maxa:
-      print 'min length = ', mina, ' max length = ', maxa,  'models are not equal length'
-      print 'All of the models need to be the same length, All long and short models will be deleted, next time  maybe try one model at a time '
-
-      lVals = l
-      modeal_l = max(map(lambda val: (lVals.count(val), val), set(lVals)))
-      modeal_l =modeal_l[1]
-      print modeal_l
-
-      for pdb in os.listdir(MODELS_LOCATION):
-        i =  split_models.check(MODELS_LOCATION+'/'+pdb)
-        if i != modeal_l:
-           os.remove(MODELS_LOCATION+'/'+pdb)
- 
-      
-  
-
+#-----------------------------------
+# break here for NMR (frags needed but not modelling
+# if NMR process models first
+#-----------------------------------
+if NMR_PROTOCOL:
+    nmr.doNMR(amopt, logger)
 # return from nmr with models already made
 
+#-----------------------------------
+# Make the models
+#-----------------------------------
+if amopt.d['make_models']:
+    
+    logger.info('----- making Rosetta models--------')
+    logger.info('making ' + str(amopt.d['nmodels']) + ' models...')
+    
+    # If we are running with cluster support submit all modelling jobs to the cluster queue
+    if amopt.d['submit_cluster']:
+        
+        # Generate the list of random seeds
+        rosetta_modeller.generate_seeds( amopt.d['nmodels'] )
 
-###modeling
-insert_Rosetta_command=''
-if INSERT_DOMAIN==True:
-    fas=open(FASTA)
-    seq=''
-    for line in fas:
-     if not re.search('>', line):
-      seq+=line.rstrip('\n')
-    length=0
-    for x in seq:
-     if re.search('\w', x):
-      length+=1
+        # Invoke the cluster run class
+        cluster_run = clusterize.ClusterRun()
+        cluster_run.QTYPE = amopt.d['submit_qtype']
+        cluster_run.setModeller( rosetta_modeller )
+        cluster_run.setupModellingDir( amopt.d['work_dir'] )
+        
+        logger.info('Submitting {0} jobs to a queueing system of type: {1}\n'.format( amopt.d['nmodels'],  amopt.d['submit_qtype'] ) )
+        # loop over the number of models and submit a job to the cluster
+        for i in range( amopt.d['nmodels'] ):
+            nproc=1 # each modelling job runs on a single processor
+            jobNumber=i+1
+            cluster_run.modelOnCluster( nproc, jobNumber )
 
+        # Monitor the cluster queue to see when all jobs have finished
+        cluster_run.monitorQueue()
 
-    print 'restricting termini distance',  domain_termini_distance
-    constraints_file = os.path.join(RunDir, 'constraints')
-    conin=open(constraints_file,"w")
-    conin.write('AtomPair CA 1 CA '+str(length)+' GAUSSIANFUNC '+str(domain_termini_distance)+' 5.0 TAG')
-    insert_Rosetta_command=' -constraints:cst_fa_file '+ constraints_file + ' -constraints:cst_file '+ constraints_file + ' '
-     
+    else:
+        # Run locally
+        amopt.d['models_dir'] = rosetta_modeller.doModelling()
+        
+    ##End IF amopt.d['submit_cluster']
+    
+    msg = '\nModelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n'
+elif amopt.d['import_models']:
+    msg = '\nImporting models from directory:\n   ' + amopt.d['models_dir'] + '\n\n'
+elif amopt.d['import_ensembles']:
+    msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
 
+    
+RUNNING.write(msg)
+logger.info(msg)
+    
 
-print  '----- making Rosetta models--------\n' 
-print 'making '+str(NMODELS)+' models...'
-RUNNING.write('----- making models--------\n')
+#--------------------------------------------
+# check if models are present regardless
+#--------------------------------------------
+if amopt.d['import_cluster']:
+    raise RuntimeError,"import_cluster needs to be updated!"
+    if os.path.exists(amopt.d['import_cluster']): 
+        cluster_path = amopt.d['import_cluster']
+        fcluster_dir = os.path.join( amopt.d['work_dir'], 'fine_cluster_1' )
+        if not os.path.exists( fcluster_dir  ):
+            os.mkdir( fcluster_dir )
+        os.chdir( fcluster_dir )
+        list_of_ensembles = truncateedit_MAX.truncate( amopt.d['theseus_exe'],
+                                                       cluster_path ,
+                                                       fcluster_dir ,
+                                                       amopt.d['maxcluster_exe'], 
+                                                       amopt.d['percent'] )
+
+        os.system('mkdir ' + amopt.d['work_dir'] + '/ensembles_1')
+        #for each_ens in list_of_ensembles:
+        #    pdb_edit.edit_sidechains(each_ens, amopt.d['work_dir'] + '/ensembles_1/')
+        #sys.exit()
+
+#---------------------------------------
+# Do the clustering
+#---------------------------------------
+ensembles = [] # List of ensembles - 1 per cluster
+
+## Save results
+#f = open( amopt.d['results_path'], 'w' )
+#cPickle.dump( amopt.d, f )
+#f.close()
+#logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
+#
+
+if amopt.d['import_ensembles']:
+    #---------------------------------------
+    # Importing pre-made ensembles
+    #---------------------------------------
+    # Set list of ensembles to the one we are importing
+    logger.info("Importing existing ensembles from: {0}".format( amopt.d['ensembles_dir'] ) )
+    final_ensembles = []
+    for infile in glob.glob(os.path.join(amopt.d['ensembles_dir'], '*.pdb')):
+        final_ensembles.append(infile)
+
+    if amopt.d['top_model_only']:
+        logger.info("Only using the top model" )
+        final_ensembles = truncateedit_MAX.One_model_only(final_ensembles , amopt.d['work_dir'])
+        
+    # Set ensembles
+    ensembles = [ final_ensembles ]
+
+else:
+    
+    if amopt.d['submit_cluster']:
+
+        # Pickle dictionary so it can be opened by the job to get the parameters
+        f = open( amopt.d['results_path'], 'w' )
+        cPickle.dump( amopt.d, f )
+        f.close()
+
+        mrBuild = clusterize.ClusterRun()
+        mrBuild.QTYPE = amopt.d['submit_qtype']
+        mrBuild.ensembleOnCluster( amopt.d )
+        mrBuild.monitorQueue()
+            
+        # queue finished so unpickle results
+        f = open( amopt.d['results_path'], "r" )
+        amopt.d = cPickle.load( f )
+        f.close()
+    else:
+        ensemble.create_ensembles( amopt.d )
+
+    # Check we have something to work with
+    if not amopt.d.has_key('ensemble_results') or not len( amopt.d['ensemble_results'] ):
+        msg = "Could not load any ensembles after running create_ensembles!"
+        logger.critical( msg )
+        sys.exit(1)
+    
+    # Extract list of pdbs from ensemble results
+    for eresult in amopt.d['ensemble_results']:
+        ensemble_pdbs = []
+        for result in eresult:
+            ensemble_pdbs.append( result.pdb )
+        ensembles.append( ensemble_pdbs )
+
+ensemble_summary = ensemble.ensemble_summary(amopt.d)
+RUNNING.write(ensemble_summary)
+RUNNING.flush()
+logger.info(ensemble_summary)
+
+#---------------------------------------
+# MR BUMP analysis of the ensembles
+#---------------------------------------
+bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
+logger.info("Running MRBUMP jobs in directory: {0}".format( bump_dir ) )
+if not os.path.exists(bump_dir):
+    os.mkdir(bump_dir)
+os.chdir(bump_dir)
+amopt.d['mrbump_dir'] = bump_dir
+amopt.d['mrbump_results'] = []
+
+# Loop over clusters
+for i, ensemble_pdbs in enumerate(ensembles):
+    
+    clusterID=str(i+1)
+    logger.info('----- Running MRBUMP (cluster ' + clusterID+ ')--------\n\n')
+    logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble_pdbs),  clusterID ) )
+    
+    if len(ensemble_pdbs) < 1:
+        msg = "ERROR! Cannot run MRBUMP for cluster {0} as there are no ensembles!".format( clusterID )
+        logger.critical( msg )
+        continue
+    
+    job_dir = os.path.join( amopt.d['mrbump_dir'], 'cluster_'+clusterID )
+
+    logger.info("Running cluster {0} in directory: {1}".format( clusterID, job_dir ) )
+    if not os.path.exists( job_dir ):
+        os.mkdir( job_dir )
+    os.chdir( job_dir )
+    
+    # Create job scripts
+    logger.info("Generating MRBUMP runscripts in: {0}".format( job_dir ) )
+    job_scripts = mrbump_ensemble.generate_jobscripts( ensemble_pdbs, amopt.d )
+    
+    if amopt.d['submit_cluster']:
+        mrbump_ensemble.mrbump_ensemble_cluster( job_scripts, amopt.d )
+    else:
+        mrbump_ensemble.mrbump_ensemble_local( job_scripts, amopt.d )
+        
+    # Collect the MRBUMP results
+    results_summary = mrbump_results.ResultsSummary( job_dir )
+    results_summary.extractResults()
+    amopt.d['mrbump_results'].append( results_summary.results )
+    #summary = results_summary.summariseResults()
+    
+    
+# Timing data
+time_stop = time.time()
+elapsed_time = time_stop - time_start
+run_in_min = elapsed_time / 60
+run_in_hours = run_in_min / 60
+msg = '\nMR and shelx DONE\n\n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
+logging.info(msg)
+RUNNING.write(msg)
 RUNNING.flush()
 
-
-
-
-if ImportTemplate ==True:
-       CCline += ' -in:file:native ' + template + ' -abinitio:steal_3mers True -abinitio:steal_9mers True -abinitio:start_native True -templates:force_native_topology True'
-
-
-if MakeModels == True:
-  PATH_TO_MODELS = RunDir + '/models'
-      
-  # If we are running with cluster support submit all modelling jobs to the cluster queue
-  if CLUSTER:
-      seed_list=[]
-
-      # Generate the list of random seeds
-      while len(seed_list) < NMODELS:
-        seed=random.randint(1000000, 4000000)
-        if seed not in seed_list:
-           seed_list.append(seed)
-
-      # Invoke the cluster run class
-      cluster_run=clusterize.ClusterRun()
-      cluster_run.QTYPE="SGE"
-      cluster_run.ALLATOM=ALLATOM
-      cluster_run.setupModellingDir(RunDir)
-      if USE_SCWRL:
-        cluster_run.setScwrlEXE(SCWRL)
-      cluster_run.set_USE_SCWRL(USE_SCWRL) 
-      # loop over the number of models and submit a job to the cluster
-      for i in range(NMODELS):
-        cluster_run.modelOnCluster(RunDir, 1, i+1, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, seed_list[i], insert_Rosetta_command+CCline)
-
-      # Monitor the cluster queue to see when all jobs have finished
-      cluster_run.monitorQueue()
-
-  else:
-      previous_seeds = [0]    #make random seeds  (1000000, 6000000) ! Must be unique seeds!!!!
-      proc = 1
-      while proc < NProc +1:
-        new_seed = random.randint(1000000, 4000000)  
-        seed_present = False
-
-        for seed in previous_seeds:
-           if new_seed == seed:
-             seed_present = True
-             break
-
-        if seed_present == False:
-          previous_seeds.append(new_seed)
-          proc +=1
-      if DEBUG == True:
-         print previous_seeds
-
-      split_jobs =  NMODELS / NProc   ### split jobs between processors
-      remainder =   NMODELS % NProc
-      jobs = [0]      
-      proc = 1
-      while proc < NProc +1:
-        jobs.insert(proc, split_jobs)
-        proc +=1
-      jobs[-1] = jobs[-1] + remainder    
-     # print jobs  ##################################
-
-
- 
-
-      os.system('mkdir '+ RunDir +'/models')
-      PATH_TO_MODELS = RunDir +'/models'
-
-      proc = 1
-      while proc < NProc +1:
-       if DEBUG == True:
-          print proc
- 
-       os.system('mkdir '+ RunDir + '/models_'+str(proc))
-       os.chdir(RunDir + '/models_'+str(proc))
-
-       
-
-       if ALLATOM == False:
-          RUNNING.write(ROSETTA_PATH +' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA + ' -in:file:frag3 '+ frags_3_mers +' -in:file:frag9 '+ frags_9_mers + ' -out:path ' +RunDir + '/models_'+str(proc)+' -out:pdb -out:nstruct ' + str(jobs[proc]) + ' -out:file:silent '+RunDir +'/models_'+str(proc) +'/OUT -return_full_atom false   -run:constant_seed -run:jran ' + str( previous_seeds[proc]) + insert_Rosetta_command+CCline+' > rosetta_' + str(proc) + '.log  &')
-          RUNNING.flush()
-
-          os.system(ROSETTA_PATH +' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA + ' -in:file:frag3 '+ frags_3_mers +' -in:file:frag9 '+ frags_9_mers + ' -out:path ' +RunDir + '/models_'+str(proc)+' -out:pdb -out:nstruct ' + str(jobs[proc]) + ' -out:file:silent '+RunDir +'/models_'+str(proc) +'/OUT -return_full_atom false   -run:constant_seed -run:jran ' + str( previous_seeds[proc]) + insert_Rosetta_command+CCline+' > rosetta_' + str(proc) + '.log  &')
-
-       else:
-          RUNNING.write(ROSETTA_PATH +' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA + ' -in:file:frag3 '+ frags_3_mers +' -in:file:frag9 '+ frags_9_mers + ' -out:path ' +RunDir + '/models_'+str(proc)+' -out:pdb -out:nstruct ' + str(jobs[proc]) + ' -out:file:silent '+RunDir +'/models_'+str(proc) +'/OUT -return_full_atom true -abinitio:relax  -run:constant_seed -run:jran ' + str( previous_seeds[proc]) + insert_Rosetta_command+CCline+' > rosetta_' + str(proc) + '.log  &')
-          RUNNING.flush()
-
-          os.system(ROSETTA_PATH +' -database ' + ROSETTA_DB + ' -in::file::fasta ' + FASTA + ' -in:file:frag3 '+ frags_3_mers +' -in:file:frag9 '+ frags_9_mers + ' -out:path ' +RunDir + '/models_'+str(proc)+' -out:pdb -out:nstruct ' + str(jobs[proc]) + ' -out:file:silent '+RunDir +'/models_'+str(proc) +'/OUT -return_full_atom true -abinitio:relax   -run:constant_seed -run:jran ' + str( previous_seeds[proc]) + insert_Rosetta_command+CCline+' > rosetta_' + str(proc) + '.log  &')
-
-
-       proc +=1
-
-
-
-
-### wait for all models to be made, check number for each job
-
-      no_models_to_make = NMODELS
-      no_models_have = 0 
-      finished_models = 0 
-      while no_models_have !=  no_models_to_make:
-        no_models_have = 0
-        proc = 1
-        while proc < NProc +1:
-          list_of_files = [file for file in os.listdir(RunDir +'/models_'+str(proc) ) if file.lower().endswith('.pdb')]
-
-
-          no_models_have  += len(list_of_files)
-          proc+=1
-        if no_models_have > finished_models:
-           if DEBUG == True:
-              print 'Number of models made so far = ' + str(no_models_have)
-           else:
-              divisor = no_models_to_make/10
-              if divisor !=0:
-                if no_models_have !=0:
-                  if no_models_have%divisor == 0:  
-                     print 'Number of models made so far = ' + str(no_models_have)
-
-           finished_models = no_models_have
-        if no_models_have ==  no_models_to_make:
-           break
-        time.sleep(5)       
-   
- 
-     
-   
-
-      
-   
-      LOG = open(RunDir+'/LOG', "a")
-      print 'MODELLING DONE'
-## got them all   Must Delete Models or job will hang -----------
-
-
-
-      MODELLING_time_stop=time.time()
-      cat_string = ''
-
-     # RunDir +'/models'
-      proc = 1
-      while proc < NProc +1:
-         if DEBUG == True:
-            print 'nproc', proc
-         if USE_SCWRL == True: 
-             add_sidechains_SCWRL(SCWRL,   RunDir + '/models_'+str(proc),   RunDir + '/models',  str(proc), DEBUG )
-         if USE_SCWRL == False:
-             for file in glob.glob( os.path.join(RunDir + '/models_'+str(proc), '*.pdb') ):
-
-                 name = re.split('/', file)
-                 pdbname = str(name.pop())
-                 shutil.copyfile(RunDir + '/models_'+str(proc) +'/'+pdbname, RunDir + '/models/'+str(proc)+'_'+pdbname )
-
-         cat_string += RunDir + '/OUT_' + str(proc) +'  '
-         #os.system('rm -r '+RunDir + '/models_'+str(proc) )
-         proc+=1
-    
-      os.chdir(RunDir)
-     # print 'Your models are in: ' +cat_string
-
-
-     ####### keep or delete run files
-if MakeModels == False:
-  PATH_TO_MODELS = MODELS_LOCATION
-  previous_seeds = []
-  seed_list = []
-RUNNING.write('\nModelling complete - models stored in:\n   '+PATH_TO_MODELS+'\n\n')
-sys.stdout.write('\n\nModelling complete - models stored in:\n   '+PATH_TO_MODELS+'\n\n')
-
-###############get seedlist
-
-if CLUSTER:
- if MakeModels == True:
-   for seed in seed_list:
-     seedlog.write(str(seed) + '\n')
-
-   seedlog.close()
-else:
- if MakeModels == True:
-   for seed in  previous_seeds:
-      seedlog.write(str(seed) + '\n')
-   seedlog.close()
-
-
-#--------------------------------------------
-#check if models are present regardless
-#--------------------------------------------
-if clusterimport:
- if os.path.exists(clusterimport):
-  cluster_path =  clusterimport
-  if not os.path.exists(RunDir+'/fine_cluster_1'): 
-    os.mkdir(RunDir+'/fine_cluster_1')
-  os.chdir(RunDir+'/fine_cluster_1')
-  list_of_ensembles = truncateedit_MAX.truncate(THESEUS,cluster_path , RunDir+'/fine_cluster_1', MAX, percent, False  )
-
-  os.system('mkdir '+RunDir+'/ensembles_1')
-  for each_ens in list_of_ensembles:
-        SCWRL_edit.edit_sidechains(each_ens, RunDir+'/ensembles_1/')
-  sys.exit()
-#--------------------------------------
-# Do the clustering  
-#---------------------------------------
-USE_SPICKER = True
-if ENSEMBLE_import ==False:
-
-# Spicker Alternative for clustering then MAX 
-#------------------------------------
- if USE_SPICKER==True:
-   
-    ResultsPath = RunDir+'/RESULTS'
-    if not os.path.exists(RunDir+'/RESULTS'):
-       os.mkdir(RunDir+'/RESULTS')
-
-
-  
-
-
-
-    #noClusters=1
-    
-    print '----- Clustering models --------\n'
-    
-    run_spicker.RUN_SPICKER(PATH_TO_MODELS, RunDir+'/spicker_run', SPICKEREXE, int(noClusters) , RunDir )
-    samples = 1
-    print '\nClusteing Done. using the first '+str(samples)+' clusters\n'
-    while samples < int(noClusters)+1:
-      models_path = RunDir + '/S_clusters/cluster_'+str(samples)
-      print '----- Truncating models for cluster '+str(samples)+' --------\n'
-      if not os.path.exists(RunDir+'/fine_cluster_'+str(samples)):
-         os.mkdir(RunDir+'/fine_cluster_'+str(samples))
-
-      os.chdir(RunDir+'/fine_cluster_'+str(samples) )    
-      if Ensembler == False:
-              list_of_ensembles = truncateedit_MAX.truncate(THESEUS, models_path, RunDir+'/fine_cluster_'+str(samples), MAX, percent, FIXED_INTERVALS  )
-
-      if Ensembler == True:
-              list_of_ensembles = truncateedit_MAX.truncate_Phenix(PHENIX, models_path, RunDir+'/fine_cluster_'+str(samples), MAX, percent, FIXED_INTERVALS  )
-
-      if top_model_only  == True:
-              list_of_ensembles = truncateedit_MAX.One_model_only( list_of_ensembles,   RunDir  )
-
-
-
- 
-      
-      os.system('mkdir '+RunDir+'/ensembles_'+str(samples))
-      for each_ens in list_of_ensembles:
-        SCWRL_edit.edit_sidechains(each_ens, RunDir+'/ensembles_'+str(samples)+'/')
-
-      final_ensembles =[]
-      for infile in glob.glob( os.path.join(RunDir+'/ensembles_'+str(samples), '*.pdb') ):
-         final_ensembles.append(infile)
-
-
-
-      bump_dir = os.path.join(RunDir, 'MRBUMP')
-      if not os.path.exists(bump_dir):
-       os.mkdir(bump_dir)
-      os.chdir(bump_dir)
-      if MISSING_DOMAINS == False:
-         if CLUSTER:
-            sys.stdout.write("Running MR and model building on a cluster\n\n")
-   
-            mrBuild=clusterize.ClusterRun()
-            mrBuild.QTYPE="SGE"
-   
-            mrBuildClusterDir=os.path.join(bump_dir, "cluster_run"+str(samples))
-            os.mkdir(mrBuildClusterDir)
-   
-            mrBuild.HKLIN = MTZ
-            mrBuild.LABIN["F"]         = flag_F
-            mrBuild.LABIN["SIGF"]      = flag_SIGF
-            mrBuild.LABIN["FreeR_flag"] = flag_FREE
-            mrBuild.SEQIN = FASTA
-            mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
-  
-            mrBuild.BCYCLES = Buccaneer_cycles
-            mrBuild.BUCC = Buccaneer
-            mrBuild.SCYLCLES = NoShelxCycles
-            mrBuild.SHELXE = use_shelxe
-
-            mrBuild.MRKEYS = MRkeys
- 
-            # Reset the queue list
-            mrBuild.qList=[]
-            jobID=0
-            for pdbfile in final_ensembles:
-               mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, mrbump_programs)
-               jobID=jobID+1
-            mrBuild.monitorQueue()
-
-            shutil.rmtree(RunDir+'/fine_cluster_'+str(samples))
-            #shutil.rmtree(RunDir+'/pre_models')
-            for l in os.listdir(RunDir+'/spicker_run'):
-              if os.path.splitext(l)[1] == 'pdb':
-                   os.remove(RunDir+'/spicker_run/'+l)
-            os.remove(RunDir+'/spicker_run/rep1.tra1')
-            T=printTable.Table()
-           
-            T.bumppath = mrBuildClusterDir
-            T.cluster = True
-            table = T.maketable()
-            out = sys.stdout
-            T.pprint_table(out, table)
-
-            #cleanup
-           # for each_run in os.listdir(mrBuildClusterDir ):
-            #   if os.path.isdir(  os.path.join(mrBuildClusterDir, each_run)):
-            #      name=re.split('_', each_run)
-            #      mrBuildOutputDir=os.path.join(bump_dir, "cluster_run"+str(samples)+"result"+name[1]) 
-            #      os.mkdir(mrBuildOutputDir)                   
-            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","phaser_shelx" ),mrBuildOutputDir  )
-            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","molrep_shelx" ),mrBuildOutputDir  )  
-            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","data" ),mrBuildOutputDir  )               
-            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "logs" ),mrBuildOutputDir  )               
-            #shutil.rmtree(mrBuildClusterDir)
-   
-      # Monitor the cluster queue to see when all jobs have finished
-
-          
-         if not CLUSTER:
-            sys.stdout.write('Truncating Done for cluster '+str(samples)+"\n\n")
-            sys.stdout.write('----- Running MRBUMP (cluster '+str(samples)+')--------\n\n')
-            sys.stdout.write('Created '+str(len(final_ensembles))+' ensembles,   running '+str(len(final_ensembles))+' jobs for cluster '+str(samples)+'\n') 
-
-            bump_dir = os.path.join(RunDir, 'MRBUMP_cluster'+str(samples))
-            print bump_dir
-            
-            os.mkdir(bump_dir) 
-            os.chdir(bump_dir)
-            split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-            run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
-            if NoShelx == False: 
-              Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
-              #print '\n\nFinal Results:\n\n'
-              #T=printTable.Table()
-              #T.bumppath = RunDir +'/MRBUMP_cluster'+str(samples)
-              #T.cluster = False
-              #table = T.maketable()
-              #out = sys.stdout
-              #T.pprint_table(out, table)
-
-            if NoShelx ==  True:
-              resultslog = open(ResultsPath+'/Results.log', "w")
-              print 'getting results from:'
-              print bump_dir
-              for mrbumplog in os.listdir(bump_dir):
-                  if re.search('.log', mrbumplog):
-                      #print mrbumplog
-                      for line in open(mrbumplog):
-                        if re.search('^(\d)\s*loc0_', line):
-                         if not re.search('method', line):
-                           print line
-                           resultslog.write(line)
-              resultslog.close()
-              sys.exit()
-
-      if MISSING_DOMAINS == True:
-        if  CLUSTER:
-            print ''
-# --------------- missing domains cluster
-
-      if MISSING_DOMAINS == True:
-        if  CLUSTER:
-            sys.stdout.write("Running MR and model building on a cluster\n\n")
-   
-            mrBuild=clusterize.ClusterRun()
-            mrBuild.QTYPE="SGE"
-   
-            mrBuildClusterDir=os.path.join(bump_dir, "cluster_run"+str(samples))
-            os.mkdir(mrBuildClusterDir)
-   
-
-            mrBuild.HKLIN = MTZ
-            mrBuild.LABIN["F"]         = flag_F
-            mrBuild.LABIN["SIGF"]      = flag_SIGF
-            mrBuild.LABIN["FreeR_flag"] = flag_FREE
-            mrBuild.SEQIN = domain_all_chain_fasta
-            mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
-
-
-            mrBuild.BCYCLES = Buccaneer_cycles
-            mrBuild.BUCC = Buccaneer
-            mrBuild.SCYLCLES = NoShelxCycles
-            mrBuild.SHELXE = use_shelxe
-
-            mrBuild.MRKEYS = MRkeys 
-
-
-#            mrBuild.FIXEDIN='FIXED_XYZIN '+domain_all_chains_pdb+' IDENTIY 0.6 \n'
-
-            # Reset the queue list
-            mrBuild.qList=[]
-            jobID=0
-            for pdbfile in final_ensembles:
-               mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID , mrbump_programs,  domain_all_chains_pdb , '0.6')
-               jobID=jobID+1
-            mrBuild.monitorQueue()
-
-            shutil.rmtree(RunDir+'/fine_cluster_'+str(samples))
-            shutil.rmtree(RunDir+'/pre_models')
-            for l in os.listdir(RunDir+'/spicker_run'):
-              if os.path.splitext(l)[1] == 'pdb':
-                   os.remove(RunDir+'/spicker_run/'+l)
-            os.remove(RunDir+'/spicker_run/rep1.tra1')
-
-
-
-
-            #cleanup
-            #for each_run in os.listdir(mrBuildClusterDir ):
-            #   if os.path.isdir(  os.path.join(mrBuildClusterDir, each_run)):
-            #      name=re.split('_', each_run)
-            #      mrBuildOutputDir=os.path.join(bump_dir, "cluster_run"+str(samples)+"result"+name[1]) 
-            #      os.mkdir(mrBuildOutputDir)                   
-            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","phaser_shelx" ),mrBuildOutputDir  )
-            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","molrep_shelx" ),mrBuildOutputDir  )  
-            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","data" ),mrBuildOutputDir  )               
-            #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "logs" ),mrBuildOutputDir  )               
-            #shutil.rmtree(mrBuildClusterDir)
-   
-#-------------------------------------
-        else:
-         print domain_all_chains_pdb
-         print domain_all_chain_fasta
-         bump_dir = os.path.join(RunDir, 'MRBUMP_cluster'+str(samples))
-         os.mkdir(bump_dir) 
-         os.chdir(bump_dir)
-         split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-         run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys )
-         Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
-
-
-      samples+=1
-
-
-    time_stop=time.time()
-    elapsed_time= time_stop - time_start
-    run_in_min=elapsed_time/60
-    run_in_hours = run_in_min/60
-    print '\nMR and shelx DONE \n ALL DONE  (in '+str(run_in_hours)+' hours) \n----------------------------------------\n'
-    RUNNING.write('\nMR and shelx ALL DONE  (in '+str(run_in_hours)+' hours) \n----------------------------------------\n')
-    RUNNING.flush()
-    RUNNING.write('The authors of specific programs should be referenced where applicable::\n\n'+
-           'AMPLE: To be added\n'+
-           'SHELX: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122/n/n'+
-
-           'SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein side-chain conformations with SCWRL4. Proteins (2009).\n\n'+
-
-
-           'Thsesus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.\n'+
-           'Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]\n'+
-           'Supplementary Materials for Theobald and Wuttke 2006b.\n'+
-
-
-           'MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457\n'+
-
-
-           'CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs\n'+
-           'for Protein Crystallography. Acta Cryst. D50, 760-763\n\n'+
-
-           'MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025\n\n'+
-
-           'PHASER: McCoy, A.J., Grosse-Kunstleve, R.W., Adams, P.D., Winn, M.D.,\n'+
-           'Storoni, L.C. & Read, R.J. (2007)\n'+
-           'Phaser crystallographic software J. Appl. Cryst. 40, 658-674\n\n'+
-
-           'REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromolecular\n'+
-           'Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255\n\n'+
-
-           'SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871\n'+
-
-           'MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/\n')
-
-
-
-    RUNNING.flush()
-    RUNNING.close()
-
-   # os.system('tar -cvf '+PDB_code+'_' + RunDir+'.tar '+RunDir)
-   # os.system('gzip ' +PDB_code+'_'+ RunDir+'.tar')
-   # os.system('mv '+ PDB_code+'_'+  RunDir+'.tar.gz /data2/jac45 ')
-   # os.system('rm '+RunDir)
-    #stop here
-    sys.exit()  # the above is the only code that should be used
-
-
-
+# Save results
+f = open( amopt.d['results_path'], 'w' )
+cPickle.dump( amopt.d, f )
+f.close()
+logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
+
+# Now print out the final summary
+summary = amopt.final_summary()
+logger.info( summary )
+RUNNING.write(summary)
+RUNNING.flush()
+RUNNING.close()
+
+# os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
+# os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')
+# os.system('mv '+ pdb_code+'_'+  work_dir+'.tar.gz /data2/jac45 ')
+# os.system('rm '+work_dir)
+sys.exit(0)
 #------------------------------------
 # END
 #----------------------------------
-time_stop=time.time()
-
-elapsed_time= time_stop - time_start
-run_in_min=elapsed_time/60
-run_in_hours = run_in_min/60
-
-RUNNING.write('\nMODELLING and ASSEMBLY ALL DONE  (in '+str(run_in_hours)+' hours) \n----------------------------------------\n')
-RUNNING.flush()
-
-if ENSEMBLE_import ==True:
- final_ensembles =[]
- for infile in glob.glob( os.path.join(ENSEMBLES, '*.pdb') ):
-   final_ensembles.append(infile)
-
- if top_model_only  == True:
-            final_ensembles   = truncateedit_MAX.One_model_only(final_ensembles ,   RunDir  )
-
-ResultsPath = RunDir+'/RESULTS'
-if not os.path.exists(RunDir+'/RESULTS'):
-       os.mkdir(RunDir+'/RESULTS')
-
-
-
-#--------------Import into MrBUMP here-------------------
-RUNNING.write('Running MrBUMP\nMR LOGS in '+RunDir+'/MRBUMP')
-RUNNING.flush()
-
-#os.system('mkdir ' + RunDir+'/MRBUMP')
-bump_dir = os.path.join(RunDir, 'MRBUMP')
-os.mkdir(bump_dir)
-os.chdir(bump_dir)
-ResultsPath = RunDir+'/RESULTS'
-if MISSING_DOMAINS == False:
-   if CLUSTER:
-      sys.stdout.write("Running MR and model building on a cluster\n\n")
-   
-      mrBuild=clusterize.ClusterRun()
-      mrBuild.QTYPE="SGE"
-   
-      mrBuildClusterDir=os.path.join(bump_dir, "cluster_run")
-      os.mkdir(mrBuildClusterDir)
-   
-      mrBuild.HKLIN = MTZ
-      mrBuild.LABIN["F"]         = flag_F
-      mrBuild.LABIN["SIGF"]      = flag_SIGF
-      mrBuild.LABIN["FreeR_flag"] = flag_FREE
-      mrBuild.SEQIN = FASTA
-      mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
-     
-      mrBuild.BCYCLES = Buccaneer_cycles
-      mrBuild.BUCC = Buccaneer
-      mrBuild.SCYLCLES = NoShelxCycles
-      mrBuild.SHELXE = NoShelx  
- 
-      mrBuild.MRKEYS = MRkeys
- 
-      # Reset the queue list
-      mrBuild.qList=[]
-      jobID=0
-
-      if OLD_shelx == True:
-           mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
-      if OLD_shelx == False:
-           mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
-
-      for pdbfile in final_ensembles:
-         mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, mrbump_programs)
-         jobID=jobID+1
-
-
-
-
-      # Monitor the cluster queue to see when all jobs have finished
-      mrBuild.monitorQueue()
-   else: 
-      split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-      run_mr_bump_shelx_parallel.split_into_runs(MTZ, split_ensembles, bump_dir, FASTA, NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
-      Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
-
-      if NoShelx == False:
-               Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
-      if NoShelx ==  True:
-              resultslog = open(ResultsPath+'/Results.log', "w")
-              print 'getting results from:'
-              print bump_dir
-              for mrbumplog in os.listdir(bump_dir):
-                  if re.search('.log', mrbumplog):
-                      #print mrbumplog
-                      for line in open(mrbumplog):
-                        if re.search('^(\d)\s*loc0_', line):
-                         if not re.search('method', line):
-                           print line
-                           resultslog.write(line)
-              resultslog.close()
-              sys.exit()
-
-
-
-
-if MISSING_DOMAINS == True:
-  if  CLUSTER:
-
-      sys.stdout.write("Running MR and model building on a cluster\n\n")
-   
-      mrBuild=clusterize.ClusterRun()
-      mrBuild.QTYPE="SGE"
-   
-      mrBuildClusterDir=os.path.join(bump_dir, "cluster_run")
-      os.mkdir(mrBuildClusterDir)
-   
-      mrBuild.HKLIN = MTZ
-      mrBuild.LABIN["F"]         = flag_F
-      mrBuild.LABIN["SIGF"]      = flag_SIGF
-      mrBuild.LABIN["FreeR_flag"] = flag_FREE
-      mrBuild.SEQIN = domain_all_chain_fasta
-      mrBuild.getMTZInfo(mrBuild.HKLIN, mrBuildClusterDir)
-
-      mrBuild.BCYCLES = Buccaneer_cycles
-      mrBuild.BUCC = Buccaneer
-      mrBuild.SCYLCLES = NoShelxCycles
-      mrBuild.SHELXE = use_shelxe
-  
-      mrBuild.MRKEYS = MRkeys 
-      print MRkeys
-      if OLD_shelx == True:
-           mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
-      if OLD_shelx == False:
-           mrBuild.shelxClusterScript = "python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
-
-      # Reset the queue list
-      mrBuild.qList=[]
-      jobID=0
-      for pdbfile in final_ensembles:
-         mrBuild.mrBuildOnCluster(mrBuildClusterDir, pdbfile, jobID, mrbump_programs, domain_all_chains_pdb, 0.6)
-         jobID=jobID+1
-
-
-
-  else:
-   print domain_all_chains_pdb
-   print domain_all_chain_fasta
-   print 'the input is fixed ', FIXED_INPUT
-
-
-   split_ensembles = run_mr_bump_shelx_parallel.split(final_ensembles, NProc)
-
-   run_mr_bump_shelx_parallel.split_into_runs_domains(MTZ, split_ensembles, bump_dir, domain_all_chain_fasta , NProc, flag_SIGF, flag_F, flag_FREE, noASU, EarlyTerminate, ResultsPath, use_shelxe, NoShelxCycles,  domain_all_chains_pdb, FIXED_INPUT, OLD_shelx, mrbump_programs, Buccaneer, Buccaneer_cycles, arpwarp, arpwarp_cycles, MRkeys)
-   Final_display_results.make_log(bump_dir, os.path.join(RunDir, 'Final_results.log'))
-
-
-
-
-time_stop=time.time()
-elapsed_time= time_stop - time_start
-run_in_min=elapsed_time/60
-run_in_hours = run_in_min/60
-
-RUNNING.write('\nMR and shelx ALL DONE  (in '+str(run_in_hours)+' hours) \n----------------------------------------\n')
-RUNNING.flush()
-
