@@ -340,6 +340,11 @@ class Ensembler(object):
                 os.mkdir( ensemble_dir )
                 os.chdir( ensemble_dir )
                 
+                # Restrict cluster to self.max_ensemble_models
+                if len( cluster_files ) > self.max_ensemble_models:
+                    logging.debug("{0} files in cluster so truncating list to first {0}".format( len( cluster_files ), self.max_ensemble_models) )
+                    cluster_files = cluster_files[ :self.max_ensemble_models ]
+                    
                 # Write out the files for reference
                 file_list = "maxcluster_radius_{0}_files.list".format( radius )
                 f = open(file_list, "w")
@@ -347,11 +352,6 @@ class Ensembler(object):
                     f.write( c+"\n")
                 f.write("\n")
                 f.close()
-                
-                # Restrict cluster to self.max_ensemble_models
-                if len( cluster_files ) > self.max_ensemble_models:
-                    logging.debug("{0} files in cluster so truncating list to first {0}".format( len( cluster_files ), self.max_ensemble_models) )
-                    cluster_files = cluster_files[ :self.max_ensemble_models ]
                 
                 # Run theseus to generate a file containing the aligned clusters
                 cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files
