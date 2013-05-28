@@ -65,14 +65,10 @@ def len_ensemble( epdb ):
 root="/home/Shared/TM"
 root="/gpfs/home/HCEA041/djr01/jxt15-djr01/TM"
 
-dirs = [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3TX3", "3U2F", "4DVE" ]
 dirs = [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]
+dirs = [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3TX3", "3U2F", "4DVE" ]
 # Need to think about 3LBW
-#dirs = [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]
-#dirs = [ "2BL2" ]
-#dirs = [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP",  "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]
-#dirs = [ "1GU8", "2BHW", "2EVU", "2O9G", "2UUI", "2XOV", "3GD8", "3HAP",  "3RLB"]
-#dirs = [ "2WIE"]
+dirs = [ "2WIE"]
 
 
 # Get the  data on each TM
@@ -140,12 +136,14 @@ for tdir in dirs:
     clusters=clusters[:-1]
     print "Spicker clusters: "+clusters
     
-    # Take second cluster
-    eresults = rdict['ensemble_results'][1]
+    # Take first cluster
+    eresults = rdict['ensemble_results'][0]
+    #eresults = rdict['ensemble_results'][1]
     
-    # MRBUMP molrep
-    #if False and os.path.exists( os.path.join( dpath, bpkl ) ):
-    if os.path.exists( os.path.join( dpath, bpkl ) ):
+    # MRBUMP - we have to process the results as the method used to mamke 
+    # the pickle file couldn't handle unfinished results
+    if False and os.path.exists( os.path.join( dpath, bpkl ) ):
+    #if os.path.exists( os.path.join( dpath, bpkl ) ):
         pklf = open( os.path.join( dpath, bpkl ) )
         rdict = cPickle.load( pklf  )
         pklf.close()
@@ -155,11 +153,20 @@ for tdir in dirs:
             #mrb_results[i].name = res.name[9:-6]
             pass
     else:
+        pass
         # unfinished run
-        r = mrbump_results.ResultsSummary( os.path.join(dpath,"ENSEMBLE_2_0/MRBUMP/cluster_1") )
+        #r = mrbump_results.ResultsSummary( os.path.join(dpath,"ENSEMBLE_2_0/MRBUMP/cluster_1") )
+        r = mrbump_results.ResultsSummary( os.path.join(dpath,"ENSEMBLE_1_PHASER0/MRBUMP/cluster_1") )
         #print r.summariseResults()
         r.extractResults()
-        mrb_results = r.results
+        #mrb_results = r.results
+        mrb_phaser = r.results
+
+    # Get MOLREP results
+    r = mrbump_results.ResultsSummary( os.path.join(dpath,"ENSEMBLE_1_MOLREP_0/MRBUMP/cluster_1") )
+    #print r.summariseResults()
+    r.extractResults()
+    mrb_molrep = r.results
     
     
     # Combine and resort
