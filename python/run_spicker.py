@@ -171,6 +171,12 @@ class SpickerCluster( object ):
     
         # Read the log and generate the results
         results = self.process_log()
+
+	# Check we have enough clusters
+        if len(results) < self.num_clusters:
+            msg = "Only {0} clusters returned from Spicker cannot process {1} clusters!\n".format( len(results),self.num_clusters )
+            self.logger.critical( msg )
+            raise RuntimeError,msg
         
         # Loop through each cluster copying the files as we go
         # We only process the clusters we will be using
