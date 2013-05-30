@@ -6,6 +6,7 @@ Created on 15 Apr 2013
 
 import re
 import types
+import unittest
 
 class PDBEdit(object):
     """Class for editing PDBs
@@ -103,7 +104,6 @@ class PDBEdit(object):
         pdb_in.close
 
 
-f = open("/Users/jmht/Documents/AMPLE/ample-dev1/python/3PP5.pdb")
 
 class PdbAtom(object):
     """
@@ -128,7 +128,6 @@ class PdbAtom(object):
     def __init__(self):
         """Set up attributes"""
         
-        self.LINEID = "ATOM"
         self.serial = None
         self.name = None
         self.altLoc = None
@@ -150,23 +149,24 @@ class PdbAtom(object):
         assert len(line) >= 54,"Line length was: {0}\n{1}".format(len(line),line)
         
         self.serial = int(line[6:11])
-        self.name = line[12:15]
+        self.name = line[12:16]
         # Use for all so None means an empty field
         if line[16].strip():
             self.altLoc = line[16]
         self.resName = line[17:20]
         if line[21].strip():
             self.chainID = line[21]
-        self.resSeq = line[22:26]
-        if line[16].strip():
+        if line[22:26].strip():
+            self.resSeq = int(line[22:26])
+        if line[26].strip():
             self.iCode = line[26]
         self.x = float(line[30:38])
         self.y = float(line[38:46])
         self.z = float(line[46:54])
         if len(line) >= 60 and line[54:60].strip():
             self.occupancy = float(line[54:60])
-        if len(line) >= 65 and line[60:65].strip():
-            self.tempFactor = float(line[60:65])
+        if len(line) >= 66 and line[60:66].strip():
+            self.tempFactor = float(line[60:66])
         if len(line) >= 78 and line[76:78].strip():
             self.element = line[76:78]
         if len(line) >= 80 and line[78:80].strip():
@@ -175,46 +175,49 @@ class PdbAtom(object):
     def toLine(self):
         """Create a line suitable for printing to a PDB file"""
         
-        s = "ATOM  "
-        s += "{0:5d}".format( self.serial )
-        s += "{0:>4}".format( self.name ) # right aligned
-        if not self.altLoc:
+        s = "ATOM  " # 1-6
+        s += "{0:5d}".format( self.serial ) # 7-11
+        s += " " # 12 blank
+        s += "{0:>4}".format( self.name ) # 13-16
+        if not self.altLoc: #17
             s += " "
         else:
             s += "{0:1}".format( self.altLoc )
-        s += "{0:3}".format( self.resName )
-        if not self.chainID:
+        s += "{0:3}".format( self.resName ) # 18-20
+        s += " " # 21 blank
+        if not self.chainID: #22
             s += " "
         else:
             s += "{0:1}".format( self.chainID )
-        s += "{0:4}".format( self.resSeq )
-        if not self.iCode:
+        s += "{0:4}".format( self.resSeq ) #23-26
+        if not self.iCode: #27
             s += " "
         else:
             s += "{0:1}".format( self.iCode )
-        s += "{0: 8.3F}".format( self.x )
-        s += "{0: 8.3F}".format( self.y )
-        s += "{0: 8.3F}".format( self.z )
-        if not self.occupancy:
+        s += "   " # 28-30 blank
+        s += "{0: 8.3F}".format( self.x ) #31-38
+        s += "{0: 8.3F}".format( self.y ) #39-46
+        s += "{0: 8.3F}".format( self.z ) #47-54
+        if not self.occupancy: # 55-60
             s += "      "
         else:
             s += "{0: 6.2F}".format( self.occupancy )
-        if not self.tempFactor:
+        if not self.tempFactor: # 61-66
             s += "      "
         else:
             s += "{0: 6.2F}".format( self.tempFactor )
-        if not self.element:
+        s += "          " # 67-76 blank
+        if not self.element: #77-78
             s += "  "
         else:
             s += "{0:>2}".format( self.element )
-        if not self.charge:
+        if not self.charge: #79-80
             s += "  "
         else:
             s += "{0:2d}".format( self.charge )
             
         return s
         
-
     def __str__(self):
         """List the data attributes of this object"""
         me = {}
@@ -226,16 +229,37 @@ class PdbAtom(object):
             
         return "{0} : {1}".format(self.__repr__(),str(me))
 
-for line in f:
-    line = line.strip()
-    
-    if line.startswith("ATOM"):
-        #a = PdbAtom().fromLine(line)
-        print line  
+
+class Test(unittest.TestCase):
+
+    def testReadAtom(self):
+        """See if we can read an atom line"""
+
+        line = "ATOM     41  NH1AARG A  -3      12.218  84.840  88.007  0.50 40.76           N  "
         a = PdbAtom()
         a.fromLine(line)
-        print a.toLine()
-        break
+        self.assertEqual(a.serial,41)
+        self.assertEqual(a.name,' NH1')
+        self.assertEqual(a.altLoc,'A')
+        self.assertEqual(a.resName,'ARG')
+        self.assertEqual(a.chainID,'A')
+        self.assertEqual(a.resSeq,-3)
+        self.assertEqual(a.iCode,None)
+        self.assertEqual(a.x,12.218)
+        self.assertEqual(a.y,84.840)
+        self.assertEqual(a.z,88.007)
+        self.assertEqual(a.occupancy,0.5)
+        self.assertEqual(a.tempFactor,40.76)
+        self.assertEqual(a.element,' N')
     
-    
-
+    def testWriteAtom(self):
+        """Round-trip an atom line"""
+        
+        line = "ATOM     41  NH1AARG A  -3      12.218  84.840  88.007  0.50 40.76           N  "
+        a = PdbAtom()
+        a.fromLine(line)   
+        self.assertEqual( a.toLine(), line )
+           
+if __name__ == "__main__":
+    #import sys;sys.argv = ['', 'Test.testName']
+    unittest.main()
