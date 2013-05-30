@@ -41,6 +41,7 @@ import time
 # Our imports
 import ample_options
 import ample_util
+import cif_parser
 import ensemble
 import fasta_parser
 import mrbump_ensemble
@@ -206,6 +207,9 @@ parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
 
 parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
                    help='pathway to SCWRL exe')
+
+parser.add_argument('-sf_cif', metavar='sf_cif', type=str, nargs=1,
+                   help='path to a structure factor CIF file')
 
 parser.add_argument('-shelx_cycles', metavar='shelx_cycles', type=str, nargs=1,
                      help='number of shelx sycles')
@@ -499,6 +503,19 @@ if amopt.d['use_shelxe']:
     amopt.d['shelxe_exe'] = ample_util.check_for_exe('shelxe', amopt.d['shelxe_exe'])
 
 # Check if we need to get any of the flags from the MTZ file
+if amopt.d['sf_cif'] and amopt.d['mtz']:
+    logger.critical("Both sf_cif and mtz flags supplied - only use one")
+    sys.exit(1)
+
+# We've been given a sf_cif so convert
+if amopt.d['sf_cif']:
+    if not os.path.isfile( amopt.d['sf_cif'] ):
+        logger.critical("Cannot find sf_cif file: {0}".format( amopt.d['sf_cif'] ) )
+        sys.exit(1)
+    else:
+        cp = cif_parser.CifParser()
+        amopt.d['mtz'] = cp.sfcif2mtz( amopt.d['sf_cif'] )
+    
 if not os.path.isfile( amopt.d['mtz'] ):
     logger.critical("Cannot find MTZ file: {0}".format( amopt.d['mtz'] ) )
     sys.exit(1)
