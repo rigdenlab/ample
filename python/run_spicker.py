@@ -33,7 +33,6 @@ class SpickerCluster( object ):
         """Initialise from a dictionary of options"""
         
         self.rundir = amoptd['spicker_rundir']
-        #self.clusterdir = amoptd['spicker_clusterdir']
         self.spicker_exe =  amoptd['spicker_exe']
         self.models_dir = amoptd['models_dir']
         self.num_clusters = amoptd['num_clusters']
@@ -83,8 +82,15 @@ class SpickerCluster( object ):
         # ones to the relevant directory after we have run spicker - the order of these must match the order
         # of the structures in the rep1.tra1 file 
         file_list = open( 'file_list', "w")
+        
+        
+        models_list = glob.glob( os.path.join(self.models_dir,  '*.pdb') )
+        if not len(models_list):
+            msg = "run_spicker cannot find any pdb files in directory: {0}".format( self.models_dir )
+            self.logger.critical( msg )
+            raise RuntimeError,msg
     
-        for infile in glob.glob( os.path.join(self.models_dir,  '*.pdb') ):
+        for infile in models_list:
             
             pdbname = os.path.basename(infile)
             file_list.write(infile + '\n')
@@ -314,21 +320,34 @@ class SpickerCluster( object ):
 
 
 if __name__ == "__main__":
-
+    
+    #
+    # Run Spicker on a directory of PDB files
+    #
+    import sys
+    if len(sys.argv) != 2:
+        print "Usage is {0} <directory_of_pdbs>".format( sys.argv[0] )
+        sys.exit(1)
+        
+    models_dir = os.path.abspath( sys.argv[1] )
+    if not os.path.isdir(models_dir):
+        print "Cannot find directory: {0}".format( models_dir )
+        sys.exit(1)
+        
+    spicker_exe = ample_util.which("spicker")
+    if not spicker_exe:
+        print "Cannot find spicker executable in path!"
+        sys.exit(1)
+        
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    root = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_0"
-    optd = { 'spicker_rundir' : os.path.join( root, 'spicker_run'),
-            'spicker_clusterdir' : os.path.join( root, 'S_clusters'),
-            'spicker_exe' : '/opt/spicker/spicker',
-            'models_dir': os.path.join( root, 'models' ),
+    optd = { 'spicker_rundir' : os.getcwd(),
+            'spicker_exe' : spicker_exe,
+            'models_dir': models_dir,
             'num_clusters' : 3
             }
 
     spicker = SpickerCluster( optd )
     spicker.run_spicker()
     print spicker.results_summary()
-    #spicker_results = spicker.get_results()
-
-    #run_spicker(models, spicker_run_dir, spickerexe, no_clusters_sampled, overpath)
