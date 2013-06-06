@@ -190,7 +190,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         job_script = open(script_path, "w")
 
         logFile= script_path+".log"
-        script_header = self.subScriptHeader( nProc=1, logFile=logFile, jobName="ensemble")
+        script_header = self.subScriptHeader( nProc=1, logFile=logFile, jobName="ensemble", jobTime="1:00")
         job_script.write( script_header )
 
         # Find path to this directory to get path to python ensemble.py script
@@ -252,7 +252,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
         file.write(script_header)
 
-        file.write("export CCP4_SCR=$TMPDIR\n\n")
+        #file.write("export CCP4_SCR=$TMPDIR\n\n")
 
         # jmht - this needs to go in the rosetta object
         file.write('cd '+ os.path.join(RunDir, "pre_models", "model_" + str(jobNumber)) +'\n\n'+
@@ -354,7 +354,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         file=open(sub_script, "w")
         script_header = self.subScriptHeader( nProc=nProc, logFile=logFile, jobName=jobName)
         file.write(script_header+"\n\n")
-        file.write("export CCP4_SCR=$TMPDIR\n\n")
+        #file.write("export CCP4_SCR=$TMPDIR\n\n")
 
         # Build up the rosetta command
         nstruct=1 # 1 structure
@@ -389,7 +389,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
         
-    def subScriptHeader(self, nProc=None, logFile=None, jobName=None):
+    def subScriptHeader(self, nProc=None, logFile=None, jobName=None, jobTime=None):
         """
         Create a string suitable for writing out as the header of the submission script
         for submitting to a particular queueing system
@@ -411,7 +411,10 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 sh += '#BSUB -R "span[ptile={0}]"\n'.format(nProc)
             else:
                 sh += '#BSUB -R "span[ptile=16]"\n'
-            sh += '#BSUB -W 12:00\n'
+            if jobTime:
+                sh += '#BSUB -W {0}\n'.format(jobTime)
+            else:
+                sh += '#BSUB -W 4:00\n'
             if nProc:
                 sh += '#BSUB -n {0}\n'.format(nProc) 
             sh += '#BSUB -o {0}\n'.format(logFile) 
