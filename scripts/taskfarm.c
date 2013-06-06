@@ -21,8 +21,8 @@
 /* Global Variables */
 int CHDIR=1;
 int rank;
-char my_lockfile[256];
-char *global_lockfile = "LOCKFILE";
+char my_lockfile[1024];
+char global_lockfile[1024];
 
 
 int get_lock() {
@@ -373,6 +373,9 @@ int main(argc, argv)
 	if ( jobid == -1 ) {
 		exit_error("Error getting jobid\n");
 	}
+
+        /* Set global_lockfile name */
+	sprintf(global_lockfile, "LOCKFILE.%d",jobid);
 
 	/* Create our local lockfile */
 	//sprintf(my_lockfile, "LOCKFILE.%d.%s",jobid, hostname);
