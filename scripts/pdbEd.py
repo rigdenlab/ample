@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Created on 30 May 2013
 
@@ -17,7 +18,8 @@ if len(sys.argv) == 3:
     
 if not outpdb:
     name = os.path.splitext( os.path.basename(inpdb) )[0]
-    outpdb = name + "_clean.pdb"
+    dirname = os.path.dirname( os.path.abspath( inpdb ) )
+    outpdb = os.path.join( dirname, name + "_clean.pdb" )
     
 o = open( outpdb, 'w' )
 
