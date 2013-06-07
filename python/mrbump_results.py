@@ -146,18 +146,17 @@ class ResultsSummary(object):
                 failed[ ensemble ] = "missing-resultsTable.dat"
                 continue
             
-            # Should have something viable, so create result object
-            result = MrBumpResult()
-            result.jobDir = jobDir
-            
             firstLine = True
             # This maps the index of data field to the index of the columnTitle and resultAttr 
             fieldIndex = [ None ] * len( self.columnTitles )
             # Read results table to get the results
             for line in open(resultsTable):
                 
-                line = line.strip()
+                # Create a result object for each line in the output file
+                result = MrBumpResult()
+                result.jobDir = jobDir
                 
+                line = line.strip()
                 if firstLine:
                     # Processing header
                     firstLine=False
