@@ -69,6 +69,7 @@ class AmpleOptions(object):
                             'rosetta_path' : None,
                             'run_dir' : os.getcwd(),
                             'scwrl_exe' : None,
+                            'sf_cif' : None,
                             'shelx_cycles' : 15,
                             'shelxe_exe' : None,
                             'SIGF' : None,

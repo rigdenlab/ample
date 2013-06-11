@@ -341,8 +341,9 @@ class Ensembler(object):
                 os.chdir( ensemble_dir )
                 
                 # Restrict cluster to self.max_ensemble_models
+                assert self.max_ensemble_models
                 if len( cluster_files ) > self.max_ensemble_models:
-                    logging.debug("{0} files in cluster so truncating list to first {0}".format( len( cluster_files ), self.max_ensemble_models) )
+                    logging.debug("{0} files in cluster so truncating list to first {1}".format( len( cluster_files ), self.max_ensemble_models) )
                     cluster_files = cluster_files[ :self.max_ensemble_models ]
                     
                 # Write out the files for reference

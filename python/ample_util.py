@@ -182,13 +182,14 @@ def make_workdir(work_dir, rootname='ROSETTA_MR_'):
     work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
     return work_dir
 
-def run_command( cmd, logfile=None, directory=None, dolog=True ):
+def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     """Execute a command and return the exit code.
     
     We take care of outputting stuff to the logs and opening/closing logfiles
     
     Args:
     cmd - command to run as a list
+    stdin - a string to use as stdin for the command
     logfile (optional) - the path to the logfile
     directory (optional) - the directory to run the job in (cwd assumed)
     dolog: bool - whether to output info to the system log
@@ -196,6 +197,7 @@ def run_command( cmd, logfile=None, directory=None, dolog=True ):
     
     if not directory:
         directory = os.getcwd()
+        
     if dolog:
         logging.debug("In directory {0}\nRunning command: {1}".format( directory, " ".join(cmd)  ) )
     
@@ -205,8 +207,16 @@ def run_command( cmd, logfile=None, directory=None, dolog=True ):
         logf = open( logfile, "w" )
     else:
         logf = tempfile.TemporaryFile()
+        
+    if stdin != None:
+        stdinstr = stdin
+        stdin = subprocess.PIPE
     
-    p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT, cwd=directory )
+    p = subprocess.Popen( cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory )
+    
+    if stdin != None:
+        p.stdin.write( stdinstr )
+        p.stdin.close()
     
     p.wait()
     logf.close()

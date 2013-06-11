@@ -55,7 +55,8 @@ def create_ensembles( amoptd ):
         if len( cluster_models ) < 2:
             msg = "Could not create ensemble for cluster {0} as less than 2 models!".format( cluster )
             logger.critical(msg)
-            raise RuntimeError, msg
+            #raise RuntimeError, msg
+            continue
         
         ensembler = ample_ensemble.Ensembler()
         ensembler.maxcluster_exe = amoptd['maxcluster_exe']

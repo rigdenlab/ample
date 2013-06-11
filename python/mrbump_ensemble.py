@@ -9,6 +9,7 @@ import logging
 import multiprocessing
 import subprocess
 import os
+import sys
 import time
 import unittest
 
@@ -269,10 +270,12 @@ def worker( queue, early_terminate=False ):
         if early_terminate:
             if check_success( directory ):
                 print "Worker {0} job succeeded".format(multiprocessing.current_process().name)
-                return 0
+                #return 0
+                sys.exit(0)
         
     #print "worker {0} FAILED!".format(multiprocessing.current_process().name)
-    return 1
+    #return 1
+    sys.exit(1)
 ##End worker
 
 def check_success( directory ):
