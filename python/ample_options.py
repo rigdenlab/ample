@@ -67,6 +67,7 @@ class AmpleOptions(object):
                             'rosetta_dir' : None,
                             'rosetta_fragments_exe' : None,
                             'rosetta_path' : None,
+                            'rosetta_version' : None,
                             'run_dir' : os.getcwd(),
                             'scwrl_exe' : None,
                             'sf_cif' : None,

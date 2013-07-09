@@ -202,6 +202,9 @@ parser.add_argument('-rosetta_dir', metavar='Rosetta_dir', type=str, nargs=1,
 parser.add_argument('-rosetta_fragments_exe', metavar='path to make_fragments.pl', type=str, nargs=1,
                    help='location of make_fragments.pl')
 
+parser.add_argument('-rosetta_version', metavar='rosetta_version', type=float, nargs=1,
+                   help='the version number of Rosetta')
+
 parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
                    help='directory to put files (default current dir)')
 

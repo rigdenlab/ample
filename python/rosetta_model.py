@@ -268,27 +268,39 @@ class RosettaModel(object):
         
         if not self.rosetta_version:
             # Get version
+            version = None
             version_file = self.rosetta_dir + '/README.version'
-            if not os.path.exists(version_file):
-                self.logger.critical('Version file for Rosetta not found')
-                sys.exit()
+            if os.path.exists(version_file):
+                try:
+                    for line in open(version_file,'r'):
+                        line.strip()
+                        if line.startswith('Rosetta'):
+                            tversion = line.split()[1].strip()
+                            # version can be 3 digits - e.g. 3.2.4 - we only care about 2
+                            version = float( ".".join(tversion.split(".")[0:2]) )
+                    #self.logger.info( 'Your Rosetta version is: {0}'.format( version ) )
+                except Exception,e:
+                    self.logger.critical("Error determining rosetta version: {0}".format(e))
+                    sys.exit(1)
+                                
+            else:
+                # Version file is absent in 3.5, so we need to use the directory name
+                self.logger.debug('Version file for Rosetta not found - checking to see if its 3.5')
+                dirname = os.path.basename( self.rosetta_dir )
+                if dirname.endswith( os.sep ):
+                    dirname = dirname[:-1]
+                if dirname.endswith("3.5"):
+                    version = 3.5
+                else:
+                    self.logger.critical("Error determining rosetta version: {0}".format(e))
+                    sys.exit(1)
                 
-            version = 3.2
-            try:
-                for line in open(version_file,'r'):
-                    line.strip()
-                    if line.startswith('Rosetta'):
-                        tversion = line.split()[1].strip()
-                        # version can be 3 digits - e.g. 3.2.4 - we only care about 2
-                        version = float( ".".join(tversion.split(".")[0:2]) )
-                self.logger.info( 'Your Rosetta version is: {0}'.format( version ) )
-            except Exception,e:
-                print e
-                self.logger.critical("Error determining rosetta version: {0}".format(e))
-                sys.exit(1)
             self.rosetta_version = version
-            
-        return version
+        else:
+            self.logger.debug( 'Using user-supplied Rosetta version' )
+        
+        self.logger.info( 'Your Rosetta version is: {0}'.format( self.rosetta_version ) )  
+        return self.rosetta_version
     #End get_version 
     
     def modelling_cmd(self, wdir, nstruct, seed):
@@ -299,17 +311,22 @@ class RosettaModel(object):
         seed: seed for this processor
         """
         
-        cmd = [ self.rosetta_path,
-               '-database', self.rosetta_db,
-               '-in::file::fasta', self.fasta,
-               '-in:file:frag3', self.frags_3mers,
-               '-in:file:frag9', self.frags_9mers,
-               '-out:path', wdir,
-               '-out:pdb',
-               '-out:nstruct', str(nstruct),
-               '-out:file:silent', wdir + '/OUT',
-               '-run:constant_seed',
-               '-run:jran', str(seed) 
+        # Set executable
+        if self.transmembrane:
+            cmd = [ self.transmembrane_exe ]
+        else:
+             cmd = [ self.rosetta_path ]
+        
+        cmd += ['-database', self.rosetta_db,
+                '-in::file::fasta', self.fasta,
+                '-in:file:frag3', self.frags_3mers,
+                '-in:file:frag9', self.frags_9mers,
+                '-out:path', wdir,
+                '-out:pdb',
+                '-out:nstruct', str(nstruct),
+                '-out:file:silent', wdir + '/OUT',
+                '-run:constant_seed',
+                '-run:jran', str(seed) 
                 ]
             
         if self.all_atom:
@@ -317,7 +334,6 @@ class RosettaModel(object):
         else:
             cmd += [ '-return_full_atom false' ]
             
-        
         if self.transmembrane:
             cmd += [ '-in:file:spanfile', self.spanfile,
                      '-in:file:lipofile', self.lipofile,
@@ -477,6 +493,7 @@ class RosettaModel(object):
         self.rosetta_dir = optd['rosetta_dir']
         
         # Determine version
+        self.rosetta_version = optd['rosetta_version']
         optd['rosetta_version'] = self.get_version()
 
         # Common variables
@@ -492,6 +509,15 @@ class RosettaModel(object):
         if optd['transmembrane']:
             
             self.transmembrane = True
+            
+            if platform.mac_ver() == ('', ('', '', ''), ''):
+                self.transmembrane_exe = self.rosetta_dir + '/rosetta_source/bin/membrane_abinitio2.linuxgccrelease'
+            else:
+                self.transmembrane_exe = self.rosetta_dir + '/rosetta_source/bin/membrane_abinitio2'
+                    
+            if not os.path.exists(self.transmembrane_exe):
+                self.logger.critical(' cant find Rosetta membrane executable: {0}'.format(self.transmembrane_exe) )
+                raise RuntimeError,msg
             
             script_dir = self.rosetta_dir + os.sep + "rosetta_source/src/apps/public/membrane_abinitio"
             self.octopus2span = script_dir + os.sep + "octopus2span.pl"
@@ -569,7 +595,8 @@ class RosettaModel(object):
             self.rosetta_path = optd['rosetta_path']
             
             if not os.path.exists(self.rosetta_path):
-                self.logger.critical(' cant find Rosetta abinitio: {0}'.format(self.rosetta_path) )
+                msg = 'Cannot find Rosetta abinitio: {0}'.format(self.rosetta_path)
+                self.logger.critical( msg )
                 raise RuntimeError,msg
     
             #jmht not used
