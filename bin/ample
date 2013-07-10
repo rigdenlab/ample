@@ -36,6 +36,7 @@ import clusterize
 import cPickle
 import glob
 import logging
+import shutil
 import time
 
 # Our imports
@@ -180,6 +181,9 @@ parser.add_argument('-nproc', metavar='NoProcessors', type=int, nargs=1,
 
 parser.add_argument('-num_clusters', metavar='num clusters to sample', type=int, nargs=1,
                    help='number of clusters to sample')
+
+parser.add_argument('-output_pdb', metavar='output_pdb', type=str, nargs=1,
+                   help='name of the result pdb to output')
 
 parser.add_argument('-percent', metavar='no clus to sample', type=str, nargs=1,
                    help='percent interval for truncation')
@@ -385,7 +389,7 @@ if amopt.d['ensembles_dir']:
         sys.exit(1)
 
     amopt.d['import_ensembles'] = True
-    logger.info("Found directory with ensemble files: {0}\nSetting make_models to False".format( amopt.d['ensembles_dir'] ) )
+    logger.info("Found directory with ensemble files: {0}\n".format( amopt.d['ensembles_dir'] ) )
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
     
@@ -811,6 +815,11 @@ logger.info( summary )
 RUNNING.write(summary)
 RUNNING.flush()
 RUNNING.close()
+
+# Copy best pdb to output_pdb - hack - just take best from the first cluster#
+output_pdb = os.path.join( amopt.d['work_dir'], amopt.d['output_pdb'])
+logging.info("Copying result pdb to: {0}\n".format( output_pdb ) )
+shutil.copy2( amopt.d['mrbump_results'][0][0].pdb, output_pdb )
 
 # os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
 # os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')
