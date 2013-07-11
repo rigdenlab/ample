@@ -168,10 +168,18 @@ def get_psipred_prediction(psipred):
 
 ########
 
-def make_workdir(work_dir, rootname='ROSETTA_MR_'):
+def make_workdir(work_dir, ccp4_jobid=None, rootname='ROSETTA_MR_'):
     """
     Make a work directory rooted at work_dir and return its path
     """
+    
+    if ccp4_jobid:
+        dname = os.path.join( work_dir, rootname + str(ccp4_jobid) )
+        if os.path.exists(dname):
+            raise RuntimeError,"There is an existing AMPLE CCP4 work directory: {0}\nPlease delete/move it aside."
+        os.mkdir(dname)
+        return dname
+    
     run_inc = 0
     run_making_done = False
     while not run_making_done:
