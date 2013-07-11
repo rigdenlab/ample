@@ -11,17 +11,16 @@ class FastaParser(object):
         """Initialise the object"""
         
         self.length = None # The length of the parse fasta
+        self.seqStr = None # The fasta sequence (just AA) as a single string 
+        self.formattedFasta = None # The reformatted fasta
 
     def _parse_fasta( self, fasta ):
-        """Return the reformatted fasta as a list of strings 
+        """Parse the fasta file int our data structures & check for consistency 
         Args:
         fasta -- list of strings or open filehandle to read from the fasta file
-        
-        Return:
-        Reformatted fasta as a list of strings
         """
         
-        newfasta = []
+        self.formattedFasta = []
         sequence = ""
         header=None
         for line in fasta:
@@ -36,33 +35,42 @@ class FastaParser(object):
                     raise RuntimeError,"There appears to be more than one sequence in your fasta.\nPlease remove all but the first."
     
                 header = line[0:80]+"\n"
-                newfasta.append( header )
+                self.formattedFasta.append( header )
                 continue
             
             sequence += line
         
         aa = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V']
         
-        newsequence = ""
-        # Check for unwanted characters
+        self.seqStr = ""
         
+        # Check for unwanted characters
         self.length=0
         for char in sequence:
             char = char.upper()
             if char not in aa:
                 raise RuntimeError,"There appear to be non-standard AA in your sequence: '{0}'\nPlease format to only use standard AA.".format(char)
-            newsequence+=char
-            self.length+=1
+            self.seqStr +=char
+            self.length +=1
         
         # Now reformat to 80 chars
         llen=80
-        for chunk in range( 0, len(newsequence), llen ):
-            newfasta.append( newsequence[ chunk:chunk+llen ]+"\n"  )
+        for chunk in range( 0, len(self.seqStr), llen ):
+            self.formattedFasta.append( self.seqStr[ chunk:chunk+llen ]+"\n"  )
         
         # Add last newline
-        newfasta.append("\n")
+        self.formattedFasta.append("\n")
         
-        return newfasta
+        return
+    
+    def getSeqStr(self, fastaFile ):
+        """Return the fasta string from the given file"""
+        
+        f = open( fastaFile, "r")
+        self._parse_fasta( f )
+        f.close()
+        
+        return self.seqStr
         
     def reformat_fasta( self, input_fasta, output_fasta):
         """
@@ -75,11 +83,11 @@ class FastaParser(object):
         """
         
         f = open( input_fasta, "r")
-        newfasta =  self._parse_fasta( f )
+        self._parse_fasta( f )
         f.close()
         
         fasout=open( output_fasta, "w")
-        for line in newfasta:
+        for line in self.formattedFasta:
             fasout.write( line )
         fasout.close()
         
@@ -98,7 +106,7 @@ LAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKAESMRPEVASTFKVLRNVTVVLWSAYPVV
 GDGAAATSD"""
         
         fp = FastaParser()
-        newfasta = fp._parse_fasta( infasta.split( os.linesep ) )
+        fp._parse_fasta( infasta.split( os.linesep ) )
 
         outfasta=""">3HAP:A|PDBID|CHAIN|SEQUENCE
 QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVPAIAFTMYLSMLLGYGLTMVPFGGEQNPIYW
@@ -108,7 +116,7 @@ GDGAAATSD
 
 """
 
-        self.assertEqual( outfasta, "".join(newfasta) )
+        self.assertEqual( outfasta, "".join(fp.formattedFasta) )
         self.assertEqual( fp.length, 249)
   
               
