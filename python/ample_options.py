@@ -2,6 +2,7 @@
 Class to hold the options for ample
 '''
 # python imports
+import copy
 import os
 
 # Our imports
@@ -25,6 +26,7 @@ class AmpleOptions(object):
                             'blast_dir' : None,
                             'buccaneer_cycles' : 5,
                             'CC' : None,
+                            'ccp4_jobid' : None,
                             'debug' : None,
                             'domain_all_chains_pdb' : None,
                             'domain_termini_distance' : 0,
@@ -173,14 +175,14 @@ class AmpleOptions(object):
             # Assume mrbump_results are already sorted
             mrbump_results = self.d['mrbump_results'][ cluster ]
             
-            # Get header from first object
-            #header = [ "Name" ] + mrbump_results[0].header
-            header = mrbump_results[0].header
-            
+            # Get header from first object - need to copy or the assignment just creates a reference
+            header = copy.copy( mrbump_results[0].header )
             if ensemble_results:
-                header += [ "#Models", "#Residues" ]
+                header += [ "#Decoys", "#Residues" ]
+            results_table.append( header )
             
-            best=mrbump_results[i] # remember best (first) result
+            best=mrbump_results[0] # remember best (first) result
+            
             for result in mrbump_results:
                 result_summary = []
                 for h in result.header:
@@ -198,7 +200,7 @@ class AmpleOptions(object):
             summary += table.pprint_table( results_table )
             
             # Show where it happened
-            summary += '\nBest results so far are in :\n\n'
+            summary += '\nBest results so far are in directory:\n\n'
             summary +=  best.resultDir
         
         return summary
@@ -345,13 +347,14 @@ if __name__ == "__main__":
     if len(sys.argv) == 2:
         pfile = sys.argv[1]
     else:
-        pfile = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_15/ample_results.pkl"
+        pfile = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_10/resultsd.pkl"
     
     f = open(pfile)
     d = cPickle.load(f)
     
     AD = AmpleOptions()
-    for k,v in d.iteritems():
-        AD.d[k] = v
-        
+    AD.d = d
     print AD.final_summary()
+#    for k,v in d.iteritems():
+#        AD.d[k] = v
+#    print AD.final_summary()
