@@ -121,10 +121,16 @@ class ShelxeLogParser(object):
         avgChainLength = sum(lengths) / int( len(lengths) )        
         
         # Here should have read the  lengths so now just get the CC
-        line = fh.readline().strip()
-        if not line.startswith("CC for partial structure against native data"):
-            raise RuntimeError,"Error parsing CC score"
-        
+        count=0
+        while True:
+            line = fh.readline().strip()
+            if line.startswith("CC for partial structure against native data"):
+                break
+            else:
+                count += 1
+                if count > 5:
+                    raise RuntimeError,"Error parsing CC score"
+            
         cc = float( re.search("\d+\.\d+", line).group(0) )
         
         return ( cc, avgChainLength )
@@ -145,3 +151,4 @@ class Test(unittest.TestCase):
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()
+
