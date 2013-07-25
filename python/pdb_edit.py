@@ -125,8 +125,13 @@ class PdbAtom(object):
 77 - 78        LString(2)    element      Element symbol, right-justified.
 79 - 80        LString(2)    charge       Charge  on the atom.
 """
-    def __init__(self):
+    def __init__(self, line):
         """Set up attributes"""
+        
+        self.fromLine( line )
+        
+    
+    def _reset(self):
         
         self.serial = None
         self.name = None
@@ -147,6 +152,8 @@ class PdbAtom(object):
         """Initialise from the line from a PDB"""
         
         assert len(line) >= 54,"Line length was: {0}\n{1}".format(len(line),line)
+        
+        self._reset()
         
         self.serial = int(line[6:11])
         self.name = line[12:16]
