@@ -373,7 +373,91 @@ class PdbHetatm(object):
         return "{0} : {1}".format(self.__repr__(),str(me))
 
 
-
+class PdbModres(object):
+    """
+COLUMNS        DATA TYPE     FIELD       DEFINITION
+--------------------------------------------------------------------------------
+ 1 -  6        Record name   "MODRES"
+ 8 - 11        IDcode        idCode      ID code of this entry.
+13 - 15        Residue name  resName     Residue name used in this entry.
+17             Character     chainID     Chain identifier.
+19 - 22        Integer       seqNum      Sequence number.
+23             AChar         iCode       Insertion code.
+25 - 27        Residue name  stdRes      Standard residue name.
+30 - 70        String        comment     Description of the residue modification.
+"""
+    def __init__(self, line):
+        """Set up attributes"""
+        
+        self.fromLine( line )
+        
+    
+    def _reset(self):
+        
+        self.idCode = None
+        self.resName = None
+        self.chainID = None
+        self.seqNum = None
+        self.iCode = None
+        self.stdRes = None
+        self.comment = None
+        
+    def fromLine(self,line):
+        """Initialise from the line from a PDB"""
+        
+        assert line[0:6] == "MODRES","Line did not begin with an MODRES record!: {0}".format(line)
+        
+        self._reset()
+        
+        self.idCode = line[7:11]
+        self.resName = line[12:15]
+        # Use for all so None means an empty field
+        if line[16].strip():
+            self.chainID = line[16]
+        self.seqNum = int(line[18:22])
+        if line[22].strip():
+            self.iCode = line[22]
+        self.stdRes = line[24:27]
+        if line[29:70].strip():
+            self.comment = line[29:70]
+    
+    def toLine(self):
+        """Create a line suitable for printing to a PDB file"""
+        
+        s = "MODRES" # 1-6
+        s += " " # 7 blank
+        s += "{0:4}".format( self.idCode ) # 8-11
+        s += " " # 12 blank
+        s += "{0:3}".format( self.resName ) # 13-15
+        s += " " # 16 blank
+        if not self.chainID: #17
+            s += " "
+        else:
+            s += "{0:1}".format( self.chainID )
+        s += " " # 18 blank
+        s += "{0:4d}".format( self.seqNum ) # 19-22
+        if not self.iCode: #23
+            s += " "
+        else:
+            s += "{0:1}".format( self.iCode )
+        s += " " # 24 blank
+        s += "{0:3}".format( self.stdRes ) # 25-27
+        s += "  " # 28-29 blank
+        if self.comment: # 30-70
+            s += "{:<}".format( self.comment )
+            
+        return s
+        
+    def __str__(self):
+        """List the data attributes of this object"""
+        me = {}
+        for slot in dir(self):
+            attr = getattr(self, slot)
+            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
+              isinstance(attr, types.FunctionType) ):
+                me[slot] = attr
+            
+        return "{0} : {1}".format(self.__repr__(),str(me))
 
 class Test(unittest.TestCase):
 
@@ -428,6 +512,27 @@ class Test(unittest.TestCase):
         line = "HETATM 8239  O1  SO4 A2001      11.191 -14.833 -15.531  1.00 50.12           O  "
         a = PdbHetatm( line )
         self.assertEqual( a.toLine(), line )
+   
+    def testReadModres(self):
+        """See if we can read a modres line"""
+
+        line = "MODRES 1IL2 1MG D 1937    G  1N-METHYLGUANOSINE-5'-MONOPHOSPHATE"
+        a = PdbModres( line )
+        self.assertEqual(a.idCode,"1IL2")
+        self.assertEqual(a.resName,'1MG')
+        self.assertEqual(a.chainID,'D')
+        self.assertEqual(a.seqNum,1937)
+        self.assertEqual(a.iCode,None)
+        self.assertEqual(a.stdRes,'  G')
+        self.assertEqual(a.comment,"1N-METHYLGUANOSINE-5'-MONOPHOSPHATE")
+    
+    def testWriteModres(self):
+        """Round-trip a modres line"""
+        
+        line = "MODRES 2R0L ASN A   74  ASN  GLYCOSYLATION SITE"
+        a = PdbModres( line )
+        self.assertEqual( a.toLine(), line )
+   
            
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
