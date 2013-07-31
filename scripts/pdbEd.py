@@ -1,170 +1,60 @@
 #!/usr/bin/env python
 '''
-Created on 30 May 2013
-
-@author: jmht
-
-Useful stuff for PDBs - currently just remove HETATM lines
+Standalone scripts to manipulate PDB files
 '''
 
-
+# python imports
 import os
-import sys
+import tempfile
 
+# our imports
+import ample_util
 import pdb_edit
 
-three2one = {
-    'ALA' : 'A',    
-    'ARG' : 'R',    
-    'ASN' : 'N',    
-    'ASP' : 'D',    
-    'CYS' : 'C',    
-    'GLU' : 'E',    
-    'GLN' : 'Q',    
-    'GLY' : 'G',    
-    'HIS' : 'H',    
-    'ILE' : 'I',    
-    'LEU' : 'L',    
-    'LYS' : 'K',    
-    'MET' : 'M',    
-    'PHE' : 'F',    
-    'PRO' : 'P',    
-    'SER' : 'S',    
-    'THR' : 'T',    
-    'TRP' : 'W',    
-    'TYR' : 'Y',   
-    'VAL' : 'V,'
-}
 
-# http://stackoverflow.com/questions/3318625/efficient-bidirectional-hash-table-in-python
-#aaDict.update( dict((v, k) for (k, v) in aaDict.items()) )
-one2three =  dict((v, k) for (k, v) in three2one.items()) 
+#import logging
+#logging.basicConfig()
+#logging.getLogger().setLevel(logging.DEBUG)
 
 
-# inpdb = sys.argv[1]
-# 
-# outpdb=None
-# if len(sys.argv) == 3:
-#     outpdb = sys.argv[2]
-#     
-# if not outpdb:
-#     name = os.path.splitext( os.path.basename(inpdb) )[0]
-#     dirname = os.path.dirname( os.path.abspath( inpdb ) )
-#     outpdb = os.path.join( dirname, name + "_clean.pdb" )
-
-
-def strip_hetatm( inpdb, outpdb):
-    """Remove all hetatoms from pdbfile"""
-    o = open( outpdb, 'w' )
+def to_1_std_chain( inpdb, outpdb):
+    """Clean down to 1 model/chain with standard amino acids"""
     
-    hremoved=-1
-    for i, line in enumerate( open(inpdb) ):
-        
-        # Remove EOL
-        line = line.rstrip( "\n" )
-        
-        # Remove any HETATOM lines and following ANISOU lines
-        if line.startswith("HETATM"):
-            hremoved = i
-            continue
-        
-        if line.startswith("ANISOU") and i == hremoved+1:
-            continue
-        
-        o.write( line + "\n" )
-        
-    o.close()
     
-    return
-    
-
-
-def keep_matching( refpdb, targetpdb, outpdb):
-    """Create a new pdb file that only contains that atoms in targetpdb that are
-    also in refpdb
-    
-    It renumbers the atoms as we go
-    
-    NB: Assumes that both pdb files only contain one model
-    
-    Args:
-    refpdb: path to pdb that contains the minimal set of atoms we want to keep
-    targetpdb: path to the pdb that will be stripped of non-matching atoms
-    outpdb: output path for the stripped pdb
-    """
-
-
-    # Go through refpdb and find which residues are present
-    f = open(refpdb, 'r')
-    
-    # map of resSeq to list of PdbAtom objects
-    residues = {}
-    
-    last = None
-    for line in f:
-        if line.startswith("MODEL"):
-            raise RuntimeError, "Multi-model file!"
-        
-        if line.startswith("ATOM"):
-            a = pdb_edit.PdbAtom( line )
-            if a.resSeq != last:
-                if a.resSeq in residues:
-                    raise RuntimeError,"Multiple chains in pdb - found residue #: {0} again.".format(a.resSeq)
-                last = a.resSeq
-                residues[ last ] = [ a ]
-            else:
-                residues[ last ].append( a )
-                
-    f.close()
-    
-    # Now read in target pdb and output everything bar the atoms in this file that
-    # don't match those in the refpdb
-    t = open(targetpdb,'r')
-    out = open(outpdb,'w')
-    
-    for line in t:
-        if line.startswith("MODEL"):
-            raise RuntimeError, "Multi-model file!"
-        
-        # Stop at TER
-        if line.startswith("TER"):
-            break
-        
-        if line.startswith("ATOM"):
-            
-            atom = pdb_edit.PdbAtom( line )
-            
-            # Skip any residues that don't match
-            if atom.resSeq not in residues:
-                continue
-            
-            # Skip any atoms that aren't in the reference PDB
-            got=False
-            for i, ratom in enumerate(residues[ atom.resSeq ]):
-                if atom.name == ratom.name:
-                    residues[ atom.resSeq ].pop(i)
-                    got=True
-                    break
-                
-            if not got:
-                continue
-            
-        # Output everything else
-        out.write(line)
-        
+    # Get temporary filenames
+    t = tempfile.NamedTemporaryFile(dir=os.getcwd(), delete=False)
+    tmp1 = t.name
     t.close()
-    out.close()
+    os.unlink(tmp1)
+    tmp1+=".pdb" # pdbcur insists names have a .pdb suffix
     
-    return
+    # Strip to one chain and standardise AA names
+    PE = pdb_edit.PDBEdit()
+    PE.to_1_std_chain(inpdb, tmp1)
+    
+    # Now clean up with pdbcur
+    cmd="/opt/ccp4-6.3.0/bin/pdbcur xyzin {0} xyzout {1}".format( tmp1, outpdb ).split()
+    stdin="""delsolvent
+mostprob
+"""
+    retcode = ample_util.run_command(cmd=cmd, logfile=None, directory=os.getcwd(), dolog=False, stdin=stdin)
+    
+    # remove temporary file
+    os.unlink(tmp1)
+    
+    return retcode
 
+# root="/home/jmht/Documents/test/3PCV"
+# os.chdir(root)
+# to1stdChain(root+"/3PCV.pdb",root+"/test/3PCV_clean.pdb")
 
-refpdb = "/Users/jmht/Documents/AMPLE/data/test/3PCV/refmac_phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.pdb"
-refpdb = "/Users/jmht/Documents/AMPLE/data/test/3PCV/refmac_phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD_1CHAIN_2.pdb"
-#refpdb = "/Users/jmht/Documents/AMPLE/data/test/3PCV/ref.pdb"
-targetpdb = "/Users/jmht/Documents/AMPLE/data/test/3PCV/3PCV_clean.pdb"
-#targetpdb = "/Users/jmht/Documents/AMPLE/data/test/3PCV/target.pdb"
-outpdb = "/Users/jmht/Documents/AMPLE/data/test/3PCV/jens.pdb"
+def keep_matching( refpdb, targetpdb, outpdb ):
+    PE = pdb_edit.PDBEdit()
+    PE.keep_matching( refpdb, targetpdb, outpdb )
+    
+    # now renumber
 
-keep_matching(refpdb, targetpdb, outpdb)
-#strip_hetatm("/Users/jmht/Documents/AMPLE/data/test/3PCV/3PCV_clean.pdb","/Users/jmht/Documents/AMPLE/data/test/3PCV/3PCV_clean_htm.pdb")
-
+refpdb="/home/jmht/Documents/test/3PCV/test/refmac_phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD_chain2.pdb"
+targetpdb="/home/jmht/Documents/test/3PCV/test/3PCV_clean.pdb"
+outpdb="/home/jmht/Documents/test/3PCV/test/matching2.pdb"
+keep_matching( refpdb, targetpdb, outpdb )
