@@ -203,6 +203,8 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     dolog: bool - whether to output info to the system log
     """
     
+    assert type(cmd) is list
+    
     if not directory:
         directory = os.getcwd()
         
