@@ -25,14 +25,101 @@ side_chain_treatment
 
 Solution
 number (and identity? of residues)
-shelex CC & av. fragment length
+
+shelxe rebuild:
+* CC
+* av. fragment length
+* RMSD to native
+* Maxsub to native
+* TM to native
+
+remac refined result
+* reforigin score to native
+* rmsd to native
+* maxsub to native
+* TM to native
+
+TO THINK ABOUT
+* multiple models/chains in native
+* multiple chains in solution (e.g. 3PCV)
 
 
 
 '''
 import os
 import re
+import sys
 import unittest
+
+import mrbump_results
+import pdbEd
+
+
+nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
+fasta = "/media/data/shared/TM/3U2F/3U2F.fasta"
+workdir = "/home/jmht/Documents/test/3U2F/test"
+# For now assume we just use the first model/chain from the native pdb
+
+
+result = mrbump_results.MrBumpResult()
+result.resultDir = "/media/data/shared/TM/3U2F/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_0.21093_rad_2_molrep_mrbump/data/loc0_ALL_poly_ala_trunc_0.21093_rad_2/unmod/mr/molrep"
+result.program = "molrep"
+resultk = "loc0_ALL_poly_ala_trunc_0.21093_rad_2_UNMOD"
+result.ensembleName = "poly_ala_trunc_0.21093_rad_2"
+
+os.chdir( workdir )
+
+# Run a pass to find the # chains/models and extract solvent content etc
+info = pdbEd.get_info( nativePdb )
+
+# Hard-wire in first native chain for now
+nativeChainID = info.models[0].chains[0]
+
+# Extract first model/chain from native
+d, f = os.path.split( nativePdb )
+name, ext = os.path.splitext( f )
+nativePdb_m1c1 = os.path.join( workdir, name+"_m1c1"+ext )
+#retcode = pdbEd.to_1_std_chain( nativePdb, nativePdb_m1c1 )
+
+
+# Get path of refined structure
+refinedPdb = os.path.join( result.resultDir, "refine", "refmac_{0}_loc0_ALL_{1}_UNMOD.pdb".format( result.program, result.ensembleName ) )
+
+# Find out how many chains it contains.
+info = pdbEd.get_info( refinedPdb )
+
+# Loop over each chain and run a comparison
+for chainID in info.models[0].chains:
+    
+    # Extract the chain from the pdb
+    n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
+    chainPdb = os.path.join( workdir, n+"_chain{0}.pdb".format(chainID) )
+    pdbEd.extract_chain( refinedPdb, chainPdb, chainID=chainID, newChainID=nativeChainID )
+    
+    # Extract the matching atoms from the nativePdb
+    n = os.path.splitext( os.path.basename( nativePdb_m1c1 ) )[0]
+    matchingPdb = os.path.join( workdir, n+"_matching_chain{0}.pdb".format(chainID) )
+    pdbEd.keep_matching( chainPdb, nativePdb_m1c1, matchingPdb )
+    
+    n = os.path.splitext( os.path.basename( chainPdb ) )[0]
+    outpdb = os.path.join( workdir, n+"_reforigin.pdb" )    
+    rms = pdbEd.reforigin_rmsd(matchingPdb, chainPdb, outpdb )
+    print rms
+
+sys.exit()
+
+
+# Extract matching atoms from natvePdb
+n = os.path.splitext( os.path.basename( nativePdb_m1c1 ) )[0]
+matchingPdb = os.path.join( workdir, n+"_matching.pdb")
+pdbEd.keep_matching(refinedPdb, nativePdb_m1c1, matchingPdb)
+
+# CHECK TWO CHAINS!
+
+print nativePdb_m1c1
+print refinedPdb
+print matchingPdb
+
 
 
 class ShelxeLogParser(object):
@@ -148,7 +235,7 @@ class Test(unittest.TestCase):
         self.assertEqual(7, p.avgChainLength)
         
 
-if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+#if __name__ == "__main__":
+#    #import sys;sys.argv = ['', 'Test.testName']
+#    unittest.main()
 
