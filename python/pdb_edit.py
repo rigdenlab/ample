@@ -70,7 +70,7 @@ class PDBEdit(object):
 
     def keep_matching( self, refpdb, targetpdb, outpdb ):
         """Create a new pdb file that only contains that atoms in targetpdb that are
-        also in refpdb
+        also in refpdb.
         
         NB: Assumes that both pdb files only contain one model and one chain
         
@@ -83,11 +83,15 @@ class PDBEdit(object):
         
         def _write_matching_residues( ref_residues, target_residues, outfh ):
             
+            #print "got target_residues: {0}".format(target_residues)
+            
             # Loop over each residue in turn
             for idx, atoms_and_lines  in sorted( target_residues.items() ):
                 
                 # Get ordered list of the ref atom names for this residue
                 rnames = [ x.name for x in ref_residues[ idx ] ]
+                
+                #print "rnames ",rnames
                 
                 # Remove any not matching
                 atoms = []
@@ -134,6 +138,8 @@ class PDBEdit(object):
                     
         f.close()
         
+        #print "got ref_residues: {0}".format(ref_residues)
+        
         # Now read in target pdb and output everything bar the atoms in this file that
         # don't match those in the refpdb
         t = open(targetpdb,'r')
@@ -154,9 +160,7 @@ class PDBEdit(object):
             
             # Stop at TER
             if line.startswith("TER"):
-                # Write out the matching residues
-                _write_matching_residues( ref_residues, target_residues, out )
-                out.write("TER\n\n")
+                # we write out our own TER
                 break
             
             if line.startswith("ATOM"):
@@ -187,11 +191,92 @@ class PDBEdit(object):
             # Output everything else
             out.write(line)
             
+        # End reading loop
+        
+        # write out everything we've collected
+        _write_matching_residues( ref_residues, target_residues, out )
+        out.write("TER\n\n")
+        
         t.close()
         out.close()
         
         return
- 
+    
+    def get_info(self, inpath):
+        """Read a PDB and extract as much information as possible into a PdbInfo object
+        """
+        
+        
+        info = PdbInfo()
+        currentModel = None
+        currentChain = -1
+        
+        # Go through refpdb and find which ref_residues are present
+        f = open(inpath, 'r')
+        line = f.readline()
+        while line:
+            
+            if line.startswith("REMARK"):
+                
+                # Get solvent content                
+                if int(line[7:10]) == 280:
+                    
+                    maxread = 5
+                    # Clunky - read up to maxread lines to see if we can get the information we're after
+                    # We assume the floats are at the end of the lines
+                    for _ in range( maxread ):
+                        line = f.readline()
+                        if line.find("SOLVENT CONTENT") != -1:
+                            info.solventContent = float( line.split()[-1] )
+                        if line.find("MATTHEWS COEFFICIENT") != -1:
+                            info.matthewsCoefficient = float( line.split()[-1] )
+            #End REMARK
+
+
+            if line.startswith("MODEL"):
+                if currentModel:
+                    # Need to make sure that we have an id if only 1 chain and none given
+                    if len( currentModel.chains ) <= 1:
+                        if currentModel.chains[0] == None:
+                            currentModel.chains[0] = 'A'
+                            
+                    info.models.append( currentModel )
+                    currentChain = -1
+                    
+                # New/first model
+                currentModel = PdbModel()
+            
+            # Check for the first model
+            if not currentModel:
+                if line.startswith('ATOM') or line.startswith('HETATM'):
+                    
+                    # This must be the first model and there should only be one
+                    currentModel = PdbModel()
+            
+            # Count chains
+            if line.startswith('ATOM') or line.startswith('HETATM'):
+                if line.startswith('ATOM'):
+                    atom = PdbAtom(line)
+                elif line.startswith('HETATM'):
+                    atom = PdbHetatm(line)
+            
+                if atom.chainID != currentChain:
+                    currentModel.chains.append( atom.chainID )
+                    currentChain = atom.chainID
+            
+            # Can ignore TER and ENDMDL for time being as we'll pick up changing chains anyway,
+            # and new models get picked up by the models line
+
+            line = f.readline()
+            # End while loop
+        
+        # End of reading loop so add the last model to the list
+        info.models.append( currentModel )
+                    
+        f.close()
+        
+        return info
+        
     def reliable_sidechains(self, inpath=None, outpath=None ):
         """Only output non-backbone atoms for residues in the res_names list.
         """
@@ -280,7 +365,7 @@ class PDBEdit(object):
         
         return
     
-    def to__std_chain( self, pdbin, pdbout ):
+    def to_1_std_chain( self, pdbin, pdbout ):
         """Take the first chain of the first model and switch any non-standard AA's to their standard names.
         We also remove any ANISOU lines.
         """
@@ -294,6 +379,7 @@ class PDBEdit(object):
         
         pdbinf = open(pdbin,'r')
         pdboutf = open(pdbout,'w')
+        
         line = True # Just for the first line
         while line:
     
@@ -368,6 +454,27 @@ class PDBEdit(object):
             
         return
 
+class PdbInfo(object):
+    """A class to hold information extracted from a PDB file"""
+    
+    def __init__(self ):
+        
+        self.models = [] # List of PdbModel objects
+        
+        # http://www.wwpdb.org/documentation/format33/remarks1.html#REMARK%20280
+        self.solventContent = None
+        self.matthewsCoefficient = None
+        
+        return
+    
+class PdbModel(object):
+    """A class to hold information on a single model in a PDB file"""
+    
+    def __init__(self ):
+        
+        self.chains = [] # Ordered list of chain IDs
+        
+        return
 
 class PdbAtom(object):
     """
@@ -386,6 +493,7 @@ class PdbAtom(object):
 47 - 54        Real(8.3)     z            Orthogonal coordinates for Z in Angstroms.
 55 - 60        Real(6.2)     occupancy    Occupancy.
 61 - 66        Real(6.2)     tempFactor   Temperature  factor.
+73 - 76        LString(4)    segID        Segment identifier, left-justified.
 77 - 78        LString(2)    element      Element symbol, right-justified.
 79 - 80        LString(2)    charge       Charge  on the atom.
 """
@@ -410,6 +518,7 @@ class PdbAtom(object):
         self.z = None
         self.occupancy = None
         self.tempFactor = None
+        self.segID = None
         self.element = None
         self.charge = None
         
@@ -441,6 +550,8 @@ class PdbAtom(object):
             self.occupancy = float(line[54:60])
         if len(line) >= 66 and line[60:66].strip():
             self.tempFactor = float(line[60:66])
+        if len(line) >= 76 and line[72:76].strip():
+            self.segID = line[72:76].strip()
         if len(line) >= 77 and line[76:78].strip():
             self.element = line[76:78].strip()
         if len(line) >= 80 and line[78:80].strip():
@@ -480,7 +591,11 @@ class PdbAtom(object):
             s += "      "
         else:
             s += "{0: 6.2F}".format( self.tempFactor )
-        s += "          " # 67-76 blank
+        s += "      " # 67-72 blank
+        if not self.segID: # 73-76
+            s += "    "
+        else:
+            s += "{0:>4}".format( self.segID )
         if not self.element: #77-78
             s += "  "
         else:
@@ -523,11 +638,12 @@ class PdbAtom(object):
             
         return "{0} : {1}".format(self.__repr__(),str(me))
 
+
 class PdbHetatm(object):
     """
     COLUMNS        DATA  TYPE    FIELD        DEFINITION
 -------------------------------------------------------------------------------------
- 1 -  6        Record name   "HETATM"
+ 1 -  6        Record name   "ATOM  "
  7 - 11        Integer       serial       Atom  serial number.
 13 - 16        Atom          name         Atom name.
 17             Character     altLoc       Alternate location indicator.
@@ -540,13 +656,15 @@ class PdbHetatm(object):
 47 - 54        Real(8.3)     z            Orthogonal coordinates for Z in Angstroms.
 55 - 60        Real(6.2)     occupancy    Occupancy.
 61 - 66        Real(6.2)     tempFactor   Temperature  factor.
+73 - 76        LString(4)    segID        Segment identifier, left-justified.
 77 - 78        LString(2)    element      Element symbol, right-justified.
 79 - 80        LString(2)    charge       Charge  on the atom.
 """
-    def __init__(self, line):
+    def __init__(self, line=None):
         """Set up attributes"""
         
-        self.fromLine( line )
+        if line:
+            self.fromLine( line )
         
     
     def _reset(self):
@@ -563,11 +681,13 @@ class PdbHetatm(object):
         self.z = None
         self.occupancy = None
         self.tempFactor = None
+        self.segID = None
         self.element = None
         self.charge = None
         
     def fromLine(self,line):
         """Initialise from the line from a PDB"""
+        
         
         assert line[0:6] == "HETATM","Line did not begin with an HETATM record!: {0}".format(line)
         assert len(line) >= 54,"Line length was: {0}\n{1}".format(len(line),line)
@@ -593,10 +713,12 @@ class PdbHetatm(object):
             self.occupancy = float(line[54:60])
         if len(line) >= 66 and line[60:66].strip():
             self.tempFactor = float(line[60:66])
+        if len(line) >= 76 and line[72:76].strip():
+            self.segID = line[72:76].strip()
         if len(line) >= 77 and line[76:78].strip():
             self.element = line[76:78].strip()
         if len(line) >= 80 and line[78:80].strip():
-            self.charge = line[78:80]
+            self.charge = int(line[78:80])
     
     def toLine(self):
         """Create a line suitable for printing to a PDB file"""
@@ -632,7 +754,11 @@ class PdbHetatm(object):
             s += "      "
         else:
             s += "{0: 6.2F}".format( self.tempFactor )
-        s += "          " # 67-76 blank
+        s += "      " # 67-72 blank
+        if not self.segID: # 73-76
+            s += "    "
+        else:
+            s += "{0:>4}".format( self.segID )
         if not self.element: #77-78
             s += "  "
         else:
@@ -762,12 +888,35 @@ class Test(unittest.TestCase):
         self.assertEqual(a.tempFactor,40.76)
         self.assertEqual(a.element,'N')
     
-    def testWriteAtom(self):
+    def testReadAtom2(self):
+        """Round-trip an atom line"""
+        
+        line = "ATOM     28  C   ALA A  12     -27.804  -2.987  10.849  1.00 11.75      AA-- C "
+        a = PdbAtom( line )
+        self.assertEqual(a.serial,28)
+        self.assertEqual(a.name,'C')
+        self.assertEqual(a.altLoc,None)
+        self.assertEqual(a.resName,'ALA')
+        self.assertEqual(a.chainID,'A')
+        self.assertEqual(a.resSeq,12)
+        self.assertEqual(a.iCode,None)
+        self.assertEqual(a.x,-27.804)
+        self.assertEqual(a.y,-2.987)
+        self.assertEqual(a.z,10.849)
+        self.assertEqual(a.occupancy,1.00)
+        self.assertEqual(a.tempFactor,11.75)       
+        self.assertEqual(a.segID,'AA--')
+        self.assertEqual(a.element,'C')
+        
+           
+    def testWriteAtom1(self):
         """Round-trip an atom line"""
         
         line = "ATOM     41  NH1AARG A  -3      12.218  84.840  88.007  0.50 40.76           N  "
         a = PdbAtom( line )
         self.assertEqual( a.toLine(), line )
+        
+
            
     def testReadHetatm(self):
         """See if we can read a hetatom line"""
