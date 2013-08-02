@@ -253,15 +253,18 @@ class PDBEdit(object):
                     # This must be the first model and there should only be one
                     currentModel = PdbModel()
             
-            # Count chains
+            # Count chains (could also check against the COMPND line if present?)
             if line.startswith('ATOM') or line.startswith('HETATM'):
                 if line.startswith('ATOM'):
                     atom = PdbAtom(line)
                 elif line.startswith('HETATM'):
                     atom = PdbHetatm(line)
             
-                if atom.chainID != currentChain:
-                    currentModel.chains.append( atom.chainID )
+                if atom.chainID != currentChain:    
+                    # Need to check if we already have this chain for this model as a changing chain could be a sign
+                    # of solvent molecules
+                    if atom.chainID not in currentModel.chains:
+                        currentModel.chains.append( atom.chainID )
                     currentChain = atom.chainID
             
             # Can ignore TER and ENDMDL for time being as we'll pick up changing chains anyway,
