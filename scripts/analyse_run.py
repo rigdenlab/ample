@@ -60,6 +60,8 @@ fasta = "/media/data/shared/TM/3U2F/3U2F.fasta"
 workdir = "/home/jmht/Documents/test/3U2F/test"
 # For now assume we just use the first model/chain from the native pdb
 
+# We need to cout models/chains and then work out what to do accordingly 
+
 
 result = mrbump_results.MrBumpResult()
 result.resultDir = "/media/data/shared/TM/3U2F/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_0.21093_rad_2_molrep_mrbump/data/loc0_ALL_poly_ala_trunc_0.21093_rad_2/unmod/mr/molrep"
@@ -72,8 +74,37 @@ os.chdir( workdir )
 # Run a pass to find the # chains/models and extract solvent content etc
 info = pdbEd.get_info( nativePdb )
 
-# Hard-wire in first native chain for now
-nativeChainID = info.models[0].chains[0]
+print "native chains ",info.models[0].chains
+if len(info.models) > 1:
+    raise RuntimeError,"More then one model!"
+
+modelNum=1 # fixed for now
+
+refinedPdb = os.path.join( result.resultDir, "refine", "refmac_{0}_loc0_ALL_{1}_UNMOD.pdb".format( result.program, result.ensembleName ) )
+#info = pdbEd.get_info( refinedPdb )
+
+# Standardise the native pdb
+n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+nativePdbStd = os.path.join( workdir, n+"_std_model{0}.pdb".format(modelNum) )
+pdbEd.standardise( nativePdb, nativePdbStd, model=None)
+
+# Now create a PDB with the matching atoms from native that are in refined
+n = os.path.splitext( os.path.basename( nativePdbStd ) )[0]
+nativePdbStdMatch = os.path.join( workdir, n+"_matched.pdb" )
+pdbEd.keep_matching( refpdb=refinedPdb, targetpdb=nativePdbStd, outpdb=nativePdbStdMatch )
+
+# Now get the rmsd
+n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
+reforiginOut = os.path.join( workdir, n+"_reforigin.pdb" )
+rmsd = rms = pdbEd.reforigin_rmsd(nativePdbStdMatch, refinedPdb, reforiginOut )
+
+print rmsd
+
+sys.exit()
+
+####
+# OLD
+####
 
 # Extract first model/chain from native
 d, f = os.path.split( nativePdb )
@@ -108,17 +139,6 @@ for chainID in info.models[0].chains:
 
 sys.exit()
 
-
-# Extract matching atoms from natvePdb
-n = os.path.splitext( os.path.basename( nativePdb_m1c1 ) )[0]
-matchingPdb = os.path.join( workdir, n+"_matching.pdb")
-pdbEd.keep_matching(refinedPdb, nativePdb_m1c1, matchingPdb)
-
-# CHECK TWO CHAINS!
-
-print nativePdb_m1c1
-print refinedPdb
-print matchingPdb
 
 
 

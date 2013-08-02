@@ -68,11 +68,9 @@ class PDBEdit(object):
         
         return
 
-    def keep_matching( self, refpdb, targetpdb, outpdb ):
+    def keep_matching( self, refpdb=None, targetpdb=None, outpdb=None ):
         """Create a new pdb file that only contains that atoms in targetpdb that are
-        also in refpdb.
-        
-        NB: Assumes that both pdb files only contain one model and one chain
+        also in refpdb. It only considers ATOM lines.
         
         Args:
         refpdb: path to pdb that contains the minimal set of atoms we want to keep
@@ -80,16 +78,17 @@ class PDBEdit(object):
         outpdb: output path for the stripped pdb
         """
     
+        assert refpdb and targetpdb and outpdb
         
-        def _write_matching_residues( ref_residues, target_residues, outfh ):
+        def _write_matching_residues( chain, ref_residues, target_residues, outfh ):
             
             #print "got target_residues: {0}".format(target_residues)
             
             # Loop over each residue in turn
-            for idx, atoms_and_lines  in sorted( target_residues.items() ):
+            for idx, atoms_and_lines  in sorted( target_residues[ chain ].items() ):
                 
                 # Get ordered list of the ref atom names for this residue
-                rnames = [ x.name for x in ref_residues[ idx ] ]
+                rnames = [ x.name for x in ref_residues[ chain ][ idx ] ]
                 
                 #print "rnames ",rnames
                 
@@ -113,6 +112,11 @@ class PDBEdit(object):
                             atom_lines.pop(i)
                             # jump out of inner loop
                             break
+                        
+            # We delete the chain we've written out so that we don't write it out again at the
+            # end by mistake
+            del ref_residues[ chainIdx ]
+            del target_residues[ chainIdx ]
             return
     
         # Go through refpdb and find which ref_residues are present
@@ -122,19 +126,32 @@ class PDBEdit(object):
         ref_residues = {}
         
         last = None
+        chain = -1
+        chainIdx=-1 # For the time being we key by the chain index so we can deal with 
+                    # proteins that have different chain IDs
         for line in f:
             if line.startswith("MODEL"):
                 raise RuntimeError, "Multi-model file!"
             
             if line.startswith("ATOM"):
                 a = PdbAtom( line )
+                
+                if a.chainID != chain:
+                    chain = a.chainID
+                    chainIdx+=1
+                    if chainIdx in ref_residues:
+                        raise RuntimeError, "ENCOUNTERED CHAIN AGAIN! {0}".format( line )
+                    ref_residues[ chainIdx ] = {}
+                
                 if a.resSeq != last:
-                    if a.resSeq in ref_residues:
-                        raise RuntimeError,"Multiple chains in pdb - found residue #: {0} again.".format(a.resSeq)
+                    #if a.resSeq in ref_residues:
+                    #    raise RuntimeError,"Multiple chains in pdb - found residue #: {0} again.".format(a.resSeq)
                     last = a.resSeq
-                    ref_residues[ last ] = [ a ]
+                    #ref_residues[ last ] = [ a ]
+                    ref_residues[ chainIdx ][ last ] = [ a ]
                 else:
-                    ref_residues[ last ].append( a )
+                    #ref_residues[ last ].append( a )
+                    ref_residues[ chainIdx ][ last ].append( a )
                     
         f.close()
         
@@ -146,6 +163,8 @@ class PDBEdit(object):
         out = open(outpdb,'w')
         
         reading=-1 # The residue we are reading - set to -1 when we are not reading
+        chain=-1 # The chain we're reading
+        chainIdx=-1 # see above
         
         target_residues = {} # dict mapping residue index to a a tuple of (atoms, lines), where atoms is a list of the atom
         # objects and lines is a list of the lines used to create the atom objects
@@ -161,26 +180,36 @@ class PDBEdit(object):
             # Stop at TER
             if line.startswith("TER"):
                 # we write out our own TER
-                break
+                _write_matching_residues( chainIdx, ref_residues, target_residues, out )
+                out.write("TER\n")
+                continue
             
             if line.startswith("ATOM"):
                 
                 atom = PdbAtom( line )
                 
+                # different/first chain
+                if atom.chainID != chain:
+                    chain = atom.chainID
+                    chainIdx+=1
+                    if chainIdx in target_residues:
+                        raise RuntimeError, "ENCOUNTERED CHAIN IN TARGET AGAIN! {0}".format( line )
+                    target_residues[ chainIdx ] = {}
+                    
                 # We copy resSeq to make sure we don't use a reference for our index
                 resSeq = copy.copy( atom.resSeq )
                 
                 # Skip any ref_residues that don't match
-                if resSeq in ref_residues:
+                if resSeq in ref_residues[ chainIdx ]:
                 
                     # If this is the first one add the empty tuple and reset reading
                     if reading != resSeq:
                         # each tuple is a list of atom objects and lines
-                        target_residues[ resSeq ] = ( [], [] )
+                        target_residues[ chainIdx ][ resSeq ] = ( [], [] )
                         reading = resSeq
                         
-                    target_residues[ resSeq ][0].append( atom )
-                    target_residues[ resSeq ][1].append( line )
+                    target_residues[ chainIdx ][ resSeq ][0].append( atom )
+                    target_residues[ chainIdx ][ resSeq ][1].append( line )
                     
                 # we don't write out any atom lines as they are either not matching or 
                 # we write out matching at the end
@@ -193,9 +222,10 @@ class PDBEdit(object):
             
         # End reading loop
         
-        # write out everything we've collected
-        _write_matching_residues( ref_residues, target_residues, out )
-        out.write("TER\n\n")
+        # For some PDBS there is no ending TER so we need to check if we've written this out yet or not
+        if target_residues.has_key( chainIdx ):
+            _write_matching_residues( chainIdx, ref_residues, target_residues, out )
+            out.write("TER\n\n")
         
         t.close()
         out.close()
@@ -245,6 +275,8 @@ class PDBEdit(object):
                     
                 # New/first model
                 currentModel = PdbModel()
+                # Get serial
+                currentModel.serial = int(line.split()[1])
             
             # Check for the first model
             if not currentModel:
@@ -368,15 +400,14 @@ class PDBEdit(object):
         
         return
     
-    def to_1_std_chain( self, pdbin, pdbout ):
-        """Take the first chain of the first model and switch any non-standard AA's to their standard names.
+    def std_residues( self, pdbin, pdbout ):
+        """Switch any non-standard AA's to their standard names.
         We also remove any ANISOU lines.
         """
     
         modres = [] # List of modres objects
-        modres_names = []
+        modres_names = {} # list of names of the modified residues keyed by chainID
         gotModel=False # to make sure we only take the first model
-        chain=None # make sure we only get one chain
         reading=False # If reading structure
         
         
@@ -404,18 +435,15 @@ class PDBEdit(object):
                 else:
                     gotModel=True
             
-            # End at the end of the first chain
-            if line.startswith("TER"):
-                pdboutf.write( line )
-                pdboutf.write( "END\n" )
-                break
-            
             # First time we hit coordinates we set up our data structures
             if not reading and ( line.startswith("HETATM") or line.startswith("ATOM") ):
                 # There is a clever way to do this with list comprehensions but this is not it...
                 for m in modres:
-                    if m.resName not in modres_names:
-                        modres_names.append( m.resName )
+                    chainID = copy.copy( m.chainID )
+                    if not modres_names.has_key( chainID ):
+                        modres_names[ chainID ] = []
+                    if m.resName not in modres_names[ chainID ]:
+                        modres_names[ chainID ].append( m.resName )
                         
                 # Now we're reading
                 reading=True
@@ -427,7 +455,7 @@ class PDBEdit(object):
                     hetatm = PdbHetatm( line )
                     
                     # See if this HETATM is in the chain we are reading and one of the residues to change
-                    if hetatm.resName in modres_names:
+                    if hetatm.resName in modres_names[ hetatm.chainID ]:
                         for m in modres:
                             if hetatm.resName == m.resName and hetatm.chainID == m.chainID:
                                 # Change this HETATM to an ATOM
@@ -441,11 +469,6 @@ class PDBEdit(object):
             # Any HETATM have been dealt with so just process as usual
             if line.startswith("ATOM"):
                 atom = PdbAtom( line )
-                if not chain:
-                    chain = atom.chainID
-                    
-                if chain and atom.chainID != chain:
-                    raise RuntimeError, "Got a different chain! {0}".format(line)
                 
                 if atom.resName not in three2one:
                     raise RuntimeError, "Unrecognised residue! {0}".format(line)
@@ -475,6 +498,7 @@ class PdbModel(object):
     
     def __init__(self ):
         
+        self.serial = None
         self.chains = [] # Ordered list of chain IDs
         
         return
@@ -625,6 +649,7 @@ class PdbAtom(object):
         self.z = hetatm.z
         self.occupancy = hetatm.occupancy
         self.tempFactor = hetatm.tempFactor
+        self.segID = hetatm.segID
         self.element = hetatm.element
         self.charge = hetatm.charge
         
@@ -977,4 +1002,10 @@ class Test(unittest.TestCase):
            
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+    #unittest.main()
+
+    refpdb = "/home/jmht/Documents/test/3U2F/test/refmac_molrep_loc0_ALL_poly_ala_trunc_0.21093_rad_2_UNMOD.pdb"
+    targetpdb = "/home/jmht/Documents/test/3U2F/test/3U2F_m1std.pdb"
+    outpdb = "/home/jmht/Documents/test/3U2F/test/3U2F_m1std_matching.pdb"
+    PE = PDBEdit()
+    PE.keep_matching( refpdb, targetpdb, outpdb )

@@ -49,23 +49,63 @@ def get_info( inpdb ):
     return info
 
 def keep_matching( refpdb, targetpdb, outpdb ):
+    """Only keep those atoms in targetpdb that are in refpdb and write the result to outpdb.
+    We also take care of renaming any chains.
+    """
+
+    PE = pdb_edit.PDBEdit()
+
+    # First get info on the two models
+    refinfo = PE.get_info( refpdb )
+    if len(refinfo.models) > 1:
+        raise RuntimeError, "refpdb {0} has > 1 model!".format( refpdb )
     
-    tmp1 = tmpFileName()
-    tmp1+=".pdb" # pdbcur insists names have a .pdb suffix  
+    targetinfo = PE.get_info( targetpdb )
+    if len(targetinfo.models) > 1:
+        raise RuntimeError, "targetpdb {0} has > 1 model!".format( targetpdb )
+    
+    # If the chains have different names we need to rename the target to match the reference
+    if refinfo.models[0].chains != targetinfo.models[0].chains:
+        #print "keep_matching CHAINS ARE DIFFERENT BETWEEN MODELS: {0} : {1}".format(refinfo.models[0].chains, targetinfo.models[0].chains )
+        
+        if len(refinfo.models[0].chains) != len(targetinfo.models[0].chains):
+            raise RuntimeError, "Different numbers of chains!"
+        
+        # We need to rename all the chains target to match those in refpdb using pdbcur
+        targettmp = tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix
+        
+        stdint = ""
+        for i, refchain in enumerate( refinfo.models[0].chains ):
+            stdint += "renchain  /*/{0} '{1}'\n".format( targetinfo.models[0].chains[i], refchain )
+ 
+        # now renumber with pdbcur
+        logfile = targettmp+".log"
+        cmd="pdbcur xyzin {0} xyzout {1}".format( targetpdb, targettmp ).split()
+        retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=True, stdin=stdint)
+        
+        if retcode == 0:
+            # remove temporary files
+            os.unlink(logfile)
+        else:
+            raise RuntimeError,"Error renaming chains!"   
+        
+    # Now we do our keep matching    
+    tmp1 = tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix 
     
     PE = pdb_edit.PDBEdit()
-    PE.keep_matching( refpdb, targetpdb, tmp1 )
+    PE.keep_matching( refpdb, targettmp, tmp1 )
     
     # now renumber with pdbcur
     logfile = tmp1+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( tmp1, outpdb ).split()
-    stdin="""sernum
+    stdint="""sernum
 """
-    retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
+    retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdint)
     
     if retcode == 0:
         # remove temporary files
         os.unlink(tmp1)
+        os.unlink(targettmp)
         os.unlink(logfile)
     
     return retcode
@@ -101,8 +141,12 @@ def tmpFileName():
     t.close()
     return tmp1
     
-def to_1_std_chain( inpdb, outpdb):
-    """Clean down to 1 model/chain with standard amino acids"""
+def standardise( inpdb, outpdb, model=None):
+    """Rename any non-standard AA, remove solvent and only keep most probably conformation.
+    
+    Args:
+    model: extract this model from the file
+    """
     
 
     tmp1 = tmpFileName()
@@ -110,7 +154,7 @@ def to_1_std_chain( inpdb, outpdb):
     
     # Strip to one chain and standardise AA names
     PE = pdb_edit.PDBEdit()
-    PE.to_1_std_chain(inpdb, tmp1)
+    PE.std_residues(inpdb, tmp1)
     
     # Now clean up with pdbcur
     logfile = tmp1+".log"
@@ -118,6 +162,11 @@ def to_1_std_chain( inpdb, outpdb):
     stdin="""delsolvent
 mostprob
 """
+    
+    if model:
+        assert type(model) == int
+        stdin += "lvmodel /{0}\n".format( model )
+        
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
     
     if retcode == 0:
