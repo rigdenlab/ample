@@ -6,6 +6,7 @@ Standalone scripts to manipulate PDB files
 # python imports
 import argparse
 import os
+import shutil
 import sys
 import tempfile
 
@@ -44,15 +45,39 @@ def extract_chain( inpdb, outpdb, chainID=None, newChainID=None ):
         
     return
 
+def extract_model( inpdb, outpdb, modelID=None ):
+    """Extract modelID from inpdb into outpdb"""
+    
+    assert modelID
+    
+    logfile = outpdb+".log"
+    cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
+    
+    # Build up stdin
+    stdin="lvmodel /{0}\n".format( modelID )
+    #stdin += "sernum\n"
+    
+    retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
+    
+    if retcode != 0:
+        raise RuntimeError,"Problem extracting model with cmd: {0}".format
+
+    # remove temporary files
+    os.unlink(logfile)
+        
+    return
+
 def get_info( inpdb ):
     PE = pdb_edit.PDBEdit()
     info = PE.get_info( inpdb )
     return info
 
-def keep_matching( refpdb, targetpdb, outpdb ):
+def keep_matching( refpdb=None, targetpdb=None, outpdb=None ):
     """Only keep those atoms in targetpdb that are in refpdb and write the result to outpdb.
     We also take care of renaming any chains.
     """
+    
+    assert refpdb and targetpdb and outpdb
 
     PE = pdb_edit.PDBEdit()
 
@@ -66,6 +91,7 @@ def keep_matching( refpdb, targetpdb, outpdb ):
         raise RuntimeError, "targetpdb {0} has > 1 model!".format( targetpdb )
     
     # If the chains have different names we need to rename the target to match the reference
+    targettmp = None
     if refinfo.models[0].chains != targetinfo.models[0].chains:
         #print "keep_matching CHAINS ARE DIFFERENT BETWEEN MODELS: {0} : {1}".format(refinfo.models[0].chains, targetinfo.models[0].chains )
         
@@ -89,14 +115,15 @@ def keep_matching( refpdb, targetpdb, outpdb ):
             os.unlink(logfile)
         else:
             raise RuntimeError,"Error renaming chains!"
-    else:
-        targettmp = targetpdb
+        
+        # Need to copy the path 
+        targetpdb = targettmp
         
     # Now we do our keep matching    
     tmp1 = tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix 
     
     PE = pdb_edit.PDBEdit()
-    PE.keep_matching( refpdb, targettmp, tmp1 )
+    PE.keep_matching( refpdb, targetpdb, tmp1 )
     
     # now renumber with pdbcur
     logfile = tmp1+".log"
@@ -108,20 +135,30 @@ def keep_matching( refpdb, targetpdb, outpdb ):
     if retcode == 0:
         # remove temporary files
         os.unlink(tmp1)
-        os.unlink(targettmp)
         os.unlink(logfile)
+        if targettmp:
+            os.unlink(targettmp)
     
     return retcode
 
-def reforigin_rmsd( refpdb, inpdb, outpdb, DMAX=100 ):
+def reforigin_rmsd( refpdb=None, targetpdb=None, outpdb=None, DMAX=100 ):
+    
+    assert refpdb and targetpdb and outpdb
+    
+    # HACK - REFORIGIN has a limit on the length of the command line, so we need to create copies of inputfile
+    # as this has the potentially longest path
+    tmptarget = tmpFileName()+".pdb"
+    shutil.copy(targetpdb, tmptarget)
     
     logfile = outpdb+".log"
-    cmd="reforigin xyzin {0} xyzref {1} xyzout {2} DMAX {3}".format( refpdb, inpdb, outpdb, DMAX ).split()
+    cmd="reforigin xyzin {0} xyzref {1} xyzout {2} DMAX {3}".format( tmptarget, refpdb, outpdb, DMAX ).split()
     
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False)
     
     if retcode != 0:
         raise RuntimeError, "Error running command: {0}".format( " ".join(cmd) )
+    else:
+        os.unlink( tmptarget )
     
     # Parse logfile to get RMSD
     rms = None
@@ -135,6 +172,31 @@ def reforigin_rmsd( refpdb, inpdb, outpdb, DMAX=100 ):
     
     return rms
 
+def standardise( inpdb, outpdb ):
+    """Rename any non-standard AA, remove solvent and only keep most probably conformation.
+    """
+
+    tmp1 = tmpFileName()
+    tmp1+=".pdb" # pdbcur insists names have a .pdb suffix
+    
+    # Now clean up with pdbcur
+    logfile = tmp1+".log"
+    cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, tmp1 ).split()
+    stdin="""delsolvent
+mostprob
+"""
+    retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
+    if retcode == 0:
+        # remove temporary files
+        os.unlink(logfile)
+        
+    # Standardise AA names
+    PE = pdb_edit.PDBEdit()
+    PE.std_residues(tmp1, outpdb)
+    os.unlink(tmp1)  
+    
+    return retcode
+
 def tmpFileName():
     """Return a filename for a temporary file"""
 
@@ -144,40 +206,6 @@ def tmpFileName():
     t.close()
     return tmp1
     
-def standardise( inpdb, outpdb, model=None):
-    """Rename any non-standard AA, remove solvent and only keep most probably conformation.
-    
-    Args:
-    model: extract this model from the file
-    """
-    
-
-    tmp1 = tmpFileName()
-    tmp1+=".pdb" # pdbcur insists names have a .pdb suffix
-    
-    # Strip to one chain and standardise AA names
-    PE = pdb_edit.PDBEdit()
-    PE.std_residues(inpdb, tmp1)
-    
-    # Now clean up with pdbcur
-    logfile = tmp1+".log"
-    cmd="pdbcur xyzin {0} xyzout {1}".format( tmp1, outpdb ).split()
-    stdin="""delsolvent
-mostprob
-"""
-    
-    if model:
-        assert type(model) == int
-        stdin += "lvmodel /{0}\n".format( model )
-        
-    retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    
-    if retcode == 0:
-        # remove temporary files
-        os.unlink(tmp1)
-        os.unlink(logfile)
-    
-    return retcode
 
 #
 # Command-line handling

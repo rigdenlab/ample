@@ -70,7 +70,7 @@ class PDBEdit(object):
 
     def keep_matching( self, refpdb=None, targetpdb=None, outpdb=None ):
         """Create a new pdb file that only contains that atoms in targetpdb that are
-        also in refpdb. It only considers ATOM lines.
+        also in refpdb. It only considers ATOM lines and discards HETATM lines in the target.
         
         Args:
         refpdb: path to pdb that contains the minimal set of atoms we want to keep
@@ -215,6 +215,9 @@ class PDBEdit(object):
                 # we write out matching at the end
                 continue
             
+            # For time being exclude all HETATM lines
+            elif line.startswith("HETATM"):
+                continue
             #Endif line.startswith("ATOM")
             
             # Output everything else
