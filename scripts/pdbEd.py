@@ -26,15 +26,16 @@ import pdb_edit
 def extract_chain( inpdb, outpdb, chainID=None, newChainID=None ):
     """Extract chainID from inpdb and renumner"""
     
-    if not newChainID:
-        newChainID = chainID
     
     logfile = outpdb+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
-    stdin="""lvchain {0}
-renchain {0} {1}
-sernum
-""".format( chainID, newChainID )
+    
+    # Build up stdin
+    stdin="lvchain {0}\n".format( chainID )
+    if newChainID:
+        stdin += "renchain {0} {1}\n".format( chainID, newChainID )
+    stdin += "sernum\n"
+    
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
     
     if retcode == 0:
@@ -87,7 +88,9 @@ def keep_matching( refpdb, targetpdb, outpdb ):
             # remove temporary files
             os.unlink(logfile)
         else:
-            raise RuntimeError,"Error renaming chains!"   
+            raise RuntimeError,"Error renaming chains!"
+    else:
+        targettmp = targetpdb
         
     # Now we do our keep matching    
     tmp1 = tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix 
