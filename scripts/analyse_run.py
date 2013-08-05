@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 Created on 19 Jul 2013
 
@@ -51,54 +52,105 @@ import re
 import sys
 import unittest
 
+sys.path.append("/Users/jmht/Documents/AMPLE/ample-dev1/python")
 import mrbump_results
 import pdbEd
 
 
-nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
-fasta = "/media/data/shared/TM/3U2F/3U2F.fasta"
-workdir = "/home/jmht/Documents/test/3U2F/test"
 # For now assume we just use the first model/chain from the native pdb
 
 # We need to cout models/chains and then work out what to do accordingly 
 
+def calculate_rmsd( refinedPdb, nativePdbStd ):
+    """Use reforigin to calculate rmsd between native and refined"""
+    # Now create a PDB with the matching atoms from native that are in refined
+    n = os.path.splitext( os.path.basename( nativePdbStd ) )[0]
+    nativePdbStdMatch = os.path.join( workdir, n+"_matched.pdb" )
+    pdbEd.keep_matching( refpdb=refinedPdb, targetpdb=nativePdbStd, outpdb=nativePdbStdMatch )
+    
+    # Now get the rmsd
+    n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
+    reforiginOut = os.path.join( workdir, n+"_reforigin.pdb" )
+    return pdbEd.reforigin_rmsd(nativePdbStdMatch, refinedPdb, reforiginOut )
+
 
 result = mrbump_results.MrBumpResult()
+
+nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
+fasta = "/media/data/shared/TM/3U2F/3U2F.fasta"
+workdir = "/home/jmht/Documents/test/3U2F/test"
 result.resultDir = "/media/data/shared/TM/3U2F/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_0.21093_rad_2_molrep_mrbump/data/loc0_ALL_poly_ala_trunc_0.21093_rad_2/unmod/mr/molrep"
 result.program = "molrep"
-resultk = "loc0_ALL_poly_ala_trunc_0.21093_rad_2_UNMOD"
+#resultk = "loc0_ALL_poly_ala_trunc_0.21093_rad_2_UNMOD"
 result.ensembleName = "poly_ala_trunc_0.21093_rad_2"
+
+
+workdir = "/Users/jmht/Documents/AMPLE/data/test/3PCV"
+nativePdb = workdir + "/3PCV.pdb"
+fasta = workdir + "/3PCV.fasta"
+result.resultDir = "/Users/jmht/Documents/AMPLE/data/test/3PCV/search_poly_ala_trunc_2.822761_rad_1_phaser_mrbump/data/loc0_ALL_poly_ala_trunc_2.822761_rad_1/unmod/mr/phaser"
+result.program = "phaser"
+result.ensembleName = "poly_ala_trunc_2.822761_rad_1"
 
 os.chdir( workdir )
 
-# Run a pass to find the # chains/models and extract solvent content etc
-info = pdbEd.get_info( nativePdb )
 
-print "native chains ",info.models[0].chains
-if len(info.models) > 1:
+# Run a pass to find the # chains/models and extract solvent content etc
+nativeInfo = pdbEd.get_info( nativePdb )
+
+if len(nativeInfo.models) > 1:
     raise RuntimeError,"More then one model!"
 
-modelNum=1 # fixed for now
+modelNum=0 # fixed for now - will be in a loop
 
 refinedPdb = os.path.join( result.resultDir, "refine", "refmac_{0}_loc0_ALL_{1}_UNMOD.pdb".format( result.program, result.ensembleName ) )
-#info = pdbEd.get_info( refinedPdb )
+refinedInfo = pdbEd.get_info( refinedPdb )
 
-# Standardise the native pdb
+# First standardise the native pdb
 n = os.path.splitext( os.path.basename( nativePdb ) )[0]
 nativePdbStd = os.path.join( workdir, n+"_std_model{0}.pdb".format(modelNum) )
-pdbEd.standardise( nativePdb, nativePdbStd, model=None)
+pdbEd.standardise( nativePdb, nativePdbStd, model=modelNum)
 
-# Now create a PDB with the matching atoms from native that are in refined
-n = os.path.splitext( os.path.basename( nativePdbStd ) )[0]
-nativePdbStdMatch = os.path.join( workdir, n+"_matched.pdb" )
-pdbEd.keep_matching( refpdb=refinedPdb, targetpdb=nativePdbStd, outpdb=nativePdbStdMatch )
+# Make sure the number of chains in the native and refined match
+native_chains = nativeInfo.models[ modelNum ].chains
+refined_chains = refinedInfo.models[ modelNum ].chains
 
-# Now get the rmsd
-n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
-reforiginOut = os.path.join( workdir, n+"_reforigin.pdb" )
-rmsd = rms = pdbEd.reforigin_rmsd(nativePdbStdMatch, refinedPdb, reforiginOut )
+if len( native_chains ) == len( refined_chains ):
+    
+    print "MATCHING CHAINS"
+    rmsd = calculate_rmsd( refinedPdb, nativePdbStd)
+    print rmsd
+    
+else:
+    
+    rmsds = {} # dict of rmsd -> ( chainIDnative, chainIDrefined )
+    print "Different numbers of chains ", native_chains, refined_chains
+    
+    # Match each chain in native against refined and pick the best
+    for nativeChainID in native_chains:
+        
+        if len( native_chains ) == 1:
+            # Don't need to do owt
+            nativeChainPdb = nativePdbStd
+        else:
+            # Extract the chain from the pdb
+            n = os.path.splitext( os.path.basename( nativePdbStd ) )[0]
+            nativeChainPdb = os.path.join( workdir, n+"_chain{0}.pdb".format( nativeChainID ) ) 
+            pdbEd.extract_chain( nativePdbStd, nativeChainPdb, chainID=nativeChainID )
+        
+        for refinedChainID in refined_chains:
+            
+            # Extract the chain from the pdb
+            n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
+            refinedChainPdb = os.path.join( workdir, n+"_chain{0}.pdb".format( refinedChainID ) ) 
+            pdbEd.extract_chain( refinedPdb, refinedChainPdb, chainID=refinedChainID, newChainID=nativeChainID )
+            
+            rmsd = calculate_rmsd( refinedChainPdb, nativeChainPdb )
+            
+            rmsds[ rmsd ] = ( nativeChainID, refinedChainID )
 
-print rmsd
+print rmsds
+    
 
 sys.exit()
 
@@ -258,4 +310,3 @@ class Test(unittest.TestCase):
 #if __name__ == "__main__":
 #    #import sys;sys.argv = ['', 'Test.testName']
 #    unittest.main()
-
