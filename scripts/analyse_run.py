@@ -44,11 +44,11 @@ TO THINK ABOUT
 * multiple models/chains in native
 * multiple chains in solution (e.g. 3PCV)
 
-
-
 '''
+
 import os
 import re
+import shutil
 import sys
 import unittest
 
@@ -68,135 +68,89 @@ class ReforiginRmsd(object):
         
     """
     
-    
     def __init__( self, nativePdb, refinedPdb ):
         
         
         self.rmsd = None
-        self.bestModel = None
         self.bestChains = None
         
-        self.run(nativePdb, refinedPdb)
+        self.run( nativePdb, refinedPdb )
     
-    def run(self, nativePdb, refinedPdb):
-        """For now just save lowest rmsd - can look at collecting more info later"""
-    
+    def run( self, nativePdb, refinedPdb ):
+        """For now just save lowest rmsd - can look at collecting more info later
+        
+        Currently we assume we are only given one model and that it has already been standardised.
+        """
 
+        # Run a pass to find the # chains
         refinedInfo = pdbEd.get_info( refinedPdb )
-        
-        # Run a pass to find the # chains/models and extract solvent content etc
         nativeInfo = pdbEd.get_info( nativePdb )
-        
-        model_rmsds = []
-        
-        multiModel=False
-        if len( nativeInfo.models ) > 1:
-            multiModel=True
-            print "Processing {0} models".format( len( nativeInfo.models ))
+        native_chains = nativeInfo.models[ 0 ].chains
+        refined_chains = refinedInfo.models[ 0 ].chains # only ever one model in the refined pdb
             
-        for imodel, model in enumerate( nativeInfo.models ):
+        rmsds = {} # dict of rmsd -> ( chainIDnative, chainIDrefined )
+        
+        # Match each chain in native against refined and pick the best
+        for nativeChainID in native_chains:
             
-            if multiModel:
-                modelNum = model.serial
-                # Need to extract the relevant model
+            #print "native_chain: {0}".format( nativeChainID )
+                    
+            if len( native_chains ) == 1:
+                # Don't need to do owt as we are just using the native as is
+                nativeChainPdb = nativePdb
+            else:
+                
+                # Extract the chain from the pdb
                 n = os.path.splitext( os.path.basename( nativePdb ) )[0]
-                nativePdbModel = os.path.join( workdir, n+"_model{0}.pdb".format( modelNum ) )
-                pdbEd.extract_model( nativePdb, nativePdbModel, modelID=modelNum)
-            else:
-                modelNum = 0
-                nativePdbModel = nativePdb
+                nativeChainPdb = os.path.join( workdir, n+"_chain{0}.pdb".format( nativeChainID ) ) 
+                pdbEd.extract_chain( nativePdb, nativeChainPdb, chainID=nativeChainID )
                 
-            print "processing model ",modelNum
+                assert os.path.isfile( nativeChainPdb  ), nativeChainPdb
             
-            # First standardise the native pdb
-            n = os.path.splitext( os.path.basename( nativePdbModel ) )[0]
-            nativePdbStd = os.path.join( workdir, n+"_std.pdb" )
-            pdbEd.standardise( nativePdbModel, nativePdbStd )
-            
-            # Make sure the number of chains in the native and refined match
-            native_chains = nativeInfo.models[ imodel ].chains
-            refined_chains = refinedInfo.models[ 0 ].chains # only ever one model in the refined pdb
-            
-            if len( native_chains ) == len( refined_chains ):
+            for refinedChainID in refined_chains:
                 
-                print "MATCHING CHAINS "
-                #self.rmsd = self.calc_reforigin_rmsd( refinedPdb, nativePdbStd, model=modelNum, chain='A' )
-                rmsd = self.calc_reforigin_rmsd( refinedPdb, nativePdbStd, model=modelNum, chain='A' )
-                print "got rmsd ",rmsd
-                model_rmsds.append( rmsd )
+                #print "refined_chain: {0}".format( refinedChainID )
                 
-            else:
+                assert os.path.isfile( nativeChainPdb  ), nativeChainPdb
                 
-                rmsds = {} # dict of rmsd -> ( chainIDnative, chainIDrefined )
-                print "DIFFERENT NUMBERS OF CHAINS ", native_chains, refined_chains
+                # Extract the chain from the pdb
+                n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
+                refinedChainPdb = os.path.join( workdir, n+"_chain{0}.pdb".format( refinedChainID ) ) 
+                pdbEd.extract_chain( refinedPdb, refinedChainPdb, chainID=refinedChainID, newChainID=nativeChainID )
                 
-                # Match each chain in native against refined and pick the best
-                for nativeChainID in native_chains:
-                    
-                    #print "native_chain: {0}".format( nativeChainID )
-                            
-                    if len( native_chains ) == 1:
-                        # Don't need to do owt as we are just using the native as is
-                        nativeChainPdb = nativePdbStd
-                    else:
-                        
-                        # Extract the chain from the pdb
-                        n = os.path.splitext( os.path.basename( nativePdbStd ) )[0]
-                        nativeChainPdb = os.path.join( workdir, n+"_chain{0}.pdb".format( nativeChainID ) ) 
-                        pdbEd.extract_chain( nativePdbStd, nativeChainPdb, chainID=nativeChainID )
-                        
-                        assert os.path.isfile( nativeChainPdb  ), nativeChainPdb
-                    
-                    for refinedChainID in refined_chains:
-                        
-                        #print "refined_chain: {0}".format( refinedChainID )
-                        
-                        assert os.path.isfile( nativeChainPdb  ), nativeChainPdb
-                        
-                        # Extract the chain from the pdb
-                        n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
-                        refinedChainPdb = os.path.join( workdir, n+"_chain{0}.pdb".format( refinedChainID ) ) 
-                        pdbEd.extract_chain( refinedPdb, refinedChainPdb, chainID=refinedChainID, newChainID=nativeChainID )
-                        
-                        #print "calculating for {0} vs. {1}.".format( refinedChainPdb, nativeChainPdb  )
-                        
-                        rmsd = self.calc_reforigin_rmsd( refinedChainPdb, nativeChainPdb, model=modelNum, chain=refinedChainID )
-                        print "got rmsd chain ",rmsd
-                        
-                        rmsds[ rmsd ] = ( nativeChainID, refinedChainID )
-                        
-                # End loop over chains
-                # Now pick the best...
-                rmsd = sorted( rmsds.keys() )[ 0 ]
-                print "best chain rmsd is ", rmsd
-                #self.rmsd = rmsd
-                model_rmsds.append( rmsd )
-                self.bestChains = rmsds[ rmsd ]
+                #print "calculating for {0} vs. {1}.".format( refinedChainPdb, nativeChainPdb  )
                 
-            # End loop over models
-            
-        print "got model rmsds ",model_rmsds
+                rmsd = self.calc_reforigin_rmsd( refinedChainPdb, nativeChainPdb, nativeChainID=nativeChainID )
+                #print "got rmsd chain ",rmsd
+                
+                rmsds[ rmsd ] = ( nativeChainID, refinedChainID )
+                
+        # End loop over chains
+        # Now pick the best...
+        rmsd = sorted( rmsds.keys() )[ 0 ]
+        print "Got rmsds over chains: {0}".format( rmsds )
         
-        self.rmsd = sorted(model_rmsds)[0]
-        print "best rmsd ",self.rmsd
+        self.rmsd = rmsd
+        self.bestChains = rmsds[ rmsd ]
+        print "best chain rmsd is {0} for nativeChain {1} vs refinedChain {2}".format( self.rmsd, self.bestChains[0], self.bestChains[1] )
             
         return
 
 
-    def calc_reforigin_rmsd( self, refinedPdb, nativePdbStd, model=None, chain=None ):
+    def calc_reforigin_rmsd( self, refinedPdb, nativePdb, nativeChainID=None ):
         """Use reforigin to calculate rmsd between native and refined"""
         
         workdir=os.getcwd()
         
         # Now create a PDB with the matching atoms from native that are in refined
-        n = os.path.splitext( os.path.basename( nativePdbStd ) )[0]
-        nativePdbStdMatch = os.path.join( workdir, n+"_matched.pdb" )
-        pdbEd.keep_matching( refpdb=refinedPdb, targetpdb=nativePdbStd, outpdb=nativePdbStdMatch )
+        n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+        nativePdbMatch = os.path.join( workdir, n+"_matched.pdb" )
+        pdbEd.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch )
         
         # Now get the rmsd
         n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
-        reforiginOut = os.path.join( workdir, n+"_model{0}_chain{1}_reforigin.pdb".format( model,chain ) )
-        return pdbEd.reforigin_rmsd( refpdb=nativePdbStdMatch, targetpdb=refinedPdb, outpdb=reforiginOut )
+        reforiginOut = os.path.join( workdir, n+"_chain{0}_reforigin.pdb".format( nativeChainID ) )
+        return pdbEd.reforigin_rmsd( refpdb=nativePdbMatch, targetpdb=refinedPdb, outpdb=reforiginOut )
 
 class ShelxeLogParser(object):
     """
@@ -463,6 +417,10 @@ def process_result( mrbumpResult=None, nativePdb=None, workdir=None ):
     
     # Get the reforigin RMSD of the phaser placed model as refined with refmac
     refinedPdb = os.path.join( mrbumpResult.resultDir, "refine", "refmac_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, mrbumpResult.ensembleName ) )
+    
+    # debug - copy into work directory
+    shutil.copy(refinedPdb, os.path.join( workdir, os.path.basename( refinedPdb ) ) )
+    
     rmsder = ReforiginRmsd( nativePdb, refinedPdb )
     print "REFORIGIN RMSD: {0}\n\n".format( rmsder.rmsd )
     
@@ -505,6 +463,7 @@ if True:
     result.ensembleName = "poly_ala_trunc_0.21093_rad_2"
 
 
+print "Checking ",nativePdb
 process_result( mrbumpResult = result, nativePdb=nativePdb, workdir=workdir)
 
 
