@@ -55,7 +55,7 @@ import unittest
 sys.path.append("/Users/jmht/Documents/AMPLE/ample-dev1/python")
 import ample_util
 import mrbump_results
-import pdbEd
+import pdb_edit
 
 
 class ReforiginRmsd(object):
@@ -70,11 +70,58 @@ class ReforiginRmsd(object):
     
     def __init__( self, nativePdb, refinedPdb ):
         
-        
         self.rmsd = None
         self.bestChains = None
         
         self.run( nativePdb, refinedPdb )
+        
+    def calc_reforigin_rmsd( self, refpdb=None, targetpdb=None, outpdb=None, DMAX=100 ):
+        
+        assert refpdb and targetpdb and outpdb
+        
+        # HACK - REFORIGIN has a limit on the length of the command line, so we need to create copies of inputfile
+        # as this has the potentially longest path
+        tmptarget = ample_util.tmpFileName()+".pdb"
+        shutil.copy(targetpdb, tmptarget)
+        
+        logfile = outpdb+".log"
+        cmd="reforigin xyzin {0} xyzref {1} xyzout {2} DMAX {3}".format( tmptarget, refpdb, outpdb, DMAX ).split()
+        
+        retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False)
+        
+        if retcode != 0:
+            raise RuntimeError, "Error running command: {0}".format( " ".join(cmd) )
+        else:
+            os.unlink( tmptarget )
+        
+        # Parse logfile to get RMSD
+        rms = None
+        for line in open( logfile, 'r' ):
+            if line.startswith("RMS deviation:"):
+                rms = float( line.split()[-1] )
+                break
+        
+        if not rms:
+            raise RuntimeError, "Error extracting RMS from logfile: {0}".format( logfile )
+        
+        return rms
+
+    def reforigin_rmsd( self, refinedPdb, nativePdb, nativeChainID=None ):
+        """Use reforigin to calculate rmsd between native and refined"""
+        
+        workdir=os.getcwd()
+        
+        pdbedit = pdb_edit.PDBEdit()
+        
+        # Now create a PDB with the matching atoms from native that are in refined
+        n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+        nativePdbMatch = os.path.join( workdir, n+"_matched.pdb" )
+        pdbedit.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch )
+        
+        # Now get the rmsd
+        n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
+        reforiginOut = os.path.join( workdir, n+"_chain{0}_reforigin.pdb".format( nativeChainID ) )
+        return self.calc_reforigin_rmsd( refpdb=nativePdbMatch, targetpdb=refinedPdb, outpdb=reforiginOut )
     
     def run( self, nativePdb, refinedPdb ):
         """For now just save lowest rmsd - can look at collecting more info later
@@ -83,8 +130,9 @@ class ReforiginRmsd(object):
         """
 
         # Run a pass to find the # chains
-        refinedInfo = pdbEd.get_info( refinedPdb )
-        nativeInfo = pdbEd.get_info( nativePdb )
+        pdbedit = pdb_edit.PDBEdit()
+        refinedInfo = pdbedit.get_info( refinedPdb )
+        nativeInfo = pdbedit.get_info( nativePdb )
         native_chains = nativeInfo.models[ 0 ].chains
         refined_chains = refinedInfo.models[ 0 ].chains # only ever one model in the refined pdb
             
@@ -103,7 +151,7 @@ class ReforiginRmsd(object):
                 # Extract the chain from the pdb
                 n = os.path.splitext( os.path.basename( nativePdb ) )[0]
                 nativeChainPdb = os.path.join( workdir, n+"_chain{0}.pdb".format( nativeChainID ) ) 
-                pdbEd.extract_chain( nativePdb, nativeChainPdb, chainID=nativeChainID )
+                pdbedit.extract_chain( nativePdb, nativeChainPdb, chainID=nativeChainID )
                 
                 assert os.path.isfile( nativeChainPdb  ), nativeChainPdb
             
@@ -116,11 +164,11 @@ class ReforiginRmsd(object):
                 # Extract the chain from the pdb
                 n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
                 refinedChainPdb = os.path.join( workdir, n+"_chain{0}.pdb".format( refinedChainID ) ) 
-                pdbEd.extract_chain( refinedPdb, refinedChainPdb, chainID=refinedChainID, newChainID=nativeChainID )
+                pdbedit.extract_chain( refinedPdb, refinedChainPdb, chainID=refinedChainID, newChainID=nativeChainID )
                 
                 #print "calculating for {0} vs. {1}.".format( refinedChainPdb, nativeChainPdb  )
                 
-                rmsd = self.calc_reforigin_rmsd( refinedChainPdb, nativeChainPdb, nativeChainID=nativeChainID )
+                rmsd = self.reforigin_rmsd( refinedChainPdb, nativeChainPdb, nativeChainID=nativeChainID )
                 #print "got rmsd chain ",rmsd
                 
                 rmsds[ rmsd ] = ( nativeChainID, refinedChainID )
@@ -135,22 +183,6 @@ class ReforiginRmsd(object):
         print "best chain rmsd is {0} for nativeChain {1} vs refinedChain {2}".format( self.rmsd, self.bestChains[0], self.bestChains[1] )
             
         return
-
-
-    def calc_reforigin_rmsd( self, refinedPdb, nativePdb, nativeChainID=None ):
-        """Use reforigin to calculate rmsd between native and refined"""
-        
-        workdir=os.getcwd()
-        
-        # Now create a PDB with the matching atoms from native that are in refined
-        n = os.path.splitext( os.path.basename( nativePdb ) )[0]
-        nativePdbMatch = os.path.join( workdir, n+"_matched.pdb" )
-        pdbEd.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch )
-        
-        # Now get the rmsd
-        n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
-        reforiginOut = os.path.join( workdir, n+"_chain{0}_reforigin.pdb".format( nativeChainID ) )
-        return pdbEd.reforigin_rmsd( refpdb=nativePdbMatch, targetpdb=refinedPdb, outpdb=reforiginOut )
 
 class ShelxeLogParser(object):
     """
@@ -268,23 +300,24 @@ class CompareModels(object):
         self.rmsd = None
         self.tm = None
         
+        pdbedit = pdb_edit.PDBEdit()
         
         # If the rebuilt models is in multiple chains, we need to create a single chain
-        info = pdbEd.get_info( self.targetModel )
+        info = pdbedit.get_info( self.targetModel )
         if len( info.models[0].chains ) > 1:
             print "Coallescing targetModel into a single chain"
             n = os.path.splitext( os.path.basename( self.targetModel ) )[0]
             targetModel1chain = os.path.join( workdir, n+"_1chain.pdb" )
-            pdbEd.to_single_chain( self.targetModel, targetModel1chain )
+            pdbedit.to_single_chain( self.targetModel, targetModel1chain )
             self.targetModel = targetModel1chain
             
         # If the reference model is in multiple chains, we need to create a single chain
-        info = pdbEd.get_info( self.refModel )
+        info = pdbedit.get_info( self.refModel )
         if len( info.models[0].chains ) > 1:
             print "Coallescing refModel into a single chain"
             n = os.path.splitext( os.path.basename( self.refModel ) )[0]
             refModel1chain = os.path.join( workdir, n+"_1chain.pdb" )
-            pdbEd.to_single_chain( self.refModel, refModel1chain )
+            pdbedit.to_single_chain( self.refModel, refModel1chain )
             self.refModel = refModel1chain
         
         self.run()
@@ -400,19 +433,21 @@ def process_result( mrbumpResult=None, nativePdb=None, workdir=None ):
     
     os.chdir( workdir )
     
+    pdbedit = pdb_edit.PDBEdit()
+    
     # First check if the native has > 1 model and extract the first if so
-    info = pdbEd.get_info( nativePdb )
+    info = pdbedit.get_info( nativePdb )
     if len( info.models ) > 1:
         print "nativePdb has > 1 model - using first"
         n = os.path.splitext( os.path.basename( nativePdb ) )[0]
         nativePdb1 = os.path.join( workdir, n+"_model1.pdb" )
-        pdbEd.extract_model( nativePdb, nativePdb1, modelID=info.models[0].serial )
+        pdbedit.extract_model( nativePdb, nativePdb1, modelID=info.models[0].serial )
         nativePdb = nativePdb1
         
     # Standardise the PDB to rename any non-standard AA, remove solvent etc
     n = os.path.splitext( os.path.basename( nativePdb ) )[0]
     nativePdbStd = os.path.join( workdir, n+"_std.pdb" )
-    pdbEd.standardise( nativePdb, nativePdbStd )
+    pdbedit.standardise( nativePdb, nativePdbStd )
     nativePdb = nativePdbStd
     
     # Get the reforigin RMSD of the phaser placed model as refined with refmac
