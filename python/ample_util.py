@@ -276,7 +276,15 @@ def setup_logging():
     logger.addHandler(cl)
     
     return logger
-        
+
+def tmpFileName():
+    """Return a filename for a temporary file"""
+
+    # Get temporary filenames
+    t = tempfile.NamedTemporaryFile(dir=os.getcwd(), delete=True)
+    tmp1 = t.name
+    t.close()
+    return tmp1
 
 
 class TestUtil(unittest.TestCase):
