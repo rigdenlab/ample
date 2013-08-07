@@ -67,6 +67,55 @@ class PDBEdit(object):
         pdb_in.close()
         
         return
+    
+    def to_single_chain( self, inpath, outpath):
+        """Condense a single-model multi-chain pdb to a single-chain pdb"""
+        
+        o = open( outpath, 'w' )
+        
+        firstChainID = None
+        currentResSeq = 1 # current residue we are reading - assume it always starts from 1
+        globalResSeq = 1
+        for line in open(inpath):
+            
+            # Remove any HETATOM lines and following ANISOU lines
+            if line.startswith("HETATM") or line.startswith("MODEL") or line.startswith("ANISOU"):
+                raise RuntimeError,"Cant cope with the line: {0}".format( line )
+            
+            if line.startswith("ATOM"):
+                
+                changed=False
+                
+                atom = PdbAtom( line )
+                
+                # First atom/residue
+                if not firstChainID:
+                    firstChainID = atom.chainID
+                
+                # Change residue numbering and chainID
+                if atom.chainID != firstChainID:
+                    atom.chainID = firstChainID
+                    changed=True
+                
+                # Catch each change in residue
+                if atom.resSeq != currentResSeq:
+                    # Change of residue
+                    currentResSeq = atom.resSeq
+                    globalResSeq += 1
+                
+                # Only change if don't match global
+                if atom.resSeq != globalResSeq:
+                    atom.resSeq = globalResSeq
+                    changed=True
+                    
+                if changed:
+                    line = atom.toLine()+"\n"
+            
+            o.write( line )
+            
+        o.close()
+        
+        return
 
     def keep_matching( self, refpdb=None, targetpdb=None, outpdb=None ):
         """Create a new pdb file that only contains that atoms in targetpdb that are

@@ -183,6 +183,7 @@ def standardise( inpdb, outpdb ):
     logfile = tmp1+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, tmp1 ).split()
     stdin="""delsolvent
+noanisou
 mostprob
 """
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
@@ -196,6 +197,11 @@ mostprob
     os.unlink(tmp1)  
     
     return retcode
+
+def to_single_chain( inpdb, outpdb ):
+    PE = pdb_edit.PDBEdit()
+    PE.to_single_chain( inpdb, outpdb )
+    return
 
 def tmpFileName():
     """Return a filename for a temporary file"""
