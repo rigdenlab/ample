@@ -46,13 +46,14 @@ TO THINK ABOUT
 
 '''
 
+import cPickle
 import os
 import re
 import shutil
 import sys
 import unittest
 
-sys.path.append("/Users/jmht/Documents/AMPLE/ample-dev1/python")
+#sys.path.append("/Users/jmht/Documents/AMPLE/ample-dev1/python")
 import ample_util
 import mrbump_results
 import pdb_edit
@@ -60,12 +61,6 @@ import pdb_edit
 
 class ReforiginRmsd(object):
     """Class to use reforigin to determine how well the model was placed.
-    
-    For multiple models in the native pdb, this will cycle through each model and take the best rmsd.
-    If the numbers of chains in the native/refined models are the same, the single rmsd is calculated.
-    If there are differing numbers of chains between the native/refined models, a comparison is made 
-    between each chain in the native and refined model, and the lowest rmsd is used
-        
     """
     
     def __init__( self, nativePdb, refinedPdb ):
@@ -180,7 +175,7 @@ class ReforiginRmsd(object):
         
         self.rmsd = rmsd
         self.bestChains = rmsds[ rmsd ]
-        print "best chain rmsd is {0} for nativeChain {1} vs refinedChain {2}".format( self.rmsd, self.bestChains[0], self.bestChains[1] )
+        #print "best chain rmsd is {0} for nativeChain {1} vs refinedChain {2}".format( self.rmsd, self.bestChains[0], self.bestChains[1] )
             
         return
 
@@ -295,7 +290,7 @@ class CompareModels(object):
         self.targetModel = targetModel
         
         self.grmsd = None
-        self.masxub = None
+        self.maxsub = None
         self.pairs = None
         self.rmsd = None
         self.tm = None
@@ -305,7 +300,7 @@ class CompareModels(object):
         # If the rebuilt models is in multiple chains, we need to create a single chain
         info = pdbedit.get_info( self.targetModel )
         if len( info.models[0].chains ) > 1:
-            print "Coallescing targetModel into a single chain"
+            #print "Coallescing targetModel into a single chain"
             n = os.path.splitext( os.path.basename( self.targetModel ) )[0]
             targetModel1chain = os.path.join( workdir, n+"_1chain.pdb" )
             pdbedit.to_single_chain( self.targetModel, targetModel1chain )
@@ -314,7 +309,7 @@ class CompareModels(object):
         # If the reference model is in multiple chains, we need to create a single chain
         info = pdbedit.get_info( self.refModel )
         if len( info.models[0].chains ) > 1:
-            print "Coallescing refModel into a single chain"
+            #print "Coallescing refModel into a single chain"
             n = os.path.splitext( os.path.basename( self.refModel ) )[0]
             refModel1chain = os.path.join( workdir, n+"_1chain.pdb" )
             pdbedit.to_single_chain( self.refModel, refModel1chain )
@@ -324,9 +319,7 @@ class CompareModels(object):
     
         return
     
-    
     def run(self):
-        
         
         n = os.path.splitext( os.path.basename( self.targetModel ) )[0]
         logfile = os.path.join( self.workdir, n+"_maxcluster.log" )
@@ -345,7 +338,6 @@ class CompareModels(object):
         self.split_alignrsm( alignrsm=alignrsm, rootname=rootname )
         
         return
-    
     
     def parse_maxcluster_log( self, logfile ):
         """Extract info - assumes it completers in 1 iteration"""
@@ -387,7 +379,6 @@ class CompareModels(object):
             
         return
     
-    
     def split_alignrsm(self, alignrsm=None, rootname=None):
          
         # Order is experiment then prediction
@@ -426,7 +417,6 @@ class CompareModels(object):
                 lines.append( line )
         
         return
-    
 # End CompareModels
 
 def process_result( mrbumpResult=None, nativePdb=None, workdir=None ):
@@ -438,6 +428,8 @@ def process_result( mrbumpResult=None, nativePdb=None, workdir=None ):
     # First check if the native has > 1 model and extract the first if so
     info = pdbedit.get_info( nativePdb )
     if len( info.models ) > 1:
+        
+        print info.models
         print "nativePdb has > 1 model - using first"
         n = os.path.splitext( os.path.basename( nativePdb ) )[0]
         nativePdb1 = os.path.join( workdir, n+"_model1.pdb" )
@@ -452,54 +444,97 @@ def process_result( mrbumpResult=None, nativePdb=None, workdir=None ):
     
     # Get the reforigin RMSD of the phaser placed model as refined with refmac
     refinedPdb = os.path.join( mrbumpResult.resultDir, "refine", "refmac_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, mrbumpResult.ensembleName ) )
+    mrbumpResult.refmacModel = refinedPdb
     
     # debug - copy into work directory
     shutil.copy(refinedPdb, os.path.join( workdir, os.path.basename( refinedPdb ) ) )
     
     rmsder = ReforiginRmsd( nativePdb, refinedPdb )
-    print "REFORIGIN RMSD: {0}\n\n".format( rmsder.rmsd )
+    mrbumpResult.reforiginRmsd = rmsder.rmsd
     
     # Now read the shelxe log to see how we did
     logfile = os.path.join( mrbumpResult.resultDir, "build/shelxe/shelxe_run.log" )
     shelxeP = ShelxeLogParser( logfile )
-    print "got CC ",shelxeP.CC
-    print "got chain length ",shelxeP.avgChainLength
-    
+    mrbumpResult.shelxCC = shelxeP.CC
+    mrbumpResult.shelxAvgChainLen = shelxeP.avgChainLength
+
     # Finally use maxcluster to compare the shelxe model with the native
     shelxeModel = os.path.join( mrbumpResult.resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, mrbumpResult.ensembleName ) )
-    
+    mrbumpResult.shelxModel = shelxeModel
     m = CompareModels( nativePdb, shelxeModel, workdir=workdir  )
-    print "Maxsub - maxsub={0} rmsd={1} grmsd={2} tm={3}".format( m.maxsub,  m.rmsd, m.grmsd, m.tm  )
+    mrbumpResult.shelxGrmsd = m.grmsd
+    mrbumpResult.shelxTM = m.tm
+    
+#     print "REFORIGIN RMSD: {0}".format( mrbumpResult.reforiginRmsd )
+#     print "got CC ",mrbumpResult.shelxCC
+#     print "got chain length ",mrbumpResult.shelxAvgChainLen
+#     print "Maxsub - maxsub={0} rmsd={1} grmsd={2} tm={3}".format( m.maxsub,  m.rmsd, m.grmsd, m.tm  )
     
     return
 
 
-result = mrbump_results.MrBumpResult()
+# result = mrbump_results.MrBumpResult()
+# 
+# if False:
+#     workdir = "/home/jmht/Documents/test/3PCV"
+#     nativePdb = "/media/data/shared/TM/3PCV/3PCV.pdb"
+#     result.resultDir = "/media/data/shared/TM/3PCV/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_2.822761_rad_1_phaser_mrbump/data/loc0_ALL_poly_ala_trunc_2.822761_rad_1/unmod/mr/phaser"
+#     result.program = "phaser"
+#     result.ensembleName = "poly_ala_trunc_2.822761_rad_1"
+# 
+# if True:
+#     workdir = "/home/jmht/Documents/test/1GU8"
+#     nativePdb = "/media/data/shared/TM/1GU8/1GU8.pdb"
+#     result.resultDir = "/media/data/shared/TM/1GU8/ROSETTA_MR_0/MRBUMP/cluster_1/search_SCWRL_reliable_sidechains_trunc_19.511671_rad_3_phaser_mrbump/data/loc0_ALL_SCWRL_reliable_sidechains_trunc_19.511671_rad_3/unmod/mr/phaser"
+#     result.program = "phaser"
+#     result.ensembleName = "SCWRL_reliable_sidechains_trunc_19.511671_rad_3"
+# 
+# if False:
+#     workdir = "/home/jmht/Documents/test/3U2F"
+#     nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
+#     result.resultDir = "/media/data/shared/TM/3U2F/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_0.21093_rad_2_molrep_mrbump/data/loc0_ALL_poly_ala_trunc_0.21093_rad_2/unmod/mr/molrep"
+#     result.program = "molrep"
+#     result.ensembleName = "poly_ala_trunc_0.21093_rad_2"
 
-if False:
-    workdir = "/home/jmht/Documents/test/3PCV"
-    result.resultDir = "/media/data/shared/TM/3PCV/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_2.822761_rad_1_phaser_mrbump/data/loc0_ALL_poly_ala_trunc_2.822761_rad_1/unmod/mr/phaser"
-    nativePdb = "/media/data/shared/TM/3PCV/3PCV.pdb"
-    result.program = "phaser"
-    result.ensembleName = "poly_ala_trunc_2.822761_rad_1"
 
-if False:
-    workdir = "/home/jmht/Documents/test/1GU8"
-    result.resultDir = "/media/data/shared/TM/1GU8/ROSETTA_MR_0/MRBUMP/cluster_1/search_SCWRL_reliable_sidechains_trunc_19.511671_rad_3_phaser_mrbump/data/loc0_ALL_SCWRL_reliable_sidechains_trunc_19.511671_rad_3/unmod/mr/phaser"
-    nativePdb = "/media/data/shared/TM/1GU8/1GU8.pdb"
-    result.program = "phaser"
-    result.ensembleName = "SCWRL_reliable_sidechains_trunc_19.511671_rad_3"
+pfile = "/media/data/shared/TM/results.pkl"
+f = open( pfile )
+resultsDict = cPickle.load( f  )
+f.close()
 
-if True:
-    workdir = "/home/jmht/Documents/test/3U2F"
-    result.resultDir = "/media/data/shared/TM/3U2F/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_0.21093_rad_2_molrep_mrbump/data/loc0_ALL_poly_ala_trunc_0.21093_rad_2/unmod/mr/molrep"
-    nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
-    result.program = "molrep"
-    result.ensembleName = "poly_ala_trunc_0.21093_rad_2"
+root = "/home/jmht/Documents/test/new"
 
-
-print "Checking ",nativePdb
-process_result( mrbumpResult = result, nativePdb=nativePdb, workdir=workdir)
+for pdbcode, mrbSummary in resultsDict.iteritems():
+    
+    if pdbcode == "3RLB":
+        print "skipping 3RLB"
+        continue
+    
+    workdir = os.path.join( root, pdbcode )
+    if not os.path.isdir( workdir ):
+        os.mkdir( workdir )
+        
+    print "\nResults for ",pdbcode
+    
+    mrbResult = mrbSummary.results[0]
+    # Need to remove last component as we recored the refmac directory
+    mrbResult.resultDir = os.sep.join( mrbResult.resultDir.split(os.sep)[:-1] )
+    # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
+    mrbResult.ensembleName = mrbResult.name[9:-6]
+    
+    # Get path to native
+    nativePdb = os.path.join( "/media/data/shared/TM", pdbcode, "{0}.pdb".format( pdbcode ) )
+    
+    process_result( mrbumpResult = mrbResult, nativePdb=nativePdb, workdir=workdir )
+    
+    print "MR program: {0}".format( mrbResult.program )
+    print "Reforigin rmsd: {0}".format( mrbResult.reforiginRmsd )
+    print "CC ",mrbResult.shelxCC
+    print "Chain length ",mrbResult.shelxAvgChainLen
+    print "TM ",mrbResult.shelxTM
+    print "gRMSD ",mrbResult.shelxGrmsd
+    
+    break
 
 
 class Test(unittest.TestCase):

@@ -7,6 +7,7 @@ import argparse
 import copy
 import os
 import re
+import unittest
 
 # our imports
 import ample_util
@@ -32,7 +33,7 @@ three2one = {
     'THR' : 'T',    
     'TRP' : 'W',    
     'TYR' : 'Y',   
-    'VAL' : 'V,'
+    'VAL' : 'V'
 }
 
 # http://stackoverflow.com/questions/3318625/efficient-bidirectional-hash-table-in-python
@@ -115,6 +116,81 @@ class PDBEdit(object):
         os.unlink(logfile)
             
         return
+    
+
+    def gett_index_map( self, nativePdb, modelPdb ):
+        """Return two lists mapping the index of a residue in the model to the corresponding residue in the native.
+        Only works if 1 chain in either file adn with standard residues
+        """
+        
+        def _get_indices( pdb ):
+            """Get sequence as string of 1AA
+            get list of matching resSeq
+            """
+            
+            sequence = ""
+            resSeq = []
+            
+            chain=None
+            currentResidue=None
+            for line in open( pdb ):
+                
+                if line.startswith("MODEL"):
+                    raise RuntimeError,"FOUND MULTI_MODEL FILE!"
+                
+                if line.startswith("ATOM"):
+                    
+                    atom = pdb_model.PdbAtom( line )
+                    
+                    if not chain:
+                        chain = atom.chainID
+                    
+                    if atom.chainID != chain:
+                        raise RuntimeError," FOUND ADDITIONAL CHAIN"
+                        break
+                    
+                    if currentResidue != atom.resSeq:
+                        sequence += three2one[ atom.resName ]
+                        resSeq.append( atom.resSeq )
+                        currentResidue = atom.resSeq
+            return ( sequence, resSeq )
+      
+    
+        model_seq, model_idx = _get_indices( modelPdb )
+        native_seq, native_idx = _get_indices( nativePdb )
+        
+        # The window of AA we used to check for a match    
+        PROBE_LEN = 10
+        
+        # MAXINSET is the max number of AA into the sequence that we will go searching for a match - i.e. if more
+        # then MAXINSET AA are non-matching, we won't find the match 
+        MAXINSET=50
+        got=False
+        for model_i in range( MAXINSET ):
+            probe = model_seq[ model_i : model_i+PROBE_LEN-1 ]
+            for native_i in range( MAXINSET ):
+                if native_seq[ native_i:native_i+PROBE_LEN-1 ] == probe:
+                    got=True
+                    break
+            
+            if got:
+                #print "GOT MODEL MATCH AT i,j ",model_i,native_i
+                break
+        
+        # Now we know where they start we can sort out the indicies
+        # map goes from the model -> native. For any in model that are not in native we set them to None
+        index_map = []
+        for i in range( len( model_seq ) ):
+            
+            if i < model_i:
+                # These are residues that are present in the model but not in the native
+                index_map.append( None )
+                continue
+                
+            index_map.append(  native_idx[ i - model_i + native_i ]  )
+            
+        
+        return ( model_idx, index_map )
 
     def keep_matching( self, refpdb=None, targetpdb=None, outpdb=None ):
         """Only keep those atoms in targetpdb that are in refpdb and write the result to outpdb.
@@ -352,7 +428,6 @@ class PDBEdit(object):
     def get_info(self, inpath):
         """Read a PDB and extract as much information as possible into a PdbInfo object
         """
-        
         
         info = pdb_model.PdbInfo()
         currentModel = None
@@ -671,54 +746,65 @@ class PDBEdit(object):
         
         return
 
+
+class Test(unittest.TestCase):
+
+    def testSeqIdxMap(self):
+        """See if we can sort out the indexing between the native and model"""
         
-#
-# Command-line handling
-#
-parser = argparse.ArgumentParser(description='Manipulate PDB files', prefix_chars="-")
+        
+        nativePdb = "/media/data/shared/TM/3RLB//3RLB.pdb"
+        modelPdb = "/media/data/shared/TM/3RLB/models/S_00000001.pdb" 
 
-group = parser.add_mutually_exclusive_group()
-group.add_argument('-one_std_chain', action='store_true',
-                   help='Take pdb to one model/chain that contains only standard amino acids')
-
-group.add_argument('-keep_matching', action='store_true',
-                   help='keep matching atoms')
-
-parser.add_argument('-ref_file', type=str,
-                   help='The reference file')
-
-parser.add_argument('input_file',
-                   help='The input file - will not be altered')
-
-parser.add_argument('output_file',
-                   help='The output file - will be created')
-
-#refpdb="/home/jmht/Documents/test/3PCV/test/refmac_phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD_chain1.pdb"
-#targetpdb="/home/jmht/Documents/test/3PCV/test/3PCV_clean.pdb"
-#outpdb="/home/jmht/Documents/test/3PCV/test/matching1.pdb"
-
-# refpdb="/home/jmht/Documents/test/3U2F/molrep/refine/refmac_molrep_loc0_ALL_poly_ala_trunc_0.21093_rad_2_UNMOD.pdb"
-# targetpdb="/home/jmht/Documents/test/3U2F/test/3U2F_clean.pdb"
-# outpdb="/home/jmht/Documents/test/3U2F/test/matching.pdb"
-# keep_matching( refpdb, targetpdb, outpdb )
-
-#to_1_std_chain("/home/jmht/Documents/test/3U2F/3U2F.pdb","/home/jmht/Documents/test/3U2F/test/3U2F_clean.pdb")
-
-
-if "__name__" == "__main__":
-    args = parser.parse_args()
+        #modelSeq = "MHHHHHHHHAMSNSKFNVRLLTEIAFMAALAFIISLIPNTVYGWIIVEIACIPILLLSLRRGLTAGLVGGLIWGILSMITGHAYILSLSQAFLEYLVAPVSLGIAGLFRQKTAPLKLAPVLLGTFVAVLLKYFFHFIAGIIFWSQYAWKGWGAVAYSLAVNGISGILTAIAAFVILIIFVKKFPKLFIHSNY"
+        #modelIdx = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192 ]
+        #nativeSeq = "NVRLLTEIAFMAALAFIISLIPNTVYGWIIVEIACIPILLLSLRRGLTAGLVGGLIWGILSMITGHAYILSLSQAFLEYLVAPVSLGIAGLFRQKTAPLKLAPVLLGTFVAVLLKYFFHFIAGIIFWSQYAWKGWGAVAYSLAVNGISGILTAIAAFVILIIFVKKFPKLFIHSNY"
+        nativeIdx = [ 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182 ]
+        
+        indexMapRef = [ None ] * 16 + nativeIdx
+        
+        modelIdx, indexMap = getIndexMap( nativePdb, modelPdb )
+        
+        self.assertEqual( indexMap, indexMapRef, "map doesn't match")
+        
+        return
+ 
+if False:       
+    #
+    # Command-line handling
+    #
+    parser = argparse.ArgumentParser(description='Manipulate PDB files', prefix_chars="-")
     
-    # Get full paths to all files
-    args.input_file = os.path.abspath( args.input_file )
-    if not os.path.isfile(args.input_file):
-        raise RuntimeError, "Cannot find input file: {0}".format( args.input_file )
-    args.output_file = os.path.abspath( args.output_file )
-    if args.ref_file:
-        args.ref_file = os.path.abspath( args.ref_file )
-        if not os.path.isfile(args.ref_file):
-            raise RuntimeError, "Cannot find ref file: {0}".format( args.ref_file )
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-one_std_chain', action='store_true',
+                       help='Take pdb to one model/chain that contains only standard amino acids')
     
-#     if args.one_std_chain:
-#         to_1_std_chain( args.input_file, args.output_file )
-#     elif args.keep_matching:
-#         keep_matching( args.ref_file, args.input_file, args.output_file )
+    group.add_argument('-keep_matching', action='store_true',
+                       help='keep matching atoms')
+    
+    parser.add_argument('-ref_file', type=str,
+                       help='The reference file')
+    
+    parser.add_argument('input_file',
+                       help='The input file - will not be altered')
+    
+    parser.add_argument('output_file',
+                       help='The output file - will be created')
+    
+    if "__name__" == "__main__":
+        args = parser.parse_args()
+        
+        # Get full paths to all files
+        args.input_file = os.path.abspath( args.input_file )
+        if not os.path.isfile(args.input_file):
+            raise RuntimeError, "Cannot find input file: {0}".format( args.input_file )
+        args.output_file = os.path.abspath( args.output_file )
+        if args.ref_file:
+            args.ref_file = os.path.abspath( args.ref_file )
+            if not os.path.isfile(args.ref_file):
+                raise RuntimeError, "Cannot find ref file: {0}".format( args.ref_file )
+        
+    #     if args.one_std_chain:
+    #         to_1_std_chain( args.input_file, args.output_file )
+    #     elif args.keep_matching:
+    #         keep_matching( args.ref_file, args.input_file, args.output_file )
