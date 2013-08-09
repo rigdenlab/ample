@@ -63,10 +63,11 @@ class ReforiginRmsd(object):
     """Class to use reforigin to determine how well the model was placed.
     """
     
-    def __init__( self, nativePdb, refinedPdb ):
+    def __init__( self, nativePdb, refinedPdb, refModelPdb ):
         
         self.rmsd = None
         self.bestChains = None
+        self.refModelPdb = refModelPdb
         
         self.run( nativePdb, refinedPdb )
         
@@ -108,10 +109,14 @@ class ReforiginRmsd(object):
         
         pdbedit = pdb_edit.PDBEdit()
         
+        # Calculate the RefSeqMap
+        PE = pdb_edit.PDBEdit()
+        resSeqMap = PE.get_resseq_map( nativePdb, self.refModelPdb )
+        
         # Now create a PDB with the matching atoms from native that are in refined
         n = os.path.splitext( os.path.basename( nativePdb ) )[0]
         nativePdbMatch = os.path.join( workdir, n+"_matched.pdb" )
-        pdbedit.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch )
+        pdbedit.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
         
         # Now get the rmsd
         n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
@@ -297,6 +302,8 @@ class CompareModels(object):
         
         pdbedit = pdb_edit.PDBEdit()
         
+        #print "CompareModels refModel: {0}  targetModel: {1}".format( refModel, targetModel )
+        
         # If the rebuilt models is in multiple chains, we need to create a single chain
         info = pdbedit.get_info( self.targetModel )
         if len( info.models[0].chains ) > 1:
@@ -419,7 +426,7 @@ class CompareModels(object):
         return
 # End CompareModels
 
-def process_result( mrbumpResult=None, nativePdb=None, workdir=None ):
+def process_result( mrbumpResult=None, nativePdb=None, refModelPdb=None, workdir=None ):
     
     os.chdir( workdir )
     
@@ -429,7 +436,6 @@ def process_result( mrbumpResult=None, nativePdb=None, workdir=None ):
     info = pdbedit.get_info( nativePdb )
     if len( info.models ) > 1:
         
-        print info.models
         print "nativePdb has > 1 model - using first"
         n = os.path.splitext( os.path.basename( nativePdb ) )[0]
         nativePdb1 = os.path.join( workdir, n+"_model1.pdb" )
@@ -449,7 +455,7 @@ def process_result( mrbumpResult=None, nativePdb=None, workdir=None ):
     # debug - copy into work directory
     shutil.copy(refinedPdb, os.path.join( workdir, os.path.basename( refinedPdb ) ) )
     
-    rmsder = ReforiginRmsd( nativePdb, refinedPdb )
+    rmsder = ReforiginRmsd( nativePdb, refinedPdb, refModelPdb )
     mrbumpResult.reforiginRmsd = rmsder.rmsd
     
     # Now read the shelxe log to see how we did
@@ -502,15 +508,14 @@ f = open( pfile )
 resultsDict = cPickle.load( f  )
 f.close()
 
-root = "/home/jmht/Documents/test/new"
+rundir = "/home/jmht/Documents/test/new"
+TMdir = "/media/data/shared/TM"
 
-for pdbcode, mrbSummary in resultsDict.iteritems():
+for pdbcode in sorted( resultsDict.keys() ):
     
-    if pdbcode == "3RLB":
-        print "skipping 3RLB"
-        continue
-    
-    workdir = os.path.join( root, pdbcode )
+    mrbSummary = resultsDict[ pdbcode ]
+        
+    workdir = os.path.join( rundir, pdbcode )
     if not os.path.isdir( workdir ):
         os.mkdir( workdir )
         
@@ -523,9 +528,12 @@ for pdbcode, mrbSummary in resultsDict.iteritems():
     mrbResult.ensembleName = mrbResult.name[9:-6]
     
     # Get path to native
-    nativePdb = os.path.join( "/media/data/shared/TM", pdbcode, "{0}.pdb".format( pdbcode ) )
+    nativePdb = os.path.join( TMdir, pdbcode, "{0}.pdb".format( pdbcode ) )
     
-    process_result( mrbumpResult = mrbResult, nativePdb=nativePdb, workdir=workdir )
+    # Get hold of a full model so we can do the mapping of residues
+    refModelPdb = os.path.join( TMdir, pdbcode, "models/S_00000001.pdb".format( pdbcode ) )
+    
+    process_result( mrbumpResult = mrbResult, nativePdb=nativePdb, refModelPdb=refModelPdb, workdir=workdir )
     
     print "MR program: {0}".format( mrbResult.program )
     print "Reforigin rmsd: {0}".format( mrbResult.reforiginRmsd )
@@ -534,8 +542,6 @@ for pdbcode, mrbSummary in resultsDict.iteritems():
     print "TM ",mrbResult.shelxTM
     print "gRMSD ",mrbResult.shelxGrmsd
     
-    break
-
 
 class Test(unittest.TestCase):
 

@@ -59,6 +59,7 @@ class PdbAtom(object):
         if line:
             self.fromLine( line )
         
+        return
     
     def _reset(self):
         
@@ -78,6 +79,8 @@ class PdbAtom(object):
         self.element = None
         self.charge = None
         
+        return
+        
     def fromLine(self,line):
         """Initialise from the line from a PDB"""
         
@@ -88,7 +91,7 @@ class PdbAtom(object):
         self._reset()
         
         self.serial = int(line[6:11])
-        self.name = line[12:16].strip()
+        self.name = line[12:16]
         # Use for all so None means an empty field
         if line[16].strip():
             self.altLoc = line[16]
@@ -111,7 +114,10 @@ class PdbAtom(object):
         if len(line) >= 77 and line[76:78].strip():
             self.element = line[76:78].strip()
         if len(line) >= 80 and line[78:80].strip():
-            self.charge = int(line[78:80])
+            try:
+                self.charge = int(line[78:80])
+            except:
+                raise RuntimeError, "Error getting charge ({0}) from line: {1}".format( line[78:80], line )
     
     def toLine(self):
         """Create a line suitable for printing to a PDB file"""
@@ -119,7 +125,9 @@ class PdbAtom(object):
         s = "ATOM  " # 1-6
         s += "{0:5d}".format( self.serial ) # 7-11
         s += " " # 12 blank
-        s += "{0:>4}".format( self.name ) # 13-16
+        if len(self.name) != 4:
+            raise RuntimeError,"Name must be 4 characters long!"
+        s += "{0:4}".format( self.name ) # 13-16
         if not self.altLoc: #17
             s += " "
         else:
@@ -136,17 +144,17 @@ class PdbAtom(object):
         else:
             s += "{0:1}".format( self.iCode )
         s += "   " # 28-30 blank
-        s += "{0: 8.3F}".format( self.x ) #31-38
-        s += "{0: 8.3F}".format( self.y ) #39-46
-        s += "{0: 8.3F}".format( self.z ) #47-54
+        s += "{0:8.3F}".format( self.x ) #31-38
+        s += "{0:8.3F}".format( self.y ) #39-46
+        s += "{0:8.3F}".format( self.z ) #47-54
         if not self.occupancy: # 55-60
             s += "      "
         else:
-            s += "{0: 6.2F}".format( self.occupancy )
+            s += "{0:6.2F}".format( self.occupancy )
         if not self.tempFactor: # 61-66
             s += "      "
         else:
-            s += "{0: 6.2F}".format( self.tempFactor )
+            s += "{0:6.2F}".format( self.tempFactor )
         s += "      " # 67-72 blank
         if not self.segID: # 73-76
             s += "    "
@@ -255,7 +263,7 @@ class PdbHetatm(object):
         self._reset()
         
         self.serial = int(line[6:11])
-        self.name = line[12:16].strip()
+        self.name = line[12:16]
         # Use for all so None means an empty field
         if line[16].strip():
             self.altLoc = line[16]
@@ -288,7 +296,9 @@ class PdbHetatm(object):
         s = "HETATM" # 1-6
         s += "{0:5d}".format( self.serial ) # 7-11
         s += " " # 12 blank
-        s += "{0:>4}".format( self.name ) # 13-16
+        if len(self.name) != 4:
+            raise RuntimeError,"Name must be 4 characters long!"
+        s += "{0:4}".format( self.name ) # 13-16
         if not self.altLoc: #17
             s += " "
         else:
@@ -305,17 +315,17 @@ class PdbHetatm(object):
         else:
             s += "{0:1}".format( self.iCode )
         s += "   " # 28-30 blank
-        s += "{0: 8.3F}".format( self.x ) #31-38
-        s += "{0: 8.3F}".format( self.y ) #39-46
-        s += "{0: 8.3F}".format( self.z ) #47-54
+        s += "{0:8.3F}".format( self.x ) #31-38
+        s += "{0:8.3F}".format( self.y ) #39-46
+        s += "{0:8.3F}".format( self.z ) #47-54
         if not self.occupancy: # 55-60
             s += "      "
         else:
-            s += "{0: 6.2F}".format( self.occupancy )
+            s += "{0:6.2F}".format( self.occupancy )
         if not self.tempFactor: # 61-66
             s += "      "
         else:
-            s += "{0: 6.2F}".format( self.tempFactor )
+            s += "{0:6.2F}".format( self.tempFactor ) #jmht changed this
         s += "      " # 67-72 blank
         if not self.segID: # 73-76
             s += "    "
@@ -441,7 +451,7 @@ class Test(unittest.TestCase):
         line = "ATOM     41  NH1AARG A  -3      12.218  84.840  88.007  0.50 40.76           N  "
         a = PdbAtom( line )
         self.assertEqual(a.serial,41)
-        self.assertEqual(a.name,'NH1')
+        self.assertEqual(a.name,' NH1')
         self.assertEqual(a.altLoc,'A')
         self.assertEqual(a.resName,'ARG')
         self.assertEqual(a.chainID,'A')
@@ -462,7 +472,7 @@ class Test(unittest.TestCase):
         line = "ATOM     28  C   ALA A  12     -27.804  -2.987  10.849  1.00 11.75      AA-- C "
         a = PdbAtom( line )
         self.assertEqual(a.serial,28)
-        self.assertEqual(a.name,'C')
+        self.assertEqual(a.name,' C  ')
         self.assertEqual(a.altLoc,None)
         self.assertEqual(a.resName,'ALA')
         self.assertEqual(a.chainID,'A')
@@ -493,7 +503,7 @@ class Test(unittest.TestCase):
         line = "HETATM 8237 MG    MG A1001      13.872  -2.555 -29.045  1.00 27.36          MG  "
         a = PdbHetatm( line )
         self.assertEqual(a.serial,8237)
-        self.assertEqual(a.name,'MG')
+        self.assertEqual(a.name,'MG  ')
         self.assertEqual(a.altLoc,None)
         self.assertEqual(a.resName,'MG')
         self.assertEqual(a.chainID,'A')
@@ -512,6 +522,15 @@ class Test(unittest.TestCase):
         """Round-trip an atom line"""
         
         line = "HETATM 8239   O1 SO4 A2001      11.191 -14.833 -15.531  1.00 50.12           O  "
+        a = PdbHetatm( line )
+        self.assertEqual( a.toLine(), line )
+        
+        return
+  
+    def testWriteHetatm2(self):
+        """Round-trip an atom line"""
+        
+        line = "HETATM    7  SD  FME A   1     -60.099  -1.874   3.446  1.00216.81           S  "
         a = PdbHetatm( line )
         self.assertEqual( a.toLine(), line )
         

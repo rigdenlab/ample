@@ -7,11 +7,35 @@ import argparse
 import copy
 import os
 import re
+import sys
 import unittest
 
 # our imports
 import ample_util
 import pdb_model
+
+
+class residueSequenceMap( object ):
+    """Class for handling mapping between model and native residue indices
+    (is basically a 2-way dictionary) """
+    
+    def __init__( self ):
+        
+        # Matching and ordered lists of the resSeq in the model and native
+        # The model list is "complete" so the first residue in the model will be at pos 0 and
+        # the last item will be the last residue
+        self.modelResSeq = []
+        self.nativeResSeq = []
+        
+        return
+    
+    def native2model( self, nativeResSeq ):
+        """Return the model resSeq for the given native resSeq"""
+        return self.modelResSeq[ self.nativeResSeq.index( nativeResSeq ) ]
+    
+    def model2native( self, modelResSeq):
+        """Return the native resSeq for the given native resSeq"""
+        return self.nativeResSeq[ self.modelResSeq.index( modelResSeq ) ]
 
 three2one = {
     'ALA' : 'A',    
@@ -92,6 +116,8 @@ class PDBEdit(object):
         if retcode == 0:
             # remove temporary files
             os.unlink(logfile)
+        else:
+            raise RuntimeError,"Error extracting chain {0}".format( chainID )
             
         return
 
@@ -118,8 +144,8 @@ class PDBEdit(object):
         return
     
 
-    def gett_index_map( self, nativePdb, modelPdb ):
-        """Return two lists mapping the index of a residue in the model to the corresponding residue in the native.
+    def get_resseq_map( self, nativePdb, modelPdb ):
+        """Return a ResSeqMap mapping the index of a residue in the model to the corresponding residue in the native.
         Only works if 1 chain in either file adn with standard residues
         """
         
@@ -155,16 +181,18 @@ class PDBEdit(object):
                         currentResidue = atom.resSeq
             return ( sequence, resSeq )
       
-    
-        model_seq, model_idx = _get_indices( modelPdb )
         native_seq, native_idx = _get_indices( nativePdb )
+        model_seq, model_idx = _get_indices( modelPdb )
         
         # The window of AA we used to check for a match    
         PROBE_LEN = 10
         
+        if len(native_seq) < 20 or len(model_seq) < 20:
+            raise RuntimeError,"Very short sequences - this might not work!"
+        
         # MAXINSET is the max number of AA into the sequence that we will go searching for a match - i.e. if more
         # then MAXINSET AA are non-matching, we won't find the match 
-        MAXINSET=50
+        MAXINSET=30 if len( model_seq ) > 30 else len( model_seq ) - ( PROBE_LEN + 2)
         got=False
         for model_i in range( MAXINSET ):
             probe = model_seq[ model_i : model_i+PROBE_LEN-1 ]
@@ -179,26 +207,34 @@ class PDBEdit(object):
         
         # Now we know where they start we can sort out the indicies
         # map goes from the model -> native. For any in model that are not in native we set them to None
-        index_map = []
+        resMap = residueSequenceMap()
+        resMap.modelResSeq = model_idx
+        
+        #index_map = {}
         for i in range( len( model_seq ) ):
             
             if i < model_i:
                 # These are residues that are present in the model but not in the native
-                index_map.append( None )
+                resMap.nativeResSeq.append( None )
                 continue
-                
-            index_map.append(  native_idx[ i - model_i + native_i ]  )
             
-        
-        return ( model_idx, index_map )
+            pos = i - model_i + native_i
+            if pos >= len( native_idx ):
+                resMap.nativeResSeq.append(  None  )
+            else:
+                resMap.nativeResSeq.append(  native_idx[ pos ]  )
+            
+        return resMap
 
-    def keep_matching( self, refpdb=None, targetpdb=None, outpdb=None ):
+    def keep_matching( self, refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
         """Only keep those atoms in targetpdb that are in refpdb and write the result to outpdb.
         We also take care of renaming any chains.
         """
         
-        assert refpdb and targetpdb and outpdb
+        assert refpdb and targetpdb and outpdb and resSeqMap
     
+        # CAN SLIM THIS FUNCTION DOWN IF WE ONLY DEAL WITH SINGLE CHAINS
+        
         # First get info on the two models
         refinfo = self.get_info( refpdb )
         if len(refinfo.models) > 1:
@@ -208,13 +244,18 @@ class PDBEdit(object):
         if len(targetinfo.models) > 1:
             raise RuntimeError, "targetpdb {0} has > 1 model!".format( targetpdb )
         
+        
         # If the chains have different names we need to rename the target to match the reference
         targettmp = None
         if refinfo.models[0].chains != targetinfo.models[0].chains:
             #print "keep_matching CHAINS ARE DIFFERENT BETWEEN MODELS: {0} : {1}".format(refinfo.models[0].chains, targetinfo.models[0].chains )
             
             if len(refinfo.models[0].chains) != len(targetinfo.models[0].chains):
-                raise RuntimeError, "Different numbers of chains!"
+                raise RuntimeError, "Different numbers of chains {0}->{1} between {2} and {3}!".format( refinfo.models[0].chains,
+                                                                                                        targetinfo.models[0].chains,
+                                                                                                        refpdb,
+                                                                                                        targetpdb
+                                                                                                        )
             
             # We need to rename all the chains target to match those in refpdb using pdbcur
             targettmp = ample_util.tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix
@@ -238,9 +279,9 @@ class PDBEdit(object):
             targetpdb = targettmp
             
         # Now we do our keep matching    
-        tmp1 = ample_util.tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix 
+        tmp1 = ample_util.tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix
         
-        self._keep_matching( refpdb, targetpdb, tmp1 )
+        self._keep_matching( refpdb, targetpdb, tmp1, resSeqMap=resSeqMap )
         
         # now renumber with pdbcur
         logfile = tmp1+".log"
@@ -258,7 +299,7 @@ class PDBEdit(object):
         
         return retcode
 
-    def _keep_matching( self, refpdb=None, targetpdb=None, outpdb=None ):
+    def _keep_matching( self, refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
         """Create a new pdb file that only contains that atoms in targetpdb that are
         also in refpdb. It only considers ATOM lines and discards HETATM lines in the target.
         
@@ -267,97 +308,97 @@ class PDBEdit(object):
         targetpdb: path to the pdb that will be stripped of non-matching atoms
         outpdb: output path for the stripped pdb
         """
-    
-        assert refpdb and targetpdb and outpdb
         
-        def _write_matching_residues( chain, ref_residues, target_residues, outfh ):
+        assert refpdb and targetpdb and outpdb and resSeqMap
+        
+        
+        def _output_residue( refResidues, targetAtomList, resSeqMap, outfh ):
+            """Output a single residue only outputting matching atoms, shuffling the atom order and changing the resSeq num""" 
             
-            #print "got target_residues: {0}".format(target_residues)
+            # Get the matching list of atoms
+            targetResSeq = targetAtomList[0].resSeq
             
-            # Loop over each residue in turn
-            for idx, atoms_and_lines  in sorted( target_residues[ chain ].items() ):
+            refResSeq = resSeqMap.native2model( targetResSeq )
+            
+            # Get the atomlist for the reference
+            for ( rid, alist ) in refResidues:
+                if rid == refResSeq:
+                    refAtomList = alist
+                    break
                 
-                # Get ordered list of the ref atom names for this residue
-                rnames = [ x.name for x in ref_residues[ chain ][ idx ] ]
-                
-                #print "rnames ",rnames
-                
-                # Remove any not matching
-                atoms = []
-                atom_lines = []
-                for i, a in enumerate( atoms_and_lines[0] ):
-                    if a.name in rnames:
-                        atoms.append( atoms_and_lines[0][i] )
-                        atom_lines.append( atoms_and_lines[1][i] )
-                
-                
-                # Now just have matching so output in the correct order
-                for refname in rnames:
-                    for i, atom in enumerate( atoms ):
-                        if atom.name == refname:
-                            # Found the matching atom so write out the corresponding line
-                            outfh.write( atom_lines[i] )
-                            # now delete both this atom and the line
-                            atoms.pop(i)
-                            atom_lines.pop(i)
-                            # jump out of inner loop
-                            break
+            # Get ordered list of the ref atom names for this residue
+            rnames = [ x.name for x in refAtomList ]
+            #print "got rnames ",rnames
+
+            # Remove any not matching in the target
+            alist = []
+            for atom in targetAtomList:
+                if atom.name in rnames:
+                    alist.append( atom )
+            
+            # List now only contains matching atoms
+            targetAtomList = alist
+            #print "tnames ",[ x.name for x in targetAtomList ]
+
+            # Now just have matching so output in the correct order
+            for refname in rnames:
+                for i,atom in enumerate( targetAtomList ):
+                    if atom.name == refname:
+                        # Found the matching atom
                         
-            # We delete the chain we've written out so that we don't write it out again at the
-            # end by mistake
-            del ref_residues[ chainIdx ]
-            del target_residues[ chainIdx ]
+                        # Change resSeq and write out
+                        atom.resSeq = refResSeq
+                        outfh.write( atom.toLine()+"\n" )
+                        
+                        # now delete both this atom and the line
+                        targetAtomList.pop(i)
+                        
+                        # jump out of inner loop
+                        break   
             return
-    
-        # Go through refpdb and find which ref_residues are present
-        f = open(refpdb, 'r')
         
-        # map of resSeq to list of PdbAtom objects for the reference residues
-        ref_residues = {}
+        # Go through refpdb and find which refResidues are present
+        # ordered list of tuples - ( resSeq, [ list_of_atoms_for_that_residue ] )
+        refResidues = []
+        targetResSeq = []
         
         last = None
         chain = -1
-        chainIdx=-1 # For the time being we key by the chain index so we can deal with 
-                    # proteins that have different chain IDs
-        for line in f:
+        for line in open(refpdb, 'r'):
+            
             if line.startswith("MODEL"):
                 raise RuntimeError, "Multi-model file!"
+            
+            if line.startswith("TER"):
+                break
             
             if line.startswith("ATOM"):
                 a = pdb_model.PdbAtom( line )
                 
-                if a.chainID != chain:
+                # First atom/chain
+                if chain == -1:
                     chain = a.chainID
-                    chainIdx+=1
-                    if chainIdx in ref_residues:
-                        raise RuntimeError, "ENCOUNTERED CHAIN AGAIN! {0}".format( line )
-                    ref_residues[ chainIdx ] = {}
                 
+                if a.chainID != chain:
+                    raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
+
                 if a.resSeq != last:
-                    #if a.resSeq in ref_residues:
-                    #    raise RuntimeError,"Multiple chains in pdb - found residue #: {0} again.".format(a.resSeq)
                     last = a.resSeq
-                    #ref_residues[ last ] = [ a ]
-                    ref_residues[ chainIdx ][ last ] = [ a ]
+                    refResidues.append( ( a.resSeq, [ a ] ) )
+                    # Add the corresponding resSeq in the target
+                    targetResSeq.append( resSeqMap.model2native( a.resSeq  ) )
                 else:
-                    #ref_residues[ last ].append( a )
-                    ref_residues[ chainIdx ][ last ].append( a )
+                    refResidues[ -1 ][ 1 ].append( a )
                     
-        f.close()
-        
-        #print "got ref_residues: {0}".format(ref_residues)
         
         # Now read in target pdb and output everything bar the atoms in this file that
         # don't match those in the refpdb
         t = open(targetpdb,'r')
         out = open(outpdb,'w')
         
-        reading=-1 # The residue we are reading - set to -1 when we are not reading
         chain=-1 # The chain we're reading
-        chainIdx=-1 # see above
-        
-        target_residues = {} # dict mapping residue index to a a tuple of (atoms, lines), where atoms is a list of the atom
-        # objects and lines is a list of the lines used to create the atom objects
+        residue=-1 # the residue we're reading
+        targetResidue = []
         
         for line in t:
             
@@ -369,41 +410,40 @@ class PDBEdit(object):
             
             # Stop at TER
             if line.startswith("TER"):
+                _output_residue( refResidues, targetResidue, resSeqMap, out )
                 # we write out our own TER
-                _write_matching_residues( chainIdx, ref_residues, target_residues, out )
                 out.write("TER\n")
                 continue
             
             if line.startswith("ATOM"):
                 
                 atom = pdb_model.PdbAtom( line )
+
+                # First atom/chain
+                if chain == -1:
+                    chain = a.chainID
                 
-                # different/first chain
                 if atom.chainID != chain:
-                    chain = atom.chainID
-                    chainIdx+=1
-                    if chainIdx in target_residues:
-                        raise RuntimeError, "ENCOUNTERED CHAIN IN TARGET AGAIN! {0}".format( line )
-                    target_residues[ chainIdx ] = {}
-                    
-                # We copy resSeq to make sure we don't use a reference for our index
-                resSeq = copy.copy( atom.resSeq )
+                    raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
                 
-                # Skip any ref_residues that don't match
-                if resSeq in ref_residues[ chainIdx ]:
-                
-                    # If this is the first one add the empty tuple and reset reading
-                    if reading != resSeq:
-                        # each tuple is a list of atom objects and lines
-                        target_residues[ chainIdx ][ resSeq ] = ( [], [] )
-                        reading = resSeq
-                        
-                    target_residues[ chainIdx ][ resSeq ][0].append( atom )
-                    target_residues[ chainIdx ][ resSeq ][1].append( line )
+                if atom.resSeq in targetResSeq:
                     
-                # we don't write out any atom lines as they are either not matching or 
-                # we write out matching at the end
-                continue
+                    # If this is the first one add the empty tuple and reset residue
+                    if atom.resSeq != residue:
+                        if residue != -1: # Dont' write out owt for first atom
+                            _output_residue( refResidues, targetResidue, resSeqMap, out )
+                        targetResidue = []
+                        residue = atom.resSeq
+                    
+                    # If not first keep adding
+                    targetResidue.append( atom )
+                    
+                    # We don't write these out as we write them with _output_residue
+                    continue
+                    
+                else:
+                    # discard this line as not a matching atom
+                    continue
             
             # For time being exclude all HETATM lines
             elif line.startswith("HETATM"):
@@ -415,15 +455,178 @@ class PDBEdit(object):
             
         # End reading loop
         
-        # For some PDBS there is no ending TER so we need to check if we've written this out yet or not
-        if target_residues.has_key( chainIdx ):
-            _write_matching_residues( chainIdx, ref_residues, target_residues, out )
-            out.write("TER\n\n")
-        
         t.close()
         out.close()
         
         return
+
+# OLD STUFF FOR MULTIPLE CHAINS AND WITHOUT THE residueSequenceMap
+#     def _keep_matching( self, refpdb=None, targetpdb=None, outpdb=None ):
+#         """Create a new pdb file that only contains that atoms in targetpdb that are
+#         also in refpdb. It only considers ATOM lines and discards HETATM lines in the target.
+#         
+#         Args:
+#         refpdb: path to pdb that contains the minimal set of atoms we want to keep
+#         targetpdb: path to the pdb that will be stripped of non-matching atoms
+#         outpdb: output path for the stripped pdb
+#         """
+#     
+#         assert refpdb and targetpdb and outpdb
+#         
+#         def _write_matching_residues( chain, refResidues, target_residues, outfh ):
+#             
+#             #print "got target_residues: {0}".format(target_residues)
+#             
+#             # Loop over each residue in turn
+#             for idx, atoms_and_lines  in sorted( target_residues[ chain ].items() ):
+#                 
+#                 # Get ordered list of the ref atom names for this residue
+#                 rnames = [ x.name for x in refResidues[ chain ][ idx ] ]
+#                 
+#                 #print "rnames ",rnames
+#                 
+#                 # Remove any not matching
+#                 atoms = []
+#                 atom_lines = []
+#                 for i, a in enumerate( atoms_and_lines[0] ):
+#                     if a.name in rnames:
+#                         atoms.append( atoms_and_lines[0][i] )
+#                         atom_lines.append( atoms_and_lines[1][i] )
+#                 
+#                 
+#                 # Now just have matching so output in the correct order
+#                 for refname in rnames:
+#                     for i, atom in enumerate( atoms ):
+#                         if atom.name == refname:
+#                             # Found the matching atom so write out the corresponding line
+#                             outfh.write( atom_lines[i] )
+#                             # now delete both this atom and the line
+#                             atoms.pop(i)
+#                             atom_lines.pop(i)
+#                             # jump out of inner loop
+#                             break
+#                         
+#             # We delete the chain we've written out so that we don't write it out again at the
+#             # end by mistake
+#             del refResidues[ chainIdx ]
+#             del target_residues[ chainIdx ]
+#             return
+#     
+#         # Go through refpdb and find which refResidues are present
+#         f = open(refpdb, 'r')
+#         
+#         # map of resSeq to list of PdbAtom objects for the reference residues
+#         refResidues = {}
+#         
+#         last = None
+#         chain = -1
+#         chainIdx=-1 # For the time being we key by the chain index so we can deal with 
+#                     # proteins that have different chain IDs
+#         for line in f:
+#             if line.startswith("MODEL"):
+#                 raise RuntimeError, "Multi-model file!"
+#             
+#             if line.startswith("ATOM"):
+#                 a = pdb_model.PdbAtom( line )
+#                 
+#                 if a.chainID != chain:
+#                     chain = a.chainID
+#                     chainIdx+=1
+#                     if chainIdx in refResidues:
+#                         raise RuntimeError, "ENCOUNTERED CHAIN AGAIN! {0}".format( line )
+#                     refResidues[ chainIdx ] = {}
+#                 
+#                 if a.resSeq != last:
+#                     #if a.resSeq in refResidues:
+#                     #    raise RuntimeError,"Multiple chains in pdb - found residue #: {0} again.".format(a.resSeq)
+#                     last = a.resSeq
+#                     #refResidues[ last ] = [ a ]
+#                     refResidues[ chainIdx ][ last ] = [ a ]
+#                 else:
+#                     #refResidues[ last ].append( a )
+#                     refResidues[ chainIdx ][ last ].append( a )
+#                     
+#         f.close()
+#         
+#         #print "got refResidues: {0}".format(refResidues)
+#         
+#         # Now read in target pdb and output everything bar the atoms in this file that
+#         # don't match those in the refpdb
+#         t = open(targetpdb,'r')
+#         out = open(outpdb,'w')
+#         
+#         reading=-1 # The residue we are reading - set to -1 when we are not reading
+#         chain=-1 # The chain we're reading
+#         chainIdx=-1 # see above
+#         
+#         target_residues = {} # dict mapping residue index to a a tuple of (atoms, lines), where atoms is a list of the atom
+#         # objects and lines is a list of the lines used to create the atom objects
+#         
+#         for line in t:
+#             
+#             if line.startswith("MODEL"):
+#                 raise RuntimeError, "Multi-model file!"
+# 
+#             if line.startswith("ANISOU"):
+#                 raise RuntimeError, "I cannot cope with ANISOU! {0}".format(line)
+#             
+#             # Stop at TER
+#             if line.startswith("TER"):
+#                 # we write out our own TER
+#                 _write_matching_residues( chainIdx, refResidues, target_residues, out )
+#                 out.write("TER\n")
+#                 continue
+#             
+#             if line.startswith("ATOM"):
+#                 
+#                 atom = pdb_model.PdbAtom( line )
+#                 
+#                 # different/first chain
+#                 if atom.chainID != chain:
+#                     chain = atom.chainID
+#                     chainIdx+=1
+#                     if chainIdx in target_residues:
+#                         raise RuntimeError, "ENCOUNTERED CHAIN IN TARGET AGAIN! {0}".format( line )
+#                     target_residues[ chainIdx ] = {}
+#                     
+#                 # We copy resSeq to make sure we don't use a reference for our index
+#                 resSeq = copy.copy( atom.resSeq )
+#                 
+#                 # Skip any refResidues that don't match
+#                 if resSeq in refResidues[ chainIdx ]:
+#                 
+#                     # If this is the first one add the empty tuple and reset reading
+#                     if reading != resSeq:
+#                         # each tuple is a list of atom objects and lines
+#                         target_residues[ chainIdx ][ resSeq ] = ( [], [] )
+#                         reading = resSeq
+#                         
+#                     target_residues[ chainIdx ][ resSeq ][0].append( atom )
+#                     target_residues[ chainIdx ][ resSeq ][1].append( line )
+#                     
+#                 # we don't write out any atom lines as they are either not matching or 
+#                 # we write out matching at the end
+#                 continue
+#             
+#             # For time being exclude all HETATM lines
+#             elif line.startswith("HETATM"):
+#                 continue
+#             #Endif line.startswith("ATOM")
+#             
+#             # Output everything else
+#             out.write(line)
+#             
+#         # End reading loop
+#         
+#         # For some PDBS there is no ending TER so we need to check if we've written this out yet or not
+#         if target_residues.has_key( chainIdx ):
+#             _write_matching_residues( chainIdx, refResidues, target_residues, out )
+#             out.write("TER\n\n")
+#         
+#         t.close()
+#         out.close()
+#         
+#         return
     
     def get_info(self, inpath):
         """Read a PDB and extract as much information as possible into a PdbInfo object
@@ -572,8 +775,7 @@ class PDBEdit(object):
         """Rename any non-standard AA, remove solvent and only keep most probably conformation.
         """
     
-        tmp1 = ample_util.tmpFileName()
-        tmp1+=".pdb" # pdbcur insists names have a .pdb suffix
+        tmp1 = ample_util.tmpFileName() + ".pdb" # pdbcur insists names have a .pdb suffix
         
         # Now clean up with pdbcur
         logfile = tmp1+".log"
@@ -586,10 +788,16 @@ class PDBEdit(object):
         if retcode == 0:
             # remove temporary files
             os.unlink(logfile)
-            
+        
         # Standardise AA names
-        self.std_residues(tmp1, outpdb)
-        os.unlink(tmp1)  
+        tmp2 = ample_util.tmpFileName() + ".pdb" # pdbcur insists names have a .pdb suffix
+        self.std_residues( tmp1, tmp2 )
+        
+        # Strip out any remaining HETATM
+        self.strip_hetatm( tmp2, outpdb )
+        
+        #os.unlink(tmp1)
+        #os.unlink(tmp2) 
         
         return retcode
 
@@ -597,7 +805,7 @@ class PDBEdit(object):
         """Switch any non-standard AA's to their standard names.
         We also remove any ANISOU lines.
         """
-    
+        
         modres = [] # List of modres objects
         modres_names = {} # list of names of the modified residues keyed by chainID
         gotModel=False # to make sure we only take the first model
@@ -749,11 +957,11 @@ class PDBEdit(object):
 
 class Test(unittest.TestCase):
 
-    def testSeqIdxMap(self):
+    def XtestRefSeqMap(self):
         """See if we can sort out the indexing between the native and model"""
         
         
-        nativePdb = "/media/data/shared/TM/3RLB//3RLB.pdb"
+        nativePdb = "/media/data/shared/TM/3RLB/3RLB.pdb"
         modelPdb = "/media/data/shared/TM/3RLB/models/S_00000001.pdb" 
 
         #modelSeq = "MHHHHHHHHAMSNSKFNVRLLTEIAFMAALAFIISLIPNTVYGWIIVEIACIPILLLSLRRGLTAGLVGGLIWGILSMITGHAYILSLSQAFLEYLVAPVSLGIAGLFRQKTAPLKLAPVLLGTFVAVLLKYFFHFIAGIIFWSQYAWKGWGAVAYSLAVNGISGILTAIAAFVILIIFVKKFPKLFIHSNY"
@@ -761,13 +969,82 @@ class Test(unittest.TestCase):
         #nativeSeq = "NVRLLTEIAFMAALAFIISLIPNTVYGWIIVEIACIPILLLSLRRGLTAGLVGGLIWGILSMITGHAYILSLSQAFLEYLVAPVSLGIAGLFRQKTAPLKLAPVLLGTFVAVLLKYFFHFIAGIIFWSQYAWKGWGAVAYSLAVNGISGILTAIAAFVILIIFVKKFPKLFIHSNY"
         nativeIdx = [ 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182 ]
         
-        indexMapRef = [ None ] * 16 + nativeIdx
+        nativeResSeq = [ None ] * 16 + nativeIdx
         
-        modelIdx, indexMap = getIndexMap( nativePdb, modelPdb )
+        PE = PDBEdit()
         
-        self.assertEqual( indexMap, indexMapRef, "map doesn't match")
+        tmpf = ample_util.tmpFileName()+".pdb"
+        PE.extract_chain( nativePdb, tmpf, chainID='A' )
+        
+        refSeqMap = PE.get_resseq_map( tmpf, modelPdb )
+        
+        self.assertEqual( refSeqMap.nativeResSeq, nativeResSeq, "map doesn't match")
+        
+        os.unlink( tmpf )
         
         return
+    
+    def XtestRefSeqMap2(self):
+        """See if we can sort out the indexing between the native and model"""
+        
+        
+        nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
+        modelPdb = "/media/data/shared/TM/3U2F/models/S_00000001.pdb" 
+
+        nativeResSeq = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, None, None ]
+        
+        PE = PDBEdit()
+        
+        tmp1 = ample_util.tmpFileName()+".pdb"
+        PE.standardise( nativePdb, tmp1 )
+        
+        tmp2 = ample_util.tmpFileName()+".pdb"
+        PE.extract_chain( tmp1, tmp2, chainID='K' )
+        
+        refSeqMap = PE.get_resseq_map( tmp2, modelPdb )
+        
+        self.assertEqual( refSeqMap.nativeResSeq, nativeResSeq, "map doesn't match")
+        
+        os.unlink( tmp1 )
+        os.unlink( tmp2 )
+        
+        return
+
+    def testKeepMatching(self):
+        """XX"""
+        
+        nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
+        modelPdb = "/media/data/shared/TM/3U2F/models/S_00000001.pdb"
+        refinedPdb = "/media/data/shared/TM/3U2F/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_0.21093_rad_2_molrep_mrbump/data/loc0_ALL_poly_ala_trunc_0.21093_rad_2/unmod/mr/molrep/refine/refmac_molrep_loc0_ALL_poly_ala_trunc_0.21093_rad_2_UNMOD.pdb"
+# 
+        PE = PDBEdit()
+        tmp1 = ample_util.tmpFileName()+".pdb"
+        PE.standardise( nativePdb, tmp1 )
+         
+        nativec1 = ample_util.tmpFileName()+".pdb"
+        PE.extract_chain( tmp1, nativec1, chainID='K' )
+        resSeqMap = PE.get_resseq_map( nativec1, modelPdb )
+#         
+        refinedc1 = "refinedc1.pdb"
+        PE.extract_chain( refinedPdb, refinedc1, chainID='A' )
+        print "nativec1 ",nativec1
+        matching = "matching.pdb"
+        PE.keep_matching( refpdb=refinedc1, targetpdb=nativec1, outpdb=matching, resSeqMap=resSeqMap )
+       
+#         refpdb = "ref.pdb"
+#         targetpdb = "target.pdb"
+#         PE._keep_matching( refpdb=refpdb, targetpdb=targetpdb, outpdb=matching, resSeqMap=resSeqMap )
+         
+        for f in [ tmp1, nativec1, refinedc1, matching ]:
+            os.unlink( f )
+         
+        return
+    
+if __name__ == "__main__":
+    #import sys;sys.argv = ['', 'Test.testName']
+    unittest.main()
+
+
  
 if False:       
     #
