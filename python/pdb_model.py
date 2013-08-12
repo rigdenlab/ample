@@ -56,9 +56,16 @@ class PdbAtom(object):
     def __init__(self, line=None):
         """Set up attributes"""
         
+        self._setAtomType()
+        
         if line:
             self.fromLine( line )
         
+        return
+    
+    def _setAtomType(self):
+        """This gets overridden in HETATM - otherwise everything the same"""
+        self._atomType = "ATOM  "
         return
     
     def _reset(self):
@@ -80,13 +87,17 @@ class PdbAtom(object):
         self.charge = None
         
         return
+    
+    def _sanityCheck( self, line ):
+        assert line[0:6] == self._atomType,"Line did not begin with an {0} record!: {1}".format( self._atomType, line )
+        assert len(line) >= 54,"Line length was: {0}\n{1}".format(len(line),line)
+        return
         
     def fromLine(self,line):
         """Initialise from the line from a PDB"""
         
         
-        assert line[0:6] == "ATOM  ","Line did not begin with an ATOM record!: {0}".format(line)
-        assert len(line) >= 54,"Line length was: {0}\n{1}".format(len(line),line)
+        self._sanityCheck(line)
         
         self._reset()
         
@@ -122,7 +133,7 @@ class PdbAtom(object):
     def toLine(self):
         """Create a line suitable for printing to a PDB file"""
         
-        s = "ATOM  " # 1-6
+        s = self._atomType # 1-6
         s += "{0:5d}".format( self.serial ) # 7-11
         s += " " # 12 blank
         if len(self.name) != 4:
@@ -203,155 +214,12 @@ class PdbAtom(object):
             
         return "{0} : {1}".format(self.__repr__(),str(me))
 
-
-class PdbHetatm(object):
-    """
-    COLUMNS        DATA  TYPE    FIELD        DEFINITION
--------------------------------------------------------------------------------------
- 1 -  6        Record name   "ATOM  "
- 7 - 11        Integer       serial       Atom  serial number.
-13 - 16        Atom          name         Atom name.
-17             Character     altLoc       Alternate location indicator.
-18 - 20        Residue name  resName      Residue name.
-22             Character     chainID      Chain identifier.
-23 - 26        Integer       resSeq       Residue sequence number.
-27             AChar         iCode        Code for insertion of residues.
-31 - 38        Real(8.3)     x            Orthogonal coordinates for X in Angstroms.
-39 - 46        Real(8.3)     y            Orthogonal coordinates for Y in Angstroms.
-47 - 54        Real(8.3)     z            Orthogonal coordinates for Z in Angstroms.
-55 - 60        Real(6.2)     occupancy    Occupancy.
-61 - 66        Real(6.2)     tempFactor   Temperature  factor.
-73 - 76        LString(4)    segID        Segment identifier, left-justified.
-77 - 78        LString(2)    element      Element symbol, right-justified.
-79 - 80        LString(2)    charge       Charge  on the atom.
-"""
-    def __init__(self, line=None):
-        """Set up attributes"""
-        
-        if line:
-            self.fromLine( line )
-        
-        return
+class PdbHetatm( PdbAtom ):
+    """Identical to PdbAtom but just with a different _atomType"""
     
-    def _reset(self):
-        
-        self.serial = None
-        self.name = None
-        self.altLoc = None
-        self.resName = None
-        self.chainID = None
-        self.resSeq = None
-        self.iCode = None
-        self.x = None
-        self.y = None
-        self.z = None
-        self.occupancy = None
-        self.tempFactor = None
-        self.segID = None
-        self.element = None
-        self.charge = None
-        
+    def _setAtomType(self):
+        self._atomType = "HETATM"
         return
-        
-    def fromLine(self,line):
-        """Initialise from the line from a PDB"""
-        
-        
-        assert line[0:6] == "HETATM","Line did not begin with an HETATM record!: {0}".format(line)
-        assert len(line) >= 54,"Line length was: {0}\n{1}".format(len(line),line)
-        
-        self._reset()
-        
-        self.serial = int(line[6:11])
-        self.name = line[12:16]
-        # Use for all so None means an empty field
-        if line[16].strip():
-            self.altLoc = line[16]
-        self.resName = line[17:20].strip()
-        if line[21].strip():
-            self.chainID = line[21]
-        if line[22:26].strip():
-            self.resSeq = int(line[22:26])
-        if line[26].strip():
-            self.iCode = line[26]
-        self.x = float(line[30:38])
-        self.y = float(line[38:46])
-        self.z = float(line[46:54])
-        if len(line) >= 60 and line[54:60].strip():
-            self.occupancy = float(line[54:60])
-        if len(line) >= 66 and line[60:66].strip():
-            self.tempFactor = float(line[60:66])
-        if len(line) >= 76 and line[72:76].strip():
-            self.segID = line[72:76].strip()
-        if len(line) >= 77 and line[76:78].strip():
-            self.element = line[76:78].strip()
-        if len(line) >= 80 and line[78:80].strip():
-            self.charge = int(line[78:80])
-            
-        return
-    
-    def toLine(self):
-        """Create a line suitable for printing to a PDB file"""
-        
-        s = "HETATM" # 1-6
-        s += "{0:5d}".format( self.serial ) # 7-11
-        s += " " # 12 blank
-        if len(self.name) != 4:
-            raise RuntimeError,"Name must be 4 characters long!"
-        s += "{0:4}".format( self.name ) # 13-16
-        if not self.altLoc: #17
-            s += " "
-        else:
-            s += "{0:1}".format( self.altLoc )
-        s += "{0:3}".format( self.resName ) # 18-20
-        s += " " # 21 blank
-        if not self.chainID: #22
-            s += " "
-        else:
-            s += "{0:1}".format( self.chainID )
-        s += "{0:4}".format( self.resSeq ) #23-26
-        if not self.iCode: #27
-            s += " "
-        else:
-            s += "{0:1}".format( self.iCode )
-        s += "   " # 28-30 blank
-        s += "{0:8.3F}".format( self.x ) #31-38
-        s += "{0:8.3F}".format( self.y ) #39-46
-        s += "{0:8.3F}".format( self.z ) #47-54
-        if not self.occupancy: # 55-60
-            s += "      "
-        else:
-            s += "{0:6.2F}".format( self.occupancy )
-        if not self.tempFactor: # 61-66
-            s += "      "
-        else:
-            s += "{0:6.2F}".format( self.tempFactor ) #jmht changed this
-        s += "      " # 67-72 blank
-        if not self.segID: # 73-76
-            s += "    "
-        else:
-            s += "{0:>4}".format( self.segID )
-        if not self.element: #77-78
-            s += "  "
-        else:
-            s += "{0:>2}".format( self.element )
-        if not self.charge: #79-80
-            s += "  "
-        else:
-            s += "{0:2d}".format( self.charge )
-            
-        return s
-        
-    def __str__(self):
-        """List the data attributes of this object"""
-        me = {}
-        for slot in dir(self):
-            attr = getattr(self, slot)
-            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
-              isinstance(attr, types.FunctionType) ):
-                me[slot] = attr
-            
-        return "{0} : {1}".format(self.__repr__(),str(me))
 
 class PdbModres(object):
     """
