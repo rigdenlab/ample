@@ -641,7 +641,17 @@ class PDBEdit(object):
         line = f.readline()
         while line:
             
+            # First line of title
+            if line.startswith('TITLE') and not info.title:
+                info.title = line[10:-1].strip()
+            
             if line.startswith("REMARK"):
+                
+                # Resolution
+                if int(line[9]) == 2:
+                    line = f.readline()
+                    if line.find("RESOLUTION") != -1:
+                        info.resolution = float( line[25:30] )
                 
                 # Get solvent content                
                 if int(line[7:10]) == 280:
