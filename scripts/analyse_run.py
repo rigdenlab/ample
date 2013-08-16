@@ -47,6 +47,7 @@ TO THINK ABOUT
 '''
 
 import cPickle
+import csv
 import os
 import re
 import shutil
@@ -54,6 +55,7 @@ import sys
 import unittest
 
 #sys.path.append("/Users/jmht/Documents/AMPLE/ample-dev1/python")
+sys.path.append("/opt/ample-dev1/python")
 import ample_util
 import mrbump_results
 import pdb_edit
@@ -330,6 +332,7 @@ class CompareModels(object):
         
         n = os.path.splitext( os.path.basename( self.targetModel ) )[0]
         logfile = os.path.join( self.workdir, n+"_maxcluster.log" )
+        # Run maxcluster in sequence independant mode
         cmd="/opt/maxcluster/maxcluster -in -e {0} -p {1}".format( self.targetModel, self.refModel ).split()
         retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False)
         
@@ -511,6 +514,20 @@ f.close()
 rundir = "/home/jmht/Documents/test/new"
 TMdir = "/media/data/shared/TM"
 
+
+# Get the  data on each TM
+# fields are: title, resolution, length
+# TMdict = {}
+# with open( os.path.join(TMdir, "TM_Data.csv"), "r" ) as inputf:
+#     
+#     #reader = csv.reader(inputf, delimiter=',', quotechar='"')
+#     reader = csv.reader(inputf, delimiter=';', quotechar='"')
+#     
+#     for i,fields in enumerate(reader):
+#         if i ==0:
+#             continue
+#         TMdict[ fields[0] ] = fields[1:]
+
 for pdbcode in sorted( resultsDict.keys() ):
     
     mrbSummary = resultsDict[ pdbcode ]
@@ -524,11 +541,50 @@ for pdbcode in sorted( resultsDict.keys() ):
     mrbResult = mrbSummary.results[0]
     # Need to remove last component as we recored the refmac directory
     mrbResult.resultDir = os.sep.join( mrbResult.resultDir.split(os.sep)[:-1] )
+
     # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
     mrbResult.ensembleName = mrbResult.name[9:-6]
     
+    # Get the path to the original pickle file
+    pfile = os.path.join( TMdir, pdbcode, "ROSETTA_MR_0/resultsd.pkl")
+    
+    f = open( pfile )
+    ampleDict = cPickle.load( f  )
+    f.close()
+    #print ampleDict['fasta']
+    
+    # Path to fasta
+    #fasta = os.path.join( TMdir, pdbcode, "ROSETTA_MR_0/{0}__.fasta".format( pdbcode ) )
+    
     # Get path to native
     nativePdb = os.path.join( TMdir, pdbcode, "{0}.pdb".format( pdbcode ) )
+    
+    # Extract all the info from it
+    pdbedit = pdb_edit.PDBEdit()
+    info = pdbedit.get_info( nativePdb )
+    
+    print "Title: {0}\nResolution: {1}\nLength: {2}".format( info.title, info.resolution, ampleDict['fasta_length'] )
+    print "resultsDir ",mrbResult.resultDir
+    print "ensemble ",mrbResult.ensembleName
+
+    # Extract information on the models and ensembles
+    eresults = ampleDict['ensemble_results']
+    got=False
+    clusterNum=0
+    for e in ampleDict[ 'ensemble_results' ][ clusterNum ]:
+       if e.name == mrbResult.ensembleName:
+           got=True
+           break 
+
+    if not got:
+        raise RuntimeError,"Failed to get ensemble results"
+
+    print "ensemble # models ", e.num_models
+    print "ensemble # residues ", e.num_residues
+    print "ensemble # side_chain_treatment ", e.side_chain_treatment
+    print "ensemble # radius_threshold ", e.radius_threshold
+    print "ensemble # truncation_threshold ", e.truncation_threshold
+
     
     # Get hold of a full model so we can do the mapping of residues
     refModelPdb = os.path.join( TMdir, pdbcode, "models/S_00000001.pdb".format( pdbcode ) )
@@ -541,6 +597,8 @@ for pdbcode in sorted( resultsDict.keys() ):
     print "Chain length ",mrbResult.shelxAvgChainLen
     print "TM ",mrbResult.shelxTM
     print "gRMSD ",mrbResult.shelxGrmsd
+    
+    break
     
 
 class Test(unittest.TestCase):
