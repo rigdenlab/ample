@@ -16,6 +16,9 @@ class PdbInfo(object):
         
         self.models = [] # List of PdbModel objects
         
+        self.title = None # First line of the title
+        self.resolution = None
+        
         # http://www.wwpdb.org/documentation/format33/remarks1.html#REMARK%20280
         self.solventContent = None
         self.matthewsCoefficient = None
@@ -70,6 +73,7 @@ class PdbAtom(object):
     
     def _reset(self):
         
+        self.line = None # the line we were created from
         self.serial = None
         self.name = None
         self.altLoc = None
@@ -96,10 +100,10 @@ class PdbAtom(object):
     def fromLine(self,line):
         """Initialise from the line from a PDB"""
         
-        
         self._sanityCheck(line)
-        
         self._reset()
+
+        self.line = line
         
         self.serial = int(line[6:11])
         self.name = line[12:16]
