@@ -434,28 +434,64 @@ class AmpleResult(object):
     
     def __init__(self):
 
-        self.title = None
-        self.resolution = None
-        self.solventContent = None
-        self.matthewsCoefficient = None
-        self.fastaLength = None
-        self.resultDir = None
-        self.ensembleName = None
-        self.ensembleNumModels = None
-        self.ensembleNumResidues = None
-        self.ensembleSideChainTreatment = None
-        self.ensembleRadiusThreshold = None
-        self.ensembleTruncationThreshold = None
-        self.mrProgram = None
-        self.reforiginRmsd = None
-        self.shelxeCC = None
-        self.shelxeAvgChainLength = None
-        self.shelxeTM = None
-        self.shelxeGrmsd = None
+        # The attributes we will be holding
+        self.orderedAttrs = [ title,
+                             resolution,
+                            solventContent,
+                            matthewsCoefficient,
+                            fastaLength,
+                            resultDir,
+                            ensembleName,
+                            ensembleNumModels,
+                            ensembleNumResidues,
+                            ensembleSideChainTreatment,
+                            ensembleRadiusThreshold,
+                            ensembleTruncationThreshold,
+                            mrProgram,
+                            reforiginRmsd,
+                            shelxeCC,
+                            shelxeAvgChainLength,
+                            shelxeTM,
+                            shelxeGrmsd ]
+        
+        # The matching titles
+        self.orderedTitles = [  "Title",
+                                "Resolution",
+                                "Solvent Content",
+                                "Matthews Coefficient",
+                                "Fasta Length",
+                                "Ensemble name",
+                                "Ensemble num models",
+                                "Ensemble num residues",
+                                "Ensemble side chain",
+                                "Ensemble radius thresh",
+                                "Ensemble truncation thresh",
+                                "MR program",
+                                "Reforigin RMSD",
+                                "Shelxe CC",
+                                "Shelxe avg. chain length",
+                                "Shelxe TM",
+                                "Shelxe gRMSD" ]
+        
+        
+        # Set initial values
+        for a in self.orderedAttrs:
+            setattr( self, a, None )
         
         return
     
+    
+    def valuesAsList(self):
+        return [ getattr(self, a) in self.orderedAttrs ]
+    
     def __str__(self):
+        
+        s = ""
+        for i, t in self.orderedTitles:
+            s += "{0:<26}: {1}".format( t, getattr( self, self.orderedAttrs[i] ) )
+        return s
+    
+    def X__str__(self):
         s = ""
         s += "Title:                      {0}\n".format( self.title )
         s += "Resolution:                 {0}\n".format( self.resolution )
@@ -555,6 +591,8 @@ TMdir = "/media/data/shared/TM"
 #         if i ==0:
 #             continue
 #         TMdict[ fields[0] ] = fields[1:]
+
+
 
 for pdbcode in sorted( resultsDict.keys() ):
     
