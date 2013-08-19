@@ -437,6 +437,7 @@ class AmpleResult(object):
         self.title = None
         self.resolution = None
         self.solventContent = None
+        self.matthewsCoefficient = None
         self.fastaLength = None
         self.resultDir = None
         self.ensembleName = None
@@ -456,23 +457,23 @@ class AmpleResult(object):
     
     def __str__(self):
         s = ""
-        s += "Title:                      {0}".format( self.title )
-        s += "Resolution:                 {0}".format( self.resolution )
-        s += "Solvent Content:            {0}".format( self.solventContent )
-        s += "Fasta Length:               {0}".format( self.fastaLength )
-        s += "Ensemble name:              {0}".format( self.ensembleName )
-        s += "Ensemble name:              {0}".format( self.ensembleName )
-        s += "Ensemble num models:        {0}".format( self.ensembleNumModels )
-        s += "Ensemble num residues:      {0}".format( self.ensembleNumResidues )
-        s += "Ensemble side chain:        {0}".format( self.ensembleSideChainTreatment )
-        s += "Ensemble radius thresh:     {0}".format( self.ensembleRadiusThreshold )
-        s += "Ensemble truncation thresh: {0}".format( self.ensembleTruncationThreshold )
-        s += "MR program:                 {0}".format( self.mrProgram )
-        s += "Reforigin RMSD:             {0}".format( self.reforiginRmsd )
-        s += "Shelxe CC:                  {0}".format( self.reforiginRmsd )
-        s += "Shelxe avg. chain length:   {0}".format( self.shelxeAvgChainLength )
-        s += "Shelxe TM:                  {0}".format( self.shelxeTM )
-        s += "Shelxe gRMSD:               {0}".format( self.shelxeGrmsd )
+        s += "Title:                      {0}\n".format( self.title )
+        s += "Resolution:                 {0}\n".format( self.resolution )
+        s += "Solvent Content:            {0}\n".format( self.solventContent )
+        s += "Matthews Coefficient:       {0}\n".format( self.matthewsCoefficient )
+        s += "Fasta Length:               {0}\n".format( self.fastaLength )
+        s += "Ensemble name:              {0}\n".format( self.ensembleName )
+        s += "Ensemble num models:        {0}\n".format( self.ensembleNumModels )
+        s += "Ensemble num residues:      {0}\n".format( self.ensembleNumResidues )
+        s += "Ensemble side chain:        {0}\n".format( self.ensembleSideChainTreatment )
+        s += "Ensemble radius thresh:     {0}\n".format( self.ensembleRadiusThreshold )
+        s += "Ensemble truncation thresh: {0}\n".format( self.ensembleTruncationThreshold )
+        s += "MR program:                 {0}\n".format( self.mrProgram )
+        s += "Reforigin RMSD:             {0}\n".format( self.reforiginRmsd )
+        s += "Shelxe CC:                  {0}\n".format( self.shelxeCC )
+        s += "Shelxe avg. chain length:   {0}\n".format( self.shelxeAvgChainLength )
+        s += "Shelxe TM:                  {0}\n".format( self.shelxeTM )
+        s += "Shelxe gRMSD:               {0}\n".format( self.shelxeGrmsd )
         
         return s
     
@@ -594,6 +595,8 @@ for pdbcode in sorted( resultsDict.keys() ):
     
     ar.title = info.title
     ar.resolution = info.resolution
+    ar.solventContent = info.solventContent
+    ar.matthewsCoefficient = info.matthewsCoefficient
     ar.fastaLength = ampleDict['fasta_length']
     ar.resultDir = mrbResult.resultDir
     ar.ensembleName = mrbResult.ensembleName
@@ -630,7 +633,7 @@ for pdbcode in sorted( resultsDict.keys() ):
     
     print ar
     
-    break
+    #break
     
 
 class Test(unittest.TestCase):
