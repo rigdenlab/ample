@@ -429,6 +429,56 @@ class CompareModels(object):
         return
 # End CompareModels
 
+class AmpleResult(object):
+    """Results for an ample solution"""
+    
+    def __init__(self):
+
+        self.title = None
+        self.resolution = None
+        self.solventContent = None
+        self.fastaLength = None
+        self.resultDir = None
+        self.ensembleName = None
+        self.ensembleNumModels = None
+        self.ensembleNumResidues = None
+        self.ensembleSideChainTreatment = None
+        self.ensembleRadiusThreshold = None
+        self.ensembleTruncationThreshold = None
+        self.mrProgram = None
+        self.reforiginRmsd = None
+        self.shelxeCC = None
+        self.shelxeAvgChainLength = None
+        self.shelxeTM = None
+        self.shelxeGrmsd = None
+        
+        return
+    
+    def __str__(self):
+        s = ""
+        s += "Title:                      {0}".format( self.title )
+        s += "Resolution:                 {0}".format( self.resolution )
+        s += "Solvent Content:            {0}".format( self.solventContent )
+        s += "Fasta Length:               {0}".format( self.fastaLength )
+        s += "Ensemble name:              {0}".format( self.ensembleName )
+        s += "Ensemble name:              {0}".format( self.ensembleName )
+        s += "Ensemble num models:        {0}".format( self.ensembleNumModels )
+        s += "Ensemble num residues:      {0}".format( self.ensembleNumResidues )
+        s += "Ensemble side chain:        {0}".format( self.ensembleSideChainTreatment )
+        s += "Ensemble radius thresh:     {0}".format( self.ensembleRadiusThreshold )
+        s += "Ensemble truncation thresh: {0}".format( self.ensembleTruncationThreshold )
+        s += "MR program:                 {0}".format( self.mrProgram )
+        s += "Reforigin RMSD:             {0}".format( self.reforiginRmsd )
+        s += "Shelxe CC:                  {0}".format( self.reforiginRmsd )
+        s += "Shelxe avg. chain length:   {0}".format( self.shelxeAvgChainLength )
+        s += "Shelxe TM:                  {0}".format( self.shelxeTM )
+        s += "Shelxe gRMSD:               {0}".format( self.shelxeGrmsd )
+        
+        return s
+    
+# End AmpleResult
+
+
 def process_result( mrbumpResult=None, nativePdb=None, refModelPdb=None, workdir=None ):
     
     os.chdir( workdir )
@@ -482,29 +532,6 @@ def process_result( mrbumpResult=None, nativePdb=None, refModelPdb=None, workdir
     return
 
 
-# result = mrbump_results.MrBumpResult()
-# 
-# if False:
-#     workdir = "/home/jmht/Documents/test/3PCV"
-#     nativePdb = "/media/data/shared/TM/3PCV/3PCV.pdb"
-#     result.resultDir = "/media/data/shared/TM/3PCV/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_2.822761_rad_1_phaser_mrbump/data/loc0_ALL_poly_ala_trunc_2.822761_rad_1/unmod/mr/phaser"
-#     result.program = "phaser"
-#     result.ensembleName = "poly_ala_trunc_2.822761_rad_1"
-# 
-# if True:
-#     workdir = "/home/jmht/Documents/test/1GU8"
-#     nativePdb = "/media/data/shared/TM/1GU8/1GU8.pdb"
-#     result.resultDir = "/media/data/shared/TM/1GU8/ROSETTA_MR_0/MRBUMP/cluster_1/search_SCWRL_reliable_sidechains_trunc_19.511671_rad_3_phaser_mrbump/data/loc0_ALL_SCWRL_reliable_sidechains_trunc_19.511671_rad_3/unmod/mr/phaser"
-#     result.program = "phaser"
-#     result.ensembleName = "SCWRL_reliable_sidechains_trunc_19.511671_rad_3"
-# 
-# if False:
-#     workdir = "/home/jmht/Documents/test/3U2F"
-#     nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
-#     result.resultDir = "/media/data/shared/TM/3U2F/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_0.21093_rad_2_molrep_mrbump/data/loc0_ALL_poly_ala_trunc_0.21093_rad_2/unmod/mr/molrep"
-#     result.program = "molrep"
-#     result.ensembleName = "poly_ala_trunc_0.21093_rad_2"
-
 
 pfile = "/media/data/shared/TM/results.pkl"
 f = open( pfile )
@@ -529,6 +556,8 @@ TMdir = "/media/data/shared/TM"
 #         TMdict[ fields[0] ] = fields[1:]
 
 for pdbcode in sorted( resultsDict.keys() ):
+    
+    ar = AmpleResult()
     
     mrbSummary = resultsDict[ pdbcode ]
         
@@ -563,9 +592,11 @@ for pdbcode in sorted( resultsDict.keys() ):
     pdbedit = pdb_edit.PDBEdit()
     info = pdbedit.get_info( nativePdb )
     
-    print "Title: {0}\nResolution: {1}\nLength: {2}".format( info.title, info.resolution, ampleDict['fasta_length'] )
-    print "resultsDir ",mrbResult.resultDir
-    print "ensemble ",mrbResult.ensembleName
+    ar.title = info.title
+    ar.resolution = info.resolution
+    ar.fastaLength = ampleDict['fasta_length']
+    ar.resultDir = mrbResult.resultDir
+    ar.ensembleName = mrbResult.ensembleName
 
     # Extract information on the models and ensembles
     eresults = ampleDict['ensemble_results']
@@ -579,24 +610,25 @@ for pdbcode in sorted( resultsDict.keys() ):
     if not got:
         raise RuntimeError,"Failed to get ensemble results"
 
-    print "ensemble # models ", e.num_models
-    print "ensemble # residues ", e.num_residues
-    print "ensemble # side_chain_treatment ", e.side_chain_treatment
-    print "ensemble # radius_threshold ", e.radius_threshold
-    print "ensemble # truncation_threshold ", e.truncation_threshold
+    ar.ensembleNumModels =  e.num_models
+    ar.ensembleNumResidues =  e.num_residues
+    ar.ensembleSideChainTreatment = e.side_chain_treatment
+    ar.ensembleRadiusThreshold = e.radius_threshold
+    ar.ensembleTruncationThreshold =  e.truncation_threshold
 
-    
     # Get hold of a full model so we can do the mapping of residues
     refModelPdb = os.path.join( TMdir, pdbcode, "models/S_00000001.pdb".format( pdbcode ) )
     
     process_result( mrbumpResult = mrbResult, nativePdb=nativePdb, refModelPdb=refModelPdb, workdir=workdir )
     
-    print "MR program: {0}".format( mrbResult.program )
-    print "Reforigin rmsd: {0}".format( mrbResult.reforiginRmsd )
-    print "CC ",mrbResult.shelxCC
-    print "Chain length ",mrbResult.shelxAvgChainLen
-    print "TM ",mrbResult.shelxTM
-    print "gRMSD ",mrbResult.shelxGrmsd
+    ar.mrProgram =  mrbResult.program
+    ar.reforiginRmsd =  mrbResult.reforiginRmsd
+    ar.shelxeCC = mrbResult.shelxCC
+    ar.shelxeAvgChainLength = mrbResult.shelxAvgChainLen
+    ar.shelxeTM = mrbResult.shelxTM
+    ar.shelxeGrmsd = mrbResult.shelxGrmsd
+    
+    print ar
     
     break
     
