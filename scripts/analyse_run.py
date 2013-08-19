@@ -435,24 +435,24 @@ class AmpleResult(object):
     def __init__(self):
 
         # The attributes we will be holding
-        self.orderedAttrs = [ title,
-                             resolution,
-                            solventContent,
-                            matthewsCoefficient,
-                            fastaLength,
-                            resultDir,
-                            ensembleName,
-                            ensembleNumModels,
-                            ensembleNumResidues,
-                            ensembleSideChainTreatment,
-                            ensembleRadiusThreshold,
-                            ensembleTruncationThreshold,
-                            mrProgram,
-                            reforiginRmsd,
-                            shelxeCC,
-                            shelxeAvgChainLength,
-                            shelxeTM,
-                            shelxeGrmsd ]
+        self.orderedAttrs = [ 'title',
+                             'resolution',
+                            'solventContent',
+                            'matthewsCoefficient',
+                            'fastaLength',
+                            'resultDir',
+                            'ensembleName',
+                            'ensembleNumModels',
+                            'ensembleNumResidues',
+                            'ensembleSideChainTreatment',
+                            'ensembleRadiusThreshold',
+                            'ensembleTruncationThreshold',
+                            'mrProgram',
+                            'reforiginRmsd',
+                            'shelxeCC',
+                            'shelxeAvgChainLength',
+                            'shelxeTM',
+                            'shelxeGrmsd' ]
         
         # The matching titles
         self.orderedTitles = [  "Title",
@@ -460,6 +460,7 @@ class AmpleResult(object):
                                 "Solvent Content",
                                 "Matthews Coefficient",
                                 "Fasta Length",
+                                "Result Dir",
                                 "Ensemble name",
                                 "Ensemble num models",
                                 "Ensemble num residues",
@@ -472,7 +473,9 @@ class AmpleResult(object):
                                 "Shelxe avg. chain length",
                                 "Shelxe TM",
                                 "Shelxe gRMSD" ]
-        
+
+        # Things not to output
+        self.skip = [ "Result Dir" ]
         
         # Set initial values
         for a in self.orderedAttrs:
@@ -482,35 +485,15 @@ class AmpleResult(object):
     
     
     def valuesAsList(self):
-        return [ getattr(self, a) in self.orderedAttrs ]
+        return [ getattr(self, a) for a in self.orderedAttrs ]
     
     def __str__(self):
         
         s = ""
-        for i, t in self.orderedTitles:
-            s += "{0:<26}: {1}".format( t, getattr( self, self.orderedAttrs[i] ) )
-        return s
-    
-    def X__str__(self):
-        s = ""
-        s += "Title:                      {0}\n".format( self.title )
-        s += "Resolution:                 {0}\n".format( self.resolution )
-        s += "Solvent Content:            {0}\n".format( self.solventContent )
-        s += "Matthews Coefficient:       {0}\n".format( self.matthewsCoefficient )
-        s += "Fasta Length:               {0}\n".format( self.fastaLength )
-        s += "Ensemble name:              {0}\n".format( self.ensembleName )
-        s += "Ensemble num models:        {0}\n".format( self.ensembleNumModels )
-        s += "Ensemble num residues:      {0}\n".format( self.ensembleNumResidues )
-        s += "Ensemble side chain:        {0}\n".format( self.ensembleSideChainTreatment )
-        s += "Ensemble radius thresh:     {0}\n".format( self.ensembleRadiusThreshold )
-        s += "Ensemble truncation thresh: {0}\n".format( self.ensembleTruncationThreshold )
-        s += "MR program:                 {0}\n".format( self.mrProgram )
-        s += "Reforigin RMSD:             {0}\n".format( self.reforiginRmsd )
-        s += "Shelxe CC:                  {0}\n".format( self.shelxeCC )
-        s += "Shelxe avg. chain length:   {0}\n".format( self.shelxeAvgChainLength )
-        s += "Shelxe TM:                  {0}\n".format( self.shelxeTM )
-        s += "Shelxe gRMSD:               {0}\n".format( self.shelxeGrmsd )
-        
+        for i, t in enumerate( self.orderedTitles ):
+            if t in self.skip:
+                continue
+            s += "{0:<26} : {1}\n".format( t, getattr( self, self.orderedAttrs[i] ) )
         return s
     
 # End AmpleResult
@@ -579,20 +562,11 @@ rundir = "/home/jmht/Documents/test/new"
 TMdir = "/media/data/shared/TM"
 
 
-# Get the  data on each TM
-# fields are: title, resolution, length
-# TMdict = {}
-# with open( os.path.join(TMdir, "TM_Data.csv"), "r" ) as inputf:
-#     
-#     #reader = csv.reader(inputf, delimiter=',', quotechar='"')
-#     reader = csv.reader(inputf, delimiter=';', quotechar='"')
-#     
-#     for i,fields in enumerate(reader):
-#         if i ==0:
-#             continue
-#         TMdict[ fields[0] ] = fields[1:]
-
-
+csvfile =  open('results.csv', 'wb')
+csvwriter = csv.writer(csvfile, delimiter=',',
+                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
+ar = AmpleResult()
+csvwriter.writerow( ar.orderedTitles )
 
 for pdbcode in sorted( resultsDict.keys() ):
     
@@ -670,10 +644,11 @@ for pdbcode in sorted( resultsDict.keys() ):
     ar.shelxeGrmsd = mrbResult.shelxGrmsd
     
     print ar
+    csvwriter.writerow( ar.valuesAsList() )
     
     #break
     
-
+csvfile.close()
 class Test(unittest.TestCase):
 
 
