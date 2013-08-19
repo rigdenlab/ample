@@ -10,11 +10,15 @@ class FastaParser(object):
     def __init__( self ):
         """Initialise the object"""
         
+        self.MAXWIDTH=80 # maximum width of any line 
+        self._reset()
+
+    def _reset( self ):
+        """Reset the object"""
+        
         self.title = None # title line
         self.length = None # The length of the parse fasta
         self.seqStr = None # The fasta sequence (just AA) as a single string
-        
-        self.MAXWIDTH=80 # maximum width of any line 
         self.formattedFasta = None # The reformatted fasta
 
     def _parse_fasta( self, fasta ):
@@ -22,7 +26,9 @@ class FastaParser(object):
         Args:
         fasta -- list of strings or open filehandle to read from the fasta file
         """
-        
+
+        self._reset() 
+
         sequence = ""
         for line in fasta:
             
