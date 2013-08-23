@@ -314,7 +314,7 @@ class AmpleOptions(object):
             pstr += "{0}: {1}\n".format(k, self.d[k])
         
         if self.d['use_scwrl']:
-            pstr+= '\n---3rd party---\nSCWRL {0}\n'.format( self.d['scwrl'] )
+            pstr+= '\n---3rd party---\nSCWRL {0}\n'.format( self.d['scwrl_exe'] )
 
         keys4 = ['missing_domain','domain_all_chains_pdb']
         if keys4[0]:
