@@ -341,6 +341,12 @@ logger = ample_util.setup_logging()
 # Path for pickling results
 amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
 
+# cluster queueing
+if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
+    msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
+    logger.critical(msg)
+    sys.exit(1)
+
 #jmht - fix these
 FIXED_INPUT = True
 pdb_code = amopt.d['name']
@@ -478,13 +484,6 @@ if amopt.d['missing_domain']:
         logger.critical( msg )
         sys.exit(1)
 
-
-# Create the rosetta modeller - this runs all the checks required
-if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
-    logger.info('Making models or fragments so checking ROSETTA options')
-    rosetta_modeller = rosetta_model.RosettaModel()
-    rosetta_modeller.set_from_dict( amopt.d )
-
 # MR programs
 if amopt.d['molrep_only'] and amopt.d['phaser_only']:
         logger.critical('you say you want molrep only AND phaser only, choose one or both')
@@ -507,10 +506,17 @@ else:
 
 amopt.d['maxcluster_exe'] = ample_util.check_for_exe('maxcluster', amopt.d['maxcluster_exe'])
 amopt.d['spicker_exe'] = ample_util.check_for_exe('spicker', amopt.d['spicker_exe'])
+
 if amopt.d['use_scwrl']:
     amopt.d['scwrl_exe'] = ample_util.check_for_exe('Scwrl4', amopt.d['scwrl_exe'] )
 if amopt.d['use_shelxe']:
     amopt.d['shelxe_exe'] = ample_util.check_for_exe('shelxe', amopt.d['shelxe_exe'])
+
+# Create the rosetta modeller - this runs all the checks required
+if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
+    logger.info('Making models or fragments so checking ROSETTA options')
+    rosetta_modeller = rosetta_model.RosettaModel()
+    rosetta_modeller.set_from_dict( amopt.d )
 
 # Check if we need to get any of the flags from the MTZ file
 if amopt.d['sf_cif'] and amopt.d['mtz']:
