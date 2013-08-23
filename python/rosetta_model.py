@@ -638,6 +638,7 @@ class RosettaModel(object):
                 
             self.use_scwrl = optd['use_scwrl']
             self.scwrl_exe = optd['scwrl_exe']        
+        return
 
 
 class Test(unittest.TestCase):
