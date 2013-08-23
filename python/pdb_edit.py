@@ -3,7 +3,6 @@ Useful manipulations on PDB files
 '''
 
 # Python imports
-import argparse
 import copy
 import os
 import re
@@ -192,7 +191,12 @@ class PDBEdit(object):
         
         # MAXINSET is the max number of AA into the sequence that we will go searching for a match - i.e. if more
         # then MAXINSET AA are non-matching, we won't find the match 
-        MAXINSET=30 if len( model_seq ) > 30 else len( model_seq ) - ( PROBE_LEN + 2)
+        #MAXINSET=30 if len( model_seq ) > 30 else len( model_seq ) - ( PROBE_LEN + 2)
+        if len( model_seq ) > 30:
+            MAXINSET=30
+        else:
+            MAXINSET = len( model_seq ) - ( PROBE_LEN + 2)
+
         got=False
         for model_i in range( MAXINSET ):
             probe = model_seq[ model_i : model_i+PROBE_LEN-1 ]
@@ -1060,6 +1064,7 @@ if False:
     #
     # Command-line handling
     #
+    import argparse
     parser = argparse.ArgumentParser(description='Manipulate PDB files', prefix_chars="-")
     
     group = parser.add_mutually_exclusive_group()
