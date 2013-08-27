@@ -292,7 +292,7 @@ class ResultsSummary(object):
         if got:
             return self.summaryString()
         else:
-            return "\n!!! No results found in directory: {0}\n".format( mrbump_dir )
+            return "\n!!! No results found in directory: {0}\n".format( self.mrbump_dir )
     
     def summaryString( self ):
         """Return a string suitable for printing the sorted results"""
