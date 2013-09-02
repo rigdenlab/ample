@@ -67,6 +67,8 @@ class ReforiginRmsd(object):
     
     def __init__( self, nativePdb, refinedPdb, refModelPdb ):
         
+        
+        self.cAlphaOnly = True # Wether to only compare c-alpha atoms
         self.rmsd = None
         self.bestChains = None
         self.refModelPdb = refModelPdb
@@ -109,16 +111,21 @@ class ReforiginRmsd(object):
         
         workdir=os.getcwd()
         
-        pdbedit = pdb_edit.PDBEdit()
-        
-        # Calculate the RefSeqMap
+        # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
         PE = pdb_edit.PDBEdit()
         resSeqMap = PE.get_resseq_map( nativePdb, self.refModelPdb )
         
+        if self.cAlphaOnly:
+            # If only alpha atoms are required, we create a copy of the native PDB with only alpha atoms
+            n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+            tmp = os.path.join( workdir, n+"_cAlphaOnly.pdb" )
+            PE.calpha_only( nativePdb, tmp )
+            nativePdb = tmp
+            
         # Now create a PDB with the matching atoms from native that are in refined
         n = os.path.splitext( os.path.basename( nativePdb ) )[0]
         nativePdbMatch = os.path.join( workdir, n+"_matched.pdb" )
-        pdbedit.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
+        PE.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
         
         # Now get the rmsd
         n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
@@ -166,7 +173,7 @@ class ReforiginRmsd(object):
                 # Extract the chain from the pdb
                 n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
                 refinedChainPdb = os.path.join( workdir, n+"_chain{0}.pdb".format( refinedChainID ) ) 
-                pdbedit.extract_chain( refinedPdb, refinedChainPdb, chainID=refinedChainID, newChainID=nativeChainID )
+                pdbedit.extract_chain( refinedPdb, refinedChainPdb, chainID=refinedChainID, newChainID=nativeChainID, cAlphaOnly=self.cAlphaOnly )
                 
                 #print "calculating for {0} vs. {1}.".format( refinedChainPdb, nativeChainPdb  )
                 
@@ -560,7 +567,7 @@ f.close()
 
 rundir = "/home/jmht/Documents/test/new"
 TMdir = "/media/data/shared/TM"
-
+os.chdir( rundir )
 
 csvfile =  open('results.csv', 'wb')
 csvwriter = csv.writer(csvfile, delimiter=',',
@@ -618,9 +625,9 @@ for pdbcode in sorted( resultsDict.keys() ):
     got=False
     clusterNum=0
     for e in ampleDict[ 'ensemble_results' ][ clusterNum ]:
-       if e.name == mrbResult.ensembleName:
-           got=True
-           break 
+        if e.name == mrbResult.ensembleName:
+            got=True
+            break 
 
     if not got:
         raise RuntimeError,"Failed to get ensemble results"
@@ -646,7 +653,7 @@ for pdbcode in sorted( resultsDict.keys() ):
     print ar
     csvwriter.writerow( ar.valuesAsList() )
     
-    #break
+    break
     
 csvfile.close()
 class Test(unittest.TestCase):

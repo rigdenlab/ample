@@ -97,8 +97,29 @@ class PDBEdit(object):
         
         return
     
-    def extract_chain( self, inpdb, outpdb, chainID=None, newChainID=None ):
-        """Extract chainID from inpdb and renumner"""
+    def calpha_only( self, inpdb, outpdb ):
+        """Strip PDB to c-alphas only"""
+        
+        
+        logfile = outpdb+".log"
+        cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
+        
+        # Build up stdin
+        stdin='lvatom "CA[C]:*"'
+        retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
+        
+        if retcode == 0:
+            # remove temporary files
+            os.unlink(logfile)
+        else:
+            raise RuntimeError,"Error stripping PDB to c-alpha atoms"
+            
+        return
+    
+    def extract_chain( self, inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False ):
+        """Extract chainID from inpdb and renumner.
+        If cAlphaOnly is set, strip down to c-alpha atoms
+        """
         
         
         logfile = outpdb+".log"
@@ -108,6 +129,8 @@ class PDBEdit(object):
         stdin="lvchain {0}\n".format( chainID )
         if newChainID:
             stdin += "renchain {0} {1}\n".format( chainID, newChainID )
+        if cAlphaOnly:
+            stdin += 'lvatom "CA[C]:*"\n'
         stdin += "sernum\n"
         
         retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
@@ -145,7 +168,7 @@ class PDBEdit(object):
 
     def get_resseq_map( self, nativePdb, modelPdb ):
         """Return a ResSeqMap mapping the index of a residue in the model to the corresponding residue in the native.
-        Only works if 1 chain in either file adn with standard residues
+        Only works if 1 chain in either file and with standard residues
         """
         
         def _get_indices( pdb ):
