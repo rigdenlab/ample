@@ -68,7 +68,9 @@ class AmpleResult(object):
     def __init__(self):
         
         # The attributes we will be holding
-        self.orderedAttrs = [ 'title',
+        self.orderedAttrs = [ 
+                              'pdbCode',
+                              'title',
                               'fastaLength',
                               'numChains',
                               'resolution',
@@ -78,6 +80,7 @@ class AmpleResult(object):
                               'ensembleName',
                               'ensembleNumModels',
                               'ensembleNumResidues',
+                              'ensemblePercentModel',
                               'ensembleSideChainTreatment',
                               'ensembleRadiusThreshold',
                               'ensembleTruncationThreshold',
@@ -96,7 +99,9 @@ class AmpleResult(object):
                               ]
         
         # The matching titles
-        self.orderedTitles = [  "Title",
+        self.orderedTitles = [  
+                                "PDB Code",
+                                "Title",
                                 "Fasta Length",
                                 "Number of Chains",
                                 "Resolution",
@@ -106,6 +111,7 @@ class AmpleResult(object):
                                 "Ensemble name",
                                 "Ensemble num models",
                                 "Ensemble num residues",
+                                "Ensemble % of Model",
                                 "Ensemble side chain",
                                 "Ensemble radius thresh",
                                 "Ensemble truncation thresh",
@@ -891,6 +897,7 @@ for pdbcode in sorted( resultsDict.keys() ):
     nativeInfo = pdbedit.get_info( nativePdb )
     
     ar = AmpleResult()
+    ar.pdbCode = pdbcode
     ar.title = nativeInfo.title
     ar.fastaLength = ampleDict['fasta_length']
     ar.numChains = len( nativeInfo.models[0].chains )
@@ -918,6 +925,8 @@ for pdbcode in sorted( resultsDict.keys() ):
     ar.ensembleSideChainTreatment = e.side_chain_treatment
     ar.ensembleRadiusThreshold = e.radius_threshold
     ar.ensembleTruncationThreshold =  e.truncation_threshold
+    
+    ar.ensemblePercentModel = int ( ( float( ar.ensembleNumResidues ) / float( ar.fastaLength ) ) * 100 )
     
     # Get the data on the models in the ensemble
     ensembleFile = os.path.join( datadir, "ROSETTA_MR_0/ensembles_1", mrbumpResult.ensembleName+".pdb" )
@@ -979,7 +988,6 @@ for pdbcode in sorted( resultsDict.keys() ):
         ar.phaserTFZ = phaserP.phaserTFZ
     else:
         molrepLog = os.path.join( mrbumpResult.resultDir, "molrep.log" )
-        print molrepLog
         molrepP = MolrepLogParser( molrepLog )
         ar.molrepScore = molrepP.score
         ar.molrepTime = molrepP.time
