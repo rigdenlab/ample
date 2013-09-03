@@ -61,6 +61,41 @@ import mrbump_results
 import pdb_edit
 
 
+class MrbumpLogParser(object):
+    """
+    Class to mine information from a 
+    """
+
+    def __init__(self,logfile):
+
+        self.logfile = logfile
+
+        self.noResTarget=0
+        self.noChainsTarget=0
+        self.resolution=0.0
+
+        self.parse()
+
+        return
+
+    def parse(self):
+        """parse"""
+
+        fh=open(self.logfile)
+
+        line=fh.readline()
+        while line:
+            if "Number of residues:" in line:
+                self.noResTarget=int( line.split()[-1] )
+            if "Estimated number of molecules to search for in a.s.u.:" in line:
+                self.noChainsTarget=int( line.split()[-1] )
+            if "Resolution of collected data (angstroms):" in line:
+                self.resolution=float( line.split()[-1] )
+            line=fh.readline()
+        fh.close()
+
+        return
+
 class ReforiginRmsd(object):
     """Class to use reforigin to determine how well the model was placed.
     """
@@ -192,6 +227,123 @@ class ReforiginRmsd(object):
         #print "best chain rmsd is {0} for nativeChain {1} vs refinedChain {2}".format( self.rmsd, self.bestChains[0], self.bestChains[1] )
             
         return
+
+class PhaserLogParser(object):
+    """
+    Class to mine information from a phaser log
+    """
+
+    def __init__(self,logfile):
+
+        self.logfile = logfile
+        self.phaserLLG = None
+        self.phaserTFZ = None
+        self.phaserTime = None
+
+        self.parse()
+
+        return
+
+    def parse(self):
+        """parse"""
+
+        # print os.path.join(os.getcwd(), logfile)
+        fh = open(self.logfile, 'r')
+        
+        print "Checking logfile ",self.logfile
+
+        for line in reversed(fh.readlines()):
+            if "CPU Time" in line:
+                self.phaserTime=float( line.split()[-2] )
+                break
+        fh.close()
+
+        fh = open(self.logfile, 'r')
+        CAPTURE = False
+        solline = ""
+        self.phaserLLG = 0.0
+        self.phaserTFZ = 0.0
+        line = fh.readline()
+        while line:
+            if CAPTURE:
+                if "SOLU SPAC" in line:
+                    CAPTURE = False
+                else:
+                    solline += line.strip() + " "
+            if  "Solution #1 annotation (history):" in line or  "Solution annotation (history):" in line:
+                CAPTURE = True
+            line = fh.readline()
+        fh.close()
+
+        llist = solline.split()
+        llist.reverse()
+        for i in llist:
+            if "TFZ==" in i and "*" not in i:
+                self.phaserTFZ = float(i.replace("TFZ==", ""))
+                break
+            if "TFZ=" in i and "TFZ==" not in i and "*" not in i:
+                self.phaserTFZ = float(i.replace("TFZ=", ""))
+                break
+
+        for i in llist:
+            if "LLG==" in i:
+                self.phaserLLG = float(i.replace("LLG==", ""))
+                break
+            if "LLG=" in i and "LLG==" not in i:
+                self.phaserLLG = float(i.replace("LLG=", ""))
+                break
+        return
+
+
+class RefmacLogParser(object):
+    """
+    Class to mine information from a phaser log
+    """
+
+    def __init__(self,logfile):
+
+        self.logfile = logfile
+
+        self.initRfree=1.0
+        self.finalRfree=1.0
+        self.initRfactor=1.0
+        self.finalRfactor=1.0
+        self.noResModel=0
+        self.noChainsModel=0
+
+        self.parse()
+
+        return
+
+    def parse(self):
+        """parse"""
+
+        # print os.path.join(os.getcwd(), logfile)
+        fh = open(self.logfile, 'r')
+
+        CAPTURE=False
+
+        line=fh.readline()
+        while line:
+            if "Number of residues :" in line:
+                self.noResModel=int( line.split()[-1] )
+            if "Number of chains   :" in line:
+                self.noChainsModel=int( line.split()[-1] )
+            if CAPTURE:
+                if "R free" in line:
+                    self.initRfree=float( line.split()[-2] )
+                    self.finalRfree=float( line.split()[-1] )
+                    CAPTURE=False
+                if "R factor" in line:
+                    self.initRfactor=float( line.split()[-2] )
+                    self.finalRfactor=float( line.split()[-1] )
+            if " $TEXT:Result: $$ Final results $$" in line:
+                CAPTURE=True
+            line=fh.readline()
+        fh.close()
+
+        return
+
 
 class ShelxeLogParser(object):
     """
@@ -440,33 +592,39 @@ class AmpleResult(object):
     """Results for an ample solution"""
     
     def __init__(self):
-
+        
         # The attributes we will be holding
         self.orderedAttrs = [ 'title',
-                             'resolution',
-                            'solventContent',
-                            'matthewsCoefficient',
-                            'fastaLength',
-                            'resultDir',
-                            'ensembleName',
-                            'ensembleNumModels',
-                            'ensembleNumResidues',
-                            'ensembleSideChainTreatment',
-                            'ensembleRadiusThreshold',
-                            'ensembleTruncationThreshold',
-                            'mrProgram',
-                            'reforiginRmsd',
-                            'shelxeCC',
-                            'shelxeAvgChainLength',
-                            'shelxeTM',
-                            'shelxeGrmsd' ]
+                              'fastaLength',
+                              'numChains',
+                              'resolution',
+                              'solventContent',
+                              'matthewsCoefficient',
+                              'resultDir',
+                              'ensembleName',
+                              'ensembleNumModels',
+                              'ensembleNumResidues',
+                              'ensembleSideChainTreatment',
+                              'ensembleRadiusThreshold',
+                              'ensembleTruncationThreshold',
+                              'estChainsASU',
+                              'mrProgram',
+                              'phaserLLG',
+                              'phaserTFZ',
+                              'phaserTime',
+                              'reforiginRmsd',
+                              'shelxeCC',
+                              'shelxeAvgChainLength',
+                              'shelxeTM',
+                              'shelxeGrmsd' ]
         
         # The matching titles
         self.orderedTitles = [  "Title",
+                                "Fasta Length",
+                                "Number of Chains",
                                 "Resolution",
                                 "Solvent Content",
                                 "Matthews Coefficient",
-                                "Fasta Length",
                                 "Result Dir",
                                 "Ensemble name",
                                 "Ensemble num models",
@@ -474,7 +632,11 @@ class AmpleResult(object):
                                 "Ensemble side chain",
                                 "Ensemble radius thresh",
                                 "Ensemble truncation thresh",
+                                "Est. Chains in ASU",
                                 "MR program",
+                                "Phaser LLG",
+                                "Phaser TFZ",
+                                "Phaser Time",
                                 "Reforigin RMSD",
                                 "Shelxe CC",
                                 "Shelxe avg. chain length",
@@ -506,8 +668,138 @@ class AmpleResult(object):
 # End AmpleResult
 
 
-def process_result( mrbumpResult=None, nativePdb=None, refModelPdb=None, workdir=None ):
+# def process_result( mrbumpResult=None, nativePdb=None, refModelPdb=None, workdir=None ):
+#     
+#     os.chdir( workdir )
+#     
+#     pdbedit = pdb_edit.PDBEdit()
+#     
+#     # First check if the native has > 1 model and extract the first if so
+#     info = pdbedit.get_info( nativePdb )
+#     if len( info.models ) > 1:
+#         
+#         print "nativePdb has > 1 model - using first"
+#         n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+#         nativePdb1 = os.path.join( workdir, n+"_model1.pdb" )
+#         pdbedit.extract_model( nativePdb, nativePdb1, modelID=info.models[0].serial )
+#         nativePdb = nativePdb1
+#         
+#     # Standardise the PDB to rename any non-standard AA, remove solvent etc
+#     n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+#     nativePdbStd = os.path.join( workdir, n+"_std.pdb" )
+#     pdbedit.standardise( nativePdb, nativePdbStd )
+#     nativePdb = nativePdbStd
+#     
+#     # Get the reforigin RMSD of the phaser placed model as refined with refmac
+#     refinedPdb = os.path.join( mrbumpResult.resultDir, "refine", "refmac_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, mrbumpResult.ensembleName ) )
+#     mrbumpResult.refmacModel = refinedPdb
+#     
+#     # debug - copy into work directory
+#     shutil.copy(refinedPdb, os.path.join( workdir, os.path.basename( refinedPdb ) ) )
+#     
+#     rmsder = ReforiginRmsd( nativePdb, refinedPdb, refModelPdb )
+#     mrbumpResult.reforiginRmsd = rmsder.rmsd
+#     
+#     # Now read the shelxe log to see how we did
+#     logfile = os.path.join( mrbumpResult.resultDir, "build/shelxe/shelxe_run.log" )
+#     shelxeP = ShelxeLogParser( logfile )
+#     mrbumpResult.shelxCC = shelxeP.CC
+#     mrbumpResult.shelxAvgChainLen = shelxeP.avgChainLength
+# 
+#     # Finally use maxcluster to compare the shelxe model with the native
+#     if False:
+#         shelxeModel = os.path.join( mrbumpResult.resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, mrbumpResult.ensembleName ) )
+#         mrbumpResult.shelxModel = shelxeModel
+#         m = CompareModels( nativePdb, shelxeModel, workdir=workdir  )
+#         mrbumpResult.shelxGrmsd = m.grmsd
+#         mrbumpResult.shelxTM = m.tm
+#     
+#     return
+
+
+
+pfile = "/media/data/shared/TM/results.pkl"
+f = open( pfile )
+resultsDict = cPickle.load( f  )
+f.close()
+
+rundir = "/home/jmht/Documents/test/new"
+TMdir = "/media/data/shared/TM"
+os.chdir( rundir )
+
+csvfile =  open('results.csv', 'wb')
+csvwriter = csv.writer(csvfile, delimiter=',',
+                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
+ar = AmpleResult()
+csvwriter.writerow( ar.orderedTitles )
+
+for pdbcode in sorted( resultsDict.keys() ):
     
+    ar = AmpleResult()
+    
+    mrbSummary = resultsDict[ pdbcode ]
+        
+    workdir = os.path.join( rundir, pdbcode )
+    if not os.path.isdir( workdir ):
+        os.mkdir( workdir )
+        
+    print "\nResults for ",pdbcode
+    
+    mrbumpResult = mrbSummary.results[0]
+    # Need to remove last component as we recored the refmac directory
+    mrbumpResult.resultDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
+
+    # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
+    mrbumpResult.ensembleName =mrbumpResult.name[9:-6]
+    
+    # Get the path to the original pickle file
+    pfile = os.path.join( TMdir, pdbcode, "ROSETTA_MR_0/resultsd.pkl")
+    f = open( pfile )
+    ampleDict = cPickle.load( f  )
+    f.close()
+    #print ampleDict['fasta']
+    
+    # Path to fasta
+    #fasta = os.path.join( TMdir, pdbcode, "ROSETTA_MR_0/{0}__.fasta".format( pdbcode ) )
+    
+    # Get path to native
+    nativePdb = os.path.join( TMdir, pdbcode, "{0}.pdb".format( pdbcode ) )
+    
+    # Extract all the info from it
+    pdbedit = pdb_edit.PDBEdit()
+    info = pdbedit.get_info( nativePdb )
+    
+    ar.title = info.title
+    ar.fastaLength = ampleDict['fasta_length']
+    ar.numChains = len( info.models[0].chains )
+    ar.resolution = info.resolution
+    ar.solventContent = info.solventContent
+    ar.matthewsCoefficient = info.matthewsCoefficient
+    ar.resultDir = mrbumpResult.resultDir
+    ar.ensembleName = mrbumpResult.ensembleName
+
+    # Extract information on the models and ensembles
+    eresults = ampleDict['ensemble_results']
+    got=False
+    clusterNum=0
+    for e in ampleDict[ 'ensemble_results' ][ clusterNum ]:
+        if e.name == mrbumpResult.ensembleName:
+            got=True
+            break 
+
+    if not got:
+        raise RuntimeError,"Failed to get ensemble results"
+
+    ar.ensembleNumModels =  e.num_models
+    ar.ensembleNumResidues =  e.num_residues
+    ar.ensembleSideChainTreatment = e.side_chain_treatment
+    ar.ensembleRadiusThreshold = e.radius_threshold
+    ar.ensembleTruncationThreshold =  e.truncation_threshold
+
+    # Get hold of a full model so we can do the mapping of residues
+    refModelPdb = os.path.join( TMdir, pdbcode, "models/S_00000001.pdb".format( pdbcode ) )
+
+    # HERE
     os.chdir( workdir )
     
     pdbedit = pdb_edit.PDBEdit()
@@ -539,116 +831,38 @@ def process_result( mrbumpResult=None, nativePdb=None, refModelPdb=None, workdir
     mrbumpResult.reforiginRmsd = rmsder.rmsd
     
     # Now read the shelxe log to see how we did
-    logfile = os.path.join( mrbumpResult.resultDir, "build/shelxe/shelxe_run.log" )
-    shelxeP = ShelxeLogParser( logfile )
+    shelxeLog = os.path.join( mrbumpResult.resultDir, "build/shelxe/shelxe_run.log" )
+    shelxeP = ShelxeLogParser( shelxeLog )
     mrbumpResult.shelxCC = shelxeP.CC
     mrbumpResult.shelxAvgChainLen = shelxeP.avgChainLength
 
     # Finally use maxcluster to compare the shelxe model with the native
-    shelxeModel = os.path.join( mrbumpResult.resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, mrbumpResult.ensembleName ) )
-    mrbumpResult.shelxModel = shelxeModel
-    m = CompareModels( nativePdb, shelxeModel, workdir=workdir  )
-    mrbumpResult.shelxGrmsd = m.grmsd
-    mrbumpResult.shelxTM = m.tm
+    if False:
+        shelxeModel = os.path.join( mrbumpResult.resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, mrbumpResult.ensembleName ) )
+        mrbumpResult.shelxModel = shelxeModel
+        m = CompareModels( nativePdb, shelxeModel, workdir=workdir  )
+        mrbumpResult.shelxGrmsd = m.grmsd
+        mrbumpResult.shelxTM = m.tm
     
-#     print "REFORIGIN RMSD: {0}".format( mrbumpResult.reforiginRmsd )
-#     print "got CC ",mrbumpResult.shelxCC
-#     print "got chain length ",mrbumpResult.shelxAvgChainLen
-#     print "Maxsub - maxsub={0} rmsd={1} grmsd={2} tm={3}".format( m.maxsub,  m.rmsd, m.grmsd, m.tm  )
+    # Ronan's stuff
+    phaserLog = os.path.join( mrbumpResult.resultDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(mrbumpResult.program, mrbumpResult.ensembleName) )
+    phaserP = PhaserLogParser( phaserLog )
+    ar.phaserLLG = phaserP.phaserLLG
+    ar.phaserTFZ = phaserP.phaserTFZ
+    ar.phaserTime = phaserP.phaserTime
     
-    return
-
-
-
-pfile = "/media/data/shared/TM/results.pkl"
-f = open( pfile )
-resultsDict = cPickle.load( f  )
-f.close()
-
-rundir = "/home/jmht/Documents/test/new"
-TMdir = "/media/data/shared/TM"
-os.chdir( rundir )
-
-csvfile =  open('results.csv', 'wb')
-csvwriter = csv.writer(csvfile, delimiter=',',
-                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
-ar = AmpleResult()
-csvwriter.writerow( ar.orderedTitles )
-
-for pdbcode in sorted( resultsDict.keys() ):
     
-    ar = AmpleResult()
+    mrbumpLog = os.path.join( TMdir, pdbcode, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( mrbumpResult.ensembleName, mrbumpResult.program )  )
+    mrbumpP = MrbumpLogParser( mrbumpLog )
+    ar.estChainsASU = mrbumpP.noChainsTarget
     
-    mrbSummary = resultsDict[ pdbcode ]
-        
-    workdir = os.path.join( rundir, pdbcode )
-    if not os.path.isdir( workdir ):
-        os.mkdir( workdir )
-        
-    print "\nResults for ",pdbcode
     
-    mrbResult = mrbSummary.results[0]
-    # Need to remove last component as we recored the refmac directory
-    mrbResult.resultDir = os.sep.join( mrbResult.resultDir.split(os.sep)[:-1] )
-
-    # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
-    mrbResult.ensembleName = mrbResult.name[9:-6]
-    
-    # Get the path to the original pickle file
-    pfile = os.path.join( TMdir, pdbcode, "ROSETTA_MR_0/resultsd.pkl")
-    
-    f = open( pfile )
-    ampleDict = cPickle.load( f  )
-    f.close()
-    #print ampleDict['fasta']
-    
-    # Path to fasta
-    #fasta = os.path.join( TMdir, pdbcode, "ROSETTA_MR_0/{0}__.fasta".format( pdbcode ) )
-    
-    # Get path to native
-    nativePdb = os.path.join( TMdir, pdbcode, "{0}.pdb".format( pdbcode ) )
-    
-    # Extract all the info from it
-    pdbedit = pdb_edit.PDBEdit()
-    info = pdbedit.get_info( nativePdb )
-    
-    ar.title = info.title
-    ar.resolution = info.resolution
-    ar.solventContent = info.solventContent
-    ar.matthewsCoefficient = info.matthewsCoefficient
-    ar.fastaLength = ampleDict['fasta_length']
-    ar.resultDir = mrbResult.resultDir
-    ar.ensembleName = mrbResult.ensembleName
-
-    # Extract information on the models and ensembles
-    eresults = ampleDict['ensemble_results']
-    got=False
-    clusterNum=0
-    for e in ampleDict[ 'ensemble_results' ][ clusterNum ]:
-        if e.name == mrbResult.ensembleName:
-            got=True
-            break 
-
-    if not got:
-        raise RuntimeError,"Failed to get ensemble results"
-
-    ar.ensembleNumModels =  e.num_models
-    ar.ensembleNumResidues =  e.num_residues
-    ar.ensembleSideChainTreatment = e.side_chain_treatment
-    ar.ensembleRadiusThreshold = e.radius_threshold
-    ar.ensembleTruncationThreshold =  e.truncation_threshold
-
-    # Get hold of a full model so we can do the mapping of residues
-    refModelPdb = os.path.join( TMdir, pdbcode, "models/S_00000001.pdb".format( pdbcode ) )
-    
-    process_result( mrbumpResult = mrbResult, nativePdb=nativePdb, refModelPdb=refModelPdb, workdir=workdir )
-    
-    ar.mrProgram =  mrbResult.program
-    ar.reforiginRmsd =  mrbResult.reforiginRmsd
-    ar.shelxeCC = mrbResult.shelxCC
-    ar.shelxeAvgChainLength = mrbResult.shelxAvgChainLen
-    ar.shelxeTM = mrbResult.shelxTM
-    ar.shelxeGrmsd = mrbResult.shelxGrmsd
+    ar.mrProgram =  mrbumpResult.program
+    ar.reforiginRmsd =  mrbumpResult.reforiginRmsd
+    ar.shelxeCC = mrbumpResult.shelxCC
+    ar.shelxeAvgChainLength = mrbumpResult.shelxAvgChainLen   
+    #ar.shelxeTM = mrbResult.shelxTM
+    #ar.shelxeGrmsd = mrbResult.shelxGrmsd
     
     print ar
     csvwriter.writerow( ar.valuesAsList() )
