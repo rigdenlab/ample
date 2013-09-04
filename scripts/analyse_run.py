@@ -73,9 +73,14 @@ class AmpleResult(object):
                               'title',
                               'fastaLength',
                               'numChains',
+                              'estChainsASU',
                               'resolution',
                               'solventContent',
                               'matthewsCoefficient',
+                              'ss_pred',
+                              'ss_pred_str',
+                              'ss_dssp',
+                              'ss_dssp_str',
                               'resultDir',
                               'ensembleName',
                               'ensembleNumModels',
@@ -86,7 +91,6 @@ class AmpleResult(object):
                               'ensembleTruncationThreshold',
                               'ensembleNativeRmsd',
                               'ensembleNativeMaxsub',
-                              'estChainsASU',
                               'mrProgram',
                               'phaserLLG',
                               'phaserTFZ',
@@ -94,6 +98,9 @@ class AmpleResult(object):
                               'molrepScore',
                               'molrepTime',
                               'reforiginRmsd',
+                              'rfact',
+                              'rfree',
+                              'solution',
                               'shelxeCC',
                               'shelxeAvgChainLength'
                               ]
@@ -104,9 +111,14 @@ class AmpleResult(object):
                                 "Title",
                                 "Fasta Length",
                                 "Number of Chains",
+                                "Est. Chains in ASU",
                                 "Resolution",
                                 "Solvent Content",
                                 "Matthews Coefficient",
+                                "SS_Prediction Data",
+                                "SS Prediction",
+                                "DSSP Data",
+                                "DSSP Assignment",
                                 "Result Dir",
                                 "Ensemble name",
                                 "Ensemble num models",
@@ -117,7 +129,6 @@ class AmpleResult(object):
                                 "Ensemble truncation thresh",
                                 'Ensemble Native Rmsd',
                                 'Ensemble Native Maxsub',
-                                "Est. Chains in ASU",
                                 "MR program",
                                 "Phaser LLG",
                                 "Phaser TFZ",
@@ -125,12 +136,15 @@ class AmpleResult(object):
                                 "Molrep Score",
                                 "Molrep Time",
                                 "Reforigin RMSD",
+                                "Rfact",
+                                "Rfree",
+                                "Solution",
                                 "Shelxe CC",
                                 "Shelxe avg. chain length"
                                  ]
 
         # Things not to output
-        self.skip = [ "Result Dir" ]
+        self.skip = [ "resultDir", "ss_pred", "ss_dssp" ]
         
         # Set initial values
         for a in self.orderedAttrs:
@@ -139,13 +153,20 @@ class AmpleResult(object):
         return
     
     def valuesAsList(self):
-        return [ getattr(self, a) for a in self.orderedAttrs ]
+        return [ getattr(self, a) for a in self.orderedAttrs if a not in self.skip ]
+    
+    def titlesAsList(self):
+        l = []
+        for i, t in enumerate( self.orderedTitles ):
+            if self.orderedAttrs[i] not in self.skip:
+                l.append( t )
+        return l
     
     def __str__(self):
         
         s = ""
         for i, t in enumerate( self.orderedTitles ):
-            if t in self.skip:
+            if self.orderedAttrs[i] in self.skip:
                 continue
             s += "{0:<26} : {1}\n".format( t, getattr( self, self.orderedAttrs[i] ) )
         return s
@@ -257,7 +278,7 @@ class CompareModels(object):
     
     def split_alignrsm(self, alignrsm=None, rootname=None):
          
-        # Order is experiment then prediction
+        # Order is experiment then assignment
  
         
         efile = rootname+"_experiment.pdb"
@@ -295,6 +316,88 @@ class CompareModels(object):
         return
 # End CompareModels
 
+class DsspParser(object):
+    """
+    Class 
+    """
+
+    def __init__(self,pfile):
+
+        self.dsspfile = pfile
+        
+        self.residues = []
+        self.assignment = []
+        
+        self.percentH = None
+        self.percentC = None
+        self.percentE = None
+
+        self.parse()
+
+        return
+    
+    def parse(self):
+        """parse"""
+
+        # print os.path.join(os.getcwd(), logfile)
+
+        self.residues = []
+        self.assignment = []
+        
+        capture=False
+        for line in open(self.dsspfile, 'r'):
+            
+            if "#  RESIDUE" in line:
+                capture=True
+                continue
+                
+            if capture:
+                #print "\"{0}\"".format(line)
+                #idx = int( line[0:5].strip() )
+                #resIdx = int( line[5:10].strip() )
+                #chainId = line[10:12].strip()
+                resName = line[12:14].strip()
+                assign = line[14:17].strip()
+                #print "\"{0}\"".format(line[14:17])
+                
+                # Only capture first chain
+                if "!" in assign:
+                    capture=False
+                    break
+                 
+                self.residues.append( resName )
+                self.assignment.append( assign )
+                
+        if not len(self.residues) or not len( self.assignment):
+            raise RuntimeError,"Got no assignment!"
+         
+        nH = 0
+        nC = 0
+        nE = 0
+        for p in self.assignment:
+            if p == "H":
+                nH += 1
+            elif p == "E":
+                nE += 1
+            # Just assume everything else is a coil
+            else:
+                nC += 1
+             
+        self.percentC = float(nC) / len(self.assignment) * 100
+        self.percentH = float(nH) / len(self.assignment) * 100
+        self.percentE = float(nE) / len(self.assignment) * 100
+            
+        return
+    
+    def asDict(self):
+        d = {}
+        d['assignment'] = self.assignment
+        d['residues'] = self.residues
+        d['percentC'] = self.percentC
+        d['percentE'] = self.percentE
+        d['percentH'] = self.percentH
+        
+        return d
 
 class EnsemblePdbParser(object):
     """
@@ -667,6 +770,85 @@ class PhaserPdbParser(object):
                         break
         return
 
+class PsipredParser(object):
+    """
+    Class to mine information from a phaser pdb file
+    """
+
+    def __init__(self,pfile):
+
+        self.psipredfile = pfile
+        
+        self.residues = []
+        self.assignment = []
+        self.percentH = None
+        self.percentC = None
+        self.percentE = None
+
+        self.parse()
+
+        return
+
+    def parse(self):
+        """parse"""
+
+        # print os.path.join(os.getcwd(), logfile)
+
+        self.residues = []
+        self.assignment = []
+        for i, line in enumerate( open(self.psipredfile, 'r') ):
+            # Assume first 2 lines are not important
+            if i < 2:
+                continue
+            
+            if not line:
+                break
+            
+            fields = line.split()
+            if len(fields) != 6:
+                raise RuntimeError,"Wrong number of fields in line: ",line
+            
+            idx, resid, pred = int(fields[0]), fields[1], fields[2]
+            if 1 == 3 and idx != 1:
+                raise RuntimeError,"Got wrong index for first data: ",line
+            
+            self.residues.append( resid )
+            self.assignment.append( pred )
+            
+        
+        if not len(self.residues) or not len( self.assignment):
+            raise RuntimeError,"Got no assignment!"
+        
+        nH = 0
+        nC = 0
+        nE = 0
+        for p in self.assignment:
+            if p == "H":
+                nH += 1
+            elif p == "C":
+                nC += 1
+            elif p == "E":
+                nE += 1
+            else:
+                raise RuntimeError,"Unrecognised assignment: {0}".format( p )
+            
+        self.percentC = float(nC) / len(self.assignment) * 100
+        self.percentH = float(nH) / len(self.assignment) * 100
+        self.percentE = float(nE) / len(self.assignment) * 100
+            
+            
+        return
+
+    def asDict(self):
+        d = {}
+        d['assignment'] = self.assignment
+        d['residues'] = self.residues
+        d['percentC'] = self.percentC
+        d['percentE'] = self.percentE
+        d['percentH'] = self.percentH
+        
+        return d
+    
 
 class RefmacLogParser(object):
     """
@@ -862,7 +1044,7 @@ csvfile =  open('results.csv', 'wb')
 csvwriter = csv.writer(csvfile, delimiter=',',
                         quotechar='"', quoting=csv.QUOTE_MINIMAL)
 ar = AmpleResult()
-csvwriter.writerow( ar.orderedTitles )
+csvwriter.writerow( ar.titlesAsList() )
 
 for pdbcode in sorted( resultsDict.keys() ):
     
@@ -876,8 +1058,8 @@ for pdbcode in sorted( resultsDict.keys() ):
     # Directory where all the data for this run live
     datadir = os.path.join( TMdir, pdbcode )
     
-    mrbSummary = resultsDict[ pdbcode ]
-    mrbumpResult = mrbSummary.results[0]
+    #mrbSummary = resultsDict[ pdbcode ]
+    mrbumpResult = resultsDict[ pdbcode ][0]
     # Need to remove last component as we recored the refmac directory
     mrbumpResult.resultDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
 
@@ -926,7 +1108,7 @@ for pdbcode in sorted( resultsDict.keys() ):
     ar.ensembleRadiusThreshold = e.radius_threshold
     ar.ensembleTruncationThreshold =  e.truncation_threshold
     
-    ar.ensemblePercentModel = int ( ( float( ar.ensembleNumResidues ) / float( ar.fastaLength ) ) * 100 )
+    ar.ensemblePercentModel = int( ( float( ar.ensembleNumResidues ) / float( ar.fastaLength ) ) * 100 )
     
     # Get the data on the models in the ensemble
     ensembleFile = os.path.join( datadir, "ROSETTA_MR_0/ensembles_1", mrbumpResult.ensembleName+".pdb" )
@@ -992,17 +1174,28 @@ for pdbcode in sorted( resultsDict.keys() ):
         ar.molrepScore = molrepP.score
         ar.molrepTime = molrepP.time
     
-    mrbumpLog = os.path.join( TMdir, pdbcode, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( mrbumpResult.ensembleName, mrbumpResult.program )  )
-    if os.path.isfile( mrbumpLog ):
-        mrbumpP = MrbumpLogParser( mrbumpLog )
-        ar.estChainsASU = mrbumpP.noChainsTarget
+    mrbumpLog = os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( mrbumpResult.ensembleName, mrbumpResult.program )  )
+    mrbumpP = MrbumpLogParser( mrbumpLog )
+    ar.estChainsASU = mrbumpP.noChainsTarget
     
     ar.mrProgram =  mrbumpResult.program
     ar.reforiginRmsd =  mrbumpResult.reforiginRmsd
+    ar.rfact =  mrbumpResult.rfact
+    ar.rfree =  mrbumpResult.rfree
+    ar.solution =  mrbumpResult.solution
     ar.shelxeCC = mrbumpResult.shelxCC
-    ar.shelxeAvgChainLength = mrbumpResult.shelxAvgChainLen   
-    #ar.shelxeTM = mrbResult.shelxTM
-    #ar.shelxeGrmsd = mrbResult.shelxGrmsd
+    ar.shelxeAvgChainLength = mrbumpResult.shelxAvgChainLen
+    
+    # Secondary Structure assignments
+    sam_file = os.path.join( datadir, "fragments/t001_.rdb_ss2"  )
+    psipredP = PsipredParser( sam_file )
+    ar.ss_pred = psipredP.asDict()
+    ar.ss_pred_str = "C:{0:d} | E:{1:d} | H:{2:d}".format( int(psipredP.percentC),  int(psipredP.percentE), int(psipredP.percentH) )
+
+    dssp_file = os.path.join( datadir, "{0}.dssp".format( pdbcode.lower()  )  )
+    dsspP = DsspParser( dssp_file )
+    ar.ss_dssp = dsspP.asDict()
+    ar.ss_dssp_str = "C:{0:d} | E:{1:d} | H:{2:d}".format( int(dsspP.percentC),  int(dsspP.percentE), int(dsspP.percentH) )  
     
     print ar
     csvwriter.writerow( ar.valuesAsList() )
