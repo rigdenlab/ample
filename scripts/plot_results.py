@@ -2,6 +2,14 @@
 Created on 4 Sep 2013
 
 @author: jmht
+
+r1% = 42.1568627451
+r2% = 31.3725490196
+r3% = 26.4705882353
+
+polya% = 41.1764705882
+reliable% = 27.4509803922
+allatom% = 31.3725490196
 '''
 
 import sys
@@ -11,32 +19,65 @@ import cPickle
 import csv
 import os
 from analyse_run import AmpleResult
+import math
 
 
 TMdir = "/media/data/shared/TM"
-rundir="/home/jmht/Dropbox/MRes/Project/Thesis/Analysis"
 rundir="/Users/jmht/Dropbox/MRes/Project/Thesis/Analysis"
+rundir="/home/jmht/Dropbox/MRes/Project/Thesis/Analysis"
 
-f = "/home/jmht/Documents/test/ar_results.pkl"
 f = "/Users/jmht/Dropbox/MRes/Project/Thesis/Analysis/ar_results.pkl"
+f = "/home/jmht/Documents/test/ar_results.pkl"
 fh = open(f)
 allResults = cPickle.load( fh )
 fh.close()
 
-count=0
-pdata = [ ['phaserLLG','phaserTFZ','CC','success'] ]
-for r in allResults:
-    success=0
-    if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
-        success=1
-     
-    if r.mrProgram == 'phaser' and r.phaserLLG != None and r.phaserTFZ != None:
-        count+=1
-        llg = r.phaserLLG
-        if llg < 0:
-            llg = -10
-        pdata.append( [ llg, r.phaserTFZ, r.shelxeCC, success  ]  )
 
+sspred = {}
+solvent = {}
+sspredC = {}
+sspredE = {}
+sspredH = {}
+success = {}
+
+for r in allResults:
+    
+    if not success.has_key( r.pdbCode ):
+        success[ r.pdbCode ] = 0
+        
+    if not solvent.has_key( r.pdbCode ):
+        solvent[ r.pdbCode ] = r.solventContent
+
+    if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
+        success[ r.pdbCode ] = 1
+     
+    if not sspred.has_key( r.pdbCode ):
+        dC = math.fabs( r.ss_pred['percentC'] - r.ss_dssp['percentC'] )
+        dE = math.fabs( r.ss_pred['percentE'] - r.ss_dssp['percentE'] )
+        dH = math.fabs( r.ss_pred['percentH'] - r.ss_dssp['percentH'] )
+        sspred[r.pdbCode ] = 100 - (dC + dE + dH) /3
+        sspredC[r.pdbCode ] = 100 - dC
+        sspredE[r.pdbCode ] = 100 - dE
+        sspredH[r.pdbCode ] = 100 - dH
+
+print sspred
+print success
+
+pdata = [ ['pdb', 'sspred','sspredC', 'sspredE', 'sspredH', 'solvent', 'success' ] ]
+for k in sorted(sspred.keys()):
+    pdata.append( [ k, sspred[k], sspredC[k], sspredE[k], sspredH[k], solvent[k], success[k] ] ) 
+
+
+# pdata = [ ['rfree','rfact','dRF', 'CC','success'] ]
+# for r in allResults:
+#     success=0
+#     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
+#         success=1
+#     
+#     if r.rfree and r.rfact:
+#         dRF = float(r.rfree)-float(r.rfact)
+#       
+#         pdata.append( [ r.rfree, r.rfact, dRF, r.shelxeCC, success  ]  )
 
 
 # r1=0
@@ -90,36 +131,31 @@ for r in allResults:
 # csvfile.close()
 # sys.exit()
 
-# pdata = [ ['phaserLLG','phaserTFZ','CC','success'] ]
-# count=0
-# for r in allResults:
-#     success=0
-#     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
-#         success=1
-#     
-#     if r.mrProgram == 'phaser' and r.phaserLLG != None and r.phaserTFZ != None:
-#         count+=1
-#         llg = r.phaserLLG
-#         if llg < 0:
-#             llg = -10
-#         pdata.append( [ llg, r.phaserTFZ, r.shelxeCC, success  ]  )
 
 
 # pdata = [ ['phaserLLG','phaserTFZ','CC','success'] ]
-# count=0
+# sn=0
+# sp=0
+# nsuccess=0
 # for r in allResults:
 #     success=0
 #     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
+#         nsuccess+=1
 #         success=1
-#     
+#      
 #     if r.mrProgram == 'phaser' and r.phaserLLG != None and r.phaserTFZ != None:
-#         count+=1
 #         llg = r.phaserLLG
-#         if llg < 0:
-#             llg = -10
+#         if success==1 and llg < 0:
+#             sn+=1
+#         elif success==1 and llg >= 0:
+#             sp+=1
+#         if llg < -1000:
+#             llg = -1000
 #         pdata.append( [ llg, r.phaserTFZ, r.shelxeCC, success  ]  )
-        
-
+#         
+# print sp
+# print sn
+# print nsuccess
 
 # molrepSuccess=0
 # phaserSuccess=0
