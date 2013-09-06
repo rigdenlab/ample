@@ -19,27 +19,64 @@ fh.close()
 
 
 TMdir = "/media/data/shared/TM"
-rundir="/home/jmht/Documents/test"
+rundir="/home/jmht/Dropbox/MRes/Project/Thesis/Analysis"
 
 
-failed = []
-success = []
 
-CC = [ r.shelxeCC for r in allResults ]
-cpath = os.path.join( rundir, 'plot.csv' )
-csvfile =  open( cpath, 'wb')
-csvwriter = csv.writer(csvfile, delimiter=',',
-                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
-
-csvwriter.writerow( ["CC"] )
-for p in CC:
-    if not p:
-        p = -1
-    csvwriter.writerow( [p] )
+pdata = [ ['phaserLLG','phaserTFZ','CC','success'] ]
+count=0
+for r in allResults:
+    success=0
+    if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
+        jsuccess=1
     
-csvfile.close()
+    if r.mrProgram == 'phaser' and r.phaserLLG != None and r.phaserTFZ != None:
+        count+=1
+        pdata.append( [ r.phaserLLG, r.phaserTFZ, r.shelxeCC, success  ]  )
+        
+print "GOT COUNT",count
+
+
+
+# molrepSuccess=0
+# phaserSuccess=0
+# molrepFail=0
+# phaserFail=0
+# 
+# for r in allResults:
+#     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
+#         if r.mrProgram == 'phaser':
+#             phaserSuccess += 1
+#         else:
+#             molrepSuccess += 1
+#     else:
+#         if r.mrProgram == 'phaser':
+#             phaserFail += 1
+#         else:
+#             molrepFail += 1
+#             
+# print "Molrep: {0}:{1}".format( molrepSuccess, molrepFail)
+# print "Phaser: {0}:{1}".format( phaserSuccess, phaserFail)
+# print "TOTAL ",molrepSuccess+molrepFail+phaserSuccess+phaserFail
+# sys.exit()
+
+# CC = [ r.shelxeCC for r in allResults ]
+# cpath = os.path.join( rundir, 'plot.csv' )
+# csvfile =  open( cpath, 'wb')
+# csvwriter = csv.writer(csvfile, delimiter=',',
+#                         quotechar='"', quoting=csv.QUOTE_MINIMAL)
+# 
+# csvwriter.writerow( ["CC"] )
+# for p in CC:
+#     if not p:
+#         p = -1
+#     csvwriter.writerow( [p] )
+#     
+# csvfile.close()
 
 # duff=99999
+# failed = []
+# success = []
 # pdata = [ ['reforiginRmsd','ensembleNativeMaxsub','success'] ]
 # for r in allResults:
 #     jsuccess=None
@@ -73,7 +110,6 @@ csvfile.close()
 
 
 
-sys.exit(0)
 
 cpath = os.path.join( rundir, 'plot.csv' )
 csvfile =  open( cpath, 'wb')
@@ -85,6 +121,7 @@ for p in pdata:
     
 csvfile.close()
 
+sys.exit(0)
 # sfail=0
 # for s in success:
 #     if s.reforiginRmsd == duff:
