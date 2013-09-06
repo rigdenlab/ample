@@ -12,30 +12,113 @@ import csv
 import os
 from analyse_run import AmpleResult
 
+
+TMdir = "/media/data/shared/TM"
+rundir="/home/jmht/Dropbox/MRes/Project/Thesis/Analysis"
+rundir="/Users/jmht/Dropbox/MRes/Project/Thesis/Analysis"
+
 f = "/home/jmht/Documents/test/ar_results.pkl"
+f = "/Users/jmht/Dropbox/MRes/Project/Thesis/Analysis/ar_results.pkl"
 fh = open(f)
 allResults = cPickle.load( fh )
 fh.close()
 
-
-TMdir = "/media/data/shared/TM"
-rundir="/home/jmht/Dropbox/MRes/Project/Thesis/Analysis"
-
-
-
-pdata = [ ['phaserLLG','phaserTFZ','CC','success'] ]
 count=0
+pdata = [ ['phaserLLG','phaserTFZ','CC','success'] ]
 for r in allResults:
     success=0
     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
-        jsuccess=1
-    
+        success=1
+     
     if r.mrProgram == 'phaser' and r.phaserLLG != None and r.phaserTFZ != None:
         count+=1
-        pdata.append( [ r.phaserLLG, r.phaserTFZ, r.shelxeCC, success  ]  )
-        
-print "GOT COUNT",count
+        llg = r.phaserLLG
+        if llg < 0:
+            llg = -10
+        pdata.append( [ llg, r.phaserTFZ, r.shelxeCC, success  ]  )
 
+
+
+# r1=0
+# r2=0
+# r3=0
+# polya=0
+# reliable=0
+# allatom=0
+# nensembles=[]
+# nsuccess=0
+# for r in allResults:
+#     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
+#         nsuccess += 1
+#         if r.ensembleRadiusThreshold == 1:
+#              r1+=1
+#         elif r.ensembleRadiusThreshold == 2:
+#              r2+=1
+#         elif r.ensembleRadiusThreshold == 3:
+#              r3+=1
+#         else:
+#             raise RuntimeError,"BAD RADIUS"
+# 
+#         if r.ensembleSideChainTreatment == 'SCWRL_reliable_sidechains':
+#              reliable+=1
+#         elif r.ensembleSideChainTreatment == 'poly_ala':
+#              polya+=1
+#         elif r.ensembleSideChainTreatment == 'All_atom':
+#              allatom+=1
+#         else:
+#             raise RuntimeError,"BAD sidechain"
+#         
+#         nensembles.append( r.ensembleNumModels )
+#         
+# 
+# print "r1% = {0}".format( (float(r1)/nsuccess)*100   )
+# print "r2% = {0}".format( (float(r2)/nsuccess)*100   )
+# print "r3% = {0}".format( (float(r3)/nsuccess)*100   )
+# print r1+r2+r3
+# print "polya% = {0}".format( (float(polya)/nsuccess)*100   )
+# print "reliable% = {0}".format( (float(reliable)/nsuccess)*100   )
+# print "allatom% = {0}".format( (float(allatom)/nsuccess)*100   )
+# 
+# cpath = os.path.join( rundir, 'plot.csv' )
+# csvfile =  open( cpath, 'wb')
+# csvwriter = csv.writer(csvfile, delimiter=',',
+#                         quotechar='"', quoting=csv.QUOTE_MINIMAL)
+#  
+# csvwriter.writerow( ["numModels"] )
+# for n in nensembles:
+#     csvwriter.writerow( [n] )
+# csvfile.close()
+# sys.exit()
+
+# pdata = [ ['phaserLLG','phaserTFZ','CC','success'] ]
+# count=0
+# for r in allResults:
+#     success=0
+#     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
+#         success=1
+#     
+#     if r.mrProgram == 'phaser' and r.phaserLLG != None and r.phaserTFZ != None:
+#         count+=1
+#         llg = r.phaserLLG
+#         if llg < 0:
+#             llg = -10
+#         pdata.append( [ llg, r.phaserTFZ, r.shelxeCC, success  ]  )
+
+
+# pdata = [ ['phaserLLG','phaserTFZ','CC','success'] ]
+# count=0
+# for r in allResults:
+#     success=0
+#     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
+#         success=1
+#     
+#     if r.mrProgram == 'phaser' and r.phaserLLG != None and r.phaserTFZ != None:
+#         count+=1
+#         llg = r.phaserLLG
+#         if llg < 0:
+#             llg = -10
+#         pdata.append( [ llg, r.phaserTFZ, r.shelxeCC, success  ]  )
+        
 
 
 # molrepSuccess=0
