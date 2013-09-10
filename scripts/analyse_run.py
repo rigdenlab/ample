@@ -44,6 +44,32 @@ TO THINK ABOUT
 * multiple models/chains in native
 * multiple chains in solution (e.g. 3PCV)
 
+Strategy:
+for each PDB structure
+Extract Data (e.g. resolution,length) from native PDB.
+Extract DSSP data from native DSSP file.
+Extract secondary structure prediction (SSP) from fragment prediction.
+Compare DSSP and SSP data.
+Extract Maxsub and RMSD data from ROSETTA score file for all models.
+For each result:
+Determine the ensemble that generated the result.
+Extract data on ensemble from serialised file for run.
+Extract data on MRBUMP MR job from logfiles
+
+Calculate RMSD:
+Standardise native PDB (most probable conformation, HETATM etc.).
+Loop over each chain in the native extracting chain to file:
+Loop over each chain in refined PDB extracting to file
+Calculate map between native and model - NEED FULL FILE?
+strip native PDB to C-alpha atoms
+create a PDB containing only those ATOMS from native that are in refined PDB
+and renaming the chain and renumbering the atoms to match the refined PDB.
+Use reforigin to compare.
+
+
+
+
+
 '''
 
 import cPickle
@@ -156,11 +182,12 @@ class AmpleResult(object):
         return [ getattr(self, a) for a in self.orderedAttrs if a not in self.skip ]
     
     def titlesAsList(self):
-        l = []
-        for i, t in enumerate( self.orderedTitles ):
-            if self.orderedAttrs[i] not in self.skip:
-                l.append( t )
-        return l
+#         l = []
+#         for i, t in enumerate( self.orderedTitles ):
+#             if self.orderedAttrs[i] not in self.skip:
+#                 l.append( t )
+#         return l
+        return [ t for i, t in enumerate( self.orderedTitles ) if self.orderedAttrs[i] not in self.skip ]
     
     def asDict(self):
         """Return ourselves as a dict"""
@@ -545,9 +572,11 @@ class ReforiginRmsd(object):
     def __init__( self, nativePdb, refinedPdb, refModelPdb):
         
         
-        self.cAlphaOnly = True # Wether to only compare c-alpha atoms
+        self.cAlphaOnly = True # Whether to only compare c-alpha atoms
         self.rmsd = None
-        self.bestChains = None
+        self.bestNativeChain = None
+        self.bestRefinedChain = None
+        self.bestLogfile = None
         self.refModelPdb = refModelPdb
         
         self.run( nativePdb, refinedPdb )
@@ -581,7 +610,7 @@ class ReforiginRmsd(object):
         if not rms:
             raise RuntimeError, "Error extracting RMS from logfile: {0}".format( logfile )
         
-        return rms
+        return ( rms, logfile )
 
     def reforigin_rmsd( self, refinedPdb, nativePdb, nativeChainID=None ):
         """Use reforigin to calculate rmsd between native and refined"""
@@ -622,7 +651,7 @@ class ReforiginRmsd(object):
         native_chains = nativeInfo.models[ 0 ].chains
         refined_chains = refinedInfo.models[ 0 ].chains # only ever one model in the refined pdb
             
-        rmsds = {} # dict of rmsd -> ( chainIDnative, chainIDrefined )
+        rmsds = {} # dict of rmsd -> ( chainIDnative, chainIDrefined, reforiginLogfile )
         
         # Match each chain in native against refined and pick the best
         for nativeChainID in native_chains:
@@ -654,13 +683,13 @@ class ReforiginRmsd(object):
                 
                 #print "calculating for {0} vs. {1}.".format( refinedChainPdb, nativeChainPdb  )
                 try:
-                    rmsd = self.reforigin_rmsd( refinedChainPdb, nativeChainPdb, nativeChainID=nativeChainID )
+                    rmsd, logfile  = self.reforigin_rmsd( refinedChainPdb, nativeChainPdb, nativeChainID=nativeChainID )
                 except:
                     print "GOT REFORIGIN ERROR for {0},{1},{2}".format( refinedChainPdb, nativeChainPdb, nativeChainID )
                     rmsd = 99999
                 #print "got rmsd chain ",rmsd
                 
-                rmsds[ rmsd ] = ( nativeChainID, refinedChainID )
+                rmsds[ rmsd ] = ( nativeChainID, refinedChainID, logfile )
                 
         # End loop over chains
         # Now pick the best...
@@ -668,7 +697,9 @@ class ReforiginRmsd(object):
         #print "Got rmsds over chains: {0}".format( rmsds )
         
         self.rmsd = rmsd
-        self.bestChains = rmsds[ rmsd ]
+        self.bestNativeChain = rmsds[ rmsd ][0]
+        self.bestRefinedChain = rmsds[ rmsd ][1]
+        self.bestLogfile = rmsds[ rmsd ][2]
         #print "best chain rmsd is {0} for nativeChain {1} vs refinedChain {2}".format( self.rmsd, self.bestChains[0], self.bestChains[1] )
             
         return
