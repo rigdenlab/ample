@@ -85,6 +85,7 @@ sys.path.append("/opt/ample-dev1/python")
 import ample_util
 import mrbump_results
 import pdb_edit
+import residue_map
 
 
 
@@ -849,19 +850,21 @@ class ReforiginRmsd(object):
         return rms
 
     def reforigin_rmsd( self, refinedPdb, nativePdb, nativeChainID=None ):
-        """Use reforigin to calculate rmsd between native and refined"""
+        """Use reforigin to calculate rmsd between native and refined.
+        
+        NB: Still have a bug with (e.g. 2UUI) where the final residue in the native file only has
+        an N for the last residue (ALA 150). If we calculate a map and then strip to C-alpha, there
+        is a missing residue.
+        """
         
         workdir=os.getcwd()
         
         # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
-        PE = pdb_edit.PDBEdit()
-        resSeqMap = PE.get_resseq_map( nativePdb, self.refModelPdb )
+        resSeqMap = residue_map.residueSequenceMap( nativePdb, self.refModelPdb )
         
-        # Find out if there are extra atoms in the model that we need to remove
-        extra = resSeqMap.modelExtra()
-        if len(extra):
-            
-            #print "GOT EXTRA ",extra
+        # Find out if there are atoms in the model that we need to remove
+        incomparable = resSeqMap.incomparable()
+        if len( incomparable ):
             
             n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
             refinedPdbCut = os.path.join( workdir, n+"_cut.pdb" )
@@ -871,7 +874,7 @@ class ReforiginRmsd(object):
             
             # Build up stdin - I'm too thick to work out the selection syntax for a discrete list
             stdin = ""
-            for e in extra:
+            for e in incomparable:
                 stdin += "delresidue {0}\n".format( e )
             
             retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=workdir, dolog=False, stdin=stdin)
@@ -885,6 +888,7 @@ class ReforiginRmsd(object):
             refinedPdb = refinedPdbCut
             
         
+        PE = pdb_edit.PDBEdit()
         if self.cAlphaOnly:
             # If only alpha atoms are required, we create a copy of the model with only alpha atoms
             n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
@@ -957,14 +961,13 @@ class ReforiginRmsd(object):
                 
                 #print "calculating for {0} vs. {1}".format( refinedChainID, nativeChainID  )
                 #print "calculating for {0} vs. {1}".format( refinedChainPdb, nativeChainPdb  )
-                rmsd, refPdb  = self.reforigin_rmsd( refinedChainPdb, nativeChainPdb, nativeChainID=nativeChainID )
-#                 try:
-#                     rmsd, logfile  = self.reforigin_rmsd( refinedChainPdb, nativeChainPdb, nativeChainID=nativeChainID )
-#                 except:
-#                     print "GOT REFORIGIN ERROR for {0},{1},{2}".format( refinedChainPdb, nativeChainPdb, nativeChainID )
-#                     rmsd = 99999
-#                     logfile= None
-                #print "got rmsd chain ",rmsd
+                try:
+                    rmsd, refPdb  = self.reforigin_rmsd( refinedChainPdb, nativeChainPdb, nativeChainID=nativeChainID )
+                except RuntimeError, e:
+                    print "GOT REFORIGIN ERROR for {0},{1},{2}".format( refinedChainPdb, nativeChainPdb, nativeChainID )
+                    print e
+                    rmsd = 99999
+                    refPdb = None
                 
                 rmsds[ rmsd ] = ( nativeChainID, refinedChainID, refPdb )
                 
@@ -1135,7 +1138,9 @@ if __name__ == "__main__":
     resultsDict = cPickle.load( f  )
     f.close()
     
+    rundir = "/Users/jmht/Documents/AMPLE/data/run"
     rundir = "/home/jmht/Documents/test/new"
+    TMdir = "/Users/jmht/Documents/AMPLE/data"
     TMdir = "/media/data/shared/TM"
     os.chdir( rundir )
     
@@ -1145,7 +1150,7 @@ if __name__ == "__main__":
     # fails 2UUI, 3OUF, 3PCV, 3RLB, 3U2F
     
     for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "3PCV" ]:
+    #for pdbcode in [ "2UUI" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1196,6 +1201,9 @@ if __name__ == "__main__":
         
         # Loop over each result
         for mrbumpResult in resultsDict[ pdbcode ]:
+        #r = mrbump_results.ResultsSummary( os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
+        #r.extractResults()
+        #for mrbumpResult in r.results:
             
             #print "processing result ",mrbumpResult
             
@@ -1222,6 +1230,9 @@ if __name__ == "__main__":
                 # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
+            
+            #if ensembleName != "SCWRL_reliable_sidechains_trunc_69.729829_rad_3":
+            #    continue
             
             # Extract information on the models and ensembles
             eresults = ampleDict['ensemble_results']
