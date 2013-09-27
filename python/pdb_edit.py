@@ -712,9 +712,17 @@ class PDBEdit(object):
                     for _ in range( maxread ):
                         line = f.readline()
                         if line.find("SOLVENT CONTENT") != -1:
-                            info.solventContent = float( line.split()[-1] )
+                            try:
+                                info.solventContent = float( line.split()[-1] )
+                            except ValueError:
+                                # Leave as None
+                                pass
                         if line.find("MATTHEWS COEFFICIENT") != -1:
-                            info.matthewsCoefficient = float( line.split()[-1] )
+                            try:
+                                info.matthewsCoefficient = float( line.split()[-1] )
+                            except ValueError:
+                                # Leave as None
+                                pass
             #End REMARK
 
 
