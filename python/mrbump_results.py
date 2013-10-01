@@ -20,6 +20,7 @@ class MrBumpResult(object):
         """
         self.jobDir = None # directory jobs ran in
         self.resultDir = None # where the actual results are
+        self.pdb = None # The refmac-refined pdb
         self.name = None
         self.program = None
         self.solution = None
@@ -54,29 +55,19 @@ class ResultsSummary(object):
         self.mrbump_dir = mrbump_dir
         self.results = []
         
-        # List of all the possible column titles
-        self.columnTitles = [ 'Model_Name',
-                             'MR_Program',
-                             'Solution_Type',
-                             'final_Rfact',
-                             'final_Rfree',
-                             'Bucc_final_Rfact',
-                             'Bucc_final_Rfree',
-                             'ARP_final_Rfact',
-                             'ARP_final_Rfree',
-                             'SHELXE_CC' ]
-        
-        # list of attributes of the result object that match the columnTitles (same order)
-        self.resultAttr = [ 'name',
-                           'program',
-                           'solution',
-                           'rfact',
-                           'rfree',
-                           'buccRfact',
-                           'buccRfree',
-                           'arpWarpRfact',
-                           'arpWarpRfree',
-                           'shelxCC' ]
+        # List of all the possible column titles and their result object attributes
+        self.title2attr = { 
+                            'Model_Name' :'name',
+                            'MR_Program': 'program',
+                            'Solution_Type': 'solution',
+                            'final_Rfact' : 'rfact',
+                            'final_Rfree' :'rfree',
+                            'Bucc_final_Rfact' :'buccRfact',
+                            'Bucc_final_Rfree' :'buccRfree',
+                            'ARP_final_Rfact' : 'arpWarpRfact',
+                            'ARP_final_Rfree' :'arpWarpRfree',
+                            'SHELXE_CC' : 'shelxCC' 
+                             }
         
         self.logger = logging.getLogger()
         
@@ -147,8 +138,7 @@ class ResultsSummary(object):
                 continue
             
             firstLine = True
-            # This maps the index of data field to the index of the columnTitle and resultAttr 
-            fieldIndex = [ None ] * len( self.columnTitles )
+            
             # Read results table to get the results
             for line in open(resultsTable):
                 
@@ -158,24 +148,37 @@ class ResultsSummary(object):
                 
                 line = line.strip()
                 if firstLine:
+                    
                     # Processing header
                     firstLine=False
                     header = line.split()
                     nfields = len(header) # count as check
-                    for i, f in enumerate( header ):
+                    badHeader=False
+                    for f in header:
                         # Map the data fields to their titles
-                        try:
-                            findex = self.columnTitles.index( f )
-                            fieldIndex[ findex ] = i
-                        except ValueError:
-                            self.logger.critical("jobDir {0}: Problem getting headerline: {1}".format( jobDir, line ) )
+                        if f not in self.title2attr.keys():
+                            result = MrBumpResult()
+                            result.jobDir = jobDir
+                            self.logger.critical("jobDir {0}: Problem with field {1} in headerline: {2}".format( jobDir, f, line ) )
                             result.header = header
-                            result.solution = "corrupted-header-resultsTable.dat"
+                            result.solution = "problem-header-resultsTable.dat"
                             self._getUnfinishedResult( result )
                             self.results.append( result )
-                            break
-                    continue
+                            badHeader=True
+                            break # break out of header check
+                    
+                    if badHeader:
+                        # break out of reading this results table
+                        break
+                    else:
+                        # Got a valid header so continue reading file
+                        continue
                     # End header processing
+                   
+                # Create a result object for each line in the output file
+                result = MrBumpResult()
+                result.jobDir = jobDir
+                    
                 result.header = header
                 
                 fields = line.split()
@@ -187,18 +190,14 @@ class ResultsSummary(object):
                     self.results.append( result )
                     break
                 
-                # Now set all attributes of the result object
-                for i, f in enumerate( fields ):
-                    # Strip loc0_ALL_ from front and strip  _UNMOD from end from (e.g.): loc0_ALL_All_atom_trunc_0.34524_rad_1_UNMOD
-                    #result.name = fields[0][9:-6]
-                    # Don't do the above yet till we've finsihed the next set of runs
-                    findex = fieldIndex.index( i )
-                    attr = self.resultAttr[findex]
-                    if attr == 'program':
-                        setattr( result, attr, f.lower() )
+                # The headers tell us what attribute is in each column, so we use these and the header2attr dict to 
+                # set the results
+                for i, title in enumerate(header):
+                    if title == 'MR_Program':
+                        setattr( result, self.title2attr[title], fields[i].lower() )
                     else:
-                        setattr( result, attr, f )
-
+                        setattr( result, self.title2attr[title], fields[i] )
+                    
                 if result.program not in ['phaser','molrep']:
                     raise RuntimeError,"getResult, unrecognised program in line: {0}".format(line)
                 
@@ -210,6 +209,11 @@ class ResultsSummary(object):
                 resultDir = os.path.join( result.jobDir,'data',dirName,'unmod','mr',result.program,'refine' )
                 #print resultDir
                 result.resultDir = resultDir
+                
+                # Need to reconstruct final pdb from directory and program name
+                pdbName = "refmac_" + result.program + "_loc0_ALL_"  + ensemble + "_UNMOD.pdb"
+                result.pdb = os.path.join( resultDir, pdbName )
+                
                 self.results.append( result )
 
         if not header or not len(header):
@@ -260,7 +264,7 @@ class ResultsSummary(object):
         self.arpWarpRfact = -1
         self.arpWarpRfree = -1
         self.buccRfact = -1
-        self.buccRfree = -1 
+        self.buccRfree = -1
         
     def sortResults( self ):
         """
@@ -288,7 +292,7 @@ class ResultsSummary(object):
         if got:
             return self.summaryString()
         else:
-            return "\n!!! No results found in directory: {0}\n".format( mrbump_dir )
+            return "\n!!! No results found in directory: {0}\n".format( self.mrbump_dir )
     
     def summaryString( self ):
         """Return a string suitable for printing the sorted results"""
@@ -301,8 +305,7 @@ class ResultsSummary(object):
         for result in self.results:
             resultLine = []
             for h in result.header:
-                i = self.columnTitles.index( h )
-                resultLine.append( getattr( result, self.resultAttr[i] ) )
+                resultLine.append( getattr( result, self.title2attr[h] ) )
             resultsTable.append( resultLine )
 
         # Format the results

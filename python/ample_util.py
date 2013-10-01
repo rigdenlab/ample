@@ -168,10 +168,18 @@ def get_psipred_prediction(psipred):
 
 ########
 
-def make_workdir(work_dir, rootname='ROSETTA_MR_'):
+def make_workdir(work_dir, ccp4_jobid=None, rootname='ROSETTA_MR_'):
     """
     Make a work directory rooted at work_dir and return its path
     """
+    
+    if ccp4_jobid:
+        dname = os.path.join( work_dir, rootname + str(ccp4_jobid) )
+        if os.path.exists(dname):
+            raise RuntimeError,"There is an existing AMPLE CCP4 work directory: {0}\nPlease delete/move it aside."
+        os.mkdir(dname)
+        return dname
+    
     run_inc = 0
     run_making_done = False
     while not run_making_done:
@@ -194,6 +202,8 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     directory (optional) - the directory to run the job in (cwd assumed)
     dolog: bool - whether to output info to the system log
     """
+    
+    assert type(cmd) is list
     
     if not directory:
         directory = os.getcwd()
@@ -266,7 +276,15 @@ def setup_logging():
     logger.addHandler(cl)
     
     return logger
-        
+
+def tmpFileName():
+    """Return a filename for a temporary file"""
+
+    # Get temporary filenames
+    t = tempfile.NamedTemporaryFile(dir=os.getcwd(), delete=True)
+    tmp1 = t.name
+    t.close()
+    return tmp1
 
 
 class TestUtil(unittest.TestCase):

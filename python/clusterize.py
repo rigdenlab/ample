@@ -32,10 +32,7 @@ class ClusterRun:
         self.runningQueueList=[]
         self.QTYPE=""
 
-        #jmht
         self.modeller = None
-        self.SCWRL_EXE=""
-        self.USE_SCWRL=False
 
         self.RunDir=""
         #self.jobLogsList=[]
@@ -51,12 +48,6 @@ class ClusterRun:
             self.pdbsetEXE=os.path.join(os.environ["CCP4"], "bin", "pdbset")
 
         self.logger =  logging.getLogger()
-
-    def set_USE_SCWRL(self, bool):
-        self.USE_SCWRL=bool
-
-    def setScwrlEXE(self, exePath):
-        self.SCWRL_EXE=exePath
 
     def setModeller(self, modeller):
         """Set the Rosetta Modeller object"""
@@ -287,12 +278,11 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 
         "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" +
         "popd\n\n"  )
-        if self.USE_SCWRL :
-
-            file.write(self.SCWRL_EXE + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
+        if self.modeller.use_scwrl:
+            file.write( self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
             "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" +
              "\n")
-        if not self.USE_SCWRL :
+        else:
             file.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )
 
         # Clean up non-essential files unless we are debugging
@@ -317,6 +307,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             fileNumber="000000" + str(jobNumber)
         elif jobNumber>=100 and jobNumber<1000:
             fileNumber="00000" + str(jobNumber)
+        
         elif jobNumber>=1000 and jobNumber<10000:
             fileNumber="0000" + str(jobNumber)
         elif jobNumber>=10000 and jobNumber<100000:
@@ -371,10 +362,10 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" +
         "popd\n\n"  )
         if self.modeller.use_scwrl:
-            file.write(self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
+            file.write( self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
             "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" +
-             "\n")
-        if not self.modeller.use_scwrl:
+             "\n" )
+        else:
             file.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )
 
         # Clean up non-essential files unless we are debugging
@@ -420,7 +411,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             sh += '#BSUB -o {0}\n'.format(logFile) 
             sh += '#BSUB -J {0}\n\n'.format(jobName)         
         else:
-            raise RuntimeError,"Unrecognised QTYPE: ".format(self.QTYPE)
+            raise RuntimeError,"Unrecognised QTYPE: {0}".format(self.QTYPE)
         
         return sh+'\n\n'
     
@@ -486,52 +477,6 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         return str(qNumber)    
         
-#    def mrBuildOnCluster(self, clusterDir, ensemblePDB, jobID, amoptd ):
-#        """
-#        Run the molecular replacement and model building on a cluster node.
-#        
-#        Args:
-#        clusterDir --
-#        ensemblePDB --
-#        jobID --
-#        amoptd -- dictionary containing job options
-#        
-#        """
-#        
-#        # Create a cluster submission script for this modelling job
-#        jobName="mrBuild_" + str(jobID)
-#        jobName = os.path.splitext( os.path.basename(ensemblePDB) )[0]
-#
-#        #jobDir=os.path.join(clusterDir, "mrbuild_" + str(jobID))
-#        jobDir=clusterDir
-#        #os.mkdir(jobDir)
-#        #os.mkdir(os.path.join(jobDir, "submit_scripts"))
-#        #os.mkdir(os.path.join(jobDir, "logs"))
-#        #sub_script=os.path.join(jobDir, "submit_scripts", "job_" + str(jobID) + ".sub")
-#        sub_script=os.path.join(clusterDir, "job_" + jobName + ".sub")
-#
-#        #modelName=os.path.split(ensemblePDB)[1].replace(".pdb","")
-#        #logFile = os.path.join(jobDir, "logs", "job_" + str(jobID) + '.log')
-#        logFile = os.path.join(clusterDir, "job_" + jobName + '.log')
-#
-#        # Create the submission script
-#        file=open(sub_script, "w")
-#        script_header = self.subScriptHeader( nProcs=amoptd['nproc'], logFile=logFile, jobName=jobName)
-#        file.write(script_header)
-#
-#        file.write("pushd " + jobDir + "\n\n" + 
-#        "export CCP4_SCR $TMPDIR\n\n")
-#        
-#        # Generate the MRBUMP command - up to eof
-#        #mrbCmd = mrbump_cmd.mrbump_cmd( amoptd, jobid=jobID, ensemble_pdb=ensemblePDB )
-#        mrbCmd = mrbump_cmd.mrbump_cmd( amoptd, jobid=jobName, ensemble_pdb=ensemblePDB )
-#        file.write(mrbCmd+'\n\n')
-#        file.write('popd\n\n')
-#
-#        file.close()
-#
-#        job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
-
 
 if __name__ == "__main__":
 

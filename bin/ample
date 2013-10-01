@@ -36,6 +36,7 @@ import clusterize
 import cPickle
 import glob
 import logging
+import shutil
 import time
 
 # Our imports
@@ -78,6 +79,9 @@ parser.add_argument('-buccaneer_cycles', metavar='buccaneer_cycles', type=int, n
 
 parser.add_argument('-CC', metavar='rad of gyration', type=str, nargs=1,
                    help='radius of gyration reweight ')
+
+parser.add_argument('-ccp4_jobid', metavar='ccp4_jobid', type=int, nargs=1,
+                   help='CCP4 job id - only needed when running from the CCP4 GUI')
 
 parser.add_argument('-submit_cluster', metavar='submit_cluster', type=str, nargs=1,
                    help='will submit jobs to a cluster')
@@ -181,6 +185,9 @@ parser.add_argument('-nproc', metavar='NoProcessors', type=int, nargs=1,
 parser.add_argument('-num_clusters', metavar='num clusters to sample', type=int, nargs=1,
                    help='number of clusters to sample')
 
+parser.add_argument('-output_pdb', metavar='output_pdb', type=str, nargs=1,
+                   help='name of the result pdb to output')
+
 parser.add_argument('-percent', metavar='no clus to sample', type=str, nargs=1,
                    help='percent interval for truncation')
 
@@ -201,6 +208,9 @@ parser.add_argument('-rosetta_dir', metavar='Rosetta_dir', type=str, nargs=1,
 
 parser.add_argument('-rosetta_fragments_exe', metavar='path to make_fragments.pl', type=str, nargs=1,
                    help='location of make_fragments.pl')
+
+parser.add_argument('-rosetta_version', metavar='rosetta_version', type=float, nargs=1,
+                   help='the version number of Rosetta')
 
 parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
                    help='directory to put files (default current dir)')
@@ -321,7 +331,7 @@ if not os.path.exists(amopt.d['run_dir']):
     sys.exit()
 
 print 'Making a Run Directory  -checking for previous runs\n'
-amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'] )
+amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'] )
 #amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], rootname="ENSEMBLE_2_" )
 os.chdir( amopt.d['work_dir'] )
 
@@ -330,6 +340,12 @@ logger = ample_util.setup_logging()
 
 # Path for pickling results
 amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
+
+# cluster queueing
+if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
+    msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
+    logger.critical(msg)
+    sys.exit(1)
 
 #jmht - fix these
 FIXED_INPUT = True
@@ -382,7 +398,7 @@ if amopt.d['ensembles_dir']:
         sys.exit(1)
 
     amopt.d['import_ensembles'] = True
-    logger.info("Found directory with ensemble files: {0}\nSetting make_models to False".format( amopt.d['ensembles_dir'] ) )
+    logger.info("Found directory with ensemble files: {0}\n".format( amopt.d['ensembles_dir'] ) )
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
     
@@ -468,13 +484,6 @@ if amopt.d['missing_domain']:
         logger.critical( msg )
         sys.exit(1)
 
-
-# Create the rosetta modeller - this runs all the checks required
-if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
-    logger.info('Making models or fragments so checking ROSETTA options')
-    rosetta_modeller = rosetta_model.RosettaModel()
-    rosetta_modeller.set_from_dict( amopt.d )
-
 # MR programs
 if amopt.d['molrep_only'] and amopt.d['phaser_only']:
         logger.critical('you say you want molrep only AND phaser only, choose one or both')
@@ -497,10 +506,17 @@ else:
 
 amopt.d['maxcluster_exe'] = ample_util.check_for_exe('maxcluster', amopt.d['maxcluster_exe'])
 amopt.d['spicker_exe'] = ample_util.check_for_exe('spicker', amopt.d['spicker_exe'])
+
 if amopt.d['use_scwrl']:
     amopt.d['scwrl_exe'] = ample_util.check_for_exe('Scwrl4', amopt.d['scwrl_exe'] )
 if amopt.d['use_shelxe']:
     amopt.d['shelxe_exe'] = ample_util.check_for_exe('shelxe', amopt.d['shelxe_exe'])
+
+# Create the rosetta modeller - this runs all the checks required
+if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
+    logger.info('Making models or fragments so checking ROSETTA options')
+    rosetta_modeller = rosetta_model.RosettaModel()
+    rosetta_modeller.set_from_dict( amopt.d )
 
 # Check if we need to get any of the flags from the MTZ file
 if amopt.d['sf_cif'] and amopt.d['mtz']:
@@ -808,6 +824,11 @@ logger.info( summary )
 RUNNING.write(summary)
 RUNNING.flush()
 RUNNING.close()
+
+# Copy best pdb to output_pdb - hack - just take best from the first cluster#
+output_pdb = os.path.join( amopt.d['work_dir'], amopt.d['output_pdb'])
+logging.info("Copying result pdb to: {0}\n".format( output_pdb ) )
+shutil.copy2( amopt.d['mrbump_results'][0][0].pdb, output_pdb )
 
 # os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
 # os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')

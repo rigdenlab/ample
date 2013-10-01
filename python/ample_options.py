@@ -2,6 +2,7 @@
 Class to hold the options for ample
 '''
 # python imports
+import copy
 import os
 
 # Our imports
@@ -25,6 +26,7 @@ class AmpleOptions(object):
                             'blast_dir' : None,
                             'buccaneer_cycles' : 5,
                             'CC' : None,
+                            'ccp4_jobid' : None,
                             'debug' : None,
                             'domain_all_chains_pdb' : None,
                             'domain_termini_distance' : 0,
@@ -58,6 +60,7 @@ class AmpleOptions(object):
                             'nr' : None,
                             'num_clusters' : 1,
                             'old_shelx' : False,
+                            'output_pdb' : 'ample_output.pdb',
                             'percent' : 5,
                             'phaser_only' : False,
                             'phenix_exe' : None,
@@ -67,6 +70,7 @@ class AmpleOptions(object):
                             'rosetta_dir' : None,
                             'rosetta_fragments_exe' : None,
                             'rosetta_path' : None,
+                            'rosetta_version' : None,
                             'run_dir' : os.getcwd(),
                             'scwrl_exe' : None,
                             'sf_cif' : None,
@@ -124,6 +128,22 @@ class AmpleOptions(object):
                    otherwise all clusters are summarised
         """
         
+        # List of all the possible column titles and their result object attributes
+        # see python/mrbump_results.py
+        title2attr = { 
+                        'Model_Name' :'name',
+                        'MR_Program': 'program',
+                        'Solution_Type': 'solution',
+                        'final_Rfact' : 'rfact',
+                        'final_Rfree' :'rfree',
+                        'Bucc_final_Rfact' :'buccRfact',
+                        'Bucc_final_Rfree' :'buccRfree',
+                        'ARP_final_Rfact' : 'arpWarpRfact',
+                        'ARP_final_Rfree' :'arpWarpRfree',
+                        'SHELXE_CC' : 'shelxCC' 
+                    }
+        
+        
         if not cluster:
             # Get number of clusters from the length of the mrbump results lists
             clusters = [ i for i in range( len( self.d['mrbump_results'] ) ) ]
@@ -145,38 +165,33 @@ class AmpleOptions(object):
             if self.d.has_key('ensemble_results'):
                 ensemble_results = self.d['ensemble_results'][ cluster ]
             
-                name2e = {}
-                # Get map of name -> ensemble result
+                # Get map of ensemble name -> ensemble result
+                name2result = {}
                 for i, e in enumerate( ensemble_results ):
-                    if name2e.has_key( e.name ):
+                    if name2result.has_key( e.name ):
                         raise RuntimeError, "Duplicate key: {0}".format( e.name )
-                    name2e[ e.name ] = ensemble_results[ i ]
-
-                results_table.append( ("Name", "MR_program", "Solution", "final_Rfact", "final_Rfree", "SHELXE_CC", "#Models", "#Residues") )
-            else:
-                results_table.append( ("Name", "MR_program", "Solution", "final_Rfact", "final_Rfree", "SHELXE_CC" ) )
+                    name2result[ e.name ] = ensemble_results[ i ]
 
             # Assume mrbump_results are already sorted
             mrbump_results = self.d['mrbump_results'][ cluster ]
-            best=None
-            for i, result in enumerate( mrbump_results ):
-                
-                # Remember best result
-                if i == 0:
-                    best = mrbump_results[i]
-                
-                result_summary = [ result.name,
-                                   result.program,
-                                   result.solution,
-                                   result.rfact,
-                                   result.rfree,
-                                   result.shelxCC,
-                                ]
-
+            
+            # Get header from first object - need to copy or the assignment just creates a reference
+            header = copy.copy( mrbump_results[0].header )
+            if ensemble_results:
+                header += [ "#Decoys", "#Residues" ]
+            results_table.append( header )
+            
+            best=mrbump_results[0] # remember best (first) result
+            
+            for result in mrbump_results:
+                result_summary = []
+                for h in result.header:
+                    result_summary.append( getattr( result, title2attr[ h ] )  )
+                    
                 if ensemble_results:
                     # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
                     name = result.name[9:-6]
-                    result_summary += [ name2e[ name ].num_models, name2e[ name ].num_residues ]
+                    result_summary += [ name2result[ name ].num_models, name2result[ name ].num_residues ]
             
                 results_table.append( result_summary )
                 
@@ -185,7 +200,7 @@ class AmpleOptions(object):
             summary += table.pprint_table( results_table )
             
             # Show where it happened
-            summary += '\nBest results so far are in :\n\n'
+            summary += '\nBest results so far are in directory:\n\n'
             summary +=  best.resultDir
         
         return summary
@@ -299,7 +314,7 @@ class AmpleOptions(object):
             pstr += "{0}: {1}\n".format(k, self.d[k])
         
         if self.d['use_scwrl']:
-            pstr+= '\n---3rd party---\nSCWRL {0}\n'.format( self.d['scwrl'] )
+            pstr+= '\n---3rd party---\nSCWRL {0}\n'.format( self.d['scwrl_exe'] )
 
         keys4 = ['missing_domain','domain_all_chains_pdb']
         if keys4[0]:
@@ -332,13 +347,14 @@ if __name__ == "__main__":
     if len(sys.argv) == 2:
         pfile = sys.argv[1]
     else:
-        pfile = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_15/ample_results.pkl"
+        pfile = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_10/resultsd.pkl"
     
     f = open(pfile)
     d = cPickle.load(f)
     
     AD = AmpleOptions()
-    for k,v in d.iteritems():
-        AD.d[k] = v
-        
+    AD.d = d
     print AD.final_summary()
+#    for k,v in d.iteritems():
+#        AD.d[k] = v
+#    print AD.final_summary()
