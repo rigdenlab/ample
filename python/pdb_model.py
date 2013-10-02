@@ -33,6 +33,11 @@ class PdbModel(object):
         self.serial = None
         self.chains = [] # Ordered list of chain IDs
         
+        self.resSeqs = [] # Ordered list of list of resSeqs for each chain - matches order in self.chains
+        self.sequences = [] # Ordered list of list of sequences for each chain - matches order in self.chains
+        self.caMask = [] # Ordered list of list of booleans of residues with no CA atoms - matches order in self.chains
+        self.bbMask = [] # Ordered list of list of boleans of residues with no backbone atoms - matches order in self.chains
+        
         return
 
 class PdbAtom(object):

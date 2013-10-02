@@ -6,10 +6,12 @@ Useful manipulations on PDB files
 import copy
 import os
 import re
+import unittest
 
 # our imports
 import ample_util
 import pdb_model
+import residue_map
 
 
 three2one = {
@@ -163,146 +165,146 @@ class PDBEdit(object):
         return
     
 
-    def get_resseq_map( self, nativePdb, modelPdb ):
-        """Return a ResSeqMap mapping the index of a residue in the model to the corresponding residue in the native.
-        Only works if 1 chain in either file and with standard residues
-        """
-        
-        def _get_indices( pdb ):
-            """Get sequence as string of 1AA
-            get list of matching resSeq
-            """
-            
-            
-            print "GETTING INDICES ",pdb
-            
-            sequence = ""
-            resSeq = []
-            
-            atomTypes = [] # For checking we have all required atom types
-            backbone = [ 'N', 'CA', 'C', 'O','CB' ]
-            
-            backboneMask = []
-            cAlphaMask = []
-            
-            chain=None
-            readingResSeq=None
-            readingResName=None
-            for line in open( pdb ):
-                
-                if line.startswith("MODEL"):
-                    raise RuntimeError,"FOUND MULTI_MODEL FILE!"
-                
-                if line.startswith("ATOM"):
-                    
-                    atom = pdb_model.PdbAtom( line )
-                    
-                    if not chain:
-                        chain = atom.chainID
-                    
-                    if atom.chainID != chain:
-                        raise RuntimeError," FOUND ADDITIONAL CHAIN"
-                        break
-                    
-                    if atom.name not in atomTypes:
-                        atomTypes.append( atom.name.strip() )
-                        
-                    # First atom in first residue
-                    if readingResSeq == None:
-                        readingResSeq = atom.resSeq
-                        readingResName = atom.resName
-                        continue
-                    
-                    if readingResSeq != atom.resSeq:
-                        # Adding a new residue
-                        
-                        
-
-                        
-                        # Add the atom we've just finished reading
-                        sequence += three2one[ readingResName ]
-                        resSeq.append( readingResSeq )
-                        
-                        got=False
-                        if 'CA' not in atomTypes:
-                            cAlphaMask.append( True )
-                            got=True
-                        else:
-                            cAlphaMask.append( False )
-                            
-                        
-                        if not got: # If we haven't got CA we don't need to check
-                            for at in backbone: # If we need to mask this residue for backbone atoms
-                                if at not in atomTypes:
-                                    got=True
-                                    break
-                                    #s = "Atom type {0} is not present in atom types for residue {1} - only got atomTypes: {2}".format( at, readingResSeq, atomTypes )
-                                    #print s
-                                    
-                        if got:
-                            backboneMask.append( True )
-                        else:
-                            backboneMask.append( False )
-                            
-                        
-                        readingResSeq = atom.resSeq
-                        readingResName = atom.resName
-                        atomTypes = []
-                        
-            return ( sequence, resSeq, cAlphaMask, backboneMask )
-      
-        native_seq, native_idx = _get_indices( nativePdb )
-        model_seq, model_idx = _get_indices( modelPdb )
-        
-        # The window of AA we used to check for a match    
-        PROBE_LEN = 10
-        
-        if len(native_seq) < 20 or len(model_seq) < 20:
-            raise RuntimeError,"Very short sequences - this will not work!"
-        
-        # MAXINSET is the max number of AA into the sequence that we will go searching for a match - i.e. if more
-        # then MAXINSET AA are non-matching, we won't find the match 
-        #MAXINSET=30 if len( model_seq ) > 30 else len( model_seq ) - ( PROBE_LEN + 2)
-        if len( model_seq ) > 30:
-            MAXINSET=30
-        else:
-            MAXINSET = len( model_seq ) - ( PROBE_LEN + 2)
-
-        got=False
-        for model_i in range( MAXINSET ):
-            probe = model_seq[ model_i : model_i+PROBE_LEN-1 ]
-            for native_i in range( MAXINSET ):
-                if native_seq[ native_i:native_i+PROBE_LEN-1 ] == probe:
-                    got=True
-                    break
-            
-            if got:
-                #print "GOT MODEL MATCH AT i,j ",model_i,native_i
-                break
-        
-        # Now we know where they start we can sort out the indicies
-        # map goes from the model -> native. For any in model that are not in native we set them to None
-        resMap = residueSequenceMap()
-        resMap.modelResSeq = model_idx
-        
-        for i in range( len( model_seq ) ):
-            
-            if i < model_i:
-                # These are residues that are present in the model but not in the native
-                resMap.nativeResSeq.append( None )
-                continue
-            
-            pos = i - model_i + native_i
-            if pos >= len( native_idx ):
-                resMap.nativeResSeq.append(  None  )
-            else:
-                resMap.nativeResSeq.append(  native_idx[ pos ]  )
-                
-        
-        if resMap.nativeResSeq != resMap.modelResSeq:
-            raise RuntimeError, "Mismatching maps: {0}".format( resMap ) 
-            
-        return resMap
+#     def get_resseq_map( self, nativePdb, modelPdb ):
+#         """Return a ResSeqMap mapping the index of a residue in the model to the corresponding residue in the native.
+#         Only works if 1 chain in either file and with standard residues
+#         """
+#         
+#         def _get_indices( pdb ):
+#             """Get sequence as string of 1AA
+#             get list of matching resSeq
+#             """
+#             
+#             
+#             print "GETTING INDICES ",pdb
+#             
+#             sequence = ""
+#             resSeq = []
+#             
+#             atomTypes = [] # For checking we have all required atom types
+#             backbone = [ 'N', 'CA', 'C', 'O','CB' ]
+#             
+#             backboneMask = []
+#             cAlphaMask = []
+#             
+#             chain=None
+#             readingResSeq=None
+#             readingResName=None
+#             for line in open( pdb ):
+#                 
+#                 if line.startswith("MODEL"):
+#                     raise RuntimeError,"FOUND MULTI_MODEL FILE!"
+#                 
+#                 if line.startswith("ATOM"):
+#                     
+#                     atom = pdb_model.PdbAtom( line )
+#                     
+#                     if not chain:
+#                         chain = atom.chainID
+#                     
+#                     if atom.chainID != chain:
+#                         raise RuntimeError," FOUND ADDITIONAL CHAIN"
+#                         break
+#                     
+#                     if atom.name not in atomTypes:
+#                         atomTypes.append( atom.name.strip() )
+#                         
+#                     # First atom in first residue
+#                     if readingResSeq == None:
+#                         readingResSeq = atom.resSeq
+#                         readingResName = atom.resName
+#                         continue
+#                     
+#                     if readingResSeq != atom.resSeq:
+#                         # Adding a new residue
+#                         
+#                         
+# 
+#                         
+#                         # Add the atom we've just finished reading
+#                         sequence += three2one[ readingResName ]
+#                         resSeq.append( readingResSeq )
+#                         
+#                         got=False
+#                         if 'CA' not in atomTypes:
+#                             cAlphaMask.append( True )
+#                             got=True
+#                         else:
+#                             cAlphaMask.append( False )
+#                             
+#                         
+#                         if not got: # If we haven't got CA we don't need to check
+#                             for at in backbone: # If we need to mask this residue for backbone atoms
+#                                 if at not in atomTypes:
+#                                     got=True
+#                                     break
+#                                     #s = "Atom type {0} is not present in atom types for residue {1} - only got atomTypes: {2}".format( at, readingResSeq, atomTypes )
+#                                     #print s
+#                                     
+#                         if got:
+#                             backboneMask.append( True )
+#                         else:
+#                             backboneMask.append( False )
+#                             
+#                         
+#                         readingResSeq = atom.resSeq
+#                         readingResName = atom.resName
+#                         atomTypes = []
+#                         
+#             return ( sequence, resSeq, cAlphaMask, backboneMask )
+#       
+#         native_seq, native_idx = _get_indices( nativePdb )
+#         model_seq, model_idx = _get_indices( modelPdb )
+#         
+#         # The window of AA we used to check for a match    
+#         PROBE_LEN = 10
+#         
+#         if len(native_seq) < 20 or len(model_seq) < 20:
+#             raise RuntimeError,"Very short sequences - this will not work!"
+#         
+#         # MAXINSET is the max number of AA into the sequence that we will go searching for a match - i.e. if more
+#         # then MAXINSET AA are non-matching, we won't find the match 
+#         #MAXINSET=30 if len( model_seq ) > 30 else len( model_seq ) - ( PROBE_LEN + 2)
+#         if len( model_seq ) > 30:
+#             MAXINSET=30
+#         else:
+#             MAXINSET = len( model_seq ) - ( PROBE_LEN + 2)
+# 
+#         got=False
+#         for model_i in range( MAXINSET ):
+#             probe = model_seq[ model_i : model_i+PROBE_LEN-1 ]
+#             for native_i in range( MAXINSET ):
+#                 if native_seq[ native_i:native_i+PROBE_LEN-1 ] == probe:
+#                     got=True
+#                     break
+#             
+#             if got:
+#                 #print "GOT MODEL MATCH AT i,j ",model_i,native_i
+#                 break
+#         
+#         # Now we know where they start we can sort out the indicies
+#         # map goes from the model -> native. For any in model that are not in native we set them to None
+#         resMap = residueSequenceMap()
+#         resMap._modelResSeqMap = model_idx
+#         
+#         for i in range( len( model_seq ) ):
+#             
+#             if i < model_i:
+#                 # These are residues that are present in the model but not in the native
+#                 resMap._nativeResSeqMap.append( None )
+#                 continue
+#             
+#             pos = i - model_i + native_i
+#             if pos >= len( native_idx ):
+#                 resMap._nativeResSeqMap.append(  None  )
+#             else:
+#                 resMap._nativeResSeqMap.append(  native_idx[ pos ]  )
+#                 
+#         
+#         if resMap._nativeResSeqMap != resMap._modelResSeqMap:
+#             raise RuntimeError, "Mismatching maps: {0}".format( resMap ) 
+#             
+#         return resMap
 
     def keep_matching( self, refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
         """Only keep those atoms in targetpdb that are in refpdb and write the result to outpdb.
@@ -408,9 +410,8 @@ class PDBEdit(object):
             return
         
         # Go through refpdb and find which refResidues are present
-        # ordered list of tuples - ( resSeq, [ list_of_atoms_for_that_residue ] )
         refResidues = []
-        targetResSeq = []
+        targetResSeq = [] # ordered list of tuples - ( resSeq, [ list_of_atoms_for_that_residue ] )
         
         last = None
         chain = -1
@@ -686,6 +687,8 @@ class PDBEdit(object):
         currentModel = None
         currentChain = -1
         
+        modelAtoms = [] # list of models, each of which is a list of chains with the list of atoms
+        
         # Go through refpdb and find which ref_residues are present
         f = open(inpath, 'r')
         line = f.readline()
@@ -725,7 +728,6 @@ class PDBEdit(object):
                                 pass
             #End REMARK
 
-
             if line.startswith("MODEL"):
                 if currentModel:
                     # Need to make sure that we have an id if only 1 chain and none given
@@ -734,34 +736,35 @@ class PDBEdit(object):
                             currentModel.chains[0] = 'A'
                             
                     info.models.append( currentModel )
-                    currentChain = -1
                     
                 # New/first model
                 currentModel = pdb_model.PdbModel()
                 # Get serial
                 currentModel.serial = int(line.split()[1])
+                
+                currentChain = None
+                modelAtoms.append( [] )
             
-            # Check for the first model
-            if not currentModel:
-                if line.startswith('ATOM') or line.startswith('HETATM'):
-                    
-                    # This must be the first model and there should only be one
-                    currentModel = pdb_model.PdbModel()
             
             # Count chains (could also check against the COMPND line if present?)
-            if line.startswith('ATOM') or line.startswith('HETATM'):
-                if line.startswith('ATOM'):
-                    atom = pdb_model.PdbAtom(line)
-                elif line.startswith('HETATM'):
-                    atom = pdb_model.PdbHetatm(line)
+            if line.startswith('ATOM'):
+                
+                # Create atom object
+                atom = pdb_model.PdbAtom(line)
+                
+                # Check for the first model
+                if not currentModel:
+                    # This must be the first model and there should only be one
+                    currentModel = pdb_model.PdbModel()
+                    modelAtoms.append( [] )
             
-                if atom.chainID != currentChain:    
-                    # Need to check if we already have this chain for this model as a changing chain could be a sign
-                    # of solvent molecules
-                    if atom.chainID not in currentModel.chains:
-                        currentModel.chains.append( atom.chainID )
+                if atom.chainID != currentChain:
                     currentChain = atom.chainID
-            
+                    currentModel.chains.append( currentChain )
+                    modelAtoms[ -1 ].append( [] )
+                
+                modelAtoms[ -1 ][-1].append( atom )
+                
             # Can ignore TER and ENDMDL for time being as we'll pick up changing chains anyway,
             # and new models get picked up by the models line
 
@@ -770,11 +773,195 @@ class PDBEdit(object):
         
         # End of reading loop so add the last model to the list
         info.models.append( currentModel )
-                    
+        
         f.close()
         
-        return info
         
+        bbatoms = [ 'N','CA','C','O','CB' ]
+        
+        # Now process the atoms
+        for modelIdx, model in enumerate( info.models ):
+            
+            chainList = modelAtoms[ modelIdx ]
+            
+            for atomList in chainList:
+                
+                # Initialise new chain
+                currentResSeq = atomList[0].resSeq
+                currentResName = atomList[0].resName
+                model.resSeqs.append( [] )
+                model.sequences.append( "" )
+                model.caMask.append( [] )
+                model.bbMask.append( [] )
+                
+                atomTypes = []
+                for i, atom in enumerate( atomList ):
+                    
+                    aname = atom.name.strip()
+                    if atom.resSeq != currentResSeq and i == len(atomList) -1 :
+                        # Edge case - last residue contains one atom
+                        atomTypes = [ aname ]
+                    else:
+                        if aname not in atomTypes:
+                            atomTypes.append( aname )
+                    
+                    if atom.resSeq != currentResSeq or i == len(atomList) -1 :
+                        # End of reading the atoms for a residue
+                        model.resSeqs[ model.chains.index( currentChain ) ].append( currentResSeq  )
+                        model.sequences[ model.chains.index( currentChain ) ] += three2one[ currentResName ]
+                        
+                        if 'CA' not in atomTypes:
+                            model.caMask[ model.chains.index( currentChain ) ].append( True )
+                        else:
+                            model.caMask[ model.chains.index( currentChain ) ].append( False )
+                        
+                        missing=False
+                        for bb in bbatoms:
+                            if bb not in atomTypes:
+                                missing=True
+                                break
+                            
+                        if missing:
+                            model.bbMask[ model.chains.index( currentChain ) ].append( True )
+                        else:
+                            model.bbMask[ model.chains.index( currentChain ) ].append( False )
+                        
+                        currentResSeq = atom.resSeq
+                        currentResName = atom.resName
+                        atomTypes = []
+        
+        return info
+    
+
+    def match_resseq(self, nativePdb=None, modelPdb=None, output=None, resMap=None ):
+        """
+        
+        """
+        
+        assert modelPdb or resMap
+        
+        if not resMap:
+            resMap = residue_map.residueSequenceMap( nativePdb, modelPdb )
+        
+        t = open(nativePdb,'r')
+        out = open(output,'w')
+        
+        chain=None # The chain we're reading
+        residue=None # the residue we're reading
+        
+        for line in t:
+            
+            if line.startswith("MODEL"):
+                raise RuntimeError, "Multi-model file!"
+
+            if line.startswith("ANISOU"):
+                raise RuntimeError, "I cannot cope with ANISOU! {0}".format(line)
+            
+            # Stop at TER
+            if line.startswith("TER"):
+                # we write out our own TER
+                #out.write("TER\n")
+                #break
+                pass
+            
+            if line.startswith("ATOM"):
+                
+                atom = pdb_model.PdbAtom( line )
+
+                # First atom/chain
+                if chain == None:
+                    chain = atom.chainID
+                
+                if atom.chainID != chain:
+                    raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
+                
+                # Get the matching resSeq for the model
+                modelResSeq = resMap.native2model( atom.resSeq )
+                if modelResSeq == atom.resSeq:
+                    out.write( line )
+                else:
+                    atom.resSeq = modelResSeq
+                    out.write( atom.toLine()+"\n" )
+                continue
+            #Endif line.startswith("ATOM")
+            
+            # Output everything else
+            out.write(line)
+            
+        # End reading loop
+        
+        t.close()
+        out.close()
+        
+        return
+
+#     def match_resseq(self, nativePdb, modelPdb, keepAtoms="all", workdir=None, resSeqMap=None ):
+#         """Given a native pdb file and a model pdb file, create a copy of the native that can be directly compared with the model
+#         
+#         args:
+#         nativePdb: 
+#         modelPdb:
+#         keepAtoms: all, backbone or calpha - the atoms which are to be kept for the comparision
+#         
+#         """
+#         
+#         if not workdir:
+#             workdir = os.curdir()
+#         
+#         if not resSeqMap:
+#             # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
+#             resSeqMap = residue_map.residueSequenceMap( nativePdb, modelPdb )
+#         
+#         # Find out if there are atoms in the model that we need to remove
+#         modelIncomparable = resSeqMap.modelIncomparable()
+#         if len( modelIncomparable ):
+#             
+#             n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+#             nativePdbCut = os.path.join( workdir, n+"_cut.pdb" )
+#             
+#             logfile = "{0}.log".format( nativePdbCut )
+#             cmd="pdbcur xyzin {0} xyzout {1}".format( nativePdb, nativePdbCut ).split()
+#             
+#             # Build up stdin - I'm too thick to work out the selection syntax for a discrete list
+#             stdin = ""
+#             for e in modelIncomparable:
+#                 stdin += "delresidue {0}\n".format( e )
+#             
+#             retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=workdir, dolog=False, stdin=stdin)
+#             
+#             if retcode == 0:
+#                 # remove temporary files
+#                 os.unlink(logfile)
+#             else:
+#                 raise RuntimeError,"Error deleting residues {0}".format( modelIncomparable )
+#             
+#             nativePdb = nativePdbCut
+#             
+#         
+#         if keepAtoms == "calpha":
+#             # If only alpha atoms are required, we create a copy of the model with only alpha atoms
+#             n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+#             tmp = os.path.join( workdir, n+"_cAlphaOnly.pdb" )
+#             self.calpha_only( nativePdb, tmp )
+#             nativePdb = tmp
+#         elif keepAtoms == "backbone":
+#             # Strip down to backbone atoms
+#             n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+#             tmp = os.path.join( workdir, n+"_backbone.pdb" )
+#             PE.backbone( nativePdb, tmp  )
+#             nativePdb = tmp
+#         elif keepAtoms == "all":
+#             pass
+#         else:
+#             raise RuntimeError,"Unrecognised keepAtoms: {0}".format( keepAtoms )
+# 
+#         # Now create a PDB with the matching atoms from native that are in refined
+#         n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+#         nativePdbMatch = os.path.join( workdir, n+"_matched.pdb" )
+#         self.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
+#         
+#         return
+    
     def reliable_sidechains(self, inpath=None, outpath=None ):
         """Only output non-backbone atoms for residues in the res_names list.
         """
@@ -839,7 +1026,7 @@ class PDBEdit(object):
         
         return
 
-    def standardise( self, inpdb, outpdb ):
+    def standardise( self, inpdb, outpdb, chain=None ):
         """Rename any non-standard AA, remove solvent and only keep most probably conformation.
         """
     
@@ -849,9 +1036,13 @@ class PDBEdit(object):
         logfile = tmp1+".log"
         cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, tmp1 ).split()
         stdin="""delsolvent
-    noanisou
-    mostprob
-    """
+noanisou
+mostprob
+"""
+        # We are extracting one  of the chains
+        if chain:
+            stdin += "lvchain {0}\n".format( chain )
+    
         retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
         if retcode == 0:
             # remove temporary files
@@ -1025,8 +1216,58 @@ class PDBEdit(object):
         return
 
 
+class Test(unittest.TestCase):
 
-if False:       
+    def testGetInfo1(self):
+        """"""
+
+        pdbfile = "../tests/testfiles/1GU8.pdb"
+        
+        PE = PDBEdit()
+        
+        info = PE.get_info( pdbfile )
+        
+        self.assertEqual( len(info.models), 2 )
+        
+        m1 = info.models[0]
+        self.assertEqual( m1.chains[0], 'A' )
+        self.assertEqual( m1.resSeqs[0], [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219] )
+        self.assertEqual( m1.sequences[0], 'VGLTTLFWLGAIGMLVGTLAFAWAGRDAGSGERRYYVTLVGISGIAAVAYVVMALGVGWVPVAERTVFAPRYIDWILTTPLIVYFLGLLAGLDSREFGIVITLNTVVMLAGFAGAMVPGIERYALFGMGAVAFLGLVYYLVGPMTESASQRSSGIKSLYVRLRNLTVILWAIYPFIWLLGPPGVALLTPTVDVALIVYLDLVTKVGFGFIALDAAATL' )
+        
+        self.assertEqual( m1.caMask[0], [ False ] * 218 )
+        self.assertEqual( m1.bbMask[0], [False, True, False, False, False, False, False, False, False, True, False, False, True, False, False, False, True, False, False, False, False, False, False, False, True, False, False, False, True, False, True, False, False, False, False, False, False, False, False, False, True, False, False, True, False, False, False, False, False, False, False, False, False, False, False, True, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, True, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, True, False, False, False, False, True, False, False, False, False, False, False, False, True, False, True, False, False, False, False, False, True, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, True, False, False, False, False, False, False, False, False, False, True] )
+        
+        m2 = info.models[1]
+        self.assertEqual( m2.chains[0], 'A' )
+        self.assertEqual( m2.resSeqs[0], [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219] )
+        self.assertEqual( m2.sequences[0], 'VGLTTLFWLGAIGMLVGTLAFAWAGRDAGSGERRYYVTLVGISGIAAVAYVVMALGVGWVPVAERTVFAPRYIDWILTTPLIVYFLGLLAGLDSREFGIVITLNTVVMLAGFAGAMVPGIERYALFGMGAVAFLGLVYYLVGPMTESASQRSSGIKSLYVRLRNLTVILWAIYPFIWLLGPPGVALLTPTVDVALIVYLDLVTKVGFGFIALDAAATL' )
+        
+        return
+    
+    def testGetInfo2(self):
+        """"""
+
+        pdbfile = "../tests/testfiles/2UUI.pdb"
+        
+        PE = PDBEdit()
+        
+        info = PE.get_info( pdbfile )
+        
+        self.assertEqual( len(info.models), 1 )
+        
+        m1 = info.models[0]
+        self.assertEqual( m1.chains[0], 'A' )
+        self.assertEqual( m1.resSeqs[0], [ i for i in range(-5,150) ] )
+        self.assertEqual( m1.sequences[0], 'MHHHHHHKDEVALLAAVTLLGVLLQAYFSLQVISARRAFRVSPPLTTGPPEFERVYRAQVNCSEYFPLFLATLWVAGIFFHEGAAALCGLVYLFARLRYFQGYARSAQLRLAPLYASARALWLLVALAALGLLAHFLPAALRAALLGRLRTLLPW' )
+        self.assertEqual( m1.caMask[0], [ False ] * 154 + [ True ] )
+        self.assertEqual( m1.bbMask[0], [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, True, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, True, True, True, True] )
+        
+        return
+
+if __name__ == "__main__":
+    unittest.main()
+
+if __name__ == "__main__" and False:
     #
     # Command-line handling
     #
@@ -1036,12 +1277,8 @@ if False:
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-one_std_chain', action='store_true',
                        help='Take pdb to one model/chain that contains only standard amino acids')
-    
-    group.add_argument('-keep_matching', action='store_true',
-                       help='keep matching atoms')
-    
-    parser.add_argument('-ref_file', type=str,
-                       help='The reference file')
+    group.add_argument('-standardise', action='store_true',
+                       help='Standardise the PDB')
     
     parser.add_argument('input_file',
                        help='The input file - will not be altered')
@@ -1049,20 +1286,25 @@ if False:
     parser.add_argument('output_file',
                        help='The output file - will be created')
     
-    if "__name__" == "__main__":
-        args = parser.parse_args()
-        
-        # Get full paths to all files
-        args.input_file = os.path.abspath( args.input_file )
-        if not os.path.isfile(args.input_file):
-            raise RuntimeError, "Cannot find input file: {0}".format( args.input_file )
-        args.output_file = os.path.abspath( args.output_file )
-        if args.ref_file:
-            args.ref_file = os.path.abspath( args.ref_file )
-            if not os.path.isfile(args.ref_file):
-                raise RuntimeError, "Cannot find ref file: {0}".format( args.ref_file )
-        
-    #     if args.one_std_chain:
-    #         to_1_std_chain( args.input_file, args.output_file )
-    #     elif args.keep_matching:
-    #         keep_matching( args.ref_file, args.input_file, args.output_file )
+    args = parser.parse_args()
+    
+    # Get full paths to all files
+    args.input_file = os.path.abspath( args.input_file )
+    if not os.path.isfile(args.input_file):
+        raise RuntimeError, "Cannot find input file: {0}".format( args.input_file )
+    
+#     if args.output_file:
+#         args.output_file = os.path.abspath( args.output_file )
+#     else:
+#         n = os.path.split( os.path.basename( args.input_file ) )[0]
+#         args.output_file = n+"_std.pdb"
+
+
+
+    PE = PDBEdit()
+    
+    if args.one_std_chain:
+        #to_1_std_chain( args.input_file, args.output_file )
+        pass
+    elif args.standardise:
+        PE.standardise( args.input_file, args.output_file )
