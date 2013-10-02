@@ -74,10 +74,12 @@ Use reforigin to compare.
 
 import cPickle
 import csv
+import glob
 import os
 import re
 import shutil
 import sys
+import types
 import unittest
 
 #sys.path.append("/Users/jmht/Documents/AMPLE/ample-dev1/python")
@@ -86,7 +88,6 @@ import ample_util
 import mrbump_results
 import pdb_edit
 import residue_map
-
 
 
 class AmpleResult(object):
@@ -117,7 +118,7 @@ class AmpleResult(object):
                               'ensembleRadiusThreshold',
                               'ensembleTruncationThreshold',
                               'ensembleNativeRmsd',
-                              'ensembleNativeMaxsub',
+                              'ensembleNativeTM',
                               'mrProgram',
                               'phaserLLG',
                               'phaserTFZ',
@@ -155,7 +156,7 @@ class AmpleResult(object):
                                 "Ensemble radius thresh",
                                 "Ensemble truncation thresh",
                                 'Ensemble Native Rmsd',
-                                'Ensemble Native Maxsub',
+                                'Ensemble Native TM',
                                 "MR program",
                                 "Phaser LLG",
                                 "Phaser TFZ",
@@ -254,6 +255,7 @@ class CompareModels(object):
         
         n = os.path.splitext( os.path.basename( self.targetModel ) )[0]
         logfile = os.path.join( self.workdir, n+"_maxcluster.log" )
+        
         # Run maxcluster in sequence independant mode
         cmd="/opt/maxcluster/maxcluster -in -e {0} -p {1}".format( self.targetModel, self.refModel ).split()
         retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False)
@@ -479,6 +481,179 @@ class EnsemblePdbParser(object):
         self.centroidModelName = self.modelNames[0]
 
         return
+
+class MaxclusterData(object):
+    
+    def __init__(self):
+        self.pairs = None
+        self.rmsd = None
+        self.maxsub = None
+        self.tm = None
+        self.msi = None
+        self.modelName = None
+        self.pdb = None
+        return
+
+    def __str__(self):
+        """List the data attributes of this object"""
+        me = {}
+        for slot in dir(self):
+            attr = getattr(self, slot)
+            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
+              isinstance(attr, types.FunctionType) ):
+                me[slot] = attr
+            
+        return "{0} : {1}".format(self.__repr__(),str(me))
+
+class MaxclusterComparator(object):
+    """
+        
+    # Extract the first chain from the nativePdb
+    
+    # Create a residueSequenceMap and see if the residues match
+    
+    # If not use keep_matching to create a nativePdb that has the correct residue sequence`
+    
+    # Run Maxcluster to compare the models to the native
+    """
+    
+    def __init__(self, nativePdb, modelsDirectory, workdir=None ):
+        
+        
+        self.data = []
+        self.modelsDirectory = modelsDirectory
+        
+        self.workdir = workdir
+        if not self.workdir:
+            self.workdir = os.getcwd()
+        
+        self.maxclusterLogfile = os.path.join( self.workdir, "maxcluster.log" )
+        self.nativePdb = self.prepareNative( nativePdb )
+        
+        self.maxclusterExe = "/Users/jmht/Documents/AMPLE/programs/maxcluster"
+        
+        self.runMaxcluster()
+        
+        self.parseLog( )
+        
+    def prepareNative(self, nativePdb ):
+        """do stuff"""
+        
+        # Find out how many chains and extract the first if > 1
+        
+        PE = pdb_edit.PDBEdit()
+        info = PE.get_info( nativePdb )
+        if len( info.models ) > 1:
+            raise RuntimeError,"More than 1 model."
+        
+        # Check if > 1 chain
+        chainID=None
+        if len( info.models[0].chains ) > 1:
+            chainID=info.models[0].chains[0]
+        
+        # Standardise the native and extract the chain if > 1
+        n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+        nativePdbStd = "{0}_std.pdb".format( n )
+        PE.standardise(nativePdb, nativePdbStd, chain=chainID )
+        nativePdb = nativePdbStd
+        
+        # 1 chain so check if the residues and sequences match
+        model = os.path.join( self.modelsDirectory, "S_00000001.pdb" )
+        resMap = residue_map.residueSequenceMap( nativePdb, model )
+        
+        #if resMap.nativeResSeq != resMap.modelResSeq or resMap.nativeSequence != resMap.model.Sequence:
+        if not resMap.resSeqMatch():
+            #print "RESSEQ DIFFER"
+            
+            # We need to create a copy of the native with numbering matching the model
+            n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+            nativeRenumber = "{0}_renumber.pdb".format( n )
+            PE.match_resseq( nativePdb, model, nativeRenumber, resMap=resMap )
+            
+            nativePdb = nativeRenumber
+        
+        return nativePdb
+        
+    def parseLog(self):
+        
+        self.data = []
+        
+        #INFO  : 1000. 2XOV_clean_ren.pdb vs. /media/data/shared/TM/2XOV/models/S_00000444.pdb  Pairs=  36, RMSD= 3.065, MaxSub=0.148, TM=0.192, MSI=0.148
+        for line in open( self.maxclusterLogfile, 'r' ):
+            
+            if re.match( "INFO *: .* vs\. .* Pairs=", line ):
+                
+                # Remove spaces after = 
+                line = re.sub("= +", "=", line )
+                # Now remove commas
+                line = line.replace(",","")
+                
+                fields = line.split()
+                
+                d = MaxclusterData()
+                d.pdb = fields[5]
+                d.modelName = os.path.split( os.path.basename( fields[5] ) )[0]
+                
+                label, value = fields[6].split( "=" )
+                assert label == "Pairs"
+                d.pairs = int( value )
+                
+                label, value = fields[7].split( "=" )
+                assert label == "RMSD"
+                d.rmsd = float( value )
+                
+                label, value = fields[8].split( "=" )
+                assert label == "MaxSub"
+                d.maxsub = float( value )
+                
+                label, value = fields[9].split( "=" )
+                assert label == "TM"
+                d.tm = float( value )
+                
+                label, value = fields[10].split( "=" )
+                assert label == "MSI"
+                d.msi = float( value )
+                
+                self.data.append( d )
+                
+        return
+
+
+    def tm(self, modelName ):
+        """"""
+        for d in self.data:
+            if d.modelName == modelName:
+                return d.tm
+            
+    def rmsd(self, modelName ):
+        """"""
+        for d in self.data:
+            if d.modelName == modelName:
+                return d.rmsd
+
+    def maxsubSorted(self, reverse=True ):
+         return sorted( self.data, key=lambda data: data.maxsub, reverse=reverse )
+     
+    def runMaxcluster(self):
+        
+        # Generate the list of models
+        pdblist = os.path.join( self.workdir, "models.list")
+        with open( pdblist, 'w' ) as f:
+            f.write( os.linesep.join( glob.glob( os.path.join( self.modelsDirectory, 'S_*.pdb' ) ) ) )
+            
+        
+        # Run Maxcluster
+        cmd = [ self.maxclusterExe, "-e", self.nativePdb, "-l", pdblist, ]
+        retcode = ample_util.run_command( cmd, logfile=self.maxclusterLogfile, dolog=False )
+        
+        if retcode != 0:
+            msg = "non-zero return code for maxcluster in runMaxcluster!"
+            #logging.critical( msg )
+            raise RuntimeError, msg
+     
+    def tmSorted(self, reverse=True ):
+         return sorted( self.data, key=lambda data: data.tm, reverse=reverse )
+
 
 class MolrepLogParser(object):
     """
@@ -863,7 +1038,7 @@ class ReforiginRmsd(object):
         resSeqMap = residue_map.residueSequenceMap( nativePdb, self.refModelPdb )
         
         # Find out if there are atoms in the model that we need to remove
-        incomparable = resSeqMap.incomparable()
+        incomparable = resSeqMap.modelIncomparable()
         if len( incomparable ):
             
             n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
@@ -984,34 +1159,102 @@ class ReforiginRmsd(object):
             
         return
 
+class RosettaScoreData(object):
+    
+    def __init__(self):
+        self.score = None
+        self.rms = None
+        self.maxsub = None
+        self.description = None
+        self.model = None
+        return
+
 class RosettaScoreParser(object):
-    """
-    Class to mine information from a rosetta score file
-    """
-
-    def __init__(self, scorefile):
-
-        self.scorefile = scorefile
+    
+    def __init__(self, directory ):
         
-        self.d = {}
-
-        self.parse()
-
-        return
-
-    def parse(self):
-        """parse"""
-
-        for i, line in enumerate( open( self.scorefile ) ):
-            if i==0:
-                continue 
-            fields = line.split()
-            rmsd = float( fields[ 26 ] )
-            maxsub = float( fields[ 27 ] )
-            description = fields[ 31 ]
-            self.d[ description ] = ( rmsd, maxsub )
-
-        return
+        self.directory = directory
+        
+        self.avgScore = None
+        self.topScore = None
+        self.avgRms = None
+        self.topRms = None
+        self.avgMaxsub = None
+        self.topMaxsub = None
+        
+        self.data = []
+        
+        score_file = os.path.join( directory, "score.fsc")
+        self.parseFile( score_file )
+        
+    def parseFile(self, score_file ):
+        for i, line in enumerate( open(score_file, 'r') ):
+            
+            if i == 0:
+                continue
+            
+            d = RosettaScoreData()
+            
+            fields = line.strip().split()
+            d.score = float(fields[1])
+            d.rms = float(fields[26])
+            d.maxsub = float(fields[27])
+            d.description = fields[ 31 ]
+            #pdb = fields[31]
+            
+            d.model = os.path.join( self.directory, d.description+".pdb" )
+            
+            self.data.append( d )
+        
+        avg = 0
+        self.topScore = self.data[0].score
+        for d in self.data:
+            avg += d.score
+            if d.score < self.topScore:
+                self.topScore = d.score
+        self.avgScore  = avg / len(self.data)
+        
+        avg = 0
+        self.topRms = self.data[0].rms
+        for d in self.data:
+            avg += d.rms
+            if d.rms < self.topRms:
+                self.topRms = d.rms
+        self.avgRms  = avg / len(self.data)
+        
+        avg = 0
+        self.topMaxsub = self.data[0].maxsub
+        for d in self.data:
+            avg += d.maxsub
+            if d.maxsub > self.topMaxsub:
+                self.topMaxsub = d.maxsub
+        self.avgMaxsub  = avg / len(self.data)
+        
+    def maxsubSorted(self, reverse=True ):
+        return sorted( self.data, key=lambda data: data.maxsub, reverse=reverse )
+     
+    def rmsSorted(self, reverse=True ):
+        return sorted( self.data, key=lambda data: data.rms, reverse=reverse )
+    
+    def rms(self, name):
+        for d in self.data:
+            if d.description == name:
+                return d.rms
+            
+    def maxsub(self, name):
+        for d in self.data:
+            if d.description == name:
+                return d.maxsub
+    
+    def __str__(self):
+        s = "Results for: {0}\n".format(self.name)
+        s += "Top score : {0}\n".format( self.topScore )
+        s += "Avg score : {0}\n".format( self.avgScore )
+        s += "Top rms   : {0}\n".format( self.topRms )
+        s += "Avg rms   : {0}\n".format( self.avgRms )
+        s += "Top maxsub: {0}\n".format( self.topMaxsub )
+        s += "Avg maxsub: {0}\n".format( self.avgMaxsub )
+        return s
 
 class ShelxeLogParser(object):
     """
@@ -1125,7 +1368,8 @@ class Test(unittest.TestCase):
         p = ShelxeLogParser( logfile )
         self.assertEqual(37.26, p.CC)
         self.assertEqual(7, p.avgChainLength)
-        
+    
+    
 
 #if __name__ == "__main__":
 #    #import sys;sys.argv = ['', 'Test.testName']
@@ -1149,8 +1393,8 @@ if __name__ == "__main__":
     #for pdbcode in [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
     # fails 2UUI, 3OUF, 3PCV, 3RLB, 3U2F
     
-    for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "2UUI" ]:
+    #for pdbcode in sorted( resultsDict.keys() ):
+    for pdbcode in [ "2XOV" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1175,6 +1419,7 @@ if __name__ == "__main__":
         pdbedit = pdb_edit.PDBEdit()
         nativeInfo = pdbedit.get_info( nativePdb )
         
+        
         # First check if the native has > 1 model and extract the first if so
         if len( nativeInfo.models ) > 1:
             print "nativePdb has > 1 model - using first"
@@ -1189,6 +1434,9 @@ if __name__ == "__main__":
         pdbedit.standardise( nativePdb, nativePdbStd )
         nativePdb = nativePdbStd
         
+        maxComp = MaxclusterComparator( nativePdb, os.path.join( datadir, "models")  )
+        continue
+        
         # Secondary Structure assignments
         sam_file = os.path.join( datadir, "fragments/t001_.rdb_ss2"  )
         psipredP = PsipredParser( sam_file )
@@ -1196,14 +1444,14 @@ if __name__ == "__main__":
         dsspP = DsspParser( dssp_file )
     
         # Get the scores for the models
-        scoreFile = os.path.join( datadir, "models", "score.fsc" )
-        scoreP = RosettaScoreParser( scoreFile )
+        #scoreP = RosettaScoreParser( os.path.join( datadir, "models") )
+        maxComp = MaxclusterComparator( nativePdb, os.path.join( datadir, "models")  )
         
         # Loop over each result
-        for mrbumpResult in resultsDict[ pdbcode ]:
-        #r = mrbump_results.ResultsSummary( os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
-        #r.extractResults()
-        #for mrbumpResult in r.results:
+        r = mrbump_results.ResultsSummary( os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
+        r.extractResults()
+        for mrbumpResult in r.results:
+        #for mrbumpResult in resultsDict[ pdbcode ]:
             
             #print "processing result ",mrbumpResult
             
@@ -1256,10 +1504,11 @@ if __name__ == "__main__":
             # Get the data on the models in the ensemble
             ensembleFile = os.path.join( datadir, "ROSETTA_MR_0/ensembles_1", ensembleName+".pdb" )
             eP = EnsemblePdbParser( ensembleFile )
-            #scoreFile = os.path.join( datadir, "models", "score.fsc" )
-            #scoreP = RosettaScoreParser( scoreFile )
-            ar.ensembleNativeRmsd = scoreP.d[ eP.centroidModelName ][0]
-            ar.ensembleNativeMaxsub = scoreP.d[ eP.centroidModelName ][1]
+            
+            #ar.ensembleNativeRmsd = scoreP.rms( eP.centroidModelName )
+            #ar.ensembleNativeMaxsub = scoreP.maxsub( eP.centroidModelName )
+            ar.ensembleNativeRmsd = maxComp.rms( eP.centroidModelName )
+            ar.ensembleNativeTM = maxComp.tm( eP.centroidModelName )
     
             ar.solution =  mrbumpResult.solution
             # No results so move on
@@ -1278,6 +1527,8 @@ if __name__ == "__main__":
             mrbumpLog = os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( ensembleName, mrbumpResult.program )  )
             mrbumpP = MrbumpLogParser( mrbumpLog )
             ar.estChainsASU = mrbumpP.noChainsTarget
+            
+            continue
             
             # Get the reforigin RMSD of the phaser placed model as refined with refmac
             refinedPdb = os.path.join( resultDir, "refine", "refmac_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
