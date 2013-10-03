@@ -242,10 +242,12 @@ class residueSequenceMap( object ):
         self.nativeOffset = nativeOffset
         
         # Work out how long the match is
+        count=0
         for i in range( self.modelOffset, len( self.modelSequence ) ):
+            
             modelAA = self.modelSequence[ i ]
             
-            y = self.nativeOffset + i
+            y = self.nativeOffset + count
             if y >= len( self.nativeSequence ):
                 break
             
@@ -253,9 +255,10 @@ class residueSequenceMap( object ):
             #print "matching {0} to {1}".format( modelAA, nativeAA )
             if modelAA != nativeAA:
                 break 
+            
+            count +=1
         
-        self.lenMatch = i
-        #print "GOT LEN MATCH ",self.lenMatch
+        self.lenMatch = count
             
         return
     
@@ -349,60 +352,9 @@ class residueSequenceMap( object ):
 
 class Test(unittest.TestCase):
 
-    def XtestRefSeqMap(self):
-        """See if we can sort out the indexing between the native and model"""
-        
-        
-        nativePdb = "/media/data/shared/TM/3RLB/3RLB.pdb"
-        modelPdb = "/media/data/shared/TM/3RLB/models/S_00000001.pdb" 
 
-        #modelSeq = "MHHHHHHHHAMSNSKFNVRLLTEIAFMAALAFIISLIPNTVYGWIIVEIACIPILLLSLRRGLTAGLVGGLIWGILSMITGHAYILSLSQAFLEYLVAPVSLGIAGLFRQKTAPLKLAPVLLGTFVAVLLKYFFHFIAGIIFWSQYAWKGWGAVAYSLAVNGISGILTAIAAFVILIIFVKKFPKLFIHSNY"
-        #modelIdx = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192 ]
-        #nativeSeq = "NVRLLTEIAFMAALAFIISLIPNTVYGWIIVEIACIPILLLSLRRGLTAGLVGGLIWGILSMITGHAYILSLSQAFLEYLVAPVSLGIAGLFRQKTAPLKLAPVLLGTFVAVLLKYFFHFIAGIIFWSQYAWKGWGAVAYSLAVNGISGILTAIAAFVILIIFVKKFPKLFIHSNY"
-        nativeIdx = [ 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182 ]
-        
-        nativeResSeq = [ None ] * 16 + nativeIdx
-        
-        PE = pdb_edit.PDBEdit()
-        
-        tmpf = ample_util.tmpFileName()+".pdb"
-        PE.extract_chain( nativePdb, tmpf, chainID='A' )
-        
-        refSeqMap = PE.get_resseq_map( tmpf, modelPdb )
-        
-        self.assertEqual( refSeqMap._nativeResSeqMap, nativeResSeq, "map doesn't match")
-        
-        os.unlink( tmpf )
-        
-        return
-    
-    def XtestRefSeqMap2(self):
-        """See if we can sort out the indexing between the native and model"""
-        
-        
-        nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
-        modelPdb = "/media/data/shared/TM/3U2F/models/S_00000001.pdb" 
 
-        nativeResSeq = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, None, None ]
-        
-        PE = pdb_edit.PDBEdit()
-        
-        tmp1 = ample_util.tmpFileName()+".pdb"
-        PE.standardise( nativePdb, tmp1 )
-        
-        tmp2 = ample_util.tmpFileName()+".pdb"
-        PE.extract_chain( tmp1, tmp2, chainID='K' )
-        
-        refSeqMap = PE.get_resseq_map( tmp2, modelPdb )
-        
-        self.assertEqual( refSeqMap._nativeResSeqMap, nativeResSeq, "map doesn't match")
-        
-        os.unlink( tmp1 )
-        os.unlink( tmp2 )
-        
-        return
-
-    def testResSeqMap3(self):
+    def testResSeqMap1(self):
         """See if we can sort out the indexing between the native and model"""
 
         resSeqMap = residueSequenceMap()
@@ -432,10 +384,35 @@ class Test(unittest.TestCase):
         self.assertEqual( resSeqMap.modelIncomparable(), [-5,-4,-1, 0, 7, 8, 9, 10, 11, 12] )
         self.assertEqual( resSeqMap.nativeIncomparable(), [ 0, 1, 2, 5, 6 ] )
         
+        # Check ends match up
+        m1 = resSeqMap.modelResSeq[ resSeqMap.modelOffset ]
+        n1 = resSeqMap.model2native( m1 )
+        self.assertEqual( m1, resSeqMap.native2model(n1) )
+        re = resSeqMap.nativeResSeq[ resSeqMap.nativeOffset + resSeqMap.lenMatch - 1  ]
+        self.assertEqual( resSeqMap.native2model( re ), resSeqMap.modelResSeq[ resSeqMap.modelOffset + resSeqMap.lenMatch - 1  ] )
+        
         
         return
     
-    def testResSeqMap4(self):
+    def testRefSeqMap2(self):
+        """See if we can sort out the indexing between the native and model"""
+        
+        
+        nativePdb = "../tests/testfiles//2XOV.pdb"
+        modelPdb = "../tests/testfiles/2XOV_S_00000001.pdb" 
+        
+        resSeqMap = residueSequenceMap( nativePdb, modelPdb )
+        
+        # Check ends match up
+        m1 = resSeqMap.modelResSeq[ resSeqMap.modelOffset ]
+        n1 = resSeqMap.model2native( m1 )
+        self.assertEqual( m1, resSeqMap.native2model(n1) )
+        re = resSeqMap.nativeResSeq[ resSeqMap.nativeOffset + resSeqMap.lenMatch - 1  ]
+        self.assertEqual( resSeqMap.native2model( re ), resSeqMap.modelResSeq[ resSeqMap.modelOffset + resSeqMap.lenMatch - 1  ] )
+        
+        return
+    
+    def testResSeqMap3(self):
         """See if we can sort out the indexing between the native and model"""
         
         
@@ -456,41 +433,19 @@ class Test(unittest.TestCase):
         self.assertEqual( resSeqMap.native2model(10), 16  )
         self.assertEqual( resSeqMap.model2native(155), 149 )
         
+        # Check ends match up
+        m1 = resSeqMap.modelResSeq[ resSeqMap.modelOffset ]
+        n1 = resSeqMap.model2native( m1 )
+        self.assertEqual( m1, resSeqMap.native2model(n1) )
+        re = resSeqMap.nativeResSeq[ resSeqMap.nativeOffset + resSeqMap.lenMatch - 1  ]
+        self.assertEqual( resSeqMap.native2model( re ), resSeqMap.modelResSeq[ resSeqMap.modelOffset + resSeqMap.lenMatch - 1  ] )
+        
         os.unlink( chainA )
         os.unlink( chainAstd )
         
         return
-
-    def XtestKeepMatching(self):
-        """XX"""
-        
-        nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
-        modelPdb = "/media/data/shared/TM/3U2F/models/S_00000001.pdb"
-        refinedPdb = "/media/data/shared/TM/3U2F/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_0.21093_rad_2_molrep_mrbump/data/loc0_ALL_poly_ala_trunc_0.21093_rad_2/unmod/mr/molrep/refine/refmac_molrep_loc0_ALL_poly_ala_trunc_0.21093_rad_2_UNMOD.pdb"
-# 
-        PE = pdb_edit.PDBEdit()
-        tmp1 = ample_util.tmpFileName()+".pdb"
-        PE.standardise( nativePdb, tmp1 )
-         
-        nativec1 = ample_util.tmpFileName()+".pdb"
-        PE.extract_chain( tmp1, nativec1, chainID='K' )
-        resSeqMap = PE.get_resseq_map( nativec1, modelPdb )
-#         
-        refinedc1 = "refinedc1.pdb"
-        PE.extract_chain( refinedPdb, refinedc1, chainID='A' )
-        print "nativec1 ",nativec1
-        matching = "matching.pdb"
-        PE.keep_matching( refpdb=refinedc1, targetpdb=nativec1, outpdb=matching, resSeqMap=resSeqMap )
-       
-#         refpdb = "ref.pdb"
-#         targetpdb = "target.pdb"
-#         PE._keep_matching( refpdb=refpdb, targetpdb=targetpdb, outpdb=matching, resSeqMap=resSeqMap )
-         
-        for f in [ tmp1, nativec1, refinedc1, matching ]:
-            os.unlink( f )
-         
-        return
     
+
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()
