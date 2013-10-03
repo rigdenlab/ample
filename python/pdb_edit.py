@@ -784,7 +784,10 @@ class PDBEdit(object):
             
             chainList = modelAtoms[ modelIdx ]
             
-            for atomList in chainList:
+            for chainIdx, atomList in enumerate( chainList ):
+                
+                # Paranoid check
+                assert model.chains[ chainIdx ] == atomList[0].chainID
                 
                 # Initialise new chain
                 currentResSeq = atomList[0].resSeq
@@ -799,7 +802,7 @@ class PDBEdit(object):
                     
                     aname = atom.name.strip()
                     if atom.resSeq != currentResSeq and i == len(atomList) -1 :
-                        # Edge case - last residue contains one atom
+                        # Edge case - last residue containing one atom
                         atomTypes = [ aname ]
                     else:
                         if aname not in atomTypes:
@@ -807,13 +810,13 @@ class PDBEdit(object):
                     
                     if atom.resSeq != currentResSeq or i == len(atomList) -1 :
                         # End of reading the atoms for a residue
-                        model.resSeqs[ model.chains.index( currentChain ) ].append( currentResSeq  )
-                        model.sequences[ model.chains.index( currentChain ) ] += three2one[ currentResName ]
+                        model.resSeqs[ chainIdx ].append( currentResSeq  )
+                        model.sequences[ chainIdx ] += three2one[ currentResName ]
                         
                         if 'CA' not in atomTypes:
-                            model.caMask[ model.chains.index( currentChain ) ].append( True )
+                            model.caMask[ chainIdx ].append( True )
                         else:
-                            model.caMask[ model.chains.index( currentChain ) ].append( False )
+                            model.caMask[ chainIdx ].append( False )
                         
                         missing=False
                         for bb in bbatoms:
@@ -822,9 +825,9 @@ class PDBEdit(object):
                                 break
                             
                         if missing:
-                            model.bbMask[ model.chains.index( currentChain ) ].append( True )
+                            model.bbMask[ chainIdx ].append( True )
                         else:
-                            model.bbMask[ model.chains.index( currentChain ) ].append( False )
+                            model.bbMask[ chainIdx ].append( False )
                         
                         currentResSeq = atom.resSeq
                         currentResName = atom.resName
