@@ -530,7 +530,8 @@ class MaxclusterComparator(object):
         self.maxclusterLogfile = os.path.join( self.workdir, "maxcluster.log" )
         self.nativePdb = self.prepareNative( nativePdb )
         
-        self.maxclusterExe = "/Users/jmht/Documents/AMPLE/programs/maxcluster"
+        #self.maxclusterExe = "/Users/jmht/Documents/AMPLE/programs/maxcluster"
+        self.maxclusterExe = "/opt/maxcluster/maxcluster"
         
         self.runMaxcluster()
         
@@ -563,7 +564,6 @@ class MaxclusterComparator(object):
         
         #if resMap.nativeResSeq != resMap.modelResSeq or resMap.nativeSequence != resMap.model.Sequence:
         if not resMap.resSeqMatch():
-            #print "RESSEQ DIFFER"
             
             # We need to create a copy of the native with numbering matching the model
             n = os.path.splitext( os.path.basename( nativePdb ) )[0]
@@ -592,7 +592,7 @@ class MaxclusterComparator(object):
                 
                 d = MaxclusterData()
                 d.pdb = fields[5]
-                d.modelName = os.path.split( os.path.basename( fields[5] ) )[0]
+                d.modelName = os.path.splitext( os.path.basename( fields[5] ) )[0]
                 
                 label, value = fields[6].split( "=" )
                 assert label == "Pairs"
@@ -632,7 +632,7 @@ class MaxclusterComparator(object):
                 return d.rmsd
 
     def maxsubSorted(self, reverse=True ):
-         return sorted( self.data, key=lambda data: data.maxsub, reverse=reverse )
+        return sorted( self.data, key=lambda data: data.maxsub, reverse=reverse )
      
     def runMaxcluster(self):
         
@@ -641,7 +641,6 @@ class MaxclusterComparator(object):
         with open( pdblist, 'w' ) as f:
             f.write( os.linesep.join( glob.glob( os.path.join( self.modelsDirectory, 'S_*.pdb' ) ) ) )
             
-        
         # Run Maxcluster
         cmd = [ self.maxclusterExe, "-e", self.nativePdb, "-l", pdblist, ]
         retcode = ample_util.run_command( cmd, logfile=self.maxclusterLogfile, dolog=False )
@@ -652,7 +651,7 @@ class MaxclusterComparator(object):
             raise RuntimeError, msg
      
     def tmSorted(self, reverse=True ):
-         return sorted( self.data, key=lambda data: data.tm, reverse=reverse )
+        return sorted( self.data, key=lambda data: data.tm, reverse=reverse )
 
 
 class MolrepLogParser(object):
@@ -1393,8 +1392,8 @@ if __name__ == "__main__":
     #for pdbcode in [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
     # fails 2UUI, 3OUF, 3PCV, 3RLB, 3U2F
     
-    #for pdbcode in sorted( resultsDict.keys() ):
-    for pdbcode in [ "2XOV" ]:
+    for pdbcode in sorted( resultsDict.keys() ):
+    #for pdbcode in [ "2XOV" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1434,24 +1433,21 @@ if __name__ == "__main__":
         pdbedit.standardise( nativePdb, nativePdbStd )
         nativePdb = nativePdbStd
         
+        # Get the scores for the models
+        #scoreP = RosettaScoreParser( os.path.join( datadir, "models") )
         maxComp = MaxclusterComparator( nativePdb, os.path.join( datadir, "models")  )
-        continue
         
         # Secondary Structure assignments
         sam_file = os.path.join( datadir, "fragments/t001_.rdb_ss2"  )
         psipredP = PsipredParser( sam_file )
         dssp_file = os.path.join( datadir, "{0}.dssp".format( pdbcode.lower()  )  )
         dsspP = DsspParser( dssp_file )
-    
-        # Get the scores for the models
-        #scoreP = RosettaScoreParser( os.path.join( datadir, "models") )
-        maxComp = MaxclusterComparator( nativePdb, os.path.join( datadir, "models")  )
         
         # Loop over each result
-        r = mrbump_results.ResultsSummary( os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
-        r.extractResults()
-        for mrbumpResult in r.results:
-        #for mrbumpResult in resultsDict[ pdbcode ]:
+        #r = mrbump_results.ResultsSummary( os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
+        #r.extractResults()
+        #for mrbumpResult in r.results:
+        for mrbumpResult in resultsDict[ pdbcode ]:
             
             #print "processing result ",mrbumpResult
             
@@ -1507,7 +1503,7 @@ if __name__ == "__main__":
             
             #ar.ensembleNativeRmsd = scoreP.rms( eP.centroidModelName )
             #ar.ensembleNativeMaxsub = scoreP.maxsub( eP.centroidModelName )
-            ar.ensembleNativeRmsd = maxComp.rms( eP.centroidModelName )
+            ar.ensembleNativeRmsd = maxComp.rmsd( eP.centroidModelName )
             ar.ensembleNativeTM = maxComp.tm( eP.centroidModelName )
     
             ar.solution =  mrbumpResult.solution
@@ -1527,8 +1523,6 @@ if __name__ == "__main__":
             mrbumpLog = os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( ensembleName, mrbumpResult.program )  )
             mrbumpP = MrbumpLogParser( mrbumpLog )
             ar.estChainsASU = mrbumpP.noChainsTarget
-            
-            continue
             
             # Get the reforigin RMSD of the phaser placed model as refined with refmac
             refinedPdb = os.path.join( resultDir, "refine", "refmac_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
