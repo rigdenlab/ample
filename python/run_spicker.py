@@ -141,7 +141,7 @@ class SpickerCluster( object ):
 #*                  From second lines are the file names which contain coordinates
 #*                  of 3D structure decoys. All these files are mandatory
         tra = open('tra.in', "w")
-        tra.write('1 -1 1 \nrep1.tra1')
+        tra.write('1 -1 1 \nrep1.tra1\n')
     
         tra.close()
         # Create the file with the sequence of the PDB structures
