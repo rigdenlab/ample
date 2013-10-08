@@ -547,7 +547,7 @@ if amopt.d['sf_cif']:
         cp = cif_parser.CifParser()
         amopt.d['mtz'] = cp.sfcif2mtz( amopt.d['sf_cif'] )
     
-if not os.path.isfile( amopt.d['mtz'] ):
+if not amopt.d['mtz'] or not os.path.isfile( amopt.d['mtz'] ):
     logger.critical("Cannot find MTZ file: {0}".format( amopt.d['mtz'] ) )
     sys.exit(1)
 
