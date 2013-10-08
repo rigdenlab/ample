@@ -49,15 +49,15 @@ import mrbump_ensemble
 import nmr
 import rosetta_model
 import mrbump_results
-import pdb_edit
 import truncateedit_MAX
+import version
 
 
 #-------------------------------------------
 # get command line options
 #-------------------------------------------
 
-parser = argparse.ArgumentParser(description='Structure solution by abinitio modelling', prefix_chars="-")
+parser = argparse.ArgumentParser( prog="AMPLE", description='Structure solution by abinitio modelling', prefix_chars="-")
 
 parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
                    help='alignment between homolog and target fastas')
@@ -266,6 +266,8 @@ parser.add_argument('-use_scwrl', metavar='USE_SCWRL', type=str, nargs=1,
 parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
                    help='True to use shelx ')
 
+parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(version.__version__) )
+
 # Mutually exclusive options
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-devel_mode', metavar='devel_mode', type=str, nargs=1,
@@ -279,9 +281,11 @@ group.add_argument('-molrep_only', metavar='molrep_only', type=str, nargs=1,
 group.add_argument('-phaser_only', metavar='phaser_only', type=str, nargs=1,
                    help='phaser_only')
 
-
 # Create amopt object to hold options
 amopt = ample_options.AmpleOptions( )
+
+# Remember the original arguments
+orig_argv = " ".join( sys.argv )
 
 # MRkeys hack - get MRBUMP keywords direct as there can be multiple arguments
 # to each one
@@ -337,6 +341,9 @@ os.chdir( amopt.d['work_dir'] )
 
 # Set up logging
 logger = ample_util.setup_logging()
+
+# Print out Version and invocation
+logger.info( """AMPLE version: {0}\n\nInvoked with command-line:\n\n{1}""".format( version.__version__, orig_argv ) )
 
 # Path for pickling results
 amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
