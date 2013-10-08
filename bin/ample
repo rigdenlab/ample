@@ -348,26 +348,25 @@ logger.info( """AMPLE version: {0}\n\nInvoked with command-line:\n\n{1}""".forma
 # Path for pickling results
 amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
 
+#jmht - fix these
+FIXED_INPUT = True
+amopt.d['pdb_code'] = amopt.d['name']
+if not amopt.d['pdb_code'] or len(amopt.d['pdb_code']) != 4:
+    msg = '-name argument is the wrong length, use 4 chars eg ABCD'
+    logger.critical(msg)
+    sys.exit(1)
+else:
+    amopt.d['pdb_code'] += '_'
+
 # cluster queueing
 if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
     msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
     logger.critical(msg)
     sys.exit(1)
 
-#jmht - fix these
-FIXED_INPUT = True
-pdb_code = amopt.d['name']
-amopt.d['pdb_code'] = amopt.d['name']
-if not amopt.d['pdb_code'] or len(pdb_code) != 4:
-    msg = 'Name is the wrong length, use 4 chars eg ABCD'
-    logger.critical(msg)
-    sys.exit(1)
-else:
-    amopt.d['pdb_code'] += '_'
-    
 # Check we can find the input fasta
-if not ( os.path.exists(str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d['NMR_remodel_fasta'] ) ) ):
-    msg = 'You need to give the path for the fasta'
+if not ( os.path.exists( str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d['NMR_remodel_fasta'] ) ) ):
+    msg = 'ERROR! Cannot find fasta file: {0}'.format( amopt.d['fasta'] )
     logger.critical(msg)
     sys.exit(1)
 
@@ -382,7 +381,7 @@ logger.info( "Fasta is {0} amino acids long".format( amopt.d['fasta_length'] ) )
 
 # Check we have a decent length
 if amopt.d['fasta_length'] < 9:
-    msg = "Fasta is of length {0}. Please check this is correct".format( amopt.d['fasta_length'] )
+    msg = "ERROR! Fasta is of length {0}. This is much too short!".format( amopt.d['fasta_length'] )
     logger.critical(msg)
     sys.exit(1)   
 
@@ -501,6 +500,15 @@ elif amopt.d['phaser_only']:
     amopt.d['mrbump_programs'] = [ 'phaser' ]
 else:
     amopt.d['mrbump_programs'] = ['molrep', 'phaser']
+    
+
+# Model building programs
+if amopt.d['use_arpwarp']:
+    if not ( os.environ.has_key('warpbin') and os.path.isfile( os.path.join(os.environ['warpbin'], "auto_tracing.sh") ) ):
+        logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
+        amopt.d['use_arpwarp'] = False
+    else:
+        logger.info('Using arpwarp script: {0}'.format( os.path.join(os.environ['warpbin'], "auto_tracing.sh") ) )
 
 #
 #Check we can find all the required programs
