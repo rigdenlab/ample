@@ -17,7 +17,7 @@ class AmpleOptions(object):
         # The dictionary with all the options
         self.d = {}
         
-        # dictionary with the default arguments
+        # dictionary with the default arguments - if any are paths add to paths in populate
         self.defaults = {
                             'alignment_file' : None,
                             'all_atom' : True,
@@ -118,6 +118,8 @@ class AmpleOptions(object):
     
         # We have a debug mode as the logger isn't activated when we run
         self.debug = False
+        
+        return
         
         
     def final_summary(self, cluster=None):
@@ -237,6 +239,7 @@ class AmpleOptions(object):
         # Handle any defaults and any preset options
         self.process_options()
         
+        return
  
     def process_options(self):
         """Check the options and process any preset defaults"""
@@ -254,7 +257,37 @@ class AmpleOptions(object):
         # Any changes here
         if self.d['submit_qtype']:
             self.d['submit_qtype'] = self.d['submit_qtype'].upper()
+            
         
+        # Convert all paths to absolute paths
+        paths = [
+                 'alignment_file',
+                'blast_dir',
+                'domain_all_chains_pdb',
+                'ensembles_dir',
+                'fasta',
+                'frags_3mers',
+                'frags_9mers',
+                'maxcluster_exe',
+                'models_dir',
+                'mtz',
+                'NMR_model_in',
+                'NMR_remodel_fasta',
+                'rosetta_db',
+                'rosetta_dir',
+                'rosetta_fragments_exe',
+                'rosetta_path',
+                'scwrl_exe',
+                'sf_cif',
+                'shelxe_exe',
+                'spicker_exe',
+                'theseus_exe',
+                'transmembrane_lipofile',
+                'transmembrane_spanfile'
+            ]
+        for k, v in self.d.iteritems():
+            if k in paths and v != None:
+                self.d[ k ] = os.path.abspath( v )
         
         # Check if using any preset options
         if self.d['devel_mode']:
