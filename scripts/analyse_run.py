@@ -1263,8 +1263,12 @@ class ShelxeLogParser(object):
     def __init__(self,logfile):
         
         self.logfile = logfile
+        
+        # All data refers to the best cycle
         self.CC = None
         self.avgChainLength = None
+        self.maxChainLength = None
+        self.cycle = None
         
         self.parse()
         
@@ -1282,8 +1286,8 @@ class ShelxeLogParser(object):
             
             # find should be quicker then re match
             if line.find("residues left after pruning, divided into chains as follows:") != -1:
-                (cc, avgChainLength) = self._parseCycle(fh)
-                cycleData.append( (cc, avgChainLength) )
+                (cc, avgChainLength, maxChainLength ) = self._parseCycle(fh)
+                cycleData.append( (cc, avgChainLength, maxChainLength) )
             
             
             if  line.find( "Best trace (cycle" ) != -1:
@@ -1298,6 +1302,8 @@ class ShelxeLogParser(object):
                 
                 self.CC =  cycleData[ cycle-1 ][0]
                 self.avgChainLength = cycleData[ cycle-1 ][1]
+                self.maxChainLength = cycleData[ cycle-1 ][2]
+                self.cycle = cycle
 
             line = fh.readline()
         #End while
@@ -1338,7 +1344,8 @@ class ShelxeLogParser(object):
             raise RuntimeError, "Failed to read any fragment lengths"
         
         # Average chain lengths
-        avgChainLength = sum(lengths) / int( len(lengths) )        
+        avgChainLength = sum(lengths) / int( len(lengths) )
+        maxChainLength = max(lengths)      
         
         # Here should have read the  lengths so now just get the CC
         count=0
@@ -1353,7 +1360,7 @@ class ShelxeLogParser(object):
             
         cc = float( re.search("\d+\.\d+", line).group(0) )
         
-        return ( cc, avgChainLength )
+        return ( cc, avgChainLength, maxChainLength )
 
 #END ShelxeLogParser
 
@@ -1367,6 +1374,8 @@ class Test(unittest.TestCase):
         p = ShelxeLogParser( logfile )
         self.assertEqual(37.26, p.CC)
         self.assertEqual(7, p.avgChainLength)
+        self.assertEqual(9, p.maxChainLength)
+        self.assertEqual(1, p.cycle)
     
     
 
@@ -1376,6 +1385,7 @@ class Test(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    
     pfile = "/media/data/shared/TM/results.pkl"
     f = open( pfile )
     resultsDict = cPickle.load( f  )
@@ -1393,7 +1403,7 @@ if __name__ == "__main__":
     # fails 2UUI, 3OUF, 3PCV, 3RLB, 3U2F
     
     for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "2XOV" ]:
+    #for pdbcode in [ "2BHW" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
