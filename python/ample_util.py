@@ -222,11 +222,17 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
         stdinstr = stdin
         stdin = subprocess.PIPE
     
-    p = subprocess.Popen( cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory )
+    # Windows needs some special treatment
+    kwargs = {}
+    if os.name == "nt":
+        kwargs = { 'buffsize': 0, 'shell' : "False" }
+    p = subprocess.Popen( cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs )
     
     if stdin != None:
         p.stdin.write( stdinstr )
         p.stdin.close()
+        if dolog:
+            logging.debug("stdin for cmd was: {0}".format( stdin ) )
     
     p.wait()
     logf.close()
