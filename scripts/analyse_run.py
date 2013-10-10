@@ -1268,6 +1268,7 @@ class ShelxeLogParser(object):
         self.CC = None
         self.avgChainLength = None
         self.maxChainLength = None
+        self.numChains = None
         self.cycle = None
         
         self.parse()
@@ -1286,8 +1287,8 @@ class ShelxeLogParser(object):
             
             # find should be quicker then re match
             if line.find("residues left after pruning, divided into chains as follows:") != -1:
-                (cc, avgChainLength, maxChainLength ) = self._parseCycle(fh)
-                cycleData.append( (cc, avgChainLength, maxChainLength) )
+                (cc, avgChainLength, maxChainLength, numChains ) = self._parseCycle(fh)
+                cycleData.append( (cc, avgChainLength, maxChainLength, numChains) )
             
             
             if  line.find( "Best trace (cycle" ) != -1:
@@ -1303,6 +1304,7 @@ class ShelxeLogParser(object):
                 self.CC =  cycleData[ cycle-1 ][0]
                 self.avgChainLength = cycleData[ cycle-1 ][1]
                 self.maxChainLength = cycleData[ cycle-1 ][2]
+                self.numChains = cycleData[ cycle-1 ][3]
                 self.cycle = cycle
 
             line = fh.readline()
@@ -1345,7 +1347,8 @@ class ShelxeLogParser(object):
         
         # Average chain lengths
         avgChainLength = sum(lengths) / int( len(lengths) )
-        maxChainLength = max(lengths)      
+        maxChainLength = max(lengths)  
+        numChains = len(lengths)    
         
         # Here should have read the  lengths so now just get the CC
         count=0
@@ -1360,7 +1363,7 @@ class ShelxeLogParser(object):
             
         cc = float( re.search("\d+\.\d+", line).group(0) )
         
-        return ( cc, avgChainLength, maxChainLength )
+        return ( cc, avgChainLength, maxChainLength, numChains )
 
 #END ShelxeLogParser
 
@@ -1376,6 +1379,7 @@ class Test(unittest.TestCase):
         self.assertEqual(7, p.avgChainLength)
         self.assertEqual(9, p.maxChainLength)
         self.assertEqual(1, p.cycle)
+        self.assertEqual(14, p.numChains)
     
     
 
