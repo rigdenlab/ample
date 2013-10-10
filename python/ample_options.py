@@ -176,6 +176,9 @@ class AmpleOptions(object):
 
             # Assume mrbump_results are already sorted
             mrbump_results = self.d['mrbump_results'][ cluster ]
+            if not len(mrbump_results):
+                print "!!!  No results found for cluster {0} !!!".format( cluster+1 )  
+                continue
             
             # Get header from first object - need to copy or the assignment just creates a reference
             header = copy.copy( mrbump_results[0].header )
