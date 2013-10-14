@@ -510,11 +510,23 @@ class RosettaModel(object):
             
             self.transmembrane = True
             
+#           if platform.mac_ver() == ('', ('', '', ''), ''):
+#               self.transmembrane_exe = self.rosetta_dir + '/rosetta_source/bin/membrane_abinitio2.linuxgccrelease'
+#           else:
+#               self.transmembrane_exe = self.rosetta_dir + '/rosetta_source/bin/membrane_abinitio2'
+
             if platform.mac_ver() == ('', ('', '', ''), ''):
-                self.transmembrane_exe = self.rosetta_dir + '/rosetta_source/bin/membrane_abinitio2.linuxgccrelease'
+                # Not a mac so we assume linux
+                self.transmembrane_exe = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'membrane_abinitio2.linuxgccrelease' )
             else:
-                self.transmembrane_exe = self.rosetta_dir + '/rosetta_source/bin/membrane_abinitio2'
-                    
+                # It seems there are different binaries on the mac 
+                rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'membrane_abinitio2' )
+                if not os.path.isfile( rbin ):
+                    rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'membrane_abinitio2.macosgccrelease' )
+                    if not os.path.isfile( rbin ):
+                        raise RuntimeError,"Cannot find AbinitioRelax binary!"
+                self.transmembrane_exe = rbin
+
             if not os.path.exists(self.transmembrane_exe):
                 self.logger.critical(' cant find Rosetta membrane executable: {0}'.format(self.transmembrane_exe) )
                 raise RuntimeError,msg
@@ -587,9 +599,16 @@ class RosettaModel(object):
             import platform
             if not optd['rosetta_path']: 
                 if platform.mac_ver() == ('', ('', '', ''), ''):
-                    optd['rosetta_path'] = self.rosetta_dir + '/rosetta_source/bin/AbinitioRelax.linuxgccrelease'
+                    # Not a mac so we assume linux
+                    optd['rosetta_path'] = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'AbinitioRelax.linuxgccrelease' )
                 else:
-                    optd['rosetta_path'] = self.rosetta_dir + '/rosetta_source/bin/AbinitioRelax'
+                    # It seems there are different binaries on the mac 
+                    rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'AbinitioRelax' )
+                    if not os.path.isfile( rbin ):
+                        rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'AbinitioRelax.macosgccrelease' )
+                        if not os.path.isfile( rbin ):
+                            raise RuntimeError,"Cannot find AbinitioRelax binary!"
+                    optd['rosetta_path'] = rbin
             
             # Always save everything back to the amopt object so we can print it out
             self.rosetta_path = optd['rosetta_path']
