@@ -113,9 +113,51 @@ class PDBEdit(object):
             raise RuntimeError,"Error stripping PDB to c-alpha atoms"
             
         return
-    
-    
-    def extract_chain( self, inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False ):
+
+    def cat_pdbs( self, pdb1=None, pdb2=None, pdbout=None ):
+        """Concatenate 2 pdbs into a single file. The header from the first is kept and
+        the chain from the  second added to the end
+        Assumes only one chain in either
+        """
+
+        one = open( pdb1, 'r' )
+        lines = []
+        
+        needTer=True
+        for line in one:
+            lines.append( line )
+            if line.startswith("TER"):
+                needTer=False
+                break
+        one.close()
+        
+        if needTer:
+            lines.append( "TER\n" )
+        
+        needTer=True
+        two = open( pdb2, 'r' )
+        for line in two:
+            if line.startswith("ATOM"):
+                lines.append( line )
+                continue
+
+            if line.startswith("TER"):
+                lines.append( line )
+                needTer=False
+                break
+        two.close()
+
+        if needTer:
+            lines.append( "TER\n" )
+        
+        # Now write 'em out
+        with open( pdbout, 'w') as o:
+            o.writelines( lines )
+        
+        return
+        
+
+    def extract_chain( self, inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False, renumber=True ):
         """Extract chainID from inpdb and renumner.
         If cAlphaOnly is set, strip down to c-alpha atoms
         """
@@ -130,7 +172,8 @@ class PDBEdit(object):
             stdin += "renchain {0} {1}\n".format( chainID, newChainID )
         if cAlphaOnly:
             stdin += 'lvatom "CA[C]:*"\n'
-        stdin += "sernum\n"
+        if renumber:
+            stdin += "sernum\n"
         
         retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
         
