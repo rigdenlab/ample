@@ -56,22 +56,6 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
-# get a program test for existsnce
-def which(program):
-    def is_exe(fpath):
-        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-    return None
-#########
 def check_for_exe(exename, varname):
     logger = logging.getLogger()
     exepath = ''
@@ -95,6 +79,14 @@ def check_for_exe(exename, varname):
     logger.debug( "Using executable {0}".format( exepath ) )
     return exepath
 
+def filename_append( filename=None, astr=None, separator="_", directory=None ):
+    """Append astr to filename, before the suffix, and return the new filename."""
+    dirname, fname = os.path.split( filename )
+    name, suffix = os.path.splitext( fname )
+    name  =  name + separator + astr + suffix
+    if not directory:
+        directory = dirname
+    return os.path.join( directory, name )
 
 def get_mtz_flags( mtzfile ):
     """
@@ -292,6 +284,21 @@ def tmpFileName():
     t.close()
     return tmp1
 
+# get a program test for existsnce
+def which(program):
+    def is_exe(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+    return None
 
 class TestUtil(unittest.TestCase):
     """
