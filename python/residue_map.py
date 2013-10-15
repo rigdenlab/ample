@@ -22,12 +22,14 @@ class residueSequenceMap( object ):
         self.modelResSeq = []
         self.modelSequence = None
         self.modelCAlphaMask = []
+        self.modelBbMask = []
         self.modelOffset = None # Where the matched part of the sequences starts in the model
         self._modelIncomparable = None # List of atoms in the model that cannot be compared to the native
         
         self.nativeResSeq = []
         self.nativeSequence = None
         self.nativeCAlphaMask = []
+        self.nativeBbMask = []
         self.nativeOffset = None
         self._nativeIncomparable = None # List of atoms in the model that cannot be compared to the model
         
@@ -261,6 +263,34 @@ class residueSequenceMap( object ):
         self.lenMatch = count
             
         return
+    
+    def fromInfo(self, nativeInfo=None, nativeChainID=None, modelInfo=None, modelChainID=None, model=0):
+        """Create a map from 2 info objects"""
+        
+        # Determine index of chain so we know where to get the data from
+        nativeIdx = nativeInfo.models[ model ].chains.index( nativeChainID )
+
+        self.nativeResSeq = nativeInfo.models[ model ].resSeqs[ nativeIdx ]
+        self.nativeSequence = nativeInfo.models[ model ].sequences[ nativeIdx ]
+        self.nativeCAlphaMask = nativeInfo.models[ model ].caMask[ nativeIdx ]
+        self.nativeBbMask = nativeInfo.models[ model ].bbMask[ nativeIdx ]
+        self.nativeOffset = None
+        self._nativeIncomparable = None
+
+        modelIdx = modelInfo.models[ model ].chains.index( modelChainID )
+        self.modelResSeq = modelInfo.models[ model ].resSeqs[ modelIdx ]
+        self.modelSequence = modelInfo.models[ model ].sequences[ modelIdx ]
+        self.modelCAlphaMask = modelInfo.models[ model ].caMask[ modelIdx ]
+        self.modelBbMask =  modelInfo.models[ model ].bbMask[ modelIdx ]
+        self.modelOffset = None
+        self._modelIncomparable = None
+        
+        self.lenMatch = None
+        
+        self._calc_map()
+        
+        return
+    
     
     def read_pdb( self, pdb ):
         """Get sequence as string of 1AA
