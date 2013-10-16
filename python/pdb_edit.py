@@ -150,6 +150,8 @@ class PDBEdit(object):
         if needTer:
             lines.append( "TER\n" )
         
+        lines.append("END\n")
+        
         # Now write 'em out
         with open( pdbout, 'w') as o:
             o.writelines( lines )
@@ -743,14 +745,20 @@ class PDBEdit(object):
             
             if line.startswith("REMARK"):
                 
+                try:
+                    numRemark = int(line[7:10])
+                except ValueError:
+                    line=f.readline()
+                    continue
+                
                 # Resolution
-                if int(line[9]) == 2:
+                if numRemark == 2:
                     line = f.readline()
                     if line.find("RESOLUTION") != -1:
                         info.resolution = float( line[25:30] )
                 
                 # Get solvent content                
-                if int(line[7:10]) == 280:
+                if numRemark == 280:
                     
                     maxread = 5
                     # Clunky - read up to maxread lines to see if we can get the information we're after
@@ -879,23 +887,24 @@ class PDBEdit(object):
         return info
     
 
-    def match_resseq(self, nativePdb=None, modelPdb=None, output=None, resMap=None ):
+    def match_resseq(self, targetPdb=None, outPdb=None, resMap=None, sourcePdb=None ):
         """
         
         """
         
-        assert modelPdb or resMap
+        assert sourcePdb or resMap
+        assert not ( sourcePdb and resMap )
         
         if not resMap:
-            resMap = residue_map.residueSequenceMap( nativePdb, modelPdb )
+            resMap = residue_map.residueSequenceMap( targetPdb, sourcePdb )
         
-        t = open(nativePdb,'r')
-        out = open(output,'w')
+        target = open(targetPdb,'r')
+        out = open(outPdb,'w')
         
         chain=None # The chain we're reading
         residue=None # the residue we're reading
         
-        for line in t:
+        for line in target:
             
             if line.startswith("MODEL"):
                 raise RuntimeError, "Multi-model file!"
@@ -919,7 +928,8 @@ class PDBEdit(object):
                     chain = atom.chainID
                 
                 if atom.chainID != chain:
-                    raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
+                    pass
+                    #raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
                 
                 # Get the matching resSeq for the model
                 modelResSeq = resMap.native2model( atom.resSeq )
@@ -936,17 +946,17 @@ class PDBEdit(object):
             
         # End reading loop
         
-        t.close()
+        target.close()
         out.close()
         
         return
 
-#     def match_resseq(self, nativePdb, modelPdb, keepAtoms="all", workdir=None, resSeqMap=None ):
+#     def match_resseq(self, targetPdb, sourcePdb, keepAtoms="all", workdir=None, resSeqMap=None ):
 #         """Given a native pdb file and a model pdb file, create a copy of the native that can be directly compared with the model
 #         
 #         args:
-#         nativePdb: 
-#         modelPdb:
+#         targetPdb: 
+#         sourcePdb:
 #         keepAtoms: all, backbone or calpha - the atoms which are to be kept for the comparision
 #         
 #         """
@@ -956,17 +966,17 @@ class PDBEdit(object):
 #         
 #         if not resSeqMap:
 #             # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
-#             resSeqMap = residue_map.residueSequenceMap( nativePdb, modelPdb )
+#             resSeqMap = residue_map.residueSequenceMap( targetPdb, sourcePdb )
 #         
 #         # Find out if there are atoms in the model that we need to remove
 #         modelIncomparable = resSeqMap.modelIncomparable()
 #         if len( modelIncomparable ):
 #             
-#             n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+#             n = os.path.splitext( os.path.basename( targetPdb ) )[0]
 #             nativePdbCut = os.path.join( workdir, n+"_cut.pdb" )
 #             
 #             logfile = "{0}.log".format( nativePdbCut )
-#             cmd="pdbcur xyzin {0} xyzout {1}".format( nativePdb, nativePdbCut ).split()
+#             cmd="pdbcur xyzin {0} xyzout {1}".format( targetPdb, nativePdbCut ).split()
 #             
 #             # Build up stdin - I'm too thick to work out the selection syntax for a discrete list
 #             stdin = ""
@@ -981,30 +991,30 @@ class PDBEdit(object):
 #             else:
 #                 raise RuntimeError,"Error deleting residues {0}".format( modelIncomparable )
 #             
-#             nativePdb = nativePdbCut
+#             targetPdb = nativePdbCut
 #             
 #         
 #         if keepAtoms == "calpha":
 #             # If only alpha atoms are required, we create a copy of the model with only alpha atoms
-#             n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+#             n = os.path.splitext( os.path.basename( targetPdb ) )[0]
 #             tmp = os.path.join( workdir, n+"_cAlphaOnly.pdb" )
-#             self.calpha_only( nativePdb, tmp )
-#             nativePdb = tmp
+#             self.calpha_only( targetPdb, tmp )
+#             targetPdb = tmp
 #         elif keepAtoms == "backbone":
 #             # Strip down to backbone atoms
-#             n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+#             n = os.path.splitext( os.path.basename( targetPdb ) )[0]
 #             tmp = os.path.join( workdir, n+"_backbone.pdb" )
-#             PE.backbone( nativePdb, tmp  )
-#             nativePdb = tmp
+#             PE.backbone( targetPdb, tmp  )
+#             targetPdb = tmp
 #         elif keepAtoms == "all":
 #             pass
 #         else:
 #             raise RuntimeError,"Unrecognised keepAtoms: {0}".format( keepAtoms )
 # 
 #         # Now create a PDB with the matching atoms from native that are in refined
-#         n = os.path.splitext( os.path.basename( nativePdb ) )[0]
+#         n = os.path.splitext( os.path.basename( targetPdb ) )[0]
 #         nativePdbMatch = os.path.join( workdir, n+"_matched.pdb" )
-#         self.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
+#         self.keep_matching( refpdb=refinedPdb, targetpdb=targetPdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
 #         
 #         return
     
@@ -1037,6 +1047,30 @@ class PDBEdit(object):
         pdb_out.close()
         pdb_in.close()
         
+        return
+
+    def rename_chains( self, inpdb=None, outpdb=None, fromChain=None, toChain=None ):
+        """Rename Chains
+        """
+        
+        assert len(fromChain) == len(toChain)
+        
+        logfile = outpdb+".log"
+        cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
+        
+        # Build up stdin
+        stdin = ""
+        for i in range( len( fromChain ) ):
+            stdin += "renchain {0} {1}\n".format( fromChain[ i ], toChain[ i ] )
+        
+        retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
+        
+        if retcode == 0:
+            # remove temporary files
+            os.unlink(logfile)
+        else:
+            raise RuntimeError,"Error renaming chains {0}".format( fromChain )
+            
         return
     
     def select_residues(self, inpath=None, outpath=None, residues=None ):
