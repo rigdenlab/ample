@@ -27,8 +27,23 @@ class Contacts(object):
     
     def __init__( self ):
         self.ncontlog = None
+        self.ncontacts = 0
+        self.inregister = 0
+        self.ooregister = 0
         return
-
+    
+    def getContacts(self, nativePdb, placedPdb, refModelPdb, workdir=None ):
+        
+        try:
+            self.run(nativePdb, placedPdb, refModelPdb, workdir=workdir )
+            self.parse_ncontlog
+        except:
+            print "ERROR RUNNING CONTACTS: ",placedPdb
+            self.ncontacts = -1
+            self.inregister = -1
+            self.ooregister = -1
+        return
+    
     def run( self, nativePdb, placedPdb, refModelPdb, workdir=None ):
         """
         """
@@ -40,9 +55,9 @@ class Contacts(object):
         pdbedit = pdb_edit.PDBEdit()
         
         # Standardise pdb
-        nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std" )
-        pdbedit.standardise( inpdb=nativePdb, outpdb=nativePdbStd )
-        nativePdb = nativePdbStd
+        #nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std" )
+        #pdbedit.standardise( inpdb=nativePdb, outpdb=nativePdbStd )
+        #nativePdb = nativePdbStd
         
         # Run a pass to find the # chains
         nativeInfo = pdbedit.get_info( nativePdb )
@@ -63,7 +78,7 @@ class Contacts(object):
                             )
          
         if not resSeqMap.resSeqMatch():
-            print "NUMBERING DOESN'T MATCH"
+            #print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
             placedPdbRes = ample_util.filename_append( filename=placedPdb, astr="reseq" )
@@ -172,7 +187,7 @@ class Contacts(object):
                                     )
                 
                 if not resSeqMap.resSeqMatch():
-                    print "NO MATCH"
+                    #print "NO MATCH"
                     # We need to create a copy of the csymmatch pdb with numbering matching the native
                     csymmatchRenumberPdb = ample_util.filename_append( filename=csymmatchPdb, astr="_renumber" )
                     pdbedit.match_resseq( nativeChainPdb, csymmatchPdb, csymmatchRenumberPdb, resMap=resSeqMap )
@@ -237,6 +252,103 @@ class Contacts(object):
         
         if not logfile:
             logfile = self.ncontlog
+            
+        self.ncontacts = 0
+        clines = []
+        
+        capture=False
+        with open( logfile, 'r' ) as f:#
+            while True:
+                line = f.readline().strip()
+                
+                if capture and not line:
+                    break
+                
+                if "contacts found:" in line:
+                    self.ncontacts = int( line.split()[0] )
+                
+                if "NO CONTACTS FOUND." in line:
+                    return False
+                
+                if "SOURCE ATOMS" in line:
+                    capture=True
+                    f.readline() # skip blank line
+                    continue
+                
+                if capture:
+                    clines.append( line )
+            
+        assert self.ncontacts == len(clines)
+        
+        
+        contacts = [] # Tuples of: chainID, resSeq, chainID, resSeq, dist
+        # Only collect contacts for central cell
+        for c in clines:
+            fields = c.split()
+            cell = int( fields[ 13 ] )
+            if cell != 333:
+                continue
+            
+            c1 = fields[ 0 ]
+            r1 = fields[ 1 ]
+            c2 = fields[ 6 ]
+            r2 = fields[ 7 ]
+            dist = float(  fields[ 12 ] )
+            
+            chainID1 = c1.split("/")[2]
+            resSeq1 = int( r1.split("(")[0] )
+            chainID2 = c2.split("/")[2].upper() # We converted to lower case
+            resSeq2 = int( r2.split("(")[0] )
+            
+            contacts.append( (chainID1, resSeq1, chainID2, resSeq2, dist) )
+    
+        # Now count'em
+        MINC = 3 # minimum contiguous to count
+        self.inregister=0
+        self.ooregister=0
+        last1=None
+        last2=None
+        count=0
+        register=True # true if in register, false if out
+        for (chainID1, resSeq1, chainID2, resSeq2, dist) in contacts:
+            
+            # First
+            if last1 == None:
+                last1 = resSeq1
+                last2 = resSeq2
+                if resSeq1 != resSeq2:
+                    register=False
+                count+=1
+                continue
+            
+            if resSeq1 == last1 + 1 and resSeq2 == last2 + 1:
+                # Make sure we don't count continguous residues where the other residue doesn't match
+                if ( resSeq1 != resSeq2 and register ) or ( resSeq1 == resSeq2 and not register ):
+                    pass
+                else:
+                    #print "INCREMENTING"
+                    count += 1
+                    last1 = resSeq1
+                    last2 = resSeq2
+                    continue
+                
+            if count > MINC:
+                #  end of a contiguous sequence
+                #print "ADDING ",count
+                if register:
+                    self.inregister += count
+                else:
+                    self.ooregister += count
+            
+            # Either starting again or a random residue
+            if resSeq1 == resSeq2:
+                register=True
+            else:
+                register=False
+            
+            last1 = resSeq1
+            last2 = resSeq2
+            count = 1
         
         return
 
@@ -275,6 +387,8 @@ os.chdir(workdir)
 # sys.exit()
 
 c = Contacts()
-c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
-#logfile = root + "refmac_phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD_csymmatch_ren_joined.pdb.ncont.log.1"
-#c.parse_ncontlog( logfile=logfile )
+#c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
+logfile = "/home/jmht/Documents/test/ncont/3PCV/poly_ala_trunc_2.822761_rad_1/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
+logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
+c.parse_ncontlog( logfile=logfile )
+print c.ncontacts, c.inregister,c.ooregister
