@@ -27,7 +27,7 @@ class Contacts(object):
     
     def __init__( self ):
         self.ncontlog = None
-        self.ncontacts = 0
+        self.numContacts = 0
         self.inregister = 0
         self.ooregister = 0
         return
@@ -36,10 +36,10 @@ class Contacts(object):
         
         try:
             self.run(nativePdb, placedPdb, refModelPdb, workdir=workdir )
-            self.parse_ncontlog
+            self.parse_ncontlog()
         except:
             print "ERROR RUNNING CONTACTS: ",placedPdb
-            self.ncontacts = -1
+            self.numContacts = -1
             self.inregister = -1
             self.ooregister = -1
         return
@@ -247,13 +247,12 @@ class Contacts(object):
         
         return
     
-    
     def parse_ncontlog(self, logfile=None ):
         
         if not logfile:
             logfile = self.ncontlog
             
-        self.ncontacts = 0
+        self.numContacts = 0
         clines = []
         
         capture=False
@@ -265,7 +264,7 @@ class Contacts(object):
                     break
                 
                 if "contacts found:" in line:
-                    self.ncontacts = int( line.split()[0] )
+                    self.numContacts = int( line.split()[0] )
                 
                 if "NO CONTACTS FOUND." in line:
                     return False
@@ -278,7 +277,7 @@ class Contacts(object):
                 if capture:
                     clines.append( line )
             
-        assert self.ncontacts == len(clines)
+        assert self.numContacts == len(clines)
         
         
         contacts = [] # Tuples of: chainID, resSeq, chainID, resSeq, dist
@@ -352,43 +351,44 @@ class Contacts(object):
         
         return
 
-root = "/Users/jmht/Documents/AMPLE/data/ncont"
-root = "/home/jmht/Documents/test/ncont/3PCV"
-nativePdb = root + "/3PCV_std.pdb"
-placedPdb = root + "/refmac_phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.pdb"
-refModelPdb = root + "/S_00000001.pdb"
-
-root = "/home/jmht/Documents/test/ncont/1D7M"
-workdir = root + "/All_atom_trunc_5.131715_rad_2"
-nativePdb = root + "/1D7M.pdb"
-refModelPdb = root + "/S_00000001.pdb"
-placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
-
-
-root = "/home/jmht/Documents/test/ncont/3PCV"
-nativePdb = root + "/3PCV.pdb"
-refModelPdb = root + "/S_00000001.pdb"
-
-workdir = root + "/All_atom_trunc_5.131715_rad_2"
-placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
-
-workdir = root + "/poly_ala_trunc_2.822761_rad_1"
-placedPdb = workdir + "/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1.pdb"
-
-workdir = root + "/All_atom_trunc_5.131715_rad_3"
-placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1.pdb"
-
-os.chdir(workdir)
-
-# PE = pdb_edit.PDBEdit()
-# PE.cat_pdbs(pdb1=nativePdb, pdb2="csymmatchAll.pdb", pdbout="joined.pdb")
-# 
-# import sys
-# sys.exit()
-
-c = Contacts()
-#c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
-logfile = "/home/jmht/Documents/test/ncont/3PCV/poly_ala_trunc_2.822761_rad_1/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
-logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
-c.parse_ncontlog( logfile=logfile )
-print c.ncontacts, c.inregister,c.ooregister
+if __name__ == "__main__":
+    root = "/Users/jmht/Documents/AMPLE/data/ncont"
+    root = "/home/jmht/Documents/test/ncont/3PCV"
+    nativePdb = root + "/3PCV_std.pdb"
+    placedPdb = root + "/refmac_phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.pdb"
+    refModelPdb = root + "/S_00000001.pdb"
+    
+    root = "/home/jmht/Documents/test/ncont/1D7M"
+    workdir = root + "/All_atom_trunc_5.131715_rad_2"
+    nativePdb = root + "/1D7M.pdb"
+    refModelPdb = root + "/S_00000001.pdb"
+    placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
+    
+    
+    root = "/home/jmht/Documents/test/ncont/3PCV"
+    nativePdb = root + "/3PCV.pdb"
+    refModelPdb = root + "/S_00000001.pdb"
+    
+    workdir = root + "/All_atom_trunc_5.131715_rad_2"
+    placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
+    
+    workdir = root + "/poly_ala_trunc_2.822761_rad_1"
+    placedPdb = workdir + "/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1.pdb"
+    
+    workdir = root + "/All_atom_trunc_5.131715_rad_3"
+    placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1.pdb"
+    
+    os.chdir(workdir)
+    
+    # PE = pdb_edit.PDBEdit()
+    # PE.cat_pdbs(pdb1=nativePdb, pdb2="csymmatchAll.pdb", pdbout="joined.pdb")
+    # 
+    # import sys
+    # sys.exit()
+    
+    c = Contacts()
+    #c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
+    logfile = "/home/jmht/Documents/test/ncont/3PCV/poly_ala_trunc_2.822761_rad_1/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
+    logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
+    c.parse_ncontlog( logfile=logfile )
+    print c.ncontacts, c.inregister,c.ooregister
