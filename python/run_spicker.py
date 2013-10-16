@@ -5,8 +5,6 @@ import glob
 import logging
 import os
 import re
-import shutil
-import subprocess
 
 # our imports
 import ample_util
