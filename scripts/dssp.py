@@ -37,18 +37,19 @@ class DsspParser(object):
                 continue
                 
             if capture:
+                
+                # Only capture first chain
+                if "!" in line:
+                    capture=False
+                    break
+                
                 #print "\"{0}\"".format(line)
                 #idx = int( line[0:5].strip() )
                 resSeq = int( line[5:10].strip() )
                 #chainId = line[10:12].strip()
                 resName = line[12:14].strip()
-                assign = line[14:17].strip()
                 #print "\"{0}\"".format(line[14:17])
-                
-                # Only capture first chain
-                if "!" in assign:
-                    capture=False
-                    break
+                assign = line[16]
                  
                 self.resNames.append( resName )
                 self.resSeqs.append( resSeq )
@@ -84,3 +85,9 @@ class DsspParser(object):
         d['percentH'] = self.percentH
         
         return d
+    
+    
+if __name__ == "__main__":
+    dssp_file = "/media/data/shared/TM/2BHW/2bhw.dssp"
+    dsspP = DsspParser( dssp_file )
+    print dsspP.asDict()
