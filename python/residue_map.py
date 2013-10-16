@@ -5,6 +5,7 @@ Useful manipulations on PDB files
 # Python imports
 import os
 import sys
+import types
 import unittest
 
 # our imports
@@ -190,12 +191,16 @@ class residueSequenceMap( object ):
 
 
     def __str__(self):
+        me = {}
+        for slot in dir(self):
+            attr = getattr(self, slot)
+            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
+              isinstance(attr, types.FunctionType) ):
+                me[slot] = attr
         
-        s = "residueSequenceMap: {0}\n".format( self.__repr__() )
-        s += "Model: {0}\n".format( self._modelResSeqMap )
-        s+= "Native: {0}\n".format( self._nativeResSeqMap )
-        s+= "cAlphaMask: {0}\n".format( self.cAlphaMask )
-        
+        s = self.__repr__() + "\n"
+        for k in sorted( me.keys() ):
+            s += "{0}: {1}\n".format( k, me[k]  )
         return s
     
     def calc_map( self, nativePdb, modelPdb ):
