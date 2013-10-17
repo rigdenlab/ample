@@ -499,7 +499,7 @@ class MaxclusterComparator(object):
             # We need to create a copy of the native with numbering matching the model
             n = os.path.splitext( os.path.basename( nativePdb ) )[0]
             nativeRenumber = "{0}_renumber.pdb".format( n )
-            PE.match_resseq( nativePdb, model, nativeRenumber, resMap=resMap )
+            PE.match_resseq( targetPdb=nativePdb, outPdb=nativeRenumber, resMap=resMap )
             
             nativePdb = nativeRenumber
         
@@ -1032,6 +1032,7 @@ class ReforiginRmsd(object):
 
         # Run a pass to find the # chains
         pdbedit = pdb_edit.PDBEdit()
+        print "GETTING INFO FOR ",refinedPdb
         refinedInfo = pdbedit.get_info( refinedPdb )
         nativeInfo = pdbedit.get_info( nativePdb )
         native_chains = nativeInfo.models[ 0 ].chains
@@ -1343,11 +1344,9 @@ if __name__ == "__main__":
     allResults = []
     
     #for pdbcode in [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
-    # fails 2UUI, 3OUF, 3PCV, 3RLB, 3U2F
-    
-    for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "2BHW" ]:
-    #for pdbcode in [ "3PCV" ]:
+    #for pdbcode in [ "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
+    #for pdbcode in sorted( resultsDict.keys() ):
+    for pdbcode in [ "2WIE" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1526,6 +1525,8 @@ if __name__ == "__main__":
      
             # Now read the shelxe log to see how we did
             shelxeLog = os.path.join( resultDir, "build/shelxe/shelxe_run.log" )
+            if not os.path.isfile( shelxeLog ):
+                continue
             shelxeP = ShelxeLogParser( shelxeLog )
             ar.shelxeCC = shelxeP.CC
             ar.shelxeAvgChainLength = shelxeP.avgChainLength
