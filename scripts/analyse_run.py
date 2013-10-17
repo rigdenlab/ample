@@ -1366,14 +1366,12 @@ if __name__ == "__main__":
         # First check if the native has > 1 model and extract the first if so
         if len( nativeInfo.models ) > 1:
             print "nativePdb has > 1 model - using first"
-            n = os.path.splitext( os.path.basename( nativePdb ) )[0]
-            nativePdb1 = os.path.join( workdir, n+"_model1.pdb" )
+            nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=workdir )
             pdbedit.extract_model( nativePdb, nativePdb1, modelID=nativeInfo.models[0].serial )
             nativePdb = nativePdb1
             
         # Standardise the PDB to rename any non-standard AA, remove solvent etc
-        n = os.path.splitext( os.path.basename( nativePdb ) )[0]
-        nativePdbStd = os.path.join( workdir, n+"_std.pdb" )
+        nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std", directory=workdir )
         pdbedit.standardise( nativePdb, nativePdbStd )
         nativePdb = nativePdbStd
         
