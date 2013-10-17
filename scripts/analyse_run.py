@@ -966,8 +966,6 @@ class ReforiginRmsd(object):
         is a missing residue.
         """
         
-        workdir=os.getcwd()
-        
         # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
         resSeqMap = residue_map.residueSequenceMap( nativePdb, self.refModelPdb )
         
@@ -975,9 +973,7 @@ class ReforiginRmsd(object):
         incomparable = resSeqMap.modelIncomparable()
         if len( incomparable ):
             
-            n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
-            refinedPdbCut = os.path.join( self.workdir, n+"_cut.pdb" )
-            
+            refinedPdbCut = ample_util.filename_append( filename=refinedPdb, astr="cut", directory=self.workdir )
             logfile = "{0}.log".format( refinedPdb )
             cmd="pdbcur xyzin {0} xyzout {1}".format( refinedPdb, refinedPdbCut ).split()
             
@@ -986,7 +982,7 @@ class ReforiginRmsd(object):
             for e in incomparable:
                 stdin += "delresidue {0}\n".format( e )
             
-            retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=workdir, dolog=False, stdin=stdin)
+            retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=self.workdir, dolog=False, stdin=stdin)
             
             if retcode == 0:
                 # remove temporary files
@@ -995,30 +991,26 @@ class ReforiginRmsd(object):
                 raise RuntimeError,"Error deleting residues {0}".format( incomparable )
             
             refinedPdb = refinedPdbCut
-            
         
         PE = pdb_edit.PDBEdit()
         if self.cAlphaOnly:
             # If only alpha atoms are required, we create a copy of the model with only alpha atoms
-            n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
-            tmp = os.path.join( self.workdir, n+"_cAlphaOnly.pdb" )
+            tmp = ample_util.filename_append( filename=refinedPdb, astr="CA", directory=self.workdir )
             PE.calpha_only( refinedPdb, tmp )
             refinedPdb = tmp
         else:
             # Strip down to backbone atoms
-            n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
-            tmp = os.path.join( self.workdir, n+"_backbone.pdb" )
+            tmp = ample_util.filename_append( filename=refinedPdb, astr="BB", directory=self.workdir )
             PE.backbone( refinedPdb, tmp  )
             refinedPdb = tmp
 
         # Now create a PDB with the matching atoms from native that are in refined
-        n = os.path.splitext( os.path.basename( nativePdb ) )[0]
-        nativePdbMatch = os.path.join( self.workdir, n+"_matched.pdb" )
+        nativePdbMatch = ample_util.filename_append( filename=nativePdb, astr="matched", directory=self.workdir )
         PE.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
         
         # Now get the rmsd
-        n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
-        reforiginOut = os.path.join( self.workdir, n+"_chain{0}_reforigin.pdb".format( nativeChainID ) )
+        astr = "chain{0}_reforigin".format( nativeChainID )
+        reforiginOut = ample_util.filename_append( filename=refinedPdb, astr=astr, directory=self.workdir )
         rms = self.calc_reforigin_rmsd( refpdb=nativePdbMatch, targetpdb=refinedPdb, outpdb=reforiginOut )
         return ( rms, reforiginOut )
     
@@ -1032,7 +1024,6 @@ class ReforiginRmsd(object):
 
         # Run a pass to find the # chains
         pdbedit = pdb_edit.PDBEdit()
-        print "GETTING INFO FOR ",refinedPdb
         refinedInfo = pdbedit.get_info( refinedPdb )
         nativeInfo = pdbedit.get_info( nativePdb )
         native_chains = nativeInfo.models[ 0 ].chains
@@ -1054,8 +1045,8 @@ class ReforiginRmsd(object):
             else:
                 
                 # Extract the chain from the pdb
-                n = os.path.splitext( os.path.basename( nativePdb ) )[0]
-                nativeChainPdb = os.path.join( self.workdir, n+"_chain{0}.pdb".format( nativeChainID ) ) 
+                astr = "chain{0}".format( nativeChainID )
+                nativeChainPdb = ample_util.filename_append( filename=nativePdb, astr=astr, directory=self.workdir )
                 pdbedit.extract_chain( nativePdb, nativeChainPdb, chainID=nativeChainID )
                 
                 assert os.path.isfile( nativeChainPdb  ), nativeChainPdb
@@ -1067,8 +1058,8 @@ class ReforiginRmsd(object):
                 assert os.path.isfile( nativeChainPdb  ), nativeChainPdb
                 
                 # Extract the chain from the pdb
-                n = os.path.splitext( os.path.basename( refinedPdb ) )[0]
-                refinedChainPdb = os.path.join( self.workdir, n+"_chain{0}.pdb".format( refinedChainID ) ) 
+                astr = "chain{0}".format( refinedChainID )
+                refinedChainPdb = ample_util.filename_append( filename=refinedPdb, astr=astr, directory=self.workdir )
                 pdbedit.extract_chain( refinedPdb, refinedChainPdb, chainID=refinedChainID, newChainID=nativeChainID, cAlphaOnly=self.cAlphaOnly )
                 
                 #print "calculating for {0} vs. {1}".format( refinedChainID, nativeChainID  )
@@ -1330,7 +1321,7 @@ if __name__ == "__main__":
 
     CLUSTERNUM=0
     #rundir = "/Users/jmht/Documents/AMPLE/data/run"
-    rundir = "/home/jmht/Documents/test/new"
+    rundir = "/home/jmht/Documents/test/TM"
     #TMdir = "/Users/jmht/Documents/AMPLE/data"
     TMdir = "/media/data/shared/TM"
     os.chdir( rundir )
@@ -1343,10 +1334,10 @@ if __name__ == "__main__":
     
     allResults = []
     
-    #for pdbcode in [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
+    for pdbcode in [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
     #for pdbcode in [ "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    for pdbcode in [ "2WIE" ]:
+    #for pdbcode in [ "2WIE" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1512,8 +1503,12 @@ if __name__ == "__main__":
         
             # Get hold of a full model so we can do the mapping of residues
             refModelPdb = os.path.join( datadir, "models/S_00000001.pdb".format( pdbcode ) )
-            rmsder = ReforiginRmsd( nativePdb, placedPdb, refModelPdb )
-            ar.reforiginRmsd =  rmsder.rmsd
+            try:
+                rmsder = ReforiginRmsd( nativePdb, placedPdb, refModelPdb )
+                ar.reforiginRmsd =  rmsder.rmsd
+            except Exception:
+                print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdb, placedPdb )
+                ar.reforiginRmsd = 9999 
             
             # Now calculate contacts
             ccalc = contacts.Contacts()
