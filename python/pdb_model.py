@@ -9,6 +9,343 @@ Classes for holding data from PDB files
 import types
 import unittest
 
+# Non-redundant origins from:
+# http://www.ccp4.ac.uk/dist/html/alternate_origins.html
+_origins = {  
+                   
+                   # TRICLINIC
+                   '1aP' : [ 
+                             [ 0.0, 0.0, 0.0 ],
+                             ],
+                   
+                   # MONOCLINIC
+                   '2mP' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.0, 0.0, 0.5 ],
+                           [ 0.5, 0.0, 0.0 ],
+                           [ 0.5, 0.0, 0.5 ],
+                           ] ,
+  
+                   '2mC' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.0, 0.0, 0.5 ],
+                           ] ,      
+                    
+                   '2mA' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.5, 0.0, 0.0 ],
+                           ] ,
+                    
+                   '2mI' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.0, 0.0, 0.5 ],
+                           ] ,
+                   
+                   # ORTHORHOMBIC
+                    '222oP' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.0, 0.0, 0.5 ],
+                           [ 0.0, 0.5, 0.0 ],
+                           [ 0.0, 0.5, 0.5 ],
+                           [ 0.5, 0.0, 0.0 ],
+                           [ 0.5, 0.0, 0.5 ],
+                           [ 0.5, 0.5, 0.0 ],
+                           [ 0.5, 0.5, 0.5 ],
+                           ] ,
+                                  
+                    '222oC' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.0, 0.0, 0.5 ],
+                           [ 0.5, 0.0, 0.0 ],
+                           [ 0.5, 0.0, 0.5 ],
+                           ] ,     
+                    
+                    '222oF' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.25, 0.25, 0.25 ],
+                           [ 0.5, 0.5, 0.5 ],
+                           [ 0.75, 0.75, 0.75 ],
+                           ] ,  
+                    
+                    '222oI' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.0, 0.0, 0.5 ],
+                           [ 0.0, 0.5, 0.0 ],
+                           [ 0.5, 0.0, 0.0 ],
+                           ] ,
+                   
+                   # TETRAGONAL
+                    '4tP' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.5, 0.5, 0.0 ],
+                           ] ,           
+                    
+                    '4tI' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           ] ,             
+
+                    '422tP' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.0, 0.0, 0.5 ],
+                           [ 0.5, 0.5, 0.0 ],
+                           [ 0.5, 0.5, 0.5 ],
+                           ] ,
+                   
+                    '422tI' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.0, 0.0, 0.5 ],
+                           ] ,
+                   
+                   # TETRAGONAL
+                   '4tP' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          [ 0.5, 0.5, 0.0 ],
+                          ] ,
+                   
+                   '4tI' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          ] ,
+                                      
+                   '422tP' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          [ 0.0, 0.0, 0.5 ],
+                          [ 0.5, 0.5, 0.0 ],
+                          [ 0.5, 0.5, 0.5 ],
+                          ] ,
+                   
+                   '422tI' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          [ 0.0, 0.0, 0.5 ],
+                          ] ,
+                   
+                   # TRIGONAL
+                   '3hP' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          [ float(1/3), float(2/3), 0.0 ],
+                          [ float(2/3), float(1/3), 0.0 ],
+                          ] ,
+                   
+                   '3hR_1' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          ] ,
+                   
+                   '3hR_2' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          ] ,
+                   
+                   '312hP' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          [ 0.0, 0.0, 0.5 ],
+                          [ float(1/3), float(2/3), 0.0 ],
+                          [ float(1/3), float(2/3), 0.5 ],
+                          [ float(2/3), float(1/3), 0.0 ],
+                          [ float(2/3), float(1/3), 0.5 ],
+                          ] ,
+                   
+                   '321hP' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          [ 0.0, 0.0, 0.5 ],
+                          ] ,
+                   
+                   '32hR_1' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          [ 0.0, 0.0, 0.5 ],
+                          ] ,
+                   
+                   '32hR_2' : [
+                          [ 0.0, 0.0, 0.0 ],
+                          [ 0.5, 0.5, 0.5 ],
+                          ] ,
+                                      
+                    # HEXAGONAL
+                    '6hP' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           ] ,
+                          
+                    '622hP' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.0, 0.0, 0.5 ],
+                           ] ,
+                          
+                    # CUBIC
+                    '23cP' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.5, 0.5, 0.5 ],
+                           ] ,
+                                          
+                    '23cF' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.25, 0.25, 0.25 ],
+                           [ 0.5, 0.5, 0.5 ],
+                           [ 0.75, 0.75, 0.75 ],
+                           ] ,
+
+                    '23cI' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           ] ,                                  
+
+                    '432cP' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.5, 0.5, 0.5 ],
+                           ] ,
+                                              
+                    '432cF' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           [ 0.5, 0.5, 0.5 ],
+                           ] ,                                  
+                                              
+                    '432cI' : [
+                           [ 0.0, 0.0, 0.0 ],
+                           ] ,                                  
+                    }
+
+sg2origins = {
+              # Primitive
+              'P 1'          : _origins[ '1aP' ],
+              # MONOCLINIC
+              'P 2'          : _origins[ '2mP' ],
+              
+              'P 2 1'        : _origins[ '2mP' ],
+              
+              'C 2'          : _origins[ '2mC' ],
+              
+              'A 2'          : _origins[ '2mA' ],
+              
+              'I 2'          : _origins[ '2mI' ],
+              
+              # ORTHORHOMBIC
+              'P 2 2 2'      : _origins[ '222oP' ],
+              'P 21 2 2'     : _origins[ '222oP' ],
+              'P 2 21 2'     : _origins[ '222oP' ],
+              'P 2 2 21'     : _origins[ '222oP' ],
+              'P 2 21 21'    : _origins[ '222oP' ],
+              'P 21 2 21'    : _origins[ '222oP' ],
+              'P 21 21 2'    : _origins[ '222oP' ],
+              'P 21 21 21'   : _origins[ '222oP' ],
+              
+              'C 2 2 21'     : _origins[ '222oC' ],
+              'C 2 2 2'      : _origins[ '222oC' ],
+              
+              'F 2 2 2'      : _origins[ '222oF' ],
+              
+              'I 2 2 2'      : _origins[ '222oI' ],
+              'I 21 12 21'   : _origins[ '222oI' ],
+              
+              # TETRAGONAL
+              'P 4'          : _origins[ '4tP' ],
+              'P 4 1'        : _origins[ '4tP' ],
+              'P 4 2'        : _origins[ '4tP' ],
+              'P 4 3'        : _origins[ '4tP' ],
+              
+              'I 4'          : _origins[ '4tI' ],
+              'I 4 1'        : _origins[ '4tI' ],
+              
+              'P 4 2 2'      : _origins[ '422tP' ],
+              'P 4 21 2'     : _origins[ '422tP' ],
+              'P 41 2 2'     : _origins[ '422tP' ],
+              'P 41 21 2'    : _origins[ '422tP' ],
+              'P 42 2 2'     : _origins[ '422tP' ],
+              'P 42 21 2'    : _origins[ '422tP' ],
+              'P 43 2 2'     : _origins[ '422tP' ],
+              'P 43 21 2'    : _origins[ '422tP' ],
+              
+              'I 4 2 2'      : _origins[ '422tI' ],
+              'I 41 2 2'     : _origins[ '422tI' ],
+              
+              # TRIGONAL
+              'P 3'          : _origins[ '3hP' ],
+              'P 31'         : _origins[ '3hP' ],
+              'P 32'         : _origins[ '3hP' ],
+              
+              'R 3 H'        : _origins[ '3hR_1' ],
+              'R 3 R'        : _origins[ '3hR_2' ],
+              
+              'P 3 1 2'      : _origins[ '312hP' ],
+              'P 31 1 2'     : _origins[ '312hP' ],
+              'P 32 1 2'     : _origins[ '312hP' ],
+              
+              'P 3 2 1'     : _origins[ '321hP' ],
+              'P 31 2 1'    : _origins[ '321hP' ],
+              'P 32 2 1'    : _origins[ '321hP' ],
+              
+              'R 3 2 H'     : _origins[ '32hR_1' ],
+              'R 3 2 R'     : _origins[ '32hR_2' ],
+              
+              # HEXAGONAL
+              'P 6'         : _origins[ '6hP' ],
+              'P 6 1'       : _origins[ '6hP' ],
+              'P 6 5'       : _origins[ '6hP' ],
+              'P 6 2'       : _origins[ '6hP' ],
+              'P 6 4'       : _origins[ '6hP' ],
+              'P 6 3'       : _origins[ '6hP' ],
+              
+              'P 6 2 2'     : _origins[ '622hP' ],
+              'P 61 2 2'    : _origins[ '622hP' ],
+              'P 65 2 2'    : _origins[ '622hP' ],
+              'P 62 2 2'    : _origins[ '622hP' ],
+              'P 64 2 2'    : _origins[ '622hP' ],
+              'P 63 2 2'    : _origins[ '622hP' ],
+              
+              # CUBIC
+              'P 2 3'       : _origins[ '23cP' ],
+              'P 21 3'      : _origins[ '23cP' ],
+              
+              'F 2 3'       : _origins[ '23cF' ],
+              
+              'I 2 3'       : _origins[ '23cI' ],
+              'I 21 3'      : _origins[ '23cI' ],
+              
+              'P 4 3 2'     : _origins[ '432cP' ],
+              'P 42 3 2'    : _origins[ '432cP' ],
+              'P 43 3 2'    : _origins[ '432cP' ],
+              'P 41 3 2'    : _origins[ '432cP' ],
+              
+              'F 4 3 2'     : _origins[ '432cF' ],
+              'F 41 3 2'    : _origins[ '432cF' ],
+              
+              'I 4 3 2'     : _origins[ '432cI' ],
+              'I 41 3 2'    : _origins[ '432cI' ],
+              
+              }
+
+
+class CrystalInfo(object):
+    def __init__(self, line=None):
+        """foo"""
+        
+        self._reset()
+        
+        if line:
+            self.fromLine( line )
+        
+        return
+    
+    def _reset( self ):
+        
+        self.a = None
+        self.b = None
+        self.c = None
+        self.alpha = None
+        self.beta = None
+        self.gamma = None
+        self.spaceGroup = None
+        self.z = None
+        
+        return
+    
+    def fromLine(self, line ):
+        
+        self.a = float( line[6:15] )
+        self.b = float( line[15:24] )
+        self.c = float( line[24:33] )
+        self.alpha = float( line[33:40] )
+        self.beta = float( line[40:47] )
+        self.gamma = float( line[47:54] )
+        self.spaceGroup = line[55:66]
+        self.z = int( line[66:70] )
+        
+        return
+
 class PdbInfo(object):
     """A class to hold information extracted from a PDB file"""
     
@@ -22,6 +359,8 @@ class PdbInfo(object):
         # http://www.wwpdb.org/documentation/format33/remarks1.html#REMARK%20280
         self.solventContent = None
         self.matthewsCoefficient = None
+        
+        self.crystalInfo = None
         
         return
     
@@ -441,6 +780,22 @@ class Test(unittest.TestCase):
         self.assertEqual(a.stdRes,'ASN')
         self.assertEqual(a.comment,"GLYCOSYLATION SITE")
         self.assertEqual( a.toLine(), line )
+        
+        return
+    
+    def testReadCrystalInfo(self):
+        """See if we can read a cryst1 line"""
+
+        line = "CRYST1  117.000   15.000   39.000  90.00  90.00  90.00 P 21 21 21    8 "
+        a = CrystalInfo( line )
+        self.assertEqual(a.a,117.000)
+        self.assertEqual(a.b,15.000)
+        self.assertEqual(a.c,39.000)
+        self.assertEqual(a.alpha,90)
+        self.assertEqual(a.beta,90)
+        self.assertEqual(a.gamma,90)
+        self.assertEqual(a.spaceGroup,"P 21 21 21 ")
+        self.assertEqual(a.z,8)
         
         return
            
