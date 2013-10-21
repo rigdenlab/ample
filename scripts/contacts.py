@@ -81,7 +81,7 @@ class Contacts(object):
             #print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
-            placedPdbRes = ample_util.filename_append( filename=placedPdb, astr="reseq" )
+            placedPdbRes = ample_util.filename_append( filename=placedPdb, astr="reseq", directory=self.workdir )
             pdbedit.match_resseq( targetPdb=placedPdb, sourcePdb=None, outPdb=placedPdbRes, resMap=resSeqMap )
             placedPdb = placedPdbRes
  
