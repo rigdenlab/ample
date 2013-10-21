@@ -15,9 +15,11 @@ parse ncont file to generate map & analyse whether placed bits match and what ty
 """
 
 import os
+import sys
 
 import ample_util
 import pdb_edit
+import pdb_model
 import residue_map
 
 
@@ -78,41 +80,68 @@ class Contacts(object):
                             )
          
         if not resSeqMap.resSeqMatch():
-            #print "NUMBERING DOESN'T MATCH"
+            print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
             placedPdbRes = ample_util.filename_append( filename=placedPdb, astr="reseq", directory=self.workdir )
             pdbedit.match_resseq( targetPdb=placedPdb, sourcePdb=None, outPdb=placedPdbRes, resMap=resSeqMap )
             placedPdb = placedPdbRes
  
-        # Output filename
-        csymmatchPdb = ample_util.filename_append( filename=placedPdb,
-                                                   astr="csymmatch",
-                                                   directory=self.workdir
-                                                    )
-                
-        # Determine the best orientation/origin
-        self.run_csymmatch( placedPdb=placedPdb,
-                            nativePdb=nativePdb,
-                            csymmatchPdb=csymmatchPdb
-                            )
-        
-            
-        # Now rename csymmatchPdb chains
-        csymmatchInfo = pdbedit.get_info( csymmatchPdb )
-        fromChain = csymmatchInfo.models[0].chains
+        # Make a copy of placedPdb with chains renamed to lower case
+        placedInfo = pdbedit.get_info( placedPdb )
+        fromChain = placedInfo.models[0].chains
         toChain = [ c.lower() for c in fromChain ]
+        placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren" )
+        pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=fromChain, toChain=toChain )
+
+        # Get list of origins
+        placedSpaceGroup = placedInfo.crystalInfo.spaceGroup
+        if placedSpaceGroup != placedInfo.crystalInfo.spaceGroup:
+            raise RuntimeError,"Mismatching space groups!"
+        origins = pdb_model.sg2origins[ placedSpaceGroup.strip() ]
         
-        csymmatchAaPdb = ample_util.filename_append( filename=csymmatchPdb, astr="ren" )
-        pdbedit.rename_chains( inpdb=csymmatchPdb, outpdb=csymmatchAaPdb, fromChain=fromChain, toChain=toChain )
-        
-        # Concatenate into one file
-        joinedPdb = ample_util.filename_append( filename=csymmatchAaPdb, astr="joined" )
-        pdbedit.cat_pdbs( pdb1=nativePdb, pdb2=csymmatchAaPdb, pdbout=joinedPdb )
-        
-        # Run ncont
-        self.run_ncont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
+        # Loop over origins, move the placed pdb to the new origin and then run ncont
+        for i, origin in enumerate( origins  ):
+            print "GOT ORIGIN ",i,origin
+            
+            placedOriginPdb =  placedAaPdb
+            if i != 0:
+                # Move pdb to new origin
+                placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr="origin{0}".format(i) )
+                pdbedit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
+            
+            # Concatenate into one file
+            joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined" )
+            pdbedit.cat_pdbs( pdb1=nativePdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
                 
+            # Run ncont
+            self.run_ncont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
+            self.parse_ncontlog()
+            print "GOT CONTACTS: {0} : {1} : {2}".format( self.numContacts, self.inregister, self.ooregister  )
+                
+        
+#         # Determine the best orientation/origin
+#         self.run_csymmatch( placedPdb=placedPdb,
+#                             nativePdb=nativePdb,
+#                             csymmatchPdb=csymmatchPdb
+#                             )
+#         
+#             
+#         # Now rename csymmatchPdb chains
+#         csymmatchInfo = pdbedit.get_info( csymmatchPdb )
+#         fromChain = csymmatchInfo.models[0].chains
+#         toChain = [ c.lower() for c in fromChain ]
+#         
+#         csymmatchAaPdb = ample_util.filename_append( filename=csymmatchPdb, astr="ren" )
+#         pdbedit.rename_chains( inpdb=csymmatchPdb, outpdb=csymmatchAaPdb, fromChain=fromChain, toChain=toChain )
+#         
+#         # Concatenate into one file
+#         joinedPdb = ample_util.filename_append( filename=csymmatchAaPdb, astr="joined" )
+#         pdbedit.cat_pdbs( pdb1=nativePdb, pdb2=csymmatchAaPdb, pdbout=joinedPdb )
+#         
+#         # Run ncont
+#         self.run_ncont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
+#                 
         return
     
     
@@ -253,6 +282,8 @@ class Contacts(object):
             logfile = self.ncontlog
             
         self.numContacts = 0
+        self.inregister = 0
+        self.ooregister = 0
         clines = []
         
         capture=False
@@ -303,8 +334,6 @@ class Contacts(object):
     
         # Now count'em
         MINC = 3 # minimum contiguous to count
-        self.inregister=0
-        self.ooregister=0
         last1=None
         last2=None
         count=0
@@ -352,17 +381,17 @@ class Contacts(object):
         return
 
 if __name__ == "__main__":
-    root = "/Users/jmht/Documents/AMPLE/data/ncont"
-    root = "/home/jmht/Documents/test/ncont/3PCV"
-    nativePdb = root + "/3PCV_std.pdb"
-    placedPdb = root + "/refmac_phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.pdb"
-    refModelPdb = root + "/S_00000001.pdb"
-    
-    root = "/home/jmht/Documents/test/ncont/1D7M"
-    workdir = root + "/All_atom_trunc_5.131715_rad_2"
-    nativePdb = root + "/1D7M.pdb"
-    refModelPdb = root + "/S_00000001.pdb"
-    placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
+#     root = "/Users/jmht/Documents/AMPLE/data/ncont"
+#     root = "/home/jmht/Documents/test/ncont/3PCV"
+#     nativePdb = root + "/3PCV_std.pdb"
+#     placedPdb = root + "/refmac_phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.pdb"
+#     refModelPdb = root + "/S_00000001.pdb"
+#     
+#     root = "/home/jmht/Documents/test/ncont/1D7M"
+#     workdir = root + "/All_atom_trunc_5.131715_rad_2"
+#     nativePdb = root + "/1D7M.pdb"
+#     refModelPdb = root + "/S_00000001.pdb"
+#     placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
     
     
     root = "/home/jmht/Documents/test/ncont/3PCV"
@@ -383,12 +412,10 @@ if __name__ == "__main__":
     # PE = pdb_edit.PDBEdit()
     # PE.cat_pdbs(pdb1=nativePdb, pdb2="csymmatchAll.pdb", pdbout="joined.pdb")
     # 
-    # import sys
-    # sys.exit()
     
     c = Contacts()
-    #c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
-    logfile = "/home/jmht/Documents/test/ncont/3PCV/poly_ala_trunc_2.822761_rad_1/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
-    logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
-    c.parse_ncontlog( logfile=logfile )
-    print c.ncontacts, c.inregister,c.ooregister
+    c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
+    #logfile = "/home/jmht/Documents/test/ncont/3PCV/poly_ala_trunc_2.822761_rad_1/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
+    #logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
+    #c.parse_ncontlog( logfile=logfile )
+    #print c.ncontacts, c.inregister,c.ooregister
