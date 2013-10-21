@@ -778,7 +778,10 @@ class PDBEdit(object):
                                 # Leave as None
                                 pass
             #End REMARK
-
+            
+            if line.startswith("CRYST1"):
+                info.crystalInfo = pdb_model.CrystalInfo( line )
+                
             if line.startswith("MODEL"):
                 if currentModel:
                     # Need to make sure that we have an id if only 1 chain and none given
@@ -1293,6 +1296,27 @@ mostprob
             
         o.close()
         
+        return
+
+    def translate( self, inpdb=None, outpdb=None, ftranslate=None ):
+        """translate pdb
+        args:
+        ftranslate -- vector of fractional coordinates to shift by
+        """
+        
+        logfile = outpdb+".log"
+        cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
+        
+        # Build up stdin
+        stdin='translate * frac {0:F} {1:F} {2:F}'.format( ftranslate[0], ftranslate[1], ftranslate[2] )
+        retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
+        
+        if retcode == 0:
+            # remove temporary files
+            os.unlink(logfile)
+        else:
+            raise RuntimeError,"Error translating PDB"
+            
         return
 
 
