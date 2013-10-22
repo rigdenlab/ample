@@ -16,12 +16,38 @@ parse ncont file to generate map & analyse whether placed bits match and what ty
 
 import os
 import sys
+import types
 
 import ample_util
 import pdb_edit
 import pdb_model
 import residue_map
 
+
+class ContactData(object):
+    def __init__(self):
+        self.numContacts = 0
+        self.inregister = 0
+        self.ooregister = 0
+        self.allMatched = None
+        self.ncontlog = None
+        self.pdb = None
+        self.csymmatchPdb = None
+        return
+    
+    def __str__(self):
+        """List the data attributes of this object"""
+        me = {}
+        for slot in dir(self):
+            attr = getattr(self, slot)
+            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
+              isinstance(attr, types.FunctionType) ):
+                me[slot] = attr
+                
+        s = "{0}\n".format( self.__repr__() )
+        for k, v in me.iteritems():
+            s += "{0} : {1}\n".format( k,v )
+        return s
 
 class Contacts(object):
     """Foo
@@ -32,6 +58,8 @@ class Contacts(object):
         self.numContacts = 0
         self.inregister = 0
         self.ooregister = 0
+        self.allMatched = []
+        self.best = None
         return
     
     def getContacts(self, nativePdb, placedPdb, refModelPdb, workdir=None ):
@@ -44,6 +72,8 @@ class Contacts(object):
             self.numContacts = -1
             self.inregister = -1
             self.ooregister = -1
+            self.allMatched = []
+            self.best = None
         return
     
     def run( self, nativePdb, placedPdb, refModelPdb, workdir=None ):
@@ -101,6 +131,8 @@ class Contacts(object):
         origins = pdb_model.sg2origins[ placedSpaceGroup.strip() ]
         
         # Loop over origins, move the placed pdb to the new origin and then run ncont
+        
+        self.best = ContactData()
         for i, origin in enumerate( origins  ):
             print "GOT ORIGIN ",i,origin
             
@@ -117,120 +149,117 @@ class Contacts(object):
             # Run ncont
             self.run_ncont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
             self.parse_ncontlog()
-            print "GOT CONTACTS: {0} : {1} : {2}".format( self.numContacts, self.inregister, self.ooregister  )
+            
+            if self.inregister + self.ooregister > self.best.inregister + self.best.ooregister:
+                self.best.numContacts = self.numContacts
+                self.best.inregister = self.inregister
+                self.best.ooregister = self.ooregister
+                self.best.allMatched = self.allMatched
+                self.best.ncontlog = self.ncontlog
+                self.best.pdb = placedOriginPdb
                 
+            #print "GOT CONTACTS: {0} : {1} : {2}".format( self.numContacts, self.inregister, self.ooregister  )
+            
         
-#         # Determine the best orientation/origin
-#         self.run_csymmatch( placedPdb=placedPdb,
-#                             nativePdb=nativePdb,
-#                             csymmatchPdb=csymmatchPdb
-#                             )
-#         
-#             
-#         # Now rename csymmatchPdb chains
-#         csymmatchInfo = pdbedit.get_info( csymmatchPdb )
-#         fromChain = csymmatchInfo.models[0].chains
-#         toChain = [ c.lower() for c in fromChain ]
-#         
-#         csymmatchAaPdb = ample_util.filename_append( filename=csymmatchPdb, astr="ren" )
-#         pdbedit.rename_chains( inpdb=csymmatchPdb, outpdb=csymmatchAaPdb, fromChain=fromChain, toChain=toChain )
-#         
-#         # Concatenate into one file
-#         joinedPdb = ample_util.filename_append( filename=csymmatchAaPdb, astr="joined" )
-#         pdbedit.cat_pdbs( pdb1=nativePdb, pdb2=csymmatchAaPdb, pdbout=joinedPdb )
-#         
-#         # Run ncont
-#         self.run_ncont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
+        if self.best.pdb:
+            # Just for info - run csymmatch so we can see the alignment
+            csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch" )
+            self.run_csymmatch( placedPdb=self.best.pdb,
+                                nativePdb=nativePdb,
+                                csymmatchPdb=csymmatchPdb
+                                )
+            
+            self.best.csymmatchPdb = csymmatchPdb
 #                 
         return
     
     
-    def run_over_chains( self, nativePdb, placedPdb, refModelPdb, workdir=None ):
-        """
-        """
-
-        self.workdir = workdir
-        if not self.workdir:
-            self.workdir = os.getcwd()
-            
-        # Run a pass to find the # chains
-        pdbedit = pdb_edit.PDBEdit()
-        placedInfo = pdbedit.get_info( placedPdb )
-        nativeInfo = pdbedit.get_info( nativePdb )
-        native_chains = nativeInfo.models[ 0 ].chains
-        placed_chains = placedInfo.models[ 0 ].chains # only ever one model in the refined pdb
-        
-        #print "got native chains ", native_chains
-        #print "got refined chains ", refined_chains
-            
-        for nativeChainID in native_chains:
-            #print "native_chain: {0}".format( nativeChainID )
-                    
-            if len( native_chains ) == 1:
-                # Don't need to do owt as we are just using the native as is
-                nativeChainPdb = nativePdb
-            else:
-                
-                # Extract the chain from the pdb
-                nativeChainPdb = ample_util.filename_append( filename=nativePdb, 
-                                                             astr="chain{0}".format( nativeChainID ), 
-                                                             directory=self.workdir
-                                                             )
-                pdbedit.extract_chain( nativePdb, nativeChainPdb, chainID=nativeChainID )
-                
-                assert os.path.isfile( nativeChainPdb )
-            
-            for placedChainID in placed_chains:
-                
-                #print "refined_chain: {0}".format( placedChainID )
-                
-                assert os.path.isfile( nativeChainPdb )
-                
-                # Extract the chain from the pdb
-                placedChainPdb = ample_util.filename_append( filename=placedPdb,
-                                                             astr="chain{0}".format( placedChainID ),
-                                                             directory=self.workdir
-                                                              )
-                pdbedit.extract_chain( placedPdb, placedChainPdb, chainID=placedChainID, newChainID=nativeChainID )
-                
-                # Output filename
-                astr = "chain{0}_csymmatch".format( placedChainID ) 
-                csymmatchPdb = ample_util.filename_append( filename=nativeChainPdb,
-                                                           astr=astr,
-                                                           directory=self.workdir
-                                                            )
-                
-                # Determine the best orientation/origin
-                self.run_csymmatch( placedPdb=placedChainPdb,
-                                    nativePdb=nativeChainPdb,
-                                    csymmatchPdb=csymmatchPdb,
-                                    nativeChainID=nativeChainID )
-                
-                # Check whether the residue numbers match
-                resSeqMap = residue_map.residueSequenceMap()
-                modelInfo = pdbedit.get_info( refModelPdb )
-                resSeqMap.fromInfo( nativeInfo=nativeInfo,
-                                    nativeChainID=nativeChainID,
-                                    modelInfo=modelInfo,
-                                    modelChainID=modelInfo.models[0].chains[0]
-                                    )
-                
-                if not resSeqMap.resSeqMatch():
-                    #print "NO MATCH"
-                    # We need to create a copy of the csymmatch pdb with numbering matching the native
-                    csymmatchRenumberPdb = ample_util.filename_append( filename=csymmatchPdb, astr="_renumber" )
-                    pdbedit.match_resseq( nativeChainPdb, csymmatchPdb, csymmatchRenumberPdb, resMap=resSeqMap )
-                    csymmatchPdb = csymmatchRenumberPdb
-                    
-                # Now rename csymmatchPDB chain to X
-                csymmatchXPdb = ample_util.filename_append( filename=csymmatchPdb, astr="X" )
-                pdbedit.extract_chain( csymmatchPdb, csymmatchXPdb, chainID=placedChainID, newChainID='X', renumber=False )
-                
-                # Concatenate into one file
-                joinedPdb = ample_util.filename_append( filename=csymmatchXPdb, astr="joined" )
-                pdbedit.cat_pdbs( pdb1=nativeChainPdb, pdb2=csymmatchXPdb, pdbout=joinedPdb)
-                
-        return
+#     def run_over_chains( self, nativePdb, placedPdb, refModelPdb, workdir=None ):
+#         """
+#         """
+# 
+#         self.workdir = workdir
+#         if not self.workdir:
+#             self.workdir = os.getcwd()
+#             
+#         # Run a pass to find the # chains
+#         pdbedit = pdb_edit.PDBEdit()
+#         placedInfo = pdbedit.get_info( placedPdb )
+#         nativeInfo = pdbedit.get_info( nativePdb )
+#         native_chains = nativeInfo.models[ 0 ].chains
+#         placed_chains = placedInfo.models[ 0 ].chains # only ever one model in the refined pdb
+#         
+#         #print "got native chains ", native_chains
+#         #print "got refined chains ", refined_chains
+#             
+#         for nativeChainID in native_chains:
+#             #print "native_chain: {0}".format( nativeChainID )
+#                     
+#             if len( native_chains ) == 1:
+#                 # Don't need to do owt as we are just using the native as is
+#                 nativeChainPdb = nativePdb
+#             else:
+#                 
+#                 # Extract the chain from the pdb
+#                 nativeChainPdb = ample_util.filename_append( filename=nativePdb, 
+#                                                              astr="chain{0}".format( nativeChainID ), 
+#                                                              directory=self.workdir
+#                                                              )
+#                 pdbedit.extract_chain( nativePdb, nativeChainPdb, chainID=nativeChainID )
+#                 
+#                 assert os.path.isfile( nativeChainPdb )
+#             
+#             for placedChainID in placed_chains:
+#                 
+#                 #print "refined_chain: {0}".format( placedChainID )
+#                 
+#                 assert os.path.isfile( nativeChainPdb )
+#                 
+#                 # Extract the chain from the pdb
+#                 placedChainPdb = ample_util.filename_append( filename=placedPdb,
+#                                                              astr="chain{0}".format( placedChainID ),
+#                                                              directory=self.workdir
+#                                                               )
+#                 pdbedit.extract_chain( placedPdb, placedChainPdb, chainID=placedChainID, newChainID=nativeChainID )
+#                 
+#                 # Output filename
+#                 astr = "chain{0}_csymmatch".format( placedChainID ) 
+#                 csymmatchPdb = ample_util.filename_append( filename=nativeChainPdb,
+#                                                            astr=astr,
+#                                                            directory=self.workdir
+#                                                             )
+#                 
+#                 # Determine the best orientation/origin
+#                 self.run_csymmatch( placedPdb=placedChainPdb,
+#                                     nativePdb=nativeChainPdb,
+#                                     csymmatchPdb=csymmatchPdb,
+#                                     nativeChainID=nativeChainID )
+#                 
+#                 # Check whether the residue numbers match
+#                 resSeqMap = residue_map.residueSequenceMap()
+#                 modelInfo = pdbedit.get_info( refModelPdb )
+#                 resSeqMap.fromInfo( nativeInfo=nativeInfo,
+#                                     nativeChainID=nativeChainID,
+#                                     modelInfo=modelInfo,
+#                                     modelChainID=modelInfo.models[0].chains[0]
+#                                     )
+#                 
+#                 if not resSeqMap.resSeqMatch():
+#                     #print "NO MATCH"
+#                     # We need to create a copy of the csymmatch pdb with numbering matching the native
+#                     csymmatchRenumberPdb = ample_util.filename_append( filename=csymmatchPdb, astr="_renumber" )
+#                     pdbedit.match_resseq( nativeChainPdb, csymmatchPdb, csymmatchRenumberPdb, resMap=resSeqMap )
+#                     csymmatchPdb = csymmatchRenumberPdb
+#                     
+#                 # Now rename csymmatchPDB chain to X
+#                 csymmatchXPdb = ample_util.filename_append( filename=csymmatchPdb, astr="X" )
+#                 pdbedit.extract_chain( csymmatchPdb, csymmatchXPdb, chainID=placedChainID, newChainID='X', renumber=False )
+#                 
+#                 # Concatenate into one file
+#                 joinedPdb = ample_util.filename_append( filename=csymmatchXPdb, astr="joined" )
+#                 pdbedit.cat_pdbs( pdb1=nativeChainPdb, pdb2=csymmatchXPdb, pdbout=joinedPdb)
+#                 
+#         return
 
     def run_csymmatch( self, placedPdb=None, nativePdb=None, csymmatchPdb=None ):
         """FOO
@@ -284,6 +313,7 @@ class Contacts(object):
         self.numContacts = 0
         self.inregister = 0
         self.ooregister = 0
+        self.allMatched = []
         clines = []
         
         capture=False
@@ -327,10 +357,14 @@ class Contacts(object):
             
             chainID1 = c1.split("/")[2]
             resSeq1 = int( r1.split("(")[0] )
+            aa1 = r1.split("(")[1][:-2] # get amino acid and convert to single letter code
+            aa1 = pdb_edit.three2one[ aa1 ] 
             chainID2 = c2.split("/")[2].upper() # We converted to lower case
             resSeq2 = int( r2.split("(")[0] )
+            aa2 = r2.split("(")[1][:-2]
+            aa2 = pdb_edit.three2one[ aa2 ]
             
-            contacts.append( (chainID1, resSeq1, chainID2, resSeq2, dist) )
+            contacts.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) )
     
         # Now count'em
         MINC = 3 # minimum contiguous to count
@@ -338,27 +372,34 @@ class Contacts(object):
         last2=None
         count=0
         register=True # true if in register, false if out
-        for (chainID1, resSeq1, chainID2, resSeq2, dist) in contacts:
+        thisMatched = []
+        for i, (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) in enumerate( contacts ):
             
-            # First
+            #print "CONTACTS ",chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist
+            # Initialise
             if last1 == None:
                 last1 = resSeq1
                 last2 = resSeq2
                 if resSeq1 != resSeq2:
                     register=False
-                count+=1
+                count = 1
+                thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) ]
                 continue
             
-            if resSeq1 == last1 + 1 and resSeq2 == last2 + 1:
-                # Make sure we don't count continguous residues where the other residue doesn't match
+            # Is a contiguous residue
+            if ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ):
+                # Make sure we don't count contiguous residues where the other residue doesn't match
                 if ( resSeq1 != resSeq2 and register ) or ( resSeq1 == resSeq2 and not register ):
                     pass
                 else:
                     #print "INCREMENTING"
                     count += 1
+                    thisMatched.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) )
                     last1 = resSeq1
                     last2 = resSeq2
-                    continue
+                    # If this is the last one we want to drop through
+                    if i < len(contacts)-1:
+                        continue
                 
             if count > MINC:
                 #  end of a contiguous sequence
@@ -367,6 +408,7 @@ class Contacts(object):
                     self.inregister += count
                 else:
                     self.ooregister += count
+                self.allMatched += thisMatched
             
             # Either starting again or a random residue
             if resSeq1 == resSeq2:
@@ -376,8 +418,9 @@ class Contacts(object):
             
             last1 = resSeq1
             last2 = resSeq2
+            thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) ]
             count = 1
-        
+            
         return
 
 if __name__ == "__main__":
@@ -415,7 +458,9 @@ if __name__ == "__main__":
     
     c = Contacts()
     c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
+    print c.best
     #logfile = "/home/jmht/Documents/test/ncont/3PCV/poly_ala_trunc_2.822761_rad_1/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
     #logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
+    #logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_ren_origin1_joined.pdb.ncont.log"
     #c.parse_ncontlog( logfile=logfile )
-    #print c.ncontacts, c.inregister,c.ooregister
+    #print c.numContacts, c.inregister,c.ooregister
