@@ -121,7 +121,7 @@ class Contacts(object):
         placedInfo = pdbedit.get_info( placedPdb )
         fromChain = placedInfo.models[0].chains
         toChain = [ c.lower() for c in fromChain ]
-        placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren" )
+        placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren", directory=self.workdir )
         pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=fromChain, toChain=toChain )
 
         # Get list of origins
@@ -139,11 +139,11 @@ class Contacts(object):
             placedOriginPdb =  placedAaPdb
             if i != 0:
                 # Move pdb to new origin
-                placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr="origin{0}".format(i) )
+                placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr="origin{0}".format(i), directory=self.workdir )
                 pdbedit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
             
             # Concatenate into one file
-            joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined" )
+            joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
             pdbedit.cat_pdbs( pdb1=nativePdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
                 
             # Run ncont
@@ -163,13 +163,14 @@ class Contacts(object):
         
         if self.best.pdb:
             # Just for info - run csymmatch so we can see the alignment
-            csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch" )
+            csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch", directory=self.workdir )
             self.run_csymmatch( placedPdb=self.best.pdb,
                                 nativePdb=nativePdb,
                                 csymmatchPdb=csymmatchPdb
                                 )
-            
             self.best.csymmatchPdb = csymmatchPdb
+        else:
+            self.best = None
 #                 
         return
     
@@ -310,6 +311,8 @@ class Contacts(object):
         if not logfile:
             logfile = self.ncontlog
             
+        #print "LOG ",logfile
+            
         self.numContacts = 0
         self.inregister = 0
         self.ooregister = 0
@@ -340,6 +343,7 @@ class Contacts(object):
             
         assert self.numContacts == len(clines)
         
+        #print "LINES ",clines
         
         contacts = [] # Tuples of: chainID, resSeq, chainID, resSeq, dist
         # Only collect contacts for central cell
@@ -375,7 +379,7 @@ class Contacts(object):
         thisMatched = []
         for i, (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) in enumerate( contacts ):
             
-            #print "CONTACTS ",chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist
+            print "CONTACTS ",chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist
             # Initialise
             if last1 == None:
                 last1 = resSeq1
@@ -421,6 +425,9 @@ class Contacts(object):
             thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) ]
             count = 1
             
+        
+        print "GOT ALLMATCHED ",self.allMatched
+            
         return
 
 if __name__ == "__main__":
@@ -457,10 +464,11 @@ if __name__ == "__main__":
     # 
     
     c = Contacts()
-    c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
-    print c.best
+    #c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
+    #print c.best
     #logfile = "/home/jmht/Documents/test/ncont/3PCV/poly_ala_trunc_2.822761_rad_1/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
     #logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
     #logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_ren_origin1_joined.pdb.ncont.log"
-    #c.parse_ncontlog( logfile=logfile )
-    #print c.numContacts, c.inregister,c.ooregister
+    logfile = "/home/jmht/Documents/test/ncont/new/3GD8/phaser_loc0_ALL_All_atom_trunc_11.13199_rad_3_UNMOD.1_reseq_ren_origin2_joined.pdb.ncont.log"
+    c.parse_ncontlog( logfile=logfile )
+    
