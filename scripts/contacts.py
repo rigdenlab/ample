@@ -166,14 +166,14 @@ class Contacts(object):
             csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch", directory=self.workdir )
             self.run_csymmatch( placedPdb=self.best.pdb,
                                 nativePdb=nativePdb,
-                                csymmatchPdb=csymmatchPdb
+                                csymmatchPdb=csymmatchPdb,
+                                altOrigins=False
                                 )
             self.best.csymmatchPdb = csymmatchPdb
         else:
             self.best = None
 #                 
         return
-    
     
 #     def run_over_chains( self, nativePdb, placedPdb, refModelPdb, workdir=None ):
 #         """
@@ -262,7 +262,7 @@ class Contacts(object):
 #                 
 #         return
 
-    def run_csymmatch( self, placedPdb=None, nativePdb=None, csymmatchPdb=None ):
+    def run_csymmatch( self, placedPdb=None, nativePdb=None, csymmatchPdb=None, breakChains=True, altOrigins=True ):
         """FOO
         """
         
@@ -273,11 +273,14 @@ class Contacts(object):
               "-pdbin",
               placedPdb,
               "-pdbout",
-              csymmatchPdb,
-              "-origin-hand" ]
+              csymmatchPdb
+              ]
         
-#         "-connectivity-radius",
-#         "100",
+        if altOrigins:
+            cmd += [  "-origin-hand" ]
+
+        if not breakChains:
+            cmd += [ "-connectivity-radius", "100" ]
 
         retcode = ample_util.run_command(cmd=cmd, logfile=logfile, dolog=False)
         
@@ -347,17 +350,27 @@ class Contacts(object):
         
         contacts = [] # Tuples of: chainID, resSeq, chainID, resSeq, dist
         # Only collect contacts for central cell
+        mycell = None
         for c in clines:
             fields = c.split()
-            cell = int( fields[ 13 ] )
-            if cell != 333:
-                continue
+
             
             c1 = fields[ 0 ]
             r1 = fields[ 1 ]
             c2 = fields[ 6 ]
             r2 = fields[ 7 ]
             dist = float(  fields[ 12 ] )
+            cell = int(  fields[ 13 ] )
+            
+            if not mycell:
+                # initialise
+                mycell = cell
+            
+            # central cell is 333
+            if cell != mycell:
+                print "CHANGE OF CELL: {0} : {1}".format( cell, mycell )
+                mycell = cell
+                #raise RuntimeError,"Change of cell!"
             
             chainID1 = c1.split("/")[2]
             resSeq1 = int( r1.split("(")[0] )
@@ -368,7 +381,7 @@ class Contacts(object):
             aa2 = r2.split("(")[1][:-2]
             aa2 = pdb_edit.three2one[ aa2 ]
             
-            contacts.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) )
+            contacts.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
     
         # Now count'em
         MINC = 3 # minimum contiguous to count
@@ -377,28 +390,26 @@ class Contacts(object):
         count=0
         register=True # true if in register, false if out
         thisMatched = []
-        for i, (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) in enumerate( contacts ):
+        for i, (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) in enumerate( contacts ):
             
-            print "CONTACTS ",chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist
+            #print "CONTACTS ",chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell
             # Initialise
-            if last1 == None:
+            if i == 0:
                 last1 = resSeq1
                 last2 = resSeq2
                 if resSeq1 != resSeq2:
                     register=False
                 count = 1
-                thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) ]
+                thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) ]
                 continue
             
-            # Is a contiguous residue
+            # Is a contiguous residue and the register matches what we're reading
             if ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ):
                 # Make sure we don't count contiguous residues where the other residue doesn't match
-                if ( resSeq1 != resSeq2 and register ) or ( resSeq1 == resSeq2 and not register ):
-                    pass
-                else:
+                if ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register ):
                     #print "INCREMENTING"
                     count += 1
-                    thisMatched.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) )
+                    thisMatched.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
                     last1 = resSeq1
                     last2 = resSeq2
                     # If this is the last one we want to drop through
@@ -422,11 +433,10 @@ class Contacts(object):
             
             last1 = resSeq1
             last2 = resSeq2
-            thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist) ]
+            thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) ]
             count = 1
-            
         
-        print "GOT ALLMATCHED ",self.allMatched
+        #print "GOT ALLMATCHED ",self.allMatched
             
         return
 
@@ -447,15 +457,13 @@ if __name__ == "__main__":
     root = "/home/jmht/Documents/test/ncont/3PCV"
     nativePdb = root + "/3PCV.pdb"
     refModelPdb = root + "/S_00000001.pdb"
+    #workdir = root + "/All_atom_trunc_5.131715_rad_3"
+    #placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1.pdb"
     
-    workdir = root + "/All_atom_trunc_5.131715_rad_2"
-    placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
-    
-    workdir = root + "/poly_ala_trunc_2.822761_rad_1"
-    placedPdb = workdir + "/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1.pdb"
-    
-    workdir = root + "/All_atom_trunc_5.131715_rad_3"
-    placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1.pdb"
+    workdir = "/Users/jmht/Documents/AMPLE/data/ncont/3GD8"
+    nativePdb = workdir + "/3GD8_std.pdb"
+    placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_11.13199_rad_3_UNMOD.1.pdb"
+    refModelPdb = workdir + "/S_00000001.pdb"
     
     os.chdir(workdir)
     
@@ -464,11 +472,10 @@ if __name__ == "__main__":
     # 
     
     c = Contacts()
-    #c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
-    #print c.best
+    c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
+    print c.best
     #logfile = "/home/jmht/Documents/test/ncont/3PCV/poly_ala_trunc_2.822761_rad_1/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
     #logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
-    #logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_ren_origin1_joined.pdb.ncont.log"
-    logfile = "/home/jmht/Documents/test/ncont/new/3GD8/phaser_loc0_ALL_All_atom_trunc_11.13199_rad_3_UNMOD.1_reseq_ren_origin2_joined.pdb.ncont.log"
-    c.parse_ncontlog( logfile=logfile )
+    #logfile = "/Users/jmht/Documents/AMPLE/data/ncont/3GD8/phaser_loc0_ALL_All_atom_trunc_11.13199_rad_3_UNMOD.1_reseq_ren_origin2_joined.pdb.ncont.log"
+    #c.parse_ncontlog( logfile=logfile )
     
