@@ -10,8 +10,8 @@ class PhaserPdbParser(object):
     def __init__(self,pdbfile):
 
         self.pdbfile = pdbfile
-        self.phaserLLG = None
-        self.phaserTFZ = None
+        self.LLG = None
+        self.TFZ = None
 
         self.parse()
 
@@ -28,18 +28,18 @@ class PhaserPdbParser(object):
                 llist.reverse()
                 for i in llist:
                     if "TFZ==" in i and "*" not in i:
-                        self.phaserTFZ = float(i.replace("TFZ==", ""))
+                        self.TFZ = float(i.replace("TFZ==", ""))
                         break
                     if "TFZ=" in i and "TFZ==" not in i and "*" not in i:
-                        self.phaserTFZ = float(i.replace("TFZ=", ""))
+                        self.TFZ = float(i.replace("TFZ=", ""))
                         break
         
                 for i in llist:
                     if "LLG==" in i:
-                        self.phaserLLG = float(i.replace("LLG==", ""))
+                        self.LLG = float(i.replace("LLG==", ""))
                         break
                     if "LLG=" in i and "LLG==" not in i:
-                        self.phaserLLG = float(i.replace("LLG=", ""))
+                        self.LLG = float(i.replace("LLG=", ""))
                         break
         return
     
@@ -52,9 +52,10 @@ class PhaserLogParser(object):
     def __init__(self,logfile):
 
         self.logfile = logfile
-        self.phaserLLG = None
-        self.phaserTFZ = None
-        self.phaserTime = None
+        self.LLG = None
+        self.TFZ = None
+        self.time = None
+        self.killed = False
 
         self.parse()
 
@@ -64,21 +65,27 @@ class PhaserLogParser(object):
         """parse"""
 
         # print os.path.join(os.getcwd(), logfile)
-        fh = open(self.logfile, 'r')
         
         #print "Checking logfile ",self.logfile
-
-        for line in reversed(fh.readlines()):
-            if "CPU Time" in line:
-                self.phaserTime=float( line.split()[-2] )
+        maxlines = 100 # num lines to keep looking for kill time statement
+        for i, line in enumerate( reversed( open(self.logfile, 'r').readlines() ) ):
+            
+            if i > maxlines:
                 break
-        fh.close()
+            
+            if "CPU Time" in line:
+                self.time=float( line.split()[-2] )
+                continue
+            
+            if line.startswith("KILL-TIME ELAPSED ERROR: Job killed for elapsed time exceeding limit"):
+                self.killed=True
+                return
 
         fh = open(self.logfile, 'r')
         CAPTURE = False
         solline = ""
-        self.phaserLLG = 0.0
-        self.phaserTFZ = 0.0
+        self.LLG = 0.0
+        self.TFZ = 0.0
         line = fh.readline()
         while line:
             if CAPTURE:
@@ -95,18 +102,18 @@ class PhaserLogParser(object):
         llist.reverse()
         for i in llist:
             if "TFZ==" in i and "*" not in i:
-                self.phaserTFZ = float(i.replace("TFZ==", ""))
+                self.TFZ = float(i.replace("TFZ==", ""))
                 break
             if "TFZ=" in i and "TFZ==" not in i and "*" not in i:
-                self.phaserTFZ = float(i.replace("TFZ=", ""))
+                self.TFZ = float(i.replace("TFZ=", ""))
                 break
 
         for i in llist:
             if "LLG==" in i:
-                self.phaserLLG = float(i.replace("LLG==", ""))
+                self.LLG = float(i.replace("LLG==", ""))
                 break
             if "LLG=" in i and "LLG==" not in i:
-                self.phaserLLG = float(i.replace("LLG=", ""))
+                self.LLG = float(i.replace("LLG=", ""))
                 break
         return
     
@@ -122,8 +129,8 @@ class TestParsers(unittest.TestCase):
         
         pp = PhaserPdbParser( pdb )
         
-        self.assertEqual( pp.phaserLLG, 11)
-        self.assertEqual( pp.phaserTFZ, 6.2)
+        self.assertEqual( pp.LLG, 11)
+        self.assertEqual( pp.TFZ, 6.2)
         
         return
     
@@ -134,9 +141,36 @@ class TestParsers(unittest.TestCase):
         
         pp = PhaserPdbParser( pdb )
         
-        self.assertEqual( pp.phaserLLG, 36)
-        self.assertEqual( pp.phaserTFZ, 8.6)
+        self.assertEqual( pp.LLG, 36)
+        self.assertEqual( pp.TFZ, 8.6)
         
+        return
+    
+
+    def testLogParser1(self):
+        """foo"""
+        
+        log = "/media/data/shared/coiled-coils/1BYZ/ROSETTA_MR_0/MRBUMP/cluster_1/search_SCWRL_reliable_sidechains_trunc_0.005734_rad_1_mrbump/data/loc0_ALL_SCWRL_reliable_sidechains_trunc_0.005734_rad_1/unmod/mr/phaser/phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_0.005734_rad_1_UNMOD.log"
+        
+        pp = PhaserLogParser( log )
+        
+        self.assertEqual( pp.time, 24991.56)
+        self.assertEqual( pp.LLG, None)
+        self.assertEqual( pp.TFZ, None)
+        self.assertEqual( pp.killed, True)
+        
+        return
+    
+    def testLogParser2(self):
+        """foo"""
+        
+        log = "/media/data/shared/coiled-coils/1BYZ/ROSETTA_MR_0/MRBUMP/cluster_1/search_All_atom_trunc_0.039428_rad_1_mrbump/data/loc0_ALL_All_atom_trunc_0.039428_rad_1/unmod/mr/phaser/phaser_loc0_ALL_All_atom_trunc_0.039428_rad_1_UNMOD.log"
+        
+        pp = PhaserLogParser( log )
+        self.assertEqual( pp.time, 9648.5)
+        self.assertEqual( pp.LLG, 36)
+        self.assertEqual( pp.TFZ, 8.6)
+        self.assertEqual( pp.killed, False)
         return
 #
 # Run unit tests
