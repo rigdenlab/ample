@@ -128,6 +128,7 @@ class AmpleResult(object):
                               'phaserLLG',
                               'phaserTFZ',
                               'phaserTime',
+                              'phaserKilled',
                               'molrepScore',
                               'molrepTime',
                               'reforiginRmsd',
@@ -171,6 +172,7 @@ class AmpleResult(object):
                                 "Phaser LLG",
                                 "Phaser TFZ",
                                 "Phaser Time",
+                                "Phaser Killed",
                                 "Molrep Score",
                                 "Molrep Time",
                                 "Reforigin RMSD",
@@ -1367,12 +1369,12 @@ if __name__ == "__main__":
                 if not os.path.isfile( phaserPdb ):
                     continue
                 phaserP = phaser_parser.PhaserPdbParser( phaserPdb )
-                ar.phaserLLG = phaserP.phaserLLG
-                ar.phaserTFZ = phaserP.phaserTFZ
+                ar.phaserLLG = phaserP.LLG
+                ar.phaserTFZ = phaserP.TFZ
                 
                 phaserLog = os.path.join( resultDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(mrbumpResult.program, ensembleName) )
                 phaserP = phaser_parser.PhaserLogParser( phaserLog )
-                ar.phaserTime = phaserP.phaserTime
+                ar.phaserTime = phaserP.time
                 
                 
                 placedPdb = phaserPdb
