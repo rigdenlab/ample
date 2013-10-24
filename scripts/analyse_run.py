@@ -89,6 +89,7 @@ import ample_util
 import contacts
 import dssp
 import pdb_edit
+import phaser_parser
 import residue_map
 
 
@@ -669,113 +670,6 @@ class MrbumpLogParser(object):
             line=fh.readline()
         fh.close()
 
-        return
-
-class PhaserLogParser(object):
-    """
-    Class to mine information from a phaser log
-    """
-
-    def __init__(self,logfile):
-
-        self.logfile = logfile
-        self.phaserLLG = None
-        self.phaserTFZ = None
-        self.phaserTime = None
-
-        self.parse()
-
-        return
-
-    def parse(self):
-        """parse"""
-
-        # print os.path.join(os.getcwd(), logfile)
-        fh = open(self.logfile, 'r')
-        
-        #print "Checking logfile ",self.logfile
-
-        for line in reversed(fh.readlines()):
-            if "CPU Time" in line:
-                self.phaserTime=float( line.split()[-2] )
-                break
-        fh.close()
-
-        fh = open(self.logfile, 'r')
-        CAPTURE = False
-        solline = ""
-        self.phaserLLG = 0.0
-        self.phaserTFZ = 0.0
-        line = fh.readline()
-        while line:
-            if CAPTURE:
-                if "SOLU SPAC" in line:
-                    CAPTURE = False
-                else:
-                    solline += line.strip() + " "
-            if  "Solution #1 annotation (history):" in line or  "Solution annotation (history):" in line:
-                CAPTURE = True
-            line = fh.readline()
-        fh.close()
-
-        llist = solline.split()
-        llist.reverse()
-        for i in llist:
-            if "TFZ==" in i and "*" not in i:
-                self.phaserTFZ = float(i.replace("TFZ==", ""))
-                break
-            if "TFZ=" in i and "TFZ==" not in i and "*" not in i:
-                self.phaserTFZ = float(i.replace("TFZ=", ""))
-                break
-
-        for i in llist:
-            if "LLG==" in i:
-                self.phaserLLG = float(i.replace("LLG==", ""))
-                break
-            if "LLG=" in i and "LLG==" not in i:
-                self.phaserLLG = float(i.replace("LLG=", ""))
-                break
-        return
-
-class PhaserPdbParser(object):
-    """
-    Class to mine information from a phaser pdb file
-    """
-
-    def __init__(self,pdbfile):
-
-        self.pdbfile = pdbfile
-        self.phaserLLG = None
-        self.phaserTFZ = None
-
-        self.parse()
-
-        return
-
-    def parse(self):
-        """parse"""
-
-        # print os.path.join(os.getcwd(), logfile)
-
-        for line in open(self.pdbfile, 'r'):
-            if "TFZ==" in line:
-                llist = line.split()
-                llist.reverse()
-                for i in llist:
-                    if "TFZ==" in i and "*" not in i:
-                        self.phaserTFZ = float(i.replace("TFZ==", ""))
-                        break
-                    if "TFZ=" in i and "TFZ==" not in i and "*" not in i:
-                        self.phaserTFZ = float(i.replace("TFZ=", ""))
-                        break
-        
-                for i in llist:
-                    if "LLG==" in i:
-                        self.phaserLLG = float(i.replace("LLG==", ""))
-                        break
-                    if "LLG=" in i and "LLG==" not in i:
-                        self.phaserLLG = float(i.replace("LLG=", ""))
-                        break
         return
 
 class PsipredParser(object):
@@ -1472,12 +1366,12 @@ if __name__ == "__main__":
                 phaserPdb = os.path.join( resultDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrbumpResult.program, ensembleName) )
                 if not os.path.isfile( phaserPdb ):
                     continue
-                phaserP = PhaserPdbParser( phaserPdb )
+                phaserP = phaser_parser.PhaserPdbParser( phaserPdb )
                 ar.phaserLLG = phaserP.phaserLLG
                 ar.phaserTFZ = phaserP.phaserTFZ
                 
                 phaserLog = os.path.join( resultDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(mrbumpResult.program, ensembleName) )
-                phaserP = PhaserLogParser( phaserLog )
+                phaserP = phaser_parser.PhaserLogParser( phaserLog )
                 ar.phaserTime = phaserP.phaserTime
                 
                 
