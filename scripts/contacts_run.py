@@ -27,12 +27,12 @@ if __name__ == "__main__":
     #rundir = "/Users/jmht/Documents/AMPLE/data/run"
     rundir = "/home/jmht/Documents/test/TM"
     rundir = "/home/jmht/Documents/test/ncont/new"
-    #TMdir = "/Users/jmht/Documents/AMPLE/data"
-    TMdir = "/media/data/shared/TM"
+    #CCdir = "/Users/jmht/Documents/AMPLE/data"
+    CCdir = "/media/data/shared/TM"
     os.chdir( rundir )
     
     
-    pfile = os.path.join( TMdir,"results.pkl" )
+    pfile = os.path.join( CCdir,"results.pkl" )
     f = open( pfile )
     resultsDict = cPickle.load( f  )
     f.close()
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     #for pdbcode in [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
     #for pdbcode in [ "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    for pdbcode in [ "3GD8" ]:
+    for pdbcode in [ "2BHW" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -52,7 +52,7 @@ if __name__ == "__main__":
         print "\nResults for ",pdbcode
         
         # Directory where all the data for this run live
-        datadir = os.path.join( TMdir, pdbcode )
+        datadir = os.path.join( CCdir, pdbcode )
         
         # Get the path to the original pickle file
         pfile = os.path.join( datadir, "ROSETTA_MR_0/resultsd.pkl")
@@ -100,8 +100,8 @@ if __name__ == "__main__":
                 # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
                 ensembleName = mrbumpResult.name[9:-6]
             
-            if ensembleName != "All_atom_trunc_11.13199_rad_3":
-                continue
+            #if ensembleName != "All_atom_trunc_11.13199_rad_3":
+            #    continue
             
             # Extract information on the models and ensembles
             eresults = ampleDict['ensemble_results']
@@ -151,8 +151,9 @@ if __name__ == "__main__":
             ccalc.getContacts(nativePdb, placedPdb, refModelPdb, workdir=workdir )
             
             if ccalc.best:
-                print "GOT BEST "
-                print ccalc.best
+                good = ccalc.best.inregister + ccalc.best.ooregister
+                bad = ccalc.best.numContacts - good
+                print "GOT BEST ", good, bad
      
             # Now read the shelxe log to see how we did
             shelxeLog = os.path.join( resultDir, "build/shelxe/shelxe_run.log" )
