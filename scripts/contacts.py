@@ -64,16 +64,16 @@ class Contacts(object):
     
     def getContacts(self, nativePdb, placedPdb, refModelPdb, workdir=None ):
         
-        try:
-            self.run(nativePdb, placedPdb, refModelPdb, workdir=workdir )
-            self.parse_ncontlog()
-        except:
-            print "ERROR RUNNING CONTACTS: ",placedPdb
-            self.numContacts = -1
-            self.inregister = -1
-            self.ooregister = -1
-            self.allMatched = []
-            self.best = None
+#        try:
+        self.run(nativePdb, placedPdb, refModelPdb, workdir=workdir )
+        self.parse_ncontlog()
+#         except:
+#             print "ERROR RUNNING CONTACTS: ",placedPdb
+#             self.numContacts = -1
+#             self.inregister = -1
+#             self.ooregister = -1
+#             self.allMatched = []
+#             self.best = None
         return
     
     def run( self, nativePdb, placedPdb, refModelPdb, workdir=None ):
@@ -110,7 +110,7 @@ class Contacts(object):
                             )
          
         if not resSeqMap.resSeqMatch():
-            print "NUMBERING DOESN'T MATCH"
+            #print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
             placedPdbRes = ample_util.filename_append( filename=placedPdb, astr="reseq", directory=self.workdir )
@@ -134,7 +134,7 @@ class Contacts(object):
         
         self.best = ContactData()
         for i, origin in enumerate( origins  ):
-            print "GOT ORIGIN ",i,origin
+            #print "GOT ORIGIN ",i,origin
             
             placedOriginPdb =  placedAaPdb
             if i != 0:
@@ -353,8 +353,12 @@ class Contacts(object):
         mycell = None
         for c in clines:
             fields = c.split()
-
             
+            if len( fields ) != 15:
+                # It seems we something get self contacts: 3GD8 - phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_12.483162_rad_3_UNMOD.1
+                # don't really understand yet
+                continue
+
             c1 = fields[ 0 ]
             r1 = fields[ 1 ]
             c2 = fields[ 6 ]
@@ -368,7 +372,7 @@ class Contacts(object):
             
             # central cell is 333
             if cell != mycell:
-                print "CHANGE OF CELL: {0} : {1}".format( cell, mycell )
+                #print "CHANGE OF CELL: {0} : {1}".format( cell, mycell )
                 mycell = cell
                 #raise RuntimeError,"Change of cell!"
             
@@ -389,6 +393,7 @@ class Contacts(object):
         last2=None
         count=0
         register=True # true if in register, false if out
+        mycell=None
         thisMatched = []
         for i, (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) in enumerate( contacts ):
             
@@ -397,6 +402,7 @@ class Contacts(object):
             if i == 0:
                 last1 = resSeq1
                 last2 = resSeq2
+                mycell = cell
                 if resSeq1 != resSeq2:
                     register=False
                 count = 1
@@ -404,17 +410,19 @@ class Contacts(object):
                 continue
             
             # Is a contiguous residue and the register matches what we're reading
-            if ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ):
-                # Make sure we don't count contiguous residues where the other residue doesn't match
-                if ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register ):
-                    #print "INCREMENTING"
-                    count += 1
-                    thisMatched.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
-                    last1 = resSeq1
-                    last2 = resSeq2
-                    # If this is the last one we want to drop through
-                    if i < len(contacts)-1:
-                        continue
+            # Make sure we don't count contiguous residues where the other residue doesn't match
+            # Also where the cell changes
+            if ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ) \
+                and  ( ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register )  ) and mycell == cell:
+                #print "INCREMENTING"
+                count += 1
+                thisMatched.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
+                last1 = resSeq1
+                last2 = resSeq2
+                
+                # If this is the last one we want to drop through
+                if i < len(contacts)-1:
+                    continue
                 
             if count > MINC:
                 #  end of a contiguous sequence
@@ -433,6 +441,7 @@ class Contacts(object):
             
             last1 = resSeq1
             last2 = resSeq2
+            mycell = cell
             thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) ]
             count = 1
         
@@ -460,9 +469,9 @@ if __name__ == "__main__":
     #workdir = root + "/All_atom_trunc_5.131715_rad_3"
     #placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1.pdb"
     
-    workdir = "/Users/jmht/Documents/AMPLE/data/ncont/3GD8"
+    workdir = "/home/jmht/Documents/test/ncont/new/3GD8"
     nativePdb = workdir + "/3GD8_std.pdb"
-    placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_11.13199_rad_3_UNMOD.1.pdb"
+    placedPdb = workdir + "/phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_12.483162_rad_3_UNMOD.1.pdb"
     refModelPdb = workdir + "/S_00000001.pdb"
     
     os.chdir(workdir)
