@@ -341,7 +341,7 @@ class CrystalInfo(object):
         self.alpha = float( line[33:40] )
         self.beta = float( line[40:47] )
         self.gamma = float( line[47:54] )
-        self.spaceGroup = line[55:66]
+        self.spaceGroup = line[55:66].strip()
         self.z = int( line[66:70] )
         
         return
@@ -794,7 +794,7 @@ class Test(unittest.TestCase):
         self.assertEqual(a.alpha,90)
         self.assertEqual(a.beta,90)
         self.assertEqual(a.gamma,90)
-        self.assertEqual(a.spaceGroup,"P 21 21 21 ")
+        self.assertEqual(a.spaceGroup,"P 21 21 21")
         self.assertEqual(a.z,8)
         
         return
