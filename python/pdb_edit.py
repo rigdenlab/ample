@@ -114,49 +114,48 @@ class PDBEdit(object):
             
         return
 
-    def cat_pdbs( self, pdb1=None, pdb2=None, pdbout=None ):
-        """Concatenate 2 pdbs into a single file. The header from the first is kept and
-        the chain from the  second added to the end
-        Assumes only one chain in either
-        """
-
-        one = open( pdb1, 'r' )
-        lines = []
-        
-        needTer=True
-        for line in one:
-            lines.append( line )
-            if line.startswith("TER"):
-                needTer=False
-                break
-        one.close()
-        
-        if needTer:
-            lines.append( "TER\n" )
-        
-        needTer=True
-        two = open( pdb2, 'r' )
-        for line in two:
-            if line.startswith("ATOM"):
-                lines.append( line )
-                continue
-
-            if line.startswith("TER"):
-                lines.append( line )
-                needTer=False
-                break
-        two.close()
-
-        if needTer:
-            lines.append( "TER\n" )
-        
-        lines.append("END\n")
-        
-        # Now write 'em out
-        with open( pdbout, 'w') as o:
-            o.writelines( lines )
-        
-        return
+#     def cat_pdbs( self, pdb1=None, pdb2=None, pdbout=None ):
+#         """Concatenate 2 pdbs into a single file. The header from the first is kept and
+#         the chains from the second added to the end of the first
+#         """
+# 
+#         one = open( pdb1, 'r' )
+#         lines = []
+#         
+#         needTer=True
+#         for line in one:
+#             lines.append( line )
+#             if line.startswith("TER"):
+#                 needTer=False
+#                 break
+#         one.close()
+#         
+#         if needTer:
+#             lines.append( "TER\n" )
+#         
+#         needTer=True
+#         two = open( pdb2, 'r' )
+#         for line in two:
+#             if line.startswith("ATOM"):
+#                 lines.append( line )
+#                 continue
+# 
+#             if line.startswith("TER"):
+#                 lines.append( line )
+#                 needTer=False
+#                 break
+#         two.close()
+# 
+#         if needTer:
+#             lines.append( "TER\n" )
+#         
+#         lines.append("END\n")
+#         
+#         # Now write 'em out
+#         with open( pdbout, 'w') as o:
+#             o.writelines( lines )
+#         
+#         return
         
 
     def extract_chain( self, inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False, renumber=True ):
@@ -1051,6 +1050,26 @@ class PDBEdit(object):
         pdb_in.close()
         
         return
+    
+    def merge( self, pdb1=None, pdb2=None, pdbout=None  ):
+        """Merge two pdb files into one"""
+        
+        
+        logfile = pdbout+".log"
+        cmd=[ 'pdb_merge', 'xyzin1', pdb1, 'xyzin2', pdb2, 'xyzout', pdbout ]
+        
+        # Build up stdin
+        stdin='nomerge'
+        retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
+        
+        if retcode == 0:
+            # remove temporary files
+            os.unlink(logfile)
+        else:
+            raise RuntimeError,"Error merging pdbs: {0} {1}".format( pdb1, pdb2  )
+            
+        return
+
 
     def rename_chains( self, inpdb=None, outpdb=None, fromChain=None, toChain=None ):
         """Rename Chains
