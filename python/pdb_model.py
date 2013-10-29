@@ -6,6 +6,7 @@ Created on 7 Aug 2013
 Classes for holding data from PDB files
 '''
 
+import os
 import types
 import unittest
 
@@ -199,7 +200,7 @@ _origins = {
                            ] ,                                  
                     }
 
-sg2origins = {
+_spacegroup2origin = {
               # Primitive
               'P 1'          : _origins[ '1aP' ],
               # MONOCLINIC
@@ -307,6 +308,38 @@ sg2origins = {
               'I 41 3 2'    : _origins[ '432cI' ],
               
               }
+
+
+symoplib = "/Applications/ccp4-6.4.0/lib/data/symop.lib"
+def _altlabel( spaceGroup, symoplib=None ):
+    
+    if not symoplib:
+        symoplib = os.path.join( os.environ['CCP4'], "lib/data/symop.lib" )
+        
+    for line in open( symoplib, 'r' ):
+        if "'" in line:
+            # Assume first single-quote enclosed string is the one we want
+            i = line.index( "'" )
+            j = line.index("'", i+1 )
+            sg = line[ i+1:j ]
+            if spaceGroup == sg:
+                return line.split()[ 3 ]
+
+    raise KeyError,spaceGroup
+    return 
+
+
+def alternateOrigins( spaceGroupLabel):
+    
+    
+    
+    try:
+        origins = _spacegroup2origin[ spaceGroupLabel ]
+    except KeyError:
+        label = _altlabel( spaceGroupLabel )
+        origins = _spacegroup2origin[ label ]
+    
+    return origins
 
 
 class CrystalInfo(object):
