@@ -128,7 +128,8 @@ class Contacts(object):
         placedSpaceGroup = placedInfo.crystalInfo.spaceGroup
         if placedSpaceGroup != placedInfo.crystalInfo.spaceGroup:
             raise RuntimeError,"Mismatching space groups!"
-        origins = pdb_model.sg2origins[ placedSpaceGroup.strip() ]
+        
+        origins = pdb_model.alternateOrigins( placedSpaceGroup )
         
         # Loop over origins, move the placed pdb to the new origin and then run ncont
         
@@ -144,9 +145,11 @@ class Contacts(object):
             
             # Concatenate into one file
             joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
-            pdbedit.cat_pdbs( pdb1=nativePdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
+            pdbedit.merge( pdb1=nativePdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
                 
             # Run ncont
+            # Need to get list of chains from Native as can't work out negate operator for ncont
+            fromChain = nativeInfo.models[0].chains
             self.run_ncont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
             self.parse_ncontlog()
             
