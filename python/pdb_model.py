@@ -202,17 +202,17 @@ _origins = {
 
 _spacegroup2origin = {
               # Primitive
-              'P 1'          : _origins[ '1aP' ],
+              'P1'          : _origins[ '1aP' ],
               # MONOCLINIC
-              'P 2'          : _origins[ '2mP' ],
+              'P2'          : _origins[ '2mP' ],
               
-              'P 2 1'        : _origins[ '2mP' ],
+              'P21'         : _origins[ '2mP' ],
               
-              'C 2'          : _origins[ '2mC' ],
+              'C2'          : _origins[ '2mC' ],
               
-              'A 2'          : _origins[ '2mA' ],
+              'A2'          : _origins[ '2mA' ],
               
-              'I 2'          : _origins[ '2mI' ],
+              'I2'          : _origins[ '2mI' ],
               
               # ORTHORHOMBIC
               'P 2 2 2'      : _origins[ '222oP' ],
@@ -258,8 +258,8 @@ _spacegroup2origin = {
               'P 31'         : _origins[ '3hP' ],
               'P 32'         : _origins[ '3hP' ],
               
-              'R 3 H'        : _origins[ '3hR_1' ],
-              'R 3 R'        : _origins[ '3hR_2' ],
+              'H 3'          : _origins[ '3hR_1' ],
+              'R 3'          : _origins[ '3hR_2' ],
               
               'P 3 1 2'      : _origins[ '312hP' ],
               'P 31 1 2'     : _origins[ '312hP' ],
@@ -269,8 +269,8 @@ _spacegroup2origin = {
               'P 31 2 1'    : _origins[ '321hP' ],
               'P 32 2 1'    : _origins[ '321hP' ],
               
-              'R 3 2 H'     : _origins[ '32hR_1' ],
-              'R 3 2 R'     : _origins[ '32hR_2' ],
+              'H 3 2'       : _origins[ '32hR_1' ],
+              'R 3 2'       : _origins[ '32hR_2' ],
               
               # HEXAGONAL
               'P 6'         : _origins[ '6hP' ],
@@ -310,7 +310,7 @@ _spacegroup2origin = {
               }
 
 
-symoplib = "/Applications/ccp4-6.4.0/lib/data/symop.lib"
+#symoplib = "/Applications/ccp4-6.4.0/lib/data/symop.lib"
 def _altlabel( spaceGroup, symoplib=None ):
     
     if not symoplib:
@@ -325,13 +325,13 @@ def _altlabel( spaceGroup, symoplib=None ):
             if spaceGroup == sg:
                 return line.split()[ 3 ]
 
-    raise KeyError,spaceGroup
+    raise KeyError, spaceGroup
     return 
 
 
 def alternateOrigins( spaceGroupLabel):
-    
-    
+    """Given a space group label, return a list of (non-redundant) alternate
+    origins as a list of float triples"""
     
     try:
         origins = _spacegroup2origin[ spaceGroupLabel ]
