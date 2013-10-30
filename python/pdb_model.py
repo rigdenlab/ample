@@ -329,10 +329,11 @@ def _altlabel( spaceGroup, symoplib=None ):
     return 
 
 
-def alternateOrigins( spaceGroupLabel):
+def alternateOrigins( spaceGroupLabel ):
     """Given a space group label, return a list of (non-redundant) alternate
     origins as a list of float triples"""
     
+    origins = []
     try:
         origins = _spacegroup2origin[ spaceGroupLabel ]
     except KeyError:
