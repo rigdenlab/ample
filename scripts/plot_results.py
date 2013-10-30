@@ -318,19 +318,21 @@ for r in allResults:
       
     killed=0
     if r.phaserKilled:
-        nkilled += 1
         killed=1
+        nkilled += 1
     else:
         nnotkilled+=1
      
     #if r.mrProgram == 'phaser' and r.phaserLLG != None and r.phaserTFZ != None:
-    if r.phaserLLG == None or r.phaserTFZ == None:
+    if r.phaserLLG == None and r.phaserTFZ == None:
+        # JObs where presumably nothing ran
         if success:
-            print "{0} {1} {2}".format( r.pdbCode, r.ensembleName, r.resultDir )
-            #if not killed:
-            nwierds += 1
-        else:
-            nwierdf += 1
+            print "DOUBLE ",r.pdbCode, r.ensembleName
+        continue
+    
+    if killed:
+        # For now ignore killed jobs
+        continue
  
     if r.phaserLLG != None and r.phaserTFZ != None:
 
@@ -362,9 +364,10 @@ for r in allResults:
 
         elif success==0:
             nfail += 1
-               
-        if llg < -1000:
-            llg = -1000
+        
+        MINLLG=-3000
+        if llg < MINLLG:
+            llg = MINLLG
         pdata.append( [ llg, r.phaserTFZ, killed, cc, success  ]  )
          
          
