@@ -6,6 +6,7 @@ Created on 7 Aug 2013
 Classes for holding data from PDB files
 '''
 
+import copy
 import os
 import types
 import unittest
@@ -333,14 +334,15 @@ def alternateOrigins( spaceGroupLabel ):
     """Given a space group label, return a list of (non-redundant) alternate
     origins as a list of float triples"""
     
-    origins = []
     try:
         origins = _spacegroup2origin[ spaceGroupLabel ]
     except KeyError:
         label = _altlabel( spaceGroupLabel )
         origins = _spacegroup2origin[ label ]
     
-    return origins
+    # Need to return a copy or if we manipulate the origins, we manipulate the copy
+    # in the module
+    return copy.copy( origins )
 
 
 class CrystalInfo(object):
