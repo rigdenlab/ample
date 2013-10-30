@@ -14,10 +14,10 @@ sys.path.append("/opt/ample-dev1/scripts")
 
 import ample_util
 import analyse_run
-#import mrbump_results
 import contacts
 import dssp
 import pdb_edit
+import residue_map
 
 
 if __name__ == "__main__":
@@ -40,9 +40,9 @@ if __name__ == "__main__":
     allResults = []
     
     #for pdbcode in [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
-    #for pdbcode in [ "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
+    #for pdbcode in [ "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    for pdbcode in [ "2BHW" ]:
+    for pdbcode in [ "3OUF" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -84,6 +84,19 @@ if __name__ == "__main__":
         dssp_file = os.path.join( datadir, "{0}.dssp".format( pdbcode.lower()  )  )
         dsspP = dssp.DsspParser( dssp_file )
         
+        # See if the residue numbers match, and if not create a residue map
+        
+        # Get hold of a full model so we can do the mapping of residues
+        refModelPdb = os.path.join( datadir, "models/S_00000001.pdb".format( pdbcode ) )
+        resSeqMap = residue_map.residueSequenceMap()
+        modelInfo = pdbedit.get_info( refModelPdb )
+        # NEED TO FIX NAMING AS THIS IS WAY TOO CONFUSING!
+        resSeqMap.fromInfo( nativeInfo=modelInfo,
+                            nativeChainID=modelInfo.models[0].chains[0],
+                            modelInfo=nativeInfo,
+                            modelChainID=nativeInfo.models[0].chains[0]
+                            )
+        
         # Loop over each result
         #r = mrbump_results.ResultsSummary( os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
         #r.extractResults()
@@ -120,6 +133,7 @@ if __name__ == "__main__":
     
             # Need to remove last component as we recored the refmac directory
             resultDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
+            print resultDir
 
             if mrbumpResult.program != "phaser":
                 continue
@@ -135,9 +149,19 @@ if __name__ == "__main__":
             
             # debug - copy into work directory as reforigin struggles with long pathnames
             shutil.copy(placedPdb, os.path.join( workdir, os.path.basename( placedPdb ) ) )
-        
-            # Get hold of a full model so we can do the mapping of residues
-            refModelPdb = os.path.join( datadir, "models/S_00000001.pdb".format( pdbcode ) )
+    
+            #
+            # SHELXE PROCESSING
+            #
+            # Now read the shelxe log to see how we did
+            shelxeLog = os.path.join( resultDir, "build/shelxe/shelxe_run.log" )
+            shelxePdb = os.path.join( resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
+            if os.path.isfile( shelxeLog ):
+                shelxeP = analyse_run.ShelxeLogParser( shelxeLog )
+                shelxeCC = shelxeP.CC
+                shelxeAvgChainLength = shelxeP.avgChainLength
+                print "SHELXE ",shelxeCC, shelxeAvgChainLength
+
 #             try:
 #                 rmsder = analyse_run.ReforiginRmsd( nativePdb, placedPdb, refModelPdb )
 #                 reforiginRmsd =  rmsder.rmsd
@@ -148,24 +172,14 @@ if __name__ == "__main__":
             # Now calculate contacts
             # All_atom_trunc_11.13199_rad_3_UNMOD
             ccalc = contacts.Contacts()
-            ccalc.getContacts(nativePdb, placedPdb, refModelPdb, workdir=workdir )
+            ccalc.getContacts( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir )
             
             if ccalc.best:
                 good = ccalc.best.inregister + ccalc.best.ooregister
                 bad = ccalc.best.numContacts - good
                 print "GOT BEST ", good, bad
      
-            # Now read the shelxe log to see how we did
-            shelxeLog = os.path.join( resultDir, "build/shelxe/shelxe_run.log" )
-            if not os.path.isfile( shelxeLog ):
-                continue
-            shelxeP = analyse_run.ShelxeLogParser( shelxeLog )
-            shelxeCC = shelxeP.CC
-            shelxeAvgChainLength = shelxeP.avgChainLength
-            
-            print "SHELXE ",shelxeCC, shelxeAvgChainLength
-            
-            
+
     #         # Finally use maxcluster to compare the shelxe model with the native
     #         if False:
     #             shelxeModel = os.path.join( resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
