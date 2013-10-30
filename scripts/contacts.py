@@ -19,6 +19,7 @@ import sys
 import types
 
 import ample_util
+import csymmatch
 import pdb_edit
 import pdb_model
 import residue_map
@@ -62,10 +63,10 @@ class Contacts(object):
         self.best = None
         return
     
-    def getContacts(self, nativePdb, placedPdb, refModelPdb, workdir=None ):
+    def getContacts(self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None ):
         
 #        try:
-        self.run(nativePdb, placedPdb, refModelPdb, workdir=workdir )
+        self.run( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir )
         self.parse_ncontlog()
 #         except:
 #             print "ERROR RUNNING CONTACTS: ",placedPdb
@@ -76,7 +77,7 @@ class Contacts(object):
 #             self.best = None
         return
     
-    def run( self, nativePdb, placedPdb, refModelPdb, workdir=None ):
+    def run( self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None ):
         """
         """
 
@@ -86,28 +87,27 @@ class Contacts(object):
             
         pdbedit = pdb_edit.PDBEdit()
         
-        # Standardise pdb
-        #nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std" )
-        #pdbedit.standardise( inpdb=nativePdb, outpdb=nativePdbStd )
-        #nativePdb = nativePdbStd
-        
-        # Run a pass to find the # chains
-        nativeInfo = pdbedit.get_info( nativePdb )
-        
-        if len( nativeInfo.models ) > 1:
-            raise RuntimeError,"> 1 model!"
-        #native_chains = nativeInfo.models[ 0 ].chains
-        #placed_chains = placedInfo.models[ 0 ].chains # only ever one model in the refined pdb
-        
-#         # Check numbering matches and match numbering if necessary
-        resSeqMap = residue_map.residueSequenceMap()
-        modelInfo = pdbedit.get_info( refModelPdb )
-        # NEED TO FIX NAMING AS THIS IS WAY TOO CONFUSING!
-        resSeqMap.fromInfo( nativeInfo=modelInfo,
-                            nativeChainID=modelInfo.models[0].chains[0],
-                            modelInfo=nativeInfo,
-                            modelChainID=nativeInfo.models[0].chains[0]
-                            )
+        if False:
+            # Standardise pdb
+            nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std" )
+            pdbedit.standardise( inpdb=nativePdb, outpdb=nativePdbStd )
+            nativePdb = nativePdbStd
+            
+            # Run a pass to find the # chains
+            nativeInfo = pdbedit.get_info( nativePdb )
+            
+            if len( nativeInfo.models ) > 1:
+                raise RuntimeError,"> 1 model!"
+            
+    #         # Check numbering matches and match numbering if necessary
+            resSeqMap = residue_map.residueSequenceMap()
+            modelInfo = pdbedit.get_info( refModelPdb )
+            # NEED TO FIX NAMING AS THIS IS WAY TOO CONFUSING!
+            resSeqMap.fromInfo( nativeInfo=modelInfo,
+                                nativeChainID=modelInfo.models[0].chains[0],
+                                modelInfo=nativeInfo,
+                                modelChainID=nativeInfo.models[0].chains[0]
+                                )
          
         if not resSeqMap.resSeqMatch():
             #print "NUMBERING DOESN'T MATCH"
@@ -131,8 +131,19 @@ class Contacts(object):
         
         origins = pdb_model.alternateOrigins( placedSpaceGroup )
         
-        # Loop over origins, move the placed pdb to the new origin and then run ncont
+        print "GOT ORIGINS ",origins
         
+        # Add the shelxe origin to the list if it's not already in there
+        csym = csymmatch.Csymmatch()
+        csymmatchPdb = ample_util.filename_append( filename=shelxePdb, astr="csymmatch", directory=self.workdir )
+        csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
+        corig = csym.origin()
+        
+        if corig and corig not in origins:
+            print "{0} is not in {1}".format( corig, origins )
+            origins.append( corig )
+        
+        # Loop over origins, move the placed pdb to the new origin and then run ncont
         self.best = ContactData()
         for i, origin in enumerate( origins  ):
             #print "GOT ORIGIN ",i,origin
@@ -166,7 +177,7 @@ class Contacts(object):
         
         if self.best.pdb:
             # Just for info - run csymmatch so we can see the alignment
-            csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch", directory=self.workdir )
+            csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch_best", directory=self.workdir )
             self.run_csymmatch( placedPdb=self.best.pdb,
                                 nativePdb=nativePdb,
                                 csymmatchPdb=csymmatchPdb,
