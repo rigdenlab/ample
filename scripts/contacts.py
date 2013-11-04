@@ -68,7 +68,7 @@ class Contacts(object):
         
 #        try:
         self.run( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir )
-        self.parse_ncontlog()
+        self.parseNcontlog()
 #         except:
 #             print "ERROR RUNNING CONTACTS: ",placedPdb
 #             self.numContacts = -1
@@ -77,7 +77,82 @@ class Contacts(object):
 #             self.allMatched = []
 #             self.best = None
         return
-    
+
+
+    def helixFromContacts( self, contactData=None, dsspP=None ):
+        """Return the sequence of the longest contiguous helix from the given contact data"""
+        
+        #print "GOT DATA ",contactData
+        #print "GOT DSSP ",dsspP.asDict()
+        
+        def getSS( c, dsspP ):
+            (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) = c
+            
+            i = dsspP.resSeqs.index( resSeq1 )
+            aad = dsspP.resNames[ i ]
+            if aad != aa1:
+                raise RuntimeError,"Missmatching residues: {0}".format( c )
+            
+            return dsspP.assignment[ i ]
+            
+            
+        maxCounts = [] # list of maximum counts of contiguous helices in each group
+        maxIndices = [] # Array of (start,stop) tuples for the max contiguous sequence in each group
+        
+        # Assign the secondary structure & work out the largest contiguous group
+        for i, contactGroup in enumerate( contactData.allMatched ):
+            count = 0
+            thisCounts = []
+            thisIndices = []
+            start = 0 
+            stop = 0
+            #print "GROUP"
+            for ic, c in enumerate( contactGroup ):
+                
+                (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) = c
+                ss = getSS( c, dsspP )
+                
+                #print "Looping through ", chainID1, resSeq1, aa1,ss
+                if ss == 'H':
+                    count += 1
+                    stop = ic
+                
+                if ic == len( contactGroup ) - 1 or ss != 'H':
+                    thisCounts.append( count )
+                    thisIndices.append( ( start, stop ) )
+                    count = 0
+                    start = ic + 1
+                    stop = ic
+                    
+            # Now add the maximum for that group
+            #print "this Counts ",thisCounts
+            #print "thisIndices ",thisIndices
+            mc =  max( thisCounts )
+            maxCounts.append( mc )
+            
+            maxIndices.append( thisIndices[ thisCounts.index( mc ) ] )
+                    
+            
+        #print "GOT maxCounts ",maxCounts
+        #print "GOT maxIndices ",maxIndices
+        
+        # Get the index of the group with the largest count
+        gmax = maxCounts.index( max( maxCounts ) )
+        start = maxIndices[ gmax ][0]
+        stop = maxIndices[ gmax ][1]
+        cg = contactData.allMatched[ gmax ]
+        
+        # Now get the sequence
+        sequence = ""
+        for i in range( start, stop + 1 ):
+            c = cg[ i ]
+            (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) = c
+            sequence += aa1
+            
+        #print "GOT sequence ",sequence
+        return sequence
+
+
     def run( self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None ):
         """
         """
@@ -161,8 +236,8 @@ class Contacts(object):
             # Run ncont
             # Need to get list of chains from Native as can't work out negate operator for ncont
             fromChain = nativeInfo.models[0].chains
-            self.run_ncont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
-            self.parse_ncontlog()
+            self.runNcont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
+            self.parseNcontlog()
             
             if self.inregister + self.ooregister > self.best.inregister + self.best.ooregister:
                 self.best.numContacts = self.numContacts
@@ -186,7 +261,7 @@ class Contacts(object):
 #                 
         return
 
-    def run_ncont( self, pdbin=None, sourceChains=None, targetChains=None, maxdist=1.5 ):
+    def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxdist=1.5 ):
         """FOO
         """
         
@@ -207,7 +282,7 @@ class Contacts(object):
         
         return
     
-    def parse_ncontlog(self, logfile=None ):
+    def parseNcontlog(self, logfile=None ):
         
         if not logfile:
             logfile = self.ncontlog
@@ -253,7 +328,7 @@ class Contacts(object):
             fields = c.split()
             
             if len( fields ) != 15:
-                # It seems we something get self contacts: 3GD8 - phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_12.483162_rad_3_UNMOD.1
+                # It seems we sometimes get self contacts: 3GD8 - phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_12.483162_rad_3_UNMOD.1
                 # don't really understand yet
                 continue
 
@@ -285,7 +360,7 @@ class Contacts(object):
             
             contacts.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
     
-        # Now count'em
+        # Now count'em and put them into groups
         MINC = 3 # minimum contiguous to count
         last1=None
         last2=None
@@ -329,7 +404,7 @@ class Contacts(object):
                     self.inregister += count
                 else:
                     self.ooregister += count
-                self.allMatched += thisMatched
+                self.allMatched.append( thisMatched )
             
             # Either starting again or a random residue
             if resSeq1 == resSeq2:
@@ -384,5 +459,5 @@ if __name__ == "__main__":
     #logfile = "/home/jmht/Documents/test/ncont/3PCV/poly_ala_trunc_2.822761_rad_1/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
     #logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
     #logfile = "/Users/jmht/Documents/AMPLE/data/ncont/3GD8/phaser_loc0_ALL_All_atom_trunc_11.13199_rad_3_UNMOD.1_reseq_ren_origin2_joined.pdb.ncont.log"
-    #c.parse_ncontlog( logfile=logfile )
+    #c.parseNcontlog( logfile=logfile )
     
