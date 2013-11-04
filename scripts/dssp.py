@@ -10,6 +10,7 @@ class DsspParser(object):
         self.dsspfile = pfile
         
         self.resNames = []
+        self.resSeqs = []
         self.assignment = []
         
         self.percentH = None
@@ -21,7 +22,8 @@ class DsspParser(object):
         return
     
     def parse(self):
-        """parse"""
+        """Info from: http://swift.cmbi.ru.nl/gv/dssp/HTML/descrip.html
+        """
 
         # print os.path.join(os.getcwd(), logfile)
 
@@ -80,6 +82,7 @@ class DsspParser(object):
         d = {}
         d['assignment'] = self.assignment
         d['resNames'] = self.resNames
+        d['resSeqs'] = self.resSeqs
         d['percentC'] = self.percentC
         d['percentE'] = self.percentE
         d['percentH'] = self.percentH
