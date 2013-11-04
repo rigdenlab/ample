@@ -16,6 +16,7 @@ import ample_util
 import analyse_run
 import contacts
 import dssp
+import mrbump_results
 import pdb_edit
 import residue_map
 
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     #for pdbcode in [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
     #for pdbcode in [ "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    for pdbcode in [ "3OUF" ]:
+    for pdbcode in [ "4DVE" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -67,7 +68,6 @@ if __name__ == "__main__":
         pdbedit = pdb_edit.PDBEdit()
         nativeInfo = pdbedit.get_info( nativePdb )
         
-        
         # First check if the native has > 1 model and extract the first if so
         if len( nativeInfo.models ) > 1:
             print "nativePdb has > 1 model - using first"
@@ -90,6 +90,10 @@ if __name__ == "__main__":
         refModelPdb = os.path.join( datadir, "models/S_00000001.pdb".format( pdbcode ) )
         resSeqMap = residue_map.residueSequenceMap()
         modelInfo = pdbedit.get_info( refModelPdb )
+        
+        # Need to update nativeInfo as it might have changed
+        nativeInfo = pdbedit.get_info( nativePdb )
+        
         # NEED TO FIX NAMING AS THIS IS WAY TOO CONFUSING!
         resSeqMap.fromInfo( nativeInfo=modelInfo,
                             nativeChainID=modelInfo.models[0].chains[0],
@@ -98,10 +102,10 @@ if __name__ == "__main__":
                             )
         
         # Loop over each result
-        #r = mrbump_results.ResultsSummary( os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
-        #r.extractResults()
-        #for mrbumpResult in r.results:
-        for mrbumpResult in resultsDict[ pdbcode ]:
+        r = mrbump_results.ResultsSummary( os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
+        r.extractResults()
+        for mrbumpResult in r.results:
+        #for mrbumpResult in resultsDict[ pdbcode ]:
             
             #print "processing result ",mrbumpResult
             
@@ -113,7 +117,7 @@ if __name__ == "__main__":
                 # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
                 ensembleName = mrbumpResult.name[9:-6]
             
-            #if ensembleName != "All_atom_trunc_11.13199_rad_3":
+            #if ensembleName != "SCWRL_reliable_sidechains_trunc_22.177282_rad_2":
             #    continue
             
             # Extract information on the models and ensembles
@@ -133,7 +137,6 @@ if __name__ == "__main__":
     
             # Need to remove last component as we recored the refmac directory
             resultDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
-            print resultDir
 
             if mrbumpResult.program != "phaser":
                 continue
@@ -156,6 +159,8 @@ if __name__ == "__main__":
             # Now read the shelxe log to see how we did
             shelxeLog = os.path.join( resultDir, "build/shelxe/shelxe_run.log" )
             shelxePdb = os.path.join( resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
+            shutil.copy( shelxePdb , os.path.join(workdir, os.path.basename( shelxePdb ) ) )
+
             if os.path.isfile( shelxeLog ):
                 shelxeP = analyse_run.ShelxeLogParser( shelxeLog )
                 shelxeCC = shelxeP.CC
@@ -170,7 +175,6 @@ if __name__ == "__main__":
 #                 reforiginRmsd = 9999 
             
             # Now calculate contacts
-            # All_atom_trunc_11.13199_rad_3_UNMOD
             ccalc = contacts.Contacts()
             ccalc.getContacts( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir )
             
@@ -178,16 +182,6 @@ if __name__ == "__main__":
                 good = ccalc.best.inregister + ccalc.best.ooregister
                 bad = ccalc.best.numContacts - good
                 print "GOT BEST ", good, bad
+                #print ccalc.best
      
-
-    #         # Finally use maxcluster to compare the shelxe model with the native
-    #         if False:
-    #             shelxeModel = os.path.join( resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
-    #             mrbumpResult.shelxModel = shelxeModel
-    #             m = CompareModels( nativePdb, shelxeModel, workdir=workdir  )
-    #             mrbumpResult.shelxGrmsd = m.grmsd
-    #             mrbumpResult.shelxTM = m.tm
-            
-            #print ar
-    
     # End loop over results
