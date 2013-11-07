@@ -68,7 +68,7 @@ class ReforiginRmsd(object):
         resSeqMap = residue_map.residueSequenceMap( nativePdb, self.refModelPdb )
         
         # Find out if there are atoms in the model that we need to remove
-        incomparable = resSeqMap.modelIncomparable()
+        incomparable = resSeqMap.targetIncomparable()
         if len( incomparable ):
             
             refinedPdbCut = ample_util.filename_append( filename=refinedPdb, astr="cut", directory=self.workdir )
