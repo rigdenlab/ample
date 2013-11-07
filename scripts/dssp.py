@@ -1,4 +1,4 @@
-
+import unittest
 
 class DsspParser(object):
     """
@@ -9,13 +9,14 @@ class DsspParser(object):
 
         self.dsspfile = pfile
         
+        self.chainIds = []
         self.resNames = []
         self.resSeqs = []
         self.assignment = []
         
-        self.percentH = None
-        self.percentC = None
-        self.percentE = None
+        self.percentH = []
+        self.percentC = []
+        self.percentE = []
 
         self.parse()
 
@@ -27,11 +28,13 @@ class DsspParser(object):
 
         # print os.path.join(os.getcwd(), logfile)
 
+        self.chainIds = []
         self.resNames = []
         self.resSeqs = []
         self.assignment = []
         
         capture=False
+        currentChain = None
         for line in open(self.dsspfile, 'r'):
             
             if "#  RESIDUE" in line:
@@ -40,46 +43,54 @@ class DsspParser(object):
                 
             if capture:
                 
-                # Only capture first chain
+                # Ignore chain break characters - we use the chainId
                 if "!" in line:
-                    capture=False
-                    break
+                    continue
                 
                 #print "\"{0}\"".format(line)
                 #idx = int( line[0:5].strip() )
                 resSeq = int( line[5:10].strip() )
-                #chainId = line[10:12].strip()
+                chainId = line[10:12].strip()
                 resName = line[12:14].strip()
                 #print "\"{0}\"".format(line[14:17])
                 assign = line[16]
                  
-                self.resNames.append( resName )
-                self.resSeqs.append( resSeq )
-                self.assignment.append( assign )
+                if currentChain != chainId:
+                    currentChain = chainId
+                    self.chainIds.append( chainId )
+                    self.resNames.append( [] )
+                    self.resSeqs.append( [] )
+                    self.assignment.append( [] )
+                                        
+                self.resNames[-1].append( resName )
+                self.resSeqs[-1].append( resSeq )
+                self.assignment[-1].append( assign )
                 
-        if not len(self.resNames) or not len( self.assignment):
+        if not len( self.resNames[0] ) or not len( self.assignment[0] ):
             raise RuntimeError,"Got no assignment!"
          
-        nH = 0
-        nC = 0
-        nE = 0
-        for p in self.assignment:
-            if p == "H":
-                nH += 1
-            elif p == "E":
-                nE += 1
-            # Just assume everything else is a coil
-            else:
-                nC += 1
-             
-        self.percentC = float(nC) / len(self.assignment) * 100
-        self.percentH = float(nH) / len(self.assignment) * 100
-        self.percentE = float(nE) / len(self.assignment) * 100
-            
+        for chain in range( len( self.assignment ) ):
+            nH = 0
+            nC = 0
+            nE = 0
+            for p in self.assignment[chain]:
+                if p == "H":
+                    nH += 1
+                elif p == "E":
+                    nE += 1
+                # Just assume everything else is a coil
+                else:
+                    nC += 1
+                 
+            self.percentC.append( float(nC) / len(self.assignment) * 100 )
+            self.percentH.append( float(nH) / len(self.assignment) * 100 )
+            self.percentE.append( float(nE) / len(self.assignment) * 100 )
+        
         return
     
     def asDict(self):
         d = {}
+        d['chainIds'] = self.chainIds
         d['assignment'] = self.assignment
         d['resNames'] = self.resNames
         d['resSeqs'] = self.resSeqs
@@ -89,8 +100,36 @@ class DsspParser(object):
         
         return d
     
+    def getAssignment(self, resSeq, resName, chainId ):
+        ci = self.chainIds.index( chainId )
+        ri = self.resSeqs[ ci ].index( resSeq )
+        # Just a check to make sure things are working - ignore X as it'll be a non-standard residue e.g. N-FORMYLMETHIONINE
+        dsspResName = self.resNames[ ci ][ ri ]
+        if dsspResName != resName and dsspResName != 'X':
+            raise RuntimeError,"Missmatching residues: {0}: {1}".format( self.resNames[ ci ][ ri ], resName )
+        return self.assignment[ ci ][ ri ]
+
+
+class Test(unittest.TestCase):
+
+    def testParse1(self):
+        """parse 2bhw"""
+        
+        dssp_file = "/media/data/shared/TM/2BHW/2bhw.dssp"
+        dsspP = DsspParser( dssp_file )
+        a = [' ', ' ', 'T', 'T', ' ', 'T', 'T', 'S', 'S', 'T', 'T', ' ', ' ', ' ', 'T', 'T', 'G', 'G', 'G', ' ', ' ', 'S', ' ', ' ', 'T', 'T', ' ', ' ', 'S', ' ', 'S', 'T', 'T', ' ', ' ', 'S', ' ', ' ', 'T', 'T', ' ', 'T', 'T', ' ', 'S', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'T', 'T', 'T', ' ', ' ', ' ', 'S', ' ', ' ', 'S', 'G', 'G', 'G', 'S', 'G', 'G', 'G', 'G', 'G', 'S', 'T', 'T', ' ', 'E', 'E', 'G', 'G', 'G', ' ', 'T', 'T', 'S', 'E', 'E', 'E', ' ', ' ', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'E', 'E', 'T', 'T', 'E', 'E', ' ', 'S', 'S', 'S', 'S', ' ', ' ', ' ', 'T', 'T', 'S', ' ', 'T', 'T', ' ', 'T', 'T', ' ', 'S', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', ' ', 'S', ' ', 'S', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', ' ', 'T', 'T', 'T', 'S', 'S', 'G', 'G', 'G', 'G', 'T', 'T', 'T', 'T', ' ', 'S', ' ', ' ']
+        self.assertEqual( dsspP.assignment[0], a)
+        
+        return
+        
+    def testParse2(self):
+        dssp_file = "/media/data/shared/TM/3OUF/3ouf.dssp"
+        dsspP = DsspParser( dssp_file )
+        
+        return
     
 if __name__ == "__main__":
-    dssp_file = "/media/data/shared/TM/2BHW/2bhw.dssp"
-    dsspP = DsspParser( dssp_file )
-    print dsspP.asDict()
+    
+    unittest.main()
+
+
