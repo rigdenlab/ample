@@ -15,7 +15,6 @@ parse ncont file to generate map & analyse whether placed bits match and what ty
 """
 
 import os
-import sys
 import types
 
 import ample_util
@@ -62,6 +61,8 @@ class Contacts(object):
         self.ooregister = 0
         self.allMatched = []
         self.best = None
+        # testing
+        self.originCompare = {}
         return
     
     def getContacts(self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None ):
@@ -79,7 +80,7 @@ class Contacts(object):
         return
 
 
-    def helixFromContacts( self, contactData=None, dsspP=None ):
+    def helixFromContacts( self, dsspP=None ):
         """Return the sequence of the longest contiguous helix from the given contact data"""
         
         #print "GOT DATA ",contactData
@@ -100,7 +101,7 @@ class Contacts(object):
         maxIndices = [] # Array of (start,stop) tuples for the max contiguous sequence in each group
         
         # Assign the secondary structure & work out the largest contiguous group
-        for i, contactGroup in enumerate( contactData.allMatched ):
+        for i, contactGroup in enumerate( self.best.allMatched ):
             count = 0
             thisCounts = []
             thisIndices = []
@@ -110,7 +111,9 @@ class Contacts(object):
             for ic, c in enumerate( contactGroup ):
                 
                 (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) = c
-                ss = getSS( c, dsspP )
+                
+                #ss = getSS( c, dsspP )
+                ss = dsspP.getAssignment( resSeq1, aa1, chainID1 )
                 
                 #print "Looping through ", chainID1, resSeq1, aa1,ss
                 if ss == 'H':
@@ -140,7 +143,7 @@ class Contacts(object):
         gmax = maxCounts.index( max( maxCounts ) )
         start = maxIndices[ gmax ][0]
         stop = maxIndices[ gmax ][1]
-        cg = contactData.allMatched[ gmax ]
+        cg = self.best.allMatched[ gmax ]
         
         # Now get the sequence
         sequence = ""
@@ -179,10 +182,10 @@ class Contacts(object):
             resSeqMap = residue_map.residueSequenceMap()
             modelInfo = pdbedit.get_info( refModelPdb )
             # NEED TO FIX NAMING AS THIS IS WAY TOO CONFUSING!
-            resSeqMap.fromInfo( nativeInfo=modelInfo,
-                                nativeChainID=modelInfo.models[0].chains[0],
-                                modelInfo=nativeInfo,
-                                modelChainID=nativeInfo.models[0].chains[0]
+            resSeqMap.fromInfo( refInfo=modelInfo,
+                                refChainID=modelInfo.models[0].chains[0],
+                                targetInfo=nativeInfo,
+                                targetChainID=nativeInfo.models[0].chains[0]
                                 )
          
         if not resSeqMap.resSeqMatch():
@@ -207,6 +210,12 @@ class Contacts(object):
         
         origins = pdb_model.alternateOrigins( placedSpaceGroup )
         #print "GOT ORIGINS ",origins
+        floating=False
+        for o in origins:
+            if 'x' in o or 'y' in o or 'z' in o:
+                #print "GOT FLOATING"
+                floating=True
+                
         
         # Add the shelxe origin to the list if it's not already in there
         csym = csymmatch.Csymmatch()
@@ -214,19 +223,26 @@ class Contacts(object):
         csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
         corig = csym.origin()
         
-        if corig and corig not in origins:
-            #print "{0} is not in {1}".format( corig, origins )
-            origins.append( corig )
+        # For floating origins we use the csymmatch origin
+        if floating:
+            origins = [ corig ]
+        else:
+            if corig and corig not in origins:
+                #print "csymmatch origin {0} is not in origins {1}".format( corig, origins )
+                origins.append( corig )
         
         # Loop over origins, move the placed pdb to the new origin and then run ncont
         self.best = ContactData()
+        self.originCompare = {}
         for i, origin in enumerate( origins  ):
             #print "GOT ORIGIN ",i,origin
             
             placedOriginPdb =  placedAaPdb
             if i != 0:
                 # Move pdb to new origin
-                placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr="origin{0}".format(i), directory=self.workdir )
+                #ostr="origin{0}".format(i)
+                ostr="o{0}".format( origin ).replace(" ","" )
+                placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr=ostr, directory=self.workdir )
                 pdbedit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
             
             # Concatenate into one file
@@ -238,6 +254,8 @@ class Contacts(object):
             fromChain = nativeInfo.models[0].chains
             self.runNcont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
             self.parseNcontlog()
+            
+            self.originCompare[ i ] = self.inregister + self.ooregister
             
             if self.inregister + self.ooregister > self.best.inregister + self.best.ooregister:
                 self.best.numContacts = self.numContacts
@@ -256,6 +274,8 @@ class Contacts(object):
             csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch_best", directory=self.workdir )
             csym.run( refPdb=nativePdb, inPdb=self.best.pdb, outPdb=csymmatchPdb, originHand=False )
             self.best.csymmatchPdb = csymmatchPdb
+            #if self.best.origin != corig:
+            #    print "GOT DIFFERENT BEST ORIGIN {0} {1} FOR {2}".format( self.best.origin, corig, placedAaPdb )
         else:
             self.best = None
 #                 
@@ -420,6 +440,14 @@ class Contacts(object):
         
         #print "GOT ALLMATCHED ",self.allMatched
             
+        return
+    
+    def writeHelixFile(self, filename=None, dsspP=None ):
+        if self.best:
+            sequence = self.helixFromContacts( dsspP )
+            with open( filename, 'w' ) as f:
+                f.write( sequence+"\n" )
+        
         return
 
 if __name__ == "__main__":
