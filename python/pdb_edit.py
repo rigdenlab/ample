@@ -406,7 +406,7 @@ class PDBEdit(object):
             # Get the matching list of atoms
             targetResSeq = targetAtomList[0].resSeq
             
-            refResSeq = resSeqMap.native2model( targetResSeq )
+            refResSeq = resSeqMap.ref2target( targetResSeq )
             
             # Get the atomlist for the reference
             for ( rid, alist ) in refResidues:
@@ -481,7 +481,7 @@ class PDBEdit(object):
                     last = a.resSeq
                     
                     # Add the corresponding resSeq in the target
-                    targetResSeq.append( resSeqMap.model2native( a.resSeq ) )
+                    targetResSeq.append( resSeqMap.target2ref( a.resSeq ) )
                     refResidues.append( ( a.resSeq, [ a ] ) )
                 else:
                     refResidues[ -1 ][ 1 ].append( a )
@@ -934,7 +934,7 @@ class PDBEdit(object):
                     #raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
                 
                 # Get the matching resSeq for the model
-                modelResSeq = resMap.native2model( atom.resSeq )
+                modelResSeq = resMap.ref2target( atom.resSeq )
                 if modelResSeq == atom.resSeq:
                     out.write( line )
                 else:
