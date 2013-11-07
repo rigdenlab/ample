@@ -238,7 +238,7 @@ class Contacts(object):
             #print "GOT ORIGIN ",i,origin
             
             placedOriginPdb =  placedAaPdb
-            if i != 0:
+            if origin != [ 0.0, 0.0, 0.0 ]:
                 # Move pdb to new origin
                 #ostr="origin{0}".format(i)
                 ostr="o{0}".format( origin ).replace(" ","" )
@@ -267,7 +267,6 @@ class Contacts(object):
                 self.best.pdb = placedOriginPdb
                 
             #print "GOT CONTACTS: {0} : {1} : {2}".format( self.numContacts, self.inregister, self.ooregister  )
-            
         
         if self.best.pdb:
             # Just for info - run csymmatch so we can see the alignment
