@@ -305,7 +305,6 @@ class Contacts(object):
         
         if not logfile:
             logfile = self.ncontlog
-            
         #print "LOG ",logfile
             
         self.numContacts = 0
@@ -317,7 +316,7 @@ class Contacts(object):
         capture=False
         with open( logfile, 'r' ) as f:#
             while True:
-                line = f.readline().strip()
+                line = f.readline().rstrip()
                 
                 if capture and not line:
                     break
@@ -343,35 +342,44 @@ class Contacts(object):
         contacts = [] # Tuples of: chainID, resSeq, chainID, resSeq, dist
         # Only collect contacts for central cell
         mycell = None
+        lastSource=None
         for c in clines:
             
             # Lines are of format
             # /1/B/1042(MET). / CA [ C]:  /1/b/ 988(GLU). / CA [ C]:   1.09 223 X-1/2,Y-1/2,Z
-                                                                                             
+            
+            # If a contact to a single atom is in more than one cell then only the second contact info is printed, e.g.
+            """
+      SOURCE ATOMS               TARGET ATOMS         DISTANCE CELL   SYMMETRY
+
+ /1/A/ 942(LYS). / CA [ C]:  /1/a/ 856(PHE). / CA [ C]:   1.44 434 X+1,-Y,-Z+1
+                             /1/a/ 908(LEU). / CA [ C]:   1.40 433 X+1,Y,Z
+ /1/A/ 957(LEU). / CA [ C]:  /1/a/ 871(LYS). / CA [ C]:   1.12 434 X+1,-Y,-Z+1
+ /1/A/ 946(GLU). / CA [ C]:  /1/a/ 860(LYS). / CA [ C]:   1.12 434 X+1,-Y,-Z+1
+ """
+            # HACK FOR NOW WE JUST IGNORE
+            # We create a new line that has the info from both
+            if not c[0:29].strip():
+                print "IGNORING CONTACT ",logfile
+                continue
+                c = lastSource[0:29] + c[29:]
+            else:
+                lastSource = c
+            
             # As the numbers overrun we can't split so we assume fixed format
-            chainID1 = c[3]
-            resSeq1 = int( c[5:9].strip() )
-            aa1 = c[10:13]
+            chainID1 = c[4]
+            resSeq1 = int( c[6:10].strip() )
+            aa1 = c[11:14]
             aa1 = pdb_edit.three2one[ aa1 ] # get amino acid and convert to single letter code
-            chainID2 = c[31]
-            resSeq2 = int( c[33:37].strip() )
-            aa2 = c[38:41]
+            chainID2 = c[32]
+            resSeq2 = int( c[34:38].strip() )
+            aa2 = c[39:42]
             aa2 = pdb_edit.three2one[ aa2 ]
-            dist = float( c[55:61].strip() )
-            cell = int( c[62:65])
-            
-            if not mycell:
-                # initialise
-                mycell = cell
-            
-            # central cell is 333
-            if cell != mycell:
-                #print "CHANGE OF CELL: {0} : {1}".format( cell, mycell )
-                mycell = cell
-                #raise RuntimeError,"Change of cell!"
+            dist = float( c[56:62].strip() )
+            cell = int( c[63:66])
             
             contacts.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
-    
+            
         # Now count'em and put them into groups
         MINC = 3 # minimum contiguous to count
         last1=None
@@ -456,7 +464,7 @@ if __name__ == "__main__":
 #     placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
 
     c = Contacts()
-    c.parseNcontlog( logfile="/home/jmht/Documents/test/ncont/new/1UIX/phaser_loc0_ALL_poly_ala_trunc_0.162732_rad_2_UNMOD.1_reseq_ren_o[0.0,0.8333,0.0]_joined.pdb.ncont.log" )
+    c.parseNcontlog( logfile="/home/jmht/Documents/test/ncont/new/2FXM/phaser_loc0_ALL_All_atom_trunc_31.778865_rad_2_UNMOD.1_reseq_ren_o[0.0,0.0,0.25]_joined.pdb.ncont.log" )
     
     print c.numContacts
     print c.allMatched
