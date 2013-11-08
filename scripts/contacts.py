@@ -344,19 +344,21 @@ class Contacts(object):
         # Only collect contacts for central cell
         mycell = None
         for c in clines:
-            fields = c.split()
             
-            if len( fields ) != 15:
-                # It seems we sometimes get self contacts: 3GD8 - phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_12.483162_rad_3_UNMOD.1
-                # don't really understand yet
-                continue
-
-            c1 = fields[ 0 ]
-            r1 = fields[ 1 ]
-            c2 = fields[ 6 ]
-            r2 = fields[ 7 ]
-            dist = float(  fields[ 12 ] )
-            cell = int(  fields[ 13 ] )
+            # Lines are of format
+            # /1/B/1042(MET). / CA [ C]:  /1/b/ 988(GLU). / CA [ C]:   1.09 223 X-1/2,Y-1/2,Z
+                                                                                             
+            # As the numbers overrun we can't split so we assume fixed format
+            chainID1 = c[3]
+            resSeq1 = int( c[5:9].strip() )
+            aa1 = c[10:13]
+            aa1 = pdb_edit.three2one[ aa1 ] # get amino acid and convert to single letter code
+            chainID2 = c[31]
+            resSeq2 = int( c[33:37].strip() )
+            aa2 = c[38:41]
+            aa2 = pdb_edit.three2one[ aa2 ]
+            dist = float( c[55:61].strip() )
+            cell = int( c[62:65])
             
             if not mycell:
                 # initialise
@@ -367,15 +369,6 @@ class Contacts(object):
                 #print "CHANGE OF CELL: {0} : {1}".format( cell, mycell )
                 mycell = cell
                 #raise RuntimeError,"Change of cell!"
-            
-            chainID1 = c1.split("/")[2]
-            resSeq1 = int( r1.split("(")[0] )
-            aa1 = r1.split("(")[1][:-2] # get amino acid and convert to single letter code
-            aa1 = pdb_edit.three2one[ aa1 ] 
-            chainID2 = c2.split("/")[2].upper() # We converted to lower case
-            resSeq2 = int( r2.split("(")[0] )
-            aa2 = r2.split("(")[1][:-2]
-            aa2 = pdb_edit.three2one[ aa2 ]
             
             contacts.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
     
@@ -461,6 +454,15 @@ if __name__ == "__main__":
 #     nativePdb = root + "/1D7M.pdb"
 #     refModelPdb = root + "/S_00000001.pdb"
 #     placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
+
+    c = Contacts()
+    c.parseNcontlog( logfile="/home/jmht/Documents/test/ncont/new/1UIX/phaser_loc0_ALL_poly_ala_trunc_0.162732_rad_2_UNMOD.1_reseq_ren_o[0.0,0.8333,0.0]_joined.pdb.ncont.log" )
+    
+    print c.numContacts
+    print c.allMatched
+    print c.inregister, c.ooregister
+    import sys
+    sys.exit()
     
     
     root = "/home/jmht/Documents/test/ncont/3PCV"
