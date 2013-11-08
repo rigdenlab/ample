@@ -275,11 +275,11 @@ _spacegroup2origin = {
               
               # HEXAGONAL
               'P 6'         : _origins[ '6hP' ],
-              'P 6 1'       : _origins[ '6hP' ],
-              'P 6 5'       : _origins[ '6hP' ],
-              'P 6 2'       : _origins[ '6hP' ],
-              'P 6 4'       : _origins[ '6hP' ],
-              'P 6 3'       : _origins[ '6hP' ],
+              'P 61'        : _origins[ '6hP' ],
+              'P 65'        : _origins[ '6hP' ],
+              'P 62'        : _origins[ '6hP' ],
+              'P 64'        : _origins[ '6hP' ],
+              'P 63'        : _origins[ '6hP' ],
               
               'P 6 2 2'     : _origins[ '622hP' ],
               'P 61 2 2'    : _origins[ '622hP' ],
