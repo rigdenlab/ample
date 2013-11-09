@@ -105,7 +105,8 @@ class DsspParser(object):
         ri = self.resSeqs[ ci ].index( resSeq )
         # Just a check to make sure things are working - ignore X as it'll be a non-standard residue e.g. N-FORMYLMETHIONINE
         dsspResName = self.resNames[ ci ][ ri ]
-        if dsspResName != resName and dsspResName != 'X':
+        # in dssp cysteine bridges are signified by lower-case letters
+        if dsspResName != resName and not dsspResName.islower() and dsspResName != 'X' :
             raise RuntimeError,"Missmatching residues: {0}: {1}".format( self.resNames[ ci ][ ri ], resName )
         return self.assignment[ ci ][ ri ]
 
