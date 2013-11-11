@@ -231,16 +231,16 @@ _spacegroup2origin = {
               'F 2 2 2'      : _origins[ '222oF' ],
               
               'I 2 2 2'      : _origins[ '222oI' ],
-              'I 21 12 21'   : _origins[ '222oI' ],
+              'I 21 21 21'   : _origins[ '222oI' ],
               
               # TETRAGONAL
               'P 4'          : _origins[ '4tP' ],
-              'P 4 1'        : _origins[ '4tP' ],
-              'P 4 2'        : _origins[ '4tP' ],
-              'P 4 3'        : _origins[ '4tP' ],
+              'P 41'         : _origins[ '4tP' ],
+              'P 42'         : _origins[ '4tP' ],
+              'P 43'         : _origins[ '4tP' ],
               
               'I 4'          : _origins[ '4tI' ],
-              'I 4 1'        : _origins[ '4tI' ],
+              'I 41'         : _origins[ '4tI' ],
               
               'P 4 2 2'      : _origins[ '422tP' ],
               'P 4 21 2'     : _origins[ '422tP' ],
