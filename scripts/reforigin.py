@@ -1,5 +1,4 @@
 import os
-import shutil
 
 import ample_util
 import pdb_edit
@@ -19,7 +18,7 @@ class ReforiginRmsd(object):
         
         self.rmsd = None
         self.bestNativeChain = None
-        self.bestRefinedChain = None
+        self.bestPlacedChain = None
         self.bestReforiginPdb = None
         
         self.refModelPdb = refModelPdb
@@ -30,24 +29,21 @@ class ReforiginRmsd(object):
         
         self.run()
         
-    def calc_reforigin_rmsd( self, refpdb=None, targetpdb=None, outpdb=None, DMAX=100 ):
+    def calcReforiginRmsd( self, refpdb=None, targetpdb=None, outpdb=None, DMAX=100 ):
         
-        assert refpdb and targetpdb and outpdb
-        
+        # Don't need to do this as we process the file before hand
         # HACK - REFORIGIN has a limit on the length of the command line, so we need to create copies of inputfile
         # as this has the potentially longest path
-        tmptarget = ample_util.tmpFileName()+".pdb"
-        shutil.copy(targetpdb, tmptarget)
+        #tmptarget = ample_util.tmpFileName()+".pdb"
+        #shutil.copy(targetpdb, tmptarget)
         
         logfile = outpdb+".log"
-        cmd="reforigin xyzin {0} xyzref {1} xyzout {2} DMAX {3}".format( tmptarget, refpdb, outpdb, DMAX ).split()
+        cmd="reforigin xyzin {0} xyzref {1} xyzout {2} DMAX {3}".format( targetpdb, refpdb, outpdb, DMAX ).split()
         
         retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False)
         
         if retcode != 0:
             raise RuntimeError, "Error running command: {0}".format( " ".join(cmd) )
-        else:
-            os.unlink( tmptarget )
         
         # Parse logfile to get RMSD
         rms = None
@@ -61,58 +57,54 @@ class ReforiginRmsd(object):
         
         return rms
 
-    def reforigin_rmsd( self, refinedPdb, nativePdb, nativeChainID=None, resSeqMap=None ):
-        """Use reforigin to calculate rmsd between native and refined.
-        
-        NB: Still have a bug with (e.g. 2UUI) where the final residue in the native file only has
-        an N for the last residue (ALA 150). If we calculate a map and then strip to C-alpha, there
-        is a missing residue.
+    def preparePlacedPdb( self, placedChainID=None, nativeChainID=None, resSeqMap=None ):
         """
+        Use pdbcur to:
+        - extract chain to compare
+        - strip down to CA/BB
+        - remove any atoms that cannot be compared to the native
+        """
+        # Build up stdin
+        
+        # Extract the chain to compare
+        stdin = "lvchain {0}\n".format( placedChainID )
+        
+        # Rename it to match the native
+        if placedChainID != nativeChainID:
+            stdin += "renchain {0} {1}\n".format( placedChainID, nativeChainID )
         
         # Find out if there are atoms in the model that we need to remove
-        incomparable = resSeqMap.targetIncomparable()
+        incomparable = resSeqMap.targetIncomparable( bbMask=not self.cAlphaOnly )
         if len( incomparable ):
-            
-            refinedPdbCut = ample_util.filename_append( filename=refinedPdb, astr="cut", directory=self.workdir )
-            logfile = "{0}.log".format( refinedPdb )
-            cmd="pdbcur xyzin {0} xyzout {1}".format( refinedPdb, refinedPdbCut ).split()
-            
             # Build up stdin - I'm too thick to work out the selection syntax for a discrete list
-            stdin = ""
             for e in incomparable:
                 stdin += "delresidue {0}\n".format( e )
-            
-            retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=self.workdir, dolog=False, stdin=stdin)
-            
-            if retcode == 0:
-                # remove temporary files
-                os.unlink(logfile)
-            else:
-                raise RuntimeError,"Error deleting residues {0}".format( incomparable )
-            
-            refinedPdb = refinedPdbCut
-        
-        PE = pdb_edit.PDBEdit()
+                
         if self.cAlphaOnly:
-            # If only alpha atoms are required, we create a copy of the model with only alpha atoms
-            tmp = ample_util.filename_append( filename=refinedPdb, astr="CA", directory=self.workdir )
-            PE.calpha_only( refinedPdb, tmp )
-            refinedPdb = tmp
+            # Strip down to CA
+            stdin += 'lvatom "CA[C]:*"\n'
         else:
             # Strip down to backbone atoms
-            tmp = ample_util.filename_append( filename=refinedPdb, astr="BB", directory=self.workdir )
-            PE.backbone( refinedPdb, tmp  )
-            refinedPdb = tmp
-
-        # Now create a PDB with the matching atoms from native that are in refined
-        nativePdbMatch = ample_util.filename_append( filename=nativePdb, astr="matched", directory=self.workdir )
-        PE.keep_matching( refpdb=refinedPdb, targetpdb=nativePdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
+            stdin += 'lvatom "N,CA,C,O,CB[N,C,O]"\n'
+            
+        # Renumber?
+        stdin += "sernum\n"
         
-        # Now get the rmsd
-        astr = "chain{0}_reforigin".format( nativeChainID )
-        reforiginOut = ample_util.filename_append( filename=refinedPdb, astr=astr, directory=self.workdir )
-        rms = self.calc_reforigin_rmsd( refpdb=nativePdbMatch, targetpdb=refinedPdb, outpdb=reforiginOut )
-        return ( rms, reforiginOut )
+        # Name the output file accordingly
+        astr = "chain{0}".format( placedChainID )
+        placedChainPdb = ample_util.filename_append( filename=self.placedPdb, astr=astr, directory=self.workdir )
+        
+        # Now run pdbcur to do it all
+        cmd="pdbcur xyzin {0} xyzout {1}".format( self.placedPdb, placedChainPdb ).split()
+        logfile = "{0}.log".format( placedChainPdb )
+        retcode = ample_util.run_command( cmd=cmd, logfile=logfile, directory=self.workdir, dolog=False, stdin=stdin)
+        
+        if retcode != 0:
+            raise RuntimeError,"Error extracting chain from placed PDB {0} in directory {1}".format( self.placedPdb, self.workdir )
+        
+        # remove temporary files
+        #os.unlink(logfile)
+        return placedChainPdb
     
     def run( self ):
         """For now just save lowest rmsd - can look at collecting more nativeInfo later
@@ -125,10 +117,10 @@ class ReforiginRmsd(object):
         #refinedInfo = pdbedit.get_info( refinedPdb )
         #nativeInfo = pdbedit.get_info( nativePdb )
         native_chains = self.nativePdbInfo.models[ 0 ].chains
-        refined_chains = self.placedPdbInfo.models[ 0 ].chains
+        placed_chains = self.placedPdbInfo.models[ 0 ].chains
         
         #print "got native chains ", native_chains
-        #print "got refined chains ", refined_chains
+        #print "got placed chains ", placed_chains
             
         rmsds = {} # dict of rmsd -> ( chainIDnative, chainIDrefined, reforiginLogfile )
         
@@ -141,13 +133,10 @@ class ReforiginRmsd(object):
                 # Don't need to do owt as we are just using the native as is
                 nativeChainPdb = self.nativePdb
             else:
-                
                 # Extract the chain from the pdb
                 astr = "chain{0}".format( nativeChainID )
                 nativeChainPdb = ample_util.filename_append( filename=self.nativePdb, astr=astr, directory=self.workdir )
                 pdbedit.extract_chain( self.nativePdb, nativeChainPdb, chainID=nativeChainID )
-                
-                assert os.path.isfile( nativeChainPdb  ), nativeChainPdb
                 
             # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
             # The second chain may be a different composition to the first, so we only generate a traceback if we fail
@@ -159,29 +148,31 @@ class ReforiginRmsd(object):
                 if nativeChainID == native_chains[0]:
                     raise
                 else:
+                    # Only compare the first chain
                     break
-            
-            for refinedChainID in refined_chains:
                 
-                #print "refined_chain: {0}".format( refinedChainID )
+            for placedChainID in placed_chains:
                 
-                # Extract the chain from the pdb
-                astr = "chain{0}".format( refinedChainID )
-                refinedChainPdb = ample_util.filename_append( filename=self.placedPdb, astr=astr, directory=self.workdir )
-                pdbedit.extract_chain( self.placedPdb, refinedChainPdb, chainID=refinedChainID, newChainID=nativeChainID, cAlphaOnly=self.cAlphaOnly )
+                # Prepare the placed PDB
+                placedChainPdb = self.preparePlacedPdb( placedChainID=placedChainID, nativeChainID=nativeChainID, resSeqMap=resSeqMap )
                 
-                #print "calculating for {0} vs. {1}".format( refinedChainID, nativeChainID  )
-                #print "calculating for {0} vs. {1}".format( refinedChainPdb, nativeChainPdb  )
-                rmsd, refPdb  = self.reforigin_rmsd( refinedChainPdb, nativeChainPdb, nativeChainID=nativeChainID, resSeqMap=resSeqMap )
+                # Now create a PDB with the matching atoms from native that are in refined
+                nativePdbMatch = ample_util.filename_append( filename=nativeChainPdb, astr="matched", directory=self.workdir )
+                pdbedit.keep_matching( refpdb=placedChainPdb, targetpdb=nativeChainPdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
+                
+                # Now get the rmsd
+                astr = "chain{0}_reforigin".format( nativeChainID )
+                reforiginOut = ample_util.filename_append( filename=placedChainPdb, astr=astr, directory=self.workdir )
+                rms = self.calcReforiginRmsd( refpdb=nativePdbMatch, targetpdb=placedChainPdb, outpdb=reforiginOut )
+                
 #                 try:
-#                     rmsd, refPdb  = self.reforigin_rmsd( refinedChainPdb, nativeChainPdb, nativeChainID=nativeChainID )
+#                     rms = self.calcReforiginRmsd( refpdb=nativePdbMatch, targetpdb=placedChainPdb, outpdb=reforiginOut )
 #                 except RuntimeError, e:
-#                     print "GOT REFORIGIN ERROR for {0},{1},{2}".format( refinedChainPdb, nativeChainPdb, nativeChainID )
+#                     print "GOT REFORIGIN ERROR for {0},{1},{2}".format( placedChainPdb, nativeChainPdb, nativeChainID )
 #                     print e
-#                     rmsd = 99999
-#                     refPdb = None
+#                     rms = 99999
 #                 
-                rmsds[ rmsd ] = ( nativeChainID, refinedChainID, refPdb )
+                rmsds[ rms ] = ( nativeChainID, placedChainID, reforiginOut )
                 
         # End loop over chains
         # Now pick the best...
@@ -190,7 +181,7 @@ class ReforiginRmsd(object):
         
         self.rmsd = rmsd
         self.bestNativeChain = rmsds[ rmsd ][0]
-        self.bestRefinedChain = rmsds[ rmsd ][1]
+        self.bestPlacedChain = rmsds[ rmsd ][1]
         self.bestReforiginPdb = rmsds[ rmsd ][2]
         #print "best chain rmsd is {0} for nativeChain {1} vs refinedChain {2}".format( self.rmsd, self.bestChains[0], self.bestChains[1] )
             
