@@ -358,18 +358,19 @@ class PDBEdit(object):
         assert refpdb and targetpdb and outpdb and resSeqMap
     
         # Paranoid check
-        refinfo = self.get_info( refpdb )
-        targetinfo = self.get_info( targetpdb )
-        if len(refinfo.models) > 1 or len(targetinfo.models) > 1:
-            raise RuntimeError, "PDBS contain more than 1 model!"
-        
-        if refinfo.models[0].chains != targetinfo.models[0].chains:
-            raise RuntimeError, "Different numbers/names of chains {0}->{1} between {2} and {3}!".format( refinfo.models[0].chains,
-                                                                                                        targetinfo.models[0].chains,
-                                                                                                        refpdb,
-                                                                                                        targetpdb
-                                                                                                        )
-        # Now we do our keep matching    
+        if False:
+            refinfo = self.get_info( refpdb )
+            targetinfo = self.get_info( targetpdb )
+            if len(refinfo.models) > 1 or len(targetinfo.models) > 1:
+                raise RuntimeError, "PDBS contain more than 1 model!"
+            
+            if refinfo.models[0].chains != targetinfo.models[0].chains:
+                raise RuntimeError, "Different numbers/names of chains {0}->{1} between {2} and {3}!".format( refinfo.models[0].chains,
+                                                                                                            targetinfo.models[0].chains,
+                                                                                                            refpdb,
+                                                                                                            targetpdb
+                                                                                                            )
+            # Now we do our keep matching    
         tmp1 = ample_util.tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix
         
         self._keep_matching( refpdb, targetpdb, tmp1, resSeqMap=resSeqMap )
