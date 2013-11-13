@@ -412,12 +412,13 @@ class Contacts(object):
                 thisMatched.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
                 last1 = resSeq1
                 last2 = resSeq2
+                mycell = cell
                 
                 # If this is the last one we want to drop through
                 if i < len(contacts)-1:
                     continue
                 
-            if count > MINC:
+            if count >= MINC:
                 #  end of a contiguous sequence
                 #print "ADDING ",count
                 if register:
@@ -463,8 +464,12 @@ if __name__ == "__main__":
 #     refModelPdb = root + "/S_00000001.pdb"
 #     placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
 
+    logfile = "/home/jmht/Documents/test/ncont/new/2FXM/phaser_loc0_ALL_All_atom_trunc_31.778865_rad_2_UNMOD.1_reseq_ren_o[0.0,0.0,0.25]_joined.pdb.ncont.log"    
+    logfile = "/home/jmht/Documents/test/ncont/new/1JCD/phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_0.953313_rad_3_UNMOD.1_ren_o[0.4583,0.6944,0.7292]_joined.pdb.ncont.log"
+    logfile = "/home/jmht/Documents/test/ncont/new/1BYZ/phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_0.005734_rad_1_UNMOD.1_reseq_ren_o[0.04167,0.9583,0.02778]_joined.pdb.ncont.log"
+
     c = Contacts()
-    c.parseNcontlog( logfile="/home/jmht/Documents/test/ncont/new/2FXM/phaser_loc0_ALL_All_atom_trunc_31.778865_rad_2_UNMOD.1_reseq_ren_o[0.0,0.0,0.25]_joined.pdb.ncont.log" )
+    c.parseNcontlog( logfile=logfile )
     
     print c.numContacts
     print c.allMatched
