@@ -217,10 +217,75 @@ class residueSequenceMap( object ):
         
         # Find where they match at the start
         self.refOffset, self.targetOffset = self._calcOffset( self.refSequence, self.targetSequence )
+        #print "Got refOffset, ", self.refOffset
+        #print "Got refResSeq ",self.refResSeq[ self.refOffset ]
+        #print "Got targetOffset ", self.targetOffset
+        #print "Got targetResSeq ",self.targetResSeq[ self.targetOffset ]
         
         self.lenMatch = self._lenMatch()
         
+        self._checkContiguous()
+        
         return
+    
+    def _XcheckContiguous(self):
+        """UNUSED"""
+        #
+        # Check that there is congiuous resSeq numbering as otherwise the map in current form won't work
+        #
+        # For reference
+        previous=self.refResSeq[ self.refOffset ]
+        for i in range( self.refOffset + 1, self.refOffset + self.lenMatch ):
+            
+            if self.refResSeq[ i ] != previous + 1:
+                raise RuntimeError,"Non-contiguous residue numbering in refSequence for {0} to {1}".format( previous, self.refResSeq[ i ] )
+            
+            previous = self.refResSeq[ i ]
+            #print "GOT i {0}, refResSeq {1}, refSequence {2}".format(  i, self.refResSeq[ i ], self.refSequence[ i ]  )
+        
+        # Now for target
+        previous=self.targetResSeq[ self.targetOffset ]
+        for i in range( self.targetOffset + 1, self.targetOffset + self.lenMatch ):
+            
+            if self.targetResSeq[ i ] != previous + 1:
+                raise RuntimeError,"Non-contiguous residue numbering in refSequence for {0} to {1}".format( previous, self.targetResSeq[ i ] )
+            
+            previous = self.targetResSeq[ i ]
+            #print "GOT i {0}, targetResSeq {1}, targetSequence {2}".format(  i, self.targetResSeq[ i ], self.targetSequence[ i ]  )
+         
+        return
+    
+    def _checkContiguous(self):
+        """
+        Check that there is congiuous resSeq numbering as otherwise the map in current form won't work
+        Can only check from the start while residues are matching - won't work after the first gap
+        """
+        p_refResSeq = p_targetResSeq = None
+        for count in range( self.lenMatch ):
+            
+            refIdx = self.refOffset + count
+            refAA = self.refSequence[ refIdx ]
+            refResSeq = self.refResSeq[ refIdx ]
+            
+            targetIdx = self.targetOffset + count
+            targetAA = self.targetSequence[ targetIdx ]
+            targetResSeq = self.targetResSeq[ targetIdx ]
+            
+            if count != 0:
+                
+                # Need to stop after the first gap
+                if refAA != targetAA:
+                    break
+                
+                # Complain if the residues match but the numbering doesn't
+                if refResSeq != p_refResSeq + 1 or targetResSeq !=  p_targetResSeq + 1:
+                    raise RuntimeError,"Non-contiguous residue numbering: {0}->{1} and {2}->{3}".format( p_refResSeq, refResSeq, p_targetResSeq, targetResSeq  )
+            
+            p_refResSeq = refResSeq
+            p_targetResSeq = targetResSeq
+            
+        return
+     
     
     def _calcOffset(self, refSequence, targetSequence, reverse=False ):
         
@@ -258,10 +323,15 @@ class residueSequenceMap( object ):
     
     def _lenMatch(self):
         refBackOffset, targetBackOffset = self._calcOffset( self.refSequence, self.targetSequence, reverse=True )
-        #print "Got refBackOffset, ", self.refBackOffset
-        #print "Got targetBackOffset ", self.targetBackOffset
+        #print "Got refBackOffset, ", refBackOffset
+        #print "Got targetBackOffset ", targetBackOffset
         # Calculate match from the residue numbers - use reference for now
-        return self.refResSeq[ len(self.refSequence) - 1 - refBackOffset ] - self.refResSeq[ self.refOffset ] + 1
+        length = self.refResSeq[ len(self.refSequence) - 1 - refBackOffset ] - self.refResSeq[ self.refOffset ] + 1
+        
+        if length > len(self.refResSeq) and length > len(self.targetResSeq):
+            raise RuntimeError, "Match of {0} is longer than both of the sequences!".format( length )
+        
+        return length
 
     def fromInfo(self, refInfo=None, refChainID=None, targetInfo=None, targetChainID=None, modelIdx=0):
         """Create a map from 2 info objects"""
@@ -276,13 +346,16 @@ class residueSequenceMap( object ):
         self.refOffset = None
         self._refIncomparable = None
 
-        modelIdx = targetInfo.models[ modelIdx ].chains.index( targetChainID )
-        self.targetResSeq = targetInfo.models[ modelIdx ].resSeqs[ modelIdx ]
-        self.targetSequence = targetInfo.models[ modelIdx ].sequences[ modelIdx ]
-        self.targetCAlphaMask = targetInfo.models[ modelIdx ].caMask[ modelIdx ]
-        self.targetBbMask =  targetInfo.models[ modelIdx ].bbMask[ modelIdx ]
+        targetIdx = targetInfo.models[ modelIdx ].chains.index( targetChainID )
+        self.targetResSeq = targetInfo.models[ modelIdx ].resSeqs[ targetIdx ]
+        self.targetSequence = targetInfo.models[ modelIdx ].sequences[ targetIdx ]
+        self.targetCAlphaMask = targetInfo.models[ modelIdx ].caMask[ targetIdx ]
+        self.targetBbMask =  targetInfo.models[ modelIdx ].bbMask[ targetIdx ]
         self.targetOffset = None
         self._targetIncomparable = None
+        
+        #print "refSequence    ",self.refSequence
+        #print "targetSequence   ", self.targetSequence
         
         self._calc_map()
         
