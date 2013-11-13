@@ -494,7 +494,7 @@ class PDBEdit(object):
         
         chain=None # The chain we're reading
         residue=None # the residue we're reading
-        targetResidue = []
+        targetAtomList = []
         
         for line in t:
             
@@ -506,7 +506,7 @@ class PDBEdit(object):
             
             # Stop at TER
             if line.startswith("TER"):
-                _output_residue( refResidues, targetResidue, resSeqMap, out )
+                _output_residue( refResidues, targetAtomList, resSeqMap, out )
                 # we write out our own TER
                 out.write("TER\n")
                 continue
@@ -517,7 +517,7 @@ class PDBEdit(object):
 
                 # First atom/chain
                 if chain == None:
-                    chain = a.chainID
+                    chain = atom.chainID
                 
                 if atom.chainID != chain:
                     raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
@@ -527,12 +527,12 @@ class PDBEdit(object):
                     # If this is the first one add the empty tuple and reset residue
                     if atom.resSeq != residue:
                         if residue != None: # Dont' write out owt for first atom
-                            _output_residue( refResidues, targetResidue, resSeqMap, out )
-                        targetResidue = []
+                            _output_residue( refResidues, targetAtomList, resSeqMap, out )
+                        targetAtomList = []
                         residue = atom.resSeq
                     
                     # If not first keep adding
-                    targetResidue.append( atom )
+                    targetAtomList.append( atom )
                     
                     # We don't write these out as we write them with _output_residue
                     continue
