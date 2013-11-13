@@ -83,20 +83,9 @@ class Contacts(object):
     def helixFromContacts( self, dsspP=None ):
         """Return the sequence of the longest contiguous helix from the given contact data"""
         
-        #print "GOT DATA ",contactData
+        #print "GOT DATA ",self.best.allMatched
         #print "GOT DSSP ",dsspP.asDict()
         
-        def getSS( c, dsspP ):
-            (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) = c
-            
-            i = dsspP.resSeqs.index( resSeq1 )
-            aad = dsspP.resNames[ i ]
-            if aad != aa1:
-                raise RuntimeError,"Missmatching residues: {0}".format( c )
-            
-            return dsspP.assignment[ i ]
-            
-            
         maxCounts = [] # list of maximum counts of contiguous helices in each group
         maxIndices = [] # Array of (start,stop) tuples for the max contiguous sequence in each group
         
@@ -113,6 +102,7 @@ class Contacts(object):
                 (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) = c
                 
                 #ss = getSS( c, dsspP )
+                #print "DATA ",chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell
                 ss = dsspP.getAssignment( resSeq1, aa1, chainID1 )
                 
                 #print "Looping through ", chainID1, resSeq1, aa1,ss
@@ -293,6 +283,7 @@ class Contacts(object):
         stdin += "target {0}//CA\n".format( ",".join( targetChains )  )  
         stdin += "maxdist {0}\n".format( maxdist )
         stdin += "cells 2\n"
+        stdin += "sort source inc\n"
         
         retcode = ample_util.run_command( cmd=cmd, logfile=self.ncontlog, directory=os.getcwd(), dolog=False, stdin=stdin )
         
@@ -336,35 +327,35 @@ class Contacts(object):
                     clines.append( line )
             
         assert self.numContacts == len(clines)
-        
         #print "LINES ",clines
-        
-        contacts = [] # Tuples of: chainID, resSeq, chainID, resSeq, dist
-        # Only collect contacts for central cell
-        mycell = None
-        lastSource=None
+
+        # Got data lines so now extract data        
+        contacts = [] # Tuples of: chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell
+        lastSource = None
+        lastChain = None
+        lastCell = None
         for c in clines:
             
             # Lines are of format
             # /1/B/1042(MET). / CA [ C]:  /1/b/ 988(GLU). / CA [ C]:   1.09 223 X-1/2,Y-1/2,Z
             
-            # If a contact to a single atom is in more than one cell then only the second contact info is printed, e.g.
+            # If a source atom has > 1 contacts to a target atoms (i.e. to atoms in different cells or chains)
+            # then the source atom is only printed once and there is then whitespace in colums 0-29
+            # We need to reconstruct the lines and select the matching chain/cell if there is one
+            # As we only care about the one in the same chain/cell we filter here
             """
       SOURCE ATOMS               TARGET ATOMS         DISTANCE CELL   SYMMETRY
 
  /1/A/ 942(LYS). / CA [ C]:  /1/a/ 856(PHE). / CA [ C]:   1.44 434 X+1,-Y,-Z+1
                              /1/a/ 908(LEU). / CA [ C]:   1.40 433 X+1,Y,Z
  /1/A/ 957(LEU). / CA [ C]:  /1/a/ 871(LYS). / CA [ C]:   1.12 434 X+1,-Y,-Z+1
- /1/A/ 946(GLU). / CA [ C]:  /1/a/ 860(LYS). / CA [ C]:   1.12 434 X+1,-Y,-Z+1
  """
-            # HACK FOR NOW WE JUST IGNORE
+
             # We create a new line that has the info from both
+            joined=False
             if not c[0:29].strip():
-                print "IGNORING CONTACT ",logfile
-                continue
+                joined=True
                 c = lastSource[0:29] + c[29:]
-            else:
-                lastSource = c
             
             # As the numbers overrun we can't split so we assume fixed format
             chainID1 = c[4]
@@ -377,6 +368,15 @@ class Contacts(object):
             aa2 = pdb_edit.three2one[ aa2 ]
             dist = float( c[56:62].strip() )
             cell = int( c[63:66])
+            
+            if not joined:
+                lastSource = c
+                lastChain  = chainID1
+                lastCell = cell
+            else:
+                # If this is a reconstructed line, only add it if it matches the chain/cell
+                if chainID1 != lastChain or cell != lastCell:
+                    continue
             
             contacts.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
             
@@ -493,8 +493,5 @@ if __name__ == "__main__":
     c = Contacts()
     c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
     print c.best
-    #logfile = "/home/jmht/Documents/test/ncont/3PCV/poly_ala_trunc_2.822761_rad_1/phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
-    #logfile = "/home/jmht/Documents/test/ncont/3PCV/All_atom_trunc_5.131715_rad_3/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1_csymmatch_ren_joined.pdb.ncont.log"
-    #logfile = "/Users/jmht/Documents/AMPLE/data/ncont/3GD8/phaser_loc0_ALL_All_atom_trunc_11.13199_rad_3_UNMOD.1_reseq_ren_origin2_joined.pdb.ncont.log"
-    #c.parseNcontlog( logfile=logfile )
-    
+
+
