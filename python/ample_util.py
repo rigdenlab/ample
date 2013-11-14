@@ -309,17 +309,20 @@ class TestUtil(unittest.TestCase):
         """
         Get paths need to think of a sensible way to do this
         """
-                
-        thisdir = os.getcwd()
-        self.ampledir = os.path.abspath( thisdir+os.sep+"..")
-        self.testdir = self.ampledir + os.sep + "tests"
-        self.testfilesdir = self.testdir + os.sep + "testfiles"
+
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ampleDir = os.sep.join( paths[ : -1 ] )
+        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
+        
+        return
+        
     
     def testGetMtzFlags(self):
         """Get MTZ flags"""
         
         
-        mtz = self.ampledir + os.sep + "examples" + os.sep + "toxd-example" + os.sep + "1dtx.mtz"
+        mtz = self.ampleDir + os.sep + "examples" + os.sep + "toxd-example" + os.sep + "1dtx.mtz"
         
         t_flag_F, t_flag_SIGF, t_flag_FREE = get_mtz_flags( mtz )
         
@@ -331,11 +334,15 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(sigf, t_flag_SIGF, "Correct SIGF")
         self.assertEqual(free, t_flag_FREE, "Correct FREE")
         
+        return
+        
     def testGetMtzFlagsNoFree(self):
         """Get MTZ flags when there are no free flags"""
         
-        mtz = self.testfilesdir + os.sep + "2uui_sigmaa.mtz"
+        mtz = self.testfilesDir + os.sep + "2uui_sigmaa.mtz"
         self.assertRaises(KeyError, get_mtz_flags, mtz )
+        
+        return
 #
 # Run unit tests
 if __name__ == "__main__":
