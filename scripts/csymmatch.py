@@ -44,6 +44,12 @@ class Csymmatch( object ):
             logfile = self.logfile
         
         for line in open( logfile, 'r' ):
+            if "Change of hand" in line:
+                # For our work, if there is a change of hand it didn't work
+                fields = line.split()
+                if fields[ 4 ] == "YES":
+                    return False
+            
             if "Change of origin:" in line:
                 # Find position of brackets
                 i1 = line.index( "(" )
@@ -53,5 +59,10 @@ class Csymmatch( object ):
                 return [ float(x), float(y), float(z) ]
         
         return False
-        
-        
+
+if __name__ == "__main__":
+    logfile = "/home/jmht/Documents/test/ncont/new/1GMJ/COH/shelxe_phaser_loc0_ALL_poly_ala_trunc_1.732018_rad_2_UNMOD_csymmatch.pdb.log"
+    c = Csymmatch()
+    print c.origin( logfile=logfile )
+
+
