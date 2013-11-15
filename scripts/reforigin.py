@@ -163,15 +163,14 @@ class ReforiginRmsd(object):
                 # Now get the rmsd
                 astr = "chain{0}_reforigin".format( nativeChainID )
                 reforiginOut = ample_util.filename_append( filename=placedChainPdb, astr=astr, directory=self.workdir )
-                rms = self.calcReforiginRmsd( refpdb=nativePdbMatch, targetpdb=placedChainPdb, outpdb=reforiginOut )
                 
-#                 try:
-#                     rms = self.calcReforiginRmsd( refpdb=nativePdbMatch, targetpdb=placedChainPdb, outpdb=reforiginOut )
-#                 except RuntimeError, e:
-#                     print "GOT REFORIGIN ERROR for {0},{1},{2}".format( placedChainPdb, nativeChainPdb, nativeChainID )
-#                     print e
-#                     rms = 99999
-#                 
+                try:
+                    rms = self.calcReforiginRmsd( refpdb=nativePdbMatch, targetpdb=placedChainPdb, outpdb=reforiginOut )
+                except RuntimeError, e:
+                    print "GOT REFORIGIN ERROR for {0},{1},{2}".format( placedChainPdb, nativeChainPdb, nativeChainID )
+                    print e
+                    rms = 99999
+                 
                 rmsds[ rms ] = ( nativeChainID, placedChainID, reforiginOut )
                 
         # End loop over chains
