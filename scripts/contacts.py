@@ -16,6 +16,7 @@ parse ncont file to generate map & analyse whether placed bits match and what ty
 
 import os
 import types
+import unittest
 
 import ample_util
 import csymmatch
@@ -200,12 +201,8 @@ class Contacts(object):
         
         origins = pdb_model.alternateOrigins( placedSpaceGroup )
         #print "GOT ORIGINS ",origins
-        floating=False
-        for o in origins:
-            if 'x' in o or 'y' in o or 'z' in o:
-                #print "GOT FLOATING"
-                floating=True
-                
+        # Pythonic way of checking if any of the origins are floating
+        floating = any(  map( lambda o: 'x' in o or 'y' in o or 'z' in o, origins  ) )
         
         # Add the shelxe origin to the list if it's not already in there
         csym = csymmatch.Csymmatch()
@@ -213,8 +210,17 @@ class Contacts(object):
         csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
         corig = csym.origin()
         
+        if not corig:
+            print "NO CSYMMATCH ORIGIN"
+        
         # For floating origins we use the csymmatch origin
         if floating:
+            if not corig:
+                # If csymmatch failed, we can't do owt
+                self.best = None
+                return False
+            # Should check if the origin is acceptable, but that would require checking through all the 
+            # alternate origins and seeing if tne non-floating axes had acceptable values  
             origins = [ corig ]
         else:
             if corig and corig not in origins:
@@ -265,10 +271,10 @@ class Contacts(object):
             self.best.csymmatchPdb = csymmatchPdb
             #if self.best.origin != corig:
             #    print "GOT DIFFERENT BEST ORIGIN {0} {1} FOR {2}".format( self.best.origin, corig, placedAaPdb )
+            return True
         else:
             self.best = None
-#                 
-        return
+            return False
 
     def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxdist=1.5 ):
         """FOO
@@ -293,6 +299,33 @@ class Contacts(object):
         return
     
     def parseNcontlog(self, logfile=None ):
+        """
+        
+        Lines are of format
+        /1/B/1042(MET). / CA [ C]:  /1/b/ 988(GLU). / CA [ C]:   1.09 223 X-1/2,Y-1/2,Z
+            
+        If a source atom has > 1 contacts to a target atoms (i.e. to atoms in different cells or chains)
+        then the source atom is only printed once and there is then whitespace in colums 0-29
+        We need to reconstruct the lines and select the matching chain if there is one
+        As we only care about the one in the same chain we filter here
+            
+      SOURCE ATOMS               TARGET ATOMS         DISTANCE CELL   SYMMETRY
+
+ /1/A/ 942(LYS). / CA [ C]:  /1/a/ 856(PHE). / CA [ C]:   1.44 434 X+1,-Y,-Z+1
+                             /1/a/ 908(LEU). / CA [ C]:   1.40 433 X+1,Y,Z
+ /1/A/ 957(LEU). / CA [ C]:  /1/a/ 871(LYS). / CA [ C]:   1.12 434 X+1,-Y,-Z+1
+ 
+ or
+ 
+ /1/A/  51(GLN). / CA [ C]:  /1/b/  93(ASN). / CA [ C]:   0.41 443 -X+Y+1,-X+1,Z
+                             /1/a/  83(THR). / CA [ C]:   0.96 444 -X+1,-X+Y+1,-Z+1
+ /1/A/  52(GLN). / CA [ C]:  /1/b/  94(TYR). / CA [ C]:   0.22 443 -X+Y+1,-X+1,Z
+                             /1/a/  84(TRP). / CA [ C]:   0.86 444 -X+1,-X+Y+1,-Z+1
+ /1/A/  53(HIS). / CA [ C]:  /1/a/  85(MET). / CA [ C]:   0.95 444 -X+1,-X+Y+1,-Z+1
+                             /1/b/  95(THR). / CA [ C]:   0.34 443 -X+Y+1,-X+1,Z
+
+ 
+        """
         
         if not logfile:
             logfile = self.ncontlog
@@ -333,27 +366,14 @@ class Contacts(object):
         contacts = [] # Tuples of: chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell
         lastSource = None
         lastChain = None
-        lastCell = None
         for c in clines:
             
-            # Lines are of format
-            # /1/B/1042(MET). / CA [ C]:  /1/b/ 988(GLU). / CA [ C]:   1.09 223 X-1/2,Y-1/2,Z
-            
-            # If a source atom has > 1 contacts to a target atoms (i.e. to atoms in different cells or chains)
-            # then the source atom is only printed once and there is then whitespace in colums 0-29
-            # We need to reconstruct the lines and select the matching chain/cell if there is one
-            # As we only care about the one in the same chain/cell we filter here
-            """
-      SOURCE ATOMS               TARGET ATOMS         DISTANCE CELL   SYMMETRY
 
- /1/A/ 942(LYS). / CA [ C]:  /1/a/ 856(PHE). / CA [ C]:   1.44 434 X+1,-Y,-Z+1
-                             /1/a/ 908(LEU). / CA [ C]:   1.40 433 X+1,Y,Z
- /1/A/ 957(LEU). / CA [ C]:  /1/a/ 871(LYS). / CA [ C]:   1.12 434 X+1,-Y,-Z+1
- """
 
             # We create a new line that has the info from both
             joined=False
             if not c[0:29].strip():
+                print "MISSING START OF NCONT LOG"
                 joined=True
                 c = lastSource[0:29] + c[29:]
             
@@ -372,10 +392,9 @@ class Contacts(object):
             if not joined:
                 lastSource = c
                 lastChain  = chainID1
-                lastCell = cell
             else:
-                # If this is a reconstructed line, only add it if it matches the chain/cell
-                if chainID1 != lastChain or cell != lastCell:
+                # If this is a reconstructed line, only add it if it matches the chain
+                if chainID1 != lastChain:
                     continue
             
             contacts.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
@@ -386,7 +405,6 @@ class Contacts(object):
         last2=None
         count=0
         register=True # true if in register, false if out
-        mycell=None
         thisMatched = []
         for i, (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) in enumerate( contacts ):
             
@@ -395,24 +413,26 @@ class Contacts(object):
             if i == 0:
                 last1 = resSeq1
                 last2 = resSeq2
-                mycell = cell
                 if resSeq1 != resSeq2:
                     register=False
                 count = 1
                 thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) ]
                 continue
             
+            # HACK
+            if ( resSeq1 == last1 + 1 and resSeq2 == last2 -1 ):
+                print "MATCHING BACKWARDS"
+            
             # Is a contiguous residue and the register matches what we're reading
             # Make sure we don't count contiguous residues where the other residue doesn't match
             # Also where the cell changes
             if ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ) \
-                and  ( ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register )  ) and mycell == cell:
+                and  ( ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register )  ):
                 #print "INCREMENTING"
                 count += 1
                 thisMatched.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
                 last1 = resSeq1
                 last2 = resSeq2
-                mycell = cell
                 
                 # If this is the last one we want to drop through
                 if i < len(contacts)-1:
@@ -435,7 +455,6 @@ class Contacts(object):
             
             last1 = resSeq1
             last2 = resSeq2
-            mycell = cell
             thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) ]
             count = 1
         
@@ -450,53 +469,41 @@ class Contacts(object):
                 f.write( sequence+"\n" )
         
         return
+    
+    
+class TestContacts( unittest.TestCase ):
+    
+    def setUp(self):
+        
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ampleDir = os.sep.join( paths[ : -1 ] )
+        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
+        
+        return
+    
+    def testParse1(self):
+        
+        logfile = os.path.join( self.testfilesDir, "ncont1.log" )
+        print logfile
+        
+        c = Contacts()
+        c.parseNcontlog( logfile=logfile )
+        
+        self.assertEqual( c.numContacts, 56 )
+        print c.numContacts
+        print c.allMatched
+        print c.inregister, c.ooregister
+        
+        
+        
+        return
 
 if __name__ == "__main__":
-#     root = "/Users/jmht/Documents/AMPLE/data/ncont"
-#     root = "/home/jmht/Documents/test/ncont/3PCV"
-#     nativePdb = root + "/3PCV_std.pdb"
-#     placedPdb = root + "/refmac_phaser_loc0_ALL_poly_ala_trunc_2.822761_rad_1_UNMOD.pdb"
-#     refModelPdb = root + "/S_00000001.pdb"
-#     
-#     root = "/home/jmht/Documents/test/ncont/1D7M"
-#     workdir = root + "/All_atom_trunc_5.131715_rad_2"
-#     nativePdb = root + "/1D7M.pdb"
-#     refModelPdb = root + "/S_00000001.pdb"
-#     placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_2_UNMOD.1.pdb"
-
-    logfile = "/home/jmht/Documents/test/ncont/new/2FXM/phaser_loc0_ALL_All_atom_trunc_31.778865_rad_2_UNMOD.1_reseq_ren_o[0.0,0.0,0.25]_joined.pdb.ncont.log"    
-    logfile = "/home/jmht/Documents/test/ncont/new/1JCD/phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_0.953313_rad_3_UNMOD.1_ren_o[0.4583,0.6944,0.7292]_joined.pdb.ncont.log"
-    logfile = "/home/jmht/Documents/test/ncont/new/1BYZ/phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_0.005734_rad_1_UNMOD.1_reseq_ren_o[0.04167,0.9583,0.02778]_joined.pdb.ncont.log"
-
-    c = Contacts()
-    c.parseNcontlog( logfile=logfile )
     
-    print c.numContacts
-    print c.allMatched
-    print c.inregister, c.ooregister
+    unittest.main()
+    
     import sys
     sys.exit()
-    
-    
-    root = "/home/jmht/Documents/test/ncont/3PCV"
-    nativePdb = root + "/3PCV.pdb"
-    refModelPdb = root + "/S_00000001.pdb"
-    #workdir = root + "/All_atom_trunc_5.131715_rad_3"
-    #placedPdb = workdir + "/phaser_loc0_ALL_All_atom_trunc_5.131715_rad_3_UNMOD.1.pdb"
-    
-    workdir = "/home/jmht/Documents/test/ncont/new/3GD8"
-    nativePdb = workdir + "/3GD8_std.pdb"
-    placedPdb = workdir + "/phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_12.483162_rad_3_UNMOD.1.pdb"
-    refModelPdb = workdir + "/S_00000001.pdb"
-    
-    os.chdir(workdir)
-    
-    # PE = pdb_edit.PDBEdit()
-    # PE.cat_pdbs(pdb1=nativePdb, pdb2="csymmatchAll.pdb", pdbout="joined.pdb")
-    # 
-    
-    c = Contacts()
-    c.run( nativePdb, placedPdb, refModelPdb, workdir=workdir )
-    print c.best
 
 
