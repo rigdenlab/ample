@@ -30,9 +30,10 @@ class ContactData(object):
         self.numContacts = 0
         self.inregister = 0
         self.ooregister = 0
+        self.backwards = 0
         self.origin = None
         self.allMatched = None
-        self.ncontlog = None
+        self.ncontLog = None
         self.pdb = None
         self.csymmatchPdb = None
         return
@@ -56,10 +57,12 @@ class Contacts(object):
     """
     
     def __init__( self ):
-        self.ncontlog = None
+        self.ncontLog = None
         self.numContacts = 0
+        self.contacts = None
         self.inregister = 0
         self.ooregister = 0
+        self.backwards = 0
         self.allMatched = []
         self.best = None
         # testing
@@ -68,16 +71,8 @@ class Contacts(object):
     
     def getContacts(self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None ):
         
-#        try:
         self.run( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir )
-        self.parseNcontlog()
-#         except:
-#             print "ERROR RUNNING CONTACTS: ",placedPdb
-#             self.numContacts = -1
-#             self.inregister = -1
-#             self.ooregister = -1
-#             self.allMatched = []
-#             self.best = None
+        
         return
 
 
@@ -100,13 +95,13 @@ class Contacts(object):
             #print "GROUP"
             for ic, c in enumerate( contactGroup ):
                 
-                (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) = c
+                ( chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) = c
                 
                 #ss = getSS( c, dsspP )
-                #print "DATA ",chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell
-                ss = dsspP.getAssignment( resSeq1, aa1, chainID1 )
+                #print "DATA ",chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell
+                ss = dsspP.getAssignment( resSeq1, aa1, chainId1 )
                 
-                #print "Looping through ", chainID1, resSeq1, aa1,ss
+                #print "Looping through ", chainId1, resSeq1, aa1,ss
                 if ss == 'H':
                     count += 1
                     stop = ic
@@ -140,7 +135,7 @@ class Contacts(object):
         sequence = ""
         for i in range( start, stop + 1 ):
             c = cg[ i ]
-            (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) = c
+            (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) = c
             sequence += aa1
             
         #print "GOT sequence ",sequence
@@ -249,7 +244,8 @@ class Contacts(object):
             # Need to get list of chains from Native as can't work out negate operator for ncont
             fromChain = nativeInfo.models[0].chains
             self.runNcont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
-            self.parseNcontlog()
+            self.parseNcontLog()
+            self.countContacts()
             
             self.originCompare[ i ] = self.inregister + self.ooregister
             
@@ -257,9 +253,11 @@ class Contacts(object):
                 self.best.numContacts = self.numContacts
                 self.best.inregister = self.inregister
                 self.best.ooregister = self.ooregister
+                self.best.backwards = self.backwards
+                self.best.contacts = self.contacts
                 self.best.allMatched = self.allMatched
                 self.best.origin = origin
-                self.best.ncontlog = self.ncontlog
+                self.best.ncontLog = self.ncontLog
                 self.best.pdb = placedOriginPdb
                 
             #print "GOT CONTACTS: {0} : {1} : {2}".format( self.numContacts, self.inregister, self.ooregister  )
@@ -280,7 +278,7 @@ class Contacts(object):
         """FOO
         """
         
-        self.ncontlog = pdbin +".ncont.log"
+        self.ncontLog = pdbin +".ncont.log"
         cmd = [ "ncont", "xyzin", pdbin ]
         
         # Build up stdin
@@ -289,52 +287,29 @@ class Contacts(object):
         stdin += "target {0}//CA\n".format( ",".join( targetChains )  )  
         stdin += "maxdist {0}\n".format( maxdist )
         stdin += "cells 2\n"
-        stdin += "sort source inc\n"
+        stdin += "sort target inc\n"
         
-        retcode = ample_util.run_command( cmd=cmd, logfile=self.ncontlog, directory=os.getcwd(), dolog=False, stdin=stdin )
+        retcode = ample_util.run_command( cmd=cmd, logfile=self.ncontLog, directory=os.getcwd(), dolog=False, stdin=stdin )
         
         if retcode != 0:
             raise RuntimeError,"Error running ncont"
         
         return
     
-    def parseNcontlog(self, logfile=None ):
+    def parseNcontLog( self, logfile=None ):
         """
         
         Lines are of format
         /1/B/1042(MET). / CA [ C]:  /1/b/ 988(GLU). / CA [ C]:   1.09 223 X-1/2,Y-1/2,Z
-            
-        If a source atom has > 1 contacts to a target atoms (i.e. to atoms in different cells or chains)
-        then the source atom is only printed once and there is then whitespace in colums 0-29
-        We need to reconstruct the lines and select the matching chain if there is one
-        As we only care about the one in the same chain we filter here
-            
-      SOURCE ATOMS               TARGET ATOMS         DISTANCE CELL   SYMMETRY
-
- /1/A/ 942(LYS). / CA [ C]:  /1/a/ 856(PHE). / CA [ C]:   1.44 434 X+1,-Y,-Z+1
-                             /1/a/ 908(LEU). / CA [ C]:   1.40 433 X+1,Y,Z
- /1/A/ 957(LEU). / CA [ C]:  /1/a/ 871(LYS). / CA [ C]:   1.12 434 X+1,-Y,-Z+1
- 
- or
- 
- /1/A/  51(GLN). / CA [ C]:  /1/b/  93(ASN). / CA [ C]:   0.41 443 -X+Y+1,-X+1,Z
-                             /1/a/  83(THR). / CA [ C]:   0.96 444 -X+1,-X+Y+1,-Z+1
- /1/A/  52(GLN). / CA [ C]:  /1/b/  94(TYR). / CA [ C]:   0.22 443 -X+Y+1,-X+1,Z
-                             /1/a/  84(TRP). / CA [ C]:   0.86 444 -X+1,-X+Y+1,-Z+1
- /1/A/  53(HIS). / CA [ C]:  /1/a/  85(MET). / CA [ C]:   0.95 444 -X+1,-X+Y+1,-Z+1
-                             /1/b/  95(THR). / CA [ C]:   0.34 443 -X+Y+1,-X+1,Z
-
  
         """
         
         if not logfile:
-            logfile = self.ncontlog
+            logfile = self.ncontLog
         #print "LOG ",logfile
             
         self.numContacts = 0
-        self.inregister = 0
-        self.ooregister = 0
-        self.allMatched = []
+        self.contacts = None
         clines = []
         
         capture=False
@@ -362,89 +337,134 @@ class Contacts(object):
         assert self.numContacts == len(clines)
         #print "LINES ",clines
 
-        # Got data lines so now extract data        
-        contacts = [] # Tuples of: chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell
+        # Got data lines so now extract data
+        # Could probably just do this in the reading loop now    
+        contacts = [] 
         lastSource = None
-        lastChain = None
         for c in clines:
             
-
-
-            # We create a new line that has the info from both
-            joined=False
+            # WE DONT DO THIS NOW AS WE SORT BY TARGET CHAINS!
+            # Reconstruct lines with only the second contact using the data from the corresponding last complete line
             if not c[0:29].strip():
-                print "MISSING START OF NCONT LOG"
-                joined=True
+                raise RuntimeError,"Atoms sorted incorrectly!"
                 c = lastSource[0:29] + c[29:]
+            else:
+                lastSource = c
             
             # As the numbers overrun we can't split so we assume fixed format
-            chainID1 = c[4]
+            chainId1 = c[4]
             resSeq1 = int( c[6:10].strip() )
             aa1 = c[11:14]
             aa1 = pdb_edit.three2one[ aa1 ] # get amino acid and convert to single letter code
-            chainID2 = c[32]
+            chainId2 = c[32]
             resSeq2 = int( c[34:38].strip() )
             aa2 = c[39:42]
             aa2 = pdb_edit.three2one[ aa2 ]
             dist = float( c[56:62].strip() )
             cell = int( c[63:66])
+            symmetry = c[67:]
             
-            if not joined:
-                lastSource = c
-                lastChain  = chainID1
-            else:
-                # If this is a reconstructed line, only add it if it matches the chain
-                if chainID1 != lastChain:
-                    continue
-            
-            contacts.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
-            
+            contacts.append( (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) )
+
+#         # Put in dictionary by chains for easy access
+#         contacts = {}
+#         for c in contactsList:
+#             
+#             chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
+#             
+#             if not contacts.has_key( chainId1 ):
+#                 # First entry in first source chain
+#                 contacts[ chainId1 ] = { chainId2: [ c ] }
+#                 continue
+#             
+#             if not contacts[ chainId1 ].has_key( chainId2 ):
+#                 # Adding a new target chain
+#                 contacts[ chainId1 ][ chainId2 ] = [ c ]
+#                 continue
+#             
+#             # Adding to existing source & target chains
+#             contacts[ chainId1 ][ chainId2 ].append( c )
+#                 
+# #         for sc in contacts.keys():
+# #             for tc in contacts[ sc ]:
+# #                 for c in contacts[ sc ][ tc ]:
+# #                     print c
+# 
+        self.contacts = contacts
+                    
+        return contacts
+    
+    def countContacts( self ):
+        
+        if not self.contacts:
+            return
+        
         # Now count'em and put them into groups
         MINC = 3 # minimum contiguous to count
-        last1=None
-        last2=None
-        count=0
-        register=True # true if in register, false if out
+        self.inregister = 0
+        self.ooregister = 0
+        self.backwards = 0
+        self.allMatched = []
+
+        last1 = None
+        last2 = None
+        count = None
+        register = True # true if in register, false if out
+        backwards = False
         thisMatched = []
-        for i, (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) in enumerate( contacts ):
+        
+        for i, c in enumerate( self.contacts ):
             
-            #print "CONTACTS ",chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell
+            chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
+
+            #print "CONTACT ",i, chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry
             # Initialise
             if i == 0:
                 last1 = resSeq1
                 last2 = resSeq2
                 if resSeq1 != resSeq2:
-                    register=False
+                    register = False
                 count = 1
-                thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) ]
+                thisMatched = [ ( chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) ]
                 continue
             
-            # HACK
-            if ( resSeq1 == last1 + 1 and resSeq2 == last2 -1 ):
-                print "MATCHING BACKWARDS"
-            
-            # Is a contiguous residue and the register matches what we're reading
-            # Make sure we don't count contiguous residues where the other residue doesn't match
-            # Also where the cell changes
-            if ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ) \
-                and  ( ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register )  ):
-                #print "INCREMENTING"
-                count += 1
-                thisMatched.append( (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) )
-                last1 = resSeq1
-                last2 = resSeq2
+            # LOGIC HERE STILL NEEDS WORK
+            # We are reading contiguous matches
+            if ( resSeq1 == last1 + 1 and resSeq2 == last2 - 1 ) or ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ):
                 
-                # If this is the last one we want to drop through
-                if i < len(contacts)-1:
-                    continue
+                # either in or oo register read
+                if ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register ):
+                    
+                    # Check if this is a change or part of a stretch
+                    if resSeq1 == last1 + 1 and resSeq2 == last2 - 1 and not backwards:
+                        backwards = True
+                        
+                    elif resSeq1 == last1 + 1 and resSeq2 == last2 + 1 and backwards:
+                        backwards = False
+                        
+                    else:
+                        count += 1
+                        thisMatched.append( ( chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) )
+                        last1 = resSeq1
+                        last2 = resSeq2
+                        
+                        # If this is the last one we want to drop through
+                        if i < len( self.contacts ) - 1:
+                            continue
+                
+            # Anything that doesn't continue didn't match
                 
             if count >= MINC:
                 #  end of a contiguous sequence
-                #print "ADDING ",count
                 if register:
+                    assert not backwards
                     self.inregister += count
                 else:
+                    #print "adding {0} to ooregister {1}".format( count, self.ooregister )
                     self.ooregister += count
+                    if backwards:
+                        self.backwards += count
+                        
                 self.allMatched.append( thisMatched )
             
             # Either starting again or a random residue
@@ -455,7 +475,7 @@ class Contacts(object):
             
             last1 = resSeq1
             last2 = resSeq2
-            thisMatched = [ (chainID1, resSeq1, aa1, chainID2, resSeq2, aa2, dist, cell) ]
+            thisMatched = [ (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) ]
             count = 1
         
         #print "GOT ALLMATCHED ",self.allMatched
@@ -482,20 +502,49 @@ class TestContacts( unittest.TestCase ):
         
         return
     
-    def testParse1(self):
+    
+    def testParse2(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont1.log" )
-        print logfile
+        logfile = os.path.join( self.testfilesDir, "ncont2.log" )
         
         c = Contacts()
-        c.parseNcontlog( logfile=logfile )
+        contacts = c.parseNcontLog( logfile=logfile )
+        c.countContacts()
+        
+        self.assertEqual( c.numContacts, 10 )
+        self.assertEqual( c.inregister, 0 )
+        self.assertEqual( c.ooregister, 7 )
+        self.assertEqual( c.backwards, 7 )
+        
+        return
+    
+    def testParse3(self):
+        
+        logfile = os.path.join( self.testfilesDir, "ncont3.log" )
+        
+        c = Contacts()
+        contacts = c.parseNcontLog( logfile=logfile )
+        c.countContacts()
+        
+        self.assertEqual( c.numContacts, 14 )
+        self.assertEqual( c.inregister, 0 )
+        self.assertEqual( c.ooregister, 10 )
+        self.assertEqual( c.backwards, 0 )
+        
+        return
+    
+    def testParse4(self):
+        
+        logfile = os.path.join( self.testfilesDir, "ncont4.log" )
+        
+        c = Contacts()
+        contacts = c.parseNcontLog( logfile=logfile )
+        c.countContacts()
         
         self.assertEqual( c.numContacts, 56 )
-        print c.numContacts
-        print c.allMatched
-        print c.inregister, c.ooregister
-        
-        
+        self.assertEqual( c.inregister, 0 )
+        self.assertEqual( c.ooregister, 55 )
+        self.assertEqual( c.backwards, 0 )
         
         return
 
