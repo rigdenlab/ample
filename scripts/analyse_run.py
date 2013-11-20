@@ -98,7 +98,9 @@ class AmpleResult(object):
     """Results for an ample solution"""
     
     def __init__(self):
-        
+
+
+
         # The attributes we will be holding
         self.orderedAttrs = [ 
                               'pdbCode',
@@ -133,9 +135,14 @@ class AmpleResult(object):
                               'molrepScore',
                               'molrepTime',
                               'reforiginRmsd',
+                              'contactData',
+                              'contactOrigin',
                               'numContacts',
-                              'inregister',
-                              'ooregister',
+                              'inregisterContacts',
+                              'ooregisterContacts',
+                              'backwardsContacts',
+                              'goodContacts',
+                              'nocatContacts',
                               'rfact',
                               'rfree',
                               'solution',
@@ -177,9 +184,14 @@ class AmpleResult(object):
                                 "Molrep Score",
                                 "Molrep Time",
                                 "Reforigin RMSD",
+                                "Contact Data",
+                                "Contact origin",
                                 "Number of contacts",
                                 "In register contacts",
                                 "Out of register contacts",
+                                "Backwards contacts",
+                                "Good contacts",
+                                "Uncategorised contacts",
                                 "Rfact",
                                 "Rfree",
                                 "Solution",
@@ -188,7 +200,7 @@ class AmpleResult(object):
                                  ]
 
         # Things not to output
-        self.skip = [ "resultDir", "ss_pred", "ss_dssp" ]
+        self.skip = [ "resultDir", "ss_pred", "ss_dssp", "contactData" ]
         
         # Set initial values
         for a in self.orderedAttrs:
@@ -1036,10 +1048,11 @@ if __name__ == "__main__":
     
     pickledResults=False
     CLUSTERNUM=0
-    #rundir = "/Users/jmht/Documents/AMPLE/data/run"
     rundir = "/home/jmht/Documents/test/TM"
-    #dataRoot = "/Users/jmht/Documents/AMPLE/data"
-    dataRoot = "/media/data/shared/TM"
+    rundir = "/home/jmht/Documents/test/CC/run1"
+    #dataRoot = "/media/data/shared/TM"
+    dataRoot = "/media/data/shared/coiled-coils"
+    
     os.chdir( rundir )
     
     if pickledResults:
@@ -1049,9 +1062,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    #for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "1DEB" ]:
+    for pdbcode in [ "1DEB" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1098,7 +1111,7 @@ if __name__ == "__main__":
         # Secondary Structure assignments
         sam_file = os.path.join( dataDir, "fragments/t001_.rdb_ss2"  )
         psipredP = PsipredParser( sam_file )
-        dssp_file = os.path.join( dataDir, "{0}.dssp".format( pdbcode.lower()  )  )
+        dssp_file = os.path.join( dataDir, "{0}.dssp".format( pdbcode  )  )
         dsspP = dssp.DsspParser( dssp_file )
 
         # Get hold of a full model so we can do the mapping of residues
@@ -1120,10 +1133,15 @@ if __name__ == "__main__":
             r = mrbump_results.ResultsSummary( os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
             r.extractResults()
             results = r.results
-            
+        
+        #jtest=0
         for mrbumpResult in results:
             
-            #print "processing result ",mrbumpResult
+            #jtest += 1
+            #if jtest > 1:
+            #    break
+            
+            print "processing result ",mrbumpResult.name
             
             ar = AmpleResult()
             allResults.append( ar )
@@ -1140,7 +1158,7 @@ if __name__ == "__main__":
             ar.ss_pred = psipredP.asDict()
             ar.ss_pred_str = "C:{0:d} | E:{1:d} | H:{2:d}".format( int(psipredP.percentC),  int(psipredP.percentE), int(psipredP.percentH) )
             ar.ss_dssp = dsspP.asDict()
-            ar.ss_dssp_str = "C:{0:d} | E:{1:d} | H:{2:d}".format( int(dsspP.percentC),  int(dsspP.percentE), int(dsspP.percentH) )
+            ar.ss_dssp_str = "C:{0:d} | E:{1:d} | H:{2:d}".format( int(dsspP.percentC[0]),  int(dsspP.percentE[0]), int(dsspP.percentH[0]) )
             
             # yuck...
             if mrbumpResult.solution == 'unfinished':
@@ -1197,7 +1215,8 @@ if __name__ == "__main__":
             ar.rfree =  mrbumpResult.rfree
             ar.mrProgram =  mrbumpResult.program
             
-            mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( ensembleName, mrbumpResult.program )  )
+            #mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( ensembleName, mrbumpResult.program )  )
+            mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}.sub.log".format( ensembleName )  )
             mrbumpP = MrbumpLogParser( mrbumpLog )
             ar.estChainsASU = mrbumpP.noChainsTarget
             
@@ -1236,64 +1255,71 @@ if __name__ == "__main__":
             placedInfo = pdbedit.get_info( placedPdb )
             
             # Get reforigin info
-            rmsder = reforigin.ReforiginRmsd( nativePdb=nativePdb,
-                                              nativePdbInfo=nativeInfo,
-                                              placedPdb=placedPdb,
-                                              placedPdbInfo=placedInfo,
-                                              refModelPdb=refModelPdb,
-                                              cAlphaOnly=True )
-            
-            
-            ar.reforiginRmsd =  rmsder.rmsd
-#             print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdb, placedPdb )
-#             ar.reforiginRmsd = 9999
-
+            try:
+                rmsder = reforigin.ReforiginRmsd( nativePdb=nativePdb,
+                                                  nativePdbInfo=nativeInfo,
+                                                  placedPdb=placedPdb,
+                                                  placedPdbInfo=placedInfo,
+                                                  refModelPdb=refModelPdb,
+                                                  cAlphaOnly=True )
+                ar.reforiginRmsd = rmsder.rmsd
+            except Exception, e:
+                print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdb, placedPdb )
+                print "{0}".format( e )
+                ar.reforiginRmsd = 9999
+                
             #
             # SHELXE PROCESSING
             #
             # Now read the shelxe log to see how we did
             shelxeLog = os.path.join( resultDir, "build/shelxe/shelxe_run.log" )
             shelxePdb = os.path.join( resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
-            if not os.path.isfile( shelxePdb):
-                continue
-            shutil.copy( shelxePdb , os.path.join(workdir, os.path.basename( shelxePdb ) ) )
- 
+            if os.path.isfile( shelxePdb):
+                shutil.copy( shelxePdb , os.path.join(workdir, os.path.basename( shelxePdb ) ) )
             if os.path.isfile( shelxeLog ):
                 shelxeP = ShelxeLogParser( shelxeLog )
                 ar.shelxeCC = shelxeP.CC
                 ar.shelxeAvgChainLength = shelxeP.avgChainLength
-
-            
+                
             # Now calculate contacts
             ccalc = contacts.Contacts()
-            ccalc.getContacts( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir )
-             
+            try:
+                ccalc.getContacts( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir )
+            except Exception, e:
+                print "ERROR WITH CONTACTS: {0}".format( e )
+                ccalc.best = None
+       
             if ccalc.best:
-                good = ccalc.best.inregister + ccalc.best.ooregister
-                bad = ccalc.best.numContacts - good
-                print "GOT BEST ", good, bad, ccalc.best.backwards, ccalc.best.inregister, ccalc.best.ooregister
-                 
-                # Show origin stats
-                oc = sorted(ccalc.originCompare.items(), key=lambda x: x[1], reverse=True )
-                print "originCompare: ", oc
-                duff=False
-                if len(oc) > 1:
-                    if oc[0][1] == oc[1][1]:
-                        if len(oc) > 2:
-                            if oc[2][1] >= oc[1][1]*.5:
+                ar.contactData = ccalc.best
+                ar.numContacts = ccalc.best.numContacts
+                ar.inregisterContacts = ccalc.best.inregister
+                ar.ooregisterContacts = ccalc.best.ooregister
+                ar.backwardsContacts = ccalc.best.backwards
+                ar.contactOrigin = ccalc.best.origin
+                ar.goodContacts = ar.inregisterContacts + ar.ooregisterContacts
+                ar.nocatContacts = ar.numContacts - ar.goodContacts
+                
+                # Just for debugging
+                if ar.shelxeCC >= 25 and ar.shelxeAvgChainLength >= 10:
+                    # Show origin stats
+                    oc = sorted(ccalc.originCompare.items(), key=lambda x: x[1], reverse=True )
+                    #print "originCompare: ", oc
+                    duff=False
+                    if len(oc) > 1:
+                        if oc[0][1] == oc[1][1]:
+                            if len(oc) > 2:
+                                if oc[2][1] >= oc[1][1]*.5:
+                                    duff=True
+                        else:
+                            if oc[1][1] >= oc[0][1]*.5:
                                 duff=True
-                    else:
-                        if oc[1][1] >= oc[0][1]*.5:
-                            duff=True
-                    if duff:
-                        print "OTHER ORIGINMATCHES ARE > 50%"
+                        if duff:
+                            print "OTHER ORIGINMATCHES ARE > 50%"
                  
-                hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
-                ccalc.writeHelixFile(filename=hfile, dsspP=dsspP )
-            else:
-                if shelxeCC >= 25 and shelxeAvgChainLength >= 10:
-                    print "SUCCESS BUT NO BEST!"
-    
+                #hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
+                #ccalc.writeHelixFile(filename=hfile, dsspP=dsspP )
+                #print ar
+
     # End loop over results
     
     pfile = os.path.join( rundir, "ar_results.pkl")
