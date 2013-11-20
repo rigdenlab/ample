@@ -75,7 +75,6 @@ class Contacts(object):
         
         return
 
-
     def helixFromContacts( self, dsspP=None ):
         """Return the sequence of the longest contiguous helix from the given contact data"""
         
@@ -201,12 +200,14 @@ class Contacts(object):
         
         # Add the shelxe origin to the list if it's not already in there
         csym = csymmatch.Csymmatch()
-        csymmatchPdb = ample_util.filename_append( filename=shelxePdb, astr="csymmatch", directory=self.workdir )
-        csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
-        corig = csym.origin()
+        corig = None
+        if shelxePdb:
+            csymmatchPdb = ample_util.filename_append( filename=shelxePdb, astr="csymmatch", directory=self.workdir )
+            csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
+            corig = csym.origin()
         
-        if not corig:
-            print "NO CSYMMATCH ORIGIN"
+        #if not corig:
+        #    print "NO CSYMMATCH ORIGIN"
         
         # For floating origins we use the csymmatch origin
         if floating:
@@ -343,10 +344,9 @@ class Contacts(object):
         lastSource = None
         for c in clines:
             
-            # WE DONT DO THIS NOW AS WE SORT BY TARGET CHAINS!
             # Reconstruct lines with only the second contact using the data from the corresponding last complete line
             if not c[0:29].strip():
-                raise RuntimeError,"Atoms sorted incorrectly!"
+                #print "MATCH ACROSS TWO ATOMS"
                 c = lastSource[0:29] + c[29:]
             else:
                 lastSource = c
