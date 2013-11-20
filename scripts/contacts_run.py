@@ -37,7 +37,7 @@ if __name__ == "__main__":
     #for pdbcode in [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
     #for pdbcode in sorted( resultsDict.keys() ):
     for pdbcode in [ l.strip() for l in open( os.path.join( rootDir, "dirs.list") ) if not l.startswith("#") ]:
-    #for pdbcode in [ "2Q6Q" ]:
+    #for pdbcode in [ "1DEB" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -47,10 +47,10 @@ if __name__ == "__main__":
         print "\nResults for ",pdbcode
         
         # Directory where all the data for this run live
-        datadir = os.path.join( rootDir, pdbcode )
+        dataDir = os.path.join( rootDir, pdbcode )
         
         # Get the path to the original pickle file
-        pfile = os.path.join( datadir, "ROSETTA_MR_0/resultsd.pkl")
+        pfile = os.path.join( dataDir, "ROSETTA_MR_0/resultsd.pkl")
         f = open( pfile )
         ampleDict = cPickle.load( f  )
         f.close()    
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         # First process all stuff that's the same for each structure
         
         # Get path to native Extract all the nativeInfo from it
-        nativePdb = os.path.join( datadir, "{0}.pdb".format( pdbcode ) )
+        nativePdb = os.path.join( dataDir, "{0}.pdb".format( pdbcode ) )
         pdbedit = pdb_edit.PDBEdit()
         nativeInfo = pdbedit.get_info( nativePdb )
         
@@ -75,14 +75,14 @@ if __name__ == "__main__":
         nativePdb = nativePdbStd
         
         # Secondary Structure assignments
-        dssp_file = os.path.join( datadir, "{0}.dssp".format( pdbcode  )  )
-        #dssp_file = os.path.join( datadir, "{0}.dssp".format( pdbcode.lower()  )  )
+        dssp_file = os.path.join( dataDir, "{0}.dssp".format( pdbcode  )  )
+        #dssp_file = os.path.join( dataDir, "{0}.dssp".format( pdbcode.lower()  )  )
         dsspP = dssp.DsspParser( dssp_file )
         
         # See if the residue numbers match, and if not create a residue map
         
         # Get hold of a full model so we can do the mapping of residues
-        refModelPdb = os.path.join( datadir, "models/S_00000001.pdb".format( pdbcode ) )
+        refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbcode ) )
         resSeqMap = residue_map.residueSequenceMap()
         
         modelInfo = pdbedit.get_info( refModelPdb )
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         #continue
     
         # Loop over each result
-        r = mrbump_results.ResultsSummary( os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
+        r = mrbump_results.ResultsSummary( os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
         r.extractResults()
         for mrbumpResult in r.results:
         #for mrbumpResult in resultsDict[ pdbcode ]:
@@ -119,7 +119,7 @@ if __name__ == "__main__":
                 # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
                 ensembleName = mrbumpResult.name[9:-6]
                 
-            #if ensembleName != "poly_ala_trunc_35.364043_rad_3":
+            #if ensembleName != "poly_ala_trunc_0.466257_rad_2":
             #    continue
             
             # Extract information on the models and ensembles
@@ -137,7 +137,7 @@ if __name__ == "__main__":
             if mrbumpResult.solution == 'unfinished':
                 continue
             
-            # Need to remove last component as we recored the refmac directory
+            # Need to remove last component as we recorded the refmac directory
             resultDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
 
             if mrbumpResult.program != "phaser":
