@@ -69,7 +69,7 @@ class DsspParser(object):
         if not len( self.resNames[0] ) or not len( self.assignment[0] ):
             raise RuntimeError,"Got no assignment!"
          
-        for chain in range( len( self.assignment ) ):
+        for chain in range( len( self.chainIds ) ):
             nH = 0
             nC = 0
             nE = 0
@@ -81,10 +81,10 @@ class DsspParser(object):
                 # Just assume everything else is a coil
                 else:
                     nC += 1
-                 
-            self.percentC.append( float(nC) / len(self.assignment) * 100 )
-            self.percentH.append( float(nH) / len(self.assignment) * 100 )
-            self.percentE.append( float(nE) / len(self.assignment) * 100 )
+            
+            self.percentC.append( float(nC) / len(self.assignment[ chain ] ) * 100 )
+            self.percentH.append( float(nH) / len(self.assignment[ chain ] ) * 100 )
+            self.percentE.append( float(nE) / len(self.assignment[ chain ] ) * 100 )
         
         return
     
