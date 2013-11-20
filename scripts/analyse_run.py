@@ -84,15 +84,15 @@ import unittest
 
 #sys.path.append("/Users/jmht/Documents/AMPLE/ample-dev1/python")
 sys.path.append("/opt/ample-dev1/python")
+
 import ample_util
-#import mrbump_results
 import contacts
 import dssp
+import mrbump_results
 import pdb_edit
 import phaser_parser
 import reforigin
 import residue_map
-
 
 class AmpleResult(object):
     """Results for an ample solution"""
@@ -1034,26 +1034,24 @@ class Test(unittest.TestCase):
 
 if __name__ == "__main__":
     
-
+    pickledResults=False
     CLUSTERNUM=0
     #rundir = "/Users/jmht/Documents/AMPLE/data/run"
     rundir = "/home/jmht/Documents/test/TM"
-    #TMdir = "/Users/jmht/Documents/AMPLE/data"
-    TMdir = "/media/data/shared/TM"
+    #dataRoot = "/Users/jmht/Documents/AMPLE/data"
+    dataRoot = "/media/data/shared/TM"
     os.chdir( rundir )
     
-    
-    pfile = os.path.join( TMdir,"results.pkl" )
-    f = open( pfile )
-    resultsDict = cPickle.load( f  )
-    f.close()
+    if pickledResults:
+        pfile = os.path.join( dataRoot,"results.pkl" )
+        with open( pfile ) as f:
+            resultsDict = cPickle.load( f  )
     
     allResults = []
     
-    for pdbcode in [ "1GU8", "2BHW", "2BL2", "2EVU", "2O9G", "2UUI", "2WIE", "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
-    #for pdbcode in [ "2X2V", "2XOV", "3GD8", "3HAP", "3LBW", "3LDC", "3OUF", "3PCV", "3RLB", "3U2F", "4DVE" ]:
+    for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "2WIE" ]:
+    #for pdbcode in [ "1DEB" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1063,21 +1061,19 @@ if __name__ == "__main__":
         print "\nResults for ",pdbcode
         
         # Directory where all the data for this run live
-        datadir = os.path.join( TMdir, pdbcode )
+        dataDir = os.path.join( dataRoot, pdbcode )
         
         # Get the path to the original pickle file
-        pfile = os.path.join( datadir, "ROSETTA_MR_0/resultsd.pkl")
-        f = open( pfile )
-        ampleDict = cPickle.load( f  )
-        f.close()    
+        pfile = os.path.join( dataDir, "ROSETTA_MR_0/resultsd.pkl")
+        with open( pfile ) as f:
+            ampleDict = cPickle.load( f  )
     
         # First process all stuff that's the same for each structure
         
         # Get path to native Extract all the nativeInfo from it
-        nativePdb = os.path.join( datadir, "{0}.pdb".format( pdbcode ) )
+        nativePdb = os.path.join( dataDir, "{0}.pdb".format( pdbcode ) )
         pdbedit = pdb_edit.PDBEdit()
         nativeInfo = pdbedit.get_info( nativePdb )
-        
         
         # First check if the native has > 1 model and extract the first if so
         if len( nativeInfo.models ) > 1:
@@ -1091,21 +1087,41 @@ if __name__ == "__main__":
         pdbedit.standardise( nativePdb, nativePdbStd )
         nativePdb = nativePdbStd
         
-        # Get the scores for the models
-        scoreP = RosettaScoreParser( os.path.join( datadir, "models") )
-        maxComp = MaxclusterComparator( nativePdb, os.path.join( datadir, "models")  )
+        # Get the new Info about the native
+        nativeInfo = pdbedit.get_info( nativePdb )
+        
+        # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
+        # requires a separate run to generate total RMSD
+        scoreP = RosettaScoreParser( os.path.join( dataDir, "models") )
+        maxComp = MaxclusterComparator( nativePdb, os.path.join( dataDir, "models")  )
         
         # Secondary Structure assignments
-        sam_file = os.path.join( datadir, "fragments/t001_.rdb_ss2"  )
+        sam_file = os.path.join( dataDir, "fragments/t001_.rdb_ss2"  )
         psipredP = PsipredParser( sam_file )
-        dssp_file = os.path.join( datadir, "{0}.dssp".format( pdbcode.lower()  )  )
+        dssp_file = os.path.join( dataDir, "{0}.dssp".format( pdbcode.lower()  )  )
         dsspP = dssp.DsspParser( dssp_file )
+
+        # Get hold of a full model so we can do the mapping of residues
+        refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbcode ) )
+        resSeqMap = residue_map.residueSequenceMap()
+        
+        modelInfo = pdbedit.get_info( refModelPdb )
+        
+        resSeqMap.fromInfo( refInfo=modelInfo,
+                                refChainID=modelInfo.models[0].chains[0],
+                                targetInfo=nativeInfo,
+                                targetChainID=nativeInfo.models[0].chains[0]
+                                )
         
         # Loop over each result
-        #r = mrbump_results.ResultsSummary( os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
-        #r.extractResults()
-        #for mrbumpResult in r.results:
-        for mrbumpResult in resultsDict[ pdbcode ]:
+        if pickledResults:
+            results = resultsDict[ pdbcode ]
+        else:
+            r = mrbump_results.ResultsSummary( os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
+            r.extractResults()
+            results = r.results
+            
+        for mrbumpResult in results:
             
             #print "processing result ",mrbumpResult
             
@@ -1129,7 +1145,9 @@ if __name__ == "__main__":
             # yuck...
             if mrbumpResult.solution == 'unfinished':
                 s = mrbumpResult.name.split("_")
-                ensembleName = "_".join( s[2:-2] )
+                # Different for CC and TM cases
+                #ensembleName = "_".join( s[2:-2] )
+                ensembleName = "_".join( s[2:-1] )
             else:
                 # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
                 ensembleName = mrbumpResult.name[9:-6]
@@ -1148,6 +1166,7 @@ if __name__ == "__main__":
         
             if not got:
                 raise RuntimeError,"Failed to get ensemble results"
+
         
             ar.ensembleNumModels =  e.num_models
             ar.ensembleNumResidues =  e.num_residues
@@ -1157,15 +1176,14 @@ if __name__ == "__main__":
             ar.ensemblePercentModel = int( ( float( ar.ensembleNumResidues ) / float( ar.fastaLength ) ) * 100 )
             
             # Get the data on the models in the ensemble
-            ensembleFile = os.path.join( datadir, "ROSETTA_MR_0/ensembles_1", ensembleName+".pdb" )
+            ensembleFile = os.path.join( dataDir, "ROSETTA_MR_0/ensembles_1", ensembleName+".pdb" )
             eP = EnsemblePdbParser( ensembleFile )
             
             ar.ensembleNativeRmsd = scoreP.rms( eP.centroidModelName )
-            #ar.ensembleNativeMaxsub = scoreP.maxsub( eP.centroidModelName )
-            #ar.ensembleNativeRmsd = maxComp.rmsd( eP.centroidModelName )
             ar.ensembleNativeTM = maxComp.tm( eP.centroidModelName )
     
             ar.solution =  mrbumpResult.solution
+            
             # No results so move on
             if mrbumpResult.solution == 'unfinished':
                 ar.solution = mrbumpResult.solution
@@ -1179,7 +1197,7 @@ if __name__ == "__main__":
             ar.rfree =  mrbumpResult.rfree
             ar.mrProgram =  mrbumpResult.program
             
-            mrbumpLog = os.path.join( datadir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( ensembleName, mrbumpResult.program )  )
+            mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( ensembleName, mrbumpResult.program )  )
             mrbumpP = MrbumpLogParser( mrbumpLog )
             ar.estChainsASU = mrbumpP.noChainsTarget
             
@@ -1188,6 +1206,7 @@ if __name__ == "__main__":
                 phaserPdb = os.path.join( resultDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrbumpResult.program, ensembleName) )
                 if not os.path.isfile( phaserPdb ):
                     continue
+                
                 phaserP = phaser_parser.PhaserPdbParser( phaserPdb )
                 ar.phaserLLG = phaserP.LLG
                 ar.phaserTFZ = phaserP.TFZ
@@ -1195,7 +1214,6 @@ if __name__ == "__main__":
                 phaserLog = os.path.join( resultDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(mrbumpResult.program, ensembleName) )
                 phaserP = phaser_parser.PhaserLogParser( phaserLog )
                 ar.phaserTime = phaserP.time
-                
                 
                 placedPdb = phaserPdb
                 
@@ -1214,42 +1232,67 @@ if __name__ == "__main__":
             
             # debug - copy into work directory as reforigin struggles with long pathnames
             shutil.copy(placedPdb, os.path.join( workdir, os.path.basename( placedPdb ) ) )
-        
-            # Get hold of a full model so we can do the mapping of residues
-            refModelPdb = os.path.join( datadir, "models/S_00000001.pdb".format( pdbcode ) )
-            try:
-                rmsder = reforigin.ReforiginRmsd( nativePdb, placedPdb, refModelPdb )
-                ar.reforiginRmsd =  rmsder.rmsd
-            except Exception:
-                print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdb, placedPdb )
-                ar.reforiginRmsd = 9999 
+            
+            placedInfo = pdbedit.get_info( placedPdb )
+            
+            # Get reforigin info
+            rmsder = reforigin.ReforiginRmsd( nativePdb=nativePdb,
+                                              nativePdbInfo=nativeInfo,
+                                              placedPdb=placedPdb,
+                                              placedPdbInfo=placedInfo,
+                                              refModelPdb=refModelPdb,
+                                              cAlphaOnly=True )
+            
+            
+            ar.reforiginRmsd =  rmsder.rmsd
+#             print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdb, placedPdb )
+#             ar.reforiginRmsd = 9999
+
+            #
+            # SHELXE PROCESSING
+            #
+            # Now read the shelxe log to see how we did
+            shelxeLog = os.path.join( resultDir, "build/shelxe/shelxe_run.log" )
+            shelxePdb = os.path.join( resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
+            if not os.path.isfile( shelxePdb):
+                continue
+            shutil.copy( shelxePdb , os.path.join(workdir, os.path.basename( shelxePdb ) ) )
+ 
+            if os.path.isfile( shelxeLog ):
+                shelxeP = ShelxeLogParser( shelxeLog )
+                ar.shelxeCC = shelxeP.CC
+                ar.shelxeAvgChainLength = shelxeP.avgChainLength
+
             
             # Now calculate contacts
             ccalc = contacts.Contacts()
-            ccalc.getContacts(nativePdb, placedPdb, refModelPdb )
-            ar.numContacts = ccalc.numContacts
-            ar.inregister = ccalc.inregister
-            ar.ooregister = ccalc.ooregister
-               
-     
-            # Now read the shelxe log to see how we did
-            shelxeLog = os.path.join( resultDir, "build/shelxe/shelxe_run.log" )
-            if not os.path.isfile( shelxeLog ):
-                continue
-            shelxeP = ShelxeLogParser( shelxeLog )
-            ar.shelxeCC = shelxeP.CC
-            ar.shelxeAvgChainLength = shelxeP.avgChainLength
-            
-            
-    #         # Finally use maxcluster to compare the shelxe model with the native
-    #         if False:
-    #             shelxeModel = os.path.join( resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
-    #             mrbumpResult.shelxModel = shelxeModel
-    #             m = CompareModels( nativePdb, shelxeModel, workdir=workdir  )
-    #             mrbumpResult.shelxGrmsd = m.grmsd
-    #             mrbumpResult.shelxTM = m.tm
-            
-            #print ar
+            ccalc.getContacts( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir )
+             
+            if ccalc.best:
+                good = ccalc.best.inregister + ccalc.best.ooregister
+                bad = ccalc.best.numContacts - good
+                print "GOT BEST ", good, bad, ccalc.best.backwards, ccalc.best.inregister, ccalc.best.ooregister
+                 
+                # Show origin stats
+                oc = sorted(ccalc.originCompare.items(), key=lambda x: x[1], reverse=True )
+                print "originCompare: ", oc
+                duff=False
+                if len(oc) > 1:
+                    if oc[0][1] == oc[1][1]:
+                        if len(oc) > 2:
+                            if oc[2][1] >= oc[1][1]*.5:
+                                duff=True
+                    else:
+                        if oc[1][1] >= oc[0][1]*.5:
+                            duff=True
+                    if duff:
+                        print "OTHER ORIGINMATCHES ARE > 50%"
+                 
+                hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
+                ccalc.writeHelixFile(filename=hfile, dsspP=dsspP )
+            else:
+                if shelxeCC >= 25 and shelxeAvgChainLength >= 10:
+                    print "SUCCESS BUT NO BEST!"
     
     # End loop over results
     
