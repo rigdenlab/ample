@@ -845,7 +845,6 @@ class RosettaScoreParser(object):
         
     def parseFile(self, score_file ):
         for i, line in enumerate( open(score_file, 'r') ):
-            print i, line
             
             if i == 0:
                 continue
