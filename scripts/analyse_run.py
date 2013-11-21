@@ -689,7 +689,7 @@ class MrbumpLogParser(object):
 
 class PsipredParser(object):
     """
-    Class to mine information from a phaser pdb file
+    Class to mine information from a psipred format file
     """
 
     def __init__(self,pfile):
@@ -845,13 +845,18 @@ class RosettaScoreParser(object):
         
     def parseFile(self, score_file ):
         for i, line in enumerate( open(score_file, 'r') ):
+            print i, line
             
             if i == 0:
+                continue
+    
+            line = line.strip()
+            if not line: # ignore blank lines - not sure why they are there...
                 continue
             
             d = RosettaScoreData()
             
-            fields = line.strip().split()
+            fields = line.split()
             d.score = float(fields[1])
             d.rms = float(fields[26])
             d.maxsub = float(fields[27])
@@ -1062,9 +1067,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    #for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    for pdbcode in [ "1DEB" ]:
+    #for pdbcode in [ "1BYZ" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1109,8 +1114,9 @@ if __name__ == "__main__":
         maxComp = MaxclusterComparator( nativePdb, os.path.join( dataDir, "models")  )
         
         # Secondary Structure assignments
-        sam_file = os.path.join( dataDir, "fragments/t001_.rdb_ss2"  )
-        psipredP = PsipredParser( sam_file )
+        #sam_file = os.path.join( dataDir, "fragments/t001_.rdb_ss2"  )
+        psipred_file = os.path.join( dataDir, "fragments/t001_.psipred_ss2"  )
+        psipredP = PsipredParser( psipred_file )
         dssp_file = os.path.join( dataDir, "{0}.dssp".format( pdbcode  )  )
         dsspP = dssp.DsspParser( dssp_file )
 
