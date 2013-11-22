@@ -1068,7 +1068,7 @@ if __name__ == "__main__":
     
     for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "1BYZ" ]:
+    #for pdbcode in [ "1ZV7" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1176,7 +1176,7 @@ if __name__ == "__main__":
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
             
-            #if ensembleName != "SCWRL_reliable_sidechains_trunc_69.729829_rad_3":
+            #if ensembleName != "All_atom_trunc_0.450428_rad_2":
             #    continue
             
             # Extract information on the models and ensembles
@@ -1278,9 +1278,12 @@ if __name__ == "__main__":
             #
             # Now read the shelxe log to see how we did
             shelxeLog = os.path.join( resultDir, "build/shelxe/shelxe_run.log" )
-            shelxePdb = os.path.join( resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
-            if os.path.isfile( shelxePdb):
-                shutil.copy( shelxePdb , os.path.join(workdir, os.path.basename( shelxePdb ) ) )
+            origShelxePdb = os.path.join( resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
+            shelxePdb = None
+            if os.path.isfile( origShelxePdb):
+                shelxePdb = os.path.join(workdir, os.path.basename( origShelxePdb ) )
+                shutil.copy( origShelxePdb, shelxePdb   )
+                
             if os.path.isfile( shelxeLog ):
                 shelxeP = ShelxeLogParser( shelxeLog )
                 ar.shelxeCC = shelxeP.CC
@@ -1308,7 +1311,6 @@ if __name__ == "__main__":
                 if ar.shelxeCC >= 25 and ar.shelxeAvgChainLength >= 10:
                     # Show origin stats
                     oc = sorted(ccalc.originCompare.items(), key=lambda x: x[1], reverse=True )
-                    #print "originCompare: ", oc
                     duff=False
                     if len(oc) > 1:
                         if oc[0][1] == oc[1][1]:
@@ -1320,6 +1322,7 @@ if __name__ == "__main__":
                                 duff=True
                         if duff:
                             print "OTHER ORIGINMATCHES ARE > 50%"
+                            print "originCompare: ", oc
                  
                 #hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
                 #ccalc.writeHelixFile(filename=hfile, dsspP=dsspP )
