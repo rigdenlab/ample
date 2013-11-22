@@ -248,7 +248,8 @@ class Contacts(object):
             self.parseNcontLog()
             self.countContacts()
             
-            self.originCompare[ i ] = self.inregister + self.ooregister
+            # Just for debugging
+            self.originCompare[ "{0}".format( origin ).replace(" ","" ) ] = self.inregister + self.ooregister
             
             if self.inregister + self.ooregister > self.best.inregister + self.best.ooregister:
                 self.best.numContacts = self.numContacts
@@ -307,6 +308,7 @@ class Contacts(object):
         
         if not logfile:
             logfile = self.ncontLog
+        
         #print "LOG ",logfile
             
         self.numContacts = 0
@@ -429,15 +431,17 @@ class Contacts(object):
                 continue
             
             # LOGIC HERE STILL NEEDS WORK
-            # We are reading contiguous matches
-            if ( resSeq1 == last1 + 1 and resSeq2 == last2 - 1 ) or ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ):
+            # We are reading contiguous matches - forwards or backwards
+            if ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ) or \
+               ( resSeq1 == last1 + 1 and resSeq2 == last2 - 1 ) or ( resSeq1 == last1 - 1 and resSeq2 == last2 + 1 ):
                 
                 # either in or oo register read
                 if ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register ):
                     
                     # Check if this is a change or part of a stretch
-                    if resSeq1 == last1 + 1 and resSeq2 == last2 - 1 and not backwards:
+                    if ( ( resSeq1 == last1 + 1 and resSeq2 == last2 - 1 ) or ( resSeq1 == last1 - 1 and resSeq2 == last2 + 1 ) ) and not backwards:
                         backwards = True
+                        #print "BACKWARDS ", self.ncontLog
                         
                     elif resSeq1 == last1 + 1 and resSeq2 == last2 + 1 and backwards:
                         backwards = False
@@ -463,6 +467,7 @@ class Contacts(object):
                     #print "adding {0} to ooregister {1}".format( count, self.ooregister )
                     self.ooregister += count
                     if backwards:
+                        print "ADDING {0} to backwards log {1}".format( count, self.ncontLog )
                         self.backwards += count
                         
                 self.allMatched.append( thisMatched )
