@@ -76,69 +76,176 @@ class Contacts(object):
         return
 
     def helixFromContacts( self, dsspP=None ):
-        """Return the sequence of the longest contiguous helix from the given contact data"""
+        """Return the sequence of the longest contiguous helix from the given contact data
         
-        #print "GOT DATA ",self.best.allMatched
-        #print "GOT DSSP ",dsspP.asDict()
+        Get start and stop indices of all contiguous chunks 
         
-        maxCounts = [] # list of maximum counts of contiguous helices in each group
-        maxIndices = [] # Array of (start,stop) tuples for the max contiguous sequence in each group
+        startstop = [ (10,15), (17, 34), (38, 50) ]
         
-        # Assign the secondary structure & work out the largest contiguous group
-        for i, contactGroup in enumerate( self.best.allMatched ):
-            count = 0
-            thisCounts = []
-            thisIndices = []
-            start = 0 
-            stop = 0
-            #print "GROUP"
-            for ic, c in enumerate( contactGroup ):
+        # Loop through all chunks, and if any two have a gap of < mingap, join the indices together.
+        
+        # Get the indices of the largest chunk
+        
+        # Get the corresponding AA sequence
+        
+        
+        
+        """
+        
+        print "GOT DATA ",self.best.allMatched
+        print "GOT DSSP ",dsspP.asDict()
+        
+        MINC=3
+        last1 = None
+        last2 = None
+        count = None
+        register = True # true if in register, false if out
+        backwards = False
+        
+        startstop = []
+        
+        for i, c in enumerate( self.best.contacts ):
+
+            if i == 0:
+                last1 = resSeq1
+                last2 = resSeq2
+                count = 1
+                start = i
+                stop = i
+                continue
+            
+            
+
+
+
+            chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
+            
+            # Assign the secondary structure
+            ss = dsspP.getAssignment( resSeq1, aa1, chainId1 )
+
+
+            
+            # LOGIC HERE STILL NEEDS WORK
+            # We are reading contiguous matches - forwards or backwards
+            if ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ) or \
+               ( resSeq1 == last1 + 1 and resSeq2 == last2 - 1 ) or ( resSeq1 == last1 - 1 and resSeq2 == last2 + 1 ):
                 
-                ( chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) = c
-                
-                #ss = getSS( c, dsspP )
-                #print "DATA ",chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell
-                ss = dsspP.getAssignment( resSeq1, aa1, chainId1 )
-                
-                #print "Looping through ", chainId1, resSeq1, aa1,ss
-                if ss == 'H':
-                    count += 1
-                    stop = ic
-                
-                if ic == len( contactGroup ) - 1 or ss != 'H':
-                    thisCounts.append( count )
-                    thisIndices.append( ( start, stop ) )
-                    count = 0
-                    start = ic + 1
-                    stop = ic
+                # either in or oo register read
+                if ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register ):
                     
-            # Now add the maximum for that group
-            #print "this Counts ",thisCounts
-            #print "thisIndices ",thisIndices
-            mc =  max( thisCounts )
-            maxCounts.append( mc )
+                    # Check if this is a change or part of a stretch
+                    if ( ( resSeq1 == last1 + 1 and resSeq2 == last2 - 1 ) or ( resSeq1 == last1 - 1 and resSeq2 == last2 + 1 ) ) and not backwards:
+                        backwards = True
+                        #print "BACKWARDS ", self.ncontLog
+                        
+                    elif resSeq1 == last1 + 1 and resSeq2 == last2 + 1 and backwards:
+                        backwards = False
+                        
+                    else:
+                        count += 1
+                        thisMatched.append( ( chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) )
+                        last1 = resSeq1
+                        last2 = resSeq2
+                        
+                        # If this is the last one we want to drop through
+                        if i < len( self.contacts ) - 1:
+                            continue
+                
+            # Anything that doesn't continue didn't match
+                
+            if count >= MINC:
+                #  end of a contiguous sequence
+                if register:
+                    assert not backwards
+                    self.inregister += count
+                else:
+                    #print "adding {0} to ooregister {1}".format( count, self.ooregister )
+                    self.ooregister += count
+                    if backwards:
+                        print "ADDING {0} to backwards log {1}".format( count, self.ncontLog )
+                        self.backwards += count
+                        
+                self.allMatched.append( thisMatched )
             
-            maxIndices.append( thisIndices[ thisCounts.index( mc ) ] )
-                    
+            # Either starting again or a random residue
+            if resSeq1 == resSeq2:
+                register=True
+            else:
+                register=False
             
-        #print "GOT maxCounts ",maxCounts
-        #print "GOT maxIndices ",maxIndices
-        
-        # Get the index of the group with the largest count
-        gmax = maxCounts.index( max( maxCounts ) )
-        start = maxIndices[ gmax ][0]
-        stop = maxIndices[ gmax ][1]
-        cg = self.best.allMatched[ gmax ]
-        
-        # Now get the sequence
-        sequence = ""
-        for i in range( start, stop + 1 ):
-            c = cg[ i ]
-            (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) = c
-            sequence += aa1
+            last1 = resSeq1
+            last2 = resSeq2
+            thisMatched = [ (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) ]
+            count = 1
+
             
-        #print "GOT sequence ",sequence
-        return sequence
+
+        return cdata
+
+#     def helixFromContacts( self, dsspP=None ):
+#         """Return the sequence of the longest contiguous helix from the given contact data"""
+#         
+#         print "GOT DATA ",self.best.allMatched
+#         print "GOT DSSP ",dsspP.asDict()
+#         
+#         maxCounts = [] # list of maximum counts of contiguous helices in each group
+#         maxIndices = [] # Array of (start,stop) tuples for the max contiguous sequence in each group
+#         
+#         # Assign the secondary structure & work out the largest contiguous group
+#         for i, contactGroup in enumerate( self.best.allMatched ):
+#             count = 0
+#             thisCounts = []
+#             thisIndices = []
+#             start = 0 
+#             stop = 0
+#             #print "GROUP"
+#             for ic, c in enumerate( contactGroup ):
+#                 
+#                 ( chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) = c
+#                 
+#                 #ss = getSS( c, dsspP )
+#                 #print "DATA ",chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell
+#                 ss = dsspP.getAssignment( resSeq1, aa1, chainId1 )
+#                 
+#                 #print "Looping through ", chainId1, resSeq1, aa1,ss
+#                 if ss == 'H':
+#                     count += 1
+#                     stop = ic
+#                 
+#                 if ic == len( contactGroup ) - 1 or ss != 'H':
+#                     thisCounts.append( count )
+#                     thisIndices.append( ( start, stop ) )
+#                     count = 0
+#                     start = ic + 1
+#                     stop = ic
+#                     
+#             # Now add the maximum for that group
+#             #print "this Counts ",thisCounts
+#             #print "thisIndices ",thisIndices
+#             mc =  max( thisCounts )
+#             maxCounts.append( mc )
+#             
+#             maxIndices.append( thisIndices[ thisCounts.index( mc ) ] )
+#                     
+#             
+#         #print "GOT maxCounts ",maxCounts
+#         #print "GOT maxIndices ",maxIndices
+#         
+#         # Get the index of the group with the largest count
+#         gmax = maxCounts.index( max( maxCounts ) )
+#         start = maxIndices[ gmax ][0]
+#         stop = maxIndices[ gmax ][1]
+#         cg = self.best.allMatched[ gmax ]
+#         
+#         # Now get the sequence
+#         sequence = ""
+#         for i in range( start, stop + 1 ):
+#             c = cg[ i ]
+#             (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) = c
+#             sequence += aa1
+#             
+#         #print "GOT sequence ",sequence
+#         return sequence
 
 
     def run( self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None ):
