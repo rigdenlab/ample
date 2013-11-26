@@ -100,15 +100,22 @@ class DsspParser(object):
         
         return d
     
-    def getAssignment(self, resSeq, resName, chainId ):
+    def getAssignment(self, resSeq, chainId, resName = None ):
         ci = self.chainIds.index( chainId )
         ri = self.resSeqs[ ci ].index( resSeq )
-        # Just a check to make sure things are working - ignore X as it'll be a non-standard residue e.g. N-FORMYLMETHIONINE
-        dsspResName = self.resNames[ ci ][ ri ]
-        # in dssp cysteine bridges are signified by lower-case letters
-        if dsspResName != resName and not dsspResName.islower() and dsspResName != 'X' :
-            raise RuntimeError,"Missmatching residues: {0}: {1}".format( self.resNames[ ci ][ ri ], resName )
+        if resName:
+            # Just a check to make sure things are working - ignore X as it'll be a non-standard residue e.g. N-FORMYLMETHIONINE
+            dsspResName = self.resNames[ ci ][ ri ]
+            # in dssp cysteine bridges are signified by lower-case letters
+            if dsspResName != resName and not dsspResName.islower() and dsspResName != 'X' :
+                raise RuntimeError,"Missmatching residues: {0}: {1}".format( self.resNames[ ci ][ ri ], resName )
+            
         return self.assignment[ ci ][ ri ]
+
+    def getResName(self, resSeq, chainId ):
+        ci = self.chainIds.index( chainId )
+        ri = self.resSeqs[ ci ].index( resSeq )
+        return self.resNames[ ci ][ ri ]
 
 
 class Test(unittest.TestCase):
