@@ -4,7 +4,7 @@
  ###############################################################
  ### CCP4 6.3: NCONT                    version 6.3 :         ##
  ###############################################################
- User: unknown  Run date: 13/11/2013 Run time: 17:55:37 
+ User: unknown  Run date: 15/11/2013 Run time: 11:26:55 
 
 
  Please reference: Collaborative Computational Project, Number 4. 1994.
@@ -20,10 +20,10 @@
   Input cards
 
  Data line--- source A//CA
- Data line--- target a//CA
+ Data line--- target a,b//CA
  Data line--- maxdist 1.5
  Data line--- cells 2
- Data line--- sort source inc
+ Data line--- sort target inc
 
  ------------------------------------------------------------------------------
 
@@ -80,14 +80,14 @@
 
       SOURCE ATOMS               TARGET ATOMS         DISTANCE CELL   SYMMETRY
 
+ /1/A/  65(ALA). / CA [ C]:  /1/a/  53(VAL). / CA [ C]:   1.07 435 -Y+1,-X,-Z+2
+ /1/A/  62(LYS). / CA [ C]:  /1/a/  56(LEU). / CA [ C]:   1.49 435 -Y+1,-X,-Z+2
  /1/A/  58(LEU). / CA [ C]:  /1/a/  68(VAL). / CA [ C]:   1.18 335 X+1/2,-Y+1/2,-Z+2
  /1/A/  61(GLU). / CA [ C]:  /1/a/  71(ASN). / CA [ C]:   0.84 335 X+1/2,-Y+1/2,-Z+2
  /1/A/  62(LYS). / CA [ C]:  /1/a/  72(LYS). / CA [ C]:   0.82 335 X+1/2,-Y+1/2,-Z+2
-                             /1/a/  56(LEU). / CA [ C]:   1.49 435 -Y+1,-X,-Z+2
  /1/A/  63(SER). / CA [ C]:  /1/a/  73(GLN). / CA [ C]:   1.10 335 X+1/2,-Y+1/2,-Z+2
  /1/A/  64(SER). / CA [ C]:  /1/a/  74(LEU). / CA [ C]:   0.49 335 X+1/2,-Y+1/2,-Z+2
- /1/A/  65(ALA). / CA [ C]:  /1/a/  53(VAL). / CA [ C]:   1.07 435 -Y+1,-X,-Z+2
-                             /1/a/  75(LEU). / CA [ C]:   0.40 335 X+1/2,-Y+1/2,-Z+2
+ /1/A/  65(ALA). / CA [ C]:  /1/a/  75(LEU). / CA [ C]:   0.40 335 X+1/2,-Y+1/2,-Z+2
  /1/A/  66(ARG). / CA [ C]:  /1/a/  76(LYS). / CA [ C]:   0.46 335 X+1/2,-Y+1/2,-Z+2
  /1/A/  67(LYS). / CA [ C]:  /1/a/  77(GLN). / CA [ C]:   0.55 335 X+1/2,-Y+1/2,-Z+2
  /1/A/  68(VAL). / CA [ C]:  /1/a/  78(ILE). / CA [ C]:   0.64 335 X+1/2,-Y+1/2,-Z+2
