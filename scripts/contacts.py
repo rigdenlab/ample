@@ -75,10 +75,16 @@ class Contacts(object):
         
         return
 
-    def helixFromContacts( self, dsspP=None ):
+    def helixFromContacts( self, dsspP=None, contacts=None, ):
         """Return the sequence of the longest contiguous helix from the given contact data
         
-        Get start and stop indices of all contiguous chunks 
+        
+        source is the native, target the model
+        
+        Get start and stop indices of all contiguous chunks
+        - we can match multiple chains in the model, but any match must be within a single native chain
+        - the source can increment or decrement - the model only ever increments
+        - matches can be in-register or out-of-register, but for finding the longest chunk we don't care
         
         startstop = [ (10,15), (17, 34), (38, 50) ]
         
@@ -92,162 +98,141 @@ class Contacts(object):
         
         """
         
-        print "GOT DATA ",self.best.allMatched
-        print "GOT DSSP ",dsspP.asDict()
+        #print "GOT DATA ",self.best.allMatched
+        #print "GOT DSSP ",dsspP.asDict()
         
-        MINC=3
-        last1 = None
-        last2 = None
-        count = None
-        register = True # true if in register, false if out
-        backwards = False
-        
-        startstop = []
-        
-        for i, c in enumerate( self.best.contacts ):
-
-            if i == 0:
-                last1 = resSeq1
-                last2 = resSeq2
-                count = 1
-                start = i
-                stop = i
-                continue
+        if contacts is None:
+            contacts = self.best.contacts
             
+        MINC         = 2
+        startstop    = []
+        lastChainId1 = None
+        lastResSeq1  = None
+        count        = None
+        start        = None
+        stop         = None
+        #newContacts = [] # with SS added
+        for i, c in enumerate( contacts ):
             
-
-
-
+            # Unpack contacts
             chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
             
             # Assign the secondary structure
-            ss = dsspP.getAssignment( resSeq1, aa1, chainId1 )
-
-
+            ss = dsspP.getAssignment( resSeq1, chainId1, resName = aa1 )
             
-            # LOGIC HERE STILL NEEDS WORK
-            # We are reading contiguous matches - forwards or backwards
-            if ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ) or \
-               ( resSeq1 == last1 + 1 and resSeq2 == last2 - 1 ) or ( resSeq1 == last1 - 1 and resSeq2 == last2 + 1 ):
-                
-                # either in or oo register read
-                if ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register ):
+            # Add it back to the contacts
+            #c = chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry, ss
+            #newContacts.append( c )
+            
+            #print "DATA: ",i, chainId1, resSeq1, aa1, chainId2, resSeq2, aa2,ss
+            
+            if i != 0:
+                # For getting the longest segment we only care it's going up  by 1 and it's helix - we don't care what matches how
+                if ( resSeq1 == lastResSeq1 + 1 or resSeq1 == lastResSeq1 - 1 ) and chainId1 == lastChainId1 and ss =='H': # Native is incrementing
+                    count += 1
+                    stop = i
+                    lastChainId1 = chainId1
+                    lastResSeq1 = resSeq1
+                            
+                    # If this is the last one we want to drop through
+                    if i < len( contacts ) - 1:
+                        continue
                     
-                    # Check if this is a change or part of a stretch
-                    if ( ( resSeq1 == last1 + 1 and resSeq2 == last2 - 1 ) or ( resSeq1 == last1 - 1 and resSeq2 == last2 + 1 ) ) and not backwards:
-                        backwards = True
-                        #print "BACKWARDS ", self.ncontLog
-                        
-                    elif resSeq1 == last1 + 1 and resSeq2 == last2 + 1 and backwards:
-                        backwards = False
-                        
-                    else:
-                        count += 1
-                        thisMatched.append( ( chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) )
-                        last1 = resSeq1
-                        last2 = resSeq2
-                        
-                        # If this is the last one we want to drop through
-                        if i < len( self.contacts ) - 1:
-                            continue
-                
-            # Anything that doesn't continue didn't match
-                
-            if count >= MINC:
-                #  end of a contiguous sequence
-                if register:
-                    assert not backwards
-                    self.inregister += count
-                else:
-                    #print "adding {0} to ooregister {1}".format( count, self.ooregister )
-                    self.ooregister += count
-                    if backwards:
-                        print "ADDING {0} to backwards log {1}".format( count, self.ncontLog )
-                        self.backwards += count
-                        
-                self.allMatched.append( thisMatched )
+                # Anything that doesn't continue didn't match
+                if count >= MINC:
+                    startstop.append( (start, stop)  )
             
-            # Either starting again or a random residue
-            if resSeq1 == resSeq2:
-                register=True
+            # Either starting afresh or a random residue
+            lastChainId1 = chainId1
+            lastResSeq1  = resSeq1
+            if ss == 'H':
+                # Only count this one if its a helix
+                count = 1
+                start = i
+                stop  = i
             else:
-                register=False
+                count = 0
+                start = i + 1
+                stop  = i + 1
+                
+        # END LOOP
+        
+        
+        # Take 2 (start, stop) chunks & see if they can be joined, if so return the joined chunk or the original 2 chunis
+        print startstop
+        
+        
+        def join_chunks( chunk1, chunk2 ):
             
-            last1 = resSeq1
-            last2 = resSeq2
-            thisMatched = [ (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) ]
-            count = 1
-
+            MAXGAP = 3
             
-
-        return cdata
-
-#     def helixFromContacts( self, dsspP=None ):
-#         """Return the sequence of the longest contiguous helix from the given contact data"""
-#         
-#         print "GOT DATA ",self.best.allMatched
-#         print "GOT DSSP ",dsspP.asDict()
-#         
-#         maxCounts = [] # list of maximum counts of contiguous helices in each group
-#         maxIndices = [] # Array of (start,stop) tuples for the max contiguous sequence in each group
-#         
-#         # Assign the secondary structure & work out the largest contiguous group
-#         for i, contactGroup in enumerate( self.best.allMatched ):
-#             count = 0
-#             thisCounts = []
-#             thisIndices = []
-#             start = 0 
-#             stop = 0
-#             #print "GROUP"
-#             for ic, c in enumerate( contactGroup ):
-#                 
-#                 ( chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) = c
-#                 
-#                 #ss = getSS( c, dsspP )
-#                 #print "DATA ",chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell
-#                 ss = dsspP.getAssignment( resSeq1, aa1, chainId1 )
-#                 
-#                 #print "Looping through ", chainId1, resSeq1, aa1,ss
-#                 if ss == 'H':
-#                     count += 1
-#                     stop = ic
-#                 
-#                 if ic == len( contactGroup ) - 1 or ss != 'H':
-#                     thisCounts.append( count )
-#                     thisIndices.append( ( start, stop ) )
-#                     count = 0
-#                     start = ic + 1
-#                     stop = ic
-#                     
-#             # Now add the maximum for that group
-#             #print "this Counts ",thisCounts
-#             #print "thisIndices ",thisIndices
-#             mc =  max( thisCounts )
-#             maxCounts.append( mc )
-#             
-#             maxIndices.append( thisIndices[ thisCounts.index( mc ) ] )
-#                     
-#             
-#         #print "GOT maxCounts ",maxCounts
-#         #print "GOT maxIndices ",maxIndices
-#         
-#         # Get the index of the group with the largest count
-#         gmax = maxCounts.index( max( maxCounts ) )
-#         start = maxIndices[ gmax ][0]
-#         stop = maxIndices[ gmax ][1]
-#         cg = self.best.allMatched[ gmax ]
-#         
-#         # Now get the sequence
-#         sequence = ""
-#         for i in range( start, stop + 1 ):
-#             c = cg[ i ]
-#             (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) = c
-#             sequence += aa1
-#             
-#         #print "GOT sequence ",sequence
-#         return sequence
-
-
+            start1 = chunk1[0]
+            stop1  = chunk1[1]
+            start2 = chunk2[0]
+            stop2  = chunk2[1]
+            
+            chainId1     = contacts[ start1 ][ 0 ]
+            chainId2     = contacts[ start2 ][ 3 ]
+            
+            # See if a suitable gap
+            if start2 - stop1 >= MAXGAP + 1 or chainId1 != chainId2:
+                return ( chunk1, chunk2 )
+                
+            # Suitable gap so make sure it's all helix
+            stop1ResSeq  = contacts[ stop1 ][ 1 ]
+            start2ResSeq = contacts[ start2 ][ 4 ]
+            for resSeq in range( stop1ResSeq + 1, start2ResSeq - 1 ):
+                ss = dsspP.getAssignment( resSeq, chainId1, resName = None )
+                if ss != 'H':
+                    return ( chunk1, chunk2 )
+                
+            return ( None, ( start1, stop2 ) )
+        
+        
+        # Go through the start-stop chunks in pairs and see if they can be joined
+        extended = []
+        for i, newChunk in enumerate( startstop ):
+            
+            # initialise
+            if i == 0:
+                toJoin = newChunk
+                continue
+            
+            chunk, toJoin = join_chunks( toJoin, newChunk  )
+            
+            if chunk is not None:
+                extended.append( chunk )
+            
+            # Last one needs to be handled specially
+            if i == len( startstop ) - 1 and toJoin:
+                extended.append( toJoin )
+                
+        # End Loop
+        
+        print "GOT EXTENDED ",extended
+        
+        # Find the biggest
+        biggest = sorted( extended, lambda x, y: (x[1] - x[0]) - (y[1] - y[0]), reverse = True )[0]
+        print "GOT BIGGEST ",biggest
+        
+        # Get the sequence that defines it
+        startResSeq = contacts[ biggest[0] ][ 1 ]
+        stopResSeq  = contacts[ biggest[1] ][ 1 ]
+        chainId     = contacts[ biggest[0] ][ 0 ]
+        sequence = ""
+        s3 = []
+        print " s ",startResSeq
+        print " e ",stopResSeq
+        for resSeq in range( startResSeq, stopResSeq + 1):
+            resName  = dsspP.getResName( resSeq, chainId )
+            sequence += resName
+            s3 .append( pdb_edit.one2three[ resName ] )
+        
+        
+        print "s3 "," ".join( s3 )
+                
+        return sequence
+        
     def run( self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None ):
         """
         """
@@ -657,6 +642,21 @@ class TestContacts( unittest.TestCase ):
         self.assertEqual( c.inregister, 0 )
         self.assertEqual( c.ooregister, 55 )
         self.assertEqual( c.backwards, 0 )
+        
+        return
+    
+    def testParse5(self):
+        
+        logfile = os.path.join( self.testfilesDir, "ncont5.log" )
+        
+        c = Contacts()
+        contacts = c.parseNcontLog( logfile=logfile )
+        c.countContacts()
+        
+        self.assertEqual( c.numContacts, 77 )
+        self.assertEqual( c.inregister, 19 )
+        self.assertEqual( c.ooregister, 56 )
+        self.assertEqual( c.backwards, 18 )
         
         return
 
