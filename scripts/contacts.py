@@ -14,6 +14,7 @@ parse ncont file to generate map & analyse whether placed bits match and what ty
 
 """
 
+from operator import itemgetter
 import os
 import types
 import unittest
@@ -83,7 +84,7 @@ class Contacts(object):
         
         Get start and stop indices of all contiguous chunks
         - we can match multiple chains in the model, but any match must be within a single native chain
-        - the source can increment or decrement - the model only ever increments
+        - the source can increment or decrement - the model only ever increments (ncont "sort target inc" argument)
         - matches can be in-register or out-of-register, but for finding the longest chunk we don't care
         
         startstop = [ (10,15), (17, 34), (38, 50) ]
@@ -94,8 +95,6 @@ class Contacts(object):
         
         # Get the corresponding AA sequence
         
-        
-        
         """
         
         #print "GOT DATA ",self.best.allMatched
@@ -104,6 +103,12 @@ class Contacts(object):
         if contacts is None:
             contacts = self.best.contacts
             
+        if not len( contacts ):
+            return None
+            
+        #
+        # Loop through the contacts finding the start, stop indices in the list of contacts of contiguous chunks
+        #
         MINC         = 2
         startstop    = []
         lastChainId1 = None
@@ -111,7 +116,6 @@ class Contacts(object):
         count        = None
         start        = None
         stop         = None
-        #newContacts = [] # with SS added
         for i, c in enumerate( contacts ):
             
             # Unpack contacts
@@ -120,17 +124,12 @@ class Contacts(object):
             # Assign the secondary structure
             ss = dsspP.getAssignment( resSeq1, chainId1, resName = aa1 )
             
-            # Add it back to the contacts
-            #c = chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry, ss
-            #newContacts.append( c )
-            
             #print "DATA: ",i, chainId1, resSeq1, aa1, chainId2, resSeq2, aa2,ss
-            
             if i != 0:
                 # For getting the longest segment we only care it's going up  by 1 and it's helix - we don't care what matches how
                 if ( resSeq1 == lastResSeq1 + 1 or resSeq1 == lastResSeq1 - 1 ) and chainId1 == lastChainId1 and ss =='H': # Native is incrementing
                     count += 1
-                    stop = i
+                    stop = resSeq1
                     lastChainId1 = chainId1
                     lastResSeq1 = resSeq1
                             
@@ -140,7 +139,7 @@ class Contacts(object):
                     
                 # Anything that doesn't continue didn't match
                 if count >= MINC:
-                    startstop.append( (start, stop)  )
+                    startstop.append( ( lastChainId1, start, stop )  )
             
             # Either starting afresh or a random residue
             lastChainId1 = chainId1
@@ -148,88 +147,121 @@ class Contacts(object):
             if ss == 'H':
                 # Only count this one if its a helix
                 count = 1
-                start = i
-                stop  = i
+                start = resSeq1
+                stop  = resSeq1
             else:
                 count = 0
-                start = i + 1
-                stop  = i + 1
+                start = resSeq1 + 1
+                stop  = resSeq1 + 1
                 
         # END LOOP
         
-        
-        # Take 2 (start, stop) chunks & see if they can be joined, if so return the joined chunk or the original 2 chunis
-        print startstop
-        
+        if not len( startstop ):
+            return None
         
         def join_chunks( chunk1, chunk2 ):
+            """Take two chunks of contacts and see if the gap between them can be joined.
             
+            If the chunks can't be joined, it returns the first chunk for adding to the list
+            of chunks, and the second chunk for use in the subsequent join step.
+            If the chunks can be joined, it returns None for the first chunk so that we know not
+            to add anything.
+            """
+            
+            
+            #print "c1, c2",chunk1, chunk2
             MAXGAP = 3
             
-            start1 = chunk1[0]
-            stop1  = chunk1[1]
-            start2 = chunk2[0]
-            stop2  = chunk2[1]
+            chainId1 = chunk1[0]
+            start1   = chunk1[1]
+            stop1    = chunk1[2]
+            chainId2 = chunk2[0]
+            start2   = chunk2[1]
+            stop2    = chunk2[2]
             
-            chainId1     = contacts[ start1 ][ 0 ]
-            chainId2     = contacts[ start2 ][ 3 ]
+            #print "GAP PARAM ",start1,stop1,chainId1,start2,stop2,chainId2
+            #print "GAP WIDTH ",start2 - stop1 + 1
             
             # See if a suitable gap
-            if start2 - stop1 >= MAXGAP + 1 or chainId1 != chainId2:
+            width = start2 - stop1 + 1
+            if width < 1 or width > MAXGAP or chainId1 != chainId2:
                 return ( chunk1, chunk2 )
+            
+            #print "POSSIBLE GAP"
                 
             # Suitable gap so make sure it's all helix
-            stop1ResSeq  = contacts[ stop1 ][ 1 ]
-            start2ResSeq = contacts[ start2 ][ 4 ]
-            for resSeq in range( stop1ResSeq + 1, start2ResSeq - 1 ):
+            for resSeq in range( stop1 + 1, start2 - 1 ):
                 ss = dsspP.getAssignment( resSeq, chainId1, resName = None )
                 if ss != 'H':
                     return ( chunk1, chunk2 )
                 
-            return ( None, ( start1, stop2 ) )
-        
-        
-        # Go through the start-stop chunks in pairs and see if they can be joined
-        extended = []
-        for i, newChunk in enumerate( startstop ):
             
-            # initialise
-            if i == 0:
-                toJoin = newChunk
-                continue
-            
-            chunk, toJoin = join_chunks( toJoin, newChunk  )
-            
-            if chunk is not None:
-                extended.append( chunk )
-            
-            # Last one needs to be handled specially
-            if i == len( startstop ) - 1 and toJoin:
-                extended.append( toJoin )
+            print "JOINED CHUNKS"
                 
-        # End Loop
+            return ( None, ( chainId1, start1, stop2 ) )
         
-        print "GOT EXTENDED ",extended
+        #
+        # Go through the start-stop chunks in pairs and see if they can be joied, creating
+        # extended, which is the list of chunks with gaps filled-in
+        #
+        print "GOT STARTSTOP ",startstop
+        if len( startstop ) > 1:
+            
+            # Need to sort the chunks by chain and then start index.
+            startstop.sort( key = itemgetter( 0, 1 ) ) # By chain
+            
+            print "SORTED STARTSTOP ",startstop
+            
+            extended = []
+            for i, newChunk in enumerate( startstop ):
+                
+                # initialise
+                if i == 0:
+                    toJoin = newChunk
+                    continue
+                
+                chunk, toJoin = join_chunks( toJoin, newChunk  )
+                
+                if chunk is not None:
+                    extended.append( chunk )
+                
+                # Last one needs to be handled specially
+                if i == len( startstop ) - 1 and toJoin:
+                    extended.append( toJoin )
+                    
+            # End Loop
+            
+            print "GOT EXTENDED ",extended
+            
+            #
+            # Find the biggest
+            #
+            biggest = sorted( extended, lambda x, y: (x[2] - x[1]) - (y[2] - y[1]), reverse = True )[0]
         
-        # Find the biggest
-        biggest = sorted( extended, lambda x, y: (x[1] - x[0]) - (y[1] - y[0]), reverse = True )[0]
+        else:
+            biggest = startstop[ 0 ]
+            
         print "GOT BIGGEST ",biggest
         
-        # Get the sequence that defines it
-        startResSeq = contacts[ biggest[0] ][ 1 ]
-        stopResSeq  = contacts[ biggest[1] ][ 1 ]
-        chainId     = contacts[ biggest[0] ][ 0 ]
+        #
+        # Get the sequence that the start, stop indices define
+        #
+        chainId     = biggest[0]
+        startResSeq = biggest[1]
+        stopResSeq  = biggest[2]
         sequence = ""
         s3 = []
-        print " s ",startResSeq
-        print " e ",stopResSeq
+        #print " s ",startResSeq
+        #print " e ",stopResSeq
         for resSeq in range( startResSeq, stopResSeq + 1):
             resName  = dsspP.getResName( resSeq, chainId )
             sequence += resName
-            s3 .append( pdb_edit.one2three[ resName ] )
+            try:
+                s3 .append( pdb_edit.one2three[ resName ] )
+            except KeyError:
+                s3.append( "XXX" )
         
-        
-        print "s3 "," ".join( s3 )
+        #print "s3 "," ".join( s3 )
                 
         return sequence
         
