@@ -1070,9 +1070,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    #for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    for pdbcode in [ "1ZV7" ]:
+    #for pdbcode in [ "1ZV7" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1318,7 +1318,8 @@ if __name__ == "__main__":
                 ar.goodContacts = ar.inregisterContacts + ar.ooregisterContacts
                 ar.nocatContacts = ar.numContacts - ar.goodContacts
                 ar.helixSequence = ccalc.best.helix
-                ar.lenHelix = len( ccalc.best.helix )
+                if ccalc.best.helix:
+                    ar.lenHelix = len( ccalc.best.helix )
                 
                 hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
                 if not ccalc.writeHelixFile( hfile ):
@@ -1341,9 +1342,7 @@ if __name__ == "__main__":
                             print "OTHER ORIGINMATCHES ARE > 50%"
                             print "originCompare: ", oc
                  
-                #hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
-                #ccalc.writeHelixFile(filename=hfile, dsspP=dsspP )
-                print ar
+                #print ar
 
     # End loop over results
     
