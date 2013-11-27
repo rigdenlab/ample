@@ -21,6 +21,7 @@ import unittest
 
 import ample_util
 import csymmatch
+import dssp
 import pdb_edit
 import pdb_model
 import residue_map
@@ -37,6 +38,7 @@ class ContactData(object):
         self.ncontLog = None
         self.pdb = None
         self.csymmatchPdb = None
+        self.helix = None
         return
     
     def __str__(self):
@@ -70,9 +72,25 @@ class Contacts(object):
         self.originCompare = {}
         return
     
-    def getContacts(self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None ):
+    def getContacts(self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None, dsspLog=None ):
         
-        self.run( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir )
+        if not self.run( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir ):
+            return False
+        
+        # We should have contact data to calculate a helix from
+        assert dsspLog
+        dsspP = dssp.DsspParser( dsspLog )
+        sequence = self.helixFromContacts( dsspP=dsspP )
+        if sequence:
+            self.best.helix = sequence
+        
+        if self.best.pdb:
+            
+            csym = csymmatch.Csymmatch()
+            # Just for info - run csymmatch so we can see the alignment
+            csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch_best", directory=self.workdir )
+            csym.run( refPdb=nativePdb, inPdb=self.best.pdb, outPdb=csymmatchPdb, originHand=False )
+            self.best.csymmatchPdb = csymmatchPdb
         
         return
 
@@ -119,19 +137,19 @@ class Contacts(object):
         for i, c in enumerate( contacts ):
             
             # Unpack contacts
-            chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
+            #chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
             
             # Assign the secondary structure
-            ss = dsspP.getAssignment( resSeq1, chainId1, resName = aa1 )
+            ss = dsspP.getAssignment( c['resSeq1'], c['chainId1'], resName = c['aa1'] )
             
             #print "DATA: ",i, chainId1, resSeq1, aa1, chainId2, resSeq2, aa2,ss
             if i != 0:
                 # For getting the longest segment we only care it's going up  by 1 and it's helix - we don't care what matches how
-                if ( resSeq1 == lastResSeq1 + 1 or resSeq1 == lastResSeq1 - 1 ) and chainId1 == lastChainId1 and ss =='H': # Native is incrementing
+                if ( c['resSeq1'] == lastResSeq1 + 1 or c['resSeq1'] == lastResSeq1 - 1 ) and c['chainId1'] == lastChainId1 and ss =='H': # Native is incrementing
                     count += 1
-                    stop = resSeq1
-                    lastChainId1 = chainId1
-                    lastResSeq1 = resSeq1
+                    stop = c['resSeq1']
+                    lastChainId1 = c['chainId1']
+                    lastResSeq1 = c['resSeq1']
                             
                     # If this is the last one we want to drop through
                     if i < len( contacts ) - 1:
@@ -142,17 +160,17 @@ class Contacts(object):
                     startstop.append( ( lastChainId1, start, stop )  )
             
             # Either starting afresh or a random residue
-            lastChainId1 = chainId1
-            lastResSeq1  = resSeq1
+            lastChainId1 = c['chainId1']
+            lastResSeq1  = c['resSeq1']
             if ss == 'H':
                 # Only count this one if its a helix
                 count = 1
-                start = resSeq1
-                stop  = resSeq1
+                start = c['resSeq1']
+                stop  = c['resSeq1']
             else:
                 count = 0
-                start = resSeq1 + 1
-                stop  = resSeq1 + 1
+                start = c['resSeq1'] + 1
+                stop  = c['resSeq1'] + 1
                 
         # END LOOP
         
@@ -196,7 +214,7 @@ class Contacts(object):
                     return ( chunk1, chunk2 )
                 
             
-            print "JOINED CHUNKS"
+            #print "JOINED CHUNKS"
                 
             return ( None, ( chainId1, start1, stop2 ) )
         
@@ -204,13 +222,12 @@ class Contacts(object):
         # Go through the start-stop chunks in pairs and see if they can be joied, creating
         # extended, which is the list of chunks with gaps filled-in
         #
-        print "GOT STARTSTOP ",startstop
+        #print "GOT STARTSTOP ",startstop
         if len( startstop ) > 1:
             
             # Need to sort the chunks by chain and then start index.
             startstop.sort( key = itemgetter( 0, 1 ) ) # By chain
-            
-            print "SORTED STARTSTOP ",startstop
+            #print "SORTED STARTSTOP ",startstop
             
             extended = []
             for i, newChunk in enumerate( startstop ):
@@ -231,7 +248,7 @@ class Contacts(object):
                     
             # End Loop
             
-            print "GOT EXTENDED ",extended
+            #print "GOT EXTENDED ",extended
             
             #
             # Find the biggest
@@ -241,7 +258,7 @@ class Contacts(object):
         else:
             biggest = startstop[ 0 ]
             
-        print "GOT BIGGEST ",biggest
+        #print "GOT BIGGEST ",biggest
         
         #
         # Get the sequence that the start, stop indices define
@@ -250,17 +267,16 @@ class Contacts(object):
         startResSeq = biggest[1]
         stopResSeq  = biggest[2]
         sequence = ""
-        s3 = []
+        #s3 = []
         #print " s ",startResSeq
         #print " e ",stopResSeq
         for resSeq in range( startResSeq, stopResSeq + 1):
             resName  = dsspP.getResName( resSeq, chainId )
             sequence += resName
-            try:
-                s3 .append( pdb_edit.one2three[ resName ] )
-            except KeyError:
-                s3.append( "XXX" )
-        
+#             try:
+#                 s3 .append( pdb_edit.one2three[ resName ] )
+#             except KeyError:
+#                 s3.append( "XXX" )
         #print "s3 "," ".join( s3 )
                 
         return sequence
@@ -389,12 +405,6 @@ class Contacts(object):
             #print "GOT CONTACTS: {0} : {1} : {2}".format( self.numContacts, self.inregister, self.ooregister  )
         
         if self.best.pdb:
-            # Just for info - run csymmatch so we can see the alignment
-            csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch_best", directory=self.workdir )
-            csym.run( refPdb=nativePdb, inPdb=self.best.pdb, outPdb=csymmatchPdb, originHand=False )
-            self.best.csymmatchPdb = csymmatchPdb
-            #if self.best.origin != corig:
-            #    print "GOT DIFFERENT BEST ORIGIN {0} {1} FOR {2}".format( self.best.origin, corig, placedAaPdb )
             return True
         else:
             self.best = None
@@ -478,19 +488,21 @@ class Contacts(object):
                 lastSource = c
             
             # As the numbers overrun we can't split so we assume fixed format
-            chainId1 = c[4]
-            resSeq1 = int( c[6:10].strip() )
-            aa1 = c[11:14]
-            aa1 = pdb_edit.three2one[ aa1 ] # get amino acid and convert to single letter code
-            chainId2 = c[32]
-            resSeq2 = int( c[34:38].strip() )
-            aa2 = c[39:42]
-            aa2 = pdb_edit.three2one[ aa2 ]
-            dist = float( c[56:62].strip() )
-            cell = int( c[63:66])
-            symmetry = c[67:]
+            d = {}
+            d['chainId1'] = c[4]
+            d['resSeq1']  = int( c[6:10].strip() )
+            aa1           = c[11:14]
+            d['aa1']      = pdb_edit.three2one[ aa1 ] # get amino acid and convert to single letter code
+            d['chainId2'] = c[32]
+            d['resSeq2']  = int( c[34:38].strip() )
+            aa2           = c[39:42]
+            d['aa2']      = pdb_edit.three2one[ aa2 ]
+            d['dist']     = float( c[56:62].strip() )
+            d['cell']     = int( c[63:66])
+            d['symmetry'] = c[67:]
             
-            contacts.append( (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) )
+            contacts.append( d )
+            #contacts.append( (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) )
 
 #         # Put in dictionary by chains for easy access
 #         contacts = {}
@@ -532,92 +544,102 @@ class Contacts(object):
         self.backwards = 0
         self.allMatched = []
 
-        last1 = None
-        last2 = None
-        count = None
-        register = True # true if in register, false if out
-        backwards = False
-        thisMatched = []
-        
-        for i, c in enumerate( self.contacts ):
+        #
+        # Loop through the contacts finding the start, stop indices in the list of contacts of contiguous chunks
+        #
+        MINC         = 3
+        startstop    = []
+        lastChainId1 = None
+        lastResSeq1  = None
+        count        = None
+        start        = None
+        stop         = None
+        contacts = self.contacts
+        for i, c in enumerate( contacts ):
             
-            chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
-
-            #print "CONTACT ",i, chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry
-            # Initialise
-            if i == 0:
-                last1 = resSeq1
-                last2 = resSeq2
-                if resSeq1 != resSeq2:
-                    register = False
-                count = 1
-                thisMatched = [ ( chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) ]
-                continue
+            # Unpack contacts
+            #chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
             
-            # LOGIC HERE STILL NEEDS WORK
-            # We are reading contiguous matches - forwards or backwards
-            if ( resSeq1 == last1 + 1 and resSeq2 == last2 + 1 ) or \
-               ( resSeq1 == last1 + 1 and resSeq2 == last2 - 1 ) or ( resSeq1 == last1 - 1 and resSeq2 == last2 + 1 ):
-                
-                # either in or oo register read
-                if ( resSeq1 == resSeq2 and register ) or ( resSeq1 != resSeq2 and not register ):
+            #print "DATA: ",i, chainId1, resSeq1, aa1, chainId2, resSeq2, aa2,ss
+            if i != 0:
+                # For getting the longest segment we only care it's going up  by 1 we measure what matches how later
+                if ( c['resSeq1'] == lastResSeq1 + 1 or c['resSeq1'] == lastResSeq1 - 1 ) and c['chainId1'] == lastChainId1: # Native is incrementing
+                    count += 1
+                    stop = i
+                    lastChainId1 = c['chainId1']
+                    lastResSeq1 = c['resSeq1']
+                            
+                    # If this is the last one we want to drop through
+                    if i < len( contacts ) - 1:
+                        continue
                     
-                    # Check if this is a change or part of a stretch
-                    if ( ( resSeq1 == last1 + 1 and resSeq2 == last2 - 1 ) or ( resSeq1 == last1 - 1 and resSeq2 == last2 + 1 ) ) and not backwards:
-                        backwards = True
-                        #print "BACKWARDS ", self.ncontLog
-                        
-                    elif resSeq1 == last1 + 1 and resSeq2 == last2 + 1 and backwards:
-                        backwards = False
-                        
-                    else:
-                        count += 1
-                        thisMatched.append( ( chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) )
-                        last1 = resSeq1
-                        last2 = resSeq2
-                        
-                        # If this is the last one we want to drop through
-                        if i < len( self.contacts ) - 1:
-                            continue
-                
-            # Anything that doesn't continue didn't match
-                
-            if count >= MINC:
-                #  end of a contiguous sequence
-                if register:
-                    assert not backwards
-                    self.inregister += count
-                else:
-                    #print "adding {0} to ooregister {1}".format( count, self.ooregister )
-                    self.ooregister += count
-                    if backwards:
-                        print "ADDING {0} to backwards log {1}".format( count, self.ncontLog )
-                        self.backwards += count
-                        
-                self.allMatched.append( thisMatched )
+                # Anything that doesn't continue didn't match
+                if count >= MINC:
+                    startstop.append( ( start, stop )  )
             
-            # Either starting again or a random residue
-            if resSeq1 == resSeq2:
-                register=True
-            else:
-                register=False
-            
-            last1 = resSeq1
-            last2 = resSeq2
-            thisMatched = [ (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) ]
+            # Either starting afresh or a random residue
+            lastChainId1 = c['chainId1']
+            lastResSeq1  = c['resSeq1']
             count = 1
+            start = i
+            stop  = i
+            
+        # END LOOP
         
-        #print "GOT ALLMATCHED ",self.allMatched
+        #print "GOT STARTSTOP ",startstop
+        
+        # Now categorise the chunks
+        for ( start, stop ) in startstop:
+            register    = True
+            backwards   = False
+            lastResSeq1 = None
+            lastResSeq2 = None
+            count       = 1
+            #print "LEN ", stop - start + 1
+            for i in range( start, stop + 1 ):
+                
+                c = contacts[ i ]
+                #chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = contacts[ i ]
+                
+                #print "CONTACT ",i,chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry
+                
+                if i != start:
+                    if c['resSeq1'] == lastResSeq1 - 1 or c['resSeq2'] == lastResSeq2 - 1:
+                        backwards = True
+                        
+                    # Sanity check
+                    if backwards:
+                        assert c['resSeq1'] == lastResSeq1 -1 or  c['resSeq2'] == lastResSeq2 - 1
+                    if not register and not backwards:
+                        assert c['resSeq1'] != c['resSeq2']
+                        
+                    count += 1
+                
+                lastResSeq1  = c['resSeq1']
+                lastResSeq2  = c['resSeq2']
+                if c['resSeq1']  != c['resSeq2']:
+                    register = False
+            
+            # Add total here
+            if register:
+                self.inregister += count
+            else:
+                self.ooregister += count
+            
+            if backwards:
+                self.backwards += count
+        
+        # End categorising chunks
             
         return
     
-    def writeHelixFile(self, filename=None, dsspP=None ):
-        if self.best:
-            sequence = self.helixFromContacts( dsspP )
+    def writeHelixFile(self, filename=None ):
+        if self.best.helix:
             with open( filename, 'w' ) as f:
-                f.write( sequence+"\n" )
+                f.write( self.best.helix+"\n" )
+            return True
         
-        return
+        return False
     
     
 class TestContacts( unittest.TestCase ):
@@ -687,8 +709,25 @@ class TestContacts( unittest.TestCase ):
         
         self.assertEqual( c.numContacts, 77 )
         self.assertEqual( c.inregister, 19 )
-        self.assertEqual( c.ooregister, 56 )
-        self.assertEqual( c.backwards, 18 )
+        self.assertEqual( c.backwards, 16 )
+        self.assertEqual( c.ooregister, 54 )
+        
+        return
+
+    def testHelix5(self):
+
+        logfile = os.path.join( self.testfilesDir, "ncont5.log" )
+        
+        import dssp
+        dssplog = os.path.join( self.testfilesDir, "3RA3.dssp" )
+        
+        dsspP = dssp.DsspParser( dssplog )
+        
+        c = Contacts()
+        contacts = c.parseNcontLog( logfile=logfile )
+        sequence = c.helixFromContacts( contacts=contacts, dsspP=dsspP )
+        
+        self.assertEqual( "NARLKQEIAALEYEIAAL", sequence )
         
         return
 
