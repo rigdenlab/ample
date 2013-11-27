@@ -143,6 +143,8 @@ class AmpleResult(object):
                               'backwardsContacts',
                               'goodContacts',
                               'nocatContacts',
+                              'helixSequence',
+                              'lenHelix',
                               'rfact',
                               'rfree',
                               'solution',
@@ -192,6 +194,8 @@ class AmpleResult(object):
                                 "Backwards contacts",
                                 "Good contacts",
                                 "Uncategorised contacts",
+                                "Helix sequence",
+                                "Helix length",
                                 "Rfact",
                                 "Rfree",
                                 "Solution",
@@ -1053,7 +1057,7 @@ if __name__ == "__main__":
     pickledResults=False
     CLUSTERNUM=0
     rundir = "/home/jmht/Documents/test/TM"
-    rundir = "/home/jmht/Documents/test/CC/run1"
+    rundir = "/home/jmht/Documents/test/CC/run2"
     #dataRoot = "/media/data/shared/TM"
     dataRoot = "/media/data/shared/coiled-coils"
     
@@ -1066,9 +1070,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    #for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "1ZV7" ]:
+    for pdbcode in [ "1ZV7" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1116,8 +1120,8 @@ if __name__ == "__main__":
         #sam_file = os.path.join( dataDir, "fragments/t001_.rdb_ss2"  )
         psipred_file = os.path.join( dataDir, "fragments/t001_.psipred_ss2"  )
         psipredP = PsipredParser( psipred_file )
-        dssp_file = os.path.join( dataDir, "{0}.dssp".format( pdbcode  )  )
-        dsspP = dssp.DsspParser( dssp_file )
+        dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbcode  )  )
+        dsspP = dssp.DsspParser( dsspLog )
 
         # Get hold of a full model so we can do the mapping of residues
         refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbcode ) )
@@ -1292,7 +1296,14 @@ if __name__ == "__main__":
             # Now calculate contacts
             ccalc = contacts.Contacts()
             try:
-                ccalc.getContacts( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir )
+                ccalc.getContacts( nativePdb=nativePdb,
+                                   placedPdb=placedPdb,
+                                   resSeqMap=resSeqMap,
+                                   nativeInfo=nativeInfo,
+                                   shelxePdb=shelxePdb,
+                                   workdir=workdir,
+                                   dsspLog=dsspLog
+                                )
             except Exception, e:
                 print "ERROR WITH CONTACTS: {0}".format( e )
                 ccalc.best = None
@@ -1306,7 +1317,13 @@ if __name__ == "__main__":
                 ar.contactOrigin = ccalc.best.origin
                 ar.goodContacts = ar.inregisterContacts + ar.ooregisterContacts
                 ar.nocatContacts = ar.numContacts - ar.goodContacts
+                ar.helixSequence = ccalc.best.helix
+                ar.lenHelix = len( ccalc.best.helix )
                 
+                hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
+                if not ccalc.writeHelixFile( hfile ):
+                    print "NO HELIX FILE"
+                        
                 # Just for debugging
                 if ar.shelxeCC >= 25 and ar.shelxeAvgChainLength >= 10:
                     # Show origin stats
@@ -1326,7 +1343,7 @@ if __name__ == "__main__":
                  
                 #hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
                 #ccalc.writeHelixFile(filename=hfile, dsspP=dsspP )
-                #print ar
+                print ar
 
     # End loop over results
     
