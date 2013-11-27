@@ -108,7 +108,7 @@ class DsspParser(object):
             dsspResName = self.resNames[ ci ][ ri ]
             # in dssp cysteine bridges are signified by lower-case letters
             if dsspResName != resName and not dsspResName.islower() and dsspResName != 'X' :
-                raise RuntimeError,"Missmatching residues: {0}: {1}".format( self.resNames[ ci ][ ri ], resName )
+                raise RuntimeError,"Missmatching residues id {0} chain {1}: {2}: {3}".format( resSeq, chainId, self.resNames[ ci ][ ri ], resName )
             
         return self.assignment[ ci ][ ri ]
 
@@ -123,16 +123,16 @@ class Test(unittest.TestCase):
     def testParse1(self):
         """parse 2bhw"""
         
-        dssp_file = "/media/data/shared/TM/2BHW/2bhw.dssp"
-        dsspP = DsspParser( dssp_file )
+        dsspLog = "/media/data/shared/TM/2BHW/2bhw.dssp"
+        dsspP = DsspParser( dsspLog )
         a = [' ', ' ', 'T', 'T', ' ', 'T', 'T', 'S', 'S', 'T', 'T', ' ', ' ', ' ', 'T', 'T', 'G', 'G', 'G', ' ', ' ', 'S', ' ', ' ', 'T', 'T', ' ', ' ', 'S', ' ', 'S', 'T', 'T', ' ', ' ', 'S', ' ', ' ', 'T', 'T', ' ', 'T', 'T', ' ', 'S', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'T', 'T', 'T', ' ', ' ', ' ', 'S', ' ', ' ', 'S', 'G', 'G', 'G', 'S', 'G', 'G', 'G', 'G', 'G', 'S', 'T', 'T', ' ', 'E', 'E', 'G', 'G', 'G', ' ', 'T', 'T', 'S', 'E', 'E', 'E', ' ', ' ', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'E', 'E', 'T', 'T', 'E', 'E', ' ', 'S', 'S', 'S', 'S', ' ', ' ', ' ', 'T', 'T', 'S', ' ', 'T', 'T', ' ', 'T', 'T', ' ', 'S', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', ' ', 'S', ' ', 'S', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', ' ', 'T', 'T', 'T', 'S', 'S', 'G', 'G', 'G', 'G', 'T', 'T', 'T', 'T', ' ', 'S', ' ', ' ']
         self.assertEqual( dsspP.assignment[0], a)
         
         return
         
     def testParse2(self):
-        dssp_file = "/media/data/shared/TM/3OUF/3ouf.dssp"
-        dsspP = DsspParser( dssp_file )
+        dsspLog = "/media/data/shared/TM/3OUF/3ouf.dssp"
+        dsspP = DsspParser( dsspLog )
         
         return
     
