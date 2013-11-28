@@ -22,6 +22,28 @@ import ample_util
 import octopus_predict
 
 
+def find_binary( name, rosettaDir=None ):
+    """
+    Find a rosetta binary on different platforms
+    separate from object as it's currently used by the NMR stuff - which is in dire need of refactoring.
+    
+    """
+    
+    assert name and rosettaDir
+    
+    binDir = os.path.join( rosettaDir, 'rosetta_source', 'bin' )
+    binaries = glob.glob( binDir + "/{0}.*".format( name )  )
+    if not len( binaries ):
+        return False
+    
+    # Could check for shortest - for now just return the first
+    binary = os.path.abspath( binaries[ 0 ] )
+    
+    if os.path.isfile( binary ):
+        return binary
+    
+    return False
+
 class RosettaModel(object):
     """
     Class to run Rosetta modelling
@@ -510,26 +532,12 @@ class RosettaModel(object):
             
             self.transmembrane = True
             
-#           if platform.mac_ver() == ('', ('', '', ''), ''):
-#               self.transmembrane_exe = self.rosetta_dir + '/rosetta_source/bin/membrane_abinitio2.linuxgccrelease'
-#           else:
-#               self.transmembrane_exe = self.rosetta_dir + '/rosetta_source/bin/membrane_abinitio2'
-
-            if platform.mac_ver() == ('', ('', '', ''), ''):
-                # Not a mac so we assume linux
-                self.transmembrane_exe = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'membrane_abinitio2.linuxgccrelease' )
-            else:
-                # It seems there are different binaries on the mac 
-                rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'membrane_abinitio2' )
-                if not os.path.isfile( rbin ):
-                    rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'membrane_abinitio2.macosgccrelease' )
-                    if not os.path.isfile( rbin ):
-                        raise RuntimeError,"Cannot find AbinitioRelax binary!"
-                self.transmembrane_exe = rbin
-
-            if not os.path.exists(self.transmembrane_exe):
+            self.transmembrane_exe = find_binary( 'membrane_abinitio2', rosettaDir=self.rosetta_dir )
+            if not self.transmembrane_exe:
+                msg = "Cannot find AbinitioRelax binary membrane_abinitio2!"
                 self.logger.critical(' cant find Rosetta membrane executable: {0}'.format(self.transmembrane_exe) )
                 raise RuntimeError,msg
+
             
             script_dir = self.rosetta_dir + os.sep + "rosetta_source/src/apps/public/membrane_abinitio"
             self.octopus2span = script_dir + os.sep + "octopus2span.pl"
@@ -567,24 +575,22 @@ class RosettaModel(object):
             # Check if we've been given files
             if  self.spanfile:
                 if not ( os.path.isfile( self.spanfile ) ):
-                     msg = "Cannot find provided transmembrane spanfile: {0}".format(  self.spanfile )
-                     self.logger.critical(msg)
-                     raise RuntimeError, msg
+                    msg = "Cannot find provided transmembrane spanfile: {0}".format(  self.spanfile )
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg
                  
             if self.lipofile:
                 if not ( os.path.isfile( self.lipofile ) ):
-                     msg = "Cannot find provided transmembrane lipofile: {0}".format( self.lipofile )
-                     self.logger.critical(msg)
-                     raise RuntimeError, msg                 
+                    msg = "Cannot find provided transmembrane lipofile: {0}".format( self.lipofile )
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg                 
                    
-            
             if (  self.spanfile and not self.lipofile ) or ( self.lipofile and not self.spanfile ):
                 msg="You need to provide both a spanfile and a lipofile"
                 self.logger.critical(msg)
                 raise RuntimeError, msg
         # End transmembrane checks          
             
-
         # Modelling variables
         if optd['make_models']:
             
@@ -598,25 +604,14 @@ class RosettaModel(object):
                     
             import platform
             if not optd['rosetta_path']: 
-                if platform.mac_ver() == ('', ('', '', ''), ''):
-                    # Not a mac so we assume linux
-                    optd['rosetta_path'] = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'AbinitioRelax.linuxgccrelease' )
-                else:
-                    # It seems there are different binaries on the mac 
-                    rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'AbinitioRelax' )
-                    if not os.path.isfile( rbin ):
-                        rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'AbinitioRelax.macosgccrelease' )
-                        if not os.path.isfile( rbin ):
-                            raise RuntimeError,"Cannot find AbinitioRelax binary!"
-                    optd['rosetta_path'] = rbin
+                optd['rosetta_path'] = find_binary( 'AbinitioRelax', rosettaDir=self.rosetta_dir )
+                if not optd['rosetta_path']:
+                    msg = "Cannot find AbinitioRelax binary!"
+                    self.logger.critical(msg)
+                    raise RuntimeError,msg
             
             # Always save everything back to the amopt object so we can print it out
             self.rosetta_path = optd['rosetta_path']
-            
-            if not os.path.exists(self.rosetta_path):
-                msg = 'Cannot find Rosetta abinitio: {0}'.format(self.rosetta_path)
-                self.logger.critical( msg )
-                raise RuntimeError,msg
     
             #jmht not used
             # ROSETTA_cluster = rosetta_dir + '/rosetta_source/bin/cluster.linuxgccrelease'
