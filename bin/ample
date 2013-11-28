@@ -31,6 +31,7 @@ if not "CCP4" in sorted(os.environ.keys()):
 # Add the ample python folder to the PYTHONPATH
 sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
 
+
 # python imports
 import argparse
 import clusterize
@@ -463,9 +464,10 @@ if amopt.d['NMR_model_in']:
         sys.exit(1)    
        
     NMR_PROTOCOL = True
-    ROSETTA_CM = amopt.d['rosetta_dir'] + '/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
-    if not os.path.exists(ROSETTA_CM) :
-        msg = 'Cannot find {0} check path names'.format( ROSETTA_CM )
+    # HACK - use the rosetta modeller to find the binary
+    ROSETTA_CM = rosetta_model.find_binary(  'mr_protocols', rosettaDir = amopt.d['rosetta_dir'] )
+    if not ROSETTA_CM:
+        msg = 'Cannot find Rosetta binary {0} in {1} check path names'.format( 'mr_protocols', amopt.d['rosetta_dir'] )
         logger.critical( msg )
         sys.exit(1)
 
@@ -495,13 +497,13 @@ if amopt.d['missing_domain']:
 if amopt.d['molrep_only'] and amopt.d['phaser_only']:
         logger.critical('you say you want molrep only AND phaser only, choose one or both')
         sys.exit(1)
+        
 if amopt.d['molrep_only']:
     amopt.d['mrbump_programs'] = [ 'molrep' ]
 elif amopt.d['phaser_only']:
     amopt.d['mrbump_programs'] = [ 'phaser' ]
 else:
     amopt.d['mrbump_programs'] = ['molrep', 'phaser']
-    
 
 # Model building programs
 if amopt.d['use_arpwarp']:
@@ -533,6 +535,11 @@ if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if maki
     logger.info('Making models or fragments so checking ROSETTA options')
     rosetta_modeller = rosetta_model.RosettaModel()
     rosetta_modeller.set_from_dict( amopt.d )
+    
+    
+    
+    
+    
 
 # Check if we need to get any of the flags from the MTZ file
 if amopt.d['sf_cif'] and amopt.d['mtz']:
