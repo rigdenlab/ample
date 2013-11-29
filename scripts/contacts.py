@@ -34,7 +34,8 @@ class ContactData(object):
         self.ooregister = 0
         self.backwards = 0
         self.origin = None
-        self.allMatched = None
+        self.floatingOrigin = None
+        self.csymmatchOrigin = None
         self.ncontLog = None
         self.pdb = None
         self.csymmatchPdb = None
@@ -66,7 +67,6 @@ class Contacts(object):
         self.inregister = 0
         self.ooregister = 0
         self.backwards = 0
-        self.allMatched = []
         self.best = None
         # testing
         self.originCompare = {}
@@ -115,7 +115,7 @@ class Contacts(object):
         
         """
         
-        #print "GOT DATA ",self.best.allMatched
+        #print "GOT DATA ",contacts
         #print "GOT DSSP ",dsspP.asDict()
         
         if contacts is None:
@@ -142,7 +142,7 @@ class Contacts(object):
             # Assign the secondary structure
             ss = dsspP.getAssignment( c['resSeq1'], c['chainId1'], resName = c['aa1'] )
             
-            #print "DATA: ",i, chainId1, resSeq1, aa1, chainId2, resSeq2, aa2,ss
+            print "DATA: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2'], ss
             if i != 0:
                 # For getting the longest segment we only care it's going up  by 1 and it's helix - we don't care what matches how
                 if ( c['resSeq1'] == lastResSeq1 + 1 or c['resSeq1'] == lastResSeq1 - 1 ) and c['chainId1'] == lastChainId1 and ss =='H': # Native is incrementing
@@ -185,7 +185,6 @@ class Contacts(object):
             If the chunks can be joined, it returns None for the first chunk so that we know not
             to add anything.
             """
-            
             
             #print "c1, c2",chunk1, chunk2
             MAXGAP = 3
@@ -253,7 +252,7 @@ class Contacts(object):
             #
             # Find the biggest
             #
-            biggest = sorted( extended, lambda x, y: (x[2] - x[1]) - (y[2] - y[1]), reverse = True )[0]
+            biggest = sorted( extended, lambda x, y: abs( x[2] - x[1]) - abs(y[2] - y[1]), reverse = True )[0]
         
         else:
             biggest = startstop[ 0 ]
@@ -264,8 +263,8 @@ class Contacts(object):
         # Get the sequence that the start, stop indices define
         #
         chainId     = biggest[0]
-        startResSeq = biggest[1]
-        stopResSeq  = biggest[2]
+        startResSeq = min( biggest[1], biggest[2] ) # use min/max as could be running backwards
+        stopResSeq  = max( biggest[1], biggest[2] )
         sequence = ""
         #s3 = []
         #print " s ",startResSeq
@@ -278,6 +277,8 @@ class Contacts(object):
 #             except KeyError:
 #                 s3.append( "XXX" )
         #print "s3 "," ".join( s3 )
+        
+        #print "HELIX ",sequence
                 
         return sequence
         
@@ -290,6 +291,9 @@ class Contacts(object):
             self.workdir = os.getcwd()
             
         pdbedit = pdb_edit.PDBEdit()
+        
+        # Object to hold contact data
+        self.best = ContactData()
         
         if False:
             # Standardise pdb
@@ -337,6 +341,7 @@ class Contacts(object):
         #print "GOT ORIGINS ",origins
         # Pythonic way of checking if any of the origins are floating
         floating = any(  map( lambda o: 'x' in o or 'y' in o or 'z' in o, origins  ) )
+        self.best.floatingOrigin = floating
         
         # Add the shelxe origin to the list if it's not already in there
         csym = csymmatch.Csymmatch()
@@ -345,7 +350,9 @@ class Contacts(object):
             csymmatchPdb = ample_util.filename_append( filename=shelxePdb, astr="csymmatch", directory=self.workdir )
             csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
             corig = csym.origin()
-        
+            
+            
+        self.best.csymmatchOrigin = bool( corig )
         #if not corig:
         #    print "NO CSYMMATCH ORIGIN"
         
@@ -353,7 +360,7 @@ class Contacts(object):
         if floating:
             if not corig:
                 # If csymmatch failed, we can't do owt
-                self.best = None
+                print "CSYMMATCH FAILED WITH FLOATING ORIGIN"
                 return False
             # Should check if the origin is acceptable, but that would require checking through all the 
             # alternate origins and seeing if tne non-floating axes had acceptable values  
@@ -364,7 +371,6 @@ class Contacts(object):
                 origins.append( corig )
         
         # Loop over origins, move the placed pdb to the new origin and then run ncont
-        self.best = ContactData()
         self.originCompare = {}
         for i, origin in enumerate( origins  ):
             #print "GOT ORIGIN ",i,origin
@@ -397,7 +403,6 @@ class Contacts(object):
                 self.best.ooregister = self.ooregister
                 self.best.backwards = self.backwards
                 self.best.contacts = self.contacts
-                self.best.allMatched = self.allMatched
                 self.best.origin = origin
                 self.best.ncontLog = self.ncontLog
                 self.best.pdb = placedOriginPdb
@@ -542,7 +547,6 @@ class Contacts(object):
         self.inregister = 0
         self.ooregister = 0
         self.backwards = 0
-        self.allMatched = []
 
         #
         # Loop through the contacts finding the start, stop indices in the list of contacts of contiguous chunks
@@ -640,7 +644,6 @@ class Contacts(object):
             return True
         
         return False
-    
     
 class TestContacts( unittest.TestCase ):
     
