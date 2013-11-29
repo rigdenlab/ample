@@ -136,6 +136,8 @@ class AmpleResult(object):
                               'molrepScore',
                               'molrepTime',
                               'reforiginRmsd',
+                              'floatingOrigin',
+                              'csymmatchOrigin',
                               'contactData',
                               'contactOrigin',
                               'numContacts',
@@ -187,6 +189,8 @@ class AmpleResult(object):
                                 "Molrep Score",
                                 "Molrep Time",
                                 "Reforigin RMSD",
+                                "Floating Origin",
+                                "Csymmatch Origin",
                                 "Contact Data",
                                 "Contact origin",
                                 "Number of contacts",
@@ -928,7 +932,7 @@ class Test(unittest.TestCase):
         logfile = "/media/data/shared/TM/2BHW/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_9.355791_rad_3_molrep_mrbump/" + \
         "data/loc0_ALL_poly_ala_trunc_9.355791_rad_3/unmod/mr/molrep/build/shelxe/shelxe_run.log"
         
-        p = ShelxeLogParser( logfile )
+        p = shelxe_log.ShelxeLogParser( logfile )
         self.assertEqual(37.26, p.CC)
         self.assertEqual(7, p.avgChainLength)
         self.assertEqual(9, p.maxChainLength)
@@ -961,7 +965,7 @@ if __name__ == "__main__":
     
     for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "1ZV7" ]:
+    #for pdbcode in [ "1M3W" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1069,7 +1073,7 @@ if __name__ == "__main__":
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
             
-            #if ensembleName != "All_atom_trunc_0.450428_rad_2":
+            #if ensembleName != "All_atom_trunc_9.06527_rad_3":
             #    continue
             
             # Extract information on the models and ensembles
@@ -1082,7 +1086,6 @@ if __name__ == "__main__":
         
             if not got:
                 raise RuntimeError,"Failed to get ensemble results"
-
         
             ar.ensembleNumModels =  e.num_models
             ar.ensembleNumResidues =  e.num_residues
@@ -1195,7 +1198,6 @@ if __name__ == "__main__":
                                 )
             except Exception, e:
                 print "ERROR WITH CONTACTS: {0}".format( e )
-                ccalc.best = None
        
             if ccalc.best:
                 ar.contactData = ccalc.best
