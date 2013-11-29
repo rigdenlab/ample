@@ -134,26 +134,29 @@ class Contacts(object):
         count        = None
         start        = None
         stop         = None
+        backwards    = 0
         for i, c in enumerate( contacts ):
-            
-            # Unpack contacts
-            #chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
             
             # Assign the secondary structure
             ss = dsspP.getAssignment( c['resSeq1'], c['chainId1'], resName = c['aa1'] )
             
-            print "DATA: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2'], ss
+            #print "DATA: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2'], ss
             if i != 0:
                 # For getting the longest segment we only care it's going up  by 1 and it's helix - we don't care what matches how
                 if ( c['resSeq1'] == lastResSeq1 + 1 or c['resSeq1'] == lastResSeq1 - 1 ) and c['chainId1'] == lastChainId1 and ss =='H': # Native is incrementing
-                    count += 1
-                    stop = c['resSeq1']
-                    lastChainId1 = c['chainId1']
-                    lastResSeq1 = c['resSeq1']
-                            
-                    # If this is the last one we want to drop through
-                    if i < len( contacts ) - 1:
-                        continue
+                    
+                    if c['resSeq1'] == lastResSeq1 - 1:
+                        backwards += 1
+                    
+                    if  not( c['resSeq1'] == lastResSeq1 + 1 and backwards >= 1 ):
+                        count += 1
+                        stop = c['resSeq1']
+                        lastChainId1 = c['chainId1']
+                        lastResSeq1 = c['resSeq1']
+                                
+                        # If this is the last one we want to drop through
+                        if i < len( contacts ) - 1:
+                            continue
                     
                 # Anything that doesn't continue didn't match
                 if count >= MINC:
@@ -162,6 +165,7 @@ class Contacts(object):
             # Either starting afresh or a random residue
             lastChainId1 = c['chainId1']
             lastResSeq1  = c['resSeq1']
+            backwards = 0
             if ss == 'H':
                 # Only count this one if its a helix
                 count = 1
@@ -350,7 +354,6 @@ class Contacts(object):
             csymmatchPdb = ample_util.filename_append( filename=shelxePdb, astr="csymmatch", directory=self.workdir )
             csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
             corig = csym.origin()
-            
             
         self.best.csymmatchOrigin = bool( corig )
         #if not corig:
@@ -559,23 +562,29 @@ class Contacts(object):
         start        = None
         stop         = None
         contacts = self.contacts
+        backwards = 0
         for i, c in enumerate( contacts ):
             
             # Unpack contacts
             #chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
             
-            #print "DATA: ",i, chainId1, resSeq1, aa1, chainId2, resSeq2, aa2,ss
+            #print "DATA: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2']
             if i != 0:
                 # For getting the longest segment we only care it's going up  by 1 we measure what matches how later
                 if ( c['resSeq1'] == lastResSeq1 + 1 or c['resSeq1'] == lastResSeq1 - 1 ) and c['chainId1'] == lastChainId1: # Native is incrementing
-                    count += 1
-                    stop = i
-                    lastChainId1 = c['chainId1']
-                    lastResSeq1 = c['resSeq1']
+                    
+                    if c['resSeq1'] == lastResSeq1 - 1:
+                        backwards += 1
+                        
+                    if  not( c['resSeq1'] == lastResSeq1 + 1 and backwards >= 1 ):
+                        count += 1
+                        stop = i
+                        lastChainId1 = c['chainId1']
+                        lastResSeq1 = c['resSeq1']
                             
-                    # If this is the last one we want to drop through
-                    if i < len( contacts ) - 1:
-                        continue
+                        # If this is the last one we want to drop through
+                        if i < len( contacts ) - 1:
+                            continue
                     
                 # Anything that doesn't continue didn't match
                 if count >= MINC:
@@ -584,9 +593,10 @@ class Contacts(object):
             # Either starting afresh or a random residue
             lastChainId1 = c['chainId1']
             lastResSeq1  = c['resSeq1']
-            count = 1
-            start = i
-            stop  = i
+            count        = 1
+            start        = i
+            stop         = i
+            backwards    = 0
             
         # END LOOP
         
@@ -603,9 +613,7 @@ class Contacts(object):
             for i in range( start, stop + 1 ):
                 
                 c = contacts[ i ]
-                #chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = contacts[ i ]
-                
-                #print "CONTACT ",i,chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry
+                #print "CONTACT: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2']
                 
                 if i != start:
                     if c['resSeq1'] == lastResSeq1 - 1 or c['resSeq2'] == lastResSeq2 - 1:
@@ -613,9 +621,9 @@ class Contacts(object):
                         
                     # Sanity check
                     if backwards:
-                        assert c['resSeq1'] == lastResSeq1 -1 or  c['resSeq2'] == lastResSeq2 - 1
+                        assert c['resSeq1'] == lastResSeq1 -1 or  c['resSeq2'] == lastResSeq2 - 1,"Going backwards but resSeq arent!"
                     if not register and not backwards:
-                        assert c['resSeq1'] != c['resSeq2']
+                        assert c['resSeq1'] != c['resSeq2'],"not register and backwards and not matching"
                         
                     count += 1
                 
@@ -716,6 +724,22 @@ class TestContacts( unittest.TestCase ):
         self.assertEqual( c.ooregister, 54 )
         
         return
+
+    def testParse7(self):
+        
+        logfile = os.path.join( self.testfilesDir, "ncont7.log" )
+        
+        c = Contacts()
+        contacts = c.parseNcontLog( logfile=logfile )
+        c.countContacts()
+        
+        self.assertEqual( c.numContacts, 18 )
+        self.assertEqual( c.inregister, 0 )
+        self.assertEqual( c.backwards, 3 )
+        self.assertEqual( c.ooregister, 3 )
+        
+        return
+
 
     def testHelix5(self):
 
