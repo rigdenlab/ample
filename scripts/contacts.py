@@ -77,6 +77,11 @@ class Contacts(object):
         if not self.run( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir ):
             return False
         
+        
+        #print "placedPdb ",placedPdb
+        #print "nativePdb ",nativePdb
+        #print "GOT MAP ",resSeqMap
+        
         # We should have contact data to calculate a helix from
         assert dsspLog
         dsspP = dssp.DsspParser( dsspLog )
@@ -400,6 +405,7 @@ class Contacts(object):
             # Just for debugging
             self.originCompare[ "{0}".format( origin ).replace(" ","" ) ] = self.inregister + self.ooregister
             
+            # Save the result if there are more 'good' contacts than anything else
             if self.inregister + self.ooregister > self.best.inregister + self.best.ooregister:
                 self.best.numContacts = self.numContacts
                 self.best.inregister = self.inregister
@@ -557,7 +563,9 @@ class Contacts(object):
         MINC         = 3
         startstop    = []
         lastChainId1 = None
+        lastChainId2 = None
         lastResSeq1  = None
+        lastResSeq2  = None
         count        = None
         start        = None
         stop         = None
@@ -570,9 +578,13 @@ class Contacts(object):
             
             #print "DATA: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2']
             if i != 0:
-                # For getting the longest segment we only care it's going up  by 1 we measure what matches how later
-                if ( c['resSeq1'] == lastResSeq1 + 1 or c['resSeq1'] == lastResSeq1 - 1 ) and c['chainId1'] == lastChainId1: # Native is incrementing
+                # For getting the longest segment we only care it's changing by 1 - we test what matched how later
+                if ( c['resSeq1'] == lastResSeq1 + 1 or c['resSeq1'] == lastResSeq1 - 1 ) and \
+                   ( c['resSeq2'] == lastResSeq2 + 1 or c['resSeq2'] == lastResSeq2 - 1 ) and \
+                     c['chainId1'] == lastChainId1 and c['chainId2'] == lastChainId2: 
                     
+                    # Need to know when we are going backwards, but also need to know if we are in a stretch going backwards
+                    # so we count how many we have been going backwards for
                     if c['resSeq1'] == lastResSeq1 - 1:
                         backwards += 1
                         
@@ -580,7 +592,9 @@ class Contacts(object):
                         count += 1
                         stop = i
                         lastChainId1 = c['chainId1']
+                        lastChainId2 = c['chainId2']
                         lastResSeq1 = c['resSeq1']
+                        lastResSeq2 = c['resSeq2']
                             
                         # If this is the last one we want to drop through
                         if i < len( contacts ) - 1:
@@ -592,7 +606,9 @@ class Contacts(object):
             
             # Either starting afresh or a random residue
             lastChainId1 = c['chainId1']
+            lastChainId2 = c['chainId2']
             lastResSeq1  = c['resSeq1']
+            lastResSeq2  = c['resSeq2']
             count        = 1
             start        = i
             stop         = i
@@ -604,6 +620,7 @@ class Contacts(object):
         
         # Now categorise the chunks
         for ( start, stop ) in startstop:
+            #print "NEW CHUNK"
             register    = True
             backwards   = False
             lastResSeq1 = None
@@ -735,8 +752,23 @@ class TestContacts( unittest.TestCase ):
         
         self.assertEqual( c.numContacts, 18 )
         self.assertEqual( c.inregister, 0 )
-        self.assertEqual( c.backwards, 3 )
-        self.assertEqual( c.ooregister, 3 )
+        self.assertEqual( c.backwards, 0 )
+        self.assertEqual( c.ooregister, 0 )
+        
+        return
+    
+    def testParse8(self):
+        
+        logfile = os.path.join( self.testfilesDir, "ncont8.log" )
+        
+        c = Contacts()
+        contacts = c.parseNcontLog( logfile=logfile )
+        c.countContacts()
+        
+        self.assertEqual( c.numContacts, 9 )
+        self.assertEqual( c.inregister, 0 )
+        self.assertEqual( c.backwards, 0 )
+        self.assertEqual( c.ooregister, 0 )
         
         return
 
