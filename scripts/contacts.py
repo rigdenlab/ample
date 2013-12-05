@@ -35,7 +35,7 @@ class ContactData(object):
         self.backwards = 0
         self.origin = None
         self.floatingOrigin = None
-        self.csymmatchOrigin = None
+        self.symmatchOriginOk = None
         self.ncontLog = None
         self.pdb = None
         self.csymmatchPdb = None
@@ -263,7 +263,8 @@ class Contacts(object):
             
             # Check numbering matches and match numbering if necessary
             resSeqMap = residue_map.residueSequenceMap()
-            modelInfo = pdbedit.get_info( refModelPdb )
+            #modelInfo = pdbedit.get_info( refModelPdb )
+            modelInfo = False
             # NEED TO FIX NAMING AS THIS IS WAY TOO CONFUSING!
             resSeqMap.fromInfo( refInfo=modelInfo,
                                 refChainID=modelInfo.models[0].chains[0],
@@ -305,7 +306,7 @@ class Contacts(object):
             csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
             corig = csym.origin()
             
-        self.best.csymmatchOrigin = bool( corig )
+        self.best.csymmatchOriginOk = bool( corig )
         #if not corig:
         #    print "NO CSYMMATCH ORIGIN"
         
@@ -365,9 +366,8 @@ class Contacts(object):
         
         if self.best.pdb:
             return True
-        else:
-            self.best = None
-            return False
+        
+        return False
 
     def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxdist=1.5 ):
         """FOO

@@ -137,7 +137,7 @@ class AmpleResult(object):
                               'molrepTime',
                               'reforiginRmsd',
                               'floatingOrigin',
-                              'csymmatchOrigin',
+                              'csymmatchOriginOk',
                               'contactData',
                               'contactOrigin',
                               'numContacts',
@@ -190,7 +190,7 @@ class AmpleResult(object):
                                 "Molrep Time",
                                 "Reforigin RMSD",
                                 "Floating Origin",
-                                "Csymmatch Origin",
+                                "Csymmatch Origin OK",
                                 "Contact Data",
                                 "Contact origin",
                                 "Number of contacts",
@@ -1073,7 +1073,7 @@ if __name__ == "__main__":
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
             
-            #if ensembleName != "All_atom_trunc_9.06527_rad_3":
+            #if ensembleName != "SCWRL_reliable_sidechains_trunc_0.058566_rad_1":
             #    continue
             
             # Extract information on the models and ensembles
@@ -1168,7 +1168,7 @@ if __name__ == "__main__":
                 print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdb, placedPdb )
                 print "{0}".format( e )
                 ar.reforiginRmsd = 9999
-                
+                 
             #
             # SHELXE PROCESSING
             #
@@ -1188,6 +1188,7 @@ if __name__ == "__main__":
             # Now calculate contacts
             ccalc = contacts.Contacts()
             try:
+            #if True:
                 ccalc.getContacts( nativePdb=nativePdb,
                                    placedPdb=placedPdb,
                                    resSeqMap=resSeqMap,
@@ -1200,42 +1201,47 @@ if __name__ == "__main__":
                 print "ERROR WITH CONTACTS: {0}".format( e )
        
             if ccalc.best:
-                ar.contactData = ccalc.best
-                ar.numContacts = ccalc.best.numContacts
+                ar.contactData        = ccalc.best
+                ar.numContacts        = ccalc.best.numContacts
+                ar.floatingOrigin     = ccalc.best.floatingOrigin
+                ar.csymmatchOriginOk  = ccalc.best.csymmatchOriginOk
                 ar.inregisterContacts = ccalc.best.inregister
                 ar.ooregisterContacts = ccalc.best.ooregister
-                ar.backwardsContacts = ccalc.best.backwards
-                ar.contactOrigin = ccalc.best.origin
-                ar.goodContacts = ar.inregisterContacts + ar.ooregisterContacts
-                ar.nocatContacts = ar.numContacts - ar.goodContacts
-                ar.helixSequence = ccalc.best.helix
+                ar.backwardsContacts  = ccalc.best.backwards
+                ar.contactOrigin      = ccalc.best.origin
+                ar.goodContacts       = ar.inregisterContacts + ar.ooregisterContacts
+                ar.nocatContacts      = ar.numContacts - ar.goodContacts
+                ar.helixSequence      = ccalc.best.helix
                 if ccalc.best.helix:
                     ar.lenHelix = len( ccalc.best.helix )
                 
+                gotHelix=False
                 hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
-                if not ccalc.writeHelixFile( hfile ):
-                    print "NO HELIX FILE"
+                gotHelix =  ccalc.writeHelixFile( hfile )
                         
                 # Just for debugging
-                if ar.shelxeCC >= 25 and ar.shelxeAvgChainLength >= 10:
-                    # Show origin stats
-                    oc = sorted(ccalc.originCompare.items(), key=lambda x: x[1], reverse=True )
-                    duff=False
-                    if len(oc) > 1:
-                        if oc[0][1] == oc[1][1]:
-                            if len(oc) > 2:
-                                if oc[2][1] >= oc[1][1]*.5:
-                                    duff=True
-                        else:
-                            if oc[1][1] >= oc[0][1]*.5:
-                                duff=True
-                        if duff:
-                            print "OTHER ORIGINMATCHES ARE > 50%"
-                            print "originCompare: ", oc
+                if ar.shelxeCC >= 25 and ar.shelxeAvgChainLength >= 10 and not gotHelix:
+                    print "NO HELIX FILE"
+                        
+#                     # Show origin stats
+#                     oc = sorted(ccalc.originCompare.items(), key=lambda x: x[1], reverse=True )
+#                     duff=False
+#                     if len(oc) > 1:
+#                         if oc[0][1] == oc[1][1]:
+#                             if len(oc) > 2:
+#                                 if oc[2][1] >= oc[1][1]*.5:
+#                                     duff=True
+#                         else:
+#                             if oc[1][1] >= oc[0][1]*.5:
+#                                 duff=True
+#                         if duff:
+#                             print "OTHER ORIGINMATCHES ARE > 50%"
+#                             print "originCompare: ", oc
                  
                 #print ar
 
     # End loop over results
+    #sys.exit(1)
     
     pfile = os.path.join( rundir, "ar_results.pkl")
     f = open( pfile, 'w' )
