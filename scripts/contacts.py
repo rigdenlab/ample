@@ -99,7 +99,7 @@ class Contacts(object):
         
         return
 
-    def helixFromContacts( self, dsspP=None, contacts=None, ):
+    def helixFromContacts( self, contacts=None, dsspP=None, minContig=2, maxGap=3  ):
         """Return the sequence of the longest contiguous helix from the given contact data
         
         
@@ -132,61 +132,12 @@ class Contacts(object):
         #
         # Loop through the contacts finding the start, stop indices in the list of contacts of contiguous chunks
         #
-        MINC         = 2
-        startstop    = []
-        lastChainId1 = None
-        lastResSeq1  = None
-        count        = None
-        start        = None
-        stop         = None
-        backwards    = 0
-        for i, c in enumerate( contacts ):
-            
-            # Assign the secondary structure
-            ss = dsspP.getAssignment( c['resSeq1'], c['chainId1'], resName = c['aa1'] )
-            
-            #print "DATA: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2'], ss
-            if i != 0:
-                # For getting the longest segment we only care it's going up  by 1 and it's helix - we don't care what matches how
-                if ( c['resSeq1'] == lastResSeq1 + 1 or c['resSeq1'] == lastResSeq1 - 1 ) and c['chainId1'] == lastChainId1 and ss =='H': # Native is incrementing
-                    
-                    if c['resSeq1'] == lastResSeq1 - 1:
-                        backwards += 1
-                    
-                    if  not( c['resSeq1'] == lastResSeq1 + 1 and backwards >= 1 ):
-                        count += 1
-                        stop = c['resSeq1']
-                        lastChainId1 = c['chainId1']
-                        lastResSeq1 = c['resSeq1']
-                                
-                        # If this is the last one we want to drop through
-                        if i < len( contacts ) - 1:
-                            continue
-                    
-                # Anything that doesn't continue didn't match
-                if count >= MINC:
-                    startstop.append( ( lastChainId1, start, stop )  )
-            
-            # Either starting afresh or a random residue
-            lastChainId1 = c['chainId1']
-            lastResSeq1  = c['resSeq1']
-            backwards = 0
-            if ss == 'H':
-                # Only count this one if its a helix
-                count = 1
-                start = c['resSeq1']
-                stop  = c['resSeq1']
-            else:
-                count = 0
-                start = c['resSeq1'] + 1
-                stop  = c['resSeq1'] + 1
-                
-        # END LOOP
-        
-        if not len( startstop ):
+        chunks = self.findChunks( contacts=contacts, dsspP=dsspP, ssTest=True, minContig=2 )
+    
+        if not chunks:
             return None
         
-        def join_chunks( chunk1, chunk2 ):
+        def join_chunks( chunk1, chunk2, dsspP=None, maxGap=None ):
             """Take two chunks of contacts and see if the gap between them can be joined.
             
             If the chunks can't be joined, it returns the first chunk for adding to the list
@@ -195,63 +146,57 @@ class Contacts(object):
             to add anything.
             """
             
-            #print "c1, c2",chunk1, chunk2
-            MAXGAP = 3
+            assert dsspP and maxGap
             
-            chainId1 = chunk1[0]
-            start1   = chunk1[1]
-            stop1    = chunk1[2]
-            chainId2 = chunk2[0]
-            start2   = chunk2[1]
-            stop2    = chunk2[2]
-            
-            #print "GAP PARAM ",start1,stop1,chainId1,start2,stop2,chainId2
-            #print "GAP WIDTH ",start2 - stop1 + 1
+            #print "CHECKING CHUNK ",chunk1, chunk2
             
             # See if a suitable gap
-            width = start2 - stop1 + 1
-            if width < 1 or width > MAXGAP or chainId1 != chainId2:
+            width = abs( chunk2[ 'startResSeq' ] - chunk1[ 'stopResSeq' ] ) - 1
+            if width < 1 or width > maxGap or chunk1[ 'chainId1' ] != chunk2[ 'chainId1' ]:
                 return ( chunk1, chunk2 )
             
-            #print "POSSIBLE GAP"
-                
             # Suitable gap so make sure it's all helix
-            for resSeq in range( stop1 + 1, start2 - 1 ):
-                ss = dsspP.getAssignment( resSeq, chainId1, resName = None )
+            for resSeq in range( chunk1[ 'stopResSeq' ] + 1, chunk2[ 'startResSeq' ] - 1 ):
+                ss = dsspP.getAssignment( resSeq, chunk1[ 'chainId1' ], resName = None )
                 if ss != 'H':
                     return ( chunk1, chunk2 )
-                
             
-            #print "JOINED CHUNKS"
+            #print "JOINED CHUNKS", chunk1, chunk2
+            
+            joinedChunk =  { 'chainId1'    : chunk1[ 'chainId1' ],
+                             'startIdx'    : chunk1[ 'startIdx'],
+                             'startResSeq' : chunk1[ 'startResSeq' ],
+                             'stopIdx'     : chunk2[ 'stopIdx'],
+                             'stopResSeq'  : chunk2[ 'stopResSeq' ] }
                 
-            return ( None, ( chainId1, start1, stop2 ) )
+            return ( None, joinedChunk )
         
         #
         # Go through the start-stop chunks in pairs and see if they can be joied, creating
         # extended, which is the list of chunks with gaps filled-in
         #
-        #print "GOT STARTSTOP ",startstop
-        if len( startstop ) > 1:
+        #print "GOT CHUNKS ",chunks
+        if len( chunks ) > 1:
             
-            # Need to sort the chunks by chain and then start index.
-            startstop.sort( key = itemgetter( 0, 1 ) ) # By chain
-            #print "SORTED STARTSTOP ",startstop
+            # Need to sort the chunks by chain and then startResSeq so that we can join anything on the same chain
+            chunks.sort( key = itemgetter( 'chainId1', 'startResSeq' ) ) # By chain
+            #print "SORTED CHUNKS ",chunks
             
             extended = []
-            for i, newChunk in enumerate( startstop ):
+            for i, newChunk in enumerate( chunks ):
                 
                 # initialise
                 if i == 0:
                     toJoin = newChunk
                     continue
                 
-                chunk, toJoin = join_chunks( toJoin, newChunk  )
+                chunk, toJoin = join_chunks( toJoin, newChunk, dsspP=dsspP, maxGap=maxGap  )
                 
                 if chunk is not None:
                     extended.append( chunk )
                 
                 # Last one needs to be handled specially
-                if i == len( startstop ) - 1 and toJoin:
+                if i == len( chunks ) - 1 and toJoin:
                     extended.append( toJoin )
                     
             # End Loop
@@ -261,19 +206,19 @@ class Contacts(object):
             #
             # Find the biggest
             #
-            biggest = sorted( extended, lambda x, y: abs( x[2] - x[1]) - abs(y[2] - y[1]), reverse = True )[0]
+            biggest = sorted( extended, lambda x, y: abs( x['stopResSeq'] - x['startResSeq']) - abs(y['stopResSeq'] - y['startResSeq']), reverse = True )[0]
         
         else:
-            biggest = startstop[ 0 ]
+            biggest = chunks[ 0 ]
             
         #print "GOT BIGGEST ",biggest
         
         #
         # Get the sequence that the start, stop indices define
         #
-        chainId     = biggest[0]
-        startResSeq = min( biggest[1], biggest[2] ) # use min/max as could be running backwards
-        stopResSeq  = max( biggest[1], biggest[2] )
+        chainId     = biggest[ 'chainId1']
+        startResSeq = min( biggest['startResSeq'], biggest['stopResSeq'] ) # use min/max as could be running backwards
+        stopResSeq  = max( biggest['startResSeq'], biggest['stopResSeq'] )
         sequence = ""
         #s3 = []
         #print " s ",startResSeq
@@ -545,81 +490,114 @@ class Contacts(object):
         self.contacts = contacts
                     
         return contacts
-    
-    def countContacts( self ):
+ 
+    def ssIsOK( self, contact, dsspP=None, ssTest=False ):
+        if ssTest:
+            ss = dsspP.getAssignment( contact['resSeq1'], contact['chainId1'], resName = contact['aa1'] )
+            if ss == "H":
+                return True
+            return False
+        else:
+            return True
+
+    def findChunks(self, contacts=None, dsspP=None, ssTest=False, minContig=3 ):
         
-        if not self.contacts:
-            return
-        
-        # Now count'em and put them into groups
-        MINC = 3 # minimum contiguous to count
-        self.inregister = 0
-        self.ooregister = 0
-        self.backwards = 0
+        if contacts is None:
+            return False
 
         #
         # Loop through the contacts finding the start, stop indices in the list of contacts of contiguous chunks
         #
-        MINC         = 3
-        startstop    = []
+        chunks    = []
         lastChainId1 = None
         lastChainId2 = None
         lastResSeq1  = None
         lastResSeq2  = None
         count        = None
-        start        = None
-        stop         = None
-        contacts = self.contacts
+        startIdx     = None
+        stopIdx      = None
         backwards = 0
+        
         for i, c in enumerate( contacts ):
             
-            # Unpack contacts
-            #chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
+            ssOK = self.ssIsOK( c, dsspP=dsspP, ssTest=ssTest )
             
-            #print "DATA: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2']
+            #ss = dsspP.getAssignment( c['resSeq1'], c['chainId1'], resName = c['aa1'] )
+            #print "DATA: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2'],ss, ssOK
+            
             if i != 0:
                 # For getting the longest segment we only care it's changing by 1 - we test what matched how later
                 if ( c['resSeq1'] == lastResSeq1 + 1 or c['resSeq1'] == lastResSeq1 - 1 ) and \
                    ( c['resSeq2'] == lastResSeq2 + 1 or c['resSeq2'] == lastResSeq2 - 1 ) and \
-                     c['chainId1'] == lastChainId1 and c['chainId2'] == lastChainId2: 
+                     c['chainId1'] == lastChainId1 and c['chainId2'] == lastChainId2 and ssOK: 
                     
                     # Need to know when we are going backwards, but also need to know if we are in a stretch going backwards
-                    # so we count how many we have been going backwards for
+                    # So we can spot if there has been a change, so we count how many we have been going backwards for
                     if c['resSeq1'] == lastResSeq1 - 1:
                         backwards += 1
                         
                     if  not( c['resSeq1'] == lastResSeq1 + 1 and backwards >= 1 ):
-                        count += 1
-                        stop = i
+                        count       += 1
+                        stopIdx      = i
                         lastChainId1 = c['chainId1']
                         lastChainId2 = c['chainId2']
-                        lastResSeq1 = c['resSeq1']
-                        lastResSeq2 = c['resSeq2']
+                        lastResSeq1  = c['resSeq1']
+                        lastResSeq2  = c['resSeq2']
                             
                         # If this is the last one we want to drop through
                         if i < len( contacts ) - 1:
                             continue
                     
                 # Anything that doesn't continue didn't match
-                if count >= MINC:
-                    startstop.append( ( start, stop )  )
+                if count >= minContig:
+                    d = { 'chainId1'    : lastChainId1,
+                          'startIdx'    : startIdx,
+                          'startResSeq' : contacts[ startIdx ][ 'resSeq1' ],
+                          'stopIdx'     : stopIdx,
+                          'stopResSeq'  : contacts[ stopIdx ][ 'resSeq1' ] }
+                    chunks.append( d  )
             
             # Either starting afresh or a random residue
             lastChainId1 = c['chainId1']
             lastChainId2 = c['chainId2']
             lastResSeq1  = c['resSeq1']
             lastResSeq2  = c['resSeq2']
-            count        = 1
-            start        = i
-            stop         = i
             backwards    = 0
-            
-        # END LOOP
+            if ssOK:
+                count        = 1
+                startIdx     = i
+                stopIdx      = i
+            else:
+                count    = 0
+                startIdx = i + 1
+                stopIdx  = i + 1
+  
+        return chunks
+    
+    def countContacts( self, contacts=None, dsspP=None ):
         
-        #print "GOT STARTSTOP ",startstop
+        
+        if contacts is None:
+            contacts = self.contacts
+        if contacts is None:
+            return
+        
+        chunks = self.findChunks( contacts=self.contacts, minContig=3 )
+        
+        if not chunks:
+            return
+        
+        #print "GOT CHUNKS ",chunks
         
         # Now categorise the chunks
-        for ( start, stop ) in startstop:
+        self.inregister = 0
+        self.ooregister = 0
+        self.backwards = 0
+        
+        #for ( start, stop ) in startstop:
+        for d in chunks:
+            start = d['startIdx']
+            stop  = d['stopIdx']
             #print "NEW CHUNK"
             register    = True
             backwards   = False
