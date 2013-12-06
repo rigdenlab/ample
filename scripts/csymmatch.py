@@ -1,18 +1,31 @@
 #!/usr/bin/env python
 
+import os
+import unittest
+
+# Our imports
 import ample_util
 
 class Csymmatch( object ):
     
     def __init__(self):
         
-        self.logfile=None
-        
+        self._reset()
         return
-  
+    
+
+    def _reset(self):
+        self.logfile=None
+        self.changeOfHand = False
+        self.changeOfOrigin = None
+        self.chainShifts = {}
+        return
+        
     def run( self, refPdb=None, inPdb=None, outPdb=None, connectivityRadius=None, originHand=True ):
         """FOO
         """
+        
+        self._reset()
         
         self.logfile = outPdb +".log"
         cmd= [ 'csymmatch',
@@ -37,18 +50,50 @@ class Csymmatch( object ):
         
         return
     
-    def origin( self,  logfile=None ):
-        """Return the change of origin"""
+    def parseLog( self,  logfile=None ):
+        """Parse the log"""
         
-        if not logfile:
+        if logfile is None:
             logfile = self.logfile
         
+        if logfile is None:
+            return False
+        
+        capturing=0
+        currentChain=None
+        self.chainShifts = {}
         for line in open( logfile, 'r' ):
+            
+            line = line.strip()
+            if not line:
+                continue
+            
+            if line.startswith("Chain:"):
+                capturing=1
+                f = line.split()
+                currentChain=f[1]
+                resStart = int( f[2][:-1] )
+                resEnd = int( f[3] )
+                if currentChain not in self.chainShifts:
+                    self.chainShifts[ currentChain ] = []
+                self.chainShifts[ currentChain ].append( { 'resStart' : resStart, 'resEnd' : resEnd } )
+                continue
+            
+            if capturing == 1 or capturing == 2:
+                capturing += 1 # Symmetry Opterator & Lattice Shift
+            elif capturing == 3:
+                capturing += 1
+                score = float( line.split()[3] )
+                self.chainShifts[ currentChain ][ -1 ][ 'score' ] = score
+            elif capturing == 4:
+                # Singnifies end of chain blocks
+                continue
+                
             if "Change of hand" in line:
                 # For our work, if there is a change of hand it didn't work
                 fields = line.split()
                 if fields[ 4 ] == "YES":
-                    return False
+                    self.changeOfHand = True
             
             if "Change of origin:" in line:
                 # Find position of brackets
@@ -56,13 +101,58 @@ class Csymmatch( object ):
                 i2 = line.index( ")" )
                 oline = line[ i1+1:i2 ]
                 x,y,z = oline.split(",")
-                return [ float(x), float(y), float(z) ]
+                self.changeOfOrigin = [ float(x), float(y), float(z) ]
         
-        return False
+        return
+
+    
+    def origin( self,  logfile=None ):
+        """Return the change of origin"""
+        if logfile:
+            self.parseLog( logfile=logfile )
+            
+        return self.changeOfOrigin
+
+class TestContacts( unittest.TestCase ):
+    
+    def setUp(self):
+        
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ampleDir = os.sep.join( paths[ : -1 ] )
+        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
+        
+        return
+    
+    def testParse1(self):
+        
+        logfile = os.path.join( self.testfilesDir, "csymmatch1.log" )
+        
+        c = Csymmatch()
+        c.parseLog( logfile=logfile )
+
+        self.assertEqual( c.changeOfHand, False )
+        self.assertEqual( c.changeOfOrigin, None )
+        self.assertEqual( c.chainShifts, {'a': [{'resStart': 14, 'score': 0.403697, 'resEnd': 14}, {'resStart': 17, 'score': 0.247688, 'resEnd': 17}, {'resStart': 32, 'score': 0.528113, 'resEnd': 44}, {'resStart': 49, 'score': 0.268943, 'resEnd': 51}]}
+ )
+        return
+    
+    def testParse2(self):
+        
+        logfile = os.path.join( self.testfilesDir, "csymmatch2.log" )
+        
+        c = Csymmatch()
+        c.parseLog( logfile=logfile )
+
+        self.assertEqual( c.changeOfHand, True )
+        self.assertEqual( c.changeOfOrigin, [ 0, 0.5625, 0 ] )
+        self.assertEqual( c.chainShifts, {'A': [{'resStart': 1, 'score': 0.440815, 'resEnd': 27} ],'B': [{'resStart': 1, 'score': 0.558538, 'resEnd': 6} ] }
+ )
+        return
+    
 
 if __name__ == "__main__":
-    logfile = "/home/jmht/Documents/test/ncont/new/1GMJ/COH/shelxe_phaser_loc0_ALL_poly_ala_trunc_1.732018_rad_2_UNMOD_csymmatch.pdb.log"
-    c = Csymmatch()
-    print c.origin( logfile=logfile )
+    
+    unittest.main()
 
 
