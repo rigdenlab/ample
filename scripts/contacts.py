@@ -72,9 +72,20 @@ class Contacts(object):
         self.originCompare = {}
         return
     
-    def getContacts(self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None, dsspLog=None ):
+    def getContacts(self, nativePdb=None,
+                    placedPdb=None,
+                    resSeqMap=None,
+                    nativeInfo=None,
+                    shelxeCsymmatchOrigin=None,
+                    workdir=None,
+                    dsspLog=None ):
         
-        if not self.run( nativePdb=nativePdb, placedPdb=placedPdb, resSeqMap=resSeqMap, nativeInfo=nativeInfo, shelxePdb=shelxePdb, workdir=workdir ):
+        if not self.run( nativePdb=nativePdb,
+                         placedPdb=placedPdb,
+                         resSeqMap=resSeqMap,
+                         nativeInfo=nativeInfo,
+                         shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
+                         workdir=workdir ):
             return False
         
         
@@ -90,7 +101,6 @@ class Contacts(object):
             self.best.helix = sequence
         
         if self.best.pdb:
-            
             csym = csymmatch.Csymmatch()
             # Just for info - run csymmatch so we can see the alignment
             csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch_best", directory=self.workdir )
@@ -236,7 +246,7 @@ class Contacts(object):
                 
         return sequence
         
-    def run( self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxePdb=None, workdir=None ):
+    def run( self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxeCsymmatchOrigin=None, workdir=None ):
         """
         """
 
@@ -297,32 +307,21 @@ class Contacts(object):
         # Pythonic way of checking if any of the origins are floating
         floating = any(  map( lambda o: 'x' in o or 'y' in o or 'z' in o, origins  ) )
         self.best.floatingOrigin = floating
-        
-        # Add the shelxe origin to the list if it's not already in there
-        csym = csymmatch.Csymmatch()
-        corig = None
-        if shelxePdb:
-            csymmatchPdb = ample_util.filename_append( filename=shelxePdb, astr="csymmatch", directory=self.workdir )
-            csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
-            corig = csym.origin()
-            
-        self.best.csymmatchOriginOk = bool( corig )
-        #if not corig:
-        #    print "NO CSYMMATCH ORIGIN"
+        self.best.csymmatchOriginOk = bool( shelxeCsymmatchOrigin )
         
         # For floating origins we use the csymmatch origin
         if floating:
-            if not corig:
+            if not shelxeCsymmatchOrigin:
                 # If csymmatch failed, we can't do owt
                 print "CSYMMATCH FAILED WITH FLOATING ORIGIN"
                 return False
             # Should check if the origin is acceptable, but that would require checking through all the 
             # alternate origins and seeing if tne non-floating axes had acceptable values  
-            origins = [ corig ]
+            origins = [ shelxeCsymmatchOrigin ]
         else:
-            if corig and corig not in origins:
+            if shelxeCsymmatchOrigin and corig not in origins:
                 #print "csymmatch origin {0} is not in origins {1}".format( corig, origins )
-                origins.append( corig )
+                origins.append( shelxeCsymmatchOrigin )
         
         # Loop over origins, move the placed pdb to the new origin and then run ncont
         self.originCompare = {}

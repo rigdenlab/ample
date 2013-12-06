@@ -16,6 +16,7 @@ class Csymmatch( object ):
 
     def _reset(self):
         self.logfile=None
+        self.parsed=False
         self.changeOfHand = False
         self.changeOfOrigin = None
         self.chainShifts = {}
@@ -56,8 +57,7 @@ class Csymmatch( object ):
         if logfile is None:
             logfile = self.logfile
         
-        if logfile is None:
-            return False
+        assert logfile
         
         capturing=0
         currentChain=None
@@ -103,15 +103,32 @@ class Csymmatch( object ):
                 x,y,z = oline.split(",")
                 self.changeOfOrigin = [ float(x), float(y), float(z) ]
         
+        self.parsed=True
         return
 
     
     def origin( self,  logfile=None ):
         """Return the change of origin"""
-        if logfile:
-            self.parseLog( logfile=logfile )
-            
+        if not self.parsed:
+            self.parseLog()
         return self.changeOfOrigin
+    
+    def averageScore(self):
+        if not self.parsed:
+            self.parseLog()
+            
+        if not len( self.chainShifts ):
+            return False
+        
+        score=0.0
+        count=0
+        for chain in self.chainShifts.keys():
+            for shift in self.chainShifts[ chain ]:
+                score += shift['score']
+                count += 1
+        
+        return score/count
+        
 
 class TestContacts( unittest.TestCase ):
     
@@ -135,6 +152,7 @@ class TestContacts( unittest.TestCase ):
         self.assertEqual( c.changeOfOrigin, None )
         self.assertEqual( c.chainShifts, {'a': [{'resStart': 14, 'score': 0.403697, 'resEnd': 14}, {'resStart': 17, 'score': 0.247688, 'resEnd': 17}, {'resStart': 32, 'score': 0.528113, 'resEnd': 44}, {'resStart': 49, 'score': 0.268943, 'resEnd': 51}]}
  )
+        self.assertEqual( c.averageScore(), 0.36211025)
         return
     
     def testParse2(self):
@@ -148,6 +166,7 @@ class TestContacts( unittest.TestCase ):
         self.assertEqual( c.changeOfOrigin, [ 0, 0.5625, 0 ] )
         self.assertEqual( c.chainShifts, {'A': [{'resStart': 1, 'score': 0.440815, 'resEnd': 27} ],'B': [{'resStart': 1, 'score': 0.558538, 'resEnd': 6} ] }
  )
+        self.assertEqual( c.averageScore(), 0.49967649999999997)
         return
     
 

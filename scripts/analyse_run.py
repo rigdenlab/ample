@@ -152,7 +152,8 @@ class AmpleResult(object):
                               'rfree',
                               'solution',
                               'shelxeCC',
-                              'shelxeAvgChainLength'
+                              'shelxeAvgChainLength',
+                              'shelxeCsymmatchScore'
                               ]
         
         # The matching titles
@@ -205,7 +206,8 @@ class AmpleResult(object):
                                 "Rfree",
                                 "Solution",
                                 "Shelxe CC",
-                                "Shelxe avg. chain length"
+                                "Shelxe avg. chain length",
+                                "Shelxe Csymmatch Score"
                                  ]
 
         # Things not to output
@@ -1178,7 +1180,13 @@ if __name__ == "__main__":
             shelxePdb = None
             if os.path.isfile( origShelxePdb):
                 shelxePdb = os.path.join(workdir, os.path.basename( origShelxePdb ) )
-                shutil.copy( origShelxePdb, shelxePdb   )
+                shutil.copy( origShelxePdb, shelxePdb )
+                
+                sym                        = csymmatch.Csymmatch()
+                shelxeCsymmatchPdb         = ample_util.filename_append( filename=shelxePdb, astr="csymmatch", directory=self.workdir )
+                csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
+                shelxeCsymmatchOrigin      = csym.origin()
+                shelxeCsymmatchShelxeScore = csym.averageScore()
                 
             if os.path.isfile( shelxeLog ):
                 shelxeP = shelxe_log.ShelxeLogParser( shelxeLog )
@@ -1193,7 +1201,7 @@ if __name__ == "__main__":
                                    placedPdb=placedPdb,
                                    resSeqMap=resSeqMap,
                                    nativeInfo=nativeInfo,
-                                   shelxePdb=shelxePdb,
+                                   shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
                                    workdir=workdir,
                                    dsspLog=dsspLog
                                 )
