@@ -67,9 +67,6 @@ and renaming the chain and renumbering the atoms to match the refined PDB.
 Use reforigin to compare.
 
 
-
-
-
 '''
 
 import cPickle
@@ -89,6 +86,7 @@ import ample_util
 import contacts
 import csymmatch
 import dssp
+import maxcluster
 import mrbump_results
 import pdb_edit
 import phaser_parser
@@ -127,7 +125,7 @@ class AmpleResult(object):
                               'ensembleSideChainTreatment',
                               'ensembleRadiusThreshold',
                               'ensembleTruncationThreshold',
-                              'ensembleNativeRmsd',
+                              'ensembleNativeRMSD',
                               'ensembleNativeTM',
                               'mrProgram',
                               'phaserLLG',
@@ -136,7 +134,7 @@ class AmpleResult(object):
                               'phaserKilled',
                               'molrepScore',
                               'molrepTime',
-                              'reforiginRmsd',
+                              'reforiginRMSD',
                               'floatingOrigin',
                               'csymmatchOriginOk',
                               'contactData',
@@ -154,7 +152,9 @@ class AmpleResult(object):
                               'solution',
                               'shelxeCC',
                               'shelxeAvgChainLength',
-                              'shelxeCsymmatchShelxeScore'
+                              'shelxeCsymmatchShelxeScore',
+                              'shelxeTM',
+                              'shelxeRMSD',
                               ]
         
         # The matching titles
@@ -181,7 +181,7 @@ class AmpleResult(object):
                                 "Ensemble side chain",
                                 "Ensemble radius thresh",
                                 "Ensemble truncation thresh",
-                                'Ensemble Native Rmsd',
+                                'Ensemble Native RMSD',
                                 'Ensemble Native TM',
                                 "MR program",
                                 "Phaser LLG",
@@ -208,7 +208,9 @@ class AmpleResult(object):
                                 "Solution",
                                 "Shelxe CC",
                                 "Shelxe avg. chain length",
-                                "Shelxe Csymmatch Score"
+                                "Shelxe Csymmatch Score",
+                                "Shelxe TM Score",
+                                "Shelxe RMSD",
                                  ]
 
         # Things not to output
@@ -440,178 +442,6 @@ class EnsemblePdbParser(object):
         self.centroidModelName = self.modelNames[0]
 
         return
-
-class MaxclusterData(object):
-    
-    def __init__(self):
-        self.pairs = None
-        self.rmsd = None
-        self.maxsub = None
-        self.tm = None
-        self.msi = None
-        self.modelName = None
-        self.pdb = None
-        return
-
-    def __str__(self):
-        """List the data attributes of this object"""
-        me = {}
-        for slot in dir(self):
-            attr = getattr(self, slot)
-            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
-              isinstance(attr, types.FunctionType) ):
-                me[slot] = attr
-            
-        return "{0} : {1}".format(self.__repr__(),str(me))
-
-class MaxclusterComparator(object):
-    """
-        
-    # Extract the first chain from the nativePdb
-    
-    # Create a residueSequenceMap and see if the residues match
-    
-    # If not use keep_matching to create a nativePdb that has the correct residue sequence`
-    
-    # Run Maxcluster to compare the models to the native
-    """
-    
-    def __init__(self, nativePdb, modelsDirectory, workdir=None ):
-        
-        
-        self.data = []
-        self.modelsDirectory = modelsDirectory
-        
-        self.workdir = workdir
-        if not self.workdir:
-            self.workdir = os.getcwd()
-        
-        self.maxclusterLogfile = os.path.join( self.workdir, "maxcluster.log" )
-        self.nativePdb = self.prepareNative( nativePdb )
-        
-        #self.maxclusterExe = "/Users/jmht/Documents/AMPLE/programs/maxcluster"
-        self.maxclusterExe = "/opt/maxcluster/maxcluster"
-        
-        self.runMaxcluster()
-        
-        self.parseLog( )
-        
-    def prepareNative(self, nativePdb ):
-        """do stuff"""
-        
-        # Find out how many chains and extract the first if > 1
-        
-        PE = pdb_edit.PDBEdit()
-        info = PE.get_info( nativePdb )
-        if len( info.models ) > 1:
-            raise RuntimeError,"More than 1 model."
-        
-        # Check if > 1 chain
-        chainID=None
-        if len( info.models[0].chains ) > 1:
-            chainID=info.models[0].chains[0]
-        
-        # Standardise the native and extract the chain if > 1
-        n = os.path.splitext( os.path.basename( nativePdb ) )[0]
-        nativePdbStd = "{0}_std.pdb".format( n )
-        PE.standardise(nativePdb, nativePdbStd, chain=chainID )
-        nativePdb = nativePdbStd
-        
-        # 1 chain so check if the residues and sequences match
-        model = os.path.join( self.modelsDirectory, "S_00000001.pdb" )
-        resMap = residue_map.residueSequenceMap( nativePdb, model )
-        
-        #if resMap.nativeResSeq != resMap.modelResSeq or resMap.nativeSequence != resMap.model.Sequence:
-        if not resMap.resSeqMatch():
-            
-            # We need to create a copy of the native with numbering matching the model
-            n = os.path.splitext( os.path.basename( nativePdb ) )[0]
-            nativeRenumber = "{0}_renumber.pdb".format( n )
-            PE.match_resseq( targetPdb=nativePdb, outPdb=nativeRenumber, resMap=resMap )
-            
-            nativePdb = nativeRenumber
-        
-        return nativePdb
-        
-    def parseLog(self):
-        
-        self.data = []
-        
-        #INFO  : 1000. 2XOV_clean_ren.pdb vs. /media/data/shared/TM/2XOV/models/S_00000444.pdb  Pairs=  36, RMSD= 3.065, MaxSub=0.148, TM=0.192, MSI=0.148
-        for line in open( self.maxclusterLogfile, 'r' ):
-            
-            if re.match( "INFO *: .* vs\. .* Pairs=", line ):
-                
-                # Remove spaces after = 
-                line = re.sub("= +", "=", line )
-                # Now remove commas
-                line = line.replace(",","")
-                
-                fields = line.split()
-                
-                d = MaxclusterData()
-                d.pdb = fields[5]
-                d.modelName = os.path.splitext( os.path.basename( fields[5] ) )[0]
-                
-                label, value = fields[6].split( "=" )
-                assert label == "Pairs"
-                d.pairs = int( value )
-                
-                label, value = fields[7].split( "=" )
-                assert label == "RMSD"
-                d.rmsd = float( value )
-                
-                label, value = fields[8].split( "=" )
-                assert label == "MaxSub"
-                d.maxsub = float( value )
-                
-                label, value = fields[9].split( "=" )
-                assert label == "TM"
-                d.tm = float( value )
-                
-                label, value = fields[10].split( "=" )
-                assert label == "MSI"
-                d.msi = float( value )
-                
-                self.data.append( d )
-                
-        return
-
-
-    def tm(self, modelName ):
-        """"""
-        for d in self.data:
-            if d.modelName == modelName:
-                return d.tm
-            
-    def rmsd(self, modelName ):
-        """"""
-        for d in self.data:
-            if d.modelName == modelName:
-                return d.rmsd
-
-    def maxsubSorted(self, reverse=True ):
-        return sorted( self.data, key=lambda data: data.maxsub, reverse=reverse )
-     
-    def runMaxcluster(self):
-        
-        # Generate the list of models
-        pdblist = os.path.join( self.workdir, "models.list")
-        with open( pdblist, 'w' ) as f:
-            f.write( os.linesep.join( glob.glob( os.path.join( self.modelsDirectory, 'S_*.pdb' ) ) ) )
-            
-        # Run Maxcluster
-        cmd = [ self.maxclusterExe, "-e", self.nativePdb, "-l", pdblist, ]
-        retcode = ample_util.run_command( cmd, logfile=self.maxclusterLogfile, dolog=False )
-        
-        if retcode != 0:
-            msg = "non-zero return code for maxcluster in runMaxcluster!"
-            #logging.critical( msg )
-            raise RuntimeError, msg
-     
-    def tmSorted(self, reverse=True ):
-        return sorted( self.data, key=lambda data: data.tm, reverse=reverse )
-
 
 class MolrepLogParser(object):
     """
@@ -902,6 +732,8 @@ class RosettaScoreParser(object):
                 self.topMaxsub = d.maxsub
         self.avgMaxsub  = avg / len(self.data)
         
+        return
+        
     def maxsubSorted(self, reverse=True ):
         return sorted( self.data, key=lambda data: data.maxsub, reverse=reverse )
      
@@ -952,9 +784,9 @@ if __name__ == "__main__":
     
     pickledResults=False
     CLUSTERNUM=0
-    rundir = "/home/jmht/Documents/test/TM"
+    #rundir = "/Users/jmht/Documents/AMPLE/data/run"
     rundir = "/home/jmht/Documents/test/CC/run2"
-    #dataRoot = "/media/data/shared/TM"
+    #dataRoot = "/Users/jmht/Documents/AMPLE/data"
     dataRoot = "/media/data/shared/coiled-coils"
     
     os.chdir( rundir )
@@ -1009,8 +841,10 @@ if __name__ == "__main__":
         
         # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
         # requires a separate run to generate total RMSD
-        scoreP = RosettaScoreParser( os.path.join( dataDir, "models") )
-        maxComp = MaxclusterComparator( nativePdb, os.path.join( dataDir, "models")  )
+        modelsDirectory = os.path.join( dataDir, "models")
+        scoreP = RosettaScoreParser( modelsDirectory )
+        maxComp = maxcluster.Maxcluster()
+        maxComp.compareDirectory(nativePdb=nativePdb, modelsDirectory=modelsDirectory, workdir=workdir )
         
         # Secondary Structure assignments
         #sam_file = os.path.join( dataDir, "fragments/t001_.rdb_ss2"  )
@@ -1077,7 +911,7 @@ if __name__ == "__main__":
             ar.ensembleName = ensembleName
             
             #if ensembleName != "poly_ala_trunc_0.005601_rad_1":
-            #    continue
+            #   continue
             
             # Extract information on the models and ensembles
             eresults = ampleDict['ensemble_results']
@@ -1101,7 +935,7 @@ if __name__ == "__main__":
             ensembleFile = os.path.join( dataDir, "ROSETTA_MR_0/ensembles_1", ensembleName+".pdb" )
             eP = EnsemblePdbParser( ensembleFile )
             
-            ar.ensembleNativeRmsd = scoreP.rms( eP.centroidModelName )
+            ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
             ar.ensembleNativeTM = maxComp.tm( eP.centroidModelName )
     
             ar.solution =  mrbumpResult.solution
@@ -1166,11 +1000,11 @@ if __name__ == "__main__":
                                                   placedPdbInfo=placedInfo,
                                                   refModelPdb=refModelPdb,
                                                   cAlphaOnly=True )
-                ar.reforiginRmsd = rmsder.rmsd
+                ar.reforiginRMSD = rmsder.rmsd
             except Exception, e:
                 print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdb, placedPdb )
                 print "{0}".format( e )
-                ar.reforiginRmsd = 9999
+                ar.reforiginRMSD = 9999
                  
             #
             # SHELXE PROCESSING
@@ -1189,6 +1023,22 @@ if __name__ == "__main__":
                 shelxeCsymmatchOrigin          = csym.origin()
                 shelxeCsymmatchShelxeScore     = csym.averageScore()
                 ar.shelxeCsymmatchShelxeScore  = shelxeCsymmatchShelxeScore
+                
+                # Compare the traced model to the native with maxcluster
+                d = maxComp.compareSingle( nativePdb=nativePdb,
+                                       modelPdb=shelxeCsymmatchPdb,
+                                       sequenceIndependant=True,
+                                       rmsd=False )
+                
+                ar.shelxeTM = d.tm
+                d = maxComp.compareSingle( nativePdb=nativePdb,
+                                       modelPdb=shelxeCsymmatchPdb,
+                                       sequenceIndependant=True,
+                                       rmsd=True )
+                
+                
+                ar.shelxeRMSD = d.rmsd
+                
                 
             if os.path.isfile( shelxeLog ):
                 shelxeP = shelxe_log.ShelxeLogParser( shelxeLog )
