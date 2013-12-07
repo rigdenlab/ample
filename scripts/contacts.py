@@ -319,8 +319,8 @@ class Contacts(object):
             # alternate origins and seeing if tne non-floating axes had acceptable values  
             origins = [ shelxeCsymmatchOrigin ]
         else:
-            if shelxeCsymmatchOrigin and corig not in origins:
-                #print "csymmatch origin {0} is not in origins {1}".format( corig, origins )
+            if shelxeCsymmatchOrigin and shelxeCsymmatchOrigin  not in origins:
+                #print "csymmatch origin {0} is not in origins {1}".format( shelxeCsymmatchOrigin, origins )
                 origins.append( shelxeCsymmatchOrigin )
         
         # Loop over origins, move the placed pdb to the new origin and then run ncont

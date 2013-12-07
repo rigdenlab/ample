@@ -87,6 +87,7 @@ sys.path.append("/opt/ample-dev1/python")
 
 import ample_util
 import contacts
+import csymmatch
 import dssp
 import mrbump_results
 import pdb_edit
@@ -153,7 +154,7 @@ class AmpleResult(object):
                               'solution',
                               'shelxeCC',
                               'shelxeAvgChainLength',
-                              'shelxeCsymmatchScore'
+                              'shelxeCsymmatchShelxeScore'
                               ]
         
         # The matching titles
@@ -967,7 +968,7 @@ if __name__ == "__main__":
     
     for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "1M3W" ]:
+    #for pdbcode in [ "1KYC" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1075,7 +1076,7 @@ if __name__ == "__main__":
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
             
-            #if ensembleName != "SCWRL_reliable_sidechains_trunc_0.058566_rad_1":
+            #if ensembleName != "poly_ala_trunc_0.005601_rad_1":
             #    continue
             
             # Extract information on the models and ensembles
@@ -1182,11 +1183,12 @@ if __name__ == "__main__":
                 shelxePdb = os.path.join(workdir, os.path.basename( origShelxePdb ) )
                 shutil.copy( origShelxePdb, shelxePdb )
                 
-                sym                        = csymmatch.Csymmatch()
-                shelxeCsymmatchPdb         = ample_util.filename_append( filename=shelxePdb, astr="csymmatch", directory=self.workdir )
-                csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=csymmatchPdb )
-                shelxeCsymmatchOrigin      = csym.origin()
-                shelxeCsymmatchShelxeScore = csym.averageScore()
+                csym                           = csymmatch.Csymmatch()
+                shelxeCsymmatchPdb             = ample_util.filename_append( filename=shelxePdb, astr="csymmatch", directory=workdir )
+                csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
+                shelxeCsymmatchOrigin          = csym.origin()
+                shelxeCsymmatchShelxeScore     = csym.averageScore()
+                ar.shelxeCsymmatchShelxeScore  = shelxeCsymmatchShelxeScore
                 
             if os.path.isfile( shelxeLog ):
                 shelxeP = shelxe_log.ShelxeLogParser( shelxeLog )
