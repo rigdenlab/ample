@@ -152,8 +152,11 @@ class AmpleResult(object):
                               'solution',
                               'shelxeCC',
                               'shelxeAvgChainLength',
+                              'shelxeMaxChainLength',
+                              'shelxeNumChains',
                               'shelxeCsymmatchShelxeScore',
                               'shelxeTM',
+                              'shelxeTMPairs',
                               'shelxeRMSD',
                               ]
         
@@ -208,8 +211,11 @@ class AmpleResult(object):
                                 "Solution",
                                 "Shelxe CC",
                                 "Shelxe avg. chain length",
+                                "Shelxe max. chain length",
+                                "Shelxe num. chains",
                                 "Shelxe Csymmatch Score",
                                 "Shelxe TM Score",
+                                "Shelxe TM Pairs",
                                 "Shelxe RMSD",
                                  ]
 
@@ -800,7 +806,7 @@ if __name__ == "__main__":
     
     for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "1KYC" ]:
+    #for pdbcode in [ "1GMJ" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1018,24 +1024,32 @@ if __name__ == "__main__":
                 shutil.copy( origShelxePdb, shelxePdb )
                 
                 csym                           = csymmatch.Csymmatch()
-                shelxeCsymmatchPdb             = ample_util.filename_append( filename=shelxePdb, astr="csymmatch", directory=workdir )
+                shelxeCsymmatchPdb             = ample_util.filename_append( 
+                                                                            filename=shelxePdb, 
+                                                                            astr="csymmatch", 
+                                                                            directory=workdir )
                 csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
                 shelxeCsymmatchOrigin          = csym.origin()
                 shelxeCsymmatchShelxeScore     = csym.averageScore()
                 ar.shelxeCsymmatchShelxeScore  = shelxeCsymmatchShelxeScore
                 
+                shelxeCsymmatchPdbSingle       = ample_util.filename_append( filename=shelxeCsymmatchPdb, 
+                                                                             astr="1chain", 
+                                                                             directory=workdir )
+                pdbedit.to_single_chain(shelxeCsymmatchPdb, shelxeCsymmatchPdbSingle)
+                
                 # Compare the traced model to the native with maxcluster
                 d = maxComp.compareSingle( nativePdb=nativePdb,
-                                       modelPdb=shelxeCsymmatchPdb,
+                                       modelPdb=shelxeCsymmatchPdbSingle,
                                        sequenceIndependant=True,
                                        rmsd=False )
                 
                 ar.shelxeTM = d.tm
+                ar.shelxeTMPairs = d.pairs
                 d = maxComp.compareSingle( nativePdb=nativePdb,
-                                       modelPdb=shelxeCsymmatchPdb,
+                                       modelPdb=shelxeCsymmatchPdbSingle,
                                        sequenceIndependant=True,
                                        rmsd=True )
-                
                 
                 ar.shelxeRMSD = d.rmsd
                 
@@ -1044,6 +1058,8 @@ if __name__ == "__main__":
                 shelxeP = shelxe_log.ShelxeLogParser( shelxeLog )
                 ar.shelxeCC = shelxeP.CC
                 ar.shelxeAvgChainLength = shelxeP.avgChainLength
+                ar.shelxeMaxChainLength = shelxeP.maxChainLength
+                ar.shelxeNumChains= shelxeP.numChains
                 
             # Now calculate contacts
             ccalc = contacts.Contacts()
