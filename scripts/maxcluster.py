@@ -46,8 +46,8 @@ class Maxcluster(object):
     
     def __init__(self):
 
-        self.maxclusterExe = "/Users/jmht/Documents/AMPLE/programs/maxcluster"
-        #self.maxclusterExe = "/opt/maxcluster/maxcluster"
+        #self.maxclusterExe = "/Users/jmht/Documents/AMPLE/programs/maxcluster"
+        self.maxclusterExe = "/opt/maxcluster/maxcluster"
         
         return
         
@@ -81,8 +81,16 @@ class Maxcluster(object):
         
         if rmsd:
             cmd.append( "-rmsd" )
-            
-        self.maxclusterLogfile = os.path.join( self.workdir, "maxcluster.log" )
+        
+        logfile = ample_util.filename_append( filename=modelPdb, 
+                                    astr="maxcluster", 
+                                    directory=self.workdir )
+        
+        if rmsd:
+            logfile = os.path.splitext( logfile )[0] + "_rmsd.log"
+        else:
+            logfile = os.path.splitext( logfile )[0] + ".log"
+        self.maxclusterLogfile = logfile
         
         retcode = ample_util.run_command( cmd, logfile=self.maxclusterLogfile, dolog=False )
         
@@ -236,6 +244,8 @@ class Maxcluster(object):
         
         assert logfile
         
+        d = MaxclusterData()
+        
         #INFO  : 1000. 2XOV_clean_ren.pdb vs. /media/data/shared/TM/2XOV/models/S_00000444.pdb  Pairs=  36, RMSD= 3.065, MaxSub=0.148, TM=0.192, MSI=0.148
         for line in open( logfile, 'r' ):
             
@@ -255,8 +265,6 @@ class Maxcluster(object):
                 line = line.replace("("," ")
                 
                 fields = line.split()
-                
-                d = MaxclusterData()
                 
                 label, value = fields[0].split( "=" )
                 assert label == "RMSD"
