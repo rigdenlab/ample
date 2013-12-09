@@ -805,9 +805,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    #for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    for pdbcode in [ "2OVC" ]:
+    #for pdbcode in [ "1D7M" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1039,11 +1039,9 @@ if __name__ == "__main__":
                 ar.floatingOrigin = originInfo.isFloating()
                 ar.csymmatchOriginOk = True
                 if not shelxeCsymmatchOrigin or \
-                ( shelxeCsymmatchOrigin not in originInfo.redundantAlternateOrigins() and not originInfo.isFloating() ):
-                    ar.shelxeCsymmatchOriginOk = False
-                
-                print "GOT ORIGIN ",shelxeCsymmatchOrigin
-                print "GOT ORIGIN OK ",ar.csymmatchOriginOk
+                ( shelxeCsymmatchOrigin not in originInfo.redundantAlternateOrigins() and not ar.floatingOrigin ):
+                    ar.csymmatchOriginOk   = False
+                    shelxeCsymmatchOrigin  = None
                 
                 shelxeCsymmatchShelxeScore     = csym.averageScore()
                 ar.shelxeCsymmatchShelxeScore  = shelxeCsymmatchShelxeScore

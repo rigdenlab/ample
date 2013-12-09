@@ -297,18 +297,19 @@ class Contacts(object):
         placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren", directory=self.workdir )
         pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=fromChain, toChain=toChain )
 
-        # Get list of origins
-        placedSpaceGroup = placedInfo.crystalInfo.spaceGroup
-        if placedSpaceGroup != originInfo.currentSpaceGroup():
-            raise RuntimeError,"Mismatching space groups!"
+        # Don't test as the labels could be differnt and it's not worth creating anther one just to test
+        #placedSpaceGroup = placedInfo.crystalInfo.spaceGroup
+        #if placedSpaceGroup != originInfo.currentSpaceGroup():
+        #    raise RuntimeError,"Mismatching space groups!"
         
-        origins = pdb_model.alternateOrigins( placedSpaceGroup )
+        # Get list of origins
         # For floating origins we use the csymmatch origin
-        if originInfo.isFloating( placedSpaceGroup ):
+        if originInfo.isFloating():
             assert bool( shelxeCsymmatchOrigin)
             origins = [ shelxeCsymmatchOrigin ]
         else:
-            if shelxeCsymmatchOrigin and shelxeCsymmatchOrigin  not in origins:
+            origins = originInfo.nonRedundantAlternateOrigins()
+            if shelxeCsymmatchOrigin is not None and shelxeCsymmatchOrigin not in origins:
                 #print "csymmatch origin {0} is not in origins {1}".format( shelxeCsymmatchOrigin, origins )
                 origins.append( shelxeCsymmatchOrigin )
         
