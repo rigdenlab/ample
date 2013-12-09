@@ -804,9 +804,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    #for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "1GMJ" ]:
+    for pdbcode in [ "2OVC" ]:
         
         workdir = os.path.join( rundir, pdbcode )
         if not os.path.isdir( workdir ):
@@ -1030,6 +1030,9 @@ if __name__ == "__main__":
                                                                             directory=workdir )
                 csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
                 shelxeCsymmatchOrigin          = csym.origin()
+                print "GOT ORIGIN ",shelxeCsymmatchOrigin
+                ar.csymmatchOriginOk           = bool(shelxeCsymmatchOrigin)
+                print "GOT ORIGIN OK ",ar.csymmatchOriginOk
                 shelxeCsymmatchShelxeScore     = csym.averageScore()
                 ar.shelxeCsymmatchShelxeScore  = shelxeCsymmatchShelxeScore
                 
@@ -1080,7 +1083,6 @@ if __name__ == "__main__":
                 ar.contactData        = ccalc.best
                 ar.numContacts        = ccalc.best.numContacts
                 ar.floatingOrigin     = ccalc.best.floatingOrigin
-                ar.csymmatchOriginOk  = ccalc.best.csymmatchOriginOk
                 ar.inregisterContacts = ccalc.best.inregister
                 ar.ooregisterContacts = ccalc.best.ooregister
                 ar.backwardsContacts  = ccalc.best.backwards

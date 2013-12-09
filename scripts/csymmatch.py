@@ -107,10 +107,14 @@ class Csymmatch( object ):
         return
 
     
-    def origin( self,  logfile=None ):
-        """Return the change of origin"""
+    def origin( self,  logfile=None, failOnChangeOfHand=True ):
+        """Return the change of origin.
+        Csymmatch will always return something so we use a changeOfHand as indication of failure
+        """
         if not self.parsed:
             self.parseLog()
+        if failOnChangeOfHand and self.changeOfHand:
+            return False
         return self.changeOfOrigin
     
     def averageScore(self):

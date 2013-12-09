@@ -35,7 +35,6 @@ class ContactData(object):
         self.backwards = 0
         self.origin = None
         self.floatingOrigin = None
-        self.symmatchOriginOk = None
         self.ncontLog = None
         self.pdb = None
         self.csymmatchPdb = None
@@ -307,7 +306,6 @@ class Contacts(object):
         # Pythonic way of checking if any of the origins are floating
         floating = any(  map( lambda o: 'x' in o or 'y' in o or 'z' in o, origins  ) )
         self.best.floatingOrigin = floating
-        self.best.csymmatchOriginOk = bool( shelxeCsymmatchOrigin )
         
         # For floating origins we use the csymmatch origin
         if floating:
