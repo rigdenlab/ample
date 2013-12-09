@@ -89,6 +89,7 @@ import dssp
 import maxcluster
 import mrbump_results
 import pdb_edit
+import pdb_model
 import phaser_parser
 import reforigin
 import residue_map
@@ -845,6 +846,9 @@ if __name__ == "__main__":
         # Get the new Info about the native
         nativeInfo = pdbedit.get_info( nativePdb )
         
+        # Get information on the origins for this spaceGroup
+        originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativeInfo.crystalInfo.spaceGroup )
+        
         # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
         # requires a separate run to generate total RMSD
         modelsDirectory = os.path.join( dataDir, "models")
@@ -1030,9 +1034,17 @@ if __name__ == "__main__":
                                                                             directory=workdir )
                 csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
                 shelxeCsymmatchOrigin          = csym.origin()
+                
+                # See if this origin is valid
+                ar.floatingOrigin = originInfo.isFloating()
+                ar.csymmatchOriginOk = True
+                if not shelxeCsymmatchOrigin or \
+                ( shelxeCsymmatchOrigin not in originInfo.redundantAlternateOrigins() and not originInfo.isFloating() ):
+                    ar.shelxeCsymmatchOriginOk = False
+                
                 print "GOT ORIGIN ",shelxeCsymmatchOrigin
-                ar.csymmatchOriginOk           = bool(shelxeCsymmatchOrigin)
                 print "GOT ORIGIN OK ",ar.csymmatchOriginOk
+                
                 shelxeCsymmatchShelxeScore     = csym.averageScore()
                 ar.shelxeCsymmatchShelxeScore  = shelxeCsymmatchShelxeScore
                 
@@ -1065,56 +1077,59 @@ if __name__ == "__main__":
                 ar.shelxeNumChains= shelxeP.numChains
                 
             # Now calculate contacts
-            ccalc = contacts.Contacts()
-            try:
-            #if True:
-                ccalc.getContacts( nativePdb=nativePdb,
-                                   placedPdb=placedPdb,
-                                   resSeqMap=resSeqMap,
-                                   nativeInfo=nativeInfo,
-                                   shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
-                                   workdir=workdir,
-                                   dsspLog=dsspLog
-                                )
-            except Exception, e:
-                print "ERROR WITH CONTACTS: {0}".format( e )
-       
-            if ccalc.best:
-                ar.contactData        = ccalc.best
-                ar.numContacts        = ccalc.best.numContacts
-                ar.floatingOrigin     = ccalc.best.floatingOrigin
-                ar.inregisterContacts = ccalc.best.inregister
-                ar.ooregisterContacts = ccalc.best.ooregister
-                ar.backwardsContacts  = ccalc.best.backwards
-                ar.contactOrigin      = ccalc.best.origin
-                ar.goodContacts       = ar.inregisterContacts + ar.ooregisterContacts
-                ar.nocatContacts      = ar.numContacts - ar.goodContacts
-                ar.helixSequence      = ccalc.best.helix
-                if ccalc.best.helix:
-                    ar.lenHelix = len( ccalc.best.helix )
-                
-                gotHelix=False
-                hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
-                gotHelix =  ccalc.writeHelixFile( hfile )
-                        
-                # Just for debugging
-                if ar.shelxeCC >= 25 and ar.shelxeAvgChainLength >= 10 and not gotHelix:
-                    print "NO HELIX FILE"
-                        
-#                     # Show origin stats
-#                     oc = sorted(ccalc.originCompare.items(), key=lambda x: x[1], reverse=True )
-#                     duff=False
-#                     if len(oc) > 1:
-#                         if oc[0][1] == oc[1][1]:
-#                             if len(oc) > 2:
-#                                 if oc[2][1] >= oc[1][1]*.5:
-#                                     duff=True
-#                         else:
-#                             if oc[1][1] >= oc[0][1]*.5:
-#                                 duff=True
-#                         if duff:
-#                             print "OTHER ORIGINMATCHES ARE > 50%"
-#                             print "originCompare: ", oc
+            
+            # Only bother when we have a floating origin if the csymmatch origin is ok
+            if not ar.floatingOrigin or ( ar.floatingOrigin and ar.csymmatchOriginOk ):
+                ccalc = contacts.Contacts()
+                try:
+                #if True:
+                    ccalc.getContacts( nativePdb=nativePdb,
+                                       placedPdb=placedPdb,
+                                       resSeqMap=resSeqMap,
+                                       nativeInfo=nativeInfo,
+                                       originInfo=originInfo,
+                                       shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
+                                       workdir=workdir,
+                                       dsspLog=dsspLog
+                                    )
+                except Exception, e:
+                    print "ERROR WITH CONTACTS: {0}".format( e )
+           
+                if ccalc.best:
+                    ar.contactData        = ccalc.best
+                    ar.numContacts        = ccalc.best.numContacts
+                    ar.inregisterContacts = ccalc.best.inregister
+                    ar.ooregisterContacts = ccalc.best.ooregister
+                    ar.backwardsContacts  = ccalc.best.backwards
+                    ar.contactOrigin      = ccalc.best.origin
+                    ar.goodContacts       = ar.inregisterContacts + ar.ooregisterContacts
+                    ar.nocatContacts      = ar.numContacts - ar.goodContacts
+                    ar.helixSequence      = ccalc.best.helix
+                    if ccalc.best.helix:
+                        ar.lenHelix = len( ccalc.best.helix )
+                    
+                    gotHelix=False
+                    hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
+                    gotHelix =  ccalc.writeHelixFile( hfile )
+                            
+                    # Just for debugging
+                    if ar.shelxeCC >= 25 and ar.shelxeAvgChainLength >= 10 and not gotHelix:
+                        print "NO HELIX FILE"
+                            
+    #                     # Show origin stats
+    #                     oc = sorted(ccalc.originCompare.items(), key=lambda x: x[1], reverse=True )
+    #                     duff=False
+    #                     if len(oc) > 1:
+    #                         if oc[0][1] == oc[1][1]:
+    #                             if len(oc) > 2:
+    #                                 if oc[2][1] >= oc[1][1]*.5:
+    #                                     duff=True
+    #                         else:
+    #                             if oc[1][1] >= oc[0][1]*.5:
+    #                                 duff=True
+    #                         if duff:
+    #                             print "OTHER ORIGINMATCHES ARE > 50%"
+    #                             print "originCompare: ", oc
                  
                 #print ar
 

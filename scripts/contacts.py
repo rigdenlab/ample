@@ -34,7 +34,6 @@ class ContactData(object):
         self.ooregister = 0
         self.backwards = 0
         self.origin = None
-        self.floatingOrigin = None
         self.ncontLog = None
         self.pdb = None
         self.csymmatchPdb = None
@@ -75,6 +74,7 @@ class Contacts(object):
                     placedPdb=None,
                     resSeqMap=None,
                     nativeInfo=None,
+                    originInfo=None, 
                     shelxeCsymmatchOrigin=None,
                     workdir=None,
                     dsspLog=None ):
@@ -83,6 +83,7 @@ class Contacts(object):
                          placedPdb=placedPdb,
                          resSeqMap=resSeqMap,
                          nativeInfo=nativeInfo,
+                         originInfo=originInfo, 
                          shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
                          workdir=workdir ):
             return False
@@ -245,7 +246,7 @@ class Contacts(object):
                 
         return sequence
         
-    def run( self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, shelxeCsymmatchOrigin=None, workdir=None ):
+    def run( self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, originInfo=None, shelxeCsymmatchOrigin=None, workdir=None ):
         """
         """
 
@@ -298,23 +299,13 @@ class Contacts(object):
 
         # Get list of origins
         placedSpaceGroup = placedInfo.crystalInfo.spaceGroup
-        if placedSpaceGroup != placedInfo.crystalInfo.spaceGroup:
+        if placedSpaceGroup != originInfo.currentSpaceGroup():
             raise RuntimeError,"Mismatching space groups!"
         
         origins = pdb_model.alternateOrigins( placedSpaceGroup )
-        #print "GOT ORIGINS ",origins
-        # Pythonic way of checking if any of the origins are floating
-        floating = any(  map( lambda o: 'x' in o or 'y' in o or 'z' in o, origins  ) )
-        self.best.floatingOrigin = floating
-        
         # For floating origins we use the csymmatch origin
-        if floating:
-            if not shelxeCsymmatchOrigin:
-                # If csymmatch failed, we can't do owt
-                print "CSYMMATCH FAILED WITH FLOATING ORIGIN"
-                return False
-            # Should check if the origin is acceptable, but that would require checking through all the 
-            # alternate origins and seeing if tne non-floating axes had acceptable values  
+        if originInfo.isFloating( placedSpaceGroup ):
+            assert bool( shelxeCsymmatchOrigin)
             origins = [ shelxeCsymmatchOrigin ]
         else:
             if shelxeCsymmatchOrigin and shelxeCsymmatchOrigin  not in origins:
