@@ -280,110 +280,110 @@ class OriginInfo( object ):
         
         self._spacegroup2origin = {
                       # Primitive
-                      'P1'          : _origins[ '1aP' ],
+                      'P1'          : self._origins[ '1aP' ],
                       # MONOCLINIC
-                      'P2'          : _origins[ '2mP' ],
+                      'P2'          : self._origins[ '2mP' ],
                       
-                      'P21'         : _origins[ '2mP' ],
+                      'P21'         : self._origins[ '2mP' ],
                       
-                      'C2'          : _origins[ '2mC' ],
+                      'C2'          : self._origins[ '2mC' ],
                       
-                      'A2'          : _origins[ '2mA' ],
+                      'A2'          : self._origins[ '2mA' ],
                       
-                      'I2'          : _origins[ '2mI' ],
+                      'I2'          : self._origins[ '2mI' ],
                       
                       # ORTHORHOMBIC
-                      'P 2 2 2'      : _origins[ '222oP' ],
-                      'P 21 2 2'     : _origins[ '222oP' ],
-                      'P 2 21 2'     : _origins[ '222oP' ],
-                      'P 2 2 21'     : _origins[ '222oP' ],
-                      'P 2 21 21'    : _origins[ '222oP' ],
-                      'P 21 2 21'    : _origins[ '222oP' ],
-                      'P 21 21 2'    : _origins[ '222oP' ],
-                      'P 21 21 21'   : _origins[ '222oP' ],
+                      'P 2 2 2'      : self._origins[ '222oP' ],
+                      'P 21 2 2'     : self._origins[ '222oP' ],
+                      'P 2 21 2'     : self._origins[ '222oP' ],
+                      'P 2 2 21'     : self._origins[ '222oP' ],
+                      'P 2 21 21'    : self._origins[ '222oP' ],
+                      'P 21 2 21'    : self._origins[ '222oP' ],
+                      'P 21 21 2'    : self._origins[ '222oP' ],
+                      'P 21 21 21'   : self._origins[ '222oP' ],
                       
-                      'C 2 2 21'     : _origins[ '222oC' ],
-                      'C 2 2 2'      : _origins[ '222oC' ],
+                      'C 2 2 21'     : self._origins[ '222oC' ],
+                      'C 2 2 2'      : self._origins[ '222oC' ],
                       
-                      'F 2 2 2'      : _origins[ '222oF' ],
+                      'F 2 2 2'      : self._origins[ '222oF' ],
                       
-                      'I 2 2 2'      : _origins[ '222oI' ],
-                      'I 21 21 21'   : _origins[ '222oI' ],
+                      'I 2 2 2'      : self._origins[ '222oI' ],
+                      'I 21 21 21'   : self._origins[ '222oI' ],
                       
                       # TETRAGONAL
-                      'P 4'          : _origins[ '4tP' ],
-                      'P 41'         : _origins[ '4tP' ],
-                      'P 42'         : _origins[ '4tP' ],
-                      'P 43'         : _origins[ '4tP' ],
+                      'P 4'          : self._origins[ '4tP' ],
+                      'P 41'         : self._origins[ '4tP' ],
+                      'P 42'         : self._origins[ '4tP' ],
+                      'P 43'         : self._origins[ '4tP' ],
                       
-                      'I 4'          : _origins[ '4tI' ],
-                      'I 41'         : _origins[ '4tI' ],
+                      'I 4'          : self._origins[ '4tI' ],
+                      'I 41'         : self._origins[ '4tI' ],
                       
-                      'P 4 2 2'      : _origins[ '422tP' ],
-                      'P 4 21 2'     : _origins[ '422tP' ],
-                      'P 41 2 2'     : _origins[ '422tP' ],
-                      'P 41 21 2'    : _origins[ '422tP' ],
-                      'P 42 2 2'     : _origins[ '422tP' ],
-                      'P 42 21 2'    : _origins[ '422tP' ],
-                      'P 43 2 2'     : _origins[ '422tP' ],
-                      'P 43 21 2'    : _origins[ '422tP' ],
+                      'P 4 2 2'      : self._origins[ '422tP' ],
+                      'P 4 21 2'     : self._origins[ '422tP' ],
+                      'P 41 2 2'     : self._origins[ '422tP' ],
+                      'P 41 21 2'    : self._origins[ '422tP' ],
+                      'P 42 2 2'     : self._origins[ '422tP' ],
+                      'P 42 21 2'    : self._origins[ '422tP' ],
+                      'P 43 2 2'     : self._origins[ '422tP' ],
+                      'P 43 21 2'    : self._origins[ '422tP' ],
                       
-                      'I 4 2 2'      : _origins[ '422tI' ],
-                      'I 41 2 2'     : _origins[ '422tI' ],
+                      'I 4 2 2'      : self._origins[ '422tI' ],
+                      'I 41 2 2'     : self._origins[ '422tI' ],
                       
                       # TRIGONAL
-                      'P 3'          : _origins[ '3hP' ],
-                      'P 31'         : _origins[ '3hP' ],
-                      'P 32'         : _origins[ '3hP' ],
+                      'P 3'          : self._origins[ '3hP' ],
+                      'P 31'         : self._origins[ '3hP' ],
+                      'P 32'         : self._origins[ '3hP' ],
                       
-                      'H 3'          : _origins[ '3hR_1' ],
-                      'R 3'          : _origins[ '3hR_2' ],
+                      'H 3'          : self._origins[ '3hR_1' ],
+                      'R 3'          : self._origins[ '3hR_2' ],
                       
-                      'P 3 1 2'      : _origins[ '312hP' ],
-                      'P 31 1 2'     : _origins[ '312hP' ],
-                      'P 32 1 2'     : _origins[ '312hP' ],
+                      'P 3 1 2'      : self._origins[ '312hP' ],
+                      'P 31 1 2'     : self._origins[ '312hP' ],
+                      'P 32 1 2'     : self._origins[ '312hP' ],
                       
-                      'P 3 2 1'     : _origins[ '321hP' ],
-                      'P 31 2 1'    : _origins[ '321hP' ],
-                      'P 32 2 1'    : _origins[ '321hP' ],
+                      'P 3 2 1'     : self._origins[ '321hP' ],
+                      'P 31 2 1'    : self._origins[ '321hP' ],
+                      'P 32 2 1'    : self._origins[ '321hP' ],
                       
-                      'H 3 2'       : _origins[ '32hR_1' ],
-                      'R 3 2'       : _origins[ '32hR_2' ],
+                      'H 3 2'       : self._origins[ '32hR_1' ],
+                      'R 3 2'       : self._origins[ '32hR_2' ],
                       
                       # HEXAGONAL
-                      'P 6'         : _origins[ '6hP' ],
-                      'P 61'        : _origins[ '6hP' ],
-                      'P 65'        : _origins[ '6hP' ],
-                      'P 62'        : _origins[ '6hP' ],
-                      'P 64'        : _origins[ '6hP' ],
-                      'P 63'        : _origins[ '6hP' ],
+                      'P 6'         : self._origins[ '6hP' ],
+                      'P 61'        : self._origins[ '6hP' ],
+                      'P 65'        : self._origins[ '6hP' ],
+                      'P 62'        : self._origins[ '6hP' ],
+                      'P 64'        : self._origins[ '6hP' ],
+                      'P 63'        : self._origins[ '6hP' ],
                       
-                      'P 6 2 2'     : _origins[ '622hP' ],
-                      'P 61 2 2'    : _origins[ '622hP' ],
-                      'P 65 2 2'    : _origins[ '622hP' ],
-                      'P 62 2 2'    : _origins[ '622hP' ],
-                      'P 64 2 2'    : _origins[ '622hP' ],
-                      'P 63 2 2'    : _origins[ '622hP' ],
+                      'P 6 2 2'     : self._origins[ '622hP' ],
+                      'P 61 2 2'    : self._origins[ '622hP' ],
+                      'P 65 2 2'    : self._origins[ '622hP' ],
+                      'P 62 2 2'    : self._origins[ '622hP' ],
+                      'P 64 2 2'    : self._origins[ '622hP' ],
+                      'P 63 2 2'    : self._origins[ '622hP' ],
                       
                       # CUBIC
-                      'P 2 3'       : _origins[ '23cP' ],
-                      'P 21 3'      : _origins[ '23cP' ],
+                      'P 2 3'       : self._origins[ '23cP' ],
+                      'P 21 3'      : self._origins[ '23cP' ],
                       
-                      'F 2 3'       : _origins[ '23cF' ],
+                      'F 2 3'       : self._origins[ '23cF' ],
                       
-                      'I 2 3'       : _origins[ '23cI' ],
-                      'I 21 3'      : _origins[ '23cI' ],
+                      'I 2 3'       : self._origins[ '23cI' ],
+                      'I 21 3'      : self._origins[ '23cI' ],
                       
-                      'P 4 3 2'     : _origins[ '432cP' ],
-                      'P 42 3 2'    : _origins[ '432cP' ],
-                      'P 43 3 2'    : _origins[ '432cP' ],
-                      'P 41 3 2'    : _origins[ '432cP' ],
+                      'P 4 3 2'     : self._origins[ '432cP' ],
+                      'P 42 3 2'    : self._origins[ '432cP' ],
+                      'P 43 3 2'    : self._origins[ '432cP' ],
+                      'P 41 3 2'    : self._origins[ '432cP' ],
                       
-                      'F 4 3 2'     : _origins[ '432cF' ],
-                      'F 41 3 2'    : _origins[ '432cF' ],
+                      'F 4 3 2'     : self._origins[ '432cF' ],
+                      'F 41 3 2'    : self._origins[ '432cF' ],
                       
-                      'I 4 3 2'     : _origins[ '432cI' ],
-                      'I 41 3 2'    : _origins[ '432cI' ],
+                      'I 4 3 2'     : self._origins[ '432cI' ],
+                      'I 41 3 2'    : self._origins[ '432cI' ],
                       
                       }
         
