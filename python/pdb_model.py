@@ -34,7 +34,7 @@ class OriginInfo( object ):
         # Non-redundant origins from:
         # http://www.ccp4.ac.uk/dist/html/alternate_origins.html
         # Organised in tuples, with True for the second item if the origin is one of the non-redundant set
-        _origins = {  
+        self._origins = {  
                            
                            # TRICLINIC
                            '1aP' : [ 
@@ -278,7 +278,7 @@ class OriginInfo( object ):
                                    ] ,                                  
                             }
         
-        _spacegroup2origin = {
+        self._spacegroup2origin = {
                       # Primitive
                       'P1'          : _origins[ '1aP' ],
                       # MONOCLINIC
