@@ -11,338 +11,444 @@ import os
 import types
 import unittest
 
-# Non-redundant origins from:
-# http://www.ccp4.ac.uk/dist/html/alternate_origins.html
-_origins = {  
-                   
-                   # TRICLINIC
-                   '1aP' : [ 
-                             [ 'x', 'y', 'z' ],
-                             ],
-                   
-                   # MONOCLINIC
-                   '2mP' : [
-                           [ 0.0, 'y', 0.0 ],
-                           [ 0.0, 'y', 0.5 ],
-                           [ 0.5, 'y', 0.0 ],
-                           [ 0.5, 'y', 0.5 ],
-                           ] ,
-  
-                   '2mC' : [
-                           [ 0.0, 'y', 0.0 ],
-                           [ 0.0, 'y', 0.5 ],
-                           ] ,      
-                    
-                   '2mA' : [
-                           [ 0.0, 'y', 0.0 ],
-                           [ 0.5, 'y', 0.0 ],
-                           ] ,
-                    
-                   '2mI' : [
-                           [ 0.0, 'y', 0.0 ],
-                           [ 0.0, 'y', 0.5 ],
-                           ] ,
-                   
-                   # ORTHORHOMBIC
-                    '222oP' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.0, 0.0, 0.5 ],
-                           [ 0.0, 0.5, 0.0 ],
-                           [ 0.0, 0.5, 0.5 ],
-                           [ 0.5, 0.0, 0.0 ],
-                           [ 0.5, 0.0, 0.5 ],
-                           [ 0.5, 0.5, 0.0 ],
-                           [ 0.5, 0.5, 0.5 ],
-                           ] ,
-                                  
-                    '222oC' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.0, 0.0, 0.5 ],
-                           [ 0.5, 0.0, 0.0 ],
-                           [ 0.5, 0.0, 0.5 ],
-                           ] ,     
-                    
-                    '222oF' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.25, 0.25, 0.25 ],
-                           [ 0.5, 0.5, 0.5 ],
-                           [ 0.75, 0.75, 0.75 ],
-                           ] ,  
-                    
-                    '222oI' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.0, 0.0, 0.5 ],
-                           [ 0.0, 0.5, 0.0 ],
-                           [ 0.5, 0.0, 0.0 ],
-                           ] ,
-                   
-                   # TETRAGONAL
-                    '4tP' : [
-                           [ 0.0, 0.0, 'z' ],
-                           [ 0.5, 0.5, 'z' ],
-                           ] ,           
-                    
-                    '4tI' : [
-                           [ 0.0, 0.0, 'z' ],
-                           ] ,             
 
-                    '422tP' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.0, 0.0, 0.5 ],
-                           [ 0.5, 0.5, 0.0 ],
-                           [ 0.5, 0.5, 0.5 ],
-                           ] ,
-                   
-                    '422tI' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.0, 0.0, 0.5 ],
-                           ] ,
-                   
-                   # TETRAGONAL
-                   '4tP' : [
-                          [ 0.0, 0.0, 0.0 ],
-                          [ 0.5, 0.5, 0.0 ],
-                          ] ,
-                   
-                   '4tI' : [
-                          [ 0.0, 0.0, 0.0 ],
-                          ] ,
-                                      
-                   '422tP' : [
-                          [ 0.0, 0.0, 0.0 ],
-                          [ 0.0, 0.0, 0.5 ],
-                          [ 0.5, 0.5, 0.0 ],
-                          [ 0.5, 0.5, 0.5 ],
-                          ] ,
-                   
-                   '422tI' : [
-                          [ 0.0, 0.0, 0.0 ],
-                          [ 0.0, 0.0, 0.5 ],
-                          ] ,
-                   
-                   # TRIGONAL
-                   '3hP' : [
-                          [ 0.0, 0.0, 'z' ],
-                          [ float(1/3), float(2/3), 'z' ],
-                          [ float(2/3), float(1/3), 'z' ],
-                          ] ,
-                   
-                   '3hR_1' : [
-                          [ 0.0, 0.0, 'z' ],
-                          ] ,
-                   
-                   '3hR_2' : [
-                          [ 'x', 'x', 'x' ],
-                          ] ,
-                   
-                   '312hP' : [
-                          [ 0.0, 0.0, 0.0 ],
-                          [ 0.0, 0.0, 0.5 ],
-                          [ float(1/3), float(2/3), 0.0 ],
-                          [ float(1/3), float(2/3), 0.5 ],
-                          [ float(2/3), float(1/3), 0.0 ],
-                          [ float(2/3), float(1/3), 0.5 ],
-                          ] ,
-                   
-                   '321hP' : [
-                          [ 0.0, 0.0, 0.0 ],
-                          [ 0.0, 0.0, 0.5 ],
-                          ] ,
-                   
-                   '32hR_1' : [
-                          [ 0.0, 0.0, 0.0 ],
-                          [ 0.0, 0.0, 0.5 ],
-                          ] ,
-                   
-                   '32hR_2' : [
-                          [ 0.0, 0.0, 0.0 ],
-                          [ 0.5, 0.5, 0.5 ],
-                          ] ,
-                                      
-                    # HEXAGONAL
-                    '6hP' : [
-                           [ 0.0, 0.0, 'z' ],
-                           ] ,
-                          
-                    '622hP' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.0, 0.0, 0.5 ],
-                           ] ,
-                          
-                    # CUBIC
-                    '23cP' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.5, 0.5, 0.5 ],
-                           ] ,
-                                          
-                    '23cF' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.25, 0.25, 0.25 ],
-                           [ 0.5, 0.5, 0.5 ],
-                           [ 0.75, 0.75, 0.75 ],
-                           ] ,
-
-                    '23cI' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           ] ,                                  
-
-                    '432cP' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.5, 0.5, 0.5 ],
-                           ] ,
-                                              
-                    '432cF' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           [ 0.5, 0.5, 0.5 ],
-                           ] ,                                  
-                                              
-                    '432cI' : [
-                           [ 0.0, 0.0, 0.0 ],
-                           ] ,                                  
-                    }
-
-_spacegroup2origin = {
-              # Primitive
-              'P1'          : _origins[ '1aP' ],
-              # MONOCLINIC
-              'P2'          : _origins[ '2mP' ],
-              
-              'P21'         : _origins[ '2mP' ],
-              
-              'C2'          : _origins[ '2mC' ],
-              
-              'A2'          : _origins[ '2mA' ],
-              
-              'I2'          : _origins[ '2mI' ],
-              
-              # ORTHORHOMBIC
-              'P 2 2 2'      : _origins[ '222oP' ],
-              'P 21 2 2'     : _origins[ '222oP' ],
-              'P 2 21 2'     : _origins[ '222oP' ],
-              'P 2 2 21'     : _origins[ '222oP' ],
-              'P 2 21 21'    : _origins[ '222oP' ],
-              'P 21 2 21'    : _origins[ '222oP' ],
-              'P 21 21 2'    : _origins[ '222oP' ],
-              'P 21 21 21'   : _origins[ '222oP' ],
-              
-              'C 2 2 21'     : _origins[ '222oC' ],
-              'C 2 2 2'      : _origins[ '222oC' ],
-              
-              'F 2 2 2'      : _origins[ '222oF' ],
-              
-              'I 2 2 2'      : _origins[ '222oI' ],
-              'I 21 21 21'   : _origins[ '222oI' ],
-              
-              # TETRAGONAL
-              'P 4'          : _origins[ '4tP' ],
-              'P 41'         : _origins[ '4tP' ],
-              'P 42'         : _origins[ '4tP' ],
-              'P 43'         : _origins[ '4tP' ],
-              
-              'I 4'          : _origins[ '4tI' ],
-              'I 41'         : _origins[ '4tI' ],
-              
-              'P 4 2 2'      : _origins[ '422tP' ],
-              'P 4 21 2'     : _origins[ '422tP' ],
-              'P 41 2 2'     : _origins[ '422tP' ],
-              'P 41 21 2'    : _origins[ '422tP' ],
-              'P 42 2 2'     : _origins[ '422tP' ],
-              'P 42 21 2'    : _origins[ '422tP' ],
-              'P 43 2 2'     : _origins[ '422tP' ],
-              'P 43 21 2'    : _origins[ '422tP' ],
-              
-              'I 4 2 2'      : _origins[ '422tI' ],
-              'I 41 2 2'     : _origins[ '422tI' ],
-              
-              # TRIGONAL
-              'P 3'          : _origins[ '3hP' ],
-              'P 31'         : _origins[ '3hP' ],
-              'P 32'         : _origins[ '3hP' ],
-              
-              'H 3'          : _origins[ '3hR_1' ],
-              'R 3'          : _origins[ '3hR_2' ],
-              
-              'P 3 1 2'      : _origins[ '312hP' ],
-              'P 31 1 2'     : _origins[ '312hP' ],
-              'P 32 1 2'     : _origins[ '312hP' ],
-              
-              'P 3 2 1'     : _origins[ '321hP' ],
-              'P 31 2 1'    : _origins[ '321hP' ],
-              'P 32 2 1'    : _origins[ '321hP' ],
-              
-              'H 3 2'       : _origins[ '32hR_1' ],
-              'R 3 2'       : _origins[ '32hR_2' ],
-              
-              # HEXAGONAL
-              'P 6'         : _origins[ '6hP' ],
-              'P 61'        : _origins[ '6hP' ],
-              'P 65'        : _origins[ '6hP' ],
-              'P 62'        : _origins[ '6hP' ],
-              'P 64'        : _origins[ '6hP' ],
-              'P 63'        : _origins[ '6hP' ],
-              
-              'P 6 2 2'     : _origins[ '622hP' ],
-              'P 61 2 2'    : _origins[ '622hP' ],
-              'P 65 2 2'    : _origins[ '622hP' ],
-              'P 62 2 2'    : _origins[ '622hP' ],
-              'P 64 2 2'    : _origins[ '622hP' ],
-              'P 63 2 2'    : _origins[ '622hP' ],
-              
-              # CUBIC
-              'P 2 3'       : _origins[ '23cP' ],
-              'P 21 3'      : _origins[ '23cP' ],
-              
-              'F 2 3'       : _origins[ '23cF' ],
-              
-              'I 2 3'       : _origins[ '23cI' ],
-              'I 21 3'      : _origins[ '23cI' ],
-              
-              'P 4 3 2'     : _origins[ '432cP' ],
-              'P 42 3 2'    : _origins[ '432cP' ],
-              'P 43 3 2'    : _origins[ '432cP' ],
-              'P 41 3 2'    : _origins[ '432cP' ],
-              
-              'F 4 3 2'     : _origins[ '432cF' ],
-              'F 41 3 2'    : _origins[ '432cF' ],
-              
-              'I 4 3 2'     : _origins[ '432cI' ],
-              'I 41 3 2'    : _origins[ '432cI' ],
-              
-              }
-
-
-#symoplib = "/Applications/ccp4-6.4.0/lib/data/symop.lib"
-def _altlabel( spaceGroup, symoplib=None ):
+class OriginInfo( object ):
     
-    if not symoplib:
-        symoplib = os.path.join( os.environ['CCP4'], "lib/data/symop.lib" )
+    def __init__(self, spaceGroupLabel=None ):
         
-    for line in open( symoplib, 'r' ):
-        if "'" in line:
-            # Assume first single-quote enclosed string is the one we want
-            i = line.index( "'" )
-            j = line.index("'", i+1 )
-            sg = line[ i+1:j ]
-            if spaceGroup == sg:
-                return line.split()[ 3 ]
-
-    raise KeyError, spaceGroup
-    return 
-
-
-def alternateOrigins( spaceGroupLabel ):
-    """Given a space group label, return a list of (non-redundant) alternate
-    origins as a list of float triples"""
+        
+        # These are reset on each call
+        self._currentSpaceGroup = None
+        self._redundantSet = None
+        self._nonRedunantSet = None
+        self._floating = False
+        
+        self._setData()
+        
+        if spaceGroupLabel:
+            self._getAlternateOrigins(spaceGroupLabel)
+        
+        return
     
-    try:
-        origins = _spacegroup2origin[ spaceGroupLabel ]
-    except KeyError:
-        label = _altlabel( spaceGroupLabel )
-        origins = _spacegroup2origin[ label ]
+    def _setData(self):
+        # Non-redundant origins from:
+        # http://www.ccp4.ac.uk/dist/html/alternate_origins.html
+        # Organised in tuples, with True for the second item if the origin is one of the non-redundant set
+        _origins = {  
+                           
+                           # TRICLINIC
+                           '1aP' : [ 
+                                     ( [ 'x', 'y', 'z' ], True ),
+                                     ],
+                           
+                           # MONOCLINIC
+                           '2mP' : [
+                                   ( [ 0.0, 'y', 0.0 ], True ),
+                                   ( [ 0.0, 'y', 0.5 ], True ),
+                                   ( [ 0.5, 'y', 0.0 ], True ),
+                                   ( [ 0.5, 'y', 0.5 ], True ),
+                                   ] ,
+          
+                           '2mC' : [
+                                   ( [ 0.0, 'y', 0.0 ], True ),
+                                   ( [ 0.0, 'y', 0.5 ], True ),
+                                   ( [ 0.5, 'y', 0.0 ], False ),
+                                   ( [ 0.5, 'y', 0.5 ], False ),
+                                   ] ,      
+                            
+                           '2mA' : [
+                                   ( [ 0.0, 'y', 0.0 ], True ),
+                                   ( [ 0.0, 'y', 0.5 ], False ),
+                                   ( [ 0.5, 'y', 0.0 ], True ),
+                                   ( [ 0.5, 'y', 0.5 ], False ),
+                                   ] ,
+                            
+                           '2mI' : [
+                                   ( [ 0.0, 'y', 0.0 ], True ),
+                                   ( [ 0.0, 'y', 0.5 ], True ),
+                                   ( [ 0.5, 'y', 0.0 ], False ),
+                                   ( [ 0.5, 'y', 0.5 ], False ),
+                                   ] ,
+                           
+                           # ORTHORHOMBIC
+                            '222oP' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ( [ 0.0, 0.5, 0.0 ], True ),
+                                   ( [ 0.0, 0.5, 0.5 ], True ),
+                                   ( [ 0.5, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.0, 0.5 ], True ),
+                                   ( [ 0.5, 0.5, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ] ,
+                                          
+                            '222oC' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.5, 0.0 ], False ),
+                                   ( [ 0.0, 0.5, 0.5 ], False ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ( [ 0.5, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.0, 0.5 ], True ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], False ),
+                                   ] ,     
+                            
+                            '222oF' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], False ),
+                                   ( [ 0.0, 0.5, 0.0 ], False ),
+                                   ( [ 0.0, 0.5, 0.5 ], False ),
+                                   ( [ 0.25, 0.25, 0.25 ], True ),
+                                   ( [ 0.25, 0.25, 0.75 ], False ),
+                                   ( [ 0.25, 0.75, 0.25 ], False ),
+                                   ( [ 0.25, 0.75, 0.75 ], False ),
+                                   ( [ 0.5, 0.0, 0.0 ], False ),
+                                   ( [ 0.5, 0.0, 0.5 ], False ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ( [ 0.75, 0.25, 0.25 ], False ),
+                                   ( [ 0.75, 0.25, 0.75 ], False ),
+                                   ( [ 0.75, 0.75, 0.25 ], False ),
+                                   ( [ 0.75, 0.75, 0.75 ], True ),
+                                   ] ,
+                            
+                            '222oI' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ( [ 0.0, 0.5, 0.0 ], True ),
+                                   ( [ 0.0, 0.5, 0.5 ], False ),
+                                   ( [ 0.5, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.0, 0.5 ], False ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], False ),
+                                   ] ,
+                           
+                           # TETRAGONAL
+                            '4tP' : [
+                                   ( [ 0.0, 0.0, 'z' ], True ),
+                                   ( [ 0.5, 0.5, 'z' ], True ),
+                                   ] ,           
+                            
+                            '4tI' : [
+                                   ( [ 0.0, 0.0, 'z' ], True ),
+                                   ( [ 0.5, 0.5, 'z' ], False ),
+                                   ] ,             
+        
+                            '422tP' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ( [ 0.5, 0.5, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ] ,
+                           
+                            '422tI' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], False ),
+                                   ] ,
+                           
+                           # TETRAGONAL
+                           '4tP' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.5, 0.5, 0.0 ], True ),
+                                  ] ,
+                           
+                           '4tI' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ] ,
+                                              
+                           '422tP' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.0, 0.0, 0.5 ], True ),
+                                  ( [ 0.5, 0.5, 0.0 ], True ),
+                                  ( [ 0.5, 0.5, 0.5 ], True ),
+                                  ] ,
+                           
+                           '422tI' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.0, 0.0, 0.5 ], True ),
+                                  ] ,
+                           
+                           # TRIGONAL
+                           '3hP' : [
+                                  ( [ 0.0, 0.0, 'z' ], True ),
+                                  ( [ float(1/3), float(2/3), 'z' ], True ),
+                                  ( [ float(2/3), float(1/3), 'z' ], True ),
+                                  ] ,
+                           
+                           '3hR_1' : [
+                                  ( [ 0.0, 0.0, 'z' ], True ),
+                                  ( [float(1/3), float(2/3), 'z' ], False ),
+                                  ( [float(2/3), float(1/3), 'z' ], False ),
+                                  ] ,
+                           
+                           '3hR_2' : [
+                                  ( [ 'x', 'x', 'x' ], True ),
+                                  ] ,
+                           
+                           '312hP' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.0, 0.0, 0.5 ], True ),
+                                  ( [ float(1/3), float(2/3), 0.0 ], True ),
+                                  ( [ float(1/3), float(2/3), 0.5 ], True ),
+                                  ( [ float(2/3), float(1/3), 0.0 ], True ),
+                                  ( [ float(2/3), float(1/3), 0.5 ], True ),
+                                  ] ,
+                           
+                           '321hP' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.0, 0.0, 0.5 ], True ),
+                                  ] ,
+                           
+                           '32hR_1' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.0, 0.0, 0.5 ], True ),
+                                  ( [ float(1/3), float(2/3), float(1/6) ], False ),
+                                  ( [ float(1/3), float(2/3), float(2/3) ], False ),
+                                  ( [ float(2/3), float(1/3), float(1/3) ], False ),
+                                  ( [ float(2/3), float(1/3), float(5/6) ], False ),
+                                  ] ,
+                           
+                           '32hR_2' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.5, 0.5, 0.5 ], True ),
+                                  ] ,
+                                              
+                            # HEXAGONAL
+                            '6hP' : [
+                                   ( [ 0.0, 0.0, 'z' ], True ),
+                                   ] ,
+                                  
+                            '622hP' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ] ,
+                                  
+                            # CUBIC
+                            '23cP' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ] ,
+                                                  
+                            '23cF' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], False ),
+                                   ( [ 0.0, 0.5, 0.0 ], False ),
+                                   ( [ 0.0, 0.5, 0.5 ], False ),
+                                   
+                                   ( [ 0.25, 0.25, 0.25 ], True ),
+                                   ( [ 0.25, 0.25, 0.75 ], False ),
+                                   ( [ 0.25, 0.75, 0.25 ], False ),
+                                   ( [ 0.25, 0.75, 0.75 ], False ),
+                                   ( [ 0.5, 0.0, 0.0 ], False ),
+                                   ( [ 0.5, 0.0, 0.5 ], False ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ( [ 0.75, 0.25, 0.25 ], False ),
+                                   ( [ 0.75, 0.25, 0.75 ], False ),
+                                   ( [ 0.75, 0.75, 0.25 ], False ),
+                                   ( [ 0.75, 0.75, 0.75 ], True ),
+                                   ] ,
+        
+                            '23cI' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], False ),
+                                   ] ,                                  
+        
+                            '432cP' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ] ,
+                                                      
+                            '432cF' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], False ),
+                                   ( [ 0.0, 0.5, 0.0 ], False ),
+                                   ( [ 0.0, 0.5, 0.5 ], False ),
+                                   ( [ 0.5, 0.0, 0.0 ], False ),
+                                   ( [ 0.5, 0.0, 0.5 ], False ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ] ,                                  
+                                                      
+                            '432cI' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], False ),
+                                   ] ,                                  
+                            }
+        
+        _spacegroup2origin = {
+                      # Primitive
+                      'P1'          : _origins[ '1aP' ],
+                      # MONOCLINIC
+                      'P2'          : _origins[ '2mP' ],
+                      
+                      'P21'         : _origins[ '2mP' ],
+                      
+                      'C2'          : _origins[ '2mC' ],
+                      
+                      'A2'          : _origins[ '2mA' ],
+                      
+                      'I2'          : _origins[ '2mI' ],
+                      
+                      # ORTHORHOMBIC
+                      'P 2 2 2'      : _origins[ '222oP' ],
+                      'P 21 2 2'     : _origins[ '222oP' ],
+                      'P 2 21 2'     : _origins[ '222oP' ],
+                      'P 2 2 21'     : _origins[ '222oP' ],
+                      'P 2 21 21'    : _origins[ '222oP' ],
+                      'P 21 2 21'    : _origins[ '222oP' ],
+                      'P 21 21 2'    : _origins[ '222oP' ],
+                      'P 21 21 21'   : _origins[ '222oP' ],
+                      
+                      'C 2 2 21'     : _origins[ '222oC' ],
+                      'C 2 2 2'      : _origins[ '222oC' ],
+                      
+                      'F 2 2 2'      : _origins[ '222oF' ],
+                      
+                      'I 2 2 2'      : _origins[ '222oI' ],
+                      'I 21 21 21'   : _origins[ '222oI' ],
+                      
+                      # TETRAGONAL
+                      'P 4'          : _origins[ '4tP' ],
+                      'P 41'         : _origins[ '4tP' ],
+                      'P 42'         : _origins[ '4tP' ],
+                      'P 43'         : _origins[ '4tP' ],
+                      
+                      'I 4'          : _origins[ '4tI' ],
+                      'I 41'         : _origins[ '4tI' ],
+                      
+                      'P 4 2 2'      : _origins[ '422tP' ],
+                      'P 4 21 2'     : _origins[ '422tP' ],
+                      'P 41 2 2'     : _origins[ '422tP' ],
+                      'P 41 21 2'    : _origins[ '422tP' ],
+                      'P 42 2 2'     : _origins[ '422tP' ],
+                      'P 42 21 2'    : _origins[ '422tP' ],
+                      'P 43 2 2'     : _origins[ '422tP' ],
+                      'P 43 21 2'    : _origins[ '422tP' ],
+                      
+                      'I 4 2 2'      : _origins[ '422tI' ],
+                      'I 41 2 2'     : _origins[ '422tI' ],
+                      
+                      # TRIGONAL
+                      'P 3'          : _origins[ '3hP' ],
+                      'P 31'         : _origins[ '3hP' ],
+                      'P 32'         : _origins[ '3hP' ],
+                      
+                      'H 3'          : _origins[ '3hR_1' ],
+                      'R 3'          : _origins[ '3hR_2' ],
+                      
+                      'P 3 1 2'      : _origins[ '312hP' ],
+                      'P 31 1 2'     : _origins[ '312hP' ],
+                      'P 32 1 2'     : _origins[ '312hP' ],
+                      
+                      'P 3 2 1'     : _origins[ '321hP' ],
+                      'P 31 2 1'    : _origins[ '321hP' ],
+                      'P 32 2 1'    : _origins[ '321hP' ],
+                      
+                      'H 3 2'       : _origins[ '32hR_1' ],
+                      'R 3 2'       : _origins[ '32hR_2' ],
+                      
+                      # HEXAGONAL
+                      'P 6'         : _origins[ '6hP' ],
+                      'P 61'        : _origins[ '6hP' ],
+                      'P 65'        : _origins[ '6hP' ],
+                      'P 62'        : _origins[ '6hP' ],
+                      'P 64'        : _origins[ '6hP' ],
+                      'P 63'        : _origins[ '6hP' ],
+                      
+                      'P 6 2 2'     : _origins[ '622hP' ],
+                      'P 61 2 2'    : _origins[ '622hP' ],
+                      'P 65 2 2'    : _origins[ '622hP' ],
+                      'P 62 2 2'    : _origins[ '622hP' ],
+                      'P 64 2 2'    : _origins[ '622hP' ],
+                      'P 63 2 2'    : _origins[ '622hP' ],
+                      
+                      # CUBIC
+                      'P 2 3'       : _origins[ '23cP' ],
+                      'P 21 3'      : _origins[ '23cP' ],
+                      
+                      'F 2 3'       : _origins[ '23cF' ],
+                      
+                      'I 2 3'       : _origins[ '23cI' ],
+                      'I 21 3'      : _origins[ '23cI' ],
+                      
+                      'P 4 3 2'     : _origins[ '432cP' ],
+                      'P 42 3 2'    : _origins[ '432cP' ],
+                      'P 43 3 2'    : _origins[ '432cP' ],
+                      'P 41 3 2'    : _origins[ '432cP' ],
+                      
+                      'F 4 3 2'     : _origins[ '432cF' ],
+                      'F 41 3 2'    : _origins[ '432cF' ],
+                      
+                      'I 4 3 2'     : _origins[ '432cI' ],
+                      'I 41 3 2'    : _origins[ '432cI' ],
+                      
+                      }
+        
+        return
     
-    # Need to return a copy or if we manipulate the origins, we manipulate the copy
-    # in the module
-    return copy.copy( origins )
+    def currentSpaceGroup(self):
+        return self._currentSpaceGroup
+    
+    def isFloating(self, spaceGroupLabel=None ):
+        if spaceGroupLabel is not None and self.currentSpaceGroup() !=  spaceGroupLabel:
+            self._getAlternateOrigins( spaceGroupLabel ) 
+        return self._floating
+
+    def redundantAlternateOrigins(self, spaceGroupLabel=None ):
+        if spaceGroupLabel is not None and self.currentSpaceGroup() !=  spaceGroupLabel:
+            self._getAlternateOrigins( spaceGroupLabel ) 
+        return self._reundantSet
+    
+    def nonRedundantAlternateOrigins(self, spaceGroupLabel=None ):
+        if spaceGroupLabel is not None and self.currentSpaceGroup() !=  spaceGroupLabel:
+            self._getAlternateOrigins( spaceGroupLabel ) 
+        return self._nonReundantSet
+
+    def _getAlternateOrigins( self, spaceGroupLabel ):
+        """Given a space group label, return a list of (non-redundant) alternate
+        origins as a list of float triples"""
+        
+        label = spaceGroupLabel
+        if label not in self._spacegroup2origin:
+            label = self._altlabel( label )
+        
+        self._currentSpaceGroup = label
+        originl = self._spacegroup2origin[ label ]
+        
+        # We build up a list of the full set (redundant) and also the non-redundant that are
+        # the only ones we need to loop through when we are checking
+        self._nonRedunantSet = []
+        self._redunantSet = []
+        self._floating = False
+        for o in originl:
+            if o[1]:
+                self._nonRedundantSet.append( o )
+            self._redundantSet.append( o )
+            
+        self._floating = any(  map( lambda o: 'x' in o or 'y' in o or 'z' in o, self._redundantSet ) )
+        return
+    
+    #symoplib = "/Applications/ccp4-6.4.0/lib/data/symop.lib"
+    def _altlabel( self, spaceGroup, symoplib=None ):
+        
+        if not symoplib:
+            symoplib = os.path.join( os.environ['CCP4'], "lib/data/symop.lib" )
+            
+        for line in open( symoplib, 'r' ):
+            if "'" in line:
+                # Assume first single-quote enclosed string is the one we want
+                i = line.index( "'" )
+                j = line.index("'", i+1 )
+                sg = line[ i+1:j ]
+                if spaceGroup == sg:
+                    return line.split()[ 3 ]
+    
+        raise KeyError, spaceGroup
+        return
+
 
 
 class CrystalInfo(object):
