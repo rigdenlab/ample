@@ -20,7 +20,7 @@ class OriginInfo( object ):
         # These are reset on each call
         self._currentSpaceGroup = None
         self._redundantSet = None
-        self._nonRedunantSet = None
+        self._nonRedundantSet = None
         self._floating = False
         
         self._setData()
@@ -400,12 +400,12 @@ class OriginInfo( object ):
     def redundantAlternateOrigins(self, spaceGroupLabel=None ):
         if spaceGroupLabel is not None and self.currentSpaceGroup() !=  spaceGroupLabel:
             self._getAlternateOrigins( spaceGroupLabel ) 
-        return self._reundantSet
+        return copy.copy(self._redundantSet)
     
     def nonRedundantAlternateOrigins(self, spaceGroupLabel=None ):
         if spaceGroupLabel is not None and self.currentSpaceGroup() !=  spaceGroupLabel:
             self._getAlternateOrigins( spaceGroupLabel ) 
-        return self._nonReundantSet
+        return copy.copy(self._nonRedundantSet)
 
     def _getAlternateOrigins( self, spaceGroupLabel ):
         """Given a space group label, return a list of (non-redundant) alternate
@@ -420,13 +420,13 @@ class OriginInfo( object ):
         
         # We build up a list of the full set (redundant) and also the non-redundant that are
         # the only ones we need to loop through when we are checking
-        self._nonRedunantSet = []
-        self._redunantSet = []
+        self._nonRedundantSet = []
+        self._redundantSet = []
         self._floating = False
         for o in originl:
             if o[1]:
-                self._nonRedundantSet.append( o )
-            self._redundantSet.append( o )
+                self._nonRedundantSet.append( o[0] )
+            self._redundantSet.append( o[0] )
             
         self._floating = any(  map( lambda o: 'x' in o or 'y' in o or 'z' in o, self._redundantSet ) )
         return
