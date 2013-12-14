@@ -4,32 +4,65 @@
 
 import re
 import os, glob
-import sys
 import subprocess
-import time
-import operator
-import argparse
-import random
-from multiprocessing import Process, Queue, JoinableQueue, Pool, Value, Array
-import pickle
-import copy
 
-from subprocess import PIPE
+import ample_util
+import pdb_edit
+
+class Scwrl( object ):
+    
+    def __init__(self, scwrlExe, workdir=None ):
+        
+        self.workdir = workdir
+        if self.workdir is None:
+            self.workdir = os.getcwd()
+        
+        self.scwrlExe = scwrlExe
+        
+        return
+    
+    def addSidechains(self, pdbin=None, pdbout=None, sequence=None ):
+        """Add the specified sidechains to the pdb"""
+        
+        cmd = [ self.scwrlExe, "-i", pdbin, "-o", pdbout ]
+        
+        if sequence is not None:
+            sequenceFile = os.path.join( self.workdir, "sequence.file")
+            with open( sequenceFile, 'w' ) as w:
+                w.write( sequence + os.linesep )
+            cmd += [ "-s",  sequenceFile ]
+            
+        retcode = ample_util.run_command( cmd )
+        
+        if retcode != 0:
+            raise RuntimeError,"Error running Scwrl"
+        
+        return
+    
+    def processDirectory(self, directory=None ):
+        
+        for pdb in glob.glob( os.path.join(directory, '*.pdb') ):
+            
+            # Get the sequence
+            #PE = pdb_edit.PDBEdit()
+            #info = PE.get_info( pdb )
+            #sequence = info.getSequence() # Returns sequence for first model/chain
+            
+            # New pdb name
+            pdbout = ample_util.filename_append( pdb, "scwrl", directory=None)
+            self.addSidechains( pdbin=pdb, pdbout=pdbout )
+        
+        return 
+
 #
 # This Adds All sicechains to the Pdb files
 #
 
 def add_sidechains_SCWRL(SCWRL,path, outpath, prefix, DEBUG ):
+    
   Path_to_SCWRL = SCWRL
 
-  string = ''
-  infiles = []
-
-  for infile in glob.glob( os.path.join(path, '*.pdb') ):
-    string  = string + infile + ' '
-    infiles.append(infile) 
-    #print infile
-########################################## ADD ALL
+  infiles = glob.glob( os.path.join(path, '*.pdb') )
 
   for each_file in infiles:
    residue_list = []
