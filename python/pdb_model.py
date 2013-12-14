@@ -506,6 +506,13 @@ class PdbInfo(object):
         
         return
     
+    def getSequence(self):
+        """Return the sequence for the first model/chain"""
+        
+        assert len(self.models) >= 1,"Need at least one model!"
+        assert len(self.models[0].chains) >= 1,"Need at least one chain!"
+        return self.sequences[0]
+    
 class PdbModel(object):
     """A class to hold information on a single model in a PDB file"""
     
