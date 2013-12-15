@@ -39,10 +39,42 @@
 #include <openbabel/atom.h>
 using namespace std;
 
-// Path to the directory with the zmatrix fragments of the amino acids
-string zmatDir = "/Users/jmht/Documents/avogadro/avogadro/builder/amino/";
+class ChainMaker {
 
-void AddResidue(string residue, bool lStereo,
+public:
+
+	//Constructor
+	ChainMaker() {};
+	//Destructor
+	~ChainMaker() {};
+
+	void AddResidue(string residue, bool lStereo,
+			OpenBabel::OBMol &mol, vector<OpenBabel::OBInternalCoord*> &vic,
+			const char chain);
+
+	void AddTerminus(int element, string atomID,
+			int a, double distance,
+			int b, double angle,
+			int c, double dihedral,
+			OpenBabel::OBMol &mol, vector<OpenBabel::OBInternalCoord*> &vic);
+
+	void generateFragment( OpenBabel::OBMol &obfragment,
+			std::string &sequence,
+			int phi, int psi, bool lStereo,
+			int nTerminus, int cTerminus, char chain
+			);
+
+	void setZmatDir( const char* directory ) { zmatDir=directory; };
+
+private:
+
+	// Path to the directory with the zmatrix fragments of the amino acids
+	string zmatDir;
+
+};
+
+
+void ChainMaker::AddResidue(string residue, bool lStereo,
 		OpenBabel::OBMol &mol, vector<OpenBabel::OBInternalCoord*> &vic,
 		const char chain)
 {
@@ -125,7 +157,7 @@ void AddResidue(string residue, bool lStereo,
 	}
 }
 
-void AddTerminus(int element, string atomID,
+void ChainMaker::AddTerminus(int element, string atomID,
 		int a, double distance,
 		int b, double angle,
 		int c, double dihedral,
@@ -160,7 +192,7 @@ void AddTerminus(int element, string atomID,
 	vic.push_back(coord);
 }
 
-void generateFragment( OpenBabel::OBMol &obfragment,
+void ChainMaker::generateFragment( OpenBabel::OBMol &obfragment,
 		std::string &sequence,
 		int phi, int psi, bool lStereo,
 		int nTerminus, int cTerminus, char chain
@@ -305,11 +337,6 @@ void generateFragment( OpenBabel::OBMol &obfragment,
 		obfragment.ConnectTheDots();
 
 		obfragment.SetPartialChargesPerceived();
-
-		// Molecule fragment;
-		//fragment.setOBMol(&obfragment);
-		//emit performCommand(new InsertFragmentCommand(m_molecule, fragment,
-		//                                              m_widget, tr("Insert Peptide")));
 	}
 }
 
@@ -390,7 +417,12 @@ int main(int argc,char **argv)
 	// Now create the chain
 	string sequence3 = s3.str();
 	OpenBabel::OBMol obfragment;
-	generateFragment( obfragment, sequence3, phi, psi, lStereo, nTerminus, cTerminus, chain );
+
+	ChainMaker chainMaker;
+	//generateFragment( obfragment, sequence3, phi, psi, lStereo, nTerminus, cTerminus, chain );
+	//string zmatDir="/Users/jmht/Documents/avogadro/avogadro/builder/amino/";
+	chainMaker.setZmatDir( "/Users/jmht/Documents/avogadro/avogadro/builder/amino/" );
+	chainMaker.generateFragment( obfragment, sequence3, phi, psi, lStereo, nTerminus, cTerminus, chain );
 
 	// Write it out as a pdb
 	OpenBabel::OBConversion conv;
