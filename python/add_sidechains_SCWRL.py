@@ -11,13 +11,17 @@ import pdb_edit
 
 class Scwrl( object ):
     
-    def __init__(self, scwrlExe, workdir=None ):
+    def __init__(self, scwrlExe=None, workdir=None ):
         
         self.workdir = workdir
         if self.workdir is None:
             self.workdir = os.getcwd()
         
         self.scwrlExe = scwrlExe
+        if self.scwrlExe is None:
+            self.scwrlExe = ample_util.which('Scwrl4')
+            if self.scwrlExe is None:
+                raise RuntimeError,"Cannot find Scwrl executable Scwrl4"
         
         return
     
@@ -39,9 +43,9 @@ class Scwrl( object ):
         
         return
     
-    def processDirectory(self, directory=None ):
+    def processDirectory(self, inDirectory=None, outDirectory=None, prefix="scwrl" ):
         
-        for pdb in glob.glob( os.path.join(directory, '*.pdb') ):
+        for pdb in glob.glob( os.path.join( inDirectory, '*.pdb') ):
             
             # Get the sequence
             #PE = pdb_edit.PDBEdit()
@@ -49,7 +53,7 @@ class Scwrl( object ):
             #sequence = info.getSequence() # Returns sequence for first model/chain
             
             # New pdb name
-            pdbout = ample_util.filename_append( pdb, "scwrl", directory=None)
+            pdbout = ample_util.filename_append( pdb, prefix, directory=outDirectory )
             self.addSidechains( pdbin=pdb, pdbout=pdbout )
         
         return 

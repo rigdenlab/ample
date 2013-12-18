@@ -464,9 +464,11 @@ class RosettaModel(object):
                 raise RuntimeError, msg
         
         if self.use_scwrl:
+            scwrl = add_sidechains_SCWRL.Scwrl( scwrlExe=self.scwrl_exe )
             # Add sidechains using SCRWL - loop over each directory and output files into the models directory
             for wdir,proc in directories.iteritems():
-                add_sidechains_SCWRL.add_sidechains_SCWRL(self.scwrl_exe, wdir, self.models_dir, str(proc), False)
+                scwrl.processDirectory(inDirectory=wdir, outDirectory=self.models_dir, prefix="scwrl_{0}".format(proc) )
+                #add_sidechains_SCWRL.add_sidechains_SCWRL(self.scwrl_exe, wdir, self.models_dir, str(proc), False)
         else:
         # Just copy all modelling files into models directory
             for wd in directories.keys():
