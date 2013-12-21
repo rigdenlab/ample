@@ -71,7 +71,7 @@ class RosettaModel(object):
         self.scwrl_exe = None
         
         # Fragment variables
-        self.pdb_code = None
+        self.name = None
         self.frags_3mers = None
         self.frags_9mers = None
         self.use_homs = None
@@ -158,7 +158,8 @@ class RosettaModel(object):
          
         cmd = [ self.fragments_exe,
                '-rundir', self.fragments_directory,
-               '-id', self.pdb_code, fasta ] 
+               '-id', self.name,
+                fasta ] 
         
         if self.transmembrane:
             cmd += [ '-noporter', '-nopsipred','-sam'] 
@@ -209,12 +210,12 @@ class RosettaModel(object):
         
         if self.rosetta_version >= 3.4:
             # new name format: $options{runid}.$options{n_frags}.$size" . "mers
-            self.frags_3mers = self.fragments_directory + os.sep + self.pdb_code + '.200.3mers'
-            self.frags_9mers = self.fragments_directory + os.sep + self.pdb_code + '.200.9mers'      
+            self.frags_3mers = self.fragments_directory + os.sep + self.name + '.200.3mers'
+            self.frags_9mers = self.fragments_directory + os.sep + self.name + '.200.9mers'      
         else:
             # old_name_format: aa$options{runid}$fragsize\_05.$options{n_frags}\_v1_3"
-            self.frags_3mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '03_05.200_v1_3'
-            self.frags_9mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '09_05.200_v1_3'
+            self.frags_3mers = self.fragments_directory + os.sep + 'aa' + self.name + '03_05.200_v1_3'
+            self.frags_9mers = self.fragments_directory + os.sep + 'aa' + self.name + '09_05.200_v1_3'
             
         if not os.path.exists( self.frags_3mers ) or not os.path.exists( self.frags_9mers ):
             raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\n".format(self.frags_3mers,self.frags_9mers)
@@ -223,7 +224,7 @@ class RosettaModel(object):
         self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
     
         if os.path.exists( self.fragments_directory + os.sep + self.fragments_directory + '.psipred'):
-            ample_util.get_psipred_prediction( self.fragments_directory + os.sep + self.pdb_code + '.psipred')
+            ample_util.get_psipred_prediction( self.fragments_directory + os.sep + self.name + '.psipred')
        
         return
     ##End fragment_cmd
@@ -253,12 +254,12 @@ class RosettaModel(object):
         #fastaseq = octo.getFasta(self.fasta)
         # Problem with 3LBW predicition when remove X
         fastaseq = octo.getFasta(self.fasta)
-        octo.getPredict(self.pdb_code,fastaseq, directory=self.models_dir )
+        octo.getPredict(self.name,fastaseq, directory=self.models_dir )
         topo_file = octo.topo
         self.logger.debug("Got topology prediction file: {0}".format(topo_file))
 
         # Generate span file from predict
-        self.spanfile = os.path.join(self.models_dir, self.pdb_code + ".span")
+        self.spanfile = os.path.join(self.models_dir, self.name + ".span")
         self.logger.debug( 'Generating span file {0}'.format( self.spanfile ) )
         cmd = [ self.octopus2span, topo_file ]
         retcode = ample_util.run_command( cmd, logfile=self.spanfile, directory=self.models_dir )
@@ -274,7 +275,7 @@ class RosettaModel(object):
         retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.models_dir )
         
         # Script only uses first 4 chars to name files
-        lipofile = os.path.join(self.models_dir, self.pdb_code[0:4] + ".lips4")
+        lipofile = os.path.join(self.models_dir, self.name[0:4] + ".lips4")
         if retcode != 0 or not os.path.exists(lipofile):
             msg = "Error generating lips file {0}. Please check the log in {1}".format(lipofile,logfile)
             self.logger.critical(msg)
@@ -371,7 +372,7 @@ class RosettaModel(object):
                     ]
             
         # Domain constraints
-        if self.domain_termini_distance > 0:
+        if self.domain_termini_distance  > 0:
             dcmd = self.setup_domain_constraints()
             cmd += dcmd
             
@@ -523,7 +524,7 @@ class RosettaModel(object):
         # Common variables
         self.fasta = optd['fasta']
         self.work_dir = optd['work_dir']
-        self.pdb_code = optd['pdb_code']
+        self.name = optd['name']
         
         # Fragment variables
         self.fragments_exe = optd['rosetta_fragments_exe']
@@ -677,7 +678,7 @@ class Test(unittest.TestCase):
         
         optd = {}
         optd['rosetta_dir'] = "/opt/rosetta3.4"
-        optd['pdb_code'] = "TOXD_"
+        optd['name'] = "TOXD_"
         optd['work_dir'] =  os.getcwd()
         optd['use_homs'] =  True
         optd['make_frags'] = True
@@ -730,7 +731,7 @@ for i in range(10):
         optd['make_models'] = True
         optd['make_frags'] =  True
         optd['fasta'] = "FASTA"
-        optd['pdb_code'] = "TOXD_"
+        optd['name'] = "TOXD_"
         optd['improve_template'] = None
         optd['all_atom'] = True
         optd['use_scwrl'] = False
@@ -760,7 +761,7 @@ for i in range(10):
         optd['make_models'] = False
         optd['make_frags'] =  True
         optd['fasta'] = "/home/Shared/2UUI/2uui.fasta"
-        optd['pdb_code'] = "2uui_"
+        optd['name'] = "2uui_"
         optd['transmembrane'] = True
         optd['blast_dir'] = "/opt/blast-2.2.26"
         optd['nr'] = "/opt/nr/nr"
