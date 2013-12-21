@@ -115,7 +115,12 @@ class DsspParser(object):
     def getResName(self, resSeq, chainId ):
         ci = self.chainIds.index( chainId )
         ri = self.resSeqs[ ci ].index( resSeq )
-        return self.resNames[ ci ][ ri ]
+        # Lower case indicates cysteine
+        name = self.resNames[ ci ][ ri ]
+        if name.islower():
+            return 'C'
+        else:
+            return name
 
 
 class Test(unittest.TestCase):
