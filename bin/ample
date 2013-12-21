@@ -742,7 +742,7 @@ if amopt.d['import_ensembles']:
     ensembles = [ final_ensembles ]
 
 elif amopt.d['import_cluster']:
-    ensembles = ensemble.import_cluster( amopt.d )
+    ensembles = [ ensemble.import_cluster( amopt.d ) ]
 else:
     
     if amopt.d['submit_cluster']:

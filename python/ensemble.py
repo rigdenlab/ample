@@ -68,6 +68,7 @@ def create_ensembles( amoptd ):
     #---------------------------------------
     # Generating  ensembles
     #---------------------------------------
+    
     # Cluster with Spicker
     spicker_cluster( amoptd )
     
@@ -106,25 +107,27 @@ def import_cluster( amoptd ):
     
     logger = logging.getLogger()
     
-    cluster = amoptd['import_cluster']
-    if not cluster:
+    cluster_src = amoptd['import_cluster']
+    if not cluster_src:
         msg = "import_cluster no cluster set!"
         logger.critical( msg )
         raise RuntimeError, msg
     
     # Either read from list of files or a directory
     clusterPdbs = []
-    if os.path.isdir( cluster ):
-        clusterPdbs = glob.glob( cluster + "*.pdb" )
-    elif os.path.isfile( cluster ):
-        clusterPdbs = [ line.strip() for line in open( cluster ) ]
+    if os.path.isdir( cluster_src ):
+        logger.info( "Importing existing cluster from directory: {0}".format( cluster_src ) )
+        clusterPdbs = glob.glob( cluster_src + "*.pdb" )
+    elif os.path.isfile( cluster_src ):
+        logger.info( "Importing existing cluster from PDBs specified in file: {0}".format( cluster_src ) )
+        clusterPdbs = [ line.strip() for line in open( cluster_src ) ]
     else:
-        msg = "import_cluster cannot import cluster from: {0}".format( cluster )
+        msg = "import_cluster cannot import cluster from: {0}".format( cluster_src )
         logger.critical( msg )
         raise RuntimeError, msg
     
     if not len( clusterPdbs ):
-        msg = "import_cluster cannot find any pdb files in: {0}".format( cluster )
+        msg = "import_cluster cannot find any pdb files in: {0}".format( cluster_src )
         logger.critical( msg )
         raise RuntimeError, msg
     
