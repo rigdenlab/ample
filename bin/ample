@@ -29,7 +29,9 @@ if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
 # Add the ample python folder to the PYTHONPATH
-sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+#sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+sys.path.append( os.path.join( root, "python" ) )
 
 
 # python imports
@@ -42,6 +44,7 @@ import shutil
 import time
 
 # Our imports
+import add_sidechains_SCWRL
 import ample_options
 import ample_util
 import cif_parser
@@ -62,85 +65,85 @@ import version
 parser = argparse.ArgumentParser( prog="AMPLE", description='Structure solution by abinitio modelling', prefix_chars="-")
 
 parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
-                   help='alignment between homolog and target fastas')
+                   help='Alignment between homolog and target fastas')
 
 parser.add_argument('-all_atom', metavar='all_atom', type=str, nargs=1,
-                   help='all_atom')
+                   help="Do all-atom Rosetta modelling (adds \"-return_full_atom true\" to rosetta arguments")
 
 parser.add_argument('-arpwarp_cycles', metavar='arpwarp_cycles', type=int, nargs=1,
-                   help='number of cycles ')
+                   help='The number of ArpWarp cycles to run')
 
-parser.add_argument('-ASU', metavar='no in ASU', type=int, nargs=1,
-                   help='no in ASU')
+parser.add_argument('-ASU', metavar='ASU', type=int, nargs=1,
+                   help='Manually specify the number of molecules in the asymmetric unit - sets the NMASu MRBUMP flag')
 
 parser.add_argument('-blast_dir', metavar='blast_dir', type=str, nargs=1,
-                   help='Directory where ncbi blast is installed (binaries in bin)')
+                   help='Directory where ncbi blast is installed (binaries in expected in bin subdirectory)')
 
 parser.add_argument('-buccaneer_cycles', metavar='buccaneer_cycles', type=int, nargs=1,
-                   help='number of cycles ')
+                   help='The number of Bucanner rebuilding cycles to run')
 
 parser.add_argument('-CC', metavar='rad of gyration', type=str, nargs=1,
-                   help='radius of gyration reweight ')
+                   help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
 
 parser.add_argument('-ccp4_jobid', metavar='ccp4_jobid', type=int, nargs=1,
-                   help='CCP4 job id - only needed when running from the CCP4 GUI')
+                   help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
 
 parser.add_argument('-submit_cluster', metavar='submit_cluster', type=str, nargs=1,
-                   help='will submit jobs to a cluster')
+                   help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
 
 parser.add_argument('-submit_qtype', metavar='submit_qtype', type=str, nargs=1,
-                   help='cluster submission queue type:SGE, LSF...')
+                   help='cluster submission queue type - currently support SGE and LSF')
 
 parser.add_argument('-debug', metavar='debug option', type=str, nargs=1,
-                   help='debug option ')
+                   help='Run in debug mode (CURRENTLY UNUSED)')
 
 parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', type=str, nargs=1,
-                   help='fixed input to mr bump')
+                   help='Fixed input to mr bump')
 
 parser.add_argument('-domain_termini_distance', metavar='termini', type=str, nargs=1,
                    help='distance between termini for insert domains')
 
 parser.add_argument('-early_terminate', metavar='early_terminate', type=str, nargs=1,
-                     help='terminate early if a success')
+                     help='Stop the run as soon as a success has been found.')
 
 parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
-                   help='ensembling')
+                   help='Use the Phenix ensembler')
 
 parser.add_argument('-ensembles_dir', metavar='ensembles_dir', type=str, nargs=1,
-                   help='path to directory containing existing ensembles')
+                   help='Path to directory containing existing ensembles')
 
 parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
                    help='protein fasta file. (required)')
 
 parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
-                   help='Flag for F')
+                   help='Flag for F column in the MTZ file')
 
 parser.add_argument('-frags_3mers', metavar='frags_3mers', type=str, nargs=1,
-                   help='path of imported 3mers')
+                   help='Path to file with pre-existing Rosetta 3mer fragments')
 
 parser.add_argument('-frags_9mers', metavar='frags_9mers', type=str, nargs=1,
-                   help='path of imported 9mers')
+                   help='Path to file with pre-existing Rosetta 3mer fragments')
 
 parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
-                   help='Flag for FREE')
+                   help='Flag for FREE column in the MTZ file')
 
 parser.add_argument('-import_cluster', metavar='import_cluster', type=str, nargs=1,
-                   help='import_cluster')
+                   help='Import a cluster of PDB files. CURRRENTLY NOT WORKING')
 
-parser.add_argument('-improve_template', metavar='improve template', type=str, nargs=1,
-                   help='give a template to imrove - NMR, homolog ')
+parser.add_argument('-improve_template', metavar='improve_template', type=str, nargs=1,
+                   help='Path to a template to improve - NMR, homolog' )
 
 parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
-                   help='pathway to LGA folder (not the exe) will use the \'lga\' executable')
+                   help='pathway to LGA folder (not the exe) will use the \'lga\' executable. UNUSED')
 
-parser.add_argument('-make_frags', metavar='bool to make fragments', type=str, nargs=1,
-                   help='Bool, True to make non homologous framents, False to import fragments')
+parser.add_argument('-make_frags', metavar='make_fragments', type=str, nargs=1,
+                   help='set True to generate Rosetta 3mers and 9mers locally, False to import fragments')
 
 parser.add_argument('-make_models', metavar='Do the modelling', type=str, nargs=1,
                    help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
 
 parser.add_argument('-maxcluster_exe', metavar='Maxcluster exe', type=str, nargs=1,
-                   help='Maxcluster exe')
+                   help='Path to Maxcluster executable')
 
 parser.add_argument('-max_ensemble_models', metavar='max_ensemble_models', type=str, nargs=1,
                    help='Maximum number of models permitted in an ensemble')
@@ -149,22 +152,22 @@ parser.add_argument('-missing_domain', metavar='missing_domain', type=str, nargs
                    help='Modelling a missing domain - requires domain_all_chains_pdb argument')
 
 parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
-                   help='folder of decoys')
+                   help='Path to folder of PDB decoys to use for this run')
 
 parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
-                   help='mrbump keywords ')
+                   help='Additional keywords for MRBUMP - are passed through without editing')
 
 parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
-                   help='MTZ in')
+                   help='The MTZ file with the reflection data.')
 
 parser.add_argument('-name', metavar='priotein name', type=str, nargs=1,
                    help='name of protien in the format ABCD ')
 
 parser.add_argument('-nmodels', metavar='no models', type=int, nargs=1,
-                   help='number of models to make (1000)')
+                   help='number of models to make (default: 1000)')
 
 parser.add_argument('-nr', metavar='nr', type=str, nargs=1,
-                   help='Path to the nr non-redundant sequence database')
+                   help='Path to the NR non-redundant sequence database')
 
 parser.add_argument('-old_shelx', metavar='old_shelx', type=str, nargs=1,
                    help='old_shelx')
@@ -681,13 +684,30 @@ if amopt.d['make_models']:
     msg = '\nModelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n'
 elif amopt.d['import_models']:
     msg = '\nImporting models from directory:\n   ' + amopt.d['models_dir'] + '\n\n'
+    RUNNING.write(msg)
+    logger.info(msg)
+    if amopt.d['use_scwrl']:
+        msg = "Processing sidechains of imported models from {0} with Scwl\n".format( amopt.d['models_dir'] )
+        models_dir_scwrl = amopt.d['models_dir']+"_scwrl"
+        if os.path.isdir( models_dir_scwrl ):
+            emsg = "Scwrl models directory {0} already exists-please move it aside".format( models_dir_scwrl )
+            logger.critical( emsg )
+            raise RuntimeError, emsg
+        os.mkdir( models_dir_scwrl )
+        msg += "Scwrl-processed models will be placed in directory: {0}",format( models_dir_scwrl )
+        msg += "Running Scwrl..."
+        RUNNING.write(msg)
+        logger.info( msg )
+        scwrl = add_sidechains_SCWRL.Scwrl( scwrlExe=amopt.d['scwrl_exe'] )
+        scwrl.processDirectory( inDirectory=amopt.d['models_dir'], outDirectory=models_dir_scwrl )
+        amopt.d['models_dir'] = models_dir_scwrl
+        logger.info( "Finished processing models with Scwrl" )
+        
 elif amopt.d['import_ensembles']:
     msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
+    RUNNING.write(msg)
+    logger.info(msg)
 
-    
-RUNNING.write(msg)
-logger.info(msg)
-    
 
 #--------------------------------------------
 # check if models are present regardless
