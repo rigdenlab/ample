@@ -132,7 +132,7 @@ def import_cluster( amoptd ):
     
     amoptd['ensemble_results'] = [ ensembles ]
     
-    return ensembles
+    return [ e.pdb for e in ensembles ]
 
 def ensemble_summary( amoptd ):
     """Print a summary of the ensembling process"""
