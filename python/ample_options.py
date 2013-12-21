@@ -290,7 +290,7 @@ class AmpleOptions(object):
                 'transmembrane_spanfile'
             ]
         for k, v in self.d.iteritems():
-            if k in paths and v != None:
+            if k in paths and isinstance( v, str ):
                 self.d[ k ] = os.path.abspath( v )
         
         # Check if using any preset options
