@@ -50,7 +50,7 @@ class AmpleOptions(object):
                             'molrep_only' : False,
                             'mr_keys' : None,
                             'mtz' : None,
-                            'name' : None,
+                            'name' : 'ampl',
                             'nmodels' : 1000,
                             'NMR_model_in' : None,
                             'NMR_process' : None,
@@ -271,6 +271,7 @@ class AmpleOptions(object):
                 'fasta',
                 'frags_3mers',
                 'frags_9mers',
+                'import_cluster',
                 'maxcluster_exe',
                 'models_dir',
                 'mtz',
@@ -334,7 +335,7 @@ class AmpleOptions(object):
         pstr = ""
         pstr +='Params Used in this Run\n\n'
         
-        keys1 = ['fasta','work_dir','mtz','pdb_code']
+        keys1 = ['fasta','work_dir','mtz','name']
         pstr += '---input---\n'
         for k in keys1:
             pstr += "{0}: {1}\n".format(k, self.d[k])
