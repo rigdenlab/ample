@@ -60,7 +60,7 @@ public:
 
 	void generateFragment( OpenBabel::OBMol &obfragment,
 			std::string &sequence,
-			int phi, int psi, bool lStereo,
+			double phi, double psi, bool lStereo,
 			int nTerminus, int cTerminus, char chain
 			);
 
@@ -194,7 +194,7 @@ void ChainMaker::AddTerminus(int element, string atomID,
 
 void ChainMaker::generateFragment( OpenBabel::OBMol &obfragment,
 		std::string &sequence,
-		int phi, int psi, bool lStereo,
+		double phi, double psi, bool lStereo,
 		int nTerminus, int cTerminus, char chain
 		)
 {
@@ -406,11 +406,18 @@ int main(int argc,char **argv)
 	// Convert single AA sequence to triplets separted by -
 	stringstream s3;
 	char delim='-';
+        char aa;
 	for ( unsigned int i=0; i < sequence1.size(); i++ ) {
+                if ( one2three.count( sequence1[i] ) < 1 ) {
+                    cerr << "Cannot find amino acid " << sequence1[i] << " in map setting to A" << endl;
+                    aa='A';
+                } else {
+                    aa = sequence1[i];
+                }
 		if ( i == 0 ) {
-			s3 << one2three.at( sequence1[i] );
+			s3 << one2three.at( aa );
 		} else{
-			s3 << delim << one2three.at( sequence1[i] );
+			s3 << delim << one2three.at( aa );
 		}
 	}
 
@@ -421,7 +428,7 @@ int main(int argc,char **argv)
 	ChainMaker chainMaker;
 	//generateFragment( obfragment, sequence3, phi, psi, lStereo, nTerminus, cTerminus, chain );
 	//string zmatDir="/Users/jmht/Documents/avogadro/avogadro/builder/amino/";
-	chainMaker.setZmatDir( "/Users/jmht/Documents/avogadro/avogadro/builder/amino/" );
+	chainMaker.setZmatDir( "/home/jmht/chainMaker/amino/" );
 	chainMaker.generateFragment( obfragment, sequence3, phi, psi, lStereo, nTerminus, cTerminus, chain );
 
 	// Write it out as a pdb
