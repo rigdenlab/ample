@@ -39,6 +39,8 @@ class AmpleOptions(object):
                             'frags_9mers' : None,
                             'FREE' : None,
                             'import_cluster' : False,
+                            'import_models' : False,
+                            'import_ensembles' : False,
                             'improve_template' : None,
                             'LGA' : None,
                             'make_frags' : True,
