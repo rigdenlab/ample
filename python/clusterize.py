@@ -198,7 +198,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 
         return
     
-    def generateFagmentsOnCluster(self, cmd=None, fragmentsDir=None, nProc=None, logFile=None ):
+    def generateFragmentsOnCluster(self, cmd=None, fragmentsDir=None, nProc=None, logFile=None ):
         """ Run the modelling step on a cluster """
 
         # write out script
