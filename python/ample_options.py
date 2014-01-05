@@ -251,7 +251,9 @@ class AmpleOptions(object):
         
         # First set anything that hasn't been set to its default option
         for k, v in self.defaults.iteritems():
-            if self.d[k] == None:
+            if k not in self.d:
+                self.d[k] = v
+            elif  self.d[k] == None:
                 #if self.debug:
                 #    print "Setting default value: {0} : {1}".format(k,v)
                 self.d[k] = v

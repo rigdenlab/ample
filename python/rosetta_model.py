@@ -201,10 +201,10 @@ class RosettaModel(object):
         if submit_cluster:
             cluster_run = clusterize.ClusterRun()
             cluster_run.QTYPE = submit_qtype
-            self.logger.info('Submitting fragment generation jobs to a queueing system of type: {1}\n'.format( submit_qtype ) )
-            cluster_run.generateFragmentsOnCluster( cmd=cmd,
+            self.logger.info('Submitting fragment generation jobs to a queueing system of type: {0}\n'.format( submit_qtype ) )
+            cluster_run.generateFragmentsOnCluster( cmd=" ".join(cmd),
                                                     fragmentsDir=self.fragments_directory,
-                                                    nproc=nproc,
+                                                    nProc=nproc,
                                                     logFile=logfile )
             # Monitor the cluster queue to see when all jobs have finished
             cluster_run.monitorQueue()

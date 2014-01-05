@@ -627,8 +627,8 @@ time_start = time.time()
 # Make Rosetta fragments
 #-----------------------------------
 if amopt.d['make_frags']:
-    rosetta_modeller.generate_fragments( cluster_submit=amopt.d['submit_cluster'],
-                                         cluster_qtype=amopt.d['submit_qtype'],
+    rosetta_modeller.generate_fragments( submit_cluster=amopt.d['submit_cluster'],
+                                         submit_qtype=amopt.d['submit_qtype'],
                                          nproc=amopt.d['nproc'] )
 
 #-----------------------------------
