@@ -19,6 +19,7 @@ import unittest
 # Our modules
 import add_sidechains_SCWRL
 import ample_util
+import clusterize
 import octopus_predict
 
 
@@ -179,15 +180,12 @@ class RosettaModel(object):
     ##End fragment_cmd
             
 
-    def generate_fragments(self):
+    def generate_fragments(self, submit_cluster=None, submit_qtype=None, nproc=None ):
         """
         Run the script to generate the fragments
-        
         """
     
         self.logger.info('----- making fragments--------')
-        #RUNNING.write('----- making fragments--------\n')
-        #RUNNING.flush()
         
         if not os.path.exists( self.fragments_directory ):
             os.mkdir( self.fragments_directory )
@@ -197,21 +195,31 @@ class RosettaModel(object):
         fasta = os.path.split(  self.fasta )[1]
         shutil.copy2( self.fasta, self.fragments_directory + os.sep + fasta )
         
-#        if self.transmembrane:
-#            self.generate_tm_predict()        
-            
         cmd = self.fragment_cmd()
         logfile = os.path.join( self.fragments_directory, "make_fragments.log" )
-        retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.fragments_directory )
-        if retcode != 0:
-            msg = "Error generating fragments!\nPlease check the logfile {0}".format( logfile )
-            self.logger.critical( msg )
-            raise RuntimeError, msg
+        
+        if submit_cluster:
+            cluster_run = clusterize.ClusterRun()
+            cluster_run.QTYPE = submit_qtype
+            self.logger.info('Submitting fragment generation jobs to a queueing system of type: {1}\n'.format( submit_qtype ) )
+            cluster_run.generateFragmentsOnCluster( cmd=cmd,
+                                                    fragmentsDir=self.fragments_directory,
+                                                    nproc=nproc,
+                                                    logFile=logfile )
+            # Monitor the cluster queue to see when all jobs have finished
+            cluster_run.monitorQueue()
+            
+        else:
+            retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.fragments_directory )
+            if retcode != 0:
+                msg = "Error generating fragments!\nPlease check the logfile {0}".format( logfile )
+                self.logger.critical( msg )
+                raise RuntimeError, msg
         
         if self.rosetta_version >= 3.4:
             # new name format: $options{runid}.$options{n_frags}.$size" . "mers
             self.frags_3mers = self.fragments_directory + os.sep + self.name + '.200.3mers'
-            self.frags_9mers = self.fragments_directory + os.sep + self.name + '.200.9mers'      
+            self.frags_9mers = self.fragments_directory + os.sep + self.name + '.200.9mers'
         else:
             # old_name_format: aa$options{runid}$fragsize\_05.$options{n_frags}\_v1_3"
             self.frags_3mers = self.fragments_directory + os.sep + 'aa' + self.name + '03_05.200_v1_3'
@@ -220,7 +228,6 @@ class RosettaModel(object):
         if not os.path.exists( self.frags_3mers ) or not os.path.exists( self.frags_9mers ):
             raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\n".format(self.frags_3mers,self.frags_9mers)
         
-        #RUNNING.write('Fragments done\n3mers at: ' + frags_3_mers + '\n9mers at: ' + frags_9_mers + '\n\n')
         self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
     
         if os.path.exists( self.fragments_directory + os.sep + self.fragments_directory + '.psipred'):
@@ -228,7 +235,6 @@ class RosettaModel(object):
        
         return
     ##End fragment_cmd
-    
     
     def generate_tm_predict(self):
         """

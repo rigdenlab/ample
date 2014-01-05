@@ -197,6 +197,25 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         job_number = self.submitJob( subScript=script_path, jobDir=amoptd['work_dir'] )
 
         return
+    
+    def generateFagmentsOnCluster(self, cmd=None, fragmentsDir=None, nProc=None, logFile=None ):
+        """ Run the modelling step on a cluster """
+
+        # write out script
+        script_path = os.path.join( fragmentsDir, "submit_fragments.sh" )
+        job_script = open(script_path, "w")
+
+        script_header = self.subScriptHeader( nProc=nProc, logFile=logFile, jobName="genFrags")
+        job_script.write( script_header )
+        job_script.write("\n{0}\n".format( cmd ) )
+        job_script.close()
+
+        # Make executable
+        os.chmod(script_path, 0o777)
+  
+        job_number = self.submitJob( subScript=script_path, jobDir=fragmentsDir )
+
+        return
 
     def NMRmodelOnCluster(self, RunDir, proc, jobNumber, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI, seed, MR_ROSETTA ):
         """ Farm out the modelling step on a cluster (SGE) """

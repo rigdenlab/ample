@@ -60,7 +60,6 @@ import version
 #-------------------------------------------
 # get command line options
 #-------------------------------------------
-
 parser = argparse.ArgumentParser( prog="AMPLE", description='Structure solution by abinitio modelling', prefix_chars="-")
 
 parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
@@ -628,7 +627,9 @@ time_start = time.time()
 # Make Rosetta fragments
 #-----------------------------------
 if amopt.d['make_frags']:
-    rosetta_modeller.generate_fragments()
+    rosetta_modeller.generate_fragments( cluster_submit=amopt.d['submit_cluster'],
+                                         cluster_qtype=amopt.d['submit_qtype'],
+                                         nproc=amopt.d['nproc'] )
 
 #-----------------------------------
 # break here for NMR (frags needed but not modelling
@@ -637,11 +638,10 @@ if amopt.d['make_frags']:
 if NMR_PROTOCOL:
     nmr.doNMR(amopt, logger)
 # return from nmr with models already made
-
+elif amopt.d['make_models']:
 #-----------------------------------
 # Make the models
 #-----------------------------------
-if amopt.d['make_models']:
     
     logger.info('----- making Rosetta models--------')
     logger.info('making ' + str(amopt.d['nmodels']) + ' models...')
