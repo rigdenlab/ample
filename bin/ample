@@ -33,7 +33,6 @@ if not "CCP4" in sorted(os.environ.keys()):
 root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
 sys.path.append( os.path.join( root, "python" ) )
 
-
 # python imports
 import argparse
 import clusterize
@@ -433,14 +432,9 @@ if amopt.d['name'] and len(amopt.d['name']) != 4:
 amopt.d['name'] += '_'
 
 # Check if importing ensembles
-amopt.d['import_ensembles'] = False
 if amopt.d['ensembles_dir']:
-    msg=None
-    if not os.path.isdir( amopt.d['ensembles_dir'] ):
-        msg = "Trying to import ensembles from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['ensembles_dir'])
-    elif not len( glob.glob( os.path.join( amopt.d['ensembles_dir'], "*.pdb" ) ) ):
-        msg = "Trying to import ensembles from the directory:\n{0}\nBut cannot find any pdb files!".format(amopt.d['ensembles_dir'])
-    if msg:
+    if not os.path.isdir( amopt.d['ensembles_dir'] ) or not len( glob.glob( os.path.join( amopt.d['ensembles_dir'], "*.pdb" ) ) ):
+        msg = "Cannot import ensembles from the directory: {0}".format(amopt.d['ensembles_dir'])
         logger.critical(msg)
         sys.exit(1)
 
@@ -451,24 +445,53 @@ if amopt.d['ensembles_dir']:
 
 # Importing pre-clustered models
 if amopt.d['import_cluster']:
+    if not os.path.exists(amopt.d['import_cluster']):
+        logger.critical('Cannot find cluster import directory: {0}'.format( amopt.d['import_cluster'] ))
+        sys.exit(1)
+    
+    logger.info("Found directory with cluster files: {0}\n".format( amopt.d['import_cluster'] ) )
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
     
 # Check if importing models
-amopt.d['import_models'] = False
 if amopt.d['models_dir']:
     msg=None
-    if not os.path.isdir( amopt.d['models_dir'] ):
-        msg = "Trying to import models from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['models_dir'])
-    elif not len( glob.glob( os.path.join( amopt.d['models_dir'], "*.pdb" ) ) ):
-        msg = "Trying to import models from the directory:\n{0}\nBut cannot find any pdb files!".format(amopt.d['models_dir'])
-    if msg:
+    if not os.path.isdir( amopt.d['models_dir'] ) or not len( glob.glob( os.path.join( amopt.d['models_dir'], "*.pdb" ) ) ):
+        msg = "Cannot import models from the directory: {0}".format( amopt.d['models_dir'] )
         logger.critical(msg)
         sys.exit(1)
     
     amopt.d['import_models'] = True
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
+
+# Check import flags
+if amopt.d['import_ensembles'] and (amopt.d['import_models'] or amopt.d['import_cluster'] ):
+        msg = "Cannot import both models and ensembles/clusters!"
+        logger.critical(msg)
+        sys.exit(1)
+
+# NMR Checks
+NMR_PROTOCOL = False
+if amopt.d['NMR_model_in']:
+    if not os.path.isfile( amopt.d['NMR_model_in'] ):
+        msg = "NMR_model_in flag given, but cannot find file: {0}".format( amopt.d['NMR_model_in'] )
+        logger.critical(msg)
+        sys.exit(1)    
+       
+    NMR_PROTOCOL = True
+    amopt.d['make_frags'] = False
+    amopt.d['make_models'] = False
+    
+    # HACK - use the rosetta modeller to find the binary
+    ROSETTA_CM = rosetta_model.find_binary(  'mr_protocols', rosettaDir = amopt.d['rosetta_dir'] )
+    if not ROSETTA_CM:
+        msg = 'Cannot find Rosetta binary {0} in {1} check path names'.format( 'mr_protocols', amopt.d['rosetta_dir'] )
+        logger.critical( msg )
+        sys.exit(1)
+
+    if not os.path.isfile( str(amopt.d['NMR_remodel_fasta']) ):
+        amopt.d['NMR_remodel_fasta'] =  amopt.d['fasta']
 
 if amopt.d['make_models']:
     # Create the models_dir
@@ -491,42 +514,6 @@ if amopt.d['make_models']:
         msg = "make_frags set to false, but you have not given the paths to the frags_3mers or frags_9mers"
         logger.critical(msg)
         sys.exit(1)   
-
-# Check models and ensembles
-if amopt.d['import_ensembles'] and amopt.d['import_models']:
-        msg = "Cannot import both models and ensembles!"
-        logger.critical(msg)
-        sys.exit(1)
-
-# NMR Checks
-NMR_PROTOCOL = False
-if amopt.d['NMR_model_in']:
-    if not os.path.isfile( amopt.d['NMR_model_in'] ):
-        msg = "NMR_model_in flag given, but cannot find file: {0}".format( amopt.d['NMR_model_in'] )
-        logger.critical(msg)
-        sys.exit(1)    
-       
-    NMR_PROTOCOL = True
-    # HACK - use the rosetta modeller to find the binary
-    ROSETTA_CM = rosetta_model.find_binary(  'mr_protocols', rosettaDir = amopt.d['rosetta_dir'] )
-    if not ROSETTA_CM:
-        msg = 'Cannot find Rosetta binary {0} in {1} check path names'.format( 'mr_protocols', amopt.d['rosetta_dir'] )
-        logger.critical( msg )
-        sys.exit(1)
-
-    if not os.path.isfile( str(amopt.d['NMR_remodel_fasta']) ):
-        amopt.d['NMR_remodel_fasta'] =  amopt.d['fasta']
-
-if not  NMR_PROTOCOL :
-    if amopt.d['import_models'] and not os.path.exists(amopt.d['models_dir']):
-        logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + amopt.d['models_dir'])
-        if not os.path.exists(amopt.d['ensembles_dir']):
-            logger.warn('you have chosen to import ensembles, but path does not exist : ' + amopt.d['ensembles_dir'])
-            if amopt.d['import_cluster']:
-                logger.info('you are importing a cluster of models from :' + amopt.d['import_cluster'])
-                if not os.path.exists(amopt.d['import_cluster']):
-                    logger.critical('you have chosen to import a cluster, the clusterpath does not exist')
-                    sys.exit(1)
 
 # Missing domains
 if amopt.d['missing_domain']:
@@ -708,11 +695,7 @@ elif amopt.d['import_models']:
         scwrl.processDirectory( inDirectory=amopt.d['models_dir'], outDirectory=models_dir_scwrl )
         amopt.d['models_dir'] = models_dir_scwrl
         logger.info( "Finished processing models with Scwrl" )
-        
-elif amopt.d['import_ensembles']:
-    msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
-    RUNNING.write(msg)
-    logger.info(msg)
+
 
 #---------------------------------------
 # Do the clustering
@@ -727,11 +710,15 @@ elif amopt.d['import_ensembles']:
 
 ensembles = [] # List of ensembles - 1 per cluster
 if amopt.d['import_ensembles']:
+    
     #---------------------------------------
     # Importing pre-made ensembles
     #---------------------------------------
+    
     # Set list of ensembles to the one we are importing
-    logger.info("Importing existing ensembles from: {0}".format( amopt.d['ensembles_dir'] ) )
+    msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
+    RUNNING.write(msg)
+    logger.info( msg )
     final_ensembles =  glob.glob( os.path.join(amopt.d['ensembles_dir'], '*.pdb') )
 
     if amopt.d['top_model_only']:
