@@ -146,10 +146,10 @@ class RosettaModel(object):
         
         """
         # Set path to script
-        if not self.fragments_exe: 
+        if self.fragments_exe is None: 
             if self.rosetta_version == 3.3:
                 self.fragments_exe = self.rosetta_dir + '/rosetta_fragments/make_fragments.pl'
-            elif self.rosetta_version  == 3.4:
+            elif self.rosetta_version  >= 3.4:
                 self.fragments_exe = self.rosetta_dir + '/rosetta_tools/fragment_tools/make_fragments.pl'
         
         # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
@@ -168,7 +168,7 @@ class RosettaModel(object):
             if self.rosetta_version == 3.3:
                 # jmht the last 3 don't seem to work with 3.4
                 cmd += ['-noporter', '-nojufo', '-nosam','-noprof' ]
-            elif self.rosetta_version == 3.4:
+            elif self.rosetta_version >= 3.4:
                 cmd += ['-noporter' ]
 
         # Whether to exclude homologs
