@@ -1,13 +1,42 @@
 import copy
+import cPickle
+import os
+import shutil
 import sys
 
-from import analyse_run import AmpleResult
+from analyse_run import AmpleResult, MrbumpLogParser, MolrepLogParser
 from mrbump_results import MrBumpResult
+import ample_util
+import contacts
+import csymmatch
+import pdb_edit
+import pdb_model
+import phaser_parser
+import shelxe_log
+import residue_map
 
 def processMrbump( mrbumpResult ):
     
+    # Add attributes to object
+    mrbumpResult.phaserLLG = None
+    mrbumpResult.phaserTFZ = None
+    mrbumpResult.phaserPdb = None
+    mrbumpResult.phaserLog = None
+    mrbumpResult.phaserTime = None
+    mrbumpResult.molrepLog = None
+    mrbumpResult.molrepScore = None
+    mrbumpResult.molrepTime = None
+    mrbumpResult.molrepPdb = None
+    mrbumpResult.shelxePdb = None
+    mrbumpResult.shelxeLog = None
+    mrbumpResult.shelxeCC = None
+    mrbumpResult.shelxeAvgChainLength = None
+    mrbumpResult.shelxeMaxChainLength = None
+    mrbumpResult.shelxeNumChains = None
+
     # Need to remove last component as we recored the refmac directory
-    mrbumpResult.mrDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
+    mrDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
+    mrbumpResult.mrDir = mrDir
     
     mrbumpResult.ensembleName = mrbumpResult.name[9:-6]
     
@@ -16,38 +45,40 @@ def processMrbump( mrbumpResult ):
     
     if mrbumpResult.program == "phaser":
         
-        phaserPdb = os.path.join( resultDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrbumpResult.program, ensembleName) )
+        phaserPdb = os.path.join( mrDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrbumpResult.program, mrbumpResult.ensembleName) )
         if os.path.isfile( phaserPdb ):
             phaserP = phaser_parser.PhaserPdbParser( phaserPdb )
             mrbumpResult.phaserLLG = phaserP.LLG
             mrbumpResult.phaserTFZ = phaserP.TFZ
             mrbumpResult.phaserPdb = phaserPdb
             
-            phaserLog = os.path.join( resultDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(mrbumpResult.program, ensembleName) )
+            phaserLog = os.path.join( mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(mrbumpResult.program, mrbumpResult.ensembleName) )
             mrbumpResult.phaserLog = phaserLog
             phaserP = phaser_parser.PhaserLogParser( phaserLog )
             mrbumpResult.phaserTime = phaserP.time
         
-    else:
-        molrepLog = os.path.join( resultDir, "molrep.log" )
+    elif mrbumpResult.program == "molrep":
+        molrepLog = os.path.join( mrDir, "molrep.log" )
         mrbumpResult.molrepLog = molrepLog
         molrepP = MolrepLogParser( molrepLog )
         mrbumpResult.molrepScore = molrepP.score
         mrbumpResult.molrepTime = molrepP.time
         
-        molrepPdb = os.path.join( resultDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrbumpResult.program, ensembleName) )
-        if is os.path.isfile( molrepPdb ):
+        molrepPdb = os.path.join( resultDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrbumpResult.program, mrbumpResult.ensembleName) )
+        if os.path.isfile( molrepPdb ):
             mrbumpResult.molrepPdb = molrepPdb
+    else:
+        assert False
         
     #
     # SHELXE PROCESSING
     #
     # Now read the shelxe log to see how we did
-    shelxePdb = os.path.join( resultDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, ensembleName ) )
+    shelxePdb = os.path.join( mrDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, mrbumpResult.ensembleName ) )
     if os.path.isfile( shelxePdb):
         mrbumpResult.shelxePdb
         
-    shelxeLog = os.path.join( resultDir, "build/shelxe/shelxe_run.log" )
+    shelxeLog = os.path.join( mrDir, "build/shelxe/shelxe_run.log" )
     if os.path.isfile( shelxeLog ):
         mrbumpResult.shelxeLog = shelxeLog
         shelxeP = shelxe_log.ShelxeLogParser( shelxeLog )
@@ -66,11 +97,20 @@ def analyseSolution( ampleResult=None,
                      dsspLog=None,
                      workdir=None ):
     
-    if ampleResult.program == "phaser":
+    if ampleResult.mrProgram == "phaser":
         placedPdb = ampleResult.phaserPdb
-    elif ampleResult.program == "molrep":
+    elif ampleResult.mrProgram == "molrep":
         placedPdb = ampleResult.molrepPdb
-    
+    else:
+        assert False
+
+
+    if placedPdb is None:
+     print "NO PDB FOR ",ampleResult
+     return
+    else:
+     print "GOT PDB FOR ",ampleResult
+
     # debug - copy into work directory as reforigin struggles with long pathnames
     shutil.copy(placedPdb, os.path.join( workdir, os.path.basename( placedPdb ) ) )
     
@@ -180,12 +220,12 @@ def analyseSolution( ampleResult=None,
 # MAIN STARTS HERE
 #
 
-rundir = ""
-singleModelDir=""
-dataDir=""
+rundir = "/home/jmht/Documents/test/CC/single_model"
+singleModelDir="/media/data/shared/coiled-coils/single_model"
+dataDir="/media/data/shared/coiled-coils/full_ensemble/"
 
 # Unpickle the original results
-pfile = os.path.join( dataRoot,"ar_results.pkl" )
+pfile = "/home/jmht/Documents/test/CC/run2/ar_results.pkl"
 with open( pfile ) as f:
     ensembleResults = cPickle.load( f )
 
@@ -194,28 +234,29 @@ pfile = os.path.join( singleModelDir,"results.pkl" )
 with open( pfile ) as f:
     mrbumpResults = cPickle.load( f )
 
+
 pdbedit = pdb_edit.PDBEdit()
-
-
-for pdbcode in sorted( mrbumpResults.keys() ):
+for pdbCode in sorted( mrbumpResults.keys() ):
+    if pdbCode != "1BYZ":
+        break
     
-    workdir = os.path.join( rundir, pdbcode )
+    workdir = os.path.join( rundir, pdbCode )
     if not os.path.isdir( workdir ):
         os.mkdir( workdir )
     os.chdir( workdir )
         
-    print "\nResults for ",pdbcode
+    print "\nResults for ",pdbCode
     
     # Get path to native Extract all the nativeInfo from it
-    nativePdb = os.path.join( dataDir, "{0}.pdb".format( pdbcode ) )
+    nativePdb = os.path.join( dataDir, pdbCode,  "{0}.pdb".format( pdbCode ) )
     pdbedit = pdb_edit.PDBEdit()
-    nativeInfo = pdbedit.get_info( nativePdb )
+    nativePdbInfo = pdbedit.get_info( nativePdb )
     
     # First check if the native has > 1 model and extract the first if so
-    if len( nativeInfo.models ) > 1:
+    if len( nativePdbInfo.models ) > 1:
         print "nativePdb has > 1 model - using first"
         nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=workdir )
-        pdbedit.extract_model( nativePdb, nativePdb1, modelID=nativeInfo.models[0].serial )
+        pdbedit.extract_model( nativePdb, nativePdb1, modelID=nativePdbInfo.models[0].serial )
         nativePdb = nativePdb1
         
     # Standardise the PDB to rename any non-standard AA, remove solvent etc
@@ -224,58 +265,34 @@ for pdbcode in sorted( mrbumpResults.keys() ):
     nativePdb = nativePdbStd
     
     # Get the new Info about the native
-    nativeInfo = pdbedit.get_info( nativePdb )
+    nativePdbInfo = pdbedit.get_info( nativePdb )
     
     # Get information on the origins for this spaceGroup
-    originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativeInfo.crystalInfo.spaceGroup )
-    dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbcode  )  )
+    originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
+    dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode  )  )
 
     # Get hold of a full model so we can do the mapping of residues
-    refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbcode ) )
+    refModelPdb = os.path.join( dataDir, pdbCode,  "models/S_00000001.pdb".format( pdbCode ) )
     resSeqMap = residue_map.residueSequenceMap()
     
-    modelInfo = pdbedit.get_info( refModelPdb )
+    modelPdbInfo = pdbedit.get_info( refModelPdb )
     
-    resSeqMap.fromInfo( refInfo=modelInfo,
-                            refChainID=modelInfo.models[0].chains[0],
-                            targetInfo=nativeInfo,
-                            targetChainID=nativeInfo.models[0].chains[0]
+    resSeqMap.fromInfo( refInfo=modelPdbInfo,
+                            refChainID=modelPdbInfo.models[0].chains[0],
+                            targetInfo=nativePdbInfo,
+                            targetChainID=nativePdbInfo.models[0].chains[0]
                             )
     
     # Loop through results for that job
-    for mrbumpResult in mrbumpResults[ pdbcode ]:
+    for mrbumpResult in mrbumpResults[ pdbCode ]:
         
         # Need to specify the log
-        mrbumpLog = 
-        mrbumpResult.mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/",
-                                               "{0}.sub.log".format( mrbumpResult.name[9:-6] ) )
+        mrbumpResult.mrbumpLog = os.path.join( singleModelDir, pdbCode, 
+                                               "{0}.log".format( mrbumpResult.name[9:-6] ) )
     
         # Update the Mrbump result object and set all values in the Ample Result
         processMrbump( mrbumpResult )
-        
-        ampleResult.solution =  mrbumpResult.solution
-        ampleResult.resultDir = mrbumpResult.mrDir
-        ampleResult.rfact =  mrbumpResult.rfact
-        ampleResult.rfree =  mrbumpResult.rfree
-        ampleResult.mrProgram =  mrbumpResult.program
-    
-        ampleResult.phaserLog = mrbumpResult.phaserLog
-        ampleResult.phaserLLG = mrbumpResult.phaserLLG
-        ampleResult.phaserTFZ = mrbumpResult.phaserTFZ
-        ampleResult.phaserPdb = mrbumpResult.phaserPdb
-        ampleResult.phaserTime = mrbumpResult.phaserTime
-        
-        ampleResult.molrepLog = mrbumpResult.molrepLog
-        ampleResult.molrepScore = mrbumpResult.molrepScore
-        ampleResult.molrepTime = mrbumpResult.molrepTime
-        ampleResult.molrepPdb = mrbumpResult.molrepPdb
-        
-        ampleResult.shelxeLog = mrbumpResult.shelxeLog
-        ampleResult.shelxeCC = mrbumpResult.shelxeCC
-        ampleResult.shelxeAvgChainLength = mrbumpResult.shelxeAvgChainLength
-        ampleResult.shelxeMaxChainLength = mrbumpResult.shelxeMaxChainLength
-        ampleResult.shelxeNumChains= mrbumpResult.shelxeNumChains
-        
+
         # Find the original result object
         ampleResult=None
         for e in ensembleResults:
@@ -284,7 +301,34 @@ for pdbcode in sorted( mrbumpResults.keys() ):
         
         assert ampleResult is not None,"Could not find result: {0} {1}".format( pdbCode,ensembleName  )
         
-        analyseSolution( ampleResult=ar,
+        ampleResult.solution =  mrbumpResult.solution
+        ampleResult.resultDir = mrbumpResult.mrDir
+        ampleResult.rfact =  mrbumpResult.rfact
+        ampleResult.rfree =  mrbumpResult.rfree
+        ampleResult.mrProgram =  mrbumpResult.program
+    
+        if mrbumpResult.program == "phaser":
+            #ampleResult.phaserLog = mrbumpResult.phaserLog
+            ampleResult.phaserLLG = mrbumpResult.phaserLLG
+            ampleResult.phaserTFZ = mrbumpResult.phaserTFZ
+            ampleResult.phaserPdb = mrbumpResult.phaserPdb
+            ampleResult.phaserTime = mrbumpResult.phaserTime
+        elif mrbumpResult.program == "molrep":
+            #ampleResult.molrepLog = mrbumpResult.molrepLog
+            ampleResult.molrepScore = mrbumpResult.molrepScore
+            ampleResult.molrepTime = mrbumpResult.molrepTime
+            ampleResult.molrepPdb = mrbumpResult.molrepPdb
+        else:
+            raise RuntimeError,"Unrecognised program!"
+        
+        #ampleResult.shelxeLog = mrbumpResult.shelxeLog
+        ampleResult.shelxeCC = mrbumpResult.shelxeCC
+        ampleResult.shelxeAvgChainLength = mrbumpResult.shelxeAvgChainLength
+        ampleResult.shelxeMaxChainLength = mrbumpResult.shelxeMaxChainLength
+        ampleResult.shelxeNumChains = mrbumpResult.shelxeNumChains
+        
+        
+        analyseSolution( ampleResult=ampleResult,
                          nativePdbInfo=nativePdbInfo,
                          refModelPdb=refModelPdb,
                          resSeqMap=resSeqMap,
