@@ -15,6 +15,53 @@ import phaser_parser
 import shelxe_log
 import residue_map
 
+def clearResult( ampleResult ):
+    """Reset all things that may change"""
+    
+    ampleResult.solution = None
+    ampleResult.resultDir = None
+    ampleResult.rfact =  None
+    ampleResult.rfree =  None
+    ampleResult.mrProgram =  None
+    
+    ampleResult.phaserLLG = None
+    ampleResult.phaserTFZ = None
+    ampleResult.phaserPdb = None
+    ampleResult.phaserTime = None
+    
+    ampleResult.molrepScore = None
+    ampleResult.molrepTime = None
+    ampleResult.molrepPdb = None
+    
+    ampleResult.shelxeCC = None
+    ampleResult.shelxeAvgChainLength = None
+    ampleResult.shelxeMaxChainLength = None
+    ampleResult.shelxeNumChains = None
+    
+    
+    ampleResult.reforiginRMSD = None
+    ampleResult.floatingOrigin = None
+    ampleResult.csymmatchOriginOk = None
+    ampleResult.csymmatchOriginOk   = None
+    ampleResult.shelxeCsymmatchShelxeScore  = None
+    ampleResult.shelxeTM = None
+    ampleResult.shelxeTMPairs = None
+    ampleResult.shelxeRMSD =None
+    
+    ampleResult.contactData        = None
+    ampleResult.numContacts        = None
+    ampleResult.inregisterContacts = None
+    ampleResult.ooregisterContacts = None
+    ampleResult.backwardsContacts  = None
+    ampleResult.contactOrigin      = None
+    ampleResult.goodContacts       = None
+    ampleResult.nocatContacts      = None
+    ampleResult.helixSequence      = None
+    ampleResult.lenHelix = None
+
+    return
+
+
 def processMrbump( mrbumpResult ):
     
     # Add attributes to object
@@ -96,7 +143,8 @@ def analyseSolution( ampleResult=None,
                      originInfo=None,
                      dsspLog=None,
                      workdir=None ):
-    
+
+
     if ampleResult.mrProgram == "phaser":
         placedPdb = ampleResult.phaserPdb
     elif ampleResult.mrProgram == "molrep":
@@ -299,7 +347,8 @@ for pdbCode in sorted( mrbumpResults.keys() ):
             if e.pdbCode == pdbCode and e.ensembleName == mrbumpResult.ensembleName:
                 ampleResult = copy.deepcopy( e )
         
-        assert ampleResult is not None,"Could not find result: {0} {1}".format( pdbCode,ensembleName  )
+        assert ampleResult is not None,"Could not find result: {0} {1}".format( pdbCode,ensembleName )
+        resetResult( ampleResult )
         
         ampleResult.solution =  mrbumpResult.solution
         ampleResult.resultDir = mrbumpResult.mrDir
