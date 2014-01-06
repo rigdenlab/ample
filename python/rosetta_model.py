@@ -321,7 +321,7 @@ class RosettaModel(object):
                 if dirname.endswith("3.5"):
                     version = 3.5
                 else:
-                    self.logger.critical("Error determining rosetta version: {0}".format(e))
+                    self.logger.critical("Error determining rosetta version")
                     sys.exit(1)
                 
             self.rosetta_version = version
