@@ -729,6 +729,8 @@ class PDBEdit(object):
         """
         
         info = pdb_model.PdbInfo()
+        info.pdb = inpath
+        
         currentModel = None
         currentChain = -1
         

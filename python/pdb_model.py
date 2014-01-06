@@ -518,6 +518,7 @@ class PdbModel(object):
     
     def __init__(self ):
         
+        self.pdb = None
         self.serial = None
         self.chains = [] # Ordered list of chain IDs
         
