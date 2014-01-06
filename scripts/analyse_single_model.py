@@ -83,6 +83,9 @@ def processMrbump( mrbumpResult ):
 
     # Need to remove last component as we recored the refmac directory
     mrDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
+    # HACK - we run the processing on cytosine so differnt place
+    #/data2/jmht/coiled-coils/single_ensemble
+    mrDir = mrDir.replace( "/data2/jmht/coiled-coils/single_ensemble","/media/data/shared/coiled-coils/single_model" )
     mrbumpResult.mrDir = mrDir
     
     mrbumpResult.ensembleName = mrbumpResult.name[9:-6]
@@ -348,7 +351,7 @@ for pdbCode in sorted( mrbumpResults.keys() ):
                 ampleResult = copy.deepcopy( e )
         
         assert ampleResult is not None,"Could not find result: {0} {1}".format( pdbCode,ensembleName )
-        resetResult( ampleResult )
+        clearResult( ampleResult )
         
         ampleResult.solution =  mrbumpResult.solution
         ampleResult.resultDir = mrbumpResult.mrDir
