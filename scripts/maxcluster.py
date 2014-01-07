@@ -71,10 +71,13 @@ class Maxcluster(object):
 
         return
     
-    def compareSingle(self, nativePdb=None, modelPdb=None, sequenceIndependant=True, rmsd=False ):
-        
+    def compareSingle(self, nativePdb=None, modelPdb=None, sequenceIndependant=True, rmsd=False, workdir=None ):
+
+        self.workdir = workdir
+        if not self.workdir:
+            self.workdir = os.getcwd()
             
-        cmd = [ self.maxclusterExe, "-e", self.nativePdb, "-p", modelPdb ]
+        cmd = [ self.maxclusterExe, "-e", nativePdb, "-p", modelPdb ]
         
         if sequenceIndependant:
             cmd.append( "-in" )
