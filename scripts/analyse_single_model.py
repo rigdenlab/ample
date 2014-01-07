@@ -9,9 +9,11 @@ from mrbump_results import MrBumpResult
 import ample_util
 import contacts
 import csymmatch
+import maxcluster
 import pdb_edit
 import pdb_model
 import phaser_parser
+import reforigin
 import shelxe_log
 import residue_map
 
@@ -33,6 +35,7 @@ def clearResult( ampleResult ):
     ampleResult.molrepTime = None
     ampleResult.molrepPdb = None
     
+    ampleResult.shelxePdb = None
     ampleResult.shelxeCC = None
     ampleResult.shelxeAvgChainLength = None
     ampleResult.shelxeMaxChainLength = None
@@ -126,7 +129,7 @@ def processMrbump( mrbumpResult ):
     # Now read the shelxe log to see how we did
     shelxePdb = os.path.join( mrDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, mrbumpResult.ensembleName ) )
     if os.path.isfile( shelxePdb):
-        mrbumpResult.shelxePdb
+        mrbumpResult.shelxePdb = shelxePdb
         
     shelxeLog = os.path.join( mrDir, "build/shelxe/shelxe_run.log" )
     if os.path.isfile( shelxeLog ):
@@ -159,31 +162,33 @@ def analyseSolution( ampleResult=None,
     if placedPdb is None:
      print "NO PDB FOR ",ampleResult
      return
-    else:
-     print "GOT PDB FOR ",ampleResult
+    #else:
+    # print "GOT PDB FOR ",ampleResult
 
     # debug - copy into work directory as reforigin struggles with long pathnames
     shutil.copy(placedPdb, os.path.join( workdir, os.path.basename( placedPdb ) ) )
     
-    placedInfo = pdbedit.get_info( placedPdb )
+    placedPdbInfo = pdbedit.get_info( placedPdb )
     
     # Get reforigin info
-    try:
-        rmsder = reforigin.ReforiginRmsd( nativePdbInfo=nativeInfo,
-                                          placedPdbInfo=placedInfo,
-                                          refModelPdb=refModelPdb,
-                                          cAlphaOnly=True )
+    if True:
+    #try:
+        rmsder = reforigin.ReforiginRmsd()
+        rmsder.getRmsd(  nativePdbInfo=nativePdbInfo,
+                              placedPdbInfo=placedPdbInfo,
+                              refModelPdb=refModelPdb,
+                              cAlphaOnly=True )
         ampleResult.reforiginRMSD = rmsder.rmsd
-    except Exception, e:
-        print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdbInfo.pdb, placedPdbInfo.pdb )
-        print "{0}".format( e )
-        ampleResult.reforiginRMSD = 9999
+    #except Exception, e:
+    #    print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdbInfo.pdb, placedPdbInfo.pdb )
+    #    print "{0}".format( e )
+    #    ampleResult.reforiginRMSD = 9999
          
     #
     # SHELXE PROCESSING
     #
     if os.path.isfile( ampleResult.shelxePdb ):
-        shelxePdb = os.path.join(workdir, os.path.basename( origShelxePdb ) )
+        shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
         shutil.copy( ampleResult.shelxePdb, shelxePdb )
         
         csym                           = csymmatch.Csymmatch()
@@ -211,6 +216,7 @@ def analyseSolution( ampleResult=None,
         pdbedit.to_single_chain(shelxeCsymmatchPdb, shelxeCsymmatchPdbSingle)
         
         # Compare the traced model to the native with maxcluster
+        maxComp = maxcluster.Maxcluster()
         d = maxComp.compareSingle( nativePdb=nativePdbInfo.pdb,
                                modelPdb=shelxeCsymmatchPdbSingle,
                                sequenceIndependant=True,
@@ -231,18 +237,18 @@ def analyseSolution( ampleResult=None,
         # Only bother when we have a floating origin if the csymmatch origin is ok
         if not ampleResult.floatingOrigin or ( ampleResult.floatingOrigin and ampleResult.csymmatchOriginOk ):
             ccalc = contacts.Contacts()
-            try:
-            #if True:
+            #try:
+            if True:
                 ccalc.getContacts( placedPdb=placedPdb,
                                    resSeqMap=resSeqMap,
-                                   nativeInfo=nativeInfo,
+                                   nativeInfo=nativePdbInfo,
                                    originInfo=originInfo,
                                    shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
                                    workdir=workdir,
                                    dsspLog=dsspLog
                                 )
-            except Exception, e:
-                print "ERROR WITH CONTACTS: {0}".format( e )
+            #except Exception, e:
+            #    print "ERROR WITH CONTACTS: {0}".format( e )
        
             if ccalc.best:
                 ampleResult.contactData        = ccalc.best
@@ -273,7 +279,9 @@ def analyseSolution( ampleResult=None,
 
 rundir = "/home/jmht/Documents/test/CC/single_model"
 singleModelDir="/media/data/shared/coiled-coils/single_model"
-dataDir="/media/data/shared/coiled-coils/full_ensemble/"
+dataDir="/media/data/shared/coiled-coils/ensemble/"
+
+results = []
 
 # Unpickle the original results
 pfile = "/home/jmht/Documents/test/CC/run2/ar_results.pkl"
@@ -336,6 +344,10 @@ for pdbCode in sorted( mrbumpResults.keys() ):
     
     # Loop through results for that job
     for mrbumpResult in mrbumpResults[ pdbCode ]:
+
+        print "processing: {0}".format( mrbumpResult.name[9:-6] )
+        if mrbumpResult.name[9:-6] != "poly_ala_trunc_0.486615_rad_1":
+            continue
         
         # Need to specify the log
         mrbumpResult.mrbumpLog = os.path.join( singleModelDir, pdbCode, 
@@ -352,6 +364,7 @@ for pdbCode in sorted( mrbumpResults.keys() ):
         
         assert ampleResult is not None,"Could not find result: {0} {1}".format( pdbCode,ensembleName )
         clearResult( ampleResult )
+        results.append( ampleResult )
         
         ampleResult.solution =  mrbumpResult.solution
         ampleResult.resultDir = mrbumpResult.mrDir
@@ -374,6 +387,7 @@ for pdbCode in sorted( mrbumpResults.keys() ):
             raise RuntimeError,"Unrecognised program!"
         
         #ampleResult.shelxeLog = mrbumpResult.shelxeLog
+        ampleResult.shelxePdb = mrbumpResult.shelxePdb
         ampleResult.shelxeCC = mrbumpResult.shelxeCC
         ampleResult.shelxeAvgChainLength = mrbumpResult.shelxeAvgChainLength
         ampleResult.shelxeMaxChainLength = mrbumpResult.shelxeMaxChainLength
@@ -387,3 +401,7 @@ for pdbCode in sorted( mrbumpResults.keys() ):
                          originInfo=originInfo,
                          dsspLog=dsspLog,
                          workdir=workdir )
+
+
+for r in results:
+    print r
