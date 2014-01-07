@@ -34,6 +34,13 @@ class residueSequenceMap( object ):
         self._targetIncomparable = None # List of atoms in the model that cannot be compared to the native
         
         self.lenMatch = None
+
+        # The window of AA we used to check for a match    
+        self.probeLen = 10
+        
+        # maxInset is the max number of AA into the sequence that we will go searching for a match - i.e. if more
+        # then maxInset AA at the start are non-matching, we won't find the match 
+        self.maxInset = 30
         
         # Like this just for testing
         if refPdb and targetPdb:
@@ -212,8 +219,8 @@ class residueSequenceMap( object ):
         Only works if 1 chain in either file and with standard residues
         """
         
-        if len(self.refSequence) < 10 or len(self.targetSequence) < 10:
-            raise RuntimeError,"Very short sequences - this will not work!"
+        #if len(self.refSequence) < self.probeLen or len(self.targetSequence) < self.probeLen:
+        #    raise RuntimeError,"Very short sequences - this will not work: {0}  : {1}".format( self.refSequence, self.targetSequence )
         
         # Find where they match at the start
         self.refOffset, self.targetOffset = self._calcOffset( self.refSequence, self.targetSequence )
@@ -289,26 +296,35 @@ class residueSequenceMap( object ):
     
     def _calcOffset(self, refSequence, targetSequence, reverse=False ):
         
-        # The window of AA we used to check for a match    
-        PROBE_LEN = 10
+        # Probe length dependant on protein size - is length of shortest protein or the default
+        shortest = min( len(targetSequence), len(refSequence) )
+        probeLen = min( self.probeLen, shortest )
         
-        # MAXINSET is the max number of AA into the sequence that we will go searching for a match - i.e. if more
-        # then MAXINSET AA at the start are non-matching, we won't find the match 
-        l = len( targetSequence ) if len( targetSequence ) < len( refSequence ) else len( refSequence )
-        MAXINSET=30 if l > 30 else ( l - PROBE_LEN )
+        # Work out how far we can probe into each sequence
+        if len( targetSequence ) - probeLen >= self.maxInset:
+            targetMaxInset = self.maxInset
+        else:
+            targetMaxInset =  len( targetSequence ) - probeLen 
         
+        if len( refSequence ) - probeLen >= self.maxInset:
+            refMaxInset = self.maxInset
+        else:
+            refMaxInset =  len( refSequence ) - probeLen 
+
+        #print "GOT targetMaxInset, refMaxInset, probeLen ",targetMaxInset, refMaxInset, probeLen
+
         # If checking from the end, reverse the strings
         if reverse:
             refSequence = refSequence[::-1]
             targetSequence = targetSequence[::-1]
         
         got=False
-        for targetOffset in range( MAXINSET + 1 ):
-            probe = targetSequence[ targetOffset : targetOffset+PROBE_LEN ]
+        for targetOffset in range( targetMaxInset + 1 ):
+            probe = targetSequence[ targetOffset : targetOffset + probeLen ]
             #print "PROBE ",probe
-            for refOffset in range( MAXINSET + 1 ):
-                #print "TEST ",self.refSequence[ refOffset:refOffset+PROBE_LEN ]
-                if refSequence[ refOffset:refOffset+PROBE_LEN ] == probe:
+            for refOffset in range( refMaxInset + 1 ):
+                #print "TEST ",refSequence[ refOffset:refOffset + probeLen ]
+                if refSequence[ refOffset:refOffset + probeLen ] == probe:
                     got=True
                     break
             
@@ -317,7 +333,7 @@ class residueSequenceMap( object ):
                 break
             
         if not got:
-            raise RuntimeError,"Could not calculate map!"
+            raise RuntimeError,"Could not calculate map for:\n{0}\n{1}".format( refSequence, targetSequence )
         
         return ( refOffset, targetOffset )
     
@@ -549,8 +565,8 @@ class Test(unittest.TestCase):
         """See if we can sort out the indexing between the native and model"""
         
         
-        nativePdb = "/media/data/shared/coiled-coils/1K33/1K33.pdb"
-        modelPdb = "/media/data/shared/coiled-coils/1K33/models/S_00000001.pdb"
+        nativePdb = "/media/data/shared/coiled-coils/ensemble/1K33/1K33.pdb"
+        modelPdb = "/media/data/shared/coiled-coils/ensemble/1K33/models/S_00000001.pdb"
         
         PE = pdb_edit.PDBEdit()
         nativePdbStd = "1K33_std.pdb"
