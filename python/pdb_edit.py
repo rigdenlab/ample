@@ -1276,14 +1276,19 @@ mostprob
         
         o = open( outpath, 'w' )
         
-        firstChainID = None
-        currentResSeq = 1 # current residue we are reading - assume it always starts from 1
-        globalResSeq = 1
+        firstChainID  = None
+        currentResSeq = None # current residue we are reading - assume it always starts from 1
+        globalResSeq  = None
+        globalSerial  = -1
         for line in open(inpath):
             
             # Remove any HETATOM lines and following ANISOU lines
             if line.startswith("HETATM") or line.startswith("MODEL") or line.startswith("ANISOU"):
                 raise RuntimeError,"Cant cope with the line: {0}".format( line )
+            
+            # Skip any TER lines
+            if line.startswith("TER"):
+                continue
             
             if line.startswith("ATOM"):
                 
@@ -1292,27 +1297,38 @@ mostprob
                 atom = pdb_model.PdbAtom( line )
                 
                 # First atom/residue
-                if not firstChainID:
+                if globalSerial == -1:
+                    globalSerial = atom.serial
                     firstChainID = atom.chainID
-                
-                # Change residue numbering and chainID
-                if atom.chainID != firstChainID:
-                    atom.chainID = firstChainID
-                    changed=True
-                
-                # Catch each change in residue
-                if atom.resSeq != currentResSeq:
-                    # Change of residue
+                    globalResSeq = atom.resSeq
                     currentResSeq = atom.resSeq
-                    globalResSeq += 1
-                
-                # Only change if don't match global
-                if atom.resSeq != globalResSeq:
-                    atom.resSeq = globalResSeq
-                    changed=True
+                else:
+                    # Change residue numbering and chainID
+                    if atom.chainID != firstChainID:
+                        atom.chainID = firstChainID
+                        changed=True
                     
-                if changed:
-                    line = atom.toLine()+"\n"
+                    # Catch each change in residue
+                    if atom.resSeq != currentResSeq:
+                        # Change of residue
+                        currentResSeq = atom.resSeq
+                        globalResSeq += 1
+                    
+                    # Only change if don't match global
+                    if atom.resSeq != globalResSeq:
+                        atom.resSeq = globalResSeq
+                        changed=True
+                        
+                    # Catch each change in numbering
+                    if atom.serial != globalSerial + 1:
+                        atom.serial = globalSerial + 1
+                        changed=True
+                        
+                    if changed:
+                        line = atom.toLine()+"\n"
+                
+                    # Increment counter for all atoms
+                    globalSerial += 1
             
             o.write( line )
             
