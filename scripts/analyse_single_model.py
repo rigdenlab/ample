@@ -6,7 +6,7 @@ import shutil
 import sys
 import traceback
 
-from analyse_run import AmpleResult, MrbumpLogParser, MolrepLogParser
+from analyse_run import AmpleResult, MrbumpLogParser, MolrepLogParser, processMrbump, analyseSolution
 from mrbump_results import MrBumpResult
 import ample_util
 import contacts
@@ -67,215 +67,7 @@ def clearResult( ampleResult ):
     return
 
 
-def processMrbump( mrbumpResult ):
-    
-    # Add attributes to object
-    mrbumpResult.phaserLLG = None
-    mrbumpResult.phaserTFZ = None
-    mrbumpResult.phaserPdb = None
-    mrbumpResult.phaserLog = None
-    mrbumpResult.phaserTime = None
-    mrbumpResult.molrepLog = None
-    mrbumpResult.molrepScore = None
-    mrbumpResult.molrepTime = None
-    mrbumpResult.molrepPdb = None
-    mrbumpResult.shelxePdb = None
-    mrbumpResult.shelxeLog = None
-    mrbumpResult.shelxeCC = None
-    mrbumpResult.shelxeAvgChainLength = None
-    mrbumpResult.shelxeMaxChainLength = None
-    mrbumpResult.shelxeNumChains = None
 
-    # Need to remove last component as we recored the refmac directory
-    mrDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
-    # HACK - we run the processing on cytosine so differnt place
-    #/data2/jmht/coiled-coils/single_ensemble
-    mrDir = mrDir.replace( "/data2/jmht/coiled-coils/single_ensemble","/media/data/shared/coiled-coils/single_model" )
-    mrbumpResult.mrDir = mrDir
-    
-    mrbumpResult.ensembleName = mrbumpResult.name[9:-6]
-    
-    mrbumpP = MrbumpLogParser( mrbumpResult.mrbumpLog )
-    mrbumpResult.estChainsASU = mrbumpP.noChainsTarget
-    
-    if mrbumpResult.program == "phaser":
-        
-        phaserPdb = os.path.join( mrDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrbumpResult.program, mrbumpResult.ensembleName) )
-        if os.path.isfile( phaserPdb ):
-            phaserP = phaser_parser.PhaserPdbParser( phaserPdb )
-            mrbumpResult.phaserLLG = phaserP.LLG
-            mrbumpResult.phaserTFZ = phaserP.TFZ
-            mrbumpResult.phaserPdb = phaserPdb
-            
-            phaserLog = os.path.join( mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(mrbumpResult.program, mrbumpResult.ensembleName) )
-            mrbumpResult.phaserLog = phaserLog
-            phaserP = phaser_parser.PhaserLogParser( phaserLog )
-            mrbumpResult.phaserTime = phaserP.time
-        
-    elif mrbumpResult.program == "molrep":
-        molrepLog = os.path.join( mrDir, "molrep.log" )
-        mrbumpResult.molrepLog = molrepLog
-        molrepP = MolrepLogParser( molrepLog )
-        mrbumpResult.molrepScore = molrepP.score
-        mrbumpResult.molrepTime = molrepP.time
-        
-        molrepPdb = os.path.join( mrDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrbumpResult.program, mrbumpResult.ensembleName) )
-        if os.path.isfile( molrepPdb ):
-            mrbumpResult.molrepPdb = molrepPdb
-    else:
-        assert False
-        
-    #
-    # SHELXE PROCESSING
-    #
-    # Now read the shelxe log to see how we did
-    shelxePdb = os.path.join( mrDir, "build/shelxe", "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrbumpResult.program, mrbumpResult.ensembleName ) )
-    if os.path.isfile( shelxePdb):
-        mrbumpResult.shelxePdb = shelxePdb
-        
-    shelxeLog = os.path.join( mrDir, "build/shelxe/shelxe_run.log" )
-    if os.path.isfile( shelxeLog ):
-        mrbumpResult.shelxeLog = shelxeLog
-        shelxeP = shelxe_log.ShelxeLogParser( shelxeLog )
-        mrbumpResult.shelxeCC = shelxeP.CC
-        mrbumpResult.shelxeAvgChainLength = shelxeP.avgChainLength
-        mrbumpResult.shelxeMaxChainLength = shelxeP.maxChainLength
-        mrbumpResult.shelxeNumChains= shelxeP.numChains
-    
-    return
-
-def analyseSolution( ampleResult=None,
-                     nativePdbInfo=None,
-                     nativePdbSingle=None,
-                     refModelPdbInfo=None,
-                     resSeqMap=None,
-                     originInfo=None,
-                     dsspLog=None,
-                     workdir=None ):
-
-
-    if ampleResult.mrProgram == "phaser":
-        placedPdb = ampleResult.phaserPdb
-    elif ampleResult.mrProgram == "molrep":
-        placedPdb = ampleResult.molrepPdb
-    else:
-        assert False
-
-
-    if placedPdb is None:
-     print "NO PDB FOR ",ampleResult
-     return
-    #else:
-    # print "GOT PDB FOR ",ampleResult
-
-    # debug - copy into work directory as reforigin struggles with long pathnames
-    shutil.copy(placedPdb, os.path.join( workdir, os.path.basename( placedPdb ) ) )
-    
-    placedPdbInfo = pdbedit.get_info( placedPdb )
-    
-    # Get reforigin info
-    if True:
-    #try:
-        rmsder = reforigin.ReforiginRmsd()
-        rmsder.getRmsd(  nativePdbInfo=nativePdbInfo,
-                         placedPdbInfo=placedPdbInfo,
-                         refModelPdbInfo=refModelPdbInfo,
-                         cAlphaOnly=True )
-        ampleResult.reforiginRMSD = rmsder.rmsd
-    #except Exception, e:
-    #    print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdbInfo.pdb, placedPdbInfo.pdb )
-    #    print "{0}".format( e )
-    #    ampleResult.reforiginRMSD = 9999
-         
-    #
-    # SHELXE PROCESSING
-    #
-    if not ampleResult.shelxePdb is None and os.path.isfile( ampleResult.shelxePdb ):
-        # Need to copy to avoid problems with long path names
-        shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
-        shutil.copy( ampleResult.shelxePdb, shelxePdb )
-        
-        csym                           = csymmatch.Csymmatch()
-        shelxeCsymmatchPdb             = ample_util.filename_append( 
-                                                                    filename=shelxePdb, 
-                                                                    astr="csymmatch", 
-                                                                    directory=workdir )
-        
-        # Had problem with shelx losing origin information
-        csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
-        shelxeCsymmatchOrigin = csym.origin()
-        
-        # See if this origin is valid
-        ampleResult.floatingOrigin = originInfo.isFloating()
-        ampleResult.csymmatchOriginOk = True
-        if not shelxeCsymmatchOrigin or \
-        ( shelxeCsymmatchOrigin not in originInfo.redundantAlternateOrigins() and not ampleResult.floatingOrigin ):
-            ampleResult.csymmatchOriginOk   = False
-            shelxeCsymmatchOrigin  = None
-        
-        ampleResult.shelxeCsymmatchShelxeScore  = csym.averageScore()
-        shelxeCsymmatchPdbSingle       = ample_util.filename_append( filename=shelxeCsymmatchPdb, 
-                                                                     astr="1chain", 
-                                                                     directory=workdir )
-        pdbedit.to_single_chain(shelxeCsymmatchPdb, shelxeCsymmatchPdbSingle)
-        
-        # Compare the traced model to the native with maxcluster
-        # We can only compare one chain so we extracted this earlier
-        maxComp = maxcluster.Maxcluster()
-        d = maxComp.compareSingle( nativePdb=nativePdbSingle,
-                                   modelPdb=shelxeCsymmatchPdbSingle,
-                                   sequenceIndependant=True,
-                                   rmsd=False
-                                 )
-        ampleResult.shelxeTM = d.tm
-        ampleResult.shelxeTMPairs = d.pairs
-        
-        d = maxComp.compareSingle( nativePdb=nativePdbSingle,
-                                   modelPdb=shelxeCsymmatchPdbSingle,
-                                   sequenceIndependant=True,
-                                   rmsd=True )
-        ampleResult.shelxeRMSD = d.rmsd
-
-        # Now calculate contacts
-    
-        # Only bother when we have a floating origin if the csymmatch origin is ok
-        if not ampleResult.floatingOrigin or ( ampleResult.floatingOrigin and ampleResult.csymmatchOriginOk ):
-            ccalc = contacts.Contacts()
-            #try:
-            if True:
-                ccalc.getContacts( placedPdbInfo=placedPdbInfo,
-                                   nativePdbInfo=nativePdbInfo,
-                                   resSeqMap=resSeqMap,
-                                   originInfo=originInfo,
-                                   shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
-                                   workdir=workdir,
-                                   dsspLog=dsspLog
-                                )
-            #except Exception, e:
-            #    print "ERROR WITH CONTACTS: {0}".format( e )
-       
-            if ccalc.best:
-                ampleResult.contactData        = ccalc.best
-                ampleResult.numContacts        = ccalc.best.numContacts
-                ampleResult.inregisterContacts = ccalc.best.inregister
-                ampleResult.ooregisterContacts = ccalc.best.ooregister
-                ampleResult.backwardsContacts  = ccalc.best.backwards
-                ampleResult.contactOrigin      = ccalc.best.origin
-                ampleResult.goodContacts       = ampleResult.inregisterContacts + ampleResult.ooregisterContacts
-                ampleResult.nocatContacts      = ampleResult.numContacts - ampleResult.goodContacts
-                ampleResult.helixSequence      = ccalc.best.helix
-                if ccalc.best.helix:
-                    ampleResult.lenHelix = len( ccalc.best.helix )
-                
-                gotHelix=False
-                hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
-                gotHelix =  ccalc.writeHelixFile( hfile )
-                        
-                # Just for debugging
-                if ampleResult.shelxeCC >= 25 and ampleResult.shelxeAvgChainLength >= 10 and not gotHelix:
-                    print "NO HELIX FILE"
-
-    return
 
 #
 # MAIN STARTS HERE
@@ -413,6 +205,7 @@ for pdbCode in sorted( mrbumpResults.keys() ):
         ampleResult.shelxeAvgChainLength = mrbumpResult.shelxeAvgChainLength
         ampleResult.shelxeMaxChainLength = mrbumpResult.shelxeMaxChainLength
         ampleResult.shelxeNumChains = mrbumpResult.shelxeNumChains
+        ampleResult.estChainsASU = mrbumpResult.estChainsASU
         
         try:
             analyseSolution( ampleResult=ampleResult,
