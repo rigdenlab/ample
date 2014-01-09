@@ -70,19 +70,18 @@ class Contacts(object):
         self.originCompare = {}
         return
     
-    def getContacts(self, nativePdb=None,
-                    placedPdb=None,
-                    resSeqMap=None,
-                    nativeInfo=None,
-                    originInfo=None, 
-                    shelxeCsymmatchOrigin=None,
-                    workdir=None,
-                    dsspLog=None ):
+    def getContacts( self, 
+                     nativePdbInfo=None,
+                     placedPdbInfo=None,
+                     resSeqMap=None,
+                     originInfo=None, 
+                     shelxeCsymmatchOrigin=None,
+                     workdir=None,
+                     dsspLog=None ):
         
-        if not self.run( nativePdb=nativePdb,
-                         placedPdb=placedPdb,
+        if not self.run( nativePdbInfo=nativePdbInfo,
+                         placedPdbInfo=placedPdbInfo,
                          resSeqMap=resSeqMap,
-                         nativeInfo=nativeInfo,
                          originInfo=originInfo, 
                          shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
                          workdir=workdir ):
@@ -104,7 +103,7 @@ class Contacts(object):
             csym = csymmatch.Csymmatch()
             # Just for info - run csymmatch so we can see the alignment
             csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch_best", directory=self.workdir )
-            csym.run( refPdb=nativePdb, inPdb=self.best.pdb, outPdb=csymmatchPdb, originHand=False )
+            csym.run( refPdb=nativePdbInfo.pdb, inPdb=self.best.pdb, outPdb=csymmatchPdb, originHand=False )
             self.best.csymmatchPdb = csymmatchPdb
         
         return
@@ -246,7 +245,13 @@ class Contacts(object):
                 
         return sequence
         
-    def run( self, nativePdb=None, placedPdb=None, resSeqMap=None, nativeInfo=None, originInfo=None, shelxeCsymmatchOrigin=None, workdir=None ):
+    def run( self,
+             nativePdbInfo=None,
+             placedPdbInfo=None,
+             resSeqMap=None,
+             originInfo=None,
+             shelxeCsymmatchOrigin=None,
+             workdir=None ):
         """
         """
 
@@ -286,13 +291,14 @@ class Contacts(object):
             #print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
-            placedPdbRes = ample_util.filename_append( filename=placedPdb, astr="reseq", directory=self.workdir )
-            pdbedit.match_resseq( targetPdb=placedPdb, sourcePdb=None, outPdb=placedPdbRes, resMap=resSeqMap )
+            placedPdbRes = ample_util.filename_append( filename=placedPdbInfo.pdb, astr="reseq", directory=self.workdir )
+            pdbedit.match_resseq( targetPdb=placedPdbInfo.pdb, sourcePdb=None, outPdb=placedPdbRes, resMap=resSeqMap )
             placedPdb = placedPdbRes
+        else:
+            placedPdb = placedPdbInfo.pdb
  
         # Make a copy of placedPdb with chains renamed to lower case
-        placedInfo = pdbedit.get_info( placedPdb )
-        fromChain = placedInfo.models[0].chains
+        fromChain = placedPdbInfo.models[0].chains
         toChain = [ c.lower() for c in fromChain ]
         placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren", directory=self.workdir )
         pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=fromChain, toChain=toChain )
@@ -328,11 +334,11 @@ class Contacts(object):
             
             # Concatenate into one file
             joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
-            pdbedit.merge( pdb1=nativePdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
+            pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
                 
             # Run ncont
             # Need to get list of chains from Native as can't work out negate operator for ncont
-            fromChain = nativeInfo.models[0].chains
+            fromChain = nativePdbInfo.models[0].chains
             self.runNcont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
             self.parseNcontLog()
             self.countContacts()
