@@ -1,4 +1,5 @@
 import copy
+import csv
 import cPickle
 import os
 import shutil
@@ -117,7 +118,7 @@ def processMrbump( mrbumpResult ):
         mrbumpResult.molrepScore = molrepP.score
         mrbumpResult.molrepTime = molrepP.time
         
-        molrepPdb = os.path.join( resultDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrbumpResult.program, mrbumpResult.ensembleName) )
+        molrepPdb = os.path.join( mrDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrbumpResult.program, mrbumpResult.ensembleName) )
         if os.path.isfile( molrepPdb ):
             mrbumpResult.molrepPdb = molrepPdb
     else:
@@ -144,7 +145,8 @@ def processMrbump( mrbumpResult ):
 
 def analyseSolution( ampleResult=None,
                      nativePdbInfo=None,
-                     refModelPdb=None,
+                     nativePdbSingle=None,
+                     refModelPdbInfo=None,
                      resSeqMap=None,
                      originInfo=None,
                      dsspLog=None,
@@ -175,9 +177,9 @@ def analyseSolution( ampleResult=None,
     #try:
         rmsder = reforigin.ReforiginRmsd()
         rmsder.getRmsd(  nativePdbInfo=nativePdbInfo,
-                              placedPdbInfo=placedPdbInfo,
-                              refModelPdb=refModelPdb,
-                              cAlphaOnly=True )
+                         placedPdbInfo=placedPdbInfo,
+                         refModelPdbInfo=refModelPdbInfo,
+                         cAlphaOnly=True )
         ampleResult.reforiginRMSD = rmsder.rmsd
     #except Exception, e:
     #    print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdbInfo.pdb, placedPdbInfo.pdb )
@@ -187,7 +189,8 @@ def analyseSolution( ampleResult=None,
     #
     # SHELXE PROCESSING
     #
-    if os.path.isfile( ampleResult.shelxePdb ):
+    if not ampleResult.shelxePdb is None and os.path.isfile( ampleResult.shelxePdb ):
+        # Need to copy to avoid problems with long path names
         shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
         shutil.copy( ampleResult.shelxePdb, shelxePdb )
         
@@ -196,7 +199,7 @@ def analyseSolution( ampleResult=None,
                                                                     filename=shelxePdb, 
                                                                     astr="csymmatch", 
                                                                     directory=workdir )
-        csym.run( refPdb=nativePdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
+        csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
         shelxeCsymmatchOrigin = csym.origin()
         
         # See if this origin is valid
@@ -207,30 +210,28 @@ def analyseSolution( ampleResult=None,
             ampleResult.csymmatchOriginOk   = False
             shelxeCsymmatchOrigin  = None
         
-        shelxeCsymmatchShelxeScore     = csym.averageScore()
-        ampleResult.shelxeCsymmatchShelxeScore  = shelxeCsymmatchShelxeScore
-        
+        ampleResult.shelxeCsymmatchShelxeScore  = csym.averageScore()
         shelxeCsymmatchPdbSingle       = ample_util.filename_append( filename=shelxeCsymmatchPdb, 
                                                                      astr="1chain", 
                                                                      directory=workdir )
         pdbedit.to_single_chain(shelxeCsymmatchPdb, shelxeCsymmatchPdbSingle)
         
         # Compare the traced model to the native with maxcluster
+        # We can only compare one chain so we extracted this earlier
         maxComp = maxcluster.Maxcluster()
-        d = maxComp.compareSingle( nativePdb=nativePdbInfo.pdb,
-                               modelPdb=shelxeCsymmatchPdbSingle,
-                               sequenceIndependant=True,
-                               rmsd=False )
-        
+        d = maxComp.compareSingle( nativePdb=nativePdbSingle,
+                                   modelPdb=shelxeCsymmatchPdbSingle,
+                                   sequenceIndependant=True,
+                                   rmsd=False
+                                 )
         ampleResult.shelxeTM = d.tm
         ampleResult.shelxeTMPairs = d.pairs
-        d = maxComp.compareSingle( nativePdb=nativePdbInfo.pdb,
-                               modelPdb=shelxeCsymmatchPdbSingle,
-                               sequenceIndependant=True,
-                               rmsd=True )
         
+        d = maxComp.compareSingle( nativePdb=nativePdbSingle,
+                                   modelPdb=shelxeCsymmatchPdbSingle,
+                                   sequenceIndependant=True,
+                                   rmsd=True )
         ampleResult.shelxeRMSD = d.rmsd
-        
 
         # Now calculate contacts
     
@@ -239,9 +240,9 @@ def analyseSolution( ampleResult=None,
             ccalc = contacts.Contacts()
             #try:
             if True:
-                ccalc.getContacts( placedPdb=placedPdb,
+                ccalc.getContacts( placedPdbInfo=placedPdbInfo,
+                                   nativePdbInfo=nativePdbInfo,
                                    resSeqMap=resSeqMap,
-                                   nativeInfo=nativePdbInfo,
                                    originInfo=originInfo,
                                    shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
                                    workdir=workdir,
@@ -264,7 +265,7 @@ def analyseSolution( ampleResult=None,
                     ampleResult.lenHelix = len( ccalc.best.helix )
                 
                 gotHelix=False
-                hfile = os.path.join( workdir, "{0}.helix".format( ensembleName ) )
+                hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
                 gotHelix =  ccalc.writeHelixFile( hfile )
                         
                 # Just for debugging
@@ -296,8 +297,8 @@ with open( pfile ) as f:
 
 pdbedit = pdb_edit.PDBEdit()
 for pdbCode in sorted( mrbumpResults.keys() ):
-    if pdbCode != "1BYZ":
-        break
+    #if pdbCode != "1ENV":
+    #    continue
     
     workdir = os.path.join( rundir, pdbCode )
     if not os.path.isdir( workdir ):
@@ -325,29 +326,43 @@ for pdbCode in sorted( mrbumpResults.keys() ):
     
     # Get the new Info about the native
     nativePdbInfo = pdbedit.get_info( nativePdb )
+
+    # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
+    if len( nativePdbInfo.models[0].chains ) > 1:
+#         chainID = nativePdbInfo.models[0].chains[0]
+#         nativePdbSingle  = ample_util.filename_append( filename=nativePdbInfo.pdb,
+#                                                        astr="chain{0}".format( chainID ), 
+#                                                        directory=workdir )
+#         pdbedit.extract_chain( nativePdbInfo.pdb, nativePdbSingle, chainID=chainID )
+        chainID = nativePdbInfo.models[0].chains[0]
+        nativePdbSingle  = ample_util.filename_append( filename=nativePdbInfo.pdb,
+                                                       astr="1chain".format( chainID ), 
+                                                       directory=workdir )
+        pdbedit.to_single_chain( nativePdbInfo.pdb, nativePdbSingle )
+    else:
+        nativePdbSingle = nativePdbInfo.pdb
     
     # Get information on the origins for this spaceGroup
     originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
-    dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode  )  )
+    dsspLog = os.path.join( dataDir, pdbCode,  "{0}.dssp".format( pdbCode  )  )
 
     # Get hold of a full model so we can do the mapping of residues
     refModelPdb = os.path.join( dataDir, pdbCode,  "models/S_00000001.pdb".format( pdbCode ) )
+    refModelPdbInfo = pdbedit.get_info( refModelPdb )
+    
     resSeqMap = residue_map.residueSequenceMap()
-    
-    modelPdbInfo = pdbedit.get_info( refModelPdb )
-    
-    resSeqMap.fromInfo( refInfo=modelPdbInfo,
-                            refChainID=modelPdbInfo.models[0].chains[0],
-                            targetInfo=nativePdbInfo,
-                            targetChainID=nativePdbInfo.models[0].chains[0]
-                            )
+    resSeqMap.fromInfo( refInfo=refModelPdbInfo,
+                        refChainID=refModelPdbInfo.models[0].chains[0],
+                        targetInfo=nativePdbInfo,
+                        targetChainID=nativePdbInfo.models[0].chains[0]
+                       )
     
     # Loop through results for that job
     for mrbumpResult in mrbumpResults[ pdbCode ]:
 
         print "processing: {0}".format( mrbumpResult.name[9:-6] )
-        if mrbumpResult.name[9:-6] != "poly_ala_trunc_0.486615_rad_1":
-            continue
+        #if mrbumpResult.name[9:-6] != "SCWRL_reliable_sidechains_trunc_24.348237_rad_1":
+        #    continue
         
         # Need to specify the log
         mrbumpResult.mrbumpLog = os.path.join( singleModelDir, pdbCode, 
@@ -362,9 +377,12 @@ for pdbCode in sorted( mrbumpResults.keys() ):
             if e.pdbCode == pdbCode and e.ensembleName == mrbumpResult.ensembleName:
                 ampleResult = copy.deepcopy( e )
         
-        assert ampleResult is not None,"Could not find result: {0} {1}".format( pdbCode,ensembleName )
+        assert ampleResult is not None,"Could not find result: {0} {1}".format( pdbCode, mrbumpResult.ensembleName )
         clearResult( ampleResult )
         results.append( ampleResult )
+        
+        # Added here
+        ampleResult.spaceGroup = originInfo.spaceGroup()
         
         ampleResult.solution =  mrbumpResult.solution
         ampleResult.resultDir = mrbumpResult.mrDir
@@ -396,7 +414,8 @@ for pdbCode in sorted( mrbumpResults.keys() ):
         
         analyseSolution( ampleResult=ampleResult,
                          nativePdbInfo=nativePdbInfo,
-                         refModelPdb=refModelPdb,
+                         nativePdbSingle=nativePdbSingle,
+                         refModelPdbInfo=refModelPdbInfo,
                          resSeqMap=resSeqMap,
                          originInfo=originInfo,
                          dsspLog=dsspLog,
@@ -405,3 +424,21 @@ for pdbCode in sorted( mrbumpResults.keys() ):
 
 for r in results:
     print r
+
+pfile = os.path.join( rundir, "ar_results.pkl")
+f = open( pfile, 'w' )
+ampleDict = cPickle.dump( results, f  )
+
+cpath = os.path.join( rundir, 'results.csv' )
+csvfile =  open( cpath, 'wb')
+csvwriter = csv.writer(csvfile, delimiter=',',
+                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+header=False
+for r in results:
+    if not header:
+        csvwriter.writerow( r.titlesAsList() )
+        header=True
+    csvwriter.writerow( r.valuesAsList() )
+
+csvfile.close()
