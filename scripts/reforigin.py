@@ -100,7 +100,7 @@ class ReforiginRmsd(object):
         #os.unlink(logfile)
         return placedChainPdb
     
-    def getRmsd( self, nativePdbInfo=None, placedPdbInfo=None, refModelPdb=None, workdir=None, cAlphaOnly=True  ):
+    def getRmsd( self, nativePdbInfo=None, placedPdbInfo=None, refModelPdbInfo=None, workdir=None, cAlphaOnly=True  ):
         """For now just save lowest rmsd - can look at collecting more nativeInfo later
         
         Currently we assume we are only given one model and that it has already been standardised.
@@ -142,7 +142,6 @@ class ReforiginRmsd(object):
             # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
             # The second chain may be a different composition to the first, so we only generate a traceback if we fail
             # on the first chain. The model only has one chain, so the residueMap has to be the same for all the chains
-            #print "CALCULTING MAP FOR {0} {1}".format( nativeChainPdb, self.refModelPdb  )
             try:
 #                 resSeqMap = residue_map.residueSequenceMap( refPdb=nativeChainPdb,
 #                                                             refChainID=nativeChainID,
@@ -152,8 +151,8 @@ class ReforiginRmsd(object):
                 resSeqMap = residue_map.residueSequenceMap()
                 resSeqMap.fromInfo( refInfo=nativePdbInfo,
                                     refChainID=nativeChainID,
-                                    targetInfo=placedPdbInfo,
-                                    targetChainID='A'
+                                    targetInfo=refModelPdbInfo,
+                                    targetChainID='A' # Model only has one chain
                                     )
                 
             except RuntimeError:
