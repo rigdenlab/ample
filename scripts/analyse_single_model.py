@@ -202,45 +202,39 @@ def analyseSolution( ampleResult=None,
                                                                     directory=workdir )
         
         # Had problem with shelx losing origin information
-        try:
-            csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
-            shelxeCsymmatchOrigin = csym.origin()
-            
-            # See if this origin is valid
-            ampleResult.floatingOrigin = originInfo.isFloating()
-            ampleResult.csymmatchOriginOk = True
-            if not shelxeCsymmatchOrigin or \
-            ( shelxeCsymmatchOrigin not in originInfo.redundantAlternateOrigins() and not ampleResult.floatingOrigin ):
-                ampleResult.csymmatchOriginOk   = False
-                shelxeCsymmatchOrigin  = None
-            
-            ampleResult.shelxeCsymmatchShelxeScore  = csym.averageScore()
-            shelxeCsymmatchPdbSingle       = ample_util.filename_append( filename=shelxeCsymmatchPdb, 
-                                                                         astr="1chain", 
-                                                                         directory=workdir )
-            pdbedit.to_single_chain(shelxeCsymmatchPdb, shelxeCsymmatchPdbSingle)
-            
-            # Compare the traced model to the native with maxcluster
-            # We can only compare one chain so we extracted this earlier
-            maxComp = maxcluster.Maxcluster()
-            d = maxComp.compareSingle( nativePdb=nativePdbSingle,
-                                       modelPdb=shelxeCsymmatchPdbSingle,
-                                       sequenceIndependant=True,
-                                       rmsd=False
-                                     )
-            ampleResult.shelxeTM = d.tm
-            ampleResult.shelxeTMPairs = d.pairs
-            
-            d = maxComp.compareSingle( nativePdb=nativePdbSingle,
-                                       modelPdb=shelxeCsymmatchPdbSingle,
-                                       sequenceIndependant=True,
-                                       rmsd=True )
-            ampleResult.shelxeRMSD = d.rmsd
+        csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
+        shelxeCsymmatchOrigin = csym.origin()
         
-        except Exception,e:
-            print "ERROR PROCESSING SHELXE RESULT!"
-            print traceback.format_exc()
-            
+        # See if this origin is valid
+        ampleResult.floatingOrigin = originInfo.isFloating()
+        ampleResult.csymmatchOriginOk = True
+        if not shelxeCsymmatchOrigin or \
+        ( shelxeCsymmatchOrigin not in originInfo.redundantAlternateOrigins() and not ampleResult.floatingOrigin ):
+            ampleResult.csymmatchOriginOk   = False
+            shelxeCsymmatchOrigin  = None
+        
+        ampleResult.shelxeCsymmatchShelxeScore  = csym.averageScore()
+        shelxeCsymmatchPdbSingle       = ample_util.filename_append( filename=shelxeCsymmatchPdb, 
+                                                                     astr="1chain", 
+                                                                     directory=workdir )
+        pdbedit.to_single_chain(shelxeCsymmatchPdb, shelxeCsymmatchPdbSingle)
+        
+        # Compare the traced model to the native with maxcluster
+        # We can only compare one chain so we extracted this earlier
+        maxComp = maxcluster.Maxcluster()
+        d = maxComp.compareSingle( nativePdb=nativePdbSingle,
+                                   modelPdb=shelxeCsymmatchPdbSingle,
+                                   sequenceIndependant=True,
+                                   rmsd=False
+                                 )
+        ampleResult.shelxeTM = d.tm
+        ampleResult.shelxeTMPairs = d.pairs
+        
+        d = maxComp.compareSingle( nativePdb=nativePdbSingle,
+                                   modelPdb=shelxeCsymmatchPdbSingle,
+                                   sequenceIndependant=True,
+                                   rmsd=True )
+        ampleResult.shelxeRMSD = d.rmsd
 
         # Now calculate contacts
     
@@ -420,15 +414,19 @@ for pdbCode in sorted( mrbumpResults.keys() ):
         ampleResult.shelxeMaxChainLength = mrbumpResult.shelxeMaxChainLength
         ampleResult.shelxeNumChains = mrbumpResult.shelxeNumChains
         
-        
-        analyseSolution( ampleResult=ampleResult,
-                         nativePdbInfo=nativePdbInfo,
-                         nativePdbSingle=nativePdbSingle,
-                         refModelPdbInfo=refModelPdbInfo,
-                         resSeqMap=resSeqMap,
-                         originInfo=originInfo,
-                         dsspLog=dsspLog,
-                         workdir=workdir )
+        try:
+            analyseSolution( ampleResult=ampleResult,
+                             nativePdbInfo=nativePdbInfo,
+                             nativePdbSingle=nativePdbSingle,
+                             refModelPdbInfo=refModelPdbInfo,
+                             resSeqMap=resSeqMap,
+                             originInfo=originInfo,
+                             dsspLog=dsspLog,
+                             workdir=workdir )
+        except Exception,e:
+            print "ERROR ANALYSING SOLUTION: {0} {1}".format( pdbCode, mrbumpResult.ensembleName )
+            print traceback.format_exc()
+            
 
 
 for r in results:
