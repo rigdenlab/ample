@@ -110,6 +110,7 @@ class AmpleResult(object):
                               'fastaLength',
                               'numChains',
                               'estChainsASU',
+                              'spaceGroup',
                               'resolution',
                               'solventContent',
                               'matthewsCoefficient',
@@ -170,6 +171,7 @@ class AmpleResult(object):
                                 "Fasta Length",
                                 "Number of Chains",
                                 "Est. Chains in ASU",
+                                "Space Group",
                                 "Resolution",
                                 "Solvent Content",
                                 "Matthews Coefficient",
@@ -282,8 +284,8 @@ class CompareModels(object):
         #print "CompareModels refModel: {0}  targetModel: {1}".format( refModel, targetModel )
         
         # If the rebuilt models is in multiple chains, we need to create a single chain
-        nativeInfo = pdbedit.get_info( self.targetModel )
-        if len( nativeInfo.models[0].chains ) > 1:
+        nativePdbInfo = pdbedit.get_info( self.targetModel )
+        if len( nativePdbInfo.models[0].chains ) > 1:
             #print "Coallescing targetModel into a single chain"
             n = os.path.splitext( os.path.basename( self.targetModel ) )[0]
             targetModel1chain = os.path.join( workdir, n+"_1chain.pdb" )
@@ -291,8 +293,8 @@ class CompareModels(object):
             self.targetModel = targetModel1chain
             
         # If the reference model is in multiple chains, we need to create a single chain
-        nativeInfo = pdbedit.get_info( self.refModel )
-        if len( nativeInfo.models[0].chains ) > 1:
+        nativePdbInfo = pdbedit.get_info( self.refModel )
+        if len( nativePdbInfo.models[0].chains ) > 1:
             #print "Coallescing refModel into a single chain"
             n = os.path.splitext( os.path.basename( self.refModel ) )[0]
             refModel1chain = os.path.join( workdir, n+"_1chain.pdb" )
@@ -326,7 +328,7 @@ class CompareModels(object):
         return
     
     def parse_maxcluster_log( self, logfile ):
-        """Extract nativeInfo - assumes it completers in 1 iteration"""
+        """Extract nativePdbInfo - assumes it completers in 1 iteration"""
         
         
         def _get_float( istr ):
@@ -1001,11 +1003,11 @@ if __name__ == "__main__":
     
     pickledResults=False
     CLUSTERNUM=0
-    #rundir = "/Users/jmht/Documents/AMPLE/data/run"
-    rundir = "/home/jmht/Documents/test/CC/run2"
     #dataRoot = "/Users/jmht/Documents/AMPLE/data"
-    dataRoot = "/media/data/shared/coiled-coils"
+    dataRoot = "/media/data/shared/coiled-coils/ensemble"
     
+    rundir = "/home/jmht/Documents/test/CC/run2"
+    rundir = os.getcwd()
     os.chdir( rundir )
     
     if pickledResults:
@@ -1015,19 +1017,19 @@ if __name__ == "__main__":
     
     allResults = []
     
-    for pdbcode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
-    #for pdbcode in sorted( resultsDict.keys() ):
-    #for pdbcode in [ "1D7M" ]:
+    for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    #for pdbCode in sorted( resultsDict.keys() ):
+    #for pdbCode in [ "1D7M" ]:
         
-        workdir = os.path.join( rundir, pdbcode )
+        workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
             os.mkdir( workdir )
         os.chdir( workdir )
             
-        print "\nResults for ",pdbcode
+        print "\nResults for ",pdbCode
         
         # Directory where all the data for this run live
-        dataDir = os.path.join( dataRoot, pdbcode )
+        dataDir = os.path.join( dataRoot, pdbCode )
         
         # Get the path to the original pickle file
         pfile = os.path.join( dataDir, "ROSETTA_MR_0/resultsd.pkl")
@@ -1036,16 +1038,16 @@ if __name__ == "__main__":
     
         # First process all stuff that's the same for each structure
         
-        # Get path to native Extract all the nativeInfo from it
-        nativePdb = os.path.join( dataDir, "{0}.pdb".format( pdbcode ) )
+        # Get path to native Extract all the nativePdbInfo from it
+        nativePdb = os.path.join( dataDir, "{0}.pdb".format( pdbCode ) )
         pdbedit = pdb_edit.PDBEdit()
-        nativeInfo = pdbedit.get_info( nativePdb )
+        nativePdbInfo = pdbedit.get_info( nativePdb )
         
         # First check if the native has > 1 model and extract the first if so
-        if len( nativeInfo.models ) > 1:
+        if len( nativePdbInfo.models ) > 1:
             print "nativePdb has > 1 model - using first"
             nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=workdir )
-            pdbedit.extract_model( nativePdb, nativePdb1, modelID=nativeInfo.models[0].serial )
+            pdbedit.extract_model( nativePdb, nativePdb1, modelID=nativePdbInfo.models[0].serial )
             nativePdb = nativePdb1
             
         # Standardise the PDB to rename any non-standard AA, remove solvent etc
@@ -1054,10 +1056,20 @@ if __name__ == "__main__":
         nativePdb = nativePdbStd
         
         # Get the new Info about the native
-        nativeInfo = pdbedit.get_info( nativePdb )
+        nativePdbInfo = pdbedit.get_info( nativePdb )
+
+        # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
+        if len( nativePdbInfo.models[0].chains ) > 1:
+            chainID = nativePdbInfo.models[0].chains[0]
+            nativePdbSingle  = ample_util.filename_append( filename=nativePdbInfo.pdb,
+                                                           astr="1chain".format( chainID ), 
+                                                           directory=workdir )
+            pdbedit.to_single_chain( nativePdbInfo.pdb, nativePdbSingle )
+        else:
+            nativePdbSingle = nativePdbInfo.pdb
         
         # Get information on the origins for this spaceGroup
-        originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativeInfo.crystalInfo.spaceGroup )
+        originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
         
         # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
         # requires a separate run to generate total RMSD
@@ -1070,24 +1082,24 @@ if __name__ == "__main__":
         #sam_file = os.path.join( dataDir, "fragments/t001_.rdb_ss2"  )
         psipred_file = os.path.join( dataDir, "fragments/t001_.psipred_ss2"  )
         psipredP = PsipredParser( psipred_file )
-        dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbcode  )  )
+        dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode  )  )
         dsspP = dssp.DsspParser( dsspLog )
 
         # Get hold of a full model so we can do the mapping of residues
-        refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbcode ) )
+        refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbCode ) )
         resSeqMap = residue_map.residueSequenceMap()
         
-        modelInfo = pdbedit.get_info( refModelPdb )
+        refModelPdbInfo = pdbedit.get_info( refModelPdb )
         
-        resSeqMap.fromInfo( refInfo=modelInfo,
-                                refChainID=modelInfo.models[0].chains[0],
-                                targetInfo=nativeInfo,
-                                targetChainID=nativeInfo.models[0].chains[0]
-                                )
+        resSeqMap.fromInfo( refInfo=refModelPdbInfo,
+                            refChainID=refModelPdbInfo.models[0].chains[0],
+                            targetInfo=nativePdbInfo,
+                            targetChainID=nativePdbInfo.models[0].chains[0]
+                          )
         
         # Loop over each result
         if pickledResults:
-            results = resultsDict[ pdbcode ]
+            results = resultsDict[ pdbCode ]
         else:
             r = mrbump_results.ResultsSummary( os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
             r.extractResults()
@@ -1105,16 +1117,16 @@ if __name__ == "__main__":
             ar = AmpleResult()
             allResults.append( ar )
             
-            ar.pdbCode = pdbcode
-            ar.title = nativeInfo.title
+            ar.pdbCode = pdbCode
+            ar.title = nativePdbInfo.title
             ar.fastaLength = ampleDict['fasta_length']
             ar.spickerClusterSize = ampleDict['spicker_results'][ CLUSTERNUM ].cluster_size
             ar.spickerClusterCentroid = os.path.splitext( os.path.basename( ampleDict['spicker_results'][ CLUSTERNUM ].cluster_centroid ) )[0]
-            ar.numChains = len( nativeInfo.models[0].chains )
-            ar.resolution = nativeInfo.resolution
-            ar.solventContent = nativeInfo.solventContent
-            ar.matthewsCoefficient = nativeInfo.matthewsCoefficient
-            ampleResult.spaceGroup = originInfo.spaceGroup()
+            ar.numChains = len( nativePdbInfo.models[0].chains )
+            ar.resolution = nativePdbInfo.resolution
+            ar.solventContent = nativePdbInfo.solventContent
+            ar.matthewsCoefficient = nativePdbInfo.matthewsCoefficient
+            ar.spaceGroup = originInfo.spaceGroup()
             
             ar.ss_pred = psipredP.asDict()
             ar.ss_pred_str = "C:{0:d} | E:{1:d} | H:{2:d}".format( int(psipredP.percentC),  int(psipredP.percentE), int(psipredP.percentH) )
@@ -1170,6 +1182,7 @@ if __name__ == "__main__":
             # process MRBUMP solution here
             #mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( ensembleName, mrbumpResult.program )  )
             mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}.sub.log".format( ensembleName ) )
+            mrbumpResult.mrbumpLog = mrbumpLog
             
            # Update the Mrbump result object and set all values in the Ample Result
             processMrbump( mrbumpResult )
@@ -1201,11 +1214,11 @@ if __name__ == "__main__":
             ar.shelxeAvgChainLength = mrbumpResult.shelxeAvgChainLength
             ar.shelxeMaxChainLength = mrbumpResult.shelxeMaxChainLength
             ar.shelxeNumChains = mrbumpResult.shelxeNumChains
-            ar.estChainsASU = mrbumpP.noChainsTarget
+            ar.estChainsASU = mrbumpResult.estChainsASU
             
             # Now process the result
             try:
-                analyseSolution( ampleResult=ampleResult,
+                analyseSolution( ampleResult=ar,
                                  nativePdbInfo=nativePdbInfo,
                                  nativePdbSingle=nativePdbSingle,
                                  refModelPdbInfo=refModelPdbInfo,
