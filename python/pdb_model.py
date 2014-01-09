@@ -18,7 +18,7 @@ class OriginInfo( object ):
         
         
         # These are reset on each call
-        self._currentSpaceGroup = None
+        self._spaceGroup = None
         self._redundantSet = None
         self._nonRedundantSet = None
         self._floating = False
@@ -389,21 +389,21 @@ class OriginInfo( object ):
         
         return
     
-    def currentSpaceGroup(self):
-        return self._currentSpaceGroup
+    def spaceGroup(self):
+        return self._spaceGroup
     
     def isFloating(self, spaceGroupLabel=None ):
-        if spaceGroupLabel is not None and self.currentSpaceGroup() !=  spaceGroupLabel:
+        if spaceGroupLabel is not None and self.spaceGroup() !=  spaceGroupLabel:
             self._getAlternateOrigins( spaceGroupLabel ) 
         return self._floating
 
     def redundantAlternateOrigins(self, spaceGroupLabel=None ):
-        if spaceGroupLabel is not None and self.currentSpaceGroup() !=  spaceGroupLabel:
+        if spaceGroupLabel is not None and self.spaceGroup() !=  spaceGroupLabel:
             self._getAlternateOrigins( spaceGroupLabel ) 
         return copy.copy(self._redundantSet)
     
     def nonRedundantAlternateOrigins(self, spaceGroupLabel=None ):
-        if spaceGroupLabel is not None and self.currentSpaceGroup() !=  spaceGroupLabel:
+        if spaceGroupLabel is not None and self.spaceGroup() !=  spaceGroupLabel:
             self._getAlternateOrigins( spaceGroupLabel ) 
         return copy.copy(self._nonRedundantSet)
 
@@ -415,7 +415,7 @@ class OriginInfo( object ):
         if label not in self._spacegroup2origin:
             label = self._altlabel( label )
         
-        self._currentSpaceGroup = label
+        self._spaceGroup = label
         originl = self._spacegroup2origin[ label ]
         
         # We build up a list of the full set (redundant) and also the non-redundant that are
