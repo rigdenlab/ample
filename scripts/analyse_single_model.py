@@ -300,8 +300,8 @@ with open( pfile ) as f:
 
 pdbedit = pdb_edit.PDBEdit()
 for pdbCode in sorted( mrbumpResults.keys() ):
-    if pdbCode != "1M5I":
-        continue
+    #if pdbCode != "1M5I":
+    #    continue
     
     workdir = os.path.join( rundir, pdbCode )
     if not os.path.isdir( workdir ):
