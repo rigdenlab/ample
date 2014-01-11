@@ -51,23 +51,23 @@ class Maxcluster(object):
         
         return
         
-    def compareDirectory(self, nativePdb=None, modelsDirectory=None, workdir=None ):
+    def compareDirectory(self, nativePdbInfo=None, 
+                               resSeqMap=None, 
+                               modelsDirectory=None,
+                               logfile=None,
+                               workdir=None ):
 
         self.data = []
-        self.modelsDirectory = modelsDirectory
-        
         self.workdir = workdir
         if not self.workdir:
             self.workdir = os.getcwd()
         
+        #refModel = os.path.join( modelsDirectory, "S_00000001.pdb" )
+        nativePdb = self.prepareNative( nativePdbInfo=nativePdbInfo, resSeqMap=resSeqMap )
         
-        refModel = os.path.join( self.modelsDirectory, "S_00000001.pdb" )
-        self.nativePdb = self.prepareNative( nativePdb=nativePdb, refModel=refModel )
-        
-        self.maxclusterLogfile = os.path.join( self.workdir, "maxcluster.log" )
-        self.runCompareDirectory()
-        
-        self.parseLogDirectory()
+        logfile = os.path.join( self.workdir, "maxcluster.log" )
+        self.runCompareDirectory( nativePdb=nativePdb, modelsDirectory=modelsDirectory, logfile=logfile )
+        self.parseLogDirectory( logfile=logfile )
 
         return
     
@@ -108,47 +108,42 @@ class Maxcluster(object):
         
         return data
         
-    def prepareNative(self, nativePdb=None, refModel=None ):
+    def prepareNative(self, nativePdbInfo=None, resSeqMap=None ):
         """do stuff"""
         
         # Find out how many chains and extract the first if > 1
-        PE = pdb_edit.PDBEdit()
-        info = PE.get_info( nativePdb )
-        if len( info.models ) > 1:
+        if len( nativePdbInfo.models ) > 1:
             raise RuntimeError,"More than 1 model."
         
         # Check if > 1 chain
         chainID=None
-        if len( info.models[0].chains ) > 1:
-            chainID=info.models[0].chains[0]
+        if len( nativePdbInfo.models[0].chains ) > 1:
+            
+            chainID=nativePdbInfo.models[0].chains[0]
         
-        # Standardise the native and extract the chain if > 1
-        n = os.path.splitext( os.path.basename( nativePdb ) )[0]
-        nativePdbStd = "{0}_std.pdb".format( n )
-        PE.standardise(nativePdb, nativePdbStd, chain=chainID )
-        nativePdb = nativePdbStd
+            # Assume native is standardised
+            # Extract the chain if > 1
+            PE = pdb_edit.PDBEdit()
+            nativePdbChain = ample_util.filename_append( filename=nativePdbInfo.pdb,
+                                                         astr="chain{0}".format(chainID) )
+            PE.extract_chain(nativePdbInfo.pdb, nativePdbChain, chainID)
+            nativePdb = nativePdbChain
         
-        # 1 chain so check if the residues and sequences match
-        resMap = residue_map.residueSequenceMap( nativePdb, refModel )
-        
-        if not resMap.resSeqMatch():
+        if not resSeqMap.resSeqMatch():
             
             # We need to create a copy of the native with numbering matching the model
-            n = os.path.splitext( os.path.basename( nativePdb ) )[0]
-            nativeRenumber = "{0}_renumber.pdb".format( n )
-            PE.match_resseq( targetPdb=nativePdb, outPdb=nativeRenumber, resMap=resMap )
-            
+            nativeRenumber = ample_util.filename_append( filename=nativePdb,
+                                                         astr="ren".format(chainID) )
+            PE.match_resseq( targetPdb=nativePdb, outPdb=nativeRenumber, resMap=resSeqMap )
             nativePdb = nativeRenumber
+        else:
+            nativePdb = nativePdbInfo.pdb
         
         return nativePdb
         
     def parseLogDirectory(self, logfile=None ):
         
         self.data = []
-        
-        if logfile is None:
-            logfile = self.maxclusterLogfile
-        
         assert logfile
         
         #INFO  : 1000. 2XOV_clean_ren.pdb vs. /media/data/shared/TM/2XOV/models/S_00000444.pdb  Pairs=  36, RMSD= 3.065, MaxSub=0.148, TM=0.192, MSI=0.148
@@ -298,15 +293,15 @@ class Maxcluster(object):
     def maxsubSorted(self, reverse=True ):
         return sorted( self.data, key=lambda data: data.maxsub, reverse=reverse )
      
-    def runCompareDirectory(self):
+    def runCompareDirectory(self, nativePdb, modelsDirectory ):
         
         # Generate the list of models
         pdblist = os.path.join( self.workdir, "models.list")
         with open( pdblist, 'w' ) as f:
-            f.write( os.linesep.join( glob.glob( os.path.join( self.modelsDirectory, 'S_*.pdb' ) ) ) )
+            f.write( os.linesep.join( glob.glob( os.path.join( modelsDirectory, 'S_*.pdb' ) ) ) )
             
         # Run Maxcluster
-        cmd = [ self.maxclusterExe, "-e", self.nativePdb, "-l", pdblist, ]
+        cmd = [ self.maxclusterExe, "-e", nativePdb, "-l", pdblist, ]
         retcode = ample_util.run_command( cmd, logfile=self.maxclusterLogfile, dolog=False )
         
         if retcode != 0:
