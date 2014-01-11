@@ -75,7 +75,7 @@ def clearResult( ampleResult ):
 
 rundir = "/home/jmht/Documents/test/CC/single_model"
 singleModelDir="/media/data/shared/coiled-coils/single_model"
-dataDir="/media/data/shared/coiled-coils/ensemble/"
+dataRoot="/media/data/shared/coiled-coils/ensemble/"
 
 results = []
 
@@ -102,8 +102,11 @@ for pdbCode in sorted( mrbumpResults.keys() ):
         
     print "\nResults for ",pdbCode
     
-    # Get path to native Extract all the nativeInfo from it
-    nativePdb = os.path.join( dataDir, pdbCode,  "{0}.pdb".format( pdbCode ) )
+    # Directory where all the data for this run live
+    dataDir = os.path.join( dataRoot, pdbCode )
+    
+    # Get path to native Extract all the nativePdbInfo from it
+    nativePdb = os.path.join( dataDir, "{0}.pdb".format( pdbCode ) )
     pdbedit = pdb_edit.PDBEdit()
     nativePdbInfo = pdbedit.get_info( nativePdb )
     
@@ -121,36 +124,33 @@ for pdbCode in sorted( mrbumpResults.keys() ):
     
     # Get the new Info about the native
     nativePdbInfo = pdbedit.get_info( nativePdb )
-
-    # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
-    if len( nativePdbInfo.models[0].chains ) > 1:
-#         chainID = nativePdbInfo.models[0].chains[0]
-#         nativePdbSingle  = ample_util.filename_append( filename=nativePdbInfo.pdb,
-#                                                        astr="chain{0}".format( chainID ), 
-#                                                        directory=workdir )
-#         pdbedit.extract_chain( nativePdbInfo.pdb, nativePdbSingle, chainID=chainID )
-        chainID = nativePdbInfo.models[0].chains[0]
-        nativePdbSingle  = ample_util.filename_append( filename=nativePdbInfo.pdb,
-                                                       astr="1chain".format( chainID ), 
-                                                       directory=workdir )
-        pdbedit.to_single_chain( nativePdbInfo.pdb, nativePdbSingle )
-    else:
-        nativePdbSingle = nativePdbInfo.pdb
     
     # Get information on the origins for this spaceGroup
     originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
-    dsspLog = os.path.join( dataDir, pdbCode,  "{0}.dssp".format( pdbCode  )  )
-
-    # Get hold of a full model so we can do the mapping of residues
-    refModelPdb = os.path.join( dataDir, pdbCode,  "models/S_00000001.pdb".format( pdbCode ) )
-    refModelPdbInfo = pdbedit.get_info( refModelPdb )
     
+    # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
+    if len( nativePdbInfo.models[0].chains ) > 1:
+        chainID = nativePdbInfo.models[0].chains[0]
+        nativeAs1Chain  = ample_util.filename_append( filename=nativePdbInfo.pdb,
+                                                       astr="1chain".format( chainID ), 
+                                                       directory=workdir )
+        pdbedit.to_single_chain( nativePdbInfo.pdb, nativeAs1Chain )
+    else:
+        nativeAs1Chain = nativePdbInfo.pdb
+    
+    
+    # Get hold of a full model so we can do the mapping of residues
+    refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbCode ) )
     resSeqMap = residue_map.residueSequenceMap()
+    refModelPdbInfo = pdbedit.get_info( refModelPdb )
     resSeqMap.fromInfo( refInfo=refModelPdbInfo,
-                        refChainID=refModelPdbInfo.models[0].chains[0],
+                        refChainID=refModelPdbInfo.models[0].chains[0], # Only 1 chain in model
                         targetInfo=nativePdbInfo,
                         targetChainID=nativePdbInfo.models[0].chains[0]
-                       )
+                      )
+    
+    dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode  )  )
+
     
     # Loop through results for that job
     for mrbumpResult in mrbumpResults[ pdbCode ]:
@@ -210,7 +210,7 @@ for pdbCode in sorted( mrbumpResults.keys() ):
         try:
             analyseSolution( ampleResult=ampleResult,
                              nativePdbInfo=nativePdbInfo,
-                             nativePdbSingle=nativePdbSingle,
+                             nativePdbAs1Chain=nativePdbAs1Chain,
                              refModelPdbInfo=refModelPdbInfo,
                              resSeqMap=resSeqMap,
                              originInfo=originInfo,
@@ -219,8 +219,6 @@ for pdbCode in sorted( mrbumpResults.keys() ):
         except Exception,e:
             print "ERROR ANALYSING SOLUTION: {0} {1}".format( pdbCode, mrbumpResult.ensembleName )
             print traceback.format_exc()
-            
-
 
 for r in results:
     print r
