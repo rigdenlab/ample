@@ -54,7 +54,6 @@ class Maxcluster(object):
     def compareDirectory(self, nativePdbInfo=None, 
                                resSeqMap=None, 
                                modelsDirectory=None,
-                               logfile=None,
                                workdir=None ):
 
         self.data = []
@@ -65,7 +64,7 @@ class Maxcluster(object):
         #refModel = os.path.join( modelsDirectory, "S_00000001.pdb" )
         nativePdb = self.prepareNative( nativePdbInfo=nativePdbInfo, resSeqMap=resSeqMap )
         
-        logfile = os.path.join( self.workdir, "maxcluster.log" )
+        logfile = os.path.join( self.workdir, "maxclusterD.log" )
         self.runCompareDirectory( nativePdb=nativePdb, modelsDirectory=modelsDirectory, logfile=logfile )
         self.parseLogDirectory( logfile=logfile )
 
@@ -294,7 +293,7 @@ class Maxcluster(object):
     def maxsubSorted(self, reverse=True ):
         return sorted( self.data, key=lambda data: data.maxsub, reverse=reverse )
      
-    def runCompareDirectory(self, nativePdb, modelsDirectory ):
+    def runCompareDirectory(self, nativePdb=None, modelsDirectory=None, logfile=None ):
         
         # Generate the list of models
         pdblist = os.path.join( self.workdir, "models.list")
@@ -303,7 +302,7 @@ class Maxcluster(object):
             
         # Run Maxcluster
         cmd = [ self.maxclusterExe, "-e", nativePdb, "-l", pdblist, ]
-        retcode = ample_util.run_command( cmd, logfile=self.maxclusterLogfile, dolog=False )
+        retcode = ample_util.run_command( cmd, logfile=logfile, dolog=True )
         
         if retcode != 0:
             msg = "non-zero return code for maxcluster in runMaxcluster!"
