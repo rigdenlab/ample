@@ -869,7 +869,7 @@ def processMrbump( mrbumpResult ):
 
 def analyseSolution( ampleResult=None,
                      nativePdbInfo=None,
-                     nativePdbSingle=None,
+                     nativeAs1Chain=None,
                      refModelPdbInfo=None,
                      resSeqMap=None,
                      originInfo=None,
@@ -944,7 +944,7 @@ def analyseSolution( ampleResult=None,
         # Compare the traced model to the native with maxcluster
         # We can only compare one chain so we extracted this earlier
         maxComp = maxcluster.Maxcluster()
-        d = maxComp.compareSingle( nativePdb=nativePdbSingle,
+        d = maxComp.compareSingle( nativePdb=nativeAs1Chain,
                                    modelPdb=shelxeCsymmatchPdbSingle,
                                    sequenceIndependant=True,
                                    rmsd=False
@@ -952,7 +952,7 @@ def analyseSolution( ampleResult=None,
         ampleResult.shelxeTM = d.tm
         ampleResult.shelxeTMPairs = d.pairs
         
-        d = maxComp.compareSingle( nativePdb=nativePdbSingle,
+        d = maxComp.compareSingle( nativePdb=nativeAs1Chain,
                                    modelPdb=shelxeCsymmatchPdbSingle,
                                    sequenceIndependant=True,
                                    rmsd=True )
@@ -1057,26 +1057,40 @@ if __name__ == "__main__":
         
         # Get the new Info about the native
         nativePdbInfo = pdbedit.get_info( nativePdb )
+        
+        # Get information on the origins for this spaceGroup
+        originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
 
         # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
         if len( nativePdbInfo.models[0].chains ) > 1:
             chainID = nativePdbInfo.models[0].chains[0]
-            nativePdbSingle  = ample_util.filename_append( filename=nativePdbInfo.pdb,
+            nativeAs1Chain  = ample_util.filename_append( filename=nativePdbInfo.pdb,
                                                            astr="1chain".format( chainID ), 
                                                            directory=workdir )
-            pdbedit.to_single_chain( nativePdbInfo.pdb, nativePdbSingle )
+            pdbedit.to_single_chain( nativePdbInfo.pdb, nativeAs1Chain )
         else:
-            nativePdbSingle = nativePdbInfo.pdb
+            nativeAs1Chain = nativePdbInfo.pdb
         
-        # Get information on the origins for this spaceGroup
-        originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
+        
+        # Get hold of a full model so we can do the mapping of residues
+        refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbCode ) )
+        resSeqMap = residue_map.residueSequenceMap()
+        refModelPdbInfo = pdbedit.get_info( refModelPdb )
+        resSeqMap.fromInfo( refInfo=refModelPdbInfo,
+                            refChainID=refModelPdbInfo.models[0].chains[0], # Only 1 chain in model
+                            targetInfo=nativePdbInfo,
+                            targetChainID=nativePdbInfo.models[0].chains[0]
+                          )
         
         # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
         # requires a separate run to generate total RMSD
         modelsDirectory = os.path.join( dataDir, "models")
         scoreP = RosettaScoreParser( modelsDirectory )
         maxComp = maxcluster.Maxcluster()
-        maxComp.compareDirectory(nativePdb=nativePdb, modelsDirectory=modelsDirectory, workdir=workdir )
+        maxComp.compareDirectory( nativePdbInfo=nativePdb,
+                                  resSeqMap=resSeqMap,
+                                  modelsDirectory=modelsDirectory,
+                                  workdir=workdir )
         
         # Secondary Structure assignments
         #sam_file = os.path.join( dataDir, "fragments/t001_.rdb_ss2"  )
@@ -1084,18 +1098,6 @@ if __name__ == "__main__":
         psipredP = PsipredParser( psipred_file )
         dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode  )  )
         dsspP = dssp.DsspParser( dsspLog )
-
-        # Get hold of a full model so we can do the mapping of residues
-        refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbCode ) )
-        resSeqMap = residue_map.residueSequenceMap()
-        
-        refModelPdbInfo = pdbedit.get_info( refModelPdb )
-        
-        resSeqMap.fromInfo( refInfo=refModelPdbInfo,
-                            refChainID=refModelPdbInfo.models[0].chains[0],
-                            targetInfo=nativePdbInfo,
-                            targetChainID=nativePdbInfo.models[0].chains[0]
-                          )
         
         # Loop over each result
         if pickledResults:
@@ -1220,7 +1222,7 @@ if __name__ == "__main__":
             try:
                 analyseSolution( ampleResult=ar,
                                  nativePdbInfo=nativePdbInfo,
-                                 nativePdbSingle=nativePdbSingle,
+                                 nativeAs1Chain=nativeAs1Chain,
                                  refModelPdbInfo=refModelPdbInfo,
                                  resSeqMap=resSeqMap,
                                  originInfo=originInfo,
