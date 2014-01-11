@@ -128,7 +128,9 @@ class Maxcluster(object):
                                                          astr="chain{0}".format(chainID) )
             PE.extract_chain(nativePdbInfo.pdb, nativePdbChain, chainID)
             nativePdb = nativePdbChain
-        
+        else:
+            nativePdb = nativePdbInfo.pdb
+
         if not resSeqMap.resSeqMatch():
             
             # We need to create a copy of the native with numbering matching the model
@@ -136,8 +138,6 @@ class Maxcluster(object):
                                                          astr="ren".format(chainID) )
             PE.match_resseq( targetPdb=nativePdb, outPdb=nativeRenumber, resMap=resSeqMap )
             nativePdb = nativeRenumber
-        else:
-            nativePdb = nativePdbInfo.pdb
         
         return nativePdb
         
