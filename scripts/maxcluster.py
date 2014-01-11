@@ -95,6 +95,7 @@ class Maxcluster(object):
             logfile = os.path.splitext( logfile )[0] + ".log"
         self.maxclusterLogfile = logfile
         
+        #print "running cmd "," ".join( cmd )
         retcode = ample_util.run_command( cmd, logfile=self.maxclusterLogfile, dolog=False )
         
         if retcode != 0:

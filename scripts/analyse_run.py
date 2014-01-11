@@ -1017,9 +1017,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    #for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbCode in sorted( resultsDict.keys() ):
-    #for pdbCode in [ "1D7M" ]:
+    for pdbCode in [ "1BYZ" ]:
         
         workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
@@ -1146,8 +1146,8 @@ if __name__ == "__main__":
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
             
-            #if ensembleName != "poly_ala_trunc_0.005601_rad_1":
-            #   continue
+            if ensembleName != "SCWRL_reliable_sidechains_trunc_0.005734_rad_1":
+               continue
             
             # Extract information on the models and ensembles
             eresults = ampleDict['ensemble_results']
