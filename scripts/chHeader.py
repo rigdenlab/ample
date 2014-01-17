@@ -6,7 +6,7 @@ sys.path.append("/Users/jmht/Documents/AMPLE/ample-dev1/python")
 import ample_util
 from analyse_run import AmpleResult
 
-ocsv = "/Users/jmht/Documents/AMPLE/data/results.csv"
+ocsv = sys.argv[1] 
 ncsv = ample_util.filename_append( filename=ocsv, astr="obj" )
 
 a = AmpleResult()
@@ -19,4 +19,4 @@ with open( ocsv ) as o, open( ncsv, 'w' ) as n:
                 i = a.orderedTitles.index( f )
                 nf.append( a.orderedAttrs[ i ] )
             line = ",".join( nf ) + "\n"
-        n.write( line )
+        n.write( line )	
