@@ -1,8 +1,85 @@
 
-setwd("/home/jmht/Documents/test/CC/run3")
+
+library(ggplot2)
+#setwd("/home/jmht/Documents/test/CC/run3")
+setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
 data <- read.table(file="results_obj.csv",sep=',', header=T)
 data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
 data$success <- replace( data$success, is.na(data$success), 0 )
+
+# Object to hold successes
+sdata <- data[ data$success == 1, ]
+
+# Data to calculate
+# NEED TO ADD TIMING DATA OF OVERALL AMPLE RUN
+# * mean resolution of failing/succesful cases
+mean(  data[ data$success == 1, ]$resolution ) # 1.949077
+mean(  data[ data$success == 0, ]$resolution ) # 2.025158
+
+# * mean of solvent content of failing/succesful cases
+unique( data[ is.na( data$solventContent ),]$pdbCode ) # 1G1J 1KYC 1P9I 3CVF
+mean( data[ data$success == 1, ]$solventContent )
+mean( data[ data$success == 0, ]$solventContent )
+
+# most common number of residues/proportion of target in search model
+median( data$ensembleNumResidues ) # 30
+median( data$ensemblePercentModel ) # 53
+
+# max/min of number of models in ensembles
+max( data$ensembleNumModels ) # 30
+min( data$ensembleNumModels ) # 2
+
+# Plots
+
+# length distribution of successful search models both as number of residues 
+# and as fraction of target chain length remaining in the search model.
+p <- ggplot(data=data[ data$success == 1, ], aes(ensembleNumResidues) )
+p + layer(geom="histogram") +
+xlab("Number of residues in ensemble") +
+ylab("Number of models") +
+ggtitle("Number of residues in ensemble for successful cases")
+
+
+p <- ggplot(data=data[ data$success == 1, ], aes(ensemblePercentModel) )
+p + layer(geom="histogram") +
+xlab("Percentage of model in ensemble") +
+ylab("Number of models") +
+ggtitle("Percentage of model in ensemble for successful cases")
+
+# Try showing success and failure together
+p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
+p + geom_bar( position = "dodge" )
+#ggsave("myCustomPlot.png", width=5, height=4, dpi=80)
+
+#ÊComparison of the RIO figures for successful search models with the number of in-register 
+# residues similarly defined.
+# goodContacts, inregisterContacts
+#p <- ggplot(data=data[ data$success == 1, ], aes(reforiginRMSD, inregisterContacts) )
+p <- ggplot(data=data, aes(shelxeCC, goodContacts/fastaLength, color=factor(success)) )
+p + layer(geom="point")
+
+p <- ggplot(data=data, aes(reforiginRMSD, inregisterContacts, color=factor(success)) )
+p + layer(geom="point")
+
+
+# As Fig ? shows, many successes are achieved with LLG <0
+
+qplot(shelxeCC, resolution, data=data, colour=success)
+
+p <- ggplot( data, aes(fastaLength, resolution, color=factor(success) ) )
+
+#p + geom_point()
+p + layer(geom="point")
+
+p + layer(geom="point") + facet_wrap(~success)
+
+# Can add colour to each layer separatly or to the aes added to the ggplot object
+# in which case all layers inherit it
+# geom_point(aes(color = factor(cyl)))
+
+#p + xlab("Body Weight") + ylab("Total Hours Sleep") + ggtitle("Some Sleep Data")
+
+q()
 
 # Count # jobs
 njobs <- aggregate( data$success, by=list( data$pdbCode ), FUN=length)[2]
@@ -24,8 +101,13 @@ nfail <- njobs-nsuccess
 x <- data[ data$success==1, ]
 # Order by pdbCode and CC
 x <- x[ order( x$pdbCode, x$shelxeCC, decreasing=TRUE ),   ]
-# Select top by selecting not duplcates on pdbCode
+# Select top by selecting not duplicates on pdbCode
 x <- x[ !duplicated(x$pdbCode), ]
+# NB LOOK AT REORDER
+
+# get non-foating origins
+nf <- data[ data$floatingOrigin=="False", ]
+
 
 
 q()
