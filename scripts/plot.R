@@ -46,10 +46,34 @@ xlab("Percentage of model in ensemble") +
 ylab("Number of models") +
 ggtitle("Percentage of model in ensemble for successful cases")
 
+#name="Experimental\nCondition",
+#breaks=c("success", "failure"),
+#labels=c("Success", "Failure" ) 
+
+
 # Try showing success and failure together
+#scale_fill_manual("Color-Matching", c("0"="#FF0000", "1"="#00FF00"))
 p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
-p + geom_bar( position = "dodge" )
-#ggsave("myCustomPlot.png", width=5, height=4, dpi=80)
+p + geom_bar( position = "dodge" ) +
+scale_fill_manual( values=c("#FF0000", "#00FF00"),
+		name="Success/Failure",
+		labels=c("Failure", "Success")
+		) +
+xlab("Number of residues in ensemble") +
+ylab("Number of ensembles") +
+ggtitle("Number of residues in ensemble for successful and failing cases")
+ggsave("ResiduesVsEnsemble.png")
+
+p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
+p + geom_bar( position = "dodge" ) +
+		scale_fill_manual( values=c("#FF0000", "#00FF00"),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		xlab("Percent of residues in ensemble") +
+		ylab("Number of ensembles") +
+		ggtitle("Percentage of residues in ensemble for successful and failing cases")
+ggsave("PercentVsEnsemble.png")
 
 #ÊComparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
