@@ -561,9 +561,9 @@ class RosettaModel(object):
                             
             if optd['blast_dir']:
                 blastpgp = optd['blast_dir'] + os.sep + "bin/blastpgp"
-                blastpgp = ample_util.check_for_exe( 'blastpgp', blastpgp )
+                blastpgp = ample_util.find_exe( 'blastpgp', blastpgp )
             else:
-                blastpgp = ample_util.check_for_exe( 'blastpgp', None )
+                blastpgp = ample_util.find_exe( 'blastpgp', None )
                 
             # Found so set
             optd['blastpgp'] = blastpgp

@@ -10,6 +10,8 @@ import re
 import subprocess
 import sys
 import tempfile
+import traceback
+import urllib
 import unittest
 
 # Our modules
@@ -57,21 +59,29 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
-def check_for_exe(exename, varname):
+def find_exe( exename, path=None, dirs=None ):
+    """Find the executable exename.
+    
+    Args:
+    exename: the name of the program
+    path - a full path to the executable
+    dirs - additional directories to search for the location
+    """
+    
     logger = logging.getLogger()
     exepath = ''
     logger.debug('Looking for executable: {0}'.format(exename) )
     
-    if varname:
-        logger.debug( 'Using executable path from command-line {0}'.format(varname) )
-        exepath = which(varname)
+    if path:
+        logger.debug( 'Using executable path from command-line {0}'.format(path) )
+        exepath = which(path)
         if not exepath:
-            msg = "Cannot find valid {0} executable from given path: {1}".format(exename,varname)
+            msg = "Cannot find valid {0} executable from given path: {1}".format(exename,path)
             logger.critical(msg)
             raise RuntimeError,msg
     else:
         logger.debug( 'No path for {0} given on the command line, looking in PATH'.format(exename) )
-        exepath = which(exename)
+        exepath = which(exename, dirs=dirs )
         if not exepath:
             msg = "Cannot find executable {0} in PATH. Please give the path to {0}".format(exename)
             logger.critical(msg)
@@ -88,6 +98,50 @@ def filename_append( filename=None, astr=None, separator="_", directory=None ):
     if not directory:
         directory = dirname
     return os.path.join( directory, name )
+
+def find_maxcluster( amopt ):
+    """Return path to maxcluster binary.
+    If we can't find one in the path, we create a $HOME/.ample
+    directory and downlod it to there
+    """
+    
+    maxcluster_exe = None
+    try:
+        maxcluster_exe = find_exe( 'maxcluster', dirs=[ amopt.d['rcdir'] ] )
+    except RuntimeError:
+        # Cannot find so we need to try and download it
+        logger = logging.getLogger()
+        rcdir = amopt.d['rcdir'] 
+        logger.info("Cannot find maxcluster binary in path so attempting to download it directory: {0}".format( rcdir )  )
+        if not os.path.isdir( rcdir ):
+            logger.info("No ample rcdir found so creating in: {0}".format( rcdir ) )
+            os.mkdir( rcdir )
+        
+        url = None
+        maxcluster_exe = os.path.join( rcdir, 'maxcluster' )
+        if sys.platform.startswith("linux"):
+            url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster'
+        elif sys.platform.startswith("darwin"):
+            url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_i686_32bit.bin'
+            #OSX PPC: http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_PPC_32bit.bin
+        elif sys.platform.startswith("win"):
+            url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster.exe'
+            maxcluster_exe = os.path.join( rcdir, 'maxcluster.exe' )
+        else:
+            raise RuntimeError,"Unrecognised system type: {0}".format( sys.platform )
+        
+        logger.info("Attempting to download maxcluster binary from: {0}".format( url ) )
+        try:
+            urllib.urlretrieve( url, maxcluster_exe )
+        except Exception:
+            msg = traceback.format_exc()
+            logger.critcal("Error downloading maxcluster executable: {0}\n{1}".format( url, msg ) )
+            return None
+        
+        # make executable
+        os.chmod(maxcluster_exe, 0o777)
+    
+    return maxcluster_exe
 
 def get_mtz_flags( mtzfile ):
     """
@@ -286,7 +340,7 @@ def tmpFileName():
     return tmp1
 
 # get a program test for existsnce
-def which(program):
+def which(program, dirs=None ):
     def is_exe(fpath):
         return os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
@@ -296,7 +350,10 @@ def which(program):
             return program
     else:
         #for path in os.environ["PATH"].split(os.pathsep):
-        for path in os.environ["PATH"].split(os.pathsep) + sys.path:
+        paths = os.environ["PATH"].split(os.pathsep)
+        if dirs:
+            paths += dirs
+        for path in paths:
             exe_file = os.path.join(path, program)
             if is_exe(exe_file):
                 return exe_file

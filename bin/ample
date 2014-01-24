@@ -545,32 +545,33 @@ if amopt.d['use_arpwarp']:
 #
 #Check we can find all the required programs
 #
-
-# cluster queueing
-if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
-    msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
-    logger.critical(msg)
-    sys.exit(1)
-
+# Maxcluster handled differently as we may need to download the binary
+#amopt.d['maxcluster_exe'] = ample_util.find_exe('maxcluster', amopt.d['maxcluster_exe'])
+amopt.d['maxcluster_exe'] = ample_util.find_maxcluster( amopt )
+amopt.d['spicker_exe'] = ample_util.find_exe('spicker', amopt.d['spicker_exe'])
 if amopt.d['ensembler']:
     logger.info('You are using Phenix ensembler')
-    amopt.d['phenix_exe'] = ample_util.check_for_exe('phenix', amopt.d['phenix_exe'])
+    amopt.d['phenix_exe'] = ample_util.find_exe('phenix', amopt.d['phenix_exe'])
 else:
-    amopt.d['theseus_exe'] = ample_util.check_for_exe('theseus', amopt.d['theseus_exe'])
+    amopt.d['theseus_exe'] = ample_util.find_exe('theseus', amopt.d['theseus_exe'])
 
-amopt.d['maxcluster_exe'] = ample_util.check_for_exe('maxcluster', amopt.d['maxcluster_exe'])
-amopt.d['spicker_exe'] = ample_util.check_for_exe('spicker', amopt.d['spicker_exe'])
 
 if amopt.d['use_scwrl']:
-    amopt.d['scwrl_exe'] = ample_util.check_for_exe('Scwrl4', amopt.d['scwrl_exe'] )
+    amopt.d['scwrl_exe'] = ample_util.find_exe('Scwrl4', amopt.d['scwrl_exe'] )
 if amopt.d['use_shelxe']:
-    amopt.d['shelxe_exe'] = ample_util.check_for_exe('shelxe', amopt.d['shelxe_exe'])
+    amopt.d['shelxe_exe'] = ample_util.find_exe('shelxe', amopt.d['shelxe_exe'])
 
 # Create the rosetta modeller - this runs all the checks required
 if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
     logger.info('Making models or fragments so checking ROSETTA options')
     rosetta_modeller = rosetta_model.RosettaModel()
     rosetta_modeller.set_from_dict( amopt.d )
+
+# cluster queueing
+if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
+    msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
+    logger.critical(msg)
+    sys.exit(1)
 
 # Print out what is being done
 if amopt.d['use_buccaneer']:
