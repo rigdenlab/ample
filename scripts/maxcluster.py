@@ -117,13 +117,13 @@ class Maxcluster(object):
         
         # Check if > 1 chain
         chainID=None
+        PE = pdb_edit.PDBEdit()
         if len( nativePdbInfo.models[0].chains ) > 1:
             
             chainID=nativePdbInfo.models[0].chains[0]
         
             # Assume native is standardised
             # Extract the chain if > 1
-            PE = pdb_edit.PDBEdit()
             nativePdbChain = ample_util.filename_append( filename=nativePdbInfo.pdb,
                                                          astr="chain{0}".format(chainID) )
             PE.extract_chain(nativePdbInfo.pdb, nativePdbChain, chainID)
