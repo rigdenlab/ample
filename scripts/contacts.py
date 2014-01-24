@@ -74,16 +74,14 @@ class Contacts(object):
                      nativePdbInfo=None,
                      placedPdbInfo=None,
                      resSeqMap=None,
-                     originInfo=None, 
-                     shelxeCsymmatchOrigin=None,
+                     origins=None, 
                      workdir=None,
                      dsspLog=None ):
         
         if not self.run( nativePdbInfo=nativePdbInfo,
                          placedPdbInfo=placedPdbInfo,
                          resSeqMap=resSeqMap,
-                         originInfo=originInfo, 
-                         shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
+                         origins=origins, 
                          workdir=workdir ):
             return False
         
@@ -249,8 +247,7 @@ class Contacts(object):
              nativePdbInfo=None,
              placedPdbInfo=None,
              resSeqMap=None,
-             originInfo=None,
-             shelxeCsymmatchOrigin=None,
+             origins=None,
              workdir=None ):
         """
         """
@@ -307,17 +304,6 @@ class Contacts(object):
         #placedSpaceGroup = placedInfo.crystalInfo.spaceGroup
         #if placedSpaceGroup != originInfo.currentSpaceGroup():
         #    raise RuntimeError,"Mismatching space groups!"
-        
-        # Get list of origins
-        # For floating origins we use the csymmatch origin
-        if originInfo.isFloating():
-            assert bool( shelxeCsymmatchOrigin)
-            origins = [ shelxeCsymmatchOrigin ]
-        else:
-            origins = originInfo.nonRedundantAlternateOrigins()
-            if shelxeCsymmatchOrigin is not None and shelxeCsymmatchOrigin not in origins:
-                #print "csymmatch origin {0} is not in origins {1}".format( shelxeCsymmatchOrigin, origins )
-                origins.append( shelxeCsymmatchOrigin )
         
         # Loop over origins, move the placed pdb to the new origin and then run ncont
         self.originCompare = {}
