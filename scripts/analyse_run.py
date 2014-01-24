@@ -141,25 +141,31 @@ class AmpleResult(object):
                               'reforiginRMSD',
                               
                               'floatingOrigin',
-                              'cContactData      ',
-                              'cNumContacts      ',
+                              'csymmatchGotOrigin',
+                              'csymmatchScore',
+                              'csymmatchInNR',
+                              'csymmatchInR',
+
+                              'csymmatchOrigin',
+                              'nrContactOrigin',
+
+                              'cContactData',
+                              'cNumContacts',
                               'cInregisterContacts',
                               'cOoRegisterContacts',
                               'cBackwardsContacts',
                               'cGoodContacts',
                               'cNocatContacts',
+
                               'nrContactData',
                               'nrNumContacts',
                               'nrInRegisterContacts',
                               'nrOoRegisterContacts',
                               'nrBackwardsContacts',
-                              'nrContactOrigin',
                               'nrGoodContacts',
                               'nrNocatContacts',
                               'helixSequence',
                               'lenHelix',
-                              'csymmatchInNR',
-                              'csymmatchInR',
 
 #                               'csymmatchOriginOk',
 #                               'contactData',
@@ -223,28 +229,34 @@ class AmpleResult(object):
                                 "Molrep Score",
                                 "Molrep Time",
                                 "Reforigin RMSD",
-                                
+
                                 'floatingOrigin',
-                                'cContactData      ',
-                                'cNumContacts      ',
+                                'csymmatchGotOrigin',
+                                'csymmatchScore',
+                                'csymmatchInNR',
+                                'csymmatchInR',
+
+                                'csymmatchOrigin',
+                                'nrContactOrigin',
+
+                                'cContactData',
+                                'cNumContacts',
                                 'cInregisterContacts',
                                 'cOoRegisterContacts',
                                 'cBackwardsContacts',
                                 'cGoodContacts',
                                 'cNocatContacts',
+
                                 'nrContactData',
                                 'nrNumContacts',
                                 'nrInRegisterContacts',
                                 'nrOoRegisterContacts',
                                 'nrBackwardsContacts',
-                                'nrContactOrigin',
                                 'nrGoodContacts',
                                 'nrNocatContacts',
                                 'helixSequence',
                                 'lenHelix',
-                                'csymmatchInNR',
-                                'csymmatchInR',
-                                
+
 #                                 "Floating Origin",
 #                                 "Csymmatch Origin OK",
 #                                 "Contact Data",
@@ -272,7 +284,7 @@ class AmpleResult(object):
                                  ]
 
         # Things not to output
-        self.skip = [ "resultDir", "ss_pred", "ss_dssp", "contactData" ]
+        self.skip = [ "resultDir", "ss_pred", "ss_dssp", "cContactData", "nrContactData" ]
         
         # Set initial values
         for a in self.orderedAttrs:
@@ -280,6 +292,9 @@ class AmpleResult(object):
         
         return
     
+    def valueAttrAsList(self):
+        return [ a for a in self.orderedAttrs if a not in self.skip ]
+
     def valuesAsList(self):
         return [ getattr(self, a) for a in self.orderedAttrs if a not in self.skip ]
     
@@ -857,8 +872,8 @@ def processMrbump( mrbumpResult ):
     # Need to remove last component as we recored the refmac directory
     mrDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
     # HACK - we run the processing on cytosine so differnt place
-    #/data2/jmht/coiled-coils/single_ensemble
     mrDir = mrDir.replace( "/data2/jmht/coiled-coils/single_ensemble","/media/data/shared/coiled-coils/single_model" )
+    #mrDir = mrDir.replace( "/data2/jmht/coiled-coils/ideal_helices","/media/data/shared/coiled-coils/ideal_helices" )
     mrbumpResult.mrDir = mrDir
     
     mrbumpResult.ensembleName = mrbumpResult.name[9:-6]
@@ -939,6 +954,7 @@ def analyseSolution( ampleResult=None,
     # debug - copy into work directory as reforigin struggles with long pathnames
     shutil.copy(placedPdb, os.path.join( workdir, os.path.basename( placedPdb ) ) )
     
+    pdbedit = pdb_edit.PDBEdit()
     placedPdbInfo = pdbedit.get_info( placedPdb )
     
     # Get reforigin info
@@ -975,9 +991,10 @@ def analyseSolution( ampleResult=None,
                                                                     directory=workdir )
         
         csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
-        shelxeCsymmatchOrigin = csym.origin()
-        ampleResult.csymmatchOrigin = shelxeCsymmatchOrigin
-        ampleResult.shelxeCsymmatchShelxeScore  = csym.averageScore()
+
+        shelxeCsymmatchOrigin          = csym.origin()
+        ampleResult.csymmatchOrigin    = shelxeCsymmatchOrigin
+        ampleResult.csymmatchScore     = csym.averageScore()
         ampleResult.csymmatchGotOrigin = bool( shelxeCsymmatchOrigin )
         
         # Clear results
@@ -1005,8 +1022,9 @@ def analyseSolution( ampleResult=None,
                 ampleResult.cInregisterContacts = ccalc.best.inregister
                 ampleResult.cOoRegisterContacts = ccalc.best.ooregister
                 ampleResult.cBackwardsContacts  = ccalc.best.backwards
-                ampleResult.cGoodContacts       = ampleResult.inregisterContacts + ampleResult.ooregisterContacts
-                ampleResult.cNocatContacts      = ampleResult.numContacts - ampleResult.goodContacts
+                good = ccalc.best.inregister + ccalc.best.ooregister
+                ampleResult.cGoodContacts       = good
+                ampleResult.cNocatContacts      = ccalc.best.numContacts - good
 
         # Clear results
         ampleResult.nrContactData        = None
@@ -1032,15 +1050,15 @@ def analyseSolution( ampleResult=None,
                                workdir=workdir,
                                dsspLog=dsspLog
                             )
-
             ampleResult.nrContactData        = ccalc.best
             ampleResult.nrNumContacts        = ccalc.best.numContacts
             ampleResult.nrInRegisterContacts = ccalc.best.inregister
             ampleResult.nrOoRegisterContacts = ccalc.best.ooregister
             ampleResult.nrBackwardsContacts  = ccalc.best.backwards
             ampleResult.nrContactOrigin      = ccalc.best.origin
-            ampleResult.nrGoodContacts       = ampleResult.inregisterContacts + ampleResult.ooregisterContacts
-            ampleResult.nrNocatContacts      = ampleResult.numContacts - ampleResult.goodContacts
+            good = ccalc.best.inregister + ccalc.best.ooregister
+            ampleResult.nrGoodContacts       = good
+            ampleResult.nrNocatContacts      = ccalc.best.numContacts - good
             ampleResult.helixSequence        = ccalc.best.helix
             if ccalc.best.helix:
                 ampleResult.lenHelix = len( ccalc.best.helix )
@@ -1057,12 +1075,12 @@ def analyseSolution( ampleResult=None,
         ampleResult.csymmatchInR = None
         # See if this origin is valid
         if ampleResult.csymmatchGotOrigin:
-            if ampleResult.csymmatchGotOrigin in originInfo.redundantAlternateOrigins():
+            if ampleResult.csymmatchOrigin in originInfo.redundantAlternateOrigins():
                 ampleResult.csymmatchInR = True
             else:
                 ampleResult.csymmatchInR = False
                 
-            if ampleResult.csymmatchGotOrigin in originInfo.nonRedundantAlternateOrigins():
+            if ampleResult.csymmatchOrigin in originInfo.nonRedundantAlternateOrigins():
                 ampleResult.csymmatchInNR = True
             else:
                 ampleResult.csymmatchInNR = False
@@ -1101,7 +1119,6 @@ if __name__ == "__main__":
     #dataRoot = "/Users/jmht/Documents/AMPLE/data"
     dataRoot = "/media/data/shared/coiled-coils/ensemble"
     
-    rundir = "/home/jmht/Documents/test/CC/run2"
     rundir = os.getcwd()
     os.chdir( rundir )
     
@@ -1242,7 +1259,7 @@ if __name__ == "__main__":
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
             
-            #if ensembleName != "SCWRL_reliable_sidechains_trunc_0.005734_rad_1":
+            #if ensembleName != "SCWRL_reliable_sidechains_trunc_13.389413_rad_2":
             #   continue
             
             # Extract information on the models and ensembles
@@ -1346,7 +1363,8 @@ if __name__ == "__main__":
     header=False
     for r in allResults:
         if not header:
-            csvwriter.writerow( r.titlesAsList() )
+            #csvwriter.writerow( r.titlesAsList() )
+            csvwriter.writerow( r.valueAttrAsList() )
             header=True
         csvwriter.writerow( r.valuesAsList() )
         
