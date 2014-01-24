@@ -8,7 +8,7 @@ data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 1
 data$success <- replace( data$success, is.na(data$success), 0 )
 
 # Object to hold successes
-sdata <- data[ data$success == 1, ]
+#sdata <- data[ data$success == 1, ]
 
 # Data to calculate
 # NEED TO ADD TIMING DATA OF OVERALL AMPLE RUN
@@ -33,39 +33,33 @@ min( data$ensembleNumModels ) # 2
 
 # length distribution of successful search models both as number of residues 
 # and as fraction of target chain length remaining in the search model.
-p <- ggplot(data=data[ data$success == 1, ], aes(ensembleNumResidues) )
-p + layer(geom="histogram") +
-xlab("Number of residues in ensemble") +
-ylab("Number of models") +
-ggtitle("Number of residues in ensemble for successful cases")
+#p <- ggplot(data=data[ data$success == 1, ], aes(ensemblePercentModel) )
+#p + layer(geom="histogram") +
 
+## Below for side-by-side but grid lines are off
+#p + geom_bar( position = "dodge", binwidth = 5 ) +
+#scale_fill_manual( values=c("#FF0000", "#00FF00"),
+#		name="Success/Failure",
+#		labels=c("Failure", "Success")
+#		) +
 
-p <- ggplot(data=data[ data$success == 1, ], aes(ensemblePercentModel) )
-p + layer(geom="histogram") +
-xlab("Percentage of model in ensemble") +
-ylab("Number of models") +
-ggtitle("Percentage of model in ensemble for successful cases")
-
-#name="Experimental\nCondition",
-#breaks=c("success", "failure"),
-#labels=c("Success", "Failure" ) 
-
+scolour = "#FF0000"
+fcolour = "#00FF00"
 
 # Try showing success and failure together
-#scale_fill_manual("Color-Matching", c("0"="#FF0000", "1"="#00FF00"))
 p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
-p + geom_bar( position = "dodge" ) +
-scale_fill_manual( values=c("#FF0000", "#00FF00"),
-		name="Success/Failure",
-		labels=c("Failure", "Success")
+p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
+		scale_fill_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
 		) +
-xlab("Number of residues in ensemble") +
-ylab("Number of ensembles") +
-ggtitle("Number of residues in ensemble for successful and failing cases")
-ggsave("ResiduesVsEnsemble.png")
+	xlab("Number of residues in ensemble") +
+	ylab("Number of ensembles") +
+	ggtitle("Number of residues in ensemble for successful and failing cases")
+ggsave("ResiduesVsEnsemble2.png")
 
 p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
-p + geom_bar( position = "dodge" ) +
+p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 		scale_fill_manual( values=c("#FF0000", "#00FF00"),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
@@ -73,16 +67,33 @@ p + geom_bar( position = "dodge" ) +
 		xlab("Percent of residues in ensemble") +
 		ylab("Number of ensembles") +
 		ggtitle("Percentage of residues in ensemble for successful and failing cases")
-ggsave("PercentVsEnsemble.png")
+ggsave("PercentVsEnsemble2.png")
 
 #ÊComparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
 # goodContacts, inregisterContacts
-#p <- ggplot(data=data[ data$success == 1, ], aes(reforiginRMSD, inregisterContacts) )
-p <- ggplot(data=data, aes(shelxeCC, goodContacts/fastaLength, color=factor(success)) )
+p <- ggplot(data=data[ data$symmatchOriginOk == "True", ], 
+			aes(reforiginRMSD,
+				inregisterContacts,
+				color=factor(success)
+				)
+			)
+
+			
+odata = data[  data$floatingOrigin == 'False' | ( data$floatingOrigin == 'True' & data$csymmatchOriginOk=='True' ) , ]
+
+x <-  odata[ odata$success == 1 & odata$numContacts == 0 , ,c("pdbCode","ensembleName") ]
+
+#p <- ggplot(data=odata, aes(reforiginRMSD, goodContacts/fastaLength, color=factor(success)) )
+p <- ggplot(data=odata, aes(reforiginRMSD, goodContacts, color=factor(success)) )
 p + layer(geom="point")
 
-p <- ggplot(data=data, aes(reforiginRMSD, inregisterContacts, color=factor(success)) )
+# histrogram
+#p <- ggplot(data=odata, aes(x=goodContacts, fill=factor(success)) )
+p <- ggplot(data=odata, aes(x=nocatContacts, fill=factor(success)) )
+p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 )
+
+p <- ggplot(data=odata, aes(reforiginRMSD, inregisterContacts, color=factor(success)) )
 p + layer(geom="point")
 
 
@@ -129,8 +140,6 @@ x <- x[ order( x$pdbCode, x$shelxeCC, decreasing=TRUE ),   ]
 x <- x[ !duplicated(x$pdbCode), ]
 # NB LOOK AT REORDER
 
-# get non-foating origins
-nf <- data[ data$floatingOrigin=="False", ]
 
 
 
