@@ -139,18 +139,41 @@ class AmpleResult(object):
                               'molrepScore',
                               'molrepTime',
                               'reforiginRMSD',
+                              
                               'floatingOrigin',
-                              'csymmatchOriginOk',
-                              'contactData',
-                              'contactOrigin',
-                              'numContacts',
-                              'inregisterContacts',
-                              'ooregisterContacts',
-                              'backwardsContacts',
-                              'goodContacts',
-                              'nocatContacts',
+                              'cContactData      ',
+                              'cNumContacts      ',
+                              'cInregisterContacts',
+                              'cOoRegisterContacts',
+                              'cBackwardsContacts',
+                              'cGoodContacts',
+                              'cNocatContacts',
+                              'nrContactData',
+                              'nrNumContacts',
+                              'nrInRegisterContacts',
+                              'nrOoRegisterContacts',
+                              'nrBackwardsContacts',
+                              'nrContactOrigin',
+                              'nrGoodContacts',
+                              'nrNocatContacts',
                               'helixSequence',
                               'lenHelix',
+                              'csymmatchInNR',
+                              'csymmatchInR',
+
+#                               'csymmatchOriginOk',
+#                               'contactData',
+#                               'contactOrigin',
+#                               'numContacts',
+#                               'inregisterContacts',
+#                               'ooregisterContacts',
+#                               'backwardsContacts',
+#                               'goodContacts',
+#                               'nocatContacts',
+#                               'helixSequence',
+#                               'lenHelix',
+                              
+                              
                               'rfact',
                               'rfree',
                               'solution',
@@ -200,18 +223,41 @@ class AmpleResult(object):
                                 "Molrep Score",
                                 "Molrep Time",
                                 "Reforigin RMSD",
-                                "Floating Origin",
-                                "Csymmatch Origin OK",
-                                "Contact Data",
-                                "Contact origin",
-                                "Number of contacts",
-                                "In register contacts",
-                                "Out of register contacts",
-                                "Backwards contacts",
-                                "Good contacts",
-                                "Uncategorised contacts",
-                                "Helix sequence",
-                                "Helix length",
+                                
+                                'floatingOrigin',
+                                'cContactData      ',
+                                'cNumContacts      ',
+                                'cInregisterContacts',
+                                'cOoRegisterContacts',
+                                'cBackwardsContacts',
+                                'cGoodContacts',
+                                'cNocatContacts',
+                                'nrContactData',
+                                'nrNumContacts',
+                                'nrInRegisterContacts',
+                                'nrOoRegisterContacts',
+                                'nrBackwardsContacts',
+                                'nrContactOrigin',
+                                'nrGoodContacts',
+                                'nrNocatContacts',
+                                'helixSequence',
+                                'lenHelix',
+                                'csymmatchInNR',
+                                'csymmatchInR',
+                                
+#                                 "Floating Origin",
+#                                 "Csymmatch Origin OK",
+#                                 "Contact Data",
+#                                 "Contact origin",
+#                                 "Number of contacts",
+#                                 "In register contacts",
+#                                 "Out of register contacts",
+#                                 "Backwards contacts",
+#                                 "Good contacts",
+#                                 "Uncategorised contacts",
+#                                 "Helix sequence",
+#                                 "Helix length",
+                                
                                 "Rfact",
                                 "Rfree",
                                 "Solution",
@@ -913,29 +959,117 @@ def analyseSolution( ampleResult=None,
     # SHELXE PROCESSING
     #
     if not ampleResult.shelxePdb is None and os.path.isfile( ampleResult.shelxePdb ):
+        
         # Need to copy to avoid problems with long path names
         shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
         shutil.copy( ampleResult.shelxePdb, shelxePdb )
         
+        # Contact object
+        ccalc = contacts.Contacts()
+        
+        # Use csymmatch to find the origin that best maps the shexePdb onto the native
         csym                           = csymmatch.Csymmatch()
         shelxeCsymmatchPdb             = ample_util.filename_append( 
                                                                     filename=shelxePdb, 
                                                                     astr="csymmatch", 
                                                                     directory=workdir )
         
-        # Had problem with shelx losing origin information
         csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
         shelxeCsymmatchOrigin = csym.origin()
-        
-        # See if this origin is valid
-        ampleResult.floatingOrigin = originInfo.isFloating()
-        ampleResult.csymmatchOriginOk = True
-        if not shelxeCsymmatchOrigin or \
-        ( shelxeCsymmatchOrigin not in originInfo.redundantAlternateOrigins() and not ampleResult.floatingOrigin ):
-            ampleResult.csymmatchOriginOk   = False
-            shelxeCsymmatchOrigin  = None
-        
+        ampleResult.csymmatchOrigin = shelxeCsymmatchOrigin
         ampleResult.shelxeCsymmatchShelxeScore  = csym.averageScore()
+        ampleResult.csymmatchGotOrigin = bool( shelxeCsymmatchOrigin )
+        
+        # Clear results
+        ampleResult.cContactData        = None
+        ampleResult.cNumContacts        = None
+        ampleResult.cInregisterContacts = None
+        ampleResult.cOoRegisterContacts = None
+        ampleResult.cBackwardsContacts  = None
+        ampleResult.cGoodContacts       = None
+        ampleResult.cNocatContacts      = None
+        
+        if ampleResult.csymmatchGotOrigin:
+            # Calculate contacts for csymmatch origin
+            ccalc.getContacts( placedPdbInfo=placedPdbInfo,
+                               nativePdbInfo=nativePdbInfo,
+                               resSeqMap=resSeqMap,
+                               origins=[ shelxeCsymmatchOrigin ] ,
+                               workdir=workdir,
+                               dsspLog=dsspLog
+                            )
+       
+            if ccalc.best:
+                ampleResult.cContactData        = ccalc.best
+                ampleResult.cNumContacts        = ccalc.best.numContacts
+                ampleResult.cInregisterContacts = ccalc.best.inregister
+                ampleResult.cOoRegisterContacts = ccalc.best.ooregister
+                ampleResult.cBackwardsContacts  = ccalc.best.backwards
+                ampleResult.cGoodContacts       = ampleResult.inregisterContacts + ampleResult.ooregisterContacts
+                ampleResult.cNocatContacts      = ampleResult.numContacts - ampleResult.goodContacts
+
+        # Clear results
+        ampleResult.nrContactData        = None
+        ampleResult.nrNumContacts        = None
+        ampleResult.nrInregisterContacts = None
+        ampleResult.nrOoRegisterContacts = None
+        ampleResult.nrBackwardsContacts  = None
+        ampleResult.nrGoodContacts       = None
+        ampleResult.nrNocatContacts      = None
+        ampleResult.helixSequence        = None
+        ampleResult.lenHelix             = None
+        
+        # Calculate contacts for redundant origins
+        if not ampleResult.floatingOrigin:
+            
+            # Get list of origins
+            origins = originInfo.nonRedundantAlternateOrigins()
+
+            ccalc.getContacts( placedPdbInfo=placedPdbInfo,
+                               nativePdbInfo=nativePdbInfo,
+                               resSeqMap=resSeqMap,
+                               origins=origins ,
+                               workdir=workdir,
+                               dsspLog=dsspLog
+                            )
+
+            ampleResult.nrContactData        = ccalc.best
+            ampleResult.nrNumContacts        = ccalc.best.numContacts
+            ampleResult.nrInRegisterContacts = ccalc.best.inregister
+            ampleResult.nrOoRegisterContacts = ccalc.best.ooregister
+            ampleResult.nrBackwardsContacts  = ccalc.best.backwards
+            ampleResult.nrContactOrigin      = ccalc.best.origin
+            ampleResult.nrGoodContacts       = ampleResult.inregisterContacts + ampleResult.ooregisterContacts
+            ampleResult.nrNocatContacts      = ampleResult.numContacts - ampleResult.goodContacts
+            ampleResult.helixSequence        = ccalc.best.helix
+            if ccalc.best.helix:
+                ampleResult.lenHelix = len( ccalc.best.helix )
+            
+            gotHelix=False
+            hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
+            gotHelix =  ccalc.writeHelixFile( hfile )
+                    
+            # Just for debugging
+            if ampleResult.shelxeCC >= 25 and ampleResult.shelxeAvgChainLength >= 10 and not gotHelix:
+                print "NO HELIX FILE"
+        
+        ampleResult.csymmatchInNR = None
+        ampleResult.csymmatchInR = None
+        # See if this origin is valid
+        if ampleResult.csymmatchGotOrigin:
+            if ampleResult.csymmatchGotOrigin in originInfo.redundantAlternateOrigins():
+                ampleResult.csymmatchInR = True
+            else:
+                ampleResult.csymmatchInR = False
+                
+            if ampleResult.csymmatchGotOrigin in originInfo.nonRedundantAlternateOrigins():
+                ampleResult.csymmatchInNR = True
+            else:
+                ampleResult.csymmatchInNR = False
+        
+        #
+        # Structure comparison - don't think this is useful anymore
+        #
         shelxeCsymmatchPdbSingle       = ample_util.filename_append( filename=shelxeCsymmatchPdb, 
                                                                      astr="1chain", 
                                                                      directory=workdir )
@@ -957,45 +1091,6 @@ def analyseSolution( ampleResult=None,
                                    sequenceIndependant=True,
                                    rmsd=True )
         ampleResult.shelxeRMSD = d.rmsd
-
-        # Now calculate contacts
-    
-        # Only bother when we have a floating origin if the csymmatch origin is ok
-        if not ampleResult.floatingOrigin or ( ampleResult.floatingOrigin and ampleResult.csymmatchOriginOk ):
-            ccalc = contacts.Contacts()
-            #try:
-            if True:
-                ccalc.getContacts( placedPdbInfo=placedPdbInfo,
-                                   nativePdbInfo=nativePdbInfo,
-                                   resSeqMap=resSeqMap,
-                                   originInfo=originInfo,
-                                   shelxeCsymmatchOrigin=shelxeCsymmatchOrigin,
-                                   workdir=workdir,
-                                   dsspLog=dsspLog
-                                )
-            #except Exception, e:
-            #    print "ERROR WITH CONTACTS: {0}".format( e )
-       
-            if ccalc.best:
-                ampleResult.contactData        = ccalc.best
-                ampleResult.numContacts        = ccalc.best.numContacts
-                ampleResult.inregisterContacts = ccalc.best.inregister
-                ampleResult.ooregisterContacts = ccalc.best.ooregister
-                ampleResult.backwardsContacts  = ccalc.best.backwards
-                ampleResult.contactOrigin      = ccalc.best.origin
-                ampleResult.goodContacts       = ampleResult.inregisterContacts + ampleResult.ooregisterContacts
-                ampleResult.nocatContacts      = ampleResult.numContacts - ampleResult.goodContacts
-                ampleResult.helixSequence      = ccalc.best.helix
-                if ccalc.best.helix:
-                    ampleResult.lenHelix = len( ccalc.best.helix )
-                
-                gotHelix=False
-                hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
-                gotHelix =  ccalc.writeHelixFile( hfile )
-                        
-                # Just for debugging
-                if ampleResult.shelxeCC >= 25 and ampleResult.shelxeAvgChainLength >= 10 and not gotHelix:
-                    print "NO HELIX FILE"
 
     return
 
@@ -1129,6 +1224,7 @@ if __name__ == "__main__":
             ar.solventContent = nativePdbInfo.solventContent
             ar.matthewsCoefficient = nativePdbInfo.matthewsCoefficient
             ar.spaceGroup = originInfo.spaceGroup()
+            ar.floatingOrigin = originInfo.isFloating()
             
             ar.ss_pred = psipredP.asDict()
             ar.ss_pred_str = "C:{0:d} | E:{1:d} | H:{2:d}".format( int(psipredP.percentC),  int(psipredP.percentE), int(psipredP.percentH) )
