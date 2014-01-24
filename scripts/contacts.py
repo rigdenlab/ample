@@ -29,6 +29,7 @@ import residue_map
 
 class ContactData(object):
     def __init__(self):
+
         self.numContacts = 0
         self.inregister = 0
         self.ooregister = 0
@@ -133,7 +134,7 @@ class Contacts(object):
         if contacts is None:
             contacts = self.best.contacts
             
-        if not len( contacts ):
+        if contacts is None or not len( contacts ):
             return None
             
         #
@@ -252,14 +253,22 @@ class Contacts(object):
         """
         """
 
+        # Reset variables each time
+        self.ncontLog = None
+        self.numContacts = 0
+        self.contacts = None
+        self.inregister = 0
+        self.ooregister = 0
+        self.backwards = 0
+        # Object to hold contact data
+        self.best = ContactData()
+
         self.workdir = workdir
         if not self.workdir:
             self.workdir = os.getcwd()
             
         pdbedit = pdb_edit.PDBEdit()
         
-        # Object to hold contact data
-        self.best = ContactData()
         
         if False:
             # Standardise pdb
