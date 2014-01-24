@@ -10,7 +10,6 @@ import re
 import subprocess
 import sys
 import tempfile
-import traceback
 import urllib
 import unittest
 
@@ -133,10 +132,9 @@ def find_maxcluster( amopt ):
         logger.info("Attempting to download maxcluster binary from: {0}".format( url ) )
         try:
             urllib.urlretrieve( url, maxcluster_exe )
-        except Exception:
-            msg = traceback.format_exc()
-            logger.critcal("Error downloading maxcluster executable: {0}\n{1}".format( url, msg ) )
-            return None
+        except Exception, e:
+            logger.critical("Error downloading maxcluster executable: {0}\n{1}".format( url, e ) )
+            raise
         
         # make executable
         os.chmod(maxcluster_exe, 0o777)
