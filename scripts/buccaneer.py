@@ -13,15 +13,13 @@ class BuccaneerLogParser(object):
     Class to mine information from a buccaneer log
     """
     
-    def __init__(self,logfile):
+    def __init__(self,logfile=None):
         
-        # buccaneer.log
-        self.logfile = logfile
-        self.parse()
-        
+        if logfile:
+            self.parse( logfile )
         return
         
-    def parse(self):
+    def parse(self, logfile ):
         """Parse 
         """
     
@@ -30,7 +28,7 @@ class BuccaneerLogParser(object):
         self.initRfact=1.0
         self.finalRfact=1.0
     
-        fh = open( self.logfile, 'r')
+        fh = open( logfile, 'r')
         line = fh.readline()
         while line:
             if line.startswith("           R factor"):
