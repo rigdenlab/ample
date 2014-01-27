@@ -3,7 +3,7 @@
 library(ggplot2)
 #setwd("/home/jmht/Documents/test/CC/run3")
 setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
-data <- read.table(file="results_obj.csv",sep=',', header=T)
+data <- read.table(file="results_bucc.csv",sep=',', header=T)
 data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
 data$success <- replace( data$success, is.na(data$success), 0 )
 
@@ -79,7 +79,21 @@ p <- ggplot(data=data[ data$symmatchOriginOk == "True", ],
 				)
 			)
 
+gdata = data[ data$success == 1 & 
+				data$floatingOrigin == 'False' & 
+				data$csymmatchInR == 'True' & data$nrNumContacts >= data$cNumContacts, ]
 			
+			
+odata = data[ data$success == 1 & 
+				data$floatingOrigin == 'False' & 
+				data$csymmatchInNR == 'False' & 
+				data$csymmatchInR == 'False' &
+				data$nrNumContacts == 0 & data$cNumContacts > 0,  ]
+
+write.csv(odata, "rdata.csv", row.names=FALSE)
+
+
+
 odata = data[  data$floatingOrigin == 'False' | ( data$floatingOrigin == 'True' & data$csymmatchOriginOk=='True' ) , ]
 
 x <-  odata[ odata$success == 1 & odata$numContacts == 0 , ,c("pdbCode","ensembleName") ]
