@@ -341,8 +341,10 @@ class Contacts(object):
             # Just for debugging
             self.originCompare[ "{0}".format( origin ).replace(" ","" ) ] = self.inregister + self.ooregister
             
-            # Save the result if there are more 'good' contacts than anything else
-            if self.inregister + self.ooregister > self.best.inregister + self.best.ooregister:
+            # Save the result if there are any contacts and update whenever we have more 'good' contacts
+            # than the last run
+            if ( self.best.numContacts == 0 and self.numContacts > 0 ) or \
+               ( self.inregister + self.ooregister > self.best.inregister + self.best.ooregister ):
                 self.best.numContacts = self.numContacts
                 self.best.inregister = self.inregister
                 self.best.ooregister = self.ooregister
@@ -359,7 +361,8 @@ class Contacts(object):
         
         return False
 
-    def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxdist=1.5 ):
+    # NB previous maxdist was 1.5
+    def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxdist=2.5 ):
         """FOO
         """
         
@@ -477,6 +480,11 @@ class Contacts(object):
 # #                 for c in contacts[ sc ][ tc ]:
 # #                     print c
 # 
+
+        #print "GOT CONTACTS"
+        #for c in contacts:
+        #    print "chainId1 {0} resSeq1 {1} chainId2 {2} resSeq2 {3}\n".format(  c['chainId1'], c['resSeq1'], c['chainId2'], c['resSeq2']  )
+
         self.contacts = contacts
                     
         return contacts
@@ -648,7 +656,21 @@ class TestContacts( unittest.TestCase ):
         self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
         
         return
-    
+
+    def testParse1(self):
+        
+        logfile = os.path.join( self.testfilesDir, "ncont1.log" )
+        
+        c = Contacts()
+        contacts = c.parseNcontLog( logfile=logfile )
+        c.countContacts()
+        
+        self.assertEqual( c.numContacts, 26 )
+        self.assertEqual( c.inregister, 0 )
+        self.assertEqual( c.ooregister, 0 )
+        self.assertEqual( c.backwards, 0 )
+        
+        return
     
     def testParse2(self):
         
