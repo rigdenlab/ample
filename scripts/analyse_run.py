@@ -950,8 +950,8 @@ def analyseSolution( ampleResult=None,
         assert False
 
     if placedPdb is None:
-     #print "NO PDB FOR ",ampleResult
-     return
+        #print "NO PDB FOR ",ampleResult
+        return
     #else:
     # print "GOT PDB FOR ",ampleResult
 
@@ -1044,8 +1044,9 @@ def analyseSolution( ampleResult=None,
         # Calculate contacts for redundant origins
         if not ampleResult.floatingOrigin:
             
-            # Get list of origins
-            origins = originInfo.nonRedundantAlternateOrigins()
+            # Get list of origins - cheat and use all
+            #origins = originInfo.nonRedundantAlternateOrigins()
+            origins = originInfo.redundantAlternateOrigins()
 
             ccalc.getContacts( placedPdbInfo=placedPdbInfo,
                                nativePdbInfo=nativePdbInfo,
