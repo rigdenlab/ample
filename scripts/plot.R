@@ -7,6 +7,8 @@ data <- read.table(file="results_bucc.csv",sep=',', header=T)
 data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
 data$success <- replace( data$success, is.na(data$success), 0 )
 
+
+
 # Object to hold successes
 #sdata <- data[ data$success == 1, ]
 
@@ -56,7 +58,7 @@ p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 	xlab("Number of residues in ensemble") +
 	ylab("Number of ensembles") +
 	ggtitle("Number of residues in ensemble for successful and failing cases")
-ggsave("ResiduesVsEnsemble2.png")
+ggsave("ResiduesVsEnsemble.png")
 
 p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
 p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
@@ -67,7 +69,44 @@ p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 		xlab("Percent of residues in ensemble") +
 		ylab("Number of ensembles") +
 		ggtitle("Percentage of residues in ensemble for successful and failing cases")
-ggsave("PercentVsEnsemble2.png")
+ggsave("PercentVsEnsemble.png")
+
+# CC vs final rFree coloured by success
+# Need to remove nolog values from buccFinalRfree
+
+# Horrible hack to get Rfree back to a number...
+data$buccFinalRfree[ data$buccFinalRfree == "nolog" ] <- NA
+data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
+
+#x <-  data[ data$buccFinalRfree != 'nolog' & ! is.na( data$shelxeCC  ),
+#		names(data) %in% c("shelxeCC","buccFinalRfree", "success") ]
+# old skool...
+#plot(x$buccFinalRfree,
+#		x$shelxeCC,
+#		pch=20,
+#		cex=1,
+#		col=c('red','green')[x$success+1],
+#		xlab="Buccaneer Rfree",
+#		ylab="ShelxeCC"  )
+#write.csv(x, "x.csv", row.names=FALSE)
+
+# another way...
+#qplot( shelxeCC, buccFinalRfree, data=x, colour=factor(success) )
+
+p <-ggplot(data=data, aes(shelxeCC, buccFinalRfree, colour=factor(success) ) )
+p + geom_point() +
+		scale_colour_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		xlab("Shelxe CC score") +
+		ylab("Final Buccaneer Rfree") +
+		ggtitle("Shelxe vs Buccanner RFree score")
+ggsave("CCVsRfree.png")
+
+
+max( data[ data$success == 1, ]$buccFinalRfree ) # 2
+
 
 #ÊComparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
@@ -81,9 +120,13 @@ p <- ggplot(data=data[ data$symmatchOriginOk == "True", ],
 
 gdata = data[ data$success == 1 & 
 				data$floatingOrigin == 'False' & 
-				data$csymmatchInR == 'True' & data$nrNumContacts >= data$cNumContacts, ]
+				 data$nrNumContacts == 0, ]
 			
 			
+odata = data[ data$success == 1 & 
+				data$floatingOrigin == 'False' & 
+				data$csymmatchInR == 'False',  ]
+
 odata = data[ data$success == 1 & 
 				data$floatingOrigin == 'False' & 
 				data$csymmatchInNR == 'False' & 
