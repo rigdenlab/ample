@@ -1,6 +1,8 @@
 
 
 library(ggplot2)
+scolour = "#FF0000"
+fcolour = "#00FF00"
 #setwd("/home/jmht/Documents/test/CC/run3")
 setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
 data <- read.table(file="results_bucc.csv",sep=',', header=T)
@@ -8,20 +10,20 @@ data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 1
 data$success <- replace( data$success, is.na(data$success), 0 )
 
 
-
 # Object to hold successes
 #sdata <- data[ data$success == 1, ]
 
 # Data to calculate
 # NEED TO ADD TIMING DATA OF OVERALL AMPLE RUN
+
 # * mean resolution of failing/succesful cases
 mean(  data[ data$success == 1, ]$resolution ) # 1.949077
 mean(  data[ data$success == 0, ]$resolution ) # 2.025158
 
 # * mean of solvent content of failing/succesful cases
 unique( data[ is.na( data$solventContent ),]$pdbCode ) # 1G1J 1KYC 1P9I 3CVF
-mean( data[ data$success == 1, ]$solventContent )
-mean( data[ data$success == 0, ]$solventContent )
+mean( data[ data$success == 1, ]$solventContent, na.rm=TRUE ) # 46.52952
+mean( data[ data$success == 0, ]$solventContent, na.rm=TRUE ) # 51.3326
 
 # most common number of residues/proportion of target in search model
 median( data$ensembleNumResidues ) # 30
@@ -31,26 +33,24 @@ median( data$ensemblePercentModel ) # 53
 max( data$ensembleNumModels ) # 30
 min( data$ensembleNumModels ) # 2
 
+# Most frequent number of models in a succesful ensemble
+median( data[ data$success == 1, ]$ensembleNumResidues ) # 27
+median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
+
+# Overall quality of the ab inito models
+ensembleNativeTM
+ensembleNativeRMSD
+
+
 # Plots
 
 # length distribution of successful search models both as number of residues 
 # and as fraction of target chain length remaining in the search model.
-#p <- ggplot(data=data[ data$success == 1, ], aes(ensemblePercentModel) )
-#p + layer(geom="histogram") +
-
-## Below for side-by-side but grid lines are off
-#p + geom_bar( position = "dodge", binwidth = 5 ) +
-#scale_fill_manual( values=c("#FF0000", "#00FF00"),
-#		name="Success/Failure",
-#		labels=c("Failure", "Success")
-#		) +
-
-scolour = "#FF0000"
-fcolour = "#00FF00"
 
 # Try showing success and failure together
 p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
-p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
+#p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
+p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		scale_fill_manual( values=c(scolour, fcolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
@@ -61,7 +61,8 @@ p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 ggsave("ResiduesVsEnsemble.png")
 
 p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
-p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
+#p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
+p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		scale_fill_manual( values=c("#FF0000", "#00FF00"),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
@@ -104,9 +105,44 @@ p + geom_point() +
 		ggtitle("Shelxe vs Buccanner RFree score")
 ggsave("CCVsRfree.png")
 
+# Comparison of model quality
+p <-ggplot(data=data, aes(x=ensembleNativeTM, fill=factor(success) ) )
+#p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
+p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
+		scale_fill_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("TM score of model to native") +
+		ggtitle("Histogram of TM score for models for successful and failing cases")
+ggsave("ModelTM.png")
 
-max( data[ data$success == 1, ]$buccFinalRfree ) # 2
+p <-ggplot(data=data, aes(x=ensembleNativeRMSD, fill=factor(success) ) )
+#p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
+p + geom_histogram( position = 'dodge', binwidth = 1 ) +
+		scale_fill_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("RMSD score of model to native") +
+		ggtitle("Histogram of RMSD score for models for successful and failing cases")
+ggsave("ModelRMSD.png")
 
+
+# Plot of Reforigin RMSD for successes and failures
+p <-ggplot(data=data, aes(x=reforiginRMSD, fill=factor(success) ) )
+#p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
+p + geom_histogram( position = 'dodge', binwidth = 1 ) +
+		scale_fill_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("reforigin RMSD of placed model to native") +
+		ggtitle("Histogram of reforigin RMSD scores by success")
+ggsave("reforiginRMSD.png")
 
 #ÊComparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
