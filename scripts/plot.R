@@ -146,32 +146,90 @@ ggsave("reforiginRMSD.png")
 
 #ÊComparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
-# goodContacts, inregisterContacts
-p <- ggplot(data=data[ data$symmatchOriginOk == "True", ], 
-			aes(reforiginRMSD,
-				inregisterContacts,
-				color=factor(success)
-				)
-			)
+rdata = data[ data$floatingOrigin == 'False', ]
 
-gdata = data[ data$success == 1 & 
-				data$floatingOrigin == 'False' & 
-				 data$nrNumContacts == 0, ]
-			
-			
-odata = data[ data$success == 1 & 
-				data$floatingOrigin == 'False' & 
-				data$csymmatchInR == 'False',  ]
+p <-ggplot(data=rdata, aes(x=nrGoodContacts, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 5 ) +
+scale_fill_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Number of good contacts.") +
+		ggtitle("Histogram of \"good\" contacts for non-floating origins.")
+ggsave("goodContacts.png")
 
-odata = data[ data$success == 1 & 
-				data$floatingOrigin == 'False' & 
-				data$csymmatchInNR == 'False' & 
-				data$csymmatchInR == 'False' &
-				data$nrNumContacts == 0 & data$cNumContacts > 0,  ]
+p <-ggplot(data=rdata, aes(x=nrNumContacts - nrGoodContacts, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 5 ) +
+		scale_fill_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("All contacts - good contacts ") +
+		ggtitle("Histogram of \"uncategorised\" contacts for non-floating origins.")
+ggsave("badContacts.png")
+
+p <-ggplot(data=rdata, aes(x=nrGoodContacts / (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
+p + geom_histogram( position = 'dodge' ) +
+		scale_fill_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Good contacts / \"uncateogorised\" contacts ") +
+		ggtitle("Histogram of ratio of good/\"uncategorised\" contacts for non-floating origins.")
+ggsave("contactsRatio.png")
+
+p <-ggplot(data=rdata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
+p + geom_point() +
+		scale_colour_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		xlab("Good Contacts") +
+		ylab("In-register Contacts") +
+		ggtitle("Good contacts vs in-register contacts for non-floating origins")
+ggsave("goodVsInRegister.png")
+
+
+# plot of nrInRegisterContacts vs nrGoodContacts
+p <-ggplot(data=rdata, aes(x=shelxeCC, y=nrGoodContacts, colour=factor(success) ) )
+p + geom_point() + scale_colour_manual( values=c(scolour, fcolour),
+		name="Success/Failure",
+		labels=c("Failure", "Success")
+) +
+xlab("Shelxe CC") +
+ylab("Good Contacts") +
+ggtitle("Good contacts vs shelxe CC for non-floating origins")
+ggsave("CCVsInRegister.png")
+
+
+# TFZ/LLG
+p <-ggplot(data=data, aes(x=phaserTFZ, y=phaserLLG, colour=factor(success) ) )
+p + geom_point() + scale_colour_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		xlab("Phaser TFZ") +
+		ylab("Phaser LLG") +
+		ggtitle("Phaser LLG vs Phaser TFZ")
+ggsave("LLGvsTFZ.png")
+
+p <-ggplot(data=data, aes(x=phaserTFZ, y=phaserLLG, colour=factor(success) ) )
+p + geom_point() +
+		scale_colour_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		scale_y_continuous( limits=c(-3000, max(data$phaserLLG, na.rm=TRUE) )  )+
+		xlab("Phaser TFZ") +
+		ylab("Phaser LLG") +
+		ggtitle("Phaser LLG vs Phaser TFZ")
+ggsave("LLGvsTFZtrunc.png")
+
 
 write.csv(odata, "rdata.csv", row.names=FALSE)
-
-
 
 odata = data[  data$floatingOrigin == 'False' | ( data$floatingOrigin == 'True' & data$csymmatchOriginOk=='True' ) , ]
 
