@@ -1,8 +1,8 @@
 
 
 library(ggplot2)
-scolour = "#FF0000"
-fcolour = "#00FF00"
+fcolour="#FF0000"
+scolour="#3333FF"
 #setwd("/home/jmht/Documents/test/CC/run3")
 setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
 data <- read.table(file="results_bucc.csv",sep=',', header=T)
@@ -17,13 +17,17 @@ data$success <- replace( data$success, is.na(data$success), 0 )
 # NEED TO ADD TIMING DATA OF OVERALL AMPLE RUN
 
 # * mean resolution of failing/succesful cases
-mean(  data[ data$success == 1, ]$resolution ) # 1.949077
-mean(  data[ data$success == 0, ]$resolution ) # 2.025158
+x <- mean(  data[ data$success == 1, ]$resolution ) # 1.949077
+cat( "Mean resolution for successes is ",x,"\n")
+x <- mean(  data[ data$success == 0, ]$resolution ) # 2.025158
+cat( "Mean resolution for failures is ",x,"\n")
 
 # * mean of solvent content of failing/succesful cases
-unique( data[ is.na( data$solventContent ),]$pdbCode ) # 1G1J 1KYC 1P9I 3CVF
-mean( data[ data$success == 1, ]$solventContent, na.rm=TRUE ) # 46.52952
-mean( data[ data$success == 0, ]$solventContent, na.rm=TRUE ) # 51.3326
+#unique( data[ is.na( data$solventContent ),]$pdbCode ) # 1G1J 1KYC 1P9I 3CVF
+x <-mean( data[ data$success == 1, ]$solventContent, na.rm=TRUE ) # 46.52952
+cat( "Mean solvent content for successes is ",x,"\n")
+x <-mean( data[ data$success == 0, ]$solventContent, na.rm=TRUE ) # 51.3326
+cat( "Mean solvent content for failures is ",x,"\n")
 
 # most common number of residues/proportion of target in search model
 median( data$ensembleNumResidues ) # 30
@@ -38,9 +42,6 @@ median( data[ data$success == 1, ]$ensembleNumResidues ) # 27
 median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
 
 # Overall quality of the ab inito models
-ensembleNativeTM
-ensembleNativeRMSD
-
 
 # Plots
 
@@ -79,21 +80,6 @@ ggsave("PercentVsEnsemble.png")
 data$buccFinalRfree[ data$buccFinalRfree == "nolog" ] <- NA
 data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
 
-#x <-  data[ data$buccFinalRfree != 'nolog' & ! is.na( data$shelxeCC  ),
-#		names(data) %in% c("shelxeCC","buccFinalRfree", "success") ]
-# old skool...
-#plot(x$buccFinalRfree,
-#		x$shelxeCC,
-#		pch=20,
-#		cex=1,
-#		col=c('red','green')[x$success+1],
-#		xlab="Buccaneer Rfree",
-#		ylab="ShelxeCC"  )
-#write.csv(x, "x.csv", row.names=FALSE)
-
-# another way...
-#qplot( shelxeCC, buccFinalRfree, data=x, colour=factor(success) )
-
 p <-ggplot(data=data, aes(shelxeCC, buccFinalRfree, colour=factor(success) ) )
 p + geom_point() +
 		scale_colour_manual( values=c(scolour, fcolour),
@@ -130,7 +116,6 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ggtitle("Histogram of RMSD score for models for successful and failing cases")
 ggsave("ModelRMSD.png")
 
-
 # Plot of Reforigin RMSD for successes and failures
 p <-ggplot(data=data, aes(x=reforiginRMSD, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
@@ -156,7 +141,7 @@ scale_fill_manual( values=c(scolour, fcolour),
 		) +
 		ylab("Number of cases") +
 		xlab("Number of good contacts.") +
-		ggtitle("Histogram of \"good\" contacts for non-floating origins.")
+		ggtitle("Histogram of good contacts (non-floating origins)")
 ggsave("goodContacts.png")
 
 p <-ggplot(data=rdata, aes(x=nrNumContacts - nrGoodContacts, fill=factor(success) ) )
@@ -167,7 +152,7 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		) +
 		ylab("Number of cases") +
 		xlab("All contacts - good contacts ") +
-		ggtitle("Histogram of \"uncategorised\" contacts for non-floating origins.")
+		ggtitle("Histogram of uncategorised contacts (non-floating origins)")
 ggsave("badContacts.png")
 
 p <-ggplot(data=rdata, aes(x=nrGoodContacts / (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
@@ -177,9 +162,20 @@ p + geom_histogram( position = 'dodge' ) +
 				labels=c("Failure", "Success")
 		) +
 		ylab("Number of cases") +
-		xlab("Good contacts / \"uncateogorised\" contacts ") +
-		ggtitle("Histogram of ratio of good/\"uncategorised\" contacts for non-floating origins.")
+		xlab("Good contacts / uncateogorised contacts ") +
+		ggtitle("Histogram of ratio of good/uncategorised contacts (non-floating origins)")
 ggsave("contactsRatio.png")
+
+p <-ggplot(data=rdata, aes(x=nrGoodContacts - (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
+p + geom_histogram( position = 'dodge' ) +
+		scale_fill_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Good contacts - uncateogorised contacts ") +
+		ggtitle("Histogram of Good minus Uncategorised contacts (non-floating origins)")
+ggsave("contactsDifference.png")
 
 p <-ggplot(data=rdata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
 p + geom_point() +
@@ -192,7 +188,6 @@ p + geom_point() +
 		ggtitle("Good contacts vs in-register contacts for non-floating origins")
 ggsave("goodVsInRegister.png")
 
-
 # plot of nrInRegisterContacts vs nrGoodContacts
 p <-ggplot(data=rdata, aes(x=shelxeCC, y=nrGoodContacts, colour=factor(success) ) )
 p + geom_point() + scale_colour_manual( values=c(scolour, fcolour),
@@ -203,7 +198,6 @@ xlab("Shelxe CC") +
 ylab("Good Contacts") +
 ggtitle("Good contacts vs shelxe CC for non-floating origins")
 ggsave("CCVsInRegister.png")
-
 
 # TFZ/LLG
 p <-ggplot(data=data, aes(x=phaserTFZ, y=phaserLLG, colour=factor(success) ) )
@@ -229,43 +223,39 @@ p + geom_point() +
 ggsave("LLGvsTFZtrunc.png")
 
 
-write.csv(odata, "rdata.csv", row.names=FALSE)
-
-odata = data[  data$floatingOrigin == 'False' | ( data$floatingOrigin == 'True' & data$csymmatchOriginOk=='True' ) , ]
-
-x <-  odata[ odata$success == 1 & odata$numContacts == 0 , ,c("pdbCode","ensembleName") ]
-
-#p <- ggplot(data=odata, aes(reforiginRMSD, goodContacts/fastaLength, color=factor(success)) )
-p <- ggplot(data=odata, aes(reforiginRMSD, goodContacts, color=factor(success)) )
-p + layer(geom="point")
-
-# histrogram
-#p <- ggplot(data=odata, aes(x=goodContacts, fill=factor(success)) )
-p <- ggplot(data=odata, aes(x=nocatContacts, fill=factor(success)) )
-p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 )
-
-p <- ggplot(data=odata, aes(reforiginRMSD, inregisterContacts, color=factor(success)) )
-p + layer(geom="point")
+# CC distribution
+p <-ggplot(data=data, aes(x=shelxeCC, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 1 ) +
+		scale_fill_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("CC score") +
+		ggtitle("Histogram of CC scores by success")
+ggsave("CCscores.png")
 
 
-# As Fig ? shows, many successes are achieved with LLG <0
+# Resolution vs length
+p <-ggplot(data=data, aes(x=resolution, y=fastaLength, colour=factor(success) ) )
+p + geom_point() +
+		stat_sum() +
+		scale_colour_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		xlab("Resolution (A)") +
+		ylab("Protein length (residues)") +
+		ggtitle("Resolution vs protein length")
+ggsave("resolutionVsLength.png")
 
-qplot(shelxeCC, resolution, data=data, colour=success)
 
-p <- ggplot( data, aes(fastaLength, resolution, color=factor(success) ) )
-
-#p + geom_point()
-p + layer(geom="point")
-
-p + layer(geom="point") + facet_wrap(~success)
-
-# Can add colour to each layer separatly or to the aes added to the ggplot object
-# in which case all layers inherit it
-# geom_point(aes(color = factor(cyl)))
-
-#p + xlab("Body Weight") + ylab("Total Hours Sleep") + ggtitle("Some Sleep Data")
 
 q()
+#write.csv(odata, "rdata.csv", row.names=FALSE)
+
+
+#p + layer(geom="point") + facet_wrap(~success)
 
 # Count # jobs
 njobs <- aggregate( data$success, by=list( data$pdbCode ), FUN=length)[2]
@@ -286,29 +276,14 @@ nfail <- njobs-nsuccess
 # select success
 x <- data[ data$success==1, ]
 # Order by pdbCode and CC
-x <- x[ order( x$pdbCode, x$shelxeCC, decreasing=TRUE ),   ]
+x <- x[ order( x$pdbCode, x$shelxeCC, decreasing=TRUE ), ]
 # Select top by selecting not duplicates on pdbCode
 x <- x[ !duplicated(x$pdbCode), ]
 # NB LOOK AT REORDER
 
-
-
-
-q()
-png(filename='plot.png')
-
-data <- read.table(file="results_obj.csv",sep=',', header=T)
-
 # Fix missing values
 #completeEnsemble <- complete.cases(data$ensembleNumResidues)
 #completeHelix <- complete.cases(data$lenHelix)
-
-#pdata <- subset( data, Shelxe.CC >= 25 & Shelxe.avg..chain.length >= 10 )
-#pdata <- subset( data, shelxeCC >= 25 & shelxeAvgChainLength >= 10 )
-pdata <-  data[ data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10, ]
-
-dim( data )
-dim( pdata )
 
 pdbAll <- unique( data$pdbCode )
 sprintf("Len all PDBs %s", length(pdbAll) )
@@ -316,18 +291,3 @@ pdbSuccess <- unique( pdata$pdbCode )
 sprintf("Len success PDBs %s", length(pdbSuccess) )
 
 q()
-
-
-par(bg="white")
-amax=max( na.omit(pdata$Ensemble.num.residues), na.omit( pdata$Helix.length ) )
-plot( pdata$Ensemble.num.residues, pdata$Helix.length,
-xlim=c(0, amax ), ylim=c(0, amax ),
-xlab="Ensemble Num Residues", ylab="Helix length"  )
-
-#guideline
-abline( 0, 1, col="red" )
-
-#main="Num residues vs helix length",
-title("Num residues vs helix length")
-
-dev.off()
