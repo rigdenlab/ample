@@ -133,6 +133,29 @@ ggsave("reforiginRMSD.png")
 # residues similarly defined.
 rdata = data[ data$floatingOrigin == 'False', ]
 
+p <-ggplot(data=rdata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
+p + geom_point() +
+		scale_colour_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		xlab("Good Contacts") +
+		ylab("In-register Contacts") +
+		ggtitle("Good contacts vs in-register contacts for non-floating origins")
+ggsave("goodVsInRegister.png")
+
+
+p <-ggplot(data=rdata, aes(x=nrInRegisterContacts, y=nrOoRegisterContacts, colour=factor(success) ) )
+p + geom_point( size=1.5 ) + stat_sum() +
+		scale_colour_manual( values=c(scolour, fcolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		xlab("In-register Contacts") +
+		ylab("Out-of-register Contacts") +
+		ggtitle("In- vs out-of-register contacts for non-floating origins")
+ggsave("InVsOutContacts.png")
+
 p <-ggplot(data=rdata, aes(x=nrGoodContacts, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 scale_fill_manual( values=c(scolour, fcolour),
