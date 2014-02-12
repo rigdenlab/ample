@@ -3,18 +3,16 @@
 library(ggplot2)
 fcolour="#FF0000"
 scolour="#3333FF"
-#setwd("/home/jmht/Documents/test/CC/run3")
-setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
-data <- read.table(file="results_bucc.csv",sep=',', header=T)
+#setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
+setwd("/home/jmht/Documents/test/CC/timings")
+#data <- read.table(file="results_bucc.csv",sep=',', header=T)
+data <- read.table(file="results_bucc_timings.csv",sep=',', header=T)
 data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
 data$success <- replace( data$success, is.na(data$success), 0 )
 
 
 # Object to hold successes
 #sdata <- data[ data$success == 1, ]
-
-# Data to calculate
-# NEED TO ADD TIMING DATA OF OVERALL AMPLE RUN
 
 # * mean resolution of failing/succesful cases
 x <- mean(  data[ data$success == 1, ]$resolution ) # 1.949077
@@ -41,9 +39,23 @@ min( data$ensembleNumModels ) # 2
 median( data[ data$success == 1, ]$ensembleNumResidues ) # 27
 median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
 
-# Overall quality of the ab inito models
 
 # Plots
+
+# Timings
+# proportion for all runs where there was a shelxe build
+
+# For some phaser runs the logs are not complete so we have no timing data
+sdata = data[ data$shelxeTime > 0 & ! is.na( data$phaserTime ), ]
+mean( sdata$fragmentTime, na.rm=TRUE )
+tlabels = c("fragmentTime", "modelTime", "ensembleTime", "phaserTime", "shelxeTime")
+#aggregate( sdata[ , tlabels ], by=list( pdbCode = sdata$pdbCode ), FUN=mean)
+
+x <- data.frame( mean(sdata$fragmentTime), mean(sdata$modelTime), mean(sdata$ensembleTime), mean(sdata$phaserTime), mean(sdata$shelxeTime) )
+# horrible...
+png("allSuccessTimingsPie.png")
+pie( as.numeric( x ), labels=tlabels, main="Timings for all runs inc. shelxe" )
+dev.off()
 
 # length distribution of successful search models both as number of residues 
 # and as fraction of target chain length remaining in the search model.
@@ -129,7 +141,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ggtitle("Histogram of reforigin RMSD scores by success")
 ggsave("reforiginRMSD.png")
 
-#ÊComparison of the RIO figures for successful search models with the number of in-register 
+#ï¿½Comparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
 rdata = data[ data$floatingOrigin == 'False', ]
 
