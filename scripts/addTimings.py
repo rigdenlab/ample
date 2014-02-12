@@ -41,7 +41,7 @@ def ampleLogTime( log ):
             if line.startswith("ALL DONE"):
                 thours =  float( line.split()[3] ) 
     
-    return thours * 60
+    return thours * 60 * 60
 
 
 root = "/media/data/shared/coiled-coils/ensemble"
@@ -120,6 +120,8 @@ for r in ensembleResults:
     #print "STIME ",stime
 
 pfile = ample_util.filename_append( pfile, astr="timings")
+
+pfile = "ar_results_bucc_timings.pkl"
 f = open( pfile, 'w' )
 ampleDict = cPickle.dump( ensembleResults, f  )
 
