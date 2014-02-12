@@ -22,6 +22,7 @@ class ShelxeLogParser(object):
         self.maxChainLength = None
         self.numChains = None
         self.cycle = None
+        self.cputime = None
         
         self.parse()
         
@@ -58,6 +59,10 @@ class ShelxeLogParser(object):
                 self.maxChainLength = cycleData[ cycle-1 ][2]
                 self.numChains = cycleData[ cycle-1 ][3]
                 self.cycle = cycle
+            
+            #+  SHELXE finished at 23:44:41      Total time:      4417.30 secs  +
+            if line.find("+  SHELXE finished at") != -1:
+                self.cputime = float( line.split()[7] )
 
             line = fh.readline()
         #End while
@@ -118,3 +123,6 @@ class ShelxeLogParser(object):
         return ( cc, avgChainLength, maxChainLength, numChains )
 
 #END ShelxeLogParser
+
+#slog = "/media/data/shared/coiled-coils/ensemble/1BYZ/ROSETTA_MR_0/MRBUMP/cluster_1/search_All_atom_trunc_0.005734_rad_1_mrbump/data/loc0_ALL_All_atom_trunc_0.005734_rad_1/unmod/mr/phaser/build/shelxe/shelxe_run.log"
+#sp = ShelxeLogParser( slog )
