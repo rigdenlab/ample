@@ -29,9 +29,9 @@ if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
 # Add the ample python folder to the PYTHONPATH
-#sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
-root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
-sys.path.append( os.path.join( root, "python" ) )
+sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+#sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
 import argparse
@@ -483,11 +483,12 @@ if amopt.d['NMR_model_in']:
     amopt.d['make_models'] = False
     
     # HACK - use the rosetta modeller to find the binary
-    ROSETTA_CM = rosetta_model.find_binary(  'mr_protocols', rosettaDir = amopt.d['rosetta_dir'] )
-    if not ROSETTA_CM:
-        msg = 'Cannot find Rosetta binary {0} in {1} check path names'.format( 'mr_protocols', amopt.d['rosetta_dir'] )
-        logger.critical( msg )
-        sys.exit(1)
+    if not amopt.d['NMR_Truncate_only']: 
+       ROSETTA_CM = rosetta_model.find_binary(  'mr_protocols', rosettaDir = amopt.d['rosetta_dir'] )
+       if not ROSETTA_CM:
+           msg = 'Cannot find Rosetta binary {0} in {1} check path names'.format( 'mr_protocols', amopt.d['rosetta_dir'] )
+           logger.critical( msg )
+           sys.exit(1)
 
     if not os.path.isfile( str(amopt.d['NMR_remodel_fasta']) ):
         amopt.d['NMR_remodel_fasta'] =  amopt.d['fasta']
