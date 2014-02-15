@@ -243,7 +243,73 @@ class Contacts(object):
         #print "HELIX ",sequence
                 
         return sequence
+
+    def allContacts( self,
+             nativePdbInfo=None,
+             placedPdbInfo=None,
+             resSeqMap=None,
+             origins=None,
+             workdir=None ):
+        """
+        """
         
+        # Reset variables each time
+        self.ncontLog = None
+        self.contacts = None
+
+        self.workdir = workdir
+        if not self.workdir:
+            self.workdir = os.getcwd()
+            
+        pdbedit = pdb_edit.PDBEdit()
+        
+        if not resSeqMap.resSeqMatch():
+            #print "NUMBERING DOESN'T MATCH"
+            #raise RuntimeError,"NUMBERING DOESN'T MATCH"
+            # We need to create a copy of the placed pdb with numbering matching the native
+            placedPdbRes = ample_util.filename_append( filename=placedPdbInfo.pdb, astr="reseq", directory=self.workdir )
+            pdbedit.match_resseq( targetPdb=placedPdbInfo.pdb, sourcePdb=None, outPdb=placedPdbRes, resMap=resSeqMap )
+            placedPdb = placedPdbRes
+        else:
+            placedPdb = placedPdbInfo.pdb
+ 
+        # Make a copy of placedPdb with chains renamed to lower case
+        fromChain = placedPdbInfo.models[0].chains
+        toChain = [ c.lower() for c in fromChain ]
+        placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren", directory=self.workdir )
+        pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=fromChain, toChain=toChain )
+
+        # Loop over origins, move the placed pdb to the new origin and then run ncont
+        self.allContacts = None
+        self.numAllContacts = 0
+        self.allContactsOrigin = None
+        for i, origin in enumerate( origins  ):
+            #print "GOT ORIGIN ",i,origin
+            
+            placedOriginPdb =  placedAaPdb
+            if origin != [ 0.0, 0.0, 0.0 ]:
+                # Move pdb to new origin
+                #ostr="origin{0}".format(i)
+                ostr="o{0}".format( origin ).replace(" ","" )
+                placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr=ostr, directory=self.workdir )
+                pdbedit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
+            
+            # Concatenate into one file
+            joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
+            pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
+                
+            # Run ncont
+            # Need to get list of chains from Native as can't work out negate operator for ncont
+            fromChain = nativePdbInfo.models[0].chains
+            self.runNcont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain, allAtoms=True, maxDist=0.5 )
+            self.parseNcontLog( toDict=False )
+            
+            if self.numContacts > self.numAllContacts:
+                self.numAllContacts = self.numContacts
+                self.allContactsOrigin = origin
+                
+        return
+
     def run( self,
              nativePdbInfo=None,
              placedPdbInfo=None,
@@ -362,7 +428,7 @@ class Contacts(object):
         return False
 
     # NB previous maxdist was 1.5
-    def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxdist=2.5 ):
+    def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxDist=1.5, allAtoms=False ):
         """FOO
         """
         
@@ -371,9 +437,13 @@ class Contacts(object):
         
         # Build up stdin
         stdin = ""
-        stdin += "source {0}//CA\n".format( ",".join( sourceChains )  )  
-        stdin += "target {0}//CA\n".format( ",".join( targetChains )  )  
-        stdin += "maxdist {0}\n".format( maxdist )
+        if allAtoms:
+                stdin += "source {0}//*\n".format( ",".join( sourceChains )  )  
+                stdin += "target {0}//*\n".format( ",".join( targetChains )  ) 
+        else:
+            stdin += "source {0}//CA\n".format( ",".join( sourceChains )  )  
+            stdin += "target {0}//CA\n".format( ",".join( targetChains )  )  
+        stdin += "maxdist {0}\n".format( maxDist )
         stdin += "cells 2\n"
         stdin += "sort target inc\n"
         
@@ -384,7 +454,7 @@ class Contacts(object):
         
         return
     
-    def parseNcontLog( self, logfile=None ):
+    def parseNcontLog( self, logfile=None, toDict=True ):
         """
         
         Lines are of format
@@ -426,66 +496,67 @@ class Contacts(object):
         assert self.numContacts == len(clines)
         #print "LINES ",clines
 
-        # Got data lines so now extract data
-        # Could probably just do this in the reading loop now    
         contacts = [] 
-        lastSource = None
-        for c in clines:
-            
-            # Reconstruct lines with only the second contact using the data from the corresponding last complete line
-            if not c[0:29].strip():
-                #print "MATCH ACROSS TWO ATOMS"
-                c = lastSource[0:29] + c[29:]
-            else:
-                lastSource = c
-            
-            # As the numbers overrun we can't split so we assume fixed format
-            d = {}
-            d['chainId1'] = c[4]
-            d['resSeq1']  = int( c[6:10].strip() )
-            aa1           = c[11:14]
-            d['aa1']      = pdb_edit.three2one[ aa1 ] # get amino acid and convert to single letter code
-            d['chainId2'] = c[32]
-            d['resSeq2']  = int( c[34:38].strip() )
-            aa2           = c[39:42]
-            d['aa2']      = pdb_edit.three2one[ aa2 ]
-            d['dist']     = float( c[56:62].strip() )
-            d['cell']     = int( c[63:66])
-            d['symmetry'] = c[67:]
-            
-            contacts.append( d )
-            #contacts.append( (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) )
-
-#         # Put in dictionary by chains for easy access
-#         contacts = {}
-#         for c in contactsList:
-#             
-#             chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
-#             
-#             if not contacts.has_key( chainId1 ):
-#                 # First entry in first source chain
-#                 contacts[ chainId1 ] = { chainId2: [ c ] }
-#                 continue
-#             
-#             if not contacts[ chainId1 ].has_key( chainId2 ):
-#                 # Adding a new target chain
-#                 contacts[ chainId1 ][ chainId2 ] = [ c ]
-#                 continue
-#             
-#             # Adding to existing source & target chains
-#             contacts[ chainId1 ][ chainId2 ].append( c )
-#                 
-# #         for sc in contacts.keys():
-# #             for tc in contacts[ sc ]:
-# #                 for c in contacts[ sc ][ tc ]:
-# #                     print c
-# 
-
-        #print "GOT CONTACTS"
-        #for c in contacts:
-        #    print "chainId1 {0} resSeq1 {1} chainId2 {2} resSeq2 {3}\n".format(  c['chainId1'], c['resSeq1'], c['chainId2'], c['resSeq2']  )
-
-        self.contacts = contacts
+        if toDict:
+            # Got data lines so now extract data
+            # Could probably just do this in the reading loop now    
+            lastSource = None
+            for c in clines:
+                
+                # Reconstruct lines with only the second contact using the data from the corresponding last complete line
+                if not c[0:29].strip():
+                    #print "MATCH ACROSS TWO ATOMS"
+                    c = lastSource[0:29] + c[29:]
+                else:
+                    lastSource = c
+                
+                # As the numbers overrun we can't split so we assume fixed format
+                d = {}
+                d['chainId1'] = c[4]
+                d['resSeq1']  = int( c[6:10].strip() )
+                aa1           = c[11:14]
+                d['aa1']      = pdb_edit.three2one[ aa1 ] # get amino acid and convert to single letter code
+                d['chainId2'] = c[32]
+                d['resSeq2']  = int( c[34:38].strip() )
+                aa2           = c[39:42]
+                d['aa2']      = pdb_edit.three2one[ aa2 ]
+                d['dist']     = float( c[56:62].strip() )
+                d['cell']     = int( c[63:66])
+                d['symmetry'] = c[67:]
+                
+                contacts.append( d )
+                #contacts.append( (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) )
+    
+    #         # Put in dictionary by chains for easy access
+    #         contacts = {}
+    #         for c in contactsList:
+    #             
+    #             chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
+    #             
+    #             if not contacts.has_key( chainId1 ):
+    #                 # First entry in first source chain
+    #                 contacts[ chainId1 ] = { chainId2: [ c ] }
+    #                 continue
+    #             
+    #             if not contacts[ chainId1 ].has_key( chainId2 ):
+    #                 # Adding a new target chain
+    #                 contacts[ chainId1 ][ chainId2 ] = [ c ]
+    #                 continue
+    #             
+    #             # Adding to existing source & target chains
+    #             contacts[ chainId1 ][ chainId2 ].append( c )
+    #                 
+    # #         for sc in contacts.keys():
+    # #             for tc in contacts[ sc ]:
+    # #                 for c in contacts[ sc ][ tc ]:
+    # #                     print c
+    # 
+    
+            #print "GOT CONTACTS"
+            #for c in contacts:
+            #    print "chainId1 {0} resSeq1 {1} chainId2 {2} resSeq2 {3}\n".format(  c['chainId1'], c['resSeq1'], c['chainId2'], c['resSeq2']  )
+    
+            self.contacts = contacts
                     
         return contacts
  
@@ -571,7 +642,7 @@ class Contacts(object):
                 stopIdx  = i + 1
   
         return chunks
-    
+
     def countContacts( self, contacts=None, dsspP=None ):
         
         
