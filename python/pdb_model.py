@@ -491,6 +491,17 @@ class PdbInfo(object):
         assert len(self.models[0].chains) >= 1,"Need at least one chain!"
         return self.sequences[0]
     
+    def numAtoms(self, modelIdx=0):
+        """Return the total number of ATOM atoms in the model"""
+        assert len(self.models) >= 1,"Need at least one model!"
+        assert len(self.models[0].chains) >= 1,"Need at least one chain!"
+        
+        natoms = 0
+        for chainAtoms in self.models[ modelIdx ].atoms:
+            natoms += len( chainAtoms )
+            
+        return natoms
+    
 class PdbModel(object):
     """A class to hold information on a single model in a PDB file"""
     
@@ -499,6 +510,7 @@ class PdbModel(object):
         self.pdb = None
         self.serial = None
         self.chains = [] # Ordered list of chain IDs
+        self.atoms = [] # List of atoms in each chain
         
         self.resSeqs = [] # Ordered list of list of resSeqs for each chain - matches order in self.chains
         self.sequences = [] # Ordered list of list of sequences for each chain - matches order in self.chains
