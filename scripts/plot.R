@@ -1,14 +1,24 @@
 
 
 library(ggplot2)
-fcolour="#FF0000"
 scolour="#3333FF"
+fcolour="#FF0000"
 #setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
-setwd("/home/jmht/Documents/test/CC/timings")
+setwd("/home/jmht/Documents/test/CC/contacts")
 #data <- read.table(file="results_bucc.csv",sep=',', header=T)
-data <- read.table(file="results_bucc_timings.csv",sep=',', header=T)
+data <- read.table(file="results_contacts1.csv",sep=',', header=T)
+
+# Categorise successes
 data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
 data$success <- replace( data$success, is.na(data$success), 0 )
+
+# Need to remove nolog values from buccFinalRfree
+# Horrible hack to get Rfree back to a number...
+data$buccFinalRfree[ data$buccFinalRfree == "nolog" ] <- NA
+data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
+
+# Find number of atoms that were placed
+data$numAllAtoms <- data$ensembleNumAtoms * data$estChainsASU
 
 
 # Object to hold successes
@@ -46,25 +56,40 @@ median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
 # proportion for all runs where there was a shelxe build
 
 # For some phaser runs the logs are not complete so we have no timing data
-sdata = data[ data$shelxeTime > 0 & ! is.na( data$phaserTime ), ]
-mean( sdata$fragmentTime, na.rm=TRUE )
-tlabels = c("fragmentTime", "modelTime", "ensembleTime", "phaserTime", "shelxeTime")
+#sdata = data[ data$shelxeTime > 0 & ! is.na( data$phaserTime ), ]
+#mean( sdata$fragmentTime, na.rm=TRUE )
+#tlabels = c("fragmentTime", "modelTime", "ensembleTime", "phaserTime", "shelxeTime")
 #aggregate( sdata[ , tlabels ], by=list( pdbCode = sdata$pdbCode ), FUN=mean)
 
-x <- data.frame( mean(sdata$fragmentTime), mean(sdata$modelTime), mean(sdata$ensembleTime), mean(sdata$phaserTime), mean(sdata$shelxeTime) )
+#x <- data.frame( mean(sdata$fragmentTime), mean(sdata$modelTime), mean(sdata$ensembleTime), mean(sdata$phaserTime), mean(sdata$shelxeTime) )
 # horrible...
-png("allSuccessTimingsPie.png")
-pie( as.numeric( x ), labels=tlabels, main="Timings for all runs inc. shelxe" )
-dev.off()
+#png("allSuccessTimingsPie.png")
+#pie( as.numeric( x ), labels=tlabels, main="Timings for all runs inc. shelxe" )
+#dev.off()
 
 # length distribution of successful search models both as number of residues 
 # and as fraction of target chain length remaining in the search model.
+
+# Distribution of all ensembles
+p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
+#p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
+p + geom_histogram( position = 'dodge', binwidth = 5 ) +
+		scale_colour_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		xlab("Number of residues in ensemble") +
+		ylab("Number of ensembles") +
+		ggtitle("Number of residues in ensemble for successful and failing cases")
+ggsave("ResiduesVsEnsemble.png")
+
+
 
 # Try showing success and failure together
 p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
-		scale_fill_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -76,7 +101,7 @@ ggsave("ResiduesVsEnsemble.png")
 p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
-		scale_fill_manual( values=c("#FF0000", "#00FF00"),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -86,15 +111,9 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 ggsave("PercentVsEnsemble.png")
 
 # CC vs final rFree coloured by success
-# Need to remove nolog values from buccFinalRfree
-
-# Horrible hack to get Rfree back to a number...
-data$buccFinalRfree[ data$buccFinalRfree == "nolog" ] <- NA
-data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
-
 p <-ggplot(data=data, aes(shelxeCC, buccFinalRfree, colour=factor(success) ) )
 p + geom_point() +
-		scale_colour_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -107,7 +126,7 @@ ggsave("CCVsRfree.png")
 p <-ggplot(data=data, aes(x=ensembleNativeTM, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
-		scale_fill_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -119,7 +138,7 @@ ggsave("ModelTM.png")
 p <-ggplot(data=data, aes(x=ensembleNativeRMSD, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
-		scale_fill_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -132,7 +151,7 @@ ggsave("ModelRMSD.png")
 p <-ggplot(data=data, aes(x=reforiginRMSD, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
-		scale_fill_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -141,13 +160,14 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ggtitle("Histogram of reforigin RMSD scores by success")
 ggsave("reforiginRMSD.png")
 
-#�Comparison of the RIO figures for successful search models with the number of in-register 
+#Comparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
-rdata = data[ data$floatingOrigin == 'False', ]
+# CAN ONLY COMPARE NON_FLOATING ORIGINS and where a phaser model was produced
+rdata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG), ]
 
 p <-ggplot(data=rdata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
 p + geom_point() +
-		scale_colour_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -159,7 +179,7 @@ ggsave("goodVsInRegister.png")
 
 p <-ggplot(data=rdata, aes(x=nrInRegisterContacts, y=nrOoRegisterContacts, colour=factor(success) ) )
 p + geom_point( size=1.5 ) + stat_sum() +
-		scale_colour_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -170,7 +190,7 @@ ggsave("InVsOutContacts.png")
 
 p <-ggplot(data=rdata, aes(x=nrGoodContacts, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
-scale_fill_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -181,7 +201,7 @@ ggsave("goodContacts.png")
 
 p <-ggplot(data=rdata, aes(x=nrNumContacts - nrGoodContacts, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
-		scale_fill_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -192,7 +212,7 @@ ggsave("badContacts.png")
 
 p <-ggplot(data=rdata, aes(x=nrGoodContacts / (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
 p + geom_histogram( position = 'dodge' ) +
-		scale_fill_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -203,7 +223,7 @@ ggsave("contactsRatio.png")
 
 p <-ggplot(data=rdata, aes(x=nrGoodContacts - (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
 p + geom_histogram( position = 'dodge' ) +
-		scale_fill_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -214,7 +234,7 @@ ggsave("contactsDifference.png")
 
 p <-ggplot(data=rdata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
 p + geom_point() +
-		scale_colour_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -225,7 +245,7 @@ ggsave("goodVsInRegister.png")
 
 # plot of nrInRegisterContacts vs nrGoodContacts
 p <-ggplot(data=rdata, aes(x=shelxeCC, y=nrGoodContacts, colour=factor(success) ) )
-p + geom_point() + scale_colour_manual( values=c(scolour, fcolour),
+p + geom_point() + scale_colour_manual( values=c(fcolour,scolour),
 		name="Success/Failure",
 		labels=c("Failure", "Success")
 ) +
@@ -234,9 +254,32 @@ ylab("Good Contacts") +
 ggtitle("Good contacts vs shelxe CC for non-floating origins")
 ggsave("CCVsInRegister.png")
 
+
+# plot of allContacts against numAtoms
+# 		scale_x_continuous( limits=c(0, max( rdata$numAllAtoms - rdata$numAllContacts , na.rm=TRUE) )  ) +
+p <-ggplot(data=rdata, aes(x=numAllAtoms-numAllContacts, y=numAllContacts, colour=factor(success) ) )
+p + geom_point() + scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		scale_y_continuous( limits=c(0, 1000)  ) +
+		xlab("Num. unmatched atoms") +
+		ylab("All contacts (< 0.5A)") +
+		ggtitle("Num contacts vs num unmatched atoms non-floating origins")
+ggsave("UnmatchedVsContacts.png")
+
+
+p <-ggplot(data=rdata[ rdata$success == 0,], aes(x=numAllAtoms-numAllContacts, y=numAllContacts ) )
+p + geom_point() +
+		scale_y_continuous( limits=c(0, 1000)  ) +
+		xlab("Num. unmatched atoms") +
+		ylab("All contacts (< 0.5A)") +
+		ggtitle("Num contacts vs num unmatched atoms non-floating origins")
+
+
 # TFZ/LLG
 p <-ggplot(data=data, aes(x=phaserTFZ, y=phaserLLG, colour=factor(success) ) )
-p + geom_point() + scale_colour_manual( values=c(scolour, fcolour),
+p + geom_point() + scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -247,7 +290,7 @@ ggsave("LLGvsTFZ.png")
 
 p <-ggplot(data=data, aes(x=phaserTFZ, y=phaserLLG, colour=factor(success) ) )
 p + geom_point() +
-		scale_colour_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -261,7 +304,7 @@ ggsave("LLGvsTFZtrunc.png")
 # CC distribution
 p <-ggplot(data=data, aes(x=shelxeCC, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
-		scale_fill_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -275,7 +318,7 @@ ggsave("CCscores.png")
 p <-ggplot(data=data, aes(x=resolution, y=fastaLength, colour=factor(success) ) )
 p + geom_point() +
 		stat_sum() +
-		scale_colour_manual( values=c(scolour, fcolour),
+		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
