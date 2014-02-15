@@ -29,6 +29,28 @@ a = AmpleResult()
 
 #for pdbCode in [ "3H7Z" ]:
 
+
+def numAtoms( pdb ):
+    
+    with open( pdb, 'r' ) as o:
+        reading=False
+        natoms=0
+        for line in o:
+            
+            if line.startswith("MODEL"):
+                reading=True
+                continue
+            
+            if line.startswith("TER"):
+                break
+            
+            if not reading:
+                continue
+            
+            natoms += 1
+            
+    return natoms
+
 NI = {}
 
 for r in ensembleResults:
@@ -98,6 +120,16 @@ for r in ensembleResults:
     #ensembles = [ os.path.splitext( os.path.basename( l ) )[0] for l in glob.glob( mrbdir + "/*.sub") ]
     #for ensemble in ensembles:
     ensemble = r.ensembleName
+    
+    # NUM ATOMS
+    ef = os.path.join( mrbdir,
+                      "search_{0}_mrbump".format( ensemble ),
+                      "data",
+                      "loc0_ALL_{0}".format( ensemble ),
+                      "unmod",
+                      "MODEL_UNMOD_loc0_ALL_{0}.pdb".format( ensemble )
+                        )
+    r.ensembleNumAtoms = numAtoms( ef )
         
     mrDir = os.path.join( mrbdir,
                           "search_{0}_mrbump".format( ensemble ),
