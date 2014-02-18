@@ -14,6 +14,7 @@ import shutil
 import stat
 
 # our imports
+import rosetta_model
 import split_models
 
 ########################
@@ -443,21 +444,28 @@ def CLUSTER_RUN_FORMAT_HOMS(homolog, NProcess, fasta, ROSETTA_PATH, a9mers, a3me
 ######################
 def RUN_FORMAT_HOMS(homolog, NProcess, fasta, ROSETTA_PATH, a9mers, a3mers, NProc, homname, alignment_file, Models_dir ):
  
+ if not alignment_file:
+     raise RuntimeError,"Need alignment_file!"
+ 
  curdir = os.getcwd()
  os.mkdir(curdir+'/RUN_'+homname)
  os.chdir(curdir+'/RUN_'+homname)
  RunDir = curdir+'/RUN_'+homname
  
  ROSETTA_OVER_PATH = ROSETTA_PATH
-# ROSETTA_OVER_PATH = '/home/jaclyn/programs/rosetta3.3_bundles'
+ # THIS NEEDS TO BE CLEANED UP PROPERLY!!
  if os.path.exists(ROSETTA_OVER_PATH):
-   ROSETTA_PATH               =ROSETTA_OVER_PATH+'/rosetta_source/bin/AbinitioRelax.linuxgccrelease'
-   ROSETTA_cluster            =ROSETTA_OVER_PATH+'/rosetta_source/bin/cluster.linuxgccrelease'
-   ROSETTA_DB                 =ROSETTA_OVER_PATH+'/rosetta_database'
-   Make_fragents_exe          =ROSETTA_OVER_PATH+'/rosetta_fragments/nnmake/make_fragments.pl'
-   MR_ROSETTA                 =ROSETTA_OVER_PATH+'/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
-#   IDEALIZE                   =ROSETTA_OVER_PATH+'/rosetta_source/bin/idealize.linuxgccrelease'
-   IDEALIZE                   =ROSETTA_OVER_PATH+'/rosetta_source/bin/idealize_jd2.default.linuxgccrelease'
+     
+     ROSETTA_PATH    = rosetta_model.find_binary( 'AbinitioRelax', rosettaDir = ROSETTA_OVER_PATH )
+     ROSETTA_cluster = rosetta_model.find_binary( 'cluster', rosettaDir = ROSETTA_OVER_PATH )
+     MR_ROSETTA      = rosetta_model.find_binary( 'mr_protocols', rosettaDir = ROSETTA_OVER_PATH )
+     IDEALIZE        = rosetta_model.find_binary( 'idealize_jd2', rosettaDir = ROSETTA_OVER_PATH )
+     ROSETTA_DB                 =ROSETTA_OVER_PATH+'/rosetta_database'
+     Make_fragents_exe          =ROSETTA_OVER_PATH+'/rosetta_fragments/nnmake/make_fragments.pl'
+     
+     if not ROSETTA_PATH or not ROSETTA_cluster or not MR_ROSETTA or not IDEALIZE:
+         msg = "Cannot find Rosetta NMR programs in directory: {0}".format( ROSETTA_OVER_PATH )
+         raise RuntimeError, msg
 
 
  #/home/jaclyn/programs/rosetta-3.2/rosetta_source/bin/mr_protocols.default.linuxgccrelease

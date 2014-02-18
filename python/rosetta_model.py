@@ -19,8 +19,31 @@ import unittest
 # Our modules
 import add_sidechains_SCWRL
 import ample_util
+import clusterize
 import octopus_predict
 
+
+def find_binary( name, rosettaDir=None ):
+    """
+    Find a rosetta binary on different platforms
+    separate from object as it's currently used by the NMR stuff - which is in dire need of refactoring.
+    
+    """
+    
+    assert name and rosettaDir
+    
+    binDir = os.path.join( rosettaDir, 'rosetta_source', 'bin' )
+    binaries = glob.glob( binDir + "/{0}.*".format( name )  )
+    if not len( binaries ):
+        return False
+    
+    # Could check for shortest - for now just return the first
+    binary = os.path.abspath( binaries[ 0 ] )
+    
+    if os.path.isfile( binary ):
+        return binary
+    
+    return False
 
 class RosettaModel(object):
     """
@@ -49,7 +72,7 @@ class RosettaModel(object):
         self.scwrl_exe = None
         
         # Fragment variables
-        self.pdb_code = None
+        self.name = None
         self.frags_3mers = None
         self.frags_9mers = None
         self.use_homs = None
@@ -124,10 +147,10 @@ class RosettaModel(object):
         
         """
         # Set path to script
-        if not self.fragments_exe: 
+        if self.fragments_exe is None: 
             if self.rosetta_version == 3.3:
                 self.fragments_exe = self.rosetta_dir + '/rosetta_fragments/make_fragments.pl'
-            elif self.rosetta_version  == 3.4:
+            elif self.rosetta_version  >= 3.4:
                 self.fragments_exe = self.rosetta_dir + '/rosetta_tools/fragment_tools/make_fragments.pl'
         
         # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
@@ -136,7 +159,8 @@ class RosettaModel(object):
          
         cmd = [ self.fragments_exe,
                '-rundir', self.fragments_directory,
-               '-id', self.pdb_code, fasta ] 
+               '-id', self.name,
+                fasta ] 
         
         if self.transmembrane:
             cmd += [ '-noporter', '-nopsipred','-sam'] 
@@ -145,7 +169,7 @@ class RosettaModel(object):
             if self.rosetta_version == 3.3:
                 # jmht the last 3 don't seem to work with 3.4
                 cmd += ['-noporter', '-nojufo', '-nosam','-noprof' ]
-            elif self.rosetta_version == 3.4:
+            elif self.rosetta_version >= 3.4:
                 cmd += ['-noporter' ]
 
         # Whether to exclude homologs
@@ -156,15 +180,12 @@ class RosettaModel(object):
     ##End fragment_cmd
             
 
-    def generate_fragments(self):
+    def generate_fragments(self, submit_cluster=None, submit_qtype=None, nproc=None ):
         """
         Run the script to generate the fragments
-        
         """
     
         self.logger.info('----- making fragments--------')
-        #RUNNING.write('----- making fragments--------\n')
-        #RUNNING.flush()
         
         if not os.path.exists( self.fragments_directory ):
             os.mkdir( self.fragments_directory )
@@ -174,38 +195,46 @@ class RosettaModel(object):
         fasta = os.path.split(  self.fasta )[1]
         shutil.copy2( self.fasta, self.fragments_directory + os.sep + fasta )
         
-#        if self.transmembrane:
-#            self.generate_tm_predict()        
-            
         cmd = self.fragment_cmd()
         logfile = os.path.join( self.fragments_directory, "make_fragments.log" )
-        retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.fragments_directory )
-        if retcode != 0:
-            msg = "Error generating fragments!\nPlease check the logfile {0}".format( logfile )
-            self.logger.critical( msg )
-            raise RuntimeError, msg
+        
+        if submit_cluster:
+            cluster_run = clusterize.ClusterRun()
+            cluster_run.QTYPE = submit_qtype
+            self.logger.info('Submitting fragment generation jobs to a queueing system of type: {0}\n'.format( submit_qtype ) )
+            cluster_run.generateFragmentsOnCluster( cmd=" ".join(cmd),
+                                                    fragmentsDir=self.fragments_directory,
+                                                    nProc=nproc,
+                                                    logFile=logfile )
+            # Monitor the cluster queue to see when all jobs have finished
+            cluster_run.monitorQueue()
+            
+        else:
+            retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.fragments_directory )
+            if retcode != 0:
+                msg = "Error generating fragments!\nPlease check the logfile {0}".format( logfile )
+                self.logger.critical( msg )
+                raise RuntimeError, msg
         
         if self.rosetta_version >= 3.4:
             # new name format: $options{runid}.$options{n_frags}.$size" . "mers
-            self.frags_3mers = self.fragments_directory + os.sep + self.pdb_code + '.200.3mers'
-            self.frags_9mers = self.fragments_directory + os.sep + self.pdb_code + '.200.9mers'      
+            self.frags_3mers = self.fragments_directory + os.sep + self.name + '.200.3mers'
+            self.frags_9mers = self.fragments_directory + os.sep + self.name + '.200.9mers'
         else:
             # old_name_format: aa$options{runid}$fragsize\_05.$options{n_frags}\_v1_3"
-            self.frags_3mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '03_05.200_v1_3'
-            self.frags_9mers = self.fragments_directory + os.sep + 'aa' + self.pdb_code + '09_05.200_v1_3'
+            self.frags_3mers = self.fragments_directory + os.sep + 'aa' + self.name + '03_05.200_v1_3'
+            self.frags_9mers = self.fragments_directory + os.sep + 'aa' + self.name + '09_05.200_v1_3'
             
         if not os.path.exists( self.frags_3mers ) or not os.path.exists( self.frags_9mers ):
             raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\n".format(self.frags_3mers,self.frags_9mers)
         
-        #RUNNING.write('Fragments done\n3mers at: ' + frags_3_mers + '\n9mers at: ' + frags_9_mers + '\n\n')
         self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
     
         if os.path.exists( self.fragments_directory + os.sep + self.fragments_directory + '.psipred'):
-            ample_util.get_psipred_prediction( self.fragments_directory + os.sep + self.pdb_code + '.psipred')
+            ample_util.get_psipred_prediction( self.fragments_directory + os.sep + self.name + '.psipred')
        
         return
     ##End fragment_cmd
-    
     
     def generate_tm_predict(self):
         """
@@ -231,12 +260,12 @@ class RosettaModel(object):
         #fastaseq = octo.getFasta(self.fasta)
         # Problem with 3LBW predicition when remove X
         fastaseq = octo.getFasta(self.fasta)
-        octo.getPredict(self.pdb_code,fastaseq, directory=self.models_dir )
+        octo.getPredict(self.name,fastaseq, directory=self.models_dir )
         topo_file = octo.topo
         self.logger.debug("Got topology prediction file: {0}".format(topo_file))
 
         # Generate span file from predict
-        self.spanfile = os.path.join(self.models_dir, self.pdb_code + ".span")
+        self.spanfile = os.path.join(self.models_dir, self.name + ".span")
         self.logger.debug( 'Generating span file {0}'.format( self.spanfile ) )
         cmd = [ self.octopus2span, topo_file ]
         retcode = ample_util.run_command( cmd, logfile=self.spanfile, directory=self.models_dir )
@@ -252,7 +281,7 @@ class RosettaModel(object):
         retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.models_dir )
         
         # Script only uses first 4 chars to name files
-        lipofile = os.path.join(self.models_dir, self.pdb_code[0:4] + ".lips4")
+        lipofile = os.path.join(self.models_dir, self.name[0:4] + ".lips4")
         if retcode != 0 or not os.path.exists(lipofile):
             msg = "Error generating lips file {0}. Please check the log in {1}".format(lipofile,logfile)
             self.logger.critical(msg)
@@ -292,7 +321,7 @@ class RosettaModel(object):
                 if dirname.endswith("3.5"):
                     version = 3.5
                 else:
-                    self.logger.critical("Error determining rosetta version: {0}".format(e))
+                    self.logger.critical("Error determining rosetta version")
                     sys.exit(1)
                 
             self.rosetta_version = version
@@ -349,7 +378,7 @@ class RosettaModel(object):
                     ]
             
         # Domain constraints
-        if self.domain_termini_distance > 0:
+        if self.domain_termini_distance  > 0:
             dcmd = self.setup_domain_constraints()
             cmd += dcmd
             
@@ -442,9 +471,11 @@ class RosettaModel(object):
                 raise RuntimeError, msg
         
         if self.use_scwrl:
+            scwrl = add_sidechains_SCWRL.Scwrl( scwrlExe=self.scwrl_exe )
             # Add sidechains using SCRWL - loop over each directory and output files into the models directory
             for wdir,proc in directories.iteritems():
-                add_sidechains_SCWRL.add_sidechains_SCWRL(self.scwrl_exe, wdir, self.models_dir, str(proc), False)
+                scwrl.processDirectory(inDirectory=wdir, outDirectory=self.models_dir, prefix="scwrl_{0}".format(proc) )
+                #add_sidechains_SCWRL.add_sidechains_SCWRL(self.scwrl_exe, wdir, self.models_dir, str(proc), False)
         else:
         # Just copy all modelling files into models directory
             for wd in directories.keys():
@@ -499,7 +530,7 @@ class RosettaModel(object):
         # Common variables
         self.fasta = optd['fasta']
         self.work_dir = optd['work_dir']
-        self.pdb_code = optd['pdb_code']
+        self.name = optd['name']
         
         # Fragment variables
         self.fragments_exe = optd['rosetta_fragments_exe']
@@ -510,26 +541,12 @@ class RosettaModel(object):
             
             self.transmembrane = True
             
-#           if platform.mac_ver() == ('', ('', '', ''), ''):
-#               self.transmembrane_exe = self.rosetta_dir + '/rosetta_source/bin/membrane_abinitio2.linuxgccrelease'
-#           else:
-#               self.transmembrane_exe = self.rosetta_dir + '/rosetta_source/bin/membrane_abinitio2'
-
-            if platform.mac_ver() == ('', ('', '', ''), ''):
-                # Not a mac so we assume linux
-                self.transmembrane_exe = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'membrane_abinitio2.linuxgccrelease' )
-            else:
-                # It seems there are different binaries on the mac 
-                rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'membrane_abinitio2' )
-                if not os.path.isfile( rbin ):
-                    rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'membrane_abinitio2.macosgccrelease' )
-                    if not os.path.isfile( rbin ):
-                        raise RuntimeError,"Cannot find AbinitioRelax binary!"
-                self.transmembrane_exe = rbin
-
-            if not os.path.exists(self.transmembrane_exe):
+            self.transmembrane_exe = find_binary( 'membrane_abinitio2', rosettaDir=self.rosetta_dir )
+            if not self.transmembrane_exe:
+                msg = "Cannot find AbinitioRelax binary membrane_abinitio2!"
                 self.logger.critical(' cant find Rosetta membrane executable: {0}'.format(self.transmembrane_exe) )
                 raise RuntimeError,msg
+
             
             script_dir = self.rosetta_dir + os.sep + "rosetta_source/src/apps/public/membrane_abinitio"
             self.octopus2span = script_dir + os.sep + "octopus2span.pl"
@@ -544,9 +561,9 @@ class RosettaModel(object):
                             
             if optd['blast_dir']:
                 blastpgp = optd['blast_dir'] + os.sep + "bin/blastpgp"
-                blastpgp = ample_util.check_for_exe( 'blastpgp', blastpgp )
+                blastpgp = ample_util.find_exe( 'blastpgp', blastpgp )
             else:
-                blastpgp = ample_util.check_for_exe( 'blastpgp', None )
+                blastpgp = ample_util.find_exe( 'blastpgp', None )
                 
             # Found so set
             optd['blastpgp'] = blastpgp
@@ -567,24 +584,22 @@ class RosettaModel(object):
             # Check if we've been given files
             if  self.spanfile:
                 if not ( os.path.isfile( self.spanfile ) ):
-                     msg = "Cannot find provided transmembrane spanfile: {0}".format(  self.spanfile )
-                     self.logger.critical(msg)
-                     raise RuntimeError, msg
+                    msg = "Cannot find provided transmembrane spanfile: {0}".format(  self.spanfile )
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg
                  
             if self.lipofile:
                 if not ( os.path.isfile( self.lipofile ) ):
-                     msg = "Cannot find provided transmembrane lipofile: {0}".format( self.lipofile )
-                     self.logger.critical(msg)
-                     raise RuntimeError, msg                 
+                    msg = "Cannot find provided transmembrane lipofile: {0}".format( self.lipofile )
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg                 
                    
-            
             if (  self.spanfile and not self.lipofile ) or ( self.lipofile and not self.spanfile ):
                 msg="You need to provide both a spanfile and a lipofile"
                 self.logger.critical(msg)
                 raise RuntimeError, msg
         # End transmembrane checks          
             
-
         # Modelling variables
         if optd['make_models']:
             
@@ -598,25 +613,14 @@ class RosettaModel(object):
                     
             import platform
             if not optd['rosetta_path']: 
-                if platform.mac_ver() == ('', ('', '', ''), ''):
-                    # Not a mac so we assume linux
-                    optd['rosetta_path'] = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'AbinitioRelax.linuxgccrelease' )
-                else:
-                    # It seems there are different binaries on the mac 
-                    rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'AbinitioRelax' )
-                    if not os.path.isfile( rbin ):
-                        rbin = os.path.join( self.rosetta_dir, 'rosetta_source', 'bin', 'AbinitioRelax.macosgccrelease' )
-                        if not os.path.isfile( rbin ):
-                            raise RuntimeError,"Cannot find AbinitioRelax binary!"
-                    optd['rosetta_path'] = rbin
+                optd['rosetta_path'] = find_binary( 'AbinitioRelax', rosettaDir=self.rosetta_dir )
+                if not optd['rosetta_path']:
+                    msg = "Cannot find AbinitioRelax binary!"
+                    self.logger.critical(msg)
+                    raise RuntimeError,msg
             
             # Always save everything back to the amopt object so we can print it out
             self.rosetta_path = optd['rosetta_path']
-            
-            if not os.path.exists(self.rosetta_path):
-                msg = 'Cannot find Rosetta abinitio: {0}'.format(self.rosetta_path)
-                self.logger.critical( msg )
-                raise RuntimeError,msg
     
             #jmht not used
             # ROSETTA_cluster = rosetta_dir + '/rosetta_source/bin/cluster.linuxgccrelease'
@@ -680,7 +684,7 @@ class Test(unittest.TestCase):
         
         optd = {}
         optd['rosetta_dir'] = "/opt/rosetta3.4"
-        optd['pdb_code'] = "TOXD_"
+        optd['name'] = "TOXD_"
         optd['work_dir'] =  os.getcwd()
         optd['use_homs'] =  True
         optd['make_frags'] = True
@@ -733,7 +737,7 @@ for i in range(10):
         optd['make_models'] = True
         optd['make_frags'] =  True
         optd['fasta'] = "FASTA"
-        optd['pdb_code'] = "TOXD_"
+        optd['name'] = "TOXD_"
         optd['improve_template'] = None
         optd['all_atom'] = True
         optd['use_scwrl'] = False
@@ -763,7 +767,7 @@ for i in range(10):
         optd['make_models'] = False
         optd['make_frags'] =  True
         optd['fasta'] = "/home/Shared/2UUI/2uui.fasta"
-        optd['pdb_code'] = "2uui_"
+        optd['name'] = "2uui_"
         optd['transmembrane'] = True
         optd['blast_dir'] = "/opt/blast-2.2.26"
         optd['nr'] = "/opt/nr/nr"

@@ -17,7 +17,7 @@ class AmpleOptions(object):
         # The dictionary with all the options
         self.d = {}
         
-        # dictionary with the default arguments
+        # dictionary with the default arguments - if any are paths add to paths in populate
         self.defaults = {
                             'alignment_file' : None,
                             'all_atom' : True,
@@ -39,6 +39,8 @@ class AmpleOptions(object):
                             'frags_9mers' : None,
                             'FREE' : None,
                             'import_cluster' : False,
+                            'import_models' : False,
+                            'import_ensembles' : False,
                             'improve_template' : None,
                             'LGA' : None,
                             'make_frags' : True,
@@ -50,7 +52,7 @@ class AmpleOptions(object):
                             'molrep_only' : False,
                             'mr_keys' : None,
                             'mtz' : None,
-                            'name' : None,
+                            'name' : 'ampl',
                             'nmodels' : 1000,
                             'NMR_model_in' : None,
                             'NMR_process' : None,
@@ -71,6 +73,7 @@ class AmpleOptions(object):
                             'rosetta_fragments_exe' : None,
                             'rosetta_path' : None,
                             'rosetta_version' : None,
+                            'rcdir' : os.path.join( os.path.expanduser("~"), ".ample" ),
                             'run_dir' : os.getcwd(),
                             'scwrl_exe' : None,
                             'sf_cif' : None,
@@ -118,6 +121,8 @@ class AmpleOptions(object):
     
         # We have a debug mode as the logger isn't activated when we run
         self.debug = False
+        
+        return
         
         
     def final_summary(self, cluster=None):
@@ -174,6 +179,9 @@ class AmpleOptions(object):
 
             # Assume mrbump_results are already sorted
             mrbump_results = self.d['mrbump_results'][ cluster ]
+            if not len(mrbump_results):
+                print "!!!  No results found for cluster {0} !!!".format( cluster+1 )  
+                continue
             
             # Get header from first object - need to copy or the assignment just creates a reference
             header = copy.copy( mrbump_results[0].header )
@@ -237,13 +245,16 @@ class AmpleOptions(object):
         # Handle any defaults and any preset options
         self.process_options()
         
+        return
  
     def process_options(self):
         """Check the options and process any preset defaults"""
         
         # First set anything that hasn't been set to its default option
         for k, v in self.defaults.iteritems():
-            if self.d[k] == None:
+            if k not in self.d:
+                self.d[k] = v
+            elif  self.d[k] == None:
                 #if self.debug:
                 #    print "Setting default value: {0} : {1}".format(k,v)
                 self.d[k] = v
@@ -254,7 +265,38 @@ class AmpleOptions(object):
         # Any changes here
         if self.d['submit_qtype']:
             self.d['submit_qtype'] = self.d['submit_qtype'].upper()
+            
         
+        # Convert all paths to absolute paths
+        paths = [
+                 'alignment_file',
+                'blast_dir',
+                'domain_all_chains_pdb',
+                'ensembles_dir',
+                'fasta',
+                'frags_3mers',
+                'frags_9mers',
+                'import_cluster',
+                'maxcluster_exe',
+                'models_dir',
+                'mtz',
+                'NMR_model_in',
+                'NMR_remodel_fasta',
+                'rosetta_db',
+                'rosetta_dir',
+                'rosetta_fragments_exe',
+                'rosetta_path',
+                'scwrl_exe',
+                'sf_cif',
+                'shelxe_exe',
+                'spicker_exe',
+                'theseus_exe',
+                'transmembrane_lipofile',
+                'transmembrane_spanfile'
+            ]
+        for k, v in self.d.iteritems():
+            if k in paths and isinstance( v, str ):
+                self.d[ k ] = os.path.abspath( v )
         
         # Check if using any preset options
         if self.d['devel_mode']:
@@ -298,7 +340,7 @@ class AmpleOptions(object):
         pstr = ""
         pstr +='Params Used in this Run\n\n'
         
-        keys1 = ['fasta','work_dir','mtz','pdb_code']
+        keys1 = ['fasta','work_dir','mtz','name']
         pstr += '---input---\n'
         for k in keys1:
             pstr += "{0}: {1}\n".format(k, self.d[k])

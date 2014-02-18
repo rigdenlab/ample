@@ -11,6 +11,7 @@ script.
 '''
 
 import cPickle
+import glob
 import logging
 import os
 import sys
@@ -20,66 +21,77 @@ import ample_ensemble
 import printTable
 import run_spicker
 
-def create_ensembles( amoptd ):
-    """Create the ensembles using the values in the amoptd dictionary"""
 
-    #---------------------------------------
-    # Generating  ensembles
-    #---------------------------------------
+def spicker_cluster( amoptd ):
+    
     logger = logging.getLogger()
     logger.info('----- Clustering models --------')
     
-    # Spicker Alternative for clustering then MAX
+    # Spicker Alternative for clustering
     amoptd['spicker_rundir'] = os.path.join( amoptd['work_dir'], 'spicker_run')
     spickerer = run_spicker.SpickerCluster( amoptd )
     spickerer.run_spicker()
-
     logger.info( spickerer.results_summary() )
-
     amoptd['spicker_results'] = spickerer.results
+    
+    return
+
+def ensemble_models( cluster_models, amoptd, ensemble_id='X' ):
+    
+    logger = logging.getLogger()
+    
+    logger.info('----- Truncating models for cluster {0} --------'.format( ensemble_id ) )
+
+    if len( cluster_models ) < 2:
+        msg = "Could not create ensemble for cluster {0} as less than 2 models!".format( ensemble_id )
+        logger.critical(msg)
+        #raise RuntimeError, msg
+        return None
+
+    ensembler = ample_ensemble.Ensembler()
+    ensembler.maxcluster_exe = amoptd['maxcluster_exe']
+    ensembler.theseus_exe =  amoptd['theseus_exe']
+    ensembler.max_ensemble_models = amoptd['max_ensemble_models']
+    ensembler.generate_ensembles( cluster_models=cluster_models,
+                                  root_dir=amoptd['work_dir'],
+                                  ensemble_id=ensemble_id,
+                                  percent=amoptd['percent'] )
+    
+    return ensembler.ensembles
+
+
+def create_ensembles( amoptd ):
+    """Create the ensembles using the values in the amoptd dictionary"""
+
+    logger = logging.getLogger()
+    
+    #---------------------------------------
+    # Generating  ensembles
+    #---------------------------------------
+    
+    # Cluster with Spicker
+    spicker_cluster( amoptd )
     
     # Generate list of clusters to sample
     # Done like this so it's easy to run specific clusters
-    cluster_nums = [ i for i in range(1,amoptd['num_clusters']+1)]
+    cluster_nums = [ i for i in range(1,amoptd[ 'num_clusters' ]+1 )] 
     
-    logger.info('Clustering Done. Using the following clusters: {0}'.format(cluster_nums) )
+    logger.info('Clustering Done. Using the following clusters: {0}'.format( cluster_nums ) )
     
     amoptd['ensemble_results'] = [] 
     for cluster in cluster_nums:
         
-        logger.info('----- Truncating models for cluster {0} --------'.format(cluster)   )
-        
         # Get list of models from spicker results
-        cluster_models = spickerer.results[ cluster-1 ].pdb_list
+        ensembles = ensemble_models( amoptd['spicker_results'][ cluster-1 ].pdb_list, amoptd, ensemble_id=cluster )
         
-        if len( cluster_models ) < 2:
-            msg = "Could not create ensemble for cluster {0} as less than 2 models!".format( cluster )
-            logger.critical(msg)
-            #raise RuntimeError, msg
-            continue
-        
-        ensembler = ample_ensemble.Ensembler()
-        ensembler.maxcluster_exe = amoptd['maxcluster_exe']
-        ensembler.theseus_exe =  amoptd['theseus_exe']
-        ensembler.max_ensemble_models = amoptd['max_ensemble_models']
-        ensembler.generate_ensembles( cluster_models=cluster_models,
-                                      root_dir=amoptd['work_dir'],
-                                      ensemble_id=cluster,
-                                      percent=amoptd['percent'] )
         # Add results to amopt
-        amoptd['ensemble_results'].append( ensembler.ensembles )
+        amoptd['ensemble_results'].append( ensembles )
         
-        # List of pdbs
-        #final_ensembles = ensembler.pdb_list()
-        
-        # Prune down to the top model        
+        # Prune down to the top model
         if amoptd['top_model_only']:
             raise RuntimeError, "Need to fix top_model_only"
-            final_ensembles = truncateedit_MAX.One_model_only( final_ensembles, amoptd['work_dir'] )
+            #final_ensembles = truncateedit_MAX.One_model_only( final_ensembles, amoptd['work_dir'] )
 
-        # Add to the total list
-        #ensembles.append( final_ensembles )
-        
         logger.info("Truncating Done for cluster {0}".format( cluster ) )
         logger.info('Created {0} ensembles'.format( len(  amoptd['ensemble_results'][-1]  ) ) )
         
@@ -90,6 +102,40 @@ def create_ensembles( amoptd ):
     logging.info("Saved results as file: {0}\n".format( amoptd['results_path'] ) )
         
     return
+
+def import_cluster( amoptd ):
+    
+    logger = logging.getLogger()
+    
+    cluster_src = amoptd['import_cluster']
+    if not cluster_src:
+        msg = "import_cluster no cluster set!"
+        logger.critical( msg )
+        raise RuntimeError, msg
+    
+    # Either read from list of files or a directory
+    clusterPdbs = []
+    if os.path.isdir( cluster_src ):
+        logger.info( "Importing existing cluster from directory: {0}".format( cluster_src ) )
+        clusterPdbs = glob.glob( cluster_src + "*.pdb" )
+    elif os.path.isfile( cluster_src ):
+        logger.info( "Importing existing cluster from PDBs specified in file: {0}".format( cluster_src ) )
+        clusterPdbs = [ line.strip() for line in open( cluster_src ) ]
+    else:
+        msg = "import_cluster cannot import cluster from: {0}".format( cluster_src )
+        logger.critical( msg )
+        raise RuntimeError, msg
+    
+    if not len( clusterPdbs ):
+        msg = "import_cluster cannot find any pdb files in: {0}".format( cluster_src )
+        logger.critical( msg )
+        raise RuntimeError, msg
+    
+    ensembles = ensemble_models( clusterPdbs, amoptd, ensemble_id='X' )
+    
+    amoptd['ensemble_results'] = [ ensembles ]
+    
+    return [ e.pdb for e in ensembles ]
 
 def ensemble_summary( amoptd ):
     """Print a summary of the ensembling process"""

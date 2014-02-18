@@ -1,0 +1,53 @@
+<B><FONT COLOR='#FF0000'><!--SUMMARY_BEGIN-->
+<html> <!-- CCP4 HTML LOGFILE -->
+<hr>
+<pre>
+ 
+ ###############################################################
+ ###############################################################
+ ###############################################################
+ ### CCP4 6.3: csymmatch                version 0.3 : 13/07/09##
+ ###############################################################
+ User: unknown  Run date:  5/12/2013 Run time: 18:28:31 
+
+
+ Please reference: Collaborative Computational Project, Number 4. 1994.
+ "The CCP4 Suite: Programs for Protein Crystallography". Acta Cryst. D50, 760-763.
+ as well as any specific reference in the program write-up.
+
+<!--SUMMARY_END--></FONT></B>
+
+pdbin-ref 	/home/jmht/Documents/test/CC/run2/1NKD/1NKD_std.pdb
+pdbin 	/home/jmht/Documents/test/CC/run2/1NKD/phaser_loc0_ALL_All_atom_trunc_0.503733_rad_2_UNMOD.1_ren_o[0.1042,0.125,0.1111].pdb
+pdbout 	/home/jmht/Documents/test/CC/run2/1NKD/phaser_loc0_ALL_All_atom_trunc_0.503733_rad_2_UNMOD.1_ren_o[0.1042,0.125,0.1111]_csymmatch_best.pdb
+
+Reference molecule:
+  Spacegroup: C 1 2 1
+  Unit cell:  Cell ( 47.06, 37.88, 31.65,    90, 100.8,    90)
+Moving molecule:
+  Spacegroup: C 1 2 1
+  Unit cell:  Cell ( 47.06, 37.88, 31.65,    90, 100.8,    90)
+
+Chain: a   14-  14 will be transformed as follows:
+  Symmetry operator: -x, y, -z
+  Lattice shift:     uvw = (         0,         0,         0)
+  with normalised score:  0.403697
+Chain: a   17-  17 will be transformed as follows:
+  Symmetry operator: x, y, z
+  Lattice shift:     uvw = (         1,         0,         1)
+  with normalised score:  0.247688
+Chain: a   32-  44 will be transformed as follows:
+  Symmetry operator: -x+1/2, y+1/2, -z
+  Lattice shift:     uvw = (         0,        -1,         1)
+  with normalised score:  0.528113
+Chain: a   49-  51 will be transformed as follows:
+  Symmetry operator: -x+1/2, y+1/2, -z
+  Lattice shift:     uvw = (         0,        -1,         1)
+  with normalised score:  0.268943
+
+<B><FONT COLOR='#FF0000'><!--SUMMARY_BEGIN-->
+csymmatch: 
+Times: User:       0.0s System:    0.0s Elapsed:     0:00  
+</pre>
+</html>
+<!--SUMMARY_END--></FONT></B>

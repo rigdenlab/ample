@@ -1,6 +1,4 @@
 '''
-Created on 4 Sep 2013
-
 @author: jmht
 
 r1% = 42.1568627451
@@ -22,15 +20,84 @@ from analyse_run import AmpleResult
 import math
 
 
-TMdir = "/media/data/shared/TM"
-rundir="/home/jmht/Dropbox/MRes/Project/Thesis/Analysis"
-rundir="/Users/jmht/Dropbox/MRes/Project/Thesis/Analysis"
+DataDir = "/media/data/shared/TM"
+DataDir = "/media/data/shared/coied-coils"
+rundir="/home/jmht/Documents/test/CC"
 
-f = "/home/jmht/Documents/test/ar_results.pkl"
-f = "/Users/jmht/Dropbox/MRes/Project/Thesis/Analysis/ar_results.pkl"
+#f = "/Users/jmht/Dropbox/MRes/Project/Thesis/Analysis/ar_results.pkl"
+f = rundir + "/ar_results.pkl"
 fh = open(f)
 allResults = cPickle.load( fh )
 fh.close()
+
+# pdbs = {}
+# for r in allResults:
+#      
+#     if not pdbs.has_key( r.pdbCode ):
+#         pdbs[ r.pdbCode ] = [ 0,0 ]
+#          
+#     success=0
+#     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
+#         pdbs[ r.pdbCode ][0] += 1
+#     else:
+#         pdbs[ r.pdbCode ][1] += 1
+#          
+# for k in sorted( pdbs.keys() ):
+#     print k, pdbs[k]
+ 
+#sys.exit()
+
+# r1 = {}
+# r2 = {}
+# r3 = {}
+# 
+# for r in allResults:
+#     
+#     success=0
+#     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
+#         success = 1
+#    
+#     if not r1.has_key( r.ensembleNumModels ):
+#         r1[ r.ensembleNumModels ] = [ 0, 0 ]
+#         
+#     if not r2.has_key( r.ensembleNumModels ):
+#         r2[ r.ensembleNumModels ] = [ 0, 0 ]
+#         
+#     if not r3.has_key( r.ensembleNumModels ):
+#         r3[ r.ensembleNumModels ] = [ 0, 0 ]
+#         
+#    
+#     if r.ensembleRadiusThreshold == 1:
+#         if success == 0:
+#             r1[ r.ensembleNumModels ][0] +=1
+#         else:
+#             r1[ r.ensembleNumModels ][1] +=1
+#             
+#     if r.ensembleRadiusThreshold == 2:
+#         if success == 0:
+#             r2[ r.ensembleNumModels ][0] +=1
+#         else:
+#             r2[ r.ensembleNumModels ][1] +=1
+#             
+#     if r.ensembleRadiusThreshold == 3:
+#         if success == 0:
+#             r3[ r.ensembleNumModels ][0] +=1
+#         else:
+#             r3[ r.ensembleNumModels ][1] +=1
+#        
+#    
+#     #pdata.append( [ r.ensembleNumResidues, cc, success ]  )
+#     #pdata.append( [ r.ensemblePercentModel, cc, success ]  )
+# 
+# 
+# print r1
+# print r2
+# print r3
+# 
+# pdata = [ [ 'numModels', 'r1Fail', 'r1Success', 'r2Fail', 'r2Success', 'r3Fail', 'r3Success' ]  ]
+# for n in sorted( r1.keys() ):
+#     pdata.append( [ n, r1[ n ][0], r1[ n ][1], r2[ n ][0], r2[ n ][1], r3[ n ][0], r3[ n ][1] ] )
+#     
 
 # smin=100
 # smax=0
@@ -62,15 +129,6 @@ fh.close()
 #     
 #     pdata.append( [ r.ensembleNumModels, r.ensembleRadiusThreshold, success ]   )
 
-
-# maxsmax = 0
-# maxsmin = 1000
-# for r in allResults:
-#     maxsmax = max( r.ensembleNativeMaxsub, maxsmax )
-#     maxsmin = min( r.ensembleNativeMaxsub, maxsmin )
-# 
-# print maxsmax
-# print maxsmin
 
 # successd = {}
 # ensemble = {}
@@ -226,44 +284,109 @@ fh.close()
 
 
 
-# pdata = [ ['phaserLLG','phaserTFZ','CC','success'] ]
-# sn=0
-# sp=0
-# fn=0
-# fp=0
-# nsuccess=0
-# for r in allResults:
-#     success=0
-#     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
-#         nsuccess+=1
-#         success=1
-#     
-#     cc = r.shelxeCC
-#     if cc == None:
-#         cc = -1
-#        
-#     if r.mrProgram == 'phaser' and r.phaserLLG != None and r.phaserTFZ != None:
-#         llg = r.phaserLLG
-#         if success==1:
-#             if llg < 0:
-#                 sn+=1
-#             else:
-#                 sp+=1
-#         elif success==0:
-#             if llg < 0:
-#                 fn+=1
-#             else:
-#                 fp+=1
-#              
-#         if llg < -1000:
-#             llg = -1000
-#         pdata.append( [ llg, r.phaserTFZ, cc, success  ]  )
-#           
-# print sp
-# print sn
-# print fp
-# print fn
-# print nsuccess
+pdata = [ ['phaserLLG','phaserTFZ','killed','CC','success'] ]
+
+nsuccess=0
+nfail=0
+njobs=0
+njobsran=0
+successBelowTFZ5=0
+successNegativeTFZ=0
+successPositiveTFZ=0
+successNegativeLLG=0
+successPositiveLLG=0
+minLLGsuccess=1
+minTFZsuccess=1
+res=None
+nwierds=0
+nwierdf=0
+nwierds=0
+nkilled=0
+nnotkilled=0
+
+for r in allResults:
+
+    njobs+=1
+
+    cc = r.shelxeCC
+    if cc == None:
+        cc = -1
+
+    success=0
+    if cc >= 25 and r.shelxeAvgChainLength >= 10:
+        success=1
+      
+    killed=0
+    if r.phaserKilled:
+        killed=1
+        nkilled += 1
+    else:
+        nnotkilled+=1
+     
+    #if r.mrProgram == 'phaser' and r.phaserLLG != None and r.phaserTFZ != None:
+    if r.phaserLLG == None and r.phaserTFZ == None:
+        # JObs where presumably nothing ran
+        if success:
+            print "DOUBLE ",r.pdbCode, r.ensembleName
+        continue
+    
+    if killed:
+        # For now ignore killed jobs
+        continue
+ 
+    if r.phaserLLG != None and r.phaserTFZ != None:
+
+        njobsran+=1
+        
+        llg = r.phaserLLG
+        tfz = r.phaserTFZ
+        if success==1:
+            nsuccess+=1
+            if llg < 0:
+                successNegativeLLG += 1
+            else:
+                successPositiveLLG += 1
+            
+            if llg < 5:
+                successBelowTFZ5+=1
+                 
+            if llg < minLLGsuccess:
+                minLLGsuccess=llg
+                res="{0} {1}".format( r.pdbCode,r.ensembleName  )
+
+            if tfz < 0:
+                successNegativeTFZ += 1
+            else:
+                successPositiveTFZ += 1
+
+            if tfz < minTFZsuccess:
+                minTFZsuccess=tfz
+
+        elif success==0:
+            nfail += 1
+        
+        MINLLG=-3000
+        if llg < MINLLG:
+            llg = MINLLG
+        pdata.append( [ llg, r.phaserTFZ, killed, cc, success  ]  )
+         
+         
+print "njobs ",njobs
+print "njobsran ",njobsran
+print "nsuccess ",nsuccess
+print "nfail ",nfail
+print "nwierds ",nwierds
+print "nwierdf ",nwierdf
+print "nkilled ",nkilled
+print "nnotkilled ",nnotkilled
+print "successBelowTFZ5 ",successBelowTFZ5
+print "successPositiveTFZ ",successPositiveTFZ
+print "successNegativeTFZ ",successNegativeTFZ
+print "successPositiveLLG ",successPositiveLLG
+print "successNegativeLLG ",successNegativeLLG
+print "minLLGsuccess ",minLLGsuccess
+print "minTFZsuccess ",minTFZsuccess
+
 
 # molrepSuccess=0
 # phaserSuccess=0
@@ -301,10 +424,24 @@ fh.close()
 #     
 # csvfile.close()
 
-# duff=99999
+# duff=9999
 # failed = []
 # success = []
-# pdata = [ ['reforiginRmsd','ensembleNativeMaxsub','success'] ]
+
+# maxsmax = 0
+# maxsmin = 1000
+# for r in allResults:
+#     maxsmax = max( r.ensembleNativeMaxsub, maxsmax )
+#     maxsmin = min( r.ensembleNativeMaxsub, maxsmin )
+# 
+# print maxsmax
+# print maxsmin
+
+# minTM=1000
+# maxTM=0
+# minRmsd=1000
+# maxRmsd=0
+# pdata = [ ['reforiginRmsd','ensembleNativeTM', 'ensembleNativeRmsd', 'success'] ]
 # for r in allResults:
 #     jsuccess=None
 #     if r.shelxeCC > 30 and r.shelxeAvgChainLength > 10:
@@ -313,20 +450,29 @@ fh.close()
 #     else:
 #         jsuccess=0
 #         failed.append( r )
-#      
+#       
 #     rmsd = r.reforiginRmsd
 #     if r.reforiginRmsd == None or r.reforiginRmsd == duff:
 #         rmsd = -1
-#          
-#     pdata.append( [ rmsd, r.ensembleNativeMaxsub, jsuccess  ]  )
-  
+#         
+#     minTM = min( r.ensembleNativeTM, minTM )
+#     maxTM = max( r.ensembleNativeTM, maxTM )
+#     minRmsd = min( r.ensembleNativeRmsd, minRmsd )
+#     maxRmsd = max( r.ensembleNativeRmsd, maxRmsd )
+#           
+#     pdata.append( [ rmsd, r.ensembleNativeTM, r.ensembleNativeRmsd, jsuccess  ]  )
+# 
+# print "minTM ",minTM
+# print "maxTM ",maxTM
+# print "minRmsd ",minRmsd
+# print "maxRmsd ",maxRmsd
     
 # ensembleData = {}
 # for r in allResults:
 #     if r.pdbCode not in ensembleData.keys():
 #         ensembleData[ r.pdbCode ] = {}
 #     
-#         pfile = os.path.join( TMdir, r.pdbCode, "ROSETTA_MR_0/resultsd.pkl")
+#         pfile = os.path.join( DataDir, r.pdbCode, "ROSETTA_MR_0/resultsd.pkl")
 #         f = open( pfile )
 #         ad = cPickle.load( f  )
 #         f.close()

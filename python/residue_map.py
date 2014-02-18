@@ -4,65 +4,211 @@ Useful manipulations on PDB files
 
 # Python imports
 import os
-import sys
+import types
 import unittest
 
 # our imports
-import ample_util
 import pdb_edit
 import pdb_model
 
 class residueSequenceMap( object ):
     """Class for handling mapping between model and native residue indices.
     
-    The mapping is based on the model, so it starts at the first model residue and continues to the end.
-    
-    If the native is longer than the model, we ignore any residues that are outside the model - so you
-    will get an index error if you query for residues beyond the length of the model.
-    
      """
     
-    def __init__( self, nativePdb, modelPdb ):
+    def __init__( self, refPdb=None, targetPdb=None ):
         
-        # Matching and ordered lists of the resSeq in the model and native
-        # The model list is "complete" so the first residue in the model will be at pos 0 and
-        # the last item will be the last residue
-        self.modelResSeq = []
-        self.nativeResSeq = []
         
-        # An array mapped onto the resSeq arrays that has True where there are no cALpha atoms
-        self.cAlphaMask = []
+        self.refResSeq = []
+        self.refSequence = None
+        self.refCAlphaMask = []
+        self.refBbMask = []
+        self.refOffset = None
+        self._refIncomparable = None # List of atoms in the model that cannot be compared to the model
         
-        self.calc_map(nativePdb, modelPdb)
+        self.targetResSeq = []
+        self.targetSequence = None
+        self.targetCAlphaMask = []
+        self.targetBbMask = []
+        self.targetOffset = None # Where the matched part of the sequences starts in the model
+        self._targetIncomparable = None # List of atoms in the model that cannot be compared to the native
+        
+        self.lenMatch = None
+
+        # The window of AA we used to check for a match    
+        self.probeLen = 10
+        
+        # maxInset is the max number of AA into the sequence that we will go searching for a match - i.e. if more
+        # then maxInset AA at the start are non-matching, we won't find the match 
+        self.maxInset = 30
+        
+        # Like this just for testing
+        if refPdb and targetPdb:
+            self.calc_map(refPdb, targetPdb)
         
         return
     
-    def native2model( self, nativeResSeq ):
-        """Return the model resSeq for the given native resSeq"""
-        return self.modelResSeq[ self.nativeResSeq.index( nativeResSeq ) ]
-    
-    def model2native( self, modelResSeq):
-        """Return the native resSeq for the given native resSeq"""
-        return self.nativeResSeq[ self.modelResSeq.index( modelResSeq ) ]
+    def ref2target( self, refResSeq ):
+        """Return the target resSeq for the given reference resSeq.
+        This will calculate a resSeq in the target if there isn't one.
+        """
+        
+        # Work out how many residues from the start of the matching region this residue is in the target
+        indent = refResSeq - self.refResSeq[ self.refOffset ]
+        
+        # calculate the corresponding index in the reference
+        targetResSeq = self.targetResSeq[ self.targetOffset ] + indent
+        
+        ## paranoid check
+        #if 0 < self.targetOffset + indent < len( self.targetResSeq ):
+        #    assert targetResSeq == self.targetResSeq[ self.targetOffset + indent ]
+        
+        return targetResSeq
+         
+    def target2ref( self, targetResSeq ):
+        """Return the referece resSeq for the given target resSeq.
+        This will calculate a resSeq in the reference if there isn't one.
+        """
+        
+        # Work out how many residues from the start of the matching region this residue is in the target
+        indent = targetResSeq - self.targetResSeq[ self.targetOffset ]
+        
+        refResSeq = self.refResSeq[ self.refOffset ] + indent
+        
+        ## paranoid check
+        #if 0 < self.refOffset + indent < len( self.refResSeq ):
+        #    assert refResSeq == self.refResSeq[ self.refOffset + indent ]
+        
+        return refResSeq
 
-    def incomparable(self):
-        """Return a list of the indices of any residues that are in the model but not in the native or
-        residues for which there are no c-Alpha atoms in one or other of the models"""
-        return [ resId for i, resId in enumerate( self.modelResSeq ) if ( self.nativeResSeq[ i ] == None or self.cAlphaMask[ i ] ) ]
-    
+    def targetIncomparable( self, cAlphaMask=True, bbMask=False ):
+        """Return a list of the resSeq in the target that cannot be compared to the reference.
+        This includes any where there isn't a corresponding residue in the reference, or there isn't a c-alpha
+        or backbone atom in either (if cAlphaMask or bbMask is set)
+        """
+        
+        if self._targetIncomparable == None:
+            
+            self._targetIncomparable = []
+            for i, resSeq in enumerate( self.targetResSeq ):
+                
+                # Before the start of the matching region
+                if i < self.targetOffset:
+                    self._targetIncomparable.append( resSeq )
+                    continue
+                
+                # After end of matching region
+                if i > self.lenMatch + 1:
+                    self._targetIncomparable.append( resSeq )
+                    continue
+                
+                # In matching region but no C-alpha
+                if cAlphaMask:
+                    if self.targetCAlphaMask[ i ]:
+                        self._targetIncomparable.append( resSeq )
+                        continue
+                    
+                # In matching region but no complete bbatoms
+                if bbMask:
+                    if self.targetBbMask[ i ]:
+                        self._targetIncomparable.append( resSeq )
+                        continue
+                
+                # Matching residues in reference
+                refResSeq = self.target2ref( resSeq )
+                try:
+                    j = self.refResSeq.index( refResSeq )
+                except ValueError:
+                    # A residue that isn't actually in the reference
+                    self._targetIncomparable.append( resSeq )
+                    continue
+                
+                # No C-Alpha
+                if cAlphaMask:
+                    if self.refCAlphaMask[ j ]:
+                        self._targetIncomparable.append( resSeq )
+                        continue
+                    
+                # No bbMask
+                if bbMask:
+                    if self.refBbMask[ j ]:
+                        self._targetIncomparable.append( resSeq )
+                        continue
+            
+        return self._targetIncomparable
+
+    def refIncomparable( self, cAlphaMask=True, bbMask=False ):
+        """Return a list of the resSeq in the reference that cannot be compared to the target.
+        This includes any where there isn't a corresponding residue in the target, or there isn't a c-alpha
+        or backbone atom in either (if cAlphaMask or bbMask is set)
+        """
+        
+        if self._refIncomparable == None:
+            self._refIncomparable = []
+            for i, resSeq in enumerate( self.refResSeq ):
+                
+                # Before the start of the matching region
+                if i < self.refOffset:
+                    self._refIncomparable.append( resSeq )
+                    continue
+
+                # After end of matching region
+                if i > self.lenMatch + 1:
+                    self._refIncomparable.append( resSeq )
+                    continue
+
+                # In matching region but no C-alpha
+                if cAlphaMask:
+                    if self.refCAlphaMask[ i ]:
+                        self._refIncomparable.append( resSeq )
+                        continue
+                    
+                # In matching region but no complete bbatoms
+                if bbMask:
+                    if self.refBbMask[ i ]:
+                        self._refIncomparable.append( resSeq )
+                        continue
+                
+                # Matching residues in reference
+                targetResSeq = self.ref2target( resSeq )
+                try:
+                    j = self.targetResSeq.index( targetResSeq )
+                except ValueError:
+                    # A residue that isn't actually in the reference
+                    self._refIncomparable.append( resSeq )
+                    continue
+                
+                # No C-Alpha
+                if cAlphaMask:
+                    if self.targetCAlphaMask[ j ]:
+                        self._refIncomparable.append( resSeq )
+                        continue
+                    
+                # No bbMask
+                if bbMask:
+                    if self.targetBbMask[ j ]:
+                        self._refIncomparable.append( resSeq )
+                        continue
+            
+        return self._refIncomparable
+
     def __str__(self):
+        me = {}
+        for slot in dir(self):
+            attr = getattr(self, slot)
+            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
+              isinstance(attr, types.FunctionType) ):
+                me[slot] = attr
         
-        s = "residueSequenceMap: {0}\n".format( self.__repr__() )
-        s += "Model: {0}\n".format( self.modelResSeq )
-        s+= "Native: {0}\n".format( self.nativeResSeq )
-        s+= "cAlphaMask: {0}\n".format( self.cAlphaMask )
-        
+        s = self.__repr__() + "\n"
+        for k in sorted( me.keys() ):
+            s += "{0}: {1}\n".format( k, me[k]  )
         return s
     
     def calc_map( self, nativePdb, modelPdb ):
         
-        self.native_seq, self.native_idx, self.native_camask = self.read_pdb( nativePdb )
-        self.model_seq, self.model_idx, self.model_camask = self.read_pdb( modelPdb )
+        self.refSequence, self.refResSeq, self.refCAlphaMask = self.read_pdb( nativePdb )
+        self.targetSequence, self.targetResSeq, self.targetCAlphaMask = self.read_pdb( modelPdb )
         
         self._calc_map()
         
@@ -73,117 +219,213 @@ class residueSequenceMap( object ):
         Only works if 1 chain in either file and with standard residues
         """
         
-        if len(self.native_seq) < 10 or len(self.model_seq) < 10:
-            raise RuntimeError,"Very short sequences - this will not work!"
+        #if len(self.refSequence) < self.probeLen or len(self.targetSequence) < self.probeLen:
+        #    raise RuntimeError,"Very short sequences - this will not work: {0}  : {1}".format( self.refSequence, self.targetSequence )
         
-        # The window of AA we used to check for a match    
-        PROBE_LEN = 10
+        # Find where they match at the start
+        self.refOffset, self.targetOffset = self._calcOffset( self.refSequence, self.targetSequence )
+        #print "Got refOffset, ", self.refOffset
+        #print "Got refResSeq ",self.refResSeq[ self.refOffset ]
+        #print "Got targetOffset ", self.targetOffset
+        #print "Got targetResSeq ",self.targetResSeq[ self.targetOffset ]
         
-        # MAXINSET is the max number of AA into the sequence that we will go searching for a match - i.e. if more
-        # then MAXINSET AA are non-matching, we won't find the match 
-        l = len( self.model_seq ) if len( self.model_seq ) < len( self.native_seq ) else len( self.native_seq )
-        MAXINSET=30 if l > 30 else ( l - PROBE_LEN )
+        self.lenMatch = self._lenMatch()
+        
+        self._checkContiguous()
+        
+        return
+    
+    def _XcheckContiguous(self):
+        """UNUSED"""
+        #
+        # Check that there is congiuous resSeq numbering as otherwise the map in current form won't work
+        #
+        # For reference
+        previous=self.refResSeq[ self.refOffset ]
+        for i in range( self.refOffset + 1, self.refOffset + self.lenMatch ):
+            
+            if self.refResSeq[ i ] != previous + 1:
+                raise RuntimeError,"Non-contiguous residue numbering in refSequence for {0} to {1}".format( previous, self.refResSeq[ i ] )
+            
+            previous = self.refResSeq[ i ]
+            #print "GOT i {0}, refResSeq {1}, refSequence {2}".format(  i, self.refResSeq[ i ], self.refSequence[ i ]  )
+        
+        # Now for target
+        previous=self.targetResSeq[ self.targetOffset ]
+        for i in range( self.targetOffset + 1, self.targetOffset + self.lenMatch ):
+            
+            if self.targetResSeq[ i ] != previous + 1:
+                raise RuntimeError,"Non-contiguous residue numbering in refSequence for {0} to {1}".format( previous, self.targetResSeq[ i ] )
+            
+            previous = self.targetResSeq[ i ]
+            #print "GOT i {0}, targetResSeq {1}, targetSequence {2}".format(  i, self.targetResSeq[ i ], self.targetSequence[ i ]  )
+         
+        return
+    
+    def _checkContiguous(self):
+        """
+        Check that there is congiuous resSeq numbering as otherwise the map in current form won't work
+        Can only check from the start while residues are matching - won't work after the first gap
+        """
+        p_refResSeq = p_targetResSeq = None
+        for count in range( self.lenMatch ):
+            
+            refIdx = self.refOffset + count
+            refAA = self.refSequence[ refIdx ]
+            refResSeq = self.refResSeq[ refIdx ]
+            
+            targetIdx = self.targetOffset + count
+            targetAA = self.targetSequence[ targetIdx ]
+            targetResSeq = self.targetResSeq[ targetIdx ]
+            
+            if count != 0:
+                
+                # Need to stop after the first gap
+                if refAA != targetAA:
+                    break
+                
+                # Complain if the residues match but the numbering doesn't
+                if refResSeq != p_refResSeq + 1 or targetResSeq !=  p_targetResSeq + 1:
+                    raise RuntimeError,"Non-contiguous residue numbering: {0}->{1} and {2}->{3}".format( p_refResSeq, refResSeq, p_targetResSeq, targetResSeq  )
+            
+            p_refResSeq = refResSeq
+            p_targetResSeq = targetResSeq
+            
+        return
+     
+    
+    def _calcOffset(self, refSequence, targetSequence, reverse=False ):
+        
+        # Probe length dependant on protein size - is length of shortest protein or the default
+        shortest = min( len(targetSequence), len(refSequence) )
+        probeLen = min( self.probeLen, shortest )
+        
+        # Work out how far we can probe into each sequence
+        if len( targetSequence ) - probeLen >= self.maxInset:
+            targetMaxInset = self.maxInset
+        else:
+            targetMaxInset =  len( targetSequence ) - probeLen 
+        
+        if len( refSequence ) - probeLen >= self.maxInset:
+            refMaxInset = self.maxInset
+        else:
+            refMaxInset =  len( refSequence ) - probeLen 
+
+        #print "GOT targetMaxInset, refMaxInset, probeLen ",targetMaxInset, refMaxInset, probeLen
+
+        # If checking from the end, reverse the strings
+        if reverse:
+            refSequence = refSequence[::-1]
+            targetSequence = targetSequence[::-1]
         
         got=False
-        for model_i in range( MAXINSET + 1 ):
-            probe = self.model_seq[ model_i : model_i+PROBE_LEN ]
+        for targetOffset in range( targetMaxInset + 1 ):
+            probe = targetSequence[ targetOffset : targetOffset + probeLen ]
             #print "PROBE ",probe
-            for native_i in range( MAXINSET + 1 ):
-                #print "TEST ",self.native_seq[ native_i:native_i+PROBE_LEN ]
-                if self.native_seq[ native_i:native_i+PROBE_LEN ] == probe:
+            for refOffset in range( refMaxInset + 1 ):
+                #print "TEST ",refSequence[ refOffset:refOffset + probeLen ]
+                if refSequence[ refOffset:refOffset + probeLen ] == probe:
                     got=True
                     break
             
             if got:
-#                 print "GOT MODEL MATCH AT i,j ",model_i,native_i
+#                 print "GOT MODEL MATCH AT i,j ",targetOffset,refOffset
                 break
             
         if not got:
-            raise RuntimeError,"Could not calculate map!"
+            raise RuntimeError,"Could not calculate map for:\n{0}\n{1}".format( refSequence, targetSequence )
         
-        # Now we know where they start we can sort out the indicies
-        # map goes from the model -> native. For any in model that are not in native we set them to None
-        self.modelResSeq = self.model_idx
+        return ( refOffset, targetOffset )
+    
+    def _lenMatch(self):
+        refBackOffset, targetBackOffset = self._calcOffset( self.refSequence, self.targetSequence, reverse=True )
+        #print "Got refBackOffset, ", refBackOffset
+        #print "Got targetBackOffset ", targetBackOffset
+        # Calculate match from the residue numbers - use reference for now
+        length = self.refResSeq[ len(self.refSequence) - 1 - refBackOffset ] - self.refResSeq[ self.refOffset ] + 1
         
-        # reset masks
-        self.cAlphaMask = [ False ] * len( self.model_seq )
+        if length > len(self.refResSeq) and length > len(self.targetResSeq):
+            raise RuntimeError, "Match of {0} is longer than both of the sequences!".format( length )
         
-        for i in range( len( self.model_seq ) ):
-            
-            if i < model_i:
-                # These are residues that are present in the model but not in the native
-                self.nativeResSeq.append( None )
-                
-                if self.model_camask[ i ]:
-                    self.cAlphaMask[ i ] = True
-                    
-                continue
-            
-            pos = i - model_i + native_i
-            if pos >= len( self.native_idx ):
-                self.nativeResSeq.append( None )
-            else:
-                self.nativeResSeq.append( self.native_idx[ pos ] )
-                # Add any masks
-                if self.model_camask[ i ]:
-                    self.cAlphaMask[ i ] = True
-                if self.native_camask[ pos ]:
-                    self.cAlphaMask[ i ] = True
+        return length
+
+    def fromInfo(self, refInfo=None, refChainID=None, targetInfo=None, targetChainID=None, modelIdx=0):
+        """Create a map from 2 info objects"""
         
-        if len(self.nativeResSeq) != len(self.modelResSeq):
-            raise RuntimeError, "Mismatching maps: {0}".format( self ) 
-            
+        # Determine index of chain so we know where to get the data from
+        nativeIdx = refInfo.models[ modelIdx ].chains.index( refChainID )
+
+        self.refResSeq = refInfo.models[ modelIdx ].resSeqs[ nativeIdx ]
+        self.refSequence = refInfo.models[ modelIdx ].sequences[ nativeIdx ]
+        self.refCAlphaMask = refInfo.models[ modelIdx ].caMask[ nativeIdx ]
+        self.refBbMask = refInfo.models[ modelIdx ].bbMask[ nativeIdx ]
+        self.refOffset = None
+        self._refIncomparable = None
+
+        targetIdx = targetInfo.models[ modelIdx ].chains.index( targetChainID )
+        self.targetResSeq = targetInfo.models[ modelIdx ].resSeqs[ targetIdx ]
+        self.targetSequence = targetInfo.models[ modelIdx ].sequences[ targetIdx ]
+        self.targetCAlphaMask = targetInfo.models[ modelIdx ].caMask[ targetIdx ]
+        self.targetBbMask =  targetInfo.models[ modelIdx ].bbMask[ targetIdx ]
+        self.targetOffset = None
+        self._targetIncomparable = None
+        
+        #print "refSequence    ",self.refSequence
+        #print "targetSequence   ", self.targetSequence
+        
+        self._calc_map()
+        
         return
     
     def read_pdb( self, pdb ):
         """Get sequence as string of 1AA
         get list of matching resSeq
         """
-        
+         
         atomTypes = [] # For checking we have all required atom types
-    
+     
         resSeq = []
         resName = []
         _atomTypes = []
         atomTypesList = []
-        
+         
         chain=None
         readingResSeq=None
         readingResName=None
         for line in open( pdb ):
-            
+             
             if line.startswith("MODEL"):
                 raise RuntimeError,"FOUND MULTI_MODEL FILE!"
-            
+             
             if line.startswith("TER"):
                 break
-            
+             
             if line.startswith("ATOM"):
-                
+                 
                 atom = pdb_model.PdbAtom( line )
-                
+                 
                 if not chain:
                     chain = atom.chainID
-                
+                 
                 if atom.chainID != chain:
                     raise RuntimeError," FOUND ADDITIONAL CHAIN"
                     break
-                    
+                     
                 # First atom in first residue
                 if readingResSeq == None:
                     readingResSeq = atom.resSeq
                     readingResName = atom.resName
                     _atomTypes.append( atom.name.strip() )
                     continue
-                
+                 
                 if readingResSeq != atom.resSeq:
                     # Adding a new residue
-                    
+                     
                     # Add the atom we've just finished reading
                     resName.append( readingResName )
                     resSeq.append( readingResSeq )
                     atomTypesList.append( _atomTypes )
-                    
+                     
                     # Reset
                     readingResSeq = atom.resSeq
                     readingResName = atom.resName
@@ -191,19 +433,19 @@ class residueSequenceMap( object ):
                 else:
                     if atom.name not in _atomTypes:
                         _atomTypes.append( atom.name.strip() )
-                        
+                         
         # End reading loop
-
+ 
         # Add the atom we've just finished reading
         resName.append( readingResName )
         resSeq.append( readingResSeq )
         atomTypesList.append( _atomTypes )
-        
+         
         sequence = ""
         # Build up the sequence
         for n in resName:
             sequence += pdb_edit.three2one[ n ]
-        
+         
         # Build up the mask
         cAlphaMask = []
         for atomTypes in atomTypesList:
@@ -211,98 +453,85 @@ class residueSequenceMap( object ):
                 cAlphaMask.append( True )
             else:
                 cAlphaMask.append( False )
-        
+         
         return ( sequence, resSeq, cAlphaMask )
+    
+    def resSeqMatch(self):
+        """Return true if the residue numbering between the model and native over the aligned region is the same"""
+        
+        #print self.targetResSeq[ self.targetOffset : self.targetOffset + self.lenMatch ]
+        #print self.refResSeq[ self.refOffset : self.refOffset + self.lenMatch ]
+        return self.targetResSeq[ self.targetOffset : self.targetOffset + self.lenMatch ] == self.refResSeq[ self.refOffset : self.refOffset + self.lenMatch ]
 
 
 class Test(unittest.TestCase):
 
-    def XtestRefSeqMap(self):
-        """See if we can sort out the indexing between the native and model"""
-        
-        
-        nativePdb = "/media/data/shared/TM/3RLB/3RLB.pdb"
-        modelPdb = "/media/data/shared/TM/3RLB/models/S_00000001.pdb" 
 
-        #modelSeq = "MHHHHHHHHAMSNSKFNVRLLTEIAFMAALAFIISLIPNTVYGWIIVEIACIPILLLSLRRGLTAGLVGGLIWGILSMITGHAYILSLSQAFLEYLVAPVSLGIAGLFRQKTAPLKLAPVLLGTFVAVLLKYFFHFIAGIIFWSQYAWKGWGAVAYSLAVNGISGILTAIAAFVILIIFVKKFPKLFIHSNY"
-        #modelIdx = [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192 ]
-        #nativeSeq = "NVRLLTEIAFMAALAFIISLIPNTVYGWIIVEIACIPILLLSLRRGLTAGLVGGLIWGILSMITGHAYILSLSQAFLEYLVAPVSLGIAGLFRQKTAPLKLAPVLLGTFVAVLLKYFFHFIAGIIFWSQYAWKGWGAVAYSLAVNGISGILTAIAAFVILIIFVKKFPKLFIHSNY"
-        nativeIdx = [ 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182 ]
-        
-        nativeResSeq = [ None ] * 16 + nativeIdx
-        
-        PE = pdb_edit.PDBEdit()
-        
-        tmpf = ample_util.tmpFileName()+".pdb"
-        PE.extract_chain( nativePdb, tmpf, chainID='A' )
-        
-        refSeqMap = PE.get_resseq_map( tmpf, modelPdb )
-        
-        self.assertEqual( refSeqMap.nativeResSeq, nativeResSeq, "map doesn't match")
-        
-        os.unlink( tmpf )
-        
-        return
-    
-    def XtestRefSeqMap2(self):
-        """See if we can sort out the indexing between the native and model"""
-        
-        
-        nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
-        modelPdb = "/media/data/shared/TM/3U2F/models/S_00000001.pdb" 
-
-        nativeResSeq = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, None, None ]
-        
-        PE = pdb_edit.PDBEdit()
-        
-        tmp1 = ample_util.tmpFileName()+".pdb"
-        PE.standardise( nativePdb, tmp1 )
-        
-        tmp2 = ample_util.tmpFileName()+".pdb"
-        PE.extract_chain( tmp1, tmp2, chainID='K' )
-        
-        refSeqMap = PE.get_resseq_map( tmp2, modelPdb )
-        
-        self.assertEqual( refSeqMap.nativeResSeq, nativeResSeq, "map doesn't match")
-        
-        os.unlink( tmp1 )
-        os.unlink( tmp2 )
-        
-        return
-
-    def XtestResSeqMap3(self):
+    def testResSeqMap1(self):
         """See if we can sort out the indexing between the native and model"""
 
         resSeqMap = residueSequenceMap()
         
-        resSeqMap.model_seq = ['G', 'G', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'F', 'F', 'F', 'F', 'F', 'F']
-        resSeqMap.model_idx = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        resSeqMap.model_camask = [False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False]
-        resSeqMap.model_bbmask = [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
+        resSeqMap.targetSequence = ['G', 'G', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'F', 'F', 'F', 'F', 'F', 'F']
+        resSeqMap.targetResSeq = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        resSeqMap.targetCAlphaMask = [False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False]
         
-        resSeqMap.native_seq = [ 'H', 'H', 'H', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A' ]
-        resSeqMap.native_idx = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-        resSeqMap.native_camask = [False, False, False, False, False, False, True, False, False, False, False, False, False]
-        resSeqMap.native_bbmask = [True, False, False, False, False, False, False, False, False, False, False, False, False]
+        resSeqMap.refSequence = [ 'H', 'H', 'H', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'A', 'G', 'G', 'G', 'G', 'G', 'G' ]
+        resSeqMap.refResSeq = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 ]
+        resSeqMap.refCAlphaMask = [False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False]
         
         resSeqMap._calc_map()
         
-        native = [None, None, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, None, None, None, None, None, None]
-        cAlphaMask = [False, False, False, False, True, True, False, False, False, False, False, False, False, False, False, False, False, False]
+        self.assertEqual( resSeqMap.targetOffset, 2)
+        self.assertEqual( resSeqMap.refOffset, 3)
+        self.assertEqual( resSeqMap._lenMatch(), 10)
         
-        self.assertEqual( resSeqMap.modelResSeq, resSeqMap.model_idx)
-        self.assertEqual( resSeqMap.nativeResSeq, native)
-        self.assertEqual( resSeqMap.cAlphaMask, cAlphaMask)
+        self.assertEqual( resSeqMap.ref2target( 0 ), -6 )
+        self.assertEqual( resSeqMap.ref2target( 3 ), -3 )
+        
+        self.assertEqual( resSeqMap.target2ref( 1 ), 7 )
+        self.assertEqual( resSeqMap.target2ref( 12 ), 18 )
+        self.assertEqual( resSeqMap.target2ref( 6 ), 12 )
+        
+        self.assertEqual( resSeqMap.targetIncomparable(), [-5,-4,-1, 0, 7, 8, 9, 10, 11, 12] )
+        self.assertEqual( resSeqMap.refIncomparable(), [ 0, 1, 2, 5, 6, 12, 13, 14, 15, 16, 17, 18 ] )
+        
+        # Check ends match up
+        m1 = resSeqMap.targetResSeq[ resSeqMap.targetOffset ]
+        n1 = resSeqMap.target2ref( m1 )
+        self.assertEqual( m1, resSeqMap.ref2target(n1) )
+        re = resSeqMap.refResSeq[ resSeqMap.refOffset + resSeqMap.lenMatch - 1  ]
+        self.assertEqual( resSeqMap.ref2target( re ), resSeqMap.targetResSeq[ resSeqMap.targetOffset + resSeqMap.lenMatch - 1  ] )
         
         
         return
     
-    def testResSeqMap4(self):
+    def testRefSeqMap2(self):
+        """See if we can sort out the indexing between the native and model"""
+        
+        
+        nativePdb = "../tests/testfiles//2XOV.pdb"
+        modelPdb = "../tests/testfiles/2XOV_S_00000001.pdb" 
+        
+        resSeqMap = residueSequenceMap( nativePdb, modelPdb )
+        
+        self.assertEqual( 181, resSeqMap._lenMatch() )
+        # Check ends match up
+        m1 = resSeqMap.targetResSeq[ resSeqMap.targetOffset ]
+        n1 = resSeqMap.target2ref( m1 )
+        self.assertEqual( m1, resSeqMap.ref2target(n1) )
+        re = resSeqMap.refResSeq[ resSeqMap.refOffset + resSeqMap.lenMatch - 1  ]
+        self.assertEqual( resSeqMap.ref2target( re ), resSeqMap.targetResSeq[ resSeqMap.targetOffset + resSeqMap.lenMatch - 1  ] )
+        
+        return
+    
+    def testResSeqMap3(self):
         """See if we can sort out the indexing between the native and model"""
         
         
         nativePdb = "../tests/testfiles/2UUI.pdb"
-        modelPdb = "../tests/testfiles/2UUI_S_00000001.pdb" 
+        modelPdb = "../tests/testfiles/2UUI_S_00000001.pdb"
+        
         PE = pdb_edit.PDBEdit()
         chainA = "2UUI_A.pdb"
         PE.extract_chain( nativePdb, chainA, chainID='A' )
@@ -310,49 +539,53 @@ class Test(unittest.TestCase):
         PE.standardise(chainA, chainAstd)
         
         resSeqMap = residueSequenceMap( chainA, modelPdb )
-        model = [ i for i in range(1,157)]
-        native = [ i - 5 for i in range(156)]
-        cAlphaMask = [ False ] * 155 + [ True ]
         
-        self.assertEqual( resSeqMap.modelResSeq, model)
-        self.assertEqual( resSeqMap.nativeResSeq, native)
-        self.assertEqual( resSeqMap.cAlphaMask, cAlphaMask)
+        self.assertEqual( 156, resSeqMap._lenMatch() )
+
+        
+        nativeMask = [ False ] * 155 + [ True ]
+        self.assertEqual( resSeqMap.refCAlphaMask, nativeMask)
+        
+        self.assertEqual( resSeqMap.ref2target(10), 16  )
+        self.assertEqual( resSeqMap.target2ref(155), 149 )
+        
+        # Check ends match up
+        m1 = resSeqMap.targetResSeq[ resSeqMap.targetOffset ]
+        n1 = resSeqMap.target2ref( m1 )
+        self.assertEqual( m1, resSeqMap.ref2target(n1) )
+        re = resSeqMap.refResSeq[ resSeqMap.refOffset + resSeqMap.lenMatch - 1  ]
+        self.assertEqual( resSeqMap.ref2target( re ), resSeqMap.targetResSeq[ resSeqMap.targetOffset + resSeqMap.lenMatch - 1  ] )
         
         os.unlink( chainA )
         os.unlink( chainAstd )
         
         return
-
-    def XtestKeepMatching(self):
-        """XX"""
+    
+    def testResSeqMap4(self):
+        """See if we can sort out the indexing between the native and model"""
         
-        nativePdb = "/media/data/shared/TM/3U2F/3U2F.pdb"
-        modelPdb = "/media/data/shared/TM/3U2F/models/S_00000001.pdb"
-        refinedPdb = "/media/data/shared/TM/3U2F/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_0.21093_rad_2_molrep_mrbump/data/loc0_ALL_poly_ala_trunc_0.21093_rad_2/unmod/mr/molrep/refine/refmac_molrep_loc0_ALL_poly_ala_trunc_0.21093_rad_2_UNMOD.pdb"
-# 
+        
+        nativePdb = "/media/data/shared/coiled-coils/ensemble/1K33/1K33.pdb"
+        modelPdb = "/media/data/shared/coiled-coils/ensemble/1K33/models/S_00000001.pdb"
+        
         PE = pdb_edit.PDBEdit()
-        tmp1 = ample_util.tmpFileName()+".pdb"
-        PE.standardise( nativePdb, tmp1 )
-         
-        nativec1 = ample_util.tmpFileName()+".pdb"
-        PE.extract_chain( tmp1, nativec1, chainID='K' )
-        resSeqMap = PE.get_resseq_map( nativec1, modelPdb )
-#         
-        refinedc1 = "refinedc1.pdb"
-        PE.extract_chain( refinedPdb, refinedc1, chainID='A' )
-        print "nativec1 ",nativec1
-        matching = "matching.pdb"
-        PE.keep_matching( refpdb=refinedc1, targetpdb=nativec1, outpdb=matching, resSeqMap=resSeqMap )
-       
-#         refpdb = "ref.pdb"
-#         targetpdb = "target.pdb"
-#         PE._keep_matching( refpdb=refpdb, targetpdb=targetpdb, outpdb=matching, resSeqMap=resSeqMap )
-         
-        for f in [ tmp1, nativec1, refinedc1, matching ]:
-            os.unlink( f )
-         
+        nativePdbStd = "1K33_std.pdb"
+        PE.standardise( nativePdb, nativePdbStd )
+        
+        nativeInfo = PE.get_info( nativePdbStd )
+        modelInfo = PE.get_info( modelPdb )
+        
+        resSeqMap = residueSequenceMap( )
+        resSeqMap.fromInfo( nativeInfo, 'A', modelInfo, 'A' )
+        
+
+        
+        #os.unlink( chainA )
+        #os.unlink( chainAstd )
+        
         return
     
+
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()

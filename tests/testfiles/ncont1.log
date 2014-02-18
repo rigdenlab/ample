@@ -1,0 +1,119 @@
+ 
+ ###############################################################
+ ###############################################################
+ ###############################################################
+ ### CCP4 6.3: NCONT                    version 6.3 :         ##
+ ###############################################################
+ User: unknown  Run date: 27/ 1/2014 Run time: 20:47:29 
+
+
+ Please reference: Collaborative Computational Project, Number 4. 1994.
+ "The CCP4 Suite: Programs for Protein Crystallography". Acta Cryst. D50, 760-763.
+ as well as any specific reference in the program write-up.
+
+
+ ------------------------------------------------------------------------------
+
+ PDB file /home/jmht/Documents/test/CC/run5/2ZZO/phaser_loc0_ALL_poly_ala_trunc_18.189603_rad_1_UNMOD.1_reseq_ren_joined.pdb has been read in.
+
+ ------------------------------------------------------------------------------
+  Input cards
+
+ Data line--- source C,N//CA
+ Data line--- target a,b//CA
+ Data line--- maxdist 2.5
+ Data line--- cells 2
+ Data line--- sort target inc
+
+ ------------------------------------------------------------------------------
+
+ Selected  70  source atoms
+ Selected  64  target atoms
+
+ Unit cell numbering:   1 2 3 4 5
+
+ Symmetry transformation matrices in cell 3:
+
+  Operation x,y,z
+      [    1.0000     0.0000    -0.0000]  [    0.0000]
+  T = [    0.0000     1.0000    -0.0000]  [    0.0000]
+      [    0.0000     0.0000     1.0000]  [    0.0000]
+
+  Operation -y,x-y,z
+      [   -0.5000    -0.8660     0.0000]  [    0.0000]
+  T = [    0.8660    -0.5000     0.0000]  [    0.0000]
+      [    0.0000     0.0000     1.0000]  [    0.0000]
+
+  Operation -x+y,-x,z
+      [   -0.5000     0.8660     0.0000]  [    0.0000]
+  T = [   -0.8660    -0.5000     0.0000]  [    0.0000]
+      [    0.0000     0.0000     1.0000]  [    0.0000]
+
+  Operation y,x,-z
+      [   -0.5000     0.8660    -0.0000]  [    0.0000]
+  T = [    0.8660     0.5000    -0.0000]  [    0.0000]
+      [    0.0000     0.0000    -1.0000]  [    0.0000]
+
+  Operation -x,-x+y,-z
+      [   -0.5000    -0.8660     0.0000]  [    0.0000]
+  T = [   -0.8660     0.5000    -0.0000]  [    0.0000]
+      [    0.0000     0.0000    -1.0000]  [    0.0000]
+
+  Operation x-y,-y,-z
+      [    1.0000    -0.0000    -0.0000]  [    0.0000]
+  T = [    0.0000    -1.0000     0.0000]  [    0.0000]
+      [    0.0000     0.0000    -1.0000]  [    0.0000]
+
+ ------------------------------------------------------------------------------
+
+  26 contacts found:
+
+      SOURCE ATOMS               TARGET ATOMS         DISTANCE CELL   SYMMETRY
+
+ /1/C/ 126(ASN). / CA [ C]:  /1/a/ 118(MET). / CA [ C]:   1.76 333 Y,X,-Z
+ /1/N/  39(GLN). / CA [ C]:  /1/a/ 123(GLU). / CA [ C]:   2.31 333 -X+Y,-X,Z
+ /1/N/  42(ASN). / CA [ C]:  /1/a/ 124(ILE). / CA [ C]:   2.27 333 -X+Y,-X,Z
+ /1/N/  43(ASN). / CA [ C]:  /1/a/ 125(ASN). / CA [ C]:   1.35 333 -X+Y,-X,Z
+ /1/N/  41(GLN). / CA [ C]:  /1/a/ 127(TYR). / CA [ C]:   1.06 333 -X+Y,-X,Z
+ /1/N/  45(LEU). / CA [ C]:  /1/a/ 128(THR). / CA [ C]:   2.20 333 -X+Y,-X,Z
+ /1/N/  44(LEU). / CA [ C]:  /1/a/ 129(SER). / CA [ C]:   1.32 333 -X+Y,-X,Z
+ /1/N/  48(ILE). / CA [ C]:  /1/a/ 131(ILE). / CA [ C]:   2.29 333 -X+Y,-X,Z
+ /1/N/  47(ALA). / CA [ C]:  /1/a/ 132(HIS). / CA [ C]:   1.93 333 -X+Y,-X,Z
+ /1/N/  57(LEU). / CA [ C]:  /1/a/ 141(GLN). / CA [ C]:   2.19 333 -X+Y,-X,Z
+                             /1/a/ 142(GLN). / CA [ C]:   2.12 333 -X+Y,-X,Z
+ /1/N/  61(GLY). / CA [ C]:  /1/a/ 144(LYS). / CA [ C]:   2.41 333 -X+Y,-X,Z
+ /1/N/  60(TRP). / CA [ C]:  /1/a/ 145(ASN). / CA [ C]:   1.87 333 -X+Y,-X,Z
+ /1/N/  64(GLN). / CA [ C]:  /1/a/ 148(GLU). / CA [ C]:   2.42 333 -X+Y,-X,Z
+ /1/C/ 125(ASN). / CA [ C]:  /1/b/ 121(ASP). / CA [ C]:   1.52 323 X,Y-1,Z
+ /1/C/ 124(ILE). / CA [ C]:  /1/b/ 122(ARG). / CA [ C]:   1.32 323 X,Y-1,Z
+ /1/C/ 126(ASN). / CA [ C]:  /1/b/ 123(GLU). / CA [ C]:   2.34 323 X,Y-1,Z
+ /1/C/ 122(ARG). / CA [ C]:  /1/b/ 125(ASN). / CA [ C]:   1.67 323 X,Y-1,Z
+ /1/N/  66(GLN). / CA [ C]:  /1/b/ 134(LEU). / CA [ C]:   2.44 424 -X+1,-X+Y-1,-Z+1
+ /1/N/  67(ALA). / CA [ C]:  /1/b/ 134(LEU). / CA [ C]:   1.68 424 -X+1,-X+Y-1,-Z+1
+ /1/N/  63(LYS). / CA [ C]:  /1/b/ 137(GLU). / CA [ C]:   2.12 424 -X+1,-X+Y-1,-Z+1
+                             /1/b/ 138(ALA). / CA [ C]:   1.85 424 -X+1,-X+Y-1,-Z+1
+ /1/N/  59(VAL). / CA [ C]:  /1/b/ 141(GLN). / CA [ C]:   2.29 424 -X+1,-X+Y-1,-Z+1
+ /1/N/  60(TRP). / CA [ C]:  /1/b/ 141(GLN). / CA [ C]:   2.45 424 -X+1,-X+Y-1,-Z+1
+ /1/N/  56(GLN). / CA [ C]:  /1/b/ 145(ASN). / CA [ C]:   2.28 424 -X+1,-X+Y-1,-Z+1
+ /1/C/ 132(HIS). / CA [ C]:  /1/b/ 150(LEU). / CA [ C]:   1.78 444 X-Y+1,-Y+1,-Z+1
+
+
+--------------------------------------------------------------------------
+
+   Contact statistics:
+
+  CELL   FRACT COORD-S   SYM NO   SYM OPERATION              NUM OF CONT-S
+
+  323       0 -1  0        0     X,Y-1,Z                               4
+  333       0  0  0        2     -X+Y,-X,Z                            13
+  333       0  0  0        3     Y,X,-Z                                1
+  424       1 -1  1        4     -X+1,-X+Y-1,-Z+1                      7
+  444       1  1  1        5     X-Y+1,-Y+1,-Z+1                       1
+
+
+  Total 26 contacts
+
+--------------------------------------------------------------------------
+
+ NCONT:  Normal termination
+Times: User:       0.0s System:    0.0s Elapsed:     0:00  

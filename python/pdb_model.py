@@ -6,8 +6,465 @@ Created on 7 Aug 2013
 Classes for holding data from PDB files
 '''
 
+import copy
+import os
 import types
 import unittest
+
+
+class OriginInfo( object ):
+    
+    def __init__(self, spaceGroupLabel=None ):
+        
+        
+        # These are reset on each call
+        self._spaceGroup = None
+        self._redundantSet = None
+        self._nonRedundantSet = None
+        self._floating = False
+        
+        self._setData()
+        
+        if spaceGroupLabel:
+            self._getAlternateOrigins(spaceGroupLabel)
+        
+        return
+    
+    def _setData(self):
+        # Non-redundant origins from:
+        # http://www.ccp4.ac.uk/dist/html/alternate_origins.html
+        # Organised in tuples, with True for the second item if the origin is one of the non-redundant set
+        self._origins = {  
+                           
+                           # TRICLINIC
+                           '1aP' : [ 
+                                     ( [ 'x', 'y', 'z' ], True ),
+                                     ],
+                           
+                           # MONOCLINIC
+                           '2mP' : [
+                                   ( [ 0.0, 'y', 0.0 ], True ),
+                                   ( [ 0.0, 'y', 0.5 ], True ),
+                                   ( [ 0.5, 'y', 0.0 ], True ),
+                                   ( [ 0.5, 'y', 0.5 ], True ),
+                                   ] ,
+          
+                           '2mC' : [
+                                   ( [ 0.0, 'y', 0.0 ], True ),
+                                   ( [ 0.0, 'y', 0.5 ], True ),
+                                   ( [ 0.5, 'y', 0.0 ], False ),
+                                   ( [ 0.5, 'y', 0.5 ], False ),
+                                   ] ,      
+                            
+                           '2mA' : [
+                                   ( [ 0.0, 'y', 0.0 ], True ),
+                                   ( [ 0.0, 'y', 0.5 ], False ),
+                                   ( [ 0.5, 'y', 0.0 ], True ),
+                                   ( [ 0.5, 'y', 0.5 ], False ),
+                                   ] ,
+                            
+                           '2mI' : [
+                                   ( [ 0.0, 'y', 0.0 ], True ),
+                                   ( [ 0.0, 'y', 0.5 ], True ),
+                                   ( [ 0.5, 'y', 0.0 ], False ),
+                                   ( [ 0.5, 'y', 0.5 ], False ),
+                                   ] ,
+                           
+                           # ORTHORHOMBIC
+                            '222oP' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ( [ 0.0, 0.5, 0.0 ], True ),
+                                   ( [ 0.0, 0.5, 0.5 ], True ),
+                                   ( [ 0.5, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.0, 0.5 ], True ),
+                                   ( [ 0.5, 0.5, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ] ,
+                                          
+                            '222oC' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.5, 0.0 ], False ),
+                                   ( [ 0.0, 0.5, 0.5 ], False ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ( [ 0.5, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.0, 0.5 ], True ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], False ),
+                                   ] ,     
+                            
+                            '222oF' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], False ),
+                                   ( [ 0.0, 0.5, 0.0 ], False ),
+                                   ( [ 0.0, 0.5, 0.5 ], False ),
+                                   ( [ 0.25, 0.25, 0.25 ], True ),
+                                   ( [ 0.25, 0.25, 0.75 ], False ),
+                                   ( [ 0.25, 0.75, 0.25 ], False ),
+                                   ( [ 0.25, 0.75, 0.75 ], False ),
+                                   ( [ 0.5, 0.0, 0.0 ], False ),
+                                   ( [ 0.5, 0.0, 0.5 ], False ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ( [ 0.75, 0.25, 0.25 ], False ),
+                                   ( [ 0.75, 0.25, 0.75 ], False ),
+                                   ( [ 0.75, 0.75, 0.25 ], False ),
+                                   ( [ 0.75, 0.75, 0.75 ], True ),
+                                   ] ,
+                            
+                            '222oI' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ( [ 0.0, 0.5, 0.0 ], True ),
+                                   ( [ 0.0, 0.5, 0.5 ], False ),
+                                   ( [ 0.5, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.0, 0.5 ], False ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], False ),
+                                   ] ,
+                           
+                           # TETRAGONAL
+                            '4tP' : [
+                                   ( [ 0.0, 0.0, 'z' ], True ),
+                                   ( [ 0.5, 0.5, 'z' ], True ),
+                                   ] ,           
+                            
+                            '4tI' : [
+                                   ( [ 0.0, 0.0, 'z' ], True ),
+                                   ( [ 0.5, 0.5, 'z' ], False ),
+                                   ] ,             
+        
+                            '422tP' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ( [ 0.5, 0.5, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ] ,
+                           
+                            '422tI' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], False ),
+                                   ] ,
+                           
+                           # TRIGONAL
+                           '3hP' : [
+                                  ( [ 0.0, 0.0, 'z' ], True ),
+                                  ( [ float(1/3), float(2/3), 'z' ], True ),
+                                  ( [ float(2/3), float(1/3), 'z' ], True ),
+                                  ] ,
+                           
+                           '3hR_1' : [
+                                  ( [ 0.0, 0.0, 'z' ], True ),
+                                  ( [float(1/3), float(2/3), 'z' ], False ),
+                                  ( [float(2/3), float(1/3), 'z' ], False ),
+                                  ] ,
+                           
+                           '3hR_2' : [
+                                  ( [ 'x', 'x', 'x' ], True ),
+                                  ] ,
+                           
+                           '312hP' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.0, 0.0, 0.5 ], True ),
+                                  ( [ float(1/3), float(2/3), 0.0 ], True ),
+                                  ( [ float(1/3), float(2/3), 0.5 ], True ),
+                                  ( [ float(2/3), float(1/3), 0.0 ], True ),
+                                  ( [ float(2/3), float(1/3), 0.5 ], True ),
+                                  ] ,
+                           
+                           '321hP' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.0, 0.0, 0.5 ], True ),
+                                  ] ,
+                           
+                           '32hR_1' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.0, 0.0, 0.5 ], True ),
+                                  ( [ float(1/3), float(2/3), float(1/6) ], False ),
+                                  ( [ float(1/3), float(2/3), float(2/3) ], False ),
+                                  ( [ float(2/3), float(1/3), float(1/3) ], False ),
+                                  ( [ float(2/3), float(1/3), float(5/6) ], False ),
+                                  ] ,
+                           
+                           '32hR_2' : [
+                                  ( [ 0.0, 0.0, 0.0 ], True ),
+                                  ( [ 0.5, 0.5, 0.5 ], True ),
+                                  ] ,
+                                              
+                            # HEXAGONAL
+                            '6hP' : [
+                                   ( [ 0.0, 0.0, 'z' ], True ),
+                                   ] ,
+                                  
+                            '622hP' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], True ),
+                                   ] ,
+                                  
+                            # CUBIC
+                            '23cP' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ] ,
+                                                  
+                            '23cF' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], False ),
+                                   ( [ 0.0, 0.5, 0.0 ], False ),
+                                   ( [ 0.0, 0.5, 0.5 ], False ),
+                                   
+                                   ( [ 0.25, 0.25, 0.25 ], True ),
+                                   ( [ 0.25, 0.25, 0.75 ], False ),
+                                   ( [ 0.25, 0.75, 0.25 ], False ),
+                                   ( [ 0.25, 0.75, 0.75 ], False ),
+                                   ( [ 0.5, 0.0, 0.0 ], False ),
+                                   ( [ 0.5, 0.0, 0.5 ], False ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ( [ 0.75, 0.25, 0.25 ], False ),
+                                   ( [ 0.75, 0.25, 0.75 ], False ),
+                                   ( [ 0.75, 0.75, 0.25 ], False ),
+                                   ( [ 0.75, 0.75, 0.75 ], True ),
+                                   ] ,
+        
+                            '23cI' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], False ),
+                                   ] ,                                  
+        
+                            '432cP' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ] ,
+                                                      
+                            '432cF' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.0, 0.0, 0.5 ], False ),
+                                   ( [ 0.0, 0.5, 0.0 ], False ),
+                                   ( [ 0.0, 0.5, 0.5 ], False ),
+                                   ( [ 0.5, 0.0, 0.0 ], False ),
+                                   ( [ 0.5, 0.0, 0.5 ], False ),
+                                   ( [ 0.5, 0.5, 0.0 ], False ),
+                                   ( [ 0.5, 0.5, 0.5 ], True ),
+                                   ] ,                                  
+                                                      
+                            '432cI' : [
+                                   ( [ 0.0, 0.0, 0.0 ], True ),
+                                   ( [ 0.5, 0.5, 0.5 ], False ),
+                                   ] ,                                  
+                            }
+        
+        self._spacegroup2origin = {
+                      # Primitive
+                      'P1'          : self._origins[ '1aP' ],
+                      # MONOCLINIC
+                      'P2'          : self._origins[ '2mP' ],
+                      
+                      'P21'         : self._origins[ '2mP' ],
+                      
+                      'C2'          : self._origins[ '2mC' ],
+                      
+                      'A2'          : self._origins[ '2mA' ],
+                      
+                      'I2'          : self._origins[ '2mI' ],
+                      
+                      # ORTHORHOMBIC
+                      'P 2 2 2'      : self._origins[ '222oP' ],
+                      'P 21 2 2'     : self._origins[ '222oP' ],
+                      'P 2 21 2'     : self._origins[ '222oP' ],
+                      'P 2 2 21'     : self._origins[ '222oP' ],
+                      'P 2 21 21'    : self._origins[ '222oP' ],
+                      'P 21 2 21'    : self._origins[ '222oP' ],
+                      'P 21 21 2'    : self._origins[ '222oP' ],
+                      'P 21 21 21'   : self._origins[ '222oP' ],
+                      
+                      'C 2 2 21'     : self._origins[ '222oC' ],
+                      'C 2 2 2'      : self._origins[ '222oC' ],
+                      
+                      'F 2 2 2'      : self._origins[ '222oF' ],
+                      
+                      'I 2 2 2'      : self._origins[ '222oI' ],
+                      'I 21 21 21'   : self._origins[ '222oI' ],
+                      
+                      # TETRAGONAL
+                      'P 4'          : self._origins[ '4tP' ],
+                      'P 41'         : self._origins[ '4tP' ],
+                      'P 42'         : self._origins[ '4tP' ],
+                      'P 43'         : self._origins[ '4tP' ],
+                      
+                      'I 4'          : self._origins[ '4tI' ],
+                      'I 41'         : self._origins[ '4tI' ],
+                      
+                      'P 4 2 2'      : self._origins[ '422tP' ],
+                      'P 4 21 2'     : self._origins[ '422tP' ],
+                      'P 41 2 2'     : self._origins[ '422tP' ],
+                      'P 41 21 2'    : self._origins[ '422tP' ],
+                      'P 42 2 2'     : self._origins[ '422tP' ],
+                      'P 42 21 2'    : self._origins[ '422tP' ],
+                      'P 43 2 2'     : self._origins[ '422tP' ],
+                      'P 43 21 2'    : self._origins[ '422tP' ],
+                      
+                      'I 4 2 2'      : self._origins[ '422tI' ],
+                      'I 41 2 2'     : self._origins[ '422tI' ],
+                      
+                      # TRIGONAL
+                      'P 3'          : self._origins[ '3hP' ],
+                      'P 31'         : self._origins[ '3hP' ],
+                      'P 32'         : self._origins[ '3hP' ],
+                      
+                      'H 3'          : self._origins[ '3hR_1' ],
+                      'R 3'          : self._origins[ '3hR_2' ],
+                      
+                      'P 3 1 2'      : self._origins[ '312hP' ],
+                      'P 31 1 2'     : self._origins[ '312hP' ],
+                      'P 32 1 2'     : self._origins[ '312hP' ],
+                      
+                      'P 3 2 1'     : self._origins[ '321hP' ],
+                      'P 31 2 1'    : self._origins[ '321hP' ],
+                      'P 32 2 1'    : self._origins[ '321hP' ],
+                      
+                      'H 3 2'       : self._origins[ '32hR_1' ],
+                      'R 3 2'       : self._origins[ '32hR_2' ],
+                      
+                      # HEXAGONAL
+                      'P 6'         : self._origins[ '6hP' ],
+                      'P 61'        : self._origins[ '6hP' ],
+                      'P 65'        : self._origins[ '6hP' ],
+                      'P 62'        : self._origins[ '6hP' ],
+                      'P 64'        : self._origins[ '6hP' ],
+                      'P 63'        : self._origins[ '6hP' ],
+                      
+                      'P 6 2 2'     : self._origins[ '622hP' ],
+                      'P 61 2 2'    : self._origins[ '622hP' ],
+                      'P 65 2 2'    : self._origins[ '622hP' ],
+                      'P 62 2 2'    : self._origins[ '622hP' ],
+                      'P 64 2 2'    : self._origins[ '622hP' ],
+                      'P 63 2 2'    : self._origins[ '622hP' ],
+                      
+                      # CUBIC
+                      'P 2 3'       : self._origins[ '23cP' ],
+                      'P 21 3'      : self._origins[ '23cP' ],
+                      
+                      'F 2 3'       : self._origins[ '23cF' ],
+                      
+                      'I 2 3'       : self._origins[ '23cI' ],
+                      'I 21 3'      : self._origins[ '23cI' ],
+                      
+                      'P 4 3 2'     : self._origins[ '432cP' ],
+                      'P 42 3 2'    : self._origins[ '432cP' ],
+                      'P 43 3 2'    : self._origins[ '432cP' ],
+                      'P 41 3 2'    : self._origins[ '432cP' ],
+                      
+                      'F 4 3 2'     : self._origins[ '432cF' ],
+                      'F 41 3 2'    : self._origins[ '432cF' ],
+                      
+                      'I 4 3 2'     : self._origins[ '432cI' ],
+                      'I 41 3 2'    : self._origins[ '432cI' ],
+                      
+                      }
+        
+        return
+    
+    def spaceGroup(self):
+        return self._spaceGroup
+    
+    def isFloating(self, spaceGroupLabel=None ):
+        if spaceGroupLabel is not None and self.spaceGroup() !=  spaceGroupLabel:
+            self._getAlternateOrigins( spaceGroupLabel ) 
+        return self._floating
+
+    def redundantAlternateOrigins(self, spaceGroupLabel=None ):
+        if spaceGroupLabel is not None and self.spaceGroup() !=  spaceGroupLabel:
+            self._getAlternateOrigins( spaceGroupLabel ) 
+        return copy.copy(self._redundantSet)
+    
+    def nonRedundantAlternateOrigins(self, spaceGroupLabel=None ):
+        if spaceGroupLabel is not None and self.spaceGroup() !=  spaceGroupLabel:
+            self._getAlternateOrigins( spaceGroupLabel ) 
+        return copy.copy(self._nonRedundantSet)
+
+    def _getAlternateOrigins( self, spaceGroupLabel ):
+        """Given a space group label, return a list of (non-redundant) alternate
+        origins as a list of float triples"""
+        
+        label = spaceGroupLabel
+        if label not in self._spacegroup2origin:
+            label = self._altlabel( label )
+        
+        self._spaceGroup = label
+        originl = self._spacegroup2origin[ label ]
+        
+        # We build up a list of the full set (redundant) and also the non-redundant that are
+        # the only ones we need to loop through when we are checking
+        self._nonRedundantSet = []
+        self._redundantSet = []
+        self._floating = False
+        for o in originl:
+            if o[1]:
+                self._nonRedundantSet.append( o[0] )
+            self._redundantSet.append( o[0] )
+            
+        self._floating = any(  map( lambda o: 'x' in o or 'y' in o or 'z' in o, self._redundantSet ) )
+        return
+    
+    #symoplib = "/Applications/ccp4-6.4.0/lib/data/symop.lib"
+    def _altlabel( self, spaceGroup, symoplib=None ):
+        
+        if not symoplib:
+            symoplib = os.path.join( os.environ['CCP4'], "lib/data/symop.lib" )
+            
+        for line in open( symoplib, 'r' ):
+            if "'" in line:
+                # Assume first single-quote enclosed string is the one we want
+                i = line.index( "'" )
+                j = line.index("'", i+1 )
+                sg = line[ i+1:j ]
+                if spaceGroup == sg:
+                    return line.split()[ 3 ]
+    
+        raise KeyError, spaceGroup
+        return
+
+
+
+class CrystalInfo(object):
+    def __init__(self, line=None):
+        """foo"""
+        
+        self._reset()
+        
+        if line:
+            self.fromLine( line )
+        
+        return
+    
+    def _reset( self ):
+        
+        self.a = None
+        self.b = None
+        self.c = None
+        self.alpha = None
+        self.beta = None
+        self.gamma = None
+        self.spaceGroup = None
+        self.z = None
+        
+        return
+    
+    def fromLine(self, line ):
+        
+        self.a = float( line[6:15] )
+        self.b = float( line[15:24] )
+        self.c = float( line[24:33] )
+        self.alpha = float( line[33:40] )
+        self.beta = float( line[40:47] )
+        self.gamma = float( line[47:54] )
+        self.spaceGroup = line[55:66].strip()
+        self.z = int( line[66:70] )
+        
+        return
 
 class PdbInfo(object):
     """A class to hold information extracted from a PDB file"""
@@ -23,15 +480,42 @@ class PdbInfo(object):
         self.solventContent = None
         self.matthewsCoefficient = None
         
+        self.crystalInfo = None
+        
         return
+    
+    def getSequence(self):
+        """Return the sequence for the first model/chain"""
+        
+        assert len(self.models) >= 1,"Need at least one model!"
+        assert len(self.models[0].chains) >= 1,"Need at least one chain!"
+        return self.sequences[0]
+    
+    def numAtoms(self, modelIdx=0):
+        """Return the total number of ATOM atoms in the model"""
+        assert len(self.models) >= 1,"Need at least one model!"
+        assert len(self.models[0].chains) >= 1,"Need at least one chain!"
+        
+        natoms = 0
+        for chainAtoms in self.models[ modelIdx ].atoms:
+            natoms += len( chainAtoms )
+            
+        return natoms
     
 class PdbModel(object):
     """A class to hold information on a single model in a PDB file"""
     
     def __init__(self ):
         
+        self.pdb = None
         self.serial = None
         self.chains = [] # Ordered list of chain IDs
+        self.atoms = [] # List of atoms in each chain
+        
+        self.resSeqs = [] # Ordered list of list of resSeqs for each chain - matches order in self.chains
+        self.sequences = [] # Ordered list of list of sequences for each chain - matches order in self.chains
+        self.caMask = [] # Ordered list of list of booleans of residues with no CA atoms - matches order in self.chains
+        self.bbMask = [] # Ordered list of list of boleans of residues with no backbone atoms - matches order in self.chains
         
         return
 
@@ -436,6 +920,22 @@ class Test(unittest.TestCase):
         self.assertEqual(a.stdRes,'ASN')
         self.assertEqual(a.comment,"GLYCOSYLATION SITE")
         self.assertEqual( a.toLine(), line )
+        
+        return
+    
+    def testReadCrystalInfo(self):
+        """See if we can read a cryst1 line"""
+
+        line = "CRYST1  117.000   15.000   39.000  90.00  90.00  90.00 P 21 21 21    8 "
+        a = CrystalInfo( line )
+        self.assertEqual(a.a,117.000)
+        self.assertEqual(a.b,15.000)
+        self.assertEqual(a.c,39.000)
+        self.assertEqual(a.alpha,90)
+        self.assertEqual(a.beta,90)
+        self.assertEqual(a.gamma,90)
+        self.assertEqual(a.spaceGroup,"P 21 21 21")
+        self.assertEqual(a.z,8)
         
         return
            

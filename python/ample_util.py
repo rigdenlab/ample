@@ -10,29 +10,30 @@ import re
 import subprocess
 import sys
 import tempfile
+import urllib
 import unittest
 
 # Our modules
 import MTZParse
 
 # Reference string
-references = """AMPLE: To be added
-
-SHELX: is used: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122
-
-SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein
-side-chain conformations with SCWRL4. Proteins (2009).
-
-Theseus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.
-Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]
-Supplementary Materials for Theobald and Wuttke 2006b.
-
-MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457
+references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
+AMPLE: a cluster-and-truncate approach to solve the crystal structures of small proteins using
+rapidly computed ab initio models. (2012). Acta Cryst. D68, 1622-1631 [ doi:10.1107/S0907444912039194 ]
 
 CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs
 for Protein Crystallography. Acta Cryst. D50, 760-763
 
+SHELX: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122
+
+SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein
+side-chain conformations with SCWRL4. Proteins (2009).
+
+MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/
+
 MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025
+
+MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457
 
 PHASER: McCoy, A.J., Grosse-Kunstleve, R.W., Adams, P.D., Winn, M.D.,
 Storoni, L.C. & Read, R.J. (2007)
@@ -42,10 +43,11 @@ REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromole
 Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255
 
 SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for
-near-native model selection, 
-Journal of Computational Chemistry, 2004 25: 865-871
+near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871
 
-MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/"""
+Theseus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.
+Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]
+Supplementary Materials for Theobald and Wuttke 2006b."""
 
 # Header string
 header ="""#########################################################################
@@ -56,37 +58,29 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
-# get a program test for existsnce
-def which(program):
-    def is_exe(fpath):
-        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        for path in os.environ["PATH"].split(os.pathsep):
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-    return None
-#########
-def check_for_exe(exename, varname):
+def find_exe( exename, path=None, dirs=None ):
+    """Find the executable exename.
+    
+    Args:
+    exename: the name of the program
+    path - a full path to the executable
+    dirs - additional directories to search for the location
+    """
+    
     logger = logging.getLogger()
     exepath = ''
     logger.debug('Looking for executable: {0}'.format(exename) )
     
-    if varname:
-        logger.debug( 'Using executable path from command-line {0}'.format(varname) )
-        exepath = which(varname)
+    if path:
+        logger.debug( 'Using executable path from command-line {0}'.format(path) )
+        exepath = which(path)
         if not exepath:
-            msg = "Cannot find valid {0} executable from given path: {1}".format(exename,varname)
+            msg = "Cannot find valid {0} executable from given path: {1}".format(exename,path)
             logger.critical(msg)
             raise RuntimeError,msg
     else:
         logger.debug( 'No path for {0} given on the command line, looking in PATH'.format(exename) )
-        exepath = which(exename)
+        exepath = which(exename, dirs=dirs )
         if not exepath:
             msg = "Cannot find executable {0} in PATH. Please give the path to {0}".format(exename)
             logger.critical(msg)
@@ -95,6 +89,57 @@ def check_for_exe(exename, varname):
     logger.debug( "Using executable {0}".format( exepath ) )
     return exepath
 
+def filename_append( filename=None, astr=None, separator="_", directory=None ):
+    """Append astr to filename, before the suffix, and return the new filename."""
+    dirname, fname = os.path.split( filename )
+    name, suffix = os.path.splitext( fname )
+    name  =  name + separator + astr + suffix
+    if not directory:
+        directory = dirname
+    return os.path.join( directory, name )
+
+def find_maxcluster( amopt ):
+    """Return path to maxcluster binary.
+    If we can't find one in the path, we create a $HOME/.ample
+    directory and downlod it to there
+    """
+    
+    maxcluster_exe = None
+    try:
+        maxcluster_exe = find_exe( 'maxcluster', dirs=[ amopt.d['rcdir'] ] )
+    except RuntimeError:
+        # Cannot find so we need to try and download it
+        logger = logging.getLogger()
+        rcdir = amopt.d['rcdir'] 
+        logger.info("Cannot find maxcluster binary in path so attempting to download it directory: {0}".format( rcdir )  )
+        if not os.path.isdir( rcdir ):
+            logger.info("No ample rcdir found so creating in: {0}".format( rcdir ) )
+            os.mkdir( rcdir )
+        
+        url = None
+        maxcluster_exe = os.path.join( rcdir, 'maxcluster' )
+        if sys.platform.startswith("linux"):
+            url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster'
+        elif sys.platform.startswith("darwin"):
+            url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_i686_32bit.bin'
+            #OSX PPC: http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_PPC_32bit.bin
+        elif sys.platform.startswith("win"):
+            url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster.exe'
+            maxcluster_exe = os.path.join( rcdir, 'maxcluster.exe' )
+        else:
+            raise RuntimeError,"Unrecognised system type: {0}".format( sys.platform )
+        
+        logger.info("Attempting to download maxcluster binary from: {0}".format( url ) )
+        try:
+            urllib.urlretrieve( url, maxcluster_exe )
+        except Exception, e:
+            logger.critical("Error downloading maxcluster executable: {0}\n{1}".format( url, e ) )
+            raise
+        
+        # make executable
+        os.chmod(maxcluster_exe, 0o777)
+    
+    return maxcluster_exe
 
 def get_mtz_flags( mtzfile ):
     """
@@ -222,11 +267,17 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
         stdinstr = stdin
         stdin = subprocess.PIPE
     
-    p = subprocess.Popen( cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory )
+    # Windows needs some special treatment
+    kwargs = {}
+    if os.name == "nt":
+        kwargs = { 'buffsize': 0, 'shell' : "False" }
+    p = subprocess.Popen( cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs )
     
     if stdin != None:
         p.stdin.write( stdinstr )
         p.stdin.close()
+        if dolog:
+            logging.debug("stdin for cmd was: {0}".format( stdin ) )
     
     p.wait()
     logf.close()
@@ -286,6 +337,25 @@ def tmpFileName():
     t.close()
     return tmp1
 
+# get a program test for existsnce
+def which(program, dirs=None ):
+    def is_exe(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        #for path in os.environ["PATH"].split(os.pathsep):
+        paths = os.environ["PATH"].split(os.pathsep)
+        if dirs:
+            paths += dirs
+        for path in paths:
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+    return None
 
 class TestUtil(unittest.TestCase):
     """
@@ -296,17 +366,20 @@ class TestUtil(unittest.TestCase):
         """
         Get paths need to think of a sensible way to do this
         """
-                
-        thisdir = os.getcwd()
-        self.ampledir = os.path.abspath( thisdir+os.sep+"..")
-        self.testdir = self.ampledir + os.sep + "tests"
-        self.testfilesdir = self.testdir + os.sep + "testfiles"
+
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ampleDir = os.sep.join( paths[ : -1 ] )
+        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
+        
+        return
+        
     
     def testGetMtzFlags(self):
         """Get MTZ flags"""
         
         
-        mtz = self.ampledir + os.sep + "examples" + os.sep + "toxd-example" + os.sep + "1dtx.mtz"
+        mtz = self.ampleDir + os.sep + "examples" + os.sep + "toxd-example" + os.sep + "1dtx.mtz"
         
         t_flag_F, t_flag_SIGF, t_flag_FREE = get_mtz_flags( mtz )
         
@@ -318,11 +391,15 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(sigf, t_flag_SIGF, "Correct SIGF")
         self.assertEqual(free, t_flag_FREE, "Correct FREE")
         
+        return
+        
     def testGetMtzFlagsNoFree(self):
         """Get MTZ flags when there are no free flags"""
         
-        mtz = self.testfilesdir + os.sep + "2uui_sigmaa.mtz"
+        mtz = self.testfilesDir + os.sep + "2uui_sigmaa.mtz"
         self.assertRaises(KeyError, get_mtz_flags, mtz )
+        
+        return
 #
 # Run unit tests
 if __name__ == "__main__":

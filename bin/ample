@@ -1,5 +1,6 @@
 #!/usr/bin/env ccp4-python
 
+
 """
 Version 0.1
 no speed buffs, no extra functionality, no optimisation
@@ -29,6 +30,8 @@ if not "CCP4" in sorted(os.environ.keys()):
 
 # Add the ample python folder to the PYTHONPATH
 sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+#sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
 import argparse
@@ -40,6 +43,7 @@ import shutil
 import time
 
 # Our imports
+import add_sidechains_SCWRL
 import ample_options
 import ample_util
 import cif_parser
@@ -49,96 +53,95 @@ import mrbump_ensemble
 import nmr
 import rosetta_model
 import mrbump_results
-import pdb_edit
 import truncateedit_MAX
+import version
 
 
 #-------------------------------------------
 # get command line options
 #-------------------------------------------
-
-parser = argparse.ArgumentParser(description='Structure solution by abinitio modelling', prefix_chars="-")
+parser = argparse.ArgumentParser( prog="AMPLE", description='Structure solution by abinitio modelling', prefix_chars="-")
 
 parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
-                   help='alignment between homolog and target fastas')
+                   help='Alignment between homolog and target fastas')
 
 parser.add_argument('-all_atom', metavar='all_atom', type=str, nargs=1,
-                   help='all_atom')
+                   help="Do all-atom Rosetta modelling (adds \"-return_full_atom true\" to rosetta arguments")
 
 parser.add_argument('-arpwarp_cycles', metavar='arpwarp_cycles', type=int, nargs=1,
-                   help='number of cycles ')
+                   help='The number of ArpWarp cycles to run')
 
-parser.add_argument('-ASU', metavar='no in ASU', type=int, nargs=1,
-                   help='no in ASU')
+parser.add_argument('-ASU', metavar='ASU', type=int, nargs=1,
+                   help='Manually specify the number of molecules in the asymmetric unit - sets the NMASu MRBUMP flag')
 
 parser.add_argument('-blast_dir', metavar='blast_dir', type=str, nargs=1,
-                   help='Directory where ncbi blast is installed (binaries in bin)')
+                   help='Directory where ncbi blast is installed (binaries in expected in bin subdirectory)')
 
 parser.add_argument('-buccaneer_cycles', metavar='buccaneer_cycles', type=int, nargs=1,
-                   help='number of cycles ')
+                   help='The number of Bucanner rebuilding cycles to run')
 
 parser.add_argument('-CC', metavar='rad of gyration', type=str, nargs=1,
-                   help='radius of gyration reweight ')
+                   help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
 
 parser.add_argument('-ccp4_jobid', metavar='ccp4_jobid', type=int, nargs=1,
-                   help='CCP4 job id - only needed when running from the CCP4 GUI')
+                   help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
 
 parser.add_argument('-submit_cluster', metavar='submit_cluster', type=str, nargs=1,
-                   help='will submit jobs to a cluster')
+                   help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
 
 parser.add_argument('-submit_qtype', metavar='submit_qtype', type=str, nargs=1,
-                   help='cluster submission queue type:SGE, LSF...')
+                   help='cluster submission queue type - currently support SGE and LSF')
 
 parser.add_argument('-debug', metavar='debug option', type=str, nargs=1,
-                   help='debug option ')
+                   help='Run in debug mode (CURRENTLY UNUSED)')
 
 parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', type=str, nargs=1,
-                   help='fixed input to mr bump')
+                   help='Fixed input to mr bump')
 
 parser.add_argument('-domain_termini_distance', metavar='termini', type=str, nargs=1,
                    help='distance between termini for insert domains')
 
 parser.add_argument('-early_terminate', metavar='early_terminate', type=str, nargs=1,
-                     help='terminate early if a success')
+                     help='Stop the run as soon as a success has been found.')
 
 parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
-                   help='ensembling')
+                   help='Use the Phenix ensembler')
 
 parser.add_argument('-ensembles_dir', metavar='ensembles_dir', type=str, nargs=1,
-                   help='path to directory containing existing ensembles')
+                   help='Path to directory containing existing ensembles')
 
 parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
                    help='protein fasta file. (required)')
 
 parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
-                   help='Flag for F')
+                   help='Flag for F column in the MTZ file')
 
 parser.add_argument('-frags_3mers', metavar='frags_3mers', type=str, nargs=1,
-                   help='path of imported 3mers')
+                   help='Path to file with pre-existing Rosetta 3mer fragments')
 
 parser.add_argument('-frags_9mers', metavar='frags_9mers', type=str, nargs=1,
-                   help='path of imported 9mers')
+                   help='Path to file with pre-existing Rosetta 3mer fragments')
 
 parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
-                   help='Flag for FREE')
+                   help='Flag for FREE column in the MTZ file')
 
 parser.add_argument('-import_cluster', metavar='import_cluster', type=str, nargs=1,
-                   help='import_cluster')
+                   help='Import an existing cluster of PDB files from a directory or list of pdb files')
 
-parser.add_argument('-improve_template', metavar='improve template', type=str, nargs=1,
-                   help='give a template to imrove - NMR, homolog ')
+parser.add_argument('-improve_template', metavar='improve_template', type=str, nargs=1,
+                   help='Path to a template to improve - NMR, homolog' )
 
 parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
-                   help='pathway to LGA folder (not the exe) will use the \'lga\' executable')
+                   help='pathway to LGA folder (not the exe) will use the \'lga\' executable. UNUSED')
 
-parser.add_argument('-make_frags', metavar='bool to make fragments', type=str, nargs=1,
-                   help='Bool, True to make non homologous framents, False to import fragments')
+parser.add_argument('-make_frags', metavar='make_fragments', type=str, nargs=1,
+                   help='set True to generate Rosetta 3mers and 9mers locally, False to import fragments')
 
 parser.add_argument('-make_models', metavar='Do the modelling', type=str, nargs=1,
                    help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
 
 parser.add_argument('-maxcluster_exe', metavar='Maxcluster exe', type=str, nargs=1,
-                   help='Maxcluster exe')
+                   help='Path to Maxcluster executable')
 
 parser.add_argument('-max_ensemble_models', metavar='max_ensemble_models', type=str, nargs=1,
                    help='Maximum number of models permitted in an ensemble')
@@ -147,22 +150,22 @@ parser.add_argument('-missing_domain', metavar='missing_domain', type=str, nargs
                    help='Modelling a missing domain - requires domain_all_chains_pdb argument')
 
 parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
-                   help='folder of decoys')
+                   help='Path to folder of PDB decoys to use for this run')
 
 parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
-                   help='mrbump keywords ')
+                   help='Additional keywords for MRBUMP - are passed through without editing')
 
 parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
-                   help='MTZ in')
+                   help='The MTZ file with the reflection data.')
 
-parser.add_argument('-name', metavar='priotein name', type=str, nargs=1,
-                   help='name of protien in the format ABCD ')
+parser.add_argument('-name', metavar='job_name', type=str, nargs=1,
+                   help='4-letter identifier for job [ampl]')
 
 parser.add_argument('-nmodels', metavar='no models', type=int, nargs=1,
-                   help='number of models to make (1000)')
+                   help='number of models to make (default: 1000)')
 
 parser.add_argument('-nr', metavar='nr', type=str, nargs=1,
-                   help='Path to the nr non-redundant sequence database')
+                   help='Path to the NR non-redundant sequence database')
 
 parser.add_argument('-old_shelx', metavar='old_shelx', type=str, nargs=1,
                    help='old_shelx')
@@ -180,108 +183,113 @@ parser.add_argument('-NMR_Truncate_only', metavar='-NMR_Truncate_only', type=str
                    help='do no remodelling only truncate the NMR')
 
 parser.add_argument('-nproc', metavar='NoProcessors', type=int, nargs=1,
-                   help='number of processers (default 1)')
+                   help='Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
+                    "For cluster submission, this should be the number of processors on a node.')
 
-parser.add_argument('-num_clusters', metavar='num clusters to sample', type=int, nargs=1,
-                   help='number of clusters to sample')
+parser.add_argument('-num_clusters', metavar='num_clusters', type=int, nargs=1,
+                   help='The number of Spicker clusters of the original decoys that will be sampled [1]')
 
 parser.add_argument('-output_pdb', metavar='output_pdb', type=str, nargs=1,
-                   help='name of the result pdb to output')
+                   help='Name of the final result pdb to output [ample_output.pdb]')
 
-parser.add_argument('-percent', metavar='no clus to sample', type=str, nargs=1,
+parser.add_argument('-percent', metavar='percent_truncation', type=str, nargs=1,
                    help='percent interval for truncation')
 
-parser.add_argument('-phenix_exe', metavar='PHENIX.ensembler exe', type=str, nargs=1,
-                   help='path to phenix executable')
+parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
+                   help='Path to Phenix executable')
 
 parser.add_argument('-rosetta_path', metavar='rosetta_path', type=str, nargs=1,
-                   help='path for Rosetta AbinitioRelax')
+                   help='Path to Rosetta AbinitioRelax executable')
 
 parser.add_argument('-ROSETTA_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
                    help='location of rosetta cluster')
 
-parser.add_argument('-rosetta_db', metavar='ROSETTA_database', type=str, nargs=1,
-                   help='path for Rosetta database')
+parser.add_argument('-rosetta_db', metavar='rosetta_db', type=str, nargs=1,
+                   help='Path to the Rosetta database directory')
 
-parser.add_argument('-rosetta_dir', metavar='Rosetta_dir', type=str, nargs=1,
-                   help='the Rosetta install directory')
+parser.add_argument('-rosetta_dir', metavar='rosetta_dir', type=str, nargs=1,
+                   help='The Rosetta install directory')
 
-parser.add_argument('-rosetta_fragments_exe', metavar='path to make_fragments.pl', type=str, nargs=1,
-                   help='location of make_fragments.pl')
+parser.add_argument('-rosetta_fragments_exe', metavar='rosetta_fragments_exe', type=str, nargs=1,
+                   help='Location of the Rosetta make_fragments.pl script')
 
 parser.add_argument('-rosetta_version', metavar='rosetta_version', type=float, nargs=1,
-                   help='the version number of Rosetta')
+                   help='The version number of Rosetta')
 
 parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
-                   help='directory to put files (default current dir)')
+                   help='Directory where the AMPLE run directory will be created [current dir]')
 
 parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
-                   help='pathway to SCWRL exe')
+                   help='Path to Scwrl4 executable')
 
 parser.add_argument('-sf_cif', metavar='sf_cif', type=str, nargs=1,
-                   help='path to a structure factor CIF file')
+                   help='Path to a structure factor CIF file (instead of MTZ file)')
 
 parser.add_argument('-shelx_cycles', metavar='shelx_cycles', type=str, nargs=1,
-                     help='number of shelx sycles')
+                     help='The number of shelx cycles to run when rebuilding.')
 
 parser.add_argument('-shelxe_exe', metavar='-shelxe_exe', type=str, nargs=1,
-                   help='Set shelxe executable name (default "shelxe")')
+                   help='Path to the shelxe executable')
 
-parser.add_argument('-SIGF', metavar='flag for SIGF', type=str, nargs=1,
-                   help='Flag for SIGF')
+parser.add_argument('-SIGF', metavar='SIGF', type=str, nargs=1,
+                   help='Flag for SIGF column in the MTZ file')
 
 parser.add_argument('-spicker_exe', metavar='boolean', type=str, nargs=1,
-                   help='path to spicker executable')
+                   help='Path to spicker executable')
 
 parser.add_argument('-split_mr', metavar='boolean', type=str, nargs=1,
-                   help='whether to split MRBUMP MR jobs into separate jobs')
+                   help='Split MRBUMP Molecular Replacement jobs (phaser, molrep etc) into separate jobs')
 
 parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', type=str, nargs=1,
-                   help='path to theseus executable')
+                   help='Path to theseus executable')
 
 parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
-                   help='top_model_only')
+                   help='Only process the top model in each ensemble')
 
 parser.add_argument('-transmembrane', metavar='transmembrane', type=str, nargs=1,
-                   help='Do modelling for transmembrane proteins')
+                   help='Do Rosetta modelling for transmembrane proteins')
 
 parser.add_argument('-transmembrane_spanfile', metavar='transmembrane_spanfile', type=str, nargs=1,
-                   help='span file for modelling transmembrane proteins')
+                   help='Span file for modelling transmembrane proteins')
 
 parser.add_argument('-transmembrane_lipofile', metavar='transmembrane_lipofile', type=str, nargs=1,
-                   help='lips4 file for modelling transmembrane proteins')
+                   help='Lips4 file for modelling transmembrane proteins')
 
-parser.add_argument('-use_homs', metavar='nohoms rosetta flag', type=str, nargs=1,
+parser.add_argument('-use_homs', metavar='use_homologues', type=str, nargs=1,
                    help='True =use nhomologs, False= dont use them ')
 
 parser.add_argument('-use_arpwarp', metavar='-use_arpwarp', type=str, nargs=1,
-                   help='True to use arpwarp ')
+                   help='True to use arpwarp to rebuild.')
 
 parser.add_argument('-use_buccaneer', metavar='use_buccaneer', type=str, nargs=1,
                    help='True to use Buccaneer')
 
-parser.add_argument('-use_scwrl', metavar='USE_SCWRL', type=str, nargs=1,
-                   help='if using scwrl true if not false')
+parser.add_argument('-use_scwrl', metavar='use_scwrl', type=str, nargs=1,
+                   help='Remodel sidechains of the decoy models using Scwrl4')
 
 parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
-                   help='True to use shelx ')
+                   help='True to use shelxe')
+
+parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(version.__version__) )
 
 # Mutually exclusive options
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-devel_mode', metavar='devel_mode', type=str, nargs=1,
-                   help='preset options to run in development mode - takes longer')
+                   help='Preset options to run in development mode - takes longer')
 group.add_argument('-quick_mode', metavar='quick_mode', type=str, nargs=1,
-                   help='preset options to run quickly, but less thoroughly')
+                   help='Preset options to run quickly, but less thoroughly')
 
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-molrep_only', metavar='molrep_only', type=str, nargs=1,
-                   help='molrep_only')
+                   help='Only use Molrep for Molecular Replacement step in MRBUMP')
 group.add_argument('-phaser_only', metavar='phaser_only', type=str, nargs=1,
-                   help='phaser_only')
-
+                   help='Only use Phaser for Molecular Replacement step in MRBUMP')
 
 # Create amopt object to hold options
 amopt = ample_options.AmpleOptions( )
+
+# Remember the original arguments
+orig_argv = " ".join( sys.argv )
 
 # MRkeys hack - get MRBUMP keywords direct as there can be multiple arguments
 # to each one
@@ -326,11 +334,11 @@ else:
     amopt.d['mr_keys'] = MRkeys
 
 # Make a work directory and go there - this way all output goes into this directory
-if not os.path.exists(amopt.d['run_dir']):
-    print 'You need to give a run directory'
+if not os.path.exists( amopt.d['run_dir'] ):
+    print 'Cannot find run directory: {0}'.format( amopt.d['run_dir'] )
     sys.exit()
 
-print 'Making a Run Directory  -checking for previous runs\n'
+print 'Making a Run Directory: checking for previous runs\n'
 amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'] )
 #amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], rootname="ENSEMBLE_2_" )
 os.chdir( amopt.d['work_dir'] )
@@ -338,35 +346,24 @@ os.chdir( amopt.d['work_dir'] )
 # Set up logging
 logger = ample_util.setup_logging()
 
+# Print out Version and invocation
+logger.info( """AMPLE version: {0}\n\nInvoked with command-line:\n\n{1}""".format( version.__version__, orig_argv ) )
+
 # Path for pickling results
 amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
 
-# cluster queueing
-if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
-    msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
-    logger.critical(msg)
-    sys.exit(1)
-
-#jmht - fix these
-FIXED_INPUT = True
-pdb_code = amopt.d['name']
-amopt.d['pdb_code'] = amopt.d['name']
-if not amopt.d['pdb_code'] or len(pdb_code) != 4:
-    msg = 'Name is the wrong length, use 4 chars eg ABCD'
-    logger.critical(msg)
-    sys.exit(1)
-else:
-    amopt.d['pdb_code'] += '_'
-    
+#
+# FASTA processing
+#
 # Check we can find the input fasta
-if not ( os.path.exists(str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d['NMR_remodel_fasta'] ) ) ):
-    msg = 'You need to give the path for the fasta'
+if not ( os.path.exists( str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d['NMR_remodel_fasta'] ) ) ):
+    msg = 'Cannot find fasta file: {0}'.format( amopt.d['fasta'] )
     logger.critical(msg)
     sys.exit(1)
 
 # Reformat to what we need    
 logger.debug('Parsing FASTA file')
-outfasta = os.path.join( amopt.d['work_dir'], amopt.d['pdb_code'] + '_.fasta')
+outfasta = os.path.join( amopt.d['work_dir'], amopt.d['name'] + '_.fasta')
 fp = fasta_parser.FastaParser()
 fp.reformat_fasta( amopt.d['fasta'], outfasta )
 amopt.d['fasta'] = outfasta
@@ -375,7 +372,7 @@ logger.info( "Fasta is {0} amino acids long".format( amopt.d['fasta_length'] ) )
 
 # Check we have a decent length
 if amopt.d['fasta_length'] < 9:
-    msg = "Fasta is of length {0}. Please check this is correct".format( amopt.d['fasta_length'] )
+    msg = "ERROR! Fasta is of length {0}. This is much too short!".format( amopt.d['fasta_length'] )
     logger.critical(msg)
     sys.exit(1)   
 
@@ -384,16 +381,59 @@ if ( float( amopt.d['fasta_length'] ) / 100 ) * float( amopt.d['percent'] ) < 1:
     msg = "Cannot truncate a fasta sequence of length {0} with {1} percent intervals. Please select a larger interval.".format( amopt.d['fasta_length'], amopt.d['percent'] )
     logger.critical(msg)
     sys.exit(1)
+
+#
+# MTZ file processing
+#
+# Check if we need to get any of the flags from the MTZ file
+if amopt.d['sf_cif'] and amopt.d['mtz']:
+    logger.critical("Both sf_cif and mtz flags supplied - only use one")
+    sys.exit(1)
+
+# We've been given a sf_cif so convert
+if amopt.d['sf_cif']:
+    if not os.path.isfile( amopt.d['sf_cif'] ):
+        logger.critical("Cannot find sf_cif file: {0}".format( amopt.d['sf_cif'] ) )
+        sys.exit(1)
+        
+    cp = cif_parser.CifParser()
+    amopt.d['mtz'] = cp.sfcif2mtz( amopt.d['sf_cif'] )
     
+if not amopt.d['mtz'] or not os.path.isfile( amopt.d['mtz'] ):
+    logger.critical("Cannot find MTZ file: {0}".format( amopt.d['mtz'] ) )
+    sys.exit(1)
+
+if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
+    logger.info("Determining MTZ flags using mtzdump from file: {0}".format( amopt.d['mtz'] ) )
+    try:
+        t_flag_F, t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( amopt.d['mtz'] )
+    except Exception,e:
+        logger.critical("Error generating flags from MTZ file: {0}\n{1}\n\nDo you need to run the CCP4 uniqueify program on the MTZ file?".format(amopt.d['mtz'],e) )
+        sys.exit(1)
+    
+if not amopt.d['F']:
+    amopt.d['F'] = t_flag_F
+    
+if not amopt.d['SIGF']:
+    amopt.d['SIGF'] = t_flag_SIGF
+    
+if not amopt.d['FREE']:
+    amopt.d['FREE'] = t_flag_FREE
+
+
+# Not sure if name actually required - see make_fragments.pl
+if amopt.d['name'] and len(amopt.d['name']) != 4:
+    msg = '-name argument is the wrong length, use 4 chars eg ABCD'
+    logger.critical(msg)
+    sys.exit(1)
+
+# Underscore required by rosetta make_fragments.pl
+amopt.d['name'] += '_'
+
 # Check if importing ensembles
-amopt.d['import_ensembles'] = False
 if amopt.d['ensembles_dir']:
-    msg=None
-    if not os.path.isdir( amopt.d['ensembles_dir'] ):
-        msg = "Trying to import ensembles from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['ensembles_dir'])
-    elif not len( glob.glob( os.path.join( amopt.d['ensembles_dir'], "*.pdb" ) ) ):
-        msg = "Trying to import ensembles from the directory:\n{0}\nBut cannot find any pdb files!".format(amopt.d['ensembles_dir'])
-    if msg:
+    if not os.path.isdir( amopt.d['ensembles_dir'] ) or not len( glob.glob( os.path.join( amopt.d['ensembles_dir'], "*.pdb" ) ) ):
+        msg = "Cannot import ensembles from the directory: {0}".format(amopt.d['ensembles_dir'])
         logger.critical(msg)
         sys.exit(1)
 
@@ -401,22 +441,57 @@ if amopt.d['ensembles_dir']:
     logger.info("Found directory with ensemble files: {0}\n".format( amopt.d['ensembles_dir'] ) )
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
+
+# Importing pre-clustered models
+if amopt.d['import_cluster']:
+    if not os.path.exists(amopt.d['import_cluster']):
+        logger.critical('Cannot find cluster import directory: {0}'.format( amopt.d['import_cluster'] ))
+        sys.exit(1)
+    
+    logger.info("Found directory with cluster files: {0}\n".format( amopt.d['import_cluster'] ) )
+    amopt.d['make_frags'] = False
+    amopt.d['make_models'] = False
     
 # Check if importing models
-amopt.d['import_models'] = False
 if amopt.d['models_dir']:
     msg=None
-    if not os.path.isdir( amopt.d['models_dir'] ):
-        msg = "Trying to import models from the directory:\n{0}\nBut it is not a directory!".format(amopt.d['models_dir'])
-    elif not len( glob.glob( os.path.join( amopt.d['models_dir'], "*.pdb" ) ) ):
-        msg = "Trying to import models from the directory:\n{0}\nBut cannot find any pdb files!".format(amopt.d['models_dir'])
-    if msg:
+    if not os.path.isdir( amopt.d['models_dir'] ) or not len( glob.glob( os.path.join( amopt.d['models_dir'], "*.pdb" ) ) ):
+        msg = "Cannot import models from the directory: {0}".format( amopt.d['models_dir'] )
         logger.critical(msg)
         sys.exit(1)
     
     amopt.d['import_models'] = True
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
+
+# Check import flags
+if amopt.d['import_ensembles'] and (amopt.d['import_models'] or amopt.d['import_cluster'] ):
+        msg = "Cannot import both models and ensembles/clusters!"
+        logger.critical(msg)
+        sys.exit(1)
+
+# NMR Checks
+NMR_PROTOCOL = False
+if amopt.d['NMR_model_in']:
+    if not os.path.isfile( amopt.d['NMR_model_in'] ):
+        msg = "NMR_model_in flag given, but cannot find file: {0}".format( amopt.d['NMR_model_in'] )
+        logger.critical(msg)
+        sys.exit(1)    
+       
+    NMR_PROTOCOL = True
+    amopt.d['make_frags'] = False
+    amopt.d['make_models'] = False
+    
+    # HACK - use the rosetta modeller to find the binary
+    if not amopt.d['NMR_Truncate_only']: 
+       ROSETTA_CM = rosetta_model.find_binary(  'mr_protocols', rosettaDir = amopt.d['rosetta_dir'] )
+       if not ROSETTA_CM:
+           msg = 'Cannot find Rosetta binary {0} in {1} check path names'.format( 'mr_protocols', amopt.d['rosetta_dir'] )
+           logger.critical( msg )
+           sys.exit(1)
+
+    if not os.path.isfile( str(amopt.d['NMR_remodel_fasta']) ):
+        amopt.d['NMR_remodel_fasta'] =  amopt.d['fasta']
 
 if amopt.d['make_models']:
     # Create the models_dir
@@ -440,42 +515,6 @@ if amopt.d['make_models']:
         logger.critical(msg)
         sys.exit(1)   
 
-# Check models and ensembles
-if amopt.d['import_ensembles'] and amopt.d['import_models']:
-        msg = "Cannot import both models and ensembles!"
-        logger.critical(msg)
-        sys.exit(1)
-
-# NMR Checks
-NMR_PROTOCOL = False
-if amopt.d['NMR_model_in']:
-    
-    if not os.path.isfile( amopt.d['NMR_model_in'] ):
-        msg = "NMR_model_in flag given, but cannot find file: {0}".format( amopt.d['NMR_model_in'] )
-        logger.critical(msg)
-        sys.exit(1)    
-       
-    NMR_PROTOCOL = True
-    ROSETTA_CM = amopt.d['rosetta_dir'] + '/rosetta_source/bin/mr_protocols.default.linuxgccrelease'
-    if not os.path.exists(ROSETTA_CM) :
-        msg = 'Cannot find {0} check path names'.format( ROSETTA_CM )
-        logger.critical( msg )
-        sys.exit(1)
-
-    if not os.path.isfile( str(amopt.d['NMR_remodel_fasta']) ):
-        amopt.d['NMR_remodel_fasta'] =  amopt.d['fasta']
-
-if not  NMR_PROTOCOL :
-    if amopt.d['import_models'] and not os.path.exists(amopt.d['models_dir']):
-        logger.warn('you have chosen to import models, but path does not exist, looking for ensembles : ' + amopt.d['models_dir'])
-        if not os.path.exists(amopt.d['ensembles_dir']):
-            logger.warn('you have chosen to import ensembles, but path does not exist : ' + amopt.d['ensembles_dir'])
-            if amopt.d['import_cluster']:
-                logger.info('you are importing a cluster of models from :' + amopt.d['import_cluster'])
-                if not os.path.exists(amopt.d['import_cluster']):
-                    logger.critical('you have chosen to import a cluster, the clusterpath does not exist')
-                    sys.exit(1)
-
 # Missing domains
 if amopt.d['missing_domain']:
     logger.info('Processing missing domain\n')
@@ -488,6 +527,7 @@ if amopt.d['missing_domain']:
 if amopt.d['molrep_only'] and amopt.d['phaser_only']:
         logger.critical('you say you want molrep only AND phaser only, choose one or both')
         sys.exit(1)
+        
 if amopt.d['molrep_only']:
     amopt.d['mrbump_programs'] = [ 'molrep' ]
 elif amopt.d['phaser_only']:
@@ -495,22 +535,32 @@ elif amopt.d['phaser_only']:
 else:
     amopt.d['mrbump_programs'] = ['molrep', 'phaser']
 
+# Model building programs
+if amopt.d['use_arpwarp']:
+    if not ( os.environ.has_key('warpbin') and os.path.isfile( os.path.join(os.environ['warpbin'], "auto_tracing.sh") ) ):
+        logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
+        amopt.d['use_arpwarp'] = False
+    else:
+        logger.info('Using arpwarp script: {0}'.format( os.path.join(os.environ['warpbin'], "auto_tracing.sh") ) )
+
 #
 #Check we can find all the required programs
 #
+# Maxcluster handled differently as we may need to download the binary
+#amopt.d['maxcluster_exe'] = ample_util.find_exe('maxcluster', amopt.d['maxcluster_exe'])
+amopt.d['maxcluster_exe'] = ample_util.find_maxcluster( amopt )
+amopt.d['spicker_exe'] = ample_util.find_exe('spicker', amopt.d['spicker_exe'])
 if amopt.d['ensembler']:
     logger.info('You are using Phenix ensembler')
-    amopt.d['phenix_exe'] = ample_util.check_for_exe('phenix', amopt.d['phenix_exe'])
+    amopt.d['phenix_exe'] = ample_util.find_exe('phenix', amopt.d['phenix_exe'])
 else:
-    amopt.d['theseus_exe'] = ample_util.check_for_exe('theseus', amopt.d['theseus_exe'])
+    amopt.d['theseus_exe'] = ample_util.find_exe('theseus', amopt.d['theseus_exe'])
 
-amopt.d['maxcluster_exe'] = ample_util.check_for_exe('maxcluster', amopt.d['maxcluster_exe'])
-amopt.d['spicker_exe'] = ample_util.check_for_exe('spicker', amopt.d['spicker_exe'])
 
 if amopt.d['use_scwrl']:
-    amopt.d['scwrl_exe'] = ample_util.check_for_exe('Scwrl4', amopt.d['scwrl_exe'] )
+    amopt.d['scwrl_exe'] = ample_util.find_exe('Scwrl4', amopt.d['scwrl_exe'] )
 if amopt.d['use_shelxe']:
-    amopt.d['shelxe_exe'] = ample_util.check_for_exe('shelxe', amopt.d['shelxe_exe'])
+    amopt.d['shelxe_exe'] = ample_util.find_exe('shelxe', amopt.d['shelxe_exe'])
 
 # Create the rosetta modeller - this runs all the checks required
 if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
@@ -518,41 +568,11 @@ if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if maki
     rosetta_modeller = rosetta_model.RosettaModel()
     rosetta_modeller.set_from_dict( amopt.d )
 
-# Check if we need to get any of the flags from the MTZ file
-if amopt.d['sf_cif'] and amopt.d['mtz']:
-    logger.critical("Both sf_cif and mtz flags supplied - only use one")
+# cluster queueing
+if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
+    msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
+    logger.critical(msg)
     sys.exit(1)
-
-# We've been given a sf_cif so convert
-if amopt.d['sf_cif']:
-    if not os.path.isfile( amopt.d['sf_cif'] ):
-        logger.critical("Cannot find sf_cif file: {0}".format( amopt.d['sf_cif'] ) )
-        sys.exit(1)
-    else:
-        cp = cif_parser.CifParser()
-        amopt.d['mtz'] = cp.sfcif2mtz( amopt.d['sf_cif'] )
-    
-if not os.path.isfile( amopt.d['mtz'] ):
-    logger.critical("Cannot find MTZ file: {0}".format( amopt.d['mtz'] ) )
-    sys.exit(1)
-
-if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
-    
-    logger.info("Determining MTZ flags using mtzdump from file: {0}".format( amopt.d['mtz'] ) )
-    try:
-        t_flag_F, t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( amopt.d['mtz'] )
-    except Exception,e:
-        logger.critical("Error generating flags from MTZ file: {0}\n{1}\n\nDo you need to run the CCP4 uniqueify program on the MTZ file?".format(amopt.d['mtz'],e) )
-        sys.exit(1)
-    
-if not amopt.d['F']:
-    amopt.d['F'] = t_flag_F
-    
-if not amopt.d['SIGF']:
-    amopt.d['SIGF'] = t_flag_SIGF
-    
-if not amopt.d['FREE']:
-    amopt.d['FREE'] = t_flag_FREE
 
 # Print out what is being done
 if amopt.d['use_buccaneer']:
@@ -609,7 +629,9 @@ time_start = time.time()
 # Make Rosetta fragments
 #-----------------------------------
 if amopt.d['make_frags']:
-    rosetta_modeller.generate_fragments()
+    rosetta_modeller.generate_fragments( submit_cluster=amopt.d['submit_cluster'],
+                                         submit_qtype=amopt.d['submit_qtype'],
+                                         nproc=amopt.d['nproc'] )
 
 #-----------------------------------
 # break here for NMR (frags needed but not modelling
@@ -618,11 +640,10 @@ if amopt.d['make_frags']:
 if NMR_PROTOCOL:
     nmr.doNMR(amopt, logger)
 # return from nmr with models already made
-
+elif amopt.d['make_models']:
 #-----------------------------------
 # Make the models
 #-----------------------------------
-if amopt.d['make_models']:
     
     logger.info('----- making Rosetta models--------')
     logger.info('making ' + str(amopt.d['nmodels']) + ' models...')
@@ -658,40 +679,29 @@ if amopt.d['make_models']:
     msg = '\nModelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n'
 elif amopt.d['import_models']:
     msg = '\nImporting models from directory:\n   ' + amopt.d['models_dir'] + '\n\n'
-elif amopt.d['import_ensembles']:
-    msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
+    RUNNING.write(msg)
+    logger.info(msg)
+    if amopt.d['use_scwrl']:
+        msg = "Processing sidechains of imported models from {0} with Scwl\n".format( amopt.d['models_dir'] )
+        models_dir_scwrl = amopt.d['models_dir']+"_scwrl"
+        if os.path.isdir( models_dir_scwrl ):
+            emsg = "Scwrl models directory {0} already exists-please move it aside".format( models_dir_scwrl )
+            logger.critical( emsg )
+            raise RuntimeError, emsg
+        os.mkdir( models_dir_scwrl )
+        msg += "Scwrl-processed models will be placed in directory: {0}",format( models_dir_scwrl )
+        msg += "Running Scwrl..."
+        RUNNING.write(msg)
+        logger.info( msg )
+        scwrl = add_sidechains_SCWRL.Scwrl( scwrlExe=amopt.d['scwrl_exe'] )
+        scwrl.processDirectory( inDirectory=amopt.d['models_dir'], outDirectory=models_dir_scwrl )
+        amopt.d['models_dir'] = models_dir_scwrl
+        logger.info( "Finished processing models with Scwrl" )
 
-    
-RUNNING.write(msg)
-logger.info(msg)
-    
-
-#--------------------------------------------
-# check if models are present regardless
-#--------------------------------------------
-if amopt.d['import_cluster']:
-    raise RuntimeError,"import_cluster needs to be updated!"
-    if os.path.exists(amopt.d['import_cluster']): 
-        cluster_path = amopt.d['import_cluster']
-        fcluster_dir = os.path.join( amopt.d['work_dir'], 'fine_cluster_1' )
-        if not os.path.exists( fcluster_dir  ):
-            os.mkdir( fcluster_dir )
-        os.chdir( fcluster_dir )
-        list_of_ensembles = truncateedit_MAX.truncate( amopt.d['theseus_exe'],
-                                                       cluster_path ,
-                                                       fcluster_dir ,
-                                                       amopt.d['maxcluster_exe'], 
-                                                       amopt.d['percent'] )
-
-        os.system('mkdir ' + amopt.d['work_dir'] + '/ensembles_1')
-        #for each_ens in list_of_ensembles:
-        #    pdb_edit.edit_sidechains(each_ens, amopt.d['work_dir'] + '/ensembles_1/')
-        #sys.exit()
 
 #---------------------------------------
 # Do the clustering
 #---------------------------------------
-ensembles = [] # List of ensembles - 1 per cluster
 
 ## Save results
 #f = open( amopt.d['results_path'], 'w' )
@@ -700,15 +710,18 @@ ensembles = [] # List of ensembles - 1 per cluster
 #logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
 #
 
+ensembles = [] # List of ensembles - 1 per cluster
 if amopt.d['import_ensembles']:
+    
     #---------------------------------------
     # Importing pre-made ensembles
     #---------------------------------------
+    
     # Set list of ensembles to the one we are importing
-    logger.info("Importing existing ensembles from: {0}".format( amopt.d['ensembles_dir'] ) )
-    final_ensembles = []
-    for infile in glob.glob(os.path.join(amopt.d['ensembles_dir'], '*.pdb')):
-        final_ensembles.append(infile)
+    msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
+    RUNNING.write(msg)
+    logger.info( msg )
+    final_ensembles =  glob.glob( os.path.join(amopt.d['ensembles_dir'], '*.pdb') )
 
     if amopt.d['top_model_only']:
         logger.info("Only using the top model" )
@@ -717,6 +730,8 @@ if amopt.d['import_ensembles']:
     # Set ensembles
     ensembles = [ final_ensembles ]
 
+elif amopt.d['import_cluster']:
+    ensembles = [ ensemble.import_cluster( amopt.d ) ]
 else:
     
     if amopt.d['submit_cluster']:
@@ -746,10 +761,7 @@ else:
     
     # Extract list of pdbs from ensemble results
     for eresult in amopt.d['ensemble_results']:
-        ensemble_pdbs = []
-        for result in eresult:
-            ensemble_pdbs.append( result.pdb )
-        ensembles.append( ensemble_pdbs )
+        ensembles.append( [ e.pdb for e in eresult ] )
 
 ensemble_summary = ensemble.ensemble_summary(amopt.d)
 RUNNING.write(ensemble_summary)
@@ -772,6 +784,7 @@ for i, ensemble_pdbs in enumerate(ensembles):
     
     clusterID=str(i+1)
     logger.info('----- Running MRBUMP (cluster ' + clusterID+ ')--------\n\n')
+    logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble_pdbs),  clusterID ) )
     logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble_pdbs),  clusterID ) )
     
     if len(ensemble_pdbs) < 1:
