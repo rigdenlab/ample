@@ -3,10 +3,10 @@
 library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
-#setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
-setwd("/home/jmht/Documents/test/CC/contacts")
+setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
+#setwd("/home/jmht/Documents/test/CC/contacts")
 #data <- read.table(file="results_bucc.csv",sep=',', header=T)
-data <- read.table(file="results_contacts1.csv",sep=',', header=T)
+data <- read.table(file="results_bucc_np.csv",sep=',', header=T)
 
 # Categorise successes
 data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
@@ -18,7 +18,7 @@ data$buccFinalRfree[ data$buccFinalRfree == "nolog" ] <- NA
 data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
 
 # Find number of atoms that were placed
-data$numAllAtoms <- data$ensembleNumAtoms * data$estChainsASU
+#data$numAllAtoms <- data$ensembleNumAtoms * data$estChainsASU
 
 
 # Object to hold successes
@@ -162,8 +162,10 @@ ggsave("reforiginRMSD.png")
 
 #Comparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
-# CAN ONLY COMPARE NON_FLOATING ORIGINS and where a phaser model was produced
-rdata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG), ]
+# CAN ONLY COMPARE NON_FLOATING ORIGINS and where a phaser model was produced and where we could find an origin
+rdata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG) & ! is.na( data$aoNumContacts ), ]
+# HACK - set NA aoNumContacts to zero
+#rdata$aoNumContacts[ is.na( rdata$aoNumContacts ) ] <- 0
 
 p <-ggplot(data=rdata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
 p + geom_point() +
@@ -255,19 +257,50 @@ ggtitle("Good contacts vs shelxe CC for non-floating origins")
 ggsave("CCVsInRegister.png")
 
 
-# plot of allContacts against numAtoms
-# 		scale_x_continuous( limits=c(0, max( rdata$numAllAtoms - rdata$numAllContacts , na.rm=TRUE) )  ) +
-p <-ggplot(data=rdata, aes(x=numAllAtoms-numAllContacts, y=numAllContacts, colour=factor(success) ) )
-p + geom_point() + scale_colour_manual( values=c(fcolour, scolour),
+p <-ggplot(data=rdata, aes(x=numPlacedAtoms-aoNumContacts, y=aoNumContacts, colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		scale_size() +
+		facet_grid( ensembleSideChainTreatment ~ .) +
+		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
-		scale_y_continuous( limits=c(0, 1000)  ) +
+				labels=c("Failure", "Success") ) +
 		xlab("Num. unmatched atoms") +
 		ylab("All contacts (< 0.5A)") +
-		ggtitle("Num contacts vs num unmatched atoms non-floating origins")
-ggsave("UnmatchedVsContacts.png")
+		ggtitle("Num coincident vs unmatched atoms non-floating origins")
+ggsave("CoindicentVsUnmatched.png")
 
+p <-ggplot(data=rdata[ rdata$aoOrigin == rdata$roOrigin , ], aes(x=roRioGood, y=aoNumContacts, colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		scale_size() +
+		facet_grid( ensembleSideChainTreatment ~ .) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("RIO score (in- + out-of-register)") +
+		ylab("All contacts (< 0.5A)") +
+		ggtitle("Num coincident vs RIO C-alpha non-floating & matching origins")
+ggsave("CoindicentVsRIO.png")
+
+
+# plot of allContacts against numAtoms
+#	scale_y_continuous( limits=c(0, max( rdata$numPlacedAtoms - rdata$aoNumContacts , na.rm=TRUE) ) ) +
+#	stat_sum( aes(size = ..n..) ) +
+p <-ggplot(data=rdata, aes(x=numPlacedAtoms-aoNumContacts, y=aoNumContacts, colour=factor(success) ) )
+p + geom_point() +
+	scale_size() +
+	facet_grid( ensembleSideChainTreatment ~ .) +
+	scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+	xlab("Num. unmatched atoms") +
+	ylab("All contacts (< 0.5A)") +
+	ggtitle("Num coincident vs unmatched atoms non-floating origins")
+ggsave("CoindicentVsUnmatched.png")
+
+#rdata[ rdata$numPlacedAtoms - rdata$aoNumContacts > 3000, ]
+#		scale_y_continuous( limits=c(0, max( rdata$numPlacedAtoms, na.rm=TRUE) )  ) +
+#	scale_x_continuous( limits=c(-10,100) ) +
+#	scale_y_continuous( limits=c(-10,100) ) +
 
 p <-ggplot(data=rdata[ rdata$success == 0,], aes(x=numAllAtoms-numAllContacts, y=numAllContacts ) )
 p + geom_point() +
