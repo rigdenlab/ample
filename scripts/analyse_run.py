@@ -125,6 +125,7 @@ class AmpleResult(object):
                               'ensembleName',
                               'ensembleNumModels',
                               'ensembleNumResidues',
+                              'ensembleNumAtoms',
                               'ensemblePercentModel',
                               'ensembleSideChainTreatment',
                               'ensembleRadiusThreshold',
@@ -140,46 +141,35 @@ class AmpleResult(object):
                               'molrepTime',
                               'reforiginRMSD',
                               
+#                               'csymmatchGotOrigin',
+#                               'csymmatchScore',
+#                               'csymmatchInNR',
+#                               'csymmatchInR',
+
+                              'numPlacedAtoms',
                               'floatingOrigin',
-                              'csymmatchGotOrigin',
-                              'csymmatchScore',
-                              'csymmatchInNR',
-                              'csymmatchInR',
-
-                              'csymmatchOrigin',
-                              'nrContactOrigin',
-
-                              'cContactData',
-                              'cNumContacts',
-                              'cInregisterContacts',
-                              'cOoRegisterContacts',
-                              'cBackwardsContacts',
-                              'cGoodContacts',
-                              'cNocatContacts',
-
-                              'nrContactData',
-                              'nrNumContacts',
-                              'nrInRegisterContacts',
-                              'nrOoRegisterContacts',
-                              'nrBackwardsContacts',
-                              'nrGoodContacts',
-                              'nrNocatContacts',
-                              'helixSequence',
-                              'lenHelix',
-
-#                               'csymmatchOriginOk',
-#                               'contactData',
-#                               'contactOrigin',
-#                               'numContacts',
-#                               'inregisterContacts',
-#                               'ooregisterContacts',
-#                               'backwardsContacts',
-#                               'goodContacts',
-#                               'nocatContacts',
-#                               'helixSequence',
-#                               'lenHelix',
                               
+                              'aoOrigin',
+                              'aoNumContacts',
+                              'aoNumRio',
+                              'aoRioInregister',
+                              'aoRioOoRegister',
+                              'aoRioBackwards',
+                              'aoRioGood',
+                              'aoRioNocat',
                               
+                              'roOrigin',
+                              'roNumContacts',
+                              'roNumRio',
+                              'roRioInregister',
+                              'roRioOoRegister',
+                              'roRioBackwards',
+                              'roRioGood',
+                              'roRioNocat',
+                              
+#                              'rioLenHelix',
+#                              'rioHelixSequence',
+
                               'rfact',
                               'rfree',
                               'solution',
@@ -217,6 +207,7 @@ class AmpleResult(object):
                                 "Ensemble name",
                                 "Ensemble num models",
                                 "Ensemble num residues",
+                                "Ensemble num atoms",
                                 "Ensemble % of Model",
                                 "Ensemble side chain",
                                 "Ensemble radius thresh",
@@ -232,45 +223,25 @@ class AmpleResult(object):
                                 "Molrep Time",
                                 "Reforigin RMSD",
 
-                                'floatingOrigin',
-                                'csymmatchGotOrigin',
-                                'csymmatchScore',
-                                'csymmatchInNR',
-                                'csymmatchInR',
-
-                                'csymmatchOrigin',
-                                'nrContactOrigin',
-
-                                'cContactData',
-                                'cNumContacts',
-                                'cInregisterContacts',
-                                'cOoRegisterContacts',
-                                'cBackwardsContacts',
-                                'cGoodContacts',
-                                'cNocatContacts',
-
-                                'nrContactData',
-                                'nrNumContacts',
-                                'nrInRegisterContacts',
-                                'nrOoRegisterContacts',
-                                'nrBackwardsContacts',
-                                'nrGoodContacts',
-                                'nrNocatContacts',
-                                'helixSequence',
-                                'lenHelix',
-
-#                                 "Floating Origin",
-#                                 "Csymmatch Origin OK",
-#                                 "Contact Data",
-#                                 "Contact origin",
-#                                 "Number of contacts",
-#                                 "In register contacts",
-#                                 "Out of register contacts",
-#                                 "Backwards contacts",
-#                                 "Good contacts",
-#                                 "Uncategorised contacts",
-#                                 "Helix sequence",
-#                                 "Helix length",
+                              'numPlacedAtoms',
+                              'floatingOrigin',
+                              'aoOrigin',
+                              'aoNumContacts',
+                              'aoNumRio',
+                              'aoRioInregister',
+                              'aoRioOoRegister',
+                              'aoRioBackwards',
+                              'aoRioGood',
+                              'aoRioNocat',
+                              
+                              'roOrigin',
+                              'roNumContacts',
+                              'roNumRio',
+                              'roRioInregister',
+                              'roRioOoRegister',
+                              'roRioBackwards',
+                              'roRioGood',
+                              'roRioNocat',
                                 
                                 "Rfact",
                                 "Rfree",
@@ -288,7 +259,7 @@ class AmpleResult(object):
                                  ]
 
         # Things not to output
-        self.skip = [ "resultDir", "ss_pred", "ss_dssp", "cContactData", "nrContactData" ]
+        self.skip = [ "resultDir", "ss_pred", "ss_dssp", "rioData" ]
         
         # Set initial values
         for a in self.orderedAttrs:
@@ -472,8 +443,6 @@ class CompareModels(object):
         return
 # End CompareModels
 
-
-
 class EnsemblePdbParser(object):
     """
     Class to mine information from an ensemble pdb
@@ -486,6 +455,7 @@ class EnsemblePdbParser(object):
         self.centroidModelName = None
         self.modelNames = []
         self.models = []
+        self.numAtoms = None
 
         self.parse()
 
@@ -496,19 +466,37 @@ class EnsemblePdbParser(object):
 
         # print os.path.join(os.getcwd(), logfile)
 
-        capture=False
+        mCapture=False
+        aCapture = False
+        self.numAtoms = 0
         for line in open(self.pdbfile, 'r'):
             
-            if line.startswith( "REMARK   MODEL" ) and not capture:
-                capture=True
+            if line.startswith( "REMARK   MODEL" ) and not mCapture:
+                mCapture=True
+                continue
                 
-            if capture and not line.startswith( "REMARK   MODEL" ):
-                break
+            if mCapture and not line.startswith( "REMARK   MODEL" ):
+                mCapture=False
+                continue
             
-            if capture:
+            if mCapture:
                 fields = line.split()
                 self.models.append( fields[3] )
-                
+                continue
+            
+            if line.startswith("MODEL"):
+                assert not aCapture and not mCapture
+                aCapture=True
+                continue
+            
+            if line.startswith("TER"):
+                aCapture = False
+                break
+            
+            if aCapture:
+                self.numAtoms += 1
+
+        assert not aCapture and not mCapture
         
         if not len( self.models ):
             raise RuntimeError,"Failed to get any models from ensemble!"
@@ -950,16 +938,17 @@ def analyseSolution( ampleResult=None,
         assert False
 
     if placedPdb is None:
-        #print "NO PDB FOR ",ampleResult
+        print "NO PLACED PDB FOR ",ampleResult
         return
-    #else:
-    # print "GOT PDB FOR ",ampleResult
 
     # debug - copy into work directory as reforigin struggles with long pathnames
     shutil.copy(placedPdb, os.path.join( workdir, os.path.basename( placedPdb ) ) )
     
     pdbedit = pdb_edit.PDBEdit()
     placedPdbInfo = pdbedit.get_info( placedPdb )
+    
+    ampleResult.numPlacedAtoms = placedPdbInfo.numAtoms()
+
     
     # Get reforigin info
     if True:
@@ -974,146 +963,225 @@ def analyseSolution( ampleResult=None,
     #    print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdbInfo.pdb, placedPdbInfo.pdb )
     #    print "{0}".format( e )
     #    ampleResult.reforiginRMSD = 9999
-         
-    #
-    # SHELXE PROCESSING
-    #
-    if not ampleResult.shelxePdb is None and os.path.isfile( ampleResult.shelxePdb ):
-        
-        # Need to copy to avoid problems with long path names
-        shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
-        shutil.copy( ampleResult.shelxePdb, shelxePdb )
+
+
+    # calculate best origin with allAtom
+    # calculate rio at allAtom origin
+    
+    # calculate best origin with RIO
+    if not originInfo.isFloating():
         
         # Contact object
         ccalc = contacts.Contacts()
         
-        # Use csymmatch to find the origin that best maps the shexePdb onto the native
-        csym                           = csymmatch.Csymmatch()
-        shelxeCsymmatchPdb             = ample_util.filename_append( 
-                                                                    filename=shelxePdb, 
-                                                                    astr="csymmatch", 
-                                                                    directory=workdir )
-        
-        csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
-
-        shelxeCsymmatchOrigin          = csym.origin()
-        ampleResult.csymmatchOrigin    = shelxeCsymmatchOrigin
-        ampleResult.csymmatchScore     = csym.averageScore()
-        ampleResult.csymmatchGotOrigin = bool( shelxeCsymmatchOrigin )
-        
-        # Clear results
-        ampleResult.cContactData        = None
-        ampleResult.cNumContacts        = None
-        ampleResult.cInregisterContacts = None
-        ampleResult.cOoRegisterContacts = None
-        ampleResult.cBackwardsContacts  = None
-        ampleResult.cGoodContacts       = None
-        ampleResult.cNocatContacts      = None
-        
-        if ampleResult.csymmatchGotOrigin:
-            # Calculate contacts for csymmatch origin
-            ccalc.getContacts( placedPdbInfo=placedPdbInfo,
-                               nativePdbInfo=nativePdbInfo,
-                               resSeqMap=resSeqMap,
-                               origins=[ shelxeCsymmatchOrigin ] ,
-                               workdir=workdir,
-                               dsspLog=dsspLog
-                            )
-       
-            if ccalc.best:
-                ampleResult.cContactData        = ccalc.best
-                ampleResult.cNumContacts        = ccalc.best.numContacts
-                ampleResult.cInregisterContacts = ccalc.best.inregister
-                ampleResult.cOoRegisterContacts = ccalc.best.ooregister
-                ampleResult.cBackwardsContacts  = ccalc.best.backwards
-                good = ccalc.best.inregister + ccalc.best.ooregister
-                ampleResult.cGoodContacts       = good
-                ampleResult.cNocatContacts      = ccalc.best.numContacts - good
-
-        # Clear results
-        ampleResult.nrContactData        = None
-        ampleResult.nrNumContacts        = None
-        ampleResult.nrInregisterContacts = None
-        ampleResult.nrOoRegisterContacts = None
-        ampleResult.nrBackwardsContacts  = None
-        ampleResult.nrGoodContacts       = None
-        ampleResult.nrNocatContacts      = None
-        ampleResult.helixSequence        = None
-        ampleResult.lenHelix             = None
-        
-        # Calculate contacts for redundant origins
-        if not ampleResult.floatingOrigin:
+        # Find the origin by using the max coindicence of the number of atoms
+        if ccalc.findOrigin( placedPdbInfo=placedPdbInfo,
+                                 nativePdbInfo=nativePdbInfo,
+                                 resSeqMap=resSeqMap,
+                                 origins=originInfo.nonRedundantAlternateOrigins(),
+                                 allAtom=True,
+                                 workdir=workdir
+                                 ):
             
-            # Get list of origins - cheat and use all
-            #origins = originInfo.nonRedundantAlternateOrigins()
-            origins = originInfo.redundantAlternateOrigins()
-
-            ccalc.getContacts( placedPdbInfo=placedPdbInfo,
-                               nativePdbInfo=nativePdbInfo,
-                               resSeqMap=resSeqMap,
-                               origins=origins ,
-                               workdir=workdir,
-                               dsspLog=dsspLog
-                            )
-            ampleResult.nrContactData        = ccalc.best
-            ampleResult.nrNumContacts        = ccalc.best.numContacts
-            ampleResult.nrInRegisterContacts = ccalc.best.inregister
-            ampleResult.nrOoRegisterContacts = ccalc.best.ooregister
-            ampleResult.nrBackwardsContacts  = ccalc.best.backwards
-            ampleResult.nrContactOrigin      = ccalc.best.origin
-            good = ccalc.best.inregister + ccalc.best.ooregister
-            ampleResult.nrGoodContacts       = good
-            ampleResult.nrNocatContacts      = ccalc.best.numContacts - good
-            ampleResult.helixSequence        = ccalc.best.helix
-            if ccalc.best.helix:
-                ampleResult.lenHelix = len( ccalc.best.helix )
-            
-            gotHelix=False
-            hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
-            gotHelix =  ccalc.writeHelixFile( hfile )
-                    
-            # Just for debugging
-            if ampleResult.shelxeCC >= 25 and ampleResult.shelxeAvgChainLength >= 10 and not gotHelix:
-                print "NO HELIX FILE"
+            contactData = ccalc.data
         
-        ampleResult.csymmatchInNR = None
-        ampleResult.csymmatchInR = None
-        # See if this origin is valid
-        if ampleResult.csymmatchGotOrigin:
-            if ampleResult.csymmatchOrigin in originInfo.redundantAlternateOrigins():
-                ampleResult.csymmatchInR = True
-            else:
-                ampleResult.csymmatchInR = False
+            # save the number of atoms in the overlap
+            ampleResult.aoOrigin = contactData.origin
+            ampleResult.aoNumContacts = contactData.numContacts
+            
+            # now calculate rio for best origin using the saved data
+            ccalc.calcRio( contactData )
+        
+            # Set results
+            ampleResult.aoNumRio           = contactData.numContacts
+            ampleResult.aoRioInregister    = contactData.inregister
+            ampleResult.aoRioOoRegister    = contactData.ooregister
+            ampleResult.aoRioBackwards     = contactData.backwards
+            ampleResult.aoRioGood          = contactData.inregister + contactData.ooregister
+            ampleResult.aoRioNocat         = contactData.numContacts - ampleResult.aoRioGood
+        else:
+            print "CANNOT FIND ALLATOM ORIGIN"
+            
+            
+        # Find the origin by using the best RIO
+        if ccalc.findOrigin( placedPdbInfo=placedPdbInfo,
+                                 nativePdbInfo=nativePdbInfo,
+                                 resSeqMap=resSeqMap,
+                                 origins=originInfo.nonRedundantAlternateOrigins(),
+                                 allAtom=False,
+                                 workdir=workdir
+                                 ):
+            
+            # save the number of atoms in the overlap
+            ampleResult.roOrigin           = ccalc.data.origin
+            ampleResult.roNumContacts      = ccalc.data.numContacts
+            # Set results
+            ampleResult.roNumRio           = ccalc.data.numContacts
+            ampleResult.roRioInregister    = ccalc.data.inregister
+            ampleResult.roRioOoRegister    = ccalc.data.ooregister
+            ampleResult.roRioBackwards     = ccalc.data.backwards
+            ampleResult.roRioGood          = ccalc.data.inregister + ccalc.data.ooregister
+            ampleResult.roRioNocat         = ccalc.data.numContacts - ampleResult.roRioGood
+        
+        else:
+            print "CANNOT FIND RIO ORIGIN"
+
+#         # Now get the helix
+#         helixSequence = ccalc.helixFromContacts( contacts=contactData.contacts,
+#                                  dsspLog=dsspLog )
+#         ampleResult.rioHelixSequence = helixSequence
+#         ampleResult.rioLenHelix      = len( helixSequence )
+#         if ampleResult.rioLenHelix:
+#             hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
+#             with open( hfile, 'w' ) as f:
+#                 f.write( helixSequence+"\n" )
                 
-            if ampleResult.csymmatchOrigin in originInfo.nonRedundantAlternateOrigins():
-                ampleResult.csymmatchInNR = True
-            else:
-                ampleResult.csymmatchInNR = False
+        # Just for analysis - copy shelxe file into analysis directory
+        if os.path.isfile( ampleResult.shelxePdb ):
+            
+            shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
+            shutil.copy( ampleResult.shelxePdb, shelxePdb )
         
-        #
-        # Structure comparison - don't think this is useful anymore
-        #
-        shelxeCsymmatchPdbSingle       = ample_util.filename_append( filename=shelxeCsymmatchPdb, 
-                                                                     astr="1chain", 
-                                                                     directory=workdir )
-        pdbedit.to_single_chain(shelxeCsymmatchPdb, shelxeCsymmatchPdbSingle)
+        # For now skip shelxe analysis
         
-        # Compare the traced model to the native with maxcluster
-        # We can only compare one chain so we extracted this earlier
-        maxComp = maxcluster.Maxcluster()
-        d = maxComp.compareSingle( nativePdb=nativeAs1Chain,
-                                   modelPdb=shelxeCsymmatchPdbSingle,
-                                   sequenceIndependant=True,
-                                   rmsd=False
-                                 )
-        ampleResult.shelxeTM = d.tm
-        ampleResult.shelxeTMPairs = d.pairs
-        
-        d = maxComp.compareSingle( nativePdb=nativeAs1Chain,
-                                   modelPdb=shelxeCsymmatchPdbSingle,
-                                   sequenceIndependant=True,
-                                   rmsd=True )
-        ampleResult.shelxeRMSD = d.rmsd
+#     #
+#     # SHELXE PROCESSING
+#     #
+#     if not ampleResult.shelxePdb is None and os.path.isfile( ampleResult.shelxePdb ):
+#         
+#         # Need to copy to avoid problems with long path names
+#         shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
+#         shutil.copy( ampleResult.shelxePdb, shelxePdb )
+#         
+# 
+#         
+#         # Use csymmatch to find the origin that best maps the shexePdb onto the native
+#         csym                           = csymmatch.Csymmatch()
+#         shelxeCsymmatchPdb             = ample_util.filename_append( 
+#                                                                     filename=shelxePdb, 
+#                                                                     astr="csymmatch", 
+#                                                                     directory=workdir )
+#         
+#         csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
+# 
+#         shelxeCsymmatchOrigin          = csym.origin()
+#         ampleResult.csymmatchOrigin    = shelxeCsymmatchOrigin
+#         ampleResult.csymmatchScore     = csym.averageScore()
+#         ampleResult.csymmatchGotOrigin = bool( shelxeCsymmatchOrigin )
+#         
+#         # Clear results
+#         ampleResult.cContactData        = None
+#         ampleResult.cNumContacts        = None
+#         ampleResult.cInregisterContacts = None
+#         ampleResult.cOoRegisterContacts = None
+#         ampleResult.cBackwardsContacts  = None
+#         ampleResult.cGoodContacts       = None
+#         ampleResult.cNocatContacts      = None
+#         
+#         if ampleResult.csymmatchGotOrigin:
+#             # Calculate contacts for csymmatch origin
+#             ccalc.getContacts( placedPdbInfo=placedPdbInfo,
+#                                nativePdbInfo=nativePdbInfo,
+#                                resSeqMap=resSeqMap,
+#                                origins=[ shelxeCsymmatchOrigin ] ,
+#                                workdir=workdir,
+#                                dsspLog=dsspLog
+#                             )
+#        
+#             if ccalc.best:
+#                 ampleResult.cContactData        = ccalc.best
+#                 ampleResult.cNumContacts        = ccalc.best.numContacts
+#                 ampleResult.cInregisterContacts = ccalc.best.inregister
+#                 ampleResult.cOoRegisterContacts = ccalc.best.ooregister
+#                 ampleResult.cBackwardsContacts  = ccalc.best.backwards
+#                 good = ccalc.best.inregister + ccalc.best.ooregister
+#                 ampleResult.cGoodContacts       = good
+#                 ampleResult.cNocatContacts      = ccalc.best.numContacts - good
+# 
+#         # Clear results
+#         ampleResult.nrContactData        = None
+#         ampleResult.nrNumContacts        = None
+#         ampleResult.nrInregisterContacts = None
+#         ampleResult.nrOoRegisterContacts = None
+#         ampleResult.nrBackwardsContacts  = None
+#         ampleResult.nrGoodContacts       = None
+#         ampleResult.nrNocatContacts      = None
+#         ampleResult.helixSequence        = None
+#         ampleResult.lenHelix             = None
+#         
+#         # Calculate contacts for redundant origins
+#         if not ampleResult.floatingOrigin:
+#             
+#             # Get list of origins - cheat and use all
+#             #origins = originInfo.nonRedundantAlternateOrigins()
+#             origins = originInfo.redundantAlternateOrigins()
+# 
+#             ccalc.getContacts( placedPdbInfo=placedPdbInfo,
+#                                nativePdbInfo=nativePdbInfo,
+#                                resSeqMap=resSeqMap,
+#                                origins=origins ,
+#                                workdir=workdir,
+#                                dsspLog=dsspLog
+#                             )
+#             ampleResult.nrContactData        = ccalc.best
+#             ampleResult.nrNumContacts        = ccalc.best.numContacts
+#             ampleResult.nrInRegisterContacts = ccalc.best.inregister
+#             ampleResult.nrOoRegisterContacts = ccalc.best.ooregister
+#             ampleResult.nrBackwardsContacts  = ccalc.best.backwards
+#             ampleResult.nrContactOrigin      = ccalc.best.origin
+#             good = ccalc.best.inregister + ccalc.best.ooregister
+#             ampleResult.nrGoodContacts       = good
+#             ampleResult.nrNocatContacts      = ccalc.best.numContacts - good
+#             ampleResult.helixSequence        = ccalc.best.helix
+#             if ccalc.best.helix:
+#                 ampleResult.lenHelix = len( ccalc.best.helix )
+#             
+#             gotHelix=False
+#             hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
+#             gotHelix =  ccalc.writeHelixFile( hfile )
+#                     
+#             # Just for debugging
+#             if ampleResult.shelxeCC >= 25 and ampleResult.shelxeAvgChainLength >= 10 and not gotHelix:
+#                 print "NO HELIX FILE"
+#         
+#         ampleResult.csymmatchInNR = None
+#         ampleResult.csymmatchInR = None
+#         # See if this origin is valid
+#         if ampleResult.csymmatchGotOrigin:
+#             if ampleResult.csymmatchOrigin in originInfo.redundantAlternateOrigins():
+#                 ampleResult.csymmatchInR = True
+#             else:
+#                 ampleResult.csymmatchInR = False
+#                 
+#             if ampleResult.csymmatchOrigin in originInfo.nonRedundantAlternateOrigins():
+#                 ampleResult.csymmatchInNR = True
+#             else:
+#                 ampleResult.csymmatchInNR = False
+#         
+#         #
+#         # Structure comparison - don't think this is useful anymore
+#         #
+#         shelxeCsymmatchPdbSingle       = ample_util.filename_append( filename=shelxeCsymmatchPdb, 
+#                                                                      astr="1chain", 
+#                                                                      directory=workdir )
+#         pdbedit.to_single_chain(shelxeCsymmatchPdb, shelxeCsymmatchPdbSingle)
+#         
+#         # Compare the traced model to the native with maxcluster
+#         # We can only compare one chain so we extracted this earlier
+#         maxComp = maxcluster.Maxcluster()
+#         d = maxComp.compareSingle( nativePdb=nativeAs1Chain,
+#                                    modelPdb=shelxeCsymmatchPdbSingle,
+#                                    sequenceIndependant=True,
+#                                    rmsd=False
+#                                  )
+#         ampleResult.shelxeTM = d.tm
+#         ampleResult.shelxeTMPairs = d.pairs
+#         
+#         d = maxComp.compareSingle( nativePdb=nativeAs1Chain,
+#                                    modelPdb=shelxeCsymmatchPdbSingle,
+#                                    sequenceIndependant=True,
+#                                    rmsd=True )
+#         ampleResult.shelxeRMSD = d.rmsd
 
     return
 
@@ -1136,7 +1204,7 @@ if __name__ == "__main__":
     
     for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbCode in sorted( resultsDict.keys() ):
-    #for pdbCode in [ "1BYZ" ]:
+    #for pdbCode in [ "1D7M" ]:
         
         workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
@@ -1188,7 +1256,6 @@ if __name__ == "__main__":
         else:
             nativeAs1Chain = nativePdbInfo.pdb
         
-        
         # Get hold of a full model so we can do the mapping of residues
         refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbCode ) )
         resSeqMap = residue_map.residueSequenceMap()
@@ -1217,10 +1284,11 @@ if __name__ == "__main__":
         dsspP = dssp.DsspParser( dsspLog )
         
         # Loop over each result
+        mrbumpDir = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1")
         if pickledResults:
             results = resultsDict[ pdbCode ]
         else:
-            r = mrbump_results.ResultsSummary( os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1") )
+            r = mrbump_results.ResultsSummary( mrbumpDir )
             r.extractResults()
             results = r.results
         
@@ -1264,7 +1332,7 @@ if __name__ == "__main__":
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
             
-            #if ensembleName != "SCWRL_reliable_sidechains_trunc_13.389413_rad_2":
+            #if ensembleName != "SCWRL_reliable_sidechains_trunc_5.241154_rad_1":
             #   continue
             
             # Extract information on the models and ensembles
@@ -1286,8 +1354,9 @@ if __name__ == "__main__":
             ar.ensemblePercentModel = int( ( float( ar.ensembleNumResidues ) / float( ar.fastaLength ) ) * 100 )
             
             # Get the data on the models in the ensemble
-            ensembleFile = os.path.join( dataDir, "ROSETTA_MR_0/ensembles_1", ensembleName+".pdb" )
-            eP = EnsemblePdbParser( ensembleFile )
+            ensemblePdb = os.path.join( dataDir, "ROSETTA_MR_0/ensembles_1", ensembleName+".pdb" )
+            eP = EnsemblePdbParser( ensemblePdb )
+            ar.ensembleNumAtoms = eP.numAtoms
             
             ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
             ar.ensembleNativeTM = maxComp.tm( eP.centroidModelName )

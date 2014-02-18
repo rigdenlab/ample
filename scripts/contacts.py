@@ -30,15 +30,24 @@ import residue_map
 class ContactData(object):
     def __init__(self):
 
-        self.numContacts = 0
-        self.inregister = 0
-        self.ooregister = 0
-        self.backwards = 0
         self.origin = None
+        self.originPdb = None
+        self.joinedPdb = None
+        self.fromChains = None
+        self.toChains = None
+        
+        self.numContacts = 0
+        self.inregister  = 0
+        self.ooregister  = 0
+        self.backwards   = 0
+        self.numGood     = 0
+        
+        self.contacts = None
+        
         self.ncontLog = None
+        self.helix = None
         self.pdb = None
         self.csymmatchPdb = None
-        self.helix = None
         return
     
     def __str__(self):
@@ -67,47 +76,225 @@ class Contacts(object):
         self.ooregister = 0
         self.backwards = 0
         self.best = None
-        # testing
-        self.originCompare = {}
         return
     
-    def getContacts( self, 
-                     nativePdbInfo=None,
-                     placedPdbInfo=None,
-                     resSeqMap=None,
-                     origins=None, 
-                     workdir=None,
-                     dsspLog=None ):
+#     def getContacts( self, 
+#                      nativePdbInfo=None,
+#                      placedPdbInfo=None,
+#                      resSeqMap=None,
+#                      origins=None, 
+#                      workdir=None,
+#                      dsspLog=None ):
+#         
+#         if not self.run( nativePdbInfo=nativePdbInfo,
+#                          placedPdbInfo=placedPdbInfo,
+#                          resSeqMap=resSeqMap,
+#                          origins=origins, 
+#                          workdir=workdir ):
+#             return False
+#         
+#         
+#         #print "placedPdb ",placedPdb
+#         #print "nativePdb ",nativePdb
+#         #print "GOT MAP ",resSeqMap
+#         
+#         # We should have contact data to calculate a helix from
+#         assert dsspLog
+#         dsspP = dssp.DsspParser( dsspLog )
+#         sequence = self.helixFromContacts( dsspP=dsspP )
+#         if sequence:
+#             self.best.helix = sequence
+#         
+#         if self.best.pdb:
+#             csym = csymmatch.Csymmatch()
+#             # Just for info - run csymmatch so we can see the alignment
+#             csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch_best", directory=self.workdir )
+#             csym.run( refPdb=nativePdbInfo.pdb, inPdb=self.best.pdb, outPdb=csymmatchPdb, originHand=False )
+#             self.best.csymmatchPdb = csymmatchPdb
+#         
+#         return
+
+    def analyseRio( self, contactData, dsspP=None ):
         
-        if not self.run( nativePdbInfo=nativePdbInfo,
-                         placedPdbInfo=placedPdbInfo,
-                         resSeqMap=resSeqMap,
-                         origins=origins, 
-                         workdir=workdir ):
-            return False
+        # Clear any data
+        contactData.inregister = 0
+        contactData.ooregister = 0
+        contactData.backwards = 0
         
+        if contactData.numContacts == 0:
+            return
+
+        # Now categorise the chunks
+        if not chunks:
+            return 0 
         
-        #print "placedPdb ",placedPdb
-        #print "nativePdb ",nativePdb
-        #print "GOT MAP ",resSeqMap
+        #print "GOT CHUNKS ",chunks
         
-        # We should have contact data to calculate a helix from
-        assert dsspLog
-        dsspP = dssp.DsspParser( dsspLog )
-        sequence = self.helixFromContacts( dsspP=dsspP )
-        if sequence:
-            self.best.helix = sequence
+        #for ( start, stop ) in startstop:
+        for d in chunks:
+            start = d['startIdx']
+            stop  = d['stopIdx']
+            #print "NEW CHUNK"
+            register    = True
+            backwards   = False
+            lastResSeq1 = None
+            lastResSeq2 = None
+            count       = 1
+            #print "LEN ", stop - start + 1
+            for i in range( start, stop + 1 ):
+                
+                c = contactData.contacts[ i ]
+                #print "CONTACT: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2']
+                
+                if i != start:
+                    if c['resSeq1'] == lastResSeq1 - 1 or c['resSeq2'] == lastResSeq2 - 1:
+                        backwards = True
+                        
+                    # Sanity check
+                    if backwards:
+                        assert c['resSeq1'] == lastResSeq1 -1 or  c['resSeq2'] == lastResSeq2 - 1,"Going backwards but resSeq arent!"
+                    if not register and not backwards:
+                        assert c['resSeq1'] != c['resSeq2'],"not register and backwards and not matching"
+                        
+                    count += 1
+                
+                lastResSeq1  = c['resSeq1']
+                lastResSeq2  = c['resSeq2']
+                if c['resSeq1']  != c['resSeq2']:
+                    register = False
+            
+            # Add total here
+            if register:
+                contactData.inregister += count
+            else:
+                contactData.ooregister += count
+            
+            if backwards:
+                contactData.backwards += count
         
-        if self.best.pdb:
-            csym = csymmatch.Csymmatch()
-            # Just for info - run csymmatch so we can see the alignment
-            csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch_best", directory=self.workdir )
-            csym.run( refPdb=nativePdbInfo.pdb, inPdb=self.best.pdb, outPdb=csymmatchPdb, originHand=False )
-            self.best.csymmatchPdb = csymmatchPdb
-        
+        # End categorising chunks
         return
 
-    def helixFromContacts( self, contacts=None, dsspP=None, minContig=2, maxGap=3  ):
+    def calcRio(self, contactData ):
+        """Calculate the RIO using the origin and data saved previously"""
+
+        # Clear out any set data
+        contactData.numContacts = 0
+        contactData.numGood     = 0
+        contactData.inregister  = 0
+        contactData.ooregister  = 0
+        contactData.backwards   = 0
+        contactData.contacts    = None
+        
+        # values from previous run to calc origin
+        self.runNcont( pdbin=contactData.joinedPdb,
+                       sourceChains=contactData.fromChains,
+                       targetChains=contactData.toChains,
+                        )
+        self.parseNcontLog( contactData )
+        self.analyseRio( contactData )
+        
+        return contactData
+        
+    def findOrigin(self,
+                   nativePdbInfo=None,
+                   placedPdbInfo=None,
+                   resSeqMap=None,
+                   origins=None,
+                   allAtom=False,
+                   workdir=None ):
+        """Find the origin using the maximum number of contacts as metric"""
+        
+        self.workdir = workdir
+        if not self.workdir:
+            self.workdir = os.getcwd()
+            
+        pdbedit = pdb_edit.PDBEdit()
+
+        
+        if not resSeqMap.resSeqMatch():
+            #print "NUMBERING DOESN'T MATCH"
+            #raise RuntimeError,"NUMBERING DOESN'T MATCH"
+            # We need to create a copy of the placed pdb with numbering matching the native
+            placedPdbRes = ample_util.filename_append( filename=placedPdbInfo.pdb, astr="reseq", directory=self.workdir )
+            pdbedit.match_resseq( targetPdb=placedPdbInfo.pdb, sourcePdb=None, outPdb=placedPdbRes, resMap=resSeqMap )
+            placedPdb = placedPdbRes
+        else:
+            placedPdb = placedPdbInfo.pdb
+ 
+        # Make a copy of placedPdb with chains renamed to lower case
+        fromChains = placedPdbInfo.models[0].chains
+        toChains = [ c.lower() for c in fromChains ]
+        placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren", directory=self.workdir )
+        pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=fromChains, toChain=toChains )
+
+        # Loop over origins, move the placed pdb to the new origin and then run ncont
+        # Object to hold data on best origin
+        self.data = None
+        numGood = 0 # For holding the metric
+        for i, origin in enumerate( origins ):
+            #print "GOT ORIGIN ",i,origin
+            
+            placedOriginPdb =  placedAaPdb
+            if origin != [ 0.0, 0.0, 0.0 ]:
+                # Move pdb to new origin
+                #ostr="origin{0}".format(i)
+                ostr="o{0}".format( origin ).replace(" ","" )
+                placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr=ostr, directory=self.workdir )
+                pdbedit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
+            
+            # Concatenate into one file
+            joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
+            pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
+                
+            # Run ncont
+            data = ContactData()
+            data.origin = origin
+            data.originPdb = placedOriginPdb
+            data.joinedPdb = joinedPdb
+            data.fromChains = fromChains
+            data.toChains = toChains
+            # Need to use list of chains from Native as can't work out negate operator for ncont
+            if allAtom:
+                self.runNcont( pdbin=joinedPdb,
+                               sourceChains=self.fromChains,
+                               targetChains=self.toChains,
+                               allAtom=True,
+                               maxDist=0.5 )
+                self.parseNcontLog( data )
+                data.numGood = data.numContacts
+            else:
+                # Calculating from RIO
+                self.runNcont( pdbin=joinedPdb,
+                               sourceChains=self.fromChains,
+                               targetChains=self.toChains,
+                               allAtom=False,
+                               maxDist=1.5
+                                )
+                self.parseNcontLog( data )
+                self.analyseRio( data )
+                data.numGood = data.inregister + data.ooregister
+                
+            if not self.data or data.numGood >= self.data.numGood:
+                self.data = data
+
+        # End loop over origins
+        if self.data.numGood > 0:
+            
+            # If we got a match run csymmatch so we can see the result
+            csym = csymmatch.Csymmatch()
+            csymmatchPdb = ample_util.filename_append( filename=self.data.originPdb,
+                                                       astr="csymmatch_best",
+                                                       directory=self.workdir )
+            csym.run( refPdb=nativePdbInfo.pdb,
+                      inPdb=self.data.originPdb,
+                      outPdb=csymmatchPdb,
+                      originHand=False )
+            return True
+        else:
+            return False
+
+    def helixFromContacts( self, contacts=None, dsspLog=None, minContig=2, maxGap=3  ):
         """Return the sequence of the longest contiguous helix from the given contact data
         
         
@@ -128,9 +315,12 @@ class Contacts(object):
         
         """
         
+        
         #print "GOT DATA ",contacts
         #print "GOT DSSP ",dsspP.asDict()
         
+        # Parse the dssp Log
+        dsspP = dssp.DsspParser( dsspLog )
         if contacts is None:
             contacts = self.best.contacts
             
@@ -244,200 +434,20 @@ class Contacts(object):
                 
         return sequence
 
-    def allContacts( self,
-             nativePdbInfo=None,
-             placedPdbInfo=None,
-             resSeqMap=None,
-             origins=None,
-             workdir=None ):
-        """
-        """
-        
-        # Reset variables each time
-        self.ncontLog = None
-        self.contacts = None
-
-        self.workdir = workdir
-        if not self.workdir:
-            self.workdir = os.getcwd()
-            
-        pdbedit = pdb_edit.PDBEdit()
-        
-        if not resSeqMap.resSeqMatch():
-            #print "NUMBERING DOESN'T MATCH"
-            #raise RuntimeError,"NUMBERING DOESN'T MATCH"
-            # We need to create a copy of the placed pdb with numbering matching the native
-            placedPdbRes = ample_util.filename_append( filename=placedPdbInfo.pdb, astr="reseq", directory=self.workdir )
-            pdbedit.match_resseq( targetPdb=placedPdbInfo.pdb, sourcePdb=None, outPdb=placedPdbRes, resMap=resSeqMap )
-            placedPdb = placedPdbRes
-        else:
-            placedPdb = placedPdbInfo.pdb
- 
-        # Make a copy of placedPdb with chains renamed to lower case
-        fromChain = placedPdbInfo.models[0].chains
-        toChain = [ c.lower() for c in fromChain ]
-        placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren", directory=self.workdir )
-        pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=fromChain, toChain=toChain )
-
-        # Loop over origins, move the placed pdb to the new origin and then run ncont
-        self.allContacts = None
-        self.numAllContacts = 0
-        self.allContactsOrigin = None
-        for i, origin in enumerate( origins  ):
-            #print "GOT ORIGIN ",i,origin
-            
-            placedOriginPdb =  placedAaPdb
-            if origin != [ 0.0, 0.0, 0.0 ]:
-                # Move pdb to new origin
-                #ostr="origin{0}".format(i)
-                ostr="o{0}".format( origin ).replace(" ","" )
-                placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr=ostr, directory=self.workdir )
-                pdbedit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
-            
-            # Concatenate into one file
-            joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
-            pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
-                
-            # Run ncont
-            # Need to get list of chains from Native as can't work out negate operator for ncont
-            fromChain = nativePdbInfo.models[0].chains
-            self.runNcont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain, allAtoms=True, maxDist=0.5 )
-            self.parseNcontLog( toDict=False )
-            
-            if self.numContacts > self.numAllContacts:
-                self.numAllContacts = self.numContacts
-                self.allContactsOrigin = origin
-                
-        return
-
-    def run( self,
-             nativePdbInfo=None,
-             placedPdbInfo=None,
-             resSeqMap=None,
-             origins=None,
-             workdir=None ):
-        """
-        """
-
-        # Reset variables each time
-        self.ncontLog = None
-        self.numContacts = 0
-        self.contacts = None
-        self.inregister = 0
-        self.ooregister = 0
-        self.backwards = 0
-        # Object to hold contact data
-        self.best = ContactData()
-
-        self.workdir = workdir
-        if not self.workdir:
-            self.workdir = os.getcwd()
-            
-        pdbedit = pdb_edit.PDBEdit()
-        
-        
-        if False:
-            # Standardise pdb
-            nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std" )
-            pdbedit.standardise( inpdb=nativePdb, outpdb=nativePdbStd )
-            nativePdb = nativePdbStd
-            
-            # Run a pass to find the # chains
-            nativeInfo = pdbedit.get_info( nativePdb )
-            
-            if len( nativeInfo.models ) > 1:
-                raise RuntimeError,"> 1 model!"
-            
-            # Check numbering matches and match numbering if necessary
-            resSeqMap = residue_map.residueSequenceMap()
-            #modelInfo = pdbedit.get_info( refModelPdb )
-            modelInfo = False
-            # NEED TO FIX NAMING AS THIS IS WAY TOO CONFUSING!
-            resSeqMap.fromInfo( refInfo=modelInfo,
-                                refChainID=modelInfo.models[0].chains[0],
-                                targetInfo=nativeInfo,
-                                targetChainID=nativeInfo.models[0].chains[0]
-                                )
-         
-        if not resSeqMap.resSeqMatch():
-            #print "NUMBERING DOESN'T MATCH"
-            #raise RuntimeError,"NUMBERING DOESN'T MATCH"
-            # We need to create a copy of the placed pdb with numbering matching the native
-            placedPdbRes = ample_util.filename_append( filename=placedPdbInfo.pdb, astr="reseq", directory=self.workdir )
-            pdbedit.match_resseq( targetPdb=placedPdbInfo.pdb, sourcePdb=None, outPdb=placedPdbRes, resMap=resSeqMap )
-            placedPdb = placedPdbRes
-        else:
-            placedPdb = placedPdbInfo.pdb
- 
-        # Make a copy of placedPdb with chains renamed to lower case
-        fromChain = placedPdbInfo.models[0].chains
-        toChain = [ c.lower() for c in fromChain ]
-        placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren", directory=self.workdir )
-        pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=fromChain, toChain=toChain )
-
-        # Don't test as the labels could be differnt and it's not worth creating anther one just to test
-        #placedSpaceGroup = placedInfo.crystalInfo.spaceGroup
-        #if placedSpaceGroup != originInfo.currentSpaceGroup():
-        #    raise RuntimeError,"Mismatching space groups!"
-        
-        # Loop over origins, move the placed pdb to the new origin and then run ncont
-        self.originCompare = {}
-        for i, origin in enumerate( origins  ):
-            #print "GOT ORIGIN ",i,origin
-            
-            placedOriginPdb =  placedAaPdb
-            if origin != [ 0.0, 0.0, 0.0 ]:
-                # Move pdb to new origin
-                #ostr="origin{0}".format(i)
-                ostr="o{0}".format( origin ).replace(" ","" )
-                placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr=ostr, directory=self.workdir )
-                pdbedit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
-            
-            # Concatenate into one file
-            joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
-            pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
-                
-            # Run ncont
-            # Need to get list of chains from Native as can't work out negate operator for ncont
-            fromChain = nativePdbInfo.models[0].chains
-            self.runNcont( pdbin=joinedPdb, sourceChains=fromChain, targetChains=toChain )
-            self.parseNcontLog()
-            self.countContacts()
-            
-            # Just for debugging
-            self.originCompare[ "{0}".format( origin ).replace(" ","" ) ] = self.inregister + self.ooregister
-            
-            # Save the result if there are any contacts and update whenever we have more 'good' contacts
-            # than the last run
-            if ( self.best.numContacts == 0 and self.numContacts > 0 ) or \
-               ( self.inregister + self.ooregister > self.best.inregister + self.best.ooregister ):
-                self.best.numContacts = self.numContacts
-                self.best.inregister = self.inregister
-                self.best.ooregister = self.ooregister
-                self.best.backwards = self.backwards
-                self.best.contacts = self.contacts
-                self.best.origin = origin
-                self.best.ncontLog = self.ncontLog
-                self.best.pdb = placedOriginPdb
-                
-            #print "GOT CONTACTS: {0} : {1} : {2}".format( self.numContacts, self.inregister, self.ooregister  )
-        
-        if self.best.pdb:
-            return True
-        
-        return False
-
-    # NB previous maxdist was 1.5
-    def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxDist=1.5, allAtoms=False ):
+    def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxDist=1.5, allAtom=False ):
         """FOO
         """
         
-        self.ncontLog = pdbin +".ncont.log"
+        if allAtom:
+            self.ncontLog = pdbin + ".ncont_aa.log"
+        else:
+            self.ncontLog = pdbin + ".ncont_rio.log"
+        
         cmd = [ "ncont", "xyzin", pdbin ]
         
         # Build up stdin
         stdin = ""
-        if allAtoms:
+        if allAtom:
                 stdin += "source {0}//*\n".format( ",".join( sourceChains )  )  
                 stdin += "target {0}//*\n".format( ",".join( targetChains )  ) 
         else:
@@ -454,7 +464,7 @@ class Contacts(object):
         
         return
     
-    def parseNcontLog( self, logfile=None, toDict=True ):
+    def parseNcontLog( self, contactData, logfile=None ):
         """
         
         Lines are of format
@@ -466,9 +476,10 @@ class Contacts(object):
             logfile = self.ncontLog
         
         #print "LOG ",logfile
-            
-        self.numContacts = 0
-        self.contacts = None
+        
+        
+        contactData.contacts = None
+        contactData.numContacts = None
         clines = []
         
         capture=False
@@ -480,7 +491,7 @@ class Contacts(object):
                     break
                 
                 if "contacts found:" in line:
-                    self.numContacts = int( line.split()[0] )
+                    contactData.numContacts = int( line.split()[0] )
                 
                 if "NO CONTACTS FOUND." in line:
                     return False
@@ -493,39 +504,44 @@ class Contacts(object):
                 if capture:
                     clines.append( line )
             
-        assert self.numContacts == len(clines)
+        assert contactData.numContacts == len(clines)
         #print "LINES ",clines
 
         contacts = [] 
-        if toDict:
-            # Got data lines so now extract data
-            # Could probably just do this in the reading loop now    
-            lastSource = None
-            for c in clines:
-                
-                # Reconstruct lines with only the second contact using the data from the corresponding last complete line
-                if not c[0:29].strip():
-                    #print "MATCH ACROSS TWO ATOMS"
-                    c = lastSource[0:29] + c[29:]
-                else:
-                    lastSource = c
-                
-                # As the numbers overrun we can't split so we assume fixed format
-                d = {}
-                d['chainId1'] = c[4]
-                d['resSeq1']  = int( c[6:10].strip() )
-                aa1           = c[11:14]
+        # Got data lines so now extract data
+        # Could probably just do this in the reading loop now    
+        lastSource = None
+        for c in clines:
+            
+            # Reconstruct lines with only the second contact using the data from the corresponding last complete line
+            if not c[0:29].strip():
+                #print "MATCH ACROSS TWO ATOMS"
+                c = lastSource[0:29] + c[29:]
+            else:
+                lastSource = c
+            
+            # As the numbers overrun we can't split so we assume fixed format
+            d = {}
+            d['chainId1'] = c[4]
+            d['resSeq1']  = int( c[6:10].strip() )
+            aa1           = c[11:14]
+            # Will get key error for all-atom if there is solvent etc.
+            try:
                 d['aa1']      = pdb_edit.three2one[ aa1 ] # get amino acid and convert to single letter code
-                d['chainId2'] = c[32]
-                d['resSeq2']  = int( c[34:38].strip() )
-                aa2           = c[39:42]
+            except KeyError:
+                d['aa1']      = 'X'
+            d['chainId2'] = c[32]
+            d['resSeq2']  = int( c[34:38].strip() )
+            aa2           = c[39:42]
+            try:
                 d['aa2']      = pdb_edit.three2one[ aa2 ]
-                d['dist']     = float( c[56:62].strip() )
-                d['cell']     = int( c[63:66])
-                d['symmetry'] = c[67:]
-                
-                contacts.append( d )
-                #contacts.append( (chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry ) )
+            except KeyError:
+                d['aa2']      = 'X'
+            d['dist']     = float( c[56:62].strip() )
+            d['cell']     = int( c[63:66])
+            d['symmetry'] = c[67:]
+            
+            contacts.append( d )
     
     #         # Put in dictionary by chains for easy access
     #         contacts = {}
@@ -556,9 +572,9 @@ class Contacts(object):
             #for c in contacts:
             #    print "chainId1 {0} resSeq1 {1} chainId2 {2} resSeq2 {3}\n".format(  c['chainId1'], c['resSeq1'], c['chainId2'], c['resSeq2']  )
     
-            self.contacts = contacts
+        contactData.contacts = contacts
                     
-        return contacts
+        return
  
     def ssIsOK( self, contact, dsspP=None, ssTest=False ):
         if ssTest:
@@ -642,80 +658,6 @@ class Contacts(object):
                 stopIdx  = i + 1
   
         return chunks
-
-    def countContacts( self, contacts=None, dsspP=None ):
-        
-        
-        if contacts is None:
-            contacts = self.contacts
-        if contacts is None:
-            return
-        
-        chunks = self.findChunks( contacts=self.contacts, minContig=3 )
-        
-        if not chunks:
-            return
-        
-        #print "GOT CHUNKS ",chunks
-        
-        # Now categorise the chunks
-        self.inregister = 0
-        self.ooregister = 0
-        self.backwards = 0
-        
-        #for ( start, stop ) in startstop:
-        for d in chunks:
-            start = d['startIdx']
-            stop  = d['stopIdx']
-            #print "NEW CHUNK"
-            register    = True
-            backwards   = False
-            lastResSeq1 = None
-            lastResSeq2 = None
-            count       = 1
-            #print "LEN ", stop - start + 1
-            for i in range( start, stop + 1 ):
-                
-                c = contacts[ i ]
-                #print "CONTACT: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2']
-                
-                if i != start:
-                    if c['resSeq1'] == lastResSeq1 - 1 or c['resSeq2'] == lastResSeq2 - 1:
-                        backwards = True
-                        
-                    # Sanity check
-                    if backwards:
-                        assert c['resSeq1'] == lastResSeq1 -1 or  c['resSeq2'] == lastResSeq2 - 1,"Going backwards but resSeq arent!"
-                    if not register and not backwards:
-                        assert c['resSeq1'] != c['resSeq2'],"not register and backwards and not matching"
-                        
-                    count += 1
-                
-                lastResSeq1  = c['resSeq1']
-                lastResSeq2  = c['resSeq2']
-                if c['resSeq1']  != c['resSeq2']:
-                    register = False
-            
-            # Add total here
-            if register:
-                self.inregister += count
-            else:
-                self.ooregister += count
-            
-            if backwards:
-                self.backwards += count
-        
-        # End categorising chunks
-            
-        return
-    
-    def writeHelixFile(self, filename=None ):
-        if self.best.helix:
-            with open( filename, 'w' ) as f:
-                f.write( self.best.helix+"\n" )
-            return True
-        
-        return False
     
 class TestContacts( unittest.TestCase ):
     
@@ -733,8 +675,8 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont1.log" )
         
         c = Contacts()
-        contacts = c.parseNcontLog( logfile=logfile )
-        c.countContacts()
+        c.parseNcontLog( logfile=logfile )
+        c.analyseRio()
         
         self.assertEqual( c.numContacts, 26 )
         self.assertEqual( c.inregister, 0 )
@@ -748,8 +690,8 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont2.log" )
         
         c = Contacts()
-        contacts = c.parseNcontLog( logfile=logfile )
-        c.countContacts()
+        c.parseNcontLog( logfile=logfile )
+        c.analyseRio()
         
         self.assertEqual( c.numContacts, 10 )
         self.assertEqual( c.inregister, 0 )
@@ -763,8 +705,8 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont3.log" )
         
         c = Contacts()
-        contacts = c.parseNcontLog( logfile=logfile )
-        c.countContacts()
+        c.parseNcontLog( logfile=logfile )
+        c.analyseRio()
         
         self.assertEqual( c.numContacts, 14 )
         self.assertEqual( c.inregister, 0 )
@@ -778,8 +720,8 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont4.log" )
         
         c = Contacts()
-        contacts = c.parseNcontLog( logfile=logfile )
-        c.countContacts()
+        c.parseNcontLog( logfile=logfile )
+        c.analyseRio()
         
         self.assertEqual( c.numContacts, 56 )
         self.assertEqual( c.inregister, 0 )
@@ -793,8 +735,8 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont5.log" )
         
         c = Contacts()
-        contacts = c.parseNcontLog( logfile=logfile )
-        c.countContacts()
+        c.parseNcontLog( logfile=logfile )
+        c.analyseRio()
         
         self.assertEqual( c.numContacts, 77 )
         self.assertEqual( c.inregister, 19 )
@@ -808,8 +750,8 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont7.log" )
         
         c = Contacts()
-        contacts = c.parseNcontLog( logfile=logfile )
-        c.countContacts()
+        c.parseNcontLog( logfile=logfile )
+        c.analyseRio()
         
         self.assertEqual( c.numContacts, 18 )
         self.assertEqual( c.inregister, 0 )
@@ -823,8 +765,8 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont8.log" )
         
         c = Contacts()
-        contacts = c.parseNcontLog( logfile=logfile )
-        c.countContacts()
+        c.parseNcontLog( logfile=logfile )
+        c.analyseRio()
         
         self.assertEqual( c.numContacts, 9 )
         self.assertEqual( c.inregister, 0 )
