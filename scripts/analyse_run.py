@@ -938,7 +938,7 @@ def analyseSolution( ampleResult=None,
         assert False
 
     if placedPdb is None:
-        print "NO PLACED PDB FOR ",ampleResult
+        print "NO PLACED PDB FOR ",ampleResult.pdbCode,ampleResult.ensembleName
         return
 
     # debug - copy into work directory as reforigin struggles with long pathnames

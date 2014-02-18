@@ -125,6 +125,7 @@ class Contacts(object):
             return
 
         # Now categorise the chunks
+        chunks = self.findChunks( contacts=contactData.contacts, minContig=3 )
         if not chunks:
             return 0 
         
@@ -257,8 +258,8 @@ class Contacts(object):
             # Need to use list of chains from Native as can't work out negate operator for ncont
             if allAtom:
                 self.runNcont( pdbin=joinedPdb,
-                               sourceChains=self.fromChains,
-                               targetChains=self.toChains,
+                               sourceChains=fromChains,
+                               targetChains=toChains,
                                allAtom=True,
                                maxDist=0.5 )
                 self.parseNcontLog( data )
@@ -266,8 +267,8 @@ class Contacts(object):
             else:
                 # Calculating from RIO
                 self.runNcont( pdbin=joinedPdb,
-                               sourceChains=self.fromChains,
-                               targetChains=self.toChains,
+                               sourceChains=fromChains,
+                               targetChains=toChains,
                                allAtom=False,
                                maxDist=1.5
                                 )
@@ -479,7 +480,7 @@ class Contacts(object):
         
         
         contactData.contacts = None
-        contactData.numContacts = None
+        contactData.numContacts = 0
         clines = []
         
         capture=False
