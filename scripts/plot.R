@@ -437,7 +437,7 @@ nfail <- njobs-nsuccess
 
 # For each case need to get the best success - i.e. success with max CC
 # Order by pdbCode and CC
-x <- data[ order( data$pdbCode, data$shelxeCC, decreasing=TRUE ), ]
+x <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasing=TRUE ), ]
 # Select top by selecting not duplicates on pdbCode
 x <- x[ !duplicated(x$pdbCode), c("pdbCode","fastaLength","numChains","resolution", "shelxeCC", "shelxeAvgChainLength", "success")  ]
 # Now put in alphabetical order
