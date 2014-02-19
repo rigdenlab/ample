@@ -18,7 +18,7 @@ data$buccFinalRfree[ data$buccFinalRfree == "nolog" ] <- NA
 data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
 
 # Calculate number of copies of decoy that were placed
-data$numPlacedCopies <- data$numPlacedAtoms / data$ensembleNumAtoms
+data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
 
 # Need to select the "best" origin and collate the properties
 
@@ -433,13 +433,11 @@ nfail <- njobs-nsuccess
 # Summary table
 #
 
-
-
 # For each case need to get the best success - i.e. success with max CC
 # Order by pdbCode and CC
 x <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasing=TRUE ), ]
 # Select top by selecting not duplicates on pdbCode
-x <- x[ !duplicated(x$pdbCode), c("pdbCode","fastaLength","numChains","resolution", "shelxeCC", "shelxeAvgChainLength", "success")  ]
+x <- x[ !duplicated(x$pdbCode), c("pdbCode", "success","fastaLength","resolution","numChains","numPlacedChains", "shelxeCC", "shelxeAvgChainLength")  ]
 # Now put in alphabetical order
 x <- x[ order( x$pdbCode ), ]
 
