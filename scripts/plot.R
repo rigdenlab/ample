@@ -6,7 +6,7 @@ fcolour="#FF0000"
 setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
 #setwd("/home/jmht/Documents/test/CC/contacts")
 #data <- read.table(file="results_bucc.csv",sep=',', header=T)
-data <- read.table(file="results_bucc_np.csv",sep=',', header=T)
+data <- read.table(file="results_bucc.csv",sep=',', header=T)
 
 # Categorise successes
 data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
@@ -17,8 +17,40 @@ data$success <- replace( data$success, is.na(data$success), 0 )
 data$buccFinalRfree[ data$buccFinalRfree == "nolog" ] <- NA
 data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
 
-# Find number of atoms that were placed
-#data$numAllAtoms <- data$ensembleNumAtoms * data$estChainsASU
+# Calculate number of copies of decoy that were placed
+data$numPlacedCopies <- data$numPlacedAtoms / data$ensembleNumAtoms
+
+# Need to select the "best" origin and collate the properties
+
+# CAN ONLY COMPARE NON_FLOATING ORIGINS and where a phaser model was produced and where we could find an origin
+odata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG), ]
+# HACK - set NA aoNumContacts to zero
+#odata$aoNumContacts[ is.na( odata$aoNumContacts ) ] <- 0
+
+# Find where origins not same
+x <- odata[ ! ( is.na( odata$aoOrigin ) & is.na( odata$roOrigin ) ) & 
+			! ( odata$aoOrigin == "" | odata$roOrigin == "" ) & 
+				odata$aoOrigin != odata$roOrigin,
+		c("aoOrigin","roOrigin", "pdbCode", "ensembleName") ]
+
+aoOrigin
+aoNumContacts
+aoNumRio
+aoRioInregister
+aoRioOoRegister
+aoRioBackwards
+aoRioGood
+aoRioNocat
+roOrigin
+roNumContacts
+roNumRi
+roRioInregister
+roRioOoRegister
+roRioBackwards
+roRioGood
+roRioNocat
+
+
 
 
 # Object to hold successes
@@ -162,12 +194,8 @@ ggsave("reforiginRMSD.png")
 
 #Comparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
-# CAN ONLY COMPARE NON_FLOATING ORIGINS and where a phaser model was produced and where we could find an origin
-rdata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG) & ! is.na( data$aoNumContacts ), ]
-# HACK - set NA aoNumContacts to zero
-#rdata$aoNumContacts[ is.na( rdata$aoNumContacts ) ] <- 0
 
-p <-ggplot(data=rdata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
+p <-ggplot(data=odata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
 p + geom_point() +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
@@ -179,7 +207,7 @@ p + geom_point() +
 ggsave("goodVsInRegister.png")
 
 
-p <-ggplot(data=rdata, aes(x=nrInRegisterContacts, y=nrOoRegisterContacts, colour=factor(success) ) )
+p <-ggplot(data=odata, aes(x=nrInRegisterContacts, y=nrOoRegisterContacts, colour=factor(success) ) )
 p + geom_point( size=1.5 ) + stat_sum() +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
@@ -190,7 +218,7 @@ p + geom_point( size=1.5 ) + stat_sum() +
 		ggtitle("In- vs out-of-register contacts for non-floating origins")
 ggsave("InVsOutContacts.png")
 
-p <-ggplot(data=rdata, aes(x=nrGoodContacts, fill=factor(success) ) )
+p <-ggplot(data=odata, aes(x=nrGoodContacts, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
@@ -201,7 +229,7 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		ggtitle("Histogram of good contacts (non-floating origins)")
 ggsave("goodContacts.png")
 
-p <-ggplot(data=rdata, aes(x=nrNumContacts - nrGoodContacts, fill=factor(success) ) )
+p <-ggplot(data=odata, aes(x=nrNumContacts - nrGoodContacts, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
@@ -212,7 +240,7 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		ggtitle("Histogram of uncategorised contacts (non-floating origins)")
 ggsave("badContacts.png")
 
-p <-ggplot(data=rdata, aes(x=nrGoodContacts / (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
+p <-ggplot(data=odata, aes(x=nrGoodContacts / (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
 p + geom_histogram( position = 'dodge' ) +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
@@ -223,7 +251,7 @@ p + geom_histogram( position = 'dodge' ) +
 		ggtitle("Histogram of ratio of good/uncategorised contacts (non-floating origins)")
 ggsave("contactsRatio.png")
 
-p <-ggplot(data=rdata, aes(x=nrGoodContacts - (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
+p <-ggplot(data=odata, aes(x=nrGoodContacts - (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
 p + geom_histogram( position = 'dodge' ) +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
@@ -234,7 +262,7 @@ p + geom_histogram( position = 'dodge' ) +
 		ggtitle("Histogram of Good minus Uncategorised contacts (non-floating origins)")
 ggsave("contactsDifference.png")
 
-p <-ggplot(data=rdata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
+p <-ggplot(data=odata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
 p + geom_point() +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
@@ -246,7 +274,7 @@ p + geom_point() +
 ggsave("goodVsInRegister.png")
 
 # plot of nrInRegisterContacts vs nrGoodContacts
-p <-ggplot(data=rdata, aes(x=shelxeCC, y=nrGoodContacts, colour=factor(success) ) )
+p <-ggplot(data=odata, aes(x=shelxeCC, y=nrGoodContacts, colour=factor(success) ) )
 p + geom_point() + scale_colour_manual( values=c(fcolour,scolour),
 		name="Success/Failure",
 		labels=c("Failure", "Success")
@@ -257,7 +285,7 @@ ggtitle("Good contacts vs shelxe CC for non-floating origins")
 ggsave("CCVsInRegister.png")
 
 
-p <-ggplot(data=rdata, aes(x=numPlacedAtoms-aoNumContacts, y=aoNumContacts, colour=factor(success) ) )
+p <-ggplot(data=odata, aes(x=numPlacedAtoms-aoNumContacts, y=aoNumContacts, colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		scale_size() +
 		facet_grid( ensembleSideChainTreatment ~ .) +
@@ -269,7 +297,7 @@ p + geom_point( size=1 ) +
 		ggtitle("Num coincident vs unmatched atoms non-floating origins")
 ggsave("CoindicentVsUnmatched.png")
 
-p <-ggplot(data=rdata[ rdata$aoOrigin == rdata$roOrigin , ], aes(x=roRioGood, y=aoNumContacts, colour=factor(success) ) )
+p <-ggplot(data=odata[ odata$aoOrigin == odata$roOrigin , ], aes(x=roRioGood, y=aoNumContacts, colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		scale_size() +
 		facet_grid( ensembleSideChainTreatment ~ .) +
@@ -283,9 +311,9 @@ ggsave("CoindicentVsRIO.png")
 
 
 # plot of allContacts against numAtoms
-#	scale_y_continuous( limits=c(0, max( rdata$numPlacedAtoms - rdata$aoNumContacts , na.rm=TRUE) ) ) +
+#	scale_y_continuous( limits=c(0, max( odata$numPlacedAtoms - odata$aoNumContacts , na.rm=TRUE) ) ) +
 #	stat_sum( aes(size = ..n..) ) +
-p <-ggplot(data=rdata, aes(x=numPlacedAtoms-aoNumContacts, y=aoNumContacts, colour=factor(success) ) )
+p <-ggplot(data=odata, aes(x=numPlacedAtoms-aoNumContacts, y=aoNumContacts, colour=factor(success) ) )
 p + geom_point() +
 	scale_size() +
 	facet_grid( ensembleSideChainTreatment ~ .) +
@@ -297,12 +325,12 @@ p + geom_point() +
 	ggtitle("Num coincident vs unmatched atoms non-floating origins")
 ggsave("CoindicentVsUnmatched.png")
 
-#rdata[ rdata$numPlacedAtoms - rdata$aoNumContacts > 3000, ]
-#		scale_y_continuous( limits=c(0, max( rdata$numPlacedAtoms, na.rm=TRUE) )  ) +
+#odata[ odata$numPlacedAtoms - odata$aoNumContacts > 3000, ]
+#		scale_y_continuous( limits=c(0, max( odata$numPlacedAtoms, na.rm=TRUE) )  ) +
 #	scale_x_continuous( limits=c(-10,100) ) +
 #	scale_y_continuous( limits=c(-10,100) ) +
 
-p <-ggplot(data=rdata[ rdata$success == 0,], aes(x=numAllAtoms-numAllContacts, y=numAllContacts ) )
+p <-ggplot(data=odata[ odata$success == 0,], aes(x=numAllAtoms-numAllContacts, y=numAllContacts ) )
 p + geom_point() +
 		scale_y_continuous( limits=c(0, 1000)  ) +
 		xlab("Num. unmatched atoms") +
@@ -363,7 +391,7 @@ ggsave("resolutionVsLength.png")
 
 
 q()
-#write.csv(odata, "rdata.csv", row.names=FALSE)
+#write.csv(odata, "odata.csv", row.names=FALSE)
 
 
 #p + layer(geom="point") + facet_wrap(~success)
