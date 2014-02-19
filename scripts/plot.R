@@ -3,8 +3,8 @@
 library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
-setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
-#setwd("/home/jmht/Documents/test/CC/contacts")
+#setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
+setwd("/home/jmht/Documents/test/CC/new_contacts")
 #data <- read.table(file="results_bucc.csv",sep=',', header=T)
 data <- read.table(file="results_bucc.csv",sep=',', header=T)
 
@@ -21,37 +21,6 @@ data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
 data$numPlacedCopies <- data$numPlacedAtoms / data$ensembleNumAtoms
 
 # Need to select the "best" origin and collate the properties
-
-# CAN ONLY COMPARE NON_FLOATING ORIGINS and where a phaser model was produced and where we could find an origin
-odata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG), ]
-# HACK - set NA aoNumContacts to zero
-#odata$aoNumContacts[ is.na( odata$aoNumContacts ) ] <- 0
-
-# Find where origins not same
-x <- odata[ ! ( is.na( odata$aoOrigin ) & is.na( odata$roOrigin ) ) & 
-			! ( odata$aoOrigin == "" | odata$roOrigin == "" ) & 
-				odata$aoOrigin != odata$roOrigin,
-		c("aoOrigin","roOrigin", "pdbCode", "ensembleName") ]
-
-aoOrigin
-aoNumContacts
-aoNumRio
-aoRioInregister
-aoRioOoRegister
-aoRioBackwards
-aoRioGood
-aoRioNocat
-roOrigin
-roNumContacts
-roNumRi
-roRioInregister
-roRioOoRegister
-roRioBackwards
-roRioGood
-roRioNocat
-
-
-
 
 # Object to hold successes
 #sdata <- data[ data$success == 1, ]
@@ -106,7 +75,7 @@ median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
 p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
-		scale_colour_manual( values=c(fcolour,scolour),
+		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -118,12 +87,12 @@ ggsave("ResiduesVsEnsemble.png")
 
 
 # Try showing success and failure together
-p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
+p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
-		scale_colour_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success")
+	scale_fill_manual( values=c(fcolour,scolour),
+					name="Success/Failure",
+					labels=c("Failure", "Success")
 		) +
 	xlab("Number of residues in ensemble") +
 	ylab("Number of ensembles") +
@@ -133,7 +102,7 @@ ggsave("ResiduesVsEnsemble.png")
 p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
-		scale_colour_manual( values=c(fcolour,scolour),
+		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -141,6 +110,28 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		ylab("Number of ensembles") +
 		ggtitle("Percentage of residues in ensemble for successful and failing cases")
 ggsave("PercentVsEnsemble.png")
+
+# Number that solved under each side-chain treatment
+p <-ggplot( data=data, aes( factor(ensembleSideChainTreatment), fill=factor(success) ) ) 
+p + geom_histogram( position = 'dodge' ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Side-chain Treatment") +
+		ggtitle("Histogram of side-chain treatment for successful and failing cases")
+ggsave("sideChain.png")
+
+
+# As a table
+#x <- aggregate( data$success==0, by=list( SideChainTreatment = data$ensembleSideChainTreatment ), FUN=sum)
+#names(x) <- sub("^x$", "failures", names(x))
+#x$success <- aggregate( data$success==1, by=list( SideChainTreatment = data$ensembleSideChainTreatment ), FUN=sum)$x
+
+
+
+
 
 # CC vs final rFree coloured by success
 p <-ggplot(data=data, aes(shelxeCC, buccFinalRfree, colour=factor(success) ) )
@@ -154,11 +145,13 @@ p + geom_point() +
 		ggtitle("Shelxe vs Buccanner RFree score")
 ggsave("CCVsRfree.png")
 
+#
 # Comparison of model quality
+#
 p <-ggplot(data=data, aes(x=ensembleNativeTM, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
-		scale_colour_manual( values=c(fcolour,scolour),
+		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -170,7 +163,7 @@ ggsave("ModelTM.png")
 p <-ggplot(data=data, aes(x=ensembleNativeRMSD, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
-		scale_colour_manual( values=c(fcolour,scolour),
+		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -183,7 +176,7 @@ ggsave("ModelRMSD.png")
 p <-ggplot(data=data, aes(x=reforiginRMSD, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
-		scale_colour_manual( values=c(fcolour,scolour),
+		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -192,35 +185,58 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ggtitle("Histogram of reforigin RMSD scores by success")
 ggsave("reforiginRMSD.png")
 
+#
+# RIO data
+#
+# CAN ONLY COMPARE NON_FLOATING ORIGINS and where a phaser model was produced and where we could find an origin
+odata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG), ]
+# HACK - set NA aoNumContacts to zero
+#odata$aoNumContacts[ is.na( odata$aoNumContacts ) ] <- 0
+
+# Find where origins are the same
+#x <- odata[ ! ( is.na( odata$aoOrigin ) & is.na( odata$roOrigin ) ) & 
+#			! ( odata$aoOrigin == "" | odata$roOrigin == "" ) & 
+#				odata$aoOrigin != odata$roOrigin,
+#		c("aoOrigin","roOrigin", "pdbCode", "ensembleName") ]
+x <- odata[ ! ( is.na( odata$aoOrigin ) & is.na( odata$roOrigin ) ) & 
+				! ( odata$aoOrigin == "" & odata$roOrigin == "" ) & 
+				odata$aoOrigin == odata$roOrigin, ]
+
+#aoOrigin
+#aoNumContacts
+#aoNumRio
+#aoRioInregister
+#aoRioOoRegister
+#aoRioBackwards
+#aoRioGood
+#aoRioNocat
+#roOrigin
+#roNumContacts
+#roNumRi
+#roRioInregister
+#roRioOoRegister
+#roRioBackwards
+#roRioGood
+#roRioNocat
+
+
 #Comparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
-
-p <-ggplot(data=odata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
+p <-ggplot(data=odata, aes(x=aoRioOoRegister, y=aoRioInregister, colour=factor(success) ) )
 p + geom_point() +
+		stat_sum( aes(size=..n..) ) +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
 		xlab("Good Contacts") +
 		ylab("In-register Contacts") +
-		ggtitle("Good contacts vs in-register contacts for non-floating origins")
-ggsave("goodVsInRegister.png")
+		ggtitle("Out-of- vs in-register contacts for non-floating & matching origins")
+ggsave("ooRegisterVsInRegister.png")
 
-
-p <-ggplot(data=odata, aes(x=nrInRegisterContacts, y=nrOoRegisterContacts, colour=factor(success) ) )
-p + geom_point( size=1.5 ) + stat_sum() +
-		scale_colour_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
-		xlab("In-register Contacts") +
-		ylab("Out-of-register Contacts") +
-		ggtitle("In- vs out-of-register contacts for non-floating origins")
-ggsave("InVsOutContacts.png")
-
-p <-ggplot(data=odata, aes(x=nrGoodContacts, fill=factor(success) ) )
+p <-ggplot(data=odata, aes(x=aoRioGood, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
-		scale_colour_manual( values=c(fcolour,scolour),
+		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -337,8 +353,8 @@ p + geom_point() +
 		ylab("All contacts (< 0.5A)") +
 		ggtitle("Num contacts vs num unmatched atoms non-floating origins")
 
-
-# TFZ/LLG
+#
+# TFZ/LLG#
 p <-ggplot(data=data, aes(x=phaserTFZ, y=phaserLLG, colour=factor(success) ) )
 p + geom_point() + scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
@@ -376,9 +392,11 @@ ggsave("CCscores.png")
 
 
 # Resolution vs length
+#		stat_sum( group=c(1,2) ) +
+#		stat_sum( aes(size=..n..) ) +
 p <-ggplot(data=data, aes(x=resolution, y=fastaLength, colour=factor(success) ) )
 p + geom_point() +
-		stat_sum() +
+		stat_sum( aes(size=..n..) ) +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
@@ -411,14 +429,28 @@ nfail <- njobs-nsuccess
 #http://stackoverflow.com/questions/6289538/aggregate-a-dataframe-on-a-given-column-and-display-another-column
 #http://stackoverflow.com/questions/2822156/select-rows-with-largest-value-of-variable-within-a-group-in-r
 
+#
+# Summary table
+#
+
+
+
 # For each case need to get the best success - i.e. success with max CC
-# select success
-x <- data[ data$success==1, ]
 # Order by pdbCode and CC
-x <- x[ order( x$pdbCode, x$shelxeCC, decreasing=TRUE ), ]
+x <- data[ order( data$pdbCode, data$shelxeCC, decreasing=TRUE ), ]
 # Select top by selecting not duplicates on pdbCode
-x <- x[ !duplicated(x$pdbCode), ]
+x <- x[ !duplicated(x$pdbCode), c("pdbCode","fastaLength","numChains","resolution", "shelxeCC", "shelxeAvgChainLength", "success")  ]
+# Now put in alphabetical order
+x <- x[ order( x$pdbCode ), ]
+
+# Need to get numbers of success
+# This gets the stats  - we can join because the by function is the pdbCode which is in similar alphabetic order
+x["successfulModels"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x["failedModels"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 0 ) } )[2]
 # NB LOOK AT REORDER
+x <- x[ order( x$success, decreasing=TRUE ), ]
+write.csv(x, "summary.csv", row.names=FALSE)
+
 
 # Fix missing values
 #completeEnsemble <- complete.cases(data$ensembleNumResidues)
