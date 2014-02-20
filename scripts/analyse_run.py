@@ -1037,7 +1037,7 @@ def analyseSolution( ampleResult=None,
 #                 f.write( helixSequence+"\n" )
                 
         # Just for analysis - copy shelxe file into analysis directory
-        if os.path.isfile( ampleResult.shelxePdb ):
+        if ampleResult.shelxePdb and os.path.isfile( ampleResult.shelxePdb ):
             
             shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
             shutil.copy( ampleResult.shelxePdb, shelxePdb )
@@ -1204,7 +1204,7 @@ if __name__ == "__main__":
     
     for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbCode in sorted( resultsDict.keys() ):
-    #for pdbCode in [ "1D7M" ]:
+    #for pdbCode in [ "3TYY" ]:
         
         workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
@@ -1332,8 +1332,8 @@ if __name__ == "__main__":
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
             
-            #if ensembleName != "SCWRL_reliable_sidechains_trunc_5.241154_rad_1":
-            #   continue
+            #if ensembleName != "SCWRL_reliable_sidechains_trunc_4.238065_rad_2":
+            #    continue
             
             # Extract information on the models and ensembles
             eresults = ampleDict['ensemble_results']
@@ -1373,7 +1373,7 @@ if __name__ == "__main__":
             mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}.sub.log".format( ensembleName ) )
             mrbumpResult.mrbumpLog = mrbumpLog
             
-           # Update the Mrbump result object and set all values in the Ample Result
+            # Update the Mrbump result object and set all values in the Ample Result
             processMrbump( mrbumpResult )
     
             # Now set result attributes from what we've got
