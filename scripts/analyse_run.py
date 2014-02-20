@@ -147,6 +147,7 @@ class AmpleResult(object):
 #                               'csymmatchInR',
 
                               'numPlacedAtoms',
+                              'numPlacedCA',
                               'floatingOrigin',
                               
                               'aoOrigin',
@@ -224,6 +225,7 @@ class AmpleResult(object):
                                 "Reforigin RMSD",
 
                               'numPlacedAtoms',
+                              'numPlacedCA',
                               'floatingOrigin',
                               'aoOrigin',
                               'aoNumContacts',
@@ -948,8 +950,8 @@ def analyseSolution( ampleResult=None,
     placedPdbInfo = pdbedit.get_info( placedPdb )
     
     ampleResult.numPlacedAtoms = placedPdbInfo.numAtoms()
+    ampleResult.numPlacedCA = placedPdbInfo.numCalpha()
 
-    
     # Get reforigin info
     if True:
     #try:
@@ -1036,13 +1038,13 @@ def analyseSolution( ampleResult=None,
 #             with open( hfile, 'w' ) as f:
 #                 f.write( helixSequence+"\n" )
                 
-        # Just for analysis - copy shelxe file into analysis directory
-        if ampleResult.shelxePdb and os.path.isfile( ampleResult.shelxePdb ):
-            
-            shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
-            shutil.copy( ampleResult.shelxePdb, shelxePdb )
+    # Just for analysis - copy shelxe file into analysis directory
+    if ampleResult.shelxePdb and os.path.isfile( ampleResult.shelxePdb ):
         
-        # For now skip shelxe analysis
+        shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
+        shutil.copy( ampleResult.shelxePdb, shelxePdb )
+        
+    # For now skip shelxe analysis
         
 #     #
 #     # SHELXE PROCESSING
@@ -1204,7 +1206,7 @@ if __name__ == "__main__":
     
     for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbCode in sorted( resultsDict.keys() ):
-    #for pdbCode in [ "3TYY" ]:
+    #for pdbCode in [ "1D7M" ]:
         
         workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
@@ -1332,8 +1334,9 @@ if __name__ == "__main__":
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
             
-            #if ensembleName != "SCWRL_reliable_sidechains_trunc_4.238065_rad_2":
-            #    continue
+            # Just for debugging
+            if False and ensembleName != "All_atom_trunc_11.413016_rad_1":
+                continue
             
             # Extract information on the models and ensembles
             eresults = ampleDict['ensemble_results']
