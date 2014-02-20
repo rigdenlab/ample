@@ -494,13 +494,26 @@ class PdbInfo(object):
     def numAtoms(self, modelIdx=0):
         """Return the total number of ATOM atoms in the model"""
         assert len(self.models) >= 1,"Need at least one model!"
-        assert len(self.models[0].chains) >= 1,"Need at least one chain!"
+        assert len(self.models[modelIdx].chains) >= 1,"Need at least one chain!"
         
         natoms = 0
         for chainAtoms in self.models[ modelIdx ].atoms:
             natoms += len( chainAtoms )
             
         return natoms
+    
+    def numCalpha(self, modelIdx=0):
+        """Return the total number of CA ATOM atoms in the model"""
+        assert len(self.models) >= 1,"Need at least one model!"
+        assert len(self.models[modelIdx].chains) >= 1,"Need at least one chain!"
+        
+        ncalpha = 0
+        for chainAtoms in self.models[ modelIdx ].atoms:
+            for atom in chainAtoms:
+                if atom.name.strip() == 'CA':
+                    ncalpha += 1
+            
+        return ncalpha
     
 class PdbModel(object):
     """A class to hold information on a single model in a PDB file"""

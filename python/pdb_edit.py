@@ -1382,6 +1382,7 @@ class Test(unittest.TestCase):
         self.assertEqual( m1.bbMask[0], [False, True, False, False, False, False, False, False, False, True, False, False, True, False, False, False, True, False, False, False, False, False, False, False, True, False, False, False, True, False, True, False, False, False, False, False, False, False, False, False, True, False, False, True, False, False, False, False, False, False, False, False, False, False, False, True, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, True, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, True, False, False, False, False, True, False, False, False, False, False, False, False, True, False, True, False, False, False, False, False, True, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, True, False, False, False, False, False, False, False, False, False, True] )
         
         self.assertEqual( info.numAtoms( modelIdx=0 ), 1621 )
+        self.assertEqual( info.numCalpha( modelIdx=0 ), 218 )
         
         m2 = info.models[1]
         self.assertEqual( m2.chains[0], 'A' )
@@ -1389,7 +1390,7 @@ class Test(unittest.TestCase):
         self.assertEqual( m2.sequences[0], 'VGLTTLFWLGAIGMLVGTLAFAWAGRDAGSGERRYYVTLVGISGIAAVAYVVMALGVGWVPVAERTVFAPRYIDWILTTPLIVYFLGLLAGLDSREFGIVITLNTVVMLAGFAGAMVPGIERYALFGMGAVAFLGLVYYLVGPMTESASQRSSGIKSLYVRLRNLTVILWAIYPFIWLLGPPGVALLTPTVDVALIVYLDLVTKVGFGFIALDAAATL' )
         
         self.assertEqual( info.numAtoms( modelIdx=1 ), 1621 )
-        
+        self.assertEqual( info.numCalpha( modelIdx=1 ), 218 )
         
         return
     
