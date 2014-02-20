@@ -4,7 +4,7 @@ library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
 #setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
-setwd("/home/jmht/Documents/test/CC/new_contacts")
+setwd("/home/jmht/Documents/test/CC/contacts")
 #data <- read.table(file="results_bucc.csv",sep=',', header=T)
 data <- read.table(file="results_bucc.csv",sep=',', header=T)
 
@@ -209,9 +209,12 @@ odata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG) & ! is.na
 #				! ( odata$aoOrigin == "" & odata$roOrigin == "" ) & 
 #				odata$aoOrigin == odata$roOrigin, ]
 # Find where they have been found and data is different - only 90
-#x <- odata[ ! is.na( odata$aoOrigin ) & !is.na( odata$roOrigin )  & 
+#x <- odata[ ! is.na( odata$aoOrigin ) & ! is.na( odata$roOrigin )  & 
 #				! odata$aoOrigin == "" & ! odata$roOrigin == ""  & 
 #				odata$aoOrigin != odata$roOrigin, ]
+x <- odata[ ! is.na( odata$aoOrigin ) & ! is.na( odata$roOrigin )  & 
+				! odata$aoOrigin == "" & ! odata$roOrigin == ""  & 
+				odata$aoOrigin != odata$roOrigin, ]
 
 #aoOrigin
 #aoNumContacts
@@ -301,30 +304,61 @@ ylab("Good Contacts") +
 ggtitle("Good contacts vs shelxe CC for non-floating origins")
 ggsave("CCVsInRegister.png")
 
-
-p <-ggplot(data=odata, aes(x=numPlacedAtoms-aoNumContacts, y=aoNumContacts, colour=factor(success) ) )
+#
+# coincident vs unmatched
+# ronan's idea to divide by number of unmatched
+#
+##p <-ggplot(data=odata, aes(x=numPlacedAtoms-aoNumContacts, y=aoNumContacts, colour=factor(success) ) )
+#p <-ggplot(data=odata, aes(x=(numPlacedAtoms-aoNumContacts)/numPlacedAtoms, y=aoNumContacts/numPlacedAtoms, colour=factor(success) ) )
+#		#scale_size() +
+#p + geom_point( size=2 ) +
+#		stat_sum( aes(size=..n..) ) +
+#		facet_grid( ensembleSideChainTreatment ~ .) +
+#		scale_colour_manual( values=c(fcolour, scolour),
+#				name="Success/Failure",
+#				labels=c("Failure", "Success") ) +
+#		xlab("% unmatched atoms") +
+#		ylab("% contacts (< 0.5A)") +
+#		ggtitle("Num coincident vs unmatched atoms non-floating origins")
+#ggsave("CoincidentVsUnmatched.png")
+p <-ggplot(data=odata,
+		aes(x=(numPlacedAtoms-aoNumContacts)/numPlacedAtoms, y=aoNumContacts/numPlacedAtoms,
+				colour=factor(success) ) )
 p + geom_point( size=1 ) +
-		scale_size() +
-		facet_grid( ensembleSideChainTreatment ~ .) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( ensembleSideChainTreatment ~ success) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success") ) +
-		xlab("Num. unmatched atoms") +
-		ylab("All contacts (< 0.5A)") +
-		ggtitle("Num coincident vs unmatched atoms non-floating origins")
-ggsave("CoindicentVsUnmatched.png")
+		xlab("% unmatched atoms") +
+		ylab("% contacts (< 0.5A)") +
+		ggtitle("Percentage coincident vs unmatched atoms non-floating origins")
+ggsave("PercentCoincidentVsUnmatched.png")
 
-p <-ggplot(data=odata, aes(x=aoRioGood, y=aoNumContacts, colour=factor(success) ) )
+# facet_grid( ensembleSideChainTreatment ~ .) +
+# label_both
+l = function( variable, value ) {
+	print(variable)
+	if ( variable == "success" ) {
+		return( c("Failure","Success"))
+	} else if ( variable == "ensembleSideChainTreatment" ) {
+		return( c("All atom","Poly-alanine","SCWRL reliable") )
+	} else {
+		return ("foo")
+	}
+}
+
+p <-ggplot(data=odata, aes(x=aoRioGood/numPlacedCA, y=aoNumContacts/numPlacedAtoms, colour=factor(success) ) )
 p + geom_point( size=1 ) +
-		scale_size() +
-		facet_grid( ensembleSideChainTreatment ~ .) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( ensembleSideChainTreatment ~ success, labeller=l ) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success") ) +
-		xlab("RIO score (in- + out-of-register)") +
-		ylab("All contacts (< 0.5A)") +
-		ggtitle("Num coincident vs RIO C-alpha non-floating & matching origins")
-ggsave("CoindicentVsRIO.png")
+		xlab("% RIO score (in- + out-of-register)") +
+		ylab("% contacts (< 0.5A)") +
+		ggtitle("% coincident vs RIO C-alpha non-floating origins")
+ggsave("PercentCoincidentVsRIO.png")
 
 
 # plot of allContacts against numAtoms
@@ -449,6 +483,19 @@ x <- x[ order( x$pdbCode ), ]
 # This gets the stats  - we can join because the by function is the pdbCode which is in similar alphabetic order
 x["successfulModels"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 x["failedModels"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 0 ) } )[2]
+
+x["successPolyAla"]  <- aggregate( 
+		data[ data$ensembleSideChain == "poly_ala", ]$success,
+		by=list( data[ data$ensembleSideChain == "poly_ala", ]$pdbCode ),
+		FUN=function(x){ sum( x == 1 ) } )[2]
+x["successScwrl"]  <- aggregate(
+		data[ data$ensembleSideChain == "SCWRL_reliable_sidechains", ]$success,
+		by=list( data[ data$ensembleSideChain == "SCWRL_reliable_sidechains", ]$pdbCode ),
+		FUN=function(x){ sum( x == 1 ) } )[2]
+x["successAllAtom"]  <- aggregate(
+		data[ data$ensembleSideChain == "All_atom", ]$success,
+		by=list( data[ data$ensembleSideChain == "All_atom", ]$pdbCode ),
+		FUN=function(x){ sum( x == 1 ) } )[2]
 # NB LOOK AT REORDER
 x <- x[ order( x$success, decreasing=TRUE ), ]
 write.csv(x, "summary.csv", row.names=FALSE)
