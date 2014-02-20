@@ -68,6 +68,14 @@ median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
 #pie( as.numeric( x ), labels=tlabels, main="Timings for all runs inc. shelxe" )
 #dev.off()
 
+
+
+###############################################################################################################################
+#
+# Overall/Ensemble info
+#
+###############################################################################################################################
+
 # length distribution of successful search models both as number of residues 
 # and as fraction of target chain length remaining in the search model.
 
@@ -131,8 +139,6 @@ ggsave("sideChain.png")
 
 
 
-
-
 # CC vs final rFree coloured by success
 p <-ggplot(data=data, aes(shelxeCC, buccFinalRfree, colour=factor(success) ) )
 p + geom_point() +
@@ -145,9 +151,11 @@ p + geom_point() +
 		ggtitle("Shelxe vs Buccanner RFree score")
 ggsave("CCVsRfree.png")
 
+###############################################################################################################################
 #
 # Comparison of model quality
 #
+###############################################################################################################################
 p <-ggplot(data=data, aes(x=ensembleNativeTM, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
 p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
@@ -185,22 +193,25 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ggtitle("Histogram of reforigin RMSD scores by success")
 ggsave("reforiginRMSD.png")
 
+###############################################################################################################################
 #
 # RIO data
 #
+###############################################################################################################################
+
 # CAN ONLY COMPARE NON_FLOATING ORIGINS and where a phaser model was produced and where we could find an origin
-odata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG), ]
+odata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG) & ! is.na( data$aoNumContacts ), ]
 # HACK - set NA aoNumContacts to zero
 #odata$aoNumContacts[ is.na( odata$aoNumContacts ) ] <- 0
 
-# Find where origins are the same
+## Find where origins are the same
 #x <- odata[ ! ( is.na( odata$aoOrigin ) & is.na( odata$roOrigin ) ) & 
-#			! ( odata$aoOrigin == "" | odata$roOrigin == "" ) & 
-#				odata$aoOrigin != odata$roOrigin,
-#		c("aoOrigin","roOrigin", "pdbCode", "ensembleName") ]
-x <- odata[ ! ( is.na( odata$aoOrigin ) & is.na( odata$roOrigin ) ) & 
-				! ( odata$aoOrigin == "" & odata$roOrigin == "" ) & 
-				odata$aoOrigin == odata$roOrigin, ]
+#				! ( odata$aoOrigin == "" & odata$roOrigin == "" ) & 
+#				odata$aoOrigin == odata$roOrigin, ]
+# Find where they have been found and data is different - only 90
+#x <- odata[ ! is.na( odata$aoOrigin ) & !is.na( odata$roOrigin )  & 
+#				! odata$aoOrigin == "" & ! odata$roOrigin == ""  & 
+#				odata$aoOrigin != odata$roOrigin, ]
 
 #aoOrigin
 #aoNumContacts
@@ -229,7 +240,7 @@ p + geom_point() +
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
-		xlab("Good Contacts") +
+		xlab("Out-of-register Contacts") +
 		ylab("In-register Contacts") +
 		ggtitle("Out-of- vs in-register contacts for non-floating & matching origins")
 ggsave("ooRegisterVsInRegister.png")
@@ -245,9 +256,10 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		ggtitle("Histogram of good contacts (non-floating origins)")
 ggsave("goodContacts.png")
 
-p <-ggplot(data=odata, aes(x=nrNumContacts - nrGoodContacts, fill=factor(success) ) )
-p + geom_histogram( position = 'dodge', binwidth = 5 ) +
-		scale_colour_manual( values=c(fcolour,scolour),
+#p <-ggplot(data=odata, aes(x=aoNumRio - aoRioGood, fill=factor(success) ) )
+p <-ggplot(data=odata, aes(x=aoRioNocat, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 1 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
@@ -256,27 +268,16 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		ggtitle("Histogram of uncategorised contacts (non-floating origins)")
 ggsave("badContacts.png")
 
-p <-ggplot(data=odata, aes(x=nrGoodContacts / (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
-p + geom_histogram( position = 'dodge' ) +
-		scale_colour_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
-		ylab("Number of cases") +
-		xlab("Good contacts / uncateogorised contacts ") +
-		ggtitle("Histogram of ratio of good/uncategorised contacts (non-floating origins)")
-ggsave("contactsRatio.png")
-
-p <-ggplot(data=odata, aes(x=nrGoodContacts - (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
-p + geom_histogram( position = 'dodge' ) +
-		scale_colour_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
-		ylab("Number of cases") +
-		xlab("Good contacts - uncateogorised contacts ") +
-		ggtitle("Histogram of Good minus Uncategorised contacts (non-floating origins)")
-ggsave("contactsDifference.png")
+#p <-ggplot(data=odata, aes(x=nrGoodContacts / (nrNumContacts - nrGoodContacts), fill=factor(success) ) )
+#p + geom_histogram( position = 'dodge' ) +
+#		scale_colour_manual( values=c(fcolour,scolour),
+#				name="Success/Failure",
+#				labels=c("Failure", "Success")
+#		) +
+#		ylab("Number of cases") +
+#		xlab("Good contacts / uncateogorised contacts ") +
+#		ggtitle("Histogram of ratio of good/uncategorised contacts (non-floating origins)")
+#ggsave("contactsRatio.png")
 
 p <-ggplot(data=odata, aes(x=nrGoodContacts, y=nrInRegisterContacts, colour=factor(success) ) )
 p + geom_point() +
@@ -290,7 +291,7 @@ p + geom_point() +
 ggsave("goodVsInRegister.png")
 
 # plot of nrInRegisterContacts vs nrGoodContacts
-p <-ggplot(data=odata, aes(x=shelxeCC, y=nrGoodContacts, colour=factor(success) ) )
+p <-ggplot(data=odata, aes(x=shelxeCC, y=aoRioGood, colour=factor(success) ) )
 p + geom_point() + scale_colour_manual( values=c(fcolour,scolour),
 		name="Success/Failure",
 		labels=c("Failure", "Success")
@@ -313,7 +314,7 @@ p + geom_point( size=1 ) +
 		ggtitle("Num coincident vs unmatched atoms non-floating origins")
 ggsave("CoindicentVsUnmatched.png")
 
-p <-ggplot(data=odata[ odata$aoOrigin == odata$roOrigin , ], aes(x=roRioGood, y=aoNumContacts, colour=factor(success) ) )
+p <-ggplot(data=odata, aes(x=aoRioGood, y=aoNumContacts, colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		scale_size() +
 		facet_grid( ensembleSideChainTreatment ~ .) +
@@ -353,8 +354,11 @@ p + geom_point() +
 		ylab("All contacts (< 0.5A)") +
 		ggtitle("Num contacts vs num unmatched atoms non-floating origins")
 
+###############################################################################################################################
 #
-# TFZ/LLG#
+# TFZ/LLG
+#
+###############################################################################################################################
 p <-ggplot(data=data, aes(x=phaserTFZ, y=phaserLLG, colour=factor(success) ) )
 p + geom_point() + scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
