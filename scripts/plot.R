@@ -200,9 +200,16 @@ ggsave("reforiginRMSD.png")
 ###############################################################################################################################
 
 # CAN ONLY COMPARE NON_FLOATING ORIGINS and where a phaser model was produced and where we could find an origin
-odata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG) & ! is.na( data$aoNumContacts ), ]
-# HACK - set NA aoNumContacts to zero
-#odata$aoNumContacts[ is.na( odata$aoNumContacts ) ] <- 0
+odata = data[ data$floatingOrigin == 'False' & !is.na( data$phaserLLG), ]
+# HACK - set NA aoNumContacts to zero - we need to do this as we set NA when they were 0 when looking for origins
+missing <- is.na( odata$aoNumContacts )
+odata$aoNumContacts[ missing ] <- 0
+odata$aoNumRio[ missing ] <- 0
+odata$aoRioInregister[ missing ] <- 0
+odata$aoRioOoRegister[ missing ] <- 0
+odata$aoRioBackwards[ missing ] <- 0
+odata$aoRioGood[ missing ] <- 0
+odata$aoRioNocat[ missing ] <- 0
 
 ## Find where origins are the same
 #x <- odata[ ! ( is.na( odata$aoOrigin ) & is.na( odata$roOrigin ) ) & 
@@ -224,14 +231,6 @@ x <- odata[ ! is.na( odata$aoOrigin ) & ! is.na( odata$roOrigin )  &
 #aoRioBackwards
 #aoRioGood
 #aoRioNocat
-#roOrigin
-#roNumContacts
-#roNumRi
-#roRioInregister
-#roRioOoRegister
-#roRioBackwards
-#roRioGood
-#roRioNocat
 
 
 #Comparison of the RIO figures for successful search models with the number of in-register 
@@ -321,24 +320,10 @@ ggsave("CCVsInRegister.png")
 #		ylab("% contacts (< 0.5A)") +
 #		ggtitle("Num coincident vs unmatched atoms non-floating origins")
 #ggsave("CoincidentVsUnmatched.png")
-p <-ggplot(data=odata,
-		aes(x=(numPlacedAtoms-aoNumContacts)/numPlacedAtoms, y=aoNumContacts/numPlacedAtoms,
-				colour=factor(success) ) )
-p + geom_point( size=1 ) +
-		stat_sum( aes(size=..n..) ) +
-		facet_grid( ensembleSideChainTreatment ~ success) +
-		scale_colour_manual( values=c(fcolour, scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
-		xlab("% unmatched atoms") +
-		ylab("% contacts (< 0.5A)") +
-		ggtitle("Percentage coincident vs unmatched atoms non-floating origins")
-ggsave("PercentCoincidentVsUnmatched.png")
 
 # facet_grid( ensembleSideChainTreatment ~ .) +
 # label_both
 l = function( variable, value ) {
-	print(variable)
 	if ( variable == "success" ) {
 		return( c("Failure","Success"))
 	} else if ( variable == "ensembleSideChainTreatment" ) {
@@ -347,6 +332,64 @@ l = function( variable, value ) {
 		return ("foo")
 	}
 }
+
+p <-ggplot(data=odata,
+		aes(x=aoRioGood, y=numPlacedAtoms-aoNumContacts,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..)) +
+		facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("RIO score (in- + out-of-register)") +
+		ylab("Num non-coincident atoms (< 0.5A)") +
+		ggtitle("Rio score vs unmatched atoms non-floating origins")
+ggsave("RIOVsUnmatched.png")
+
+
+p <-ggplot(data=odata,
+		aes(x=numPlacedAtoms-aoNumContacts, y=aoNumContacts,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..)) +
+		facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("Num unmatched atoms") +
+		ylab("Num contacts (< 0.5A)") +
+		ggtitle("Number of coincident vs unmatched atoms non-floating origins")
+ggsave("CoincidentVsUnmatched.png")
+
+
+p <-ggplot(data=odata, aes(x=aoRioGood/numPlacedCA, y=aoNumContacts/numPlacedAtoms, colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( ensembleSideChainTreatment ~ success, labeller=l ) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("% RIO score (in- + out-of-register)") +
+		ylab("% contacts (< 0.5A)") +
+		ggtitle("% coincident vs RIO C-alpha non-floating origins")
+ggsave("PercentCoincidentVsRIO.png")
+
+
+p <-ggplot(data=odata,
+		aes(x=(numPlacedAtoms-aoNumContacts)/numPlacedAtoms, y=aoNumContacts/numPlacedAtoms,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..)) +
+		facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("% unmatched atoms") +
+		ylab("% contacts (< 0.5A)") +
+		ggtitle("Percentage coincident vs unmatched atoms non-floating origins")
+ggsave("PercentCoincidentVsUnmatched.png")
+
 
 p <-ggplot(data=odata, aes(x=aoRioGood/numPlacedCA, y=aoNumContacts/numPlacedAtoms, colour=factor(success) ) )
 p + geom_point( size=1 ) +
