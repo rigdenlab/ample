@@ -977,57 +977,51 @@ def analyseSolution( ampleResult=None,
         ccalc = contacts.Contacts()
         
         # Find the origin by using the max coindicence of the number of atoms
-        if ccalc.findOrigin( placedPdbInfo=placedPdbInfo,
+        ccalc.findOrigin( placedPdbInfo=placedPdbInfo,
                                  nativePdbInfo=nativePdbInfo,
                                  resSeqMap=resSeqMap,
                                  origins=originInfo.nonRedundantAlternateOrigins(),
                                  allAtom=True,
                                  workdir=workdir
-                                 ):
+                                 )
             
-            contactData = ccalc.data
+        contactData = ccalc.data
+    
+        # save the number of atoms in the overlap
+        ampleResult.aoOrigin = contactData.origin
+        ampleResult.aoNumContacts = contactData.numContacts
         
-            # save the number of atoms in the overlap
-            ampleResult.aoOrigin = contactData.origin
-            ampleResult.aoNumContacts = contactData.numContacts
-            
-            # now calculate rio for best origin using the saved data
-            ccalc.calcRio( contactData )
-        
-            # Set results
-            ampleResult.aoNumRio           = contactData.numContacts
-            ampleResult.aoRioInregister    = contactData.inregister
-            ampleResult.aoRioOoRegister    = contactData.ooregister
-            ampleResult.aoRioBackwards     = contactData.backwards
-            ampleResult.aoRioGood          = contactData.inregister + contactData.ooregister
-            ampleResult.aoRioNocat         = contactData.numContacts - ampleResult.aoRioGood
-        else:
-            print "CANNOT FIND ALLATOM ORIGIN"
-            
+        # now calculate rio for best origin using the saved data
+        ccalc.calcRio( contactData )
+    
+        # Set results
+        ampleResult.aoNumRio           = contactData.numContacts
+        ampleResult.aoRioInregister    = contactData.inregister
+        ampleResult.aoRioOoRegister    = contactData.ooregister
+        ampleResult.aoRioBackwards     = contactData.backwards
+        ampleResult.aoRioGood          = contactData.inregister + contactData.ooregister
+        ampleResult.aoRioNocat         = contactData.numContacts - ampleResult.aoRioGood
             
         # Find the origin by using the best RIO
-        if ccalc.findOrigin( placedPdbInfo=placedPdbInfo,
+        ccalc.findOrigin( placedPdbInfo=placedPdbInfo,
                                  nativePdbInfo=nativePdbInfo,
                                  resSeqMap=resSeqMap,
                                  origins=originInfo.nonRedundantAlternateOrigins(),
                                  allAtom=False,
                                  workdir=workdir
-                                 ):
+                                 )
             
-            # save the number of atoms in the overlap
-            ampleResult.roOrigin           = ccalc.data.origin
-            ampleResult.roNumContacts      = ccalc.data.numContacts
-            # Set results
-            ampleResult.roNumRio           = ccalc.data.numContacts
-            ampleResult.roRioInregister    = ccalc.data.inregister
-            ampleResult.roRioOoRegister    = ccalc.data.ooregister
-            ampleResult.roRioBackwards     = ccalc.data.backwards
-            ampleResult.roRioGood          = ccalc.data.inregister + ccalc.data.ooregister
-            ampleResult.roRioNocat         = ccalc.data.numContacts - ampleResult.roRioGood
+        # save the number of atoms in the overlap
+        ampleResult.roOrigin           = ccalc.data.origin
+        ampleResult.roNumContacts      = ccalc.data.numContacts
+        # Set results
+        ampleResult.roNumRio           = ccalc.data.numContacts
+        ampleResult.roRioInregister    = ccalc.data.inregister
+        ampleResult.roRioOoRegister    = ccalc.data.ooregister
+        ampleResult.roRioBackwards     = ccalc.data.backwards
+        ampleResult.roRioGood          = ccalc.data.inregister + ccalc.data.ooregister
+        ampleResult.roRioNocat         = ccalc.data.numContacts - ampleResult.roRioGood
         
-        else:
-            print "CANNOT FIND RIO ORIGIN"
-
 #         # Now get the helix
 #         helixSequence = ccalc.helixFromContacts( contacts=contactData.contacts,
 #                                  dsspLog=dsspLog )
