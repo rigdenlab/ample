@@ -3,8 +3,8 @@
 library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
-#setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
-setwd("/home/jmht/Documents/test/CC/contacts")
+setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
+#setwd("/home/jmht/Documents/test/CC/contacts")
 #data <- read.table(file="results_bucc.csv",sep=',', header=T)
 data <- read.table(file="results_bucc.csv",sep=',', header=T)
 
@@ -51,6 +51,30 @@ median( data[ data$success == 1, ]$ensembleNumResidues ) # 27
 median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
 
 
+# highest percentage of model that solved - selecting the largest
+# Could use which.max but want to select largest
+#sdata = data[ data$success == 1, ]
+#x <- sdata[ sdata$ensemblePercentModel == max( sdata$ensemblePercentModel ), ]
+#x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
+# 3K29 SCWRL_reliable_sidechains_trunc_168.103952_rad_3 100% 169 residues
+
+# Min
+#x <- sdata[ sdata$ensemblePercentModel == min( sdata$ensemblePercentModel ), ]
+#x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
+# 3OKQ poly_ala_trunc_0.202334_rad_1 4% 7 residues
+
+# Longest model that solved
+#x <- sdata[ sdata$ensembleNumResidues == max( sdata$ensembleNumResidues ), ]
+#x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
+# 3K29 SCWRL_reliable_sidechains_trunc_168.103952_rad_3 169 residues
+
+# Shortest model that solved
+#x <- sdata[ sdata$ensembleNumResidues == min( sdata$ensembleNumResidues ), ]
+#x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
+#  2OVC SCWRL_reliable_sidechains_trunc_0.012153_rad_1  5 residues fasta: 33
+
+
+
 # Plots
 
 # Timings
@@ -91,8 +115,6 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		ylab("Number of ensembles") +
 		ggtitle("Number of residues in ensemble for successful and failing cases")
 ggsave("ResiduesVsEnsemble.png")
-
-
 
 # Try showing success and failure together
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
@@ -137,8 +159,6 @@ ggsave("sideChain.png")
 #names(x) <- sub("^x$", "failures", names(x))
 #x$success <- aggregate( data$success==1, by=list( SideChainTreatment = data$ensembleSideChainTreatment ), FUN=sum)$x
 
-
-
 # CC vs final rFree coloured by success
 p <-ggplot(data=data, aes(shelxeCC, buccFinalRfree, colour=factor(success) ) )
 p + geom_point() +
@@ -150,6 +170,53 @@ p + geom_point() +
 		ylab("Final Buccaneer Rfree") +
 		ggtitle("Shelxe vs Buccanner RFree score")
 ggsave("CCVsRfree.png")
+
+# CC distribution
+p <-ggplot(data=data, aes(x=shelxeCC, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 1 ) +
+		scale_colour_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("CC score") +
+		ggtitle("Histogram of CC scores by success")
+ggsave("CCscores.png")
+
+
+# Resolution vs length
+#		stat_sum( group=c(1,2) ) +
+#		stat_sum( aes(size=..n..) ) +
+p <-ggplot(data=data, aes(x=resolution, y=fastaLength, colour=factor(success) ) )
+p + geom_point() +
+		stat_sum( aes(size=..n..) ) +
+		scale_colour_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		xlab("Resolution (A)") +
+		ylab("Protein length (residues)") +
+		ggtitle("Resolution vs protein length")
+ggsave("resolutionVsLength.png")
+
+
+#Distribution of chain lengths of all ensembles
+
+# percentage traced vs shelxeCC
+# FIX _ ASSUMES ALL CHAINS ARE THE SAME!
+#p <-ggplot(data=data, aes(x= ( ( shelxeAvgChainLength * shelxeNumChains ) / ( fastaLength * numChains ) ) * 100,
+#				y=buccFinalRfree, colour=factor(success) ) )
+#p + geom_point( size= 1) +
+#		stat_sum( aes(size=..n..) ) +
+#		scale_colour_manual( values=c(fcolour,scolour),
+#				name="Success/Failure",
+#				labels=c("Failure", "Success")
+#		) +
+#		xlab("% Shelxe Trace") +
+#		ylab("Shelxe CC") +
+#		ggtitle("Percentage traced by Shelxe vs Shelxe CC score")
+#ggsave("shelxePropVsCC.png")
+
 
 ###############################################################################################################################
 #
@@ -219,9 +286,9 @@ odata$aoRioNocat[ missing ] <- 0
 #x <- odata[ ! is.na( odata$aoOrigin ) & ! is.na( odata$roOrigin )  & 
 #				! odata$aoOrigin == "" & ! odata$roOrigin == ""  & 
 #				odata$aoOrigin != odata$roOrigin, ]
-x <- odata[ ! is.na( odata$aoOrigin ) & ! is.na( odata$roOrigin )  & 
-				! odata$aoOrigin == "" & ! odata$roOrigin == ""  & 
-				odata$aoOrigin != odata$roOrigin, ]
+#x <- odata[ ! is.na( odata$aoOrigin ) & ! is.na( odata$roOrigin )  & 
+#				! odata$aoOrigin == "" & ! odata$roOrigin == ""  & 
+#				odata$aoOrigin != odata$roOrigin, ]
 
 #aoOrigin
 #aoNumContacts
@@ -459,33 +526,6 @@ p + geom_point() +
 ggsave("LLGvsTFZtrunc.png")
 
 
-# CC distribution
-p <-ggplot(data=data, aes(x=shelxeCC, fill=factor(success) ) )
-p + geom_histogram( position = 'dodge', binwidth = 1 ) +
-		scale_colour_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
-		ylab("Number of cases") +
-		xlab("CC score") +
-		ggtitle("Histogram of CC scores by success")
-ggsave("CCscores.png")
-
-
-# Resolution vs length
-#		stat_sum( group=c(1,2) ) +
-#		stat_sum( aes(size=..n..) ) +
-p <-ggplot(data=data, aes(x=resolution, y=fastaLength, colour=factor(success) ) )
-p + geom_point() +
-		stat_sum( aes(size=..n..) ) +
-		scale_colour_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
-		xlab("Resolution (A)") +
-		ylab("Protein length (residues)") +
-		ggtitle("Resolution vs protein length")
-ggsave("resolutionVsLength.png")
 
 
 
