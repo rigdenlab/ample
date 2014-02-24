@@ -462,7 +462,11 @@ class CrystalInfo(object):
         self.beta = float( line[40:47] )
         self.gamma = float( line[47:54] )
         self.spaceGroup = line[55:66].strip()
-        self.z = int( line[66:70] )
+        try:
+            self.z = int( line[66:70] )
+        except ValueError:
+            # Z-info could be missing (shelxe output pdb)
+            pass
         
         return
 
