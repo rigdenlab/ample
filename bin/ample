@@ -110,7 +110,7 @@ parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
 parser.add_argument('-ensembles_dir', metavar='ensembles_dir', type=str, nargs=1,
                    help='Path to directory containing existing ensembles')
 
-parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
+parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1, required=True,
                    help='protein fasta file. (required)')
 
 parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
@@ -155,7 +155,7 @@ parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1
 parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
                    help='Additional keywords for MRBUMP - are passed through without editing')
 
-parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
+parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1, required=True,
                    help='The MTZ file with the reflection data.')
 
 parser.add_argument('-name', metavar='job_name', type=str, nargs=1,
