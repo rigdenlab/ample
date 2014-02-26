@@ -263,27 +263,29 @@ class ResultsSummary(object):
         self.buccRfree = -1
         self.arpWarpRfact = -1
         self.arpWarpRfree = -1
-        self.buccRfact = -1
-        self.buccRfree = -1
         
     def sortResults( self ):
         """
         Sort the results
         """
         
-        # Check if we can use shelx
-        if self.results[0].shelxCC:
-            use_shelx=True 
-        else:
-            use_shelx=False
-        
-        if use_shelx:
+        # Use the first result to determine what attributes are present and how we will sort the results
+        reverse=False
+        r = self.results[0]
+        if r.shelxCC:
+            reverse=True
             sortf = lambda x: float( x.shelxCC )
+        elif r.buccRfree:
+            sortf = lambda x: float( x.buccRfree )
+        elif r.arpWarpRfree:
+            sortf = lambda x: float( x.arpWarpRfree )
         else:
             sortf = lambda x: float( x.rfree )
         
+        # Now sort them
         self.results.sort(key=sortf)
-        self.results.reverse()
+        if reverse:
+            self.results.reverse()
     
     def summariseResults( self ):
         """Return a string summarising the results"""

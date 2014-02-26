@@ -212,7 +212,6 @@ class Contacts(object):
             
         pdbedit = pdb_edit.PDBEdit()
 
-        
         if not resSeqMap.resSeqMatch():
             #print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
@@ -224,15 +223,17 @@ class Contacts(object):
             placedPdb = placedPdbInfo.pdb
  
         # Make a copy of placedPdb with chains renamed to lower case
-        fromChains = placedPdbInfo.models[0].chains
-        toChains = [ c.lower() for c in fromChains ]
+        ucChains = placedPdbInfo.models[0].chains
+        toChains = [ c.lower() for c in ucChains ]
         placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren", directory=self.workdir )
-        pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=fromChains, toChain=toChains )
+        pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=ucChains, toChain=toChains )
 
+        # The list of chains in the native that we will be checking contacts from
+        fromChains = nativePdbInfo.models[0].chains
+        
         # Loop over origins, move the placed pdb to the new origin and then run ncont
         # Object to hold data on best origin
         self.data = None
-        numGood = 0 # For holding the metric
         for i, origin in enumerate( origins ):
             #print "GOT ORIGIN ",i,origin
             
@@ -255,6 +256,7 @@ class Contacts(object):
             data.joinedPdb = joinedPdb
             data.fromChains = fromChains
             data.toChains = toChains
+            data.numGood = 0 # For holding the metric
             # Need to use list of chains from Native as can't work out negate operator for ncont
             if allAtom:
                 self.runNcont( pdbin=joinedPdb,
@@ -275,11 +277,13 @@ class Contacts(object):
                 self.parseNcontLog( data )
                 self.analyseRio( data )
                 data.numGood = data.inregister + data.ooregister
-                
-            if not self.data or data.numGood >= self.data.numGood:
+            
+            # Save the first origin and only update if we get a better score
+            if not self.data or data.numGood > self.data.numGood:
                 self.data = data
 
         # End loop over origins
+        
         if self.data.numGood > 0:
             
             # If we got a match run csymmatch so we can see the result

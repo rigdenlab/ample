@@ -110,7 +110,7 @@ parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
 parser.add_argument('-ensembles_dir', metavar='ensembles_dir', type=str, nargs=1,
                    help='Path to directory containing existing ensembles')
 
-parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1,
+parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1, required=True,
                    help='protein fasta file. (required)')
 
 parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
@@ -155,7 +155,7 @@ parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1
 parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
                    help='Additional keywords for MRBUMP - are passed through without editing')
 
-parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
+parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1, required=True,
                    help='The MTZ file with the reflection data.')
 
 parser.add_argument('-name', metavar='job_name', type=str, nargs=1,
@@ -505,15 +505,17 @@ if amopt.d['make_models']:
             sys.exit(1)
         amopt.d['make_frags'] = False
     
-    if amopt.d['make_frags'] and (  amopt.d['frags_3mers'] or  amopt.d['frags_9mers'] ):
+    if amopt.d['make_frags'] and ( amopt.d['frags_3mers'] or  amopt.d['frags_9mers'] ):
         msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
         logger.critical(msg)
         sys.exit(1)
     
-    if not amopt.d['make_frags'] and not (  amopt.d['frags_3mers'] and  amopt.d['frags_9mers'] ):
-        msg = "make_frags set to false, but you have not given the paths to the frags_3mers or frags_9mers"
+    if not amopt.d['make_frags'] and not ( amopt.d['frags_3mers'] and amopt.d['frags_9mers'] ):
+        msg = """Please supply the paths to the fragment files using the -frags_3mers and -frags_9mers flags.
+These can be generated using the Robetta server: http://robetta.bakerlab.org
+Please see the AMPLE documentation for further information."""
         logger.critical(msg)
-        sys.exit(1)   
+        sys.exit(1)
 
 # Missing domains
 if amopt.d['missing_domain']:

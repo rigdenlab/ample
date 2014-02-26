@@ -147,6 +147,7 @@ class AmpleResult(object):
 #                               'csymmatchInR',
 
                               'numPlacedAtoms',
+                              'numPlacedCA',
                               'floatingOrigin',
                               
                               'aoOrigin',
@@ -224,6 +225,7 @@ class AmpleResult(object):
                                 "Reforigin RMSD",
 
                               'numPlacedAtoms',
+                              'numPlacedCA',
                               'floatingOrigin',
                               'aoOrigin',
                               'aoNumContacts',
@@ -948,8 +950,8 @@ def analyseSolution( ampleResult=None,
     placedPdbInfo = pdbedit.get_info( placedPdb )
     
     ampleResult.numPlacedAtoms = placedPdbInfo.numAtoms()
+    ampleResult.numPlacedCA = placedPdbInfo.numCalpha()
 
-    
     # Get reforigin info
     if True:
     #try:
@@ -975,57 +977,51 @@ def analyseSolution( ampleResult=None,
         ccalc = contacts.Contacts()
         
         # Find the origin by using the max coindicence of the number of atoms
-        if ccalc.findOrigin( placedPdbInfo=placedPdbInfo,
+        ccalc.findOrigin( placedPdbInfo=placedPdbInfo,
                                  nativePdbInfo=nativePdbInfo,
                                  resSeqMap=resSeqMap,
                                  origins=originInfo.nonRedundantAlternateOrigins(),
                                  allAtom=True,
                                  workdir=workdir
-                                 ):
+                                 )
             
-            contactData = ccalc.data
+        contactData = ccalc.data
+    
+        # save the number of atoms in the overlap
+        ampleResult.aoOrigin = contactData.origin
+        ampleResult.aoNumContacts = contactData.numContacts
         
-            # save the number of atoms in the overlap
-            ampleResult.aoOrigin = contactData.origin
-            ampleResult.aoNumContacts = contactData.numContacts
-            
-            # now calculate rio for best origin using the saved data
-            ccalc.calcRio( contactData )
-        
-            # Set results
-            ampleResult.aoNumRio           = contactData.numContacts
-            ampleResult.aoRioInregister    = contactData.inregister
-            ampleResult.aoRioOoRegister    = contactData.ooregister
-            ampleResult.aoRioBackwards     = contactData.backwards
-            ampleResult.aoRioGood          = contactData.inregister + contactData.ooregister
-            ampleResult.aoRioNocat         = contactData.numContacts - ampleResult.aoRioGood
-        else:
-            print "CANNOT FIND ALLATOM ORIGIN"
-            
+        # now calculate rio for best origin using the saved data
+        ccalc.calcRio( contactData )
+    
+        # Set results
+        ampleResult.aoNumRio           = contactData.numContacts
+        ampleResult.aoRioInregister    = contactData.inregister
+        ampleResult.aoRioOoRegister    = contactData.ooregister
+        ampleResult.aoRioBackwards     = contactData.backwards
+        ampleResult.aoRioGood          = contactData.inregister + contactData.ooregister
+        ampleResult.aoRioNocat         = contactData.numContacts - ampleResult.aoRioGood
             
         # Find the origin by using the best RIO
-        if ccalc.findOrigin( placedPdbInfo=placedPdbInfo,
+        ccalc.findOrigin( placedPdbInfo=placedPdbInfo,
                                  nativePdbInfo=nativePdbInfo,
                                  resSeqMap=resSeqMap,
                                  origins=originInfo.nonRedundantAlternateOrigins(),
                                  allAtom=False,
                                  workdir=workdir
-                                 ):
+                                 )
             
-            # save the number of atoms in the overlap
-            ampleResult.roOrigin           = ccalc.data.origin
-            ampleResult.roNumContacts      = ccalc.data.numContacts
-            # Set results
-            ampleResult.roNumRio           = ccalc.data.numContacts
-            ampleResult.roRioInregister    = ccalc.data.inregister
-            ampleResult.roRioOoRegister    = ccalc.data.ooregister
-            ampleResult.roRioBackwards     = ccalc.data.backwards
-            ampleResult.roRioGood          = ccalc.data.inregister + ccalc.data.ooregister
-            ampleResult.roRioNocat         = ccalc.data.numContacts - ampleResult.roRioGood
+        # save the number of atoms in the overlap
+        ampleResult.roOrigin           = ccalc.data.origin
+        ampleResult.roNumContacts      = ccalc.data.numContacts
+        # Set results
+        ampleResult.roNumRio           = ccalc.data.numContacts
+        ampleResult.roRioInregister    = ccalc.data.inregister
+        ampleResult.roRioOoRegister    = ccalc.data.ooregister
+        ampleResult.roRioBackwards     = ccalc.data.backwards
+        ampleResult.roRioGood          = ccalc.data.inregister + ccalc.data.ooregister
+        ampleResult.roRioNocat         = ccalc.data.numContacts - ampleResult.roRioGood
         
-        else:
-            print "CANNOT FIND RIO ORIGIN"
-
 #         # Now get the helix
 #         helixSequence = ccalc.helixFromContacts( contacts=contactData.contacts,
 #                                  dsspLog=dsspLog )
@@ -1036,13 +1032,13 @@ def analyseSolution( ampleResult=None,
 #             with open( hfile, 'w' ) as f:
 #                 f.write( helixSequence+"\n" )
                 
-        # Just for analysis - copy shelxe file into analysis directory
-        if os.path.isfile( ampleResult.shelxePdb ):
-            
-            shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
-            shutil.copy( ampleResult.shelxePdb, shelxePdb )
+    # Just for analysis - copy shelxe file into analysis directory
+    if ampleResult.shelxePdb and os.path.isfile( ampleResult.shelxePdb ):
         
-        # For now skip shelxe analysis
+        shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
+        shutil.copy( ampleResult.shelxePdb, shelxePdb )
+        
+    # For now skip shelxe analysis
         
 #     #
 #     # SHELXE PROCESSING
@@ -1332,8 +1328,9 @@ if __name__ == "__main__":
                 ensembleName = mrbumpResult.name[9:-6]
             ar.ensembleName = ensembleName
             
-            #if ensembleName != "SCWRL_reliable_sidechains_trunc_5.241154_rad_1":
-            #   continue
+            # Just for debugging
+            if False and ensembleName != "All_atom_trunc_11.413016_rad_1":
+                continue
             
             # Extract information on the models and ensembles
             eresults = ampleDict['ensemble_results']
@@ -1373,7 +1370,7 @@ if __name__ == "__main__":
             mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}.sub.log".format( ensembleName ) )
             mrbumpResult.mrbumpLog = mrbumpLog
             
-           # Update the Mrbump result object and set all values in the Ample Result
+            # Update the Mrbump result object and set all values in the Ample Result
             processMrbump( mrbumpResult )
     
             # Now set result attributes from what we've got
