@@ -13,6 +13,7 @@ import unittest
 # our imports
 import clusterize
 import mrbump_cmd
+import mrbump_results
 import workers
 
 
@@ -187,7 +188,6 @@ def check_success( job ):
     Success is assumed as a SHELX CC score of >= SHELXSUCCESS
     """
     
-    SHELX_SUCCESS = 25.0
     
     directory, script = os.path.split( job )
     scriptname = os.path.splitext( script )[0]
@@ -196,31 +196,27 @@ def check_success( job ):
     if not os.path.isfile(rfile):
         print "{0} cannot find results file: {1}".format(multiprocessing.current_process().name,rfile)
         return False
+    
+    mrbR = mrbump_results.ResultsSummary(directory)
+    results = mrbR.parseTableDat(rfile)
+    # Put into order
+    results = mrbR.sortResults(results)
+    r = results[0]
+
+    success=False
+    rFreeSuccess=0.4
+    if r.shelxCC and r.shelxeCC >= 25.0:
+        success=True
+    elif r.buccRfree and r.buccRfree >=rFreeSuccess:
+        success=True
+    elif r.arpWarpRfree and r.arpWarpRfree >=rFreeSuccess:
+        success=True
+    elif r.rfree and r.rfree >=rFreeSuccess:
+        success=True
         
-    f = open(rfile, 'r')
-    
-    # First line is
-    hline =  f.readline().strip()
-    headers = hline.split()
-    
-    # For now we assume we are using SHELXE to check results
-    # otherwise we would check 'final_Rfree'
-    if 'SHELXE_CC' in headers:
-        scol = headers.index('SHELXE_CC')
-    else:
-        return False
-    
-    for line in f:
-        fields = line.strip().split()
-        score = float(fields[scol])
-        if score >= SHELX_SUCCESS:
-            return True
-    
-    # Nothing good enough
-    return False
+    return success
 
 class Test(unittest.TestCase):
-
 
     def XtestLocal(self):
         

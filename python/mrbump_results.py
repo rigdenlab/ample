@@ -1,10 +1,8 @@
 #!/usr/bin/env python
 
 import glob
-import locale
 import logging
 import os
-import re
 import types
 
 # Our imports
@@ -24,12 +22,13 @@ class MrBumpResult(object):
         self.name = None
         self.program = None
         self.solution = None
-        self.rfact = None
-        self.rfree = None
-        self.buccRfact = None # Bucc_final_Rfact
-        self.buccRfree = None
-        self.arpWarpRfact = None # ARP_final_Rfact/Rfree
-        self.arpWarpRfree = None
+
+        self.rfact = 1.0
+        self.rfree = 1.0
+        self.buccRfact = 1.0 # Bucc_final_Rfact
+        self.buccRfree = 1.0
+        self.arpWarpRfact = 1.0 # ARP_final_Rfact/Rfree
+        self.arpWarpRfree = 1.0
         self.shelxCC = None
         
         self.header = [] # The header format for this table
@@ -50,7 +49,7 @@ class ResultsSummary(object):
     Summarise the results for a series of MRBUMP runs
     """
     
-    def __init__(self, mrbump_dir):
+    def __init__(self, mrbump_dir=None):
         
         self.mrbump_dir = mrbump_dir
         self.results = []
@@ -70,6 +69,8 @@ class ResultsSummary(object):
                              }
         
         self.logger = logging.getLogger()
+        
+        return
         
     def _addFailedResults(self, failed, header):
         """Add failures to self.results
@@ -111,8 +112,6 @@ class ResultsSummary(object):
         # reset any results
         self.results = []
         failed = {} # dict mapping failures to what went wrong - need to process at the end
-        header = None
-        nfields=None
         for ensemble in ensembles:
 
             # Check job directory
@@ -137,99 +136,23 @@ class ResultsSummary(object):
                 failed[ ensemble ] = "missing-resultsTable.dat"
                 continue
             
-            firstLine = True
+            # Extract the result
+            self.results += self.parseTableDat(resultsTable)
             
-            # Read results table to get the results
-            for line in open(resultsTable):
-                
-                # Create a result object for each line in the output file
-                result = MrBumpResult()
-                result.jobDir = jobDir
-                
-                line = line.strip()
-                if firstLine:
-                    
-                    # Processing header
-                    firstLine=False
-                    header = line.split()
-                    nfields = len(header) # count as check
-                    badHeader=False
-                    for f in header:
-                        # Map the data fields to their titles
-                        if f not in self.title2attr.keys():
-                            result = MrBumpResult()
-                            result.jobDir = jobDir
-                            self.logger.critical("jobDir {0}: Problem with field {1} in headerline: {2}".format( jobDir, f, line ) )
-                            result.header = header
-                            result.solution = "problem-header-resultsTable.dat"
-                            self._getUnfinishedResult( result )
-                            self.results.append( result )
-                            badHeader=True
-                            break # break out of header check
-                    
-                    if badHeader:
-                        # break out of reading this results table
-                        break
-                    else:
-                        # Got a valid header so continue reading file
-                        continue
-                    # End header processing
-                   
-                # Create a result object for each line in the output file
-                result = MrBumpResult()
-                result.jobDir = jobDir
-                    
-                result.header = header
-                
-                fields = line.split()
-                if len(fields) != nfields:
-                    msg = "jobDir {0}: Problem getting dataline: {1}".format( jobDir, line )
-                    self.logger.debug(msg)
-                    result.solution = "corrupted-data-resultsTable.dat"
-                    self._getUnfinishedResult( result )
-                    self.results.append( result )
-                    break
-                
-                # The headers tell us what attribute is in each column, so we use these and the header2attr dict to 
-                # set the results
-                for i, title in enumerate(header):
-                    if title == 'MR_Program':
-                        setattr( result, self.title2attr[title], fields[i].lower() )
-                    else:
-                        setattr( result, self.title2attr[title], fields[i] )
-                    
-                if result.program not in ['phaser','molrep']:
-                    raise RuntimeError,"getResult, unrecognised program in line: {0}".format(line)
-                
-                # Rebuild the path that generated the result
-                # Add loc0_ALL_ and strip  _UNMOD from (e.g.): loc0_ALL_All_atom_trunc_0.34524_rad_1_UNMOD 
-                #dirName = "loc0_ALL_" + result.name + "_UNMOD"
-                # While using old names - just strip _UNMOD
-                dirName = result.name[:-6]
-                resultDir = os.path.join( result.jobDir,'data',dirName,'unmod','mr',result.program,'refine' )
-                #print resultDir
-                result.resultDir = resultDir
-                
-                # Need to reconstruct final pdb from directory and program name
-                pdbName = "refmac_" + result.program + "_loc0_ALL_"  + ensemble + "_UNMOD.pdb"
-                result.pdb = os.path.join( resultDir, pdbName )
-                
-                self.results.append( result )
-
-        if not header or not len(header):
-            self.logger.warn("Could not extract any results from directory - no header: {0}".format( self.mrbump_dir ) )
-            return False
+#         if not header or not len(header):
+#             self.logger.warn("Could not extract any results from directory - no header: {0}".format( self.mrbump_dir ) )
+#             return False
 
         # Process the failed results
-        if failed:
-            self._addFailedResults( failed, header )
+        if failed and len(self.results):
+            self._addFailedResults( failed, self.results[0].header )
                 
         if not len(self.results):
             self.logger.warn("Could not extract any results from directory: {0}".format( self.mrbump_dir ) )
             return False
 
         # Sort the results
-        self.sortResults()
+        self.sortResults(self.results)
         
         return True
     
@@ -256,15 +179,105 @@ class ResultsSummary(object):
                 result.name = os.path.basename( dlist[0] )+"_UNMOD"
 
         result.program = "unknown"
-        result.rfact = -1
-        result.rfree = -1
-        result.shelxCC = -1
-        self.buccRfact = -1
-        self.buccRfree = -1
-        self.arpWarpRfact = -1
-        self.arpWarpRfree = -1
+        return
         
-    def sortResults( self ):
+    def parseTableDat(self, tfile):
+        """Read a resultsTable file and return a list of MrBump results objects"""
+        
+        # Extract the various components from the path
+        paths = tfile.split( os.sep )
+        assert len( paths[0] )  == 0 # need absolute path
+        
+        jobDir = os.sep.join( paths[:-2] )
+        ensemble = paths[-3][7:-7] #  remove search_..._mrbump: 'search_All_atom_trunc_0.005734_rad_1_mrbump'
+        
+        if not self.mrbump_dir:
+            mrbump_dir = os.sep.join( paths[:-3] )
+            
+        results = []
+        header = None
+        nfields=None
+        firstLine = True
+        # Read results table to get the results
+        for line in open(tfile):
+            
+            # Create a result object for each line in the output file
+            result = MrBumpResult()
+            result.jobDir = jobDir
+            
+            line = line.strip()
+            if firstLine:
+                
+                # Processing header
+                firstLine=False
+                header = line.split()
+                nfields = len(header) # count as check
+                badHeader=False
+                for f in header:
+                    # Map the data fields to their titles
+                    if f not in self.title2attr.keys():
+                        result = MrBumpResult()
+                        result.jobDir = jobDir
+                        self.logger.critical("jobDir {0}: Problem with field {1} in headerline: {2}".format( jobDir, f, line ) )
+                        result.header = header
+                        result.solution = "problem-header-tfile.dat"
+                        self._getUnfinishedResult( result )
+                        results.append( result )
+                        badHeader=True
+                        break # break out of header check
+                
+                if badHeader:
+                    # break out of reading this results table
+                    return []
+                else:
+                    # Got a valid header so continue reading file
+                    continue
+                # End header processing
+               
+            # Create a result object for each line in the output file
+            result = MrBumpResult()
+            result.jobDir = jobDir
+                
+            result.header = header
+            
+            fields = line.split()
+            if len(fields) != nfields:
+                msg = "jobDir {0}: Problem getting dataline: {1}".format( jobDir, line )
+                self.logger.debug(msg)
+                result.solution = "corrupted-data-tfile.dat"
+                self._getUnfinishedResult( result )
+                results.append( result )
+                break
+            
+            # The headers tell us what attribute is in each column, so we use these and the header2attr dict to 
+            # set the results
+            for i, title in enumerate(header):
+                if title == 'MR_Program':
+                    setattr( result, self.title2attr[title], fields[i].lower() )
+                else:
+                    setattr( result, self.title2attr[title], fields[i] )
+                
+            if result.program not in ['phaser','molrep']:
+                raise RuntimeError,"getResult, unrecognised program in line: {0}".format(line)
+            
+            # Rebuild the path that generated the result
+            # Add loc0_ALL_ and strip  _UNMOD from (e.g.): loc0_ALL_All_atom_trunc_0.34524_rad_1_UNMOD 
+            #dirName = "loc0_ALL_" + result.name + "_UNMOD"
+            # While using old names - just strip _UNMOD
+            dirName = result.name[:-6]
+            resultDir = os.path.join( result.jobDir,'data',dirName,'unmod','mr',result.program,'refine' )
+            #print resultDir
+            result.resultDir = resultDir
+            
+            # Need to reconstruct final pdb from directory and program name
+            pdbName = "refmac_" + result.program + "_loc0_ALL_"  + ensemble + "_UNMOD.pdb"
+            result.pdb = os.path.join( resultDir, pdbName )
+            
+            results.append( result )
+            
+        return results
+        
+    def sortResults( self, results ):
         """
         Sort the results
         """
@@ -282,10 +295,9 @@ class ResultsSummary(object):
         else:
             sortf = lambda x: float( x.rfree )
         
-        # Now sort them
-        self.results.sort(key=sortf)
-        if reverse:
-            self.results.reverse()
+        results.sort(key=sortf, reverse=reverse)
+        
+        return
     
     def summariseResults( self ):
         """Return a string summarising the results"""
