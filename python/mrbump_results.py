@@ -264,14 +264,14 @@ class ResultsSummary(object):
         reverse=False
         sortf=False
         for r in results:
-            if r.shelxCC and float(r.shelxCC) > -1.0:
+            if r.shelxCC and r.shelxCC != "--" and float(r.shelxCC) > -1.0:
                 reverse=True
                 sortf = lambda x: float( x.shelxCC )
                 break
-            elif r.buccRfree and float(r.buccRfree) < 1.0:
+            elif r.buccRfree and r.buccRfree != "--" and float(r.buccRfree) < 1.0:
                 sortf = lambda x: float( x.buccRfree )
                 break
-            elif r.arpWarpRfree and float(r.arpWarpRfree) < 1.0:
+            elif r.arpWarpRfree and r.arpWarpRfree != "--" and loat(r.arpWarpRfree) < 1.0:
                 sortf = lambda x: float( x.arpWarpRfree )
                 break
             elif r.rfree and float(r.rfree) < 1.0:
