@@ -812,8 +812,9 @@ for i, ensemble_pdbs in enumerate(ensembles):
         mrbump_ensemble.mrbump_ensemble_local( job_scripts, amopt.d )
         
     # Collect the MRBUMP results
-    results_summary = mrbump_results.ResultsSummary( job_dir )
-    results_summary.extractResults()
+    #results_summary = mrbump_results.ResultsSummary( job_dir )
+    results_summary = mrbump_results.ResultsSummary()
+    results_summary.extractResults( job_dir )
     amopt.d['mrbump_results'].append( results_summary.results )
     #summary = results_summary.summariseResults()
     
