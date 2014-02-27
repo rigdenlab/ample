@@ -202,7 +202,8 @@ def check_success( job ):
     
     # Put into order and take top one
     results = mrbR.parseTableDat(rfile)
-    r = mrbR.sortResults(results)[0]
+    mrbR.sortResults(results)
+    r = results[0]
 
     success=False
     rFreeSuccess=0.4
