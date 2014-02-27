@@ -199,9 +199,8 @@ def check_success( job ):
     
     mrbR = mrbump_results.ResultsSummary(directory)
     results = mrbR.parseTableDat(rfile)
-    # Put into order
-    results = mrbR.sortResults(results)
-    r = results[0]
+    # Put into order and take top one
+    r = mrbR.sortResults(results)[0]
 
     success=False
     rFreeSuccess=0.4
