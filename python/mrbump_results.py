@@ -271,7 +271,7 @@ class ResultsSummary(object):
             elif r.buccRfree and r.buccRfree != "--" and float(r.buccRfree) < 1.0:
                 sortf = lambda x: float( x.buccRfree )
                 break
-            elif r.arpWarpRfree and r.arpWarpRfree != "--" and loat(r.arpWarpRfree) < 1.0:
+            elif r.arpWarpRfree and r.arpWarpRfree != "--" and float(r.arpWarpRfree) < 1.0:
                 sortf = lambda x: float( x.arpWarpRfree )
                 break
             elif r.rfree and float(r.rfree) < 1.0:

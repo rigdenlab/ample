@@ -812,7 +812,6 @@ for i, ensemble_pdbs in enumerate(ensembles):
         mrbump_ensemble.mrbump_ensemble_local( job_scripts, amopt.d )
         
     # Collect the MRBUMP results
-    #results_summary = mrbump_results.ResultsSummary( job_dir )
     results_summary = mrbump_results.ResultsSummary()
     results_summary.extractResults( job_dir )
     amopt.d['mrbump_results'].append( results_summary.results )
@@ -844,8 +843,10 @@ RUNNING.close()
 
 # Copy best pdb to output_pdb - hack - just take best from the first cluster#
 output_pdb = os.path.join( amopt.d['work_dir'], amopt.d['output_pdb'])
-logging.info("Copying result pdb to: {0}\n".format( output_pdb ) )
-shutil.copy2( amopt.d['mrbump_results'][0][0].pdb, output_pdb )
+result_pdb = amopt.d['mrbump_results'][0][0].pdb
+if os.path.isfile( output_pdb ):
+    logging.info("Copying result pdb to: {0}\n".format( output_pdb ) )
+    shutil.copy2( result_pdb, output_pdb )
 
 # os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
 # os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')
