@@ -511,7 +511,8 @@ if amopt.d['make_models']:
         sys.exit(1)
     
     if not amopt.d['make_frags'] and not ( amopt.d['frags_3mers'] and amopt.d['frags_9mers'] ):
-        msg = """Please supply the paths to the fragment files using the -frags_3mers and -frags_9mers flags.
+        msg = """*** Missing fragment files! ***
+Please supply the paths to the fragment files using the -frags_3mers and -frags_9mers flags.
 These can be generated using the Robetta server: http://robetta.bakerlab.org
 Please see the AMPLE documentation for further information."""
         logger.critical(msg)
