@@ -197,20 +197,22 @@ def check_success( job ):
         print "{0} cannot find results file: {1}".format(multiprocessing.current_process().name,rfile)
         return False
     
-    mrbR = mrbump_results.ResultsSummary(directory)
-    results = mrbR.parseTableDat(rfile)
+    # Results summary object to parse table file
+    mrbR = mrbump_results.ResultsSummary()
+    
     # Put into order and take top one
+    results = mrbR.parseTableDat(rfile)
     r = mrbR.sortResults(results)[0]
 
     success=False
     rFreeSuccess=0.4
-    if r.shelxCC and r.shelxeCC >= 25.0:
+    if r.shelxCC and float(r.shelxeCC) >= 25.0:
         success=True
-    elif r.buccRfree and r.buccRfree >=rFreeSuccess:
+    elif r.buccRfree and float(r.buccRfree) >=rFreeSuccess:
         success=True
-    elif r.arpWarpRfree and r.arpWarpRfree >=rFreeSuccess:
+    elif r.arpWarpRfree and float(r.arpWarpRfree) >=rFreeSuccess:
         success=True
-    elif r.rfree and r.rfree >=rFreeSuccess:
+    elif r.rfree and float(r.rfree) >= rFreeSuccess:
         success=True
         
     return success
