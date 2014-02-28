@@ -484,11 +484,11 @@ if amopt.d['NMR_model_in']:
     
     # HACK - use the rosetta modeller to find the binary
     if not amopt.d['NMR_Truncate_only']: 
-       ROSETTA_CM = rosetta_model.find_binary(  'mr_protocols', rosettaDir = amopt.d['rosetta_dir'] )
-       if not ROSETTA_CM:
-           msg = 'Cannot find Rosetta binary {0} in {1} check path names'.format( 'mr_protocols', amopt.d['rosetta_dir'] )
-           logger.critical( msg )
-           sys.exit(1)
+        ROSETTA_CM = rosetta_model.find_binary(  'mr_protocols', rosettaDir = amopt.d['rosetta_dir'] )
+        if not ROSETTA_CM:
+            msg = 'Cannot find Rosetta binary {0} in {1} check path names'.format( 'mr_protocols', amopt.d['rosetta_dir'] )
+            logger.critical( msg )
+            sys.exit(1)
 
     if not os.path.isfile( str(amopt.d['NMR_remodel_fasta']) ):
         amopt.d['NMR_remodel_fasta'] =  amopt.d['fasta']
@@ -550,20 +550,32 @@ if amopt.d['use_arpwarp']:
 #Check we can find all the required programs
 #
 # Maxcluster handled differently as we may need to download the binary
-#amopt.d['maxcluster_exe'] = ample_util.find_exe('maxcluster', amopt.d['maxcluster_exe'])
 amopt.d['maxcluster_exe'] = ample_util.find_maxcluster( amopt )
+#
+# We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
+#
+if amopt.d['use_shelxe']:
+    try:
+        amopt.d['shelxe_exe'] = ample_util.find_exe('shelxe', amopt.d['shelxe_exe'])
+    except RuntimeError:
+        msg = """*** Cannot find shelxe executable in PATH - turning off use of SHELXE. ***
+SHELXE is recommended for the best chance of success. We recommend you install shelxe from:
+http://shelx.uni-ac.gwdg.de/SHELX/
+and install it in your PATH so that AMPLE can use it.
+"""
+        logger.warn( msg )
+        amopt.d['use_shelxe'] = False
+#
+# SPICKER and Theseus now shipped with CCP4
+#
 amopt.d['spicker_exe'] = ample_util.find_exe('spicker', amopt.d['spicker_exe'])
 if amopt.d['ensembler']:
     logger.info('You are using Phenix ensembler')
     amopt.d['phenix_exe'] = ample_util.find_exe('phenix', amopt.d['phenix_exe'])
 else:
     amopt.d['theseus_exe'] = ample_util.find_exe('theseus', amopt.d['theseus_exe'])
-
-
 if amopt.d['use_scwrl']:
-    amopt.d['scwrl_exe'] = ample_util.find_exe('Scwrl4', amopt.d['scwrl_exe'] )
-if amopt.d['use_shelxe']:
-    amopt.d['shelxe_exe'] = ample_util.find_exe('shelxe', amopt.d['shelxe_exe'])
+        amopt.d['scwrl_exe'] = ample_util.find_exe('Scwrl4', amopt.d['scwrl_exe'] )
 
 # Create the rosetta modeller - this runs all the checks required
 if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models

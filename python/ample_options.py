@@ -93,7 +93,7 @@ class AmpleOptions(object):
                             'use_buccaneer' : True,
                             'use_homs' : True,
                             'use_scwrl' : False,
-                            'use_shelxe' : False,
+                            'use_shelxe' : True,
 
                          }
         
