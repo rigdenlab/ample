@@ -28,7 +28,7 @@ WEIGHT MATRIX 0.01
 NCYC 0
 END
 """
-    ret = ample_util.run_command(cmd=cmd, dolog=False, stdin=stdin)
+    ret = ample_util.run_command(cmd=cmd, logfile="generateMap.log", dolog=False, stdin=stdin)
     
     assert ret == 0, "generateMap refmac failed!"
 
@@ -38,7 +38,7 @@ def ccmtzOrigin( nativeMap, mrPdb  ):
     """Use the phenix get_cc_mtz_pdb script to determine the origin of a MR pdb using the supplied map"""
     
     cmd = [ "phenix.get_cc_mtz_pdb", nativeMap, mrPdb ]
-    ret = ample_util.run_command(cmd=cmd, logfile="xx.log")
+    ret = ample_util.run_command(cmd=cmd, logfile="get_cc_mtz_pdb.log", dolog=False )
     assert ret == 0, "phenix.get_cc_mtz_pdb refmac failed!"
     
     ofile = "temp_dir/resolve.offset"
