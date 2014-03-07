@@ -1126,7 +1126,7 @@ class PDBEdit(object):
                 pdb_result2 = re.split(pdb_pattern, pdbline )
                 for i in residues : #convert to ints to comparex
         
-                    if int(pdb_result2[5]) == int(i):
+                    if int(pdb_result2[4]) == int(i):
                         pdb_out.write(pdbline)
         
         pdb_out.close()
