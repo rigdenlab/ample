@@ -1102,6 +1102,7 @@ class PDBEdit(object):
     
     def select_residues(self, inpath=None, outpath=None, residues=None ):
         """Create a new pdb by selecting only the numbered residues from the list.
+        This only keeps ATOM lines - everything else gets discarded.
         
         Args:
         infile: path to input pdb
