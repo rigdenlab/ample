@@ -344,7 +344,7 @@ class RosettaModel(object):
         if self.transmembrane:
             cmd = [ self.transmembrane_exe ]
         else:
-             cmd = [ self.rosetta_path ]
+            cmd = [ self.rosetta_path ]
         
         cmd += ['-database', self.rosetta_db,
                 '-in::file::fasta', self.fasta,
@@ -402,7 +402,6 @@ class RosettaModel(object):
         
         return cmd
     ##End make_rosetta_cmd
-    
     
     def doModelling(self):
         """
@@ -611,7 +610,6 @@ class RosettaModel(object):
                     self.logger.critical(msg)
                     raise RuntimeError,msg
                     
-            import platform
             if not optd['rosetta_path']: 
                 optd['rosetta_path'] = find_binary( 'AbinitioRelax', rosettaDir=self.rosetta_dir )
                 if not optd['rosetta_path']:
