@@ -106,18 +106,22 @@ class AmpleOptions(object):
                            'shelx_cycles' : 5,
                            'use_arpwarp' : True,
                            'use_buccaneer' : True,
+                           # This kills phaser after 15 minutes
                            # Needs to be a list of lists as there can be multiple mr_keys
-                           # This kills phaser after 15 min - add when the CCP4 version of phaser supports it
-                           # 'mr_keys' : [ [ 'PKEY', 'KILL','TIME','15'  ] ],
+                           'mr_keys' : [ [ 'PKEY', 'KILL','TIME','15'  ] ],
                         }
     
         # Test use scrwl
         self.devel_mode = {
                            'early_terminate': False,
                            'use_shelxe' : True,
+                           'shelxe_rebuild' : True,
                            'use_scwrl' : False,
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
+                           # This kills phaser after 6 hours
+                           # Needs to be a list of lists as there can be multiple mr_keys
+                           'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
                         }
     
         # We have a debug mode as the logger isn't activated when we run
