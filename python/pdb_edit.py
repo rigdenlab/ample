@@ -1109,29 +1109,23 @@ class PDBEdit(object):
         residues: list of integers of the residues to keep
         
         Return:
-        path to new pdb or None
+        Number of residues written
         """
     
         assert inpath, outpath
         assert type(residues) == list
     
-        pdb_in = open(inpath, "r")
-        pdb_out = open(outpath , "w")
-        
         # Loop through PDB files and create new ones that only contain the residues specified in the list
-        for pdbline in pdb_in:
-            pdb_pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s')
-            pdb_result = pdb_pattern.match(pdbline)
-            if pdb_result:
-                pdb_result2 = re.split(pdb_pattern, pdbline )
-                for i in residues : #convert to ints to comparex
+        count=0
+        with open(inpath, "r") as pdb_in, open(outpath , "w") as pdb_out:
+            for line in pdb_in:
+                if line.startswith("ATOM"):
+                    atom = pdb_model.PdbAtom( line )
+                    if int( atom.resSeq ) in residues: #convert to ints to compare
+                        count += 1
+                        pdb_out.write(line)
         
-                    if int(pdb_result2[4]) == int(i):
-                        pdb_out.write(pdbline)
-        
-        pdb_out.close()
-        
-        return
+        return count
 
     def standardise( self, inpdb, outpdb, chain=None ):
         """Rename any non-standard AA, remove solvent and only keep most probably conformation.
