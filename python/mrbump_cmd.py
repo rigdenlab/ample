@@ -51,7 +51,11 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     mrs+='USEENSEM False\n'
     mrs+='CLEAN False\n'
     mrs+='DEBUG True\n'
-
+    #
+    # Optional extras
+    #
+    if adict['shelxe_rebuild']:
+        mrs+='SXREBUILD True\n'
     if adict['ASU'] > 0:
         mrs+='NMASU  {0}\n'.format( adict['ASU'] )
     if adict['domain_all_chains_pdb']:

@@ -79,6 +79,7 @@ class AmpleOptions(object):
                             'sf_cif' : None,
                             'shelx_cycles' : 15,
                             'shelxe_exe' : None,
+                            'shelxe_rebuild' : False,
                             'SIGF' : None,
                             'spicker_exe' : None,
                             'split_mr' : False,
