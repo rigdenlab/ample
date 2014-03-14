@@ -53,54 +53,42 @@ class PhaserLogParser(object):
     def __init__(self,logfile, noLLG=True):
 
 
-        self.noLLG = noLLG # Whether to skip the LLG/TFZ parsing if we are getting these from the PDB
-        self.logfile = logfile
-        self.LLG = None
-        self.TFZ = None
-        self.time = None
+        self.noLLG  = noLLG # Whether to skip the LLG/TFZ parsing if we are getting these from the PDB
+        self.LLG    = None
+        self.TFZ    = None
+        self.time   = None
         self.killed = False
+        self.nproc  = None
 
-        self.parse()
-
-        return
+        return self.parse( logfile )
     
     
-    def parse(self):
+    def parse(self, logfile ):
         """parse"""
 
-        # print os.path.join(os.getcwd(), logfile)
-        #print "Checking logfile ",self.logfile
+        self.LLG    = None
+        self.TFZ    = None
+        self.time   = None
+        self.killed = False
+        self.nproc  = None
         
-        # First read the file backwards to get the time and see if it was killed
-        BUFFSIZE=1024
-        with open(self.logfile, 'r') as fh:
-            
-            # Find out how long the file is
-            fh.seek( 0, os.SEEK_END )
-            fsize = fh.tell()
-            
-            # Position pointer BUFFSIZE bytes from end
-            fh.seek( max( fsize - BUFFSIZE, 0 ), os.SEEK_SET )
-            
-            # Now read lines in reverse
-            for line in reversed( fh.readlines() ) :
-                if "CPU Time" in line:
-                    self.time=float( line.split()[-2] )
-                    continue
-                
-                if line.startswith("KILL-TIME ELAPSED ERROR: Job killed for elapsed time exceeding limit"):
-                    self.killed=True
-                    return
+        self._parseReverse( logfile ) # Find whether we were killed
         
         # Return if we're reading the LLG from the PDB
         if self.noLLG:
             return
 
-        fh = open(self.logfile, 'r')
+        fh = open( logfile, 'r' )
         CAPTURE = False
         solline = ""
         line = fh.readline()
         while line:
+            
+            # HACK!!! - just here as need to get nproc quickly
+            if line.startswith("JOBS"):
+                self.nproc = int( line.split()[1] )
+                return
+            
             if CAPTURE:
                 if "SOLU SPAC" in line:
                     CAPTURE = False
@@ -129,7 +117,35 @@ class PhaserLogParser(object):
                 self.LLG = float(i.replace("LLG=", ""))
                 break
         return
-    
+
+    def _parseReverse(self, logfile):
+        """Parse from end of logfile to get final time and see if the job was killed"""
+
+        # print os.path.join(os.getcwd(), logfile)
+        #print "Checking logfile ",self.logfile
+        
+        # First read the file backwards to get the time and see if it was killed
+        BUFFSIZE=1024
+        with open( logfile, 'r' ) as fh:
+            
+            # Find out how long the file is
+            fh.seek( 0, os.SEEK_END )
+            fsize = fh.tell()
+            
+            # Position pointer BUFFSIZE bytes from end
+            fh.seek( max( fsize - BUFFSIZE, 0 ), os.SEEK_SET )
+            
+            # Now read lines in reverse
+            for line in reversed( fh.readlines() ) :
+                if "CPU Time" in line:
+                    self.time=float( line.split()[-2] )
+                    continue
+                
+                if line.startswith("KILL-TIME ELAPSED ERROR: Job killed for elapsed time exceeding limit"):
+                    self.killed=True
+                    return
+        return
+
 class TestParsers(unittest.TestCase):
     """
     Unit test
