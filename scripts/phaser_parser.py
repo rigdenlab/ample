@@ -84,10 +84,10 @@ class PhaserLogParser(object):
         line = fh.readline()
         while line:
             
-            # HACK!!! - just here as need to get nproc quickly
+            # just here as needed to get nproc quickly
             if line.startswith("JOBS"):
                 self.nproc = int( line.split()[1] )
-                return
+                #return
             
             if CAPTURE:
                 if "SOLU SPAC" in line:
