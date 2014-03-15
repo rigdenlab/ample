@@ -10,16 +10,19 @@ sys.path.append("/opt/ample-dev1/python")
 
 import ample_util
 
-def generateMap( mtz, pdb ):
+def generateMap( mtz, pdb, directory=None ):
     """Generate a map from an mtz file and a pdb using reforigin"""
     
     assert os.path.isfile( mtz ) and os.path.isfile( pdb ), "Cannot find files: {0} {1}".format( mtz, pdb )
     
-    mapFile = ample_util.filename_append( filename=mtz, astr="map" )
+    if not directory:
+        directory = os.getcwd()
+    
+    mapFile = ample_util.filename_append( filename=mtz, astr="map", directory=directory )
     mapFile = os.path.abspath(mapFile)
-    mapPdb = ample_util.filename_append( filename=pdb, astr="map" )
+    mapPdb = ample_util.filename_append( filename=pdb, astr="map", directory=directory )
 
-    cmd    = [ "refmac5", "HKLIN", mtz, "HKLOUT", mapFile, "XYZIN", pdb, "XYZOUT", mapPdb ]
+    cmd = [ "refmac5", "HKLIN", mtz, "HKLOUT", mapFile, "XYZIN", pdb, "XYZOUT", mapPdb ]
     # FIX FOR DIFFERENT FP etc.     
     stdin ="""RIDG DIST SIGM 0.02
 LABIN FP=FP SIGFP=SIGFP FREE=FREE
