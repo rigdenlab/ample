@@ -54,7 +54,7 @@ class CifParser(object):
     def _delColumn(self, mtzPath, column ):
         """Delete a column from an mtz file"""
         
-        mtzDel = ample_util.filename_append(mtzPath, "del")
+        mtzDel = ample_util.filename_append(mtzPath, "d{0}".format(column) )
         
         cmd = [ "mtzutils", "hklin1", mtzPath, "hklout", mtzDel ]
         stdin = "EXCLUDE 1 {0}".format( column )
