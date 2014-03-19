@@ -87,12 +87,16 @@ class CifParser(object):
         # Create a name for the mtz
         name = os.path.splitext( os.path.basename(cifPath) )[0]
         mtzPath = os.path.join( os.getcwd(), name+".mtz" )
+
+        self.logger.info( "sfcif2mtz: sf-cif file will be converted to mtz: {0}".format( cifPath )
         
         # First parse the cif file - checks if amplitudes present and whether any reflections
         # have been set aside for RFree
         self._parseCif( cifPath )
         if not self.hasAmplitudes:
-            raise RuntimeError,"No amplitudes in sf-cif - need to run ctruncate!"
+            msg = "sfcif2mtz: no amplitudes in sf-cif - need to run ctruncate!"
+            self.logger.info( msg )
+            raise RuntimeError,msg
         
         # Convert to mtz - this might add a spurious FREE column
         self._sfcif2mtz(cifPath, mtzPath)
@@ -101,13 +105,14 @@ class CifParser(object):
         if not self.hasRfree:
             if self.reflnStatus:
                 # cif2mtz will have added a useless FREE column so we remove it
-                self.logger.info( "Removing FREE column added by mtz2cif")
+                self.logger.info( "sfcif2mtz: removing FREE column added by mtz2cif")
                 mtzPath = self._delColumn( mtzPath, 'FREE')
                 
             # If there are no RFREE
-            self.logger.info( "No RFree flags so running uniqueify")
+            self.logger.info( "sfcif2mtz: no RFree flags so running uniqueify")
             mtzPath = self.uniqueify(mtzPath)
         
+        self.logger.info( "sfcif2mtz: created mtz file: {0}".format( mtzPath )
         return mtzPath
 
     def uniqueify(self, mtzPath):
