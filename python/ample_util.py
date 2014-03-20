@@ -89,7 +89,7 @@ def find_exe( exename, path=None, dirs=None ):
     logger.debug( "Using executable {0}".format( exepath ) )
     return exepath
 
-def filename_append( filename=None, astr=None, separator="_", directory=None ):
+def filename_append( filename=None, astr=None,directory=None, separator="_",  ):
     """Append astr to filename, before the suffix, and return the new filename."""
     dirname, fname = os.path.split( filename )
     name, suffix = os.path.splitext( fname )
