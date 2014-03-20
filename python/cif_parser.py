@@ -88,7 +88,7 @@ class CifParser(object):
         name = os.path.splitext( os.path.basename(cifPath) )[0]
         mtzPath = os.path.join( os.getcwd(), name+".mtz" )
 
-        self.logger.info( "sfcif2mtz: sf-cif file will be converted to mtz: {0}".format( cifPath )
+        self.logger.info( "sfcif2mtz: sf-cif file will be converted to mtz: {0}".format( cifPath ) )
         
         # First parse the cif file - checks if amplitudes present and whether any reflections
         # have been set aside for RFree
@@ -112,7 +112,7 @@ class CifParser(object):
             self.logger.info( "sfcif2mtz: no RFree flags so running uniqueify")
             mtzPath = self.uniqueify(mtzPath)
         
-        self.logger.info( "sfcif2mtz: created mtz file: {0}".format( mtzPath )
+        self.logger.info( "sfcif2mtz: created mtz file: {0}".format( mtzPath ) )
         return mtzPath
 
     def uniqueify(self, mtzPath):
