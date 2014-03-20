@@ -80,9 +80,6 @@ parser.add_argument('-blast_dir', type=str, nargs=1,
 parser.add_argument('-buccaneer_cycles', type=int, nargs=1,
                    help='The number of Bucanner rebuilding cycles to run')
 
-parser.add_argument('-CC', metavar='radius of gyration', type=str, nargs=1,
-                   help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
-
 parser.add_argument('-ccp4_jobid', type=int, nargs=1,
                    help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
 
@@ -194,6 +191,9 @@ parser.add_argument('-percent', metavar='percent_truncation', type=str, nargs=1,
 
 parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
                    help='Path to Phenix executable')
+
+parser.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, nargs=1,
+                   help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
 
 parser.add_argument('-rosetta_path', metavar='rosetta_path', type=str, nargs=1,
                    help='Path to Rosetta AbinitioRelax executable')

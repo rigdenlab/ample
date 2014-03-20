@@ -353,13 +353,22 @@ class RosettaModel(object):
                 '-out:path', wdir,
                 '-out:pdb',
                 '-out:nstruct', str(nstruct),
-                '-out:file:silent', wdir + '/OUT',
+                '-out:file:silent', os.path.join( wdir, 'silent.out'),
                 '-run:constant_seed',
-                '-run:jran', str(seed) 
+                '-run:jran', str(seed),
+                '-abinitio:relax',
+                '-relax::fast'
                 ]
+        
+        if self.rosetta_version >= 3.4:
+            # Recommended default paramenters - see also Radius of gyration reweight
+            cmd += [ "-abinitio::rsd_wt_helix", "0.5",
+                     "-abinitio::rsd_wt_loop", "0.5",
+                     "-use_filters", "true" ]
+            
             
         if self.all_atom:
-            cmd += [ '-return_full_atom true', '-abinitio:relax' ]
+            cmd += [ '-return_full_atom true', ]
         else:
             cmd += [ '-return_full_atom false' ]
             
@@ -383,9 +392,10 @@ class RosettaModel(object):
             cmd += dcmd
             
         # Radius of gyration reweight
-        if self.rad_gyr_reweight:
-            if "none" in self.rad_gyr_reweight.lower():
-                cmd+= ['-rg_reweight', '0']
+        if self.rad_gyr_reweight is not None:
+            cmd+= ['-rg_reweight', str(self.rad_gyr_reweight) ]
+        else:
+            cmd+= ['-rg_reweight', "0.5" ]
                 
         # Improve Template
         if self.improve_template:
@@ -649,7 +659,7 @@ class RosettaModel(object):
             # Extra modelling options
             self.all_atom = optd['all_atom']
             self.domain_termini_distance = optd['domain_termini_distance']
-            self.rad_gyr_reweight = optd['CC']
+            self.rad_gyr_reweight = optd['rg_reweight']
             
             if optd['improve_template'] and not os.path.exists( optd['improve_template'] ):
                 msg = 'cant find template to improve'
