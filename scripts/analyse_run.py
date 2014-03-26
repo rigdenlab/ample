@@ -99,8 +99,6 @@ class AmpleResult(object):
     
     def __init__(self):
 
-
-
         # The attributes we will be holding
         self.orderedAttrs = [ 
                               'pdbCode',
@@ -147,6 +145,8 @@ class AmpleResult(object):
                               'numPlacedAtoms',
                               'numPlacedCA',
                               'floatingOrigin',
+                              
+                              'matchingOrigins',
 
                                 "rioOrigin",
                                 "rioRioNumContacts",
@@ -173,6 +173,7 @@ class AmpleResult(object):
                                 "ccmtzRioBackwards",
                                 "ccmtzRioGood",
                                 "ccmtzRioNoCat",
+                                "ccmtzValidOrigin",
                                 
                                 "csymOrigin",
                                 "csymAaNumContacts",
@@ -244,6 +245,7 @@ class AmpleResult(object):
                               'numPlacedCA',
                               'floatingOrigin',
 
+                              'matchingOrigins',
 
                                 "rioOrigin",
                                 "rioRioNumContacts",
@@ -270,6 +272,7 @@ class AmpleResult(object):
                                 "ccmtzRioBackwards",
                                 "ccmtzRioGood",
                                 "ccmtzRioNoCat",
+                                "ccmtzValidOrigin",
                                 
                                 "csymOrigin",
                                 "csymAaNumContacts",
@@ -921,11 +924,13 @@ def processMrbump( mrbumpResult ):
             mrbumpResult.phaserLLG = phaserP.LLG
             mrbumpResult.phaserTFZ = phaserP.TFZ
             mrbumpResult.phaserPdb = phaserPdb
-            
-            phaserLog = os.path.join( mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(mrbumpResult.program, mrbumpResult.ensembleName) )
-            mrbumpResult.phaserLog = phaserLog
-            phaserP = phaser_parser.PhaserLogParser( phaserLog )
-            mrbumpResult.phaserTime = phaserP.time
+        
+        phaserLog = os.path.join( mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(mrbumpResult.program, mrbumpResult.ensembleName) )
+        if os.path.isfile( phaserLog ):
+            phaserP = phaser_parser.PhaserLogParser( phaserLog, onlyTime=True )
+            mrbumpResult.phaserLog    = phaserLog
+            mrbumpResult.phaserTime   = phaserP.time
+            mrbumpResult.phaserKilled = phaserP.killed
         
     elif mrbumpResult.program == "molrep":
         molrepLog = os.path.join( mrDir, "molrep.log" )
@@ -1025,6 +1030,14 @@ def analyseSolution( ampleResult=None,
     ccmtzOrigin = phenixer.ccmtzOrigin( nativeMap=nativeDensityMap, mrPdb=mrPdb  )
     ampleResult.ccmtzOrigin = ccmtzOrigin
     
+    # See if ccmtzOrigin is in list of allowed origins
+    ampleResult.ccmtzValidOrigin = False
+    if not originInfo.isFloating():
+        origins = originInfo.redundantAlternateOrigins( spaceGroupLabel=ampleResult.spaceGroup )
+        if ampleResult.ccmtzOrigin in origins:
+            ampleResult.ccmtzValidOrigin = True
+
+
     # 3. run csymmatch with the shelxe pdb (or the phaser-placed model) to genereate an origin
     csymmatchOrigin=None
     if not ampleResult.shelxePdb is None and os.path.isfile( ampleResult.shelxePdb ):
@@ -1123,6 +1136,13 @@ def analyseSolution( ampleResult=None,
         # Add the new data
         _setResultData( 'csym', ampleResult, contactData  )
         
+    # Now compare the origins
+    ampleResult.matchingOrigins = False
+    if ampleResult.ccmtzOrigin and ampleResult.csymOrigin:
+        x = lambda x: float(int(x*10))/10
+        if map( x, ampleResult.ccmtzOrigin ) == map ( x, ampleResult.csymOrigin ):
+            ampleResult.matchingOrigins = True
+        
 #         # Now get the helix
 #         helixSequence = ccalc.helixFromContacts( contacts=contactData.contacts,
 #                                  dsspLog=dsspLog )
@@ -1133,121 +1153,6 @@ def analyseSolution( ampleResult=None,
 #             with open( hfile, 'w' ) as f:
 #                 f.write( helixSequence+"\n" )
                 
-    # For now skip shelxe analysis
-        
-#     #
-#     # SHELXE PROCESSING
-#     #
-#     if not ampleResult.shelxePdb is None and os.path.isfile( ampleResult.shelxePdb ):
-#         
-#         # Need to copy to avoid problems with long path names
-#         shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
-#         shutil.copy( ampleResult.shelxePdb, shelxePdb )
-#         
-# 
-#         
-#         # Use csymmatch to find the origin that best maps the shexePdb onto the native
-#         csym                           = csymmatch.Csymmatch()
-#         shelxeCsymmatchPdb             = ample_util.filename_append( 
-#                                                                     filename=shelxePdb, 
-#                                                                     astr="csymmatch", 
-#                                                                     directory=workdir )
-#         
-#         csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
-# 
-#         shelxeCsymmatchOrigin          = csym.origin()
-#         ampleResult.csymmatchOrigin    = shelxeCsymmatchOrigin
-#         ampleResult.csymmatchScore     = csym.averageScore()
-#         ampleResult.csymmatchGotOrigin = bool( shelxeCsymmatchOrigin )
-#         
-#         # Clear results
-#         ampleResult.cContactData        = None
-#         ampleResult.cNumContacts        = None
-#         ampleResult.cInregisterContacts = None
-#         ampleResult.cOoRegisterContacts = None
-#         ampleResult.cBackwardsContacts  = None
-#         ampleResult.cGoodContacts       = None
-#         ampleResult.cNocatContacts      = None
-#         
-#         if ampleResult.csymmatchGotOrigin:
-#             # Calculate contacts for csymmatch origin
-#             ccalc.getContacts( placedPdbInfo=mrPdbInfo,
-#                                nativePdbInfo=nativePdbInfo,
-#                                resSeqMap=resSeqMap,
-#                                origins=[ shelxeCsymmatchOrigin ] ,
-#                                workdir=workdir,
-#                                dsspLog=dsspLog
-#                             )
-#        
-#             if ccalc.best:
-#                 ampleResult.cContactData        = ccalc.best
-#                 ampleResult.cNumContacts        = ccalc.best.numContacts
-#                 ampleResult.cInregisterContacts = ccalc.best.inregister
-#                 ampleResult.cOoRegisterContacts = ccalc.best.ooregister
-#                 ampleResult.cBackwardsContacts  = ccalc.best.backwards
-#                 good = ccalc.best.inregister + ccalc.best.ooregister
-#                 ampleResult.cGoodContacts       = good
-#                 ampleResult.cNocatContacts      = ccalc.best.numContacts - good
-# 
-#         # Clear results
-#         ampleResult.nrContactData        = None
-#         ampleResult.nrNumContacts        = None
-#         ampleResult.nrInregisterContacts = None
-#         ampleResult.nrOoRegisterContacts = None
-#         ampleResult.nrBackwardsContacts  = None
-#         ampleResult.nrGoodContacts       = None
-#         ampleResult.nrNocatContacts      = None
-#         ampleResult.helixSequence        = None
-#         ampleResult.lenHelix             = None
-#         
-#         # Calculate contacts for redundant origins
-#         if not ampleResult.floatingOrigin:
-#             
-#             # Get list of origins - cheat and use all
-#             #origins = originInfo.nonRedundantAlternateOrigins()
-#             origins = originInfo.redundantAlternateOrigins()
-# 
-#             ccalc.getContacts( placedPdbInfo=mrPdbInfo,
-#                                nativePdbInfo=nativePdbInfo,
-#                                resSeqMap=resSeqMap,
-#                                origins=origins ,
-#                                workdir=workdir,
-#                                dsspLog=dsspLog
-#                             )
-#             ampleResult.nrContactData        = ccalc.best
-#             ampleResult.nrNumContacts        = ccalc.best.numContacts
-#             ampleResult.nrInRegisterContacts = ccalc.best.inregister
-#             ampleResult.nrOoRegisterContacts = ccalc.best.ooregister
-#             ampleResult.nrBackwardsContacts  = ccalc.best.backwards
-#             ampleResult.nrContactOrigin      = ccalc.best.origin
-#             good = ccalc.best.inregister + ccalc.best.ooregister
-#             ampleResult.nrGoodContacts       = good
-#             ampleResult.nrNocatContacts      = ccalc.best.numContacts - good
-#             ampleResult.helixSequence        = ccalc.best.helix
-#             if ccalc.best.helix:
-#                 ampleResult.lenHelix = len( ccalc.best.helix )
-#             
-#             gotHelix=False
-#             hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
-#             gotHelix =  ccalc.writeHelixFile( hfile )
-#                     
-#             # Just for debugging
-#             if ampleResult.shelxeCC >= 25 and ampleResult.shelxeAvgChainLength >= 10 and not gotHelix:
-#                 print "NO HELIX FILE"
-#         
-#         ampleResult.csymmatchInNR = None
-#         ampleResult.csymmatchInR = None
-#         # See if this origin is valid
-#         if ampleResult.csymmatchGotOrigin:
-#             if ampleResult.csymmatchOrigin in originInfo.redundantAlternateOrigins():
-#                 ampleResult.csymmatchInR = True
-#             else:
-#                 ampleResult.csymmatchInR = False
-#                 
-#             if ampleResult.csymmatchOrigin in originInfo.nonRedundantAlternateOrigins():
-#                 ampleResult.csymmatchInNR = True
-#             else:
-#                 ampleResult.csymmatchInNR = False
 #         
 #         #
 #         # Structure comparison - don't think this is useful anymore
@@ -1293,9 +1198,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    #for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbCode in sorted( resultsDict.keys() ):
-    #for pdbCode in [ "1BYZ" ]:
+    for pdbCode in [ "1BYZ" ]:
         
         workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
@@ -1316,6 +1221,11 @@ if __name__ == "__main__":
         
         # Get path to native Extract all the nativePdbInfo from it
         nativePdb = os.path.join( dataDir, "{0}.pdb".format( pdbCode ) )
+
+        # Calculate the nativeDensityMap
+        mtzFile = os.path.join( dataDir, "{0}-cad.mtz".format( pdbCode  )  )
+        nativeDensityMap = phenixer.generateMap( mtzFile, nativePdb )
+
         pdbedit = pdb_edit.PDBEdit()
         nativePdbInfo = pdbedit.get_info( nativePdb )
         
@@ -1337,10 +1247,6 @@ if __name__ == "__main__":
         # Get information on the origins for this spaceGroup
         originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
         
-        # Calculate the nativeDensityMap
-        mtzFile = os.path.join( dataDir, "{0}-cad.mtz".format( pdbCode  )  )
-        nativeDensityMap = phenixer.generateMap( mtzFile, nativePdbInfo.pdb )
-
         # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
         if len( nativePdbInfo.models[0].chains ) > 1:
             chainID = nativePdbInfo.models[0].chains[0]
@@ -1482,10 +1388,11 @@ if __name__ == "__main__":
         
             if mrbumpResult.program == "phaser":
                 #ar.phaserLog = mrbumpResult.phaserLog
-                ar.phaserLLG = mrbumpResult.phaserLLG
-                ar.phaserTFZ = mrbumpResult.phaserTFZ
-                ar.phaserPdb = mrbumpResult.phaserPdb
-                ar.phaserTime = mrbumpResult.phaserTime
+                ar.phaserLLG    = mrbumpResult.phaserLLG
+                ar.phaserTFZ    = mrbumpResult.phaserTFZ
+                ar.phaserPdb    = mrbumpResult.phaserPdb
+                ar.phaserTime   = mrbumpResult.phaserTime
+                ar.phaserKilled = mrbumpResult.phaserKilled
             elif mrbumpResult.program == "molrep":
                 #ar.molrepLog = mrbumpResult.molrepLog
                 ar.molrepScore = mrbumpResult.molrepScore
