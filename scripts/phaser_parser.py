@@ -50,20 +50,19 @@ class PhaserLogParser(object):
     Class to mine information from a phaser log
     """
 
-    def __init__(self,logfile, noLLG=True):
+    def __init__(self,logfile, onlyTime=False):
 
 
-        self.noLLG  = noLLG # Whether to skip the LLG/TFZ parsing if we are getting these from the PDB
-        self.LLG    = None
-        self.TFZ    = None
-        self.time   = None
-        self.killed = False
-        self.nproc  = None
+        self.LLG       = None
+        self.TFZ       = None
+        self.time      = None
+        self.killed    = False
+        self.nproc     = None
 
-        return self.parse( logfile )
+        return self.parse( logfile, onlyTime=onlyTime )
     
     
-    def parse(self, logfile ):
+    def parse(self, logfile, onlyTime=False):
         """parse"""
 
         self.LLG    = None
@@ -75,7 +74,7 @@ class PhaserLogParser(object):
         self._parseReverse( logfile ) # Find whether we were killed
         
         # Return if we're reading the LLG from the PDB
-        if self.noLLG:
+        if onlyTime:
             return
 
         fh = open( logfile, 'r' )
@@ -87,7 +86,6 @@ class PhaserLogParser(object):
             # just here as needed to get nproc quickly
             if line.startswith("JOBS"):
                 self.nproc = int( line.split()[1] )
-                #return
             
             if CAPTURE:
                 if "SOLU SPAC" in line:
