@@ -7,6 +7,30 @@ Created on 28 Nov 2013
 import os
 import re
 
+
+class ShelxePdbParser(object):
+    #UNTESTED!!
+    def __init__(self, pdbfile):
+        self.CC             = None
+        self.numResidues    = None
+        self.numChains      = None
+        
+        return self.parse( pdbfile )
+    
+    def parse(self, pdbfile):
+        with open(pdbfile) as f:
+            line = f.readline.strip()
+        
+        tokens = line.split()
+        assert line.startswith("TITLE") and len( tokens ) == 12
+        
+        self.CC             = tokens[6][:-1] # Remove % from end
+        self.numResidues    = int(tokens[7])
+        self.numChains      = int(tokens[10])
+        
+        return
+    
+
 class ShelxeLogParser(object):
     """
     Class to mine information from a shelxe log
