@@ -206,7 +206,10 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='ROSETTA_MR_'):
     return work_dir
 
 def processReflectionFile( amoptd ):
-    """Make sure we have a valid mtz file. If necessary convert a given cif file"""
+    """Make sure we have a valid mtz file. If necessary convert a given cif file.
+       Set the mtz variable in the given amoptd to the reflection file to use
+       Return True if it all worked or raise an exception if it failed
+    """
     
     # We've been given a sf_cif so convert to mtz
     if amoptd['sf_cif']:
@@ -259,7 +262,7 @@ def processReflectionFile( amoptd ):
         # possibly unnecessary check
         assert mtzp.checkRFREE(FreeR_flag=amoptd['FREE'])
     
-    return
+    return True
 
 def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     """Execute a command and return the exit code.

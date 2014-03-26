@@ -386,6 +386,7 @@ if ( float( amopt.d['fasta_length'] ) / 100 ) * float( amopt.d['percent'] ) < 1:
 # MTZ file processing
 #
 ample_util.processReflectionFile( amopt.d )
+logger.info( "Using MTZ file: {0}".format( amopt.d['mtz'] ) )
 #
 # Not sure if name actually required - see make_fragments.pl
 #
