@@ -105,34 +105,15 @@ class CifParser(object):
         if not self.hasRfree:
             if self.reflnStatus:
                 # cif2mtz will have added a useless FREE column so we remove it
-                self.logger.info( "sfcif2mtz: removing FREE column added by mtz2cif")
+                self.logger.info( "sfcif2mtz: no valid RFREE data so removing FREE column added by mtz2cif")
                 mtzPath = self._delColumn( mtzPath, 'FREE')
                 
             # If there are no RFREE
             self.logger.info( "sfcif2mtz: no RFree flags so running uniqueify")
-            mtzPath = self.uniqueify(mtzPath)
+            mtzPath = ample_util.uniqueify(mtzPath)
         
         self.logger.info( "sfcif2mtz: created mtz file: {0}".format( mtzPath ) )
         return mtzPath
-
-    def uniqueify(self, mtzPath):
-        #
-        # If not we need to run uniquefiy to generate them
-        #
-        mtzUnique = ample_util.filename_append(mtzPath, "uniqueify")
-        
-        cmd = ['uniqueify', mtzPath, mtzUnique]
-        
-        #uniqueify {-p fraction} mydata.mtz.
-        logfile = os.path.join( os.getcwd(), "uniqueify.log" )
-        retcode = ample_util.run_command(cmd, logfile=logfile)
-        if retcode != 0:
-            msg = "Error running sfcif2mtz. Check the logfile: {0}".format(logfile)
-            self.logger.critical(msg)
-            raise RuntimeError, msg
-        
-        return mtzUnique
-
 
 if __name__ == '__main__':
     

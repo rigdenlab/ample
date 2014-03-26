@@ -14,7 +14,12 @@ import urllib
 import unittest
 
 # Our modules
-import MTZParse
+import cif_parser
+
+# MRBUMP modules
+#sys.path.append(os.path.join(os.environ["CCP4"], "share", "mrbump", "include", "file_info")) # For MTZ_parse
+sys.path.insert(0, "/Users/jmht/Documents/AMPLE/programs/mrbump/include/file_info")
+import MTZ_parse
 
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
@@ -141,41 +146,6 @@ def find_maxcluster( amopt ):
     
     return maxcluster_exe
 
-def get_mtz_flags( mtzfile ):
-    """
-    Return the SIGF, F and FREER column labels in an MTZ file
-    """
-    
-    # Instantiate the class
-    md=MTZParse.Mtzdump()
-    
-    # Set the MTZ file and the output log file
-    md.setHKLIN( mtzfile )
-    md.setMTZdumpLogfile("./")
-    
-    # Run mtzdump
-    md.go()
-    
-    # Extract column data
-    md.getColumnData()
-    
-    try:
-        F =  md.colLabels['F']
-    except KeyError:
-        raise RuntimeError,"Cannot find column label: {0} in MTZ file".format('F')
-    try:
-        SIGF =  md.colLabels['SIGF']
-    except KeyError:
-        raise RuntimeError,"Cannot find column label: {0} in MTZ file".format('SIGF')
-    try:
-        FREE =  md.colLabels['FREE']
-    except KeyError:
-        raise RuntimeError,"Cannot find column label: {0} in MTZ file".format('FREE')
-    
-    return (F, SIGF, FREE)
-    
-##End get_mtz_flags
-
 def get_psipred_prediction(psipred):
     string = ''
     for line in open(psipred):
@@ -234,6 +204,62 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='ROSETTA_MR_'):
         run_inc += 1
     work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
     return work_dir
+
+def processReflectionFile( amoptd ):
+    """Make sure we have a valid mtz file. If necessary convert a given cif file"""
+    
+    # We've been given a sf_cif so convert to mtz
+    if amoptd['sf_cif']:
+        if not os.path.isfile( amoptd['sf_cif'] ):
+            logging.critical("Cannot find sf_cif file: {0}".format( amoptd['sf_cif'] ) )
+            sys.exit(1)
+        
+        cp = cif_parser.CifParser()
+        amoptd['mtz'] = cp.sfcif2mtz( amoptd['sf_cif'] )
+    
+    # Now have an mtz so check it's valid
+    if not amoptd['mtz'] or not os.path.isfile( amoptd['mtz'] ):
+        logging.critical("Cannot find MTZ file: {0}".format( amoptd['mtz'] ) )
+        sys.exit(1)
+    
+    # Run mtzdmp to get file info
+    mtzp = MTZ_parse.MTZ_parse()
+    mtzp.run_mtzdmp( amoptd['mtz'] )
+    
+    # If flags given check they are present in the file
+    for flag in ['F', 'SIGF', 'FREE']:
+        if amoptd[flag] and amoptd[flag] not in mtzp.col_labels:
+            logging.critical("Cannot find given {0} label {1} in mtz file {2}".format( flag, amoptd[flag], amoptd['mtz'] ) )
+            sys.exit(1)
+    
+    # If any of the flags aren't given we get them from the file
+    if not amoptd['F']:
+        amoptd['F']  = mtzp.F
+    if not amoptd['SIGF']:
+        amoptd['SIGF']  = mtzp.SIGF
+    if not amoptd['FREE']:
+        amoptd['FREE']  = mtzp.FreeR_flag
+    
+    # Make sure we've found something
+    for flag in ['F', 'SIGF' ]:
+        if amoptd[flag] is None or not len(amoptd[flag]) or amoptd[flag] not in mtzp.col_labels:
+            logging.critical("Cannot find any {0} label in mtz file {1}".format( flag, amoptd['mtz'] ) )
+            sys.exit(1)
+    
+    # All flags ok so just check the RFREE flag is valid
+    if not mtzp.checkRFREE(FreeR_flag=amoptd['FREE']):
+        # If not run uniqueify
+        logging.warning("Cannot find a valid FREE flag - running uniquefy to generate column with RFREE data." )
+        amoptd['mtz'] = uniqueify( amoptd['mtz'] )
+        
+        # Check file and get new FREE flag
+        mtzp.run_mtzdmp( amoptd['mtz'] )
+        amoptd['FREE']  = mtzp.FreeR_flag
+        
+        # possibly unnecessary check
+        assert mtzp.checkRFREE(FreeR_flag=amoptd['FREE'])
+    
+    return
 
 def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     """Execute a command and return the exit code.
@@ -337,6 +363,23 @@ def tmpFileName():
     t.close()
     return tmp1
 
+def uniqueify(mtzPath):
+    """Run uniqueify on mtz file to generate RFREE data column"""
+    
+    mtzUnique = filename_append(mtzPath, "uniqueify")
+    
+    cmd = ['uniqueify', mtzPath, mtzUnique]
+    
+    #uniqueify {-p fraction} mydata.mtz.
+    logfile = os.path.join( os.getcwd(), "uniqueify.log" )
+    retcode = run_command(cmd, logfile=logfile)
+    if retcode != 0:
+        msg = "Error running sfcif2mtz. Check the logfile: {0}".format(logfile)
+        logging.critical(msg)
+        raise RuntimeError, msg
+    
+    return mtzUnique
+
 # get a program test for existsnce
 def which(program, dirs=None ):
     def is_exe(fpath):
@@ -373,31 +416,66 @@ class TestUtil(unittest.TestCase):
         self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
         
         return
-        
     
-    def testGetMtzFlags(self):
+    def testProcessReflectionFile(self):
         """Get MTZ flags"""
         
         
-        mtz = self.ampleDir + os.sep + "examples" + os.sep + "toxd-example" + os.sep + "1dtx.mtz"
+        mtz = os.path.join( self.ampleDir, "examples", "toxd-example" , "1dtx.mtz" )
         
-        t_flag_F, t_flag_SIGF, t_flag_FREE = get_mtz_flags( mtz )
         
-        f = 'FP'
-        sigf = 'SIGFP'
-        free = 'FreeR_flag'
+        d = { 'mtz'    : mtz,
+              'sf_cif' : None,
+              'F'      : None,
+              'SIGF'   : None,
+              'FREE'   : None,
+             } 
         
-        self.assertEqual(f, t_flag_F, "Correct F")
-        self.assertEqual(sigf, t_flag_SIGF, "Correct SIGF")
-        self.assertEqual(free, t_flag_FREE, "Correct FREE")
+        processReflectionFile( d )
+        
+        self.assertEqual( 'FP', d['F'], "Correct F")
+        self.assertEqual( 'SIGFP', d['SIGF'], "Correct SIGF")
+        self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
         
         return
+    
+    def testProcessReflectionFileNORFREE(self):
+        """Get MTZ flags"""
         
-    def testGetMtzFlagsNoFree(self):
-        """Get MTZ flags when there are no free flags"""
+        mtz = os.path.join( self.testfilesDir, "2uui_sigmaa.mtz" )
         
-        mtz = self.testfilesDir + os.sep + "2uui_sigmaa.mtz"
-        self.assertRaises(KeyError, get_mtz_flags, mtz )
+        d = { 'mtz'    : mtz,
+              'sf_cif' : None,
+              'F'      : None,
+              'SIGF'   : None,
+              'FREE'   : None,
+             } 
+        
+        processReflectionFile( d )
+        
+        self.assertEqual( 'F', d['F'], "Correct F")
+        self.assertEqual( 'SIGF', d['SIGF'], "Correct SIGF")
+        self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
+        
+        return
+    
+    def testProcessReflectionFileCIF(self):
+        """Get MTZ flags"""
+        
+        cif = os.path.join( self.testfilesDir, "1x79-sf.cif" )
+        
+        d = { 'mtz'    : None,
+              'sf_cif' : cif,
+              'F'      : None,
+              'SIGF'   : None,
+              'FREE'   : None,
+             } 
+        
+        processReflectionFile( d )
+        
+        self.assertEqual( 'FP', d['F'], "Correct F")
+        self.assertEqual( 'SIGFP', d['SIGF'], "Correct SIGF")
+        self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
         
         return
 #

@@ -46,7 +46,6 @@ import time
 import add_sidechains_SCWRL
 import ample_options
 import ample_util
-import cif_parser
 import ensemble
 import fasta_parser
 import mrbump_ensemble
@@ -55,7 +54,6 @@ import rosetta_model
 import mrbump_results
 import truncateedit_MAX
 import version
-
 
 #-------------------------------------------
 # get command line options
@@ -384,47 +382,13 @@ if ( float( amopt.d['fasta_length'] ) / 100 ) * float( amopt.d['percent'] ) < 1:
     msg = "Cannot truncate a fasta sequence of length {0} with {1} percent intervals. Please select a larger interval.".format( amopt.d['fasta_length'], amopt.d['percent'] )
     logger.critical(msg)
     sys.exit(1)
-
 #
 # MTZ file processing
 #
-# Check if we need to get any of the flags from the MTZ file
-if amopt.d['sf_cif'] and amopt.d['mtz']:
-    logger.critical("Both sf_cif and mtz flags supplied - only use one")
-    sys.exit(1)
-
-# We've been given a sf_cif so convert
-if amopt.d['sf_cif']:
-    if not os.path.isfile( amopt.d['sf_cif'] ):
-        logger.critical("Cannot find sf_cif file: {0}".format( amopt.d['sf_cif'] ) )
-        sys.exit(1)
-        
-    cp = cif_parser.CifParser()
-    amopt.d['mtz'] = cp.sfcif2mtz( amopt.d['sf_cif'] )
-    
-if not amopt.d['mtz'] or not os.path.isfile( amopt.d['mtz'] ):
-    logger.critical("Cannot find MTZ file: {0}".format( amopt.d['mtz'] ) )
-    sys.exit(1)
-
-if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
-    logger.info("Determining MTZ flags using mtzdump from file: {0}".format( amopt.d['mtz'] ) )
-    try:
-        t_flag_F, t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( amopt.d['mtz'] )
-    except Exception,e:
-        logger.critical("Error generating flags from MTZ file: {0}\n{1}\n\nDo you need to run the CCP4 uniqueify program on the MTZ file?".format(amopt.d['mtz'],e) )
-        sys.exit(1)
-    
-if not amopt.d['F']:
-    amopt.d['F'] = t_flag_F
-    
-if not amopt.d['SIGF']:
-    amopt.d['SIGF'] = t_flag_SIGF
-    
-if not amopt.d['FREE']:
-    amopt.d['FREE'] = t_flag_FREE
-
-
+ample_util.processReflectionFile( amopt.d )
+#
 # Not sure if name actually required - see make_fragments.pl
+#
 if amopt.d['name'] and len(amopt.d['name']) != 4:
     msg = '-name argument is the wrong length, use 4 chars eg ABCD'
     logger.critical(msg)
