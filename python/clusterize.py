@@ -13,16 +13,8 @@ import subprocess
 import shlex
 import time
 
-# our imports
-import mrbump_cmd
-import run_shelx
-import MTZParse
-import MatthewsCoef
-
 if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
-
-###############
 
 class ClusterRun:
 
@@ -91,6 +83,8 @@ class ClusterRun:
                 self.logger.info("Queue Monitor: All jobs complete!")
             runningList=newRunningList
             newRunningList=[]
+            
+        return
 
     # Currently unused
     def XgetJobStatus(self, qNumber):
@@ -171,6 +165,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 log_lines.pop(0)
             for i in log_lines:
                 self.runningQueueList.append(i.split()[0])
+        return
 
     def ensembleOnCluster(self, amoptd):
         """ Run the modelling step on a cluster """
@@ -219,7 +214,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 
     def NMRmodelOnCluster(self, RunDir, proc, jobNumber, ROSETTA_PATH, ROSETTA_DB, FASTA, frags_3_mers, frags_9_mers, ideal_homolog,  ALI, seed, MR_ROSETTA ):
         """ Farm out the modelling step on a cluster (SGE) """
-        # Set the file number according to the job number
+        # Set the scriptFile number according to the job number
         if jobNumber<10:
             fileNumber="0000000" + str(jobNumber)
         elif jobNumber>=10 and jobNumber<100:
@@ -250,29 +245,29 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         SEQFile       = os.path.join(preModelDir, "S_" + fileNumber + ".seq")
         PDBOutFile    = os.path.join(RunDir, "models", "1_S_" + fileNumber + ".pdb")
 
-       # Create a cluster submission script for this modelling job
+        # Create a cluster submission script for this modelling job
         jobName="model_" + str(proc) + "_" + str(seed)
         sub_script=os.path.join(RunDir, "pre_models", "submit_scripts", "job_" + jobName + ".sub")
 
         #self.jobLogsList.append(os.path.join(RunDir, "pre_models", "logs", jobName + '.log'))
 
         logFile = os.path.join(RunDir, "pre_models", "logs", jobName + '.log')
-        file=open(sub_script, "w")
+        scriptFile=open(sub_script, "w")
         
         script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
-        file.write(script_header)
+        scriptFile.write(script_header)
 
-        #file.write("export CCP4_SCR=$TMPDIR\n\n")
+        #scriptFile.write("export CCP4_SCR=$TMPDIR\n\n")
 
         # jmht - this needs to go in the rosetta object
-        file.write('cd '+ os.path.join(RunDir, "pre_models", "model_" + str(jobNumber)) +'\n\n'+
+        scriptFile.write('cd '+ os.path.join(RunDir, "pre_models", "model_" + str(jobNumber)) +'\n\n'+
              MR_ROSETTA +' \\\n'+
              '-database '+ROSETTA_DB+' \\\n'+
              '-MR:mode cm \\\n'+
-             '-in:file:extended_pose 1 \\\n'+
-             '-in:file:fasta '+FASTA+' \\\n'+
-             '-in:file:alignment '+ALI+' \\\n'+
-             '-in:file:template_pdb '+ideal_homolog+' \\\n'+
+             '-in:scriptFile:extended_pose 1 \\\n'+
+             '-in:scriptFile:fasta '+FASTA+' \\\n'+
+             '-in:scriptFile:alignment '+ALI+' \\\n'+
+             '-in:scriptFile:template_pdb '+ideal_homolog+' \\\n'+
              '-loops:frag_sizes 9 3 1 \\\n'+
              '-loops:frag_files '+frags_9_mers+' '+frags_3_mers+' none \\\n'+
              '-loops:random_order \\\n'+
@@ -288,8 +283,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
              '-ignore_unrecognized_res \\\n'+
              '-overwrite \n\n')
 
-
-        file.write("pushd " + os.path.join(preModelDir) + "\n\n" +
+        scriptFile.write("pushd " + os.path.join(preModelDir) + "\n\n" +
 
         self.pdbsetEXE + " xyzin " + PDBInFile + " xyzout " + PDBSetOutFile + "<<eof\n" +
         "sequence single\n" +
@@ -298,28 +292,30 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" +
         "popd\n\n"  )
         if self.modeller.use_scwrl:
-            file.write( self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
+            scriptFile.write( self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
             "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" +
              "\n")
         else:
-            file.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )
+            scriptFile.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )
 
         # Clean up non-essential files unless we are debugging
         if self.debug == False:
-            file.write("rm " + PDBSetOutFile + "\n" +
+            scriptFile.write("rm " + PDBSetOutFile + "\n" +
             "rm " + os.path.join(preModelDir, "SEQUENCE") + "\n" +
             "rm " + PDBScwrlFile + "\n\n")
 
-        file.close()
+        scriptFile.close()
 
         jobDir = os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts")
         
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
+        
+        return
 
     def modelOnCluster(self, nProc, jobNumber):
         """ Farm out the modelling step on a cluster (SGE) """
 
-        # Set the file number according to the job number
+        # Set the scriptFile number according to the job number
         if jobNumber<10:
             fileNumber="0000000" + str(jobNumber)
         elif jobNumber>=10 and jobNumber<100:
@@ -361,18 +357,18 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         #self.jobLogsList.append(os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log'))
 
         logFile = os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log')
-        file=open(sub_script, "w")
+        scriptFile=open(sub_script, "w")
         script_header = self.subScriptHeader( nProc=nProc, logFile=logFile, jobName=jobName)
-        file.write(script_header+"\n\n")
-        #file.write("export CCP4_SCR=$TMPDIR\n\n")
+        scriptFile.write(script_header+"\n\n")
+        #scriptFile.write("export CCP4_SCR=$TMPDIR\n\n")
 
         # Build up the rosetta command
         nstruct=1 # 1 structure
         rcmd = self.modeller.modelling_cmd( preModelDir, nstruct, seed )
         cmdstr = " ".join(rcmd) + "\n\n"
-        file.write( cmdstr )
+        scriptFile.write( cmdstr )
 
-        file.write("pushd " + os.path.join(preModelDir) + "\n\n" +
+        scriptFile.write("pushd " + os.path.join(preModelDir) + "\n\n" +
 
         self.pdbsetEXE + " xyzin " + PDBInFile + " xyzout " + PDBSetOutFile + "<<eof\n" +
         "sequence single\n" +
@@ -381,23 +377,25 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" +
         "popd\n\n"  )
         if self.modeller.use_scwrl:
-            file.write( self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
+            scriptFile.write( self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
             "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" +
              "\n" )
         else:
-            file.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )
+            scriptFile.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )
 
         # Clean up non-essential files unless we are debugging
         if not self.debug:
-            file.write("rm " + PDBSetOutFile + "\n" +
+            scriptFile.write("rm " + PDBSetOutFile + "\n" +
             "rm " + os.path.join(preModelDir, "SEQUENCE") + "\n" +
             "rm " + PDBScwrlFile + "\n\n")
 
-        file.close()
+        scriptFile.close()
 
         jobDir = os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts")
         
         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
+        
+        return
         
     def subScriptHeader(self, nProc=None, logFile=None, jobName=None, jobTime=None):
         """
@@ -495,10 +493,8 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         os.chdir(curDir)
         
         return str(qNumber)    
-        
 
 if __name__ == "__main__":
-
 
     c=ClusterRun()
     c.QTYPE="SGE"
