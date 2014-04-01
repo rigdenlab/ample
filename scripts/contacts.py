@@ -315,7 +315,7 @@ class Contacts(object):
         
         return self.data
 
-    def helixFromContacts( self, contacts=None, dsspLog=None, minContig=2, maxGap=3  ):
+    def helixFromContacts( self, contacts, dsspLog, minContig=2, maxGap=3  ):
         """Return the sequence of the longest contiguous helix from the given contact data
         
         
@@ -335,63 +335,21 @@ class Contacts(object):
         # Get the corresponding AA sequence
         
         """
-        
-        
         #print "GOT DATA ",contacts
-        #print "GOT DSSP ",dsspP.asDict()
+        if not len( contacts ):
+            return None
         
+        #print "GOT DSSP ",dsspP.asDict()
         # Parse the dssp Log
         dsspP = dssp.DsspParser( dsspLog )
-        if contacts is None:
-            contacts = self.best.contacts
-            
-        if contacts is None or not len( contacts ):
-            return None
-            
         #
         # Loop through the contacts finding the start, stop indices in the list of contacts of contiguous chunks
         #
         chunks = self.findChunks( contacts=contacts, dsspP=dsspP, ssTest=True, minContig=2 )
-    
         if not chunks:
             return None
-        
-        def join_chunks( chunk1, chunk2, dsspP=None, maxGap=None ):
-            """Take two chunks of contacts and see if the gap between them can be joined.
-            
-            If the chunks can't be joined, it returns the first chunk for adding to the list
-            of chunks, and the second chunk for use in the subsequent join step.
-            If the chunks can be joined, it returns None for the first chunk so that we know not
-            to add anything.
-            """
-            
-            assert dsspP and maxGap
-            
-            #print "CHECKING CHUNK ",chunk1, chunk2
-            
-            # See if a suitable gap
-            width = abs( chunk2[ 'startResSeq' ] - chunk1[ 'stopResSeq' ] ) - 1
-            if width < 1 or width > maxGap or chunk1[ 'chainId1' ] != chunk2[ 'chainId1' ]:
-                return ( chunk1, chunk2 )
-            
-            # Suitable gap so make sure it's all helix
-            for resSeq in range( chunk1[ 'stopResSeq' ] + 1, chunk2[ 'startResSeq' ] - 1 ):
-                ss = dsspP.getAssignment( resSeq, chunk1[ 'chainId1' ], resName = None )
-                if ss != 'H':
-                    return ( chunk1, chunk2 )
-            
-            #print "JOINED CHUNKS", chunk1, chunk2
-            
-            joinedChunk =  { 'chainId1'    : chunk1[ 'chainId1' ],
-                             'startIdx'    : chunk1[ 'startIdx'],
-                             'startResSeq' : chunk1[ 'startResSeq' ],
-                             'stopIdx'     : chunk2[ 'stopIdx'],
-                             'stopResSeq'  : chunk2[ 'stopResSeq' ] }
-                
-            return ( None, joinedChunk )
-        
         #
-        # Go through the start-stop chunks in pairs and see if they can be joied, creating
+        # Go through the start-stop chunks in pairs and see if they can be joined, creating
         # extended, which is the list of chunks with gaps filled-in
         #
         #print "GOT CHUNKS ",chunks
@@ -409,7 +367,7 @@ class Contacts(object):
                     toJoin = newChunk
                     continue
                 
-                chunk, toJoin = join_chunks( toJoin, newChunk, dsspP=dsspP, maxGap=maxGap  )
+                chunk, toJoin = self._join_chunks( toJoin, newChunk, dsspP=dsspP, maxGap=maxGap  )
                 
                 if chunk is not None:
                     extended.append( chunk )
@@ -454,6 +412,40 @@ class Contacts(object):
         #print "HELIX ",sequence
                 
         return sequence
+
+    def _join_chunks( self, chunk1, chunk2, dsspP=None, maxGap=None ):
+        """Take two chunks of contacts and see if the gap between them can be joined.
+        
+        If the chunks can't be joined, it returns the first chunk for adding to the list
+        of chunks, and the second chunk for use in the subsequent join step.
+        If the chunks can be joined, it returns None for the first chunk so that we know not
+        to add anything.
+        """
+        
+        assert dsspP and maxGap
+        
+        #print "CHECKING CHUNK ",chunk1, chunk2
+        
+        # See if a suitable gap
+        width = abs( chunk2[ 'startResSeq' ] - chunk1[ 'stopResSeq' ] ) - 1
+        if width < 1 or width > maxGap or chunk1[ 'chainId1' ] != chunk2[ 'chainId1' ]:
+            return ( chunk1, chunk2 )
+        
+        # Suitable gap so make sure it's all helix
+        for resSeq in range( chunk1[ 'stopResSeq' ] + 1, chunk2[ 'startResSeq' ] - 1 ):
+            ss = dsspP.getAssignment( resSeq, chunk1[ 'chainId1' ], resName = None )
+            if ss != 'H':
+                return ( chunk1, chunk2 )
+        
+        #print "JOINED CHUNKS", chunk1, chunk2
+        
+        joinedChunk =  { 'chainId1'    : chunk1[ 'chainId1' ],
+                         'startIdx'    : chunk1[ 'startIdx'],
+                         'startResSeq' : chunk1[ 'startResSeq' ],
+                         'stopIdx'     : chunk2[ 'stopIdx'],
+                         'stopResSeq'  : chunk2[ 'stopResSeq' ] }
+            
+        return ( None, joinedChunk )
 
     def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxDist=1.5, allAtom=False ):
         """FOO
