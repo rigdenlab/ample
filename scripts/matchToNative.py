@@ -7,15 +7,31 @@ root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
 sys.path.insert( 0, os.path.join( root, "python" ) )
 sys.path.insert( 0, os.path.join( root, "scripts" ) )
 
+# We use MRBUMP's MTZ_parse
+sys.path.append(os.path.join(os.environ["CCP4"], "share", "mrbump", "include", "file_info")) # For MTZ_parse
+
 import ample_util
 import csymmatch
 import phenixer
 
+import MTZ_parse
+
 def run( nativePdb, nativeMtz, mrPdb ):
     
+    # Get the labels from the MTZ file
+    print "Parsing MTZ file {0} to determine column labels".format( nativeMtz )
+    mtzp = MTZ_parse.MTZ_parse()
+    mtzp.run_mtzdmp( nativeMtz )
+    
     # Generate map from 
-    print "Generating map from: {0} {1}".format( nativeMtz, nativePdb )
-    mtzMap = phenixer.generateMap( nativeMtz, nativePdb )
+    print "Generating map from: {0} {1}".format( nativeMtz,
+                                                 nativePdb )
+    mtzMap = phenixer.generateMap( nativeMtz,
+                                   nativePdb,
+                                   FP= mtzp.F,
+                                   SIGFP=mtzp.SIGF,
+                                   FREE=mtzp.FreeR_flag,
+                                  )
     print "Searching for origin shift using: {0} {1}".format( mtzMap, mrPdb )
     origin =  phenixer.ccmtzOrigin( mtzMap, mrPdb )
     
