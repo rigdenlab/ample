@@ -10,7 +10,7 @@ sys.path.append("/opt/ample-dev1/python")
 
 import ample_util
 
-def generateMap( mtz, pdb, directory=None ):
+def generateMap( mtz, pdb, FP='FP', SIGFP='SIGFP', FREE='FREE', directory=None ):
     """Generate a map from an mtz file and a pdb using reforigin"""
     
     assert os.path.isfile( mtz ) and os.path.isfile( pdb ), "Cannot find files: {0} {1}".format( mtz, pdb )
@@ -25,12 +25,12 @@ def generateMap( mtz, pdb, directory=None ):
     cmd = [ "refmac5", "HKLIN", mtz, "HKLOUT", mapFile, "XYZIN", pdb, "XYZOUT", mapPdb ]
     # FIX FOR DIFFERENT FP etc.     
     stdin ="""RIDG DIST SIGM 0.02
-LABIN FP=FP SIGFP=SIGFP FREE=FREE
+LABIN FP={0} SIGFP={1} FREE={2}
 MAKE HYDR N
 WEIGHT MATRIX 0.01
 NCYC 0
 END
-"""
+""".format( FP, SIGFP, FREE )
     ret = ample_util.run_command(cmd=cmd, logfile="generateMap.log", dolog=False, stdin=stdin)
     
     assert ret == 0, "generateMap refmac failed!"
