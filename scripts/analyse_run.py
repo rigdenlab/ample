@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env ccp4-python
 '''
 Created on 19 Jul 2013
 
@@ -77,10 +77,10 @@ import sys
 import traceback
 import unittest
 
-#sys.path.append("/Users/jmht/Documents/AMPLE/ample-dev1/python")
-sys.path.append("/opt/ample-dev1/python")
+sys.path.insert(0,"/opt/ample-dev1/python")
 
 import ample_util
+import buccaneer
 import contacts
 import csymmatch
 import dssp
@@ -137,34 +137,10 @@ class AmpleResult(object):
                               'molrepTime',
                               'reforiginRMSD',
                               
-#                               'csymmatchGotOrigin',
-#                               'csymmatchScore',
-#                               'csymmatchInNR',
-#                               'csymmatchInR',
-
                               'numPlacedAtoms',
                               'numPlacedCA',
                               'floatingOrigin',
                               
-                              'matchingOrigins',
-
-                                "rioOrigin",
-                                "rioRioNumContacts",
-                                "rioRioInregister",
-                                "rioRioOoRegister",
-                                "rioRioBackwards",
-                                "rioRioGood",
-                                "rioRioNoCat",
-                                
-                                "aaOrigin",
-                                "aaAaNumContacts",
-                                "aaRioNumContacts",
-                                "aaRioInregister",
-                                "aaRioOoRegister",
-                                "aaRioBackwards",
-                                "aaRioGood",
-                                "aaRioNoCat",
-                                
                                 "ccmtzOrigin",
                                 "ccmtzAaNumContacts",
                                 "ccmtzRioNumContacts",
@@ -174,19 +150,9 @@ class AmpleResult(object):
                                 "ccmtzRioGood",
                                 "ccmtzRioNoCat",
                                 "ccmtzValidOrigin",
-                                
-                                "csymOrigin",
-                                "csymAaNumContacts",
-                                "csymRioNumContacts",
-                                "csymRioInregister",
-                                "csymRioOoRegister",
-                                "csymRioBackwards",
-                                "csymRioGood",
-                                "csymRioNoCat",
 
-                              
-#                              'rioLenHelix',
-#                              'rioHelixSequence',
+                              'rioLenHelix',
+                              'rioHelixSequence',
 
                               'rfact',
                               'rfree',
@@ -245,25 +211,6 @@ class AmpleResult(object):
                               'numPlacedCA',
                               'floatingOrigin',
 
-                              'matchingOrigins',
-
-                                "rioOrigin",
-                                "rioRioNumContacts",
-                                "rioRioInregister",
-                                "rioRioOoRegister",
-                                "rioRioBackwards",
-                                "rioRioGood",
-                                "rioRioNoCat",
-                                
-                                "aaOrigin",
-                                "aaAaNumContacts",
-                                "aaRioNumContacts",
-                                "aaRioInregister",
-                                "aaRioOoRegister",
-                                "aaRioBackwards",
-                                "aaRioGood",
-                                "aaRioNoCat",
-                                
                                 "ccmtzOrigin",
                                 "ccmtzAaNumContacts",
                                 "ccmtzRioNumContacts",
@@ -272,18 +219,9 @@ class AmpleResult(object):
                                 "ccmtzRioBackwards",
                                 "ccmtzRioGood",
                                 "ccmtzRioNoCat",
-                                "ccmtzValidOrigin",
-                                
-                                "csymOrigin",
-                                "csymAaNumContacts",
-                                "csymRioNumContacts",
-                                "csymRioInregister",
-                                "csymRioOoRegister",
-                                "csymRioBackwards",
-                                "csymRioGood",
-                                "csymRioNoCat",
 
-                            
+                              'rioLenHelix',
+                              'rioHelixSequence',
                                 
                                 "Rfact",
                                 "Rfree",
@@ -886,27 +824,31 @@ class Test(unittest.TestCase):
 def processMrbump( mrbumpResult ):
     
     # Add attributes to object
-    mrbumpResult.phaserLLG = None
-    mrbumpResult.phaserTFZ = None
-    mrbumpResult.phaserPdb = None
-    mrbumpResult.phaserLog = None
-    mrbumpResult.phaserTime = None
-    mrbumpResult.molrepLog = None
-    mrbumpResult.molrepScore = None
-    mrbumpResult.molrepTime = None
-    mrbumpResult.molrepPdb = None
-    mrbumpResult.shelxePdb = None
-    mrbumpResult.shelxeLog = None
-    mrbumpResult.shelxeCC = None
+    mrbumpResult.phaserLLG            = None
+    mrbumpResult.phaserTFZ            = None
+    mrbumpResult.phaserPdb            = None
+    mrbumpResult.phaserLog            = None
+    mrbumpResult.phaserTime           = None
+    mrbumpResult.molrepLog            = None
+    mrbumpResult.molrepScore          = None
+    mrbumpResult.molrepTime           = None
+    mrbumpResult.molrepPdb            = None
+    mrbumpResult.shelxePdb            = None
+    mrbumpResult.shelxeLog            = None
+    mrbumpResult.shelxeCC             = None
     mrbumpResult.shelxeAvgChainLength = None
     mrbumpResult.shelxeMaxChainLength = None
-    mrbumpResult.shelxeNumChains = None
-    mrbumpResult.estChainsASU = None
-
+    mrbumpResult.shelxeNumChains      = None
+    mrbumpResult.estChainsASU         = None
+    mrbumpResult.buccFinalRfree       = None
+    mrbumpResult.buccFinalRfact       = None
+    mrbumpResult.buccaneerPdb         = None
+  
     # Need to remove last component as we recored the refmac directory
     mrDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
     # HACK - we run the processing on cytosine so differnt place
-    mrDir = mrDir.replace( "/data2/jmht/coiled-coils/single_ensemble","/media/data/shared/coiled-coils/single_model" )
+    #ssert False,mrbumpResult.resultDir
+    #rDir = mrDir.replace( "/data2/jmht/coiled-coils/single_ensemble","/media/data/shared/coiled-coils/single_model" )
     #mrDir = mrDir.replace( "/data2/jmht/coiled-coils/ideal_helices","/media/data/shared/coiled-coils/ideal_helices" )
     mrbumpResult.mrDir = mrDir
     
@@ -933,6 +875,7 @@ def processMrbump( mrbumpResult ):
             mrbumpResult.phaserKilled = phaserP.killed
         
     elif mrbumpResult.program == "molrep":
+        
         molrepLog = os.path.join( mrDir, "molrep.log" )
         mrbumpResult.molrepLog = molrepLog
         molrepP = MolrepLogParser( molrepLog )
@@ -961,6 +904,25 @@ def processMrbump( mrbumpResult ):
         mrbumpResult.shelxeAvgChainLength = shelxeP.avgChainLength
         mrbumpResult.shelxeMaxChainLength = shelxeP.maxChainLength
         mrbumpResult.shelxeNumChains= shelxeP.numChains
+        
+    #
+    # Buccaneer Rebuild Processing
+    #
+    buccaneerPdb = os.path.join( mrDir,
+                                 "build/shelxe/rebuild/build",
+                                 "buccSX_output.pdb" )
+    buccaneerLog = os.path.join( mrDir,
+                                 "build/shelxe/rebuild/build",
+                                 "buccaneer.log" )
+    
+    bp = buccaneer.BuccaneerLogParser()
+    if os.path.isfile( buccaneerLog ):
+        bp.parse( buccaneerLog )
+        mrbumpResult.buccFinalRfree = bp.finalRfree
+        mrbumpResult.buccFinalRfact = bp.finalRfact
+    
+    if os.path.isfile( buccaneerPdb ):
+        mrbumpResult.buccaneerPdb = buccaneerPdb
     
     return
 
@@ -974,21 +936,6 @@ def analyseSolution( ampleResult=None,
                      originInfo=None,
                      dsspLog=None,
                      workdir=None ):
-
-    def _setResultData( otype, ampleResult, contactData  ):
-        
-        assert otype in [ 'rio', 'aa', 'ccmtz', 'csym']
-        
-        #setattr( ampleResult, "{0}NumAll".format( otype ), contactData.numAllContacts )
-        setattr( ampleResult, "{0}AaNumContacts".format( otype ), contactData.aaNumContacts )
-        setattr( ampleResult, "{0}RioNumContacts".format( otype ), contactData.rioNumContacts )
-        setattr( ampleResult, "{0}RioInregister".format( otype ), contactData.rioInRegister )
-        setattr( ampleResult, "{0}RioOoRegister".format( otype ), contactData.rioOoRegister )
-        setattr( ampleResult, "{0}RioBackwards".format( otype ), contactData.rioBackwards )
-        setattr( ampleResult, "{0}RioGood".format( otype ), contactData.rioInRegister + contactData.rioOoRegister )
-        setattr( ampleResult, "{0}RioNoCat".format( otype ), contactData.rioNumContacts - ( contactData.rioInRegister + contactData.rioOoRegister )  )
-        
-        return
 
     if ampleResult.mrProgram == "phaser":
         mrPdb = ampleResult.phaserPdb
@@ -1030,163 +977,287 @@ def analyseSolution( ampleResult=None,
     ccmtzOrigin = phenixer.ccmtzOrigin( nativeMap=nativeDensityMap, mrPdb=mrPdb  )
     ampleResult.ccmtzOrigin = ccmtzOrigin
     
-    # See if ccmtzOrigin is in list of allowed origins
-    ampleResult.ccmtzValidOrigin = False
-    if not originInfo.isFloating():
-        origins = originInfo.redundantAlternateOrigins( spaceGroupLabel=ampleResult.spaceGroup )
-        if ampleResult.ccmtzOrigin in origins:
-            ampleResult.ccmtzValidOrigin = True
+    # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
+    
+    csymmatch.Csymmatch().wrapModelToNative( "offset.pdb",
+                                             nativePdb,
+                                             csymmatchPdb = os.path.join( workdir,
+                                                                          "phaser_{0}_csymmatch.pdb".format( ampleResult.ensembleName ) )
+                                               )
 
+    # Score the origin with all-atom and rio
+    contactData = contacts.Contacts().scoreOrigin( ccmtzOrigin,
+                                                   mrPdbInfo=mrPdbInfo,
+                                                   nativePdbInfo=nativePdbInfo,
+                                                   resSeqMap=resSeqMap,
+                                                   workdir=workdir
+                                                   )
 
-    # 3. run csymmatch with the shelxe pdb (or the phaser-placed model) to genereate an origin
-    csymmatchOrigin=None
+    # Set attributes
+    ampleResult.ccmtzAaNumContacts  = contactData.aaNumContacts
+    ampleResult.ccmtzRioNumContacts = contactData.rioNumContacts
+    ampleResult.ccmtzRioInregister  = contactData.rioInRegister
+    ampleResult.ccmtzRioOoRegister  = contactData.rioOoRegister
+    ampleResult.ccmtzRioBackwards   = contactData.rioBackwards
+    ampleResult.ccmtzRioGood        = contactData.rioInRegister + contactData.rioOoRegister
+    ampleResult.ccmtzRioNoCat       = contactData.rioNumContacts - ( contactData.rioInRegister + contactData.rioOoRegister )
+
+    # Now get the helix
+    helixSequence = contacts.Contacts().helixFromContacts( contacts=contactData.contacts,
+                                                           dsspLog=dsspLog )
+    if helixSequence is not None:
+        ampleResult.rioHelixSequence = helixSequence
+        ampleResult.rioLenHelix      = len( helixSequence )
+        hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
+        with open( hfile, 'w' ) as f:
+            f.write( helixSequence+"\n" )
+
+    #
+    # This purely for checking and so we have pdbs to view
+    # 
+    # Wrap shelxe trace onto native using Csymmatch
     if not ampleResult.shelxePdb is None and os.path.isfile( ampleResult.shelxePdb ):
-         
-        # Need to copy to avoid problems with long path names
-        shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
-        shutil.copy( ampleResult.shelxePdb, shelxePdb )
-        
-        csym               = csymmatch.Csymmatch()
-        shelxeCsymmatchPdb = ample_util.filename_append( filename=shelxePdb, 
-                                                         astr="csymmatch", 
-                                                         directory=workdir )
-         
-        csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
-        csymmatchOrigin  = csym.origin()
-    
-    ampleResult.csymOrigin = csymmatchOrigin   
-    # 4. use contacts to find origin RIO (this will also generate the score)
-    # 5. use contacts to find origin using AA (this will also generate the score)
-    # 6. if get_cc_mtz_pdb isn't included in RIO origin and AA origin calc score for get_cc_mtz_pdb
-    # 7. if csymmmatch origin isn't included in RIO origin, AA origin and get_cc_mtz_pdb, calc score for csymmatch
-    
-    
-    # Contact object
-    ccalc = contacts.Contacts()
-    aaOrigin  = None
-    rioOrigin = None
-    origins = []
-    if not originInfo.isFloating():
-        
-        
-        # Find the origin by using the max coindicence of the number of atoms
-        contactData = ccalc.findOrigin( mrPdbInfo=mrPdbInfo,
-                                        nativePdbInfo=nativePdbInfo,
-                                        resSeqMap=resSeqMap,
-                                        origins=originInfo.nonRedundantAlternateOrigins(),
-                                        allAtom=True,
-                                        workdir=workdir
-                                        )
-            
-        # Add the origin to the list we have
-        aaOrigin = contactData.origin
-        origins.append( aaOrigin )
-        
-        # Save the data to the ample result object
-        _setResultData( 'aa', ampleResult, contactData  )
-        
-        # Find the origin by using the best RIO
-        contactData = ccalc.findOrigin( mrPdbInfo=mrPdbInfo,
-                                        nativePdbInfo=nativePdbInfo,
-                                        resSeqMap=resSeqMap,
-                                        origins=originInfo.nonRedundantAlternateOrigins(),
-                                        allAtom=False,
-                                        workdir=workdir
-                                        )
-        
-        
-        # save the number of atoms in the overlap
-        rioOrigin                      = contactData.origin
-        if rioOrigin not in origins:
-            origins.append( rioOrigin )
-            
-        # Save the data to the ample result object
-        _setResultData( 'rio', ampleResult, contactData  )
-    
-    # End isFloating
-    ampleResult.aaOrigin = aaOrigin 
-    ampleResult.rioOrigin = rioOrigin 
+        csymmatch.Csymmatch().wrapModelToNative( ampleResult.shelxePdb,
+                                                 nativePdb,
+                                                 origin=ccmtzOrigin,
+                                                 workdir=workdir  )
 
-    # Now score the other origins if not already there
-    if ccmtzOrigin and ccmtzOrigin not in origins:
-        origins.append( ccmtzOrigin )
-        
-        # Calculate the scores for that origin
-        contactData = ccalc.scoreOrigin( ccmtzOrigin,
-                                         mrPdbInfo=mrPdbInfo,
-                                         nativePdbInfo=nativePdbInfo,
-                                         resSeqMap=resSeqMap,
-                                         workdir=workdir
-                                         )
-        
-        # Add the new data
-        _setResultData( 'ccmtz', ampleResult, contactData  )
-        
-    if csymmatchOrigin and csymmatchOrigin not in origins:
-        origins.append( csymmatchOrigin )
-        
-        # Calculate the scores for that origin
-        contactData = ccalc.scoreOrigin( csymmatchOrigin,
-                                         mrPdbInfo=mrPdbInfo,
-                                         nativePdbInfo=nativePdbInfo,
-                                         resSeqMap=resSeqMap,
-                                         workdir=workdir
-                                         )
-        
-        # Add the new data
-        _setResultData( 'csym', ampleResult, contactData  )
-        
-    # Now compare the origins
-    ampleResult.matchingOrigins = False
-    if ampleResult.ccmtzOrigin and ampleResult.csymOrigin:
-        x = lambda x: float(int(x*10))/10
-        if map( x, ampleResult.ccmtzOrigin ) == map ( x, ampleResult.csymOrigin ):
-            ampleResult.matchingOrigins = True
-        
-#         # Now get the helix
-#         helixSequence = ccalc.helixFromContacts( contacts=contactData.contacts,
-#                                  dsspLog=dsspLog )
-#         ampleResult.rioHelixSequence = helixSequence
-#         ampleResult.rioLenHelix      = len( helixSequence )
-#         if ampleResult.rioLenHelix:
-#             hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
-#             with open( hfile, 'w' ) as f:
-#                 f.write( helixSequence+"\n" )
-                
-#         
-#         #
-#         # Structure comparison - don't think this is useful anymore
-#         #
-#         shelxeCsymmatchPdbSingle       = ample_util.filename_append( filename=shelxeCsymmatchPdb, 
-#                                                                      astr="1chain", 
-#                                                                      directory=workdir )
-#         pdbedit.to_single_chain(shelxeCsymmatchPdb, shelxeCsymmatchPdbSingle)
-#         
-#         # Compare the traced model to the native with maxcluster
-#         # We can only compare one chain so we extracted this earlier
-#         maxComp = maxcluster.Maxcluster()
-#         d = maxComp.compareSingle( nativePdb=nativeAs1Chain,
-#                                    modelPdb=shelxeCsymmatchPdbSingle,
-#                                    sequenceIndependant=True,
-#                                    rmsd=False
-#                                  )
-#         ampleResult.shelxeTM = d.tm
-#         ampleResult.shelxeTMPairs = d.pairs
-#         
-#         d = maxComp.compareSingle( nativePdb=nativeAs1Chain,
-#                                    modelPdb=shelxeCsymmatchPdbSingle,
-#                                    sequenceIndependant=True,
-#                                    rmsd=True )
-#         ampleResult.shelxeRMSD = d.rmsd
+    # Wrap buccaneer model onto native
+    if not ampleResult.buccaneerPdb is None and os.path.isfile( ampleResult.buccaneerPdb ):
+        # Need to rename Pdb as is just called buccSX_output.pdb
+        csymmatchPdb = os.path.join( workdir, "buccaneer_{0}_csymmatch.pdb".format( ampleResult.ensembleName ) )
+
+        csymmatch.Csymmatch().wrapModelToNative( ampleResult.buccaneerPdb,
+                                                 nativePdb,
+                                                 origin=ccmtzOrigin,
+                                                 csymmatchPdb=csymmatchPdb,
+                                                 workdir=workdir  )
 
     return
+
+# def analyseSolution( ampleResult=None,
+#                      nativePdbInfo=None,
+#                      nativeAs1Chain=None,
+#                      nativeDensityMap=None,
+#                      refModelPdbInfo=None,
+#                      resSeqMap=None,
+#                      originInfo=None,
+#                      dsspLog=None,
+#                      workdir=None ):
+# 
+#     def _setResultData( otype, ampleResult, contactData  ):
+#         
+#         assert otype in [ 'rio', 'aa', 'ccmtz', 'csym']
+#         
+#         #setattr( ampleResult, "{0}NumAll".format( otype ), contactData.numAllContacts )
+#         setattr( ampleResult, "{0}AaNumContacts".format( otype ), contactData.aaNumContacts )
+#         setattr( ampleResult, "{0}RioNumContacts".format( otype ), contactData.rioNumContacts )
+#         setattr( ampleResult, "{0}RioInregister".format( otype ), contactData.rioInRegister )
+#         setattr( ampleResult, "{0}RioOoRegister".format( otype ), contactData.rioOoRegister )
+#         setattr( ampleResult, "{0}RioBackwards".format( otype ), contactData.rioBackwards )
+#         setattr( ampleResult, "{0}RioGood".format( otype ), contactData.rioInRegister + contactData.rioOoRegister )
+#         setattr( ampleResult, "{0}RioNoCat".format( otype ), contactData.rioNumContacts - ( contactData.rioInRegister + contactData.rioOoRegister )  )
+#         
+#         return
+# 
+#     if ampleResult.mrProgram == "phaser":
+#         mrPdb = ampleResult.phaserPdb
+#     elif ampleResult.mrProgram == "molrep":
+#         mrPdb = ampleResult.molrepPdb
+#     else:
+#         assert False
+# 
+#     if mrPdb is None:
+#         print "NO MR PDB FOR ",ampleResult.pdbCode,ampleResult.ensembleName
+#         return
+# 
+#     # debug - copy into work directory as reforigin struggles with long pathnames
+#     shutil.copy(mrPdb, os.path.join( workdir, os.path.basename( mrPdb ) ) )
+#     
+#     pdbedit = pdb_edit.PDBEdit()
+#     mrPdbInfo = pdbedit.get_info( mrPdb )
+#     
+#     ampleResult.numPlacedAtoms = mrPdbInfo.numAtoms()
+#     ampleResult.numPlacedCA = mrPdbInfo.numCalpha()
+# 
+#     # Get reforigin info
+#     if True:
+#     #try:
+#         rmsder = reforigin.ReforiginRmsd()
+#         rmsder.getRmsd(  nativePdbInfo=nativePdbInfo,
+#                          placedPdbInfo=mrPdbInfo,
+#                          refModelPdbInfo=refModelPdbInfo,
+#                          cAlphaOnly=True )
+#         ampleResult.reforiginRMSD = rmsder.rmsd
+#     #except Exception, e:
+#     #    print "ERROR: ReforiginRmsd with: {0} {1}".format( nativePdbInfo.pdb, mrPdbInfo.pdb )
+#     #    print "{0}".format( e )
+#     #    ampleResult.reforiginRMSD = 9999
+# 
+# 
+#     # 1. run reforigin to generate map for native with mtz (before this routine is called)
+#     # 2. run get_cc_mtz_pdb to calculate an origin
+#     ccmtzOrigin = phenixer.ccmtzOrigin( nativeMap=nativeDensityMap, mrPdb=mrPdb  )
+#     ampleResult.ccmtzOrigin = ccmtzOrigin
+#     
+#     # See if ccmtzOrigin is in list of allowed origins
+#     ampleResult.ccmtzValidOrigin = False
+#     if not originInfo.isFloating():
+#         origins = originInfo.redundantAlternateOrigins( spaceGroupLabel=ampleResult.spaceGroup )
+#         if ampleResult.ccmtzOrigin in origins:
+#             ampleResult.ccmtzValidOrigin = True
+# 
+# 
+#     # 3. run csymmatch with the shelxe pdb (or the phaser-placed model) to genereate an origin
+#     csymmatchOrigin=None
+#     if not ampleResult.shelxePdb is None and os.path.isfile( ampleResult.shelxePdb ):
+#          
+#         # Need to copy to avoid problems with long path names
+#         shelxePdb = os.path.join(workdir, os.path.basename( ampleResult.shelxePdb ) )
+#         shutil.copy( ampleResult.shelxePdb, shelxePdb )
+#         
+#         csym               = csymmatch.Csymmatch()
+#         shelxeCsymmatchPdb = ample_util.filename_append( filename=shelxePdb, 
+#                                                          astr="csymmatch", 
+#                                                          directory=workdir )
+#          
+#         csym.run( refPdb=nativePdbInfo.pdb, inPdb=shelxePdb, outPdb=shelxeCsymmatchPdb )
+#         csymmatchOrigin  = csym.origin()
+#     
+#     ampleResult.csymOrigin = csymmatchOrigin   
+#     # 4. use contacts to find origin RIO (this will also generate the score)
+#     # 5. use contacts to find origin using AA (this will also generate the score)
+#     # 6. if get_cc_mtz_pdb isn't included in RIO origin and AA origin calc score for get_cc_mtz_pdb
+#     # 7. if csymmmatch origin isn't included in RIO origin, AA origin and get_cc_mtz_pdb, calc score for csymmatch
+#     
+#     
+#     # Contact object
+#     ccalc = contacts.Contacts()
+#     aaOrigin  = None
+#     rioOrigin = None
+#     origins = []
+#     if not originInfo.isFloating():
+#         
+#         
+#         # Find the origin by using the max coindicence of the number of atoms
+#         contactData = ccalc.findOrigin( mrPdbInfo=mrPdbInfo,
+#                                         nativePdbInfo=nativePdbInfo,
+#                                         resSeqMap=resSeqMap,
+#                                         origins=originInfo.nonRedundantAlternateOrigins(),
+#                                         allAtom=True,
+#                                         workdir=workdir
+#                                         )
+#             
+#         # Add the origin to the list we have
+#         aaOrigin = contactData.origin
+#         origins.append( aaOrigin )
+#         
+#         # Save the data to the ample result object
+#         _setResultData( 'aa', ampleResult, contactData  )
+#         
+#         # Find the origin by using the best RIO
+#         contactData = ccalc.findOrigin( mrPdbInfo=mrPdbInfo,
+#                                         nativePdbInfo=nativePdbInfo,
+#                                         resSeqMap=resSeqMap,
+#                                         origins=originInfo.nonRedundantAlternateOrigins(),
+#                                         allAtom=False,
+#                                         workdir=workdir
+#                                         )
+#         
+#         
+#         # save the number of atoms in the overlap
+#         rioOrigin                      = contactData.origin
+#         if rioOrigin not in origins:
+#             origins.append( rioOrigin )
+#             
+#         # Save the data to the ample result object
+#         _setResultData( 'rio', ampleResult, contactData  )
+#     
+#     # End isFloating
+#     ampleResult.aaOrigin = aaOrigin 
+#     ampleResult.rioOrigin = rioOrigin 
+# 
+#     # Now score the other origins if not already there
+#     if ccmtzOrigin and ccmtzOrigin not in origins:
+#         origins.append( ccmtzOrigin )
+#         
+#         # Calculate the scores for that origin
+#         contactData = ccalc.scoreOrigin( ccmtzOrigin,
+#                                          mrPdbInfo=mrPdbInfo,
+#                                          nativePdbInfo=nativePdbInfo,
+#                                          resSeqMap=resSeqMap,
+#                                          workdir=workdir
+#                                          )
+#         
+#         # Add the new data
+#         _setResultData( 'ccmtz', ampleResult, contactData  )
+#         
+#     if csymmatchOrigin and csymmatchOrigin not in origins:
+#         origins.append( csymmatchOrigin )
+#         
+#         # Calculate the scores for that origin
+#         contactData = ccalc.scoreOrigin( csymmatchOrigin,
+#                                          mrPdbInfo=mrPdbInfo,
+#                                          nativePdbInfo=nativePdbInfo,
+#                                          resSeqMap=resSeqMap,
+#                                          workdir=workdir
+#                                          )
+#         
+#         # Add the new data
+#         _setResultData( 'csym', ampleResult, contactData  )
+#         
+#     # Now compare the origins
+#     ampleResult.matchingOrigins = False
+#     if ampleResult.ccmtzOrigin and ampleResult.csymOrigin:
+#         x = lambda x: float(int(x*10))/10
+#         if map( x, ampleResult.ccmtzOrigin ) == map ( x, ampleResult.csymOrigin ):
+#             ampleResult.matchingOrigins = True
+#         
+# #         # Now get the helix
+# #         helixSequence = ccalc.helixFromContacts( contacts=contactData.contacts,
+# #                                  dsspLog=dsspLog )
+# #         ampleResult.rioHelixSequence = helixSequence
+# #         ampleResult.rioLenHelix      = len( helixSequence )
+# #         if ampleResult.rioLenHelix:
+# #             hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
+# #             with open( hfile, 'w' ) as f:
+# #                 f.write( helixSequence+"\n" )
+#                 
+# #         
+# #         #
+# #         # Structure comparison - don't think this is useful anymore
+# #         #
+# #         shelxeCsymmatchPdbSingle       = ample_util.filename_append( filename=shelxeCsymmatchPdb, 
+# #                                                                      astr="1chain", 
+# #                                                                      directory=workdir )
+# #         pdbedit.to_single_chain(shelxeCsymmatchPdb, shelxeCsymmatchPdbSingle)
+# #         
+# #         # Compare the traced model to the native with maxcluster
+# #         # We can only compare one chain so we extracted this earlier
+# #         maxComp = maxcluster.Maxcluster()
+# #         d = maxComp.compareSingle( nativePdb=nativeAs1Chain,
+# #                                    modelPdb=shelxeCsymmatchPdbSingle,
+# #                                    sequenceIndependant=True,
+# #                                    rmsd=False
+# #                                  )
+# #         ampleResult.shelxeTM = d.tm
+# #         ampleResult.shelxeTMPairs = d.pairs
+# #         
+# #         d = maxComp.compareSingle( nativePdb=nativeAs1Chain,
+# #                                    modelPdb=shelxeCsymmatchPdbSingle,
+# #                                    sequenceIndependant=True,
+# #                                    rmsd=True )
+# #         ampleResult.shelxeRMSD = d.rmsd
+# 
+#     return
 
 if __name__ == "__main__":
     
     pickledResults=False
     CLUSTERNUM=0
     #dataRoot = "/Users/jmht/Documents/AMPLE/data"
-    dataRoot = "/media/data/shared/coiled-coils/ensemble"
+    dataRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run1"
+    mrRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run2"
     
     rundir = os.getcwd()
     os.chdir( rundir )
@@ -1198,9 +1269,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    #for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    #or pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbCode in sorted( resultsDict.keys() ):
-    for pdbCode in [ "1BYZ" ]:
+    for pdbCode in [ "1ENV" ]:
         
         workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
@@ -1213,6 +1284,7 @@ if __name__ == "__main__":
         dataDir = os.path.join( dataRoot, pdbCode )
         
         # Get the path to the original pickle file
+        # Hack - ampleDict is stored with first run
         pfile = os.path.join( dataDir, "ROSETTA_MR_0/resultsd.pkl")
         with open( pfile ) as f:
             ampleDict = cPickle.load( f  )
@@ -1286,7 +1358,10 @@ if __name__ == "__main__":
         dsspP = dssp.DsspParser( dsspLog )
         
         # Loop over each result
-        mrbumpDir = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1")
+        if dataDir == mrRoot:
+            mrbumpDir = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1")
+        else:
+            mrbumpDir = os.path.join( mrRoot, pdbCode )
         if pickledResults:
             results = resultsDict[ pdbCode ]
         else:
@@ -1335,7 +1410,7 @@ if __name__ == "__main__":
             ar.ensembleName = ensembleName
             
             # Just for debugging
-            if False and ensembleName != "BYZ":
+            if False and ensembleName != "poly_ala_trunc_24.348237_rad_1":
                 continue
             
             # Extract information on the models and ensembles
@@ -1396,10 +1471,14 @@ if __name__ == "__main__":
             elif mrbumpResult.program == "molrep":
                 #ar.molrepLog = mrbumpResult.molrepLog
                 ar.molrepScore = mrbumpResult.molrepScore
-                ar.molrepTime = mrbumpResult.molrepTime
-                ar.molrepPdb = mrbumpResult.molrepPdb
+                ar.molrepTime  = mrbumpResult.molrepTime
+                ar.molrepPdb   = mrbumpResult.molrepPdb
             else:
                 raise RuntimeError,"Unrecognised program!"
+
+            ar.buccFinalRfree = mrbumpResult.buccFinalRfree
+            ar.buccFinalRfact = mrbumpResult.buccFinalRfact
+            ar.buccaneerPdb   = mrbumpResult.buccaneerPdb
             
             #ar.shelxeLog = mrbumpResult.shelxeLog
             ar.shelxePdb = mrbumpResult.shelxePdb
@@ -1423,8 +1502,6 @@ if __name__ == "__main__":
             except Exception,e:
                 print "ERROR ANALYSING SOLUTION: {0} {1}".format( pdbCode, mrbumpResult.ensembleName )
                 print traceback.format_exc()
-            
-            
             #print ar
 
     # End loop over results
