@@ -590,6 +590,29 @@ class Contacts(object):
                     
         return
     
+    def helixFromPdbs(self, origin, mrPdb, nativePdb, nativeChain, dsspLog, workdir=os.getcwd() ):
+        """This is a wrapper to generate the info and resSeqMap objects needed by score Origin"""
+        
+        mrPdbInfo = pdb_edit.PDBEdit().get_info(mrPdb)
+        nativePdbInfo = pdb_edit.PDBEdit().get_info(nativePdb)
+        
+        assert nativeChain in nativePdbInfo.models[0].chains
+        
+        import residue_map
+        resSeqMap = residue_map.residueSequenceMap()
+        resSeqMap.fromInfo( refInfo=nativePdbInfo,
+                            refChainID=nativeChain,
+                            targetInfo=mrPdbInfo,
+                            targetChainID=mrPdbInfo.models[0].chains[0]# Only 1 chain in model
+                          )
+        
+        data = self.scoreOrigin(origin, mrPdbInfo, nativePdbInfo, resSeqMap, workdir)
+        
+        contacts = data.contacts
+        
+        return self.helixFromContacts(contacts, dsspLog )
+        
+    
     def scoreOrigin(self,
                     origin=None,
                     mrPdbInfo=None,
