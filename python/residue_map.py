@@ -40,7 +40,7 @@ class residueSequenceMap( object ):
         
         # maxInset is the max number of AA into the sequence that we will go searching for a match - i.e. if more
         # then maxInset AA at the start are non-matching, we won't find the match 
-        self.maxInset = 30
+        self.maxInset = 50
         
         # Like this just for testing
         if refPdb and targetPdb:
@@ -221,6 +221,13 @@ class residueSequenceMap( object ):
         
         #if len(self.refSequence) < self.probeLen or len(self.targetSequence) < self.probeLen:
         #    raise RuntimeError,"Very short sequences - this will not work: {0}  : {1}".format( self.refSequence, self.targetSequence )
+
+        if False:        
+            print "Calculating map for:\n{0}\n{1}\n{2}\n{3}\n".format( self.refSequence,
+                                                                      self.targetSequence,
+                                                                      self.refResSeq,
+                                                                      self.targetResSeq,
+                                                                     )
         
         # Find where they match at the start
         self.refOffset, self.targetOffset = self._calcOffset( self.refSequence, self.targetSequence )
