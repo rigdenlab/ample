@@ -336,7 +336,7 @@ class Contacts(object):
         
         """
         #print "GOT DATA ",contacts
-        if not len( contacts ):
+        if contacts is None or not len( contacts ):
             return None
         
         #print "GOT DSSP ",dsspP.asDict()
