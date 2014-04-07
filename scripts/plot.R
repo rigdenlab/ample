@@ -6,7 +6,7 @@ fcolour="#FF0000"
 setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
 #setwd("/home/jmht/Documents/test/CC/contacts")
 #data <- read.table(file="results_bucc.csv",sep=',', header=T)
-data <- read.table(file="results_bucc.csv",sep=',', header=T)
+data <- read.table(file="results.csv",sep=',', header=T)
 
 # Categorise successes
 data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
@@ -20,13 +20,21 @@ data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
 # Calculate number of copies of decoy that were placed
 data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
 
-# Need to select the "best" origin and collate the properties
+#
+# Summary information
+#
 
-# Object to hold successes
-#sdata <- data[ data$success == 1, ]
+pdbAll <- unique( data$pdbCode )
+sprintf("Len all PDBs %s", length(pdbAll) )
+pdbSuccess <- unique( data[ data$success==1, ]$pdbCode )
+sprintf("Len success PDBs %s", length(pdbSuccess) )
+
+# Failures
+#setdiff( pdbAll, pdbSuccess )
+
 
 # * mean resolution of failing/succesful cases
-x <- mean(  data[ data$success == 1, ]$resolution ) # 1.949077
+x <- mean(  data[ data$success == 1, ]$resolution ) # 1.969702
 cat( "Mean resolution for successes is ",x,"\n")
 x <- mean(  data[ data$success == 0, ]$resolution ) # 2.025158
 cat( "Mean resolution for failures is ",x,"\n")
@@ -49,6 +57,43 @@ min( data$ensembleNumModels ) # 2
 # Most frequent number of models in a succesful ensemble
 median( data[ data$success == 1, ]$ensembleNumResidues ) # 27
 median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
+
+
+
+#
+# Summary table
+#
+#http://stackoverflow.com/questions/6289538/aggregate-a-dataframe-on-a-given-column-and-display-another-column
+#http://stackoverflow.com/questions/2822156/select-rows-with-largest-value-of-variable-within-a-group-in-r
+
+# For each case need to get the best success - i.e. success with max CC
+# Order by pdbCode and CC
+x <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasing=TRUE ), ]
+# Select top by selecting not duplicates on pdbCode
+x <- x[ !duplicated(x$pdbCode), c("pdbCode", "success","fastaLength","resolution","numChains","numPlacedChains", "shelxeCC", "shelxeAvgChainLength")  ]
+# Now put in alphabetical order
+x <- x[ order( x$pdbCode ), ]
+
+# Need to get numbers of success
+# This gets the stats  - we can join because the by function is the pdbCode which is in similar alphabetic order
+x["successfulModels"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x["failedModels"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 0 ) } )[2]
+
+x["successPolyAla"]  <- aggregate( 
+		data[ data$ensembleSideChain == "poly_ala", ]$success,
+		by=list( data[ data$ensembleSideChain == "poly_ala", ]$pdbCode ),
+		FUN=function(x){ sum( x == 1 ) } )[2]
+x["successScwrl"]  <- aggregate(
+		data[ data$ensembleSideChain == "SCWRL_reliable_sidechains", ]$success,
+		by=list( data[ data$ensembleSideChain == "SCWRL_reliable_sidechains", ]$pdbCode ),
+		FUN=function(x){ sum( x == 1 ) } )[2]
+x["successAllAtom"]  <- aggregate(
+		data[ data$ensembleSideChain == "All_atom", ]$success,
+		by=list( data[ data$ensembleSideChain == "All_atom", ]$pdbCode ),
+		FUN=function(x){ sum( x == 1 ) } )[2]
+# NB LOOK AT REORDER
+summary <- x[ order( x$success, decreasing=TRUE ), ]
+write.csv(summary, "summary.csv", row.names=FALSE)
 
 
 # highest percentage of model that solved - selecting the largest
@@ -199,7 +244,29 @@ p + geom_point() +
 		ggtitle("Resolution vs protein length")
 ggsave("resolutionVsLength.png")
 
+# Binned (20) bar graph with length along the bottom and the bars dividied/coloured by success
+# NB: Uuses data from summary
+p <-ggplot( data=summary, aes( fastaLength, fill=factor(success) ) )
+p + geom_histogram( binwidth=20 ) +
+	scale_x_continuous( breaks=seq(0,260,20) ) +
+	scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+	) +
+	xlab("Length in residues") +
+	ylab("Number of targets") +
+	ggtitle("Number of successes/failures by protein length")
+ggsave("targetByLength.png")
 
+#p + geom_bar( stat="bin" ) +
+p + geom_histogram( binwidth=20 ) +
+    theme(text = element_text(size=5),
+    axis.text.x = element_text(angle=90, vjust=1)) 
+
+scale_fill_manual( values=c(fcolour,scolour),
+		name="Success/Failure",
+		labels=c("Failure", "Success")
+) 
 #Distribution of chain lengths of all ensembles
 
 # percentage traced vs shelxeCC
@@ -524,73 +591,3 @@ p + geom_point() +
 		ylab("Phaser LLG") +
 		ggtitle("Phaser LLG vs Phaser TFZ")
 ggsave("LLGvsTFZtrunc.png")
-
-
-
-
-
-q()
-#write.csv(odata, "odata.csv", row.names=FALSE)
-
-
-#p + layer(geom="point") + facet_wrap(~success)
-
-# Count # jobs
-njobs <- aggregate( data$success, by=list( data$pdbCode ), FUN=length)[2]
-# Count succcess
-nsuccess <- aggregate( data$success, by=list( data$pdbCode ), FUN=sum)[2]
-# Failed models
-nfail <- njobs-nsuccess
-
-# Get a data frame just with the successk
-# Order gives us the indices of the frame rows ordered by the values we've given
-# duplciated gives us an array of bools for which items are duplicated
-
-
-#http://stackoverflow.com/questions/6289538/aggregate-a-dataframe-on-a-given-column-and-display-another-column
-#http://stackoverflow.com/questions/2822156/select-rows-with-largest-value-of-variable-within-a-group-in-r
-
-#
-# Summary table
-#
-
-# For each case need to get the best success - i.e. success with max CC
-# Order by pdbCode and CC
-x <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasing=TRUE ), ]
-# Select top by selecting not duplicates on pdbCode
-x <- x[ !duplicated(x$pdbCode), c("pdbCode", "success","fastaLength","resolution","numChains","numPlacedChains", "shelxeCC", "shelxeAvgChainLength")  ]
-# Now put in alphabetical order
-x <- x[ order( x$pdbCode ), ]
-
-# Need to get numbers of success
-# This gets the stats  - we can join because the by function is the pdbCode which is in similar alphabetic order
-x["successfulModels"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["failedModels"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 0 ) } )[2]
-
-x["successPolyAla"]  <- aggregate( 
-		data[ data$ensembleSideChain == "poly_ala", ]$success,
-		by=list( data[ data$ensembleSideChain == "poly_ala", ]$pdbCode ),
-		FUN=function(x){ sum( x == 1 ) } )[2]
-x["successScwrl"]  <- aggregate(
-		data[ data$ensembleSideChain == "SCWRL_reliable_sidechains", ]$success,
-		by=list( data[ data$ensembleSideChain == "SCWRL_reliable_sidechains", ]$pdbCode ),
-		FUN=function(x){ sum( x == 1 ) } )[2]
-x["successAllAtom"]  <- aggregate(
-		data[ data$ensembleSideChain == "All_atom", ]$success,
-		by=list( data[ data$ensembleSideChain == "All_atom", ]$pdbCode ),
-		FUN=function(x){ sum( x == 1 ) } )[2]
-# NB LOOK AT REORDER
-x <- x[ order( x$success, decreasing=TRUE ), ]
-write.csv(x, "summary.csv", row.names=FALSE)
-
-
-# Fix missing values
-#completeEnsemble <- complete.cases(data$ensembleNumResidues)
-#completeHelix <- complete.cases(data$lenHelix)
-
-pdbAll <- unique( data$pdbCode )
-sprintf("Len all PDBs %s", length(pdbAll) )
-pdbSuccess <- unique( pdata$pdbCode )
-sprintf("Len success PDBs %s", length(pdbSuccess) )
-
-q()
