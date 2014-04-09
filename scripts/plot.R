@@ -388,20 +388,6 @@ ggsave("CCVsInRegister.png")
 # coincident vs unmatched
 # ronan's idea to divide by number of unmatched
 #
-##p <-ggplot(data=odata, aes(x=numPlacedAtoms-aoNumContacts, y=aoNumContacts, colour=factor(success) ) )
-#p <-ggplot(data=odata, aes(x=(numPlacedAtoms-aoNumContacts)/numPlacedAtoms, y=aoNumContacts/numPlacedAtoms, colour=factor(success) ) )
-#		#scale_size() +
-#p + geom_point( size=2 ) +
-#		stat_sum( aes(size=..n..) ) +
-#		facet_grid( ensembleSideChainTreatment ~ .) +
-#		scale_colour_manual( values=c(fcolour, scolour),
-#				name="Success/Failure",
-#				labels=c("Failure", "Success") ) +
-#		xlab("% unmatched atoms") +
-#		ylab("% contacts (< 0.5A)") +
-#		ggtitle("Num coincident vs unmatched atoms non-floating origins")
-#ggsave("CoincidentVsUnmatched.png")
-
 # facet_grid( ensembleSideChainTreatment ~ .) +
 # label_both
 l = function( variable, value ) {
@@ -413,6 +399,25 @@ l = function( variable, value ) {
 		return ("foo")
 	}
 }
+
+#p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts, y=numPlacedAtoms, colour=factor(success) ) )
+p <-ggplot(data=odata,
+		aes(x=(ccmtzAaNumContacts/numPlacedAtoms)*100,
+				y=(ccmtzRioGood/numPlacedCA)*100,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("Proportion unmatched atoms") +
+		ylab("Proportion unmatched vs matched contacts (< 0.5A)") +
+		ggtitle("Proportion")
+#ggsave("CoincidentVsUnmatched.png")
+#scale_x_continuous( limits=c(0, max(odata$numPlacedAtoms) )  ) +
+
+
 
 p <-ggplot(data=odata,
 		aes(x=ccmtzRioGood, y=numPlacedAtoms-ccmtzAaNumContacts,
