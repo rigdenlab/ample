@@ -105,6 +105,8 @@ class AmpleResult(object):
                               'title',
                               'fastaLength',
                               'numChains',
+                              'numResidues',
+                              'numAtoms',
                               'estChainsASU',
                               'spaceGroup',
                               'resolution',
@@ -163,10 +165,7 @@ class AmpleResult(object):
                               'shelxeAvgChainLength',
                               'shelxeMaxChainLength',
                               'shelxeNumChains',
-                              'shelxeCsymmatchShelxeScore',
-                              'shelxeTM',
-                              'shelxeTMPairs',
-                              'shelxeRMSD',
+
                               ]
         
         # The matching titles
@@ -175,6 +174,8 @@ class AmpleResult(object):
                                 "Title",
                                 "Fasta Length",
                                 "Number of Chains",
+                                'Num. residues',
+                                'Num Atoms',
                                 "Est. Chains in ASU",
                                 "Space Group",
                                 "Resolution",
@@ -232,10 +233,6 @@ class AmpleResult(object):
                                 "Shelxe avg. chain length",
                                 "Shelxe max. chain length",
                                 "Shelxe num. chains",
-                                "Shelxe Csymmatch Score",
-                                "Shelxe TM Score",
-                                "Shelxe TM Pairs",
-                                "Shelxe RMSD",
                                  ]
 
         # Things not to output
@@ -1269,9 +1266,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    #or pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbCode in sorted( resultsDict.keys() ):
-    for pdbCode in [ "1ENV" ]:
+    #for pdbCode in [ "1ENV" ]:
         
         workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
@@ -1315,6 +1312,9 @@ if __name__ == "__main__":
         
         # Get the new Info about the native
         nativePdbInfo = pdbedit.get_info( nativePdb )
+        
+        # number atoms/residues
+        natoms, nresidues = pdb_edit.PDBEdit().num_atoms_and_residues(nativePdb)
         
         # Get information on the origins for this spaceGroup
         originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
@@ -1387,6 +1387,8 @@ if __name__ == "__main__":
             ar.spickerClusterSize = ampleDict['spicker_results'][ CLUSTERNUM ].cluster_size
             ar.spickerClusterCentroid = os.path.splitext( os.path.basename( ampleDict['spicker_results'][ CLUSTERNUM ].cluster_centroid ) )[0]
             ar.numChains = len( nativePdbInfo.models[0].chains )
+            ar.numAtoms = natoms
+            ar.numResidues = nresidues
             ar.resolution = nativePdbInfo.resolution
             ar.solventContent = nativePdbInfo.solventContent
             ar.matthewsCoefficient = nativePdbInfo.matthewsCoefficient
