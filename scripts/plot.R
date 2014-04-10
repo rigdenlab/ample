@@ -3,13 +3,13 @@
 library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
-setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
-#setwd("/home/jmht/Documents/test/CC/contacts")
-#data <- read.table(file="results_bucc.csv",sep=',', header=T)
-data <- read.table(file="results.csv",sep=',', header=T)
+#setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
+data <- read.table(file="results_natoms.csv",sep=',', header=T)
+#data <- read.table(file="results.csv",sep=',', header=T)
 
 # Categorise successes
-data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
+#data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
+data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 & data$buccFinalRfree < 0.5  )
 data$success <- replace( data$success, is.na(data$success), 0 )
 
 # Need to remove nolog values from buccFinalRfree
@@ -19,6 +19,16 @@ data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
 
 # Calculate number of copies of decoy that were placed
 data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
+
+# Categories for resolution
+data$resCat <- 0
+data$resCat[ data$resolution < 1.5 ] <- 1
+data$resCat[  data$resolution >= 1.5 & data$resolution < 1.8 ] <- 2
+data$resCat[  data$resolution >= 1.8 & data$resolution < 2.2 ] <- 3
+data$resCat[data$resolution >= 2.2 ] <- 4
+
+# Data for which there are placed models and we have an origin
+odata = data[ ! is.na(data$ccmtzOrigin) & ! is.na( data$phaserLLG), ]
 
 #
 # Summary information
@@ -337,6 +347,132 @@ odata = data[ ! is.na(data$ccmtzOrigin) & ! is.na( data$phaserLLG), ]
 #				! odata$aoOrigin == "" & ! odata$roOrigin == ""  & 
 #				odata$aoOrigin != odata$roOrigin, ]
 
+#
+# Histograms
+#
+p <-ggplot(data=odata, aes(x=ccmtzRioGood, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 5 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("RIO score") +
+		ggtitle("Histogram of RIO scores")
+ggsave("rioHistogram.png")
+
+p <-ggplot(data=odata, aes(x=ccmtzRioNoCat, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 1 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Number non-RIO C-alpha") +
+		ggtitle("non-RIO C-alpha atoms")
+ggsave("noRioHistogram.png")
+
+
+# Proportion RIO of model
+p <-ggplot(data=odata, aes(x=ccmtzRioGood/numPlacedCA, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 0.05 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Proportion RIO") +
+		ggtitle("RIO as proportion of model")
+ggsave("rioModelHistogramProp.png")
+
+# Proportion RIO of native
+p <-ggplot(data=odata, aes(x=ccmtzRioGood/numResidues, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 0.05 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Proportion RIO") +
+		ggtitle("RIO as proportion of native")
+ggsave("rioNativeHistogramProp.png")
+
+# Proportion in density of model
+p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts/numPlacedAtoms, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Proportion in density") +
+		ggtitle("Atoms in density as a proportion of the model")
+ggsave("inDensityModelHistogramProp.png")
+
+# Proportion in density of native
+p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts/numAtoms, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 0.001 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Proportion in density") +
+		ggtitle("Atoms in density as proportion of native")
+ggsave("inDensityNativeHistogramProp.png")
+
+# Number in density
+p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 5 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Number in density") +
+		ggtitle("Number of atoms in density")
+ggsave("inDensityHistogramNum.png")
+
+
+# Number out of density
+p <-ggplot(data=odata, aes(x=numPlacedAtoms-ccmtzAaNumContacts, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 5 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Number out of density") +
+		ggtitle("Number of atoms out of density")
+ggsave("outOfDensityHistogramNum.png")
+
+# Out of density as proportion of model
+p <-ggplot(data=odata, aes(x=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Proportion out of density") +
+		ggtitle("Atoms out of density as proportion of model")
+ggsave("outOfDensityHistogramModel.png")
+
+# Out of density as proportion of native
+p <-ggplot(data=odata, aes(x=(numPlacedAtoms-ccmtzAaNumContacts)/numAtoms, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of cases") +
+		xlab("Proportion out of density") +
+		ggtitle("Atoms out of density as proportion of native")
+ggsave("outOfDensityHistogramNative.png")
+
+#
+# Graphs
+#
 #Comparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
 p <-ggplot(data=odata, aes(x=ccmtzRioOoRegister, y=ccmtzRioInregister, colour=factor(success) ) ) 
@@ -346,32 +482,11 @@ p + geom_point() +
 				name="Success/Failure",
 				labels=c("Failure", "Success")
 		) +
-		xlab("Out-of-register Contacts") +
-		ylab("In-register Contacts") +
-		ggtitle("In- vs, Out-of-register")
+		xlab("Out-of-register C-alpha") +
+		ylab("In-register C-alpha") +
+		ggtitle("In- vs, Out-of-register C-alphas")
 ggsave("ooRegisterVsInRegister.png")
 
-p <-ggplot(data=odata, aes(x=ccmtzRioGood, fill=factor(success) ) )
-p + geom_histogram( position = 'dodge', binwidth = 5 ) +
-		scale_fill_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
-		ylab("Number of cases") +
-		xlab("Number of good contacts.") +
-		ggtitle("Histogram of in- plus out-of-register contacts.")
-ggsave("goodContacts.png")
-
-p <-ggplot(data=odata, aes(x=ccmtzRioNoCat, fill=factor(success) ) )
-p + geom_histogram( position = 'dodge', binwidth = 1 ) +
-		scale_fill_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
-		ylab("Number of cases") +
-		xlab("All contacts - good contacts ") +
-		ggtitle("Histogram of uncategorised contacts")
-ggsave("badContacts.png")
 
 # plot of nrInRegisterContacts vs nrGoodContacts
 p <-ggplot(data=odata, aes(x=shelxeCC, y=ccmtzRioGood, colour=factor(success) ) )
@@ -380,12 +495,12 @@ p + geom_point() +
 	name="Success/Failure",
 	labels=c("Failure", "Success") ) +
 	xlab("Shelxe CC") +
-	ylab("Good Contacts") +
-	ggtitle("Good contacts vs shelxe CC for non-floating origins")
-ggsave("CCVsInRegister.png")
+	ylab("RIO score") +
+	ggtitle("RIO score vs shelxe CC")
+ggsave("CCVsRIO.png")
 
 #
-# coincident vs unmatched
+# inDensity vs unmatched
 # ronan's idea to divide by number of unmatched
 #
 # facet_grid( ensembleSideChainTreatment ~ .) +
@@ -395,112 +510,171 @@ l = function( variable, value ) {
 		return( c("Failure","Success"))
 	} else if ( variable == "ensembleSideChainTreatment" ) {
 		return( c("All atom","Poly-alanine","SCWRL reliable") )
+	} else if ( variable == "resCat" ) {
+		return( c("res. < 1.5","1.5 < res. < 1.8","1.8 < res. < 2.2","res. > 2.2") )
 	} else {
 		return ("foo")
 	}
 }
 
-#p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts, y=numPlacedAtoms, colour=factor(success) ) )
+# Proportion RIO vs proportion in density
 p <-ggplot(data=odata,
-		aes(x=(ccmtzAaNumContacts/numPlacedAtoms)*100,
-				y=(ccmtzRioGood/numPlacedCA)*100,
+		aes(x=ccmtzAaNumContacts/numAtoms,
+				y=ccmtzRioGood/numResidues,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
+		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success") ) +
-		xlab("Proportion unmatched atoms") +
-		ylab("Proportion unmatched vs matched contacts (< 0.5A)") +
-		ggtitle("Proportion")
-#ggsave("CoincidentVsUnmatched.png")
-#scale_x_continuous( limits=c(0, max(odata$numPlacedAtoms) )  ) +
+		xlab("Proportion  atoms in density (< 0.5A)") +
+		ylab("RIO C-alphas as prop. of native (< 1.5A)") +
+		ggtitle("RIO vs in-density as proportion of native")
+ggsave("inDensityVsRIObyRes.png")
 
 
-
+# Measure of how many correct vs number/proportion misplaced
+# Misplaced atoms of model measured by: numPlacedAtoms - ccmtzAaNumContacts - proportion is (numPlacedAtoms-ccmtzAaNumContacts)/numAtoms
+# Proportion correct measured by: ccmtzAaNumContacts/numAtoms
+#                             or: ccmtzRioGood/numResidues
+# so...
 p <-ggplot(data=odata,
-		aes(x=ccmtzRioGood, y=numPlacedAtoms-ccmtzAaNumContacts,
-				colour=factor(success) ) )
-p + geom_point( size=1 ) +
-		stat_sum( aes(size=..n..)) +
-		facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
-		scale_colour_manual( values=c(fcolour, scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
-		xlab("RIO score (in- + out-of-register)") +
-		ylab("Num non-coincident atoms (< 0.5A)") +
-		ggtitle("Rio score vs unmatched atoms")
-ggsave("RIOVsUnmatched.png")
-
-
-p <-ggplot(data=odata,
-		aes(x=numPlacedAtoms-ccmtzAaNumContacts, y=ccmtzAaNumContacts,
-				colour=factor(success) ) )
-p + geom_point( size=1 ) +
-		stat_sum( aes(size=..n..)) +
-		facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
-		scale_colour_manual( values=c(fcolour, scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
-		xlab("Num unmatched atoms") +
-		ylab("Num contacts (< 0.5A)") +
-		ggtitle("Number of coincident vs unmatched atoms")
-ggsave("coincidentVsUnmatched.png")
-
-p <-ggplot(data=odata, aes(x=ccmtzRioGood/numPlacedCA, y=ccmtzAaNumContacts/numPlacedAtoms, colour=factor(success) ) )
+		aes(x=ccmtzAaNumContacts/numAtoms,
+			y=(numPlacedAtoms-ccmtzAaNumContacts)/numAtoms,
+			colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( ensembleSideChainTreatment ~ success, labeller=l ) +
+		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success") ) +
-		xlab("% RIO score (in- + out-of-register)") +
-		ylab("% contacts (< 0.5A)") +
-		ggtitle("% coincident vs RIO C-alpha")
-ggsave("percentCoincidentVsRIO.png")
+		xlab("Proportion in density (< 0.5A)") +
+		ylab("Proportion outside if density (> 0.5A)") +
+		ggtitle("Proportion placed in- vs out-of-density")
+ggsave("inDensityVsMisplacedProp.png")
+
+p <-ggplot(data=odata,
+		aes(x=ccmtzAaNumContacts,
+				y=numPlacedAtoms-ccmtzAaNumContacts,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( resCat ~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("Num. atoms in density (< 0.5A)") +
+		ylab("Num. out of density (> 0.5A)") +
+		ggtitle("Number placed in- vs out-of-density")
+ggsave("inDensityVsMisplacedNum.png")
 
 
 p <-ggplot(data=odata,
-		aes(x=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms, y=ccmtzAaNumContacts/numPlacedAtoms,
+		aes(x=ccmtzRioGood/numResidues,
+				y=(numPlacedAtoms-ccmtzAaNumContacts)/numAtoms,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
-		stat_sum( aes(size=..n..)) +
-		facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success") ) +
-		xlab("% unmatched atoms") +
-		ylab("% contacts (< 0.5A)") +
-		ggtitle("Percentage coincident vs unmatched atoms")
-ggsave("percentCoincidentVsUnmatched.png")
+		xlab("RIO as proportion of native") +
+		ylab("Num. outside density as prop. native (> 0.5A)") +
+		ggtitle("Out-of-density as prop. of native vs RIO as prop. of native")
+ggsave("correctlyVsMisplacedProp.png")
 
-p <-ggplot(data=odata, aes(x=ccmtzRioGood/numPlacedCA, y=ccmtzAaNumContacts/numPlacedAtoms, colour=factor(success) ) )
+p <-ggplot(data=odata,
+		aes(x=ccmtzRioGood/numResidues,
+				y=numPlacedAtoms-ccmtzAaNumContacts,
+				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( ensembleSideChainTreatment ~ success, labeller=l ) +
+		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success") ) +
-		xlab("% RIO score (in- + out-of-register)") +
-		ylab("% contacts (< 0.5A)") +
-		ggtitle("% coincident vs RIO C-alpha")
-ggsave("percentCoincidentVsRIO.png")
+		xlab("RIO as proportion of native") +
+		ylab("Num. misplaced atoms (> 0.5A)") +
+		ggtitle("RIO as proportion of native vs num. out-of-density")
+ggsave("correctlyVsMisplacedNum.png")
+##
+##
+##
+# Selecting interesting cases
 
-# plot of allContacts against numAtoms
-#	scale_y_continuous( limits=c(0, max( odata$numPlacedAtoms - odata$aoNumContacts , na.rm=TRUE) ) ) +
-#	stat_sum( aes(size = ..n..) ) +
-p <-ggplot(data=odata, aes(x=numPlacedAtoms-ccmtzAaNumContacts, y=ccmtzAaNumContacts, colour=factor(success) ) )
-p + geom_point() +
-	scale_size() +
-	facet_grid( ensembleSideChainTreatment ~ .) +
-	scale_colour_manual( values=c(fcolour, scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
-	xlab("Num. unmatched atoms") +
-	ylab("All contacts (< 0.5A)") +
-	ggtitle("Num coincident vs unmatched atoms")
-ggsave("coindicentVsUnmatched.png")
+
+#p <-ggplot(data=odata,
+#		aes(x=numPlacedAtoms-ccmtzAaNumContacts, y=ccmtzAaNumContacts,
+#				colour=factor(success) ) )
+#p + geom_point( size=1 ) +
+#		stat_sum( aes(size=..n..)) +
+#		#facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
+#		facet_grid( resCat ~ success, labeller=l) +
+#		scale_colour_manual( values=c(fcolour, scolour),
+#				name="Success/Failure",
+#				labels=c("Failure", "Success") ) +
+#		xlab("Num unmatched atoms") +
+#		ylab("Num contacts (< 0.5A)") +
+#		ggtitle("Number of coincident vs unmatched atoms")
+#ggsave("coincidentVsUnmatchedRes.png")
+#
+## plot of allContacts against numAtoms
+##	scale_y_continuous( limits=c(0, max( odata$numPlacedAtoms - odata$aoNumContacts , na.rm=TRUE) ) ) +
+##	stat_sum( aes(size = ..n..) ) +
+#p + geom_point() +
+#		scale_size() +
+#		#facet_grid( ensembleSideChainTreatment ~ .) +
+#		facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
+#		scale_colour_manual( values=c(fcolour, scolour),
+#				name="Success/Failure",
+#				labels=c("Failure", "Success") ) +
+#		xlab("Num. unmatched atoms") +
+#		ylab("All contacts (< 0.5A)") +
+#		ggtitle("Num coincident vs unmatched atoms")
+#ggsave("coincidentVsUnmatchedResSideChain.png")
+#
+#p <-ggplot(data=odata, aes(x=ccmtzRioGood/numPlacedCA, y=ccmtzAaNumContacts/numPlacedAtoms, colour=factor(success) ) )
+#p + geom_point( size=1 ) +
+#		stat_sum( aes(size=..n..) ) +
+#		facet_grid( ensembleSideChainTreatment ~ success, labeller=l ) +
+#		scale_colour_manual( values=c(fcolour, scolour),
+#				name="Success/Failure",
+#				labels=c("Failure", "Success") ) +
+#		xlab("% RIO score (in- + out-of-register)") +
+#		ylab("% contacts (< 0.5A)") +
+#		ggtitle("% coincident vs RIO C-alpha")
+#ggsave("percentCoincidentVsRIO.png")
+#
+#
+#p <-ggplot(data=odata,
+#		aes(x=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms, y=ccmtzAaNumContacts/numPlacedAtoms,
+#				colour=factor(success) ) )
+#p + geom_point( size=1 ) +
+#		stat_sum( aes(size=..n..)) +
+#		facet_grid( ensembleSideChainTreatment ~ success, labeller=l) +
+#		scale_colour_manual( values=c(fcolour, scolour),
+#				name="Success/Failure",
+#				labels=c("Failure", "Success") ) +
+#		xlab("% unmatched atoms") +
+#		ylab("% contacts (< 0.5A)") +
+#		ggtitle("Percentage coincident vs unmatched atoms")
+#ggsave("percentCoincidentVsUnmatched.png")
+#
+#p <-ggplot(data=odata, aes(x=ccmtzRioGood/numPlacedCA, y=ccmtzAaNumContacts/numPlacedAtoms, colour=factor(success) ) )
+#p + geom_point( size=1 ) +
+#		stat_sum( aes(size=..n..) ) +
+#		facet_grid( ensembleSideChainTreatment ~ success, labeller=l ) +
+#		scale_colour_manual( values=c(fcolour, scolour),
+#				name="Success/Failure",
+#				labels=c("Failure", "Success") ) +
+#		xlab("% RIO score (in- + out-of-register)") +
+#		ylab("% contacts (< 0.5A)") +
+#		ggtitle("% coincident vs RIO C-alpha")
+#ggsave("percentCoincidentVsRIO.png")
+
+
 
 ###############################################################################################################################
 #
