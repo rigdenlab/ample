@@ -549,10 +549,42 @@ p + geom_point( size=1 ) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success") ) +
-		xlab("Proportion in density (< 0.5A)") +
-		ylab("Proportion outside if density (> 0.5A)") +
-		ggtitle("Proportion placed in- vs out-of-density")
-ggsave("inDensityVsMisplacedProp.png")
+		xlab("Atoms in density as prop. of native (< 0.5A)") +
+		ylab("Atoms outside of density as prop. of native (> 0.5A)") +
+		ggtitle("In- vs out-of-density as prop. of native")
+ggsave("inDensityVsMisplacedPropNative.png")
+
+p <-ggplot(data=odata,
+		aes(x=ccmtzAaNumContacts/numPlacedAtoms,
+				y=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( resCat ~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("Atoms in density as prop. of model (< 0.5A)") +
+		ylab("Atoms outside of density as prop. of model (> 0.5A)") +
+		ggtitle("In- vs out-of-density as prop. of model")
+ggsave("inDensityVsMisplacedPropModel.png")
+
+# Number outside of density as proportion of model shows negative signal as proportion of the input signal
+# Number in density shows what actually matched
+p <-ggplot(data=odata,
+		aes(x=ccmtzAaNumContacts/numAtoms,
+				y=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( resCat ~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("Atoms in density as prop. of native (< 0.5A)") +
+		ylab("Atoms outside of density as prop. of model (> 0.5A)") +
+		ggtitle("In- vs out-of-density as native/model")
+ggsave("inDensityVsMisplacedPropBoth.png")
 
 p <-ggplot(data=odata,
 		aes(x=ccmtzAaNumContacts,
@@ -587,6 +619,21 @@ ggsave("correctlyVsMisplacedProp.png")
 
 p <-ggplot(data=odata,
 		aes(x=ccmtzRioGood/numResidues,
+				y=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( resCat ~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("RIO as proportion of native") +
+		ylab("Num. outside density as prop. model (> 0.5A)") +
+		ggtitle("Out-of-density as prop. of model vs RIO as prop. of native")
+ggsave("correctlyVsMisplacedPropModel.png")
+
+p <-ggplot(data=odata,
+		aes(x=ccmtzRioGood/numResidues,
 				y=numPlacedAtoms-ccmtzAaNumContacts,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
@@ -603,7 +650,10 @@ ggsave("correctlyVsMisplacedNum.png")
 ##
 ##
 # Selecting interesting cases
-
+# Successes with RIO == 0
+# odata[ odata$ccmtzRioGood == 0 & odata$success == 1, c("pdbCode","ensembleName") ]
+# Failures with RIO as prop of native > 0.5
+# odata[ odata$ccmtzRioGood/odata$numResidues > 0.5 & odata$success == 0, c("pdbCode","ensembleName") ]
 
 #p <-ggplot(data=odata,
 #		aes(x=numPlacedAtoms-ccmtzAaNumContacts, y=ccmtzAaNumContacts,
