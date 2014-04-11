@@ -17,9 +17,7 @@ os.chdir(workdir)
 
 sfail = "/home/jmht/Documents/work/CC/ensemble_results/single.fail"
 
-
 d = [ tuple(line.strip().split()) for line in open(sfail) ]
-
 for pdbCode, ensembleName in d:
     
     # Need to extract the column labels for the mtz file - use the old script
@@ -54,9 +52,9 @@ for pdbCode, ensembleName in d:
     
     
     # Create the directory for the files
-    jobDir = os.path.join( workdir,"{0}_{1}",format(pdbCode,ensembleName))
+    #jobDir = os.path.join( workdir,"{0}_{1}".format(pdbCode,ensembleName))
+    jobDir = os.path.join( workdir,"{0}".format(pdbCode))
     os.mkdir(jobDir)
-    sys.exit()
     
     # Copy files in
     ofasta = os.path.join( ensembleDir, pdbCode, "{0}_1.fasta".format( pdbCode ) )
@@ -75,7 +73,7 @@ for pdbCode, ensembleName in d:
                                  "ROSETTA_MR_0/ensembles_1",
                                  ensembleName+".pdb" 
                                  )
-    modelIds = split_models.split_pdb( ensembleFile )
+    modelIds = split_models.split_pdb( ensembleFile, directory=jobDir )
     
     #
     # Create scripts to run them all
@@ -86,7 +84,6 @@ for pdbCode, ensembleName in d:
     
         newScript = os.path.join( jobDir, "{0}.sub".format( ename ) )
         stext = """#!/bin/bash
-
 
 # Set up SGE variables
 #$ -j y
@@ -150,6 +147,6 @@ popd
         with open( newScript, 'w') as f:
             f.write(stext )
 
-    break
+    #break
 
     
