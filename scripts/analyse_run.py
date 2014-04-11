@@ -1254,7 +1254,8 @@ if __name__ == "__main__":
     CLUSTERNUM=0
     #dataRoot = "/Users/jmht/Documents/AMPLE/data"
     dataRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run1"
-    mrRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run2"
+    #mrRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run2"
+    mrRoot = "/media/data/shared/coiled-coils/single_model/single_model.run2"
     
     rundir = os.getcwd()
     os.chdir( rundir )
@@ -1268,7 +1269,7 @@ if __name__ == "__main__":
     
     for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbCode in sorted( resultsDict.keys() ):
-    #for pdbCode in [ "1ENV" ]:
+    #for pdbCode in [ "1BYZ" ]:
         
         workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
@@ -1298,6 +1299,9 @@ if __name__ == "__main__":
         pdbedit = pdb_edit.PDBEdit()
         nativePdbInfo = pdbedit.get_info( nativePdb )
         
+        # number atoms/residues
+        natoms, nresidues = pdb_edit.PDBEdit().num_atoms_and_residues(nativePdb)
+        
         # First check if the native has > 1 model and extract the first if so
         if len( nativePdbInfo.models ) > 1:
             print "nativePdb has > 1 model - using first"
@@ -1312,9 +1316,6 @@ if __name__ == "__main__":
         
         # Get the new Info about the native
         nativePdbInfo = pdbedit.get_info( nativePdb )
-        
-        # number atoms/residues
-        natoms, nresidues = pdb_edit.PDBEdit().num_atoms_and_residues(nativePdb)
         
         # Get information on the origins for this spaceGroup
         originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
@@ -1362,9 +1363,11 @@ if __name__ == "__main__":
             mrbumpDir = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1")
         else:
             mrbumpDir = os.path.join( mrRoot, pdbCode )
+            
         if pickledResults:
             results = resultsDict[ pdbCode ]
         else:
+            print "RESULTS FROM ",mrbumpDir
             r = mrbump_results.ResultsSummary()
             r.extractResults( mrbumpDir )
             results = r.results
