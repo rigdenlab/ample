@@ -156,9 +156,7 @@ class ResultsSummary(object):
         for ensemble in ensembles:
 
             # Check job directory
-            #jobDir = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
-            print "JENS CHANGE HERE"
-            jobDir = os.path.join( mrbumpDir, 'search_'+ensemble )
+            jobDir = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
             if not os.path.isdir(jobDir):
                 self.logger.critical("Missing job directory: {0}".format( jobDir ) )
                 failed[ ensemble ] = "no_job_directory"
