@@ -124,13 +124,14 @@ class ResultsSummary(object):
         if os.path.isfile( shelxeLog ):
             
             shelxeP = shelxe_log.ShelxeLogParser( shelxeLog )
-            print result.shelxCC
-            print shelxeP.CC
             #assert result.shelxCC == shelxeP.CC,"Mismatching ShelxeCC scores"
             result.shelxeAvgChainLength = shelxeP.avgChainLength
             #result.shelxeLog = shelxeLog
             #result.shelxeMaxChainLength = shelxeP.maxChainLength
             #result.shelxeNumChains= shelxeP.numChains
+
+            # Another horrible hack - add the title to the header
+            result.header.append('SHELXE_Avg_Chain')
 
         return
 
@@ -155,7 +156,9 @@ class ResultsSummary(object):
         for ensemble in ensembles:
 
             # Check job directory
-            jobDir = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
+            #jobDir = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
+            print "JENS CHANGE HERE"
+            jobDir = os.path.join( mrbumpDir, 'search_'+ensemble )
             if not os.path.isdir(jobDir):
                 self.logger.critical("Missing job directory: {0}".format( jobDir ) )
                 failed[ ensemble ] = "no_job_directory"
@@ -345,11 +348,15 @@ class ResultsSummary(object):
         resultsTable = []
         
         #Header
-        resultsTable.append( self.results[0].header )
+        # The best result may have more info (e.g. shelxe info) aso we use this to 
+        # work out what data we should present
+        topHeader = self.results[0].header
+        resultsTable.append( topHeader )
         
         for result in self.results:
             resultLine = []
-            for h in result.header:
+            #for h in result.header:
+            for h in topHeader:
                 resultLine.append( getattr( result, self.title2attr[h] ) )
             resultsTable.append( resultLine )
 
