@@ -149,7 +149,8 @@ class AmpleOptions(object):
                         'Bucc_final_Rfree' :'buccRfree',
                         'ARP_final_Rfact' : 'arpWarpRfact',
                         'ARP_final_Rfree' :'arpWarpRfree',
-                        'SHELXE_CC' : 'shelxCC' 
+                        'SHELXE_CC' : 'shelxCC',
+                        'SHELXE_Avg_Chain' : 'shelxeAvgChainLength',
                     }
         
         
@@ -213,7 +214,7 @@ class AmpleOptions(object):
             
             # Show where it happened
             summary += '\nBest results so far are in directory:\n\n'
-            summary +=  best.resultDir
+            summary +=  best.mrDir
         
         return summary
         

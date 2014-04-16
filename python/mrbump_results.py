@@ -13,8 +13,9 @@ if __name__ == "__main__":
 
 
 # Our imports
+import parse_buccaneer
+import parse_shelxe
 import printTable
-import shelxe_log
 
 class MrBumpResult(object):
     """
@@ -40,8 +41,13 @@ class MrBumpResult(object):
         self.arpWarpRfree = 1.0
         self.shelxCC = -1.0
         self.shelxeAvgChainLength = -1.0
+        # Buccaneer scores after final rebuild
+        self.buccFinalRfact = 1.0
+        self.buccFinalRfree  = 1.0
         
         self.header = [] # The header format for this table
+        
+        return
         
     def __str__(self):
         """List the data attributes of this object"""
@@ -105,6 +111,28 @@ class ResultsSummary(object):
         self.logger.debug("Added {0} MRBUMP result failures".format(count) )
         return
     
+    def addBuccaneerResult(self, result ):
+        """Add the buccaneer rebuild information to the result"""
+
+
+        buccaneerPdb = os.path.join( result.mrDir,
+                                     "build/shelxe/rebuild/build",
+                                     "buccSX_output.pdb" )
+        buccaneerLog = os.path.join( result.mrDir,
+                                     "build/shelxe/rebuild/build",
+                                     "buccaneer.log" )
+        
+        bp = parse_buccaneer.BuccaneerLogParser()
+        if os.path.isfile( buccaneerLog ):
+            bp.parse( buccaneerLog )
+            result.buccFinalRfree = bp.finalRfree
+            result.buccFinalRfact = bp.finalRfact
+        
+        if os.path.isfile( buccaneerPdb ):
+            result.buccaneerPdb = buccaneerPdb
+
+        return
+
     def addShelxeResult(self, result ):
         """Add the shelxe information to the result"""
         
@@ -122,18 +150,18 @@ class ResultsSummary(object):
                                   "shelxe_run.log" )
         
         if os.path.isfile( shelxeLog ):
-            
-            shelxeP = shelxe_log.ShelxeLogParser( shelxeLog )
+            shelxeP = parse_shelxe.ShelxeLogParser( shelxeLog )
             #assert result.shelxCC == shelxeP.CC,"Mismatching ShelxeCC scores"
             result.shelxeAvgChainLength = shelxeP.avgChainLength
-            #result.shelxeLog = shelxeLog
-            #result.shelxeMaxChainLength = shelxeP.maxChainLength
-            #result.shelxeNumChains= shelxeP.numChains
+            result.shelxeLog            = shelxeLog
+            result.shelxeMaxChainLength = shelxeP.maxChainLength
+            result.shelxeNumChains      = shelxeP.numChains
 
             # Another horrible hack - add the title to the header
             result.header.append('SHELXE_Avg_Chain')
 
         return
+
 
     def extractResults( self, mrbumpDir ):
         """
@@ -297,6 +325,9 @@ class ResultsSummary(object):
             
             # Add the information from Shelxe
             self.addShelxeResult( result )
+            
+            # Add the information from Buccaneer rebuild of the Shelxe trace
+            self.addBuccaneerResult( result )
             
             results.append( result )
             
