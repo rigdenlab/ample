@@ -9,7 +9,7 @@ import logging
 import os
 import sys
 
-import iotbx.cif
+from iotbx.cif import reader as cif_reader
 
 class CifParser(object):
     """Class for manipulating CIF files."""
@@ -31,7 +31,7 @@ class CifParser(object):
         self.reflnStatus   = False
         self.hasAmplitudes = False
         
-        cifObject = iotbx.cif.reader(file_path=cifFile).model()
+        cifObject = cif_reader(file_path=cifFile).model()
         
         # For now assume only one dataSet
         assert len(cifObject.keys()) == 1,"More than one data set in sf_cif - not sure what to do!"
