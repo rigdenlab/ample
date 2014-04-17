@@ -48,11 +48,11 @@ class MTZ_parse:
             FreeR_flag = self.FreeR_flag
         
         # Need something to check...
-        if self.FreeR_flag is None or len(self.FreeR_flag) == 0:
+        if FreeR_flag is None or len(FreeR_flag) == 0:
             return False
         
         # Make sure its there
-        if self.FreeR_flag not in self.col_labels:
+        if FreeR_flag not in self.col_labels:
             return False
         
         # We search for the file statistics and check that the min and max rfree values
@@ -76,13 +76,13 @@ class MTZ_parse:
         try:
             for line in self.log[start:]:
                 tokens = line.split()
-                if tokens[11] == self.FreeR_flag:
+                if tokens[11] == FreeR_flag:
                     minf = float(tokens[2])
                     maxf = float(tokens[3])
                     if minf != maxf:
                         return True
                     break
-        except:
+        except Exception,e:
             sys.stdout.write("Warning: error checking FreeR_valid in input MTZ file\n")
             sys.stdout.write("\n")
             
@@ -152,7 +152,7 @@ class MTZ_parse:
             if i == "I":
                 FreeR_flag=self.col_labels[count]
                 # Check this Rfree is valid
-                if checkRFREE(FreeR_flag=FreeR_flag):
+                if self.checkRFREE(FreeR_flag=FreeR_flag):
                     self.FreeR_flag=FreeR_flag
                     break
             count=count+1

@@ -99,7 +99,7 @@ def filename_append( filename=None, astr=None,directory=None, separator="_",  ):
     dirname, fname = os.path.split( filename )
     name, suffix = os.path.splitext( fname )
     name  =  name + separator + astr + suffix
-    if not directory:
+    if directory is None:
         directory = dirname
     return os.path.join( directory, name )
 
@@ -253,13 +253,13 @@ def processReflectionFile( amoptd ):
     if not mtzp.checkRFREE(FreeR_flag=amoptd['FREE']):
         # If not run uniqueify
         logging.warning("Cannot find a valid FREE flag - running uniquefy to generate column with RFREE data." )
-        amoptd['mtz'] = uniqueify( amoptd['mtz'] )
+        amoptd['mtz'] = uniqueify( amoptd['mtz'], directory=amoptd['work_dir'] )
         
         # Check file and get new FREE flag
         mtzp.run_mtzdmp( amoptd['mtz'] )
         amoptd['FREE']  = mtzp.FreeR_flag
         
-        # possibly unnecessary check
+        # hopefully unnecessary check
         assert mtzp.checkRFREE(FreeR_flag=amoptd['FREE'])
     
     return True
@@ -366,10 +366,10 @@ def tmpFileName():
     t.close()
     return tmp1
 
-def uniqueify(mtzPath):
+def uniqueify(mtzPath,directory=None):
     """Run uniqueify on mtz file to generate RFREE data column"""
     
-    mtzUnique = filename_append(mtzPath, "uniqueify")
+    mtzUnique = filename_append(mtzPath, "uniqueify", directory=directory)
     
     cmd = ['uniqueify', mtzPath, mtzUnique]
     
