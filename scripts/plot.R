@@ -4,18 +4,26 @@ library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
 #setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
-data <- read.table(file="results_natoms.csv",sep=',', header=T)
+data <- read.table(file="/home/jmht/Documents/work/CC/all_results/results_all.csv",sep=',', header=T)
 #data <- read.table(file="results.csv",sep=',', header=T)
 
 # Categorise successes
-#data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
-data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 & data$buccFinalRfree < 0.5  )
+data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
+#data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 & data$buccFinalRfree < 0.5  )
 data$success <- replace( data$success, is.na(data$success), 0 )
 
-# Need to remove nolog values from buccFinalRfree
-# Horrible hack to get Rfree back to a number...
-data$buccFinalRfree[ data$buccFinalRfree == "nolog" ] <- NA
-data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
+# single-model success
+data$single_model_success <- as.numeric( data$single_model_shelxeCC >= 25 & data$single_model_shelxeAvgChainLength >= 10 )
+data$single_model_success <- replace( data$single_model_success, is.na(data$single_model_success), 0 )
+
+# helix success
+data$helix_success <- as.numeric( data$helix_shelxeCC >= 25 & data$helix_shelxeAvgChainLength >= 10 )
+data$helix_success <- replace( data$helix_success, is.na(data$helix_success), 0 )
+
+## Need to remove nolog values from buccFinalRfree
+## Horrible hack to get Rfree back to a number...
+#data$buccFinalRfree[ data$buccFinalRfree == "nolog" ] <- NA
+#data$buccFinalRfree <- as.numeric( as.character(data$buccFinalRfree) )
 
 # Calculate number of copies of decoy that were placed
 data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
@@ -38,6 +46,12 @@ pdbAll <- unique( data$pdbCode )
 sprintf("Len all PDBs %s", length(pdbAll) )
 pdbSuccess <- unique( data[ data$success==1, ]$pdbCode )
 sprintf("Len success PDBs %s", length(pdbSuccess) )
+
+smSuccess <- unique( data[ data$single_model_success==1, ]$pdbCode )
+sprintf("Len single-model success PDBs %s", length(smSuccess) )
+
+hSuccess <- unique( data[ data$helix_success==1, ]$pdbCode )
+sprintf("Len helix success PDBs %s", length(hSuccess) )
 
 # Failures
 #setdiff( pdbAll, pdbSuccess )
@@ -67,8 +81,6 @@ min( data$ensembleNumModels ) # 2
 # Most frequent number of models in a succesful ensemble
 median( data[ data$success == 1, ]$ensembleNumResidues ) # 27
 median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
-
-
 
 #
 # Summary table
@@ -101,6 +113,13 @@ x["successAllAtom"]  <- aggregate(
 		data[ data$ensembleSideChain == "All_atom", ]$success,
 		by=list( data[ data$ensembleSideChain == "All_atom", ]$pdbCode ),
 		FUN=function(x){ sum( x == 1 ) } )[2]
+
+# ADD SINGLE MODEL AND HELIX
+x["successfulSingleModel"] <- aggregate( data$single_model_success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x$successfulSingleModel[ x$successfulSingleModel >= 1 ] <- 1
+x["successfulHelix"] <- aggregate( data$helix_success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x$successfulHelix[ x$successfulHelix >= 1 ] <- 1
+
 # NB LOOK AT REORDER
 summary <- x[ order( x$success, decreasing=TRUE ), ]
 write.csv(summary, "summary.csv", row.names=FALSE)
