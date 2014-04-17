@@ -93,6 +93,7 @@ class RosettaModel(object):
         self.seeds = None
         
         # Extra options
+        self.psipred_ss2 = None
         self.domain_termini_distance = None
         self.rad_gyr_reweight = None
         self.improve_template = None
@@ -366,6 +367,8 @@ class RosettaModel(object):
                      "-abinitio::rsd_wt_loop", "0.5",
                      "-use_filters", "true" ]
             
+            if self.psipred_ss2: # not sure if this works < 3.4
+                cmd += [ "-psipred_ss2", self.psipred_ss2 ]
             
         if self.all_atom:
             cmd += [ '-return_full_atom true', ]
@@ -540,6 +543,10 @@ class RosettaModel(object):
         self.fasta = optd['fasta']
         self.work_dir = optd['work_dir']
         self.name = optd['name']
+        
+        # psipred secondary structure prediction
+        if os.path.isfile( optd['psipred_ss2'] ):
+            self.psipred_ss2 = optd['psipred_ss2']
         
         # Fragment variables
         self.fragments_exe = optd['rosetta_fragments_exe']
