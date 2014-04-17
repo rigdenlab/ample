@@ -83,7 +83,7 @@ class MTZ_parse:
                         return True
                     break
         except:
-            sys.stdout.write("Warning: error checking FreeR_valud in input MTZ file\n")
+            sys.stdout.write("Warning: error checking FreeR_valid in input MTZ file\n")
             sys.stdout.write("\n")
             
         return False
@@ -150,8 +150,11 @@ class MTZ_parse:
             sys.stdout.write("\n")
         for i in self.col_types:
             if i == "I":
-                self.FreeR_flag=self.col_labels[count]
-                break
+                FreeR_flag=self.col_labels[count]
+                # Check this Rfree is valid
+                if checkRFREE(FreeR_flag=FreeR_flag):
+                    self.FreeR_flag=FreeR_flag
+                    break
             count=count+1
         
         return
