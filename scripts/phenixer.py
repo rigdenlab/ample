@@ -5,6 +5,7 @@ Created on 5 Mar 2014
 '''
 
 import os
+import shutil
 import sys
 sys.path.append("/opt/ample-dev1/python")
 
@@ -40,6 +41,17 @@ END
 def ccmtzOrigin( nativeMap, mrPdb  ):
     """Use the phenix get_cc_mtz_pdb script to determine the origin of a MR pdb using the supplied map"""
     
+    # resolve can only handle file names < 75 characters so we need to truncate
+    # We copy the file rather than symlink so that this works on windows and then delete afterwards
+    tempnam=None
+    if len( os.path.basename(mrPdb) ) >= 75:
+        tempnam = os.tempnam()
+        # Need to add .pdb extension or it doesn't work
+        tempnam += ".pdb"
+        assert len(tempnam) < 75
+        shutil.copy( mrPdb, tempnam )
+        mrPdb = tempnam
+    
     cmd = [ "phenix.get_cc_mtz_pdb", nativeMap, mrPdb ]
     ret = ample_util.run_command(cmd=cmd, logfile="get_cc_mtz_pdb.log", dolog=False )
     assert ret == 0, "phenix.get_cc_mtz_pdb refmac failed!"
@@ -51,6 +63,10 @@ def ccmtzOrigin( nativeMap, mrPdb  ):
     t = line.split()
     assert t[0] == "OFFSET"
     origin = [ float( t[1] ) * -1, float( t[2] ) * -1, float( t[3] ) * -1 ]
+    
+    # remove temp file if we created it
+    if tempnam:
+        os.unlink(tempnam)
     
     return origin
 
