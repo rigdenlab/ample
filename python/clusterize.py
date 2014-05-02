@@ -410,6 +410,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             sh += '#$ -cwd\n'
             sh += '#$ -w e\n'
             sh += '#$ -V\n'
+            sh += '#$ -S /bin/bash\n'
             sh += '#$ -o {0}\n'.format(logFile) 
             sh += '#$ -N {0}\n\n'.format(jobName)
         elif self.QTYPE=="LSF":
@@ -429,6 +430,9 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             sh += '#BSUB -J {0}\n\n'.format(jobName)         
         else:
             raise RuntimeError,"Unrecognised QTYPE: {0}".format(self.QTYPE)
+        
+        # Make sure the CCP4 scratch directory is available
+        sh += '[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n'
         
         return sh+'\n\n'
     
