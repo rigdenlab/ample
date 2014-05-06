@@ -16,7 +16,7 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     """
     
     mrs = ""
-    mrs+='mrbump HKLIN {0} SEQIN {1} HKLOUT OUT.mtz  XYZOUT OUT.pdb << eof\n'.format( adict['mtz'], adict['fasta'] )
+    mrs+='mrbump HKLIN {0} SEQIN {1} HKLOUT OUT.mtz  XYZOUT OUT.pdb << eof\n'.format( adict['mtz'], adict['mr_sequence'] )
     mrs+='LABIN SIGF={0} F={1} FreeR_flag={2}\n'.format( adict['SIGF'], adict['F'], adict['FREE'] )
     mrs+='JOBID {0}_mrbump\n'.format( jobid )
     #mrs+='MRPROGRAM {0}\n'.format( adict['mrbump_programs'] )

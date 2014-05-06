@@ -108,6 +108,9 @@ parser.add_argument('-ensembles_dir', type=str, nargs=1,
 parser.add_argument('-fasta', type=str, nargs=1, required=True,
                    help='protein fasta file. (required)')
 
+parser.add_argument('-mr_sequence', type=str, nargs=1,
+                   help="sequence file for crystal content (if different from what's given by -fasta)")
+
 parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
                    help='Flag for F column in the MTZ file')
 
@@ -359,6 +362,15 @@ amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
 #
 # FASTA processing
 #
+# Check to see if mr_sequence was given and if not mr_sequence defaults to fasta
+if amopt.d['mr_sequence'] != None:
+    if not ( os.path.exists( str(amopt.d['mr_sequence']) )):
+        msg = 'Cannot find mr sequence file: {0}'.format( amopt.d['mr_sequence'] )
+        logger.critical(msg)
+        sys.exit(1)
+else:
+    amopt.d['mr_sequence']=amopt.d['fasta']
+
 # Check we can find the input fasta
 if not ( os.path.exists( str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d['NMR_remodel_fasta'] ) ) ):
     msg = 'Cannot find fasta file: {0}'.format( amopt.d['fasta'] )
