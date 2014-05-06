@@ -545,7 +545,7 @@ class RosettaModel(object):
         self.name = optd['name']
         
         # psipred secondary structure prediction
-        if os.path.isfile( optd['psipred_ss2'] ):
+        if optd['psipred_ss2'] is not None and os.path.isfile( optd['psipred_ss2'] ):
             self.psipred_ss2 = optd['psipred_ss2']
         
         # Fragment variables
