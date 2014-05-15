@@ -80,7 +80,7 @@ import unittest
 sys.path.insert(0,"/opt/ample-dev1/python")
 
 import ample_util
-import buccaneer
+import parse_buccaneer
 import contacts
 import csymmatch
 import dssp
@@ -92,7 +92,7 @@ import phaser_parser
 import phenixer
 import reforigin
 import residue_map
-import shelxe_log
+import parse_shelxe
 
 class AmpleResult(object):
     """Results for an ample solution"""
@@ -161,6 +161,8 @@ class AmpleResult(object):
                               'solution',
                               'buccFinalRfact',
                               'buccFinalRfree',
+                              'arpWarpFinalRfact',
+                              'arpWarpFinalRfree',
                               'shelxeCC',
                               'shelxeAvgChainLength',
                               'shelxeMaxChainLength',
@@ -229,6 +231,8 @@ class AmpleResult(object):
                                 "Solution",
                                 'buccFinalRfact',
                                 'buccFinalRfree',
+                                'arpWarpFinalRfact',
+                                'arpWarpFinalRfree',
                                 "Shelxe CC",
                                 "Shelxe avg. chain length",
                                 "Shelxe max. chain length",
@@ -809,7 +813,7 @@ class Test(unittest.TestCase):
         logfile = "/media/data/shared/TM/2BHW/ROSETTA_MR_0/MRBUMP/cluster_1/search_poly_ala_trunc_9.355791_rad_3_molrep_mrbump/" + \
         "data/loc0_ALL_poly_ala_trunc_9.355791_rad_3/unmod/mr/molrep/build/shelxe/shelxe_run.log"
         
-        p = shelxe_log.ShelxeLogParser( logfile )
+        p = parse_shelxe.ShelxeLogParser( logfile )
         self.assertEqual(37.26, p.CC)
         self.assertEqual(7, p.avgChainLength)
         self.assertEqual(9, p.maxChainLength)
@@ -896,7 +900,7 @@ def processMrbump( mrbumpResult ):
     shelxeLog = os.path.join( mrDir, "build/shelxe/shelxe_run.log" )
     if os.path.isfile( shelxeLog ):
         mrbumpResult.shelxeLog = shelxeLog
-        shelxeP = shelxe_log.ShelxeLogParser( shelxeLog )
+        shelxeP = parse_shelxe.ShelxeLogParser( shelxeLog )
         mrbumpResult.shelxeCC = shelxeP.CC
         mrbumpResult.shelxeAvgChainLength = shelxeP.avgChainLength
         mrbumpResult.shelxeMaxChainLength = shelxeP.maxChainLength
@@ -910,9 +914,9 @@ def processMrbump( mrbumpResult ):
                                  "buccSX_output.pdb" )
     buccaneerLog = os.path.join( mrDir,
                                  "build/shelxe/rebuild/build",
-                                 "buccaneer.log" )
+                                 "parse_buccaneer.log" )
     
-    bp = buccaneer.BuccaneerLogParser()
+    bp = parse_buccaneer.BuccaneerLogParser()
     if os.path.isfile( buccaneerLog ):
         bp.parse( buccaneerLog )
         mrbumpResult.buccFinalRfree = bp.finalRfree
@@ -1019,7 +1023,7 @@ def analyseSolution( ampleResult=None,
                                                  origin=ccmtzOrigin,
                                                  workdir=workdir  )
 
-    # Wrap buccaneer model onto native
+    # Wrap parse_buccaneer model onto native
     if not ampleResult.buccaneerPdb is None and os.path.isfile( ampleResult.buccaneerPdb ):
         # Need to rename Pdb as is just called buccSX_output.pdb
         csymmatchPdb = os.path.join( workdir, "buccaneer_{0}_csymmatch.pdb".format( ampleResult.ensembleName ) )
