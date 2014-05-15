@@ -1271,9 +1271,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    for pdbCode in [ l.strip() for l in open( os.path.join( dataRoot, "dirs.list") ) if not l.startswith("#") ]:
+    #for pdbCode in [ l.strip() for l in open( os.path.join( mrRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbCode in sorted( resultsDict.keys() ):
-    #for pdbCode in [ "1BYZ" ]:
+    for pdbCode in [ "1MI7" ]:
         
         workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
@@ -1284,10 +1284,11 @@ if __name__ == "__main__":
         
         # Directory where all the data for this run live
         dataDir = os.path.join( dataRoot, pdbCode )
+        mrDir = os.path.join( mrRoot, pdbCode )
         
         # Get the path to the original pickle file
         # Hack - ampleDict is stored with first run
-        pfile = os.path.join( dataDir, "ROSETTA_MR_0/resultsd.pkl")
+        pfile = os.path.join( mrDir, "ROSETTA_MR_0/resultsd.pkl")
         with open( pfile ) as f:
             ampleDict = cPickle.load( f  )
     
@@ -1335,7 +1336,8 @@ if __name__ == "__main__":
             nativeAs1Chain = nativePdbInfo.pdb
         
         # Get hold of a full model so we can do the mapping of residues
-        refModelPdb = os.path.join( dataDir, "models/S_00000001.pdb".format( pdbCode ) )
+        modelsDir = os.path.join( mrDir, "models")
+        refModelPdb = os.path.join( modelsDir, "S_00000001.pdb" )
         resSeqMap = residue_map.residueSequenceMap()
         refModelPdbInfo = pdbedit.get_info( refModelPdb )
         resSeqMap.fromInfo( refInfo=refModelPdbInfo,
@@ -1344,29 +1346,26 @@ if __name__ == "__main__":
                             targetChainID=nativePdbInfo.models[0].chains[0]
                           )
         
-        
         # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
         # requires a separate run to generate total RMSD
-        modelsDirectory = os.path.join( dataDir, "models")
-        scoreP = RosettaScoreParser( modelsDirectory )
+        scoreP = RosettaScoreParser( modelsDir )
         maxComp = maxcluster.Maxcluster()
         maxComp.compareDirectory( nativePdbInfo=nativePdbInfo,
                                   resSeqMap=resSeqMap,
-                                  modelsDirectory=modelsDirectory,
+                                  modelsDirectory=modelsDir,
                                   workdir=workdir )
         
         # Secondary Structure assignments
-        #sam_file = os.path.join( dataDir, "fragments/t001_.rdb_ss2"  )
         psipred_file = os.path.join( dataDir, "fragments/t001_.psipred_ss2"  )
         psipredP = PsipredParser( psipred_file )
-        dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode  )  )
+        dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode ) )
         dsspP = dssp.DsspParser( dsspLog )
         
-        # Loop over each result
-        if dataDir == mrRoot:
-            mrbumpDir = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1")
-        else:
-            mrbumpDir = os.path.join( mrRoot, pdbCode )
+#         # Loop over each result
+#         if dataDir == mrRoot:
+#         else:
+#             mrbumpDir = os.path.join( mrRoot, pdbCode )
+        mrbumpDir = os.path.join( mrDir, "ROSETTA_MR_0/MRBUMP/cluster_1")
             
         if pickledResults:
             results = resultsDict[ pdbCode ]
