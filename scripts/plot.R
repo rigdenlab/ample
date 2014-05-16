@@ -1,24 +1,37 @@
-
-
 library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
-#setwd("/Users/jmht/Documents/AMPLE/data/coiled-coils/ensemble")
-data <- read.table(file="/home/jmht/Documents/work/CC/all_results/results_all.csv",sep=',', header=T)
+#data <- read.table(file="results_all_arpwarp.csv",sep=',', header=T)
+data <- read.table(file="results_bucc.csv",sep=',', header=T)
 #data <- read.table(file="results.csv",sep=',', header=T)
 
 # Categorise successes
-data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
-#data$success <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 & data$buccFinalRfree < 0.5  )
+data$successShelxe <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
+data$successShelxe <- replace( data$successShelxe, is.na(data$successShelxe), 0 )
+
+# Definition of success where at least one rebuild worked 
+data$successRebuild <- as.numeric( data$arpWarpFinalRfree <= 0.45 | data$buccFinalRfree <= 0.45 )
+data$successRebuild <- replace( data$successRebuild, is.na(data$successRebuild), 0 )
+
+# Data where MR seemingly worked according to refmac rfree
+data$successRefmac <- as.numeric( data$rfree <= 0.45 )
+data$successRefmac <- replace( data$successRefmac, is.na(data$successRefmac), 0 )
+
+# Data where MR seemingly worked according to phaser
+data$successPhaser <- as.numeric( data$phaserTFZ > 8.0 | data$phaserLLG > 120 )
+data$successPhaser <- replace( data$successPhaser, is.na(data$successPhaser), 0 )
+
+# Gold standard
+data$success <- as.numeric( data$successShelxe == 1 & data$successRebuild == 1 )
 data$success <- replace( data$success, is.na(data$success), 0 )
 
 # single-model success
-data$single_model_success <- as.numeric( data$single_model_shelxeCC >= 25 & data$single_model_shelxeAvgChainLength >= 10 )
-data$single_model_success <- replace( data$single_model_success, is.na(data$single_model_success), 0 )
-
-# helix success
-data$helix_success <- as.numeric( data$helix_shelxeCC >= 25 & data$helix_shelxeAvgChainLength >= 10 )
-data$helix_success <- replace( data$helix_success, is.na(data$helix_success), 0 )
+#data$single_model_success <- as.numeric( data$single_model_shelxeCC >= 25 & data$single_model_shelxeAvgChainLength >= 10 )
+#data$single_model_success <- replace( data$single_model_success, is.na(data$single_model_success), 0 )
+#
+## helix success
+#data$helix_success <- as.numeric( data$helix_shelxeCC >= 25 & data$helix_shelxeAvgChainLength >= 10 )
+#data$helix_success <- replace( data$helix_success, is.na(data$helix_success), 0 )
 
 ## Need to remove nolog values from buccFinalRfree
 ## Horrible hack to get Rfree back to a number...
@@ -28,12 +41,37 @@ data$helix_success <- replace( data$helix_success, is.na(data$helix_success), 0 
 # Calculate number of copies of decoy that were placed
 data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
 
+
+
 # Categories for resolution
 data$resCat <- 0
-data$resCat[ data$resolution < 1.5 ] <- 1
-data$resCat[  data$resolution >= 1.5 & data$resolution < 1.8 ] <- 2
-data$resCat[  data$resolution >= 1.8 & data$resolution < 2.2 ] <- 3
-data$resCat[data$resolution >= 2.2 ] <- 4
+data$resCat[ data$resolution < 2.0 ] <- 1
+data$resCat[  data$resolution >= 2.0 & data$resolution < 2.2 ] <- 2
+data$resCat[  data$resolution >= 2.2 & data$resolution < 2.4 ] <- 3
+data$resCat[  data$resolution >= 2.4 & data$resolution < 2.6 ] <- 4
+data$resCat[data$resolution >= 2.6 ] <- 5
+
+# Horrible hack - use label as factor - needed as no labeller attribute to facet_wrap
+data$resCatw <- 0
+data$resCatw[ data$resolution < 2.0 ] <- "1: res. < 2.0"
+data$resCatw[  data$resolution >= 2.0 & data$resolution < 2.2 ] <- "2: 2.0 < res. < 2.2"
+data$resCatw[  data$resolution >= 2.2 & data$resolution < 2.4 ] <- "3: 2.2 < res. < 2.4"
+data$resCatw[  data$resolution >= 2.4 & data$resolution < 2.6 ] <- "4: 2.4 < res. < 2.6"
+data$resCatw[data$resolution >= 2.6 ] <- "5: res. > 2.6"
+
+l = function( variable, value ) {
+	if ( variable == "success" ) {
+		return( c("Failure","Success"))
+	} else if ( variable == "ensembleSideChainTreatment" ) {
+		return( c("All atom","Poly-alanine","SCWRL reliable") )
+	} else if ( variable == "resCat" ) {
+		return( c("res. < 2.0","2.0 < res. < 2.2","2.2 < res. < 2.4","2.4 < res. < 2.6","res. > 2.6") )
+	} else {
+		return ("foo")
+	}
+}
+
+#http://stackoverflow.com/questions/19357668/r-ggplot2-facetting-keep-ratio-but-override-define-output-plot-size
 
 # Data for which there are placed models and we have an origin
 odata = data[ ! is.na(data$ccmtzOrigin) & ! is.na( data$phaserLLG), ]
@@ -91,15 +129,26 @@ median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
 # For each case need to get the best success - i.e. success with max CC
 # Order by pdbCode and CC
 x <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasing=TRUE ), ]
+
 # Select top by selecting not duplicates on pdbCode
-x <- x[ !duplicated(x$pdbCode), c("pdbCode", "success","fastaLength","resolution","numChains","numPlacedChains", "shelxeCC", "shelxeAvgChainLength")  ]
+x <- x[ !duplicated(x$pdbCode), c("pdbCode", "fastaLength","resolution","numChains","numPlacedChains", "shelxeCC", "shelxeAvgChainLength")  ]
+
 # Now put in alphabetical order
 x <- x[ order( x$pdbCode ), ]
 
 # Need to get numbers of success
 # This gets the stats  - we can join because the by function is the pdbCode which is in similar alphabetic order
-x["successfulModels"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["failedModels"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 0 ) } )[2]
+x["numModels"] <- aggregate( data$pdbCode, by=list(data$pdbCode), FUN=length )[2]
+x["worked"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x$worked <- replace( x$worked, x$worked > 0, 1 )
+
+
+# Different measures of success
+x["success"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x["successShelxe"] <- aggregate( data$successShelxe, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x["successRefmac"] <- aggregate( data$successRefmac, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x["successPhaser"] <- aggregate( data$successPhaser, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x["successRebuild"] <- aggregate( data$successRebuild, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 
 x["successPolyAla"]  <- aggregate( 
 		data[ data$ensembleSideChain == "poly_ala", ]$success,
@@ -114,15 +163,18 @@ x["successAllAtom"]  <- aggregate(
 		by=list( data[ data$ensembleSideChain == "All_atom", ]$pdbCode ),
 		FUN=function(x){ sum( x == 1 ) } )[2]
 
+
 # ADD SINGLE MODEL AND HELIX
-x["successfulSingleModel"] <- aggregate( data$single_model_success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x$successfulSingleModel[ x$successfulSingleModel >= 1 ] <- 1
-x["successfulHelix"] <- aggregate( data$helix_success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x$successfulHelix[ x$successfulHelix >= 1 ] <- 1
+#x["successfulSingleModel"] <- aggregate( data$single_model_success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+#x$successfulSingleModel[ x$successfulSingleModel >= 1 ] <- 1
+#x["successfulHelix"] <- aggregate( data$helix_success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+#x$successfulHelix[ x$successfulHelix >= 1 ] <- 1
 
 # NB LOOK AT REORDER
-summary <- x[ order( x$success, decreasing=TRUE ), ]
-write.csv(summary, "summary.csv", row.names=FALSE)
+# Now put in order by success, resolution
+x <- x[ order( x$worked, x$resolution ), ]
+#x <- x[ order( x$success, decreasing=TRUE ), ]
+write.csv(x, "summary.csv", row.names=FALSE)
 
 
 # highest percentage of model that solved - selecting the largest
@@ -244,6 +296,15 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ggtitle("Histogram of CC scores by success")
 ggsave("CCscores.png")
 
+p <-ggplot(data=data[ data$success==1, ], aes(x=buccFinalRfree, y=arpWarpFinalRfree) )
+p + geom_point() +
+		#facet_grid( .~resCat, space="free", scales="free", labeller=l) +
+		facet_wrap( ~resCatw) +
+		#stat_sum( aes(size=..n..) ) +
+		xlab("buccFinalRfree") +
+		ylab("arpWarpFinalRfree") +
+		ggtitle("Bucc vs Arpwarp")
+ggsave("buccVsArp.png")
 
 # Resolution vs length
 #		stat_sum( group=c(1,2) ) +
@@ -273,6 +334,7 @@ p + geom_histogram( binwidth=20 ) +
 	ylab("Number of targets") +
 	ggtitle("Number of successes/failures by protein length")
 ggsave("targetByLength.png")
+
 
 #Distribution of chain lengths of all ensembles
 
@@ -340,10 +402,6 @@ ggsave("reforiginRMSD.png")
 #
 ###############################################################################################################################
 
-#
-# Can only compare where a phaser model was produced and where we could find an origin
-#
-odata = data[ ! is.na(data$ccmtzOrigin) & ! is.na( data$phaserLLG), ]
 ## HACK - set NA aoNumContacts to zero - we need to do this as we set NA when they were 0 when looking for origins
 #missing <- is.na( odata$aoNumContacts )
 #odata$aoNumContacts[ missing ] <- 0
@@ -524,17 +582,7 @@ ggsave("CCVsRIO.png")
 #
 # facet_grid( ensembleSideChainTreatment ~ .) +
 # label_both
-l = function( variable, value ) {
-	if ( variable == "success" ) {
-		return( c("Failure","Success"))
-	} else if ( variable == "ensembleSideChainTreatment" ) {
-		return( c("All atom","Poly-alanine","SCWRL reliable") )
-	} else if ( variable == "resCat" ) {
-		return( c("res. < 1.5","1.5 < res. < 1.8","1.8 < res. < 2.2","res. > 2.2") )
-	} else {
-		return ("foo")
-	}
-}
+
 
 # Proportion RIO vs proportion in density
 p <-ggplot(data=odata,
