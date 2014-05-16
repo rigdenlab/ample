@@ -845,13 +845,15 @@ def processMrbump( mrbumpResult ):
     mrbumpResult.buccFinalRfact       = None
     mrbumpResult.buccaneerPdb         = None
   
-    # Need to remove last component as we recored the refmac directory
-    mrDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
-    # HACK - we run the processing on cytosine so differnt place
-    #ssert False,mrbumpResult.resultDir
-    #rDir = mrDir.replace( "/data2/jmht/coiled-coils/single_ensemble","/media/data/shared/coiled-coils/single_model" )
-    #mrDir = mrDir.replace( "/data2/jmht/coiled-coils/ideal_helices","/media/data/shared/coiled-coils/ideal_helices" )
-    mrbumpResult.mrDir = mrDir
+    if False:
+        # Need to remove last component as we recored the refmac directory
+        mrDir = os.sep.join( mrbumpResult.resultDir.split(os.sep)[:-1] )
+        # HACK - we run the processing on cytosine so differnt place
+        #ssert False,mrbumpResult.resultDir
+        #rDir = mrDir.replace( "/data2/jmht/coiled-coils/single_ensemble","/media/data/shared/coiled-coils/single_model" )
+        #mrDir = mrDir.replace( "/data2/jmht/coiled-coils/ideal_helices","/media/data/shared/coiled-coils/ideal_helices" )
+        mrbumpResult.mrDir = mrDir
+    mrDir = mrbumpResult.mrDir
     
     mrbumpResult.ensembleName = mrbumpResult.name[9:-6]
     
@@ -914,7 +916,7 @@ def processMrbump( mrbumpResult ):
                                  "buccSX_output.pdb" )
     buccaneerLog = os.path.join( mrDir,
                                  "build/shelxe/rebuild/build",
-                                 "parse_buccaneer.log" )
+                                 "buccaneer.log" )
     
     bp = parse_buccaneer.BuccaneerLogParser()
     if os.path.isfile( buccaneerLog ):
@@ -1259,7 +1261,8 @@ if __name__ == "__main__":
     #dataRoot = "/Users/jmht/Documents/AMPLE/data"
     dataRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run1"
     #mrRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run2"
-    mrRoot = "/media/data/shared/coiled-coils/single_model/single_model.run2"
+    #mrRoot = "/media/data/shared/coiled-coils/single_model/single_model.run2"
+    mrRoot = "/media/data/shared/coiled-coils/ensemble/ensemble_redo_failures1"
     
     rundir = os.getcwd()
     os.chdir( rundir )
@@ -1271,9 +1274,9 @@ if __name__ == "__main__":
     
     allResults = []
     
-    #for pdbCode in [ l.strip() for l in open( os.path.join( mrRoot, "dirs.list") ) if not l.startswith("#") ]:
+    for pdbCode in [ l.strip() for l in open( os.path.join( mrRoot, "dirs.list") ) if not l.startswith("#") ]:
     #for pdbCode in sorted( resultsDict.keys() ):
-    for pdbCode in [ "1MI7" ]:
+    #for pdbCode in [ "1MI7" ]:
         
         workdir = os.path.join( rundir, pdbCode )
         if not os.path.isdir( workdir ):
@@ -1336,8 +1339,8 @@ if __name__ == "__main__":
             nativeAs1Chain = nativePdbInfo.pdb
         
         # Get hold of a full model so we can do the mapping of residues
-        modelsDir = os.path.join( mrDir, "models")
-        refModelPdb = os.path.join( modelsDir, "S_00000001.pdb" )
+        modelsDir = os.path.join( mrDir, "ROSETTA_MR_0", "models")
+        refModelPdb = os.path.join( modelsDir, "1_S_00000001.pdb" )
         resSeqMap = residue_map.residueSequenceMap()
         refModelPdbInfo = pdbedit.get_info( refModelPdb )
         resSeqMap.fromInfo( refInfo=refModelPdbInfo,
@@ -1348,12 +1351,13 @@ if __name__ == "__main__":
         
         # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
         # requires a separate run to generate total RMSD
-        scoreP = RosettaScoreParser( modelsDir )
-        maxComp = maxcluster.Maxcluster()
-        maxComp.compareDirectory( nativePdbInfo=nativePdbInfo,
-                                  resSeqMap=resSeqMap,
-                                  modelsDirectory=modelsDir,
-                                  workdir=workdir )
+        if False:
+            scoreP = RosettaScoreParser( modelsDir )
+            maxComp = maxcluster.Maxcluster()
+            maxComp.compareDirectory( nativePdbInfo=nativePdbInfo,
+                                      resSeqMap=resSeqMap,
+                                      modelsDirectory=modelsDir,
+                                      workdir=workdir )
         
         # Secondary Structure assignments
         psipred_file = os.path.join( dataDir, "fragments/t001_.psipred_ss2"  )
@@ -1440,12 +1444,13 @@ if __name__ == "__main__":
             ar.ensemblePercentModel = int( ( float( ar.ensembleNumResidues ) / float( ar.fastaLength ) ) * 100 )
             
             # Get the data on the models in the ensemble
-            ensemblePdb = os.path.join( dataDir, "ROSETTA_MR_0/ensembles_1", ensembleName+".pdb" )
+            ensemblePdb = os.path.join( mrDir, "ROSETTA_MR_0", "ensembles_1", ensembleName+".pdb" )
             eP = EnsemblePdbParser( ensemblePdb )
             ar.ensembleNumAtoms = eP.numAtoms
             
-            ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
-            ar.ensembleNativeTM = maxComp.tm( eP.centroidModelName )
+            if False:
+                ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
+                ar.ensembleNativeTM = maxComp.tm( eP.centroidModelName )
     
             ar.solution =  mrbumpResult.solution
             
@@ -1456,7 +1461,8 @@ if __name__ == "__main__":
             
             # process MRBUMP solution here
             #mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( ensembleName, mrbumpResult.program )  )
-            mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}.sub.log".format( ensembleName ) )
+            #mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0" "MRBUMP", "cluster_1", "{0}.sub.log".format( ensembleName ) )
+            mrbumpLog = os.path.join( mrDir, "ROSETTA_MR_0", "MRBUMP", "cluster_1", "{0}.log".format( ensembleName ) )
             mrbumpResult.mrbumpLog = mrbumpLog
             
             # Update the Mrbump result object and set all values in the Ample Result
