@@ -2,7 +2,7 @@ library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
 #data <- read.table(file="results_all_arpwarp.csv",sep=',', header=T)
-data <- read.table(file="results_bucc.csv",sep=',', header=T)
+data <- read.table(file="results_all_arpwarp.csv",sep=',', header=T)
 #data <- read.table(file="results.csv",sep=',', header=T)
 
 # Categorise successes
@@ -172,7 +172,7 @@ x["successAllAtom"]  <- aggregate(
 
 # NB LOOK AT REORDER
 # Now put in order by success, resolution
-x <- x[ order( x$worked, x$resolution ), ]
+x <- x[ order( -x$worked, x$resolution ), ]
 #x <- x[ order( x$success, decreasing=TRUE ), ]
 write.csv(x, "summary.csv", row.names=FALSE)
 
