@@ -463,13 +463,16 @@ p + geom_histogram( position = 'dodge', binwidth = 0.05 ) +
 ggsave("rioModelHistogramProp.png")
 
 #foo
-#ÊCalculate proportion of in/out in rioGood
+#ï¿½Calculate proportion of in/out in rioGood
 #prop.table(as.matrix(x[-1]),margin=1)
 #prop.table(as.matrix( odata[ odata$ccmtzRioGood > 0, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)
-odata$pRioIn <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)[,1]
+odata$propRioIn <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)[,1]
+odata$propRioOut <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)[,2]
+#odata$propRioIn <- replace( odata$propRioIn, is.na(odata$propRioIn), -1 )
 
-p <-ggplot(data=odata, aes(x=ccmtzRioGood, fill=factor(success)) )
-p + geom_histogram( binwidth = 1 ) +
+#p <-ggplot(data=odata, aes(x=ccmtzRioGood, fill=factor(success)) )
+p <-ggplot(data=odata[ odata$ccmtzRioGood > 0,  ], aes(x=propRioOut, fill=factor(success)) )
+p + geom_histogram( binwidth = 0.1 ) +
 #		facet_wrap( ~success)
 #p + geom_histogram( position = 'dodge', binwidth = 0.05 )
 #		scale_fill_manual( values=c(fcolour,scolour),
