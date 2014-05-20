@@ -172,9 +172,9 @@ x["successAllAtom"]  <- aggregate(
 
 # NB LOOK AT REORDER
 # Now put in order by success, resolution
-x <- x[ order( -x$worked, x$resolution ), ]
+summaryData <- x[ order( -x$worked, x$resolution ), ]
 #x <- x[ order( x$success, decreasing=TRUE ), ]
-write.csv(x, "summary.csv", row.names=FALSE)
+write.csv(summaryData, "summary.csv", row.names=FALSE)
 
 
 # highest percentage of model that solved - selecting the largest
@@ -322,14 +322,12 @@ p + geom_point() +
 ggsave("resolutionVsLength.png")
 
 # Binned (20) bar graph with length along the bottom and the bars dividied/coloured by success
-# NB: Uuses data from summary
-p <-ggplot( data=summary, aes( fastaLength, fill=factor(success) ) )
-p + geom_histogram( binwidth=20 ) +
+p <-ggplot( data=data, aes( fastaLength, fill=factor(success) ) )
+p + geom_histogram( binwidth=10,  position = 'dodge' ) +
 	scale_x_continuous( breaks=seq(0,260,20) ) +
 	scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-	) +
+				labels=c("Failure", "Success")) +
 	xlab("Length in residues") +
 	ylab("Number of targets") +
 	ggtitle("Number of successes/failures by protein length")
@@ -462,28 +460,28 @@ p + geom_histogram( position = 'dodge', binwidth = 0.05 ) +
 		ggtitle("RIO as proportion of model")
 ggsave("rioModelHistogramProp.png")
 
-#foo
-#�Calculate proportion of in/out in rioGood
+#Calculate proportion of in/out in rioGood
 #prop.table(as.matrix(x[-1]),margin=1)
-#prop.table(as.matrix( odata[ odata$ccmtzRioGood > 0, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)
 odata$propRioIn <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)[,1]
 odata$propRioOut <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)[,2]
 #odata$propRioIn <- replace( odata$propRioIn, is.na(odata$propRioIn), -1 )
 
-#p <-ggplot(data=odata, aes(x=ccmtzRioGood, fill=factor(success)) )
-p <-ggplot(data=odata[ odata$ccmtzRioGood > 0,  ], aes(x=propRioOut, fill=factor(success)) )
-p + geom_histogram( binwidth = 0.1 ) +
-#		facet_wrap( ~success)
-#p + geom_histogram( position = 'dodge', binwidth = 0.05 )
-#		scale_fill_manual( values=c(fcolour,scolour),
-#				name="Success/Failure",
-#				labels=c("Failure", "Success")
-#		) +
-#		ylab("Number of cases") +
-#		xlab("Proportion RIO") +
-#		ggtitle("RIO as proportion of native")
-
-
+#p <-ggplot(data=odata[ odata$ccmtzRioGood > 0, ], aes(x=propRioIn, fill=factor(success)) )
+#p + geom_histogram( binwidth = 0.05, position='dodge' ) 
+p <-ggplot(data=odata[ odata$ccmtzRioGood > 0, ],
+		aes(x=propRioIn,
+			y=numResidues,
+			colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( .~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success") ) +
+		xlab("In-register proportion of RIO") +
+		ylab("Number of residues in the unit cell") +
+		ggtitle("In-register CA as a prop. of RIO vs num. residues for RIO > 0")
+ggsave("rioInRegisterPropVsLength.png")
 
 # Proportion RIO of native
 p <-ggplot(data=odata, aes(x=ccmtzRioGood/numResidues, fill=factor(success) ) )
@@ -733,8 +731,8 @@ p + geom_point( size=1 ) +
 				name="Success/Failure",
 				labels=c("Failure", "Success") ) +
 		xlab("RIO as proportion of native") +
-		ylab("Num. misplaced atoms (> 0.5A)") +
-		ggtitle("RIO as proportion of native vs num. out-of-density")
+		ylab("Numer placed atoms - AIO score") +
+		ggtitle("RIO as proportion of native vs num. of misplaced atoms.")
 ggsave("correctlyVsMisplacedNum.png")
 ##
 ##
