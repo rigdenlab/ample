@@ -41,7 +41,8 @@ data$success <- replace( data$success, is.na(data$success), 0 )
 # Calculate number of copies of decoy that were placed
 data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
 
-
+# Data for which there are placed models and we have an origin
+odata = data[ ! is.na(data$ccmtzOrigin) & ! is.na( data$phaserLLG), ]
 
 # Categories for resolution
 data$resCat <- 0
@@ -73,8 +74,7 @@ l = function( variable, value ) {
 
 #http://stackoverflow.com/questions/19357668/r-ggplot2-facetting-keep-ratio-but-override-define-output-plot-size
 
-# Data for which there are placed models and we have an origin
-odata = data[ ! is.na(data$ccmtzOrigin) & ! is.na( data$phaserLLG), ]
+
 
 #
 # Summary information
@@ -341,14 +341,14 @@ ggsave("resolutionVsLength.png")
 
 # Binned (20) bar graph with length along the bottom and the bars dividied/coloured by success
 p <-ggplot( data=data, aes( fastaLength, fill=factor(success) ) )
-p + geom_histogram( binwidth=10,  position = 'dodge' ) +
+p + geom_histogram( binwidth=5, position = 'dodge' ) +
 	scale_x_continuous( breaks=seq(0,260,20) ) +
 	scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success")) +
 	xlab("Length in residues") +
 	ylab("Number of targets") +
-	ggtitle("Number of successes/failures by protein length")
+	ggtitle("Successes/failures by target protein length")
 ggsave("targetByLength.png")
 
 
