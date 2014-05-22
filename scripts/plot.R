@@ -176,10 +176,28 @@ summaryData <- x[ order( -x$worked, x$resolution ), ]
 #x <- x[ order( x$success, decreasing=TRUE ), ]
 write.csv(summaryData, "summary.csv", row.names=FALSE)
 
+sdata = data[ data$success == 1, ]
+# Most accurate models that solved 
+# Highest number RIO
+sdata[ sdata$ccmtzRioGood == max(sdata$ccmtzRioGood,na.rm=TRUE), c("pdbCode","ensembleName") ]
+# 2IC9 poly_ala_trunc_6.098002_rad_1
+
+# Best Reforigin RMSD reforiginRMSD
+sdata[ sdata$reforiginRMSD == min(sdata$reforiginRMSD,na.rm=TRUE), c("pdbCode","ensembleName") ]
+# 3LJM All_atom_trunc_0.000847_rad_1
+
+# Longest that solved with zero RIO score
+x <- sdata[ sdata$ccmtzRioGood == 0, ]
+x[ x$fastaLength == max(x$fastaLength), c("pdbCode","ensembleName") ]
+# 2QIH poly_ala_trunc_24.292064_rad_2
+
+# Longest that solved with zero AIO score
+x <- sdata[ sdata$ccmtzAaNumContacts== 0, ]
+x[ x$fastaLength == max(x$fastaLength), c("pdbCode","ensembleName") ]
+# 3M91 SCWRL_reliable_sidechains_trunc_0.066638_rad_1
 
 # highest percentage of model that solved - selecting the largest
 # Could use which.max but want to select largest
-#sdata = data[ data$success == 1, ]
 #x <- sdata[ sdata$ensemblePercentModel == max( sdata$ensemblePercentModel ), ]
 #x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
 # 3K29 SCWRL_reliable_sidechains_trunc_168.103952_rad_3 100% 169 residues
@@ -479,7 +497,7 @@ p + geom_point( size=1 ) +
 				name="Success/Failure",
 				labels=c("Failure", "Success") ) +
 		xlab("In-register proportion of RIO") +
-		ylab("Number of residues in the unit cell") +
+		ylab("Number of residues in ASU") +
 		ggtitle("In-register CA as a prop. of RIO vs num. residues for RIO > 0")
 ggsave("rioInRegisterPropVsLength.png")
 
