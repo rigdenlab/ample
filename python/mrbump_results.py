@@ -1,5 +1,6 @@
 #!/usr/bin/env ccp4-python
 
+import copy
 import glob
 import logging
 import os
@@ -290,7 +291,9 @@ class ResultsSummary(object):
                 continue
                 # End header processing
             else:
-                result.header = header
+                # horrible - we manipulate the header in addShelxe/buccaneer so we need to use a copy here
+                result.header = copy.copy(header)
+
             
             fields = line.split()
             if len(fields) != nfields:
