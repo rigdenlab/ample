@@ -52,6 +52,8 @@ class RosettaModel(object):
 
     def __init__(self):
         
+        self.debug=None
+        
         self.nproc = None
         self.nmodels = None
         self.work_dir = None
@@ -86,6 +88,7 @@ class RosettaModel(object):
         self.align_blast = None
         self.nr = None
         self.blastpgp = None
+        self.octopusTopology = None 
         self.spanfile = None
         self.lipofile = None
         
@@ -99,6 +102,8 @@ class RosettaModel(object):
         self.improve_template = None
         
         self.logger = logging.getLogger()
+        
+        return
     
     def generate_seeds(self, nseeds):
         """
@@ -175,7 +180,11 @@ class RosettaModel(object):
 
         # Whether to exclude homologs
         if not self.use_homs:
-            cmd.append('-nohoms')           
+            cmd.append('-nohoms')
+        
+        # Be 'chatty'
+        if self.debug:
+            cmd.append('-verbose')
         
         return cmd
     ##End fragment_cmd
@@ -255,20 +264,24 @@ class RosettaModel(object):
         fasta = os.path.split(  self.fasta )[1]
         shutil.copy2( self.fasta, self.models_dir + os.sep + fasta )
         
-        # Query octopus server for prediction
-        octo = octopus_predict.OctopusPredict()
-        self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
-        #fastaseq = octo.getFasta(self.fasta)
-        # Problem with 3LBW predicition when remove X
-        fastaseq = octo.getFasta(self.fasta)
-        octo.getPredict(self.name,fastaseq, directory=self.models_dir )
-        topo_file = octo.topo
-        self.logger.debug("Got topology prediction file: {0}".format(topo_file))
+        # See if we need to query the octopus server
+        if os.path.isfile( str(self.octopusTopology) ):
+            self.logger.info("Using user-supplied topology prediction file: {0}".format(self.octopusTopology))
+        else:
+            # Query octopus server for prediction
+            octo = octopus_predict.OctopusPredict()
+            self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
+            #fastaseq = octo.getFasta(self.fasta)
+            # Problem with 3LBW predicition when remove X
+            fastaseq = octo.getFasta(self.fasta)
+            octo.getPredict(self.name,fastaseq, directory=self.models_dir )
+            self.octopusTopology = octo.topo
+            self.logger.debug("Got topology prediction file: {0}".format(self.octopusTopology))
 
         # Generate span file from predict
         self.spanfile = os.path.join(self.models_dir, self.name + ".span")
         self.logger.debug( 'Generating span file {0}'.format( self.spanfile ) )
-        cmd = [ self.octopus2span, topo_file ]
+        cmd = [ self.octopus2span, self.octopusTopology ]
         retcode = ample_util.run_command( cmd, logfile=self.spanfile, directory=self.models_dir )
         if retcode != 0:
             msg = "Error generating span file. Please check the log in {0}".format(self.spanfile)
@@ -596,19 +609,23 @@ class RosettaModel(object):
                 
             self.spanfile = optd['transmembrane_spanfile']
             self.lipofile = optd['transmembrane_lipofile']
+            self.octopusTopology = optd['transmembrane_octopusfile']
             
             # Check if we've been given files
-            if  self.spanfile:
-                if not ( os.path.isfile( self.spanfile ) ):
-                    msg = "Cannot find provided transmembrane spanfile: {0}".format(  self.spanfile )
-                    self.logger.critical(msg)
-                    raise RuntimeError, msg
+            if  self.octopusTopology and not ( os.path.isfile( self.octopusTopology ) ):
+                msg = "Cannot find provided transmembrane octopus topology prediction: {0}".format(  self.octopusTopology )
+                self.logger.critical(msg)
+                raise RuntimeError, msg
+
+            if  self.spanfile and not ( os.path.isfile( self.spanfile ) ):
+                msg = "Cannot find provided transmembrane spanfile: {0}".format(  self.spanfile )
+                self.logger.critical(msg)
+                raise RuntimeError, msg
                  
-            if self.lipofile:
-                if not ( os.path.isfile( self.lipofile ) ):
-                    msg = "Cannot find provided transmembrane lipofile: {0}".format( self.lipofile )
-                    self.logger.critical(msg)
-                    raise RuntimeError, msg                 
+            if self.lipofile and not ( os.path.isfile( self.lipofile ) ):
+                msg = "Cannot find provided transmembrane lipofile: {0}".format( self.lipofile )
+                self.logger.critical(msg)
+                raise RuntimeError, msg                 
                    
             if (  self.spanfile and not self.lipofile ) or ( self.lipofile and not self.spanfile ):
                 msg="You need to provide both a spanfile and a lipofile"

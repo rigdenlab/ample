@@ -89,6 +89,7 @@ class AmpleOptions(object):
                             'theseus_exe' : None,
                             'top_model_only' : False,
                             'transmembrane' : False,
+                            'transmembrane_octopusfile' : None,
                             'transmembrane_lipofile' : None,
                             'transmembrane_spanfile' : None,
                             'use_arpwarp' : True,
@@ -300,6 +301,7 @@ class AmpleOptions(object):
                 'shelxe_exe',
                 'spicker_exe',
                 'theseus_exe',
+                'transmembrane_octopusfile',
                 'transmembrane_lipofile',
                 'transmembrane_spanfile'
             ]

@@ -250,6 +250,9 @@ parser.add_argument('-top_model_only', metavar='True/False', type=str, nargs=1,
 parser.add_argument('-transmembrane', metavar='transmembrane', type=str, nargs=1,
                    help='Do Rosetta modelling for transmembrane proteins')
 
+parser.add_argument('-transmembrane_octopusfile', metavar='transmembrane_octopusfile', type=str, nargs=1,
+                   help='Octopus transmembrane topology predicition file')
+
 parser.add_argument('-transmembrane_spanfile', metavar='transmembrane_spanfile', type=str, nargs=1,
                    help='Span file for modelling transmembrane proteins')
 
