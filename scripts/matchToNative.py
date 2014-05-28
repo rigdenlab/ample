@@ -16,7 +16,7 @@ import phenixer
 
 import MTZ_parse
 
-def run( nativePdb, nativeMtz, mrPdb ):
+def run( nativePdb, nativeMtz, mrPdbs ):
     
     # Get the labels from the MTZ file
     print "Parsing MTZ file {0} to determine column labels".format( nativeMtz )
@@ -32,26 +32,27 @@ def run( nativePdb, nativeMtz, mrPdb ):
                                    SIGFP=mtzp.SIGF,
                                    FREE=mtzp.FreeR_flag,
                                   )
-    print "Searching for origin shift using: {0} {1}".format( mtzMap, mrPdb )
-    origin =  phenixer.ccmtzOrigin( mtzMap, mrPdb )
     
-    # offset.pdb is the mrPdb moved onto the new origin
-    offsetPdb = "offset.pdb"
-    print "Found origin: {0}\nOffset pdb is: {1}".format( origin, offsetPdb )
-    
-    # Run csymmatch to map offsetted pdb onto native
-    csymmPdb = ample_util.filename_append( filename=mrPdb, astr="csymmatch", directory=os.getcwd() )
-    print "Running csymmatch to wrap {0} onto native {1}".format( offsetPdb, nativePdb )
-    csymmatch.Csymmatch().run( refPdb=nativePdb, inPdb=offsetPdb, outPdb=csymmPdb, originHand=False )
-    
-    print "Matched PDB is: {0}".format( csymmPdb )
+    for mrPdb in mrPdbs:
+        print "Searching for origin shift using: {0} {1}".format( mtzMap, mrPdb )
+        origin =  phenixer.ccmtzOrigin( mtzMap, mrPdb )
+        
+        # offset.pdb is the mrPdb moved onto the new origin
+        offsetPdb = "offset.pdb"
+        print "Found origin: {0}\nOffset pdb is: {1}".format( origin, offsetPdb )
+        
+        # Run csymmatch to map offsetted pdb onto native
+        csymmPdb = ample_util.filename_append( filename=mrPdb, astr="csymmatch", directory=os.getcwd() )
+        print "Running csymmatch to wrap {0} onto native {1}".format( offsetPdb, nativePdb )
+        csymmatch.Csymmatch().run( refPdb=nativePdb, inPdb=offsetPdb, outPdb=csymmPdb, originHand=False )
+        
+        print "Matched PDB is: {0}".format( csymmPdb )
     
     return 
 
 if __name__ == "__main__":
-    assert len(sys.argv) == 4,"Usage: {0} native.pdb native.mtz molecular_replacement.pdb".format( sys.argv[0] )
+    assert len(sys.argv) >= 4,"Usage: {0} native.pdb native.mtz molecular_replacement.pdb[s]".format( sys.argv[0] )
     nativePdb = sys.argv[1]
     nativeMtz = sys.argv[2]
-    mrPdb     = sys.argv[3]
-    
-    run( nativePdb, nativeMtz, mrPdb )
+    mrPdbs    = sys.argv[3:]
+    run( nativePdb, nativeMtz, mrPdbs )
