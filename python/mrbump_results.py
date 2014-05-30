@@ -81,7 +81,7 @@ class ResultsSummary(object):
                             'ARP_final_Rfact'  : 'arpWarpRfact',
                             'ARP_final_Rfree'  : 'arpWarpRfree',
                             'SHELXE_CC'        : 'shelxCC',
-                            'SHELXE_Avg_Chain' : 'shelxeAvgChainLength',
+                            'SHELXE_ACL'       : 'shelxeAvgChainLength',
                              }
         
         self.logger = logging.getLogger()
@@ -159,7 +159,7 @@ class ResultsSummary(object):
             result.shelxeNumChains      = shelxeP.numChains
 
             # Another horrible hack - add the title to the header
-            result.header.append('SHELXE_Avg_Chain')
+            result.header.append('SHELXE_ACL')
 
         return
 
