@@ -18,6 +18,11 @@ import parse_buccaneer
 import parse_shelxe
 import printTable
 
+# We need a null logger so that we can be used without requiring a logger
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
+
 class MrBumpResult(object):
     """
     Class to hold the result of running a MRBUMP job
@@ -85,7 +90,8 @@ class ResultsSummary(object):
                              }
         
         self.logger = logging.getLogger()
-        
+        # Add Null logger so we can be used without requiring a logger
+        self.logger.addHandler(NullHandler())
         return
         
     def _addFailedResults(self, mrbumpDir, failed, header):
@@ -186,6 +192,7 @@ class ResultsSummary(object):
 
             # Check job directory
             jobDir = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
+            #jobDir = os.path.join( mrbumpDir, 'search_'+ensemble )
             if not os.path.isdir(jobDir):
                 self.logger.critical("Missing job directory: {0}".format( jobDir ) )
                 failed[ ensemble ] = "no_job_directory"
