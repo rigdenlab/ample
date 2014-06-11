@@ -36,9 +36,18 @@ data$successSingleModel <- replace( data$successSingleModel, is.na(data$successS
 #ok <- (data$helix_All_atom_shelxeCC >= 25 & data$helix_All_atom_shelxeAvgChainLength >= 10 & (data$helix_All_atom_buccFinalRfree <= 0.45 | data$helix_All_atom_arpWarpFinalRfree <= 0.45))| 
 #(data$helix_SCWRL_reliable_sidechains_shelxeCC >= 25 & data$helix_SCWRL_reliable_sidechains_shelxeAvgChainLength >= 10 & (data$helix_SCWRL_reliable_sidechains_buccFinalRfree <= 0.45 | data$helix_SCWRL_reliable_sidechains_arpWarpFinalRfree <= 0.45))| 
 #(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
+#ok <-(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
+#data$successHelix <- as.numeric( ok )
+#data$successHelix <- replace( data$successHelix, is.na(data$successHelix), 0 )
 ok <-(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
-data$successHelix <- as.numeric( ok )
-data$successHelix <- replace( data$successHelix, is.na(data$successHelix), 0 )
+ok <- as.numeric( ok )
+data$successHelix1 <- replace( ok, is.na(ok), 0 )
+ok <-(data$helix_SCWRL_reliable_sidechains_shelxeCC >= 25 & data$helix_SCWRL_reliable_sidechains_shelxeAvgChainLength >= 10 & (data$helix_SCWRL_reliable_sidechains_buccFinalRfree <= 0.45 | data$helix_SCWRL_reliable_sidechains_arpWarpFinalRfree <= 0.45) )
+ok <- as.numeric( ok )
+data$successHelix2 <- replace( ok, is.na(ok), 0 )
+ok <-(data$helix_All_atom_shelxeCC >= 25 & data$helix_All_atom_shelxeAvgChainLength >= 10 & (data$helix_All_atom_buccFinalRfree <= 0.45 | data$helix_All_atom_arpWarpFinalRfree <= 0.45) )
+ok <- as.numeric( ok )
+data$successHelix3 <- replace( ok, is.na(ok), 0 )
 
 
 # Calculate number of copies of decoy that were placed
@@ -103,8 +112,13 @@ x["successPhaser"] <- aggregate( smdata$successPhaser, by=list(smdata$pdbCode), 
 x["successRebuild"] <- aggregate( smdata$successRebuild, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 
 x["successSingleModel"] <- aggregate( smdata$successSingleModel, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successHelix"] <- aggregate( smdata$successHelix, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["helixWorked"] <- x$successHelix
+#x["successHelix"] <- aggregate( smdata$successHelix, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+#x["helixWorked"] <- x$successHelix
+#x$helixWorked <- replace( x$helixWorked, x$helixWorked > 0, 1 )
+x["successHelix1"] <- aggregate( smdata$successHelix1, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x["successHelix2"] <- aggregate( smdata$successHelix2, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x["successHelix3"] <- aggregate( smdata$successHelix3, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x["helixWorked"] <- x$successHelix1
 x$helixWorked <- replace( x$helixWorked, x$helixWorked > 0, 1 )
 
 
@@ -112,7 +126,7 @@ x$helixWorked <- replace( x$helixWorked, x$helixWorked > 0, 1 )
 # Now put in order by success, resolution
 summaryData <- x[ order( -x$worked, x$resolution ), ]
 #x <- x[ order( x$success, decreasing=TRUE ), ]
-write.csv(summaryData, "summary1.csv", row.names=FALSE)
+write.csv(summaryData, "summary2.csv", row.names=FALSE)
 
 #
 # Summary information
@@ -280,22 +294,22 @@ ylab("Single Model Shelxe CC score") +
 ggtitle("Comparison of Ensemble and Single Model CC scores")
 ggsave("SMEShelxe.png")
 
-# Helix vs Ensemble
+# Helix vs Single model
 hdata = data[ data$helix_ran == "True", ]
 p <-ggplot(data=hdata,
-		aes(shelxeCC,helix_poly_ala_shelxeCC,colour=factor(success),shape=factor(successHelix)))
+		aes(single_model_shelxeCC,helix_poly_ala_shelxeCC,colour=factor(successSingleModel),shape=factor(successHelix)))
 p + geom_point() +
 		scale_colour_manual( values=c(fcolour,scolour),
-				name="Ensemble Success",
+				name="Single Model Success",
 				labels=c("Failure", "Success")
 		) +
 		scale_shape_manual( values=c(0,2),
-				name="Idealised helix Success",
+				name="Idealised Helix Success",
 				labels=c("Failure", "Success")
 		) +
 		scale_x_continuous(limits=c(0,80)) +
 		scale_y_continuous(limits=c(0,80)) +
-		xlab("Ensemble Shelxe CC score") +
+		xlab("Single Model Shelxe CC score") +
 		ylab("Idealised Helix Shelxe CC score") +
 		ggtitle("Comparison of Idealised Helices and Single Model CC scores")
 ggsave("SMHShelxe.png")
