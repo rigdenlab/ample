@@ -49,6 +49,8 @@ ok <-(data$helix_All_atom_shelxeCC >= 25 & data$helix_All_atom_shelxeAvgChainLen
 ok <- as.numeric( ok )
 data$successHelix3 <- replace( ok, is.na(ok), 0 )
 
+# CHECK
+data$helixWorked <- as.numeric( data$successHelix1 | data$successHelix2 | data$successHelix3 )
 
 # Calculate number of copies of decoy that were placed
 data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
@@ -101,11 +103,12 @@ x <- x[ order( x$pdbCode ), ]
 # Need to get numbers of success
 # This gets the stats  - we can join because the by function is the pdbCode which is in similar alphabetic order
 x["numModels"] <- aggregate( smdata$pdbCode, by=list(smdata$pdbCode), FUN=length )[2]
-x["worked"] <- aggregate( smdata$success, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x$worked <- replace( x$worked, x$worked > 0, 1 )
 
 # Different measures of success
 x["success"] <- aggregate( smdata$success, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+#x["worked"] <- aggregate( smdata$success, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+#x$worked <- replace( x$worked, x$worked > 0, 1 )
+x["worked"] <- replace( x$success, x$success > 0, 1 )
 x["successShelxe"] <- aggregate( smdata$successShelxe, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 x["successRefmac"] <- aggregate( smdata$successRefmac, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 x["successPhaser"] <- aggregate( smdata$successPhaser, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
@@ -115,11 +118,11 @@ x["successSingleModel"] <- aggregate( smdata$successSingleModel, by=list(smdata$
 #x["successHelix"] <- aggregate( smdata$successHelix, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 #x["helixWorked"] <- x$successHelix
 #x$helixWorked <- replace( x$helixWorked, x$helixWorked > 0, 1 )
+x["successHelix"] <- aggregate( smdata$helixWorked, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+x["helixWorked"] <- replace( x$successHelix, x$successHelix > 0, 1 )
 x["successHelix1"] <- aggregate( smdata$successHelix1, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 x["successHelix2"] <- aggregate( smdata$successHelix2, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 x["successHelix3"] <- aggregate( smdata$successHelix3, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["helixWorked"] <- x$successHelix1
-x$helixWorked <- replace( x$helixWorked, x$helixWorked > 0, 1 )
 
 
 # NB LOOK AT REORDER
@@ -295,43 +298,53 @@ ggtitle("Comparison of Ensemble and Single Model CC scores")
 ggsave("SMEShelxe.png")
 
 # Helix vs Single model
-hdata = data[ data$helix_ran == "True", ]
+# Need to pull out the different side chain treamtments
+# hacky way to get names to match - must be better way of doing this
+hdata <- data[ data$helix_ran == "True" & data$ensembleSideChainTreatment == "poly_ala",
+		c("single_model_shelxeCC","successSingleModel","helix_poly_ala_shelxeCC","successHelix1") ]
+names(hdata) <- c("single_model_shelxeCC","successSingleModel","helix_shelxeCC","successHelix")
+
+x <- data[ data$helix_ran == "True" & data$ensembleSideChainTreatment == "SCWRL_reliable_sidechains",
+		c("single_model_shelxeCC","successSingleModel","helix_SCWRL_reliable_sidechains_shelxeCC","successHelix2") ]
+names(x) <- c("single_model_shelxeCC","successSingleModel","helix_shelxeCC","successHelix")
+hdata <- rbind(hdata,x)
+
+x <- data[ data$helix_ran == "True" & data$ensembleSideChainTreatment == "All_atom",
+		c("single_model_shelxeCC","successSingleModel","helix_All_atom_shelxeCC","successHelix3") ]
+names(x) <- c("single_model_shelxeCC","successSingleModel","helix_shelxeCC","successHelix")
+hdata <- rbind(hdata,x)
+
+hdata[,"result"] <- NA
+hdata$result[ hdata$successSingleModel == 0 & hdata$successHelix == 0 ] <- 0
+hdata$result[ hdata$successSingleModel == 1 & hdata$successHelix == 0 ] <- 1
+hdata$result[ hdata$successSingleModel == 0 & hdata$successHelix == 1 ] <- 2
+hdata$result[ hdata$successSingleModel == 1 & hdata$successHelix == 1 ] <- 3
+
+
+# 1637 in total - dim(hdata)
+# 398 single model success
+# 127 helix worked
+# 617 both worked dim( hdata[ hdata$successSingleModel==1 & hdata$successHelix==1,])
+
+cols <- c("0" = "red","1" = "yellow","2" = "orange", "3" = "blue")
+
 p <-ggplot(data=hdata,
-		aes(single_model_shelxeCC,helix_poly_ala_shelxeCC,colour=factor(successSingleModel),shape=factor(successHelix)))
+		aes(single_model_shelxeCC,helix_shelxeCC,colour=factor(result)))
 p + geom_point() +
-		scale_colour_manual( values=c(fcolour,scolour),
-				name="Single Model Success",
-				labels=c("Failure", "Success")
-		) +
-		scale_shape_manual( values=c(0,2),
-				name="Idealised Helix Success",
-				labels=c("Failure", "Success")
+		scale_colour_manual( name="Result",
+				values=cols,
+				labels=c("Both Fail","Single model success","Helix success","Both succeeed")
 		) +
 		scale_x_continuous(limits=c(0,80)) +
 		scale_y_continuous(limits=c(0,80)) +
 		xlab("Single Model Shelxe CC score") +
 		ylab("Idealised Helix Shelxe CC score") +
 		ggtitle("Comparison of Idealised Helices and Single Model CC scores")
+
+
 ggsave("SMHShelxe.png")
 
 
-# Ensemble vs helix
-smdata$helixCC <- max(smdata$helix_All_atom_shelxeCC,smdata$helix_SCWRL_reliable_sidechains_shelxeCC,smdata$helix_poly_ala_shelxeCC)
-p <-ggplot(data=smdata[ smdata$helix_ran == "True",],
-		aes(shelxeCC,helixCC))
-p + geom_point() +
-		scale_colour_manual( values=c(fcolour,scolour),
-				name="Ensemble Success",
-				labels=c("Failure", "Success")
-		) +
-		scale_shape_manual( values=c(0,2),
-				name="Single Model Success",
-				labels=c("Failure", "Success")
-		) +
-		xlab("Ensemble Shelxe CC score") +
-		ylab("Single Model Shelxe CC score") +
-		ggtitle("Comparison of Ensemble and Single Model CC scores")
-ggsave("SMEShelxe.png")
 
 
 # How the different treatments fared - facet by resolution
