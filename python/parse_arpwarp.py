@@ -4,8 +4,6 @@ Created on 28 Nov 2013
 @author: jmht
 '''
 
-import re
-import os
 import unittest
 
 class ArpwarpLogParser(object):
