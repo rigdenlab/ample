@@ -55,7 +55,10 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     # Optional extras
     #
     if adict['shelxe_rebuild']:
+        # Rebuild SHELXE trace with both Buccaneer and ArpWarp
         mrs+='SXREBUILD True\n'
+        mrs+='SXRBUCC True\n'
+        mrs+='SXRARPW True\n'
     if adict['ASU'] > 0:
         mrs+='NMASU  {0}\n'.format( adict['ASU'] )
     if adict['domain_all_chains_pdb']:

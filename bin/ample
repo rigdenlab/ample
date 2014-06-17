@@ -230,7 +230,7 @@ parser.add_argument('-shelxe_exe', metavar='path to shelxe executable', type=str
                    help='Path to the shelxe executable')
 
 parser.add_argument('-shelxe_rebuild', metavar='True/False', type=str, nargs=1,
-                   help='Rebuild shelxe traced pdb with buccaneer')
+                   help='Rebuild shelxe traced pdb with buccaneer and arpwarp')
 
 parser.add_argument('-SIGF', metavar='SIGF', type=str, nargs=1,
                    help='Flag for SIGF column in the MTZ file')
