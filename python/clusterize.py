@@ -27,10 +27,12 @@ class ClusterRun:
         self.modeller = None
 
         self.RunDir=""
-        #self.jobLogsList=[]
-
-        #self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelx_cluster.py")
         self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
+
+        # Required when a specific python interpreter needs to be invoked in the nodes
+        # See ensembleOnCluster
+        self.pythonPath = "python"
+        self.pythonPath = "/home/rmk65/opt/python/python-2.7.2/bin/python"
 
         self.debug=True
 
@@ -189,7 +191,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         pydir=os.path.abspath( os.path.dirname( __file__ ) )
         ensemble_script = os.path.join( pydir, "ensemble.py" )
 
-        job_script.write("python {0} {1}\n".format( ensemble_script, amoptd['results_path'] ) )
+        job_script.write("{0} {1} {2}\n".format( self.pythonPath, ensemble_script, amoptd['results_path'] ) )
         job_script.close()
 
         # Make executable
@@ -364,7 +366,8 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 
         logFile = os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log')
         scriptFile=open(sub_script, "w")
-        script_header = self.subScriptHeader( nProc=nProc, logFile=logFile, jobName=jobName)
+        # Modelling always run on single processor
+        script_header = self.subScriptHeader( nProc=1, logFile=logFile, jobName=jobName)
         scriptFile.write(script_header+"\n\n")
         #scriptFile.write("export CCP4_SCR=$TMPDIR\n\n")
 
@@ -419,6 +422,9 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             sh += '#$ -S /bin/bash\n'
             sh += '#$ -o {0}\n'.format(logFile) 
             sh += '#$ -N {0}\n\n'.format(jobName)
+            # jmht hack for morrigan
+            if nProc and nProc > 1:
+                sh += '#$ -pe threaded {0}\n\n'.format( nProc )
         elif self.QTYPE=="LSF":
             sh += '#!/bin/sh\n'
             # jmht - hard-wired for hartree wonder
@@ -526,9 +532,11 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         nJobs=len(scriptList)
         with open(self._scriptFile,'w') as f:
             for s in scriptList:
+                # Check the scripts are of the correct format - abspath and .sh extension
+                if not s.startswith("/") or not s.endswith(".sh"):
+                    raise RuntimeError,"Scripts for array jobs must be absolute paths with a .sh extension: {0}".format(s)
                 f.write(s +"\n")
 
-        
         # Generate the qsub array script
         arrayScript = os.path.abspath(os.path.join(jobDir,"array.script"))
         # Write head of script
@@ -599,7 +607,7 @@ if __name__ == "__main__":
         s = """#!/bin/bash
 echo "I am script {0}"
 """.format(i)
-        script="script_{0}.sub".format(i)
+        script=os.path.abspath(os.path.join(os.getcwd(),"script_{0}.sh".format(i)))
         with open(script,'w') as f:
             f.write(s)
         os.chmod(script, 0o777)
