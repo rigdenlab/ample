@@ -40,11 +40,12 @@ class ClusterRun:
             self.pdbsetEXE=os.path.join(os.environ["CCP4"], "bin", "pdbset")
 
         self.logger =  logging.getLogger()
+        return
 
     def setModeller(self, modeller):
         """Set the Rosetta Modeller object"""
         self.modeller=modeller
-
+        return
 
     def setupModellingDir(self, RunDir):
         """ A function to create the necessary directories for the modelling step """
@@ -65,6 +66,10 @@ class ClusterRun:
     def monitorQueue(self, user=""):
         """ Monitor the Cluster queue to see when all jobs are completed """
 
+
+        if not len(self.qList):
+            raise RuntimeError,"No jobs found in self.qList!"
+
         self.logger.info("Jobs submitted to cluster queue, awaiting their completion...")
 
         # set a holder for the qlist
@@ -72,6 +77,7 @@ class ClusterRun:
         newRunningList=[]
 
         while runningList!=[]:
+            #print "runningList is ",runningList
             time.sleep(60)
             self.getRunningJobList(user)
             for job in runningList:
@@ -477,7 +483,12 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         while out:
             qNumber = None
             if self.QTYPE=="SGE":
-                if "Your job" in out:
+                if "Your job-array" in out:
+                    # Array jobs have different form
+                    #Your job-array 19094.1-10:1 ("array.script") has been submitted
+                    qNumber=int(out.split()[2].split(".")[0])
+                    self.qList.append(qNumber)
+                elif "Your job" in out:
                     qNumber=int(out.split()[2])
                     self.qList.append(qNumber)
             elif self.QTYPE=="LSF":
@@ -496,13 +507,107 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 
         os.chdir(curDir)
         
-        return str(qNumber)    
+        return str(qNumber)
+    
+    def submitArrayJob(self,scriptList,jobDir=None):
+        """Submit a list of jobs as an SGE array job"""
+        
+        
+        if self.QTYPE != "SGE":
+            raise RuntimeError,"Need to add code for non-SGE array jobs"
+        
+        if jobDir is None:
+            jobDir=os.getcwd()
+        else:
+            os.chdir(jobDir)
+        
+        # Create the list of scripts
+        self._scriptFile = os.path.abspath(os.path.join(jobDir,"array.jobs"))
+        nJobs=len(scriptList)
+        with open(self._scriptFile,'w') as f:
+            for s in scriptList:
+                f.write(s +"\n")
+
+        
+        # Generate the qsub array script
+        arrayScript = os.path.abspath(os.path.join(jobDir,"array.script"))
+        # Write head of script
+        s = """#!/bin/bash
+
+# Set up SGE variables
+#$ -j y
+#$ -cwd
+#$ -w e
+#$ -V
+#$ -o arrayJob_$TASK_ID.log
+#$ -t 1-{0}
+#
+# Ignore for now as we always run single processor jobs
+##$ -pe smp 16
+
+scriptlist={1}
+""".format(nJobs,self._scriptFile)
+
+        # Add on the rest of the script - need to do in two bits or the stuff in here gets interpreted by format
+        s += """
+# Extract info on what we need to run
+script=`sed -n "${SGE_TASK_ID}p" $scriptlist`
+
+jobdir=`dirname $script`
+jobname=`basename $script .sh`
+
+# cd to jobdir and runit
+cd $jobdir
+
+# Run the script
+$script
+"""
+        
+        with open(arrayScript,'w') as f:
+            f.write(s)
+        
+        # submit the array script
+        self.submitJob( subScript=arrayScript, jobDir=jobDir )
+        
+        return
+    
+    def cleanUpArrayJob(self):
+        """Rename all the log files"""
+        
+        assert os.path.isfile(self._scriptFile)
+        
+        with open( self._scriptFile ) as f:
+            for i, line in enumerate( f ):
+                jdir, script = os.path.split( line.strip() )
+                jobName = os.path.splitext(script)[0]
+                oldLog = "arrayJob_{0}.log".format( i+1 )
+                newLog = os.path.join( jdir, "{0}.log".format( jobName ) )
+                print "Moving {0} to {1}".format( oldLog, newLog )
+                os.rename( oldLog, newLog ) 
+        
+        return
+        
+        
 
 if __name__ == "__main__":
-
+    
+    # Test array jobs
+    
+    # Create run scripts
+    jobScripts=[]
+    for i in range(10):
+        s = """#!/bin/bash
+echo "I am script {0}"
+""".format(i)
+        script="script_{0}.sub".format(i)
+        with open(script,'w') as f:
+            f.write(s)
+        os.chmod(script, 0o777)
+        jobScripts.append(script)
+    
     c=ClusterRun()
     c.QTYPE="SGE"
-    c.qList=["2553845", "2553846", "2553847", "2553849"]
-    c.monitorQueue(user="jac45")
-    #c.monitorQueue()
-    #list=c.getRunningJobList(user="jac45")
+    
+    c.submitArrayJob(jobScripts)
+    c.monitorQueue()
+    c.cleanUpArrayJob()
