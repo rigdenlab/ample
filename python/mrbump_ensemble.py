@@ -139,11 +139,18 @@ def mrbump_ensemble_cluster( job_scripts, amoptd ):
 
     mrBuild = clusterize.ClusterRun()
     mrBuild.QTYPE = amoptd['submit_qtype']
-    for script in job_scripts:
-        job_number = mrBuild.submitJob( subScript=script )
+    
+    if amoptd['submit_array']:
+        mrBuild.submitArrayJob(job_scripts)
+    else:
+        for script in job_scripts:
+            job_number = mrBuild.submitJob( subScript=script )
 
     # Monitor the cluster queue to see when all jobs have finished
     mrBuild.monitorQueue()
+    
+    if amoptd['submit_array']:
+        mrBuild.cleanUpArrayJob()
     
     # Cleanup code
     #shutil.rmtree(work_dir + '/fine_cluster_' + str(clusterID))
