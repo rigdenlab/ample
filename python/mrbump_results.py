@@ -174,12 +174,13 @@ class ResultsSummary(object):
         """
         Find the results from running MRBUMP and sort them
         """
-
-
         mrbumpDir = os.path.abspath( mrbumpDir )
         # Get a list of the ensembles (could get this from the amopt dictionary)
-        # For now we just use the submission scripts and assume all have .sub extension
-        ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*.sub") ) ]
+        # For now we just use the submission scripts and assume all have .sh or .sub extension
+        ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*.sh") ) ]
+        if not len(ensembles):
+            # legacy - try .sub
+            ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*.sub") ) ]
 
         if not len(ensembles):
             self.logger.warn("Could not extract any results from directory: {0}".format( mrbumpDir ) )
