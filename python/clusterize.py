@@ -34,9 +34,8 @@ class ClusterRun:
 
         # Required when a specific python interpreter needs to be invoked in the nodes
         # See ensembleOnCluster
-        self.pythonPath = "python"
         self.pythonPath = "/home/rmk65/opt/python/python-2.7.2/bin/python"
-        
+        self.pythonPath = "ccp4-python"
 
         self.debug=True
 
@@ -378,8 +377,8 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         self.runDir=RunDir
 
         # Create the directories for the submission scripts
-        if not os.path.isdir(os.path.join(RunDir, "models")):
-            os.mkdir(os.path.join(RunDir, "models"))
+        #if not os.path.isdir(os.path.join(RunDir, "models")):
+        #    os.mkdir(os.path.join(RunDir, "models"))
         if not os.path.isdir(os.path.join(RunDir, "pre_models")):
             os.mkdir(os.path.join(RunDir, "pre_models"))
         
