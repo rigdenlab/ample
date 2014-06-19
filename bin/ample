@@ -741,7 +741,6 @@ else:
         f.close()
 
         mrBuild = clusterize.ClusterRun()
-        mrBuild.QTYPE = amopt.d['submit_qtype']
         mrBuild.ensembleOnCluster( amopt.d )
         mrBuild.monitorQueue()
             

@@ -85,6 +85,7 @@ class ClusterRun:
         script_path = os.path.join( work_dir, "submit_ensemble.sh" )
         job_script = open(script_path, "w")
 
+        self.QTYPE = amoptd['submit_qtype']
         logFile= script_path+".log"
         script_header = self.subScriptHeader( nProc=1, logFile=logFile, jobName="ensemble", jobTime="1:00")
         job_script.write( script_header )
@@ -98,7 +99,9 @@ class ClusterRun:
 
         # Make executable
         os.chmod(script_path, 0o777)
-  
+
+        # submit
+        self.logger.info("Running ensembling on a cluster. Submitting to queue of type: {0}".format(self.QTYPE))
         self.submitJob( subScript=script_path, jobDir=amoptd['work_dir'] )
 
         return
@@ -504,14 +507,16 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         if self.QTYPE != "SGE":
             raise RuntimeError,"Need to add code for non-SGE array jobs"
-        
+
         if jobDir is None:
-            jobDir=os.getcwd()
-        else:
-            os.chdir(jobDir)
+            if self.scriptDir and os.path.isdir(self.scriptDir):
+                jobDir=self.scriptDir
+            else:
+                jobDir=os.getcwd()
+        os.chdir(jobDir)
         
         # Create the list of scripts
-        self._scriptFile = os.path.abspath(os.path.join(self.scriptDir,"array.jobs"))
+        self._scriptFile = os.path.abspath(os.path.join(jobDir,"array.jobs"))
         nJobs=len(jobScripts)
         with open(self._scriptFile,'w') as f:
             for s in jobScripts:

@@ -91,7 +91,7 @@ def write_jobscript( name, pdb, amoptd, directory=None ):
     # Path
     if not directory:
         directory = os.getcwd()
-    script_path = directory + os.sep + name + '.sub'
+    script_path = directory + os.sep + name + '.sh'
     
     # Write script
     job_script = open(script_path, "w")
