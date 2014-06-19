@@ -26,7 +26,7 @@ class ClusterRun:
 
         self.modeller = None
 
-        self.runDir=""
+        self.runDir=None
         self.logDir=None
         self.scriptDir=None
         self._scriptFile  = None
@@ -57,14 +57,6 @@ class ClusterRun:
         
         assert os.path.isfile(self._scriptFile)
         
-        # See if we have a list of names for the logfiles
-        logList=None
-        if self._logFileList is not None:
-            logList=[]
-            with open( self._logFileList ) as f:
-                for line in enumerate( f ):
-                    logList.append(line)
-        
         scriptFiles = []
         with open( self._scriptFile ) as f:
             for line in f:
@@ -80,7 +72,7 @@ class ClusterRun:
             else:
                 newLog = os.path.join( logDir, "{0}.log".format( jobName ) )
                 
-            print "Moving {0} to {1}".format( oldLog, newLog )
+            self.logger.debug( "Moving {0} to {1}".format( oldLog, newLog ) )
             os.rename( oldLog, newLog ) 
         
         return
@@ -313,6 +305,9 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
     
     def modelOnCluster(self,modeller,amoptd):
 
+        self.logger.info('Submitting {0} jobs to a queueing system of type: {1}\n'.format( amoptd['nmodels'],amoptd['submit_qtype'] ) )
+        if amoptd['submit_array']:
+            self.logger.info('Submitting SGE array job')
 
         self.QTYPE = amoptd['submit_qtype']
         
@@ -335,7 +330,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         # For array jobs we submit as one
         if amoptd['submit_array']:
-            self.submitArrayJob(jobScripts, jobDir=amoptd['workdir'])
+            self.submitArrayJob(jobScripts, jobDir=amoptd['work_dir'])
             
         # Monitor the cluster queue to see when all jobs have finished
         self.monitorQueue()
@@ -373,88 +368,6 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             newRunningList=[]
             
         return
-
-#     def modelOnClusterX(self, nProc, jobNumber):
-#         """ Farm out the modelling step on a cluster (SGE) """
-# 
-#         # Set the scriptFile number according to the job number
-#         if jobNumber<10:
-#             fileNumber="0000000" + str(jobNumber)
-#         elif jobNumber>=10 and jobNumber<100:
-#             fileNumber="000000" + str(jobNumber)
-#         elif jobNumber>=100 and jobNumber<1000:
-#             fileNumber="00000" + str(jobNumber)
-#         
-#         elif jobNumber>=1000 and jobNumber<10000:
-#             fileNumber="0000" + str(jobNumber)
-#         elif jobNumber>=10000 and jobNumber<100000:
-#             fileNumber="000" + str(jobNumber)
-#         elif jobNumber>=100000 and jobNumber<1000000:
-#             fileNumber="00" + str(jobNumber)
-#         else:
-#             sys.stdout.write("No. of Models exceeds program limits (Max=999999)\n")
-#             sys.exit()
-# 
-#         preModelDir=os.path.join(self.modeller.work_dir, "pre_models", "model_" + str(jobNumber))
-# 
-#         if not os.path.isdir(preModelDir):
-#             os.mkdir(preModelDir)
-# 
-#         PDBInFile     = os.path.join(preModelDir, "S_00000001.pdb")
-#         PDBSetOutFile = os.path.join(preModelDir, "pdbsetOut_" + str(jobNumber) + ".pdb")
-#         PDBScwrlFile  = os.path.join(preModelDir, "scwrlOut_" + str(jobNumber) + ".pdb")
-#         SEQFile       = os.path.join(preModelDir, "S_" + fileNumber + ".seq")
-#         PDBOutFile    = os.path.join(self.modeller.work_dir, "models", "1_S_" + fileNumber + ".pdb")
-# 
-# 
-#         # Get the seed for this job
-#         seed = self.modeller.seeds[jobNumber-1]
-# 
-#         # Create a cluster submission script for this modelling job
-#         jobName="model_" + str(nProc) + "_" + str(seed)
-#         sub_script=os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts", "job_" + jobName + ".sub")
-# 
-#         logFile = os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log')
-#         scriptFile=open(sub_script, "w")
-#         # Modelling always run on single processor
-#         script_header = self.subScriptHeader( nProc=1, logFile=logFile, jobName=jobName)
-#         scriptFile.write(script_header+"\n\n")
-#         #scriptFile.write("export CCP4_SCR=$TMPDIR\n\n")
-# 
-#         # Build up the rosetta command
-#         nstruct=1 # 1 structure
-#         rcmd = self.modeller.modelling_cmd( preModelDir, nstruct, seed )
-#         cmdstr = " ".join(rcmd) + "\n\n"
-#         scriptFile.write( cmdstr )
-# 
-#         scriptFile.write("pushd " + os.path.join(preModelDir) + "\n\n" +
-# 
-#         self.pdbsetEXE + " xyzin " + PDBInFile + " xyzout " + PDBSetOutFile + "<<eof\n" +
-#         "sequence single\n" +
-#         "eof\n\n" +
-# 
-#         "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" +
-#         "popd\n\n"  )
-#         if self.modeller.use_scwrl:
-#             scriptFile.write( self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
-#             "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" +
-#              "\n" )
-#         else:
-#             scriptFile.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )
-# 
-#         # Clean up non-essential files unless we are debugging
-#         if not self.debug:
-#             scriptFile.write("rm " + PDBSetOutFile + "\n" +
-#             "rm " + os.path.join(preModelDir, "SEQUENCE") + "\n" +
-#             "rm " + PDBScwrlFile + "\n\n")
-# 
-#         scriptFile.close()
-# 
-#         jobDir = os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts")
-#         
-#         job_number = self.submitJob(subScript=sub_script, jobDir=jobDir)
-#         
-#         return
     
     def setupModellingDir(self, RunDir):
         """ A function to create the necessary directories for the modelling step """
@@ -724,6 +637,8 @@ $script
                 "rm " + os.path.join(preModelDir, "SEQUENCE") + "\n" +
                 "rm " + PDBScwrlFile + "\n\n")
 
+        # Make executbakle
+        os.chmod( scriptPath, 0o777)
         jobDir = os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts")
         
         return scriptPath,jobDir

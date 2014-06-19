@@ -84,6 +84,7 @@ class AmpleOptions(object):
                             'SIGF' : None,
                             'spicker_exe' : None,
                             'split_mr' : False,
+                            'submit_array' : False,
                             'submit_cluster' : False,
                             'submit_qtype' : None,
                             'theseus_exe' : None,

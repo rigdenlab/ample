@@ -29,9 +29,9 @@ if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
 # Add the ample python folder to the PYTHONPATH
-sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
-#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
-#sys.path.append( os.path.join( root, "python" ) )
+#sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
 import argparse
@@ -80,6 +80,9 @@ parser.add_argument('-buccaneer_cycles', type=int, nargs=1,
 
 parser.add_argument('-ccp4_jobid', type=int, nargs=1,
                    help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
+
+parser.add_argument('-submit_array', metavar='True/False', type=str, nargs=1,
+                   help='Submit SGE jobs as array jobs')
 
 parser.add_argument('-submit_cluster', metavar='True/False', type=str, nargs=1,
                    help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
@@ -664,28 +667,9 @@ elif amopt.d['make_models']:
     
     # If we are running with cluster support submit all modelling jobs to the cluster queue
     if amopt.d['submit_cluster']:
-        
-        # Generate the list of random seeds
-        rosetta_modeller.generate_seeds( amopt.d['nmodels'] )
-
         # Invoke the cluster run class
         cluster_run = clusterize.ClusterRun()
-        logger.info('Submitting {0} jobs to a queueing system of type: {1}\n'.format( amopt.d['nmodels'],amopt.d['submit_qtype'] ) )
         cluster_run.modelOnCluster(rosetta_modeller, amopt.d)
-#         cluster_run.QTYPE = amopt.d['submit_qtype']
-#         cluster_run.setModeller( rosetta_modeller )
-#         cluster_run.setupModellingDir( amopt.d['work_dir'] )
-#         
-#         
-#         # loop over the number of models and submit a job to the cluster
-#         for i in range( amopt.d['nmodels'] ):
-#             nproc=1 # each modelling job runs on a single processor
-#             jobNumber=i+1
-#             cluster_run.modelOnCluster( nproc, jobNumber )
-# 
-#         # Monitor the cluster queue to see when all jobs have finished
-#         cluster_run.monitorQueue()
-
     else:
         # Run locally
         amopt.d['models_dir'] = rosetta_modeller.doModelling()
@@ -713,7 +697,6 @@ elif amopt.d['import_models']:
         scwrl.processDirectory( inDirectory=amopt.d['models_dir'], outDirectory=models_dir_scwrl )
         amopt.d['models_dir'] = models_dir_scwrl
         logger.info( "Finished processing models with Scwrl" )
-
 
 #---------------------------------------
 # Do the clustering
