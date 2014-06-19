@@ -502,7 +502,7 @@ class RosettaModel(object):
                 scwrl.processDirectory(inDirectory=wdir, outDirectory=self.models_dir, prefix="scwrl_{0}".format(proc) )
                 #add_sidechains_SCWRL.add_sidechains_SCWRL(self.scwrl_exe, wdir, self.models_dir, str(proc), False)
         else:
-        # Just copy all modelling files into models directory
+            # Just copy all modelling files into models directory
             for wd in directories.keys():
                 proc = directories[wd]
                 for pfile in glob.glob( os.path.join(wd, '*.pdb') ):
