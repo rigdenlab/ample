@@ -316,7 +316,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         if self.modeller.transmembrane:
             self.modeller.generate_tm_predict()    
         
-        self.setupModellingDir( amoptd['work_dir'] )
+        self.setupModellingDir( self.modeller.models_dir )
         
         jobScripts = []
         # loop over the number of models and submit a job to the cluster
@@ -585,7 +585,7 @@ $script
             sys.stdout.write("No. of Models exceeds program limits (Max=999999)\n")
             sys.exit()
 
-        preModelDir=os.path.join(self.modeller.work_dir, "pre_models", "model_" + str(jobNumber))
+        preModelDir=os.path.join(self.runDir, "pre_models", "model_" + str(jobNumber))
 
         if not os.path.isdir(preModelDir):
             os.mkdir(preModelDir)
@@ -594,15 +594,15 @@ $script
         PDBSetOutFile = os.path.join(preModelDir, "pdbsetOut_" + str(jobNumber) + ".pdb")
         PDBScwrlFile  = os.path.join(preModelDir, "scwrlOut_" + str(jobNumber) + ".pdb")
         SEQFile       = os.path.join(preModelDir, "S_" + fileNumber + ".seq")
-        PDBOutFile    = os.path.join(self.modeller.work_dir, "models", "1_S_" + fileNumber + ".pdb")
+        PDBOutFile    = os.path.join(self.modeller.models_dir, "1_S_" + fileNumber + ".pdb")
 
         # Get the seed for this job
         seed = self.modeller.seeds[jobNumber-1]
 
         # Create a cluster submission script for this modelling job
         jobName="model_" + str(nProc) + "_" + str(seed)
-        scriptPath=os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts", "job_" + jobName + ".sh")
-        logFile = os.path.join(self.modeller.work_dir, "pre_models", "logs", jobName + '.log')
+        scriptPath=os.path.join(self.runDir, "pre_models", "submit_scripts", "job_" + jobName + ".sh")
+        logFile = os.path.join(self.runDir, "pre_models", "logs", jobName + '.log')
         
         with open(scriptPath, "w") as scriptFile:
             # Modelling always run on single processor
@@ -637,12 +637,11 @@ $script
                 "rm " + os.path.join(preModelDir, "SEQUENCE") + "\n" +
                 "rm " + PDBScwrlFile + "\n\n")
 
-        # Make executbakle
+        # Make executble
         os.chmod( scriptPath, 0o777)
-        jobDir = os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts")
+        jobDir = os.path.join(self.runDir, "pre_models", "submit_scripts")
         
         return scriptPath,jobDir
-
 
 if __name__ == "__main__":
     
