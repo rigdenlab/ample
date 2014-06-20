@@ -39,6 +39,8 @@ class MTZ_parse:
             self.debug=eval(os.environ['MRBUMP_DEBUG'])
         except:
             self.debug=False
+        
+        return
 
     def checkRFREE(self, FreeR_flag=None):
         """Check the RFREE flag is valid"""
@@ -70,20 +72,24 @@ class MTZ_parse:
             sys.stdout.write("Warning: could not find OVERALL FILE STATISTICS section in input MTZ file\n")
             sys.stdout.write("\n")
             return False
+        
         #
         # Assume the data we want starts 7 lines in
         start = stats + 7
         try:
+            # Need to fix this to work with fixed column widths as things overflow
             for line in self.log[start:]:
+                clabel=line[73:].strip() # Can't split as lines can overrun
                 tokens = line.split()
-                if tokens[11] == FreeR_flag:
+                #if tokens[11] == FreeR_flag:
+                if clabel == FreeR_flag:
                     minf = float(tokens[2])
                     maxf = float(tokens[3])
                     if minf != maxf:
                         return True
                     break
         except Exception,e:
-            sys.stdout.write("Warning: error checking FreeR_valid in input MTZ file\n")
+            sys.stdout.write("Warning: error checking FreeR_valid in input MTZ file: {0}\n".format(e))
             sys.stdout.write("\n")
             
         return False
