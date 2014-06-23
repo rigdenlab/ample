@@ -167,6 +167,38 @@ class AmpleResult(object):
                               'shelxeAvgChainLength',
                               'shelxeMaxChainLength',
                               'shelxeNumChains',
+                              
+                            # new attributes
+                            'single_model_ran',
+                            'single_model_shelxeCC',
+                            'single_model_shelxeAvgChainLength',
+                            'single_model_buccFinalRfact',
+                            'single_model_buccFinalRfree',
+                            'single_model_arpWarpFinalRfact',
+                            'single_model_arpWarpFinalRfree',
+                            
+                            'helix_ran',
+                            
+                            'helix_All_atom_shelxeCC',
+                            'helix_All_atom_shelxeAvgChainLength',
+                            'helix_All_atom_buccFinalRfact',
+                            'helix_All_atom_buccFinalRfree',
+                            'helix_All_atom_arpWarpFinalRfact',
+                            'helix_All_atom_arpWarpFinalRfree',
+                            
+                            'helix_SCWRL_reliable_sidechains_shelxeCC',
+                            'helix_SCWRL_reliable_sidechains_shelxeAvgChainLength',
+                            'helix_SCWRL_reliable_sidechains_buccFinalRfact',
+                            'helix_SCWRL_reliable_sidechains_buccFinalRfree',
+                            'helix_SCWRL_reliable_sidechains_arpWarpFinalRfact',
+                            'helix_SCWRL_reliable_sidechains_arpWarpFinalRfree',
+                            
+                            'helix_poly_ala_shelxeCC',
+                            'helix_poly_ala_shelxeAvgChainLength',
+                            'helix_poly_ala_buccFinalRfact',
+                            'helix_poly_ala_buccFinalRfree',
+                            'helix_poly_ala_arpWarpFinalRfact',
+                            'helix_poly_ala_arpWarpFinalRfree',
 
                               ]
         
@@ -237,6 +269,38 @@ class AmpleResult(object):
                                 "Shelxe avg. chain length",
                                 "Shelxe max. chain length",
                                 "Shelxe num. chains",
+                                
+                            # new attributes
+                            'single_model_ran',
+                            'single_model_shelxeCC',
+                            'single_model_shelxeAvgChainLength',
+                            'single_model_buccFinalRfact',
+                            'single_model_buccFinalRfree',
+                            'single_model_arpWarpFinalRfact',
+                            'single_model_arpWarpFinalRfree',
+                            
+                            'helix_ran',
+                            
+                            'helix_All_atom_shelxeCC',
+                            'helix_All_atom_shelxeAvgChainLength',
+                            'helix_All_atom_buccFinalRfact',
+                            'helix_All_atom_buccFinalRfree',
+                            'helix_All_atom_arpWarpFinalRfact',
+                            'helix_All_atom_arpWarpFinalRfree',
+                            
+                            'helix_SCWRL_reliable_sidechains_shelxeCC',
+                            'helix_SCWRL_reliable_sidechains_shelxeAvgChainLength',
+                            'helix_SCWRL_reliable_sidechains_buccFinalRfact',
+                            'helix_SCWRL_reliable_sidechains_buccFinalRfree',
+                            'helix_SCWRL_reliable_sidechains_arpWarpFinalRfact',
+                            'helix_SCWRL_reliable_sidechains_arpWarpFinalRfree',
+                            
+                            'helix_poly_ala_shelxeCC',
+                            'helix_poly_ala_shelxeAvgChainLength',
+                            'helix_poly_ala_buccFinalRfact',
+                            'helix_poly_ala_buccFinalRfree',
+                            'helix_poly_ala_arpWarpFinalRfact',
+                            'helix_poly_ala_arpWarpFinalRfree',
                                  ]
 
         # Things not to output
@@ -1262,7 +1326,7 @@ if __name__ == "__main__":
     dataRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run1"
     #mrRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run2"
     #mrRoot = "/media/data/shared/coiled-coils/single_model/single_model.run2"
-    mrRoot = "/media/data/shared/coiled-coils/ensemble/ensemble_redo_failures1"
+    mrRoot = "/media/data/shared/coiled-coils/ensemble/ensemble_redo_failures2"
     
     rundir = os.getcwd()
     os.chdir( rundir )
