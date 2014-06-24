@@ -86,6 +86,7 @@ import csymmatch
 import dssp
 import maxcluster
 import mrbump_results
+import parse_arpwarp
 import pdb_edit
 import pdb_model
 import phaser_parser
@@ -1320,42 +1321,59 @@ def analyseSolution( ampleResult=None,
 
 if __name__ == "__main__":
     
-    pickledResults=False
+    arpParse = parse_arpwarp.ArpwarpLogParser()
+    
+    allResults = []
     CLUSTERNUM=0
-    #dataRoot = "/Users/jmht/Documents/AMPLE/data"
-    dataRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run1"
-    #mrRoot = "/media/data/shared/coiled-coils/ensemble/ensemble.run2"
-    #mrRoot = "/media/data/shared/coiled-coils/single_model/single_model.run2"
-    mrRoot = "/media/data/shared/coiled-coils/ensemble/ensemble_redo_failures2"
     
-    rundir = os.getcwd()
-    os.chdir( rundir )
+    runDir = os.getcwd()
+    runDir = "/media/data/shared/coiled-coils/ensemble/final_results"
+    os.chdir( runDir )
     
+    pickledResults=False
     if pickledResults:
         pfile = os.path.join( dataRoot,"results.pkl" )
         with open( pfile ) as f:
             resultsDict = cPickle.load( f  )
     
-    allResults = []
-    
-    for pdbCode in [ l.strip() for l in open( os.path.join( mrRoot, "dirs.list") ) if not l.startswith("#") ]:
-    #for pdbCode in sorted( resultsDict.keys() ):
+    #for pdbCode in [ l.strip() for l in open( os.path.join( mrRoot, "dirs.list.1") ) if not l.startswith("#") ]:
     #for pdbCode in [ "1MI7" ]:
+    for jd in [ l.strip() for l in open( os.path.join( runDir, "dirs.list") ) if not l.startswith("#") ]:
+        directory = "/".join(jd.split("/")[0:-1])
+        pdbCode = jd.split("/")[-1]
         
-        workdir = os.path.join( rundir, pdbCode )
+        print directory,pdbCode
+        
+        workdir = os.path.join( runDir, pdbCode )
         if not os.path.isdir( workdir ):
             os.mkdir( workdir )
         os.chdir( workdir )
             
         print "\nResults for ",pdbCode
         
-        # Directory where all the data for this run live
-        dataDir = os.path.join( dataRoot, pdbCode )
-        mrDir = os.path.join( mrRoot, pdbCode )
-        
-        # Get the path to the original pickle file
+        # Get the paths sorted for the different runs
+        if directory == "/media/data/shared/coiled-coils/ensemble/ensemble.run2":
+            # Data is sorted with the first run
+            dataDir = os.path.join( "/media/seagate/coiled-coils/ensemble/ensemble.run1", pdbCode)
+            modelsDir = os.path.join( dataDir, "models")
+            refModelPdb = os.path.join( modelsDir, "S_00000001.pdb" )
+            pfile = os.path.join( dataDir, "ROSETTA_MR_0/resultsd.pkl")
+            mrbumpDir = os.path.join( directory, pdbCode )
+            arpRoot = os.path.join("/media/data/shared/coiled-coils/ensemble/ensemble_arpwarp",pdbCode)
+        else:
+            dataDir = os.path.join( directory, pdbCode )
+            modelsDir = os.path.join( dataDir, "ROSETTA_MR_0", "models")
+            refModelPdb = os.path.join( modelsDir, "1_S_00000001.pdb" )
+            pfile = os.path.join(dataDir,"ROSETTA_MR_0/resultsd.pkl")
+            mrbumpDir = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1")
+            if directory == "/media/data/shared/coiled-coils/ensemble/ensemble_redo_failures1":
+                arpRoot = os.path.join("/media/data/shared/coiled-coils/ensemble/redo1_arpwarp",pdbCode)
+            elif directory == "/media/data/shared/coiled-coils/ensemble/ensemble_redo_failures2":
+                arpRoot = os.path.join("/media/data/shared/coiled-coils/ensemble/redo2_arpwarp",pdbCode)
+            else:
+                assert False
+
         # Hack - ampleDict is stored with first run
-        pfile = os.path.join( mrDir, "ROSETTA_MR_0/resultsd.pkl")
         with open( pfile ) as f:
             ampleDict = cPickle.load( f  )
     
@@ -1403,8 +1421,6 @@ if __name__ == "__main__":
             nativeAs1Chain = nativePdbInfo.pdb
         
         # Get hold of a full model so we can do the mapping of residues
-        modelsDir = os.path.join( mrDir, "ROSETTA_MR_0", "models")
-        refModelPdb = os.path.join( modelsDir, "1_S_00000001.pdb" )
         resSeqMap = residue_map.residueSequenceMap()
         refModelPdbInfo = pdbedit.get_info( refModelPdb )
         resSeqMap.fromInfo( refInfo=refModelPdbInfo,
@@ -1424,17 +1440,11 @@ if __name__ == "__main__":
                                       workdir=workdir )
         
         # Secondary Structure assignments
-        psipred_file = os.path.join( dataDir, "fragments/t001_.psipred_ss2"  )
+        psipred_file = os.path.join( dataDir, "{0}.psipred_ss2".format(pdbCode)  )
         psipredP = PsipredParser( psipred_file )
         dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode ) )
         dsspP = dssp.DsspParser( dsspLog )
         
-#         # Loop over each result
-#         if dataDir == mrRoot:
-#         else:
-#             mrbumpDir = os.path.join( mrRoot, pdbCode )
-        mrbumpDir = os.path.join( mrDir, "ROSETTA_MR_0/MRBUMP/cluster_1")
-            
         if pickledResults:
             results = resultsDict[ pdbCode ]
         else:
@@ -1443,13 +1453,10 @@ if __name__ == "__main__":
             r.extractResults( mrbumpDir )
             results = r.results
         
-        #jtest=0
-        for mrbumpResult in results:
+        for i, mrbumpResult in enumerate(results):
             
-            #jtest += 1
-            #if jtest > 1:
-            #    break
-            
+            if i > 0:
+                break
             print "processing result ",mrbumpResult.name
             
             ar = AmpleResult()
@@ -1508,7 +1515,7 @@ if __name__ == "__main__":
             ar.ensemblePercentModel = int( ( float( ar.ensembleNumResidues ) / float( ar.fastaLength ) ) * 100 )
             
             # Get the data on the models in the ensemble
-            ensemblePdb = os.path.join( mrDir, "ROSETTA_MR_0", "ensembles_1", ensembleName+".pdb" )
+            ensemblePdb = os.path.join( dataDir, "ROSETTA_MR_0", "ensembles_1", ensembleName+".pdb" )
             eP = EnsemblePdbParser( ensemblePdb )
             ar.ensembleNumAtoms = eP.numAtoms
             
@@ -1526,7 +1533,7 @@ if __name__ == "__main__":
             # process MRBUMP solution here
             #mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0/MRBUMP/cluster_1/", "{0}_{1}.sub.log".format( ensembleName, mrbumpResult.program )  )
             #mrbumpLog = os.path.join( dataDir, "ROSETTA_MR_0" "MRBUMP", "cluster_1", "{0}.sub.log".format( ensembleName ) )
-            mrbumpLog = os.path.join( mrDir, "ROSETTA_MR_0", "MRBUMP", "cluster_1", "{0}.log".format( ensembleName ) )
+            mrbumpLog = os.path.join( mrbumpDir, "{0}.log".format( ensembleName ) )
             mrbumpResult.mrbumpLog = mrbumpLog
             
             # Update the Mrbump result object and set all values in the Ample Result
@@ -1566,6 +1573,25 @@ if __name__ == "__main__":
             ar.shelxeNumChains = mrbumpResult.shelxeNumChains
             ar.estChainsASU = mrbumpResult.estChainsASU
             
+            # Need to get the ArpWarp results
+            arpDir = os.path.join(arpRoot,ar.ensembleName)
+            arpLog = os.path.join( arpDir, "{0}.log".format(ar.ensembleName))
+            arpPdb = os.path.join( arpDir, "{0}-cad_warpNtrace.pdb".format(pdbCode))
+            if os.path.isfile(arpLog):
+                            arpParse.parse(arpLog)
+                            ar.arpWarpFinalRfact=arpParse.finalRfact
+                            ar.arpWarpFinalRfree=arpParse.finalRfree
+            if os.path.isfile(arpPdb):
+                origin =  phenixer.ccmtzOrigin( nativeDensityMap, arpPdb )
+                # offset.pdb is the mrPdb moved onto the new origin
+                offsetPdb = "offset.pdb"
+                if os.path.isfile(offsetPdb):
+                    # Run csymmatch to map offsetted pdb onto native
+                    #csymmPdb = ample_util.filename_append( filename=arpPdb, astr="csymmatch", directory=os.getcwd() )
+                    csymmPdb = os.path.join( workdir, "arpwarp_{0}_csymmatch.pdb".format(ar.ensembleName))
+                    #print "Running csymmatch to wrap {0} onto native {1}".format( offsetPdb, nativePdb )
+                    csymmatch.Csymmatch().run( refPdb=nativePdb, inPdb=offsetPdb, outPdb=csymmPdb, originHand=False )
+            
             # Now process the result
             try:
                 analyseSolution( ampleResult=ar,
@@ -1582,14 +1608,19 @@ if __name__ == "__main__":
                 print traceback.format_exc()
             #print ar
 
+            # Back up the dict
+            pfile = os.path.join( runDir, "ar_results.pkl")
+            f = open( pfile, 'w' )
+            cPickle.dump( allResults, f  )
+
     # End loop over results
     #sys.exit(1)
     
-    pfile = os.path.join( rundir, "ar_results.pkl")
+    pfile = os.path.join( runDir, "ar_results.pkl")
     f = open( pfile, 'w' )
-    ampleDict = cPickle.dump( allResults, f  )
+    cPickle.dump( allResults, f  )
     
-    cpath = os.path.join( rundir, 'results.csv' )
+    cpath = os.path.join( runDir, 'results.csv' )
     csvfile =  open( cpath, 'wb')
     csvwriter = csv.writer(csvfile, delimiter=',',
                             quotechar='"', quoting=csv.QUOTE_MINIMAL)
