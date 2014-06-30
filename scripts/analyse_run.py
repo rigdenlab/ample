@@ -544,6 +544,24 @@ class EnsemblePdbParser(object):
 
         assert not aCapture and not mCapture
         
+        # Horrible hack due to Theseus truncating filenames so we can't parse the ensemble to get the filename
+        # Instead we use the list of files given to theseus
+        if not all([ m.endswith(".pdb") for m in self.models]):
+            # parse ensemble file to get the truncation level and subclustering radius
+            ename = os.path.splitext(os.path.basename(self.pdbfile))[0]
+            f = ename.split("_")
+            rclust = f[-1]
+            tlevel = f[-3]
+            mxList = os.path.abspath(os.path.join(os.path.dirname(self.pdbfile),
+                                                   "..",
+                                                   "fine_cluster_1",
+                                                   "trunc_files_{0}".format(tlevel),
+                                                   "fine_clusters_{0}_ensemble".format(rclust),
+                                                   "maxcluster_radius_{0}_files.list".format(rclust)
+                                                   ))
+            with open(mxList) as f:
+                self.models = [ line.strip() for line in f.readlines()]
+        
         if not len( self.models ):
             raise RuntimeError,"Failed to get any models from ensemble!"
         
@@ -797,22 +815,43 @@ class RosettaScoreParser(object):
         self.parseFile( score_file )
         
     def parseFile(self, score_file ):
+        
+        print "Parsing file ",score_file
+        idxScore=None
+        idxRms=None
+        idxMaxsub=None
+        idxDesc=None
         for i, line in enumerate( open(score_file, 'r') ):
             
-            if i == 0:
-                continue
-    
             line = line.strip()
+            
+            # Read header
+            if i == 0:
+                for j,f in enumerate(line.split()):
+                    if f=="score":
+                        idxScore=j
+                    elif f=="rms":
+                        idxRms=j
+                    elif f=="maxsub":
+                        idxMaxsub=j
+                    elif f=="description":
+                        idxDesc=j
+                
+                if idxScore==None or idxRms==None or idxMaxsub==None or idxDesc==None:
+                    raise RuntimeError,"Missing header field from score file: {0}".format(score_file)
+                continue
+                # End read header
+    
             if not line: # ignore blank lines - not sure why they are there...
                 continue
             
             d = RosettaScoreData()
             
             fields = line.split()
-            d.score = float(fields[1])
-            d.rms = float(fields[26])
-            d.maxsub = float(fields[27])
-            d.description = fields[ 31 ]
+            d.score = float(fields[idxScore])
+            d.rms = float(fields[idxRms])
+            d.maxsub = float(fields[idxMaxsub])
+            d.description = fields[idxDesc]
             #pdb = fields[31]
             
             d.model = os.path.join( self.directory, d.description+".pdb" )
@@ -1335,12 +1374,19 @@ if __name__ == "__main__":
         pfile = os.path.join( dataRoot,"results.pkl" )
         with open( pfile ) as f:
             resultsDict = cPickle.load( f  )
-    
+
+    # Restart from last point
+    pfile = os.path.join( runDir,"ar_results.pkl.bak" )
+    with open( pfile ) as f:
+        allResults = cPickle.load( f  )
+            
     #for pdbCode in [ l.strip() for l in open( os.path.join( mrRoot, "dirs.list.1") ) if not l.startswith("#") ]:
-    #for pdbCode in [ "1MI7" ]:
     for jd in [ l.strip() for l in open( os.path.join( runDir, "dirs.list") ) if not l.startswith("#") ]:
         directory = "/".join(jd.split("/")[0:-1])
         pdbCode = jd.split("/")[-1]
+        
+        #if pdbCode != "1MI7":
+        #    continue
         
         print directory,pdbCode
         
@@ -1431,13 +1477,13 @@ if __name__ == "__main__":
         
         # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
         # requires a separate run to generate total RMSD
-        if False:
-            scoreP = RosettaScoreParser( modelsDir )
-            maxComp = maxcluster.Maxcluster()
-            maxComp.compareDirectory( nativePdbInfo=nativePdbInfo,
-                                      resSeqMap=resSeqMap,
-                                      modelsDirectory=modelsDir,
-                                      workdir=workdir )
+        #if False:
+        scoreP = RosettaScoreParser( modelsDir )
+        maxComp = maxcluster.Maxcluster()
+        maxComp.compareDirectory( nativePdbInfo=nativePdbInfo,
+                                  resSeqMap=resSeqMap,
+                                  modelsDirectory=modelsDir,
+                                  workdir=workdir )
         
         # Secondary Structure assignments
         psipred_file = os.path.join( dataDir, "{0}.psipred_ss2".format(pdbCode)  )
@@ -1454,9 +1500,8 @@ if __name__ == "__main__":
             results = r.results
         
         for i, mrbumpResult in enumerate(results):
-            
-            if i > 0:
-                break
+            #if i > 0:
+            #    break
             print "processing result ",mrbumpResult.name
             
             ar = AmpleResult()
@@ -1519,9 +1564,9 @@ if __name__ == "__main__":
             eP = EnsemblePdbParser( ensemblePdb )
             ar.ensembleNumAtoms = eP.numAtoms
             
-            if False:
-                ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
-                ar.ensembleNativeTM = maxComp.tm( eP.centroidModelName )
+            #if False:
+            ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
+            ar.ensembleNativeTM = maxComp.tm( eP.centroidModelName )
     
             ar.solution =  mrbumpResult.solution
             
