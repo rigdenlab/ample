@@ -154,6 +154,7 @@ class AmpleOptions(object):
                         'ARP_final_Rfact' : 'arpWarpRfact',
                         'ARP_final_Rfree' :'arpWarpRfree',
                         'SHELXE_CC' : 'shelxCC',
+                        'SHELXE_ACL' : 'shelxeAvgChainLength',
                         'SHELXE_Avg_Chain' : 'shelxeAvgChainLength',
                     }
         
