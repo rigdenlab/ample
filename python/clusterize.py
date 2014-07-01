@@ -500,7 +500,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         return str(qNumber)
     
-    def submitArrayJob(self,jobScripts,jobDir=None,runTime=None):
+    def submitArrayJob(self,jobScripts,jobDir=None,jobTime=None):
         """Submit a list of jobs as an SGE array job"""
         
         if self.QTYPE != "SGE":
@@ -525,10 +525,10 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 
         # Generate the qsub array script
         arrayScript = os.path.abspath(os.path.join(jobDir,"array.script"))
-        if runTime is None:
-            runTime="# No runtime specified"
+        if jobTime is None:
+            jobTime="# No runtime specified"
         else:
-            runTime="#$ -l h_rt={0}".format(runTime)
+            jobTime="#$ -l h_rt={0}".format(jobTime)
  
         # Write head of script
         s = """#!/bin/bash
@@ -546,7 +546,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 ##$ -pe smp 16
 
 scriptlist={2}
-""".format(runTime,nJobs,self._scriptFile)
+""".format(jobTime,nJobs,self._scriptFile)
 
         # Add on the rest of the script - need to do in two bits or the stuff in here gets interpreted by format
         s += """
