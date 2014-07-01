@@ -141,7 +141,7 @@ def mrbump_ensemble_cluster( job_scripts, amoptd ):
     mrBuild.QTYPE = amoptd['submit_qtype']
     
     if amoptd['submit_array']:
-        mrBuild.submitArrayJob(job_scripts.jobTime=86400)
+        mrBuild.submitArrayJob(job_scripts,jobTime=86400)
     else:
         for script in job_scripts:
             job_number = mrBuild.submitJob( subScript=script )
