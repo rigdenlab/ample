@@ -197,7 +197,8 @@ median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
 x <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasing=TRUE ), ]
 
 # Select top by selecting not duplicates on pdbCode
-x <- x[ !duplicated(x$pdbCode), c("pdbCode", "fastaLength","resolution","numChains","numPlacedChains", "shelxeCC", "shelxeAvgChainLength")  ]
+x <- x[ !duplicated(x$pdbCode), c("pdbCode","fastaLength","resolution","numChains",
+				"numPlacedChains", "shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
 
 # Now put in alphabetical order
 x <- x[ order( x$pdbCode ), ]
