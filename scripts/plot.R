@@ -1,9 +1,9 @@
 library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
-#data <- read.table(file="results_all_arpwarp.csv",sep=',', header=T)
-#data <- read.table(file="results_all_arpwarp.csv",sep=',', header=T)
-data <- read.table(file="results_all_arpwarpH.csv",sep=',', header=T)
+comparison=FALSE
+#data <- read.table(file="results_all_arpwarpH.csv",sep=',', header=T)
+data <- read.table(file="results.csv",sep=',', header=T)
 
 # Categorise successes
 data$successShelxe <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
@@ -29,31 +29,33 @@ data$successPhaser <- replace( data$successPhaser, is.na(data$successPhaser), 0 
 data$success <- as.numeric( data$successShelxe == 1 & data$successRebuild == 1 )
 data$success <- replace( data$success, is.na(data$success), 0 )
 
-# single-structure success
-data$successSingleStructure <- as.numeric( data$single_model_shelxeCC >= 25 & 
-				data$single_model_shelxeAvgChainLength >= 10 &
-				( data$single_model_buccFinalRfree <= 0.45 | data$single_model_arpWarpFinalRfree  <= 0.45 ) )
-data$successSingleStructure <- replace( data$successSingleStructure, is.na(data$successSingleStructure), 0 )
-
-# helix success
-#ok <- (data$helix_All_atom_shelxeCC >= 25 & data$helix_All_atom_shelxeAvgChainLength >= 10 & (data$helix_All_atom_buccFinalRfree <= 0.45 | data$helix_All_atom_arpWarpFinalRfree <= 0.45))| 
-#(data$helix_SCWRL_reliable_sidechains_shelxeCC >= 25 & data$helix_SCWRL_reliable_sidechains_shelxeAvgChainLength >= 10 & (data$helix_SCWRL_reliable_sidechains_buccFinalRfree <= 0.45 | data$helix_SCWRL_reliable_sidechains_arpWarpFinalRfree <= 0.45))| 
-#(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
-#ok <-(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
-#data$successHelix <- as.numeric( ok )
-#data$successHelix <- replace( data$successHelix, is.na(data$successHelix), 0 )
-ok <-(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
-ok <- as.numeric( ok )
-data$successHelix1 <- replace( ok, is.na(ok), 0 )
-ok <-(data$helix_SCWRL_reliable_sidechains_shelxeCC >= 25 & data$helix_SCWRL_reliable_sidechains_shelxeAvgChainLength >= 10 & (data$helix_SCWRL_reliable_sidechains_buccFinalRfree <= 0.45 | data$helix_SCWRL_reliable_sidechains_arpWarpFinalRfree <= 0.45) )
-ok <- as.numeric( ok )
-data$successHelix2 <- replace( ok, is.na(ok), 0 )
-ok <-(data$helix_All_atom_shelxeCC >= 25 & data$helix_All_atom_shelxeAvgChainLength >= 10 & (data$helix_All_atom_buccFinalRfree <= 0.45 | data$helix_All_atom_arpWarpFinalRfree <= 0.45) )
-ok <- as.numeric( ok )
-data$successHelix3 <- replace( ok, is.na(ok), 0 )
-
-# CHECK
-data$helixWorked <- as.numeric( data$successHelix1 | data$successHelix2 | data$successHelix3 )
+if (comparison){
+	# single-structure success
+	data$successSingleStructure <- as.numeric( data$single_model_shelxeCC >= 25 & 
+					data$single_model_shelxeAvgChainLength >= 10 &
+					( data$single_model_buccFinalRfree <= 0.45 | data$single_model_arpWarpFinalRfree  <= 0.45 ) )
+	data$successSingleStructure <- replace( data$successSingleStructure, is.na(data$successSingleStructure), 0 )
+	
+	# helix success
+	#ok <- (data$helix_All_atom_shelxeCC >= 25 & data$helix_All_atom_shelxeAvgChainLength >= 10 & (data$helix_All_atom_buccFinalRfree <= 0.45 | data$helix_All_atom_arpWarpFinalRfree <= 0.45))| 
+	#(data$helix_SCWRL_reliable_sidechains_shelxeCC >= 25 & data$helix_SCWRL_reliable_sidechains_shelxeAvgChainLength >= 10 & (data$helix_SCWRL_reliable_sidechains_buccFinalRfree <= 0.45 | data$helix_SCWRL_reliable_sidechains_arpWarpFinalRfree <= 0.45))| 
+	#(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
+	#ok <-(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
+	#data$successHelix <- as.numeric( ok )
+	#data$successHelix <- replace( data$successHelix, is.na(data$successHelix), 0 )
+	ok <-(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
+	ok <- as.numeric( ok )
+	data$successHelix1 <- replace( ok, is.na(ok), 0 )
+	ok <-(data$helix_SCWRL_reliable_sidechains_shelxeCC >= 25 & data$helix_SCWRL_reliable_sidechains_shelxeAvgChainLength >= 10 & (data$helix_SCWRL_reliable_sidechains_buccFinalRfree <= 0.45 | data$helix_SCWRL_reliable_sidechains_arpWarpFinalRfree <= 0.45) )
+	ok <- as.numeric( ok )
+	data$successHelix2 <- replace( ok, is.na(ok), 0 )
+	ok <-(data$helix_All_atom_shelxeCC >= 25 & data$helix_All_atom_shelxeAvgChainLength >= 10 & (data$helix_All_atom_buccFinalRfree <= 0.45 | data$helix_All_atom_arpWarpFinalRfree <= 0.45) )
+	ok <- as.numeric( ok )
+	data$successHelix3 <- replace( ok, is.na(ok), 0 )
+	
+	# CHECK
+	data$helixWorked <- as.numeric( data$successHelix1 | data$successHelix2 | data$successHelix3 )
+} # End comparison
 
 # Calculate number of copies of decoy that were placed
 data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
@@ -93,51 +95,52 @@ l = function( variable, value ) {
 # Data for which there are placed models and we have an origin
 odata = data[ ! is.na(data$ccmtzOrigin) & ! is.na( data$phaserLLG), ]
 
-# Data for which we can compare the single-model casse
-smdata <- data[ data$single_model_ran == "True", ]
+if (comparison){
+	# Data for which we can compare the single-model casse
+	smdata <- data[ data$single_model_ran == "True", ]
+	
+	#http://stackoverflow.com/questions/19357668/r-ggplot2-facetting-keep-ratio-but-override-define-output-plot-size
+	# Comparison of Ensemble with Single model
+	x <- smdata[ order( smdata$pdbCode, smdata$success, smdata$shelxeCC, decreasing=TRUE ), ]
+	
+	# Select top by selecting not duplicates on pdbCode
+	x <- x[ !duplicated(x$pdbCode), c("pdbCode", "fastaLength","resolution","numChains","numPlacedChains", "shelxeCC", "shelxeAvgChainLength")  ]
+	
+	# Now put in alphabetical order
+	x <- x[ order( x$pdbCode ), ]
+	
+	# Need to get numbers of success
+	# This gets the stats  - we can join because the by function is the pdbCode which is in similar alphabetic order
+	x["numModels"] <- aggregate( smdata$pdbCode, by=list(smdata$pdbCode), FUN=length )[2]
+	
+	# Different measures of success
+	x["success"] <- aggregate( smdata$success, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	#x["worked"] <- aggregate( smdata$success, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	#x$worked <- replace( x$worked, x$worked > 0, 1 )
+	x["worked"] <- replace( x$success, x$success > 0, 1 )
+	x["successShelxe"] <- aggregate( smdata$successShelxe, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	x["successRefmac"] <- aggregate( smdata$successRefmac, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	x["successPhaser"] <- aggregate( smdata$successPhaser, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	x["successRebuild"] <- aggregate( smdata$successRebuild, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	
+	x["successSingleStructure"] <- aggregate( smdata$successSingleStructure, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	#x["successHelix"] <- aggregate( smdata$successHelix, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	#x["helixWorked"] <- x$successHelix
+	#x$helixWorked <- replace( x$helixWorked, x$helixWorked > 0, 1 )
+	x["successHelix"] <- aggregate( smdata$helixWorked, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	x["helixWorked"] <- replace( x$successHelix, x$successHelix > 0, 1 )
+	x["successHelix1"] <- aggregate( smdata$successHelix1, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	x["successHelix2"] <- aggregate( smdata$successHelix2, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	x["successHelix3"] <- aggregate( smdata$successHelix3, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	
+	
+	# NB LOOK AT REORDER
+	# Now put in order by success, resolution
+	summaryData <- x[ order( -x$worked, x$resolution ), ]
+	#x <- x[ order( x$success, decreasing=TRUE ), ]
+	write.csv(summaryData, "summary2.csv", row.names=FALSE)
 
-
-#http://stackoverflow.com/questions/19357668/r-ggplot2-facetting-keep-ratio-but-override-define-output-plot-size
-
-# Comparison of Ensemble with Single model
-x <- smdata[ order( smdata$pdbCode, smdata$success, smdata$shelxeCC, decreasing=TRUE ), ]
-
-# Select top by selecting not duplicates on pdbCode
-x <- x[ !duplicated(x$pdbCode), c("pdbCode", "fastaLength","resolution","numChains","numPlacedChains", "shelxeCC", "shelxeAvgChainLength")  ]
-
-# Now put in alphabetical order
-x <- x[ order( x$pdbCode ), ]
-
-# Need to get numbers of success
-# This gets the stats  - we can join because the by function is the pdbCode which is in similar alphabetic order
-x["numModels"] <- aggregate( smdata$pdbCode, by=list(smdata$pdbCode), FUN=length )[2]
-
-# Different measures of success
-x["success"] <- aggregate( smdata$success, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-#x["worked"] <- aggregate( smdata$success, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-#x$worked <- replace( x$worked, x$worked > 0, 1 )
-x["worked"] <- replace( x$success, x$success > 0, 1 )
-x["successShelxe"] <- aggregate( smdata$successShelxe, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successRefmac"] <- aggregate( smdata$successRefmac, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successPhaser"] <- aggregate( smdata$successPhaser, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successRebuild"] <- aggregate( smdata$successRebuild, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-
-x["successSingleStructure"] <- aggregate( smdata$successSingleStructure, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-#x["successHelix"] <- aggregate( smdata$successHelix, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-#x["helixWorked"] <- x$successHelix
-#x$helixWorked <- replace( x$helixWorked, x$helixWorked > 0, 1 )
-x["successHelix"] <- aggregate( smdata$helixWorked, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["helixWorked"] <- replace( x$successHelix, x$successHelix > 0, 1 )
-x["successHelix1"] <- aggregate( smdata$successHelix1, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successHelix2"] <- aggregate( smdata$successHelix2, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successHelix3"] <- aggregate( smdata$successHelix3, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-
-
-# NB LOOK AT REORDER
-# Now put in order by success, resolution
-summaryData <- x[ order( -x$worked, x$resolution ), ]
-#x <- x[ order( x$success, decreasing=TRUE ), ]
-write.csv(summaryData, "summary2.csv", row.names=FALSE)
+} # End comparison
 
 #
 # Summary information
@@ -213,8 +216,10 @@ x["successRefmac"] <- aggregate( data$successRefmac, by=list(data$pdbCode), FUN=
 x["successPhaser"] <- aggregate( data$successPhaser, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 x["successRebuild"] <- aggregate( data$successRebuild, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 
-x["successSingleStructure"] <- aggregate( data$successSingleStructure, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successHelix"] <- aggregate( data$helixWorked, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+if (comparison){
+	x["successSingleStructure"] <- aggregate( data$successSingleStructure, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	x["successHelix"] <- aggregate( data$helixWorked, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+}
 
 x["successPolyAla"]  <- aggregate( 
 		data[ data$ensembleSideChain == "poly_ala", ]$success,
@@ -287,84 +292,86 @@ x[ x$fastaLength == max(x$fastaLength), c("pdbCode","ensembleName") ]
 # Plots
 #
 scols <- c("0" = "red","1" = "yellow","2" = "orange", "3" = "blue")
-# Set all NA CC to 0
-smdata$shelxeCC <- replace( smdata$shelxeCC,is.na(smdata$shelxeCC),0)
-smdata$single_model_shelxeCC <- replace( smdata$single_model_shelxeCC,is.na(smdata$single_model_shelxeCC),0)
-smdata[,"ESresult"] <- NA
-smdata$ESresult[ smdata$success == 0 & smdata$successSingleStructure == 0 ] <- 0
-smdata$ESresult[ smdata$success == 1 & smdata$successSingleStructure == 0 ] <- 1
-smdata$ESresult[ smdata$success == 0 & smdata$successSingleStructure == 1 ] <- 2
-smdata$ESresult[ smdata$success == 1 & smdata$successSingleStructure == 1 ] <- 3
 
-# 1006 both succeed
-# 488 ensemble success
-# 165 single model success
-# 3627 both fail
+if (comparison){
+	
+	# Set all NA CC to 0
+	smdata$shelxeCC <- replace( smdata$shelxeCC,is.na(smdata$shelxeCC),0)
+	smdata$single_model_shelxeCC <- replace( smdata$single_model_shelxeCC,is.na(smdata$single_model_shelxeCC),0)
+	smdata[,"ESresult"] <- NA
+	smdata$ESresult[ smdata$success == 0 & smdata$successSingleStructure == 0 ] <- 0
+	smdata$ESresult[ smdata$success == 1 & smdata$successSingleStructure == 0 ] <- 1
+	smdata$ESresult[ smdata$success == 0 & smdata$successSingleStructure == 1 ] <- 2
+	smdata$ESresult[ smdata$success == 1 & smdata$successSingleStructure == 1 ] <- 3
+	
+	# 1006 both succeed
+	# 488 ensemble success
+	# 165 single model success
+	# 3627 both fail
+	
+	# Ensemble vs single model
+	p <-ggplot(data=smdata,
+			aes(shelxeCC,single_model_shelxeCC,colour=factor(ESresult)))
+	p + geom_point(size=1.5) +
+	stat_sum( aes(size=..n..) ) +
+	scale_colour_manual( name="Result",
+			values=scols,
+			labels=c("Both Failed","Ensemble success", "Single-structure success", "Both succeeed")
+	) +
+	xlab("Ensemble Shelxe CC score") +
+	ylab("Single-structure Shelxe CC score") +
+	ggtitle("Ensemble and Single-structure CC scores")
+	ggsave("SSEShelxe.png")
+	
+	# Helix vs Single model
+	# Need to pull out the different side chain treamtments
+	# hacky way to get names to match - must be better way of doing this
+	hdata <- data[ data$helix_ran == "True" & data$ensembleSideChainTreatment == "poly_ala",
+			c("single_model_shelxeCC","successSingleStructure","helix_poly_ala_shelxeCC","successHelix1") ]
+	names(hdata) <- c("single_model_shelxeCC","successSingleStructure","helix_shelxeCC","successHelix")
+	
+	x <- data[ data$helix_ran == "True" & data$ensembleSideChainTreatment == "SCWRL_reliable_sidechains",
+			c("single_model_shelxeCC","successSingleStructure","helix_SCWRL_reliable_sidechains_shelxeCC","successHelix2") ]
+	names(x) <- c("single_model_shelxeCC","successSingleStructure","helix_shelxeCC","successHelix")
+	hdata <- rbind(hdata,x)
+	
+	x <- data[ data$helix_ran == "True" & data$ensembleSideChainTreatment == "All_atom",
+			c("single_model_shelxeCC","successSingleStructure","helix_All_atom_shelxeCC","successHelix3") ]
+	names(x) <- c("single_model_shelxeCC","successSingleStructure","helix_shelxeCC","successHelix")
+	hdata <- rbind(hdata,x)
+	
+	
+	hdata$single_model_shelxeCC <- replace( hdata$single_model_shelxeCC,is.na(hdata$single_model_shelxeCC),0)
+	hdata$helix_shelxeCC <- replace( hdata$helix_shelxeCC,is.na(hdata$helix_shelxeCC),0)
+	hdata[,"result"] <- NA
+	hdata$result[ hdata$successSingleStructure == 0 & hdata$successHelix == 0 ] <- 0
+	hdata$result[ hdata$successSingleStructure == 1 & hdata$successHelix == 0 ] <- 1
+	hdata$result[ hdata$successSingleStructure == 0 & hdata$successHelix == 1 ] <- 2
+	hdata$result[ hdata$successSingleStructure == 1 & hdata$successHelix == 1 ] <- 3
+	
+	
+	# 1637 in total - dim(hdata)
+	# 398 single model success
+	# 127 helix worked
+	# 617 both worked dim( hdata[ hdata$successSingleStructure==1 & hdata$successHelix==1,])
+	
+	p <-ggplot(data=hdata,
+			aes(single_model_shelxeCC,helix_shelxeCC,colour=factor(result)))
+	p + geom_point( size=1.5 ) +
+			stat_sum( aes(size=..n..) ) +
+			scale_colour_manual( name="Result",
+					values=scols,
+					labels=c("Both Fail","Single-structure success","Helix success","Both succeeed")
+			) +
+			scale_x_continuous(limits=c(0,80)) +
+			scale_y_continuous(limits=c(0,80)) +
+			xlab("Single-structure Shelxe CC score") +
+			ylab("Idealised Helix Shelxe CC score") +
+			ggtitle("Idealised Helices and Single-structure CC scores")
+	
+	ggsave("SSHShelxe.png")
 
-# Ensemble vs single model
-p <-ggplot(data=smdata,
-		aes(shelxeCC,single_model_shelxeCC,colour=factor(ESresult)))
-p + geom_point(size=1.5) +
-stat_sum( aes(size=..n..) ) +
-scale_colour_manual( name="Result",
-		values=scols,
-		labels=c("Both Failed","Ensemble success", "Single-structure success", "Both succeeed")
-) +
-xlab("Ensemble Shelxe CC score") +
-ylab("Single-structure Shelxe CC score") +
-ggtitle("Ensemble and Single-structure CC scores")
-ggsave("SSEShelxe.png")
-
-# Helix vs Single model
-# Need to pull out the different side chain treamtments
-# hacky way to get names to match - must be better way of doing this
-hdata <- data[ data$helix_ran == "True" & data$ensembleSideChainTreatment == "poly_ala",
-		c("single_model_shelxeCC","successSingleStructure","helix_poly_ala_shelxeCC","successHelix1") ]
-names(hdata) <- c("single_model_shelxeCC","successSingleStructure","helix_shelxeCC","successHelix")
-
-x <- data[ data$helix_ran == "True" & data$ensembleSideChainTreatment == "SCWRL_reliable_sidechains",
-		c("single_model_shelxeCC","successSingleStructure","helix_SCWRL_reliable_sidechains_shelxeCC","successHelix2") ]
-names(x) <- c("single_model_shelxeCC","successSingleStructure","helix_shelxeCC","successHelix")
-hdata <- rbind(hdata,x)
-
-x <- data[ data$helix_ran == "True" & data$ensembleSideChainTreatment == "All_atom",
-		c("single_model_shelxeCC","successSingleStructure","helix_All_atom_shelxeCC","successHelix3") ]
-names(x) <- c("single_model_shelxeCC","successSingleStructure","helix_shelxeCC","successHelix")
-hdata <- rbind(hdata,x)
-
-
-hdata$single_model_shelxeCC <- replace( hdata$single_model_shelxeCC,is.na(hdata$single_model_shelxeCC),0)
-hdata$helix_shelxeCC <- replace( hdata$helix_shelxeCC,is.na(hdata$helix_shelxeCC),0)
-hdata[,"result"] <- NA
-hdata$result[ hdata$successSingleStructure == 0 & hdata$successHelix == 0 ] <- 0
-hdata$result[ hdata$successSingleStructure == 1 & hdata$successHelix == 0 ] <- 1
-hdata$result[ hdata$successSingleStructure == 0 & hdata$successHelix == 1 ] <- 2
-hdata$result[ hdata$successSingleStructure == 1 & hdata$successHelix == 1 ] <- 3
-
-
-# 1637 in total - dim(hdata)
-# 398 single model success
-# 127 helix worked
-# 617 both worked dim( hdata[ hdata$successSingleStructure==1 & hdata$successHelix==1,])
-
-p <-ggplot(data=hdata,
-		aes(single_model_shelxeCC,helix_shelxeCC,colour=factor(result)))
-p + geom_point( size=1.5 ) +
-		stat_sum( aes(size=..n..) ) +
-		scale_colour_manual( name="Result",
-				values=scols,
-				labels=c("Both Fail","Single-structure success","Helix success","Both succeeed")
-		) +
-		scale_x_continuous(limits=c(0,80)) +
-		scale_y_continuous(limits=c(0,80)) +
-		xlab("Single-structure Shelxe CC score") +
-		ylab("Idealised Helix Shelxe CC score") +
-		ggtitle("Idealised Helices and Single-structure CC scores")
-
-ggsave("SSHShelxe.png")
-
-
-
+} # END comparison
 
 # How the different treatments fared - facet by resolution
 # Number of success
@@ -477,10 +484,15 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ggtitle("Histogram of CC scores by success")
 ggsave("CCscores.png")
 
+		#coord_fixed() +
 p <-ggplot(data=data[ data$success==1, ], aes(x=buccFinalRfree, y=arpWarpFinalRfree) )
 p + geom_point() +
-		#facet_grid( .~resCat, space="free", scales="free", labeller=l) +
-		facet_wrap( ~resCatw) +
+		#scale_x_continuous(limits=c(0,1)) +
+		#scale_y_continuous(limits=c(0,1)) +
+		#facet_grid( .~resCat, space="fixed", scales="fixed", labeller=l) +
+		facet_wrap( ~resCatw, ncol=1) +
+		coord_equal() +
+		#theme(aspect.ratio = 1) +
 		#stat_sum( aes(size=..n..) ) +
 		xlab("buccFinalRfree") +
 		ylab("arpWarpFinalRfree") +
