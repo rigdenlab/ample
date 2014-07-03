@@ -3,7 +3,8 @@ scolour="#3333FF"
 fcolour="#FF0000"
 comparison=FALSE
 #data <- read.table(file="results_all_arpwarpH.csv",sep=',', header=T)
-data <- read.table(file="results.csv",sep=',', header=T)
+#data <- read.table(file="comparison_results.csv",sep=',', header=T)
+data <- read.table(file="final_results.csv",sep=',', header=T)
 
 # Categorise successes
 data$successShelxe <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
@@ -95,6 +96,9 @@ l = function( variable, value ) {
 # Data for which there are placed models and we have an origin
 odata = data[ ! is.na(data$ccmtzOrigin) & ! is.na( data$phaserLLG), ]
 
+# Data for those that worked
+sdata = data[ data$success == 1, ]
+
 if (comparison){
 	# Data for which we can compare the single-model casse
 	smdata <- data[ data$single_model_ran == "True", ]
@@ -162,16 +166,16 @@ sprintf("Len helix success PDBs %s", length(hSuccess) )
 
 
 # * mean resolution of failing/succesful cases
-x <- mean(  data[ data$success == 1, ]$resolution ) # 1.969702
+x <- mean(  data[ data$success == 1, ]$resolution ) # 1.882012
 cat( "Mean resolution for successes is ",x,"\n")
-x <- mean(  data[ data$success == 0, ]$resolution ) # 2.007124
+x <- mean(  data[ data$success == 0, ]$resolution ) # 2.034655
 cat( "Mean resolution for failures is ",x,"\n")
 
 # * mean of solvent content of failing/succesful cases
 #unique( data[ is.na( data$solventContent ),]$pdbCode ) # 1G1J 1KYC 1P9I 3CVF
-x <-mean( data[ data$success == 1, ]$solventContent, na.rm=TRUE ) # 47.20036
+x <-mean( data[ data$success == 1, ]$solventContent, na.rm=TRUE ) # 46.58613
 cat( "Mean solvent content for successes is ",x,"\n")
-x <-mean( data[ data$success == 0, ]$solventContent, na.rm=TRUE ) # 50.47158
+x <-mean( data[ data$success == 0, ]$solventContent, na.rm=TRUE ) # 50.39069
 cat( "Mean solvent content for failures is ",x,"\n")
 
 # most common number of residues/proportion of target in search model
@@ -194,47 +198,45 @@ median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
 
 # For each case need to get the best success - i.e. success with max CC
 # Order by pdbCode and CC
-x <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasing=TRUE ), ]
+summaryData <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasing=TRUE ), ]
 
 # Select top by selecting not duplicates on pdbCode
-x <- x[ !duplicated(x$pdbCode), c("pdbCode","fastaLength","resolution","numChains",
-				"numPlacedChains", "shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
+summaryData <- summaryData[ !duplicated(summaryData$pdbCode), c("pdbCode","fastaLength","resolution","numChains",
+				"numResidues", "shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
 
 # Now put in alphabetical order
-x <- x[ order( x$pdbCode ), ]
+summaryData <- summaryData[ order( summaryData$pdbCode ), ]
 
 # Need to get numbers of success
 # This gets the stats  - we can join because the by function is the pdbCode which is in similar alphabetic order
-x["numModels"] <- aggregate( data$pdbCode, by=list(data$pdbCode), FUN=length )[2]
-x["worked"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x$worked <- replace( x$worked, x$worked > 0, 1 )
+summaryData["numModels"] <- aggregate( data$pdbCode, by=list(data$pdbCode), FUN=length )[2]
+summaryData["worked"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+summaryData$worked <- replace( summaryData$worked, summaryData$worked > 0, 1 )
 
 
 # Different measures of success
-x["success"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successShelxe"] <- aggregate( data$successShelxe, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successRefmac"] <- aggregate( data$successRefmac, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successPhaser"] <- aggregate( data$successPhaser, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-x["successRebuild"] <- aggregate( data$successRebuild, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+summaryData["success"] <- aggregate( data$success, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+summaryData["successShelxe"] <- aggregate( data$successShelxe, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+summaryData["successRefmac"] <- aggregate( data$successRefmac, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+summaryData["successPhaser"] <- aggregate( data$successPhaser, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+summaryData["successRebuild"] <- aggregate( data$successRebuild, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 
 if (comparison){
-	x["successSingleStructure"] <- aggregate( data$successSingleStructure, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
-	x["successHelix"] <- aggregate( data$helixWorked, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	summaryData["successSingleStructure"] <- aggregate( data$successSingleStructure, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	summaryData["successHelix"] <- aggregate( data$helixWorked, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 }
-
-x["successPolyAla"]  <- aggregate( 
+summaryData["successPolyAla"]  <- aggregate( 
 		data[ data$ensembleSideChain == "poly_ala", ]$success,
 		by=list( data[ data$ensembleSideChain == "poly_ala", ]$pdbCode ),
 		FUN=function(x){ sum( x == 1 ) } )[2]
-x["successScwrl"]  <- aggregate(
+summaryData["successScwrl"]  <- aggregate(
 		data[ data$ensembleSideChain == "SCWRL_reliable_sidechains", ]$success,
 		by=list( data[ data$ensembleSideChain == "SCWRL_reliable_sidechains", ]$pdbCode ),
 		FUN=function(x){ sum( x == 1 ) } )[2]
-x["successAllAtom"]  <- aggregate(
+summaryData["successAllAtom"]  <- aggregate(
 		data[ data$ensembleSideChain == "All_atom", ]$success,
 		by=list( data[ data$ensembleSideChain == "All_atom", ]$pdbCode ),
 		FUN=function(x){ sum( x == 1 ) } )[2]
-
 
 # ADD SINGLE MODEL AND HELIX
 #x["successfulSingleModel"] <- aggregate( data$successSingleStructure, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
@@ -244,11 +246,22 @@ x["successAllAtom"]  <- aggregate(
 
 # NB LOOK AT REORDER
 # Now put in order by success, resolution
-summaryData <- x[ order( -x$worked, x$resolution ), ]
+summaryData <- summaryData[ order( -summaryData$worked, summaryData$resolution ), ]
 #x <- x[ order( x$success, decreasing=TRUE ), ]
 write.csv(summaryData, "summary.csv", row.names=FALSE)
 
-sdata = data[ data$success == 1, ]
+# Plot of targets by chain length
+p <-ggplot( data=summaryData, aes( fastaLength, fill=factor(worked) ) ) 
+p + geom_histogram( position = 'stack', binwidth = 10 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success")
+		) +
+		ylab("Number of targets") +
+		xlab("Target chain length") +
+		ggtitle("Histogram of target chain length for successful and failing cases")
+ggsave("targetsByLength.png")
+
 # Most accurate models that solved 
 # Highest number RIO
 sdata[ sdata$ccmtzRioGood == max(sdata$ccmtzRioGood,na.rm=TRUE), c("pdbCode","ensembleName") ]
@@ -511,8 +524,8 @@ p + geom_point() +
 				labels=c("Failure", "Success")
 		) +
 		xlab("Resolution (A)") +
-		ylab("Protein length (residues)") +
-		ggtitle("Resolution vs protein length")
+		ylab("Chain length (residues)") +
+		ggtitle("Resolution vs chain length")
 ggsave("resolutionVsLength.png")
 
 # Binned (20) bar graph with length along the bottom and the bars dividied/coloured by success
@@ -524,7 +537,7 @@ p + geom_histogram( binwidth=5, position = 'dodge' ) +
 				labels=c("Failure", "Success")) +
 	xlab("Length in residues") +
 	ylab("Number of targets") +
-	ggtitle("Successes/failures by target protein length")
+	ggtitle("Successes/failures by target chain length")
 ggsave("targetByLength.png")
 
 
@@ -559,8 +572,8 @@ p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 				labels=c("Failure", "Success")
 		) +
 		ylab("Number of cases") +
-		xlab("TM score of model to native") +
-		ggtitle("Histogram of TM score for models for successful and failing cases")
+		xlab("TM-score of model to native") +
+		ggtitle("Histogram of TM-score for models for successful and failing cases")
 ggsave("modelTM.png")
 
 p <-ggplot(data=data, aes(x=ensembleNativeRMSD, fill=factor(success) ) )
@@ -762,6 +775,16 @@ p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 		ggtitle("Atoms out of density as proportion of native")
 ggsave("outOfDensityHistogramNative.png")
 
+# Proportion of In vs out of register contacts for success
+#p <-ggplot(data=odata, aes(x=ccmtzRioOoRegister/ccmtzRioNumContacts, fill=factor(success) ) )
+p <-ggplot(data=odata[ odata$success==1, ], aes(x=ccmtzRioOoRegister/ccmtzRioNumContacts) )
+p + geom_histogram( binwidth = 0.01, fill="#3333FF" ) +
+		ylab("Number of cases") +
+		xlab("Proportion out-of-register") +
+		ggtitle("Prop. of Out-of-register contacts for successes")
+ggsave("propOutRegister.png")
+
+
 #
 # Graphs
 #
@@ -778,7 +801,6 @@ p + geom_point() +
 		ylab("In-register C-alpha") +
 		ggtitle("In- vs, Out-of-register C-alphas")
 ggsave("ooRegisterVsInRegister.png")
-
 
 # plot of nrInRegisterContacts vs nrGoodContacts
 p <-ggplot(data=odata, aes(x=shelxeCC, y=ccmtzRioGood, colour=factor(success) ) )
