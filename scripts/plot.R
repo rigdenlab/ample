@@ -255,8 +255,8 @@ p <-ggplot( data=summaryData, aes( fastaLength, fill=factor(worked) ) )
 p + geom_histogram( position = 'stack', binwidth = 10 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of targets") +
 		xlab("Target chain length") +
 		ggtitle("Histogram of target chain length for successful and failing cases")
@@ -435,8 +435,8 @@ p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("Number of residues in ensemble") +
 		ylab("Number of ensembles") +
 		ggtitle("Number of residues in ensemble for successful and failing cases")
@@ -447,8 +447,8 @@ p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("Percent of residues in ensemble") +
 		ylab("Number of ensembles") +
 		ggtitle("Percentage of residues in ensemble for successful and failing cases")
@@ -459,8 +459,8 @@ p <-ggplot( data=data, aes( factor(ensembleSideChainTreatment), fill=factor(succ
 p + geom_histogram( position = 'dodge' ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Side-chain Treatment") +
 		ggtitle("Histogram of side-chain treatment for successful and failing cases")
@@ -478,8 +478,8 @@ p <-ggplot(data=data, aes(shelxeCC, buccFinalRfree, colour=factor(successShelxe)
 p + geom_point() +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Shelxe Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		facet_wrap( ~resCatw) +
 		xlab("Shelxe CC score") +
 		ylab("Buccaneer Rfree") +
@@ -491,8 +491,8 @@ p <-ggplot(data=data, aes(x=shelxeCC, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("CC score") +
 		ggtitle("Histogram of CC scores by success")
@@ -521,9 +521,9 @@ p + geom_point() +
 		stat_sum( aes(size=..n..) ) +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
-		xlab("Resolution (A)") +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		xlab("Resolution (\uc5)") +
 		ylab("Chain length (residues)") +
 		ggtitle("Resolution vs chain length")
 ggsave("resolutionVsLength.png")
@@ -534,7 +534,8 @@ p + geom_histogram( binwidth=5, position = 'dodge' ) +
 	scale_x_continuous( breaks=seq(0,260,20) ) +
 	scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 	xlab("Length in residues") +
 	ylab("Number of targets") +
 	ggtitle("Successes/failures by target chain length")
@@ -569,8 +570,8 @@ p <-ggplot(data=data, aes(x=ensembleNativeTM, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("TM-score of model to native") +
 		ggtitle("Histogram of TM-score for models for successful and failing cases")
@@ -581,8 +582,8 @@ p <-ggplot(data=data, aes(x=ensembleNativeRMSD, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("RMSD score of model to native") +
 		ggtitle("Histogram of RMSD score for models for successful and failing cases")
@@ -594,8 +595,8 @@ p <-ggplot(data=data, aes(x=reforiginRMSD, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("reforigin RMSD of placed model to native") +
 		ggtitle("Histogram of reforigin RMSD scores by success")
@@ -636,8 +637,8 @@ p <-ggplot(data=odata, aes(x=ccmtzRioGood, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("RIO score") +
 		ggtitle("Histogram of RIO scores")
@@ -647,8 +648,8 @@ p <-ggplot(data=odata, aes(x=ccmtzRioNoCat, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Number non-RIO C-alpha") +
 		ggtitle("non-RIO C-alpha atoms")
@@ -660,8 +661,8 @@ p <-ggplot(data=odata, aes(x=ccmtzRioGood/numPlacedCA, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 0.05 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Proportion RIO") +
 		ggtitle("RIO as proportion of model")
@@ -684,7 +685,8 @@ p + geom_point( size=1 ) +
 		facet_grid( .~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("In-register proportion of RIO") +
 		ylab("Number of residues in ASU") +
 		ggtitle("In-register CA as a prop. of RIO vs num. residues for RIO > 0")
@@ -695,8 +697,8 @@ p <-ggplot(data=odata, aes(x=ccmtzRioGood/numResidues, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 0.05 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Proportion RIO") +
 		ggtitle("RIO as proportion of native")
@@ -707,8 +709,8 @@ p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts/numPlacedAtoms, fill=factor(succ
 p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Proportion in density") +
 		ggtitle("Atoms in density as a proportion of the model")
@@ -719,8 +721,8 @@ p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts/numAtoms, fill=factor(success) )
 p + geom_histogram( position = 'dodge', binwidth = 0.001 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Proportion in density") +
 		ggtitle("Atoms in density as proportion of native")
@@ -731,8 +733,8 @@ p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Number in density") +
 		ggtitle("Number of atoms in density")
@@ -744,8 +746,8 @@ p <-ggplot(data=odata, aes(x=numPlacedAtoms-ccmtzAaNumContacts, fill=factor(succ
 p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Number out of density") +
 		ggtitle("Number of atoms out of density")
@@ -756,8 +758,8 @@ p <-ggplot(data=odata, aes(x=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms,
 p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Proportion out of density") +
 		ggtitle("Atoms out of density as proportion of model")
@@ -768,21 +770,71 @@ p <-ggplot(data=odata, aes(x=(numPlacedAtoms-ccmtzAaNumContacts)/numAtoms, fill=
 p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Proportion out of density") +
 		ggtitle("Atoms out of density as proportion of native")
 ggsave("outOfDensityHistogramNative.png")
 
 # Proportion of In vs out of register contacts for success
+#3767 success
+#3766 with RIO score > 0
+#3209 in ==0 out-of-register >0 - 85.19%
+#		130 out == 0, in > 0 - 3.45%
+#		400 - some in & out - 10.62%
+#		28 solved but no scores. - 0.74%
+#		1364 - OO == RIO
+
+
+
+#dim(odata[ odata$success==1 & odata$ccmtzRioOoRegister==odata$ccmtzRioNumContacts, ])
+#dim(odata[ odata$success==1 & odata$ccmtzRioOoRegister>0 & odata$ccmtzRioInregister==0, ]) - 3209
+#dim(odata[ odata$success==1 & odata$ccmtzRioOoRegister == odata$ccmtzRioNumContacts, ]) - 1364
 #p <-ggplot(data=odata, aes(x=ccmtzRioOoRegister/ccmtzRioNumContacts, fill=factor(success) ) )
-p <-ggplot(data=odata[ odata$success==1, ], aes(x=ccmtzRioOoRegister/ccmtzRioNumContacts) )
+# odata[ odata$success==1,]$ccmtzRioOoRegister / odata[ odata$success==1,]$ccmtzRioNumContacts 
+p <-ggplot(data=odata[ odata$success==1, ], aes(x=ccmtzRioOoRegister/ccmtzRioGood) )
 p + geom_histogram( binwidth = 0.01, fill="#3333FF" ) +
 		ylab("Number of cases") +
 		xlab("Proportion out-of-register") +
 		ggtitle("Prop. of Out-of-register contacts for successes")
 ggsave("propOutRegister.png")
+
+# Length distribution of RIO scores
+p <-ggplot(data=odata, aes(x=ccmtzRioGood, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 1  ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		ylab("Number of cases") +
+		xlab("RIO score") +
+		ggtitle("Histogram of RIO scores")
+ggsave("rioDistribution.png")
+
+p <-ggplot(data=odata[ odata$ccmtzRioGood >0, ], aes(x=ccmtzRioGood, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 1  ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		ylab("Number of cases") +
+		xlab("RIO score") +
+		ggtitle("Histogram of RIO scores (RIO >0)")
+ggsave("rioDistributionNoZero.png")
+
+
+# Length distribution of ideal helcies
+p <-ggplot(data=odata, aes(x=rioLenHelix, fill=factor(success) ) )
+p + geom_histogram( position = 'dodge', binwidth = 1  ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		ylab("Number of cases") +
+		xlab("Length of RIO helix") +
+		ggtitle("Distribution of RIO helices")
+ggsave("lengthIdealHelices.png")
 
 
 #
@@ -795,19 +847,32 @@ p + geom_point() +
 		stat_sum( aes(size=..n..) ) +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("Out-of-register C-alpha") +
 		ylab("In-register C-alpha") +
 		ggtitle("In- vs, Out-of-register C-alphas")
 ggsave("ooRegisterVsInRegister.png")
+
+p <-ggplot(data=odata[odata$ccmtzRioOoRegister + odata$ccmtzRioInregister > 0, ], aes(x=ccmtzRioOoRegister, y=ccmtzRioInregister, colour=factor(success) ) ) 
+p + geom_point() +
+		stat_sum( aes(size=..n..) ) +
+		scale_colour_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		xlab("Out-of-register C-alpha") +
+		ylab("In-register C-alpha") +
+		ggtitle("In- vs, Out-of-register C-alphas (In+Out > 0)")
+ggsave("ooRegisterVsInRegisterGtZero.png")
 
 # plot of nrInRegisterContacts vs nrGoodContacts
 p <-ggplot(data=odata, aes(x=shelxeCC, y=ccmtzRioGood, colour=factor(success) ) )
 p + geom_point() +
 	scale_colour_manual( values=c(fcolour,scolour),
 	name="Success/Failure",
-	labels=c("Failure", "Success") ) +
+	labels=c("Failure", "Success"),
+	guide=FALSE) +
 	xlab("Shelxe CC") +
 	ylab("RIO score") +
 	ggtitle("RIO score vs shelxe CC")
@@ -831,7 +896,8 @@ p + geom_point( size=1 ) +
 		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("Proportion  atoms in density (< 0.5A)") +
 		ylab("RIO C-alphas as prop. of native (< 1.5A)") +
 		ggtitle("RIO vs in-density as proportion of native")
@@ -852,7 +918,8 @@ p + geom_point( size=1 ) +
 		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("Atoms in density as prop. of native (< 0.5A)") +
 		ylab("Atoms outside of density as prop. of native (> 0.5A)") +
 		ggtitle("In- vs out-of-density as prop. of native")
@@ -867,7 +934,8 @@ p + geom_point( size=1 ) +
 		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("Atoms in density as prop. of model (< 0.5A)") +
 		ylab("Atoms outside of density as prop. of model (> 0.5A)") +
 		ggtitle("In- vs out-of-density as prop. of model")
@@ -884,7 +952,8 @@ p + geom_point( size=1 ) +
 		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("Atoms in density as prop. of native (< 0.5A)") +
 		ylab("Atoms outside of density as prop. of model (> 0.5A)") +
 		ggtitle("In- vs out-of-density as native/model")
@@ -899,7 +968,8 @@ p + geom_point( size=1 ) +
 		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("Num. atoms in density (< 0.5A)") +
 		ylab("Num. out of density (> 0.5A)") +
 		ggtitle("Number placed in- vs out-of-density")
@@ -915,7 +985,8 @@ p + geom_point( size=1 ) +
 		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("RIO as proportion of native") +
 		ylab("Num. outside density as prop. native (> 0.5A)") +
 		ggtitle("Out-of-density as prop. of native vs RIO as prop. of native")
@@ -930,7 +1001,8 @@ p + geom_point( size=1 ) +
 		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("RIO as proportion of native") +
 		ylab("Num. outside density as prop. model (> 0.5A)") +
 		ggtitle("Out-of-density as prop. of model vs RIO as prop. of native")
@@ -945,7 +1017,8 @@ p + geom_point( size=1 ) +
 		facet_grid( resCat ~ success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
-				labels=c("Failure", "Success") ) +
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
 		xlab("RIO as proportion of native") +
 		ylab("Numer placed atoms - AIO score") +
 		ggtitle("RIO as proportion of native vs num. of misplaced atoms.")
@@ -1028,20 +1101,6 @@ ggsave("correctlyVsMisplacedNum.png")
 #		ggtitle("% coincident vs RIO C-alpha")
 #ggsave("percentCoincidentVsRIO.png")
 
-
-# Length distribution of helcies
-p <-ggplot(data=odata, aes(x=rioLenHelix, fill=factor(success) ) )
-p + geom_histogram( position = 'dodge', binwidth = 1  ) +
-		scale_fill_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success")
-		) +
-		ylab("Number of cases") +
-		xlab("Length of RIO helix") +
-		ggtitle("Distribution of RIO helices")
-ggsave("rioHelices.png")
-
-
 ###############################################################################################################################
 #
 # TFZ/LLG
@@ -1053,7 +1112,8 @@ p <-ggplot(data=data[ ! is.na( data$phaserLLG) & ! is.na( data$phaserTFZ),],
 p + geom_point() + 
 		scale_colour_manual( values=c(fcolour,scolour),
 							name="Success/Failure",
-							labels=c("Failure", "Success") ) +
+							labels=c("Failure", "Success"),
+							guide=FALSE) +
 		xlab("Phaser TFZ") +
 		ylab("Phaser LLG") +
 		ggtitle("Phaser LLG vs Phaser TFZ")
