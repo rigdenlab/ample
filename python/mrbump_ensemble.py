@@ -216,11 +216,11 @@ def check_success( job ):
     rFreeSuccess=0.4
     if r.shelxCC and r.shelxCC != "--" and float(r.shelxCC) >= 25.0:
         success=True
-    elif r.buccRfree and r.buccRfree != "--" and float(r.buccRfree) >=rFreeSuccess:
+    elif r.buccRfree and r.buccRfree != "--" and float(r.buccRfree) <=rFreeSuccess:
         success=True
-    elif r.arpWarpRfree and r.arpWarpRfree != "--" and float(r.arpWarpRfree) >=rFreeSuccess:
+    elif r.arpWarpRfree and r.arpWarpRfree != "--" and float(r.arpWarpRfree) <=rFreeSuccess:
         success=True
-    elif r.rfree and float(r.rfree) >= rFreeSuccess:
+    elif r.rfree and float(r.rfree) <= rFreeSuccess:
         success=True
         
     return success
