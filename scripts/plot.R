@@ -11,8 +11,7 @@ data$successShelxe <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLengt
 data$successShelxe <- replace( data$successShelxe, is.na(data$successShelxe), 0 )
 
 # Definition of success where at least one rebuild worked 
-#data$minRfree <- min( data$arpWarpFinalRfree, data$buccFinalRfree )
-data$minRfree <- pmin( data$arpWarpFinalRfree, data$buccFinalRfree )
+data$minRfree <- pmin( data$arpWarpFinalRfree, data$buccFinalRfree, na.rm=TRUE )
 data$successRebuild <- as.numeric( data$minRfree <= 0.45 )
 #data$successRebuild <- as.numeric(  data$buccFinalRfree <= 0.45 )
 data$successRebuild <- replace( data$successRebuild, is.na(data$successRebuild), 0 )
@@ -142,7 +141,7 @@ if (comparison){
 	# Now put in order by success, resolution
 	summaryData <- x[ order( -x$worked, x$resolution ), ]
 	#x <- x[ order( x$success, decreasing=TRUE ), ]
-	write.csv(summaryData, "summary2.csv", row.names=FALSE)
+	write.csv(summaryData, "summaryComparison.csv", row.names=FALSE)
 
 } # End comparison
 
@@ -225,6 +224,8 @@ if (comparison){
 	summaryData["successSingleStructure"] <- aggregate( data$successSingleStructure, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 	summaryData["successHelix"] <- aggregate( data$helixWorked, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 }
+
+# side-chain treatment
 summaryData["successPolyAla"]  <- aggregate( 
 		data[ data$ensembleSideChain == "poly_ala", ]$success,
 		by=list( data[ data$ensembleSideChain == "poly_ala", ]$pdbCode ),
@@ -237,6 +238,45 @@ summaryData["successAllAtom"]  <- aggregate(
 		data[ data$ensembleSideChain == "All_atom", ]$success,
 		by=list( data[ data$ensembleSideChain == "All_atom", ]$pdbCode ),
 		FUN=function(x){ sum( x == 1 ) } )[2]
+
+# Subclustering radii
+pdbCodes <- unique( data$pdbCode )
+
+x <- aggregate( success~pdbCode,
+		data=data,
+		FUN=function(x){ sum( x == 1 ) },
+		subset=data$ensembleRadiusThreshold==1 )
+missing <- setdiff( pdbCodes, x$pdbCode)
+y<-rep(0,length(missing)) # Make vector of zeros as long as the missing codes
+y <- data.frame( missing, y) # Create a data frame and name it
+names(y) <- c("pdbCode","success")
+y<-rbind(x,y)
+y <- y[ order(y$pdbCode), ]
+summaryData$subclustering1A <- y$success
+
+x <- aggregate( success~pdbCode,
+		data=data,
+		FUN=function(x){ sum( x == 1 ) },
+		subset=data$ensembleRadiusThreshold==2 )
+missing <- setdiff( pdbCodes, x$pdbCode)
+y<-rep(0,length(missing)) # Make vector of zeros as long as the missing codes
+y <- data.frame( missing, y) # Create a data frame and name it
+names(y) <- c("pdbCode","success")
+y<-rbind(x,y)
+y <- y[ order(y$pdbCode), ]
+summaryData$subclustering2A <- y$success
+
+x <- aggregate( success~pdbCode,
+		data=data,
+		FUN=function(x){ sum( x == 1 ) },
+		subset=data$ensembleRadiusThreshold==3 )
+missing <- setdiff( pdbCodes, x$pdbCode)
+y<-rep(0,length(missing)) # Make vector of zeros as long as the missing codes
+y <- data.frame( missing, y) # Create a data frame and name it
+names(y) <- c("pdbCode","success")
+y<-rbind(x,y)
+y <- y[ order(y$pdbCode), ]
+summaryData$subclustering3A <- y$success
 
 # ADD SINGLE MODEL AND HELIX
 #x["successfulSingleModel"] <- aggregate( data$successSingleStructure, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
@@ -333,7 +373,7 @@ if (comparison){
 			labels=c("Both Failed","Ensemble success", "Single-structure success", "Both succeeed")
 	) +
 	xlab("Ensemble Shelxe CC score") +
-	ylab("Single-structure Shelxe CC score") +
+	ylab("Single centroid structure CC score") +
 	ggtitle("Ensemble and Single-structure CC scores")
 	ggsave("SSEShelxe.png")
 	
@@ -465,6 +505,19 @@ p + geom_histogram( position = 'dodge' ) +
 		xlab("Side-chain Treatment") +
 		ggtitle("Histogram of side-chain treatment for successful and failing cases")
 ggsave("sideChain.png")
+
+
+# Number that solved under each sub-clustering radius
+p <-ggplot( data=data, aes( factor(ensembleRadiusThreshold), fill=factor(success) ) ) 
+p + geom_histogram( position = 'dodge' ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		ylab("Number of cases") +
+		xlab("Sub-clustering radius") +
+		ggtitle("Histogram of sub-clustering for successful and failing cases")
+ggsave("subClusteringRadius.png")
 
 
 # As a table
@@ -652,7 +705,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Number non-RIO C-alpha") +
-		ggtitle("non-RIO C-alpha atoms")
+		ggtitle("non-RIO contacts")
 ggsave("noRioHistogram.png")
 
 
@@ -909,21 +962,21 @@ ggsave("inDensityVsRIObyRes.png")
 # Proportion correct measured by: ccmtzAaNumContacts/numAtoms
 #                             or: ccmtzRioGood/numResidues
 # so...
-p <-ggplot(data=odata,
-		aes(x=ccmtzAaNumContacts/numAtoms,
-			y=(numPlacedAtoms-ccmtzAaNumContacts)/numAtoms,
-			colour=factor(success) ) )
-p + geom_point( size=1 ) +
-		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
-		scale_colour_manual( values=c(fcolour, scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success"),
-				guide=FALSE) +
-		xlab("Atoms in density as prop. of native (< 0.5A)") +
-		ylab("Atoms outside of density as prop. of native (> 0.5A)") +
-		ggtitle("In- vs out-of-density as prop. of native")
-ggsave("inDensityVsMisplacedPropNative.png")
+#p <-ggplot(data=odata,
+#		aes(x=ccmtzAaNumContacts/numAtoms,
+#			y=(numPlacedAtoms-ccmtzAaNumContacts)/numAtoms,
+#			colour=factor(success) ) )
+#p + geom_point( size=1 ) +
+#		stat_sum( aes(size=..n..) ) +
+#		facet_grid( resCat ~ success, labeller=l) +
+#		scale_colour_manual( values=c(fcolour, scolour),
+#				name="Success/Failure",
+#				labels=c("Failure", "Success"),
+#				guide=FALSE) +
+#		xlab("AIO as prop. of native") +
+#		ylab("Num. native atoms - AIO") +
+#		ggtitle("")
+#ggsave("inDensityVsMisplacedPropNative.png")
 
 p <-ggplot(data=odata,
 		aes(x=ccmtzAaNumContacts/numPlacedAtoms,
