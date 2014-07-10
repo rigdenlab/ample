@@ -2,7 +2,7 @@ library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
 comparison=FALSE
-data <- read.table(file="results.csv",sep=',', header=T)
+data <- read.table(file="final_results.csv",sep=',', header=T)
 #data <- read.table(file="comparison_results.csv",sep=',', header=T)
 #data <- read.table(file="final_results.csv",sep=',', header=T)
 
@@ -316,7 +316,7 @@ x <- sdata[ sdata$ccmtzRioGood == 0, ]
 x[ x$fastaLength == max(x$fastaLength), c("pdbCode","ensembleName") ]
 # 2QIH poly_ala_trunc_24.292064_rad_2
 
-# Longest that solved with zero AIO score
+# Longest that solved with zero AIO score (and RIO)
 x <- sdata[ sdata$ccmtzAaNumContacts== 0, ]
 x[ x$fastaLength == max(x$fastaLength), c("pdbCode","ensembleName") ]
 # 3M91 SCWRL_reliable_sidechains_trunc_0.066638_rad_1
@@ -727,24 +727,6 @@ odata$propRioIn <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRi
 odata$propRioOut <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)[,2]
 #odata$propRioIn <- replace( odata$propRioIn, is.na(odata$propRioIn), -1 )
 
-#p <-ggplot(data=odata[ odata$ccmtzRioGood > 0, ], aes(x=propRioIn, fill=factor(success)) )
-#p + geom_histogram( binwidth = 0.05, position='dodge' ) 
-p <-ggplot(data=odata[ odata$ccmtzRioGood > 0, ],
-		aes(x=propRioIn,
-			y=numResidues,
-			colour=factor(success) ) )
-p + geom_point( size=1 ) +
-		stat_sum( aes(size=..n..) ) +
-		facet_grid( .~ success, labeller=l) +
-		scale_colour_manual( values=c(fcolour, scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success"),
-				guide=FALSE) +
-		xlab("In-register proportion of RIO") +
-		ylab("Number of residues in ASU") +
-		ggtitle("In-register CA as a prop. of RIO vs num. residues for RIO > 0")
-ggsave("rioInRegisterPropVsLength.png")
-
 # Proportion RIO of native
 p <-ggplot(data=odata, aes(x=ccmtzRioGood/numResidues, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 0.05 ) +
@@ -920,6 +902,25 @@ p + geom_point() +
 		ggtitle("RIO_in versus RIO_out (RIO > 0)")
 ggsave("rioInVsRioOutGtZero.png")
 
+#p <-ggplot(data=odata[ odata$ccmtzRioGood > 0, ], aes(x=propRioIn, fill=factor(success)) )
+#p + geom_histogram( binwidth = 0.05, position='dodge' ) 
+p <-ggplot(data=odata[ odata$ccmtzRioGood > 0, ],
+		aes(x=propRioIn,
+				y=numResidues,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( .~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		xlab("In-register proportion of RIO") +
+		ylab("Number of residues in ASU") +
+		ggtitle("In-register CA as a prop. of RIO vs num. residues for RIO > 0")
+ggsave("rioInRegisterPropVsLength.png")
+
+
 # plot of nrInRegisterContacts vs nrGoodContacts
 p <-ggplot(data=odata, aes(x=shelxeCC, y=ccmtzRioGood, colour=factor(success) ) )
 p + geom_point() +
@@ -990,68 +991,11 @@ p + geom_point( size=1 ) +
 ggsave("nonAioVsRIO.png")
 
 
-
-# Proportion RIO vs proportion in density
-p <-ggplot(data=odata,
-		aes(x=ccmtzAaNumContacts/numAtoms,
-				y=ccmtzRioGood/numResidues,
-				colour=factor(success) ) )
-p + geom_point( size=1 ) +
-		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
-		scale_colour_manual( values=c(fcolour, scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success"),
-				guide=FALSE) +
-		xlab("Proportion  atoms in density (< 0.5A)") +
-		ylab("RIO C-alphas as prop. of native (< 1.5A)") +
-		ggtitle("RIO vs in-density as proportion of native")
-ggsave("inDensityVsRIObyRes.png")
-
-
-# Measure of how many correct vs number/proportion misplaced
-# Misplaced atoms of model measured by: numPlacedAtoms - ccmtzAaNumContacts - proportion is (numPlacedAtoms-ccmtzAaNumContacts)/numAtoms
-# Proportion correct measured by: ccmtzAaNumContacts/numAtoms
-#                             or: ccmtzRioGood/numResidues
-# so...
-#p <-ggplot(data=odata,
-#		aes(x=ccmtzAaNumContacts/numAtoms,
-#			y=(numPlacedAtoms-ccmtzAaNumContacts)/numAtoms,
-#			colour=factor(success) ) )
-#p + geom_point( size=1 ) +
-#		stat_sum( aes(size=..n..) ) +
-#		facet_grid( resCat ~ success, labeller=l) +
-#		scale_colour_manual( values=c(fcolour, scolour),
-#				name="Success/Failure",
-#				labels=c("Failure", "Success"),
-#				guide=FALSE) +
-#		xlab("AIO as prop. of native") +
-#		ylab("Num. native atoms - AIO") +
-#		ggtitle("")
-#ggsave("inDensityVsMisplacedPropNative.png")
-p <-ggplot(data=odata,
-		aes(x=ccmtzAaNumContacts/numPlacedAtoms,
-				y=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms,
-				colour=factor(success) ) )
-p + geom_point( size=1 ) +
-		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
-		scale_colour_manual( values=c(fcolour, scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success"),
-				guide=FALSE) +
-		xlab("Atoms in density as prop. of model (< 0.5A)") +
-		ylab("Atoms outside of density as prop. of model (> 0.5A)") +
-		ggtitle("In- vs out-of-density as prop. of model")
-ggsave("inDensityVsMisplacedPropModel.png")
-
-
-
 # Number outside of density as proportion of model shows negative signal as proportion of the input signal
 # Number in density shows what actually matched
 p <-ggplot(data=odata,
-		aes(x=ccmtzAaNumContacts/numAtoms,
-				y=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms,
+		aes(x=(ccmtzRioGood/numResidues)*100,
+				y=((numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms)*100,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
@@ -1060,13 +1004,62 @@ p + geom_point( size=1 ) +
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
 				guide=FALSE) +
-		xlab("Atoms in density as prop. of native (< 0.5A)") +
-		ylab("Atoms outside of density as prop. of model (> 0.5A)") +
-		ggtitle("In- vs out-of-density as native/model")
-ggsave("inDensityVsMisplacedPropBoth.png")
+		xlab("% RIO of native") +
+		ylab("% non-AIO atoms of model") +
+		ggtitle("RIO/non-AIO as percentages")
+ggsave("rioPercentAioPercentFres.png")
 
 p <-ggplot(data=odata,
-		aes(x=ccmtzAaNumContacts,
+		aes(x=(ccmtzRioGood/numResidues)*100,
+				y=((numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms)*100,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid(  ~success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		xlab("% RIO of native") +
+		ylab("% non-AIO atoms of model") +
+		ggtitle("RIO/non-AIO as percentages")
+ggsave("rioPercentAioPercent.png")
+
+p <-ggplot(data=odata,
+		aes(x=(ccmtzRioGood/numResidues)*100,
+				y=(numPlacedAtoms-ccmtzAaNumContacts),
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( resCat ~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		xlab("%RIO of native") +
+		ylab("Number non-AIO atoms") +
+		ggtitle("RIO as percentage vs number non-AIO")
+ggsave("rioPercentAioNumFres.png")
+
+
+p <-ggplot(data=odata,
+		aes(x=ccmtzRioGood,
+				y=((numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms)*100,
+				colour=factor(success) ) )
+p + geom_point( size=1 ) +
+		stat_sum( aes(size=..n..) ) +
+		facet_grid( resCat ~ success, labeller=l) +
+		scale_colour_manual( values=c(fcolour, scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		xlab("RIO score") +
+		ylab("% non-AIO atoms of model") +
+		ggtitle("RIO vs non-AIO as percentage of model")
+ggsave("rioNumAioPercentFres.png")
+
+p <-ggplot(data=odata,
+		aes(x=ccmtzRioGood,
 				y=numPlacedAtoms-ccmtzAaNumContacts,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
@@ -1076,59 +1069,26 @@ p + geom_point( size=1 ) +
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
 				guide=FALSE) +
-		xlab("Num. atoms in density (< 0.5A)") +
-		ylab("Num. out of density (> 0.5A)") +
-		ggtitle("Number placed in- vs out-of-density")
-ggsave("inDensityVsMisplacedNum.png")
-
-
-p <-ggplot(data=odata,
-		aes(x=ccmtzRioGood/numResidues,
-				y=(numPlacedAtoms-ccmtzAaNumContacts)/numAtoms,
-				colour=factor(success) ) )
-p + geom_point( size=1 ) +
-		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
-		scale_colour_manual( values=c(fcolour, scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success"),
-				guide=FALSE) +
-		xlab("RIO as proportion of native") +
-		ylab("Num. outside density as prop. native (> 0.5A)") +
-		ggtitle("Out-of-density as prop. of native vs RIO as prop. of native")
-ggsave("correctlyVsMisplacedProp.png")
+		xlab("RIO score") +
+		ylab("Number non-AIO atoms") +
+		ggtitle("RIO vs number non-AIO atoms")
+ggsave("rioNumAioNumFres.png")
 
 p <-ggplot(data=odata,
-		aes(x=ccmtzRioGood/numResidues,
-				y=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms,
-				colour=factor(success) ) )
-p + geom_point( size=1 ) +
-		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
-		scale_colour_manual( values=c(fcolour, scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success"),
-				guide=FALSE) +
-		xlab("RIO as proportion of native") +
-		ylab("Num. outside density as prop. model (> 0.5A)") +
-		ggtitle("Out-of-density as prop. of model vs RIO as prop. of native")
-ggsave("correctlyVsMisplacedPropModel.png")
-
-p <-ggplot(data=odata,
-		aes(x=ccmtzRioGood/numResidues,
+		aes(x=ccmtzRioGood,
 				y=numPlacedAtoms-ccmtzAaNumContacts,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
+		facet_grid(  ~success, labeller=l) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
 				guide=FALSE) +
-		xlab("RIO as proportion of native") +
-		ylab("Numer placed atoms - AIO score") +
-		ggtitle("RIO as proportion of native vs num. of misplaced atoms.")
-ggsave("correctlyVsMisplacedNum.png")
+		xlab("RIO score") +
+		ylab("Number non-AIO atoms") +
+		ggtitle("RIO vs number non-AIO atoms")
+ggsave("rioNumAioNum.png")
 
 
 
