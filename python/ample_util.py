@@ -6,6 +6,7 @@ Might end up somewhere else at somepoint.
 # Python modules
 import logging
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -120,11 +121,16 @@ def find_maxcluster( amopt ):
         if not os.path.isdir( rcdir ):
             logger.info("No ample rcdir found so creating in: {0}".format( rcdir ) )
             os.mkdir( rcdir )
-        
         url = None
         maxcluster_exe = os.path.join( rcdir, 'maxcluster' )
         if sys.platform.startswith("linux"):
-            url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster'
+            bit=platform.architecture()[0]
+            if bit=='64bit':
+                url='http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster64bit'
+            elif bit=='32bit':
+                url='http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster'
+            else:
+                raise RuntimeError,"Unrecognised system type: {0} {1}".format(sys.platform,bit)
         elif sys.platform.startswith("darwin"):
             url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_i686_32bit.bin'
             #OSX PPC: http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_PPC_32bit.bin
