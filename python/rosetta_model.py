@@ -52,6 +52,8 @@ class RosettaModel(object):
 
     def __init__(self):
         
+        self.debug=None
+        
         self.nproc = None
         self.nmodels = None
         self.work_dir = None
@@ -86,6 +88,7 @@ class RosettaModel(object):
         self.align_blast = None
         self.nr = None
         self.blastpgp = None
+        self.octopusTopology = None 
         self.spanfile = None
         self.lipofile = None
         
@@ -93,11 +96,14 @@ class RosettaModel(object):
         self.seeds = None
         
         # Extra options
+        self.psipred_ss2 = None
         self.domain_termini_distance = None
         self.rad_gyr_reweight = None
         self.improve_template = None
         
         self.logger = logging.getLogger()
+        
+        return
     
     def generate_seeds(self, nseeds):
         """
@@ -174,7 +180,11 @@ class RosettaModel(object):
 
         # Whether to exclude homologs
         if not self.use_homs:
-            cmd.append('-nohoms')           
+            cmd.append('-nohoms')
+        
+        # Be 'chatty'
+        if self.debug:
+            cmd.append('-verbose')
         
         return cmd
     ##End fragment_cmd
@@ -254,20 +264,24 @@ class RosettaModel(object):
         fasta = os.path.split(  self.fasta )[1]
         shutil.copy2( self.fasta, self.models_dir + os.sep + fasta )
         
-        # Query octopus server for prediction
-        octo = octopus_predict.OctopusPredict()
-        self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
-        #fastaseq = octo.getFasta(self.fasta)
-        # Problem with 3LBW predicition when remove X
-        fastaseq = octo.getFasta(self.fasta)
-        octo.getPredict(self.name,fastaseq, directory=self.models_dir )
-        topo_file = octo.topo
-        self.logger.debug("Got topology prediction file: {0}".format(topo_file))
+        # See if we need to query the octopus server
+        if os.path.isfile( str(self.octopusTopology) ):
+            self.logger.info("Using user-supplied topology prediction file: {0}".format(self.octopusTopology))
+        else:
+            # Query octopus server for prediction
+            octo = octopus_predict.OctopusPredict()
+            self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
+            #fastaseq = octo.getFasta(self.fasta)
+            # Problem with 3LBW predicition when remove X
+            fastaseq = octo.getFasta(self.fasta)
+            octo.getPredict(self.name,fastaseq, directory=self.models_dir )
+            self.octopusTopology = octo.topo
+            self.logger.debug("Got topology prediction file: {0}".format(self.octopusTopology))
 
         # Generate span file from predict
         self.spanfile = os.path.join(self.models_dir, self.name + ".span")
         self.logger.debug( 'Generating span file {0}'.format( self.spanfile ) )
-        cmd = [ self.octopus2span, topo_file ]
+        cmd = [ self.octopus2span, self.octopusTopology ]
         retcode = ample_util.run_command( cmd, logfile=self.spanfile, directory=self.models_dir )
         if retcode != 0:
             msg = "Error generating span file. Please check the log in {0}".format(self.spanfile)
@@ -344,7 +358,7 @@ class RosettaModel(object):
         if self.transmembrane:
             cmd = [ self.transmembrane_exe ]
         else:
-             cmd = [ self.rosetta_path ]
+            cmd = [ self.rosetta_path ]
         
         cmd += ['-database', self.rosetta_db,
                 '-in::file::fasta', self.fasta,
@@ -353,13 +367,24 @@ class RosettaModel(object):
                 '-out:path', wdir,
                 '-out:pdb',
                 '-out:nstruct', str(nstruct),
-                '-out:file:silent', wdir + '/OUT',
+                '-out:file:silent', os.path.join( wdir, 'silent.out'),
                 '-run:constant_seed',
-                '-run:jran', str(seed) 
+                '-run:jran', str(seed),
+                '-abinitio:relax',
+                '-relax::fast'
                 ]
+        
+        if self.rosetta_version >= 3.4:
+            # Recommended default paramenters - see also Radius of gyration reweight
+            cmd += [ "-abinitio::rsd_wt_helix", "0.5",
+                     "-abinitio::rsd_wt_loop", "0.5",
+                     "-use_filters", "true" ]
+            
+            if self.psipred_ss2: # not sure if this works < 3.4
+                cmd += [ "-psipred_ss2", self.psipred_ss2 ]
             
         if self.all_atom:
-            cmd += [ '-return_full_atom true', '-abinitio:relax' ]
+            cmd += [ '-return_full_atom true', ]
         else:
             cmd += [ '-return_full_atom false' ]
             
@@ -383,9 +408,10 @@ class RosettaModel(object):
             cmd += dcmd
             
         # Radius of gyration reweight
-        if self.rad_gyr_reweight:
-            if "none" in self.rad_gyr_reweight.lower():
-                cmd+= ['-rg_reweight', '0']
+        if self.rad_gyr_reweight is not None:
+            cmd+= ['-rg_reweight', str(self.rad_gyr_reweight) ]
+        else:
+            cmd+= ['-rg_reweight', "0.5" ]
                 
         # Improve Template
         if self.improve_template:
@@ -402,7 +428,6 @@ class RosettaModel(object):
         
         return cmd
     ##End make_rosetta_cmd
-    
     
     def doModelling(self):
         """
@@ -477,7 +502,7 @@ class RosettaModel(object):
                 scwrl.processDirectory(inDirectory=wdir, outDirectory=self.models_dir, prefix="scwrl_{0}".format(proc) )
                 #add_sidechains_SCWRL.add_sidechains_SCWRL(self.scwrl_exe, wdir, self.models_dir, str(proc), False)
         else:
-        # Just copy all modelling files into models directory
+            # Just copy all modelling files into models directory
             for wd in directories.keys():
                 proc = directories[wd]
                 for pfile in glob.glob( os.path.join(wd, '*.pdb') ):
@@ -532,6 +557,10 @@ class RosettaModel(object):
         self.work_dir = optd['work_dir']
         self.name = optd['name']
         
+        # psipred secondary structure prediction
+        if optd['psipred_ss2'] is not None and os.path.isfile( optd['psipred_ss2'] ):
+            self.psipred_ss2 = optd['psipred_ss2']
+        
         # Fragment variables
         self.fragments_exe = optd['rosetta_fragments_exe']
         self.use_homs = optd['use_homs']
@@ -580,19 +609,23 @@ class RosettaModel(object):
                 
             self.spanfile = optd['transmembrane_spanfile']
             self.lipofile = optd['transmembrane_lipofile']
+            self.octopusTopology = optd['transmembrane_octopusfile']
             
             # Check if we've been given files
-            if  self.spanfile:
-                if not ( os.path.isfile( self.spanfile ) ):
-                    msg = "Cannot find provided transmembrane spanfile: {0}".format(  self.spanfile )
-                    self.logger.critical(msg)
-                    raise RuntimeError, msg
+            if  self.octopusTopology and not ( os.path.isfile( self.octopusTopology ) ):
+                msg = "Cannot find provided transmembrane octopus topology prediction: {0}".format(  self.octopusTopology )
+                self.logger.critical(msg)
+                raise RuntimeError, msg
+
+            if  self.spanfile and not ( os.path.isfile( self.spanfile ) ):
+                msg = "Cannot find provided transmembrane spanfile: {0}".format(  self.spanfile )
+                self.logger.critical(msg)
+                raise RuntimeError, msg
                  
-            if self.lipofile:
-                if not ( os.path.isfile( self.lipofile ) ):
-                    msg = "Cannot find provided transmembrane lipofile: {0}".format( self.lipofile )
-                    self.logger.critical(msg)
-                    raise RuntimeError, msg                 
+            if self.lipofile and not ( os.path.isfile( self.lipofile ) ):
+                msg = "Cannot find provided transmembrane lipofile: {0}".format( self.lipofile )
+                self.logger.critical(msg)
+                raise RuntimeError, msg                 
                    
             if (  self.spanfile and not self.lipofile ) or ( self.lipofile and not self.spanfile ):
                 msg="You need to provide both a spanfile and a lipofile"
@@ -611,7 +644,6 @@ class RosettaModel(object):
                     self.logger.critical(msg)
                     raise RuntimeError,msg
                     
-            import platform
             if not optd['rosetta_path']: 
                 optd['rosetta_path'] = find_binary( 'AbinitioRelax', rosettaDir=self.rosetta_dir )
                 if not optd['rosetta_path']:
@@ -651,7 +683,7 @@ class RosettaModel(object):
             # Extra modelling options
             self.all_atom = optd['all_atom']
             self.domain_termini_distance = optd['domain_termini_distance']
-            self.rad_gyr_reweight = optd['CC']
+            self.rad_gyr_reweight = optd['rg_reweight']
             
             if optd['improve_template'] and not os.path.exists( optd['improve_template'] ):
                 msg = 'cant find template to improve'

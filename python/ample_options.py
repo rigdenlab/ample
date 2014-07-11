@@ -25,7 +25,6 @@ class AmpleOptions(object):
                             'ASU' : 0,
                             'blast_dir' : None,
                             'buccaneer_cycles' : 5,
-                            'CC' : None,
                             'ccp4_jobid' : None,
                             'debug' : None,
                             'domain_all_chains_pdb' : None,
@@ -51,6 +50,7 @@ class AmpleOptions(object):
                             'models_dir' : None,
                             'molrep_only' : False,
                             'mr_keys' : None,
+                            'mr_sequence' : None,
                             'mtz' : None,
                             'name' : 'ampl',
                             'nmodels' : 1000,
@@ -66,7 +66,8 @@ class AmpleOptions(object):
                             'percent' : 5,
                             'phaser_only' : False,
                             'phenix_exe' : None,
-                            #'ROSETTA' : None,
+                            'psipred_ss2' : None,
+                            'rg_reweight' : None,
                             'ROSETTA_cluster' : None,
                             'rosetta_db' : None,
                             'rosetta_dir' : None,
@@ -79,14 +80,17 @@ class AmpleOptions(object):
                             'sf_cif' : None,
                             'shelx_cycles' : 15,
                             'shelxe_exe' : None,
+                            'shelxe_rebuild' : False,
                             'SIGF' : None,
                             'spicker_exe' : None,
                             'split_mr' : False,
+                            'submit_array' : False,
                             'submit_cluster' : False,
                             'submit_qtype' : None,
                             'theseus_exe' : None,
                             'top_model_only' : False,
                             'transmembrane' : False,
+                            'transmembrane_octopusfile' : None,
                             'transmembrane_lipofile' : None,
                             'transmembrane_spanfile' : None,
                             'use_arpwarp' : True,
@@ -105,18 +109,22 @@ class AmpleOptions(object):
                            'shelx_cycles' : 5,
                            'use_arpwarp' : True,
                            'use_buccaneer' : True,
+                           # This kills phaser after 15 minutes
                            # Needs to be a list of lists as there can be multiple mr_keys
-                           # This kills phaser after 15 min - add when the CCP4 version of phaser supports it
-                           # 'mr_keys' : [ [ 'PKEY', 'KILL','TIME','15'  ] ],
+                           'mr_keys' : [ [ 'PKEY', 'KILL','TIME','15'  ] ],
                         }
     
         # Test use scrwl
         self.devel_mode = {
                            'early_terminate': False,
                            'use_shelxe' : True,
+                           'shelxe_rebuild' : True,
                            'use_scwrl' : False,
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
+                           # This kills phaser after 6 hours
+                           # Needs to be a list of lists as there can be multiple mr_keys
+                           'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
                         }
     
         # We have a debug mode as the logger isn't activated when we run
@@ -145,7 +153,9 @@ class AmpleOptions(object):
                         'Bucc_final_Rfree' :'buccRfree',
                         'ARP_final_Rfact' : 'arpWarpRfact',
                         'ARP_final_Rfree' :'arpWarpRfree',
-                        'SHELXE_CC' : 'shelxCC' 
+                        'SHELXE_CC' : 'shelxCC',
+                        'SHELXE_ACL' : 'shelxeAvgChainLength',
+                        'SHELXE_Avg_Chain' : 'shelxeAvgChainLength',
                     }
         
         
@@ -209,7 +219,7 @@ class AmpleOptions(object):
             
             # Show where it happened
             summary += '\nBest results so far are in directory:\n\n'
-            summary +=  best.resultDir
+            summary +=  best.mrDir
         
         return summary
         
@@ -279,9 +289,11 @@ class AmpleOptions(object):
                 'import_cluster',
                 'maxcluster_exe',
                 'models_dir',
+                'mr_sequence',
                 'mtz',
                 'NMR_model_in',
                 'NMR_remodel_fasta',
+                'psipred_ss2',
                 'rosetta_db',
                 'rosetta_dir',
                 'rosetta_fragments_exe',
@@ -291,6 +303,7 @@ class AmpleOptions(object):
                 'shelxe_exe',
                 'spicker_exe',
                 'theseus_exe',
+                'transmembrane_octopusfile',
                 'transmembrane_lipofile',
                 'transmembrane_spanfile'
             ]

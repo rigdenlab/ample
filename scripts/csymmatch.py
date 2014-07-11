@@ -5,6 +5,7 @@ import unittest
 
 # Our imports
 import ample_util
+import pdb_edit
 
 class Csymmatch( object ):
     
@@ -132,6 +133,37 @@ class Csymmatch( object ):
                 count += 1
         
         return score/count
+    
+    def wrapModelToNative(self, mrPdb, nativePdb, origin=[0.0,0.0,0.0], csymmatchPdb=None, workdir=None ):
+        """Take a pdb and wrap it onto the nativePdb using csymmatch.
+        If origin is not [0.0,0.0,0.0] we also move the structure onto the new origin before wrapping"""
+        
+        if workdir is None:
+            workdir = os.getcwd()
+        
+        assert os.path.isfile( mrPdb ) and os.path.isfile( nativePdb )
+        
+        if origin != [ 0.0, 0.0, 0.0 ]:
+            # Move pdb to new origin
+            #ostr="origin{0}".format(i)
+            ostr="o{0}".format( origin ).replace(" ","" )
+            originMrPdb = ample_util.filename_append( filename=mrPdb, astr=ostr, directory=workdir )
+            pdb_edit.PDBEdit().translate( inpdb=mrPdb, outpdb=originMrPdb, ftranslate=origin )
+            mrPdb = originMrPdb
+        
+        if csymmatchPdb is None:
+            csymmatchPdb = ample_util.filename_append( filename=mrPdb,
+                                                       astr="csymmatch",
+                                                       directory=workdir )
+        self.run( refPdb=nativePdb,
+                  inPdb=mrPdb,
+                  outPdb=csymmatchPdb,
+                  originHand=False )
+        
+        if not os.path.isfile( csymmatchPdb ):
+            raise RuntimeError,"Error generating csymmatchPdb" 
+               
+        return csymmatchPdb
         
 
 class TestContacts( unittest.TestCase ):

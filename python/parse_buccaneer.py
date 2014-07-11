@@ -4,8 +4,6 @@ Created on 28 Nov 2013
 @author: jmht
 '''
 
-import re
-import os
 import unittest
 
 class BuccaneerLogParser(object):
@@ -32,11 +30,11 @@ class BuccaneerLogParser(object):
         line = fh.readline()
         while line:
             if line.startswith("           R factor"):
-               self.initRfact = float( line.split()[2] )
-               self.finalRfact = float( line.split()[3] )
+                self.initRfact = float( line.split()[2] )
+                self.finalRfact = float( line.split()[3] )
             if "R free" in line:
-               self.initRfree = float( line.split()[2] )
-               self.finalRfree = float( line.split()[3] )
+                self.initRfree = float( line.split()[2] )
+                self.finalRfree = float( line.split()[3] )
 
             line = fh.readline()
         #End while

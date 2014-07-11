@@ -1,12 +1,27 @@
-#!/usr/bin/env python
+#!/usr/bin/env ccp4-python
 
+import copy
 import glob
 import logging
 import os
 import types
 
+# Hack to make sure we can find the modules we need
+if __name__ == "__main__":
+    import sys
+    root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+    sys.path.insert( 0, os.path.join( root, "scripts" ) )
+
+
 # Our imports
+import parse_buccaneer
+import parse_shelxe
 import printTable
+
+# We need a null logger so that we can be used without requiring a logger
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
 
 class MrBumpResult(object):
     """
@@ -17,9 +32,10 @@ class MrBumpResult(object):
         
         """
         self.jobDir = None # directory jobs ran in
-        self.resultDir = None # where the actual results are
+        self.mrDir = None # where the actual results are
         self.pdb = None # The refmac-refined pdb
-        self.name = None
+        self.name = None # The MRBUMP name
+        self.ensembleName = None
         self.program = None
         self.solution = None
 
@@ -30,8 +46,14 @@ class MrBumpResult(object):
         self.arpWarpRfact = 1.0 # ARP_final_Rfact/Rfree
         self.arpWarpRfree = 1.0
         self.shelxCC = -1.0
+        self.shelxeAvgChainLength = -1.0
+        # Buccaneer scores after final rebuild
+        self.buccFinalRfact = 1.0
+        self.buccFinalRfree  = 1.0
         
         self.header = [] # The header format for this table
+        
+        return
         
     def __str__(self):
         """List the data attributes of this object"""
@@ -54,20 +76,22 @@ class ResultsSummary(object):
         self.results = []
         # List of all the possible column titles and their result object attributes
         self.title2attr = { 
-                            'Model_Name' :'name',
-                            'MR_Program': 'program',
-                            'Solution_Type': 'solution',
-                            'final_Rfact' : 'rfact',
-                            'final_Rfree' :'rfree',
-                            'Bucc_final_Rfact' :'buccRfact',
-                            'Bucc_final_Rfree' :'buccRfree',
-                            'ARP_final_Rfact' : 'arpWarpRfact',
-                            'ARP_final_Rfree' :'arpWarpRfree',
-                            'SHELXE_CC' : 'shelxCC' 
+                            'Model_Name'       : 'name',
+                            'MR_Program'       : 'program',
+                            'Solution_Type'    : 'solution',
+                            'final_Rfact'      : 'rfact',
+                            'final_Rfree'      : 'rfree',
+                            'Bucc_final_Rfact' : 'buccRfact',
+                            'Bucc_final_Rfree' : 'buccRfree',
+                            'ARP_final_Rfact'  : 'arpWarpRfact',
+                            'ARP_final_Rfree'  : 'arpWarpRfree',
+                            'SHELXE_CC'        : 'shelxCC',
+                            'SHELXE_ACL'       : 'shelxeAvgChainLength',
                              }
         
         self.logger = logging.getLogger()
-        
+        # Add Null logger so we can be used without requiring a logger
+        self.logger.addHandler(NullHandler())
         return
         
     def _addFailedResults(self, mrbumpDir, failed, header):
@@ -93,15 +117,70 @@ class ResultsSummary(object):
         
         self.logger.debug("Added {0} MRBUMP result failures".format(count) )
         return
+    
+    def addBuccaneerResult(self, result ):
+        """Add the buccaneer rebuild information to the result"""
+
+
+        buccaneerPdb = os.path.join( result.mrDir,
+                                     "build/shelxe/rebuild/build",
+                                     "buccSX_output.pdb" )
+        buccaneerLog = os.path.join( result.mrDir,
+                                     "build/shelxe/rebuild/build",
+                                     "buccaneer.log" )
+        
+        bp = parse_buccaneer.BuccaneerLogParser()
+        if os.path.isfile( buccaneerLog ):
+            bp.parse( buccaneerLog )
+            result.buccFinalRfree = bp.finalRfree
+            result.buccFinalRfact = bp.finalRfact
+        
+        if os.path.isfile( buccaneerPdb ):
+            result.buccaneerPdb = buccaneerPdb
+
+        return
+
+    def addShelxeResult(self, result ):
+        """Add the shelxe information to the result"""
+        
+        shelxePdb = os.path.join( result.mrDir,
+                                  "build",
+                                  "shelxe",
+                                  "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( result.program,
+                                                                              result.ensembleName ) )
+        if os.path.isfile( shelxePdb):
+            result.shelxePdb = shelxePdb
+            
+        shelxeLog = os.path.join( result.mrDir,
+                                  "build",
+                                  "shelxe",
+                                  "shelxe_run.log" )
+        
+        if os.path.isfile( shelxeLog ):
+            shelxeP = parse_shelxe.ShelxeLogParser( shelxeLog )
+            #assert result.shelxCC == shelxeP.CC,"Mismatching ShelxeCC scores"
+            result.shelxeAvgChainLength = shelxeP.avgChainLength
+            result.shelxeLog            = shelxeLog
+            result.shelxeMaxChainLength = shelxeP.maxChainLength
+            result.shelxeNumChains      = shelxeP.numChains
+
+            # Another horrible hack - add the title to the header
+            result.header.append('SHELXE_ACL')
+
+        return
+
 
     def extractResults( self, mrbumpDir ):
         """
         Find the results from running MRBUMP and sort them
         """
-
+        mrbumpDir = os.path.abspath( mrbumpDir )
         # Get a list of the ensembles (could get this from the amopt dictionary)
-        # For now we just use the submission scripts and assume all have .sub extension
-        ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*.sub") ) ]
+        # For now we just use the submission scripts and assume all have .sh or .sub extension
+        ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*.sh") ) ]
+        if not len(ensembles):
+            # legacy - try .sub
+            ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*.sub") ) ]
 
         if not len(ensembles):
             self.logger.warn("Could not extract any results from directory: {0}".format( mrbumpDir ) )
@@ -114,6 +193,7 @@ class ResultsSummary(object):
 
             # Check job directory
             jobDir = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
+            #jobDir = os.path.join( mrbumpDir, 'search_'+ensemble )
             if not os.path.isdir(jobDir):
                 self.logger.critical("Missing job directory: {0}".format( jobDir ) )
                 failed[ ensemble ] = "no_job_directory"
@@ -168,13 +248,15 @@ class ResultsSummary(object):
                 if dname.endswith("_molrep") or dname.endswith("_phaser"):
                     dname = dname[:-7]
                 # Add loc0_ALL_ and append _UNMOD. shudder...
+                result.ensembleName = dname
                 result.name = "loc0_ALL_" + dname + "_UNMOD"
                 result.solution = "ERROR"
             else:
                 # Use dirname but remove "loc0_ALL_" from front
                 #result.name = os.path.basename( dlist[0] )[9:]
                 # Use dirname but add "_UNMOD" to back
-                result.name = os.path.basename( dlist[0] )+"_UNMOD"
+                result.ensembleName = os.path.basename( dlist[0] )
+                result.name = result.ensembleName + "_UNMOD"
 
         result.program = "unknown"
         return
@@ -186,7 +268,7 @@ class ResultsSummary(object):
         paths = tfile.split( os.sep )
         assert len( paths[0] )  == 0,"Need absolute path: {0}".format( tfile )
         
-        jobDir = os.sep.join( paths[:-2] )
+        jobDir = os.path.abspath( os.sep.join( paths[:-2] ) )
         ensemble = paths[-3][7:-7] #  remove search_..._mrbump: 'search_All_atom_trunc_0.005734_rad_1_mrbump'
         
         results = []
@@ -198,6 +280,7 @@ class ResultsSummary(object):
             # Create a result object for each line in the output file
             result = MrBumpResult()
             result.jobDir = jobDir
+            result.ensembleName = ensemble
             
             line = line.strip()
             if not header:
@@ -216,7 +299,9 @@ class ResultsSummary(object):
                 continue
                 # End header processing
             else:
-                result.header = header
+                # horrible - we manipulate the header in addShelxe/buccaneer so we need to use a copy here
+                result.header = copy.copy(header)
+
             
             fields = line.split()
             if len(fields) != nfields:
@@ -243,13 +328,17 @@ class ResultsSummary(object):
             #dirName = "loc0_ALL_" + result.name + "_UNMOD"
             # While using old names - just strip _UNMOD
             dirName = result.name[:-6]
-            resultDir = os.path.join( result.jobDir,'data',dirName,'unmod','mr',result.program,'refine' )
-            #print resultDir
-            result.resultDir = resultDir
+            result.mrDir = os.path.join( result.jobDir,'data',dirName,'unmod','mr',result.program )
             
             # Need to reconstruct final pdb from directory and program name
-            pdbName = "refmac_" + result.program + "_loc0_ALL_"  + ensemble + "_UNMOD.pdb"
-            result.pdb = os.path.join( resultDir, pdbName )
+            pdbName = "refmac_" + result.program + "_loc0_ALL_" + result.ensembleName + "_UNMOD.pdb"
+            result.pdb = os.path.join( result.mrDir,'refine', pdbName )
+            
+            # Add the information from Shelxe
+            self.addShelxeResult( result )
+            
+            # Add the information from Buccaneer rebuild of the Shelxe trace
+            self.addBuccaneerResult( result )
             
             results.append( result )
             
@@ -299,11 +388,15 @@ class ResultsSummary(object):
         resultsTable = []
         
         #Header
-        resultsTable.append( self.results[0].header )
+        # The best result may have more info (e.g. shelxe info) aso we use this to 
+        # work out what data we should present
+        topHeader = self.results[0].header
+        resultsTable.append( topHeader )
         
         for result in self.results:
             resultLine = []
-            for h in result.header:
+            #for h in result.header:
+            for h in topHeader:
                 resultLine.append( getattr( result, self.title2attr[h] ) )
             resultsTable.append( resultLine )
 
@@ -314,7 +407,7 @@ class ResultsSummary(object):
         r = "\n\nOverall Summary:\n\n"
         r += summary
         r += '\nBest results so far are in :\n\n'
-        r +=  self.results[0].resultDir
+        r +=  self.results[0].mrDir
             
         return r    
 #

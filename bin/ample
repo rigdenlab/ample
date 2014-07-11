@@ -29,9 +29,9 @@ if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
 # Add the ample python folder to the PYTHONPATH
-sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
-#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
-#sys.path.append( os.path.join( root, "python" ) )
+#sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
 import argparse
@@ -46,7 +46,6 @@ import time
 import add_sidechains_SCWRL
 import ample_options
 import ample_util
-import cif_parser
 import ensemble
 import fasta_parser
 import mrbump_ensemble
@@ -56,62 +55,64 @@ import mrbump_results
 import truncateedit_MAX
 import version
 
-
 #-------------------------------------------
 # get command line options
 #-------------------------------------------
 parser = argparse.ArgumentParser( prog="AMPLE", description='Structure solution by abinitio modelling', prefix_chars="-")
 
-parser.add_argument('-alignment_file', metavar='alignment_file', type=str, nargs=1,
+parser.add_argument('-alignment_file', type=str, nargs=1,
                    help='Alignment between homolog and target fastas')
 
-parser.add_argument('-all_atom', metavar='all_atom', type=str, nargs=1,
+parser.add_argument('-all_atom', metavar='True/False', type=str, nargs=1,
                    help="Do all-atom Rosetta modelling (adds \"-return_full_atom true\" to rosetta arguments")
 
-parser.add_argument('-arpwarp_cycles', metavar='arpwarp_cycles', type=int, nargs=1,
+parser.add_argument('-arpwarp_cycles', type=int, nargs=1,
                    help='The number of ArpWarp cycles to run')
 
-parser.add_argument('-ASU', metavar='ASU', type=int, nargs=1,
+parser.add_argument('-ASU', type=int, nargs=1,
                    help='Manually specify the number of molecules in the asymmetric unit - sets the NMASu MRBUMP flag')
 
-parser.add_argument('-blast_dir', metavar='blast_dir', type=str, nargs=1,
+parser.add_argument('-blast_dir', type=str, nargs=1,
                    help='Directory where ncbi blast is installed (binaries in expected in bin subdirectory)')
 
-parser.add_argument('-buccaneer_cycles', metavar='buccaneer_cycles', type=int, nargs=1,
+parser.add_argument('-buccaneer_cycles', type=int, nargs=1,
                    help='The number of Bucanner rebuilding cycles to run')
 
-parser.add_argument('-CC', metavar='rad of gyration', type=str, nargs=1,
-                   help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
-
-parser.add_argument('-ccp4_jobid', metavar='ccp4_jobid', type=int, nargs=1,
+parser.add_argument('-ccp4_jobid', type=int, nargs=1,
                    help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
 
-parser.add_argument('-submit_cluster', metavar='submit_cluster', type=str, nargs=1,
+parser.add_argument('-submit_array', metavar='True/False', type=str, nargs=1,
+                   help='Submit SGE jobs as array jobs')
+
+parser.add_argument('-submit_cluster', metavar='True/False', type=str, nargs=1,
                    help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
 
-parser.add_argument('-submit_qtype', metavar='submit_qtype', type=str, nargs=1,
+parser.add_argument('-submit_qtype', type=str, nargs=1,
                    help='cluster submission queue type - currently support SGE and LSF')
 
-parser.add_argument('-debug', metavar='debug option', type=str, nargs=1,
+parser.add_argument('-debug', metavar='True/False', type=str, nargs=1,
                    help='Run in debug mode (CURRENTLY UNUSED)')
 
-parser.add_argument('-domain_all_chains_pdb', metavar='domain_all_chains_pdb', type=str, nargs=1,
+parser.add_argument('-domain_all_chains_pdb', type=str, nargs=1,
                    help='Fixed input to mr bump')
 
-parser.add_argument('-domain_termini_distance', metavar='termini', type=str, nargs=1,
+parser.add_argument('-domain_termini_distance', type=str, nargs=1,
                    help='distance between termini for insert domains')
 
-parser.add_argument('-early_terminate', metavar='early_terminate', type=str, nargs=1,
+parser.add_argument('-early_terminate', metavar='True/False', type=str, nargs=1,
                      help='Stop the run as soon as a success has been found.')
 
-parser.add_argument('-ensembler', metavar='ensembler', type=str, nargs=1,
+parser.add_argument('-ensembler', type=str, nargs=1,
                    help='Use the Phenix ensembler')
 
-parser.add_argument('-ensembles_dir', metavar='ensembles_dir', type=str, nargs=1,
+parser.add_argument('-ensembles_dir', type=str, nargs=1,
                    help='Path to directory containing existing ensembles')
 
-parser.add_argument('-fasta', metavar='fasta_file', type=str, nargs=1, required=True,
+parser.add_argument('-fasta', type=str, nargs=1, required=True,
                    help='protein fasta file. (required)')
+
+parser.add_argument('-mr_sequence', type=str, nargs=1,
+                   help="sequence file for crystal content (if different from what's given by -fasta)")
 
 parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
                    help='Flag for F column in the MTZ file')
@@ -134,19 +135,19 @@ parser.add_argument('-improve_template', metavar='improve_template', type=str, n
 parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
                    help='pathway to LGA folder (not the exe) will use the \'lga\' executable. UNUSED')
 
-parser.add_argument('-make_frags', metavar='make_fragments', type=str, nargs=1,
+parser.add_argument('-make_frags', metavar='True/False', type=str, nargs=1,
                    help='set True to generate Rosetta 3mers and 9mers locally, False to import fragments')
 
-parser.add_argument('-make_models', metavar='Do the modelling', type=str, nargs=1,
+parser.add_argument('-make_models', metavar='True/False', type=str, nargs=1,
                    help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
 
-parser.add_argument('-maxcluster_exe', metavar='Maxcluster exe', type=str, nargs=1,
+parser.add_argument('-maxcluster_exe', type=str, nargs=1,
                    help='Path to Maxcluster executable')
 
-parser.add_argument('-max_ensemble_models', metavar='max_ensemble_models', type=str, nargs=1,
+parser.add_argument('-max_ensemble_models', type=str, nargs=1,
                    help='Maximum number of models permitted in an ensemble')
 
-parser.add_argument('-missing_domain', metavar='missing_domain', type=str, nargs=1,
+parser.add_argument('-missing_domain', metavar='True/False', type=str, nargs=1,
                    help='Modelling a missing domain - requires domain_all_chains_pdb argument')
 
 parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
@@ -155,13 +156,10 @@ parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1
 parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
                    help='Additional keywords for MRBUMP - are passed through without editing')
 
-parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1, required=True,
-                   help='The MTZ file with the reflection data.')
-
 parser.add_argument('-name', metavar='job_name', type=str, nargs=1,
                    help='4-letter identifier for job [ampl]')
 
-parser.add_argument('-nmodels', metavar='no models', type=int, nargs=1,
+parser.add_argument('-nmodels', metavar='number of models', type=int, nargs=1,
                    help='number of models to make (default: 1000)')
 
 parser.add_argument('-nr', metavar='nr', type=str, nargs=1,
@@ -179,24 +177,30 @@ parser.add_argument('-NMR_process', metavar='NMR_process', type=str, nargs=1,
 parser.add_argument('-NMR_remodel_fasta', metavar='-NMR_remodel_fasta', type=str, nargs=1,
                    help='fasta_for_remodeling')
 
-parser.add_argument('-NMR_Truncate_only', metavar='-NMR_Truncate_only', type=str, nargs=1,
+parser.add_argument('-NMR_Truncate_only', metavar='True/False', type=str, nargs=1,
                    help='do no remodelling only truncate the NMR')
 
-parser.add_argument('-nproc', metavar='NoProcessors', type=int, nargs=1,
-                   help='Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
-                    "For cluster submission, this should be the number of processors on a node.')
+parser.add_argument('-nproc', metavar='Number of Processors', type=int, nargs=1,
+                   help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
+                    "For cluster submission, this should be the number of processors on a node.")
 
-parser.add_argument('-num_clusters', metavar='num_clusters', type=int, nargs=1,
+parser.add_argument('-num_clusters', type=int, nargs=1,
                    help='The number of Spicker clusters of the original decoys that will be sampled [1]')
 
-parser.add_argument('-output_pdb', metavar='output_pdb', type=str, nargs=1,
+parser.add_argument('-output_pdb', type=str, nargs=1,
                    help='Name of the final result pdb to output [ample_output.pdb]')
 
 parser.add_argument('-percent', metavar='percent_truncation', type=str, nargs=1,
                    help='percent interval for truncation')
 
+parser.add_argument('-psipred_ss2', metavar='psipred file', type=str, nargs=1,
+                   help='Psipred secondary structure prediction file')
+
 parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
                    help='Path to Phenix executable')
+
+parser.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, nargs=1,
+                   help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
 
 parser.add_argument('-rosetta_path', metavar='rosetta_path', type=str, nargs=1,
                    help='Path to Rosetta AbinitioRelax executable')
@@ -222,32 +226,35 @@ parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
 parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
                    help='Path to Scwrl4 executable')
 
-parser.add_argument('-sf_cif', metavar='sf_cif', type=str, nargs=1,
-                   help='Path to a structure factor CIF file (instead of MTZ file)')
-
-parser.add_argument('-shelx_cycles', metavar='shelx_cycles', type=str, nargs=1,
+parser.add_argument('-shelx_cycles', type=str, nargs=1,
                      help='The number of shelx cycles to run when rebuilding.')
 
-parser.add_argument('-shelxe_exe', metavar='-shelxe_exe', type=str, nargs=1,
+parser.add_argument('-shelxe_exe', metavar='path to shelxe executable', type=str, nargs=1,
                    help='Path to the shelxe executable')
+
+parser.add_argument('-shelxe_rebuild', metavar='True/False', type=str, nargs=1,
+                   help='Rebuild shelxe traced pdb with buccaneer and arpwarp')
 
 parser.add_argument('-SIGF', metavar='SIGF', type=str, nargs=1,
                    help='Flag for SIGF column in the MTZ file')
 
-parser.add_argument('-spicker_exe', metavar='boolean', type=str, nargs=1,
+parser.add_argument('-spicker_exe', type=str, nargs=1,
                    help='Path to spicker executable')
 
-parser.add_argument('-split_mr', metavar='boolean', type=str, nargs=1,
+parser.add_argument('-split_mr', metavar='True/False', type=str, nargs=1,
                    help='Split MRBUMP Molecular Replacement jobs (phaser, molrep etc) into separate jobs')
 
 parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', type=str, nargs=1,
                    help='Path to theseus executable')
 
-parser.add_argument('-top_model_only', metavar='top_model_only', type=str, nargs=1,
+parser.add_argument('-top_model_only', metavar='True/False', type=str, nargs=1,
                    help='Only process the top model in each ensemble')
 
 parser.add_argument('-transmembrane', metavar='transmembrane', type=str, nargs=1,
                    help='Do Rosetta modelling for transmembrane proteins')
+
+parser.add_argument('-transmembrane_octopusfile', metavar='transmembrane_octopusfile', type=str, nargs=1,
+                   help='Octopus transmembrane topology predicition file')
 
 parser.add_argument('-transmembrane_spanfile', metavar='transmembrane_spanfile', type=str, nargs=1,
                    help='Span file for modelling transmembrane proteins')
@@ -255,24 +262,30 @@ parser.add_argument('-transmembrane_spanfile', metavar='transmembrane_spanfile',
 parser.add_argument('-transmembrane_lipofile', metavar='transmembrane_lipofile', type=str, nargs=1,
                    help='Lips4 file for modelling transmembrane proteins')
 
-parser.add_argument('-use_homs', metavar='use_homologues', type=str, nargs=1,
+parser.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
                    help='True =use nhomologs, False= dont use them ')
 
-parser.add_argument('-use_arpwarp', metavar='-use_arpwarp', type=str, nargs=1,
+parser.add_argument('-use_arpwarp', metavar='True/False', type=str, nargs=1,
                    help='True to use arpwarp to rebuild.')
 
-parser.add_argument('-use_buccaneer', metavar='use_buccaneer', type=str, nargs=1,
+parser.add_argument('-use_buccaneer', metavar='True/False', type=str, nargs=1,
                    help='True to use Buccaneer')
 
-parser.add_argument('-use_scwrl', metavar='use_scwrl', type=str, nargs=1,
+parser.add_argument('-use_scwrl', metavar='True/False', type=str, nargs=1,
                    help='Remodel sidechains of the decoy models using Scwrl4')
 
-parser.add_argument('-use_shelxe', metavar='-use_shelxe', type=str, nargs=1,
+parser.add_argument('-use_shelxe', metavar='True/False', type=str, nargs=1,
                    help='True to use shelxe')
 
 parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(version.__version__) )
 
 # Mutually exclusive options
+group = parser.add_mutually_exclusive_group(required=True)
+group.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
+                   help='The MTZ file with the reflection data.')
+group.add_argument('-sf_cif', metavar='sf_cif', type=str, nargs=1,
+                   help='Path to a structure factor CIF file (instead of MTZ file)')
+
 group = parser.add_mutually_exclusive_group()
 group.add_argument('-devel_mode', metavar='devel_mode', type=str, nargs=1,
                    help='Preset options to run in development mode - takes longer')
@@ -355,6 +368,15 @@ amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
 #
 # FASTA processing
 #
+# Check to see if mr_sequence was given and if not mr_sequence defaults to fasta
+if amopt.d['mr_sequence'] != None:
+    if not ( os.path.exists( str(amopt.d['mr_sequence']) )):
+        msg = 'Cannot find mr sequence file: {0}'.format( amopt.d['mr_sequence'] )
+        logger.critical(msg)
+        sys.exit(1)
+else:
+    amopt.d['mr_sequence']=amopt.d['fasta']
+
 # Check we can find the input fasta
 if not ( os.path.exists( str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d['NMR_remodel_fasta'] ) ) ):
     msg = 'Cannot find fasta file: {0}'.format( amopt.d['fasta'] )
@@ -381,47 +403,14 @@ if ( float( amopt.d['fasta_length'] ) / 100 ) * float( amopt.d['percent'] ) < 1:
     msg = "Cannot truncate a fasta sequence of length {0} with {1} percent intervals. Please select a larger interval.".format( amopt.d['fasta_length'], amopt.d['percent'] )
     logger.critical(msg)
     sys.exit(1)
-
 #
 # MTZ file processing
 #
-# Check if we need to get any of the flags from the MTZ file
-if amopt.d['sf_cif'] and amopt.d['mtz']:
-    logger.critical("Both sf_cif and mtz flags supplied - only use one")
-    sys.exit(1)
-
-# We've been given a sf_cif so convert
-if amopt.d['sf_cif']:
-    if not os.path.isfile( amopt.d['sf_cif'] ):
-        logger.critical("Cannot find sf_cif file: {0}".format( amopt.d['sf_cif'] ) )
-        sys.exit(1)
-        
-    cp = cif_parser.CifParser()
-    amopt.d['mtz'] = cp.sfcif2mtz( amopt.d['sf_cif'] )
-    
-if not amopt.d['mtz'] or not os.path.isfile( amopt.d['mtz'] ):
-    logger.critical("Cannot find MTZ file: {0}".format( amopt.d['mtz'] ) )
-    sys.exit(1)
-
-if not amopt.d['F'] or not amopt.d['SIGF'] or not amopt.d['FREE']:
-    logger.info("Determining MTZ flags using mtzdump from file: {0}".format( amopt.d['mtz'] ) )
-    try:
-        t_flag_F, t_flag_SIGF, t_flag_FREE = ample_util.get_mtz_flags( amopt.d['mtz'] )
-    except Exception,e:
-        logger.critical("Error generating flags from MTZ file: {0}\n{1}\n\nDo you need to run the CCP4 uniqueify program on the MTZ file?".format(amopt.d['mtz'],e) )
-        sys.exit(1)
-    
-if not amopt.d['F']:
-    amopt.d['F'] = t_flag_F
-    
-if not amopt.d['SIGF']:
-    amopt.d['SIGF'] = t_flag_SIGF
-    
-if not amopt.d['FREE']:
-    amopt.d['FREE'] = t_flag_FREE
-
-
+ample_util.processReflectionFile( amopt.d )
+logger.info( "Using MTZ file: {0}".format( amopt.d['mtz'] ) )
+#
 # Not sure if name actually required - see make_fragments.pl
+#
 if amopt.d['name'] and len(amopt.d['name']) != 4:
     msg = '-name argument is the wrong length, use 4 chars eg ABCD'
     logger.critical(msg)
@@ -566,6 +555,14 @@ and install it in your PATH so that AMPLE can use it.
         logger.warn( msg )
         amopt.d['use_shelxe'] = False
 #
+# If shelxe_rebuild is set we need use_shelxe to be set
+#
+if amopt.d['shelxe_rebuild'] and not amopt.d['use_shelxe']:
+    msg = 'shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.'
+    logger.critical(msg)
+    sys.exit(1)
+
+#
 # SPICKER and Theseus now shipped with CCP4
 #
 amopt.d['spicker_exe'] = ample_util.find_exe('spicker', amopt.d['spicker_exe'])
@@ -601,7 +598,10 @@ else:
     logger.info('Not rebuilding in ARP/wARP')
 
 if amopt.d['make_frags']:
-    logger.info('Making non homologusFragments')
+    if amopt.d['use_homs']:
+        logger.info('Making fragments (including homologues)')
+    else:
+        logger.info('Making fragments EXCLUDING HOMOLOGUES')
 else:
     logger.info('NOT Making Fragments')
 
@@ -647,6 +647,8 @@ if amopt.d['make_frags']:
     rosetta_modeller.generate_fragments( submit_cluster=amopt.d['submit_cluster'],
                                          submit_qtype=amopt.d['submit_qtype'],
                                          nproc=amopt.d['nproc'] )
+    amopt.d['frags_3mers'] = rosetta_modeller.frags_3mers
+    amopt.d['frags_9mers'] = rosetta_modeller.frags_9mers
 
 #-----------------------------------
 # break here for NMR (frags needed but not modelling
@@ -665,26 +667,9 @@ elif amopt.d['make_models']:
     
     # If we are running with cluster support submit all modelling jobs to the cluster queue
     if amopt.d['submit_cluster']:
-        
-        # Generate the list of random seeds
-        rosetta_modeller.generate_seeds( amopt.d['nmodels'] )
-
         # Invoke the cluster run class
         cluster_run = clusterize.ClusterRun()
-        cluster_run.QTYPE = amopt.d['submit_qtype']
-        cluster_run.setModeller( rosetta_modeller )
-        cluster_run.setupModellingDir( amopt.d['work_dir'] )
-        
-        logger.info('Submitting {0} jobs to a queueing system of type: {1}\n'.format( amopt.d['nmodels'],  amopt.d['submit_qtype'] ) )
-        # loop over the number of models and submit a job to the cluster
-        for i in range( amopt.d['nmodels'] ):
-            nproc=1 # each modelling job runs on a single processor
-            jobNumber=i+1
-            cluster_run.modelOnCluster( nproc, jobNumber )
-
-        # Monitor the cluster queue to see when all jobs have finished
-        cluster_run.monitorQueue()
-
+        cluster_run.modelOnCluster(rosetta_modeller, amopt.d)
     else:
         # Run locally
         amopt.d['models_dir'] = rosetta_modeller.doModelling()
@@ -712,7 +697,6 @@ elif amopt.d['import_models']:
         scwrl.processDirectory( inDirectory=amopt.d['models_dir'], outDirectory=models_dir_scwrl )
         amopt.d['models_dir'] = models_dir_scwrl
         logger.info( "Finished processing models with Scwrl" )
-
 
 #---------------------------------------
 # Do the clustering
@@ -757,7 +741,6 @@ else:
         f.close()
 
         mrBuild = clusterize.ClusterRun()
-        mrBuild.QTYPE = amopt.d['submit_qtype']
         mrBuild.ensembleOnCluster( amopt.d )
         mrBuild.monitorQueue()
             

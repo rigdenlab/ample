@@ -23,23 +23,26 @@ import ample_util
 import csymmatch
 import dssp
 import pdb_edit
-import pdb_model
-import residue_map
 
 
 class ContactData(object):
     def __init__(self):
 
-        self.origin = None
-        self.originPdb = None
+        
+        # Hack to transfer data
         self.joinedPdb = None
         self.fromChains = None
         self.toChains = None
         
-        self.numContacts = 0
-        self.inregister  = 0
-        self.ooregister  = 0
-        self.backwards   = 0
+        self.origin = None
+        self.originPdb = None
+        
+        self.numContacts = None # Used by both as parseNcontLog sets it
+        self.aaNumContacts = 0
+        self.rioNumContacts = 0
+        self.rioInRegister  = 0
+        self.rioOoRegister  = 0
+        self.rioBackwards   = 0
         self.numGood     = 0
         
         self.contacts = None
@@ -117,9 +120,9 @@ class Contacts(object):
     def analyseRio( self, contactData, dsspP=None ):
         
         # Clear any data
-        contactData.inregister = 0
-        contactData.ooregister = 0
-        contactData.backwards = 0
+        contactData.rioInRegister = 0
+        contactData.rioOoRegister = 0
+        contactData.rioBackwards = 0
         
         if contactData.numContacts == 0:
             return
@@ -166,26 +169,47 @@ class Contacts(object):
             
             # Add total here
             if register:
-                contactData.inregister += count
+                contactData.rioInRegister += count
             else:
-                contactData.ooregister += count
+                contactData.rioOoRegister += count
             
             if backwards:
-                contactData.backwards += count
+                contactData.rioBackwards += count
         
         # End categorising chunks
         return
 
+    def calcAllAtom(self, contactData ):
+        """Calculate the All Atom data using the origin and data saved previously"""
+
+        # Clear out any set data
+        contactData.numContacts   = 0
+        contactData.aaNumContacts = 0
+        contactData.contacts      = None
+        
+        # values from previous run to calc origin
+        self.runNcont( pdbin=contactData.joinedPdb,
+                       sourceChains=contactData.fromChains,
+                       targetChains=contactData.toChains,
+                       allAtom=True,
+                       maxDist=0.5 )
+        self.parseNcontLog( contactData )
+        
+        contactData.aaNumContacts = contactData.numContacts
+        
+        
+        return contactData
+    
     def calcRio(self, contactData ):
         """Calculate the RIO using the origin and data saved previously"""
 
         # Clear out any set data
-        contactData.numContacts = 0
-        contactData.numGood     = 0
-        contactData.inregister  = 0
-        contactData.ooregister  = 0
-        contactData.backwards   = 0
-        contactData.contacts    = None
+        #contactData.numGood        = 0
+        contactData.rioNumContacts = 0
+        contactData.rioInRegister  = 0
+        contactData.rioOoRegister  = 0
+        contactData.rioBackwards   = 0
+        contactData.contacts       = None
         
         # values from previous run to calc origin
         self.runNcont( pdbin=contactData.joinedPdb,
@@ -195,38 +219,37 @@ class Contacts(object):
         self.parseNcontLog( contactData )
         self.analyseRio( contactData )
         
+        contactData.rioNumContacts = contactData.numContacts
+        
         return contactData
         
     def findOrigin(self,
                    nativePdbInfo=None,
-                   placedPdbInfo=None,
+                   mrPdbInfo=None,
                    resSeqMap=None,
                    origins=None,
                    allAtom=False,
-                   workdir=None ):
+                   workdir=os.getcwd() ):
         """Find the origin using the maximum number of contacts as metric"""
         
         self.workdir = workdir
-        if not self.workdir:
-            self.workdir = os.getcwd()
-            
         pdbedit = pdb_edit.PDBEdit()
 
         if not resSeqMap.resSeqMatch():
             #print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
-            placedPdbRes = ample_util.filename_append( filename=placedPdbInfo.pdb, astr="reseq", directory=self.workdir )
-            pdbedit.match_resseq( targetPdb=placedPdbInfo.pdb, sourcePdb=None, outPdb=placedPdbRes, resMap=resSeqMap )
-            placedPdb = placedPdbRes
+            mrPdbRes = ample_util.filename_append( filename=mrPdbInfo.pdb, astr="reseq", directory=self.workdir )
+            pdbedit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
+            mrPdb = mrPdbRes
         else:
-            placedPdb = placedPdbInfo.pdb
+            mrPdb = mrPdbInfo.pdb
  
-        # Make a copy of placedPdb with chains renamed to lower case
-        ucChains = placedPdbInfo.models[0].chains
+        # Make a copy of mrPdb with chains renamed to lower case
+        ucChains = mrPdbInfo.models[0].chains
         toChains = [ c.lower() for c in ucChains ]
-        placedAaPdb = ample_util.filename_append( filename=placedPdb, astr="ren", directory=self.workdir )
-        pdbedit.rename_chains( inpdb=placedPdb, outpdb=placedAaPdb, fromChain=ucChains, toChain=toChains )
+        placedAaPdb = ample_util.filename_append( filename=mrPdb, astr="ren", directory=self.workdir )
+        pdbedit.rename_chains( inpdb=mrPdb, outpdb=placedAaPdb, fromChain=ucChains, toChain=toChains )
 
         # The list of chains in the native that we will be checking contacts from
         fromChains = nativePdbInfo.models[0].chains
@@ -234,7 +257,7 @@ class Contacts(object):
         # Loop over origins, move the placed pdb to the new origin and then run ncont
         # Object to hold data on best origin
         self.data = None
-        for i, origin in enumerate( origins ):
+        for origin in origins:
             #print "GOT ORIGIN ",i,origin
             
             placedOriginPdb =  placedAaPdb
@@ -248,41 +271,35 @@ class Contacts(object):
             # Concatenate into one file
             joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
             pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
-                
-            # Run ncont
-            data = ContactData()
-            data.origin = origin
-            data.originPdb = placedOriginPdb
-            data.joinedPdb = joinedPdb
+            
+            # Set up object to hold data
+            data            = ContactData()
+            data.origin     = origin
+            data.originPdb  = placedOriginPdb
+            data.joinedPdb  = joinedPdb
             data.fromChains = fromChains
-            data.toChains = toChains
-            data.numGood = 0 # For holding the metric
-            # Need to use list of chains from Native as can't work out negate operator for ncont
+            data.toChains   = toChains
+            data.numGood    = 0 # For holding the metric
+            
+            # Run ncont
             if allAtom:
-                self.runNcont( pdbin=joinedPdb,
-                               sourceChains=fromChains,
-                               targetChains=toChains,
-                               allAtom=True,
-                               maxDist=0.5 )
-                self.parseNcontLog( data )
-                data.numGood = data.numContacts
+                self.calcAllAtom( data )
+                data.numGood = data.aaNumContacts
             else:
-                # Calculating from RIO
-                self.runNcont( pdbin=joinedPdb,
-                               sourceChains=fromChains,
-                               targetChains=toChains,
-                               allAtom=False,
-                               maxDist=1.5
-                                )
-                self.parseNcontLog( data )
-                self.analyseRio( data )
-                data.numGood = data.inregister + data.ooregister
+                self.calcRio( data )
+                data.numGood = data.rioInRegister + data.rioOoRegister
             
             # Save the first origin and only update if we get a better score
             if not self.data or data.numGood > self.data.numGood:
                 self.data = data
 
         # End loop over origins
+        
+        # Now need to calculate data for whichever one we didn't calculate
+        if allAtom:
+            self.calcRio( self.data )
+        else:
+            self.calcAllAtom( self.data )
         
         if self.data.numGood > 0:
             
@@ -295,11 +312,10 @@ class Contacts(object):
                       inPdb=self.data.originPdb,
                       outPdb=csymmatchPdb,
                       originHand=False )
-            return True
-        else:
-            return False
+        
+        return self.data
 
-    def helixFromContacts( self, contacts=None, dsspLog=None, minContig=2, maxGap=3  ):
+    def helixFromContacts( self, contacts, dsspLog, minContig=2, maxGap=3  ):
         """Return the sequence of the longest contiguous helix from the given contact data
         
         
@@ -319,63 +335,21 @@ class Contacts(object):
         # Get the corresponding AA sequence
         
         """
-        
-        
         #print "GOT DATA ",contacts
-        #print "GOT DSSP ",dsspP.asDict()
-        
-        # Parse the dssp Log
-        dsspP = dssp.DsspParser( dsspLog )
-        if contacts is None:
-            contacts = self.best.contacts
-            
         if contacts is None or not len( contacts ):
             return None
-            
+        
+        #print "GOT DSSP ",dsspP.asDict()
+        # Parse the dssp Log
+        dsspP = dssp.DsspParser( dsspLog )
         #
         # Loop through the contacts finding the start, stop indices in the list of contacts of contiguous chunks
         #
         chunks = self.findChunks( contacts=contacts, dsspP=dsspP, ssTest=True, minContig=2 )
-    
         if not chunks:
             return None
-        
-        def join_chunks( chunk1, chunk2, dsspP=None, maxGap=None ):
-            """Take two chunks of contacts and see if the gap between them can be joined.
-            
-            If the chunks can't be joined, it returns the first chunk for adding to the list
-            of chunks, and the second chunk for use in the subsequent join step.
-            If the chunks can be joined, it returns None for the first chunk so that we know not
-            to add anything.
-            """
-            
-            assert dsspP and maxGap
-            
-            #print "CHECKING CHUNK ",chunk1, chunk2
-            
-            # See if a suitable gap
-            width = abs( chunk2[ 'startResSeq' ] - chunk1[ 'stopResSeq' ] ) - 1
-            if width < 1 or width > maxGap or chunk1[ 'chainId1' ] != chunk2[ 'chainId1' ]:
-                return ( chunk1, chunk2 )
-            
-            # Suitable gap so make sure it's all helix
-            for resSeq in range( chunk1[ 'stopResSeq' ] + 1, chunk2[ 'startResSeq' ] - 1 ):
-                ss = dsspP.getAssignment( resSeq, chunk1[ 'chainId1' ], resName = None )
-                if ss != 'H':
-                    return ( chunk1, chunk2 )
-            
-            #print "JOINED CHUNKS", chunk1, chunk2
-            
-            joinedChunk =  { 'chainId1'    : chunk1[ 'chainId1' ],
-                             'startIdx'    : chunk1[ 'startIdx'],
-                             'startResSeq' : chunk1[ 'startResSeq' ],
-                             'stopIdx'     : chunk2[ 'stopIdx'],
-                             'stopResSeq'  : chunk2[ 'stopResSeq' ] }
-                
-            return ( None, joinedChunk )
-        
         #
-        # Go through the start-stop chunks in pairs and see if they can be joied, creating
+        # Go through the start-stop chunks in pairs and see if they can be joined, creating
         # extended, which is the list of chunks with gaps filled-in
         #
         #print "GOT CHUNKS ",chunks
@@ -393,7 +367,7 @@ class Contacts(object):
                     toJoin = newChunk
                     continue
                 
-                chunk, toJoin = join_chunks( toJoin, newChunk, dsspP=dsspP, maxGap=maxGap  )
+                chunk, toJoin = self._join_chunks( toJoin, newChunk, dsspP=dsspP, maxGap=maxGap  )
                 
                 if chunk is not None:
                     extended.append( chunk )
@@ -439,6 +413,40 @@ class Contacts(object):
                 
         return sequence
 
+    def _join_chunks( self, chunk1, chunk2, dsspP=None, maxGap=None ):
+        """Take two chunks of contacts and see if the gap between them can be joined.
+        
+        If the chunks can't be joined, it returns the first chunk for adding to the list
+        of chunks, and the second chunk for use in the subsequent join step.
+        If the chunks can be joined, it returns None for the first chunk so that we know not
+        to add anything.
+        """
+        
+        assert dsspP and maxGap
+        
+        #print "CHECKING CHUNK ",chunk1, chunk2
+        
+        # See if a suitable gap
+        width = abs( chunk2[ 'startResSeq' ] - chunk1[ 'stopResSeq' ] ) - 1
+        if width < 1 or width > maxGap or chunk1[ 'chainId1' ] != chunk2[ 'chainId1' ]:
+            return ( chunk1, chunk2 )
+        
+        # Suitable gap so make sure it's all helix
+        for resSeq in range( chunk1[ 'stopResSeq' ] + 1, chunk2[ 'startResSeq' ] - 1 ):
+            ss = dsspP.getAssignment( resSeq, chunk1[ 'chainId1' ], resName = None )
+            if ss != 'H':
+                return ( chunk1, chunk2 )
+        
+        #print "JOINED CHUNKS", chunk1, chunk2
+        
+        joinedChunk =  { 'chainId1'    : chunk1[ 'chainId1' ],
+                         'startIdx'    : chunk1[ 'startIdx'],
+                         'startResSeq' : chunk1[ 'startResSeq' ],
+                         'stopIdx'     : chunk2[ 'stopIdx'],
+                         'stopResSeq'  : chunk2[ 'stopResSeq' ] }
+            
+        return ( None, joinedChunk )
+
     def runNcont( self, pdbin=None, sourceChains=None, targetChains=None, maxDist=1.5, allAtom=False ):
         """FOO
         """
@@ -452,6 +460,7 @@ class Contacts(object):
         
         # Build up stdin
         stdin = ""
+        # Need to use list of chains from Native as can't work out negate operator for ncont
         if allAtom:
                 stdin += "source {0}//*\n".format( ",".join( sourceChains )  )  
                 stdin += "target {0}//*\n".format( ",".join( targetChains )  ) 
@@ -580,6 +589,88 @@ class Contacts(object):
         contactData.contacts = contacts
                     
         return
+    
+    def helixFromPdbs(self, origin, mrPdb, nativePdb, nativeChain, dsspLog, workdir=os.getcwd() ):
+        """This is a wrapper to generate the info and resSeqMap objects needed by score Origin"""
+        
+        mrPdbInfo = pdb_edit.PDBEdit().get_info(mrPdb)
+        nativePdbInfo = pdb_edit.PDBEdit().get_info(nativePdb)
+        
+        assert nativeChain in nativePdbInfo.models[0].chains
+        
+        import residue_map
+        resSeqMap = residue_map.residueSequenceMap()
+        resSeqMap.fromInfo( refInfo=nativePdbInfo,
+                            refChainID=nativeChain,
+                            targetInfo=mrPdbInfo,
+                            targetChainID=mrPdbInfo.models[0].chains[0]# Only 1 chain in model
+                          )
+        
+        data = self.scoreOrigin(origin, mrPdbInfo, nativePdbInfo, resSeqMap, workdir)
+        
+        contacts = data.contacts
+        
+        return self.helixFromContacts(contacts, dsspLog )
+        
+    
+    def scoreOrigin(self,
+                    origin=None,
+                    mrPdbInfo=None,
+                    nativePdbInfo=None,
+                    resSeqMap=None,
+                    workdir=os.getcwd()
+                     ):
+        
+        self.workdir = workdir
+        pdbedit = pdb_edit.PDBEdit()
+
+        if not resSeqMap.resSeqMatch():
+            #print "NUMBERING DOESN'T MATCH"
+            #raise RuntimeError,"NUMBERING DOESN'T MATCH"
+            # We need to create a copy of the placed pdb with numbering matching the native
+            mrPdbRes = ample_util.filename_append( filename=mrPdbInfo.pdb, astr="reseq", directory=self.workdir )
+            pdbedit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
+            mrPdb = mrPdbRes
+        else:
+            mrPdb = mrPdbInfo.pdb
+ 
+        # Make a copy of mrPdb with chains renamed to lower case
+        ucChains = mrPdbInfo.models[0].chains
+        toChains = [ c.lower() for c in ucChains ]
+        mrAaPdb = ample_util.filename_append( filename=mrPdb, astr="ren", directory=self.workdir )
+        pdbedit.rename_chains( inpdb=mrPdb, outpdb=mrAaPdb, fromChain=ucChains, toChain=toChains )
+
+        # The list of chains in the native that we will be checking contacts from
+        fromChains = nativePdbInfo.models[0].chains
+        
+        mrOriginPdb =  mrAaPdb
+        if origin != [ 0.0, 0.0, 0.0 ]:
+            # Move pdb to new origin
+            #ostr="origin{0}".format(i)
+            ostr="o{0}".format( origin ).replace(" ","" )
+            mrOriginPdb = ample_util.filename_append( filename=mrAaPdb, astr=ostr, directory=self.workdir )
+            pdbedit.translate( inpdb=mrAaPdb, outpdb=mrOriginPdb, ftranslate=origin )
+        
+        # Concatenate into one file
+        joinedPdb = ample_util.filename_append( filename=mrOriginPdb, astr="joined", directory=self.workdir )
+        pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=mrOriginPdb, pdbout=joinedPdb )
+            
+        # Run ncont
+        data = ContactData()
+        data.origin = origin
+        data.originPdb = mrOriginPdb
+        data.joinedPdb = joinedPdb
+        data.fromChains = fromChains
+        data.toChains = toChains
+
+        # First get AllAtom score        
+        self.calcAllAtom( data )
+        
+        # Then score RIO
+        self.calcRio( data )
+        #data.numGood = data.inregister + data.ooregister
+        
+        return data
  
     def ssIsOK( self, contact, dsspP=None, ssTest=False ):
         if ssTest:
@@ -784,8 +875,6 @@ class TestContacts( unittest.TestCase ):
     def testHelix5(self):
 
         logfile = os.path.join( self.testfilesDir, "ncont5.log" )
-        
-        import dssp
         dssplog = os.path.join( self.testfilesDir, "3RA3.dssp" )
         
         dsspP = dssp.DsspParser( dssplog )

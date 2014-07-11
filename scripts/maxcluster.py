@@ -3,6 +3,8 @@
 import glob
 import os
 import re
+import traceback
+import types
 
 import ample_util
 import pdb_edit
@@ -160,7 +162,14 @@ class Maxcluster(object):
                 
                 d = MaxclusterData()
                 d.pdb = fields[5]
-                d.modelName = os.path.splitext( os.path.basename( fields[5] ) )[0]
+                tmp = os.path.splitext( os.path.basename( fields[5] ) )[0]
+#                 # Hack to make sure there isn't something like "1_" prepended to the name
+#                 if not tmp.startswith("S"):
+#                     for i,f in enumerate(tmp):
+#                         if f=="S":
+#                             tmp=tmp[i:]
+#                             break
+                d.modelName = tmp
                 
                 label, value = fields[6].split( "=" )
                 assert label == "Pairs"
@@ -279,16 +288,18 @@ class Maxcluster(object):
         for d in self.data:
             if d.modelName == modelName:
                 return d.tm
-        assert False
-        return
+        s = "\n".join(traceback.format_list(traceback.extract_stack()))
+        print "MaxCluster tm failed to find model name: {0}\n{1}".format(modelName,s)
+        return None
             
     def rmsd(self, modelName ):
         """"""
         for d in self.data:
             if d.modelName == modelName:
                 return d.rmsd
-        assert False
-        return
+        s = "\n".join(traceback.format_list(traceback.extract_stack()))
+        print "MaxCluster rmsd failed to find model name: {0}\n{1}".format(modelName,s)
+        return None
 
     def maxsubSorted(self, reverse=True ):
         return sorted( self.data, key=lambda data: data.maxsub, reverse=reverse )
@@ -298,7 +309,10 @@ class Maxcluster(object):
         # Generate the list of models
         pdblist = os.path.join( self.workdir, "models.list")
         with open( pdblist, 'w' ) as f:
-            f.write( os.linesep.join( glob.glob( os.path.join( modelsDirectory, 'S_*.pdb' ) ) ) )
+            l = glob.glob( os.path.join( modelsDirectory, '*S_*.pdb' ) )
+            if not len(l) > 0:
+                raise RuntimeError,"Could not find any pdb files in directory: {0}".format(modelsDirectory)
+            f.write( os.linesep.join( l ) )
             
         # Run Maxcluster
         cmd = [ self.maxclusterExe, "-e", nativePdb, "-l", pdblist, ]

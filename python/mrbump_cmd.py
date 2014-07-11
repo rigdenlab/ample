@@ -16,7 +16,7 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     """
     
     mrs = ""
-    mrs+='mrbump HKLIN {0} SEQIN {1} HKLOUT OUT.mtz  XYZOUT OUT.pdb << eof\n'.format( adict['mtz'], adict['fasta'] )
+    mrs+='mrbump HKLIN {0} SEQIN {1} HKLOUT OUT.mtz  XYZOUT OUT.pdb << eof\n'.format( adict['mtz'], adict['mr_sequence'] )
     mrs+='LABIN SIGF={0} F={1} FreeR_flag={2}\n'.format( adict['SIGF'], adict['F'], adict['FREE'] )
     mrs+='JOBID {0}_mrbump\n'.format( jobid )
     #mrs+='MRPROGRAM {0}\n'.format( adict['mrbump_programs'] )
@@ -51,7 +51,14 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     mrs+='USEENSEM False\n'
     mrs+='CLEAN False\n'
     mrs+='DEBUG True\n'
-
+    #
+    # Optional extras
+    #
+    if adict['shelxe_rebuild']:
+        # Rebuild SHELXE trace with both Buccaneer and ArpWarp
+        mrs+='SXREBUILD True\n'
+        mrs+='SXRBUCC True\n'
+        mrs+='SXRARPW True\n'
     if adict['ASU'] > 0:
         mrs+='NMASU  {0}\n'.format( adict['ASU'] )
     if adict['domain_all_chains_pdb']:

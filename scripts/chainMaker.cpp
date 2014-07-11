@@ -11,6 +11,16 @@
  * 		--n-terminus: 0 for NH2, 1 for NH3+ [0]
  * 		--r-stereo: use r-stereo [l-stereo]
  *
+ *  Openbabel must be installed and the:
+ *
+ *  BABEL_DATADIR=.../openbabel/data
+ *  BABEL_LIBDIR=.../build/lib
+ *
+ *  environment variable sets before use.
+ *
+ *  The zmatDir variable (in main) also needs to be set to the
+ *  location of the Avogadro zmatrix files (avogadro/builder/amino)
+ *
  * This code to make the chain was written by Geoff Hutchison for the Avogadro project
  * http://avogadro.openmolecules.net/
  *
@@ -342,6 +352,11 @@ void ChainMaker::generateFragment( OpenBabel::OBMol &obfragment,
 
 int main(int argc,char **argv)
 {
+        // Location of the amino acid .zmat files from avogadro ( avogadro/builder/amino )
+        const char *zmatDir = "/home/jmht/Documents/avogadro/avogadro/builder/amino/";
+
+        
+
 	// Maps 1 AA code -> 3
 	map <char, string> one2three;
 	one2three['A'] = "ala";
@@ -426,9 +441,7 @@ int main(int argc,char **argv)
 	OpenBabel::OBMol obfragment;
 
 	ChainMaker chainMaker;
-	//generateFragment( obfragment, sequence3, phi, psi, lStereo, nTerminus, cTerminus, chain );
-	//string zmatDir="/Users/jmht/Documents/avogadro/avogadro/builder/amino/";
-	chainMaker.setZmatDir( "/home/jmht/chainMaker/amino/" );
+	chainMaker.setZmatDir( zmatDir );
 	chainMaker.generateFragment( obfragment, sequence3, phi, psi, lStereo, nTerminus, cTerminus, chain );
 
 	// Write it out as a pdb

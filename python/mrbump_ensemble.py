@@ -91,7 +91,7 @@ def write_jobscript( name, pdb, amoptd, directory=None ):
     # Path
     if not directory:
         directory = os.getcwd()
-    script_path = directory + os.sep + name + '.sub'
+    script_path = directory + os.sep + name + '.sh'
     
     # Write script
     job_script = open(script_path, "w")
@@ -139,11 +139,18 @@ def mrbump_ensemble_cluster( job_scripts, amoptd ):
 
     mrBuild = clusterize.ClusterRun()
     mrBuild.QTYPE = amoptd['submit_qtype']
-    for script in job_scripts:
-        job_number = mrBuild.submitJob( subScript=script )
+    
+    if amoptd['submit_array']:
+        mrBuild.submitArrayJob(job_scripts,jobTime=86400)
+    else:
+        for script in job_scripts:
+            job_number = mrBuild.submitJob( subScript=script )
 
     # Monitor the cluster queue to see when all jobs have finished
     mrBuild.monitorQueue()
+    
+    if amoptd['submit_array']:
+        mrBuild.cleanUpArrayJob()
     
     # Cleanup code
     #shutil.rmtree(work_dir + '/fine_cluster_' + str(clusterID))
@@ -209,11 +216,11 @@ def check_success( job ):
     rFreeSuccess=0.4
     if r.shelxCC and r.shelxCC != "--" and float(r.shelxCC) >= 25.0:
         success=True
-    elif r.buccRfree and r.buccRfree != "--" and float(r.buccRfree) >=rFreeSuccess:
+    elif r.buccRfree and r.buccRfree != "--" and float(r.buccRfree) <=rFreeSuccess:
         success=True
-    elif r.arpWarpRfree and r.arpWarpRfree != "--" and float(r.arpWarpRfree) >=rFreeSuccess:
+    elif r.arpWarpRfree and r.arpWarpRfree != "--" and float(r.arpWarpRfree) <=rFreeSuccess:
         success=True
-    elif r.rfree and float(r.rfree) >= rFreeSuccess:
+    elif r.rfree and float(r.rfree) <= rFreeSuccess:
         success=True
         
     return success

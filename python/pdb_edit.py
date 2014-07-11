@@ -13,6 +13,9 @@ import ample_util
 import pdb_model
 import residue_map
 
+# cctbx
+#import iotbx.pdb
+
 
 three2one = {
     'ALA' : 'A',    
@@ -1075,6 +1078,34 @@ class PDBEdit(object):
             
         return
 
+    def num_atoms_and_residues(self, pdbin):
+        #pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
+        #model = pdb_obj.hierarchy.models()[0]
+        #return sum(  [ len( chain.residues() ) for chain in model.chains() ]  )
+
+        cmd=[ 'rwcontents', 'xyzin', pdbin ]
+        
+        logfile="rwcontents.log"
+        stdin='' # blank to trigger EOF
+        retcode = ample_util.run_command(cmd=cmd,
+                                         directory=os.getcwd(),
+                                         logfile=logfile,
+                                         stdin=stdin)
+        if retcode != 0:
+            raise RuntimeError,"Error running rwcontents {0}".format( pdbin  )
+        
+        natoms=0
+        nresidues = 0
+        with open( logfile ) as f:
+            for line in f:
+                if line.startswith(" Number of amino-acids residues"):
+                    nresidues = int(line.strip().split()[5])
+                #Total number of protein atoms (including hydrogens)
+                if line.startswith(" Total number of         atoms (including hydrogens)"):
+                    natoms = int(float(line.strip().split()[6]))
+                    break
+        assert natoms > 0 and nresidues > 0
+        return (natoms, nresidues)
 
     def rename_chains( self, inpdb=None, outpdb=None, fromChain=None, toChain=None ):
         """Rename Chains
@@ -1102,6 +1133,7 @@ class PDBEdit(object):
     
     def select_residues(self, inpath=None, outpath=None, residues=None ):
         """Create a new pdb by selecting only the numbered residues from the list.
+        This only keeps ATOM lines - everything else gets discarded.
         
         Args:
         infile: path to input pdb
@@ -1109,29 +1141,23 @@ class PDBEdit(object):
         residues: list of integers of the residues to keep
         
         Return:
-        path to new pdb or None
+        Number of residues written
         """
     
         assert inpath, outpath
         assert type(residues) == list
     
-        pdb_in = open(inpath, "r")
-        pdb_out = open(outpath , "w")
-        
         # Loop through PDB files and create new ones that only contain the residues specified in the list
-        for pdbline in pdb_in:
-            pdb_pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s')
-            pdb_result = pdb_pattern.match(pdbline)
-            if pdb_result:
-                pdb_result2 = re.split(pdb_pattern, pdbline )
-                for i in residues : #convert to ints to comparex
+        count=0
+        with open(inpath, "r") as pdb_in, open(outpath , "w") as pdb_out:
+            for line in pdb_in:
+                if line.startswith("ATOM"):
+                    atom = pdb_model.PdbAtom( line )
+                    if int( atom.resSeq ) in residues: #convert to ints to compare
+                        count += 1
+                        pdb_out.write(line)
         
-                    if int(pdb_result2[5]) == int(i):
-                        pdb_out.write(pdbline)
-        
-        pdb_out.close()
-        
-        return
+        return count
 
     def standardise( self, inpdb, outpdb, chain=None ):
         """Rename any non-standard AA, remove solvent and only keep most probably conformation.
