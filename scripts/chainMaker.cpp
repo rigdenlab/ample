@@ -4,7 +4,7 @@
  *
  * Optional arguments are as follows (defaults in [] ):
  * 		-chain: 1 letter chain code [A]
- * 		-phi: phi angle (-57.8)
+ * 		-phi: phi angle (-57)
  * 		-psi: psi angle (-47)
  * 		-o: output pdb [chain.pdb]
  * 		--c-terminus: 0 for OXT,HO, 1 for OXT [0]
@@ -381,7 +381,7 @@ int main(int argc,char **argv)
 	one2three['Y'] = "tyr";
 
 	/* Default values */
-	double phi=-57.8;
+	double phi=-57;
 	double psi=-47;
 	bool lStereo=true;
 	int nTerminus=0; // 0=NH2, 1=NH3+
@@ -394,7 +394,7 @@ int main(int argc,char **argv)
 	vector<string> args(argv + 1, argv + argc);
 	for ( unsigned int i=0; i < args.size(); i++) {
 		if (args[i] == "-h" || args[i] == "--help") {
-			cout << "Usage: prog -s ASDSDS -phi -57.8 -psi -47 -o pdbout.pdb "<< endl;
+			cout << "Usage: prog -s ASDSDS -phi -57 -psi -47 -o pdbout.pdb "<< endl;
 			return 0;
 		} else if (args[i] == "-chain") {
 			chain = args[i+1].c_str()[0];
