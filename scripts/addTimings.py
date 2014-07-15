@@ -1,18 +1,21 @@
+#!/usr/bin/env ccp4-python
 import sys
-sys.path.append( "/opt/ample-dev1/python" )
-sys.path.append( "/opt/ample-dev1/scripts" )
+sys.path.insert(0, "/opt/ample-dev1/python" )
+sys.path.insert(0, "/opt/ample-dev1/scripts" )
+
 
 import cPickle
 import csv
+
+sys.path.append("/usr/lib/python2.7/dist-packages")
 from dateutil import parser
-import datetime
 import glob
 import os
 
 import ample_util
 from analyse_run import AmpleResult
-import phaser_parser
-import shelxe_log
+#import phaser_parser
+import parse_shelxe
 
 def sgeLogTime( log ):
     with open( log, 'r') as f:
@@ -43,31 +46,84 @@ def ampleLogTime( log ):
     
     return thours * 60 * 60
 
+def logTime(log):
+    with open( log, 'r') as f:
+        lines = f.readlines()
+        
+        # times are first two chunks of file
+        start = " ".join(lines[0].strip().split()[0:2])
+        # strip milliseconds - why the FUCK!!! is the default log format a time that can't be parsed with
+        # standard python tools?!?!?!?!?!
+        start = start.split(",")[0]
+        
+        l=None
+        for i in range(1,5):
+            l = lines[-i].strip()
+            if l:
+                break
+        assert l
+        end = " ".join(l.split()[0:2])
+        end = end.split(",")[0]
+        
+        tstart = parser.parse( start )
+        tend = parser.parse( end )
+        
+    delta = tend-tstart
+    return delta.seconds
 
-root = "/media/data/shared/coiled-coils/ensemble"
+
+
+#l = "/media/data/shared/coiled-coils/ensemble/ensemble_redo_failures1/1G1J/ROSETTA_MR_0/ensemble.log"
+#t = logTime(l)
+#print "TIME ",t
+#sys.exit()
+
+
+e1root = "/media/seagate/coiled-coils/ensemble/ensemble.run1"
+
 runDir = os.getcwd()
 os.chdir( runDir )
 
-pfile = os.path.join( runDir, "ar_results_bucc.pkl" )
-pfile = "/home/jmht/Documents/test/CC/run6/ar_results_bucc.pkl"
+pfile = os.path.join( runDir, "final_results.pkl" )
 with open( pfile ) as f:
     ensembleResults = cPickle.load( f )
+
+
+# Map targets to directories
+pdb2dir = {}
+for jd in [ l.strip() for l in open( "/media/data/shared/coiled-coils/ensemble/final_results/dirs.list") if not l.startswith("#") ]:
+    directory = "/".join(jd.split("/")[0:-1])
+    pdbCode = jd.split("/")[-1]
+    pdb2dir[pdbCode]=directory
 
 # Hack to add extra attributes
 a = AmpleResult()
 
+
 #for pdbCode in [ "3H7Z" ]:
 for r in ensembleResults:
+    
+    #if r.pdbCode not in pdb2dir:
+    #    continue
     
     print "processing ",r.pdbCode, r.ensembleName
     # Need to add the extra attributes
     r.orderedAttrs = a.orderedAttrs
     r.orderedTitles = a.orderedTitles
-
+    
+    dataRoot=pdb2dir[r.pdbCode]
+    # Always use the old models as we dont' have the times for the redo ones
+    #if dataRoot == "/media/data/shared/coiled-coils/ensemble/ensemble.run2":
+    #    modelsDir=os.path.join(e1root,r.pdbCode,"models")
+    #else:
+    #    modelsDir=os.path.join(dataRoot,r.pdbCode,"models")
+    
+    modelsDir=os.path.join(e1root,r.pdbCode,"models")
+    
     # Find all fragment logs and add up times
-    fdir = os.path.join( root, r.pdbCode, "fragments" )
+    fdir = os.path.join( e1root, r.pdbCode, "fragments" )
     ftime = 0.0
-    for flog in glob.glob( fdir + "/frags_*"):
+    for flog in glob.glob( fdir + "/frags_*log*"):
         w, c = sgeLogTime( flog )
         ftime += c
     
@@ -75,34 +131,43 @@ for r in ensembleResults:
     r.fragmentTime = ftime
 
     # Parse model time
-    mdir = os.path.join( root, r.pdbCode, "models" )
-    mlog = glob.glob( mdir + "/models_*")[0]
+    mlog = glob.glob( modelsDir + "/models_*")[0]
     w, mtime = sgeLogTime( mlog )
     
     #print "MTIME ",mtime
     r.modelTime = mtime
     
-    # Parse ample log to get ample time
-    alog = os.path.join( root, r.pdbCode, "run_ample.sh.out" )
-    atime = ampleLogTime( alog )
+    # Get the ensembling time from the ensemble log
+    if dataRoot == "/media/data/shared/coiled-coils/ensemble/ensemble.run2":
+        elog=os.path.join(e1root,r.pdbCode,"ROSETTA_MR_0","ensemble.log")
+        etime = logTime(elog)
+        # First run ran 3 ensembles
+        etime = etime/3
+    else:
+        elog=os.path.join(dataRoot,r.pdbCode,"ROSETTA_MR_0","ensemble.log")
+        etime = logTime(elog)
     
-    #print "aTIME ",atime
-    r.ensembleTime = atime
+    # Parse ample log to get ample time
+    #alog = os.path.join( dataRoot, r.pdbCode, "run_ample.sh.out" )
+    #atime = ampleLogTime( alog )
+    
+    #print "ETIME ",etime
+    r.ensembleTime = etime
 
     # For all jobs add up phaser and shelxe times to get overall time
-    mrbdir = os.path.join( root, r.pdbCode, "ROSETTA_MR_0/MRBUMP/cluster_1" )
-    ensembles = [ os.path.splitext( os.path.basename( l ) )[0] for l in glob.glob( mrbdir + "/*.sub") ]
-    #for ensemble in ensembles:
-    ensemble = r.ensembleName
-        
+    if dataRoot == "/media/data/shared/coiled-coils/ensemble/ensemble.run2":
+        mrbdir = os.path.join(dataRoot,r.pdbCode)
+    else:
+        mrbdir = os.path.join( dataRoot, r.pdbCode, "ROSETTA_MR_0/MRBUMP/cluster_1" )
+    
     mrDir = os.path.join( mrbdir,
-                          "search_{0}_mrbump".format( ensemble ),
+                          "search_{0}_mrbump".format( r.ensembleName ),
                           "data",
-                          "loc0_ALL_{0}".format( ensemble ),
+                          "loc0_ALL_{0}".format( r.ensembleName ),
                           "unmod/mr/phaser"
                             )
-    
-#     phaserLog = os.path.join( mrDir, "phaser_loc0_ALL_{0}_UNMOD.log".format( ensemble ) )
+    #Already calculated the phaser log time    
+#     phaserLog = os.path.join( mrDir, "phaser_loc0_ALL_{0}_UNMOD.log".format( r.ensembleName ) )
 #     ptime = 0.0
 #     if os.path.isfile( phaserLog ):
 #         phaserP = phaser_parser.PhaserLogParser( phaserLog )
@@ -111,21 +176,21 @@ for r in ensembleResults:
     shelxeLog = os.path.join( mrDir, "build/shelxe/shelxe_run.log" )
     stime = 0.0
     if os.path.isfile( shelxeLog ):
-        shelxeP = shelxe_log.ShelxeLogParser( shelxeLog )
+        shelxeP = parse_shelxe.ShelxeLogParser( shelxeLog )
         stime = shelxeP.cputime
     
     r.shelxeTime = stime
     
-    #print "PTIME ",ptime
+    #print "PTIME ",r.phaserTime
     #print "STIME ",stime
 
-pfile = ample_util.filename_append( pfile, astr="timings")
 
-pfile = "ar_results_bucc_timings.pkl"
+
+pfile = ample_util.filename_append( pfile, astr="timings")
 f = open( pfile, 'w' )
 ampleDict = cPickle.dump( ensembleResults, f  )
 
-cpath = os.path.join( runDir, 'results_bucc_timings.csv' )
+cpath = os.path.join( runDir, 'final_results_timings.csv' )
 csvfile =  open( cpath, 'wb')
 csvwriter = csv.writer(csvfile, delimiter=',',
                         quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -139,3 +204,4 @@ for r in ensembleResults:
     csvwriter.writerow( r.valuesAsList() )
     
 csvfile.close()
+
