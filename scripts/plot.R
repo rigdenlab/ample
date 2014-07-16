@@ -438,18 +438,20 @@ if (comparison){
 data$phaserTime <- replace( data$phaserTime, is.na(data$phaserTime), 0 )
 data$shelxeTime <- replace( data$shelxeTime, is.na(data$shelxeTime), 0 )
 tdata = data[ data$shelxeTime > 0 & data$phaserTime >0, ]
-tlabels = c("fragmentTime", "modelTime", "ensembleTime", "phaserTime", "shelxeTime")
-x <- aggregate( tdata[ , tlabels ], by=list( pdbCode = tdata$pdbCode ), FUN=mean)
-write.csv(x, "timingData.csv", row.names=FALSE)
-x <- data.frame( mean(tdata$fragmentTime), mean(tdata$modelTime), mean(tdata$ensembleTime), mean(tdata$phaserTime), mean(tdata$shelxeTime) )
+
+# modelling etc is same for all models so don't want to average across jobs, but targets
+tsum <- tdata[ !duplicated(tdata$pdbCode), c("pdbCode","fragmentTime","modelTime","ensembleTime")]
+mr <- aggregate( tdata[ , c("phaserTime", "shelxeTime") ], by=list( tdata$pdbCode ), FUN=mean)
+names(mr)[1] <- "pdbCode" # unnecessary - just for REM
+tsum$phaserTime <- mr$phaserTime
+tsum$shelxeTime <- mr$shelxeTime
+
+write.csv(tsum, "timingData.csv", row.names=FALSE)
+x <- data.frame( mean(tsum$fragmentTime), mean(tsum$modelTime), mean(tsum$ensembleTime), mean(tsum$phaserTime), mean(tsum$shelxeTime) )
 # horrible...
 png("allShelxeTimingsPie.png")
-pie( as.numeric( x ), labels=tlabels, main="Timings for all runs inc. shelxe" )
+pie( as.numeric( x ), labels=c("fragmentTime","modelTime","ensembleTime","phaserTime", "shelxeTime"), main="Timings for all runs inc. shelxe" )
 dev.off()
-
-
-q()
-
 
 
 ###############################################################################################################################
