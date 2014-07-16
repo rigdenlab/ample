@@ -1,5 +1,6 @@
 #!/usr/bin/env ccp4-python
 
+import csv
 import cPickle
 import glob
 import os
@@ -39,6 +40,9 @@ nativeData=""
 
 results=[]
 for pdbCode in [ l.strip() for l in open( os.path.join(dataRoot,"dirs.list") ) if not l.startswith("#") ]:
+    
+        if pdbCode != "1BYZ":
+            continue
     
         mrbumpDir=os.path.abspath(os.path.join(dataRoot,pdbCode))
         
@@ -164,15 +168,41 @@ for pdbCode in [ l.strip() for l in open( os.path.join(dataRoot,"dirs.list") ) i
                 result.arpWarpFinalRfact=ap.finalRfree
                 result.arpWarpFinalRfact=ap.finalRfact
                 
+            # Save the result object
+            results.append(result)
+                
             # See if we want to copy all the pdb's onto the same origin as the native
             if nativeOrigin:
+                resultDir=os.path.join(nativeData,pdbCode)
+                if not os.path.isdir(resultDir):
+                    os.mkdir(resultDir)
                 if len(mrPdbs):
                     nativeDir=os.path.join(nativeData,pdbCode)
                     nativePdb=os.path.join(nativeDir,pdbCode+".pdb")
                     nativeMtz=os.path.join(nativeDir,pdbCode+"-cad.pdb")
                     matchToNative.run(nativePdb, nativeMtz, mrPdbs, outDir=mrPdbs)
                 
+
+runDir=os.getcwd()
+pfile = os.path.join( runDir, "results.pkl")
+f = open( pfile, 'w' )
+cPickle.dump( results, f  )
+
+cpath = os.path.join( runDir, 'results.csv' )
+csvfile =  open( cpath, 'wb')
+csvwriter = csv.writer(csvfile, delimiter=',',
+                        quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+header=False
+for r in results:
+    if not header:
+        #csvwriter.writerow( r.titlesAsList() )
+        csvwriter.writerow( r.valueAttrAsList() )
+        header=True
+    csvwriter.writerow( r.valuesAsList() )
     
+csvfile.close()
+
 sys.exit()
 
 wdir = os.getcwd()
