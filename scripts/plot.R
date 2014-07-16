@@ -2,9 +2,9 @@ library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
 comparison=FALSE
-data <- read.table(file="final_results.csv",sep=',', header=T)
-#data <- read.table(file="comparison_results.csv",sep=',', header=T)
+data <- read.table(file="results_timings.csv",sep=',', header=T)
 #data <- read.table(file="final_results.csv",sep=',', header=T)
+#data <- read.table(file="comparison_results.csv",sep=',', header=T)
 
 # Categorise successes
 data$successShelxe <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
@@ -290,18 +290,6 @@ summaryData <- summaryData[ order( -summaryData$worked, summaryData$resolution )
 #x <- x[ order( x$success, decreasing=TRUE ), ]
 write.csv(summaryData, "summary.csv", row.names=FALSE)
 
-# Plot of targets by chain length
-p <-ggplot( data=summaryData, aes( fastaLength, fill=factor(worked) ) ) 
-p + geom_histogram( position = 'stack', binwidth = 10 ) +
-		scale_fill_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success"),
-				guide=FALSE) +
-		ylab("Number of targets") +
-		xlab("Target chain length") +
-		ggtitle("Histogram of target chain length for successful and failing cases")
-ggsave("targetsByLength.png")
-
 # Most accurate models that solved 
 # Highest number RIO
 sdata[ sdata$ccmtzRioGood == max(sdata$ccmtzRioGood,na.rm=TRUE), c("pdbCode","ensembleName") ]
@@ -419,7 +407,7 @@ if (comparison){
 			) +
 			scale_x_continuous(limits=c(0,80)) +
 			scale_y_continuous(limits=c(0,80)) +
-			xlab("Single-structure Shelxe CC score") +
+			xlab("Single centroid structure Shelxe CC score") +
 			ylab("Idealised Helix Shelxe CC score") +
 			ggtitle("Idealised Helices and Single-structure CC scores")
 	
@@ -446,17 +434,21 @@ if (comparison){
 # Timings
 # proportion for all runs where there was a shelxe build
 
-# For some phaser runs the logs are not complete so we have no timing data
-#sdata = data[ data$shelxeTime > 0 & ! is.na( data$phaserTime ), ]
-#mean( sdata$fragmentTime, na.rm=TRUE )
-#tlabels = c("fragmentTime", "modelTime", "ensembleTime", "phaserTime", "shelxeTime")
-#aggregate( sdata[ , tlabels ], by=list( pdbCode = sdata$pdbCode ), FUN=mean)
-
-#x <- data.frame( mean(sdata$fragmentTime), mean(sdata$modelTime), mean(sdata$ensembleTime), mean(sdata$phaserTime), mean(sdata$shelxeTime) )
+# For some phaser runs the logs are not complete so we have no timing data - we set these to 0
+data$phaserTime <- replace( data$phaserTime, is.na(data$phaserTime), 0 )
+data$shelxeTime <- replace( data$shelxeTime, is.na(data$shelxeTime), 0 )
+tdata = data[ data$shelxeTime > 0 & data$phaserTime >0, ]
+tlabels = c("fragmentTime", "modelTime", "ensembleTime", "phaserTime", "shelxeTime")
+x <- aggregate( tdata[ , tlabels ], by=list( pdbCode = tdata$pdbCode ), FUN=mean)
+write.csv(x, "timingData.csv", row.names=FALSE)
+x <- data.frame( mean(tdata$fragmentTime), mean(tdata$modelTime), mean(tdata$ensembleTime), mean(tdata$phaserTime), mean(tdata$shelxeTime) )
 # horrible...
-#png("allSuccessTimingsPie.png")
-#pie( as.numeric( x ), labels=tlabels, main="Timings for all runs inc. shelxe" )
-#dev.off()
+png("allShelxeTimingsPie.png")
+pie( as.numeric( x ), labels=tlabels, main="Timings for all runs inc. shelxe" )
+dev.off()
+
+
+q()
 
 
 
@@ -557,7 +549,7 @@ p + geom_point() +
 		scale_x_continuous(limits=c(0,1)) +
 		scale_y_continuous(limits=c(0,1)) +
 		#facet_grid( .~resCat, space="fixed", scales="fixed", labeller=l) +
-		facet_wrap( ~resCatw, nrow=1) +
+		#facet_wrap( ~resCatw, nrow=1) +
 		#coord_equal() +
 		#theme(aspect.ratio = 1) +
 		#stat_sum( aes(size=..n..) ) +
@@ -566,12 +558,10 @@ p + geom_point() +
 		ggtitle("Bucc vs Arpwarp")
 ggsave("buccVsArp.png")
 
-# Resolution vs length
-#		stat_sum( group=c(1,2) ) +
-#		stat_sum( aes(size=..n..) ) +
+# Resolution vs length1
 p <-ggplot(data=data, aes(x=resolution, y=fastaLength, colour=factor(success) ) )
-p + geom_point() +
-		stat_sum( aes(size=..n..) ) +
+p + geom_point( size=0, alpha=0 ) +
+		stat_sum( aes(size=..n..), shape=1 ) +
 		scale_colour_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -580,6 +570,65 @@ p + geom_point() +
 		ylab("Chain length (residues)") +
 		ggtitle("Resolution vs chain length")
 ggsave("resolutionVsLength.png")
+
+# Resolution vs length2
+p <-ggplot(data=summaryData, aes(x=resolution, y=fastaLength, colour=factor(worked) ) )
+p + geom_point( aes(size=numModels), guide=FALSE  ) +
+		scale_colour_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		xlab("Resolution (\uc5)") +
+		ylab("Chain length (residues)") +
+		ggtitle("Resolution vs chain length")
+ggsave("resolutionVsLength2.png")
+
+p <-ggplot(data=summaryData, aes(x=resolution, y=numResidues, colour=factor(worked) ) )
+p + geom_point( aes(size=numModels), guide=FALSE  ) +
+		scale_colour_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		xlab("Resolution (\uc5)") +
+		ylab("Residues in ASU") +
+		ggtitle("Resolution vs residues in ASU")
+ggsave("resolutionVsOverallLength.png")
+
+p <-ggplot(data=summaryData, aes(x=resolution, y=numResidues, colour=factor(worked) ) )
+p + geom_point(guide=FALSE) +
+		scale_colour_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		xlab("Resolution (\uc5)") +
+		ylab("Residues in ASU") +
+		ggtitle("Resolution vs residues in ASU")
+ggsave("resolutionVsOverallLength2.png")
+
+
+# Plot of targets by chain length
+p <-ggplot( data=summaryData, aes( fastaLength, fill=factor(worked) ) ) 
+p + geom_histogram( position = 'stack', binwidth = 10 ) +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		ylab("Number of targets") +
+		xlab("Target chain length") +
+		ggtitle("Histogram of target chain length for successful and failing cases")
+ggsave("targetsByLength.png")
+
+p <-ggplot( data=summaryData, aes( numResidues, fill=factor(worked) ) )
+p + geom_histogram() +
+		scale_fill_manual( values=c(fcolour,scolour),
+				name="Success/Failure",
+				labels=c("Failure", "Success"),
+				guide=FALSE) +
+		#scale_y_continuous(limits=c(0.10),breaks=c(0,10,1))+
+		ylab("Number of targets") +
+		xlab("Residues in ASU") +
+		ggtitle("Histogram of target size for successful and failing cases")
+ggsave("targetsByResASU.png")
 
 # Binned (20) bar graph with length along the bottom and the bars dividied/coloured by success
 p <-ggplot( data=data, aes( fastaLength, fill=factor(success) ) )
