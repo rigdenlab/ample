@@ -166,6 +166,15 @@ class ResultsSummary(object):
 
             # Another horrible hack - add the title to the header
             result.header.append('SHELXE_ACL')
+        else:
+            #assert result.shelxCC == shelxeP.CC,"Mismatching ShelxeCC scores"
+            result.shelxeAvgChainLength = 0
+            result.shelxeLog            = ""
+            result.shelxeMaxChainLength = 0
+            result.shelxeNumChains      = 0
+
+            # Another horrible hack - add the title to the header
+            result.header.append('SHELXE_ACL')
 
         return
 
