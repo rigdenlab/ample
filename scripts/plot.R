@@ -2,8 +2,8 @@ library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
 comparison=FALSE
-data <- read.table(file="results_timings.csv",sep=',', header=T)
-#data <- read.table(file="final_results.csv",sep=',', header=T)
+#data <- read.table(file="results_timings.csv",sep=',', header=T)
+data <- read.table(file="final_results.csv",sep=',', header=T)
 #data <- read.table(file="comparison_results.csv",sep=',', header=T)
 
 # Categorise successes
@@ -200,7 +200,7 @@ median( data[ data$success == 1, ]$ensemblePercentModel ) # 53
 summaryData <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasing=TRUE ), ]
 
 # Select top by selecting not duplicates on pdbCode
-summaryData <- summaryData[ !duplicated(summaryData$pdbCode), c("pdbCode","fastaLength","resolution","numChains",
+summaryData <- summaryData[ !duplicated(summaryData$pdbCode), c("pdbCode","fastaLength","resolution","spaceGroup","numChains",
 				"numResidues", "shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
 
 # Now put in alphabetical order
@@ -437,20 +437,25 @@ if (comparison){
 # For some phaser runs the logs are not complete so we have no timing data - we set these to 0
 data$phaserTime <- replace( data$phaserTime, is.na(data$phaserTime), 0 )
 data$shelxeTime <- replace( data$shelxeTime, is.na(data$shelxeTime), 0 )
-tdata = data[ data$shelxeTime > 0 & data$phaserTime >0, ]
 
 # modelling etc is same for all models so don't want to average across jobs, but targets
-tsum <- tdata[ !duplicated(tdata$pdbCode), c("pdbCode","fragmentTime","modelTime","ensembleTime")]
-mr <- aggregate( tdata[ , c("phaserTime", "shelxeTime") ], by=list( tdata$pdbCode ), FUN=mean)
+tsum <- data[ !duplicated(data$pdbCode), c("pdbCode","fragmentTime","modelTime","ensembleTime")]
+mr <- aggregate( data[ , c("phaserTime", "shelxeTime") ], by=list( data$pdbCode ), FUN=mean)
 names(mr)[1] <- "pdbCode" # unnecessary - just for REM
 tsum$phaserTime <- mr$phaserTime
 tsum$shelxeTime <- mr$shelxeTime
 
 write.csv(tsum, "timingData.csv", row.names=FALSE)
-x <- data.frame( mean(tsum$fragmentTime), mean(tsum$modelTime), mean(tsum$ensembleTime), mean(tsum$phaserTime), mean(tsum$shelxeTime) )
-# horrible...
-png("allShelxeTimingsPie.png")
-pie( as.numeric( x ), labels=c("fragmentTime","modelTime","ensembleTime","phaserTime", "shelxeTime"), main="Timings for all runs inc. shelxe" )
+x <- c( mean(tsum$fragmentTime), mean(tsum$modelTime), mean(tsum$ensembleTime), mean(tsum$phaserTime), mean(tsum$shelxeTime) )
+
+lbls <- c("fragmentTime","modelTime","ensembleTime","phaserTime", "shelxeTime")
+lbls <- paste(lbls, round(x), sep="\n") # add times to labels 
+png("timingsPie.png")
+pie( as.numeric( x ),
+		labels=l,
+		col=rainbow(length(lbls))
+)
+#		main="Timings for all runs inc. shelxe" )
 dev.off()
 
 
