@@ -26,7 +26,7 @@ class AmpleOptions(object):
                             'blast_dir' : None,
                             'buccaneer_cycles' : 5,
                             'ccp4_jobid' : None,
-                            'debug' : None,
+                            'debug' : False,
                             'domain_all_chains_pdb' : None,
                             'domain_termini_distance' : 0,
                             'early_terminate' : True,
