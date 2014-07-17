@@ -30,6 +30,117 @@ def alignPdb(nativeMap,mrPdb,outPdb=None,outDir=None):
     
     return
 
+
+def processMrDirectory(result,matchNative=False,outDir=None):
+    
+    assert os.path.isdir(result.mrDir)
+    assert result.mrProgram
+
+    #
+    # Phaser and Refmac processing
+    #
+    phaserLog=os.path.join(result.mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(result.mrProgram,result.jobName))
+    if os.path.isfile(phaserLog):
+        phaserP = phaser_parser.PhaserLogParser(phaserLog, onlyTime=True)
+        #result.phaserLog    = phaserLog
+        result.phaserTime   = phaserP.time
+        result.phaserKilled = phaserP.killed
+
+    phaserPdb=os.path.join( result.mrDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result.mrProgram,result.jobName))
+    if os.path.isfile(phaserPdb):
+        phaserP = phaser_parser.PhaserPdbParser(phaserPdb)
+        result.phaserLLG = phaserP.LLG
+        result.phaserTFZ = phaserP.TFZ
+        result.phaserPdb = phaserPdb
+        
+    refmacLog=os.path.join(result.mrDir,"refine","refmac_{0}_loc0_ALL_{1}_UNMOD.log".format(result.mrProgram,result.jobName))
+    if os.path.isfile(refmacLog):
+        refmacP = parse_refmac.RefmacLogParser(refmacLog)
+        result.rfact = refmacP.finalRfact
+        result.rfree = refmacP.finalRfree
+    
+    #
+    # Shelxe processing 
+    #
+    shelxeDir = os.path.join(result.mrDir,"build","shelxe")
+    shelxePdb = os.path.join(shelxeDir,
+                            "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format(result.mrProgram,result.jobName))
+    if os.path.isfile(shelxePdb):
+        pass
+        
+    shelxeLog = os.path.join(shelxeDir,
+                            "shelxe_run.log" )
+    
+    if os.path.isfile(shelxeLog):
+        shelxeP = parse_shelxe.ShelxeLogParser(shelxeLog)
+        result.shelxeCC = shelxeP.CC
+        result.shelxeAvgChainLength = shelxeP.avgChainLength
+        result.shelxeMaxChainLength = shelxeP.maxChainLength
+        result.shelxeNumChains= shelxeP.numChains
+        result.shelxeTime=shelxeP.cputime
+        
+    #
+    # Buccaneer Rebuild Processing
+    #
+    buccaneerPdb = os.path.join(shelxeDir,
+                                "rebuild",
+                                "buccaneer",
+                                "buccSX_output.pdb")
+    if os.path.isfile(buccaneerPdb):
+        pass
+    
+    buccaneerLog = os.path.join(shelxeDir,
+                                "rebuild",
+                                "buccaneer",
+                                "buccaneer.log" )
+    
+    if os.path.isfile(buccaneerLog):
+        bp = parse_buccaneer.BuccaneerLogParser()
+        bp.parse( buccaneerLog )
+        result.buccFinalRfree = bp.finalRfree
+        result.buccFinalRfact = bp.finalRfact
+    
+    #
+    # Arpwarp Rebuild Processing
+    #
+    arpwarpPdb = os.path.join(shelxeDir,
+                              "rebuild",
+                              "arpwarp",
+                              "refmacSX_output_warpNtrace.pdb")
+    if os.path.isfile(arpwarpPdb):
+        pass
+        
+    arpwarpLog = os.path.join(shelxeDir,
+                              "rebuild",
+                              "arpwarp",
+                              "arpwarp.log")
+    
+    if os.path.isfile(arpwarpLog):
+        ap = parse_arpwarp.ArpwarpLogParser()
+        ap.parse(arpwarpLog)
+        result.arpWarpFinalRfact=ap.finalRfact
+        result.arpWarpFinalRfree=ap.finalRfree
+        
+    
+    # See if we want to copy all the pdb's onto the same origin as the native
+    if matchNative:
+        
+        assert os.path.isfile(result.nativeMap)
+        assert os.path.isdir(outDir)
+        
+        if os.path.isfile(phaserPdb):
+            alignPdb(result.nativeMap,phaserPdb,outPdb=None,outDir=outDir)
+        if os.path.isfile(shelxePdb):
+            alignPdb(result.nativeMap,shelxePdb,outPdb=None,outDir=outDir)
+        if os.path.isfile(buccaneerPdb):
+            outPdb=os.path.join(outDir,"buccaneer_{0}_csymmatch.pdb".format(result.jobName))
+            alignPdb(result.nativeMap,buccaneerPdb,outPdb=outPdb,outDir=outDir)
+        if os.path.isfile(arpwarpPdb):
+            outPdb=os.path.join(outDir,"arpwarp_{0}_csymmatch.pdb".format(result.jobName))
+            alignPdb(result.nativeMap,arpwarpPdb,outPdb=outPdb,outDir=outDir)
+    
+    return
+
 class HelixResult(object):
     """Results for an ample solution"""
     
@@ -106,29 +217,31 @@ class HelixResult(object):
         
         s = ""
         for i, t in enumerate( self.orderedTitles ):
-            if self.orderedAttrs[i] in self.skip:
-                continue
-            s += "{0:<26} : {1}\n".format( t, getattr( self, self.orderedAttrs[i] ) )
+            if self.orderedAttrs[i] not in self.skip:
+                s += "{0:<26} : {1}\n".format( t, getattr( self, self.orderedAttrs[i] ) )
         return s
     
 # End HelixResult
 
 
-nativeOrigin=True
-if nativeOrigin:
+matchNative=True
+if matchNative:
     import ample_util
     import csymmatch
     import phenixer
     import MTZ_parse
 
-dataRoot="."
-nativeData="/home/jmht/foo/outputs"
+dataRoot="/home/jmht/foo"
+analysisDir="/home/jmht/foo/analysis"
 
 results=[]
 runDir=os.getcwd()
 for pdbCode in [ l.strip() for l in open( os.path.join(dataRoot,"dirs.list") ) if not l.startswith("#") ]:
     
         mrbumpDir=os.path.abspath(os.path.join(dataRoot,pdbCode))
+        outDir=os.path.join(analysisDir,pdbCode)
+        if not os.path.isdir(outDir):
+            os.mkdir(outDir)
         
         # Get a list of the jobs
         # For now we just use the submission scripts and assume all have .sh or .sub extension
@@ -141,10 +254,10 @@ for pdbCode in [ l.strip() for l in open( os.path.join(dataRoot,"dirs.list") ) i
             print("Could not extract any results from directory: {0}".format( mrbumpDir ) )
             continue
         
-        if nativeOrigin:
+        if matchNative:
             # Get paths to files
-            nativePdb=os.path.join(nativeData,pdbCode+".pdb")
-            nativeMtz=os.path.join(nativeData,pdbCode+"-cad.mtz")
+            nativePdb=os.path.join(analysisDir,pdbCode+".pdb")
+            nativeMtz=os.path.join(analysisDir,pdbCode+"-cad.mtz")
             
             # Create the map
             mtzp = MTZ_parse.MTZ_parse()
@@ -182,114 +295,18 @@ for pdbCode in [ l.strip() for l in open( os.path.join(dataRoot,"dirs.list") ) i
             # Create empty result object
             result=HelixResult()
             
+            result.pdbCode=pdbCode
+            result.jobName=jobName
+            result.mrProgram=mrProgram
+            result.mrDir=mrDir
+            result.nativeMap=nativeMap
+            
             # Number of residues
             result.polyaLength=int(jobName.split("_")[1])
             
-            #
-            # Phaser and Refmac processing
-            #
-            phaserLog=os.path.join(mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(mrProgram,jobName))
-            if os.path.isfile(phaserLog):
-                phaserP = phaser_parser.PhaserLogParser(phaserLog, onlyTime=True)
-                #result.phaserLog    = phaserLog
-                result.phaserTime   = phaserP.time
-                result.phaserKilled = phaserP.killed
-
-            phaserPdb=os.path.join( mrDir,"refine","{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(mrProgram,jobName))
-            if os.path.isfile(phaserPdb):
-                phaserP = phaser_parser.PhaserPdbParser(phaserPdb)
-                result.phaserLLG = phaserP.LLG
-                result.phaserTFZ = phaserP.TFZ
-                result.phaserPdb = phaserPdb
-                
-            refmacLog=os.path.join(mrDir,"refine","refmac_{0}_loc0_ALL_{1}_UNMOD.log".format(mrProgram,jobName))
-            if os.path.isfile(refmacLog):
-                refmacP = parse_refmac.RefmacLogParser(refmacLog)
-                result.rfact = refmacP.finalRfact
-                result.rfree = refmacP.finalRfree
+            processMrDirectory(result,matchNative=matchNative,outDir=outDir)
             
-            #
-            # Shelxe processing 
-            #
-            shelxeDir = os.path.join(mrDir,"build","shelxe")
-            shelxePdb = os.path.join(shelxeDir,
-                                    "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( mrProgram,jobName))
-            if os.path.isfile(shelxePdb):
-                pass
-                
-            shelxeLog = os.path.join(shelxeDir,
-                                    "shelxe_run.log" )
-            
-            if os.path.isfile(shelxeLog):
-                shelxeP = parse_shelxe.ShelxeLogParser(shelxeLog)
-                result.shelxeCC = shelxeP.CC
-                result.shelxeAvgChainLength = shelxeP.avgChainLength
-                result.shelxeMaxChainLength = shelxeP.maxChainLength
-                result.shelxeNumChains= shelxeP.numChains
-                result.shelxeTime=shelxeP.cputime
-                
-            #
-            # Buccaneer Rebuild Processing
-            #
-            buccaneerPdb = os.path.join(shelxeDir,
-                                        "rebuild",
-                                        "buccaneer",
-                                        "buccSX_output.pdb")
-            if os.path.isfile(buccaneerPdb):
-                pass
-            
-            buccaneerLog = os.path.join(shelxeDir,
-                                        "rebuild",
-                                        "buccaneer",
-                                        "buccaneer.log" )
-            
-            if os.path.isfile(buccaneerLog):
-                bp = parse_buccaneer.BuccaneerLogParser()
-                bp.parse( buccaneerLog )
-                result.buccFinalRfree = bp.finalRfree
-                result.buccFinalRfact = bp.finalRfact
-            
-            #
-            # Arpwarp Rebuild Processing
-            #
-            arpwarpPdb = os.path.join(shelxeDir,
-                                      "rebuild",
-                                      "arpwarp",
-                                      "refmacSX_output_warpNtrace.pdb")
-            if os.path.isfile(arpwarpPdb):
-                pass
-                
-            arpwarpLog = os.path.join(shelxeDir,
-                                      "rebuild",
-                                      "arpwarp",
-                                      "arpwarp.log")
-            
-            if os.path.isfile(arpwarpLog):
-                ap = parse_arpwarp.ArpwarpLogParser()
-                ap.parse(arpwarpLog)
-                result.arpWarpFinalRfact=ap.finalRfact
-                result.arpWarpFinalRfree=ap.finalRfree
-                
-            # Save the result object
             results.append(result)
-            
-            # See if we want to copy all the pdb's onto the same origin as the native
-            if nativeOrigin:
-                
-                resultDir=os.path.join(nativeData,pdbCode)
-                if not os.path.isdir(resultDir):
-                    os.mkdir(resultDir)
-                    
-                if os.path.isfile(phaserPdb):
-                    alignPdb(nativeMap,phaserPdb,outPdb=None,outDir=resultDir)
-                if os.path.isfile(shelxePdb):
-                    alignPdb(nativeMap,shelxePdb,outPdb=None,outDir=resultDir)
-                if os.path.isfile(buccaneerPdb):
-                    outPdb=os.path.join(resultDir,"buccaneer_{0}_csymmatch.pdb".format(jobName))
-                    alignPdb(nativeMap,buccaneerPdb,outPdb=outPdb,outDir=resultDir)
-                if os.path.isfile(arpwarpPdb):
-                    outPdb=os.path.join(resultDir,"arpwarp_{0}_csymmatch.pdb".format(jobName))
-                    alignPdb(nativeMap,arpwarpPdb,outPdb=outPdb,outDir=resultDir)
                 
         # End of individual job loop
 
