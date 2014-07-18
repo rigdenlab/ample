@@ -30,8 +30,25 @@ def alignPdb(nativeMap,mrPdb,outPdb=None,outDir=None):
     
     return
 
+def matchResult(result,nativeMap,outDir):
 
-def processMrDirectory(result,matchNative=False,outDir=None):
+    assert os.path.isfile(nativeMap)
+    assert os.path.isdir(outDir)
+    
+    if os.path.isfile(result.phaserPdb):
+        alignPdb(nativeMap,result.phaserPdb,outPdb=None,outDir=outDir)
+    if os.path.isfile(result.shelxePdb):
+        alignPdb(nativeMap,result.shelxePdb,outPdb=None,outDir=outDir)
+    if os.path.isfile(result.buccaneerPdb):
+        outPdb=os.path.join(outDir,"buccaneer_{0}_csymmatch.pdb".format(result.jobName))
+        alignPdb(nativeMap,result.buccaneerPdb,outPdb=outPdb,outDir=outDir)
+    if os.path.isfile(result.arpwarpPdb):
+        outPdb=os.path.join(outDir,"arpwarp_{0}_csymmatch.pdb".format(result.jobName))
+        alignPdb(nativeMap,result.arpwarpPdb,outPdb=outPdb,outDir=outDir)
+    
+    return
+
+def processMrDirectory(result):
     
     assert os.path.isdir(result.mrDir)
     assert result.mrProgram
@@ -120,24 +137,6 @@ def processMrDirectory(result,matchNative=False,outDir=None):
         ap.parse(arpwarpLog)
         result.arpWarpFinalRfact=ap.finalRfact
         result.arpWarpFinalRfree=ap.finalRfree
-        
-    
-    # See if we want to copy all the pdb's onto the same origin as the native
-    if matchNative:
-        
-        assert os.path.isfile(result.nativeMap)
-        assert os.path.isdir(outDir)
-        
-        if os.path.isfile(phaserPdb):
-            alignPdb(result.nativeMap,phaserPdb,outPdb=None,outDir=outDir)
-        if os.path.isfile(shelxePdb):
-            alignPdb(result.nativeMap,shelxePdb,outPdb=None,outDir=outDir)
-        if os.path.isfile(buccaneerPdb):
-            outPdb=os.path.join(outDir,"buccaneer_{0}_csymmatch.pdb".format(result.jobName))
-            alignPdb(result.nativeMap,buccaneerPdb,outPdb=outPdb,outDir=outDir)
-        if os.path.isfile(arpwarpPdb):
-            outPdb=os.path.join(outDir,"arpwarp_{0}_csymmatch.pdb".format(result.jobName))
-            alignPdb(result.nativeMap,arpwarpPdb,outPdb=outPdb,outDir=outDir)
     
     return
 
@@ -299,14 +298,15 @@ for pdbCode in [ l.strip() for l in open( os.path.join(dataRoot,"dirs.list") ) i
             result.jobName=jobName
             result.mrProgram=mrProgram
             result.mrDir=mrDir
-            result.nativeMap=nativeMap
             
             # Number of residues
             result.polyaLength=int(jobName.split("_")[1])
             
-            processMrDirectory(result,matchNative=matchNative,outDir=outDir)
-            
+            processMrDirectory(result)
             results.append(result)
+            
+            if matchNative:
+                alignPdbs(result,nativeMap,outDir)
                 
         # End of individual job loop
 
