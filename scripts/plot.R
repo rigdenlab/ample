@@ -60,7 +60,6 @@ if (comparison){
 # Calculate number of copies of decoy that were placed
 data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
 
-#write(data,"foo.csv",row.NAMES=FALSE)
 
 
 # Categories for resolution
@@ -565,6 +564,7 @@ p + geom_point() +
 		ggtitle("Bucc vs Arpwarp")
 ggsave("buccVsArp.png")
 
+
 # Resolution vs length1
 p <-ggplot(data=data, aes(x=resolution, y=fastaLength, colour=factor(success) ) )
 p + geom_point( size=0, alpha=0 ) +
@@ -579,6 +579,52 @@ p + geom_point( size=0, alpha=0 ) +
 ggsave("resolutionVsLength.png")
 
 # Resolution vs length2
+
+# Split into categories
+# - all succcess
+# - all failures
+# above as filled blobs
+# targets where success < failure - failures as big red circules - successs as filled blue circles
+# targets where success > failure - succcess as big red circules - failures as filled red circles
+summaryData$nfailed <- summaryData$numModels - summaryData$success
+
+p <- ggplot()
+# All failures
+p + geom_point( data=summaryData[ summaryData$success == 0, ],
+		        aes(x=resolution, y=fastaLength, size=numModels, colour=fcolour) ) +
+	# Successes with successes > failures
+    geom_point( data=summaryData[ summaryData$success-summaryData$nfailed > 0, ],
+		aes(x=resolution, y=fastaLength, size=success), colour=scolour) +
+    geom_point( data=summaryData[ summaryData$success-summaryData$nfailed > 0, ],
+		aes(x=resolution, y=fastaLength, size=nfailed), colour=fcolour) +
+	# successes with successes < failures
+	geom_point( data=summaryData[ summaryData$success > 0 & summaryData$success-summaryData$nfailed < 0, ],
+			aes(x=resolution, y=fastaLength, size=success), colour=scolour) +
+	geom_point( data=summaryData[ summaryData$success > 0 & summaryData$success-summaryData$nfailed < 0, ],
+			aes(x=resolution, y=fastaLength, size=nfailed), shape=1, colour=scolour) +
+	theme(legend.position="none")
+ggsave("resolutionVsFastaLengthLayered.png")
+
+
+p <- ggplot()
+# All failures
+p + geom_point( data=summaryData[ summaryData$success == 0, ],
+				aes(x=resolution, y=numResidues, size=numModels, colour=fcolour) ) +
+		# Successes with successes > failures
+		geom_point( data=summaryData[ summaryData$success-summaryData$nfailed > 0, ],
+				aes(x=resolution, y=numResidues, size=success), colour=scolour) +
+		geom_point( data=summaryData[ summaryData$success-summaryData$nfailed > 0, ],
+				aes(x=resolution, y=numResidues, size=nfailed), colour=fcolour) +
+		# successes with successes < failures
+		geom_point( data=summaryData[ summaryData$success > 0 & summaryData$success-summaryData$nfailed < 0, ],
+				aes(x=resolution, y=numResidues, size=success), colour=scolour) +
+		geom_point( data=summaryData[ summaryData$success > 0 & summaryData$success-summaryData$nfailed < 0, ],
+				aes(x=resolution, y=numResidues, size=nfailed), shape=1, colour=scolour) +
+		theme(legend.position="none")
+ggsave("resolutionVsOverallLengthLayered.png")
+
+
+# simple
 p <-ggplot(data=summaryData, aes(x=resolution, y=fastaLength, colour=factor(worked) ) )
 p + geom_point( aes(size=numModels), guide=FALSE  ) +
 		scale_colour_manual( values=c(fcolour,scolour),
