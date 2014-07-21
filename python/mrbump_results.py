@@ -344,10 +344,10 @@ class ResultsSummary(object):
             result.pdb = os.path.join( result.mrDir,'refine', pdbName )
             
             # Add the information from Shelxe
-            self.addShelxeResult( result )
+            #self.addShelxeResult( result )
             
             # Add the information from Buccaneer rebuild of the Shelxe trace
-            self.addBuccaneerResult( result )
+            #self.addBuccaneerResult( result )
             
             results.append( result )
             
