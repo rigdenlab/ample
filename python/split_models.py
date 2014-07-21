@@ -142,6 +142,7 @@ def split_pdb(pdbin, directory=None):
     
     crystal_symmetry=pdbf.file_object.crystal_symmetry()
     
+    output_files = []
     for k, model in enumerate(hierarchy.models()) :
         k += 1
         new_hierarchy = iotbx.pdb.hierarchy.root()
@@ -150,6 +151,7 @@ def split_pdb(pdbin, directory=None):
             model_id = str(k)
         else:
             model_id = model.id.strip()
+            
             
         output_file = ample_util.filename_append(pdbin, model_id, directory)
         with open(output_file, "w") as f:
@@ -163,7 +165,9 @@ def split_pdb(pdbin, directory=None):
                 print >> f, "REMARK   %s" % pdbin
             f.write(new_hierarchy.as_pdb_string())
     
-    return n_models
+        output_files.append( output_file )
+        
+    return output_files
 
 
 if __name__ == "__main__":
