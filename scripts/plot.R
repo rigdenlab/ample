@@ -2,9 +2,8 @@ library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
 comparison=TRUE
-#data <- read.table(file="single_model_results.csv",sep=',', header=T)
-data <- read.table(file="final_results.csv",sep=',', header=T)
-#data <- read.table(file="comparison_results.csv",sep=',', header=T)
+data <- read.table(file="results.csv",sep=',', header=T)
+#data <- read.table(file="final_results.csv",sep=',', header=T)
 
 # Kill redundant columns
 todrop <- c(
@@ -140,7 +139,7 @@ if (comparison){
 #	# CHECK
 #	data$helixWorked <- as.numeric( data$successHelix1 | data$successHelix2 | data$successHelix3 )
 
-	
+
 	# Data for which we can compare the single-model casse
 	smdata <- data[ data$single_model_ran == 1, ]
 	
@@ -152,7 +151,7 @@ if (comparison){
 	x <- x[ !duplicated(x$pdbCode), c("pdbCode", "fastaLength","resolution","numChains","numPlacedChains", "shelxeCC", "shelxeAvgChainLength")  ]
 	
 	# Now put in alphabetical order
-	x <- x[ order( x$pdbCode ), ]
+	x <- x[ order( x$pdbCode ), ]	
 	
 	# Need to get numbers of success
 	# This gets the stats  - we can join because the by function is the pdbCode which is in similar alphabetic order
@@ -182,7 +181,7 @@ if (comparison){
 	# Now put in order by success, resolution
 	summaryData <- x[ order( -x$worked, x$resolution ), ]
 	#x <- x[ order( x$success, decreasing=TRUE ), ]
-	write.csv(summaryData, "summaryComparison.csv", row.names=FALSE)
+	write.csv(summaryData, "summaryComparisonSM.csv", row.names=FALSE)
 
 } # End comparison
 
@@ -246,6 +245,7 @@ summaryData <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasin
 summaryData <- summaryData[ !duplicated(summaryData$pdbCode), c("pdbCode","fastaLength","resolution","spaceGroup","numChains",
 				"numResidues", "shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
 
+# For helix
 #summaryData <- summaryData[ !duplicated(summaryData$pdbCode), c("pdbCode","polyaLength","shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
 
 # Now put in alphabetical order
@@ -268,6 +268,11 @@ summaryData["successRebuild"] <- aggregate( data$successRebuild, by=list(data$pd
 if (comparison){
 	summaryData["successSingleStructure"] <- aggregate( data$successSingleStructure, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 	#summaryData["successHelix"] <- aggregate( data$helixWorked, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	
+	# Read in the helix summary
+	hdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/summary.csv",sep=',', header=T)
+	summaryData$successHelix <- 0
+	summaryData$successHelix <- hdata[ match(summaryData$pdbCode,hdata$pdbCode), "success"]
 }
 
 # side-chain treatment
@@ -1276,3 +1281,86 @@ ggsave("LLGvsTFZ.png")
 
 # Below for truncating the y-axis
 # scale_y_continuous( limits=c(-3000, max(data$phaserLLG, na.rm=TRUE) )  )+
+
+q()
+
+library("ggplot2")
+
+# Below for comparison of single runs (/home/jmht/Documents/work/CC/all_results) or comparisonResults.csv in google
+scolour="#3333FF"
+fcolour="#FF0000"
+pcolour='#FF00FF'
+data <- read.table(file="/home/jmht/Documents/work/CC/all_results/comparisonResults.csv",sep=',', header=T)
+
+rerunSolved <- c("1MI7", "2BEZ", "2Q5U", "2ZZO", "3H00", "3H7Z", "3TYY", "3U1A", "3U1C")
+manual <- c("1M3W", "3BAS", "3CVF") # No manual ones solved with anything else
+onlySingle <- c("4DZK")
+
+all <- data$pdbCode
+esolved <- data[ data$success >0, ]$pdbCode
+ssolved <- data[ data$successSingleStructure >0, ]$pdbCode
+hsolved <- data[ data$successHelix >0, ]$pdbCode
+
+# Ones that solved by everything
+# 44
+everything <- intersect(intersect(esolved, ssolved), hsolved)
+
+# All ones that solved
+allsolved <- union(esolved,union(ssolved,hsolved)) # 70
+
+# Ones that didn't solve
+failed <- setdiff(all,allsolved) # 24
+
+# ones that solved only with ensembles
+onlye <- esolved[ ! esolved %in% union(ssolved,hsolved) ] # 1YBK 2B22 2YKT 1X8Y 1D7M 1KQL
+
+# ones that only solved with helices
+onlyh <- hsolved[ ! hsolved %in% union(esolved,ssolved) ] # 3H00 - solved in rerun
+
+# ones that only solved with single structures
+onlys <- ssolved[ ! ssolved %in% union(esolved,hsolved) ] # 2Q5U 4DZK 3U1C # 4DZK only solved with the single structure
+
+
+# Ones that only sovled with reruns
+setdiff(rerunSolved,allsolved) # 1MI7 2BEZ 2ZZO 3H7Z 3U1A
+
+# check - everything that solved
+length(union(rerunSolved,union(manual,allsolved))) # 78 - minus 1 for 4DZK - 77 => 77/94= 82%
+
+allFailed <- setdiff(all, union(allsolved,union(rerunSolved,manual) ))
+
+# Categories
+# - solved with something -1
+# - failed - 0
+# - solved with everything - 1
+# - only helix - 2
+# - only single - 3
+# - only ensemble - 4
+# - failed
+
+data$howSolved <- 0 # default - solved with something
+data[ data$pdbCode %in%  allFailed, ]$howSolved <- -1
+data[ data$pdbCode %in%  everything, ]$howSolved <- 1
+data[ data$pdbCode %in%  rerunSolved, ]$howSolved <- 2
+data[ data$pdbCode %in%  manual, ]$howSolved <- 3
+data[ data$pdbCode %in%  onlySingle, ]$howSolved <- 4
+
+
+p <- ggplot()
+p + geom_point( data=data[ data$howSolved==-1, ],
+				aes(x=resolution, y=fastaLength), shape=2, colour=fcolour ) +
+		geom_point( data=data[ data$howSolved==0, ],
+				aes(x=resolution, y=fastaLength), shape=1, colour=scolour ) + # 1 is empty cirlce
+		geom_point( data=data[ data$howSolved==1, ],
+				aes(x=resolution, y=fastaLength), shape=16, colour=scolour ) +
+		geom_point( data=data[ data$howSolved==2, ],
+				aes(x=resolution, y=fastaLength), shape=1, colour=pcolour ) +
+		geom_point( data=data[ data$howSolved==3, ],
+				aes(x=resolution, y=fastaLength), shape=0, colour=pcolour ) +
+		geom_point( data=data[ data$howSolved==4, ],
+				aes(x=resolution, y=fastaLength), shape=13, colour=scolour ) +
+		theme(legend.position="none")
+ggsave("finalSummary.png")
+
+
+
