@@ -5,6 +5,10 @@ comparison=TRUE
 data <- read.table(file="results.csv",sep=',', header=T)
 #data <- read.table(file="final_results.csv",sep=',', header=T)
 
+
+# Calculate number of copies of decoy that were placed
+data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
+
 # Kill redundant columns
 todrop <- c(
 		"helix_ran",
@@ -58,8 +62,6 @@ updateData <- function(data){
 
 data <- updateData(data)
 
-# Calculate number of copies of decoy that were placed
-data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
 
 # Categories for resolution
 data$resCat <- 0
@@ -270,9 +272,9 @@ if (comparison){
 	#summaryData["successHelix"] <- aggregate( data$helixWorked, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 	
 	# Read in the helix summary
-	hdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/summary.csv",sep=',', header=T)
+	hsdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/summary.csv",sep=',', header=T)
 	summaryData$successHelix <- 0
-	summaryData$successHelix <- hdata[ match(summaryData$pdbCode,hdata$pdbCode), "success"]
+	summaryData$successHelix <- hsdata[ match(summaryData$pdbCode,hsdata$pdbCode), "success"]
 }
 
 # side-chain treatment
@@ -418,6 +420,22 @@ if (comparison){
 	ylab("Single centroid structure CC score") +
 	ggtitle("Ensemble and Single-structure CC scores")
 	ggsave("SSEShelxe.png")
+	
+	# Suck in the helix data
+	hdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/results.csv",sep=',', header=T)
+	hdata <- updateData(hdata)
+	
+	# Length distribution of ideal helcies
+	p <-ggplot(data=hdata, aes(x=polyaLength, fill=factor(success) ) )
+	p + geom_histogram( position = 'dodge', binwidth = 1  ) +
+			scale_fill_manual( values=c(fcolour,scolour),
+					name="Success/Failure",
+					labels=c("Failure", "Success"),
+					guide=FALSE) +
+			ylab("Number of cases") +
+			xlab("Length of ideal helix") +
+			ggtitle("Distribution of polya helices")
+	ggsave("lengthIdealHelices.png")
 	
 #	# Helix vs Single model
 #	# Need to pull out the different side chain treamtments
@@ -1036,7 +1054,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1  ) +
 		ylab("Number of cases") +
 		xlab("Length of RIO helix") +
 		ggtitle("Distribution of RIO helices")
-ggsave("lengthIdealHelices.png")
+ggsave("lengthRioHelices.png")
 
 
 #
