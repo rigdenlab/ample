@@ -248,7 +248,7 @@ summaryData <- summaryData[ !duplicated(summaryData$pdbCode), c("pdbCode","fasta
 				"numResidues", "shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
 
 # For helix
-#summaryData <- summaryData[ !duplicated(summaryData$pdbCode), c("pdbCode","polyaLength","shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
+#summaryData <- summaryData[ !duplicated(summaryData$pdbCode), c("pdbCode","polyaLength","resolution","shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
 
 # Now put in alphabetical order
 summaryData <- summaryData[ order( summaryData$pdbCode ), ]
@@ -1301,6 +1301,27 @@ ggsave("LLGvsTFZ.png")
 # scale_y_continuous( limits=c(-3000, max(data$phaserLLG, na.rm=TRUE) )  )+
 
 q()
+###############################################################################################################################
+#
+# Additionl stuff
+#
+###############################################################################################################################
+
+# For analysing polyalanine helix results - source updateData from above
+hsdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/summary.csv",sep=',', header=T)
+
+#, colour=factor(worked)
+scolour="#3333FF"
+fcolour="#FF0000"
+p <- ggplot()
+p + geom_point( data=hsdata,
+				aes(x=resolution, y=numResidues, colour=factor(worked)), shape=16) +
+		scale_colour_manual( values=c(fcolour, scolour)) +
+		theme(legend.position="none")
+ggsave("polyaResults.png")
+
+
+q()
 
 library("ggplot2")
 
@@ -1378,7 +1399,21 @@ p + geom_point( data=data[ data$howSolved==-1, ],
 		geom_point( data=data[ data$howSolved==4, ],
 				aes(x=resolution, y=fastaLength), shape=13, colour=scolour ) +
 		theme(legend.position="none")
-ggsave("finalSummary.png")
+ggsave("finalSummaryFasta.png")
 
-
+p <- ggplot()
+p + geom_point( data=data[ data$howSolved==-1, ],
+				aes(x=resolution, y=numResidues), shape=2, colour=fcolour ) +
+		geom_point( data=data[ data$howSolved==0, ],
+				aes(x=resolution, y=numResidues), shape=1, colour=scolour ) + # 1 is empty cirlce
+		geom_point( data=data[ data$howSolved==1, ],
+				aes(x=resolution, y=numResidues), shape=16, colour=scolour ) +
+		geom_point( data=data[ data$howSolved==2, ],
+				aes(x=resolution, y=numResidues), shape=1, colour=pcolour ) +
+		geom_point( data=data[ data$howSolved==3, ],
+				aes(x=resolution, y=numResidues), shape=0, colour=pcolour ) +
+		geom_point( data=data[ data$howSolved==4, ],
+				aes(x=resolution, y=numResidues), shape=13, colour=scolour ) +
+		theme(legend.position="none")
+ggsave("finalSummaryNumResidues.png")
 
