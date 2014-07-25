@@ -2,8 +2,8 @@ library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
 comparison=TRUE
-data <- read.table(file="results.csv",sep=',', header=T)
-#data <- read.table(file="final_results.csv",sep=',', header=T)
+#data <- read.table(file="results.csv",sep=',', header=T)
+data <- read.table(file="/media/data/shared/coiled-coils/ensemble/final_results/final_results.csv",sep=',', header=T)
 
 
 # Calculate number of copies of decoy that were placed
@@ -78,18 +78,6 @@ data$resCatw[  data$resolution >= 2.0 & data$resolution < 2.2 ] <- "2: 2.0 < res
 data$resCatw[  data$resolution >= 2.2 & data$resolution < 2.4 ] <- "3: 2.2 < res. < 2.4"
 data$resCatw[  data$resolution >= 2.4 & data$resolution < 2.6 ] <- "4: 2.4 < res. < 2.6"
 data$resCatw[data$resolution >= 2.6 ] <- "5: res. > 2.6"
-
-l = function( variable, value ) {
-	if ( variable == "success" ) {
-		return( c("Failure","Success"))
-	} else if ( variable == "ensembleSideChainTreatment" ) {
-		return( c("All atom","Poly-alanine","SCWRL reliable") )
-	} else if ( variable == "resCat" ) {
-		return( c("res. < 2.0","2.0 < res. < 2.2","2.2 < res. < 2.4","2.4 < res. < 2.6","res. > 2.6") )
-	} else {
-		return ("foo")
-	}
-}
 
 
 # Data for which there are placed models and we have an origin
@@ -426,17 +414,18 @@ if (comparison){
 	hdata <- updateData(hdata)
 	
 	# Length distribution of ideal helcies
-	p <-ggplot(data=hdata, aes(x=polyaLength, fill=factor(success) ) )
-	p + geom_histogram( position = 'dodge', binwidth = 1  ) +
-			scale_fill_manual( values=c(fcolour,scolour),
-					name="Success/Failure",
-					labels=c("Failure", "Success"),
-					guide=FALSE) +
+	p <-ggplot(data=hdata[ hdata$success==1,], aes(x=polyaLength) )
+	#p + geom_histogram( position = 'dodge', binwidth = 1, colour=scolour  ) +
+	p + geom_histogram( binwidth=1, fill=scolour  ) +
+#			scale_fill_manual( values=c(fcolour,scolour),
+#					name="Success/Failure",
+#					labels=c("Failure", "Success"),
+#					guide=FALSE) +
 			ylab("Number of cases") +
 			xlab("Length of ideal helix") +
-			ggtitle("Distribution of polya helices")
+			#ggtitle("Distribution of polya helices")
 	ggsave("lengthIdealHelices.png")
-	
+
 #	# Helix vs Single model
 #	# Need to pull out the different side chain treamtments
 #	# hacky way to get names to match - must be better way of doing this
@@ -567,7 +556,9 @@ ggsave("PercentVsEnsemble.png")
 
 # Number that solved under each side-chain treatment
 p <-ggplot( data=data, aes( factor(ensembleSideChainTreatment), fill=factor(success) ) ) 
-p + geom_histogram( position = 'dodge' ) +
+p + geom_histogram( position = 'dodge', labeller=labeller ) +
+		scale_x_discrete(limits=c("All_atom","SCWRL_reliable_sidechains","poly_ala"), # Change order
+				labels=c("All_atom"="All atom", "poly_ala"="PolyA","SCWRL_reliable_sidechains"="Reliable")) + # Change labels
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1060,6 +1051,19 @@ ggsave("lengthRioHelices.png")
 #
 # Graphs
 #
+
+labeller = function( variable, value ) {
+	if ( variable == "success" ) {
+		return( c("Failure","Success"))
+	} else if ( variable == "ensembleSideChainTreatment" ) {
+		return( c("All atom","Poly-alanine","SCWRL reliable") )
+	} else if ( variable == "resCat" ) {
+		return( c("res. < 2.0","2.0 < res. < 2.2","2.2 < res. < 2.4","2.4 < res. < 2.6","res. > 2.6") )
+	} else {
+		return ("foo")
+	}
+}
+
 #Comparison of the RIO figures for successful search models with the number of in-register 
 # residues similarly defined.
 p <-ggplot(data=odata, aes(x=ccmtzRioOoRegister, y=ccmtzRioInregister, colour=factor(success) ) ) 
@@ -1094,7 +1098,7 @@ p <-ggplot(data=odata[ odata$ccmtzRioGood > 0, ],
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( .~ success, labeller=l) +
+		facet_grid( .~ success, labeller=labeller) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1131,7 +1135,7 @@ p <-ggplot(data=odata,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
+		facet_grid( resCat ~ success, labeller=labeller) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1148,7 +1152,7 @@ p <-ggplot(data=odata,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
+		facet_grid( resCat ~ success, labeller=labeller) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1164,7 +1168,7 @@ p <-ggplot(data=odata,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
+		facet_grid( resCat ~ success, labeller=labeller) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1183,7 +1187,7 @@ p <-ggplot(data=odata,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
+		facet_grid( resCat ~ success, labeller=labeller) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1199,7 +1203,7 @@ p <-ggplot(data=odata,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid(  ~success, labeller=l) +
+		facet_grid(  ~success, labeller=labeller) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1215,7 +1219,7 @@ p <-ggplot(data=odata,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
+		facet_grid( resCat ~ success, labeller=labeller) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1232,7 +1236,7 @@ p <-ggplot(data=odata,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
+		facet_grid( resCat ~ success, labeller=labeller) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1248,7 +1252,7 @@ p <-ggplot(data=odata,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid( resCat ~ success, labeller=l) +
+		facet_grid( resCat ~ success, labeller=labeller) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1264,7 +1268,7 @@ p <-ggplot(data=odata,
 				colour=factor(success) ) )
 p + geom_point( size=1 ) +
 		stat_sum( aes(size=..n..) ) +
-		facet_grid(  ~success, labeller=l) +
+		facet_grid(  ~success, labeller=labeller) +
 		scale_colour_manual( values=c(fcolour, scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -1324,6 +1328,7 @@ ggsave("polyaResults.png")
 q()
 
 library("ggplot2")
+library("VennDiagram")
 
 # Below for comparison of single runs (/home/jmht/Documents/work/CC/all_results) or comparisonResults.csv in google
 scolour="#3333FF"
@@ -1367,6 +1372,30 @@ setdiff(rerunSolved,allsolved) # 1MI7 2BEZ 2ZZO 3H7Z 3U1A
 length(union(rerunSolved,union(manual,allsolved))) # 78 - minus 1 for 4DZK - 77 => 77/94= 82%
 
 allFailed <- setdiff(all, union(allsolved,union(rerunSolved,manual) ))
+
+allEnsemble <- union(union(esolved,rerunSolved),manual)
+
+everythingWithRerun <- intersect(intersect(allEnsemble,ssolved),hsolved)
+
+png("finalResultsVenn.png")
+venn.plot <- draw.triple.venn(
+		area1 = length(allEnsemble),
+		area2 = length(ssolved),
+		area3 = length(hsolved),
+		n12 = length(intersect(allEnsemble,ssolved)),
+		n23 = length(intersect(ssolved,hsolved)),
+		n13 = length(intersect(allEnsemble,hsolved)),
+		n123 = length(everythingWithRerun),
+		category = c("Ensembles", "Single\nStructures", "Polyalanine Helices"),
+		fill = c("blue", "red", "green"),
+		lty = "blank",
+		cex = 2,
+		cat.cex = 2,
+		cat.col = c("blue", "red", "green")
+		)
+grid.draw(venn.plot)
+dev.off()
+
 
 # Categories
 # - solved with something -1
