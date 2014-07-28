@@ -3,8 +3,12 @@ scolour="#3333FF"
 fcolour="#FF0000"
 comparison=TRUE
 #data <- read.table(file="results.csv",sep=',', header=T)
-data <- read.table(file="/media/data/shared/coiled-coils/ensemble/final_results/final_results.csv",sep=',', header=T)
 
+if (comparison){
+	data <- read.table(file="/home/jmht/Documents/work/CC/all_results/results.csv",sep=',', header=T)
+} else {
+	data <- read.table(file="/media/data/shared/coiled-coils/ensemble/final_results/final_results.csv",sep=',', header=T)
+}
 
 # Calculate number of copies of decoy that were placed
 data$numPlacedChains <- data$numPlacedAtoms / data$ensembleNumAtoms
@@ -116,19 +120,21 @@ if (comparison){
 					( data$single_model_buccFinalRfree <= 0.45 | data$single_model_arpWarpFinalRfree  <= 0.45 ) )
 	data$successSingleStructure <- replace( data$successSingleStructure, is.na(data$successSingleStructure), 0 )
 	
-#	# helix success
-#	ok <-(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
-#	ok <- as.numeric( ok )
-#	data$successHelix1 <- replace( ok, is.na(ok), 0 )
-#	ok <-(data$helix_SCWRL_reliable_sidechains_shelxeCC >= 25 & data$helix_SCWRL_reliable_sidechains_shelxeAvgChainLength >= 10 & (data$helix_SCWRL_reliable_sidechains_buccFinalRfree <= 0.45 | data$helix_SCWRL_reliable_sidechains_arpWarpFinalRfree <= 0.45) )
-#	ok <- as.numeric( ok )
-#	data$successHelix2 <- replace( ok, is.na(ok), 0 )
-#	ok <-(data$helix_All_atom_shelxeCC >= 25 & data$helix_All_atom_shelxeAvgChainLength >= 10 & (data$helix_All_atom_buccFinalRfree <= 0.45 | data$helix_All_atom_arpWarpFinalRfree <= 0.45) )
-#	ok <- as.numeric( ok )
-#	data$successHelix3 <- replace( ok, is.na(ok), 0 )
-#	# CHECK
-#	data$helixWorked <- as.numeric( data$successHelix1 | data$successHelix2 | data$successHelix3 )
-
+	data$single_model_phaserTime <- NA
+	data$single_model_phaserTime <- smdata[ match(data$ensembleName,smdata$ensembleName),"phaserTime"]
+		
+	#	# helix success
+	#	ok <-(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
+	#	ok <- as.numeric( ok )
+	#	data$successHelix1 <- replace( ok, is.na(ok), 0 )
+	#	ok <-(data$helix_SCWRL_reliable_sidechains_shelxeCC >= 25 & data$helix_SCWRL_reliable_sidechains_shelxeAvgChainLength >= 10 & (data$helix_SCWRL_reliable_sidechains_buccFinalRfree <= 0.45 | data$helix_SCWRL_reliable_sidechains_arpWarpFinalRfree <= 0.45) )
+	#	ok <- as.numeric( ok )
+	#	data$successHelix2 <- replace( ok, is.na(ok), 0 )
+	#	ok <-(data$helix_All_atom_shelxeCC >= 25 & data$helix_All_atom_shelxeAvgChainLength >= 10 & (data$helix_All_atom_buccFinalRfree <= 0.45 | data$helix_All_atom_arpWarpFinalRfree <= 0.45) )
+	#	ok <- as.numeric( ok )
+	#	data$successHelix3 <- replace( ok, is.na(ok), 0 )
+	#	# CHECK
+	#	data$helixWorked <- as.numeric( data$successHelix1 | data$successHelix2 | data$successHelix3 )
 
 	# Data for which we can compare the single-model casse
 	smdata <- data[ data$single_model_ran == 1, ]
@@ -175,7 +181,7 @@ if (comparison){
 
 } # End comparison
 
-
+#write.csv(data[data$success==1 & data$successSingleStructure==1,], "jens.csv", row.names=FALSE)
 
 #
 # Summary information
@@ -329,6 +335,8 @@ summaryData$subclustering3A <- y$success
 summaryData <- summaryData[ order( -summaryData$worked, summaryData$resolution ), ]
 #x <- x[ order( x$success, decreasing=TRUE ), ]
 write.csv(summaryData, "summary.csv", row.names=FALSE)
+
+q()
 
 #
 # Information on extreme models
@@ -1337,7 +1345,8 @@ pcolour='#FF00FF'
 data <- read.table(file="/home/jmht/Documents/work/CC/all_results/comparisonResults.csv",sep=',', header=T)
 
 rerunSolved <- c("1MI7", "2BEZ", "2Q5U", "2ZZO", "3H00", "3H7Z", "3TYY", "3U1A", "3U1C")
-manual <- c("1M3W", "3BAS", "3CVF") # No manual ones solved with anything else
+#manual <- c("1M3W", "3BAS", "3CVF") # No manual ones solved with anything else
+manual <- c("3BAS", "3CVF") # No manual ones solved with anything else
 onlySingle <- c("4DZK")
 
 all <- data$pdbCode
@@ -1378,6 +1387,7 @@ allEnsemble <- union(union(esolved,rerunSolved),manual)
 everythingWithRerun <- intersect(intersect(allEnsemble,ssolved),hsolved)
 
 png("finalResultsVenn.png")
+par(oma=c(2,2,2,2), mar=c(2,2,2,2)) 
 venn.plot <- draw.triple.venn(
 		area1 = length(allEnsemble),
 		area2 = length(ssolved),
@@ -1386,14 +1396,16 @@ venn.plot <- draw.triple.venn(
 		n23 = length(intersect(ssolved,hsolved)),
 		n13 = length(intersect(allEnsemble,hsolved)),
 		n123 = length(everythingWithRerun),
-		category = c("Ensembles", "Single\nStructures", "Polyalanine Helices"),
+		category = c("ENSEMBLES", "SINGLE\nSTRUCTURES ", "POLYALANINE\nHELICES"),
+		euler.d = FALSE,
+		scaled=FALSE,
 		fill = c("blue", "red", "green"),
-		lty = "blank",
-		cex = 2,
-		cat.cex = 2,
-		cat.col = c("blue", "red", "green")
+		#cat.pos = c(330,30,180),
+		cat.dist = c(0.05,0.07,0.05),
+		cat.cex = 1.1,
+		#cat.col = c("blue", "red", "green")
 		)
-grid.draw(venn.plot)
+#grid.draw(venn.plot)
 dev.off()
 
 
