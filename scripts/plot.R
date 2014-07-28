@@ -1396,13 +1396,14 @@ venn.plot <- draw.triple.venn(
 		n23 = length(intersect(ssolved,hsolved)),
 		n13 = length(intersect(allEnsemble,hsolved)),
 		n123 = length(everythingWithRerun),
-		category = c("ENSEMBLES", "SINGLE\nSTRUCTURES ", "POLYALANINE\nHELICES"),
+		category = c("Ensembles", "Single\nStructures ", "Polyalanine\nHelices"),
 		euler.d = FALSE,
 		scaled=FALSE,
 		fill = c("blue", "red", "green"),
+		cex = 1.5, # Numbers in cirlces
 		#cat.pos = c(330,30,180),
 		cat.dist = c(0.05,0.07,0.05),
-		cat.cex = 1.1,
+		cat.cex = 1.1, # labels
 		#cat.col = c("blue", "red", "green")
 		)
 #grid.draw(venn.plot)
