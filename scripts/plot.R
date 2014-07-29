@@ -92,7 +92,7 @@ sdata = data[ data$success == 1, ]
 
 if (comparison){
 	
-	## Read in single-model data
+	# Read in single-model data
 	smdata <- read.table(file="/home/jmht/Documents/work/CC/single_model_results/single_model_results.csv",sep=',', header=T)
 	smdata <- updateData(smdata)
 	
@@ -122,7 +122,13 @@ if (comparison){
 	
 	data$single_model_phaserTime <- NA
 	data$single_model_phaserTime <- smdata[ match(data$ensembleName,smdata$ensembleName),"phaserTime"]
-		
+	
+	# Suck in the helix data
+	hdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/results.csv",sep=',', header=T)
+	hdata <- updateData(hdata)
+	
+	#
+	
 	#	# helix success
 	#	ok <-(data$helix_poly_ala_shelxeCC >= 25 & data$helix_poly_ala_shelxeAvgChainLength >= 10 & (data$helix_poly_ala_buccFinalRfree <= 0.45 | data$helix_poly_ala_arpWarpFinalRfree <= 0.45) )
 	#	ok <- as.numeric( ok )
@@ -165,7 +171,7 @@ if (comparison){
 	
 	x["successSingleStructure"] <- aggregate( smdata$successSingleStructure, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 	
-	
+	x$successHelix <- aggregate( hdata$success, by=list(hdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 #	x["successHelix"] <- aggregate( smdata$helixWorked, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 #	x["helixWorked"] <- replace( x$successHelix, x$successHelix > 0, 1 )
 #	x["successHelix1"] <- aggregate( smdata$successHelix1, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
@@ -266,9 +272,10 @@ if (comparison){
 	#summaryData["successHelix"] <- aggregate( data$helixWorked, by=list(data$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 	
 	# Read in the helix summary
-	hsdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/summary.csv",sep=',', header=T)
-	summaryData$successHelix <- 0
-	summaryData$successHelix <- hsdata[ match(summaryData$pdbCode,hsdata$pdbCode), "success"]
+	#hsdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/summary.csv",sep=',', header=T)
+	#summaryData$successHelix <- 0
+	#summaryData$successHelix <- hsdata[ match(summaryData$pdbCode,hsdata$pdbCode), "success"]
+	summaryData["successHelix"] <- aggregate( hdata$success, by=list(hdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 }
 
 # side-chain treatment
@@ -416,10 +423,6 @@ if (comparison){
 	ylab("Single centroid structure CC score") +
 	ggtitle("Ensemble and Single-structure CC scores")
 	ggsave("SSEShelxe.png")
-	
-	# Suck in the helix data
-	hdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/results.csv",sep=',', header=T)
-	hdata <- updateData(hdata)
 	
 	# Length distribution of ideal helcies
 	p <-ggplot(data=hdata[ hdata$success==1,], aes(x=polyaLength) )
@@ -1387,7 +1390,7 @@ allEnsemble <- union(union(esolved,rerunSolved),manual)
 everythingWithRerun <- intersect(intersect(allEnsemble,ssolved),hsolved)
 
 png("finalResultsVenn.png")
-par(oma=c(2,2,2,2), mar=c(2,2,2,2)) 
+#par(oma=c(2,2,2,2), mar=c(2,2,2,2)) 
 venn.plot <- draw.triple.venn(
 		area1 = length(allEnsemble),
 		area2 = length(ssolved),
@@ -1404,6 +1407,8 @@ venn.plot <- draw.triple.venn(
 		#cat.pos = c(330,30,180),
 		cat.dist = c(0.05,0.07,0.05),
 		cat.cex = 1.1, # labels
+		cat.fontface = rep("plain", 3),
+		cat.fontfamily = rep("sans", 3)
 		#cat.col = c("blue", "red", "green")
 		)
 #grid.draw(venn.plot)
