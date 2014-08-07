@@ -202,7 +202,7 @@ parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
 parser.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, nargs=1,
                    help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
 
-parser.add_argument('-rosetta_path', metavar='rosetta_path', type=str, nargs=1,
+parser.add_argument('-rosetta_AbinitioRelax', metavar='rosetta_AbinitioRelax', type=str, nargs=1,
                    help='Path to Rosetta AbinitioRelax executable')
 
 parser.add_argument('-ROSETTA_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
@@ -383,7 +383,7 @@ if not ( os.path.exists( str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d
     logger.critical(msg)
     sys.exit(1)
 
-# Reformat to what we need    
+# Reformat to what we need
 logger.debug('Parsing FASTA file')
 outfasta = os.path.join( amopt.d['work_dir'], amopt.d['name'] + '_.fasta')
 fp = fasta_parser.FastaParser()
@@ -396,7 +396,7 @@ logger.info( "Fasta is {0} amino acids long".format( amopt.d['fasta_length'] ) )
 if amopt.d['fasta_length'] < 9:
     msg = "ERROR! Fasta is of length {0}. This is much too short!".format( amopt.d['fasta_length'] )
     logger.critical(msg)
-    sys.exit(1)   
+    sys.exit(1)
 
 # Check we will be able to truncate at this level
 if ( float( amopt.d['fasta_length'] ) / 100 ) * float( amopt.d['percent'] ) < 1:
@@ -436,11 +436,11 @@ if amopt.d['import_cluster']:
     if not os.path.exists(amopt.d['import_cluster']):
         logger.critical('Cannot find cluster import directory: {0}'.format( amopt.d['import_cluster'] ))
         sys.exit(1)
-    
+
     logger.info("Found directory with cluster files: {0}\n".format( amopt.d['import_cluster'] ) )
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
-    
+
 # Check if importing models
 if amopt.d['models_dir']:
     msg=None
@@ -448,7 +448,7 @@ if amopt.d['models_dir']:
         msg = "Cannot import models from the directory: {0}".format( amopt.d['models_dir'] )
         logger.critical(msg)
         sys.exit(1)
-    
+
     amopt.d['import_models'] = True
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
@@ -460,24 +460,15 @@ if amopt.d['import_ensembles'] and (amopt.d['import_models'] or amopt.d['import_
         sys.exit(1)
 
 # NMR Checks
-NMR_PROTOCOL = False
 if amopt.d['NMR_model_in']:
     if not os.path.isfile( amopt.d['NMR_model_in'] ):
         msg = "NMR_model_in flag given, but cannot find file: {0}".format( amopt.d['NMR_model_in'] )
         logger.critical(msg)
-        sys.exit(1)    
-       
-    NMR_PROTOCOL = True
+        sys.exit(1)
+
+    amopt.d['NMR_protocol'] = True
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
-    
-    # HACK - use the rosetta modeller to find the binary
-    if not amopt.d['NMR_Truncate_only']: 
-        ROSETTA_CM = rosetta_model.find_binary(  'mr_protocols', rosettaDir = amopt.d['rosetta_dir'] )
-        if not ROSETTA_CM:
-            msg = 'Cannot find Rosetta binary {0} in {1} check path names'.format( 'mr_protocols', amopt.d['rosetta_dir'] )
-            logger.critical( msg )
-            sys.exit(1)
 
     if not os.path.isfile( str(amopt.d['NMR_remodel_fasta']) ):
         amopt.d['NMR_remodel_fasta'] =  amopt.d['fasta']
@@ -485,20 +476,20 @@ if amopt.d['NMR_model_in']:
 if amopt.d['make_models']:
     # Create the models_dir
     amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
-    os.mkdir( amopt.d['models_dir'] ) 
+    os.mkdir( amopt.d['models_dir'] )
     # If the user has given both fragment files we check they are ok and unset make_frags
     if amopt.d['frags_3mers'] and amopt.d['frags_9mers']:
         if not os.path.isfile( amopt.d['frags_3mers'] ) or not os.path.isfile( amopt.d['frags_9mers'] ):
-            msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format( amopt.d['frags_3mers'], amopt.d['frags_9mers'] )   
+            msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format( amopt.d['frags_3mers'], amopt.d['frags_9mers'] )
             logger.critical(msg)
             sys.exit(1)
         amopt.d['make_frags'] = False
-    
+
     if amopt.d['make_frags'] and ( amopt.d['frags_3mers'] or  amopt.d['frags_9mers'] ):
         msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
         logger.critical(msg)
         sys.exit(1)
-    
+
     if not amopt.d['make_frags'] and not ( amopt.d['frags_3mers'] and amopt.d['frags_9mers'] ):
         msg = """*** Missing fragment files! ***
 Please supply the paths to the fragment files using the -frags_3mers and -frags_9mers flags.
@@ -519,7 +510,7 @@ if amopt.d['missing_domain']:
 if amopt.d['molrep_only'] and amopt.d['phaser_only']:
         logger.critical('you say you want molrep only AND phaser only, choose one or both')
         sys.exit(1)
-        
+
 if amopt.d['molrep_only']:
     amopt.d['mrbump_programs'] = [ 'molrep' ]
 elif amopt.d['phaser_only']:
@@ -575,10 +566,9 @@ if amopt.d['use_scwrl']:
         amopt.d['scwrl_exe'] = ample_util.find_exe('Scwrl4', amopt.d['scwrl_exe'] )
 
 # Create the rosetta modeller - this runs all the checks required
-if amopt.d['make_models'] or amopt.d['make_frags']:  # only need Rosetta if making models
-    logger.info('Making models or fragments so checking ROSETTA options')
-    rosetta_modeller = rosetta_model.RosettaModel()
-    rosetta_modeller.set_from_dict( amopt.d )
+if amopt.d['make_models'] or amopt.d['make_frags'] or amopt.d['NMR_protocol']:  # only need Rosetta if making models
+    logger.info('Using ROSETTA so checking options')
+    rosetta_modeller = rosetta_model.RosettaModel(optd=amopt.d)
 
 # cluster queueing
 if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
@@ -613,7 +603,7 @@ else:
 logger.info('All needed programs are found, continuing Run')
 
 #----------------------------
-# Running is the 'official' output file 
+# Running is the 'official' output file
 #----------------------------
 RUNNING = open( amopt.d['work_dir'] + '/ROSETTA.log', "w")
 RUNNING.write( ample_util.header )
@@ -622,7 +612,7 @@ RUNNING.flush()
 #----------------------------
 # params used
 #---------------------------
-f = open( os.path.join( amopt.d['work_dir'], 'params_used.txt' ), "w") 
+f = open( os.path.join( amopt.d['work_dir'], 'params_used.txt' ), "w")
 param_str = amopt.prettify_parameters()
 f.write( param_str )
 f.close()
@@ -654,17 +644,17 @@ if amopt.d['make_frags']:
 # break here for NMR (frags needed but not modelling
 # if NMR process models first
 #-----------------------------------
-if NMR_PROTOCOL:
-    nmr.doNMR(amopt, logger)
+if amopt.d['NMR_protocol']:
+    nmr.doNMR(amopt, rosetta_modeller, logger)
 # return from nmr with models already made
 elif amopt.d['make_models']:
 #-----------------------------------
 # Make the models
 #-----------------------------------
-    
+
     logger.info('----- making Rosetta models--------')
     logger.info('making ' + str(amopt.d['nmodels']) + ' models...')
-    
+
     # If we are running with cluster support submit all modelling jobs to the cluster queue
     if amopt.d['submit_cluster']:
         # Invoke the cluster run class
@@ -673,9 +663,9 @@ elif amopt.d['make_models']:
     else:
         # Run locally
         amopt.d['models_dir'] = rosetta_modeller.doModelling()
-        
+
     ##End IF amopt.d['submit_cluster']
-    
+
     msg = '\nModelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n'
 elif amopt.d['import_models']:
     msg = '\nImporting models from directory:\n   ' + amopt.d['models_dir'] + '\n\n'
@@ -711,11 +701,11 @@ elif amopt.d['import_models']:
 
 ensembles = [] # List of ensembles - 1 per cluster
 if amopt.d['import_ensembles']:
-    
+
     #---------------------------------------
     # Importing pre-made ensembles
     #---------------------------------------
-    
+
     # Set list of ensembles to the one we are importing
     msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
     RUNNING.write(msg)
@@ -725,14 +715,14 @@ if amopt.d['import_ensembles']:
     if amopt.d['top_model_only']:
         logger.info("Only using the top model" )
         final_ensembles = truncateedit_MAX.One_model_only(final_ensembles , amopt.d['work_dir'])
-        
+
     # Set ensembles
     ensembles = [ final_ensembles ]
 
 elif amopt.d['import_cluster']:
     ensembles = [ ensemble.import_cluster( amopt.d ) ]
 else:
-    
+
     if amopt.d['submit_cluster']:
 
         # Pickle dictionary so it can be opened by the job to get the parameters
@@ -743,7 +733,7 @@ else:
         mrBuild = clusterize.ClusterRun()
         mrBuild.ensembleOnCluster( amopt.d )
         mrBuild.monitorQueue()
-            
+
         # queue finished so unpickle results
         f = open( amopt.d['results_path'], "r" )
         amopt.d = cPickle.load( f )
@@ -756,7 +746,7 @@ else:
         msg = "Could not load any ensembles after running create_ensembles!"
         logger.critical( msg )
         sys.exit(1)
-    
+
     # Extract list of pdbs from ensemble results
     for eresult in amopt.d['ensemble_results']:
         ensembles.append( [ e.pdb for e in eresult ] )
@@ -779,40 +769,40 @@ amopt.d['mrbump_results'] = []
 
 # Loop over clusters
 for i, ensemble_pdbs in enumerate(ensembles):
-    
+
     clusterID=str(i+1)
     logger.info('----- Running MRBUMP (cluster ' + clusterID+ ')--------\n\n')
     logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble_pdbs),  clusterID ) )
     logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble_pdbs),  clusterID ) )
-    
+
     if len(ensemble_pdbs) < 1:
         msg = "ERROR! Cannot run MRBUMP for cluster {0} as there are no ensembles!".format( clusterID )
         logger.critical( msg )
         continue
-    
+
     job_dir = os.path.join( amopt.d['mrbump_dir'], 'cluster_'+clusterID )
 
     logger.info("Running cluster {0} in directory: {1}".format( clusterID, job_dir ) )
     if not os.path.exists( job_dir ):
         os.mkdir( job_dir )
     os.chdir( job_dir )
-    
+
     # Create job scripts
     logger.info("Generating MRBUMP runscripts in: {0}".format( job_dir ) )
     job_scripts = mrbump_ensemble.generate_jobscripts( ensemble_pdbs, amopt.d )
-    
+
     if amopt.d['submit_cluster']:
         mrbump_ensemble.mrbump_ensemble_cluster( job_scripts, amopt.d )
     else:
         mrbump_ensemble.mrbump_ensemble_local( job_scripts, amopt.d )
-        
+
     # Collect the MRBUMP results
     results_summary = mrbump_results.ResultsSummary()
     results_summary.extractResults( job_dir )
     amopt.d['mrbump_results'].append( results_summary.results )
     #summary = results_summary.summariseResults()
-    
-    
+
+
 # Timing data
 time_stop = time.time()
 elapsed_time = time_stop - time_start
@@ -824,10 +814,9 @@ RUNNING.write(msg)
 RUNNING.flush()
 
 # Save results
-f = open( amopt.d['results_path'], 'w' )
-cPickle.dump( amopt.d, f )
-f.close()
-logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
+with open( amopt.d['results_path'], 'w' ) as f:
+    cPickle.dump( amopt.d, f )
+    logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
 
 # Now print out the final summary
 summary = amopt.final_summary()
@@ -837,11 +826,14 @@ RUNNING.flush()
 RUNNING.close()
 
 # Copy best pdb to output_pdb - hack - just take best from the first cluster#
-output_pdb = os.path.join( amopt.d['work_dir'], amopt.d['output_pdb'])
-result_pdb = amopt.d['mrbump_results'][0][0].pdb
-if os.path.isfile( output_pdb ):
-    logging.info("Copying result pdb to: {0}\n".format( output_pdb ) )
-    shutil.copy2( result_pdb, output_pdb )
+if amopt.d['mrbump_results'] and len(amopt.d['mrbump_results'][0]):
+    result_pdb = amopt.d['mrbump_results'][0][0].pdb
+    output_pdb = os.path.join( amopt.d['work_dir'], amopt.d['output_pdb'])
+    if os.path.isfile( output_pdb ):
+        logging.info("Copying result pdb to: {0}\n".format( output_pdb ) )
+        shutil.copy2( result_pdb, output_pdb )
+else:
+    logging.critical("Failed to generate a final pdb for cluster 1")
 
 # os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
 # os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')

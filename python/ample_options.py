@@ -9,14 +9,14 @@ import os
 import printTable
 
 class AmpleOptions(object):
-    
-    def __init__(self):
-        
 
-        
+    def __init__(self):
+
+
+
         # The dictionary with all the options
         self.d = {}
-        
+
         # dictionary with the default arguments - if any are paths add to paths in populate
         self.defaults = {
                             'alignment_file' : None,
@@ -56,6 +56,7 @@ class AmpleOptions(object):
                             'nmodels' : 1000,
                             'NMR_model_in' : None,
                             'NMR_process' : None,
+                            'NMR_protocol' : False,
                             'NMR_remodel_fasta' : None,
                             'NMR_Truncate_only' : None,
                             'nproc' : 1,
@@ -72,7 +73,7 @@ class AmpleOptions(object):
                             'rosetta_db' : None,
                             'rosetta_dir' : None,
                             'rosetta_fragments_exe' : None,
-                            'rosetta_path' : None,
+                            'rosetta_AbinitioRelax' : None,
                             'rosetta_version' : None,
                             'rcdir' : os.path.join( os.path.expanduser("~"), ".ample" ),
                             'run_dir' : os.getcwd(),
@@ -100,7 +101,7 @@ class AmpleOptions(object):
                             'use_shelxe' : True,
 
                          }
-        
+
         self.quick_mode = {
                            'max_ensemble_models' : 10,
                            'nmodels' : 200,
@@ -113,7 +114,7 @@ class AmpleOptions(object):
                            # Needs to be a list of lists as there can be multiple mr_keys
                            'mr_keys' : [ [ 'PKEY', 'KILL','TIME','15'  ] ],
                         }
-    
+
         # Test use scrwl
         self.devel_mode = {
                            'early_terminate': False,
@@ -126,24 +127,24 @@ class AmpleOptions(object):
                            # Needs to be a list of lists as there can be multiple mr_keys
                            'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
                         }
-    
+
         # We have a debug mode as the logger isn't activated when we run
         self.debug = False
-        
+
         return
-        
-        
+
+
     def final_summary(self, cluster=None):
         """Return a string summarising the results of the run.
-        
+
         Args:
         cluster -- the number of the cluster to summarise (COUNTING FROM 0)
                    otherwise all clusters are summarised
         """
-        
+
         # List of all the possible column titles and their result object attributes
         # see python/mrbump_results.py
-        title2attr = { 
+        title2attr = {
                         'Model_Name' :'name',
                         'MR_Program': 'program',
                         'Solution_Type': 'solution',
@@ -157,8 +158,8 @@ class AmpleOptions(object):
                         'SHELXE_ACL' : 'shelxeAvgChainLength',
                         'SHELXE_Avg_Chain' : 'shelxeAvgChainLength',
                     }
-        
-        
+
+
         if not cluster:
             # Get number of clusters from the length of the mrbump results lists
             clusters = [ i for i in range( len( self.d['mrbump_results'] ) ) ]
@@ -166,20 +167,20 @@ class AmpleOptions(object):
             if cluster >= len( self.d['mrbump_results'] ):
                 raise RuntimeError, "Cluster number is not in results list"
             clusters = [ cluster ]
-            
+
         # String to hold the results summary
         summary = ""
         for cluster in clusters:
-            
+
             summary+="\n\nResults for cluster: {0}\n\n".format( cluster+1 )
-            
+
             # Table for results with header
             results_table = []
 
             ensemble_results = None
             if self.d.has_key('ensemble_results'):
                 ensemble_results = self.d['ensemble_results'][ cluster ]
-            
+
                 # Get map of ensemble name -> ensemble result
                 name2result = {}
                 for i, e in enumerate( ensemble_results ):
@@ -190,76 +191,81 @@ class AmpleOptions(object):
             # Assume mrbump_results are already sorted
             mrbump_results = self.d['mrbump_results'][ cluster ]
             if not len(mrbump_results):
-                print "!!!  No results found for cluster {0} !!!".format( cluster+1 )  
+                print "!!!  No results found for cluster {0} !!!".format( cluster+1 )
                 continue
-            
+
             # Get header from first object - need to copy or the assignment just creates a reference
             header = copy.copy( mrbump_results[0].header )
             if ensemble_results:
                 header += [ "#Decoys", "#Residues" ]
             results_table.append( header )
-            
+
             best=mrbump_results[0] # remember best (first) result
-            
+
             for result in mrbump_results:
                 result_summary = []
                 for h in result.header:
                     result_summary.append( getattr( result, title2attr[ h ] )  )
-                    
+
                 if ensemble_results:
                     # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
                     name = result.name[9:-6]
                     result_summary += [ name2result[ name ].num_models, name2result[ name ].num_residues ]
-            
+
                 results_table.append( result_summary )
-                
+
             # Get nicely formatted string summarising the results
             table = printTable.Table()
             summary += table.pprint_table( results_table )
-            
+
             # Show where it happened
-            summary += '\nBest results so far are in directory:\n\n'
+            summary += '\nBest Molecular Replacement results so far are in:\n\n'
             summary +=  best.mrDir
-        
+
+            if best.pdb and os.path.isfile(best.pdb):
+                summary += '\n\nFinal PDB is:\n\n'
+                summary +=  self.results[0].pdb
+            summary += '\n\n'
+
         return summary
-        
-        
+
+
     def populate( self, parser_args ):
         """
         Fill ourselves with the options from the parser
         """
-        
+
         tmpv = None
         for k, v in vars(parser_args).iteritems():
-            #print "{} | {}".format( k, v )   
+            #print "{} | {}".format( k, v )
             if isinstance(v,list):
                 # All values are in a list
                 tmpv  = v[0]
             else:
                 tmpv = v
-                
+
             # Bit of a hack for true/false
             if isinstance( tmpv, str ):
                 if tmpv.lower() == "true":
                     tmpv = True
                 elif tmpv.lower() == "false":
                     tmpv = False
-                
+
             self.d[k] = tmpv
         # end of loop
-        
+
 #        print "After populate"
 #        for k, v in self.d.iteritems():
 #            print "{} | {}".format( k, v )
-            
+
         # Handle any defaults and any preset options
         self.process_options()
-        
+
         return
- 
+
     def process_options(self):
         """Check the options and process any preset defaults"""
-        
+
         # First set anything that hasn't been set to its default option
         for k, v in self.defaults.iteritems():
             if k not in self.d:
@@ -271,12 +277,12 @@ class AmpleOptions(object):
             else:
                 if self.debug and self.d[k] != v:
                     print "Changed default value: {0} : {1}".format(k, self.d[k])
-        
+
         # Any changes here
         if self.d['submit_qtype']:
             self.d['submit_qtype'] = self.d['submit_qtype'].upper()
-            
-        
+
+
         # Convert all paths to absolute paths
         paths = [
                  'alignment_file',
@@ -297,7 +303,7 @@ class AmpleOptions(object):
                 'rosetta_db',
                 'rosetta_dir',
                 'rosetta_fragments_exe',
-                'rosetta_path',
+                'rosetta_AbinitioRelax',
                 'scwrl_exe',
                 'sf_cif',
                 'shelxe_exe',
@@ -310,7 +316,7 @@ class AmpleOptions(object):
         for k, v in self.d.iteritems():
             if k in paths and isinstance( v, str ):
                 self.d[ k ] = os.path.abspath( v )
-        
+
         # Check if using any preset options
         if self.d['devel_mode']:
             for k, v in self.devel_mode.iteritems():
@@ -343,16 +349,16 @@ class AmpleOptions(object):
                         if self.debug:
                             print "Overriding default setting: {0} : {1} with quick_mode setting {2}".format( k, self.defaults[k], v )
                         self.d[k] = v
-        
+
         return
-        
+
     def prettify_parameters(self):
         """
         Return the parameters nicely formated as a list of strings suitable for writing out to a file
         """
         pstr = ""
         pstr +='Params Used in this Run\n\n'
-        
+
         keys1 = ['fasta','work_dir','mtz','name']
         pstr += '---input---\n'
         for k in keys1:
@@ -362,12 +368,12 @@ class AmpleOptions(object):
         pstr+= '\n---fragments---\n'
         for k in keys2:
             pstr += "{0}: {1}\n".format(k, self.d[k])
-            
-        keys3 = ['make_models','rosetta_path','rosetta_db']
+
+        keys3 = ['make_models','rosetta_AbinitioRelax','rosetta_db']
         pstr+= '\n---modelling---\n'
         for k in keys3:
             pstr += "{0}: {1}\n".format(k, self.d[k])
-        
+
         if self.d['use_scwrl']:
             pstr+= '\n---3rd party---\nSCWRL {0}\n'.format( self.d['scwrl_exe'] )
 
@@ -376,37 +382,37 @@ class AmpleOptions(object):
             pstr+= '\n---Missing Domain---\n'
             for k in keys4:
                 pstr += "{0}: {1}\n".format(k, self.d[k])
-        
+
         # This only used for printing
         INSERT_DOMAIN = False
         if self.d['domain_termini_distance'] > 0:
             INSERT_DOMAIN = True
         pstr += '\nIs an Insert Domain {0} termini distance {1}\n'.format( INSERT_DOMAIN, self.d['domain_termini_distance'] )
-        
+
         # Now print out everything else
         pstr += "\n---Other parameters---\n"
-        
+
         done_keys = keys1 + keys2 + keys3 + keys4 + [ 'use_scwrl', 'domain_termini_distance'  ]
         for k, v in sorted(self.d.items()):
             if k not in done_keys:
                 pstr += "{0} : {1}\n".format( k, v )
-                
+
         return pstr
-    
+
 
 if __name__ == "__main__":
-    
+
     import sys
     import cPickle
-    
+
     if len(sys.argv) == 2:
         pfile = sys.argv[1]
     else:
         pfile = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_10/resultsd.pkl"
-    
+
     f = open(pfile)
     d = cPickle.load(f)
-    
+
     AD = AmpleOptions()
     AD.d = d
     print AD.final_summary()
