@@ -158,6 +158,11 @@ def ensemble_summary( amoptd ):
         for i, clusterEnsemble in enumerate( amoptd['ensemble_results'] ):
 
             rstr += "---- Cluster {0} ----\n".format( i+1 )
+
+            if not clusterEnsemble:
+                rstr += "\n### COULD NOT GENERATE ANY ENSEMBLES! ###\n\n"
+                continue
+
             nensembles = 0
             truncation_thresholds = {}
 

@@ -749,12 +749,19 @@ else:
 
     # Extract list of pdbs from ensemble results
     for eresult in amopt.d['ensemble_results']:
-        ensembles.append( [ e.pdb for e in eresult ] )
+        if eresult:
+            ensembles.append( [ e.pdb for e in eresult ] )
 
 ensemble_summary = ensemble.ensemble_summary(amopt.d)
 RUNNING.write(ensemble_summary)
 RUNNING.flush()
 logger.info(ensemble_summary)
+#
+# Bail here if we didn't create anything
+#
+if not len(ensembles):
+    logger.critical("### AMPLE FAILED TO GENERATE ANY ENSEMBLES! ###\nExiting...")
+    sys.exit(1)
 
 #---------------------------------------
 # MR BUMP analysis of the ensembles

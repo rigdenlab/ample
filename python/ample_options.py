@@ -224,7 +224,7 @@ class AmpleOptions(object):
 
             if best.pdb and os.path.isfile(best.pdb):
                 summary += '\n\nFinal PDB is:\n\n'
-                summary +=  self.results[0].pdb
+                summary +=  best.pdb
             summary += '\n\n'
 
         return summary
