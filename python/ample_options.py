@@ -108,8 +108,8 @@ class AmpleOptions(object):
                            'percent' : 20,
                            'phaser_only' : True,
                            'shelx_cycles' : 5,
-                           'use_arpwarp' : True,
-                           'use_buccaneer' : True,
+                           'use_arpwarp' : False,
+                           'use_buccaneer' : False,
                            # This kills phaser after 15 minutes
                            # Needs to be a list of lists as there can be multiple mr_keys
                            'mr_keys' : [ [ 'PKEY', 'KILL','TIME','15'  ] ],
