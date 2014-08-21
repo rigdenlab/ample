@@ -1,7 +1,7 @@
 library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
-comparison=TRUE
+comparison=FALSE
 #data <- read.table(file="results.csv",sep=',', header=T)
 
 if (comparison){
@@ -343,8 +343,6 @@ summaryData <- summaryData[ order( -summaryData$worked, summaryData$resolution )
 #x <- x[ order( x$success, decreasing=TRUE ), ]
 write.csv(summaryData, "summary.csv", row.names=FALSE)
 
-q()
-
 #
 # Information on extreme models
 #
@@ -555,7 +553,7 @@ ggsave("ResiduesVsEnsemble.png")
 
 p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
-p + geom_histogram( position = 'dodge', binwidth = 1 ) +
+p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		scale_fill_manual( values=c(fcolour,scolour),
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
@@ -564,6 +562,8 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ylab("Number of ensembles") +
 		ggtitle("Percentage of residues in ensemble for successful and failing cases")
 ggsave("PercentVsEnsemble.png")
+
+q()
 
 # Number that solved under each side-chain treatment
 p <-ggplot( data=data, aes( factor(ensembleSideChainTreatment), fill=factor(success) ) ) 
@@ -673,6 +673,8 @@ p + geom_point( data=summaryData[ summaryData$success == 0, ],
 			aes(x=resolution, y=fastaLength, size=numModels), shape=1, colour=scolour ) +
 	geom_point( data=summaryData[ summaryData$success > 0, ],
 			aes(x=resolution, y=fastaLength, size=success), colour=scolour)	+
+	xlab("Resolution (\uc5)") +
+	ylab("Chain length in residues") +
 	theme(legend.position="none")
 ggsave("resolutionVsLenFasta.png")
 		
@@ -685,6 +687,8 @@ p + geom_point( data=summaryData[ summaryData$success == 0, ],
 				aes(x=resolution, y=numResidues, size=numModels), shape=1, colour=scolour ) +
 		geom_point( data=summaryData[ summaryData$success > 0, ],
 				aes(x=resolution, y=numResidues, size=success), colour=scolour)	+
+		xlab("Resolution (\uc5)") +
+		ylab("Num. residues in ASU") +
 		theme(legend.position="none")
 ggsave("resolutionVsNumResidues.png")
 
@@ -1322,18 +1326,32 @@ q()
 #
 ###############################################################################################################################
 
+
 # For analysing polyalanine helix results - source updateData from above
 hsdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/summary.csv",sep=',', header=T)
 
 #, colour=factor(worked)
 scolour="#3333FF"
 fcolour="#FF0000"
+library("ggplot2")
+p <- ggplot()
+p + geom_point( data=hsdata,
+				aes(x=resolution, y=fastaLength, colour=factor(worked)), shape=16) +
+		scale_colour_manual( values=c(fcolour, scolour)) +
+		xlab("Resolution (\uc5)") +
+		ylab("Chain length in residues") +
+		theme(legend.position="none")
+ggsave("polyaResultsChain.png")
+
+
 p <- ggplot()
 p + geom_point( data=hsdata,
 				aes(x=resolution, y=numResidues, colour=factor(worked)), shape=16) +
 		scale_colour_manual( values=c(fcolour, scolour)) +
+		xlab("Resolution (\uc5)") +
+		ylab("Residues in ASU") +
 		theme(legend.position="none")
-ggsave("polyaResults.png")
+ggsave("polyaResultsASU.png")
 
 
 q()
@@ -1357,10 +1375,6 @@ esolved <- data[ data$success >0, ]$pdbCode
 ssolved <- data[ data$successSingleStructure >0, ]$pdbCode
 hsolved <- data[ data$successHelix >0, ]$pdbCode
 
-# Ones that solved by everything
-# 44
-everything <- intersect(intersect(esolved, ssolved), hsolved)
-
 # All ones that solved
 allsolved <- union(esolved,union(ssolved,hsolved)) # 70
 
@@ -1376,18 +1390,28 @@ onlyh <- hsolved[ ! hsolved %in% union(esolved,ssolved) ] # 3H00 - solved in rer
 # ones that only solved with single structures
 onlys <- ssolved[ ! ssolved %in% union(esolved,hsolved) ] # 2Q5U 4DZK 3U1C # 4DZK only solved with the single structure
 
+if (FALSE) {
+	# This bundles in the reruns from the ensembles and the manual ones too
+	
+	# Ones that only sovled with reruns
+	setdiff(rerunSolved,allsolved) # 1MI7 2BEZ 2ZZO 3H7Z 3U1A
+	
+	# check - everything that solved
+	length(union(rerunSolved,union(manual,allsolved))) # 78 - minus 1 for 4DZK - 77 => 77/94= 82%
+	
+	allFailed <- setdiff(all, union(allsolved,union(rerunSolved,manual) ))
+	
+	allEnsemble <- union(union(esolved,rerunSolved),manual)
+	
+	everything <- intersect(intersect(allEnsemble,ssolved),hsolved)
+	
+} else {
+	allEnsemble <- esolved
+	# Ones that solved by everything
+	# 44
+	everything <- intersect(intersect(esolved, ssolved), hsolved)
+}
 
-# Ones that only sovled with reruns
-setdiff(rerunSolved,allsolved) # 1MI7 2BEZ 2ZZO 3H7Z 3U1A
-
-# check - everything that solved
-length(union(rerunSolved,union(manual,allsolved))) # 78 - minus 1 for 4DZK - 77 => 77/94= 82%
-
-allFailed <- setdiff(all, union(allsolved,union(rerunSolved,manual) ))
-
-allEnsemble <- union(union(esolved,rerunSolved),manual)
-
-everythingWithRerun <- intersect(intersect(allEnsemble,ssolved),hsolved)
 
 png("finalResultsVenn.png")
 #par(oma=c(2,2,2,2), mar=c(2,2,2,2)) 
@@ -1398,7 +1422,7 @@ venn.plot <- draw.triple.venn(
 		n12 = length(intersect(allEnsemble,ssolved)),
 		n23 = length(intersect(ssolved,hsolved)),
 		n13 = length(intersect(allEnsemble,hsolved)),
-		n123 = length(everythingWithRerun),
+		n123 = length(everything),
 		category = c("Ensembles", "Single\nStructures ", "Polyalanine\nHelices"),
 		euler.d = FALSE,
 		scaled=FALSE,
