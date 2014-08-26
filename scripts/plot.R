@@ -1,7 +1,7 @@
 library(ggplot2)
 scolour="#3333FF"
 fcolour="#FF0000"
-comparison=FALSE
+comparison=TRUE
 #data <- read.table(file="results.csv",sep=',', header=T)
 
 if (comparison){
@@ -171,7 +171,11 @@ if (comparison){
 	
 	x["successSingleStructure"] <- aggregate( smdata$successSingleStructure, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 	
-	x$successHelix <- aggregate( hdata$success, by=list(hdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	x["workedSS"] <- replace( x$successSingleStructure, x$successSingleStructure > 0, 1 )
+	
+	x["successHelix"] <- aggregate( hdata$success, by=list(hdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
+	
+	x["workedH"] <- replace( x$successHelix, x$successHelix > 0, 1 )
 #	x["successHelix"] <- aggregate( smdata$helixWorked, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
 #	x["helixWorked"] <- replace( x$successHelix, x$successHelix > 0, 1 )
 #	x["successHelix1"] <- aggregate( smdata$successHelix1, by=list(smdata$pdbCode), FUN=function(x){ sum( x == 1 ) } )[2]
