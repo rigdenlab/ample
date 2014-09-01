@@ -1,7 +1,14 @@
 library(ggplot2)
+# http://sape.inf.usi.ch/quick-reference/ggplot2/themes
+#theme(panel.background = element_rect(colour = "#FFFFFF"))
+theme_set(theme_bw())
+
 scolour="#3333FF"
 fcolour="#FF0000"
-comparison=TRUE
+pcolour='#FF00FF'
+
+
+comparison=FALSE
 #data <- read.table(file="results.csv",sep=',', header=T)
 
 if (comparison){
@@ -423,8 +430,8 @@ if (comparison){
 	) +
 	xlab("Ensemble Shelxe CC score") +
 	ylab("Single centroid structure CC score") +
-	ggtitle("Ensemble and Single-structure CC scores")
-	ggsave("SSEShelxe.png")
+	#ggtitle("Ensemble and Single-structure CC scores")
+	ggsave("z_singleStructureVsEnsembleCC.eps",scale=1.5)
 	
 	# Length distribution of ideal helcies
 	p <-ggplot(data=hdata[ hdata$success==1,], aes(x=polyaLength) )
@@ -437,7 +444,7 @@ if (comparison){
 			ylab("Number of cases") +
 			xlab("Length of ideal helix") +
 			#ggtitle("Distribution of polya helices")
-	ggsave("lengthIdealHelices.png")
+	ggsave("z_lengthIdealHelices.eps",scale=1.5)
 
 #	# Helix vs Single model
 #	# Need to pull out the different side chain treamtments
@@ -485,7 +492,7 @@ if (comparison){
 #			ylab("Idealised Helix Shelxe CC score") +
 #			ggtitle("Idealised Helices and Single-structure CC scores")
 #	
-#	ggsave("SSHShelxe.png")
+#	ggsave("SSHShelxe.eps",scale=1.5)
 
 } # END comparison
 
@@ -542,6 +549,7 @@ dev.off()
 # length distribution of successful search models both as number of residues 
 # and as fraction of target chain length remaining in the search model.
 
+
 # Distribution of all ensembles
 p <-ggplot(data=data, aes(x=ensembleNumResidues, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
@@ -552,8 +560,8 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 				guide=FALSE) +
 		xlab("Number of residues in ensemble") +
 		ylab("Number of ensembles") +
-		ggtitle("Number of residues in ensemble for successful and failing cases")
-ggsave("ResiduesVsEnsemble.png")
+		#ggtitle("Number of residues in ensemble for successful and failing cases")
+ggsave("residuesPerEnsemble.eps",scale=1.5)
 
 p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
@@ -564,10 +572,8 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 				guide=FALSE) +
 		xlab("Percent of residues in ensemble") +
 		ylab("Number of ensembles") +
-		ggtitle("Percentage of residues in ensemble for successful and failing cases")
-ggsave("PercentVsEnsemble.png")
-
-q()
+		#ggtitle("Percentage of residues in ensemble for successful and failing cases")
+ggsave("residuesPerEnsembleNum.eps",scale=1.5)
 
 # Number that solved under each side-chain treatment
 p <-ggplot( data=data, aes( factor(ensembleSideChainTreatment), fill=factor(success) ) ) 
@@ -580,9 +586,8 @@ p + geom_histogram( position = 'dodge', labeller=labeller ) +
 				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Side-chain Treatment") +
-		ggtitle("Histogram of side-chain treatment for successful and failing cases")
-ggsave("sideChain.png")
-
+		#ggtitle("Histogram of side-chain treatment for successful and failing cases")
+ggsave("z_sideChainHistogram.eps",scale=1.5)
 
 # Number that solved under each sub-clustering radius
 p <-ggplot( data=data, aes( factor(ensembleRadiusThreshold), fill=factor(success) ) ) 
@@ -593,8 +598,8 @@ p + geom_histogram( position = 'dodge' ) +
 				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("Sub-clustering radius") +
-		ggtitle("Histogram of sub-clustering for successful and failing cases")
-ggsave("subClusteringRadius.png")
+		#ggtitle("Histogram of sub-clustering for successful and failing cases")
+ggsave("subClusteringRadiusHistogram.eps",scale=1.5)
 
 
 # As a table
@@ -614,7 +619,7 @@ p + geom_point() +
 		xlab("Shelxe CC score") +
 		ylab("Buccaneer Rfree") +
 		ggtitle("Shelxe Buccanner Rfree score")
-ggsave("CCVsRfree.png")
+ggsave("buccaneerRfreeVsCC.eps",scale=1.5)
 
 # CC distribution
 p <-ggplot(data=data, aes(x=shelxeCC, fill=factor(success) ) )
@@ -626,7 +631,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ylab("Number of cases") +
 		xlab("CC score") +
 		ggtitle("Histogram of CC scores by success")
-ggsave("CCscores.png")
+ggsave("CCHistogram.eps",scale=1.5)
 
 #coord_fixed() +
 p <-ggplot(data=data[ data$success==1, ], aes(x=buccFinalRfree, y=arpWarpFinalRfree) )
@@ -641,7 +646,7 @@ p + geom_point() +
 		xlab("Buccaneer Rfree") +
 		ylab("ARP/wARP Rfree") +
 		ggtitle("Bucc vs Arpwarp")
-ggsave("buccVsArp.png")
+ggsave("buccaneerVsArpwarpRfree.eps",scale=1.5)
 
 
 ## Resolution vs length1
@@ -655,7 +660,7 @@ ggsave("buccVsArp.png")
 #		xlab("Resolution (\uc5)") +
 #		ylab("Chain length (residues)") +
 #		ggtitle("Resolution vs chain length")
-#ggsave("resolutionVsLength.png")
+#ggsave("resolutionVsLength.eps",scale=1.5)
 
 # Resolution vs length2
 
@@ -666,7 +671,6 @@ ggsave("buccVsArp.png")
 # targets where success < failure - failures as big red circules - successs as filled blue circles
 # targets where success > failure - succcess as big red circules - failures as filled red circles
 summaryData$nfailed <- summaryData$numModels - summaryData$success
-
 
 # Open circles sized by the number of models and coloured by success. Filled blue circles indicate # successes
 p <- ggplot()
@@ -680,7 +684,7 @@ p + geom_point( data=summaryData[ summaryData$success == 0, ],
 	xlab("Resolution (\uc5)") +
 	ylab("Chain length in residues") +
 	theme(legend.position="none")
-ggsave("resolutionVsLenFasta.png")
+ggsave("z_resolutionVsChainLength.eps",scale=1.5)
 		
 # Open circles sized by the number of models and coloured by success. Filled blue circles indicate # successes
 p <- ggplot()
@@ -694,7 +698,7 @@ p + geom_point( data=summaryData[ summaryData$success == 0, ],
 		xlab("Resolution (\uc5)") +
 		ylab("Num. residues in ASU") +
 		theme(legend.position="none")
-ggsave("resolutionVsNumResidues.png")
+ggsave("z_resolutionVsNumResidues.eps",scale=1.5)
 
 
 #p <- ggplot()
@@ -712,7 +716,7 @@ ggsave("resolutionVsNumResidues.png")
 #	geom_point( data=summaryData[ summaryData$success > 0 & summaryData$success-summaryData$nfailed < 0, ],
 #			aes(x=resolution, y=fastaLength, size=nfailed), shape=1, colour=scolour) +
 #	theme(legend.position="none")
-#ggsave("resolutionVsFastaLengthLayered.png")
+#ggsave("resolutionVsFastaLengthLayered.eps",scale=1.5)
 
 
 
@@ -726,7 +730,7 @@ ggsave("resolutionVsNumResidues.png")
 #		xlab("Resolution (\uc5)") +
 #		ylab("Chain length (residues)") +
 #		ggtitle("Resolution vs chain length")
-#ggsave("resolutionVsLength2.png")
+#ggsave("resolutionVsLength2.eps",scale=1.5)
 #
 #p <-ggplot(data=summaryData, aes(x=resolution, y=numResidues, colour=factor(worked) ) )
 #p + geom_point( aes(size=numModels), guide=FALSE  ) +
@@ -737,7 +741,7 @@ ggsave("resolutionVsNumResidues.png")
 #		xlab("Resolution (\uc5)") +
 #		ylab("Residues in ASU") +
 #		ggtitle("Resolution vs residues in ASU")
-#ggsave("resolutionVsOverallLength.png")
+#ggsave("resolutionVsOverallLength.eps",scale=1.5)
 #
 #p <-ggplot(data=summaryData, aes(x=resolution, y=numResidues, colour=factor(worked) ) )
 #p + geom_point(guide=FALSE) +
@@ -748,7 +752,7 @@ ggsave("resolutionVsNumResidues.png")
 #		xlab("Resolution (\uc5)") +
 #		ylab("Residues in ASU") +
 #		ggtitle("Resolution vs residues in ASU")
-#ggsave("resolutionVsOverallLength2.png")
+#ggsave("resolutionVsOverallLength2.eps",scale=1.5)
 
 
 # Plot of targets by chain length
@@ -761,7 +765,7 @@ p + geom_histogram( position = 'stack', binwidth = 10 ) +
 		ylab("Number of targets") +
 		xlab("Target chain length") +
 		ggtitle("Histogram of target chain length for successful and failing cases")
-ggsave("targetsByLength.png")
+ggsave("targetsByLength.eps",scale=1.5)
 
 p <-ggplot( data=summaryData, aes( numResidues, fill=factor(worked) ) )
 p + geom_histogram() +
@@ -773,7 +777,7 @@ p + geom_histogram() +
 		ylab("Number of targets") +
 		xlab("Residues in ASU") +
 		ggtitle("Histogram of target size for successful and failing cases")
-ggsave("targetsByResASU.png")
+ggsave("targetsByResASU.eps",scale=1.5)
 
 # Binned (20) bar graph with length along the bottom and the bars dividied/coloured by success
 p <-ggplot( data=data, aes( fastaLength, fill=factor(success) ) )
@@ -786,7 +790,7 @@ p + geom_histogram( binwidth=5, position = 'dodge' ) +
 	xlab("Length in residues") +
 	ylab("Number of targets") +
 	ggtitle("Successes/failures by target chain length")
-ggsave("targetByLength.png")
+ggsave("targetByLength.eps",scale=1.5)
 
 
 #Distribution of chain lengths of all ensembles
@@ -804,7 +808,7 @@ ggsave("targetByLength.png")
 #		xlab("% Shelxe Trace") +
 #		ylab("Shelxe CC") +
 #		ggtitle("Percentage traced by Shelxe vs Shelxe CC score")
-#ggsave("shelxePropVsCC.png")
+#ggsave("shelxePropVsCC.eps",scale=1.5)
 
 
 ###############################################################################################################################
@@ -822,7 +826,7 @@ p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 		ylab("Number of cases") +
 		xlab("TM-score of model to native") +
 		ggtitle("Histogram of TM-score for models for successful and failing cases")
-ggsave("modelTM.png")
+ggsave("z_modelTM.eps",scale=1.5)
 
 p <-ggplot(data=data, aes(x=ensembleNativeRMSD, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
@@ -834,7 +838,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ylab("Number of cases") +
 		xlab("RMSD score of model to native") +
 		ggtitle("Histogram of RMSD score for models for successful and failing cases")
-ggsave("modelRMSD.png")
+ggsave("modelRMSD.eps",scale=1.5)
 
 # Plot of Reforigin RMSD for successes and failures
 p <-ggplot(data=data, aes(x=reforiginRMSD, fill=factor(success) ) )
@@ -846,8 +850,8 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("reforigin RMSD of placed model to native") +
-		ggtitle("Histogram of reforigin RMSD scores by success")
-ggsave("reforiginRMSD.png")
+		#ggtitle("Histogram of reforigin RMSD scores by success")
+ggsave("z_reforiginRMSD.eps",scale=1.5)
 
 ###############################################################################################################################
 #
@@ -889,7 +893,7 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		ylab("Number of cases") +
 		xlab("RIO score") +
 		ggtitle("Histogram of RIO scores")
-ggsave("rioHistogram.png")
+ggsave("rioHistogram.eps",scale=1.5)
 
 p <-ggplot(data=odata, aes(x=ccmtzRioNoCat, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 1 ) +
@@ -900,7 +904,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ylab("Number of cases") +
 		xlab("Number non-RIO C-alpha") +
 		ggtitle("non-RIO contacts")
-ggsave("noRioHistogram.png")
+ggsave("noRioHistogram.eps",scale=1.5)
 
 
 # Proportion RIO of model
@@ -913,7 +917,7 @@ p + geom_histogram( position = 'dodge', binwidth = 0.05 ) +
 		ylab("Number of cases") +
 		xlab("Proportion RIO") +
 		ggtitle("RIO as proportion of model")
-ggsave("rioModelHistogramProp.png")
+ggsave("rioModelHistogramProp.eps",scale=1.5)
 
 #Calculate proportion of in/out in rioGood
 #prop.table(as.matrix(x[-1]),margin=1)
@@ -931,7 +935,7 @@ p + geom_histogram( position = 'dodge', binwidth = 0.05 ) +
 		ylab("Number of cases") +
 		xlab("Proportion RIO") +
 		ggtitle("RIO as proportion of native")
-ggsave("rioNativeHistogramProp.png")
+ggsave("rioNativeHistogramProp.eps",scale=1.5)
 
 # Proportion in density of model
 p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts/numPlacedAtoms, fill=factor(success) ) )
@@ -943,7 +947,7 @@ p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 		ylab("Number of cases") +
 		xlab("Proportion in density") +
 		ggtitle("Atoms in density as a proportion of the model")
-ggsave("inDensityModelHistogramProp.png")
+ggsave("inDensityModelHistogramProp.eps",scale=1.5)
 
 # Proportion in density of native
 p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts/numAtoms, fill=factor(success) ) )
@@ -955,7 +959,7 @@ p + geom_histogram( position = 'dodge', binwidth = 0.001 ) +
 		ylab("Number of cases") +
 		xlab("Proportion in density") +
 		ggtitle("Atoms in density as proportion of native")
-ggsave("inDensityNativeHistogramProp.png")
+ggsave("inDensityNativeHistogramProp.eps",scale=1.5)
 
 # Number in density
 p <-ggplot(data=odata, aes(x=ccmtzAaNumContacts, fill=factor(success) ) )
@@ -967,7 +971,7 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		ylab("Number of cases") +
 		xlab("Number in density") +
 		ggtitle("Number of atoms in density")
-ggsave("inDensityHistogramNum.png")
+ggsave("inDensityHistogramNum.eps",scale=1.5)
 
 
 # Number out of density
@@ -980,7 +984,7 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		ylab("Number of cases") +
 		xlab("Number out of density") +
 		ggtitle("Number of atoms out of density")
-ggsave("outOfDensityHistogramNum.png")
+ggsave("outOfDensityHistogramNum.eps",scale=1.5)
 
 # Out of density as proportion of model
 p <-ggplot(data=odata, aes(x=(numPlacedAtoms-ccmtzAaNumContacts)/numPlacedAtoms, fill=factor(success) ) )
@@ -992,7 +996,7 @@ p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 		ylab("Number of cases") +
 		xlab("Proportion out of density") +
 		ggtitle("Atoms out of density as proportion of model")
-ggsave("outOfDensityHistogramModel.png")
+ggsave("outOfDensityHistogramModel.eps",scale=1.5)
 
 # Out of density as proportion of native
 p <-ggplot(data=odata, aes(x=(numPlacedAtoms-ccmtzAaNumContacts)/numAtoms, fill=factor(success) ) )
@@ -1004,7 +1008,7 @@ p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 		ylab("Number of cases") +
 		xlab("Proportion out of density") +
 		ggtitle("Atoms out of density as proportion of native")
-ggsave("outOfDensityHistogramNative.png")
+ggsave("outOfDensityHistogramNative.eps",scale=1.5)
 
 # Proportion of In vs out of register contacts for success
 #3767 success
@@ -1027,8 +1031,8 @@ p <-ggplot(data=odata[ odata$success==1, ], aes(x=(ccmtzRioOoRegister/ccmtzRioGo
 p + geom_histogram( binwidth = 1, fill="#3333FF" ) +
 		ylab("Number of cases") +
 		xlab(expression(paste("% RIO_out C",alpha))) +
-		ggtitle(expression(paste("Percentage of RIO_out C",alpha," for successes")))
-ggsave("percentOutRegister.png")
+		#ggtitle(expression(paste("Percentage of RIO_out C",alpha," for successes")))
+ggsave("z_percentOutRegister.eps",scale=1.5)
 
 # Length distribution of RIO scores
 p <-ggplot(data=odata, aes(x=ccmtzRioGood, fill=factor(success) ) )
@@ -1040,7 +1044,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1  ) +
 		ylab("Number of cases") +
 		xlab("RIO score") +
 		ggtitle("Histogram of RIO scores")
-ggsave("rioDistribution.png")
+ggsave("rioDistribution.eps",scale=1.5)
 
 p <-ggplot(data=odata[ odata$ccmtzRioGood >0, ], aes(x=ccmtzRioGood, fill=factor(success) ) )
 p + geom_histogram( position = 'dodge', binwidth = 1  ) +
@@ -1051,7 +1055,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1  ) +
 		ylab("Number of cases") +
 		xlab("RIO score") +
 		ggtitle("Histogram of RIO scores (RIO >0)")
-ggsave("rioDistributionNoZero.png")
+ggsave("rioDistributionNoZero.eps",scale=1.5)
 
 
 # Length distribution of ideal helcies
@@ -1064,7 +1068,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1  ) +
 		ylab("Number of cases") +
 		xlab("Length of RIO helix") +
 		ggtitle("Distribution of RIO helices")
-ggsave("lengthRioHelices.png")
+ggsave("lengthRioHelices.eps",scale=1.5)
 
 
 #
@@ -1095,7 +1099,7 @@ p + geom_point() +
 		xlab("RIO_out") +
 		ylab("RIO_in") +
 		ggtitle("RIO_in versus RIO_out")
-ggsave("rioInVsRioOut.png")
+ggsave("rioInVsRioOut.eps",scale=1.5)
 
 p <-ggplot(data=odata[odata$ccmtzRioOoRegister + odata$ccmtzRioInregister > 0, ], aes(x=ccmtzRioOoRegister, y=ccmtzRioInregister, colour=factor(success) ) ) 
 p + geom_point() +
@@ -1106,8 +1110,8 @@ p + geom_point() +
 				guide=FALSE) +
 		xlab("RIO_out") +
 		ylab("RIO_in") +
-		ggtitle("RIO_in versus RIO_out (RIO > 0)")
-ggsave("rioInVsRioOutGtZero.png")
+		#ggtitle("RIO_in versus RIO_out (RIO > 0)")
+ggsave("z_rioInVsRioOutGtZero.eps",scale=1.5)
 
 #p <-ggplot(data=odata[ odata$ccmtzRioGood > 0, ], aes(x=propRioIn, fill=factor(success)) )
 #p + geom_histogram( binwidth = 0.05, position='dodge' ) 
@@ -1125,7 +1129,7 @@ p + geom_point( size=1 ) +
 		xlab("In-register proportion of RIO") +
 		ylab("Number of residues in ASU") +
 		ggtitle("In-register CA as a prop. of RIO vs num. residues for RIO > 0")
-ggsave("rioInRegisterPropVsLength.png")
+ggsave("rioInRegisterPropVsLength.eps",scale=1.5)
 
 
 # plot of nrInRegisterContacts vs nrGoodContacts
@@ -1138,7 +1142,7 @@ p + geom_point() +
 	xlab("Shelxe CC") +
 	ylab("RIO score") +
 	ggtitle("RIO score vs shelxe CC")
-ggsave("CCVsRIO.png")
+ggsave("CCVsRIO.eps",scale=1.5)
 
 #
 # inDensity vs unmatched
@@ -1162,7 +1166,7 @@ p + geom_point( size=1 ) +
 		xlab("AIO") +
 		ylab("RIO") +
 		ggtitle("AIO vs RIO")
-ggsave("aioVsRio.png")
+ggsave("aioVsRio.eps",scale=1.5)
 
 
 p <-ggplot(data=odata,
@@ -1179,7 +1183,7 @@ p + geom_point( size=1 ) +
 		xlab(" % AIO") +
 		ylab("% RIO") +
 		ggtitle("Percentage AIO vs RIO")
-ggsave("percentAioVsRio.png")
+ggsave("percentAioVsRio.eps",scale=1.5)
 
 p <-ggplot(data=odata,
 		aes(x=numPlacedAtoms-ccmtzAaNumContacts,
@@ -1195,7 +1199,7 @@ p + geom_point( size=1 ) +
 		xlab("Number of non-AIO model atoms") +
 		ylab("RIO score") +
 		ggtitle("Non-AIO atoms against RIO score")
-ggsave("nonAioVsRIO.png")
+ggsave("nonAioVsRIO.eps",scale=1.5)
 
 
 # Number outside of density as proportion of model shows negative signal as proportion of the input signal
@@ -1214,7 +1218,7 @@ p + geom_point( size=1 ) +
 		xlab("% RIO of native") +
 		ylab("% non-AIO atoms of model") +
 		ggtitle("RIO/non-AIO as percentages")
-ggsave("rioPercentAioPercentFres.png")
+ggsave("rioPercentAioPercentFres.eps",scale=1.5)
 
 p <-ggplot(data=odata,
 		aes(x=(ccmtzRioGood/numResidues)*100,
@@ -1230,7 +1234,7 @@ p + geom_point( size=1 ) +
 		xlab("% RIO of native") +
 		ylab("% non-AIO atoms of model") +
 		ggtitle("RIO/non-AIO as percentages")
-ggsave("rioPercentAioPercent.png")
+ggsave("rioPercentAioPercent.eps",scale=1.5)
 
 p <-ggplot(data=odata,
 		aes(x=(ccmtzRioGood/numResidues)*100,
@@ -1246,7 +1250,7 @@ p + geom_point( size=1 ) +
 		xlab("%RIO of native") +
 		ylab("Number non-AIO atoms") +
 		ggtitle("RIO as percentage vs number non-AIO")
-ggsave("rioPercentAioNumFres.png")
+ggsave("rioPercentAioNumFres.eps",scale=1.5)
 
 
 p <-ggplot(data=odata,
@@ -1263,7 +1267,7 @@ p + geom_point( size=1 ) +
 		xlab("RIO score") +
 		ylab("% non-AIO atoms of model") +
 		ggtitle("RIO vs non-AIO as percentage of model")
-ggsave("rioNumAioPercentFres.png")
+ggsave("rioNumAioPercentFres.eps",scale=1.5)
 
 p <-ggplot(data=odata,
 		aes(x=ccmtzRioGood,
@@ -1279,7 +1283,7 @@ p + geom_point( size=1 ) +
 		xlab("RIO score") +
 		ylab("Number non-AIO atoms") +
 		ggtitle("RIO vs number non-AIO atoms")
-ggsave("rioNumAioNumFres.png")
+ggsave("rioNumAioNumFres.eps",scale=1.5)
 
 p <-ggplot(data=odata,
 		aes(x=ccmtzRioGood,
@@ -1295,7 +1299,7 @@ p + geom_point( size=1 ) +
 		xlab("RIO score") +
 		ylab("Number non-AIO atoms") +
 		ggtitle("RIO vs number non-AIO atoms")
-ggsave("rioNumAioNum.png")
+ggsave("rioNumAioNum.eps",scale=1.5)
 
 
 
@@ -1318,12 +1322,11 @@ p + geom_point(data=data[ ! is.na( data$phaserLLG) & ! is.na( data$phaserTFZ) & 
 		xlab("Phaser TFZ") +
 		ylab("Phaser LLG") +
 		ggtitle("Phaser LLG vs Phaser TFZ")
-ggsave("LLGvsTFZ.png")
+ggsave("LLGvsTFZ.eps",scale=1.5)
 
 # Below for truncating the y-axis
 # scale_y_continuous( limits=c(-3000, max(data$phaserLLG, na.rm=TRUE) )  )+
 
-q()
 ###############################################################################################################################
 #
 # Additionl stuff
@@ -1331,13 +1334,13 @@ q()
 ###############################################################################################################################
 
 
+#scolour="#3333FF"
+#fcolour="#FF0000"
+#library("ggplot2")
+
 # For analysing polyalanine helix results - source updateData from above
 hsdata <- read.table(file="/home/jmht/Documents/work/CC/polya_helices/summary.csv",sep=',', header=T)
 
-#, colour=factor(worked)
-scolour="#3333FF"
-fcolour="#FF0000"
-library("ggplot2")
 p <- ggplot()
 p + geom_point( data=hsdata,
 				aes(x=resolution, y=fastaLength, colour=factor(worked)), shape=16) +
@@ -1345,8 +1348,7 @@ p + geom_point( data=hsdata,
 		xlab("Resolution (\uc5)") +
 		ylab("Chain length in residues") +
 		theme(legend.position="none")
-ggsave("polyaResultsChain.png")
-
+ggsave("z_polyaResultsChain.eps",scale=1.5)
 
 p <- ggplot()
 p + geom_point( data=hsdata,
@@ -1355,14 +1357,12 @@ p + geom_point( data=hsdata,
 		xlab("Resolution (\uc5)") +
 		ylab("Residues in ASU") +
 		theme(legend.position="none")
-ggsave("polyaResultsASU.png")
+ggsave("polyaResultsASU.eps",scale=1.5)
 
-
-q()
+#q()
 
 library("ggplot2")
 library("VennDiagram")
-
 # Below for comparison of single runs (/home/jmht/Documents/work/CC/all_results) or comparisonResults.csv in google
 scolour="#3333FF"
 fcolour="#FF0000"
@@ -1410,22 +1410,24 @@ if (FALSE) {
 	everything <- intersect(intersect(allEnsemble,ssolved),hsolved)
 	
 } else {
-	allEnsemble <- esolved
+	allFailed <- setdiff(all, union(allsolved,union(rerunSolved,manual) ))
 	# Ones that solved by everything
 	# 44
 	everything <- intersect(intersect(esolved, ssolved), hsolved)
+	
+	theLot <- intersect(everything,rerunSolved)
 }
 
 
-png("finalResultsVenn.png")
+postscript("finalResultsVenn.eps", horizontal = FALSE, onefile = FALSE, paper = "special")
 #par(oma=c(2,2,2,2), mar=c(2,2,2,2)) 
 venn.plot <- draw.triple.venn(
-		area1 = length(allEnsemble),
+		area1 = length(esolved),
 		area2 = length(ssolved),
 		area3 = length(hsolved),
-		n12 = length(intersect(allEnsemble,ssolved)),
+		n12 = length(intersect(esolved,ssolved)),
 		n23 = length(intersect(ssolved,hsolved)),
-		n13 = length(intersect(allEnsemble,hsolved)),
+		n13 = length(intersect(esolved,hsolved)),
 		n123 = length(everything),
 		category = c("Ensembles", "Single\nStructures ", "Polyalanine\nHelices"),
 		euler.d = FALSE,
@@ -1454,7 +1456,7 @@ dev.off()
 
 data$howSolved <- 0 # default - solved with something
 data[ data$pdbCode %in%  allFailed, ]$howSolved <- -1
-data[ data$pdbCode %in%  everything, ]$howSolved <- 1
+data[ data$pdbCode %in%  theLot, ]$howSolved <- 1
 data[ data$pdbCode %in%  rerunSolved, ]$howSolved <- 2
 data[ data$pdbCode %in%  manual, ]$howSolved <- 3
 data[ data$pdbCode %in%  onlySingle, ]$howSolved <- 4
@@ -1474,7 +1476,7 @@ p + geom_point( data=data[ data$howSolved==-1, ],
 		geom_point( data=data[ data$howSolved==4, ],
 				aes(x=resolution, y=fastaLength), shape=13, colour=scolour ) +
 		theme(legend.position="none")
-ggsave("finalSummaryFasta.png")
+ggsave("z_finalSummaryChainLength.eps",scale=1.5)
 
 p <- ggplot()
 p + geom_point( data=data[ data$howSolved==-1, ],
@@ -1490,5 +1492,5 @@ p + geom_point( data=data[ data$howSolved==-1, ],
 		geom_point( data=data[ data$howSolved==4, ],
 				aes(x=resolution, y=numResidues), shape=13, colour=scolour ) +
 		theme(legend.position="none")
-ggsave("finalSummaryNumResidues.png")
+ggsave("finalSummaryNumResidues.eps",scale=1.5)
 
