@@ -7,7 +7,6 @@ scolour="#3333FF"
 fcolour="#FF0000"
 pcolour='#FF00FF'
 
-
 comparison=FALSE
 #data <- read.table(file="results.csv",sep=',', header=T)
 
@@ -44,7 +43,6 @@ todrop <- c(
 
 data <- data[, !(colnames(data) %in% todrop)]
 
-
 updateData <- function(data){
 	data$successShelxe <- as.numeric( data$shelxeCC >= 25 & data$shelxeAvgChainLength >= 10 )
 	data$successShelxe <- replace( data$successShelxe, is.na(data$successShelxe), 0 )
@@ -73,6 +71,17 @@ updateData <- function(data){
 
 data <- updateData(data)
 
+if (!comparison){
+	# Hack to add in data for manual cases - see /media/data/shared/coiled-coils/ensemble/manual
+	# 3BAS
+	data[ data$pdbCode=="3BAS"& data$ensembleName=="poly_ala_trunc_51.929237_rad_2", ]$buccFinalRfact <- 0.2947
+	data[ data$pdbCode=="3BAS"& data$ensembleName=="poly_ala_trunc_51.929237_rad_2", ]$buccFinalRfree <- 0.436
+	data[ data$pdbCode=="3BAS"& data$ensembleName=="poly_ala_trunc_51.929237_rad_2", ]$successRebuild <- 1
+	data[ data$pdbCode=="3BAS"& data$ensembleName=="poly_ala_trunc_51.929237_rad_2", ]$success <- 1
+	#3CVF
+	data[ data$pdbCode=="3CVF"& data$ensembleName=="poly_ala_trunc_3.742193_rad_1", ]$success <- 1
+}
+	
 
 # Categories for resolution
 data$resCat <- 0
@@ -383,20 +392,21 @@ x[ x$fastaLength == max(x$fastaLength), c("pdbCode","ensembleName") ]
 #x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
 # 3K29 SCWRL_reliable_sidechains_trunc_168.103952_rad_3 100% 169 residues
 
-# Min
-#x <- sdata[ sdata$ensemblePercentModel == min( sdata$ensemblePercentModel ), ]
-#x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
-# 3OKQ poly_ala_trunc_0.202334_rad_1 4% 7 residues
-
 # Longest model that solved
 #x <- sdata[ sdata$ensembleNumResidues == max( sdata$ensembleNumResidues ), ]
 #x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
 # 3K29 SCWRL_reliable_sidechains_trunc_168.103952_rad_3 169 residues
 
+# Min
+#x <- sdata[ sdata$ensemblePercentModel == min( sdata$ensemblePercentModel ), ]
+#x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
+# 3OKQ poly_ala_trunc_0.202334_rad_1 4% 7 residues
+
 # Shortest model that solved
 #x <- sdata[ sdata$ensembleNumResidues == min( sdata$ensembleNumResidues ), ]
 #x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
-#  2OVC SCWRL_reliable_sidechains_trunc_0.012153_rad_1  5 residues fasta: 33
+# 1YOD SCWRL_reliable_sidechains_trunc_0.000777_rad_1 
+
 
 #
 # Plots
@@ -419,19 +429,22 @@ if (comparison){
 	# 165 single model success
 	# 3627 both fail
 	
-	# Ensemble vs single model
+	# Ensemble vs single model - exclude those with zero scores
+	#p <-ggplot(data=smdata[ smdata$shelxeCC >0 & smdata$single_model_shelxeCC >0,  ],
+	#stat_sum( aes(size=..n..) ) + # skip as Olga didn't like
 	p <-ggplot(data=smdata,
 			aes(shelxeCC,single_model_shelxeCC,colour=factor(ESresult)))
 	p + geom_point(size=1.5) +
-	stat_sum( aes(size=..n..) ) +
 	scale_colour_manual( name="Result",
 			values=scols,
 			labels=c("Both Failed","Ensemble success", "Single-structure success", "Both succeeed")
 	) +
 	xlab("Ensemble Shelxe CC score") +
 	ylab("Single centroid structure CC score") +
+	theme(legend.position="none")
 	#ggtitle("Ensemble and Single-structure CC scores")
 	ggsave("z_singleStructureVsEnsembleCC.eps",scale=1.5)
+	ggsave("z_singleStructureVsEnsembleCC.png")
 	
 	# Length distribution of ideal helcies
 	p <-ggplot(data=hdata[ hdata$success==1,], aes(x=polyaLength) )
@@ -512,32 +525,35 @@ if (comparison){
 
 
 
-# Timings
-# proportion for all runs where there was a shelxe build
-
-# For some phaser runs the logs are not complete so we have no timing data - we set these to 0
-data$phaserTime <- replace( data$phaserTime, is.na(data$phaserTime), 0 )
-data$shelxeTime <- replace( data$shelxeTime, is.na(data$shelxeTime), 0 )
-
-# modelling etc is same for all models so don't want to average across jobs, but targets
-tsum <- data[ !duplicated(data$pdbCode), c("pdbCode","fragmentTime","modelTime","ensembleTime")]
-mr <- aggregate( data[ , c("phaserTime", "shelxeTime") ], by=list( data$pdbCode ), FUN=mean)
-names(mr)[1] <- "pdbCode" # unnecessary - just for REM
-tsum$phaserTime <- mr$phaserTime
-tsum$shelxeTime <- mr$shelxeTime
-
-write.csv(tsum, "timingData.csv", row.names=FALSE)
-x <- c( mean(tsum$fragmentTime), mean(tsum$modelTime), mean(tsum$ensembleTime), mean(tsum$phaserTime), mean(tsum$shelxeTime) )
-
-lbls <- c("fragmentTime","modelTime","ensembleTime","phaserTime", "shelxeTime")
-lbls <- paste(lbls, round(x), sep="\n") # add times to labels 
-png("timingsPie.png")
-pie( as.numeric( x ),
-		labels=lbls,
-		col=rainbow(length(lbls))
-)
-#		main="Timings for all runs inc. shelxe" )
-dev.off()
+if (!comparison) {
+	# skip when not comparison as didn't calcualte the timings
+	# Timings
+	# proportion for all runs where there was a shelxe build
+	
+	# For some phaser runs the logs are not complete so we have no timing data - we set these to 0
+	data$phaserTime <- replace( data$phaserTime, is.na(data$phaserTime), 0 )
+	data$shelxeTime <- replace( data$shelxeTime, is.na(data$shelxeTime), 0 )
+	
+	# modelling etc is same for all models so don't want to average across jobs, but targets
+	tsum <- data[ !duplicated(data$pdbCode), c("pdbCode","fragmentTime","modelTime","ensembleTime")]
+	mr <- aggregate( data[ , c("phaserTime", "shelxeTime") ], by=list( data$pdbCode ), FUN=mean)
+	names(mr)[1] <- "pdbCode" # unnecessary - just for REM
+	tsum$phaserTime <- mr$phaserTime
+	tsum$shelxeTime <- mr$shelxeTime
+	
+	write.csv(tsum, "timingData.csv", row.names=FALSE)
+	x <- c( mean(tsum$fragmentTime), mean(tsum$modelTime), mean(tsum$ensembleTime), mean(tsum$phaserTime), mean(tsum$shelxeTime) )
+	
+	lbls <- c("fragmentTime","modelTime","ensembleTime","phaserTime", "shelxeTime")
+	lbls <- paste(lbls, round(x), sep="\n") # add times to labels 
+	png("timingsPie.png")
+	pie( as.numeric( x ),
+			labels=lbls,
+			col=rainbow(length(lbls))
+	)
+	#		main="Timings for all runs inc. shelxe" )
+	dev.off()
+}
 
 
 ###############################################################################################################################
@@ -1394,32 +1410,16 @@ onlyh <- hsolved[ ! hsolved %in% union(esolved,ssolved) ] # 3H00 - solved in rer
 # ones that only solved with single structures
 onlys <- ssolved[ ! ssolved %in% union(esolved,hsolved) ] # 2Q5U 4DZK 3U1C # 4DZK only solved with the single structure
 
-if (FALSE) {
-	# This bundles in the reruns from the ensembles and the manual ones too
-	
-	# Ones that only sovled with reruns
-	setdiff(rerunSolved,allsolved) # 1MI7 2BEZ 2ZZO 3H7Z 3U1A
-	
-	# check - everything that solved
-	length(union(rerunSolved,union(manual,allsolved))) # 78 - minus 1 for 4DZK - 77 => 77/94= 82%
-	
-	allFailed <- setdiff(all, union(allsolved,union(rerunSolved,manual) ))
-	
-	allEnsemble <- union(union(esolved,rerunSolved),manual)
-	
-	everything <- intersect(intersect(allEnsemble,ssolved),hsolved)
-	
-} else {
-	allFailed <- setdiff(all, union(allsolved,union(rerunSolved,manual) ))
-	# Ones that solved by everything
-	# 44
-	everything <- intersect(intersect(esolved, ssolved), hsolved)
-	
-	theLot <- intersect(everything,rerunSolved)
-}
 
+allFailed <- setdiff(all, union(allsolved,union(rerunSolved,manual) ))
+# Ones that solved by everything - excluding reruns (44)
+everything <- intersect(intersect(esolved, ssolved), hsolved)
 
-postscript("finalResultsVenn.eps", horizontal = FALSE, onefile = FALSE, paper = "special")
+everythingRerun <- union(everything,rerunSolved)
+
+# Bug with postscript or venn?
+#postscript("z_finalResultsVenn.eps", horizontal = FALSE, onefile = FALSE, paper = "special")
+pdf("z_finalResultsVenn.pdf")
 #par(oma=c(2,2,2,2), mar=c(2,2,2,2)) 
 venn.plot <- draw.triple.venn(
 		area1 = length(esolved),
@@ -1455,12 +1455,11 @@ dev.off()
 # - failed
 
 data$howSolved <- 0 # default - solved with something
-data[ data$pdbCode %in%  allFailed, ]$howSolved <- -1
-data[ data$pdbCode %in%  theLot, ]$howSolved <- 1
-data[ data$pdbCode %in%  rerunSolved, ]$howSolved <- 2
-data[ data$pdbCode %in%  manual, ]$howSolved <- 3
-data[ data$pdbCode %in%  onlySingle, ]$howSolved <- 4
-
+data[ data$pdbCode %in%  allFailed, ]$howSolved <- -1 # didn't solve
+data[ data$pdbCode %in%  everythingRerun, ]$howSolved <- 1 # solved with everything - including the reruns
+data[ data$pdbCode %in%  rerunSolved, ]$howSolved <- 2 # just rerun
+data[ data$pdbCode %in%  manual, ]$howSolved <- 3 # manual
+data[ data$pdbCode %in%  onlySingle, ]$howSolved <- 4 # only with single-structure
 
 p <- ggplot()
 p + geom_point( data=data[ data$howSolved==-1, ],
@@ -1475,8 +1474,11 @@ p + geom_point( data=data[ data$howSolved==-1, ],
 				aes(x=resolution, y=fastaLength), shape=0, colour=pcolour ) +
 		geom_point( data=data[ data$howSolved==4, ],
 				aes(x=resolution, y=fastaLength), shape=13, colour=scolour ) +
+		xlab("Resolution (\uc5)") +
+		ylab("Chain length in residues") +
 		theme(legend.position="none")
 ggsave("z_finalSummaryChainLength.eps",scale=1.5)
+ggsave("z_finalSummaryChainLength.png")
 
 p <- ggplot()
 p + geom_point( data=data[ data$howSolved==-1, ],
@@ -1491,6 +1493,8 @@ p + geom_point( data=data[ data$howSolved==-1, ],
 				aes(x=resolution, y=numResidues), shape=0, colour=pcolour ) +
 		geom_point( data=data[ data$howSolved==4, ],
 				aes(x=resolution, y=numResidues), shape=13, colour=scolour ) +
+		xlab("Resolution (\uc5)") +
+		ylab("Num. residues in ASU") +
 		theme(legend.position="none")
 ggsave("finalSummaryNumResidues.eps",scale=1.5)
 
