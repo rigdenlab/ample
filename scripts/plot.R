@@ -110,6 +110,11 @@ data$resCatw[data$resolution >= 2.6 ] <- "5: res. > 2.6"
 # Data for which there are placed models and we have an origin
 odata = data[ ! is.na(data$ccmtzOrigin) & ! is.na( data$phaserLLG), ]
 
+#Calculate proportion of in/out in rioGood
+#prop.table(as.matrix(x[-1]),margin=1)
+odata$propRioIn <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)[,1]
+odata$propRioOut <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)[,2]
+
 # Data for those that worked
 sdata = data[ data$success == 1, ]
 
@@ -447,11 +452,11 @@ if (comparison){
 			labels=c("Both Failed","Ensemble success", "Single-structure success", "Both succeeed")
 	) +
 	xlab("Ensemble Shelxe CC score") +
-	ylab("Single centroid structure CC score") +
-	theme(legend.position="none")
+	ylab("Single centroid structure CC score")
+	#theme(legend.position="none")
 	#ggtitle("Ensemble and Single-structure CC scores")
-	ggsave("z_singleStructureVsEnsembleCC.eps",scale=1.5)
-	ggsave("z_singleStructureVsEnsembleCC.png")
+	ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_singleStructureVsEnsembleCC.eps",scale=1.5)
+	ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_singleStructureVsEnsembleCC.png")
 	
 	# Length distribution of ideal helcies
 	p <-ggplot(data=hdata[ hdata$success==1,], aes(x=polyaLength) )
@@ -464,8 +469,8 @@ if (comparison){
 			ylab("Number of cases") +
 			xlab("Length of ideal helix") +
 			#ggtitle("Distribution of polya helices")
-	ggsave("z_lengthIdealHelices.eps",scale=1.5)
-	ggsave("z_lengthIdealHelices.png")
+	ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_lengthIdealHelices.eps",scale=1.5)
+	ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_lengthIdealHelices.png")
 
 #	# Helix vs Single model
 #	# Need to pull out the different side chain treamtments
@@ -531,8 +536,6 @@ if (comparison){
 #geom_point(mapping=aes(x=resolution,y=successSingleStructure ), colour="blue") +
 #geom_point(mapping=aes(x=resolution,y=successHelix), colour="green")
 
-
-
 if (!comparison) {
 	# skip when not comparison as didn't calcualte the timings
 	# Timings
@@ -582,11 +585,11 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
 				guide=FALSE) +
-		xlab("Number of residues in ensemble") +
-		ylab("Number of ensembles") +
+		xlab("Number of residues per chain in search model") +
+		ylab("Number of search models") +
 		#ggtitle("Number of residues in ensemble for successful and failing cases")
-ggsave("z_residuesPerEnsemble.png")
-ggsave("z_residuesPerEnsemble.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_residuesPerEnsemble.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_residuesPerEnsemble.eps",scale=1.5)
 
 p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
@@ -595,11 +598,11 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 				name="Success/Failure",
 				labels=c("Failure", "Success"),
 				guide=FALSE) +
-		xlab("Percent of residues in ensemble") +
-		ylab("Number of ensembles") +
+		xlab("% of residues per chain in search model") +
+		ylab("Number of search models") +
 		#ggtitle("Percentage of residues in ensemble for successful and failing cases")
-ggsave("z_residuesPerEnsemblePercent.png")
-ggsave("z_residuesPerEnsemblePercent.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_residuesPerEnsemblePercent.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_residuesPerEnsemblePercent.eps",scale=1.5)
 
 # Number that solved under each side-chain treatment
 p <-ggplot( data=data, aes( factor(ensembleSideChainTreatment), fill=factor(success) ) ) 
@@ -613,8 +616,8 @@ p + geom_histogram( position = 'dodge', labeller=labeller ) +
 		ylab("Number of cases") +
 		xlab("Side-chain Treatment") +
 		#ggtitle("Histogram of side-chain treatment for successful and failing cases")
-ggsave("z_sideChainHistogram.png")
-ggsave("z_sideChainHistogram.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_sideChainHistogram.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_sideChainHistogram.eps",scale=1.5)
 
 # Number that solved under each sub-clustering radius
 p <-ggplot( data=data, aes( factor(ensembleRadiusThreshold), fill=factor(success) ) ) 
@@ -626,7 +629,8 @@ p + geom_histogram( position = 'dodge' ) +
 		ylab("Number of cases") +
 		xlab("Sub-clustering radius") +
 		#ggtitle("Histogram of sub-clustering for successful and failing cases")
-ggsave("subClusteringRadiusHistogram.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_subClusteringRadiusHistogram.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_subClusteringRadiusHistogram.png")
 
 
 # As a table
@@ -709,13 +713,13 @@ p + geom_point( data=summaryData[ summaryData$success == 0, ],
 	geom_point( data=summaryData[ summaryData$success > 0, ],
 			aes(x=resolution, y=fastaLength, size=success), colour=scolour)	+
 	xlab("Resolution (\uc5)") +
-	ylab("Chain length in residues") +
+	ylab("Target chain length in residues") +
 #	theme(legend.position="none",
 #			axis.line=element_line(size = 0.5),
 #			axis.title=element_text(size=15),
 #			axis.text=element_text(size=12) )
-ggsave("z_resolutionVsChainLength.eps",scale=1.5)
-ggsave("z_resolutionVsChainLength.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_resolutionVsChainLength.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_resolutionVsChainLength.png")
 		
 # Open circles sized by the number of models and coloured by success. Filled blue circles indicate # successes
 p <- ggplot()
@@ -727,10 +731,10 @@ p + geom_point( data=summaryData[ summaryData$success == 0, ],
 		geom_point( data=summaryData[ summaryData$success > 0, ],
 				aes(x=resolution, y=numResidues, size=success), colour=scolour)	+
 		xlab("Resolution (\uc5)") +
-		ylab("Num. residues in ASU") +
-		theme(legend.position="none")
-ggsave("z_resolutionVsNumResidues.eps",scale=1.5)
-ggsave("z_resolutionVsNumResidues.png")
+		ylab("Num. residues in ASU") 
+		#theme(legend.position="none")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_resolutionVsNumResidues.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_resolutionVsNumResidues.png")
 
 
 #p <- ggplot()
@@ -858,8 +862,8 @@ p + geom_histogram( position = 'dodge', binwidth = 0.01 ) +
 		ylab("Number of cases") +
 		xlab("TM-score of model to crystal structure") +
 		#ggtitle("Histogram of TM-score for models for successful and failing cases")
-ggsave("z_modelTM.png")
-ggsave("z_modelTM.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_modelTM.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_modelTM.eps",scale=1.5)
 
 p <-ggplot(data=data, aes(x=ensembleNativeRMSD, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
@@ -883,9 +887,10 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 				guide=FALSE) +
 		ylab("Number of cases") +
 		xlab("REFORIGIN RMSD of placed model to crystal structure") +
+		geom_vline(aes(xintercept=3), colour="#000000", linetype="dashed")
 		#ggtitle("Histogram of reforigin RMSD scores by success")
-ggsave("z_reforiginRMSD.png")
-ggsave("z_reforiginRMSD.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_reforiginRMSD.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_reforiginRMSD.eps",scale=1.5)
 
 ###############################################################################################################################
 #
@@ -953,10 +958,7 @@ p + geom_histogram( position = 'dodge', binwidth = 0.05 ) +
 		ggtitle("RIO as proportion of model")
 ggsave("rioModelHistogramProp.eps",scale=1.5)
 
-#Calculate proportion of in/out in rioGood
-#prop.table(as.matrix(x[-1]),margin=1)
-odata$propRioIn <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)[,1]
-odata$propRioOut <- prop.table(as.matrix( odata[, c("ccmtzRioInregister","ccmtzRioOoRegister") ]),margin=1)[,2]
+
 #odata$propRioIn <- replace( odata$propRioIn, is.na(odata$propRioIn), -1 )
 
 # Proportion RIO of native
@@ -1066,8 +1068,8 @@ p + geom_histogram( binwidth = 1, fill="#3333FF" ) +
 		ylab("Number of cases") +
 		xlab(expression(paste("% RIO_out C",alpha))) +
 		#ggtitle(expression(paste("Percentage of RIO_out C",alpha," for successes")))
-ggsave("z_percentOutRegister.eps",scale=1.5)
-ggsave("z_percentOutRegister.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_percentOutRegister.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_percentOutRegister.png")
 
 # Length distribution of RIO scores
 p <-ggplot(data=odata, aes(x=ccmtzRioGood, fill=factor(success) ) )
@@ -1136,18 +1138,25 @@ p + geom_point() +
 		ggtitle("RIO_in versus RIO_out")
 ggsave("rioInVsRioOut.eps",scale=1.5)
 
-p <-ggplot(data=odata[odata$ccmtzRioOoRegister + odata$ccmtzRioInregister > 0, ], aes(x=ccmtzRioOoRegister, y=ccmtzRioInregister, colour=factor(success) ) ) 
-p + geom_point() +
-		stat_sum( aes(size=..n..) ) +
-		scale_colour_manual( values=c(fcolour,scolour),
-				name="Success/Failure",
-				labels=c("Failure", "Success"),
-				guide=FALSE) +
-		xlab("RIO_out") +
-		ylab("RIO_in") +
-		#ggtitle("RIO_in versus RIO_out (RIO > 0)")
-ggsave("z_rioInVsRioOutGtZero.png")
-ggsave("z_rioInVsRioOutGtZero.eps",scale=1.5)
+p <-ggplot(data=odata[odata$ccmtzRioOoRegister + odata$ccmtzRioInregister > 0, ],
+		aes(x=ccmtzRioOoRegister, y=ccmtzRioInregister, colour=factor(success) ) ) 
+p + 
+	#geom_point() +
+	stat_sum( aes(size=..n..) ) +
+	scale_colour_manual( values=c(fcolour,scolour),
+			guide=FALSE
+			#name="Success/Failure",
+			#labels=c("Failure", "Success"),
+			) +
+	xlab("RIO_out") +
+	ylab("RIO_in") +
+	scale_size(name="Number of\nsearch models",
+			breaks=c(1,10,100,300),
+			range=c(1,10) ) +
+	theme(legend.position="right")
+	#ggtitle("RIO_in versus RIO_out (RIO > 0)")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_rioInVsRioOutGtZero.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_rioInVsRioOutGtZero.eps",scale=1.5)
 
 #p <-ggplot(data=odata[ odata$ccmtzRioGood > 0, ], aes(x=propRioIn, fill=factor(success)) )
 #p + geom_histogram( binwidth = 0.05, position='dodge' ) 
@@ -1357,8 +1366,9 @@ p + geom_point(data=data[ ! is.na( data$phaserLLG) & ! is.na( data$phaserTFZ) & 
 		) + 	
 		xlab("Phaser TFZ") +
 		ylab("Phaser LLG") +
-		ggtitle("Phaser LLG vs Phaser TFZ")
-ggsave("LLGvsTFZ.eps",scale=1.5)
+		#ggtitle("Phaser LLG vs Phaser TFZ")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_LLGvsTFZ.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_LLGvsTFZ.eps",scale=1.5)
 
 # Below for truncating the y-axis
 # scale_y_continuous( limits=c(-3000, max(data$phaserLLG, na.rm=TRUE) )  )+
@@ -1382,10 +1392,10 @@ p + geom_point( data=hsdata,
 				aes(x=resolution, y=fastaLength, colour=factor(worked)), shape=16) +
 		scale_colour_manual( values=c(fcolour, scolour)) +
 		xlab("Resolution (\uc5)") +
-		ylab("Chain length in residues") +
+		ylab("Target chain length in residues") +
 		theme(legend.position="none")
-ggsave("z_polyaResultsChain.png")
-ggsave("z_polyaResultsChain.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_polyaResultsChain.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_polyaResultsChain.eps",scale=1.5)
 
 p <- ggplot()
 p + geom_point( data=hsdata,
@@ -1397,7 +1407,6 @@ p + geom_point( data=hsdata,
 ggsave("polyaResultsASU.eps",scale=1.5)
 
 #q()
-
 library("ggplot2")
 library("VennDiagram")
 # Below for comparison of single runs (/home/jmht/Documents/work/CC/all_results) or comparisonResults.csv in google
@@ -1440,7 +1449,7 @@ everythingRerun <- union(everything,rerunSolved)
 
 # Bug with postscript or venn?
 #postscript("z_finalResultsVenn.eps", horizontal = FALSE, onefile = FALSE, paper = "special")
-pdf("z_finalResultsVenn.pdf")
+pdf("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_finalResultsVenn.pdf")
 #par(oma=c(2,2,2,2), mar=c(2,2,2,2)) 
 venn.plot <- draw.triple.venn(
 		area1 = length(esolved),
@@ -1450,7 +1459,7 @@ venn.plot <- draw.triple.venn(
 		n23 = length(intersect(ssolved,hsolved)),
 		n13 = length(intersect(esolved,hsolved)),
 		n123 = length(everything),
-		category = c("Ensembles", "Single\nStructures ", "Polyalanine\nHelices"),
+		category = c("Ensembles", "Single\nStructures ", "Ideal\nHelices"),
 		euler.d = FALSE,
 		scaled=FALSE,
 		fill = c("blue", "red", "green"),
@@ -1496,10 +1505,10 @@ p + geom_point( data=data[ data$howSolved==-1, ],
 		geom_point( data=data[ data$howSolved==4, ],
 				aes(x=resolution, y=fastaLength), shape=13, colour=scolour ) +
 		xlab("Resolution (\uc5)") +
-		ylab("Chain length in residues") +
+		ylab("Target chain length in residues") +
 		theme(legend.position="none")
-ggsave("z_finalSummaryChainLength.eps",scale=1.5)
-ggsave("z_finalSummaryChainLength.png")
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_finalSummaryChainLength.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/z_finalSummaryChainLength.png")
 
 p <- ggplot()
 p + geom_point( data=data[ data$howSolved==-1, ],
@@ -1517,5 +1526,5 @@ p + geom_point( data=data[ data$howSolved==-1, ],
 		xlab("Resolution (\uc5)") +
 		ylab("Num. residues in ASU") +
 		theme(legend.position="none")
-ggsave("finalSummaryNumResidues.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/finalSummaryNumResidues.eps",scale=1.5)
 
