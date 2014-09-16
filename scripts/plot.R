@@ -277,7 +277,7 @@ summaryData <- data[ order( data$pdbCode, data$success, data$shelxeCC, decreasin
 
 # Select top by selecting not duplicates on pdbCode
 summaryData <- summaryData[ !duplicated(summaryData$pdbCode), c("pdbCode","fastaLength","resolution","spaceGroup","numChains",
-				"numResidues", "shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
+				"estChainsASU","matthewsCoefficient","numResidues","numAtoms", "shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
 
 # For helix
 #summaryData <- summaryData[ !duplicated(summaryData$pdbCode), c("pdbCode","polyaLength","resolution","shelxeCC", "shelxeAvgChainLength","shelxeNumChains")  ]
@@ -419,11 +419,11 @@ x[ x$fastaLength == max(x$fastaLength), c("pdbCode","ensembleName") ]
 #x[ order( x$fastaLength, decreasing=TRUE ), ][1,]
 # 1YOD SCWRL_reliable_sidechains_trunc_0.000777_rad_1 
 
-
+q()
 #
 # Plots
 #
-scols <- c("0" = "red","1" = "yellow","2" = "orange", "3" = "blue")
+scols <- c("0" = "red","1" = "magenta","2" = "orange", "3" = "blue")
 
 if (comparison){
 	
