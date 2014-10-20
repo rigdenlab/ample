@@ -232,7 +232,8 @@ if (comparison){
 #			axis.line=element_line(size = 0.5),
 #			axis.title=element_text(size=15),
 #			axis.text=element_text(size=12) )
-	ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-9 (Rigden).eps",scale=1.5)
+	#ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-9 (Rigden).eps",scale=1.5)
+	ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-9 (Rigden).eps")
 	ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-9 (Rigden).png")
 
 } # End comparison
@@ -603,7 +604,7 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		xlab("Number of residues per chain in search model") +
 		ylab("Number of search models") +
 		#ggtitle("Number of residues in ensemble for successful and failing cases")
-ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-3a.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-3a.eps")
 
 p <-ggplot(data=data, aes(x=ensemblePercentModel, fill=factor(success) ) )
 #p + geom_histogram(alpha = 0.5, position = 'identity', binwidth = 5 ) +
@@ -615,7 +616,7 @@ p + geom_histogram( position = 'dodge', binwidth = 5 ) +
 		xlab("% of residues per chain in search model") +
 		ylab("Number of search models") +
 		#ggtitle("Percentage of residues in ensemble for successful and failing cases")
-ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-3b.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-3b.eps")
 
 # Number that solved under each side-chain treatment
 p <-ggplot( data=data, aes( factor(ensembleSideChainTreatment), fill=factor(success) ) ) 
@@ -630,7 +631,7 @@ p + geom_histogram( position = 'dodge', labeller=labeller ) +
 		xlab("Side-chain Treatment") +
 		#ggtitle("Histogram of side-chain treatment for successful and failing cases")
 ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-6 (Rigden).png")
-ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-6 (Rigden).eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-6 (Rigden).eps")
 
 # Number that solved under each sub-clustering radius
 p <-ggplot( data=data, aes( factor(ensembleRadiusThreshold), fill=factor(success) ) ) 
@@ -642,7 +643,7 @@ p + geom_histogram( position = 'dodge' ) +
 		ylab("Number of cases") +
 		xlab("Sub-clustering radius") +
 		#ggtitle("Histogram of sub-clustering for successful and failing cases")
-ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-8 (Rigden).eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-8 (Rigden).eps")
 ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-8 (Rigden).png")
 
 
@@ -663,7 +664,7 @@ p + geom_point() +
 		xlab("Shelxe CC score") +
 		ylab("Buccaneer Rfree") +
 		ggtitle("Shelxe Buccanner Rfree score")
-ggsave("buccaneerRfreeVsCC.eps",scale=1.5)
+ggsave("buccaneerRfreeVsCC.eps")
 
 # CC distribution
 p <-ggplot(data=data, aes(x=shelxeCC, fill=factor(success) ) )
@@ -675,7 +676,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		ylab("Number of cases") +
 		xlab("CC score") +
 		ggtitle("Histogram of CC scores by success")
-ggsave("CCHistogram.eps",scale=1.5)
+ggsave("CCHistogram.eps")
 
 #coord_fixed() +
 p <-ggplot(data=data[ data$success==1, ], aes(x=buccFinalRfree, y=arpWarpFinalRfree) )
@@ -690,7 +691,7 @@ p + geom_point() +
 		xlab("Buccaneer Rfree") +
 		ylab("ARP/wARP Rfree") +
 		ggtitle("Bucc vs Arpwarp")
-ggsave("buccaneerVsArpwarpRfree.eps",scale=1.5)
+ggsave("buccaneerVsArpwarpRfree.eps")
 
 
 ## Resolution vs length1
@@ -731,7 +732,7 @@ p + geom_point( data=summaryData[ summaryData$success == 0, ],
 #			axis.line=element_line(size = 0.5),
 #			axis.title=element_text(size=15),
 #			axis.text=element_text(size=12) )
-ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Figure-1_data.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Figure-1_data.eps")
 ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Figure-1_data.png")
 		
 # Open circles sized by the number of models and coloured by success. Filled blue circles indicate # successes
@@ -746,7 +747,7 @@ p + geom_point( data=summaryData[ summaryData$success == 0, ],
 		xlab("Resolution (\uc5)") +
 		ylab("Num. residues in ASU") 
 		#theme(legend.position="none")
-ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-1.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-1.eps")
 ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-1.png")
 
 
@@ -902,7 +903,7 @@ p + geom_histogram( position = 'dodge', binwidth = 1 ) +
 		geom_vline(aes(xintercept=3), colour="#000000", linetype="dashed")
 		#ggtitle("Histogram of reforigin RMSD scores by success")
 ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-5 (Rigden).png")
-ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-5 (Rigden).eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-5 (Rigden).eps")
 
 ###############################################################################################################################
 #
@@ -1378,7 +1379,7 @@ p + geom_point(data=data[ ! is.na( data$phaserLLG) & ! is.na( data$phaserTFZ) & 
 		ylab("PHASER LLG") +
 		#ggtitle("Phaser LLG vs Phaser TFZ")
 ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-4.png")
-ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-4.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-4.eps")
 
 # Below for truncating the y-axis
 # scale_y_continuous( limits=c(-3000, max(data$phaserLLG, na.rm=TRUE) )  )+
@@ -1405,7 +1406,7 @@ p + geom_point( data=hsdata,
 		ylab("Target chain length in residues") +
 		theme(legend.position="none")
 ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-7 (Rigden).png")
-ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-7 (Rigden).eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Supp Figure-7 (Rigden).eps")
 
 p <- ggplot()
 p + geom_point( data=hsdata,
@@ -1546,7 +1547,7 @@ p + geom_point( data=data[ data$howSolved==-1, ],
 		xlab("Resolution (\uc5)") +
 		ylab("Target chain length in residues") +
 		#theme(legend.position="none")
-ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Figure-3_data.eps",scale=1.5)
+ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Figure-3_data.eps")
 ggsave("/home/jmht/Dropbox/PHD/CoiledCoilPaper/Figure-3_data.png")
 
 p <- ggplot()
