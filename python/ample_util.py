@@ -65,11 +65,12 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
-def extractAlldecoy(tfile,fileName='alldecoy.pdb',directory=None):
-    with tarfile.open(tfile,'r:*') as tf:
+def extractFile(tarArchive,fileName,directory=None):
+    """Extract a file from a tar.gz archive into the directory and return the name of the file"""
+    with tarfile.open(tarArchive,'r:*') as tf:
         m = tf.getmembers()
         if not len(m):
-            raise RuntimeError,'Empty archive: {0}'.format(tfile)
+            raise RuntimeError,'Empty archive: {0}'.format(tarArchive)
         if len(m)==1 and m[0].name==fileName:
             tf.extractall(path=directory)
             return m[0].name

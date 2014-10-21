@@ -29,9 +29,9 @@ if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
 # Add the ample python folder to the PYTHONPATH
-#sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
-root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
-sys.path.append( os.path.join( root, "python" ) )
+sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+#sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
 import argparse
@@ -198,6 +198,9 @@ parser.add_argument('-psipred_ss2', metavar='psipred file', type=str, nargs=1,
 
 parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
                    help='Path to Phenix executable')
+
+parser.add_argument('-quark_models', type=str, nargs=1,
+                   help='A file containing quark models (either a tar.gz file with a pdb containing the models, or the pdb file itself)')
 
 parser.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, nargs=1,
                    help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
@@ -440,26 +443,33 @@ if amopt.d['import_cluster']:
     logger.info("Found directory with cluster files: {0}\n".format( amopt.d['import_cluster'] ) )
     amopt.d['make_frags'] = False
     amopt.d['make_models'] = False
+    
+# Importing quark models
+if amopt.d['quark_models']:
+    logger.info("Attempting to use quark models from file: {0}".format(amopt.d['quark_models']))
+    if not os.path.isfile(amopt.d['quark_models']):
+        logger.critical('Cannot find quark model file: {0}'.format(amopt.d['quark_models']))
+        sys.exit(1)
+        
+    dirname,fname = os.path.split(amopt.d['quark_models'])
+    # First see if we need to extract the files from the archive
+    if fname.endswith(".tar.gz") or fname.endswith(".tgz"):
+        logger.info("Extracting quark alldecoy.pdb file from archive: {0}".format(amopt.d['quark_models']))
+        # Extract the alldecoy.pdb file from the archive
+        fname=ample_util.extractFile(amopt.d['quark_models'],fileName='alldecoy.pdb',directory=amopt.d['work_dir'])
+        if not fname:
+            logger.critical('Cannot extract alldecoy.pdb from archive: {0}'.format(amopt.d['quark_models']))
+            sys.exit(1)            
+        amopt.d['quark_models']=os.path.join(amopt.d['work_dir'],fname) # Construct new path to file
 
+    # Need to create the quark pdbs from the monolithic quark pdb
+    logger.info("Creating directory of quark models from: {0}".format(amopt.d['quark_models']))
+    quark_models=os.path.join(amopt.d['work_dir'],'quark_models')
+    ample_util.splitQuark(amopt.d['quark_models'],directory=quark_models)
+    amopt.d['models_dir']=quark_models
+    
 # Check if importing models
 if amopt.d['models_dir']:
-
-    # First check for quark models
-    f=amopt.d['models_dir']
-    dirname,fname = os.path.split(f)
-    if fname=="decoys.tar.gz":
-        logger.info("Extracting quark dalldecoy.pdb from archive: {0}".format(f))
-        # Extract the alldecoy.pdb file from the archive
-        fname = ample_util.extractAlldecoy(f,directory=amopt.d['work_dir'])
-        f=os.path.join(amopt.d['work_dir'],fname) # Construct new path to file
-
-    if fname=='alldecoy.pdb':
-        # Need to create the quark pdbs from the monolithic quark pdb
-        d=os.path.join(amopt.d['work_dir'],'quark_models')
-        logger.info("Extracting quark decoys from: {0}".format(f))
-        ample_util.splitQuark(f,directory=d)
-        amopt.d['models_dir']=d
-
     if not os.path.isdir( amopt.d['models_dir'] ) or not len( glob.glob( os.path.join( amopt.d['models_dir'], "*.pdb" ) ) ):
         msg = "Cannot import models from the directory: {0}".format( amopt.d['models_dir'] )
         logger.critical(msg)
