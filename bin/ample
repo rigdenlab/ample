@@ -368,9 +368,11 @@ logger.info( """AMPLE version: {0}\n\nInvoked with command-line:\n\n{1}""".forma
 # Path for pickling results
 amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
 
+###############################################################################
 #
 # FASTA processing
 #
+###############################################################################
 # Check to see if mr_sequence was given and if not mr_sequence defaults to fasta
 if amopt.d['mr_sequence'] != None:
     if not ( os.path.exists( str(amopt.d['mr_sequence']) )):
@@ -406,9 +408,12 @@ if ( float( amopt.d['fasta_length'] ) / 100 ) * float( amopt.d['percent'] ) < 1:
     msg = "Cannot truncate a fasta sequence of length {0} with {1} percent intervals. Please select a larger interval.".format( amopt.d['fasta_length'], amopt.d['percent'] )
     logger.critical(msg)
     sys.exit(1)
+
+###############################################################################
 #
 # MTZ file processing
 #
+###############################################################################
 ample_util.processReflectionFile( amopt.d )
 logger.info( "Using MTZ file: {0}".format( amopt.d['mtz'] ) )
 #
@@ -576,8 +581,8 @@ if not amopt.d['spicker_exe']:
         amopt.d['spicker_exe']='spicker'
 try:
     amopt.d['spicker_exe'] = ample_util.find_exe(amopt.d['spicker_exe'])
-except Exception,e:
-    logger.critical(e)
+except Exception:
+    logger.critical("Cannot find spicker executable: {0}".format(amopt.d['spicker_exe']))
     sys.exit(1)    
 #
 # Ensembler
@@ -593,8 +598,8 @@ else:
             amopt.d['theseus_exe']='theseus'
     try:
         amopt.d['theseus_exe'] = ample_util.find_exe(amopt.d['theseus_exe'])
-    except Exception,e:
-        logger.critical(e)
+    except Exception:
+        logger.critical("Cannot find theseus executable: {0}".format(amopt.d['theseus_exe']))
         sys.exit(1)
 #
 # Scwrl
@@ -607,8 +612,8 @@ if amopt.d['use_scwrl']:
             amopt.d['scwrl_exe']='Scwrl4'
     try:
         amopt.d['scwrl_exe'] = ample_util.find_exe(amopt.d['scrwl_exe'])
-    except Exception,e:
-        logger.critical(e)
+    except Exception:
+        logger.critical("Cannot find Scwrl executable: {0}".format(amopt.d['scwrl_exe']))
         sys.exit(1)
 
 #

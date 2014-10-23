@@ -98,7 +98,7 @@ def find_exe( executable, dirs=None ):
         found=True
     else:
         # If the user has given a path we just take the name part
-        fpath, fname = os.path.split(executable)
+        fpath,fname = os.path.split(executable)
         if fname:
             executable=fname
             
@@ -117,6 +117,7 @@ def find_exe( executable, dirs=None ):
     if not found:
         raise Exception("Cannot find executable: {0}".format(executable))
     
+    logger.debug('find_exe found executable: {0}'.format(exe_file) )
     return exe_file
 
 def filename_append( filename=None, astr=None,directory=None, separator="_",  ):
@@ -134,8 +135,6 @@ def find_maxcluster( amopt ):
     directory and downlod it to there
     """
 
-    maxcluster_exe = None
-    
     if not amopt.d['maxcluster_exe']:
         if sys.platform.startswith("win"):
             amopt.d['maxcluster_exe']='maxcluster.exe'

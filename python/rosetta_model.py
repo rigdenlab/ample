@@ -563,10 +563,10 @@ class RosettaModel(object):
             self.transmembrane = True
 
             if optd['blast_dir']:
-                blastpgp = optd['blast_dir'] + os.sep + "bin/blastpgp"
-                blastpgp = ample_util.find_exe( 'blastpgp', blastpgp )
+                blastpgp = os.path.join(optd['blast_dir'],"bin/blastpgp")
+                blastpgp = ample_util.find_exe( blastpgp )
             else:
-                blastpgp = ample_util.find_exe( 'blastpgp', None )
+                blastpgp = ample_util.find_exe( 'blastpgp' )
 
             # Found so set
             optd['blastpgp'] = blastpgp
