@@ -544,6 +544,14 @@ elif amopt.d['phaser_only']:
 else:
     amopt.d['mrbump_programs'] = ['molrep', 'phaser']
 
+
+###############################################################################
+#
+# Program defaults
+#
+#
+###############################################################################
+
 # Model building programs
 if amopt.d['use_arpwarp']:
     if not ( os.environ.has_key('warpbin') and os.path.isfile( os.path.join(os.environ['warpbin'], "auto_tracing.sh") ) ):
@@ -557,13 +565,64 @@ if amopt.d['use_arpwarp']:
 #
 # Maxcluster handled differently as we may need to download the binary
 amopt.d['maxcluster_exe'] = ample_util.find_maxcluster( amopt )
+
+#
+# SPICKER and Theseus now shipped with CCP4
+#
+if not amopt.d['spicker_exe']:
+    if sys.platform.startswith("win"):
+        amopt.d['spicker_exe']='spicker.exe'
+    else:
+        amopt.d['spicker_exe']='spicker'
+try:
+    amopt.d['spicker_exe'] = ample_util.find_exe(amopt.d['spicker_exe'])
+except Exception,e:
+    logger.critical(e)
+    sys.exit(1)    
+#
+# Ensembler
+#
+if amopt.d['ensembler']:
+    logger.info('You are using Phenix ensembler')
+    amopt.d['phenix_exe'] = ample_util.find_exe(amopt.d['phenix_exe'])
+else:
+    if not amopt.d['theseus_exe']:
+        if sys.platform.startswith("win"):
+            amopt.d['theseus_exe']='theseus.exe'
+        else:
+            amopt.d['theseus_exe']='theseus'
+    try:
+        amopt.d['theseus_exe'] = ample_util.find_exe(amopt.d['theseus_exe'])
+    except Exception,e:
+        logger.critical(e)
+        sys.exit(1)
+#
+# Scwrl
+#
+if amopt.d['use_scwrl']:
+    if not amopt.d['scwrl_exe']:
+        if sys.platform.startswith("win"):
+            amopt.d['scwrl_exe']='Scwrl4.exe'
+        else:
+            amopt.d['scwrl_exe']='Scwrl4'
+    try:
+        amopt.d['scwrl_exe'] = ample_util.find_exe(amopt.d['scrwl_exe'])
+    except Exception,e:
+        logger.critical(e)
+        sys.exit(1)
+
 #
 # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
 #
 if amopt.d['use_shelxe']:
+    if not amopt.d['shelxe_exe']:
+        if sys.platform.startswith("win"):
+            amopt.d['shelxe_exe']='shelxe.exe'
+        else:
+            amopt.d['shelxe_exe']='shelxe'
     try:
-        amopt.d['shelxe_exe'] = ample_util.find_exe('shelxe', amopt.d['shelxe_exe'])
-    except RuntimeError:
+        amopt.d['shelxe_exe'] = ample_util.find_exe(amopt.d['shelxe_exe'])
+    except Exception:
         msg = """*** Cannot find shelxe executable in PATH - turning off use of SHELXE. ***
 SHELXE is recommended for the best chance of success. We recommend you install shelxe from:
 http://shelx.uni-ac.gwdg.de/SHELX/
@@ -579,39 +638,11 @@ if amopt.d['shelxe_rebuild'] and not amopt.d['use_shelxe']:
     logger.critical(msg)
     sys.exit(1)
 
-#
-# SPICKER and Theseus now shipped with CCP4
-#
-amopt.d['spicker_exe'] = ample_util.find_exe('spicker', amopt.d['spicker_exe'])
-if amopt.d['ensembler']:
-    logger.info('You are using Phenix ensembler')
-    amopt.d['phenix_exe'] = ample_util.find_exe('phenix', amopt.d['phenix_exe'])
-else:
-    amopt.d['theseus_exe'] = ample_util.find_exe('theseus', amopt.d['theseus_exe'])
-if amopt.d['use_scwrl']:
-        amopt.d['scwrl_exe'] = ample_util.find_exe('Scwrl4', amopt.d['scwrl_exe'] )
-
 # Create the rosetta modeller - this runs all the checks required
 if amopt.d['make_models'] or amopt.d['make_frags'] or amopt.d['NMR_protocol']:  # only need Rosetta if making models
     logger.info('Using ROSETTA so checking options')
     rosetta_modeller = rosetta_model.RosettaModel(optd=amopt.d)
 
-# cluster queueing
-if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
-    msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
-    logger.critical(msg)
-    sys.exit(1)
-
-# Print out what is being done
-if amopt.d['use_buccaneer']:
-    logger.info('Rebuilding in Bucaneer')
-else:
-    logger.info('Not rebuilding in Bucaneer')
-
-if amopt.d['use_arpwarp']:
-    logger.info('Rebuilding in ARP/wARP')
-else:
-    logger.info('Not rebuilding in ARP/wARP')
 
 if amopt.d['make_frags']:
     if amopt.d['use_homs']:
@@ -625,6 +656,23 @@ if amopt.d['make_models']:
     logger.info('\nMaking Rosetta Models')
 else:
     logger.info('NOT Making Rosetta Models')
+    
+    # Print out what is being done
+if amopt.d['use_buccaneer']:
+    logger.info('Rebuilding in Bucaneer')
+else:
+    logger.info('Not rebuilding in Bucaneer')
+
+if amopt.d['use_arpwarp']:
+    logger.info('Rebuilding in ARP/wARP')
+else:
+    logger.info('Not rebuilding in ARP/wARP')
+
+# cluster queueing
+if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
+    msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
+    logger.critical(msg)
+    sys.exit(1)
 
 logger.info('All needed programs are found, continuing Run')
 

@@ -77,36 +77,47 @@ def extractFile(tarArchive,fileName,directory=None):
         else:
             return False
 
-def find_exe( exename, path=None, dirs=None ):
+def find_exe( executable, dirs=None ):
     """Find the executable exename.
 
     Args:
-    exename: the name of the program
-    path - a full path to the executable
+    executable: the name of the program or the path to an existing executable
     dirs - additional directories to search for the location
+    
     """
+    def is_exe(fpath):
+        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
     logger = logging.getLogger()
-    exepath = ''
-    logger.debug('Looking for executable: {0}'.format(exename) )
-
-    if path:
-        logger.debug( 'Using executable path from command-line {0}'.format(path) )
-        exepath = which(path)
-        if not exepath:
-            msg = "Cannot find valid {0} executable from given path: {1}".format(exename,path)
-            logger.critical(msg)
-            raise RuntimeError,msg
+    logger.debug('Looking for executable: {0}'.format(executable) )
+    
+    exe_file=None
+    found=False
+    if is_exe(executable):
+        exe_file=os.path.abspath(executable)
+        found=True
     else:
-        logger.debug( 'No path for {0} given on the command line, looking in PATH'.format(exename) )
-        exepath = which(exename, dirs=dirs )
-        if not exepath:
-            msg = "Cannot find executable {0} in PATH. Please give the path to {0}".format(exename)
-            logger.critical(msg)
-            raise RuntimeError,msg
-
-    logger.debug( "Using executable {0}".format( exepath ) )
-    return exepath
+        # If the user has given a path we just take the name part
+        fpath, fname = os.path.split(executable)
+        if fname:
+            executable=fname
+            
+        # By default we search in the system PATH and add any additional user given paths here
+        paths = os.environ["PATH"].split(os.pathsep)
+        if dirs:
+            paths += dirs
+        logger.debug('Checking paths: {0}'.format(paths))
+        for path in paths:
+            exe_file = os.path.abspath(os.path.join(path, executable))
+            if is_exe(exe_file):
+                logger.debug( 'Found executable {0} in directory {1}'.format(executable,path) )
+                found=True
+                break
+    
+    if not found:
+        raise Exception("Cannot find executable: {0}".format(executable))
+    
+    return exe_file
 
 def filename_append( filename=None, astr=None,directory=None, separator="_",  ):
     """Append astr to filename, before the suffix, and return the new filename."""
@@ -124,9 +135,16 @@ def find_maxcluster( amopt ):
     """
 
     maxcluster_exe = None
+    
+    if not amopt.d['maxcluster_exe']:
+        if sys.platform.startswith("win"):
+            amopt.d['maxcluster_exe']='maxcluster.exe'
+        else:
+            amopt.d['maxcluster_exe']='maxcluster'
+    
     try:
-        maxcluster_exe = find_exe( 'maxcluster', dirs=[ amopt.d['rcdir'] ] )
-    except RuntimeError:
+        maxcluster_exe = find_exe(amopt.d['maxcluster_exe'], dirs=[ amopt.d['rcdir'] ] )
+    except Exception:
         # Cannot find so we need to try and download it
         logger = logging.getLogger()
         rcdir = amopt.d['rcdir']
@@ -318,7 +336,7 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     # Windows needs some special treatment
     kwargs = {}
     if os.name == "nt":
-        kwargs = { 'buffsize': 0, 'shell' : "False" }
+        kwargs = { 'bufsize': 0, 'shell' : "False" }
     p = subprocess.Popen( cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs )
 
     if stdin != None:
@@ -431,26 +449,6 @@ def uniqueify(mtzPath,directory=None):
         raise RuntimeError, msg
 
     return mtzUnique
-
-# get a program test for existsnce
-def which(program, dirs=None ):
-    def is_exe(fpath):
-        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
-
-    fpath, fname = os.path.split(program)
-    if fpath:
-        if is_exe(program):
-            return program
-    else:
-        #for path in os.environ["PATH"].split(os.pathsep):
-        paths = os.environ["PATH"].split(os.pathsep)
-        if dirs:
-            paths += dirs
-        for path in paths:
-            exe_file = os.path.join(path, program)
-            if is_exe(exe_file):
-                return exe_file
-    return None
 
 class TestUtil(unittest.TestCase):
     """
