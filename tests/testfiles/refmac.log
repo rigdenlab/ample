@@ -1,0 +1,1570 @@
+<B><FONT COLOR="#FF0000"><!--SUMMARY_BEGIN-->
+<html> <!-- CCP4 HTML LOGFILE -->
+<hr>
+<!--SUMMARY_END--></FONT></B>
+<B><FONT COLOR="#FF0000"><!--SUMMARY_BEGIN-->
+<pre>
+ 
+ ###############################################################
+ ###############################################################
+ ###############################################################
+ ### CCP4 6.4: Refmac_5.8.0049     version 5.8.0049 : 30/06/13##
+ ###############################################################
+ User: unknown  Run date: 15/ 7/2014 Run time: 21:14:02 
+
+
+ Please reference: Collaborative Computational Project, Number 4. 1994.
+ "The CCP4 Suite: Programs for Protein Crystallography". Acta Cryst. D50, 760-763.
+ as well as any specific reference in the program write-up.
+
+<!--SUMMARY_END--></FONT></B>
+ $TEXT:Reference1: $$ Main reference $$ 
+   "REFMAC5 for the refinement of macromolecular crystal structures:"
+   G.N.Murshudov, P.Skubak, A.A.Lebedev, N.S.Pannu, R.A.Steiner, R.A.Nicholls, M.D.Winn, F.Long and A.A.Vagin,(2011) 
+   Acta Crystallogr. D67, 355-367
+
+ $$
+ $SUMMARY :Reference1:  $$ Refmac: $$
+ :TEXT:Reference1: $$
+
+ $TEXT:Reference2: $$ Secondary reference $$ 
+   "Refinement of Macromolecular Structures by the  Maximum-Likelihood Method:"
+   G.N. Murshudov, A.A.Vagin and E.J.Dodson,(1997)
+   Acta Crystallogr. D53, 240-255
+   EU  Validation contract: BIO2CT-92-0524
+
+ $$
+ $SUMMARY :Reference2:  $$ Refmac: $$
+ :TEXT:Reference2: $$
+
+  Data line--- RIDG DIST SIGM 0.02
+  Data line--- LABIN FP=FP SIGFP=SIGFP FREE=FREE
+  Data line--- MAKE HYDR N
+  Data line--- WEIGHT MATRIX 0.01
+  Data line--- NCYC 30
+  Data line--- END
+
+ OPENED INPUT MTZ FILE 
+ Logical Name: HKLIN   Filename: 1BYZ-cad.mtz 
+
+
+ Spacegroup information obtained from library file: 
+ Logical Name: SYMINFO   Filename: /home/jmht/ccp4-6.4.0/lib/data/syminfo.lib
+
+
+    ****                     Input and Default parameters#                      ****
+
+
+Input coordinate file.  Logical name - XYZIN actual file name  - phaser_loc0_ALL_polya_10_UNMOD.1.pdb
+Output coordinate file. Logical name - XYZOUT actual file name - refmac_phaser_loc0_ALL_polya_10_UNMOD.pdb
+Input reflection file.  Logical name - HKLIN actual file name  - 1BYZ-cad.mtz
+Output reflection file. Logical name - HKLOUT actual file name - refmac_phaser_HKLOUT_loc0_ALL_polya_10_UNMOD.mtz
+
+Cell from mtz :    20.846    20.909    27.057   102.400    95.330   119.620
+Space group from mtz: number -    1; name - P 1
+
+  Refinement type                        : Restrained
+
+
+    ****                           Makecif parameters                           ****
+
+Dictionary files for restraints : /home/jmht/ccp4-6.4.0/lib/data/monomers/mon*cif
+Parameters for new entry and VDW: /home/jmht/ccp4-6.4.0/lib/data/monomers/ener_lib.cif
+    Apart from amino acids and DNA/RNA all monomers will be checked to see if atom names and connectivity is correct
+    Hydrogens will not be written to the output file
+    Links between monomers will be checked. Only those links present in the coordinate file will be used
+    Standard sugar links will be analysed and used
+    For new ligands "ideal restraint" values will be taken from the energetic libary ener_lib.cif
+    Symmetry related links will be analysed and used
+    Cis peptides will be found and used automatically
+
+
+  Residual                               : Rice Maximum Likelihood for Fs
+
+    ****                    Least-square scaling parameters                     ****
+
+Overall scale
+Overall B value
+Overall anisotropic B with tr(B) = 0.0
+Constant bulk solvent in non protein region
+Probe radii for non-ions     1.200
+Probe radii for ions         0.800
+Shrinkage of the mask  by    0.800
+
+
+    ****                 Map sharpening parameters and methods                  ****
+
+No map sharpening will be performed
+
+  Method of minimisation                 : Sparse Matrix
+  Experimental sigmas used for weighting
+  Number of Bins and width:    20       0.0612
+  Refinement of individual isotropic Bfactors
+  Refinement resln        :    25.6895  0.9040
+  Estimated number of reflections :      48384
+  Free R exclusion - flag equals:     0
+  Weighting by comparison of trace of matrix
+  Weighting parameters   :     0.0100
+  Refinement cycles       :    30
+  Scaling type                           :
+          Bulk solvent using using Babinet principle
+
+  Estimation of D/Sigma in resolution bins
+  using  free set of reflns with experimental sigmas
+  using  free set of reflns with experimental sigmas
+
+  Scaling and SigmaA resln:    25.6895  0.9040
+
+  Damping factors:     1.0000  1.0000
+
+
+    ****                    Geometry restraints and weights                     ****
+
+
+                                              Sigma:
+ Bonding distances
+          Weight =  1.00
+
+ Bond angles
+          Weight =  1.00
+
+ Planar groups (all and main chain)
+          WEIGHT= 1.00 1.00
+
+ Chiral centers
+          Weight= 1.00
+
+ NON-BONDED CONTACTS
+          Overall weight                          =  1.00
+          Sigma for simple VDW                    =  0.20
+          Sigma for VDW trhough torsion angle     =  0.20
+          Sigma for HBOND                         =  0.20
+          Sigma for metal-ion                     =  0.20
+          Sigma for DUMMY and other atom          =  0.30
+          Distance for donor-accepetor = vdw1+vdw2+(-0.30)
+          Distance for acceptor - H    = vdw1+     ( 0.10)
+          VDW distance through torsion = vdw1+vdw2+(-0.30)
+          Distance for DUMMY-others    = vdw1+vdw2+(-0.70)
+
+ TORSION ANGLES
+          Weight= 1.00
+
+ THERMAL FACTORS
+          Weight= 1.00
+     Main chain bond (1-2 neighbour)          1.5A**2
+     Main chain angle (1-3 neighbour)         2.0A**2
+     Side chain bond                          3.0A**2
+     Side chain angle                         4.5A**2
+
+ RESTRAINTS AGAINST EXCESSIVE SHIFTS
+     Positional parameters                   0.00A
+     Thermal parameters                      0.00A
+     Occupancy parameters                    0.00
+
+ RADIUS OF CONFIDENCE
+     Positional parameters 0.00A
+     Thermal parameters    0.00A**2
+     Occupancy parameters  0.00
+
+Restraints on changes of interatomic distances is appplied
+
+    ****                    Distance shift penlty parameters                    ****
+
+     Sigma:           0.0200
+     Maximum distance 4.2000
+
+Monitoring style is "MEDIUM". Complete information will be printed out in the
+first and last cycle. In all other cycles minimum information will be printed out
+Sigma cutoffs for printing out outliers
+If deviation of restraint parameter > alpha*sigma then information will be printed out
+Distance outliers      10.000
+Angle outliers         10.000
+Torsion outliers       10.000
+Chiral volume outliers 10.000
+Plane outliers         10.000
+Non-bonding outliers   10.000
+B value  outliers      10.000
+---------------------------------------------------------------
+
+ Input file :phaser_loc0_ALL_polya_10_UNMOD.1.pdb
+  ------------------------------
+  ---  LIBRARY OF MONOMERS   ---
+ _lib_name         mon_lib
+ _lib_version      5.41
+ _lib_update       11/02/13
+  ------------------------------
+  NUMBER OF MONOMERS IN THE LIBRARY          : 11464
+                with complete description    : 11464
+  NUMBER OF MODIFICATIONS                    :    56
+  NUMBER OF LINKS                            :    68
+  I am reading libraries. Please wait.
+      - energy parameters
+      - monomer"s description (links & mod )
+
+FORMATTED      OLD     file opened on unit  45
+<B><FONT COLOR="#FF0000"><!--SUMMARY_BEGIN-->
+Logical name: ATOMSF, Filename: /home/jmht/ccp4-6.4.0/lib/data/atomsf.lib
+<!--SUMMARY_END--></FONT></B>
+
+  Number of atoms    :      51
+  Number of residues :      10
+  Number of chains   :       1
+  I am reading library. Please wait.
+                mon_lib.cif
+  --------------------------------
+  --- title of input coord file ---
+
+  PDB_code:xxxx
+  PDB_name:----
+  PDB_date:XX-XXX-XX
+  --------------------------------
+  Number of chains                  :       1
+  Total number of monomers          :      10
+  Number of atoms                   :      51
+  Number of missing atoms           :       0
+  Number of rebuilt atoms           :       0
+  Number of unknown atoms           :       0
+  Number of deleted atoms           :       0
+
+  Number of bonds restraints    :      50
+  Number of angles restraints   :      69
+  Number of torsions restraints :      28
+  Number of chiralities         :      10
+  Number of planar groups       :      10
+
+
+ loop_
+     _atom_type_symbol
+     _atom_type_scat_Cromer_Mann_a1
+     _atom_type_scat_Cromer_Mann_b1
+     _atom_type_scat_Cromer_Mann_a2
+     _atom_type_scat_Cromer_Mann_b2
+     _atom_type_scat_Cromer_Mann_a3
+     _atom_type_scat_Cromer_Mann_b3
+     _atom_type_scat_Cromer_Mann_a4
+     _atom_type_scat_Cromer_Mann_b4
+     _atom_type_scat_Cromer_Mann_c
+
+
+  N     12.2126   0.0057   3.1322   9.8933   2.0125  28.9975   1.1663   0.5826 -11.5290
+  C      2.3100  20.8439   1.0200  10.2075   1.5886   0.5687   0.8650  51.6512   0.2156
+  O      3.0485  13.2771   2.2868   5.7011   1.5463   0.3239   0.8670  32.9089   0.2508
+
+
+ Number of distances         :           0
+ Number of angles            :           0
+ Number of torsions          :           0
+ Number of planes            :           0
+ Number of chirals           :           0
+ Number of intervals         :           0
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+                        Standard  External       All
+                Bonds:        50         0        50
+               Angles:        69         0        69
+              Chirals:        10         0        10
+               Planes:        10         0        10
+             Torsions:        28         0        28
+            Intervals:         0         0         0
+--------------------------------------------------------------------------------
+
+
+  Number of harmonic restraints       =            0
+  Number of atoms in special position =            0
+ -----------------------------------------------------
+
+
+    ****                           Info from mtz file                           ****
+
+FreeR flag                            0
+Number of "free" reflections       1388
+Number of   all  reflections      27578
+--------------------------------------------------------------------------------
+ Number of reflections in file      27590
+ Number of reflections read          27578
+
+
+     CGMAT cycle number =      1
+
+ Limits of asymmetric unit      : 1.00 1.00 1.00
+ Grid spacing to be used        :    80   80   96
+ Maximuum H,K,L                 :    24   24   30
+ Minimum acceptable grid spacing:    49   49   63
+ Limits of asymmetric unit      : 1.00 1.00 1.00
+ Grid spacing to be used        :    80   80   96
+ Maximuum H,K,L                 :    24   24   30
+ Minimum acceptable grid spacing:    49   49   63
+ Weight matrix   9.99999885E-03
+ Actual weight   0.15467440      is applied to the X-ray term
+Norm of X_ray positional gradient                4.26
+Norm of Geom. positional gradient                88.0
+Norm of X_ray B-factor gradient                  26.6
+Norm of Geom. B-factor gradient                  0.00
+Product of X_ray and Geom posit. gradients      0.117E+04
+ Cosine of angle between them                       0.020
+Product of X_ray and Geom B-fact gradients       0.00
+ Cosine of angle between them                       0.000
+
+
+Residuals: XRAY=     0.1021E+05 GEOM=      235.9     TOTAL=     0.1045E+05
+ function value    10445.718    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.019     0.019
+Bond angles  : refined atoms                     69     3.189     1.897
+Torsion angles, period  1. refined                9     0.034     5.000
+Chiral centres: refined atoms                    10     0.092     0.200
+Planar groups: refined atoms                     40     0.000     0.020
+VDW repulsions: refined_atoms                    20     0.413     0.200
+VDW; torsion: refined_atoms                      38     0.338     0.200
+HBOND: refined_atoms                              6     0.017     0.200
+M. chain bond B values: refined atoms            39     0.000     0.200
+M. chain angle B values: refined atoms           47     0.000     0.300
+S. chain bond B values: refined atoms            11     0.000     0.200
+S. chain angle B values: refined atoms           22     0.000     0.300
+Long range B values: refined atoms              209     0.000     1.945
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.026, B  =   2.738
+Partial structure    1: scale =    0.531, B  = 148.841
+Overall anisotropic scale factors
+   B11 = -0.11 B22 =  0.06 B33 = -0.11 B12 =  0.08 B13 =  0.04 B23 =  0.04
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+
+    ****                Things for loggraph, R factor and others                ****
+
+
+$TABLE: Cycle    1. Rfactor analysis, F distribution v resln  :
+$GRAPHS:Cycle    1. <Rfactor> v. resln :N:1,6,7,11,12:
+:Cycle    1. <Fobs> and <Fc> v. resln :N:1,4,5,9,10:
+:Cycle    1. % observed v. resln :N:1,3:
+$$
+M(4SSQ/LL) NR_used %_obs M(Fo_used) M(Fc_used) Rf_used WR_used
+NR_free M(Fo_free) M(Fc_free) Rf_free   WR_free $$
+$$
+ 0.032     293  99.36    39.1    31.2  0.54  0.77      19    24.6    36.2  0.76  1.48
+ 0.093     548 100.00    35.1    25.7  0.53  0.61      35    32.9    26.5  0.53  0.59
+ 0.154     675 100.00    28.2    23.8  0.51  0.62      35    23.7    21.4  0.58  0.70
+ 0.215     853 100.00    23.6    18.9  0.55  0.65      39    25.4    18.8  0.54  0.59
+ 0.276     920 100.00    18.0    14.4  0.55  0.60      48    16.2    13.9  0.47  0.55
+ 0.338    1031 100.00    14.7    11.9  0.51  0.54      70    13.6    11.4  0.51  0.53
+ 0.399    1106 100.00    13.4     9.9  0.55  0.55      68    13.1    10.1  0.45  0.45
+ 0.460    1193 100.00    12.3     9.5  0.52  0.54      68    10.4     9.3  0.45  0.47
+ 0.521    1279  99.85    10.5     8.3  0.55  0.55      72    10.8     8.7  0.46  0.48
+ 0.582    1356  99.72    10.0     8.0  0.53  0.52      75    11.8     7.8  0.58  0.58
+ 0.643    1364  99.18     9.8     7.6  0.55  0.55      82     9.2     7.2  0.52  0.53
+ 0.704    1473  98.72     9.1     6.8  0.55  0.54      70     9.7     6.5  0.56  0.54
+ 0.765    1546  97.89     8.9     6.3  0.56  0.56      79     8.0     5.8  0.55  0.53
+ 0.826    1484  92.33     7.9     5.9  0.54  0.53      82     8.0     5.9  0.55  0.52
+ 0.887    1434  87.55     7.5     5.5  0.55  0.53      85     7.6     5.1  0.57  0.54
+ 0.948    1468  82.59     6.5     4.9  0.54  0.52      50     5.7     5.3  0.45  0.43
+ 1.010    1351  75.18     5.4     4.1  0.57  0.54      73     4.7     4.5  0.64  0.60
+ 1.071    1200  67.16     4.4     3.5  0.57  0.56      70     4.2     3.8  0.53  0.50
+ 1.132    1143  58.99     3.9     3.0  0.53  0.53      51     3.5     3.0  0.57  0.60
+ 1.193     750  39.07     3.8     2.6  0.53  0.54      42     3.9     2.5  0.51  0.53
+$$
+
+    ****                      Fom and SigmaA vs resolution                      ****
+
+ $TABLE: Cycle    1. Fom(<cos(DelPhi)>-acentric, centric, overall v resln:
+ $GRAPHS:Cycle    1. M(Fom) v. resln :N:1,3,5,7,8:
+ $$
+ <4SSQ/LL> NREFa  FOMa  NREFc FOMc NREFall FOMall  SigmaA_Fc1 $$
+ $$
+  0.0321   293   0.567     0   0.000   293   0.567  0.646
+  0.0932   548   0.567     0   0.000   548   0.567  0.658
+  0.1542   675   0.572     0   0.000   675   0.572  0.667
+  0.2153   853   0.511     0   0.000   853   0.511  0.675
+  0.2764   920   0.442     0   0.000   920   0.442  0.681
+  0.3375  1031   0.422     0   0.000  1031   0.422  0.693
+  0.3986  1106   0.447     0   0.000  1106   0.447  0.729
+  0.4597  1193   0.483     0   0.000  1193   0.483  0.721
+  0.5208  1279   0.316     0   0.000  1279   0.316  0.524
+  0.5819  1356   0.246     0   0.000  1356   0.246  0.430
+  0.6430  1364   0.282     0   0.000  1364   0.282  0.529
+  0.7041  1473   0.307     0   0.000  1473   0.307  0.580
+  0.7652  1546   0.333     0   0.000  1546   0.333  0.574
+  0.8262  1484   0.270     0   0.000  1484   0.270  0.489
+  0.8873  1434   0.219     0   0.000  1434   0.219  0.410
+  0.9484  1468   0.304     0   0.000  1468   0.304  0.537
+  1.0095  1351   0.409     0   0.000  1351   0.409  0.642
+  1.0706  1200   0.256     0   0.000  1200   0.256  0.445
+  1.1317  1143   0.279     0   0.000  1143   0.279  0.478
+  1.1928   750   0.193     0   0.000   750   0.193  0.361
+ $$
+Resolution limits                    =     25.690     0.904
+Number of used reflections           =      22467
+Percentage observed                  =    85.8624
+Percentage of free reflections       =     5.1225
+Overall R factor                     =     0.5397
+Free R factor                        =     0.5317
+Overall weighted R factor            =     0.5603
+Free weighted R factor               =     0.5489
+Overall weighted R2 factor           =     0.7148
+Free weighted R2 factor              =     0.7169
+Overall correlation coefficient      =     0.5861
+Free correlation coefficient         =     0.5500
+Cruickshanks DPI for coordinate error=     0.0250
+DPI based on free R factor           =     0.0245
+Overall figure of merit              =     0.3465
+ML based su of positional parameters =     0.0553
+ML based su of thermal parameters    =     0.9157
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    67529.625       236.16486       10375.359       10681.269    
+
+
+     CGMAT cycle number =      2
+
+ Weight matrix   1.00000007E-02
+ Actual weight   0.17625086      is applied to the X-ray term
+
+
+ function value    11807.357    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.011     0.019
+Bond angles  : refined atoms                     69     2.391     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.025, B  =  -0.701
+Partial structure    1: scale =    0.531, B  = 153.079
+Overall anisotropic scale factors
+   B11 = -0.12 B22 =  0.06 B33 = -0.11 B12 =  0.08 B13 =  0.04 B23 =  0.04
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5380
+Free R factor                        =     0.5313
+Overall figure of merit              =     0.3343
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    66013.289       170.74696       11781.681       11805.646    
+
+
+     CGMAT cycle number =      3
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.17637867      is applied to the X-ray term
+
+
+ function value    11792.232    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.009     0.019
+Bond angles  : refined atoms                     69     2.037     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.024, B  =  -0.511
+Partial structure    1: scale =    0.530, B  = 152.877
+Overall anisotropic scale factors
+   B11 = -0.12 B22 =  0.06 B33 = -0.10 B12 =  0.08 B13 =  0.04 B23 =  0.04
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5363
+Free R factor                        =     0.5315
+Overall figure of merit              =     0.3314
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    66003.258       148.69785       11777.536       11790.265    
+
+
+     CGMAT cycle number =      4
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.18057829      is applied to the X-ray term
+
+
+ function value    12040.708    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.007     0.019
+Bond angles  : refined atoms                     69     1.844     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.031, B  =  -0.489
+Partial structure    1: scale =    0.528, B  = 150.911
+Overall anisotropic scale factors
+   B11 = -0.12 B22 =  0.06 B33 = -0.10 B12 =  0.08 B13 =  0.04 B23 =  0.05
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5352
+Free R factor                        =     0.5321
+Overall figure of merit              =     0.3295
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65910.578       136.89224       12030.296       12038.912    
+
+
+     CGMAT cycle number =      5
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.18012092      is applied to the X-ray term
+
+
+ function value    11983.645    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.006     0.019
+Bond angles  : refined atoms                     69     1.713     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.039, B  =  -0.477
+Partial structure    1: scale =    0.527, B  = 148.799
+Overall anisotropic scale factors
+   B11 = -0.13 B22 =  0.06 B33 = -0.10 B12 =  0.08 B13 =  0.04 B23 =  0.05
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5344
+Free R factor                        =     0.5327
+Overall figure of merit              =     0.3301
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65804.563       128.98074       11975.271       11981.759    
+
+
+     CGMAT cycle number =      6
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.18366803      is applied to the X-ray term
+
+
+ function value    12202.473    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.006     0.019
+Bond angles  : refined atoms                     69     1.614     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.043, B  =  -0.502
+Partial structure    1: scale =    0.526, B  = 148.358
+Overall anisotropic scale factors
+   B11 = -0.13 B22 =  0.06 B33 = -0.10 B12 =  0.08 B13 =  0.04 B23 =  0.05
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5338
+Free R factor                        =     0.5330
+Overall figure of merit              =     0.3294
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65757.031       123.01176       12195.221       12200.477    
+
+
+     CGMAT cycle number =      7
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.18727751      is applied to the X-ray term
+
+
+ function value    12423.935    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.005     0.019
+Bond angles  : refined atoms                     69     1.532     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.047, B  =  -0.519
+Partial structure    1: scale =    0.526, B  = 148.056
+Overall anisotropic scale factors
+   B11 = -0.13 B22 =  0.06 B33 = -0.10 B12 =  0.07 B13 =  0.04 B23 =  0.05
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5334
+Free R factor                        =     0.5333
+Overall figure of merit              =     0.3285
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65698.031       118.22646       12417.462       12421.990    
+
+
+     CGMAT cycle number =      8
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.18805784      is applied to the X-ray term
+
+
+ function value    12471.380    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.005     0.019
+Bond angles  : refined atoms                     69     1.462     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.047, B  =  -0.527
+Partial structure    1: scale =    0.525, B  = 148.581
+Overall anisotropic scale factors
+   B11 = -0.13 B22 =  0.06 B33 = -0.10 B12 =  0.07 B13 =  0.04 B23 =  0.05
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5330
+Free R factor                        =     0.5336
+Overall figure of merit              =     0.3282
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65698.492       114.20934       12465.364       12469.325    
+
+
+     CGMAT cycle number =      9
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.19018760      is applied to the X-ray term
+
+
+ function value    12617.862    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.004     0.019
+Bond angles  : refined atoms                     69     1.400     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.041, B  =  -0.546
+Partial structure    1: scale =    0.525, B  = 150.661
+Overall anisotropic scale factors
+   B11 = -0.13 B22 =  0.06 B33 = -0.10 B12 =  0.07 B13 =  0.04 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5327
+Free R factor                        =     0.5339
+Overall figure of merit              =     0.3273
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65750.648       110.74963       12612.191       12615.708    
+
+
+     CGMAT cycle number =     10
+
+ Weight matrix   9.99999885E-03
+ Actual weight   0.19256791      is applied to the X-ray term
+
+
+ function value    12763.211    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.004     0.019
+Bond angles  : refined atoms                     69     1.345     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.042, B  =  -0.556
+Partial structure    1: scale =    0.524, B  = 150.783
+Overall anisotropic scale factors
+   B11 = -0.14 B22 =  0.06 B33 = -0.10 B12 =  0.07 B13 =  0.04 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5324
+Free R factor                        =     0.5343
+Overall figure of merit              =     0.3269
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65709.258       107.72796       12757.899       12761.223    
+
+
+     CGMAT cycle number =     11
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.19515310      is applied to the X-ray term
+
+
+ function value    12935.227    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.004     0.019
+Bond angles  : refined atoms                     69     1.296     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.038, B  =  -0.536
+Partial structure    1: scale =    0.525, B  = 152.267
+Overall anisotropic scale factors
+   B11 = -0.14 B22 =  0.06 B33 = -0.10 B12 =  0.07 B13 =  0.04 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5322
+Free R factor                        =     0.5344
+Overall figure of merit              =     0.3259
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65733.250       105.03008       12930.065       12933.078    
+
+
+     CGMAT cycle number =     12
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.19728640      is applied to the X-ray term
+
+
+ function value    13073.082    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.004     0.019
+Bond angles  : refined atoms                     69     1.250     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.037, B  =  -0.558
+Partial structure    1: scale =    0.525, B  = 153.142
+Overall anisotropic scale factors
+   B11 = -0.14 B22 =  0.06 B33 = -0.09 B12 =  0.07 B13 =  0.05 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5319
+Free R factor                        =     0.5345
+Overall figure of merit              =     0.3246
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65733.477       102.57401       13067.829       13070.895    
+
+
+     CGMAT cycle number =     13
+
+ Weight matrix   1.00000007E-02
+ Actual weight   0.19859137      is applied to the X-ray term
+
+
+ function value    13152.449    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     1.206     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.037, B  =  -0.577
+Partial structure    1: scale =    0.524, B  = 152.817
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.09 B12 =  0.06 B13 =  0.05 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5315
+Free R factor                        =     0.5345
+Overall figure of merit              =     0.3239
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65714.063       100.13646       13147.387       13150.382    
+
+
+     CGMAT cycle number =     14
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.19899757      is applied to the X-ray term
+
+
+ function value    13182.580    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     1.164     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.034, B  =  -0.568
+Partial structure    1: scale =    0.524, B  = 153.868
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.09 B12 =  0.06 B13 =  0.05 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5311
+Free R factor                        =     0.5345
+Overall figure of merit              =     0.3235
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65741.602       97.842636       13177.499       13180.262    
+
+
+     CGMAT cycle number =     15
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.19777547      is applied to the X-ray term
+
+
+ function value    13106.106    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     1.126     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.030, B  =  -0.599
+Partial structure    1: scale =    0.525, B  = 156.215
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.09 B12 =  0.06 B13 =  0.05 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5307
+Free R factor                        =     0.5346
+Overall figure of merit              =     0.3237
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65771.852       95.728302       13100.992       13103.787    
+
+
+     CGMAT cycle number =     16
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.20252641      is applied to the X-ray term
+
+
+ function value    13433.278    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     1.091     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.022, B  =  -0.616
+Partial structure    1: scale =    0.525, B  = 158.369
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.09 B12 =  0.06 B13 =  0.05 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5302
+Free R factor                        =     0.5342
+Overall figure of merit              =     0.3226
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65856.672       93.783546       13428.699       13431.498    
+
+
+     CGMAT cycle number =     17
+
+ Weight matrix   9.99999885E-03
+ Actual weight   0.20631324      is applied to the X-ray term
+
+
+ function value    13689.022    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     1.059     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.018, B  =  -0.576
+Partial structure    1: scale =    0.528, B  = 163.691
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.09 B12 =  0.06 B13 =  0.05 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5297
+Free R factor                        =     0.5338
+Overall figure of merit              =     0.3219
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65894.352       92.027214       13684.241       13686.904    
+
+
+     CGMAT cycle number =     18
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.20919824      is applied to the X-ray term
+
+
+ function value    13888.759    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     1.028     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.012, B  =  -0.589
+Partial structure    1: scale =    0.528, B  = 166.067
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.09 B12 =  0.06 B13 =  0.05 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5291
+Free R factor                        =     0.5331
+Overall figure of merit              =     0.3213
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65950.500       90.382362       13884.213       13887.111    
+
+
+     CGMAT cycle number =     19
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.20678738      is applied to the X-ray term
+
+
+ function value    13727.558    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     1.000     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.010, B  =  -0.531
+Partial structure    1: scale =    0.528, B  = 166.647
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.05 B33 = -0.09 B12 =  0.06 B13 =  0.05 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5283
+Free R factor                        =     0.5326
+Overall figure of merit              =     0.3222
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65944.578       88.839996       13722.667       13725.347    
+
+
+     CGMAT cycle number =     20
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.20751075      is applied to the X-ray term
+
+
+ function value    13762.591    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.972     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.011, B  =  -0.577
+Partial structure    1: scale =    0.527, B  = 165.686
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.05 B33 = -0.09 B12 =  0.07 B13 =  0.05 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5274
+Free R factor                        =     0.5321
+Overall figure of merit              =     0.3225
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65893.305       87.379181       13758.084       13760.948    
+
+
+     CGMAT cycle number =     21
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.20792148      is applied to the X-ray term
+
+
+ function value    13781.914    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.946     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.009, B  =  -0.515
+Partial structure    1: scale =    0.525, B  = 162.122
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.05 B33 = -0.09 B12 =  0.07 B13 =  0.06 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5265
+Free R factor                        =     0.5316
+Overall figure of merit              =     0.3227
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65862.234       86.041626       13777.474       13780.215    
+
+
+     CGMAT cycle number =     22
+
+ Weight matrix   1.00000007E-02
+ Actual weight   0.20814922      is applied to the X-ray term
+
+
+ function value    13783.915    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.921     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.009, B  =  -0.509
+Partial structure    1: scale =    0.522, B  = 154.201
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.05 B33 = -0.10 B12 =  0.07 B13 =  0.06 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5258
+Free R factor                        =     0.5308
+Overall figure of merit              =     0.3233
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65804.672       84.758209       13779.274       13781.949    
+
+
+     CGMAT cycle number =     23
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.21028180      is applied to the X-ray term
+
+
+ function value    13920.192    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.897     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.008, B  =  -0.549
+Partial structure    1: scale =    0.520, B  = 148.280
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.05 B33 = -0.10 B12 =  0.07 B13 =  0.06 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5251
+Free R factor                        =     0.5301
+Overall figure of merit              =     0.3232
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65794.961       83.559410       13916.233       13919.043    
+
+
+     CGMAT cycle number =     24
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.20296875      is applied to the X-ray term
+
+
+ function value    13437.624    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.874     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.008, B  =  -0.478
+Partial structure    1: scale =    0.519, B  = 144.288
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.10 B12 =  0.07 B13 =  0.06 B23 =  0.07
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5245
+Free R factor                        =     0.5295
+Overall figure of merit              =     0.3256
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65792.164       82.452347       13433.635       13436.205    
+
+
+     CGMAT cycle number =     25
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.19687591      is applied to the X-ray term
+
+
+ function value    13036.940    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.851     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.008, B  =  -0.490
+Partial structure    1: scale =    0.518, B  = 145.484
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.11 B12 =  0.07 B13 =  0.06 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5239
+Free R factor                        =     0.5291
+Overall figure of merit              =     0.3288
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65798.594       81.361580       13033.154       13035.520    
+
+
+     CGMAT cycle number =     26
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.18802868      is applied to the X-ray term
+
+
+ function value    12460.411    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.829     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.003, B  =  -0.475
+Partial structure    1: scale =    0.519, B  = 146.882
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.11 B12 =  0.08 B13 =  0.06 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5234
+Free R factor                        =     0.5287
+Overall figure of merit              =     0.3318
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65831.586       80.335724       12456.385       12458.563    
+
+
+     CGMAT cycle number =     27
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.18172127      is applied to the X-ray term
+
+
+ function value    12031.438    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.809     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.011, B  =  -0.515
+Partial structure    1: scale =    0.519, B  = 145.716
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.11 B12 =  0.08 B13 =  0.07 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5228
+Free R factor                        =     0.5287
+Overall figure of merit              =     0.3347
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65761.344       79.369461       12027.534       12029.604    
+
+
+     CGMAT cycle number =     28
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.17160133      is applied to the X-ray term
+
+
+ function value    11340.245    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.789     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.023, B  =  -0.499
+Partial structure    1: scale =    0.519, B  = 142.248
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.11 B12 =  0.07 B13 =  0.07 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5222
+Free R factor                        =     0.5286
+Overall figure of merit              =     0.3394
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65616.680       78.479897       11336.601       11338.389    
+
+
+     CGMAT cycle number =     29
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.17050534      is applied to the X-ray term
+
+
+ function value    11249.089    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.769     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.033, B  =  -0.500
+Partial structure    1: scale =    0.518, B  = 139.649
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.06 B33 = -0.12 B12 =  0.07 B13 =  0.07 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5217
+Free R factor                        =     0.5286
+Overall figure of merit              =     0.3400
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65509.840       77.627090       11245.642       11247.405    
+
+
+     CGMAT cycle number =     30
+
+ Weight matrix   9.99999978E-03
+ Actual weight   0.17061555      is applied to the X-ray term
+
+
+ function value    11253.262    
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.751     1.897
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.033, B  =  -0.493
+Partial structure    1: scale =    0.518, B  = 141.462
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.07 B33 = -0.12 B12 =  0.07 B13 =  0.07 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall R factor                     =     0.5211
+Free R factor                        =     0.5288
+Overall figure of merit              =     0.3401
+-----------------------------------------------------------------------------
+ Trying gamma equal    0.0000000    
+ Convergence reached with no gamma cycles 
+
+
+ fvalues    65497.680       76.843964       11250.167       11251.767    
+
+ Limits of asymmetric unit      : 1.00 1.00 1.00
+ Grid spacing to be used        :    80   80   96
+ Maximuum H,K,L                 :    24   24   30
+ Minimum acceptable grid spacing:    49   49   63
+ Limits of asymmetric unit      : 1.00 1.00 1.00
+ Grid spacing to be used        :    80   80   96
+ Maximuum H,K,L                 :    24   24   30
+ Minimum acceptable grid spacing:    49   49   63
+
+ WRITTEN OUTPUT MTZ FILE 
+ Logical Name: HKLOUT   Filename: refmac_phaser_HKLOUT_loc0_ALL_polya_10_UNMOD.mtz 
+
+Norm of X_ray positional gradient                0.00
+Norm of Geom. positional gradient                0.00
+Norm of X_ray B-factor gradient                  0.00
+Norm of Geom. B-factor gradient                  0.00
+Product of X_ray and Geom posit. gradients       0.00
+ Cosine of angle between them                       0.000
+Product of X_ray and Geom B-fact gradients       0.00
+ Cosine of angle between them                       0.000
+
+
+Residuals: XRAY=     0.1119E+05 GEOM=      76.09     TOTAL=     0.1126E+05
+
+-------------------------------------------------------------------------------
+             Restraint type              N restraints   Rms Delta   Av(Sigma)
+Bond distances: refined atoms                    50     0.003     0.019
+Bond angles  : refined atoms                     69     0.733     1.897
+Torsion angles, period  1. refined                9     1.617     5.000
+Chiral centres: refined atoms                    10     0.024     0.200
+Planar groups: refined atoms                     40     0.005     0.020
+VDW repulsions: refined_atoms                    27     0.285     0.200
+VDW; torsion: refined_atoms                      38     0.286     0.200
+HBOND: refined_atoms                              1     0.009     0.200
+M. chain bond B values: refined atoms            39     0.034     0.520
+M. chain angle B values: refined atoms           47     0.055     0.779
+S. chain bond B values: refined atoms            11     0.024     0.522
+S. chain angle B values: refined atoms           22     0.040     0.782
+Long range B values: refined atoms              200     0.160     5.028
+-------------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+Overall               : scale =    2.026, B  =  -0.471
+Partial structure    1: scale =    0.519, B  = 143.612
+Overall anisotropic scale factors
+   B11 = -0.15 B22 =  0.07 B33 = -0.12 B12 =  0.08 B13 =  0.07 B23 =  0.06
+-----------------------------------------------------------------------------
+
+-----------------------------------------------------------------------------
+
+    ****                Things for loggraph, R factor and others                ****
+
+
+$TABLE: Cycle   31. Rfactor analysis, F distribution v resln  :
+$GRAPHS:Cycle   31. <Rfactor> v. resln :N:1,6,7,11,12:
+:Cycle   31. <Fobs> and <Fc> v. resln :N:1,4,5,9,10:
+:Cycle   31. % observed v. resln :N:1,3:
+$$
+M(4SSQ/LL) NR_used %_obs M(Fo_used) M(Fc_used) Rf_used WR_used
+NR_free M(Fo_free) M(Fc_free) Rf_free   WR_free $$
+$$
+ 0.032     293  99.36    39.1    31.1  0.53  0.77      19    24.6    35.0  0.74  1.36
+ 0.093     548 100.00    35.1    26.5  0.52  0.61      35    32.9    26.5  0.58  0.64
+ 0.154     675 100.00    28.2    25.1  0.49  0.62      35    23.7    23.8  0.60  0.74
+ 0.215     853 100.00    23.6    19.6  0.52  0.62      39    25.4    20.0  0.50  0.58
+ 0.276     920 100.00    18.0    14.2  0.52  0.56      48    16.2    13.1  0.49  0.56
+ 0.338    1031 100.00    14.7    11.4  0.51  0.54      70    13.6    11.0  0.50  0.51
+ 0.399    1106 100.00    13.4    10.2  0.53  0.54      68    13.1    10.7  0.44  0.46
+ 0.460    1193 100.00    12.3    10.0  0.50  0.51      68    10.4     9.2  0.42  0.44
+ 0.521    1279  99.85    10.5     8.7  0.51  0.52      72    10.8     9.7  0.47  0.50
+ 0.582    1356  99.72    10.0     8.4  0.51  0.50      75    11.8     8.3  0.52  0.50
+ 0.643    1364  99.18     9.8     7.5  0.53  0.52      82     9.2     7.5  0.53  0.50
+ 0.704    1473  98.72     9.1     6.8  0.53  0.52      70     9.7     6.5  0.55  0.53
+ 0.765    1546  97.89     8.8     6.5  0.55  0.55      79     8.0     6.2  0.53  0.51
+ 0.826    1484  92.33     7.9     6.2  0.53  0.52      82     8.0     5.7  0.53  0.52
+ 0.887    1434  87.55     7.5     5.7  0.51  0.49      85     7.6     5.3  0.52  0.50
+ 0.948    1468  82.59     6.5     4.9  0.52  0.50      50     5.7     4.9  0.60  0.56
+ 1.010    1351  75.18     5.4     4.2  0.56  0.54      73     4.7     4.4  0.65  0.60
+ 1.071    1200  67.16     4.4     3.7  0.56  0.55      70     4.2     3.4  0.53  0.51
+ 1.132    1143  58.99     3.9     3.1  0.55  0.55      51     3.5     3.6  0.61  0.57
+ 1.193     750  39.07     3.8     2.7  0.53  0.53      42     3.9     2.9  0.55  0.58
+$$
+
+    ****                      Fom and SigmaA vs resolution                      ****
+
+ $TABLE: Cycle   31. Fom(<cos(DelPhi)>-acentric, centric, overall v resln:
+ $GRAPHS:Cycle   31. M(Fom) v. resln :N:1,3,5,7,8:
+ $$
+ <4SSQ/LL> NREFa  FOMa  NREFc FOMc NREFall FOMall  SigmaA_Fc1 $$
+ $$
+  0.0321   293   0.581     0   0.000   293   0.581  0.654
+  0.0932   548   0.596     0   0.000   548   0.596  0.672
+  0.1542   675   0.611     0   0.000   675   0.611  0.685
+  0.2153   853   0.540     0   0.000   853   0.540  0.696
+  0.2764   920   0.456     0   0.000   920   0.456  0.705
+  0.3375  1031   0.421     0   0.000  1031   0.421  0.718
+  0.3986  1106   0.471     0   0.000  1106   0.471  0.751
+  0.4597  1193   0.531     0   0.000  1193   0.531  0.740
+  0.5208  1279   0.344     0   0.000  1279   0.344  0.531
+  0.5819  1356   0.222     0   0.000  1356   0.222  0.364
+  0.6430  1364   0.165     0   0.000  1364   0.165  0.304
+  0.7041  1473   0.261     0   0.000  1473   0.261  0.470
+  0.7652  1546   0.370     0   0.000  1546   0.370  0.602
+  0.8262  1484   0.269     0   0.000  1484   0.269  0.463
+  0.8873  1434   0.235     0   0.000  1434   0.235  0.409
+  0.9484  1468   0.282     0   0.000  1468   0.282  0.496
+  1.0095  1351   0.353     0   0.000  1351   0.353  0.588
+  1.0706  1200   0.308     0   0.000  1200   0.308  0.501
+  1.1317  1143   0.225     0   0.000  1143   0.225  0.387
+  1.1928   750   0.136     0   0.000   750   0.136  0.246
+ $$
+Resolution limits                    =     25.690     0.904
+Number of used reflections           =      22467
+Percentage observed                  =    85.8624
+Percentage of free reflections       =     5.1225
+Overall R factor                     =     0.5207
+Free R factor                        =     0.5289
+Overall weighted R factor            =     0.5425
+Free weighted R factor               =     0.5425
+Overall weighted R2 factor           =     0.6996
+Free weighted R2 factor              =     0.6953
+Overall correlation coefficient      =     0.6076
+Free correlation coefficient         =     0.5684
+Cruickshanks DPI for coordinate error=     0.0241
+DPI based on free R factor           =     0.0244
+Overall figure of merit              =     0.3407
+ML based su of positional parameters =     0.0589
+ML based su of thermal parameters    =     1.0064
+-----------------------------------------------------------------------------
+  Time in seconds: CPU =        77.78
+             Elapsed =         128.00
+
+    ****           Things for loggraph, R factor and others vs cycle            ****
+
+
+$TABLE: Rfactor analysis, stats vs cycle  :
+$GRAPHS:<Rfactor> vs cycle :N:1,2,3:
+:FOM vs cycle :N:1,4:
+:-LL vs cycle :N:1,5:
+:-LLfree vs cycle :N:1,6:
+:Geometry vs cycle:N:1,7,8,9,10,11:
+$$
+    Ncyc    Rfact    Rfree     FOM      -LL     -LLfree  rmsBOND  zBOND rmsANGL  zANGL rmsCHIRAL $$
+$$
+       0   0.5397   0.5317   0.347     66009.    3533.2   0.0193  0.987   3.189  1.772   0.092
+       1   0.5380   0.5313   0.334     66023.    3532.7   0.0108  0.528   2.391  1.304   0.081
+       2   0.5363   0.5315   0.331     66014.    3532.9   0.0088  0.422   2.037  1.111   0.056
+       3   0.5352   0.5321   0.329     65921.    3528.3   0.0075  0.359   1.844  1.008   0.036
+       4   0.5344   0.5327   0.330     65815.    3523.4   0.0064  0.311   1.713  0.940   0.023
+       5   0.5338   0.5330   0.329     65768.    3521.5   0.0057  0.274   1.614  0.887   0.018
+       6   0.5334   0.5333   0.329     65708.    3518.9   0.0051  0.245   1.532  0.843   0.019
+       7   0.5330   0.5336   0.328     65709.    3519.7   0.0046  0.223   1.462  0.805   0.021
+       8   0.5327   0.5339   0.327     65762.    3523.2   0.0042  0.206   1.400  0.771   0.024
+       9   0.5324   0.5343   0.327     65720.    3521.4   0.0040  0.192   1.345  0.741   0.026
+      10   0.5322   0.5344   0.326     65744.    3523.5   0.0037  0.182   1.296  0.713   0.028
+      11   0.5319   0.5345   0.325     65745.    3524.1   0.0036  0.173   1.250  0.688   0.029
+      12   0.5315   0.5345   0.324     65724.    3523.4   0.0034  0.166   1.206  0.662   0.029
+      13   0.5311   0.5345   0.324     65753.    3525.6   0.0033  0.159   1.164  0.639   0.029
+      14   0.5307   0.5346   0.324     65784.    3527.6   0.0031  0.154   1.126  0.617   0.030
+      15   0.5302   0.5342   0.323     65865.    3531.8   0.0031  0.151   1.091  0.597   0.030
+      16   0.5297   0.5338   0.322     65905.    3534.0   0.0030  0.150   1.059  0.579   0.030
+      17   0.5291   0.5331   0.321     65958.    3536.7   0.0030  0.150   1.028  0.562   0.029
+      18   0.5283   0.5326   0.322     65955.    3536.5   0.0029  0.149   1.000  0.545   0.029
+      19   0.5274   0.5321   0.323     65901.    3532.7   0.0029  0.149   0.972  0.529   0.029
+      20   0.5265   0.5316   0.323     65870.    3530.9   0.0029  0.150   0.946  0.515   0.029
+      21   0.5258   0.5308   0.323     65814.    3527.7   0.0029  0.151   0.921  0.500   0.028
+      22   0.5251   0.5301   0.323     65800.    3525.9   0.0029  0.152   0.897  0.487   0.028
+      23   0.5245   0.5295   0.326     65799.    3525.3   0.0029  0.153   0.874  0.474   0.028
+      24   0.5239   0.5291   0.329     65806.    3525.1   0.0029  0.154   0.851  0.462   0.027
+      25   0.5234   0.5287   0.332     65841.    3527.3   0.0029  0.155   0.829  0.450   0.027
+      26   0.5228   0.5287   0.335     65771.    3522.6   0.0029  0.156   0.809  0.438   0.026
+      27   0.5222   0.5286   0.339     65628.    3514.3   0.0029  0.156   0.789  0.427   0.026
+      28   0.5217   0.5286   0.340     65520.    3508.0   0.0029  0.156   0.769  0.417   0.025
+      29   0.5211   0.5288   0.340     65506.    3506.9   0.0029  0.156   0.751  0.407   0.025
+      30   0.5207   0.5289   0.341     65565.    3509.9   0.0028  0.155   0.733  0.397   0.024
+ $$
+ $TEXT:Result: $$ Final results $$
+                      Initial    Final
+           R factor    0.5397   0.5207
+             R free    0.5317   0.5289
+     Rms BondLength    0.0193   0.0028
+      Rms BondAngle    3.1891   0.7330
+     Rms ChirVolume    0.0916   0.0240
+ $$
+ Harvest: NO PNAME_KEYWRD given - no deposit file created
+<B><FONT COLOR="#FF0000"><!--SUMMARY_BEGIN-->
+ Refmac_5.8.0049:  End of Refmac_5.8.0049  
+Times: User:      66.8s System:   13.6s Elapsed:     1:21  
+</pre>
+</html>
+<!--SUMMARY_END--></FONT></B>

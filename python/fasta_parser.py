@@ -12,6 +12,13 @@ class FastaParser(object):
         
         self.MAXWIDTH=80 # maximum width of any line 
         self._reset()
+        return
+    
+    
+    def parse(self,fastaFile):
+        with open( fastaFile, "r") as f:
+            self._parse_fasta( f )
+        return
 
     def _reset( self ):
         """Reset the object"""
@@ -109,10 +116,7 @@ class FastaParser(object):
         Rosetta has a lot of problems with fastas so we put in this script to deal with it.
         """
         
-        f = open( input_fasta, "r")
-        self._parse_fasta( f )
-        f.close()
-        
+        self.parse(input_fasta)
         fasout=open( output_fasta, "w")
         for line in self.fastaStr():
             fasout.write( line )
@@ -123,10 +127,7 @@ class FastaParser(object):
     def toPir(self, input_fasta, output_pir=None ):
         """Take a fasta file and output the corresponding PIR file"""
 
-        f = open( input_fasta, "r")
-        self._parse_fasta( f )
-        f.close()
-        
+        self.parse(input_fasta)
         if not output_pir:
             dir, ffile = os.path.split( input_fasta )
             fname = os.path.splitext(ffile)[0]

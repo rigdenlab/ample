@@ -50,7 +50,7 @@ def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     mrs+='USEACORN False\n'
     mrs+='USEENSEM False\n'
     mrs+='CLEAN False\n'
-    mrs+='DEBUG True\n'
+    mrs+='DEBUG {0}\n'.format( adict['debug'] )
     #
     # Optional extras
     #
