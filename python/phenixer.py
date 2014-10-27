@@ -7,7 +7,7 @@ Created on 5 Mar 2014
 import os
 import shutil
 import sys
-sys.path.append("/opt/ample-dev1/python")
+#sys.path.append("/opt/ample-dev1/python")
 
 import ample_util
 
@@ -32,9 +32,10 @@ WEIGHT MATRIX 0.01
 NCYC 0
 END
 """.format( FP, SIGFP, FREE )
-    ret = ample_util.run_command(cmd=cmd, logfile="generateMap.log", dolog=False, stdin=stdin)
+    logfile=os.path.join(directory,"generateMap.log")
+    ret = ample_util.run_command(cmd=cmd, logfile=logfile, dolog=True, stdin=stdin)
     
-    assert ret == 0, "generateMap refmac failed!"
+    assert ret == 0, "generateMap refmac failed-check log: {0}".format(logfile)
 
     return mapFile
 
