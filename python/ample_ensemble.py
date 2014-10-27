@@ -26,12 +26,15 @@ class EnsembleData(object):
         self.num_residues = None
         self.num_atoms = None
         self.residues = []
+        self.centroid_model=None
 
         self.side_chain_treatment = None
         self.radius_threshold = None
         self.truncation_threshold = None
 
         self.pdb = None # path to the ensemble file
+        
+        return
 
     def __str__(self):
         """List the data attributes of this object"""
@@ -371,20 +374,29 @@ class Ensembler(object):
                 #retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
 
                 # Rename the file with the aligned files and append the path to the ensembles
-                cluster_file = os.path.join(  ensemble_dir, basename+'_sup.pdb' )
+                cluster_file = os.path.join(  ensemble_dir, basename+'_sup.pdb' )                
                 ensemble_file = os.path.join( ensemble_dir, basename+'.pdb' )
                 shutil.move( cluster_file, ensemble_file )
-
+                
+                # Count the number of atoms in the ensemble-only required for benchmark mode
+                natoms,nresidues=pdb_edit.PDBEdit().num_atoms_and_residues(ensemble_file,first=True)
+                
                 # Generate the ensemble
                 ensemble = EnsembleData()
                 ensemble.name = basename
                 ensemble.num_models = len( cluster_files )
                 ensemble.residues = self.truncation_residues[ tcount ]
-                ensemble.num_residues = len( ensemble.residues )
+                ensemble.num_residues = len(ensemble.residues)
+                assert ensemble.num_residues==nresidues
+                ensemble.num_atoms=natoms
                 ensemble.truncation_threshold = truncation_threshold
                 ensemble.num_truncated_models = len( self.truncated_models[ tcount ] )
                 ensemble.radius_threshold = radius
                 ensemble.pdb = ensemble_file
+                
+                # Get the centroid model name from the list of files given to theseus - we can't parse
+                # the pdb file as theseus truncates the filename
+                ensemble.centroid_model=os.path.splitext( os.path.basename(cluster_files[0]) )[0]
 
                 self.truncated_ensembles.append( ensemble )
 
