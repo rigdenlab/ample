@@ -327,7 +327,7 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
         logf = open( logfile, "w" )
     else:
         logf = tempfile.TemporaryFile()
-
+        
     if stdin != None:
         stdinstr = stdin
         stdin = subprocess.PIPE
@@ -342,11 +342,11 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
         p.stdin.write( stdinstr )
         p.stdin.close()
         if dolog:
-            logging.debug("stdin for cmd was: {0}".format( stdin ) )
+            logging.debug("stdin for cmd was: {0}".format( stdinstr ) )
 
     p.wait()
     logf.close()
-
+    
     return p.returncode
 
 def setup_logging():
