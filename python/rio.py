@@ -25,7 +25,7 @@ import dssp
 import pdb_edit
 
 
-class ContactData(object):
+class RioData(object):
     def __init__(self):
 
         
@@ -67,7 +67,7 @@ class ContactData(object):
             s += "{0} : {1}\n".format( k,v )
         return s
 
-class Contacts(object):
+class Rio(object):
     """Foo
     """
     
@@ -273,7 +273,7 @@ class Contacts(object):
             pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
             
             # Set up object to hold data
-            data            = ContactData()
+            data            = RioData()
             data.origin     = origin
             data.originPdb  = placedOriginPdb
             data.joinedPdb  = joinedPdb
@@ -656,7 +656,7 @@ class Contacts(object):
         pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=mrOriginPdb, pdbout=joinedPdb )
             
         # Run ncont
-        data = ContactData()
+        data = RioData()
         data.origin = origin
         data.originPdb = mrOriginPdb
         data.joinedPdb = joinedPdb
@@ -770,7 +770,7 @@ class TestContacts( unittest.TestCase ):
         
         logfile = os.path.join( self.testfilesDir, "ncont1.log" )
         
-        c = Contacts()
+        c = Rio()
         c.parseNcontLog( logfile=logfile )
         c.analyseRio()
         
@@ -785,7 +785,7 @@ class TestContacts( unittest.TestCase ):
         
         logfile = os.path.join( self.testfilesDir, "ncont2.log" )
         
-        c = Contacts()
+        c = Rio()
         c.parseNcontLog( logfile=logfile )
         c.analyseRio()
         
@@ -800,7 +800,7 @@ class TestContacts( unittest.TestCase ):
         
         logfile = os.path.join( self.testfilesDir, "ncont3.log" )
         
-        c = Contacts()
+        c = Rio()
         c.parseNcontLog( logfile=logfile )
         c.analyseRio()
         
@@ -815,7 +815,7 @@ class TestContacts( unittest.TestCase ):
         
         logfile = os.path.join( self.testfilesDir, "ncont4.log" )
         
-        c = Contacts()
+        c = Rio()
         c.parseNcontLog( logfile=logfile )
         c.analyseRio()
         
@@ -830,7 +830,7 @@ class TestContacts( unittest.TestCase ):
         
         logfile = os.path.join( self.testfilesDir, "ncont5.log" )
         
-        c = Contacts()
+        c = Rio()
         c.parseNcontLog( logfile=logfile )
         c.analyseRio()
         
@@ -845,7 +845,7 @@ class TestContacts( unittest.TestCase ):
         
         logfile = os.path.join( self.testfilesDir, "ncont7.log" )
         
-        c = Contacts()
+        c = Rio()
         c.parseNcontLog( logfile=logfile )
         c.analyseRio()
         
@@ -860,7 +860,7 @@ class TestContacts( unittest.TestCase ):
         
         logfile = os.path.join( self.testfilesDir, "ncont8.log" )
         
-        c = Contacts()
+        c = Rio()
         c.parseNcontLog( logfile=logfile )
         c.analyseRio()
         
@@ -879,7 +879,7 @@ class TestContacts( unittest.TestCase ):
         
         dsspP = dssp.DsspParser( dssplog )
         
-        c = Contacts()
+        c = Rio()
         contacts = c.parseNcontLog( logfile=logfile )
         sequence = c.helixFromContacts( contacts=contacts, dsspP=dsspP )
         
