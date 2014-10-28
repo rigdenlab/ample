@@ -430,6 +430,9 @@ class RosettaModel(object):
                     '-templates:force_native_topology',
                     'True' ]
 
+        if self.benchmark:
+            cmd += ['-in:file:native',self.nativePdbStd]
+
         return cmd
     ##End make_rosetta_cmd
 
@@ -549,6 +552,8 @@ class RosettaModel(object):
         self.fasta = optd['fasta']
         self.work_dir = optd['work_dir']
         self.name = optd['name']
+        self.benchmark=optd['benchmark_mode']
+        self.nativePdbStd=optd['nativePdbStd']
 
         # psipred secondary structure prediction
         if optd['psipred_ss2'] is not None and os.path.isfile( optd['psipred_ss2'] ):
