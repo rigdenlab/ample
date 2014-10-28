@@ -135,7 +135,6 @@ class MrBumpResult(object):
         self.arpWarpRfree = 1.0
         self.shelxeCC = -1.0
         self.shelxeACL = -1.0
-        self.shelxePdb=None
         
         # Buccaneer & arpwarp scores after final rebuild
         self.buccFinalRfact = 1.0
@@ -147,6 +146,7 @@ class MrBumpResult(object):
         self.phaserPdb=None
         self.molrepPdb=None
         self.refmacPdb=None
+        self.shelxePdb=None
         self.buccaneerPdb=None
         self.arpWarpPdb=None
         self.buccaneerPdb=None
