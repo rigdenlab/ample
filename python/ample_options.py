@@ -109,7 +109,8 @@ class AmpleOptions(object):
                            'max_ensemble_models' : 10,
                            'nmodels' : 200,
                            'percent' : 20,
-                           'molrep_only' : True,
+                           'molrep_only' : False,
+                           'phaser_only' : True,
                            'shelx_cycles' : 5,
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
@@ -157,8 +158,8 @@ class AmpleOptions(object):
                         'Bucc_final_Rfree' :'buccRfree',
                         'ARP_final_Rfact' : 'arpWarpRfact',
                         'ARP_final_Rfree' :'arpWarpRfree',
-                        'SHELXE_CC' : 'shelxCC',
-                        'SHELXE_ACL' : 'shelxeAvgChainLength',
+                        'SHELXE_CC' : 'shelxeCC',
+                        'SHELXE_ACL' : 'shelxeACL',
                         'SHELXE_Avg_Chain' : 'shelxeAvgChainLength',
                     }
 
