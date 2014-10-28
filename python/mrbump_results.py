@@ -14,7 +14,9 @@ if __name__ == "__main__":
 
 
 # Our imports
+import parse_arpwarp
 import parse_buccaneer
+import parse_phaser
 import parse_shelxe
 import printTable
 
@@ -22,6 +24,92 @@ import printTable
 class NullHandler(logging.Handler):
     def emit(self, record):
         pass
+    
+class MolrepLogParser(object):
+    """
+    Class to mine information from a 
+    """
+
+    def __init__(self,logfile):
+
+        self.logfile = logfile
+
+        self.score=None
+        self.tfScore=None
+        self.wrfac=None
+        self.time = None
+
+        self.parse()
+
+        return
+
+    def parse(self):
+        """This just drops through reading each summary and so we are left with the last one"""
+
+        fh=open(self.logfile)
+
+        line=fh.readline()
+        while line:
+            
+            if "--- Summary ---" in line:
+                # really scrappy - just skip 3 and take whatever comes next
+                fh.readline()
+                fh.readline()
+                fh.readline()
+                line=fh.readline()
+                fields = line.split()
+                if len(fields) != 14:
+                    raise RuntimeError,"Error reading summary for line: {0}".format( line )
+                
+                self.tfScore = float( fields[10] )
+                self.wrfac = float( fields[11] )
+                self.score= float( fields[12] )
+                
+            if line.startswith( "Times: User:" ):
+                fields = line.split()
+                time = fields[6]
+                m,s = time.split(":")
+                self.time = int(m)*60 + int(s)
+
+            line=fh.readline()
+        fh.close()
+
+        return
+
+class MrbumpLogParser(object):
+    """
+    Class to mine information from a 
+    """
+
+    def __init__(self,logfile):
+
+        self.logfile = logfile
+
+        self.noResTarget=0
+        self.noChainsTarget=0
+        self.resolution=0.0
+
+        self.parse()
+
+        return
+
+    def parse(self):
+        """parse"""
+
+        fh=open(self.logfile)
+
+        line=fh.readline()
+        while line:
+            if "Number of residues:" in line:
+                self.noResTarget=int( line.split()[-1] )
+            if "Estimated number of molecules to search for in a.s.u.:" in line:
+                self.noChainsTarget=int( line.split()[-1] )
+            if "Resolution of collected data (angstroms):" in line:
+                self.resolution=float( line.split()[-1] )
+            line=fh.readline()
+        fh.close()
+
+        return
 
 class MrBumpResult(object):
     """
@@ -41,18 +129,27 @@ class MrBumpResult(object):
 
         self.rfact = 1.0
         self.rfree = 1.0
-        self.refmacPdb=None
         self.buccRfact = 1.0 # Bucc_final_Rfact
         self.buccRfree = 1.0
         self.arpWarpRfact = 1.0 # ARP_final_Rfact/Rfree
         self.arpWarpRfree = 1.0
-        self.shelxCC = -1.0
-        self.shelxeAvgChainLength = -1.0
+        self.shelxeCC = -1.0
+        self.shelxeACL = -1.0
         self.shelxePdb=None
-        # Buccaneer scores after final rebuild
+        
+        # Buccaneer & arpwarp scores after final rebuild
         self.buccFinalRfact = 1.0
         self.buccFinalRfree  = 1.0
-        self.buccPdb=None
+        self.arpWarpFinalRfact = 1.0
+        self.arpWarpFinalRfree  = 1.0
+        
+        # pdb files
+        self.phaserPdb=None
+        self.molrepPdb=None
+        self.refmacPdb=None
+        self.buccaneerPdb=None
+        self.arpWarpPdb=None
+        self.buccaneerPdb=None
 
         self.header = [] # The header format for this table
 
@@ -88,8 +185,8 @@ class ResultsSummary(object):
                             'Bucc_final_Rfree' : 'buccRfree',
                             'ARP_final_Rfact'  : 'arpWarpRfact',
                             'ARP_final_Rfree'  : 'arpWarpRfree',
-                            'SHELXE_CC'        : 'shelxCC',
-                            'SHELXE_ACL'       : 'shelxeAvgChainLength',
+                            'SHELXE_CC'        : 'shelxeCC',
+                            'SHELXE_ACL'       : 'shelxeACL',
                              }
 
         self.logger = logging.getLogger()
@@ -111,6 +208,7 @@ class ResultsSummary(object):
             result = MrBumpResult()
             # name hard-coded
             result.name = "loc0_ALL_" + ensemble + "_UNMOD"
+            result.ensembleName=ensemble 
             result.jobDir = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
             result.header = header
             result.solution = reason
@@ -121,65 +219,65 @@ class ResultsSummary(object):
         self.logger.debug("Added {0} MRBUMP result failures".format(count) )
         return
 
-    def addBuccaneerResult(self, result ):
-        """Add the buccaneer rebuild information to the result"""
-
-
-        buccaneerPdb = os.path.join( result.mrDir,
-                                     "build/shelxe/rebuild/build",
-                                     "buccSX_output.pdb" )
-        buccaneerLog = os.path.join( result.mrDir,
-                                     "build/shelxe/rebuild/build",
-                                     "buccaneer.log" )
-
-        bp = parse_buccaneer.BuccaneerLogParser()
-        if os.path.isfile( buccaneerLog ):
-            bp.parse( buccaneerLog )
-            result.buccFinalRfree = bp.finalRfree
-            result.buccFinalRfact = bp.finalRfact
-
-        if os.path.isfile( buccaneerPdb ):
-            result.buccaneerPdb = buccaneerPdb
-
-        return
-
-    def addShelxeResult(self, result ):
-        """Add the shelxe information to the result"""
-
-        shelxePdb = os.path.join( result.mrDir,
-                                  "build",
-                                  "shelxe",
-                                  "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( result.program,
-                                                                              result.ensembleName ) )
-        if os.path.isfile( shelxePdb):
-            result.shelxePdb = shelxePdb
-
-        shelxeLog = os.path.join( result.mrDir,
-                                  "build",
-                                  "shelxe",
-                                  "shelxe_run.log" )
-
-        if os.path.isfile( shelxeLog ):
-            shelxeP = parse_shelxe.ShelxeLogParser( shelxeLog )
-            #assert result.shelxCC == shelxeP.CC,"Mismatching ShelxeCC scores"
-            result.shelxeAvgChainLength = shelxeP.avgChainLength
-            result.shelxeLog            = shelxeLog
-            result.shelxeMaxChainLength = shelxeP.maxChainLength
-            result.shelxeNumChains      = shelxeP.numChains
-
-            # Another horrible hack - add the title to the header
-            result.header.append('SHELXE_ACL')
-        else:
-            #assert result.shelxCC == shelxeP.CC,"Mismatching ShelxeCC scores"
-            result.shelxeAvgChainLength = 0
-            result.shelxeLog            = ""
-            result.shelxeMaxChainLength = 0
-            result.shelxeNumChains      = 0
-
-            # Another horrible hack - add the title to the header
-            result.header.append('SHELXE_ACL')
-
-        return
+#     def addBuccaneerResult(self, result ):
+#         """Add the buccaneer rebuild information to the result"""
+# 
+# 
+#         buccaneerPdb = os.path.join( result.mrDir,
+#                                      "build/shelxe/rebuild/build",
+#                                      "buccSX_output.pdb" )
+#         buccaneerLog = os.path.join( result.mrDir,
+#                                      "build/shelxe/rebuild/build",
+#                                      "buccaneer.log" )
+# 
+#         bp = parse_buccaneer.BuccaneerLogParser()
+#         if os.path.isfile( buccaneerLog ):
+#             bp.parse( buccaneerLog )
+#             result.buccFinalRfree = bp.finalRfree
+#             result.buccFinalRfact = bp.finalRfact
+# 
+#         if os.path.isfile( buccaneerPdb ):
+#             result.buccaneerPdb = buccaneerPdb
+# 
+#         return
+# 
+#     def addShelxeResult(self, result ):
+#         """Add the shelxe information to the result"""
+# 
+#         shelxePdb = os.path.join( result.mrDir,
+#                                   "build",
+#                                   "shelxe",
+#                                   "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( result.program,
+#                                                                               result.ensembleName ) )
+#         if os.path.isfile( shelxePdb):
+#             result.shelxePdb = shelxePdb
+# 
+#         shelxeLog = os.path.join( result.mrDir,
+#                                   "build",
+#                                   "shelxe",
+#                                   "shelxe_run.log" )
+# 
+#         if os.path.isfile( shelxeLog ):
+#             shelxeP = parse_shelxe.ShelxeLogParser( shelxeLog )
+#             #assert result.shelxeCC == shelxeP.CC,"Mismatching ShelxeCC scores"
+#             result.shelxeAvgChainLength = shelxeP.avgChainLength
+#             result.shelxeLog            = shelxeLog
+#             result.shelxeMaxChainLength = shelxeP.maxChainLength
+#             result.shelxeNumChains      = shelxeP.numChains
+# 
+#             # Another horrible hack - add the title to the header
+#             result.header.append('SHELXE_ACL')
+#         else:
+#             #assert result.shelxeCC == shelxeP.CC,"Mismatching ShelxeCC scores"
+#             result.shelxeAvgChainLength = 0
+#             result.shelxeLog            = ""
+#             result.shelxeMaxChainLength = 0
+#             result.shelxeNumChains      = 0
+# 
+#             # Another horrible hack - add the title to the header
+#             result.header.append('SHELXE_ACL')
+# 
+#         return
 
 
     def extractResults( self, mrbumpDir ):
@@ -314,7 +412,6 @@ class ResultsSummary(object):
                 # horrible - we manipulate the header in addShelxe/buccaneer so we need to use a copy here
                 result.header = copy.copy(header)
 
-
             fields = line.split()
             if len(fields) != nfields:
                 msg = "jobDir {0}: Problem getting dataline: {1}".format( jobDir, line )
@@ -341,43 +438,144 @@ class ResultsSummary(object):
             # While using old names - just strip _UNMOD
             dirName = result.name[:-6]
             result.mrDir = os.path.join( result.jobDir,'data',dirName,'unmod','mr',result.program )
+            
+            # See which pdb files were created
+            if result.program=='phaser':
+                phaserPdb=os.path.join(result.mrDir,
+                                       "refine",
+                                       "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result.program,result.ensembleName))
+                if os.path.isfile(phaserPdb):
+                    result.phaserPdb=phaserPdb
+            elif result.program=='molrep':
+                molrepPdb=os.path.join(result.mrDir,
+                                       "refine",
+                                       "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result.program, result.ensembleName) )
+                if os.path.isfile(molrepPdb):
+                    result.molrepPdb=molrepPdb
 
-            # Need to reconstruct final pdb from directory and program name
-            refmacPdb = os.path.join( result.mrDir,'refine',
-                                      "refmac_" + result.program + "_loc0_ALL_" + result.ensembleName + "_UNMOD.pdb" )
-            shelxePdb = os.path.join( result.mrDir,'build','shelxe',
-                                      "shelxe_" + result.program + "_loc0_ALL_" + result.ensembleName + "_UNMOD.pdb" )
-            buccPdb = os.path.join( result.mrDir,'build','shelxe','rebuild','build',
+            refmacPdb=os.path.join(result.mrDir,
+                                   'refine',
+                                   "refmac_" + result.program + "_loc0_ALL_" + result.ensembleName + "_UNMOD.pdb" )
+            if os.path.isfile(refmacPdb):
+                result.refmacPdb=refmacPdb
+                
+            shelxePdb=os.path.join(result.mrDir,'build','shelxe',
+                                   "shelxe_" + result.program + "_loc0_ALL_" + result.ensembleName + "_UNMOD.pdb" )
+            if os.path.isfile(shelxePdb):
+                result.shelxePdb=shelxePdb
+                
+            buccaneerPdb=os.path.join(result.mrDir,'build','shelxe','rebuild','buccaneer',
                                       "buccSX_output.pdb" )
-            if os.path.isfile(buccPdb):
-                result.pdb=buccPdb
-            elif os.path.isfile(shelxePdb):
-                result.pdb=shelxePdb
-            elif os.path.isfile(refmacPdb):
-                result.pdb=refmacPdb
+            if os.path.isfile(buccaneerPdb):
+                result.buccaneerPdb=buccaneerPdb
+                
+            arpWarpPdb=os.path.join(result.mrDir,'build','shelxe','rebuild','arpwarp',
+                                      "refmacSX_output_warpNtrace.pdb" )
+            if os.path.isfile(arpWarpPdb):
+                result.arpWarpPdb=arpWarpPdb
+            
+            # Set the final result pdb
+            if result.buccaneerPdb:
+                result.pdb=result.buccaneerPdb
+            elif result.arpWarpPdb:
+                result.pdb=result.arpWarpPdb
+            elif result.shelxePdb:
+                result.pdb=result.shelxePdb
+            elif result.refmacPdb:
+                result.pdb=result.refmacPdb
 
             # Add the information from Shelxe
             #self.addShelxeResult( result )
 
             # Add the information from Buccaneer rebuild of the Shelxe trace
             #self.addBuccaneerResult( result )
+            self.analyseResult(result)
 
             results.append( result )
 
         return results
+    
+    def analyseResult(self,result):
+        
+        mrDir = result.mrDir
+        
+        result.ensembleName = result.name[9:-6]
+        
+        # Process log
+        #mrbumpP = MrbumpLogParser(result.mrbumpLog)
+        #result.estChainsASU=mrbumpP.noChainsTarget
+        
+        if result.program == "phaser":
+            if result.phaserPdb:
+                phaserP = parse_phaser.PhaserPdbParser(result.phaserPdb)
+                result.phaserLLG = phaserP.LLG
+                result.phaserTFZ = phaserP.TFZ
+                result.phaserPdb = result.phaserPdb
+            
+            phaserLog = os.path.join( mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(result.program, result.ensembleName) )
+            if os.path.isfile( phaserLog ):
+                phaserP = parse_phaser.PhaserLogParser( phaserLog, onlyTime=True )
+                result.phaserLog    = phaserLog
+                result.phaserTime   = phaserP.time
+                result.phaserKilled = phaserP.killed
+            
+        elif result.program == "molrep":
+            molrepLog = os.path.join( mrDir, "molrep.log" )
+            result.molrepLog = molrepLog
+            molrepP = MolrepLogParser( molrepLog )
+            result.molrepScore = molrepP.score
+            result.molrepTime = molrepP.time
+        #
+        # SHELXE PROCESSING
+        #
+# We get this from the pdb
+#         shelxeLog = os.path.join( mrDir, "build/shelxe/shelxe_run.log" )
+#         if os.path.isfile( shelxeLog ):
+#             result.shelxeLog = shelxeLog
+#             shelxeP = parse_shelxe.ShelxeLogParser( shelxeLog )
+#             result.shelxeCC = shelxeP.CC
+#             result.shelxeACL = shelxeP.avgChainLength
+#             result.shelxeMaxChainLength = shelxeP.maxChainLength
+#             result.shelxeNumChains= shelxeP.numChains
+        #
+        # Buccaneer Rebuild Processing
+        #
+        buccaneerLog = os.path.join( mrDir,
+                                     "build/shelxe/rebuild/buccaneer",
+                                     "buccaneer.log" )
+    
+        bp = parse_buccaneer.BuccaneerLogParser()
+        if os.path.isfile( buccaneerLog ):
+            bp.parse( buccaneerLog )
+            result.buccFinalRfree = bp.finalRfree
+            result.buccFinalRfact = bp.finalRfact
+
+        #
+        # Arpwarp Rebuild Processing
+        #
+        arpLog = os.path.join(mrDir,
+                              "build/shelxe/rebuild/arpwarp",
+                              "arpwarp.log")
+        if os.path.isfile(arpLog):
+                        ap=parse_arpwarp.ArpwarpLogParser()
+                        ap.parse(arpLog)
+                        result.arpWarpFinalRfact=ap.finalRfact
+                        result.arpWarpFinalRfree=ap.finalRfree
+        
+        return
 
     def sortResults( self, results ):
         """
         Sort the results
         """
-
+        
         # Check each result to see what attributes are set and use this to work out how we rate this run
         reverse=False
         sortf=False
         for r in results:
-            if r.shelxCC and r.shelxCC != "--" and float(r.shelxCC) > -1.0:
+            if r.shelxeCC and r.shelxeCC != "--" and float(r.shelxeCC) > -1.0:
                 reverse=True
-                sortf = lambda x: float( x.shelxCC )
+                sortf = lambda x: float( x.shelxeCC )
                 break
             elif r.buccRfree and r.buccRfree != "--" and float(r.buccRfree) < 1.0:
                 sortf = lambda x: float( x.buccRfree )
