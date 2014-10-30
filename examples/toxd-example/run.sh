@@ -25,3 +25,4 @@ $CCP4/bin/ample \
 #-models_dir ./models \
 #-ensembles_dir ./ROSETTA_MR_0/ensembles_1 \
 
+
