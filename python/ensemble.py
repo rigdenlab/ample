@@ -184,17 +184,18 @@ def ensemble_summary( amoptd ):
 
 
             rstr += "\n"
-            tdata = [ ( "Truncation Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys" ) ]
+            tdata = [ ( "Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys" ) ]
             raw_ensemble_count=0
-            for threshold in sorted( truncation_thresholds.keys() ):
+            for level, threshold in enumerate(sorted( truncation_thresholds.keys() ) ):
+                truncation_level=len(truncation_thresholds)-level
                 nresidues = truncation_thresholds[ threshold ][0]
                 for i, radius in enumerate( sorted( truncation_thresholds[ threshold ][1].keys() ) ):
                     raw_ensemble_count+=1
                     nmodels = truncation_thresholds[ threshold ][1][radius ]
                     if i == 0:
-                        tdata.append( ( threshold, nresidues, radius, nmodels  ) )
+                        tdata.append( ( truncation_level, threshold, nresidues, radius, nmodels  ) )
                     else:
-                        tdata.append( ( "", "", radius, nmodels  ) )
+                        tdata.append( ( "", "", "", radius, nmodels  ) )
 
             rstr += tableFormat.pprint_table( tdata )
 

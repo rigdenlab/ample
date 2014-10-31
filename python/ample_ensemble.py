@@ -7,8 +7,8 @@ Created on Apr 18, 2013
 import copy
 import glob
 import logging
+import math
 import os
-import re
 import shutil
 import sys
 import types
@@ -33,7 +33,8 @@ class EnsembleData(object):
 
         self.side_chain_treatment = None
         self.radius_threshold = None
-        self.truncation_threshold = None
+        self.truncation_threshold = None # The variance used to truncate
+        self.truncation_level = None # the index of the truncation threshold
 
         self.pdb = None # path to the ensemble file
 
@@ -218,6 +219,7 @@ class Ensembler(object):
             raise RuntimeError,msg
 
         # How many residues should fit in each bin
+        # NB - Should round up not down with int!
         chunk_size=int( ( float(length)/100 ) *float(self.percent) )
         if chunk_size < 1:
             msg = "Error generating thresholds, got < 1 AA in chunk_size"
@@ -270,9 +272,10 @@ class Ensembler(object):
                 counts.append(count)
                 if first: first=False
             else:
-                thresholds[-1]=variance
+                #thresholds[-1]=variance
                 counts[-1]+=count
 
+        thresholds.sort()
         return thresholds
 
     def make_truncated_ensembles( self  ):
@@ -287,15 +290,17 @@ class Ensembler(object):
         """
 
         # Loop through all truncation levels
-        for tcount, truncation_threshold in enumerate( self.truncation_thresholds ):
-
+        for i, truncation_threshold in enumerate( self.truncation_thresholds ):
+            
+            truncation_level=len(self.truncation_thresholds)-i
+            
             # change to the truncation directory
-            truncation_dir = self.truncation_dirs[tcount]
+            truncation_dir = self.truncation_dirs[i]
             os.chdir( truncation_dir )
 
             # Run maxcluster to generate the distance matrix
             clusterer = cluster_with_MAX.MaxClusterer( self.maxcluster_exe )
-            clusterer.generate_distance_matrix( self.truncated_models[tcount] )
+            clusterer.generate_distance_matrix( self.truncated_models[i] )
 
             # Loop through the radius thresholds
             num_previous_models=-1 # set to -1 so comparison always false on first pass
@@ -311,7 +316,8 @@ class Ensembler(object):
                     continue
 
                 # For naming all files
-                basename='trunc_{0}_rad_{1}'.format( truncation_threshold, radius )
+                #basename='trunc_{0}_rad_{1}'.format( truncation_threshold, radius )
+                basename='tl{0}_r{1}'.format( truncation_level, radius )
 
                 # Check if there are the same number of models in this ensemble as the previous one - if so
                 # the ensembles will be identical and we can skip this one
@@ -368,12 +374,13 @@ class Ensembler(object):
                 ensemble = EnsembleData()
                 ensemble.name = basename
                 ensemble.num_models = len( cluster_files )
-                ensemble.residues = self.truncation_residues[ tcount ]
+                ensemble.residues = self.truncation_residues[ i ]
                 ensemble.num_residues = len(ensemble.residues)
                 assert ensemble.num_residues==nresidues
                 ensemble.num_atoms=natoms
                 ensemble.truncation_threshold = truncation_threshold
-                ensemble.num_truncated_models = len( self.truncated_models[ tcount ] )
+                ensemble.truncation_level = truncation_level
+                ensemble.num_truncated_models = len( self.truncated_models[ i ] )
                 ensemble.radius_threshold = radius
                 ensemble.pdb = ensemble_file
 
@@ -425,14 +432,16 @@ class Ensembler(object):
         truncate_log = open( os.path.join( self.work_dir, 'truncate.log'), "w")
         truncate_log.write('This is the number of residues kept under each truncation threshold\n\nthreshold\tnumber of residues\n')
 
-        for threshold in self.truncation_thresholds:
+        for i, threshold in enumerate(self.truncation_thresholds):
+            
+            trunc_idx=len(self.truncation_thresholds)-i
 
             # Get a list of the indexes of the residues to keep
             to_keep=[resSeq for resSeq,variance in self.var_by_res if variance <= threshold]
             self.truncation_residues.append(to_keep)
 
             truncate_log.write( str(threshold) +'\t' + str(len(to_keep)) + '\n' )
-            logging.info( 'Keeping: {0} residues at truncation level: {1}'.format( len(to_keep), threshold ) )
+            logging.info( 'Keeping: {0} residues at truncation level: {1}'.format( len(to_keep), trunc_idx ) )
             logging.debug( 'The following residues will be kept: {0}'.format( to_keep ) )
 
             if len(to_keep) < 1:
@@ -440,17 +449,17 @@ class Ensembler(object):
                 logging.debug( 'No residues kept at this truncation level.' )
                 continue
 
-            trunc_out = os.path.join( self.work_dir, 'trunc_files_' + str(threshold) )
-            os.mkdir(trunc_out)
-            logging.info( 'truncating at: {0} in directory {1}'.format( threshold, trunc_out ) )
-            self.truncation_dirs.append( trunc_out )
+            trunc_dir = os.path.join( self.work_dir, 'trunc_files_' + str(trunc_idx) )
+            os.mkdir(trunc_dir)
+            logging.info( 'truncating at: {0} in directory {1}'.format( threshold, trunc_dir ) )
+            self.truncation_dirs.append( trunc_dir )
 
             # list of models for this truncation level
             truncated_models = []
             pdbed = pdb_edit.PDBEdit()
             for infile in self.cluster_models:
                 pdbname = os.path.basename( infile )
-                pdbout = os.path.join( trunc_out, pdbname )
+                pdbout = os.path.join( trunc_dir, pdbname )
 
                 # Loop through PDB files and create new ones that only contain the residues left after truncation
                 pdbed.select_residues( inpath=infile, outpath=pdbout, residues=to_keep )
@@ -541,8 +550,37 @@ class Test(unittest.TestCase):
 
 
     def testGenThresh(self):
-        l=[0,5,6,7,9,1,2,2,2,3,3,8,8,8,8,8,8,8,8,8,8,8,3,3,3,3,3,4,5,9]
-        l=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+        l1=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+        l2=[0,5,6,7,9,1,2,2,2,3,3,8,8,8,8,8,8,8,8,8,8,8,3,3,3,3,3,4,5,9]
+        l3=[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5]
+        
+        e=Ensembler()
+        
+        
+        for percent in [20,50]:
+            
+            chunk_size1=int(len(l1)*float(percent)/float(100))
+            chunk_size2=int(math.ceil(len(l1)*float(percent)/float(100)))
+            
+            print "PERCENT ",percent
+            t=e._generate_thresholds(l1,chunk_size1)
+            print t
+            t=e._generate_thresholds2(l1,chunk_size2)
+            print t
+            print
+            
+            chunk_size=int(math.ceil(len(l2)*float(percent)/float(100)))
+            t=e._generate_thresholds(l2,chunk_size1)
+            print t
+            t=e._generate_thresholds2(l2,chunk_size2)
+            print t
+            print
+            
+            chunk_size=int(math.ceil(len(l3)*float(percent)/float(100)))
+            t=e._generate_thresholds(l3,chunk_size1)
+            print t
+            t=e._generate_thresholds2(l3,chunk_size2)
+            print t
 
         return
 
