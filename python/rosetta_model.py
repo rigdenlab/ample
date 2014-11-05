@@ -81,6 +81,7 @@ class RosettaModel(object):
         self.domain_termini_distance = None
         self.rad_gyr_reweight = None
         self.improve_template = None
+        self.nativePdbStd = None
 
         self.logger = logging.getLogger()
 
@@ -553,7 +554,8 @@ class RosettaModel(object):
         self.work_dir = optd['work_dir']
         self.name = optd['name']
         self.benchmark=optd['benchmark_mode']
-        self.nativePdbStd=optd['nativePdbStd']
+        if 'nativePdbStd' in optd:
+            self.nativePdbStd=optd['nativePdbStd']
 
         # psipred secondary structure prediction
         if optd['psipred_ss2'] is not None and os.path.isfile( optd['psipred_ss2'] ):
