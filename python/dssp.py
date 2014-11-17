@@ -1,3 +1,4 @@
+import os
 import unittest
 
 class DsspParser(object):
@@ -125,10 +126,21 @@ class DsspParser(object):
 
 class Test(unittest.TestCase):
 
+    def setUp(self):
+        """
+        Get paths need to think of a sensible way to do this
+        """
+
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ampleDir = os.sep.join( paths[ : -1 ] )
+        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
+        return
+
     def testParse1(self):
         """parse 2bhw"""
         
-        dsspLog = "/media/data/shared/TM/2BHW/2bhw.dssp"
+        dsspLog = os.path.join(self.testfilesDir,"2bhw.dssp")
         dsspP = DsspParser( dsspLog )
         a = [' ', ' ', 'T', 'T', ' ', 'T', 'T', 'S', 'S', 'T', 'T', ' ', ' ', ' ', 'T', 'T', 'G', 'G', 'G', ' ', ' ', 'S', ' ', ' ', 'T', 'T', ' ', ' ', 'S', ' ', 'S', 'T', 'T', ' ', ' ', 'S', ' ', ' ', 'T', 'T', ' ', 'T', 'T', ' ', 'S', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'T', 'T', 'T', ' ', ' ', ' ', 'S', ' ', ' ', 'S', 'G', 'G', 'G', 'S', 'G', 'G', 'G', 'G', 'G', 'S', 'T', 'T', ' ', 'E', 'E', 'G', 'G', 'G', ' ', 'T', 'T', 'S', 'E', 'E', 'E', ' ', ' ', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'E', 'E', 'T', 'T', 'E', 'E', ' ', 'S', 'S', 'S', 'S', ' ', ' ', ' ', 'T', 'T', 'S', ' ', 'T', 'T', ' ', 'T', 'T', ' ', 'S', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', ' ', 'S', ' ', 'S', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', ' ', 'T', 'T', 'T', 'S', 'S', 'G', 'G', 'G', 'G', 'T', 'T', 'T', 'T', ' ', 'S', ' ', ' ']
         self.assertEqual( dsspP.assignment[0], a)
@@ -136,13 +148,21 @@ class Test(unittest.TestCase):
         return
         
     def testParse2(self):
-        dsspLog = "/media/data/shared/TM/3OUF/3ouf.dssp"
+        dsspLog = os.path.join(self.testfilesDir,"3ouf.dssp")
         dsspP = DsspParser( dsspLog )
         
         return
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testParse1'))
+    suite.addTest(Test('testParse2'))
+    return suite
     
+#
+# Run unit tests
 if __name__ == "__main__":
-    
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
+
 
 
