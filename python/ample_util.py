@@ -498,6 +498,7 @@ class TestUtil(unittest.TestCase):
               'F'      : None,
               'SIGF'   : None,
               'FREE'   : None,
+              'work_dir': os.getcwd(),
              }
 
         processReflectionFile( d )
@@ -505,6 +506,10 @@ class TestUtil(unittest.TestCase):
         self.assertEqual( 'F', d['F'], "Correct F")
         self.assertEqual( 'SIGF', d['SIGF'], "Correct SIGF")
         self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
+        
+        os.unlink('uniqueify.log')
+        os.unlink('2uui_sigmaa_uniqueify.mtz')
+        os.unlink('2uui_sigmaa_uniqueify.log')
 
         return
 
@@ -513,11 +518,12 @@ class TestUtil(unittest.TestCase):
 
         cif = os.path.join( self.testfilesDir, "1x79-sf.cif" )
 
-        d = { 'mtz'    : None,
-              'sf_cif' : cif,
-              'F'      : None,
-              'SIGF'   : None,
-              'FREE'   : None,
+        d = { 'mtz'     : None,
+              'sf_cif'  : cif,
+              'F'       : None,
+              'SIGF'    : None,
+              'FREE'    : None,
+              'work_dir': os.getcwd(),
              }
 
         processReflectionFile( d )
@@ -526,8 +532,24 @@ class TestUtil(unittest.TestCase):
         self.assertEqual( 'SIGFP', d['SIGF'], "Correct SIGF")
         self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
 
+        os.unlink('cif2mtz.log')
+        os.unlink('1x79-sf.mtz')
+        os.unlink('mtzutils.log')
+        os.unlink('1x79-sf_dFREE.mtz')
+        os.unlink('uniqueify.log')
+        os.unlink('1x79-sf_dFREE_uniqueify.mtz')
+        os.unlink('1x79-sf_dFREE_uniqueify.log')
+
         return
+    
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(TestUtil('testProcessReflectionFile'))
+    suite.addTest(TestUtil('testProcessReflectionFileNORFREE'))
+    suite.addTest(TestUtil('testProcessReflectionFileCIF'))
+    return suite
+    
 #
 # Run unit tests
 if __name__ == "__main__":
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())

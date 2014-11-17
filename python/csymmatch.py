@@ -206,8 +206,13 @@ class TestContacts( unittest.TestCase ):
         return
     
 
-if __name__ == "__main__":
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(TestContacts('testParse1'))
+    suite.addTest(TestContacts('testParse2'))
+    return suite
     
-    unittest.main()
-
-
+#
+# Run unit tests
+if __name__ == "__main__":
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
