@@ -188,7 +188,15 @@ GDGAAATSD"""
 
         fp = FastaParser()
         self.assertRaises( RuntimeError, fp._parse_fasta, infasta.split( os.linesep ) )       
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testOK'))
+    suite.addTest(Test('testFailMulti'))
+    suite.addTest(Test('testFailChar'))
+    return suite
     
+#
+# Run unit tests
 if __name__ == "__main__":
-    unittest.main()
-    #parse_fasta("/home/jmht/in.fasta", "/home/jmht/out.fasta")
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
