@@ -3,8 +3,6 @@ Created on 28 Feb 2013
 
 @author: jmht
 '''
-import unittest
-
 def mrbump_cmd( adict, jobid=None, ensemble_pdb=None, fixed_iden=0.6 ):
     """
     Create MRBUMP input string based on given variables
