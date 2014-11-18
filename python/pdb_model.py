@@ -956,8 +956,22 @@ class Test(unittest.TestCase):
         self.assertEqual(a.z,8)
         
         return
-           
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testReadAtom'))
+    suite.addTest(Test('testReadAtom2'))
+    suite.addTest(Test('testWriteAtom1'))
+    suite.addTest(Test('testReadHetatm'))
+    suite.addTest(Test('testWriteHetatm'))
+    suite.addTest(Test('testWriteHetatm2'))
+    suite.addTest(Test('testReadModres'))
+    suite.addTest(Test('testWriteModres'))
+    suite.addTest(Test('testReadCrystalInfo'))
+    return suite
+    
+#
+# Run unit tests
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
 
