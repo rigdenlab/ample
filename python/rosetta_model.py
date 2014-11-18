@@ -468,7 +468,7 @@ class RosettaModel(object):
             seed = str(self.seeds[proc-1])
             nstruct = str(jobs[proc-1])
             cmd = self.modelling_cmd( wdir, nstruct, seed )
-
+            
             self.logger.debug('Making {0} models in directory: {1}'.format(nstruct,wdir) )
             self.logger.debug('Executing cmd: {0}'.format( " ".join(cmd) ) )
 
@@ -897,9 +897,11 @@ class Test(unittest.TestCase):
 
         m = RosettaModel(optd=optd)
         m.generate_fragments()
+        
+        return
 
 
-    def XtestNoRosetta(self):
+    def testNoRosetta(self):
         """
         Test without Rosetta
         """
@@ -915,29 +917,41 @@ for i in range(10):
         f.write(content)
         f.close()
         os.chmod(script, 0o777)
-
+        
+        # Create dummy fragment files
+        frags3='3mers'
+        frags9='9mers'
+        
+        with open(frags3,'w') as f:
+            f.write(frags3+"\n")
+        with open(frags9,'w') as f:
+            f.write(frags9+"\n")
 
         # Set options
         optd={}
         optd['nproc'] = 3
         optd['nmodels'] = 30
         optd['work_dir'] = os.getcwd()
-        optd['models_dir'] = os.getcwd() + os.sep + "models"
+        optd['models_dir'] = os.getcwd() + os.sep + "XXXmodelsXXX"
         optd['rosetta_dir'] = "/opt/rosetta3.4"
         optd['rosetta_AbinitioRelax'] = os.getcwd() + os.sep + "dummy_rosetta.sh"
         optd['rosetta_db'] = None
-        optd['frags_3mers'] = '3mers'
-        optd['frags_9mers'] = '9mers'
+        optd['frags_3mers'] = frags3
+        optd['frags_9mers'] = frags9
         optd['rosetta_fragments_exe'] = None
         optd['use_homs'] = None
         optd['make_models'] = True
-        optd['make_frags'] =  True
+        optd['make_frags'] =  False
         optd['fasta'] = "FASTA"
         optd['name'] = "TOXD_"
         optd['improve_template'] = None
         optd['all_atom'] = True
         optd['use_scwrl'] = False
         optd['scwrl_exe'] = ""
+        optd['benchmark_mode'] = False
+        optd['transmembrane'] = False
+        optd['psipred_ss2'] = None
+        optd['rg_reweight'] = None
 
         optd['domain_termini_distance'] = None
         optd['CC'] = None
@@ -945,10 +959,19 @@ for i in range(10):
 
         rm = RosettaModel(optd=optd)
         mdir = rm.doModelling()
-        print "models in: {0}".format(mdir)
+        
+        print "GOT mdir ",mdir
+        
+        os.unlink(script)
+        os.unlink('seedlist')
+        os.unlink(frags3)
+        os.unlink(frags9)
+        shutil.rmtree(mdir)
+        
+        
+        return
 
-
-    def testTransmembraneFragments(self):
+    def XtestTransmembraneFragments(self):
         """
         Test for generating transmembrane fragments
         """
@@ -973,8 +996,17 @@ for i in range(10):
         rm = RosettaModel(optd=optd)
         rm.fragments_directory = os.getcwd()+os.sep+"fragments"
         rm.generate_tm_predict()
+        
+        return
 
 
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testNoRosetta'))
+    return suite
+    
+#
+# Run unit tests
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
+
