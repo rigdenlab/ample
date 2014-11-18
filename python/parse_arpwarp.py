@@ -77,7 +77,15 @@ class Test(unittest.TestCase):
         self.assertEqual( ap.res_built, 44)
         
         return
+
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testParse1'))
+    return suite
     
+#
+# Run unit tests
 if __name__ == "__main__":
-    
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
+
