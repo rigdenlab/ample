@@ -771,13 +771,14 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont1.log" )
         
         c = Rio()
-        c.parseNcontLog( logfile=logfile )
-        c.analyseRio()
+        contactData = RioData()
+        c.parseNcontLog( contactData, logfile=logfile )
+        c.analyseRio(contactData)
         
-        self.assertEqual( c.numContacts, 26 )
-        self.assertEqual( c.inregister, 0 )
-        self.assertEqual( c.ooregister, 0 )
-        self.assertEqual( c.backwards, 0 )
+        self.assertEqual( contactData.numContacts, 26 )
+        self.assertEqual( contactData.rioInRegister, 0 )
+        self.assertEqual( contactData.rioOoRegister, 0 )
+        self.assertEqual( contactData.rioBackwards, 0 )
         
         return
     
@@ -786,13 +787,14 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont2.log" )
         
         c = Rio()
-        c.parseNcontLog( logfile=logfile )
-        c.analyseRio()
+        contactData = RioData()
+        c.parseNcontLog( contactData, logfile=logfile )
+        c.analyseRio(contactData)
         
-        self.assertEqual( c.numContacts, 10 )
-        self.assertEqual( c.inregister, 0 )
-        self.assertEqual( c.ooregister, 7 )
-        self.assertEqual( c.backwards, 7 )
+        self.assertEqual( contactData.numContacts, 10 )
+        self.assertEqual( contactData.rioInRegister, 0 )
+        self.assertEqual( contactData.rioOoRegister, 7 )
+        self.assertEqual( contactData.rioBackwards, 7 )
         
         return
     
@@ -801,13 +803,14 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont3.log" )
         
         c = Rio()
-        c.parseNcontLog( logfile=logfile )
-        c.analyseRio()
+        contactData = RioData()
+        c.parseNcontLog( contactData, logfile=logfile )
+        c.analyseRio(contactData)
         
-        self.assertEqual( c.numContacts, 14 )
-        self.assertEqual( c.inregister, 0 )
-        self.assertEqual( c.ooregister, 10 )
-        self.assertEqual( c.backwards, 0 )
+        self.assertEqual( contactData.numContacts, 14 )
+        self.assertEqual( contactData.rioInRegister, 0 )
+        self.assertEqual( contactData.rioOoRegister, 10 )
+        self.assertEqual( contactData.rioBackwards, 0 )
         
         return
     
@@ -816,13 +819,14 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont4.log" )
         
         c = Rio()
-        c.parseNcontLog( logfile=logfile )
-        c.analyseRio()
+        contactData = RioData()
+        c.parseNcontLog( contactData, logfile=logfile )
+        c.analyseRio(contactData)
         
-        self.assertEqual( c.numContacts, 56 )
-        self.assertEqual( c.inregister, 0 )
-        self.assertEqual( c.ooregister, 55 )
-        self.assertEqual( c.backwards, 0 )
+        self.assertEqual( contactData.numContacts, 56 )
+        self.assertEqual( contactData.rioInRegister, 0 )
+        self.assertEqual( contactData.rioOoRegister, 55 )
+        self.assertEqual( contactData.rioBackwards, 0 )
         
         return
     
@@ -831,13 +835,14 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont5.log" )
         
         c = Rio()
-        c.parseNcontLog( logfile=logfile )
-        c.analyseRio()
+        contactData = RioData()
+        c.parseNcontLog( contactData, logfile=logfile )
+        c.analyseRio(contactData)
         
-        self.assertEqual( c.numContacts, 77 )
-        self.assertEqual( c.inregister, 19 )
-        self.assertEqual( c.backwards, 16 )
-        self.assertEqual( c.ooregister, 54 )
+        self.assertEqual( contactData.numContacts, 77 )
+        self.assertEqual( contactData.rioInRegister, 19 )
+        self.assertEqual( contactData.rioOoRegister, 54 )
+        self.assertEqual( contactData.rioBackwards,16 )
         
         return
 
@@ -846,14 +851,15 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont7.log" )
         
         c = Rio()
-        c.parseNcontLog( logfile=logfile )
-        c.analyseRio()
-        
-        self.assertEqual( c.numContacts, 18 )
-        self.assertEqual( c.inregister, 0 )
-        self.assertEqual( c.backwards, 0 )
-        self.assertEqual( c.ooregister, 0 )
-        
+        contactData = RioData()
+        c.parseNcontLog( contactData, logfile=logfile )
+        c.analyseRio(contactData)
+
+        self.assertEqual( contactData.numContacts, 18 )
+        self.assertEqual( contactData.rioInRegister, 0 )
+        self.assertEqual( contactData.rioOoRegister, 0 )
+        self.assertEqual( contactData.rioBackwards,0 )
+   
         return
     
     def testParse8(self):
@@ -861,13 +867,14 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont8.log" )
         
         c = Rio()
-        c.parseNcontLog( logfile=logfile )
-        c.analyseRio()
+        contactData = RioData()
+        c.parseNcontLog( contactData, logfile=logfile )
+        c.analyseRio(contactData)
         
-        self.assertEqual( c.numContacts, 9 )
-        self.assertEqual( c.inregister, 0 )
-        self.assertEqual( c.backwards, 0 )
-        self.assertEqual( c.ooregister, 0 )
+        self.assertEqual( contactData.numContacts, 9 )
+        self.assertEqual( contactData.rioInRegister, 0 )
+        self.assertEqual( contactData.rioOoRegister, 0 )
+        self.assertEqual( contactData.rioBackwards,0 )
         
         return
 
@@ -877,21 +884,31 @@ class TestContacts( unittest.TestCase ):
         logfile = os.path.join( self.testfilesDir, "ncont5.log" )
         dssplog = os.path.join( self.testfilesDir, "3RA3.dssp" )
         
-        dsspP = dssp.DsspParser( dssplog )
-        
         c = Rio()
-        contacts = c.parseNcontLog( logfile=logfile )
-        sequence = c.helixFromContacts( contacts=contacts, dsspP=dsspP )
+        contactData = RioData()
+        c.parseNcontLog( contactData, logfile=logfile )       
         
+        sequence = c.helixFromContacts( contactData.contacts, dssplog )
         self.assertEqual( "NARLKQEIAALEYEIAAL", sequence )
         
         return
 
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(TestContacts('testParse1'))
+    suite.addTest(TestContacts('testParse2'))
+    suite.addTest(TestContacts('testParse3'))
+    suite.addTest(TestContacts('testParse4'))
+    suite.addTest(TestContacts('testParse5'))
+    suite.addTest(TestContacts('testParse7'))
+    suite.addTest(TestContacts('testParse8'))
+    suite.addTest(TestContacts('testHelix5'))
+    return suite
+    
+#
+# Run unit tests
 if __name__ == "__main__":
-    
-    unittest.main()
-    
-    import sys
-    sys.exit()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
 
 
