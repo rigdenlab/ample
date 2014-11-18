@@ -1,0 +1,432 @@
+
+Fri May  2 14:32:27 BST 2014
+
+
+############### You are running ARP/wARP 7.4, patch 2 ###############
+
+
+
+ Working directory    /data1/jmht/ensemble_arpwarp/1BYZ/All_atom_trunc_0.00843_rad_1
+ Job ID is set to     .
+ X-ray data file      /data1/jmht/ensemble_arpwarp/1BYZ/1BYZ-cad.mtz
+ Sequence file        /data1/jmht/ensemble_arpwarp/1BYZ/1BYZ_1.pir
+ Input PDB file       /data1/jmht/ensemble_arpwarp/1BYZ/All_atom_trunc_0.00843_rad_1/shelxe_phaser_loc0_ALL_All_atom_trunc_0.00843_rad_1_UNMOD.pdb
+ Tracing mode         WARPNTRACEMODEL
+
+ Accepted label:      fp=FP
+ Accepted label:      sigfp=SIGFP
+ Accepted label:      freelabin=FREE
+ mtz labels taken:    FP SIGFP FREE
+
+ Parameter file       /data1/jmht/ensemble_arpwarp/1BYZ/All_atom_trunc_0.00843_rad_1/arp_warp_tracing.par
+ Job launched in      /data1/jmht/ensemble_arpwarp/1BYZ/All_atom_trunc_0.00843_rad_1
+
+
+############### You are running ARP/wARP 7.4, patch 2 ###############
+
+
+ 
+==================================================================================
+|           Please cite at least one of the publications below for               |
+|                   the ARP/wARP application you are using:                      |
+|                                                                                |
+| Langer G, Cohen SX, Lamzin VS, Perrakis A. (2008) Automated macromolecular     |
+| model building for x-ray crystallography using ARP/wARP version 7.             |
+| Nat. Protoc. 3, 1171-1179                                                      |
+|                                                                                |
+| Perrakis A, Morris RM, Lamzin VS. (1999) Automated protein model building      |
+| combined with iterative structure refinement. Nature Struct. Biol. 6, 458-463  |
+|                                                                                |
+| Wiegels T. & Lamzin, V.S. (2012) Use of noncrystallographic symmetry for       |
+| automated model building at medium to low resolution. Acta Crystallogr D Biol  |
+| Crystallogr. 68, 446-453                                                       |
+|                                                                                |
+|      Use of Refmac is an essential part of model building with ARP/wARP.       |
+|   Please acknowledge the use of Refmac by citing the following publication:    |
+|                                                                                |
+| Murshudov GN, Skubak P, Lebedev AA, Pannu NS, Steiner RA, Nicholls RA,         |
+| Winn MD, Long F, Vagin AA. (2011) REFMAC5 for the refinement of macromolecular |
+| crystal structures. Acta Crystallogr D Biol Crystallogr. 67, 355-367           |
+==================================================================================
+
+Fri May  2 14:32:41 BST 2014
+
+ You are running ARP/wARP version 7.4
+
+ Entering warp_tracing.sh from COMMAND_LINE_SUBMISSION 
+ The working directory is:            /data1/jmht/ensemble_arpwarp/1BYZ/All_atom_trunc_0.00843_rad_1
+
+ ARP/wARP software version is:        7.4
+ The parameter file is:               /data1/jmht/ensemble_arpwarp/1BYZ/All_atom_trunc_0.00843_rad_1/arp_warp_tracing.par
+ ARP/wARP will run in subdirectory:   temp_tracing
+
+ Checking the estimated solvent content
+
+ Computed solvent content is outside allowed range. 
+ Target number of residues/nucleotides is changed to 46 and 0
+
+
+ Target number of residues in the AU: 46
+ Target solvent content:              0.3606
+
+ Checking the provided sequence file
+ Detected sequence length:            12
+ Number of NCS-related molecules:     4
+ Adjusted target number of residues:  48
+ Adjusted target solvent content:     0.33
+
+ Input MTZ file is:                   1BYZ-cad.mtz.cad
+ Column labels for model refinement:  FP SIGFP FREE
+ Rfree value for free reflections:    0
+ Space group number is:               1
+ Cell parameters:                     20.846 20.909 27.057 102.400 95.330 119.620
+ Input sequence file is:              1BYZ_1.pir_lf
+ Input PDB file is:                   shelxe_phaser_loc0_ALL_All_atom_trunc_0.00843_rad_1_UNMOD.pdb_lf
+
+ Setting PDB header to reflect the MTZ header content
+
+ Number of atoms in the PDB file:     260
+
+
+ ARP/wARP will be iterated with REFMAC5
+ 50 refinement / model update cycles will be run in total.
+ Atoms will be removed below 1.0 sigma in 2mFoDFc map and added above 3.2 sigma in mFoDFc map.
+
+ Refmac Refinement Parameters
+   1 REFMAC cycle(s) with 1.0 1.0 fractional shifts damping in each cycle.
+   Conditional restraints will be used
+   Weight for restraints is set to AUTO 
+   Solvent mask correction will be used
+   Anisotropic scaling, No bulk solvent correction
+
+ Model Building Parameters
+   Main chain tracing will take place every 5 refinement / model update cycles.
+   Side chain docking will be performed from autobuilding cycle number 0
+   Loops will be built when appropriate and at the last cycle
+
+ Resolution range:                    25.690 0.904
+ Wilson plot Bfac:                    3.75
+
+ Checking whether input PDB contains ligands unknown to the Refmac library
+
+   22467 reflections ( 85.86 % complete ) and  256 restraints for refining 260 atoms.
+   Observations/parameters ratio is 21.60
+------------------------------------------------------
+ Starting model:  R = 0.4486 (Rfree = 0.480). 
+------------------------------------------------------
+  Cycle 0:   After refmac, R = 0.4199 (Rfree = 0.452) for 260 atoms.
+  Cycle 0:   After refmac, R = 0.4102 (Rfree = 0.443) for 260 atoms.
+  Cycle 0:   After refmac, R = 0.4045 (Rfree = 0.438) for 260 atoms.
+  Cycle 0:   After refmac, R = 0.4011 (Rfree = 0.434) for 260 atoms.
+  Cycle 0:   After refmac, R = 0.3989 (Rfree = 0.433) for 260 atoms.
+  Cycle 0:   After refmac, R = 0.3974 (Rfree = 0.432) for 260 atoms.
+  Cycle 0:   After refmac, R = 0.3964 (Rfree = 0.431) for 260 atoms.
+  Cycle 0:   After refmac, R = 0.3956 (Rfree = 0.430) for 260 atoms.
+  Cycle 0:   After refmac, R = 0.3949 (Rfree = 0.430) for 260 atoms.
+             Found 85 (85 requested) and removed  6 (42 requested) atoms.
+------------------------------------------------------
+ Building Cycle 1    Atomic shape factors  0.48  0.58
+   Round 1: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 2: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 3: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 4: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 5: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Taking the results from Round 5
+
+  Chains 4, Residues 41, Estimated correctness of the model 99.9 %
+  2 chains (23 residues) have been docked in sequence
+
+  4 chains (41 residues) following loop building
+  2 chains (23 residues) in sequence following loop building
+------------------------------------------------------
+   22467 reflections ( 85.86 % complete ) and  570 restraints for refining 378 atoms.
+   310 conditional restraints added.
+   Observations/parameters ratio is 14.86
+------------------------------------------------------
+  Cycle 1:   After refmac, R = 0.3723 (Rfree = 0.390) for 378 atoms.
+             Found 86 (124 requested) and removed  3 (62 requested) atoms.
+  Cycle 2:   After refmac, R = 0.3082 (Rfree = 0.354) for 461 atoms.
+             Found 52 (151 requested) and removed  6 (75 requested) atoms.
+  Cycle 3:   After refmac, R = 0.2556 (Rfree = 0.297) for 501 atoms.
+             Found 37 (166 requested) and removed  9 (83 requested) atoms.
+  Cycle 4:   After refmac, R = 0.2202 (Rfree = 0.263) for 526 atoms.
+             Found 33 (174 requested) and removed  1 (87 requested) atoms.
+  Cycle 5:   After refmac, R = 0.2170 (Rfree = 0.265) for 551 atoms.
+             Found 24 (183 requested) and removed  2 (91 requested) atoms.
+------------------------------------------------------
+ Building Cycle 2    Atomic shape factors  0.47  0.57
+   Round 1: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 2: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 3: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 4: 44 peptides, 4 chains. Longest chain 13 peptides. Score 0.883
+   Round 5: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Taking the results from Round 3
+
+  Chains 4, Residues 44, Estimated correctness of the model 99.9 %
+  4 chains (44 residues) have been docked in sequence
+
+  4 chains (44 residues) following loop building
+  4 chains (44 residues) in sequence following loop building
+------------------------------------------------------
+   22467 reflections ( 85.86 % complete ) and  584 restraints for refining 495 atoms.
+   212 conditional restraints added.
+   Observations/parameters ratio is 11.35
+------------------------------------------------------
+  Cycle 6:   After refmac, R = 0.2504 (Rfree = 0.283) for 495 atoms.
+             Found 43 (163 requested) and removed  5 (81 requested) atoms.
+  Cycle 7:   After refmac, R = 0.2022 (Rfree = 0.238) for 533 atoms.
+             Found 29 (175 requested) and removed  5 (87 requested) atoms.
+  Cycle 8:   After refmac, R = 0.1851 (Rfree = 0.222) for 552 atoms.
+             Found 19 (183 requested) and removed  5 (91 requested) atoms.
+  Cycle 9:   After refmac, R = 0.1713 (Rfree = 0.216) for 562 atoms.
+             Found 19 (186 requested) and removed  6 (93 requested) atoms.
+  Cycle 10:  After refmac, R = 0.1668 (Rfree = 0.210) for 569 atoms.
+             Found 18 (189 requested) and removed  7 (94 requested) atoms.
+------------------------------------------------------
+ Building Cycle 3    Atomic shape factors  0.45  0.54
+   Round 1: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 2: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 3: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 4: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 5: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Taking the results from Round 5
+
+  Chains 4, Residues 44, Estimated correctness of the model 99.9 %
+  4 chains (44 residues) have been docked in sequence
+
+  4 chains (44 residues) following loop building
+  4 chains (44 residues) in sequence following loop building
+------------------------------------------------------
+   22467 reflections ( 85.86 % complete ) and  597 restraints for refining 500 atoms.
+   225 conditional restraints added.
+   Observations/parameters ratio is 11.23
+------------------------------------------------------
+  Cycle 11:  After refmac, R = 0.2278 (Rfree = 0.255) for 500 atoms.
+             Found 46 (164 requested) and removed  2 (82 requested) atoms.
+  Cycle 12:  After refmac, R = 0.1906 (Rfree = 0.236) for 544 atoms.
+             Found 28 (179 requested) and removed  5 (89 requested) atoms.
+  Cycle 13:  After refmac, R = 0.1753 (Rfree = 0.222) for 564 atoms.
+             Found 32 (186 requested) and removed  9 (93 requested) atoms.
+  Cycle 14:  After refmac, R = 0.1707 (Rfree = 0.220) for 580 atoms.
+             Found 24 (193 requested) and removed  12 (96 requested) atoms.
+  Cycle 15:  After refmac, R = 0.1642 (Rfree = 0.210) for 590 atoms.
+             Found 33 (194 requested) and removed  9 (97 requested) atoms.
+------------------------------------------------------
+ Building Cycle 4    Atomic shape factors  0.44  0.53
+   Round 1: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 2: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 3: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 4: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 5: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Taking the results from Round 4
+
+  Chains 4, Residues 44, Estimated correctness of the model 99.9 %
+  4 chains (44 residues) have been docked in sequence
+
+  4 chains (44 residues) following loop building
+  4 chains (44 residues) in sequence following loop building
+------------------------------------------------------
+   22467 reflections ( 85.86 % complete ) and  626 restraints for refining 508 atoms.
+   254 conditional restraints added.
+   Observations/parameters ratio is 11.06
+------------------------------------------------------
+  Cycle 16:  After refmac, R = 0.2231 (Rfree = 0.257) for 508 atoms.
+             Found 43 (167 requested) and removed  3 (83 requested) atoms.
+  Cycle 17:  After refmac, R = 0.2010 (Rfree = 0.246) for 548 atoms.
+             Found 24 (180 requested) and removed  3 (90 requested) atoms.
+  Cycle 18:  After refmac, R = 0.1906 (Rfree = 0.246) for 563 atoms.
+             Found 30 (187 requested) and removed  4 (93 requested) atoms.
+  Cycle 19:  After refmac, R = 0.1840 (Rfree = 0.247) for 587 atoms.
+             Found 22 (193 requested) and removed  6 (96 requested) atoms.
+  Cycle 20:  After refmac, R = 0.1787 (Rfree = 0.244) for 597 atoms.
+             Found 30 (198 requested) and removed  9 (99 requested) atoms.
+------------------------------------------------------
+ Building Cycle 5    Atomic shape factors  0.42  0.51
+   Round 1: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 2: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 3: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 4: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 5: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Taking the results from Round 1
+
+  Chains 4, Residues 44, Estimated correctness of the model 99.9 %
+  4 chains (44 residues) have been docked in sequence
+
+  4 chains (44 residues) following loop building
+  4 chains (44 residues) in sequence following loop building
+------------------------------------------------------
+   22467 reflections ( 85.86 % complete ) and  622 restraints for refining 507 atoms.
+   250 conditional restraints added.
+   Observations/parameters ratio is 11.08
+------------------------------------------------------
+  Cycle 21:  After refmac, R = 0.2126 (Rfree = 0.245) for 507 atoms.
+             Found 41 (166 requested) and removed  1 (83 requested) atoms.
+  Cycle 22:  After refmac, R = 0.1815 (Rfree = 0.228) for 547 atoms.
+             Found 31 (180 requested) and removed  2 (90 requested) atoms.
+  Cycle 23:  After refmac, R = 0.1776 (Rfree = 0.226) for 573 atoms.
+             Found 27 (189 requested) and removed  6 (94 requested) atoms.
+  Cycle 24:  After refmac, R = 0.1766 (Rfree = 0.220) for 590 atoms.
+             Found 21 (195 requested) and removed  8 (97 requested) atoms.
+  Cycle 25:  After refmac, R = 0.1717 (Rfree = 0.232) for 599 atoms.
+             Found 21 (198 requested) and removed  7 (99 requested) atoms.
+------------------------------------------------------
+ Building Cycle 6    Atomic shape factors  0.42  0.51
+   Round 1: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 2: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 3: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 4: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 5: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Taking the results from Round 4
+
+  Chains 4, Residues 44, Estimated correctness of the model 99.9 %
+  4 chains (44 residues) have been docked in sequence
+
+  4 chains (44 residues) following loop building
+  4 chains (44 residues) in sequence following loop building
+------------------------------------------------------
+   22467 reflections ( 85.86 % complete ) and  636 restraints for refining 511 atoms.
+   264 conditional restraints added.
+   Observations/parameters ratio is 10.99
+------------------------------------------------------
+  Cycle 26:  After refmac, R = 0.2278 (Rfree = 0.268) for 511 atoms.
+             Found 48 (168 requested) and removed  3 (84 requested) atoms.
+  Cycle 27:  After refmac, R = 0.2039 (Rfree = 0.254) for 556 atoms.
+             Found 27 (183 requested) and removed  3 (91 requested) atoms.
+  Cycle 28:  After refmac, R = 0.1939 (Rfree = 0.249) for 578 atoms.
+             Found 26 (191 requested) and removed  4 (95 requested) atoms.
+  Cycle 29:  After refmac, R = 0.1873 (Rfree = 0.250) for 594 atoms.
+             Found 21 (197 requested) and removed  2 (98 requested) atoms.
+  Cycle 30:  After refmac, R = 0.1827 (Rfree = 0.249) for 606 atoms.
+             Found 24 (201 requested) and removed  5 (100 requested) atoms.
+------------------------------------------------------
+ Building Cycle 7    Atomic shape factors  0.44  0.53
+   Round 1: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 2: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 3: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 4: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 5: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Taking the results from Round 5
+
+  Chains 4, Residues 44, Estimated correctness of the model 99.9 %
+  4 chains (44 residues) have been docked in sequence
+
+  4 chains (44 residues) following loop building
+  4 chains (44 residues) in sequence following loop building
+------------------------------------------------------
+   22467 reflections ( 85.86 % complete ) and  620 restraints for refining 507 atoms.
+   248 conditional restraints added.
+   Observations/parameters ratio is 11.08
+------------------------------------------------------
+  Cycle 31:  After refmac, R = 0.2422 (Rfree = 0.273) for 507 atoms.
+             Found 48 (166 requested) and removed  5 (83 requested) atoms.
+  Cycle 32:  After refmac, R = 0.1975 (Rfree = 0.247) for 550 atoms.
+             Found 34 (181 requested) and removed  3 (90 requested) atoms.
+  Cycle 33:  After refmac, R = 0.1922 (Rfree = 0.248) for 577 atoms.
+             Found 24 (191 requested) and removed  3 (95 requested) atoms.
+  Cycle 34:  After refmac, R = 0.1853 (Rfree = 0.246) for 593 atoms.
+             Found 17 (196 requested) and removed  4 (98 requested) atoms.
+  Cycle 35:  After refmac, R = 0.1811 (Rfree = 0.237) for 602 atoms.
+             Found 15 (199 requested) and removed  2 (99 requested) atoms.
+------------------------------------------------------
+ Building Cycle 8    Atomic shape factors  0.44  0.53
+   Round 1: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 2: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 3: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 4: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 5: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Taking the results from Round 5
+
+  Chains 4, Residues 44, Estimated correctness of the model 99.9 %
+  4 chains (44 residues) have been docked in sequence
+
+  4 chains (44 residues) following loop building
+  4 chains (44 residues) in sequence following loop building
+------------------------------------------------------
+   22467 reflections ( 85.86 % complete ) and  669 restraints for refining 513 atoms.
+   297 conditional restraints added.
+   Observations/parameters ratio is 10.95
+------------------------------------------------------
+  Cycle 36:  After refmac, R = 0.2334 (Rfree = 0.267) for 513 atoms.
+             Found 44 (168 requested) and removed  1 (84 requested) atoms.
+  Cycle 37:  After refmac, R = 0.2127 (Rfree = 0.266) for 556 atoms.
+             Found 27 (183 requested) and removed  1 (91 requested) atoms.
+  Cycle 38:  After refmac, R = 0.2023 (Rfree = 0.256) for 579 atoms.
+             Found 16 (191 requested) and removed  1 (95 requested) atoms.
+  Cycle 39:  After refmac, R = 0.1928 (Rfree = 0.250) for 590 atoms.
+             Found 19 (195 requested) and removed  0 (97 requested) atoms.
+  Cycle 40:  After refmac, R = 0.1866 (Rfree = 0.251) for 607 atoms.
+             Found 15 (200 requested) and removed  4 (100 requested) atoms.
+------------------------------------------------------
+ Building Cycle 9    Atomic shape factors  0.43  0.52
+   Round 1: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 2: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 3: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 4: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 5: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Taking the results from Round 5
+
+  Chains 4, Residues 44, Estimated correctness of the model 99.9 %
+  4 chains (44 residues) have been docked in sequence
+
+  4 chains (44 residues) following loop building
+  4 chains (44 residues) in sequence following loop building
+------------------------------------------------------
+   22467 reflections ( 85.86 % complete ) and  653 restraints for refining 514 atoms.
+   281 conditional restraints added.
+   Observations/parameters ratio is 10.93
+------------------------------------------------------
+  Cycle 41:  After refmac, R = 0.2647 (Rfree = 0.299) for 514 atoms.
+             Found 44 (169 requested) and removed  0 (84 requested) atoms.
+  Cycle 42:  After refmac, R = 0.2083 (Rfree = 0.263) for 558 atoms.
+             Found 32 (183 requested) and removed  3 (91 requested) atoms.
+  Cycle 43:  After refmac, R = 0.1995 (Rfree = 0.264) for 585 atoms.
+             Found 24 (193 requested) and removed  3 (96 requested) atoms.
+  Cycle 44:  After refmac, R = 0.1914 (Rfree = 0.257) for 603 atoms.
+             Found 15 (199 requested) and removed  3 (99 requested) atoms.
+  Cycle 45:  After refmac, R = 0.1840 (Rfree = 0.253) for 611 atoms.
+             Found 17 (202 requested) and removed  5 (101 requested) atoms.
+------------------------------------------------------
+ Building Cycle 10    Atomic shape factors  0.43  0.52
+   Round 1: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 2: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Round 3: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 4: 48 peptides, 4 chains. Longest chain 12 peptides. Score 0.907
+   Round 5: 45 peptides, 4 chains. Longest chain 13 peptides. Score 0.890
+   Taking the results from Round 4
+
+  Last building cycle: 
+  Chain fragments will be rearranged
+
+  Chains 4, Residues 44, Estimated correctness of the model 99.9 %
+  4 chains (44 residues) have been docked in sequence
+
+
+  Sequence coverage is 97 %
+
+  All DUM atoms will be removed
+  4 chains (44 residues) following loop building
+  4 chains (44 residues) in sequence following loop building
+------------------------------------------------------
+ ---> Final restrained refinement block. Update only waters.
+   22467 reflections ( 85.86 % complete ) and  372 restraints for refining 377 atoms.
+   Observations/parameters ratio is 14.90
+------------------------------------------------------
+  Cycle 46:  After refmac, R = 0.3146 (Rfree = 0.327) for 377 atoms.
+             Found 48 (124 requested) and removed  0 (124 requested) atoms.
+  Cycle 47:  After refmac, R = 0.2513 (Rfree = 0.270) for 377 atoms.
+             Found 16 (139 requested) and removed  0 (69 requested) atoms.
+  Cycle 48:  After refmac, R = 0.2248 (Rfree = 0.252) for 377 atoms.
+             Found 6 (145 requested) and removed  1 (72 requested) atoms.
+  Cycle 49:  After refmac, R = 0.2157 (Rfree = 0.242) for 377 atoms.
+             Found 2 (146 requested) and removed  2 (73 requested) atoms.
+
+   Writing map files covering molecule ...
+
+
+ Normal termination of warpNtrace
+
+
+Fri May  2 15:41:41 BST 2014
+
+ Job finished.
+
