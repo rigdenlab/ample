@@ -1473,8 +1473,18 @@ class Test(unittest.TestCase):
         
         return
 
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testGetInfo1'))
+    suite.addTest(Test('testGetInfo2'))
+    return suite
+    
+#
+# Run unit tests
 if __name__ == "__main__":
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
+
 
 if __name__ == "__main__" and False:
     #
