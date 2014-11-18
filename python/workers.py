@@ -5,6 +5,7 @@ Created on Feb 28, 2013
 '''
 
 # python imports
+import glob
 import logging
 import multiprocessing
 import os
@@ -127,19 +128,32 @@ sys.exit(0)
                 return True
             return False
         
-        print "running in ",os.getcwd()
+        #print "running in ",os.getcwd()
         jobs = []
         for j in range( 15 ):
-            j = "job_{0}.job".format( j )
-            jobs.append( self.makeJob( os.path.abspath( j ) ) )
+            j = os.path.abspath("job_{0}.job".format( j ))
+            jobs.append( self.makeJob(j))
             
         js = JobServer()
         js.setJobs( jobs )
         js.start( nproc=2, early_terminate=True, check_success=check_success )
         
+        # Cleanup
+        for j in jobs:
+            os.unlink(j)
+        for l in glob.glob("job_*.log"):
+            os.unlink(l)
+        
         pass
 
-        
-if __name__ == "__main__":
-    unittest.main()
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testJobServer'))
+    return suite
     
+#
+# Run unit tests
+if __name__ == "__main__":
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
+
+      
