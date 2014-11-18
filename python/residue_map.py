@@ -474,6 +474,15 @@ class residueSequenceMap( object ):
 class Test(unittest.TestCase):
 
 
+    def setUp(self):
+        
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ampleDir = os.sep.join( paths[ : -1 ] )
+        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
+        
+        return
+
     def testResSeqMap1(self):
         """See if we can sort out the indexing between the native and model"""
 
@@ -513,12 +522,12 @@ class Test(unittest.TestCase):
         
         return
     
-    def testRefSeqMap2(self):
+    def testResSeqMap2(self):
         """See if we can sort out the indexing between the native and model"""
         
         
-        nativePdb = "../tests/testfiles//2XOV.pdb"
-        modelPdb = "../tests/testfiles/2XOV_S_00000001.pdb" 
+        nativePdb = os.path.join(self.testfilesDir,"2XOV.pdb")
+        modelPdb = os.path.join(self.testfilesDir,"2XOV_S_00000001.pdb")
         
         resSeqMap = residueSequenceMap( nativePdb, modelPdb )
         
@@ -536,8 +545,8 @@ class Test(unittest.TestCase):
         """See if we can sort out the indexing between the native and model"""
         
         
-        nativePdb = "../tests/testfiles/2UUI.pdb"
-        modelPdb = "../tests/testfiles/2UUI_S_00000001.pdb"
+        nativePdb = os.path.join(self.testfilesDir,"2UUI.pdb")
+        modelPdb = os.path.join(self.testfilesDir,"2UUI_S_00000001.pdb")
         
         PE = pdb_edit.PDBEdit()
         chainA = "2UUI_A.pdb"
@@ -572,8 +581,8 @@ class Test(unittest.TestCase):
         """See if we can sort out the indexing between the native and model"""
         
         
-        nativePdb = "/media/data/shared/coiled-coils/ensemble/1K33/1K33.pdb"
-        modelPdb = "/media/data/shared/coiled-coils/ensemble/1K33/models/S_00000001.pdb"
+        nativePdb = os.path.join(self.testfilesDir,"1K33.pdb")
+        modelPdb = os.path.join(self.testfilesDir,"1K33_S_00000001.pdb")
         
         PE = pdb_edit.PDBEdit()
         nativePdbStd = "1K33_std.pdb"
@@ -585,14 +594,21 @@ class Test(unittest.TestCase):
         resSeqMap = residueSequenceMap( )
         resSeqMap.fromInfo( nativeInfo, 'A', modelInfo, 'A' )
         
-
-        
-        #os.unlink( chainA )
-        #os.unlink( chainAstd )
+        os.unlink( nativePdbStd )
         
         return
     
 
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testResSeqMap1'))
+    suite.addTest(Test('testResSeqMap2'))
+    suite.addTest(Test('testResSeqMap3'))
+    suite.addTest(Test('testResSeqMap4'))
+    return suite
+    
+#
+# Run unit tests
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
+
