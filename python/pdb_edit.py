@@ -1,3 +1,4 @@
+#!/usr/bin/env ccp4-python
 '''
 Useful manipulations on PDB files
 '''
@@ -1480,13 +1481,9 @@ def testSuite():
     suite.addTest(Test('testGetInfo2'))
     return suite
     
-#
-# Run unit tests
+
 if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(testSuite())
-
-
-if __name__ == "__main__" and False:
+    #unittest.TextTestRunner(verbosity=2).run(testSuite())
     #
     # Command-line handling
     #
@@ -1494,15 +1491,15 @@ if __name__ == "__main__" and False:
     parser = argparse.ArgumentParser(description='Manipulate PDB files', prefix_chars="-")
     
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-one_std_chain', action='store_true',
-                       help='Take pdb to one model/chain that contains only standard amino acids')
-    group.add_argument('-standardise', action='store_true',
+    group.add_argument('-std', action='store_true',
                        help='Standardise the PDB')
+    group.add_argument('-std1', action='store_true',
+                       help='Take pdb to one model/chain that contains only standard amino acids')
     
     parser.add_argument('input_file',
                        help='The input file - will not be altered')
     
-    parser.add_argument('output_file',
+    parser.add_argument('-o', dest='output_file',
                        help='The output file - will be created')
     
     args = parser.parse_args()
@@ -1512,18 +1509,14 @@ if __name__ == "__main__" and False:
     if not os.path.isfile(args.input_file):
         raise RuntimeError, "Cannot find input file: {0}".format( args.input_file )
     
-#     if args.output_file:
-#         args.output_file = os.path.abspath( args.output_file )
-#     else:
-#         n = os.path.split( os.path.basename( args.input_file ) )[0]
-#         args.output_file = n+"_std.pdb"
+    if args.output_file:
+        args.output_file = os.path.abspath( args.output_file )
+    else:
+        n = os.path.splitext( os.path.basename( args.input_file ) )[0]
+        args.output_file = n+"_std.pdb"
 
-
-
-    PE = PDBEdit()
-    
-    if args.one_std_chain:
+    if args.std1:
         #to_1_std_chain( args.input_file, args.output_file )
         pass
-    elif args.standardise:
-        PE.standardise( args.input_file, args.output_file )
+    elif args.std:
+        PDBEdit().standardise( args.input_file, args.output_file )
