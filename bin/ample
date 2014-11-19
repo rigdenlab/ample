@@ -46,6 +46,7 @@ import time
 import add_sidechains_SCWRL
 import ample_options
 import ample_util
+import benchmark
 import ensemble
 import fasta_parser
 import mrbump_ensemble
@@ -158,6 +159,9 @@ parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
 
 parser.add_argument('-name', metavar='job_name', type=str, nargs=1,
                    help='4-letter identifier for job [ampl]')
+
+parser.add_argument('-native_pdb', metavar='native_pdb', type=str, nargs=1,
+                   help='Path to the crystal structure PDB for benchmarking.')
 
 parser.add_argument('-nmodels', metavar='number of models', type=int, nargs=1,
                    help='number of models to make (default: 1000)')
@@ -409,13 +413,6 @@ if ( float( amopt.d['fasta_length'] ) / 100 ) * float( amopt.d['percent'] ) < 1:
     logger.critical(msg)
     sys.exit(1)
 
-###############################################################################
-#
-# MTZ file processing
-#
-###############################################################################
-ample_util.processReflectionFile( amopt.d )
-logger.info( "Using MTZ file: {0}".format( amopt.d['mtz'] ) )
 #
 # Not sure if name actually required - see make_fragments.pl
 #
@@ -423,9 +420,23 @@ if amopt.d['name'] and len(amopt.d['name']) != 4:
     msg = '-name argument is the wrong length, use 4 chars eg ABCD'
     logger.critical(msg)
     sys.exit(1)
-
+    
 # Underscore required by rosetta make_fragments.pl
 amopt.d['name'] += '_'
+
+###############################################################################
+#
+# MTZ file processing
+#
+###############################################################################
+ample_util.processReflectionFile( amopt.d )
+logger.info( "Using MTZ file: {0}".format( amopt.d['mtz'] ) )
+
+###############################################################################
+#
+# Modelling and ensemble options
+#
+###############################################################################
 
 # Check if importing ensembles
 if amopt.d['ensembles_dir']:
@@ -528,6 +539,23 @@ These can be generated using the Robetta server: http://robetta.bakerlab.org
 Please see the AMPLE documentation for further information."""
         logger.critical(msg)
         sys.exit(1)
+
+###############################################################################
+#
+# Misc options
+#
+###############################################################################
+
+# Benchmark mode
+if amopt.d['native_pdb']:
+    if not os.path.isfile(amopt.d['native_pdb']):
+        msg = "Cannot find crystal structure PDB: {0}".format(amopt.d['native_pdb'])
+        logger.critical(msg)
+        sys.exit(1)
+    amopt.d['benchmark_mode']=True
+    logger.info("*** AMPLE running in benchmark mode ***")
+    amopt.d['benchmark_dir']=os.path.join(amopt.d['work_dir'],"benchmark")
+    os.mkdir(amopt.d['benchmark_dir'])
 
 # Missing domains
 if amopt.d['missing_domain']:
@@ -642,6 +670,12 @@ if amopt.d['shelxe_rebuild'] and not amopt.d['use_shelxe']:
     msg = 'shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.'
     logger.critical(msg)
     sys.exit(1)
+
+#-----------------------------------
+# Collect data if in benchmark mode
+#-----------------------------------
+if amopt.d['benchmark_mode']:
+    benchmark.analysePdb(amopt)
 
 # Create the rosetta modeller - this runs all the checks required
 if amopt.d['make_models'] or amopt.d['make_frags'] or amopt.d['NMR_protocol']:  # only need Rosetta if making models
@@ -841,6 +875,13 @@ logger.info(ensemble_summary)
 if not len(ensembles):
     logger.critical("### AMPLE FAILED TO GENERATE ANY ENSEMBLES! ###\nExiting...")
     sys.exit(1)
+    
+    
+#-----------------------------------
+# Collect data if in benchmark mode
+#-----------------------------------
+if amopt.d['benchmark_mode']:
+    benchmark.analyse1(amopt)
 
 #---------------------------------------
 # MR BUMP analysis of the ensembles
@@ -889,6 +930,11 @@ for i, ensemble_pdbs in enumerate(ensembles):
     #summary = results_summary.summariseResults()
 
 
+#results_summary = mrbump_results.ResultsSummary()
+#results_summary.extractResults("/opt/ample-dev1/examples/3twe/ROSETTA_MR_1/MRBUMP/cluster_1")
+#amopt.d['mrbump_results'].append( results_summary.results )
+
+
 # Timing data
 time_stop = time.time()
 elapsed_time = time_stop - time_start
@@ -898,6 +944,9 @@ msg = '\nMR and shelx DONE\n\n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n
 logging.info(msg)
 RUNNING.write(msg)
 RUNNING.flush()
+
+if amopt.d['benchmark_mode']:
+    benchmark.analyse2(amopt)
 
 # Save results
 with open( amopt.d['results_path'], 'w' ) as f:

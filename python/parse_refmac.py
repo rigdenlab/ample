@@ -4,6 +4,7 @@ Created on 28 Nov 2013
 @author: jmht
 '''
 
+import os
 import unittest
 
 class RefmacLogParser(object):
@@ -46,10 +47,20 @@ class RefmacLogParser(object):
     
 class Test(unittest.TestCase):
 
+
+    def setUp(self):
+        
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ampleDir = os.sep.join( paths[ : -1 ] )
+        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
+        
+        return
+    
     def testParse1(self):
         """parse 2bhw"""
         
-        logFile = "/opt/ample-dev1/tests/testfiles/refmac.log"
+        logFile = os.path.join(self.testfilesDir,"refmac.log")
         ap = RefmacLogParser( logFile )
         
         #self.assertEqual( ap.initRfact, 0.452)
@@ -58,7 +69,14 @@ class Test(unittest.TestCase):
         self.assertEqual( ap.finalRfree, 0.5289)
         
         return
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testParse1'))
+    return suite
     
+#
+# Run unit tests
 if __name__ == "__main__":
-    
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
+

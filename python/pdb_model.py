@@ -455,9 +455,9 @@ class CrystalInfo(object):
     
     def fromLine(self, line ):
         
-        self.a = float( line[6:15] )
-        self.b = float( line[15:24] )
-        self.c = float( line[24:33] )
+        self.a = float(line[6:15].strip())
+        self.b = float( line[15:24].strip() )
+        self.c = float( line[24:33].strip() )
         self.alpha = float( line[33:40] )
         self.beta = float( line[40:47] )
         self.gamma = float( line[47:54] )
@@ -477,6 +477,7 @@ class PdbInfo(object):
         
         self.models = [] # List of PdbModel objects
         
+        self.pdbCode=None
         self.title = None # First line of the title
         self.resolution = None
         
@@ -955,8 +956,22 @@ class Test(unittest.TestCase):
         self.assertEqual(a.z,8)
         
         return
-           
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testReadAtom'))
+    suite.addTest(Test('testReadAtom2'))
+    suite.addTest(Test('testWriteAtom1'))
+    suite.addTest(Test('testReadHetatm'))
+    suite.addTest(Test('testWriteHetatm'))
+    suite.addTest(Test('testWriteHetatm2'))
+    suite.addTest(Test('testReadModres'))
+    suite.addTest(Test('testWriteModres'))
+    suite.addTest(Test('testReadCrystalInfo'))
+    return suite
+    
+#
+# Run unit tests
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
 

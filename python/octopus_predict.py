@@ -192,19 +192,57 @@ class Test(unittest.TestCase):
         
         logging.basicConfig()
         logging.getLogger().setLevel(logging.DEBUG)
-        
+         
         filedir = os.path.abspath( os.getcwd()+os.sep+".."+os.sep+"tests/testfiles")
         fastafile = filedir + os.sep + "2uui.fasta"
-
+ 
         octo = OctopusPredict()
         fasta = octo.getFasta(fastafile)
         octo.getPredict("2uui",fasta)
-    
+     
         self.assertIsNotNone(octo.topo, "Error getting topo file")
-        
-        print octo.topo
-        
+    
+    
+        ref="""##############################################################################
+OCTOPUS result file
+Generated from http://octopus.cbr.su.se/ at 2014-11-17 18:15:38
+Total request time: 2.67 seconds.
+##############################################################################
 
+
+Sequence name: 2uui_A; molId:1; molType:protein; unp:Q16873; molName:LEUKOTRIENE C4 SY...
+Sequence length: 156 aa.
+Sequence:
+MHHHHHHKDEVALLAAVTLLGVLLQAYFSLQVISARRAFRVSPPLTTGPPEFERVYRAQV
+NCSEYFPLFLATLWVAGIFFHEGAAALCGLVYLFARLRYFQGYARSAQLRLAPLYASARA
+LWLLVALAALGLLAHFLPAALRAALLGRLRTLLPWA
+
+OCTOPUS predicted topology:
+oooooooooooMMMMMMMMMMMMMMMMMMMMMiiiiiiiiiiiiiiiiiiiiiiiiiiii
+iiiiiiiMMMMMMMMMMMMMMMoMMMMMMMMMMMMMMMiiiiiiiiiiiiiiiiiMMMMM
+MMMMMMMMMMMMMMMMoooooooooooooooooooo
+"""
+        
+        #class FOO():
+        #    pass
+        #octo=FOO()
+        #octo.topo="2uui.topo"
+        with open(octo.topo) as f:
+            lines=[l.strip() for l in f]
+        
+        self.assertEqual(lines[7:],ref.split("\n")[7:])
+        
+        os.unlink("2uui.topo")
+        os.unlink("2uui.nnprf")
+        
+        return 
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testGetPredict'))
+    return suite
+    
+#
+# Run unit tests
 if __name__ == "__main__":
-    #import sys;sys.argv = ['', 'Test.testName']
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())

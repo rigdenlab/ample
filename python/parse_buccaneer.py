@@ -3,7 +3,7 @@ Created on 28 Nov 2013
 
 @author: jmht
 '''
-
+import os
 import unittest
 
 class BuccaneerLogParser(object):
@@ -45,19 +45,35 @@ class BuccaneerLogParser(object):
     
 class Test(unittest.TestCase):
 
+
+    def setUp(self):
+        
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ampleDir = os.sep.join( paths[ : -1 ] )
+        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
+        
+        return
+
     def testParse1(self):
         """parse 2bhw"""
         
-        logFile = "/Users/jmht/Documents/AMPLE/data/buccaneer.log"
+        logFile = os.path.join(self.testfilesDir,"buccaneer.log")
         bp = BuccaneerLogParser( logFile )
         
-        self.assertEqual( bp.initRfree, 0.5642)
-        self.assertEqual( bp.finalRfree, 0.2841)
-        self.assertEqual( bp.initRfact, 0.5548)
-        self.assertEqual( bp.finalRfact, 0.2659)
+        self.assertEqual( bp.initRfree, 0.3781)
+        self.assertEqual( bp.finalRfree, 0.3222)
+        self.assertEqual( bp.initRfact, 0.3708)
+        self.assertEqual( bp.finalRfact, 0.2979)
         
         return
     
-if __name__ == "__main__":
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testParse1'))
+    return suite
     
-    unittest.main()
+#
+# Run unit tests
+if __name__ == "__main__":
+    unittest.TextTestRunner(verbosity=2).run(testSuite())

@@ -8,6 +8,9 @@ import os
 import re
 import unittest
 
+# External imports
+import iotbx.pdb
+
 # our imports
 import ample_util
 import pdb_model
@@ -189,10 +192,10 @@ class PDBEdit(object):
             
         return
 
-    def extract_model( self, inpdb, outpdb, modelID=None ):
+    def extract_model( self, inpdb, outpdb, modelID ):
         """Extract modelID from inpdb into outpdb"""
         
-        assert modelID
+        assert modelID>0
         
         logfile = outpdb+".log"
         cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
@@ -745,6 +748,10 @@ class PDBEdit(object):
         while line:
             
             # First line of title
+            if line.startswith('HEADER'):
+                info.pdbCode = line[62:66].strip()
+            
+            # First line of title
             if line.startswith('TITLE') and not info.title:
                 info.title = line[10:-1].strip()
             
@@ -760,7 +767,11 @@ class PDBEdit(object):
                 if numRemark == 2:
                     line = f.readline()
                     if line.find("RESOLUTION") != -1:
-                        info.resolution = float( line[25:30] )
+                        try:
+                            info.resolution = float( line[25:30] )
+                        except ValueError:
+                            # RESOLUTION. NOT APPLICABLE.
+                            info.resolution=-1
                 
                 # Get solvent content                
                 if numRemark == 280:
@@ -785,7 +796,12 @@ class PDBEdit(object):
             #End REMARK
             
             if line.startswith("CRYST1"):
-                info.crystalInfo = pdb_model.CrystalInfo( line )
+                try:
+                    info.crystalInfo = pdb_model.CrystalInfo( line )
+                except ValueError,e:
+                    # Bug in pdbset nukes the CRYST1 line so we need to catch this
+                    print "ERROR READING CRYST1 LINE in file {0}\":{1}\"\n{2}".format(inpath,line.rstrip(),e)
+                    info.crystalInfo=None
                 
             if line.startswith("MODEL"):
                 if currentModel:
@@ -1078,33 +1094,46 @@ class PDBEdit(object):
             
         return
 
-    def num_atoms_and_residues(self, pdbin):
+    def num_atoms_and_residues(self,pdbin,first=False):
+        """"Return number of atoms and residues in a pdb file.
+        If all is True, return all atoms and residues, else just for the first chain in the first model'
+        """
+        
         #pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
         #model = pdb_obj.hierarchy.models()[0]
         #return sum(  [ len( chain.residues() ) for chain in model.chains() ]  )
 
-        cmd=[ 'rwcontents', 'xyzin', pdbin ]
-        
-        logfile="rwcontents.log"
-        stdin='' # blank to trigger EOF
-        retcode = ample_util.run_command(cmd=cmd,
-                                         directory=os.getcwd(),
-                                         logfile=logfile,
-                                         stdin=stdin)
-        if retcode != 0:
-            raise RuntimeError,"Error running rwcontents {0}".format( pdbin  )
-        
-        natoms=0
-        nresidues = 0
-        with open( logfile ) as f:
-            for line in f:
-                if line.startswith(" Number of amino-acids residues"):
-                    nresidues = int(line.strip().split()[5])
-                #Total number of protein atoms (including hydrogens)
-                if line.startswith(" Total number of         atoms (including hydrogens)"):
-                    natoms = int(float(line.strip().split()[6]))
-                    break
+
+        if not first:
+            cmd=[ 'rwcontents', 'xyzin', pdbin ]
+            
+            logfile="rwcontents.log"
+            stdin='' # blank to trigger EOF
+            retcode = ample_util.run_command(cmd=cmd,
+                                             directory=os.getcwd(),
+                                             logfile=logfile,
+                                             stdin=stdin)
+            if retcode != 0:
+                raise RuntimeError,"Error running rwcontents {0}".format( pdbin  )
+            
+            natoms=0
+            nresidues = 0
+            with open( logfile ) as f:
+                for line in f:
+                    if line.startswith(" Number of amino-acids residues"):
+                        nresidues = int(line.strip().split()[5])
+                    #Total number of protein atoms (including hydrogens)
+                    if line.startswith(" Total number of         atoms (including hydrogens)"):
+                        natoms = int(float(line.strip().split()[6]))
+                        break
+        else:
+            pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
+            model=pdb_obj.hierarchy.models()[0]
+            nresidues=len(model.chains()[0].residues())
+            natoms=len(model.chains()[0].atoms())
+            
         assert natoms > 0 and nresidues > 0
+        
         return (natoms, nresidues)
 
     def rename_chains( self, inpdb=None, outpdb=None, fromChain=None, toChain=None ):
@@ -1397,6 +1426,8 @@ class Test(unittest.TestCase):
         
         info = PE.get_info( pdbfile )
         
+        self.assertEqual( info.pdbCode, "1GU8" )
+        
         self.assertEqual( len(info.models), 2 )
         
         m1 = info.models[0]
@@ -1442,8 +1473,18 @@ class Test(unittest.TestCase):
         
         return
 
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testGetInfo1'))
+    suite.addTest(Test('testGetInfo2'))
+    return suite
+    
+#
+# Run unit tests
 if __name__ == "__main__":
-    unittest.main()
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
+
 
 if __name__ == "__main__" and False:
     #

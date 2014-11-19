@@ -5,11 +5,14 @@ Created on Apr 18, 2013
 '''
 
 import copy
+import glob
 import logging
+import math
 import os
-import re
 import shutil
+import sys
 import types
+import unittest
 
 # our imports
 import ample_util
@@ -26,12 +29,16 @@ class EnsembleData(object):
         self.num_residues = None
         self.num_atoms = None
         self.residues = []
+        self.centroid_model=None
 
         self.side_chain_treatment = None
         self.radius_threshold = None
-        self.truncation_threshold = None
+        self.truncation_threshold = None # The variance used to truncate
+        self.truncation_level = None # the index of the truncation threshold
 
         self.pdb = None # path to the ensemble file
+
+        return
 
     def __str__(self):
         """List the data attributes of this object"""
@@ -65,6 +72,9 @@ class Ensembler(object):
         # theseus variance file
         self.variance_log = None
 
+        # list of tupes: (resSeq,variances)
+        self.var_by_res=[]
+
         # List of the thresholds we truncate at
         self.truncation_thresholds = []
 
@@ -94,12 +104,11 @@ class Ensembler(object):
 
         self.maxcluster_exe = None
 
+        return
+
     def pdb_list(self):
         """Return the final ensembles as a list of pdb files"""
-        ensembles = []
-        for ensemble in self.ensembles:
-            ensembles.append( ensemble.pdb )
-        return ensembles
+        return [ensemble.pdb for ensemble in self.ensembles]
 
     def edit_sidechains(self):
         """Take the ensembles and give them the 3 sidechain treatments"""
@@ -113,8 +122,7 @@ class Ensembler(object):
 
             # 1. all_atom
             ensemble = copy.deepcopy( trunc_ensemble )
-            ensemble.side_chain_treatment = "all_atom"
-            ensemble.side_chain_treatment = "All_atom"
+            ensemble.side_chain_treatment = "allatom"
             ensemble.name = "{0}_{1}".format( ensemble.side_chain_treatment, trunc_ensemble.name )
             ensemble.pdb = os.path.join( self.ensemble_dir, ensemble.name+".pdb" )
             # For all atom just copy the file
@@ -123,8 +131,8 @@ class Ensembler(object):
 
             # 2. Reliable side chains
             ensemble = copy.deepcopy( trunc_ensemble )
-            ensemble.side_chain_treatment = "reliable_sidechains"
-            ensemble.side_chain_treatment = "SCWRL_reliable_sidechains"
+            ensemble.side_chain_treatment = "reliable"
+            #ensemble.side_chain_treatment = "SCWRL_reliable_sidechains"
             ensemble.name = "{0}_{1}".format( ensemble.side_chain_treatment, trunc_ensemble.name )
             ensemble.pdb = os.path.join( self.ensemble_dir, ensemble.name+".pdb" )
             # Do the edit
@@ -133,7 +141,7 @@ class Ensembler(object):
 
             # 3. backbone
             ensemble = copy.deepcopy( trunc_ensemble )
-            ensemble.side_chain_treatment = "poly_ala"
+            ensemble.side_chain_treatment = "polya"
             ensemble.name = "{0}_{1}".format( ensemble.side_chain_treatment, trunc_ensemble.name )
             ensemble.pdb = os.path.join( self.ensemble_dir, ensemble.name+".pdb" )
             # Do the edit
@@ -170,6 +178,7 @@ class Ensembler(object):
         # Undertake the 3 side-chain treatments
         self.edit_sidechains()
 
+        return
 
     def generate_thresholds(self):
         """
@@ -188,36 +197,20 @@ class Ensembler(object):
         # get variations between pdbs
         #--------------------------------
         cmd = [ self.theseus_exe, "-a0" ] + self.cluster_models
-        retcode = ample_util.run_command( cmd, logfile="theseus.log" )
+        retcode = ample_util.run_command(cmd,
+                                         logfile=os.path.join(self.work_dir,"theseus.log"),
+                                         directory=self.work_dir)
         if retcode != 0:
             msg = "non-zero return code for theseus in generate_thresholds!"
             logging.critical( msg )
             raise RuntimeError, msg
 
-        # print theseus_out
-        self.variance_log = os.path.join( self.work_dir, 'theseus_variances.txt' )
-        theseus_out = open( self.variance_log  )
+        #build up a list of the variances of each residue
+        self.variance_log=os.path.join(self.work_dir,'theseus_variances.txt')
+        self.var_by_res=self.read_variances(self.variance_log)
 
         # List of variances ordered by residue index
-        var_list=[]
-
-        #build up a list of the variances of each residue
-        for i, line in enumerate(theseus_out):
-
-            # Skip header
-            if i==0:
-                continue
-            #print line
-            # Different versions of theseus may have a RES card first, so remove
-            line = re.sub('RES\s*', '', line)
-            pattern = re.compile('^(\d*)\s*(\w*)\s*(\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)')
-            result = pattern.match(line)
-            if result:
-                #print line
-                seq = re.split(pattern, line)
-                var_list.append(float(seq[4]))
-
-        theseus_out.close()
+        var_list=[var for (resSeq,var) in self.var_by_res]
 
         length = len(var_list)
         if length == 0:
@@ -225,69 +218,65 @@ class Ensembler(object):
             logging.critical(msg)
             raise RuntimeError,msg
 
-
-        percent_interval=( float(length)/100 ) *float(self.percent)
-        if percent_interval < 1:
-            msg = "Error generating thresholds, got < 1 AA in percent_interval"
+        # How many residues should fit in each bin
+        # NB - Should round up not down with int!
+        chunk_size=int( ( float(length)/100 ) *float(self.percent) )
+        if chunk_size < 1:
+            msg = "Error generating thresholds, got < 1 AA in chunk_size"
             logging.critical(msg)
             raise RuntimeError,msg
 #        lowest=min(var_list)
 #        highest=max(var_list)
 #        print length
 #        print lowest, highest
-#        print int( percent_interval )
+#        print int( chunk_size )
 
         ## try to find intervals for truncation
-        try_list=copy.deepcopy(var_list)
-        try_list.sort()
-        #print try_list
-
-        # print list(chunks(try_list, int(percent_interval)))
-        # For chunking list
-        def chunks(a_list, percent_interval):
-            for i in xrange(0, len(a_list), percent_interval):
-                yield a_list[i:i+percent_interval ]
-
-        for x in list( chunks(try_list, int(percent_interval) ) ):
-            #print x, x[-1]
-            # For some cases, multiple residues share the same variance so we don't create a separate thereshold
-            if x[-1] not in self.truncation_thresholds:
-                self.truncation_thresholds.append(x[-1])
+        self.truncation_thresholds=self._generate_thresholds(var_list, chunk_size)
 
         logging.debug("Got {0} thresholds: {1}".format( len(self.truncation_thresholds), self.truncation_thresholds ))
 
         return
 
-    def make_list_to_keep(self, threshold ):
-        """Make a list of residues to keep under variance threshold
-        INPUTS:
-        threshold: the threshold variance
+    def _generate_thresholds(self,values,chunk_size):
+        try_list=copy.deepcopy(values)
+        try_list.sort()
+        #print "try_list ",try_list
 
-        RETURNS:
-        a list of the residue indexes
-        """
-        add_list =[]
+        # print list(chunks(try_list, int(chunk_size)))
+        # For chunking list
+        def chunks(a_list, chunk_size):
+            for i in xrange(0, len(a_list), chunk_size):
+                yield a_list[i:i+chunk_size ]
 
-        theseus_out = open( self.variance_log )
-        for line in theseus_out:
-            # for alternate versions of theseus remove RES cards
-            line = re.sub('RES\s*', '', line)
-            pattern = re.compile('^(\d*)\s*(\w*)\s*(\d*)\s*(\d*.\d*)\s*(\d*.\d*)\s*(\d*.\d*)')
-            result = pattern.match(line)
-            if result:
-                seq = re.split(pattern, line)
-                #print seq
-                if (seq[6]) != 'T':
+        thresholds=[]
+        for x in list( chunks(try_list, chunk_size ) ):
+            #print x, x[-1]
+            # For some cases, multiple residues share the same variance so we don't create a separate thereshold
+            if x[-1] not in thresholds:
+                thresholds.append(x[-1])
 
-                    if float(seq[4]) <= float(threshold):
-                        if seq[1] != '':
-                    #  print 'GOT ' + str(seq[4]) + '  thresh ' + str(THESEUS_threthold) + ' KEEP ' + str(seq[3])
-                            add_list.append( int(seq[3]) )
+        return thresholds
 
-        theseus_out.close()
+    def _generate_thresholds2(self,values,chunk_size):
 
-        #print add_list
-        return add_list
+        # Create tuple mapping values to counts
+        data=[(i,values.count(i)) for i in sorted(set(values),reverse=True)]
+
+        thresholds=[]
+        counts=[]
+        first=True
+        for variance,count in data:
+            if first or counts[-1] + count > chunk_size:
+                thresholds.append(variance)
+                counts.append(count)
+                if first: first=False
+            else:
+                #thresholds[-1]=variance
+                counts[-1]+=count
+
+        thresholds.sort()
+        return thresholds
 
     def make_truncated_ensembles( self  ):
         """
@@ -301,15 +290,17 @@ class Ensembler(object):
         """
 
         # Loop through all truncation levels
-        for tcount, truncation_threshold in enumerate( self.truncation_thresholds ):
-
+        for i, truncation_threshold in enumerate( self.truncation_thresholds ):
+            
+            truncation_level=len(self.truncation_thresholds)-i
+            
             # change to the truncation directory
-            truncation_dir = self.truncation_dirs[tcount]
+            truncation_dir = self.truncation_dirs[i]
             os.chdir( truncation_dir )
 
             # Run maxcluster to generate the distance matrix
             clusterer = cluster_with_MAX.MaxClusterer( self.maxcluster_exe )
-            clusterer.generate_distance_matrix( self.truncated_models[tcount] )
+            clusterer.generate_distance_matrix( self.truncated_models[i] )
 
             # Loop through the radius thresholds
             num_previous_models=-1 # set to -1 so comparison always false on first pass
@@ -325,7 +316,8 @@ class Ensembler(object):
                     continue
 
                 # For naming all files
-                basename='trunc_{0}_rad_{1}'.format( truncation_threshold, radius )
+                #basename='trunc_{0}_rad_{1}'.format( truncation_threshold, radius )
+                basename='tl{0}_r{1}'.format( truncation_level, radius )
 
                 # Check if there are the same number of models in this ensemble as the previous one - if so
                 # the ensembles will be identical and we can skip this one
@@ -375,20 +367,57 @@ class Ensembler(object):
                 ensemble_file = os.path.join( ensemble_dir, basename+'.pdb' )
                 shutil.move( cluster_file, ensemble_file )
 
+                # Count the number of atoms in the ensemble-only required for benchmark mode
+                natoms,nresidues=pdb_edit.PDBEdit().num_atoms_and_residues(ensemble_file,first=True)
+
                 # Generate the ensemble
                 ensemble = EnsembleData()
                 ensemble.name = basename
                 ensemble.num_models = len( cluster_files )
-                ensemble.residues = self.truncation_residues[ tcount ]
-                ensemble.num_residues = len( ensemble.residues )
+                ensemble.residues = self.truncation_residues[ i ]
+                ensemble.num_residues = len(ensemble.residues)
+                assert ensemble.num_residues==nresidues
+                ensemble.num_atoms=natoms
                 ensemble.truncation_threshold = truncation_threshold
-                ensemble.num_truncated_models = len( self.truncated_models[ tcount ] )
+                ensemble.truncation_level = truncation_level
+                ensemble.num_truncated_models = len( self.truncated_models[ i ] )
                 ensemble.radius_threshold = radius
                 ensemble.pdb = ensemble_file
+
+                # Get the centroid model name from the list of files given to theseus - we can't parse
+                # the pdb file as theseus truncates the filename
+                ensemble.centroid_model=os.path.splitext( os.path.basename(cluster_files[0]) )[0]
 
                 self.truncated_ensembles.append( ensemble )
 
         return
+
+    def read_variances(self,variance_log):
+        variances=[]
+        with open(variance_log) as f:
+            for i, line in enumerate(f):
+                # Skip header
+                if i==0: continue
+
+                line=line.strip()
+
+                # Skip blank lines
+                if not line: continue
+
+                #print line
+                tokens=line.split()
+                # Different versions of theseus may have a RES card first, so need to check
+                if tokens[0]=="RES":
+                    idxResSeq=3
+                    idxVariance=4
+                else:
+                    idxResSeq=2
+                    idxVariance=3
+
+                variances.append( ( int(tokens[idxResSeq]),float(tokens[idxVariance]) ) )
+
+        assert len(variances)>0,"Failed to read variances from: {0}".format(variance_log)
+        return variances
 
     def truncate_models(self):
         """Truncate the models according to the calculated thresholds
@@ -403,41 +432,172 @@ class Ensembler(object):
         truncate_log = open( os.path.join( self.work_dir, 'truncate.log'), "w")
         truncate_log.write('This is the number of residues kept under each truncation threshold\n\nthreshold\tnumber of residues\n')
 
-        for threshold in self.truncation_thresholds:
+        for i, threshold in enumerate(self.truncation_thresholds):
+            
+            trunc_idx=len(self.truncation_thresholds)-i
 
             # Get a list of the indexes of the residues to keep
-            add_list = self.make_list_to_keep( threshold )
-            self.truncation_residues.append( add_list )
+            to_keep=[resSeq for resSeq,variance in self.var_by_res if variance <= threshold]
+            self.truncation_residues.append(to_keep)
 
-            truncate_log.write( str(threshold) +'\t' + str(len(add_list)) + '\n' )
-            logging.info( 'Keeping: {0} residues at truncation level: {1}'.format( len(add_list), threshold ) )
-            logging.debug( 'The following residues will be kept: {0}'.format( add_list ) )
+            truncate_log.write( str(threshold) +'\t' + str(len(to_keep)) + '\n' )
+            logging.info( 'Keeping: {0} residues at truncation level: {1}'.format( len(to_keep), trunc_idx ) )
+            logging.debug( 'The following residues will be kept: {0}'.format( to_keep ) )
 
-            if len(add_list) < 1:
+            if len(to_keep) < 1:
                 #######   limit to size of pdb to keep, if files are too variable, all residues are removed
                 logging.debug( 'No residues kept at this truncation level.' )
                 continue
 
-            trunc_out = os.path.join( self.work_dir, 'trunc_files_' + str(threshold) )
-            os.mkdir(trunc_out)
-            logging.info( 'truncating at: {0} in directory {1}'.format( threshold, trunc_out ) )
-            self.truncation_dirs.append( trunc_out )
+            trunc_dir = os.path.join( self.work_dir, 'trunc_files_' + str(trunc_idx) )
+            os.mkdir(trunc_dir)
+            logging.info( 'truncating at: {0} in directory {1}'.format( threshold, trunc_dir ) )
+            self.truncation_dirs.append( trunc_dir )
 
             # list of models for this truncation level
             truncated_models = []
             pdbed = pdb_edit.PDBEdit()
             for infile in self.cluster_models:
                 pdbname = os.path.basename( infile )
-                pdbout = os.path.join( trunc_out, pdbname )
+                pdbout = os.path.join( trunc_dir, pdbname )
 
                 # Loop through PDB files and create new ones that only contain the residues left after truncation
-                pdbed.select_residues( inpath=infile, outpath=pdbout, residues=add_list )
+                pdbed.select_residues( inpath=infile, outpath=pdbout, residues=to_keep )
 
                 truncated_models.append( pdbout )
 
             self.truncated_models.append( truncated_models )
 
         return
+
+class Test(unittest.TestCase):
+
+    def setUp(self):
+        """
+        Get paths need to think of a sensible way to do this
+        """
+
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ample_dir = os.sep.join( paths[ : -1 ] )
+        self.theseus_exe=ample_util.find_exe('theseus')
+
+        return
+
+    def testThresholds(self):
+        """xxx"""
+
+        ensembler=Ensembler()
+
+        ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
+        os.mkdir(ensembler.work_dir)
+        ensembler.theseus_exe=self.theseus_exe
+        ensembler.percent=5
+        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+        ensembler.cluster_models=glob.glob(mdir+os.sep+"*.pdb")
+        ensembler.generate_thresholds()
+
+        self.assertEqual(29,len(ensembler.truncation_thresholds))
+        self.assertEqual([0.030966, 0.070663, 0.084085, 0.099076, 0.185523, 0.723045,
+                          1.79753, 3.266976, 4.886417, 6.478746, 10.378687, 11.229685,
+                          16.701308, 18.823698, 22.837544, 23.741723, 25.736834, 27.761794,
+                          36.255004, 37.780944, 42.318928, 49.650732, 51.481748, 56.60685,
+                          58.865232, 60.570085, 70.749036, 81.15141, 87.045704],
+                         ensembler.truncation_thresholds,
+                         "Wrong truncation thresholds"
+                         )
+
+        truncation_residues=[]
+        for threshold in ensembler.truncation_thresholds:
+            to_keep=[resSeq for resSeq,variance in ensembler.var_by_res if variance <= threshold]
+            truncation_residues.append(to_keep)
+
+        r=[[26, 27, 31, 32],
+           [26, 27, 28, 30, 31, 32],
+           [26, 27, 28, 29, 30, 31, 32, 33],
+           [25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+           [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+           [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+           [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+           [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+           [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+           [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+           [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
+           [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
+           [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+           [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+           [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+           [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+           [7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+           [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+           [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45],
+           [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
+           [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
+           [2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
+           [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 50, 53],
+           [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53],
+           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 57],
+           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 56, 57],
+           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
+           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58],
+           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
+           ]
+
+        self.assertEqual(r,truncation_residues)
+
+        shutil.rmtree(ensembler.work_dir)
+        return
+
+
+    def testGenThresh(self):
+        l1=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+        l2=[0,5,6,7,9,1,2,2,2,3,3,8,8,8,8,8,8,8,8,8,8,8,3,3,3,3,3,4,5,9]
+        l3=[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5]
+        
+        e=Ensembler()
+        
+        
+        for percent in [20,50]:
+            
+            chunk_size1=int(len(l1)*float(percent)/float(100))
+            chunk_size2=int(math.ceil(len(l1)*float(percent)/float(100)))
+            
+            print "PERCENT ",percent
+            t=e._generate_thresholds(l1,chunk_size1)
+            print t
+            t=e._generate_thresholds2(l1,chunk_size2)
+            print t
+            print
+            
+            chunk_size=int(math.ceil(len(l2)*float(percent)/float(100)))
+            t=e._generate_thresholds(l2,chunk_size1)
+            print t
+            t=e._generate_thresholds2(l2,chunk_size2)
+            print t
+            print
+            
+            chunk_size=int(math.ceil(len(l3)*float(percent)/float(100)))
+            t=e._generate_thresholds(l3,chunk_size1)
+            print t
+            t=e._generate_thresholds2(l3,chunk_size2)
+            print t
+
+        return
+
+#
+# Run unit tests
+if __name__ == "__main__":
+
+    if False:
+        root = logging.getLogger()
+        root.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(logging.DEBUG)
+        #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(message)s')
+        ch.setFormatter(formatter)
+        root.addHandler(ch)
+    unittest.main()
 
 #    def XtestEnsemble():
 #        logging.basicConfig()

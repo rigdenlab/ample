@@ -214,7 +214,7 @@ def check_success( job ):
 
     success=False
     rFreeSuccess=0.4
-    if r.shelxCC and r.shelxCC != "--" and float(r.shelxCC) >= 25.0:
+    if r.shelxeCC and r.shelxeCC != "--" and float(r.shelxeCC) >= 25.0:
         success=True
     elif r.buccRfree and r.buccRfree != "--" and float(r.buccRfree) <=rFreeSuccess:
         success=True
