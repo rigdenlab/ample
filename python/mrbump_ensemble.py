@@ -8,6 +8,7 @@ Created on Feb 28, 2013
 import logging
 import multiprocessing
 import os
+import sys
 import unittest
 
 # our imports
@@ -91,35 +92,45 @@ def write_jobscript( name, pdb, amoptd, directory=None ):
     # Path
     if not directory:
         directory = os.getcwd()
-    script_path = directory + os.sep + name + '.sh'
-    
-    # Write script
-    job_script = open(script_path, "w")
-    
-    # If on cluster, insert queue header 
-    if amoptd['submit_cluster']:
-        # Messy - create an instance to get the script header. Could pass one in to save creating one each time
-        mrBuild = clusterize.ClusterRun()
-        mrBuild.QTYPE = amoptd['submit_qtype']
-        logFile=os.path.join( directory, name + ".log" )
-        script_header = mrBuild.subScriptHeader( nProc=amoptd['nproc'], logFile=logFile, jobName=name)
-        job_script.write( script_header )
-        job_script.write("pushd " + directory + "\n\n")
-        # Required on the RAL cluster as the default tmp can be deleted on the nodes
-        if amoptd['submit_qtype'] == "SGE":
-            job_script.write("setenv CCP4_SCR $TMPDIR\n\n")
-
-    else:
-        job_script.write('#!/bin/sh\n')
-    
-    jobstr = mrbump_cmd.mrbump_cmd( amoptd, jobid=name, ensemble_pdb=pdb )
-    job_script.write(jobstr)
-    
-    if amoptd['submit_cluster']:
-        job_script.write('\n\npopd\n\n')
         
-    job_script.close()
+    # First write mrbump keyword file
+    keyword_file = os.path.join(directory,name+'.mrbump')
+    keywords = mrbump_cmd.mrbump_keywords(amoptd, jobid=name, ensemble_pdb=pdb)
+    with open(keyword_file,'w') as f:
+        f.write(keywords)
+        
+    # Next the script to run mrbump
+    ext='.sh'
+    if sys.platform.startswith("win"):
+        ext='.bat'
+    script_path = os.path.join(directory,name+ext)
     
+    with open(script_path, "w") as job_script:
+        
+        # If on cluster, insert queue header 
+        if amoptd['submit_cluster']:
+            # Messy - create an instance to get the script header. Could pass one in to save creating one each time
+            mrBuild = clusterize.ClusterRun()
+            mrBuild.QTYPE = amoptd['submit_qtype']
+            logFile=os.path.join( directory, name + ".log" )
+            script_header = mrBuild.subScriptHeader( nProc=amoptd['nproc'], logFile=logFile, jobName=name)
+            job_script.write( script_header )
+            job_script.write("pushd " + directory + "\n\n")
+            # Required on the RAL cluster as the default tmp can be deleted on the nodes
+            if amoptd['submit_qtype'] == "SGE":
+                job_script.write("setenv CCP4_SCR $TMPDIR\n\n")
+    
+        else:
+            if not sys.platform.startswith("win"):
+                job_script.write('#!/bin/sh\n') 
+        
+        # Get the mrbump command-line
+        jobcmd = mrbump_cmd.mrbump_cmd(amoptd,name,keyword_file)
+        job_script.write(jobcmd)
+        
+        #if amoptd['submit_cluster']:
+        #    job_script.write('\n\npopd\n\n')
+        
     # Make executable
     os.chmod(script_path, 0o777)
     
