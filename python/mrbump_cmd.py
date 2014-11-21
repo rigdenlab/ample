@@ -3,13 +3,23 @@ Created on 28 Feb 2013
 
 @author: jmht
 '''
+import os
+import sys
 def mrbump_cmd(adict,jobid,keyinFile):
     """Return the command to run mrbump
+    Need to return the full path as on *!*windoze*!* the mrbump script isn't executable
     """
-    return'mrbump KEYIN {0} HKLIN {1} SEQIN {2} HKLOUT {3}.mtz  XYZOUT {3}.pdb'.format(keyinFile,
-                                                                                       adict['mtz'],
-                                                                                       adict['mr_sequence'],
-                                                                                       jobid)
+    if sys.platform.startswith("win"):
+        ccp4python=os.path.join(os.environ["CCP4"],"bin","ccp4-python")
+        mrbump=os.path.join(os.environ["CCP4"],"bin","mrbump")
+        mrbump="{0} {1}".format(ccp4python,mrbump)
+    else:
+        mrbump='mrbump'
+    return'{0} KEYIN {1} HKLIN {2} SEQIN {3} HKLOUT {4}.mtz  XYZOUT {4}.pdb'.format(mrbump,
+                                                                                    keyinFile,
+                                                                                    adict['mtz'],
+                                                                                    adict['mr_sequence'],
+                                                                                    jobid)
 
 def mrbump_keywords(adict=None, jobid=None, ensemble_pdb=None, fixed_iden=0.6):
     """
