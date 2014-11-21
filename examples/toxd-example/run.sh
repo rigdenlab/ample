@@ -7,10 +7,12 @@
 # Change the below if the path to these external dependencies of AMPLE
 # cannot be found in your standard PATH
 export PATH=\
+/opt/mrbump-trunk/bin:\
 /opt/shelx:\
 $PATH
 
-$CCP4/bin/ample \
+#$CCP4/bin/ample.py \
+/opt/ample-dev1/bin/ample.py \
 -rosetta_dir /opt/rosetta-3.5 \
 -fasta toxd_.fasta \
 -mtz 1dtx.mtz \
@@ -20,7 +22,8 @@ $CCP4/bin/ample \
 -percent 50 \
 -quick_mode True \
 -use_shelxe True \
--nproc 2 \
+-nproc 6 \
+-models_dir ./models \
 
 #-models_dir ./models \
 #-ensembles_dir ./ROSETTA_MR_0/ensembles_1 \
