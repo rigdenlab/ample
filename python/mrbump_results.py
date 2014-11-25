@@ -4,6 +4,7 @@ import copy
 import glob
 import logging
 import os
+import sys
 import types
 
 # Hack to make sure we can find the modules we need
@@ -285,9 +286,16 @@ class ResultsSummary(object):
         Find the results from running MRBUMP and sort them
         """
         mrbumpDir = os.path.abspath( mrbumpDir )
+        
+        if not os.path.isdir(mrbumpDir):
+            self.logger.warn("extractResults - is not a valid directory: {0}".format( mrbumpDir ) )
+                
         # Get a list of the ensembles (could get this from the amopt dictionary)
         # For now we just use the submission scripts and assume all have .sh or .sub extension
-        ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*.sh") ) ]
+        ext='.sh'
+        if sys.platform.startswith("win"):
+            ext='.bat'
+        ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*"+ext) ) ]
         if not len(ensembles):
             # legacy - try .sub
             ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*.sub") ) ]
@@ -375,9 +383,8 @@ class ResultsSummary(object):
         """Read a resultsTable file and return a list of MrBump results objects"""
 
         # Extract the various components from the path
+        tfile=os.path.abspath(tfile)
         paths = tfile.split( os.sep )
-        assert len( paths[0] )  == 0,"Need absolute path: {0}".format( tfile )
-
         jobDir = os.path.abspath( os.sep.join( paths[:-2] ) )
         ensemble = paths[-3][7:-7] #  remove search_..._mrbump: 'search_All_atom_trunc_0.005734_rad_1_mrbump'
 
@@ -764,7 +771,6 @@ class ResultsSummary(object):
 
 
 if __name__ == "__main__":
-    import sys
     if len(sys.argv) == 2:
         mrbump_dir = os.path.join( os.getcwd(), sys.argv[1] )
     else:
