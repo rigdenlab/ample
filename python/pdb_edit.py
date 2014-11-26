@@ -1079,7 +1079,6 @@ class PDBEdit(object):
     def merge( self, pdb1=None, pdb2=None, pdbout=None  ):
         """Merge two pdb files into one"""
         
-        
         logfile = pdbout+".log"
         cmd=[ 'pdb_merge', 'xyzin1', pdb1, 'xyzin2', pdb2, 'xyzout', pdbout ]
         
@@ -1235,7 +1234,6 @@ mostprob
         gotModel=False # to make sure we only take the first model
         reading=False # If reading structure
         
-        
         pdbinf = open(pdbin,'r')
         pdboutf = open(pdbout,'w')
         
@@ -1304,6 +1302,53 @@ mostprob
             # END reading loop
             
         return
+    
+    def std_residues_cctbx(self, pdbin, pdbout):
+        
+        pdb_input=iotbx.pdb.pdb_input(pdbin)
+        
+        # Get MODRES Section & build up dict mapping the changes
+        modres={}
+        for _,id,resname,chain,resseq,stdres,comment in [ l.strip().split() \
+                                                         for l in pdb_input.primary_structure_section() \
+                                                         if l.startswith("MODRES")]:
+            if not chain in modres:
+                modres[chain]={}
+            modres[chain][int(resseq)]=(resname,stdres)
+        
+        hierachy=pdb_input.construct_hierarchy()
+        for model in hierachy.models():
+            for chain in model.chains():
+                for residue_group in chain.residue_groups():
+                    resseq=residue_group.resseq_as_int()
+                    for atom_group in residue_group.atom_groups():
+                        resname=atom_group.resname
+                        if resseq in modres[chain.id]:
+                            # Change modified name to std name
+                            assert modres[chain.id][resseq][0]==resname,\
+                            "Unmatched names: {0} : {1}".format(modres[chain.id][resseq][0],resname)
+                            atom_group.resname=modres[chain.id][resseq][1]
+                            # If any of the atoms are hetatms, set them to be atoms
+                            for atom in atom_group.atoms():
+                                if atom.hetero:
+                                    atom.hetero=False
+                                
+        
+        if False:
+            # Remove HETATMS
+            for model in hierachy.models():
+                for chain in model.chains():
+                    for residue_group in chain.residue_groups():
+                        for atom_group in residue_group.atom_groups():
+                            # Can't use below as it uses indexes which change as we remove atoms
+                            # ag.atoms().extract_hetero()]
+                            todel=[a for a in atom_group.atoms() if a.hetero ]
+                            for a in todel:
+                                atom_group.remove_atom(a)       
+        
+        hierachy.write_pdb_file(pdbout,anisou=False)
+        
+        return       
     
     def strip_hetatm( self, inpath, outpath):
         """Remove all hetatoms from pdbfile"""
@@ -1418,6 +1463,19 @@ mostprob
 
 class Test(unittest.TestCase):
 
+
+    def setUp(self):
+        """
+        Get paths need to think of a sensible way to do this
+        """
+
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ampleDir = os.sep.join( paths[ : -1 ] )
+        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
+
+        return
+
     def testGetInfo1(self):
         """"""
 
@@ -1473,12 +1531,56 @@ class Test(unittest.TestCase):
         self.assertEqual( info.numAtoms( modelIdx=0 ), 1263 )
         
         return
+    
+    def testStdResidues(self):
+
+        pdbin=os.path.join(self.testfilesDir,"4DZN.pdb")
+        pdbout="std.pdb"
+        
+        PDBEdit().std_residues(pdbin, pdbout)
+        
+        # Check it's valid
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+        
+        #Get list of all the residue names in chain 1
+        resnames=[g.unique_resnames()[0]  for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
+        ref=['ACE', 'GLY', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
+             'LYS', 'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
+             'LYS', 'GLN', 'GLY', 'TYR', 'TYR']
+        self.assertEqual(resnames,ref)
+        
+        os.unlink(pdbout)
+        
+        return
+    
+    def testStdResiduesCctbx(self):
+
+        pdbin=os.path.join(self.testfilesDir,"4DZN.pdb")
+        pdbout="std.pdb"
+        
+        PDBEdit().std_residues_cctbx(pdbin, pdbout)
+        
+        # Check it's valid
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+        
+        #Get list of all the residue names in chain 1
+        resnames=[g.unique_resnames()[0]  for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
+        ref=['ACE', 'GLY', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
+             'LYS', 'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
+             'LYS', 'GLN', 'GLY', 'TYR', 'TYR']
+        self.assertEqual(resnames,ref)
+        
+        os.unlink(pdbout)
+        
+        return
 
 
 def testSuite():
     suite = unittest.TestSuite()
     suite.addTest(Test('testGetInfo1'))
     suite.addTest(Test('testGetInfo2'))
+    suite.addTest(Test('testStdResidues'))
+    suite.addTest(Test('testStdResiduesCctbx'))
     return suite
     
 
