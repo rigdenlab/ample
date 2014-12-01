@@ -17,11 +17,7 @@ import unittest
 
 # Our modules
 import cif_parser
-
-# MRBUMP modules
-#sys.path.append(os.path.join(os.environ["CCP4"], "share", "mrbump", "include", "file_info")) # For MTZ_parse
-sys.path.insert(0, "/Users/jmht/Documents/AMPLE/programs/mrbump/include/file_info")
-import MTZ_parse
+from iotbx import reflection_file_reader
 
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
@@ -241,6 +237,28 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='ROSETTA_MR_'):
     work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
     return work_dir
 
+def _get_rfree(content):
+    rfree_label=None
+    #print "GOT ",content.column_labels()
+    for label in content.column_labels():
+        if 'free' in label.lower():
+            column = content.get_column(label=label)
+            #print "size ",column.array_size()
+            #print "valid ",column.n_valid_values()
+            selection_valid = column.selection_valid()
+            flags = column.extract_values()
+            sel_0 = (flags == 0)
+            n0=( sel_0 & selection_valid).count(True)
+            n1=(~sel_0 & selection_valid).count(True)
+            #print "Number of 0 (work):",n0
+            #print "Number of 1 (test):",n1
+            #print float(n0)/float(n1)*100
+            if n0>0 and n1>0:
+                if rfree_label:
+                    logging.warning("FOUND >1 RFREE label in file!")
+                rfree_label=label
+    return rfree_label
+
 def processReflectionFile( amoptd ):
     """Make sure we have a valid mtz file. If necessary convert a given cif file.
        Set the mtz variable in the given amoptd to the reflection file to use
@@ -261,42 +279,52 @@ def processReflectionFile( amoptd ):
         logging.critical("Cannot find MTZ file: {0}".format( amoptd['mtz'] ) )
         sys.exit(1)
 
-    # Run mtzdmp to get file info
-    mtzp = MTZ_parse.MTZ_parse()
-    mtzp.run_mtzdmp( amoptd['mtz'] )
-
-    # If flags given check they are present in the file
-    for flag in ['F', 'SIGF', 'FREE']:
-        if amoptd[flag] and amoptd[flag] not in mtzp.col_labels:
-            logging.critical("Cannot find given {0} label {1} in mtz file {2}".format( flag, amoptd[flag], amoptd['mtz'] ) )
-            sys.exit(1)
-
-    # If any of the flags aren't given we get them from the file
+    # Get column label info
+    reflection_file = reflection_file_reader.any_reflection_file(file_name=amoptd['mtz'])
+    if not reflection_file.file_type()=="ccp4_mtz":
+        logging.critical("File is not of type ccp4_mtz: {0}".format( amoptd['mtz'] ) )
+        sys.exit(1)
+    
+    # Read the file
+    content=reflection_file.file_content()
+    
+    # If any of the flags aren't given we set defaults based on what's in the file
     if not amoptd['F']:
-        amoptd['F']  = mtzp.F
+        if 'F' not in content.column_types():
+            logging.critical("Cannot find column type F for flag F in mtz file: {0}".format( amoptd['mtz'] ) )
+            sys.exit(1)
+        amoptd['F']  = content.column_labels()[content.column_types().index('F')]
     if not amoptd['SIGF']:
-        amoptd['SIGF']  = mtzp.SIGF
+        amoptd['SIGF']  = 'SIG'+amoptd['F']
     if not amoptd['FREE']:
-        amoptd['FREE']  = mtzp.FreeR_flag
-
-    # Make sure we've found something
-    for flag in ['F', 'SIGF' ]:
-        if amoptd[flag] is None or not len(amoptd[flag]) or amoptd[flag] not in mtzp.col_labels:
-            logging.critical("Cannot find any {0} label in mtz file {1}".format( flag, amoptd['mtz'] ) )
+        amoptd['FREE']  = _get_rfree(content)
+        
+    # If flags given check they are present in the file
+    for flag in ['F','SIGF','FREE']:
+        if amoptd[flag] and amoptd[flag] not in content.column_labels():
+            logging.critical("Cannot find flag {0} label {1} in mtz file {2}".format( flag, amoptd[flag], amoptd['mtz'] ) )
             sys.exit(1)
 
-    # All flags ok so just check the RFREE flag is valid
-    if not mtzp.checkRFREE(FreeR_flag=amoptd['FREE']):
+    # Data flags ok so check the RFREE flag is valid
+    rfree=_get_rfree(content)
+    if not rfree==amoptd['FREE']:
         # If not run uniqueify
         logging.warning("Cannot find a valid FREE flag - running uniquefy to generate column with RFREE data." )
         amoptd['mtz'] = uniqueify( amoptd['mtz'], directory=amoptd['work_dir'] )
 
         # Check file and get new FREE flag
-        mtzp.run_mtzdmp( amoptd['mtz'] )
-        amoptd['FREE']  = mtzp.FreeR_flag
-
-        # hopefully unnecessary check
-        assert mtzp.checkRFREE(FreeR_flag=amoptd['FREE'])
+        reflection_file = reflection_file_reader.any_reflection_file(file_name=amoptd['mtz'])
+        if not reflection_file.file_type()=="ccp4_mtz":
+            logging.critical("File is not of type ccp4_mtz: {0}".format( amoptd['mtz'] ) )
+            sys.exit(1)
+        
+        # Read the file
+        content=reflection_file.file_content()
+        rfree=_get_rfree(content)
+        if not rfree:
+            logging.critical("Cannot find valid rfree flag in mtz file {0} after running uniquefy".format(amoptd['mtz']))
+            sys.exit(1)
+        amoptd['FREE']  = rfree
 
     return True
 
