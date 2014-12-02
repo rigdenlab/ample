@@ -1479,7 +1479,7 @@ class Test(unittest.TestCase):
     def testGetInfo1(self):
         """"""
 
-        pdbfile = "../tests/testfiles/1GU8.pdb"
+        pdbfile = os.path.join(self.testfilesDir,"1GU8.pdb")
         
         PE = PDBEdit()
         
@@ -1513,7 +1513,7 @@ class Test(unittest.TestCase):
     def testGetInfo2(self):
         """"""
 
-        pdbfile = "../tests/testfiles/2UUI.pdb"
+        pdbfile = os.path.join(self.testfilesDir,"2UUI.pdb")
         
         PE = PDBEdit()
         

@@ -187,15 +187,24 @@ class OctopusPredict(object):
   
 class Test(unittest.TestCase):
 
+
+    def setUp(self):
+        """
+        Get paths need to think of a sensible way to do this
+        """
+
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ample_dir = os.sep.join( paths[ : -1 ] )
+        return
+
     def testGetPredict(self):
         """See we can get the prediction"""
         
         logging.basicConfig()
         logging.getLogger().setLevel(logging.DEBUG)
          
-        filedir = os.path.abspath( os.getcwd()+os.sep+".."+os.sep+"tests/testfiles")
-        fastafile = filedir + os.sep + "2uui.fasta"
- 
+        fastafile = os.path.join(self.ample_dir,"tests","testfiles","2uui.fasta")
         octo = OctopusPredict()
         fasta = octo.getFasta(fastafile)
         octo.getPredict("2uui",fasta)
