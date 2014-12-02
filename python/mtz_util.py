@@ -120,6 +120,12 @@ def processReflectionFile( amoptd ):
     # Read the file
     content=reflection_file.file_content()
     
+    # Check any user-given flags
+    for flag in ['F','SIGF','FREE']:
+        if amoptd[flag] and amoptd[flag] not in content.column_labels():
+            _logger.critical("Cannot find flag {0} label {1} in mtz file {2}".format( flag, amoptd[flag], amoptd['mtz'] ) )
+            sys.exit(1)    
+    
     # If any of the flags aren't given we set defaults based on what's in the file
     if not amoptd['F']:
         if 'F' not in content.column_types():
@@ -127,35 +133,31 @@ def processReflectionFile( amoptd ):
             sys.exit(1)
         amoptd['F']  = content.column_labels()[content.column_types().index('F')]
     if not amoptd['SIGF']:
-        amoptd['SIGF']  = 'SIG'+amoptd['F']
-    if not amoptd['FREE']:
-        amoptd['FREE']  = _getRfree(content)
-        
-    # If flags given check they are present in the file
-    for flag in ['F','SIGF','FREE']:
-        if amoptd[flag] and amoptd[flag] not in content.column_labels():
-            _logger.critical("Cannot find flag {0} label {1} in mtz file {2}".format( flag, amoptd[flag], amoptd['mtz'] ) )
+        l='SIG'+amoptd['F']
+        if not l in content.column_labels():
+            _logger.critical("Cannot find column type {0} for flag SIGF in mtz file: {0}".format( l, amoptd['mtz'] ) )
             sys.exit(1)
-
-    # Data flags ok so check the RFREE flag is valid
-    rfree=_getRfree(content)
-    if not rfree==amoptd['FREE']:
-        # If not run uniqueify
-        _logger.warning("Cannot find a valid FREE flag - running uniquefy to generate column with RFREE data." )
-        amoptd['mtz'] = addRfree( amoptd['mtz'], directory=amoptd['work_dir'] )
-
-        # Check file and get new FREE flag
-        reflection_file = reflection_file_reader.any_reflection_file(file_name=amoptd['mtz'])
-        if not reflection_file.file_type()=="ccp4_mtz":
-            _logger.critical("File is not of type ccp4_mtz: {0}".format( amoptd['mtz'] ) )
-            sys.exit(1)
+        amoptd['SIGF']  = l
         
-        # Read the file
-        content=reflection_file.file_content()
-        rfree=getRfree(content)
+    if amoptd['FREE']:
+        # Check is valid
+        rfree=_getRfree(content)
+        if not rfree or not rfree==amoptd['FREE']:
+            _logger.critical("Given RFREE label {0} is not valid for mtz file: {0}".format( amoptd['FREE'], amoptd['mtz'] ) )
+            sys.exit(1)
+    else:
+        # See if we can find a valid label in the file
+        rfree=_getRfree(content)
         if not rfree:
-            _logger.critical("Cannot find valid rfree flag in mtz file {0} after running uniquiefy".format(amoptd['mtz']))
-            sys.exit(1)
+            # Need to generate RFREE
+            _logger.warning("Cannot find a valid FREE flag - running uniquefy to generate column with RFREE data." )
+            amoptd['mtz'] = addRfree( amoptd['mtz'], directory=amoptd['work_dir'],overwrite=False)
+
+            # Check file and get new FREE flag
+            rfree=getRfree(amoptd['mtz'])
+            if not rfree:
+                _logger.critical("Cannot find valid rfree flag in mtz file {0} after running uniquiefy".format(amoptd['mtz']))
+                sys.exit(1)
         amoptd['FREE']  = rfree
 
     return True
@@ -190,6 +192,7 @@ class Test(unittest.TestCase):
               'F'      : None,
               'SIGF'   : None,
               'FREE'   : None,
+               'work_dir': os.getcwd(),
              }
 
         processReflectionFile( d )
@@ -248,10 +251,10 @@ class Test(unittest.TestCase):
         os.unlink('cif2mtz.log')
         os.unlink('1x79-sf.mtz')
         os.unlink('mtzutils.log')
-        os.unlink('1x79-sf_dFREE.mtz')
+        #os.unlink('1x79-sf_dFREE.mtz')
         os.unlink('uniqueify.log')
-        os.unlink('1x79-sf_dFREE_uniqueify.mtz')
-        os.unlink('1x79-sf_dFREE_uniqueify.log')
+        os.unlink('1x79-sf_uniqueify.mtz')
+        os.unlink('1x79-sf_uniqueify.log')
 
         return
     

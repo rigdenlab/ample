@@ -50,6 +50,7 @@ import benchmark
 import ensemble
 import fasta_parser
 import mrbump_ensemble
+import mtz_util
 import nmr
 import rosetta_model
 import mrbump_results
@@ -437,7 +438,7 @@ def main():
     # MTZ file processing
     #
     ###############################################################################
-    ample_util.processReflectionFile( amopt.d )
+    mtz_util.processReflectionFile( amopt.d )
     logger.info( "Using MTZ file: {0}".format( amopt.d['mtz'] ) )
     
     ###############################################################################
@@ -925,6 +926,7 @@ def main():
         # Create job scripts
         logger.info("Generating MRBUMP runscripts in: {0}".format( job_dir ) )
         job_scripts = mrbump_ensemble.generate_jobscripts( ensemble_pdbs, amopt.d )
+        #continue
     
         if amopt.d['submit_cluster']:
             mrbump_ensemble.mrbump_ensemble_cluster( job_scripts, amopt.d )
