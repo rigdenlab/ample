@@ -39,7 +39,7 @@ def One_model_only(list_of_ensembles, rundir):
     return  outlist
 
 #############cluster_with_MAX####
-def make_list_to_keep( theseus_out, THESEUS_threthold ):
+def calculate_residues( theseus_out, THESEUS_threthold ):
     """
     Make a list of residues to keep under variance threshold
     INPUTS:
@@ -69,7 +69,7 @@ def make_list_to_keep( theseus_out, THESEUS_threthold ):
 
     #print add_list
     return add_list
-#END make_list_to_keep
+#END calculate_residues
 
 def chunks(a_list, percent_interval):
 
@@ -294,7 +294,7 @@ def truncate( theseus_exe, models_list, work_dir, percent, FIXED_INTERVALS=False
     for threshold in thresholds:
 
         # Get a list of the indexes of the residues to keep
-        add_list = make_list_to_keep(T_data, threshold)
+        add_list = calculate_residues(T_data, threshold)
         
         truncate_log.write( str(threshold) +'\t' + str(len(add_list)) + '\n' )
         logging.info( 'Keeping: {0} residues at truncation level: {1}'.format( len(add_list), threshold ) )

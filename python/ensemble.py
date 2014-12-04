@@ -164,7 +164,7 @@ def ensemble_summary( amoptd ):
                 continue
 
             nensembles = 0
-            truncation_thresholds = {}
+            truncation_levels = {}
 
             side_chain_treatments = []
             for ensemble in clusterEnsemble:
@@ -174,26 +174,27 @@ def ensemble_summary( amoptd ):
                 if ensemble.side_chain_treatment not in side_chain_treatments:
                     side_chain_treatments.append( ensemble.side_chain_treatment )
 
-                if ensemble.truncation_threshold not in truncation_thresholds.keys():
-                    truncation_thresholds[ ensemble.truncation_threshold ] = ( ensemble.num_residues,
+                if ensemble.truncation_level not in truncation_levels.keys():
+                    truncation_levels[ ensemble.truncation_level ] = ( ensemble.truncation_threshold, ensemble.num_residues,
                                                                                { ensemble.radius_threshold : ensemble.num_models } )
                 else:
                     # Already got this truncation level so add radius
-                    if ensemble.radius_threshold not in truncation_thresholds[ ensemble.truncation_threshold ][1].keys():
-                        truncation_thresholds[ ensemble.truncation_threshold ][1][ ensemble.radius_threshold ] = ensemble.num_models
+                    if ensemble.radius_threshold not in truncation_levels[ ensemble.truncation_level ][2].keys():
+                        truncation_levels[ ensemble.truncation_level ][2][ ensemble.radius_threshold ] = ensemble.num_models
 
 
             rstr += "\n"
             tdata = [ ( "Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys" ) ]
             raw_ensemble_count=0
-            for level, threshold in enumerate(sorted( truncation_thresholds.keys() ) ):
-                truncation_level=len(truncation_thresholds)-level
-                nresidues = truncation_thresholds[ threshold ][0]
-                for i, radius in enumerate( sorted( truncation_thresholds[ threshold ][1].keys() ) ):
+            for level in sorted( truncation_levels.keys() ):
+                #truncation_level=len(truncation_levels)-level
+                threshold = truncation_levels[ level ][0]
+                nresidues = truncation_levels[ level ][1]
+                for i, radius in enumerate( sorted( truncation_levels[ level ][2].keys() ) ):
                     raw_ensemble_count+=1
-                    nmodels = truncation_thresholds[ threshold ][1][radius ]
+                    nmodels = truncation_levels[ level ][2][radius ]
                     if i == 0:
-                        tdata.append( ( truncation_level, threshold, nresidues, radius, nmodels  ) )
+                        tdata.append( ( level, threshold, nresidues, radius, nmodels  ) )
                     else:
                         tdata.append( ( "", "", "", radius, nmodels  ) )
 
