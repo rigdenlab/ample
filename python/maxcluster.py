@@ -46,10 +46,9 @@ class Maxcluster(object):
     # Run Maxcluster to compare the models to the native
     """
     
-    def __init__(self):
+    def __init__(self,maxcluster_exe):
 
-        #self.maxclusterExe = "/Users/jmht/Documents/AMPLE/programs/maxcluster"
-        self.maxclusterExe = "/opt/maxcluster/maxcluster"
+        self.maxclusterExe = maxcluster_exe
         
         return
         

@@ -53,6 +53,9 @@ def analyse2(amopt):
     ensemble_results={} # Maps ensemble name to the data object
     if amopt.d.has_key('ensemble_results'):
         ensemble_data = amopt.d['ensemble_results'][cluster]
+        if not len(ensemble_data):
+            _logger.critical("Benchmark cannot find any ensemble data!")
+            return
 
         # Get map of ensemble name -> ensemble result
         for i, e in enumerate( ensemble_data ):
@@ -62,6 +65,10 @@ def analyse2(amopt):
                     
     # Get mrbump_results for cluster
     mrbump_results = amopt.d['mrbump_results'][cluster]
+    if not len(mrbump_results):
+        _logger.critical("Benchmark cannot find any mrbump results!")
+        return
+
     for result in mrbump_results:
         
         d=mkDataDict(amopt)
@@ -314,7 +321,7 @@ def analyseModels(amopt):
         amopt.d['rosettaSP'] = rosetta_model.RosettaScoreParser(amopt.d['models_dir'])
     except RuntimeError,e:
         print e
-    amopt.d['maxComp'] = maxcluster.Maxcluster()
+    amopt.d['maxComp'] = maxcluster.Maxcluster(amopt.d['maxcluster_exe'])
     _logger.info("Analysing Rosetta models with Maxcluster")
     amopt.d['maxComp'].compareDirectory( nativePdbInfo=nativePdbInfo,
                               resSeqMap=resSeqMap,
