@@ -650,11 +650,12 @@ def main():
                 amopt.d['scwrl_exe']='Scwrl4.exe'
             else:
                 amopt.d['scwrl_exe']='Scwrl4'
-        try:
-            amopt.d['scwrl_exe'] = ample_util.find_exe(amopt.d['scrwl_exe'])
-        except Exception:
-            logger.critical("Cannot find Scwrl executable: {0}".format(amopt.d['scwrl_exe']))
-            sys.exit(1)
+        if True:
+        #try:
+            amopt.d['scwrl_exe'] = ample_util.find_exe(amopt.d['scwrl_exe'])
+        #except Exception:
+        #    logger.critical("Cannot find Scwrl executable: {0}".format(amopt.d['scwrl_exe']))
+        #    sys.exit(1)
     
     #
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
@@ -798,13 +799,13 @@ def main():
         logger.info(msg)
         if amopt.d['use_scwrl']:
             msg = "Processing sidechains of imported models from {0} with Scwl\n".format( amopt.d['models_dir'] )
-            models_dir_scwrl = amopt.d['models_dir']+"_scwrl"
+            models_dir_scwrl = os.path.join(amopt.d['work_dir'],os.path.basename(amopt.d['models_dir'])+"_scwrl")
             if os.path.isdir( models_dir_scwrl ):
                 emsg = "Scwrl models directory {0} already exists-please move it aside".format( models_dir_scwrl )
                 logger.critical( emsg )
                 raise RuntimeError, emsg
             os.mkdir( models_dir_scwrl )
-            msg += "Scwrl-processed models will be placed in directory: {0}",format( models_dir_scwrl )
+            msg += "Scwrl-processed models will be placed in directory: {0}".format( models_dir_scwrl )
             msg += "Running Scwrl..."
             RUNNING.write(msg)
             logger.info( msg )
