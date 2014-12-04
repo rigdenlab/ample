@@ -112,6 +112,9 @@ def main():
     parser.add_argument('-early_terminate', metavar='True/False', type=str, nargs=1,
                          help='Stop the run as soon as a success has been found.')
     
+    parser.add_argument('-ensemble_mode', type=str, nargs=1,
+                       help='How to ensemble the decoys (threshold|percent)')
+    
     parser.add_argument('-ensembler', type=str, nargs=1,
                        help='Use the Phenix ensembler')
     

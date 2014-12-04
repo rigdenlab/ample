@@ -31,6 +31,7 @@ class AmpleOptions(object):
                             'domain_all_chains_pdb' : None,
                             'domain_termini_distance' : 0,
                             'early_terminate' : True,
+                            'ensemble_mode' : 'percent',
                             'ensembler' : False,
                             'ensembles_dir' : None,
                             'F' : None,
@@ -122,9 +123,10 @@ class AmpleOptions(object):
         # Test use scrwl
         self.devel_mode = {
                            'early_terminate': False,
+                           'benchmark_mode': True,
                            'use_shelxe' : True,
                            'shelxe_rebuild' : True,
-                           'use_scwrl' : False,
+                           'use_scwrl' : True,
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
                            # This kills phaser after 6 hours

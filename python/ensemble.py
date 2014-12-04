@@ -55,7 +55,9 @@ def ensemble_models( cluster_models, amoptd, ensemble_id='X' ):
     ensembler.generate_ensembles( cluster_models=cluster_models,
                                   root_dir=amoptd['work_dir'],
                                   ensemble_id=ensemble_id,
-                                  percent=amoptd['percent'] )
+                                  percent=amoptd['percent'],
+                                  mode=amoptd['ensemble_mode']
+                                   )
 
     return ensembler.ensembles
 
