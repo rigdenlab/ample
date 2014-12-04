@@ -8,7 +8,6 @@ import types
 
 import ample_util
 import pdb_edit
-import residue_map 
 
 class MaxclusterData(object):
     
