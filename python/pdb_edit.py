@@ -11,6 +11,7 @@ import unittest
 
 # External imports
 import iotbx.pdb
+#iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 
 # our imports
 import ample_util
@@ -19,6 +20,8 @@ import residue_map
 
 # cctbx
 #import iotbx.pdb
+
+
 
 
 three2one = {
@@ -46,7 +49,7 @@ three2one = {
 
 # http://stackoverflow.com/questions/3318625/efficient-bidirectional-hash-table-in-python
 #aaDict.update( dict((v, k) for (k, v) in aaDict.items()) )
-one2three =  dict((v, k) for (k, v) in three2one.items()) 
+one2three =  dict((v, k) for (k, v) in three2one.items())
 
 class PDBEdit(object):
     """Class for editing PDBs
@@ -1187,6 +1190,39 @@ class PDBEdit(object):
                         pdb_out.write(line)
         
         return count
+    
+    def sequence(self,pdbin,maxwidth=None):
+        """Extract the sequence of residues from a pdb file.
+        Currently prints a fasta string."""
+        
+        name=os.path.splitext(os.path.basename(pdbin))[0]
+        pdb_input=iotbx.pdb.pdb_input(pdbin)
+        chain2seq={}
+        hierachy=pdb_input.construct_hierarchy()
+        for chain in hierachy.models()[0].chains(): # only the first model
+            # Seems we sometimes loop over the chains twice - not sure why - something
+            # to do with conformers, but why when we deal with that below?
+            if chain.id in chain2seq:
+                continue
+            chain2seq[chain.id]=""
+            # Only look at the first conformer
+            for residue in chain.conformers()[0].residues():
+                # See if any of the atoms are non-hetero - if so we add this residue
+                if any([not atom.hetero for atom in residue.atoms()]):
+                    chain2seq[chain.id]+=three2one[residue.resname]
+        
+        #maxwidth=5
+        s=""
+        for chain,seq in chain2seq.iteritems():
+            s+=">{0} chain: {1} length: {2}\n".format(name,chain,len(seq))
+            if maxwidth:
+                assert maxwidth > 0
+                for i in range(0,max(len(seq),maxwidth),maxwidth):
+                    s+="{0}\n".format(seq[i:i+maxwidth])
+            else:
+                s+="{0}\n".format(seq)
+        
+        return s
 
     def standardise( self, inpdb, outpdb, chain=None ):
         """Rename any non-standard AA, remove solvent and only keep most probably conformation.
@@ -1553,6 +1589,18 @@ class Test(unittest.TestCase):
         
         return
     
+    def testSequence(self):
+        pdbin=os.path.join(self.testfilesDir,"4DZN.pdb")
+        ref=""">4DZN chain: A length: 31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+>4DZN chain: C length: 31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+>4DZN chain: B length: 31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+"""
+        self.assertEqual(ref,PDBEdit().sequence(pdbin))
+        return
+    
     def testStdResiduesCctbx(self):
 
         pdbin=os.path.join(self.testfilesDir,"4DZN.pdb")
@@ -1597,6 +1645,8 @@ if __name__ == "__main__":
                        help='Standardise the PDB')
     group.add_argument('-std1', action='store_true',
                        help='Take pdb to one model/chain that contains only standard amino acids')
+    group.add_argument('-seq', action='store_true',
+                       help='Write a fasta of the found AA to stdout')
     
     parser.add_argument('input_file',
                        help='The input file - will not be altered')
@@ -1607,18 +1657,21 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # Get full paths to all files
-    args.input_file = os.path.abspath( args.input_file )
+    args.input_file = os.path.abspath(args.input_file)
     if not os.path.isfile(args.input_file):
-        raise RuntimeError, "Cannot find input file: {0}".format( args.input_file )
+        raise RuntimeError, "Cannot find input file: {0}".format(args.input_file)
     
     if args.output_file:
-        args.output_file = os.path.abspath( args.output_file )
+        args.output_file = os.path.abspath(args.output_file)
     else:
-        n = os.path.splitext( os.path.basename( args.input_file ) )[0]
+        n = os.path.splitext( os.path.basename(args.input_file))[0]
         args.output_file = n+"_std.pdb"
 
     if args.std1:
         #to_1_std_chain( args.input_file, args.output_file )
         pass
     elif args.std:
-        PDBEdit().standardise( args.input_file, args.output_file )
+        PDBEdit().standardise(args.input_file, args.output_file)
+    elif args.seq:
+        print PDBEdit().sequence(args.input_file)
+        
