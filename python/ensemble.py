@@ -18,6 +18,7 @@ import sys
 
 # our imports
 import ample_ensemble
+import ample_util
 import printTable
 import run_spicker
 
@@ -61,7 +62,6 @@ def ensemble_models( cluster_models, amoptd, ensemble_id='X' ):
 
     return ensembler.ensembles
 
-
 def create_ensembles( amoptd ):
     """Create the ensembles using the values in the amoptd dictionary"""
 
@@ -97,12 +97,6 @@ def create_ensembles( amoptd ):
         logger.info("Truncating Done for cluster {0}".format( cluster ) )
         if amoptd['ensemble_results'][-1] and len(amoptd['ensemble_results'][-1]):
             logger.info('Created {0} ensembles'.format( len(  amoptd['ensemble_results'][-1] ) ) )
-
-    # Write out pickle file
-    f = open( amoptd['results_path'], 'w' )
-    cPickle.dump( amoptd, f )
-    f.close()
-    logging.info("Saved results as file: {0}\n".format( amoptd['results_path'] ) )
 
     return
 
@@ -222,10 +216,8 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Get the amopt dictionary
-    fpath = sys.argv[1]
-    f = open( fpath, "r" )
-    amoptd = cPickle.load( f )
-    f.close()
+    with open(sys.argv[1], "r") as f:
+        amoptd = cPickle.load(f)
 
     #if os.path.abspath(fpath) != os.path.abspath(amoptd['results_path']):
     #    print "results_path must match the path to the pickle file"
@@ -240,5 +232,6 @@ if __name__ == "__main__":
     fl.setFormatter(formatter)
     logger.addHandler(fl)
 
-    # Create the ensembles
+    # Create the ensembles & save them
     create_ensembles( amoptd )
+    ample_util.saveAmoptd(amoptd)

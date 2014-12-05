@@ -4,6 +4,7 @@ Might end up somewhere else at somepoint.
 '''
 
 # Python modules
+import cPickle
 import logging
 import os
 import platform
@@ -13,7 +14,6 @@ import sys
 import tarfile
 import tempfile
 import urllib
-import unittest
 
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
@@ -325,6 +325,13 @@ def setup_logging():
     logger.addHandler(cl)
 
     return logger
+
+def saveAmoptd(amoptd):
+    # Save results
+    with open( amoptd['results_path'], 'w' ) as f:
+        cPickle.dump( amoptd, f )
+        logging.info("Saved results as file: {0}\n".format( amoptd['results_path'] ) )
+    return
 
 def splitQuark(dfile,directory='quark_models'):
     smodels=[]

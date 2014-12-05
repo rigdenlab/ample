@@ -57,7 +57,6 @@ import mrbump_results
 import truncateedit_MAX
 import version
 
-
 def main():
     """Main AMPLE routine.
     
@@ -558,17 +557,6 @@ def main():
     #
     ###############################################################################
     
-    # Benchmark mode
-    if amopt.d['native_pdb']:
-        if not os.path.isfile(amopt.d['native_pdb']):
-            msg = "Cannot find crystal structure PDB: {0}".format(amopt.d['native_pdb'])
-            logger.critical(msg)
-            sys.exit(1)
-        amopt.d['benchmark_mode']=True
-        logger.info("*** AMPLE running in benchmark mode ***")
-        amopt.d['benchmark_dir']=os.path.join(amopt.d['work_dir'],"benchmark")
-        os.mkdir(amopt.d['benchmark_dir'])
-    
     # Missing domains
     if amopt.d['missing_domain']:
         logger.info('Processing missing domain\n')
@@ -589,7 +577,19 @@ def main():
     else:
         amopt.d['mrbump_programs'] = ['molrep', 'phaser']
     
-    
+    #
+    # Benchmark Mode
+    #
+    if amopt.d['native_pdb']:
+        if not os.path.isfile(amopt.d['native_pdb']):
+            msg = "Cannot find crystal structure PDB: {0}".format(amopt.d['native_pdb'])
+            logger.critical(msg)
+            sys.exit(1)
+        amopt.d['benchmark_mode']=True
+        logger.info("*** AMPLE running in benchmark mode ***")
+        amopt.d['benchmark_dir']=os.path.join(amopt.d['work_dir'],"benchmark")
+        os.mkdir(amopt.d['benchmark_dir'])
+
     ###############################################################################
     #
     # Program defaults
@@ -683,12 +683,6 @@ def main():
         msg = 'shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.'
         logger.critical(msg)
         sys.exit(1)
-    
-    #-----------------------------------
-    # Collect data if in benchmark mode
-    #-----------------------------------
-    if amopt.d['benchmark_mode']:
-        benchmark.analysePdb(amopt)
     
     # Create the rosetta modeller - this runs all the checks required
     if amopt.d['make_models'] or amopt.d['make_frags'] or amopt.d['NMR_protocol']:  # only need Rosetta if making models
@@ -861,9 +855,7 @@ def main():
             mrBuild.monitorQueue()
     
             # queue finished so unpickle results
-            f = open( amopt.d['results_path'], "r" )
-            amopt.d = cPickle.load( f )
-            f.close()
+            with open( amopt.d['results_path'], "r" ) as f: amopt.d = cPickle.load( f )
         else:
             ensemble.create_ensembles( amopt.d )
     
@@ -888,13 +880,6 @@ def main():
     if not len(ensembles):
         logger.critical("### AMPLE FAILED TO GENERATE ANY ENSEMBLES! ###\nExiting...")
         sys.exit(1)
-        
-        
-    #-----------------------------------
-    # Collect data if in benchmark mode
-    #-----------------------------------
-    if amopt.d['benchmark_mode']:
-        benchmark.analyse1(amopt)
     
     #---------------------------------------
     # MR BUMP analysis of the ensembles
@@ -941,6 +926,7 @@ def main():
         results_summary = mrbump_results.ResultsSummary()
         results_summary.extractResults( job_dir )
         amopt.d['mrbump_results'].append( results_summary.results )
+        ample_util.saveAmoptd(amopt.d)
         #summary = results_summary.summariseResults()
     
     
@@ -959,13 +945,8 @@ def main():
     RUNNING.write(msg)
     RUNNING.flush()
     
-    if amopt.d['benchmark_mode']:
-        benchmark.analyse2(amopt)
-    
     # Save results
-    with open( amopt.d['results_path'], 'w' ) as f:
-        cPickle.dump( amopt.d, f )
-        logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
+    ample_util.saveAmoptd(amopt.d)
     
     # Now print out the final summary
     summary = amopt.final_summary()
@@ -983,11 +964,14 @@ def main():
             shutil.copy2( result_pdb, output_pdb )
     else:
         logging.critical("Failed to generate a final pdb for cluster 1")
-    
-    # os.system('tar -cvf '+pdb_code+'_' + work_dir+'.tar '+work_dir)
-    # os.system('gzip ' +pdb_code+'_'+ work_dir+'.tar')
-    # os.system('mv '+ pdb_code+'_'+  work_dir+'.tar.gz /data2/jac45 ')
-    # os.system('rm '+work_dir)
+
+    # Benchmark mode
+    if amopt.d['benchmark_mode']:
+        benchmark.analysePdb(amopt)
+        benchmark.analyse1(amopt)
+        benchmark.analyse2(amopt)
+
+
     sys.exit(0)
     #------------------------------------
     # END

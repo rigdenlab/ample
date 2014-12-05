@@ -25,8 +25,11 @@ import rosetta_model
 
 _logger=logging.getLogger()
 
-def analyse1(amopt):
+def analyse(amopt):
     
+    if not os.path.isdir(amopt.d['benchmark_dir']):
+        raise RuntimeError,"Cannot find benchmark dir: {0}".format(amopt.d['benchmark_dir'])
+
     analysePdb(amopt)
     
     analyseModels(amopt)
@@ -41,10 +44,6 @@ def analyse1(amopt):
                                                      directory=amopt.d['benchmark_dir']
                                                      )
     
-    return
-
-def analyse2(amopt):
-
     data=[]
     # Only look at first cluster
     cluster=0
