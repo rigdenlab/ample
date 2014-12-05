@@ -6,9 +6,6 @@ Created on 5 Mar 2014
 
 import os
 import shutil
-import sys
-#sys.path.append("/opt/ample-dev1/python")
-
 import ample_util
 
 def generateMap( mtz, pdb, FP='FP', SIGFP='SIGFP', FREE='FREE', directory=None ):
@@ -52,8 +49,10 @@ def ccmtzOrigin( nativeMap, mrPdb  ):
         assert len(tempnam) < 75
         shutil.copy( mrPdb, tempnam )
         mrPdb = tempnam
-    
-    cmd = [ "phenix.get_cc_mtz_pdb", nativeMap, mrPdb ]
+        
+    # make sure we can find the program
+    get_cc_mtz_pdb=ample_util.find_exe('phenix.get_cc_mtz_pdb')
+    cmd = [get_cc_mtz_pdb , nativeMap, mrPdb ]
     ret = ample_util.run_command(cmd=cmd, logfile="get_cc_mtz_pdb.log", dolog=False )
     assert ret == 0, "phenix.get_cc_mtz_pdb refmac failed!"
     
