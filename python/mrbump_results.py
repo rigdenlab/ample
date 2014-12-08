@@ -9,7 +9,6 @@ import types
 
 # Hack to make sure we can find the modules we need
 if __name__ == "__main__":
-    import sys
     root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
     sys.path.insert( 0, os.path.join( root, "scripts" ) )
 
@@ -18,7 +17,7 @@ if __name__ == "__main__":
 import parse_arpwarp
 import parse_buccaneer
 import parse_phaser
-import parse_shelxe
+#import parse_shelxe
 import printTable
 
 # We need a null logger so that we can be used without requiring a logger
@@ -177,7 +176,7 @@ class ResultsSummary(object):
         self.results = []
         # List of all the possible column titles and their result object attributes
         self.title2attr = {
-                            'Model_Name'       : 'name',
+                            'Model_Name'       : 'ensembleName',
                             'MR_Program'       : 'program',
                             'Solution_Type'    : 'solution',
                             'final_Rfact'      : 'rfact',
