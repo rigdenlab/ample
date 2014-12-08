@@ -126,7 +126,7 @@ class AmpleOptions(object):
                            'benchmark_mode': True,
                            'use_shelxe' : True,
                            'shelxe_rebuild' : True,
-                           'use_scwrl' : True,
+                           'use_scwrl' : False,
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
                            # This kills phaser after 6 hours
@@ -151,6 +151,7 @@ class AmpleOptions(object):
         # List of all the possible column titles and their result object attributes
         # see python/mrbump_results.py
         title2attr = {
+                        'Ensemble_Name' :'ensembleName',
                         'Model_Name' :'name',
                         'MR_Program': 'program',
                         'Solution_Type': 'solution',

@@ -948,13 +948,6 @@ def main():
     # Save results
     ample_util.saveAmoptd(amopt.d)
     
-    # Now print out the final summary
-    summary = amopt.final_summary()
-    logger.info( summary )
-    RUNNING.write(summary)
-    RUNNING.flush()
-    RUNNING.close()
-    
     # Copy best pdb to output_pdb - hack - just take best from the first cluster#
     if amopt.d['mrbump_results'] and len(amopt.d['mrbump_results'][0]):
         result_pdb = amopt.d['mrbump_results'][0][0].pdb
@@ -967,10 +960,14 @@ def main():
 
     # Benchmark mode
     if amopt.d['benchmark_mode']:
-        benchmark.analysePdb(amopt)
-        benchmark.analyse1(amopt)
-        benchmark.analyse2(amopt)
+        benchmark.analyse(amopt.d)
 
+    # Now print out the final summary
+    summary = amopt.final_summary()
+    logger.info( summary )
+    RUNNING.write(summary)
+    RUNNING.flush()
+    RUNNING.close()
 
     sys.exit(0)
     #------------------------------------
