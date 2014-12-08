@@ -1,6 +1,5 @@
 #!/usr/bin/env ccp4-python
 
-import copy
 import glob
 import logging
 import os
@@ -181,12 +180,12 @@ class ResultsSummary(object):
                             'Solution_Type'    : 'solution',
                             'final_Rfact'      : 'rfact',
                             'final_Rfree'      : 'rfree',
+                            'SHELXE_CC'        : 'shelxeCC',
+                            'SHELXE_ACL'       : 'shelxeACL',
                             'Bucc_final_Rfact' : 'buccRfact',
                             'Bucc_final_Rfree' : 'buccRfree',
                             'ARP_final_Rfact'  : 'arpWarpRfact',
                             'ARP_final_Rfree'  : 'arpWarpRfree',
-                            'SHELXE_CC'        : 'shelxeCC',
-                            'SHELXE_ACL'       : 'shelxeACL',
                              }
         
         # Same as titles but Model_Name swapped for Ensemble NAme
@@ -195,12 +194,12 @@ class ResultsSummary(object):
                       'Solution_Type',
                       'final_Rfact',
                       'final_Rfree',
+                      'SHELXE_CC',
+                      'SHELXE_ACL',
                       'Bucc_final_Rfact',
                       'Bucc_final_Rfree',
                       'ARP_final_Rfact',
                       'ARP_final_Rfree',
-                      'SHELXE_CC',
-                      'SHELXE_ACL',
                       ]
 
         self.logger = logging.getLogger()
@@ -421,7 +420,7 @@ class ResultsSummary(object):
                     # Map the data fields to their titles
                     if f not in self.title2attr.keys():
                         self.logger.critical("jobDir {0}: Problem with field {1} in headerline: {2}".format( jobDir, f, line ) )
-                        result.header = [h for h in self.header if h in header ]# copy those attributes that we found
+                        result.header = ['Ensemble_Name']+[h for h in self.header if h in header ]# copy those attributes that we found
                         result.solution = "problem-header-file.dat"
                         self._getUnfinishedResult( result )
                         results.append( result )
@@ -429,7 +428,7 @@ class ResultsSummary(object):
                 continue
                 # End header processing
             else:
-                result.header = [h for h in self.header if h in header ] # copy those attributes that we found
+                result.header = ['Ensemble_Name']+[h for h in self.header if h in header ] # copy those attributes that we found
 
             fields = line.split()
             if len(fields) != nfields:
