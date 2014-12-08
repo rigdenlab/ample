@@ -176,7 +176,7 @@ class ResultsSummary(object):
         self.results = []
         # List of all the possible column titles and their result object attributes
         self.title2attr = {
-                            'Model_Name'       : 'ensembleName',
+                            'Model_Name'       : 'name',
                             'MR_Program'       : 'program',
                             'Solution_Type'    : 'solution',
                             'final_Rfact'      : 'rfact',
@@ -188,6 +188,20 @@ class ResultsSummary(object):
                             'SHELXE_CC'        : 'shelxeCC',
                             'SHELXE_ACL'       : 'shelxeACL',
                              }
+        
+        # Same as titles but Model_Name swapped for Ensemble NAme
+        self.header= ['Ensemble_Name' ,
+                      'MR_Program',
+                      'Solution_Type',
+                      'final_Rfact',
+                      'final_Rfree',
+                      'Bucc_final_Rfact',
+                      'Bucc_final_Rfree',
+                      'ARP_final_Rfact',
+                      'ARP_final_Rfree',
+                      'SHELXE_CC',
+                      'SHELXE_ACL',
+                      ]
 
         self.logger = logging.getLogger()
         # Add Null logger so we can be used without requiring a logger
@@ -407,7 +421,7 @@ class ResultsSummary(object):
                     # Map the data fields to their titles
                     if f not in self.title2attr.keys():
                         self.logger.critical("jobDir {0}: Problem with field {1} in headerline: {2}".format( jobDir, f, line ) )
-                        result.header = header
+                        result.header = [h for h in self.header if h in header ]# copy those attributes that we found
                         result.solution = "problem-header-file.dat"
                         self._getUnfinishedResult( result )
                         results.append( result )
@@ -415,8 +429,7 @@ class ResultsSummary(object):
                 continue
                 # End header processing
             else:
-                # horrible - we manipulate the header in addShelxe/buccaneer so we need to use a copy here
-                result.header = copy.copy(header)
+                result.header = [h for h in self.header if h in header ] # copy those attributes that we found
 
             fields = line.split()
             if len(fields) != nfields:
@@ -623,7 +636,11 @@ class ResultsSummary(object):
             resultLine = []
             #for h in result.header:
             for h in topHeader:
-                resultLine.append( getattr( result, self.title2attr[h] ) )
+                if h == 'Ensemble_Name':
+                    a=result.ensembleName
+                else:
+                    a=getattr(result, self.title2attr[h])
+                resultLine.append(a)
             resultsTable.append( resultLine )
 
         # Format the results
