@@ -58,7 +58,7 @@ def analyse(amoptd):
             return
 
         # Get map of ensemble name -> ensemble result
-        for i, e in enumerate( ensemble_data ):
+        for e in ensemble_data:
             if ensemble_results.has_key( e.name ):
                 raise RuntimeError, "Duplicate key: {0}".format( e.name )
             ensemble_results[ e.name ] = e
@@ -145,6 +145,9 @@ def analyseSolution(amoptd,result,d):
             mrPdb=result.refmacPdb
         if not mrPdb:
             return
+    
+    # Copy in attributes
+    addMrbumpData(result, d)
     
     # debug - copy into work directory as reforigin struggles with long pathnames
     shutil.copy(mrPdb, os.path.join(amoptd['benchmark_dir'], os.path.basename(mrPdb)))
@@ -236,6 +239,45 @@ def analyseSolution(amoptd,result,d):
                                                  csymmatchPdb=csymmatchPdb,
                                                  workdir=amoptd['benchmark_dir'])
 
+    return
+
+def addMrbumpData(result,d):
+    """Copy data from mrbump result into dict"""
+    
+    attrs = [
+             # 'jobDir',
+             # 'mrDir',
+             # 'name',
+             # 'pdb',
+             # 'ensembleName',
+             'program',
+             'solution',
+             'rfact',
+             'rfree',
+             'buccRfact',
+             'buccRfree',
+             'arpWarpRfact',
+             'arpWarpRfree',
+             'shelxeCC',
+             'shelxeACL',
+             'buccFinalRfact',
+             'buccFinalRfree',
+             'arpWarpFinalRfact',
+             'arpWarpFinalRfree',
+             'phaserLLG',
+             'phaserTFZ',
+             'phaserTime',
+             'phaserKilled',
+             'molrepScore',
+             'molrepTime'
+             ]
+
+    for a in attrs:
+        if hasattr(result,a):
+            d[a]=getattr(result, a)
+        else:
+            d[a]=None
+    
     return
 
 
