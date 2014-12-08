@@ -90,27 +90,21 @@ def analyse(amoptd):
         analyseSolution(amoptd,result,d)
         data.append(d)
 
-    cpath=os.path.join(amoptd['benchmark_dir'],'results.csv' )
-    csvfile= open(cpath,'wb')
-    csvwriter=csv.DictWriter(csvfile,
-                             fieldnames=sorted(data[0].keys()),
-                             delimiter=',',
-                             quotechar='"',
-                             quoting=csv.QUOTE_MINIMAL)
+    fileName=os.path.join(amoptd['benchmark_dir'],'results.csv' )
+    writeCsv(fileName,data)
+    amoptd['benchmark_results']=data
+    return
 
-    csvwriter.writeheader()
-    csvwriter.writerows(data)
+def writeCsv(fileName,resultList):
+    with open(fileName,'wb') as csvfile:
+        csvwriter=csv.DictWriter(csvfile,
+                                 fieldnames=sorted(resultList[0].keys()),
+                                 delimiter=',',
+                                 quotechar='"',
+                                 quoting=csv.QUOTE_MINIMAL)
 
-    #header=False
-    #for r in allResults:
-    #    if not header:
-    #        #csvwriter.writerow( r.titlesAsList() )
-    #        csvwriter.writerow( r.valueAttrAsList() )
-    #        header=True
-    #    csvwriter.writerow( r.valuesAsList() )
-
-    csvfile.close()
-        
+        csvwriter.writeheader()
+        csvwriter.writerows(resultList)
     return
     
 def mkDataDict(amoptd):

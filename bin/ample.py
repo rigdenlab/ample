@@ -961,6 +961,7 @@ def main():
     # Benchmark mode
     if amopt.d['benchmark_mode']:
         benchmark.analyse(amopt.d)
+        ample_util.saveAmoptd(amopt.d)
 
     # Now print out the final summary
     summary = amopt.final_summary()
