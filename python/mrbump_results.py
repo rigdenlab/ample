@@ -1,14 +1,13 @@
 #!/usr/bin/env ccp4-python
 
-import copy
 import glob
 import logging
 import os
+import sys
 import types
 
 # Hack to make sure we can find the modules we need
 if __name__ == "__main__":
-    import sys
     root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
     sys.path.insert( 0, os.path.join( root, "scripts" ) )
 
@@ -17,7 +16,7 @@ if __name__ == "__main__":
 import parse_arpwarp
 import parse_buccaneer
 import parse_phaser
-import parse_shelxe
+#import parse_shelxe
 import printTable
 
 # We need a null logger so that we can be used without requiring a logger
@@ -181,13 +180,27 @@ class ResultsSummary(object):
                             'Solution_Type'    : 'solution',
                             'final_Rfact'      : 'rfact',
                             'final_Rfree'      : 'rfree',
+                            'SHELXE_CC'        : 'shelxeCC',
+                            'SHELXE_ACL'       : 'shelxeACL',
                             'Bucc_final_Rfact' : 'buccRfact',
                             'Bucc_final_Rfree' : 'buccRfree',
                             'ARP_final_Rfact'  : 'arpWarpRfact',
                             'ARP_final_Rfree'  : 'arpWarpRfree',
-                            'SHELXE_CC'        : 'shelxeCC',
-                            'SHELXE_ACL'       : 'shelxeACL',
                              }
+        
+        # Same as titles but Model_Name swapped for Ensemble NAme
+        self.header= ['Ensemble_Name' ,
+                      'MR_Program',
+                      'Solution_Type',
+                      'final_Rfact',
+                      'final_Rfree',
+                      'SHELXE_CC',
+                      'SHELXE_ACL',
+                      'Bucc_final_Rfact',
+                      'Bucc_final_Rfree',
+                      'ARP_final_Rfact',
+                      'ARP_final_Rfree',
+                      ]
 
         self.logger = logging.getLogger()
         # Add Null logger so we can be used without requiring a logger
@@ -285,9 +298,16 @@ class ResultsSummary(object):
         Find the results from running MRBUMP and sort them
         """
         mrbumpDir = os.path.abspath( mrbumpDir )
+        
+        if not os.path.isdir(mrbumpDir):
+            self.logger.warn("extractResults - is not a valid directory: {0}".format( mrbumpDir ) )
+                
         # Get a list of the ensembles (could get this from the amopt dictionary)
         # For now we just use the submission scripts and assume all have .sh or .sub extension
-        ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*.sh") ) ]
+        ext='.sh'
+        if sys.platform.startswith("win"):
+            ext='.bat'
+        ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*"+ext) ) ]
         if not len(ensembles):
             # legacy - try .sub
             ensembles = [ os.path.splitext( os.path.basename(e) )[0] for e in glob.glob( os.path.join( mrbumpDir, "*.sub") ) ]
@@ -375,9 +395,8 @@ class ResultsSummary(object):
         """Read a resultsTable file and return a list of MrBump results objects"""
 
         # Extract the various components from the path
+        tfile=os.path.abspath(tfile)
         paths = tfile.split( os.sep )
-        assert len( paths[0] )  == 0,"Need absolute path: {0}".format( tfile )
-
         jobDir = os.path.abspath( os.sep.join( paths[:-2] ) )
         ensemble = paths[-3][7:-7] #  remove search_..._mrbump: 'search_All_atom_trunc_0.005734_rad_1_mrbump'
 
@@ -401,7 +420,7 @@ class ResultsSummary(object):
                     # Map the data fields to their titles
                     if f not in self.title2attr.keys():
                         self.logger.critical("jobDir {0}: Problem with field {1} in headerline: {2}".format( jobDir, f, line ) )
-                        result.header = header
+                        result.header = ['Ensemble_Name']+[h for h in self.header if h in header ]# copy those attributes that we found
                         result.solution = "problem-header-file.dat"
                         self._getUnfinishedResult( result )
                         results.append( result )
@@ -409,8 +428,7 @@ class ResultsSummary(object):
                 continue
                 # End header processing
             else:
-                # horrible - we manipulate the header in addShelxe/buccaneer so we need to use a copy here
-                result.header = copy.copy(header)
+                result.header = ['Ensemble_Name']+[h for h in self.header if h in header ] # copy those attributes that we found
 
             fields = line.split()
             if len(fields) != nfields:
@@ -617,7 +635,11 @@ class ResultsSummary(object):
             resultLine = []
             #for h in result.header:
             for h in topHeader:
-                resultLine.append( getattr( result, self.title2attr[h] ) )
+                if h == 'Ensemble_Name':
+                    a=result.ensembleName
+                else:
+                    a=getattr(result, self.title2attr[h])
+                resultLine.append(a)
             resultsTable.append( resultLine )
 
         # Format the results
@@ -764,7 +786,6 @@ class ResultsSummary(object):
 
 
 if __name__ == "__main__":
-    import sys
     if len(sys.argv) == 2:
         mrbump_dir = os.path.join( os.getcwd(), sys.argv[1] )
     else:

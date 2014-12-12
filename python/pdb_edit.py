@@ -1,3 +1,4 @@
+#!/usr/bin/env ccp4-python
 '''
 Useful manipulations on PDB files
 '''
@@ -10,6 +11,7 @@ import unittest
 
 # External imports
 import iotbx.pdb
+#iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 
 # our imports
 import ample_util
@@ -18,6 +20,8 @@ import residue_map
 
 # cctbx
 #import iotbx.pdb
+
+
 
 
 three2one = {
@@ -45,7 +49,7 @@ three2one = {
 
 # http://stackoverflow.com/questions/3318625/efficient-bidirectional-hash-table-in-python
 #aaDict.update( dict((v, k) for (k, v) in aaDict.items()) )
-one2three =  dict((v, k) for (k, v) in three2one.items()) 
+one2three =  dict((v, k) for (k, v) in three2one.items())
 
 class PDBEdit(object):
     """Class for editing PDBs
@@ -1078,7 +1082,6 @@ class PDBEdit(object):
     def merge( self, pdb1=None, pdb2=None, pdbout=None  ):
         """Merge two pdb files into one"""
         
-        
         logfile = pdbout+".log"
         cmd=[ 'pdb_merge', 'xyzin1', pdb1, 'xyzin2', pdb2, 'xyzout', pdbout ]
         
@@ -1187,6 +1190,39 @@ class PDBEdit(object):
                         pdb_out.write(line)
         
         return count
+    
+    def sequence(self,pdbin,maxwidth=None):
+        """Extract the sequence of residues from a pdb file.
+        Currently prints a fasta string."""
+        
+        name=os.path.splitext(os.path.basename(pdbin))[0]
+        pdb_input=iotbx.pdb.pdb_input(pdbin)
+        chain2seq={}
+        hierachy=pdb_input.construct_hierarchy()
+        for chain in hierachy.models()[0].chains(): # only the first model
+            # Seems we sometimes loop over the chains twice - not sure why - something
+            # to do with conformers, but why when we deal with that below?
+            if chain.id in chain2seq:
+                continue
+            chain2seq[chain.id]=""
+            # Only look at the first conformer
+            for residue in chain.conformers()[0].residues():
+                # See if any of the atoms are non-hetero - if so we add this residue
+                if any([not atom.hetero for atom in residue.atoms()]):
+                    chain2seq[chain.id]+=three2one[residue.resname]
+        
+        #maxwidth=5
+        s=""
+        for chain,seq in chain2seq.iteritems():
+            s+=">{0} chain: {1} length: {2}\n".format(name,chain,len(seq))
+            if maxwidth:
+                assert maxwidth > 0
+                for i in range(0,max(len(seq),maxwidth),maxwidth):
+                    s+="{0}\n".format(seq[i:i+maxwidth])
+            else:
+                s+="{0}\n".format(seq)
+        
+        return s
 
     def standardise( self, inpdb, outpdb, chain=None ):
         """Rename any non-standard AA, remove solvent and only keep most probably conformation.
@@ -1233,7 +1269,6 @@ mostprob
         modres_names = {} # list of names of the modified residues keyed by chainID
         gotModel=False # to make sure we only take the first model
         reading=False # If reading structure
-        
         
         pdbinf = open(pdbin,'r')
         pdboutf = open(pdbout,'w')
@@ -1303,6 +1338,53 @@ mostprob
             # END reading loop
             
         return
+    
+    def std_residues_cctbx(self, pdbin, pdbout):
+        
+        pdb_input=iotbx.pdb.pdb_input(pdbin)
+        
+        # Get MODRES Section & build up dict mapping the changes
+        modres={}
+        for _,id,resname,chain,resseq,stdres,comment in [ l.strip().split() \
+                                                         for l in pdb_input.primary_structure_section() \
+                                                         if l.startswith("MODRES")]:
+            if not chain in modres:
+                modres[chain]={}
+            modres[chain][int(resseq)]=(resname,stdres)
+        
+        hierachy=pdb_input.construct_hierarchy()
+        for model in hierachy.models():
+            for chain in model.chains():
+                for residue_group in chain.residue_groups():
+                    resseq=residue_group.resseq_as_int()
+                    for atom_group in residue_group.atom_groups():
+                        resname=atom_group.resname
+                        if resseq in modres[chain.id]:
+                            # Change modified name to std name
+                            assert modres[chain.id][resseq][0]==resname,\
+                            "Unmatched names: {0} : {1}".format(modres[chain.id][resseq][0],resname)
+                            atom_group.resname=modres[chain.id][resseq][1]
+                            # If any of the atoms are hetatms, set them to be atoms
+                            for atom in atom_group.atoms():
+                                if atom.hetero:
+                                    atom.hetero=False
+                                
+        
+        if False:
+            # Remove HETATMS
+            for model in hierachy.models():
+                for chain in model.chains():
+                    for residue_group in chain.residue_groups():
+                        for atom_group in residue_group.atom_groups():
+                            # Can't use below as it uses indexes which change as we remove atoms
+                            # ag.atoms().extract_hetero()]
+                            todel=[a for a in atom_group.atoms() if a.hetero ]
+                            for a in todel:
+                                atom_group.remove_atom(a)       
+        
+        hierachy.write_pdb_file(pdbout,anisou=False)
+        
+        return       
     
     def strip_hetatm( self, inpath, outpath):
         """Remove all hetatoms from pdbfile"""
@@ -1417,10 +1499,23 @@ mostprob
 
 class Test(unittest.TestCase):
 
+
+    def setUp(self):
+        """
+        Get paths need to think of a sensible way to do this
+        """
+
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ampleDir = os.sep.join( paths[ : -1 ] )
+        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
+
+        return
+
     def testGetInfo1(self):
         """"""
 
-        pdbfile = "../tests/testfiles/1GU8.pdb"
+        pdbfile = os.path.join(self.testfilesDir,"1GU8.pdb")
         
         PE = PDBEdit()
         
@@ -1454,7 +1549,7 @@ class Test(unittest.TestCase):
     def testGetInfo2(self):
         """"""
 
-        pdbfile = "../tests/testfiles/2UUI.pdb"
+        pdbfile = os.path.join(self.testfilesDir,"2UUI.pdb")
         
         PE = PDBEdit()
         
@@ -1472,21 +1567,73 @@ class Test(unittest.TestCase):
         self.assertEqual( info.numAtoms( modelIdx=0 ), 1263 )
         
         return
+    
+    def testStdResidues(self):
+
+        pdbin=os.path.join(self.testfilesDir,"4DZN.pdb")
+        pdbout="std.pdb"
+        
+        PDBEdit().std_residues(pdbin, pdbout)
+        
+        # Check it's valid
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+        
+        #Get list of all the residue names in chain 1
+        resnames=[g.unique_resnames()[0]  for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
+        ref=['ACE', 'GLY', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
+             'LYS', 'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
+             'LYS', 'GLN', 'GLY', 'TYR', 'TYR']
+        self.assertEqual(resnames,ref)
+        
+        os.unlink(pdbout)
+        
+        return
+    
+    def testSequence(self):
+        pdbin=os.path.join(self.testfilesDir,"4DZN.pdb")
+        ref=""">4DZN chain: A length: 31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+>4DZN chain: C length: 31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+>4DZN chain: B length: 31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+"""
+        self.assertEqual(ref,PDBEdit().sequence(pdbin))
+        return
+    
+    def testStdResiduesCctbx(self):
+
+        pdbin=os.path.join(self.testfilesDir,"4DZN.pdb")
+        pdbout="std.pdb"
+        
+        PDBEdit().std_residues_cctbx(pdbin, pdbout)
+        
+        # Check it's valid
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+        
+        #Get list of all the residue names in chain 1
+        resnames=[g.unique_resnames()[0]  for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
+        ref=['ACE', 'GLY', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
+             'LYS', 'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
+             'LYS', 'GLN', 'GLY', 'TYR', 'TYR']
+        self.assertEqual(resnames,ref)
+        
+        os.unlink(pdbout)
+        
+        return
 
 
 def testSuite():
     suite = unittest.TestSuite()
     suite.addTest(Test('testGetInfo1'))
     suite.addTest(Test('testGetInfo2'))
+    suite.addTest(Test('testStdResidues'))
+    suite.addTest(Test('testStdResiduesCctbx'))
     return suite
     
-#
-# Run unit tests
+
 if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(testSuite())
-
-
-if __name__ == "__main__" and False:
+    #unittest.TextTestRunner(verbosity=2).run(testSuite())
     #
     # Command-line handling
     #
@@ -1494,36 +1641,37 @@ if __name__ == "__main__" and False:
     parser = argparse.ArgumentParser(description='Manipulate PDB files', prefix_chars="-")
     
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-one_std_chain', action='store_true',
-                       help='Take pdb to one model/chain that contains only standard amino acids')
-    group.add_argument('-standardise', action='store_true',
+    group.add_argument('-std', action='store_true',
                        help='Standardise the PDB')
+    group.add_argument('-std1', action='store_true',
+                       help='Take pdb to one model/chain that contains only standard amino acids')
+    group.add_argument('-seq', action='store_true',
+                       help='Write a fasta of the found AA to stdout')
     
     parser.add_argument('input_file',
                        help='The input file - will not be altered')
     
-    parser.add_argument('output_file',
+    parser.add_argument('-o', dest='output_file',
                        help='The output file - will be created')
     
     args = parser.parse_args()
     
     # Get full paths to all files
-    args.input_file = os.path.abspath( args.input_file )
+    args.input_file = os.path.abspath(args.input_file)
     if not os.path.isfile(args.input_file):
-        raise RuntimeError, "Cannot find input file: {0}".format( args.input_file )
+        raise RuntimeError, "Cannot find input file: {0}".format(args.input_file)
     
-#     if args.output_file:
-#         args.output_file = os.path.abspath( args.output_file )
-#     else:
-#         n = os.path.split( os.path.basename( args.input_file ) )[0]
-#         args.output_file = n+"_std.pdb"
+    if args.output_file:
+        args.output_file = os.path.abspath(args.output_file)
+    else:
+        n = os.path.splitext( os.path.basename(args.input_file))[0]
+        args.output_file = n+"_std.pdb"
 
-
-
-    PE = PDBEdit()
-    
-    if args.one_std_chain:
+    if args.std1:
         #to_1_std_chain( args.input_file, args.output_file )
         pass
-    elif args.standardise:
-        PE.standardise( args.input_file, args.output_file )
+    elif args.std:
+        PDBEdit().standardise(args.input_file, args.output_file)
+    elif args.seq:
+        print PDBEdit().sequence(args.input_file)
+        

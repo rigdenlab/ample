@@ -20,7 +20,7 @@ import shutil
 import cluster_with_MAX
 import SCWRL_edit
 #############cluster_with_MAX####
-def make_list_to_keep(theseus_out, THESEUS_threthold): #make a list of residues to keep under variance threshold
+def calculate_residues(theseus_out, THESEUS_threthold): #make a list of residues to keep under variance threshold
  add_list =[]
 
  theseus_out = open(theseus_out)
@@ -223,7 +223,7 @@ def truncate(THESEUS, models_path, out_path, Rosetta_cluster, RDB ): #truncate m
   truncate_log.write('This is the number of residues kept under each truncation threshold\n\nthreshold\tnumber of residues\n')
   for threshold in thresholds:
     T_data = out_path + '/theseus_variances.txt'
-    add_list = make_list_to_keep(T_data, threshold)
+    add_list = calculate_residues(T_data, threshold)
     truncate_log.write( str(threshold) +'\t' + str(len(add_list)) + '\n' )
     trunc_out=''
 

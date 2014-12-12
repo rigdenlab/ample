@@ -4,6 +4,7 @@ Might end up somewhere else at somepoint.
 '''
 
 # Python modules
+import cPickle
 import logging
 import os
 import platform
@@ -13,15 +14,6 @@ import sys
 import tarfile
 import tempfile
 import urllib
-import unittest
-
-# Our modules
-import cif_parser
-
-# MRBUMP modules
-#sys.path.append(os.path.join(os.environ["CCP4"], "share", "mrbump", "include", "file_info")) # For MTZ_parse
-sys.path.insert(0, "/Users/jmht/Documents/AMPLE/programs/mrbump/include/file_info")
-import MTZ_parse
 
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
@@ -241,65 +233,6 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='ROSETTA_MR_'):
     work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
     return work_dir
 
-def processReflectionFile( amoptd ):
-    """Make sure we have a valid mtz file. If necessary convert a given cif file.
-       Set the mtz variable in the given amoptd to the reflection file to use
-       Return True if it all worked or raise an exception if it failed
-    """
-
-    # We've been given a sf_cif so convert to mtz
-    if amoptd['sf_cif']:
-        if not os.path.isfile( amoptd['sf_cif'] ):
-            logging.critical("Cannot find sf_cif file: {0}".format( amoptd['sf_cif'] ) )
-            sys.exit(1)
-
-        cp = cif_parser.CifParser()
-        amoptd['mtz'] = cp.sfcif2mtz( amoptd['sf_cif'] )
-
-    # Now have an mtz so check it's valid
-    if not amoptd['mtz'] or not os.path.isfile( amoptd['mtz'] ):
-        logging.critical("Cannot find MTZ file: {0}".format( amoptd['mtz'] ) )
-        sys.exit(1)
-
-    # Run mtzdmp to get file info
-    mtzp = MTZ_parse.MTZ_parse()
-    mtzp.run_mtzdmp( amoptd['mtz'] )
-
-    # If flags given check they are present in the file
-    for flag in ['F', 'SIGF', 'FREE']:
-        if amoptd[flag] and amoptd[flag] not in mtzp.col_labels:
-            logging.critical("Cannot find given {0} label {1} in mtz file {2}".format( flag, amoptd[flag], amoptd['mtz'] ) )
-            sys.exit(1)
-
-    # If any of the flags aren't given we get them from the file
-    if not amoptd['F']:
-        amoptd['F']  = mtzp.F
-    if not amoptd['SIGF']:
-        amoptd['SIGF']  = mtzp.SIGF
-    if not amoptd['FREE']:
-        amoptd['FREE']  = mtzp.FreeR_flag
-
-    # Make sure we've found something
-    for flag in ['F', 'SIGF' ]:
-        if amoptd[flag] is None or not len(amoptd[flag]) or amoptd[flag] not in mtzp.col_labels:
-            logging.critical("Cannot find any {0} label in mtz file {1}".format( flag, amoptd['mtz'] ) )
-            sys.exit(1)
-
-    # All flags ok so just check the RFREE flag is valid
-    if not mtzp.checkRFREE(FreeR_flag=amoptd['FREE']):
-        # If not run uniqueify
-        logging.warning("Cannot find a valid FREE flag - running uniquefy to generate column with RFREE data." )
-        amoptd['mtz'] = uniqueify( amoptd['mtz'], directory=amoptd['work_dir'] )
-
-        # Check file and get new FREE flag
-        mtzp.run_mtzdmp( amoptd['mtz'] )
-        amoptd['FREE']  = mtzp.FreeR_flag
-
-        # hopefully unnecessary check
-        assert mtzp.checkRFREE(FreeR_flag=amoptd['FREE'])
-
-    return True
-
 def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     """Execute a command and return the exit code.
 
@@ -393,6 +326,13 @@ def setup_logging():
 
     return logger
 
+def saveAmoptd(amoptd):
+    # Save results
+    with open( amoptd['results_path'], 'w' ) as f:
+        cPickle.dump( amoptd, f )
+        logging.info("Saved results as file: {0}\n".format( amoptd['results_path'] ) )
+    return
+
 def splitQuark(dfile,directory='quark_models'):
     smodels=[]
     with open(dfile,'r') as f:
@@ -431,125 +371,3 @@ def tmpFileName():
     tmp1 = t.name
     t.close()
     return tmp1
-
-def uniqueify(mtzPath,directory=None):
-    """Run uniqueify on mtz file to generate RFREE data column"""
-
-    mtzUnique = filename_append(mtzPath, "uniqueify", directory=directory)
-
-    cmd = ['uniqueify', mtzPath, mtzUnique]
-
-    #uniqueify {-p fraction} mydata.mtz.
-    logfile = os.path.join( os.getcwd(), "uniqueify.log" )
-    retcode = run_command(cmd, logfile=logfile)
-    if retcode != 0:
-        msg = "Error running sfcif2mtz. Check the logfile: {0}".format(logfile)
-        logging.critical(msg)
-        raise RuntimeError, msg
-
-    return mtzUnique
-
-class TestUtil(unittest.TestCase):
-    """
-    Unit test
-    """
-
-    def setUp(self):
-        """
-        Get paths need to think of a sensible way to do this
-        """
-
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
-        self.ampleDir = os.sep.join( paths[ : -1 ] )
-        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
-
-        return
-
-    def testProcessReflectionFile(self):
-        """Get MTZ flags"""
-
-
-        mtz = os.path.join( self.ampleDir, "examples", "toxd-example" , "1dtx.mtz" )
-
-
-        d = { 'mtz'    : mtz,
-              'sf_cif' : None,
-              'F'      : None,
-              'SIGF'   : None,
-              'FREE'   : None,
-             }
-
-        processReflectionFile( d )
-
-        self.assertEqual( 'FP', d['F'], "Correct F")
-        self.assertEqual( 'SIGFP', d['SIGF'], "Correct SIGF")
-        self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
-
-        return
-
-    def testProcessReflectionFileNORFREE(self):
-        """Get MTZ flags"""
-
-        mtz = os.path.join( self.testfilesDir, "2uui_sigmaa.mtz" )
-
-        d = { 'mtz'    : mtz,
-              'sf_cif' : None,
-              'F'      : None,
-              'SIGF'   : None,
-              'FREE'   : None,
-              'work_dir': os.getcwd(),
-             }
-
-        processReflectionFile( d )
-
-        self.assertEqual( 'F', d['F'], "Correct F")
-        self.assertEqual( 'SIGF', d['SIGF'], "Correct SIGF")
-        self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
-        
-        os.unlink('uniqueify.log')
-        os.unlink('2uui_sigmaa_uniqueify.mtz')
-        os.unlink('2uui_sigmaa_uniqueify.log')
-
-        return
-
-    def testProcessReflectionFileCIF(self):
-        """Get MTZ flags"""
-
-        cif = os.path.join( self.testfilesDir, "1x79-sf.cif" )
-
-        d = { 'mtz'     : None,
-              'sf_cif'  : cif,
-              'F'       : None,
-              'SIGF'    : None,
-              'FREE'    : None,
-              'work_dir': os.getcwd(),
-             }
-
-        processReflectionFile( d )
-
-        self.assertEqual( 'FP', d['F'], "Correct F")
-        self.assertEqual( 'SIGFP', d['SIGF'], "Correct SIGF")
-        self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
-
-        os.unlink('cif2mtz.log')
-        os.unlink('1x79-sf.mtz')
-        os.unlink('mtzutils.log')
-        os.unlink('1x79-sf_dFREE.mtz')
-        os.unlink('uniqueify.log')
-        os.unlink('1x79-sf_dFREE_uniqueify.mtz')
-        os.unlink('1x79-sf_dFREE_uniqueify.log')
-
-        return
-    
-def testSuite():
-    suite = unittest.TestSuite()
-    suite.addTest(TestUtil('testProcessReflectionFile'))
-    suite.addTest(TestUtil('testProcessReflectionFileNORFREE'))
-    suite.addTest(TestUtil('testProcessReflectionFileCIF'))
-    return suite
-    
-#
-# Run unit tests
-if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(testSuite())

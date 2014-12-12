@@ -36,10 +36,13 @@ class Scwrl( object ):
                 w.write( sequence + os.linesep )
             cmd += [ "-s",  sequenceFile ]
             
-        retcode = ample_util.run_command( cmd )
+        logfile = os.path.abspath("scwrl.log")
+        retcode = ample_util.run_command( cmd, logfile=logfile )
         
         if retcode != 0:
-            raise RuntimeError,"Error running Scwrl"
+            raise RuntimeError,"Error running Scwrl - please check the logfile: {0}".format(logfile)
+        else:
+            os.unlink(logfile)
         
         return
     

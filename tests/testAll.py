@@ -27,9 +27,6 @@ testsuite = unittest.TestSuite()
 # Add all the tests
 #
 ###############################################################
-import ample_util
-testsuite.addTests(ample_util.testSuite())
-
 import csymmatch
 testsuite.addTests(csymmatch.testSuite())
 
@@ -38,6 +35,9 @@ testsuite.addTests(dssp.testSuite())
 
 import fasta_parser
 testsuite.addTests(fasta_parser.testSuite())
+
+import mtz_util
+testsuite.addTests(mtz_util.testSuite())
 
 import octopus_predict
 testsuite.addTests(octopus_predict.testSuite())

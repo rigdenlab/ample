@@ -99,61 +99,60 @@ class JobServer(object):
         time.sleep( 3 )
         return
 
-
-
+# Need this defined outside of the test or it can't be pickled on Windoze
+def _check_success_test( job ):
+    import os
+    jobname = os.path.splitext( os.path.basename( job ) )[0]
+    if jobname == "job_2":
+        return True
+    return False
+ 
 class Test(unittest.TestCase):
-    
+     
     def makeJob(self, name):
-        
+         
         script = """#!/usr/bin/python
 import sys,time
 print "I am job: {0}"
 time.sleep( 3 )
 sys.exit(0)
 """.format( name )
-
+ 
         f = open( name, 'w' )
         f.write( script )
         f.close()
         os.chmod( name, 0o777)
-        
+         
         return name
-
+ 
     def testJobServer(self):
-        
-        def check_success( job ):
-            import os
-            jobname = os.path.splitext( os.path.basename( job ) )[0]
-            if jobname == "job_2":
-                return True
-            return False
-        
+         
         #print "running in ",os.getcwd()
         jobs = []
         for j in range( 15 ):
-            j = os.path.abspath("job_{0}.job".format( j ))
+            j = os.path.abspath("job_{0}.py".format( j ))
             jobs.append( self.makeJob(j))
-            
+             
         js = JobServer()
         js.setJobs( jobs )
-        js.start( nproc=2, early_terminate=True, check_success=check_success )
-        
+        js.start( nproc=2, early_terminate=True, check_success=_check_success_test )
+         
         # Cleanup
         for j in jobs:
             os.unlink(j)
         for l in glob.glob("job_*.log"):
             os.unlink(l)
-        
+         
         pass
-
+ 
 def testSuite():
     suite = unittest.TestSuite()
     suite.addTest(Test('testJobServer'))
     return suite
-    
+     
 #
 # Run unit tests
 if __name__ == "__main__":
     unittest.TextTestRunner(verbosity=2).run(testSuite())
-
-      
+ 
+       

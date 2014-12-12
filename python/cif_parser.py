@@ -1,13 +1,19 @@
+
+
+
 '''
 Created on 28 May 2013
 
 @author: jmht
 '''
 
-import ample_util
 import logging
 import os
 import sys
+
+# Our imports
+import ample_util
+import mtz_util
 
 from iotbx.cif import reader as cif_reader
 
@@ -50,22 +56,6 @@ class CifParser(object):
             self.hasAmplitudes = True
         
         return
-    
-    def _delColumn(self, mtzPath, column ):
-        """Delete a column from an mtz file"""
-        
-        mtzDel = ample_util.filename_append(mtzPath, "d{0}".format(column) )
-        
-        cmd = [ "mtzutils", "hklin1", mtzPath, "hklout", mtzDel ]
-        stdin = "EXCLUDE 1 {0}".format( column )
-        logfile = os.path.join( os.getcwd(), "mtzutils.log" )
-        retcode = ample_util.run_command(cmd, stdin=stdin, logfile=logfile)
-        if retcode != 0:
-            msg = "Error running mtzutils. Check the logfile: {0}".format(logfile)
-            self.logger.critical(msg)
-            raise RuntimeError, msg
-        
-        return mtzDel
 
     def _sfcif2mtz(self, cifPath, mtzPath ):
         """Convert a CIF containing structure factors to an MTZ file."""
@@ -106,11 +96,11 @@ class CifParser(object):
             if self.reflnStatus:
                 # cif2mtz will have added a useless FREE column so we remove it
                 self.logger.info( "sfcif2mtz: no valid RFREE data so removing FREE column added by mtz2cif")
-                mtzPath = self._delColumn( mtzPath, 'FREE')
+                mtzPath = mtz_util.delColumn( mtzPath, 'FREE')
                 
-            # If there are no RFREE
-            self.logger.info( "sfcif2mtz: no RFree flags so running uniqueify")
-            mtzPath = ample_util.uniqueify(mtzPath)
+#             # If there are no RFREE
+#             self.logger.info( "sfcif2mtz: no RFree flags so running uniqueify")
+#             mtzPath = mtz_util.addRfree(mtzPath)
         
         self.logger.info( "sfcif2mtz: created mtz file: {0}".format( mtzPath ) )
         return mtzPath

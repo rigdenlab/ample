@@ -31,6 +31,7 @@ class AmpleOptions(object):
                             'domain_all_chains_pdb' : None,
                             'domain_termini_distance' : 0,
                             'early_terminate' : True,
+                            'ensemble_mode' : 'percent',
                             'ensembler' : False,
                             'ensembles_dir' : None,
                             'F' : None,
@@ -122,6 +123,7 @@ class AmpleOptions(object):
         # Test use scrwl
         self.devel_mode = {
                            'early_terminate': False,
+                           'benchmark_mode': True,
                            'use_shelxe' : True,
                            'shelxe_rebuild' : True,
                            'use_scwrl' : False,
@@ -149,6 +151,7 @@ class AmpleOptions(object):
         # List of all the possible column titles and their result object attributes
         # see python/mrbump_results.py
         title2attr = {
+                        'Ensemble_Name' :'ensembleName',
                         'Model_Name' :'name',
                         'MR_Program': 'program',
                         'Solution_Type': 'solution',
