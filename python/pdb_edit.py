@@ -1223,6 +1223,20 @@ class PDBEdit(object):
                 s+="{0}\n".format(seq)
         
         return s
+    
+    def split(self,pdbin):
+        """Split a pdb into separate models"""
+        
+        name=os.path.splitext(os.path.basename(pdbin))[0]
+        pdb_input=iotbx.pdb.pdb_input(pdbin)
+        hierachy=pdb_input.construct_hierarchy()
+        for i,model in enumerate(hierachy.models()):
+            m=model.detached_copy()
+            h=iotbx.pdb.hierarchy.root()
+            h.append_model(m)
+            pdbout="{0}_{1}.pdb".format(name,i)
+            h.write_pdb_file(pdbout,anisou=False)
+        return
 
     def standardise( self, inpdb, outpdb, chain=None ):
         """Rename any non-standard AA, remove solvent and only keep most probably conformation.
@@ -1647,7 +1661,8 @@ if __name__ == "__main__":
                        help='Take pdb to one model/chain that contains only standard amino acids')
     group.add_argument('-seq', action='store_true',
                        help='Write a fasta of the found AA to stdout')
-    
+    group.add_argument('-split', action='store_true',
+                       help='Split a pdb into constituent models')
     parser.add_argument('input_file',
                        help='The input file - will not be altered')
     
@@ -1674,4 +1689,6 @@ if __name__ == "__main__":
         PDBEdit().standardise(args.input_file, args.output_file)
     elif args.seq:
         print PDBEdit().sequence(args.input_file)
+    elif args.split:
+        print PDBEdit().split(args.input_file)
         
