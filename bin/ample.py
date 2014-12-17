@@ -732,10 +732,9 @@ def main():
     #----------------------------
     # params used
     #---------------------------
-    f = open( os.path.join( amopt.d['work_dir'], 'params_used.txt' ), "w")
-    param_str = amopt.prettify_parameters()
-    f.write( param_str )
-    f.close()
+    with open( os.path.join( amopt.d['work_dir'], 'params_used.txt' ), "w") as f:
+        param_str = amopt.prettify_parameters()
+        f.write( param_str )
     # Echo to log too
     logger.debug( param_str )
     
@@ -842,7 +841,13 @@ def main():
     elif amopt.d['import_cluster']:
         ensembles = [ ensemble.import_cluster( amopt.d ) ]
     else:
-    
+        # Check we have some models to work with
+        if not glob.glob(os.path.join(amopt.d['models_dir'],"*.pdb")):
+            msg="ERORR! Cannot find any pdb files in: {0}".format(amopt.d['models_dir'])
+            logger.critical(msg)
+            ample_util.saveAmoptd(amopt.d)
+            sys.exit(1)
+        
         if amopt.d['submit_cluster']:
     
             # Pickle dictionary so it can be opened by the job to get the parameters
@@ -879,6 +884,7 @@ def main():
     #
     if not len(ensembles):
         logger.critical("### AMPLE FAILED TO GENERATE ANY ENSEMBLES! ###\nExiting...")
+        ample_util.saveAmoptd(amopt.d)
         sys.exit(1)
     
     #---------------------------------------
