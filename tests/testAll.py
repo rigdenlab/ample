@@ -30,6 +30,9 @@ testsuite = unittest.TestSuite()
 import csymmatch
 testsuite.addTests(csymmatch.testSuite())
 
+import cluster_with_MAX
+testsuite.addTests(cluster_with_MAX.testSuite())
+
 import dssp
 testsuite.addTests(dssp.testSuite())
 

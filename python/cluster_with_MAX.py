@@ -1,12 +1,13 @@
-#!/usr/bin/python2.6
+#!/usr/bin/env ccp4-python
 
 #edit the sidechains to make polyala, all and reliable
 
 import ample_util
+import glob
 import logging
 import re
 import os
-
+import unittest
 
 class MaxClusterer(object):
     """Class to cluster files with maxcluster"""
@@ -384,35 +385,50 @@ def cluster_with_MAX(string, radius, MAX, no_models):
     #        print l
     return largest_models
 
-if __name__ == "__main__":
-    
-    maxcluster_exe = "/Users/jmht/Documents/AMPLE/programs/maxcluster"
-    radius = 0.5
-    fname = "/Users/jmht/Documents/AMPLE/ample-dev1/examples/toxd-example/ROSETTA_MR_0/fine_cluster_1/trunc_files_0.308182/files.list"
-    
-    clusterer = MaxClusterer( maxcluster_exe )
-    pdb_list = [ f.strip() for f in open( fname ) ]
-    clusterer.generate_distance_matrix( pdb_list )
-    cluster_files1 = clusterer.cluster_by_radius( 3 )
-    cluster_files1 = clusterer.cluster_by_radius( 2 )
-    cluster_files1 = clusterer.cluster_by_radius( radius )
-    print cluster_files1
-    
-    cluster_files2 = cluster_with_MAX_FAST( fname, radius, maxcluster_exe )
-    print cluster_files2
-    
-    for f in cluster_files1:
-        if f not in cluster_files2:
-            print "MISSING ",f
-            
-    if len(cluster_files1) != len(cluster_files2):
-        print "WRONG LENGTH"
+class Test(unittest.TestCase):
 
-###################
-#string ='/home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/8_S_00000002.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/8_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/2_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/5_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/1_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/3_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/8_S_00000003.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/4_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/7_S_00000001.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/fine/trunc_files_1/6_S_00000001.pdb'
-#1 /home/jaclyn/programs/maxcluster/maxcluster 10
+    def setUp(self):
+        """
+        Get paths need to think of a sensible way to do this
+        """
 
-#string = '/home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0/1_S_00000009.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0/1_S_00000010.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0/1_S_00000011.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0/1_S_00000012.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0/1_S_00000013.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0/1_S_00000016.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0/1_S_00000017.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0/1_S_00000018.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0/1_S_00000019.pdb /home/jaclyn/Desktop/backup_scripts/NEW_WORKFLOW/MASTER_parallel/PROGRAM/Version_0.1/test/clusters/cluster_60/sorted_cluster_0/1_S_00000020.pdb '
-#NoMODELS = 10
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        self.ample_dir = os.sep.join( paths[ : -1 ] )
+        self.maxcluster_exe=ample_util.find_exe('maxcluster')
+
+        return
+
+    def testRadius(self):
+        """Test we can reproduce the original thresholds"""
+
+        radius = 4
+        clusterer = MaxClusterer( self.maxcluster_exe )
+        pdb_list = glob.glob(os.path.join(self.ample_dir,'examples','toxd-example','models','*.pdb'))
+        clusterer.generate_distance_matrix( pdb_list )
+        cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius( radius )]
+        
+        ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', '3_S_00000006.pdb',
+             '5_S_00000005.pdb', '3_S_00000003.pdb', '1_S_00000004.pdb', '4_S_00000005.pdb',
+             '3_S_00000004.pdb', '1_S_00000002.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb', '1_S_00000005.pdb']
+        
+        self.assertEqual(ref,cluster_files1)
+        
+        os.unlink('files.list')
+        os.unlink('maxcluster.log')
+
+        return
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testRadius'))
+    return suite
+    
 #
-#cluster_with_MAX_FAST(string, 2, '/home/jaclyn/programs/maxcluster/maxcluster', NoMODELS)
+# Run unit tests
+if __name__ == "__main__":
+ 
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
+
+
+
