@@ -332,7 +332,7 @@ if __name__ == "__main__":
         print "Cannot find directory: {0}".format( models_dir )
         sys.exit(1)
         
-    spicker_exe = ample_util.which("spicker")
+    spicker_exe = ample_util.find_exe("spicker")
     if not spicker_exe:
         print "Cannot find spicker executable in path!"
         sys.exit(1)
