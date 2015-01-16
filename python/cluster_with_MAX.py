@@ -3,28 +3,59 @@
 #edit the sidechains to make polyala, all and reliable
 
 import ample_util
+import copy
 import glob
 import logging
 import re
 import os
 import unittest
 
-class MaxClusterer(object):
-    """Class to cluster files with maxcluster"""
+
+class SubClusterer(object):
+    """Base class for clustering pdbs by distance
+    Sub-classes just need to provide a generate_distance_matrix class
+    """
     
-    def __init__(self, maxcluster_exe ):
-        
-        self.maxcluster_exe = maxcluster_exe
+    def __init__(self,executable):
+        self.executable = executable
         self.distance_matrix = None
         self.index2pdb = []
-        
         return
     
-    def generate_distance_matrix(self, pdb_list ):
+    def generate_distance_matrix(self,pdb_list):
+        assert False
+
+    def cluster_by_radius(self, radius):
+        """Return a list of pdbs clustered by the given radius"""
+        return [ self.index2pdb[i] for i in self._get_indices_from_distances(radius)]
+
+    def _get_indices_from_distances(self,thresh):
+        """Return the indices of the largest cluster that have distances < thresh."""
+        #self.dump_matrix("maxcluster.csv")
+        thresh=float(thresh)
+        max_cluster=[]
+        m=self.distance_matrix
+        for i in range(len(m)):
+            cluster=[i]
+            for j in range(len(m)):
+                if m[i][j] is None or j==i: continue
+                if float(m[i][j]) < thresh:
+                    cluster.append(j)
+            if len(cluster) > len(max_cluster):
+                max_cluster=copy.copy(cluster)
+        return sorted(max_cluster)
+    
+    def dump_matrix(self,file_name):
+        with open(file_name,'w') as f:
+            for row in self.distance_matrix:
+                f.write(",".join(map(str,row))+"\n")
+            f.write("\n")
+        
+class MaxClusterer(SubClusterer):
+    """Class to cluster files with maxcluster"""
+    
+    def generate_distance_matrix(self, pdb_list):
         """Run maxcluster to generate the distance distance_matrix"""
-        
-        
-        cur_dir = os.getcwd()
         
         no_models = len( pdb_list )
         if not no_models:
@@ -45,14 +76,13 @@ class MaxClusterer(object):
         #print 'MAX Done'
         
         # Create the list of files for maxcluster
-        fname = os.path.join( cur_dir, "files.list" )
-        f = open( fname, 'w' )
-        f.write( "\n".join( pdb_list )+"\n" )
-        f.close()
+        fname = os.path.join(os.getcwd(), "files.list" )
+        with open( fname, 'w' ) as f:
+            f.write( "\n".join( pdb_list )+"\n" )
             
         #log_name = "maxcluster_radius_{0}.log".format(radius)
         log_name = "maxcluster.log"
-        cmd = [ self.maxcluster_exe, "-l", fname, "-L", "4", "-rmsd", "-d", "1000", "-bb", "-C0" ]
+        cmd = [ self.executable, "-l", fname, "-L", "4", "-rmsd", "-d", "1000", "-bb", "-C0" ]
         retcode = ample_util.run_command( cmd, logfile=log_name )
         
         if retcode != 0:
@@ -60,8 +90,8 @@ class MaxClusterer(object):
             logging.critical( msg )
             raise RuntimeError, msg
         
-        # Create a square distance_matrix no_models in size filled with zeros
-        self.distance_matrix =  [[0 for col in range(no_models)] for row in range(no_models)]
+        # Create a square distance_matrix no_models in size filled with None
+        self.distance_matrix = [[None for col in range(no_models)] for row in range(no_models)]
     
         #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
         #max_log = open(cur_dir+'/MAX_LOG')
@@ -77,10 +107,6 @@ class MaxClusterer(object):
                 # 3: path to model 2 without .pdb suffix
                 # 4: distance metric
                 split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
-                #print split
-        #         int(split[3])
-    
-            # print split[1], split[3], split[5]
                 self.distance_matrix[  int(split[1]) -1 ][  int(split[3]) -1]  = split[5]
     
                 if split[2]+'.pdb' not  in self.index2pdb:
@@ -89,301 +115,72 @@ class MaxClusterer(object):
                 if split[4]+'.pdb' not  in self.index2pdb:
                     self.index2pdb[int(split[3]) -1]  =  split[4]+'.pdb'
     
-        x = 0
-        while x < len(self.distance_matrix):
-            y = 0
-            while y < len(self.distance_matrix):
-                self.distance_matrix[y][x] = self.distance_matrix [x][y]
-                y+=1
-            x+=1
-            
+        # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
+        for x in range(len(self.distance_matrix)):
+            for y in range(len(self.distance_matrix)):
+                self.distance_matrix[y][x] = self.distance_matrix[x][y]
         return
-
-    def cluster_by_radius(self, radius):
-        """Return a list of pdbs clustered by the given radius"""
+    
+class FpcClusterer(SubClusterer):
+    """Class to cluster files with fast_protein_clusterer"""
+    
+    def generate_distance_matrix(self,pdb_list):
         
-        cluster = []
-        cluster_indices = self._get_indices_from_distances( radius )
-        for index in cluster_indices:
-            cluster.append( self.index2pdb[index] )
+        # Create list of pdb files
+        fname = os.path.join(os.getcwd(), "files.list" )
+        with open( fname, 'w' ) as f:
+            f.write( "\n".join( pdb_list )+"\n" )
+            
+        # Index is just the order of the pdb in the file
+        self.index2pdb=pdb_list
         
-        return cluster
-    
-    def _get_indices_from_distances( self, radius ):
-        """Return the indices of the pdb files when clustering by radius"""
-    
-        #print len(matrix)
-        matrix_line = 0
-        best_cluster=[]
-        largest = 0
-    
-        while matrix_line<len(self.distance_matrix):
-            cluster=0
-            current_cluster_models = []
-    
-            each_model = 0
-    
-            while each_model < len(self.distance_matrix[matrix_line]):
-                if float(self.distance_matrix[matrix_line][each_model])<radius:
-                    current_cluster_models.append(each_model)
-                    cluster+=1
-                each_model+=1
-        # print 'MODEL ', matrix_line+1, cluster
-            if len(current_cluster_models) > largest:
-                largest = len(current_cluster_models)
-                best_cluster = current_cluster_models
-    
-            matrix_line +=1
-    
-        # print 'BEST ', best_cluster
-        return best_cluster
+        # Run fast_protein_cluster
+        log_name = "fast_protein_cluster.log"
+        matrix_file = "fpc.matrix"
+        cmd = [self.executable,
+               "--cluster_write_text_matrix",
+               matrix_file,
+               "-i",
+               fname]
+               
+        retcode = ample_util.run_command( cmd, logfile=log_name )
+        if retcode != 0:
+            msg = "non-zero return code for fast_protein_cluster in generate_distance_matrix!"
+            logging.critical( msg )
+            raise RuntimeError, msg
 
-###########################################
-def get_clusters_from_distances(matrix, radius):
-
-    #print len(matrix)
-    matrix_line = 0
-    best_cluster=[]
-    largest = 0
-
-
-    while matrix_line<len(matrix):
-        cluster=0
-        current_cluster_models = []
-
-        each_model = 0
-
-        while each_model < len(matrix[matrix_line]):
-            if float(matrix[matrix_line][each_model])<radius:
-                current_cluster_models.append(each_model)
-                cluster+=1
-            each_model+=1
-    # print 'MODEL ', matrix_line+1, cluster
-        if len(current_cluster_models) > largest:
-            largest = len(current_cluster_models)
-            best_cluster = current_cluster_models
-
-        matrix_line +=1
-
-    # print 'BEST ', best_cluster
-    return best_cluster
-########################################## ADD ALL
-def cluster_with_MAX_FASTBAK(string, radius, MAX, no_models):
-    cur_dir = os.getcwd()
-    string = re.sub(' ', '\n', string)
-    list_string = open(cur_dir + '/list', "w")
-    list_string.write(string)
-    list_string.close()
-
-    model_indeces=[]
-    #print 'runing MAX'
-    os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
-    #print 'MAX Done'
-    matrix = []
-    inc = 1
-    while inc < no_models+1:
-        matrix_line =[]
-        #print 'matrix', inc
-        max_log = open(cur_dir+'/MAX_LOG')
-        pattern = re.compile('INFO  \: Model')
-        for line in max_log:
-            if re.match(pattern, line):
-
-                #print line
-                split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
-                #print split
-                if int(split[1]) == inc:
-                    matrix_line.insert(int(split[3]),  split[5] )
-                    if split[2] not in model_indeces:
-                        model_indeces.insert(inc, split[2])
-
-                if int(split[3]) == inc:
-                    matrix_line.insert(int(split[1]), split[5] )
-                    if split[4] not in model_indeces:
-                        model_indeces.insert(inc, split[4])
-
-
-        matrix_line.insert(inc-1, 0 )
-        matrix.append(matrix_line )
-        inc +=1
-
-    # for x in matrix:   ### got distance matrix
-    #  print x
-    # print 'GOT MATRIX'
-    cluster_models = get_clusters_from_distances(matrix, radius)
-    return cluster_models
-#####################################
-##################################### START
-
-def matrix_insert(i, j, k,  matrix):
-    matrix[1][2]  = 2
-    #print matrix
-
-    return matrix
-
-##########
-def cluster_with_MAX_FAST( file_list, radius, MAX ):
-    """
-    Cluster the models in the file_list with the given radius using maxcluster
-    INPUTS:
-    file_list: a file with a list of PDB files to compare
-    radius: radius threshold (currently [1,2,3])
-    MAX: path to maxcluster executable
-
-    Returns:
-    A list of the clustered files.
-    """
-    cur_dir = os.getcwd()
-
-    no_models = 0
-    for pdb in open( file_list, 'r' ):
-        no_models+=1
-    #no_models = len( file_list )
-
-    # Create the input file for maxcluster with the list of fragments
-    #list_string = open(cur_dir + '/list', "w")
-    #list_string.write( "\n".join( file_list ) )
-    #list_string.close()
-
-    models=[0]*no_models
-    #print 'runing MAX'
-
-    # Maxcluster arguments
-    # -l [file]   File containing a list of PDB model fragments
-    # -L [n]      Log level (default is 4 for single MaxSub, 1 for lists)
-    # -d [f]      The distance cut-off for search (default auto-calibrate)
-    # -bb         Perform RMSD fit using backbone atoms
-    #     -C [n]      Cluster method: 0 - No clustering
-    # -rmsd ???
-    #os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
-    #print 'MAX Done'
-
-    log_name = "maxcluster_radius_{0}.log".format(radius)
-    cmd = [ MAX, "-l", file_list, "-L", "4", "-rmsd", "-d", "1000", "-bb", "-C0" ]
-    retcode = ample_util.run_command( cmd, logfile=log_name )
-    
-    # Create a square matrix no_models in size filled with zeros
-    matrix =  [[0 for col in range(no_models)] for row in range(no_models)]
-
-    #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
-    #max_log = open(cur_dir+'/MAX_LOG')
-    max_log = open( log_name, 'r')
-    pattern = re.compile('INFO  \: Model')
-    for line in max_log:
-        if re.match(pattern, line):
-
-                    # Split so that we get a list with
-                    # 0: model 1 index
-                    # 1: path to model 1 without .pdb suffix
-                    # 2: model 2 index
-                    # 3: path to model 2 without .pdb suffix
-                    # 4: distance metric
-            split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
-            #print split
-    #         int(split[3])
-
-        # print split[1], split[3], split[5]
-            matrix[  int(split[1]) -1 ][  int(split[3]) -1]  = split[5]
-
-            if split[2]+'.pdb' not  in models:
-                models[int(split[1]) -1]  =  split[2]+'.pdb'
-
-            if split[4]+'.pdb' not  in models:
-                models[int(split[3]) -1]  =  split[4]+'.pdb'
-
-    x = 0
-    while x < len(matrix):
-        y = 0
-        while y < len(matrix):
-            matrix[y][x] = matrix [x][y]
-            y+=1
-        x+=1
-
-    # for x in matrix:   ### got distance matrix
-    #  print x
-    # print 'GOT MATRIX'
-    ############# get model indeces
-
-    CLUSTER = []
-
-    cluster_models = get_clusters_from_distances(matrix, radius)
-    #print cluster_models
-    #for i in cluster_models:
-    #  print 'using', i
-
-    for index in cluster_models:
-        CLUSTER.append(models[index])
-    #print CLUSTER
-    return CLUSTER
-
-#  1 2 3 4
-#1
-#2
-#3
-#4
-
-
-
-
-#################### STOP
-def cluster_with_MAX(string, radius, MAX, no_models):
-    
-    cur_dir = os.getcwd()
-    string = re.sub(' ', '\n', string)
-    list_string = open(cur_dir + '/list', "w")
-    list_string.write(string)
-    list_string.close()
-
-
-    os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb >MAX_LOG ')
-
-    matrix = []
-    inc = 1
-
-    largest_size = 0
-    largest_models = []
-
-    while inc < no_models+1:  # for each model
-        COUNT = 1   # size of cluster
-        models = []
-
-        max_log = open(cur_dir+'/MAX_LOG')
-        pattern = re.compile('INFO  \: Model')
-        for line in max_log:
-            if re.match(pattern, line):
-            #  print line
-                split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
-            #  print split
-
-                if int(split[1]) == inc:
-
-                    if float(split[5]) < radius:
-                        COUNT +=1
-                        models.append(split[4]+'.pdb')
-                        if split[2] not  in models:
-                            models.append(split[2]+'.pdb')
-
-                if int(split[3]) == inc:
-                    if float(split[5]) < radius:
-                        COUNT +=1
-                        models.append(split[2]+'.pdb')
-                        if split[4] not  in models:
-                            models.append(split[4]+'.pdb')
-
-
-        if COUNT > largest_size:
-            largest_size = COUNT
-            largest_models = models
-            # print 'MODEL ',  inc,  ' ', COUNT
-    #  for x in models:
-            #     print x
-
-        inc +=1
-
-    # print 'LARGEST ',  largest_size
-    #for l in largest_models:
-    #        print l
-    return largest_models
+        mlen=0
+        data=[]
+        with open(matrix_file) as f:
+            for l in f:
+                l=l.strip().split()
+                x=int(l[0])
+                y=int(l[1])
+                d=float(l[2])
+                mlen=max(mlen,x+1) # +1 as we want the length
+                data.append((x,y,d))
+         
+        # create empty matrix - we use None's but this means we need to check for then when
+        # looking through the matrix
+        # use square matrix to make indexing easier as we're unlikely to be very big
+        m=[[None for i in range(mlen)] for j in range(mlen)]
+         
+        # Fill in all values (upper triangle)
+        for i,j,d in data:
+            if i > j:
+                m[j][i]=d
+            else:
+                m[i][j]=d
+                 
+        # Copy to lower
+        for x in range(mlen):
+            for y in range(mlen):
+                if x==y: continue
+                m[y][x] = m[x][y]
+                
+        self.distance_matrix=m
+        
+        return
 
 class Test(unittest.TestCase):
 
@@ -396,10 +193,26 @@ class Test(unittest.TestCase):
         paths = thisd.split( os.sep )
         self.ample_dir = os.sep.join( paths[ : -1 ] )
         self.maxcluster_exe=ample_util.find_exe('maxcluster')
+        self.fpc_exe="/opt/fast_protein_cluster.1.1.2/fast_protein_cluster"
 
         return
 
-    def testRadius(self):
+    def testIndicesMaxcluster(self):
+        """Test we can reproduce the original thresholds"""
+
+        radius = 4
+        clusterer = MaxClusterer( self.maxcluster_exe )
+        pdb_list = glob.glob(os.path.join(self.ample_dir,'examples','toxd-example','models','*.pdb'))
+        clusterer.generate_distance_matrix( pdb_list )
+        indices=clusterer._get_indices_from_distances(radius) 
+
+        ref=[2, 3, 5, 6, 13, 14, 15, 16, 22, 23, 25, 26, 27]
+        self.assertEqual(ref,indices)
+        os.unlink('files.list')
+        os.unlink('maxcluster.log')
+        return
+    
+    def testRadiusMaxcluster(self):
         """Test we can reproduce the original thresholds"""
 
         radius = 4
@@ -414,14 +227,59 @@ class Test(unittest.TestCase):
         
         self.assertEqual(ref,cluster_files1)
         
-        os.unlink('files.list')
         os.unlink('maxcluster.log')
 
+        return
+    
+    def testIndicesFpc(self):
+        """Test we can reproduce the original thresholds"""
+    
+        radius = 4
+        clusterer = FpcClusterer( self.fpc_exe )
+        pdb_list = glob.glob(os.path.join(self.ample_dir,'examples','toxd-example','models','*.pdb'))
+        clusterer.generate_distance_matrix( pdb_list )
+        indices=clusterer._get_indices_from_distances(radius) 
+    
+        ref=[2, 3, 5, 6, 13, 14, 15, 16, 22, 23, 25, 26, 27]
+        self.assertEqual(ref,indices)
+        os.unlink('files.list')
+        os.unlink('cluster_output.names')
+        os.unlink('cluster_output.cluster.stats')
+        os.unlink('cluster_output.clusters')
+        os.unlink('fpc.matrix')
+        os.unlink('fast_protein_cluster.log')
+        return
+    
+    def testRadiusFpc(self):
+        """Test we can reproduce the original thresholds"""
+    
+        radius = 4
+        clusterer = FpcClusterer( self.fpc_exe )
+        pdb_list = glob.glob(os.path.join(self.ample_dir,'examples','toxd-example','models','*.pdb'))
+        clusterer.generate_distance_matrix( pdb_list )
+
+        cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius( radius )]
+        
+        ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', '3_S_00000006.pdb',
+             '5_S_00000005.pdb', '3_S_00000003.pdb', '1_S_00000004.pdb', '4_S_00000005.pdb',
+             '3_S_00000004.pdb', '1_S_00000002.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb', '1_S_00000005.pdb']
+        
+        self.assertEqual(ref,cluster_files1)
+
+        os.unlink('files.list')
+        os.unlink('cluster_output.names')
+        os.unlink('cluster_output.cluster.stats')
+        os.unlink('cluster_output.clusters')
+        os.unlink('fpc.matrix')
+        os.unlink('fast_protein_cluster.log')
         return
 
 def testSuite():
     suite = unittest.TestSuite()
-    suite.addTest(Test('testRadius'))
+    suite.addTest(Test('testRadiusMaxcluster'))
+    suite.addTest(Test('testIndicesMaxcluster'))
+    suite.addTest(Test('testIndicesFpc'))
+    suite.addTest(Test('testRadiusFpc'))
     return suite
     
 #
