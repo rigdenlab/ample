@@ -27,10 +27,15 @@ class SubClusterer(object):
 
     def cluster_by_radius(self, radius):
         """Return a list of pdbs clustered by the given radius"""
-        return [ self.index2pdb[i] for i in self._get_indices_from_distances(radius)]
+        if self.distance_matrix is None:
+            raise RuntimeError,"Need to call generate_distance_matrix before cluster_by_radius!"
+        return [ self.index2pdb[i] for i in self._cluster_indices(radius)]
 
-    def _get_indices_from_distances(self,thresh):
-        """Return the indices of the largest cluster that have distances < thresh."""
+    def _cluster_indices(self,thresh):
+        """Return the indices of the largest cluster that have distances < thresh.
+        We loop through each row of the distance matrix and for each row (pdb) see
+        how many pdbs are < thresh to this pdb. We return the largest cluster.
+        """
         #self.dump_matrix("maxcluster.csv")
         thresh=float(thresh)
         max_cluster=[]
@@ -134,7 +139,9 @@ class FpcClusterer(SubClusterer):
         # Index is just the order of the pdb in the file
         self.index2pdb=pdb_list
         
-        # Run fast_protein_cluster
+        # Run fast_protein_cluster - this is just to generate the distance matrix, but there
+        # doesn't seem to be a way to stop it clustering as well - not a problem as it just
+        # generates more files
         log_name = "fast_protein_cluster.log"
         matrix_file = "fpc.matrix"
         cmd = [self.executable,
@@ -204,7 +211,7 @@ class Test(unittest.TestCase):
         clusterer = MaxClusterer( self.maxcluster_exe )
         pdb_list = glob.glob(os.path.join(self.ample_dir,'examples','toxd-example','models','*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
-        indices=clusterer._get_indices_from_distances(radius) 
+        indices=clusterer._cluster_indices(radius) 
 
         ref=[2, 3, 5, 6, 13, 14, 15, 16, 22, 23, 25, 26, 27]
         self.assertEqual(ref,indices)
@@ -238,7 +245,7 @@ class Test(unittest.TestCase):
         clusterer = FpcClusterer( self.fpc_exe )
         pdb_list = glob.glob(os.path.join(self.ample_dir,'examples','toxd-example','models','*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
-        indices=clusterer._get_indices_from_distances(radius) 
+        indices=clusterer._cluster_indices(radius) 
     
         ref=[2, 3, 5, 6, 13, 14, 15, 16, 22, 23, 25, 26, 27]
         self.assertEqual(ref,indices)

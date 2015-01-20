@@ -16,7 +16,7 @@ import unittest
 
 # our imports
 import ample_util
-import cluster_with_MAX
+import subcluster
 import pdb_edit
 
 class EnsembleData(object):
@@ -421,7 +421,7 @@ class Ensembler(object):
             os.chdir( truncation_dir )
 
             # Run maxcluster to generate the distance matrix
-            clusterer = cluster_with_MAX.MaxClusterer( self.maxcluster_exe )
+            clusterer = subcluster.MaxClusterer( self.maxcluster_exe )
             clusterer.generate_distance_matrix( self.truncated_models[i] )
 
             # Loop through the radius thresholds
