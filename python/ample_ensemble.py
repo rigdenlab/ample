@@ -51,6 +51,144 @@ class EnsembleData(object):
 
         return "{0} : {1}".format(self.__repr__(),str(me))
 
+class Ensembler2(object):
+    """Class to generate ensembles from cluster of models
+    
+Each method returns a list of pdbs and a corresponding list of dictionaries holding information on the returned pdbs
+
+create_ensembles
+= return a list of models
+
+    cluster_models
+    = return list of clusters - each a list of models
+    
+    DATA
+    * cluster_method
+    * cluster_number
+    * models
+    * centroid
+    
+    ######################################
+    
+    truncate_models
+    - calculate_variances
+    
+    - calculate_residue_list
+    
+    - prune_residue_list
+    
+    - _truncate_models
+    
+    = return a list of truncation_levels - each a list of models
+    
+    DATA
+    * truncation_level
+    * variance_level
+    * truncation_method
+    * pruning_strategy
+    
+    
+        ########################################
+        
+        - for each truncation_level:
+            subcluster_models
+        
+        = return a list of subclusters - each a list of models
+    
+            ########################################
+            
+            for all ensembles:
+               treat_side_chains
+
+
+e = Ensembler(work_dir,
+              cluster_method,
+              cluster_exe,
+              truncation_method,
+              pruning_strategy,
+              theseus_exe,
+              subclustering_method,
+              subclustering_exe,
+              side_chain_treatments)
+              
+ensembles = e.generate_ensembles()
+e.ensemble_directory
+              
+              
+    
+    
+    
+    """
+    
+    def __init__(self):
+        self.work_dir=None # top directory where everything gets donw
+        self.cluster_method="spicker" # the method for initial clustering
+        self.cluster_exe=None
+        self.truncation_method="percent"
+        self.pruning_strategy="none"
+        self.theseus_exe=None
+        self.subclustering_method="radius"
+        self.subclustering_exe=None
+        self.side_chain_treatments=['allatom','reliable','polya']
+        return
+    
+    
+    
+    def generate_ensembles(self,models):
+        ensembles = []
+        for cluster in self.cluster_models(models):
+            for truncated_models in self.truncate_models(cluster):
+                for subcluster in self.subcluster_models(truncated_models):
+                    ensembles.append(subcluster)
+        return self.edit_side_chains(ensembles)
+    
+    def ensemble_data(self):
+        # list of EnsembleData objects
+        return self.ensemble_data
+    
+    def edit_side_chains(self,ensembles):
+        
+        
+        pdbed = pdb_edit.PDBEdit()
+        sc_ensembles=[]
+        for ensemble in ensembles:
+            
+            for sct in self.side_chain_treatments:
+                
+                if sct == "allatom":
+                    fname = ample_util.filename_append(ensemble,astr=sct, directory=self.ensembles_directory)
+                    # For all atom just copy the file
+                    shutil.copy2(ensemble,fname)
+                    sc_ensembles.append(fname)
+                    
+                    
+
+            # 3 different side-chain treatments
+
+            # 1. all_atom
+
+            # 2. Reliable side chains
+            ensemble = copy.deepcopy( trunc_ensemble )
+            ensemble.side_chain_treatment = "reliable"
+            #ensemble.side_chain_treatment = "SCWRL_reliable_sidechains"
+            ensemble.name = "{0}_{1}".format( ensemble.side_chain_treatment, trunc_ensemble.name )
+            ensemble.pdb = os.path.join( self.ensemble_dir, ensemble.name+".pdb" )
+            # Do the edit
+            pdbed.reliable_sidechains( trunc_ensemble.pdb, ensemble.pdb )
+            self.ensembles.append( ensemble )
+
+            # 3. backbone
+            ensemble = copy.deepcopy( trunc_ensemble )
+            ensemble.side_chain_treatment = "polya"
+            ensemble.name = "{0}_{1}".format( ensemble.side_chain_treatment, trunc_ensemble.name )
+            ensemble.pdb = os.path.join( self.ensemble_dir, ensemble.name+".pdb" )
+            # Do the edit
+            pdbed.backbone( trunc_ensemble.pdb, ensemble.pdb )
+            self.ensembles.append( ensemble )
+
+    
+
+
 class Ensembler(object):
     """Class to generate ensembles from cluster of models"""
     
@@ -196,6 +334,7 @@ class Ensembler(object):
         return
         
     def calculate_variances(self):
+        """CONVERT TO RETURN LIST"""
         
         #--------------------------------
         # get variations between pdbs
