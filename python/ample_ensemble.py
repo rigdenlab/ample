@@ -18,6 +18,7 @@ import unittest
 import ample_util
 import subcluster
 import pdb_edit
+from cluster_entropy import cluster
 
 class EnsembleData(object):
     """Class to hold data about an ensemble"""
@@ -132,59 +133,85 @@ e.ensemble_directory
         self.side_chain_treatments=['allatom','reliable','polya']
         return
     
+    def cluster_models(self,models):
+
+
+        # Spicker Alternative for clustering
+        amoptd['spicker_rundir'] = os.path.join( amoptd['work_dir'], 'spicker_run')
+        spickerer = run_spicker.SpickerCluster( amoptd )
+        spickerer.run_spicker()
+        logger.info( spickerer.results_summary() )
+        amoptd['spicker_results'] = spickerer.results
+
+
+        return
     
-    
-    def generate_ensembles(self,models):
-        ensembles = []
-        for cluster in self.cluster_models(models):
-            for truncated_models in self.truncate_models(cluster):
-                for subcluster in self.subcluster_models(truncated_models):
-                    ensembles.append(subcluster)
-        return self.edit_side_chains(ensembles)
-    
-    def ensemble_data(self):
-        # list of EnsembleData objects
-        return self.ensemble_data
-    
-    def edit_side_chains(self,ensembles):
-        
+    def edit_side_chains(self,raw_ensembles,raw_ensembles_data):
         
         pdbed = pdb_edit.PDBEdit()
-        sc_ensembles=[]
-        for ensemble in ensembles:
+        ensembles=[]
+        ensembles_data=[]
+        for raw_ensemble, raw_ensemble_data in zip(raw_ensembles,raw_ensembles_data):
             
             for sct in self.side_chain_treatments:
                 
+                # create filename based on side chain treatment
+                fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=self.ensembles_directory)
+                ensemble_data=copy.copy(raw_ensemble_data)
+                ensemble_data.side_chain_treatment=sct
+                ensemble_data.pdb=fpath
+                self.ensembles.append(fpath)
+                self.ensembles_data.append(ensemble_data)
+                # Create the files
                 if sct == "allatom":
-                    fname = ample_util.filename_append(ensemble,astr=sct, directory=self.ensembles_directory)
                     # For all atom just copy the file
-                    shutil.copy2(ensemble,fname)
-                    sc_ensembles.append(fname)
-                    
-                    
+                    shutil.copy2(raw_ensemble,fpath)
+                elif sct == "reliable":
+                    pdbed.reliable_sidechains(raw_ensemble,fpath)
+                elif sct == "reliable":
+                    pdbed.backbone(raw_ensemble,fpath)
+                else:
+                    raise RuntimeError,"Unrecognised side_chain_treatment: {0}\n{1}".format(sct,ensemble_data)
+        
+        return ensembles,ensembles_data
+  
+    def generate_ensembles(self,models):
+        ensembles = []
+        ensembles_data = []
+        for cluster, cluster_data in self.cluster_models(models):
+            for truncated_models, truncated_models_data in self.truncate_models(cluster,cluster_data):
+                for subcluster, subcluster_data in self.subcluster_models(truncated_models,truncated_models_data):
+                    ensembles.append(subcluster)
+                    ensembles_data.append(subcluster_data)
+        ensembles,ensembles_data = self.edit_side_chains(ensembles,ensembles_data)
+        self.ensembles=ensembles
+        self.ensembles_data=ensembles_data
+        return ensembles
+    
 
-            # 3 different side-chain treatments
-
-            # 1. all_atom
-
-            # 2. Reliable side chains
-            ensemble = copy.deepcopy( trunc_ensemble )
-            ensemble.side_chain_treatment = "reliable"
-            #ensemble.side_chain_treatment = "SCWRL_reliable_sidechains"
-            ensemble.name = "{0}_{1}".format( ensemble.side_chain_treatment, trunc_ensemble.name )
-            ensemble.pdb = os.path.join( self.ensemble_dir, ensemble.name+".pdb" )
-            # Do the edit
-            pdbed.reliable_sidechains( trunc_ensemble.pdb, ensemble.pdb )
-            self.ensembles.append( ensemble )
-
-            # 3. backbone
-            ensemble = copy.deepcopy( trunc_ensemble )
-            ensemble.side_chain_treatment = "polya"
-            ensemble.name = "{0}_{1}".format( ensemble.side_chain_treatment, trunc_ensemble.name )
-            ensemble.pdb = os.path.join( self.ensemble_dir, ensemble.name+".pdb" )
-            # Do the edit
-            pdbed.backbone( trunc_ensemble.pdb, ensemble.pdb )
-            self.ensembles.append( ensemble )
+            
+            
+    def ensemble_summary(self,ensemble_data):
+        
+        #cluster
+        #- truncation_level
+        #-- subcluster
+        #- variance_level
+        #-- radius_level
+        #--- side_chain_treatment
+        
+        clusters={}
+        # Loop through all ensemble data objects and build up a data tree
+        for e in ensemble_data:
+            if e.cluster not in clusters:
+                clusters[e.cluster] = {}
+            if e.truncation_level not in clusters[e.cluster]:
+                clusters[e.cluster] = {}
+            
+                
+        
+        
+        return
 
     
 

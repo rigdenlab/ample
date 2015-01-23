@@ -9,7 +9,6 @@ import re
 # our imports
 import ample_util
 
-
 class SpickerResult( object ):
     """
     A class to hold the result of running Spicker
@@ -35,8 +34,11 @@ class SpickerCluster( object ):
         self.models_dir = amoptd['models_dir']
         self.num_clusters = amoptd['num_clusters']
         self.results = None
+        self.max_cluster_size = 200
 
         self.logger = logging.getLogger()
+        
+        return
         
     ###############
     def get_length(self, pdb):
@@ -67,98 +69,78 @@ class SpickerCluster( object ):
     
         """
 
-        #os.chdir( self.rundir )
-        
-        pdbname = ''
-        list_string = ''
-        counter = 0
-    
-        # Input file for spicker with coordinates of the CA atoms for each of the PDB structures
-        read_out = open( 'rep1.tra1', "w")
-    
-        #jmht - a list of the full path of all PDBs - used so we can loop through it and copy the selected
-        # ones to the relevant directory after we have run spicker - the order of these must match the order
-        # of the structures in the rep1.tra1 file 
-        file_list = open( 'file_list', "w")
-        
-        
         models_list = glob.glob( os.path.join(self.models_dir,  '*.pdb') )
         if not len(models_list):
             msg = "run_spicker cannot find any pdb files in directory: {0}".format( self.models_dir )
             self.logger.critical( msg )
             raise RuntimeError,msg
+        
+        pdbname = ''
+        list_string = ''
+        counter = 0
     
-        for infile in models_list:
-            
-            pdbname = os.path.basename(infile)
-            file_list.write(infile + '\n')
-            list_string = list_string + pdbname+ '\n'
-            counter +=1
-            read = open(infile)
+        # read_out - Input file for spicker with coordinates of the CA atoms for each of the PDB structures
     
-            length = self.get_length(infile)
-            # 1st field is length, 2nd energy, 3rd & 4th don't seem to be used for anything
-            read_out.write('\t' + length + '\t926.917       '+str(counter)+'       '+str(counter)+'\n')
-            
-            # Write out the coordinates of the CA atoms 
-            for line in read:
-                #print line
-                pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s*(.\d*.\d*)\s*(.\d*.\d*)\s*(.\d*.\d*)\s*(.\d*.\d*)')
-                result = re.match(pattern, line)
-                if result:
-                    split = re.split(pattern, line)
-                    #print line
-                    #print split
-                # print '\t' + split[5] + '\t' + split[6] + '\t' +split[7]
-                    if split[2] == 'CA':
-                        read_out.write( '     ' + split[6] + '     ' + split[7] + '     ' +split[8] + '\n' )
+        # file_list - a list of the full path of all PDBs - used so we can loop through it and copy the selected
+        # ones to the relevant directory after we have run spicker - the order of these must match the order
+        # of the structures in the rep1.tra1 file 
+        
+        with open( 'rep1.tra1', "w") as read_out, open( 'file_list', "w") as file_list:
+            for infile in models_list:
+                
+                pdbname = os.path.basename(infile)
+                file_list.write(infile + '\n')
+                list_string = list_string + pdbname+ '\n'
+                counter +=1
+        
+                length = self.get_length(infile)
+                # 1st field is length, 2nd energy, 3rd & 4th don't seem to be used for anything
+                read_out.write('\t' + length + '\t926.917       '+str(counter)+'       '+str(counter)+'\n')
+                
+                with open(infile) as read:
+                    # Write out the coordinates of the CA atoms 
+                    for line in read:
+                        pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s*(.\d*.\d*)\s*(.\d*.\d*)\s*(.\d*.\d*)\s*(.\d*.\d*)')
+                        result = re.match(pattern, line)
+                        if result:
+                            split = re.split(pattern, line)
+                            if split[2] == 'CA':
+                                read_out.write( '     ' + split[6] + '     ' + split[7] + '     ' +split[8] + '\n' )
     
-            read.close()
-        file_list.close()
-        #print list_string
-        #make rmsinp
-        #length = get_length(path + '/' + pdbname)
-    
-# from spicker.f
-#*       'rmsinp'---Mandatory, length of protein & piece for RMSD calculation;
+        # from spicker.f
+        #*       'rmsinp'---Mandatory, length of protein & piece for RMSD calculation;
         rmsinp = open('rmsinp', "w")
         rmsinp.write('1  ' + length + '\n\n')
         rmsinp.write(length + '\n')
         rmsinp.close()
         
         #make tra.in
-# from spicker.f
-#*       'tra.in'---Mandatory, list of trajectory names used for clustering.
-#*                  In the first line of 'tra.in', there are 3 parameters:
-#*                  par1: number of decoy files
-#*                  par2: 1, default cutoff, best for decoys from template-based
-#*                           modeling;
-#*                       -1, cutoff based on variation, best for decoys from
-#*                           ab initio modeling.
-#*                  par3: 1, closc from all decoys; -1, closc clustered decoys
-#*                  From second lines are the file names which contain coordinates
-#*                  of 3D structure decoys. All these files are mandatory
-        tra = open('tra.in', "w")
-        tra.write('1 -1 1 \nrep1.tra1\n')
+        # from spicker.f
+        #*       'tra.in'---Mandatory, list of trajectory names used for clustering.
+        #*                  In the first line of 'tra.in', there are 3 parameters:
+        #*                  par1: number of decoy files
+        #*                  par2: 1, default cutoff, best for decoys from template-based
+        #*                           modeling;
+        #*                       -1, cutoff based on variation, best for decoys from
+        #*                           ab initio modeling.
+        #*                  par3: 1, closc from all decoys; -1, closc clustered decoys
+        #*                  From second lines are the file names which contain coordinates
+        #*                  of 3D structure decoys. All these files are mandatory
+        with open('tra.in', "w") as tra:
+            tra.write('1 -1 1 \nrep1.tra1\n')
     
-        tra.close()
         # Create the file with the sequence of the PDB structures
-# from spicker.f
-#*       'seq.dat'--Mandatory, sequence file, for output of PDB models.
-        seq = open('seq.dat', "w")
-        a_pdb = open( os.path.join( self.models_dir, pdbname ), 'r' )
-        for line in a_pdb:
-            #print line
-            pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s*(\d*)\s')
-            result = re.match(pattern, line)
-            if result:
-                split = re.split(pattern, line)
-                #print line
-            # print split
-                if split[2] == 'CA':
-                    seq.write('\t' +split[5] + '\t' + split[3] + '\n')
-    ################
-    
+        # from spicker.f
+        #*       'seq.dat'--Mandatory, sequence file, for output of PDB models.
+        with open('seq.dat', "w") as seq, open( os.path.join( self.models_dir, pdbname ), 'r' ) as a_pdb:
+            for line in a_pdb:
+                pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s*(\d*)\s')
+                result = re.match(pattern, line)
+                if result:
+                    split = re.split(pattern, line)
+                    if split[2] == 'CA':
+                        seq.write('\t' +split[5] + '\t' + split[3] + '\n')
+        return
     
     def run_spicker(self):
         """
@@ -176,7 +158,7 @@ class SpickerCluster( object ):
         # Read the log and generate the results
         results = self.process_log()
 
-	# Check we have enough clusters
+        # Check we have enough clusters
         if len(results) < self.num_clusters:
             msg = "Only {0} clusters returned from Spicker cannot process {1} clusters!\n".format( len(results),self.num_clusters )
             self.logger.critical( msg )
@@ -184,27 +166,23 @@ class SpickerCluster( object ):
         
         # Loop through each cluster copying the files as we go
         # We only process the clusters we will be using
-        MAXCLUSTER=200 # max number of pdbs in a cluster
         for cluster in range( self.num_clusters ):
                 
             result = results[ cluster ]
             result.pdb_file = os.path.join( self.rundir, "spicker_cluster_{0}.list".format(cluster+1)  )
             
-            f = open( result.pdb_file, "w" )
-            for i, pdb in enumerate( result.rosetta_pdb ):
-                
-                if i > MAXCLUSTER:
-                    result.cluster_size = MAXCLUSTER
-                    break
-                
-                result.pdb_list.append( pdb )
-                f.write( pdb + "\n" )
-                
-                if i == 0:
-                    result.cluster_centroid = pdb
-            
-            f.close()
-        
+            with open( result.pdb_file, "w" ) as f:
+                for i, pdb in enumerate( result.rosetta_pdb ):
+                    
+                    if i > self.max_cluster_size:
+                        result.cluster_size = self.max_cluster_size
+                        break
+                    
+                    result.pdb_list.append( pdb )
+                    f.write( pdb + "\n" )
+                    
+                    if i == 0:
+                        result.cluster_centroid = pdb
         self.results = results
         return
                 
