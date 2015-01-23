@@ -16,9 +16,10 @@ import unittest
 
 # our imports
 import ample_util
-import subcluster
 import pdb_edit
-from cluster_entropy import cluster
+import run_spicker
+import subcluster
+#from cluster_entropy import cluster - no idea where this came from...
 
 class EnsembleData(object):
     """Class to hold data about an ensemble"""
@@ -51,6 +52,32 @@ class EnsembleData(object):
                 me[slot] = attr
 
         return "{0} : {1}".format(self.__repr__(),str(me))
+
+
+class EnsembleData2(object):
+    """Class to hold data about an ensemble"""
+
+    def __init(self):
+
+        self.name = None
+        self.num_models = None
+        self.num_residues = None
+        self.num_atoms = None
+        self.residues = None
+        
+        # cluster info
+        self.cluster_centroid=None
+        self.cluster_size=None
+
+        self.side_chain_treatment = None
+        self.radius_threshold = None
+        self.truncation_threshold = None # The variance used to truncate
+        self.truncation_level = None # the index of the truncation threshold
+
+        self.pdb = None # path to the ensemble file
+
+        return
+
 
 class Ensembler2(object):
     """Class to generate ensembles from cluster of models
@@ -114,10 +141,6 @@ e = Ensembler(work_dir,
               
 ensembles = e.generate_ensembles()
 e.ensemble_directory
-              
-              
-    
-    
     
     """
     
@@ -133,18 +156,159 @@ e.ensemble_directory
         self.side_chain_treatments=['allatom','reliable','polya']
         return
     
-    def cluster_models(self,models):
+    def calculate_residues_percent(self):
+        """Calculate the list of residues to keep if we are keeping self.percent residues under
+        each truncation bin. The threshold is just the threshold of the most variable residue"""
+        
+        # Calculate variances between pdb
+        var_by_res=self.calculate_variances()
 
-
-        # Spicker Alternative for clustering
-        amoptd['spicker_rundir'] = os.path.join( amoptd['work_dir'], 'spicker_run')
-        spickerer = run_spicker.SpickerCluster( amoptd )
-        spickerer.run_spicker()
-        logger.info( spickerer.results_summary() )
-        amoptd['spicker_results'] = spickerer.results
-
-
+        length = len(var_by_res)
+        if not length > 0:
+            msg = "Error reading residue variances!"
+            logging.critical(msg)
+            raise RuntimeError,msg
+        
+        # How many residues should fit in each bin
+        chunk_size=int(round(float(length) * float(self.percent_interval)/100.0))
+        if chunk_size < 1:
+            msg = "Error generating thresholds, got < 1 AA in chunk_size"
+            logging.critical(msg)
+            raise RuntimeError,msg
+        
+        nchunks=int(round(length/chunk_size))+1
+        #print "chunk_size, nchunks ",chunk_size,nchunks
+        
+        # Get list of residue indices sorted by variance - from most variable to least
+        var_by_res.sort(key=lambda x: x[1], reverse=True)
+        
+        #print "var_by_res ",var_by_res
+        resSeq=[ x[0] for x in var_by_res ]
+        
+        # Get list of residues to keep under the different intevals
+        self.truncation_levels=[]
+        self.truncation_thresholds=[]
+        self.truncation_residues=[]
+        for i in range(nchunks):
+            if i==0:
+                residues=copy.copy(resSeq)
+                percent=100
+            else:
+                residues=resSeq[chunk_size*i:]
+                percent=int(round(float(length-(chunk_size*i))/float(length)*100))
+            
+            if len(residues):
+                # For the threshold we take the threshold of the most variable residue
+                idx=chunk_size*(i+1)-1
+                if idx > length-1: # Need to make sure we have a full final chunk
+                    idx=length-1
+                thresh=var_by_res[idx][1]
+                self.truncation_thresholds.append(thresh)
+                self.truncation_levels.append(percent)
+                #print "GOT PERCENT,THRESH ",percent,thresh
+                #print "residues ",residues
+                residues.sort()
+                self.truncation_residues.append(residues)
+                
         return
+    
+    def calculate_residues_thresh(self):
+        """Txxx
+        """
+
+        # calculate the thresholds
+        self.truncation_thresholds=self.generate_thresholds()
+
+        # We run in reverse as that's how the original code worked
+        self.truncation_residues=[]
+        self.truncation_levels=[]
+        lt=len(self.truncation_thresholds)
+        for i, truncation_threshold in enumerate(self.truncation_thresholds):
+            
+            truncation_level=lt-i # as going backwards
+            self.truncation_levels.append(truncation_level)
+            
+            # Get a list of the indexes of the residues to keep
+            to_keep=[resSeq for resSeq,variance in self.var_by_res if variance <= truncation_threshold]
+            self.truncation_residues.append( to_keep )
+        
+        # We went through in reverse so put things the right way around
+        self.truncation_levels.reverse()
+        self.truncation_thresholds.reverse()
+        self.truncation_residues.reverse()
+        return
+        
+    def calculate_variances(self,cluster_models):
+        """CONVERT TO RETURN LIST"""
+        
+        #--------------------------------
+        # get variations between pdbs
+        #--------------------------------
+        cmd = [ self.theseus_exe, "-a0" ] + cluster_models
+        retcode = ample_util.run_command(cmd,
+                                         logfile=os.path.join(self.work_dir,"theseus.log"),
+                                         directory=self.work_dir)
+        if retcode != 0:
+            msg = "non-zero return code for theseus in generate_thresholds!"
+            logging.critical( msg )
+            raise RuntimeError, msg
+
+        variances=[]
+        variance_log=os.path.join(self.work_dir,'theseus_variances.txt')
+        with open(variance_log) as f:
+            for i, line in enumerate(f):
+                # Skip header
+                if i==0: continue
+
+                line=line.strip()
+
+                # Skip blank lines
+                if not line: continue
+
+                #print line
+                tokens=line.split()
+                # Different versions of theseus may have a RES card first, so need to check
+                if tokens[0]=="RES":
+                    idxResSeq=3
+                    idxVariance=4
+                else:
+                    idxResSeq=2
+                    idxVariance=3
+                resSeq=int(tokens[idxResSeq])
+                variance=float(tokens[idxVariance])
+                assert resSeq==i,"Residue numbering doesn't match residue position in calculate_variances!"
+                variances.append(variance)
+                
+        return variances
+    
+    def cluster_models(self, models, cluster_method, cluster_exe, work_dir):
+        
+        clusters=[]
+        clusters_data=[]
+        if cluster_method=="spicker":
+            
+            # Spicker Alternative for clustering
+            spicker_rundir = os.path.join( work_dir, 'spicker')
+            num_clusters=1
+            spickerer = run_spicker.SpickerCluster(run_dir=spicker_rundir,
+                                                   spicker_exe=cluster_exe,
+                                                   models=models,
+                                                   num_clusters=num_clusters )
+            
+            self.logger.info( spickerer.results_summary() )
+            
+            # The models
+            cluster=spickerer.results[0]
+            clusters.append(cluster)
+            
+            # Data on the models
+            cluster_data=EnsembleData2()
+            d=spickerer.results[0]
+            cluster_data.cluster_centroid=d.cluster_centroid
+            cluster_data.cluster_size=d.cluster_size
+            clusters_data.append(cluster_data)
+
+        return clusters, cluster_data
     
     def edit_side_chains(self,raw_ensembles,raw_ensembles_data):
         
@@ -152,7 +316,6 @@ e.ensemble_directory
         ensembles=[]
         ensembles_data=[]
         for raw_ensemble, raw_ensemble_data in zip(raw_ensembles,raw_ensembles_data):
-            
             for sct in self.side_chain_treatments:
                 
                 # create filename based on side chain treatment
@@ -162,6 +325,7 @@ e.ensemble_directory
                 ensemble_data.pdb=fpath
                 self.ensembles.append(fpath)
                 self.ensembles_data.append(ensemble_data)
+                
                 # Create the files
                 if sct == "allatom":
                     # For all atom just copy the file
@@ -175,10 +339,10 @@ e.ensemble_directory
         
         return ensembles,ensembles_data
   
-    def generate_ensembles(self,models):
+    def generate_ensembles(self, models, cluster_method, cluster_exe, work_dir):
         ensembles = []
         ensembles_data = []
-        for cluster, cluster_data in self.cluster_models(models):
+        for cluster, cluster_data in self.cluster_models(models, cluster_method, cluster_exe, work_dir):
             for truncated_models, truncated_models_data in self.truncate_models(cluster,cluster_data):
                 for subcluster, subcluster_data in self.subcluster_models(truncated_models,truncated_models_data):
                     ensembles.append(subcluster)
@@ -187,9 +351,6 @@ e.ensemble_directory
         self.ensembles=ensembles
         self.ensembles_data=ensembles_data
         return ensembles
-    
-
-            
             
     def ensemble_summary(self,ensemble_data):
         
@@ -207,14 +368,66 @@ e.ensemble_directory
                 clusters[e.cluster] = {}
             if e.truncation_level not in clusters[e.cluster]:
                 clusters[e.cluster] = {}
-            
-                
-        
         
         return
-
     
+    def init_from_dict(self,amoptd):
+        
+        self.work_dir=amoptd['work_dir'] 
+        self.cluster_method=amoptd['cluster_method']
+        if self.cluster_method=="spicker":
+            self.cluster_exe=amoptd['spicker_exe']
+            
+        self.truncation_method=amoptd['truncation_method']
+        self.pruning_strategy=amoptd['pruning_strategy']
+        self.theseus_exe=amoptd['theseus_exe']
+        self.subclustering_method="radius"
+        self.subclustering_exe=None
+        self.side_chain_treatments=None
+        return
+    
+    def truncate_models(self,models,model_data):
 
+
+        # Create the directories we'll be working in
+        self.work_dir =  os.path.join( root_dir, 'fine_cluster_{0}'.format( ensemble_id ) )
+        os.mkdir( self.work_dir )
+        os.chdir( self.work_dir )
+
+        self.ensemble_dir = os.path.join( root_dir, 'ensembles_{0}'.format( ensemble_id ) )
+        os.mkdir( self.ensemble_dir )
+
+        # Calculate which residues to keep under the different methods
+        if mode=='threshold':
+            self.calculate_residues_thresh()
+        elif mode=='percent':
+            self.calculate_residues_percent()
+        else:
+            raise RuntimeError,"Unrecognised ensembling mode: {0}".format(mode)
+
+        self.truncation_dirs=[]
+        self.truncation_models=[]
+        for i in range(len(self.truncation_levels)):
+            trunc_dir = os.path.join( self.work_dir, 'trunc_files_{0}'.format(self.truncation_levels[i]))
+            os.mkdir(trunc_dir)
+            logging.info( 'truncating at: {0} in directory {1}'.format(self.truncation_thresholds[i],trunc_dir))
+            self.truncation_dirs.append(trunc_dir)
+
+            # list of models for this truncation level
+            level_models = []
+            pdbed = pdb_edit.PDBEdit()
+            for infile in self.cluster_models:
+                pdbname = os.path.basename( infile )
+                pdbout = os.path.join( trunc_dir, pdbname )
+                # Loop through PDB files and create new ones that only contain the residues left after truncation
+                pdbed.select_residues( inpath=infile, outpath=pdbout, residues=self.truncation_residues[i] )
+                level_models.append( pdbout )
+
+            self.truncated_models.append( level_models )
+        return
+
+
+        return
 
 class Ensembler(object):
     """Class to generate ensembles from cluster of models"""
