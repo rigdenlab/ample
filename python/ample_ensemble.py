@@ -68,11 +68,14 @@ class EnsembleData2(object):
         # cluster info
         self.cluster_centroid=None
         self.cluster_size=None
-
+        
+        
+        self.truncation_level = None
+        self.truncation_residues = None
+        self.truncation_dir = None
+        
         self.side_chain_treatment = None
         self.radius_threshold = None
-        self.truncation_threshold = None # The variance used to truncate
-        self.truncation_level = None # the index of the truncation threshold
 
         self.pdb = None # path to the ensemble file
 
@@ -145,7 +148,7 @@ e.ensemble_directory
     """
     
     def __init__(self):
-        self.work_dir=None # top directory where everything gets donw
+        self.work_dir=None # top directory where everything gets done
         self.cluster_method="spicker" # the method for initial clustering
         self.cluster_exe=None
         self.truncation_method="percent"
@@ -156,13 +159,10 @@ e.ensemble_directory
         self.side_chain_treatments=['allatom','reliable','polya']
         return
     
-    def calculate_residues_percent(self):
+    def calculate_residues_percent(self,var_by_res):
         """Calculate the list of residues to keep if we are keeping self.percent residues under
         each truncation bin. The threshold is just the threshold of the most variable residue"""
         
-        # Calculate variances between pdb
-        var_by_res=self.calculate_variances()
-
         length = len(var_by_res)
         if not length > 0:
             msg = "Error reading residue variances!"
@@ -186,9 +186,9 @@ e.ensemble_directory
         resSeq=[ x[0] for x in var_by_res ]
         
         # Get list of residues to keep under the different intevals
-        self.truncation_levels=[]
-        self.truncation_thresholds=[]
-        self.truncation_residues=[]
+        truncation_levels=[]
+        truncation_variances=[]
+        truncation_residues=[]
         for i in range(nchunks):
             if i==0:
                 residues=copy.copy(resSeq)
@@ -203,40 +203,40 @@ e.ensemble_directory
                 if idx > length-1: # Need to make sure we have a full final chunk
                     idx=length-1
                 thresh=var_by_res[idx][1]
-                self.truncation_thresholds.append(thresh)
-                self.truncation_levels.append(percent)
+                truncation_variances.append(thresh)
+                truncation_levels.append(percent)
                 #print "GOT PERCENT,THRESH ",percent,thresh
                 #print "residues ",residues
                 residues.sort()
-                self.truncation_residues.append(residues)
+                truncation_residues.append(residues)
                 
-        return
+        return truncation_levels, truncation_variances, truncation_residues
     
-    def calculate_residues_thresh(self):
+    def calculate_residues_thresh(self,var_by_res):
         """Txxx
         """
 
         # calculate the thresholds
-        self.truncation_thresholds=self.generate_thresholds()
+        truncation_variances=self.generate_thresholds(var_by_res)
 
         # We run in reverse as that's how the original code worked
-        self.truncation_residues=[]
-        self.truncation_levels=[]
-        lt=len(self.truncation_thresholds)
-        for i, truncation_threshold in enumerate(self.truncation_thresholds):
+        truncation_residues=[]
+        truncation_levels=[]
+        lt=len(truncation_variances)
+        for i, truncation_threshold in enumerate(truncation_variances):
             
             truncation_level=lt-i # as going backwards
-            self.truncation_levels.append(truncation_level)
+            truncation_levels.append(truncation_level)
             
             # Get a list of the indexes of the residues to keep
-            to_keep=[resSeq for resSeq,variance in self.var_by_res if variance <= truncation_threshold]
-            self.truncation_residues.append( to_keep )
+            to_keep=[resSeq for resSeq,variance in var_by_res if variance <= truncation_threshold]
+            truncation_residues.append( to_keep )
         
         # We went through in reverse so put things the right way around
-        self.truncation_levels.reverse()
-        self.truncation_thresholds.reverse()
-        self.truncation_residues.reverse()
-        return
+        truncation_levels.reverse()
+        truncation_variances.reverse()
+        truncation_residues.reverse()
+        return truncation_levels, truncation_variances, truncation_residues
         
     def calculate_variances(self,cluster_models):
         """CONVERT TO RETURN LIST"""
@@ -347,11 +347,103 @@ e.ensemble_directory
                 for subcluster, subcluster_data in self.subcluster_models(truncated_models,truncated_models_data):
                     ensembles.append(subcluster)
                     ensembles_data.append(subcluster_data)
+        
+        # Have all-atom side-chains so now prune down the side chains
         ensembles,ensembles_data = self.edit_side_chains(ensembles,ensembles_data)
         self.ensembles=ensembles
         self.ensembles_data=ensembles_data
+        
         return ensembles
-            
+
+    def generate_thresholds(self,var_by_res):
+        """
+        This is the original method developed by Jaclyn and used in all work until November 2014 (including the coiled-coil paper)
+        
+        Calculate the residue variance thresholds that will keep self.percent_interval residues for each truncation level
+        """
+        #--------------------------------
+        # choose threshold type
+        #-------------------------------
+        FIXED_INTERVALS=False
+        if FIXED_INTERVALS:
+            self.thresholds = [ 1, 1.5, 2 , 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8 ]
+            logging.debug("Got {0} thresholds: {1}".format( len(self.thresholds), self.thresholds ))
+            return
+
+        # List of variances ordered by residue index
+        var_list=[var for (resSeq,var) in var_by_res]
+
+        length = len(var_list)
+        if length == 0:
+            msg = "Error generating thresholds, got len: {0}".format(length)
+            logging.critical(msg)
+            raise RuntimeError,msg
+
+        # How many residues should fit in each bin
+        # NB - Should round up not down with int!
+        chunk_size=int( ( float(length)/100 ) *float(self.percent_interval) )
+        if chunk_size < 1:
+            msg = "Error generating thresholds, got < 1 AA in chunk_size"
+            logging.critical(msg)
+            raise RuntimeError,msg
+
+        ## try to find intervals for truncation
+        truncation_thresholds=self._generate_thresholds(var_list, chunk_size)
+        
+        # Jens' new untested method
+        #truncation_thresholds=self._generate_thresholds2(var_list, chunk_size)
+        
+        logging.debug("Got {0} thresholds: {1}".format( len(truncation_thresholds), truncation_thresholds ))
+
+        return truncation_thresholds
+
+    def _generate_thresholds(self,values,chunk_size):
+        """Jaclyn's threshold method
+        """
+        try_list=copy.deepcopy(values)
+        try_list.sort()
+        #print "try_list ",try_list
+
+        # print list(chunks(try_list, int(chunk_size)))
+        # For chunking list
+        def chunks(a_list, chunk_size):
+            for i in xrange(0, len(a_list), chunk_size):
+                yield a_list[i:i+chunk_size ]
+
+        thresholds=[]
+        for x in list( chunks(try_list, chunk_size ) ):
+            #print x, x[-1]
+            # For some cases, multiple residues share the same variance so we don't create a separate thereshold
+            if x[-1] not in thresholds:
+                thresholds.append(x[-1])
+                
+        return thresholds
+
+    def _generate_thresholds2(self,values,chunk_size):
+        """
+        This is Jens's update to Jaclyn's method that groups the residues by variances so that we split
+        them by variance, and try and fit chunk_size in each bin. Previously we tried to split by variance but didn't
+        group the residues by variance, so the same variance bin could cover multiple residue groups. 
+        """
+
+        # Create tuple mapping values to counts
+        data=[(i,values.count(i)) for i in sorted(set(values),reverse=True)]
+
+        thresholds=[]
+        counts=[]
+        first=True
+        for variance,count in data:
+            if first or counts[-1] + count > chunk_size:
+                thresholds.append(variance)
+                counts.append(count)
+                if first: first=False
+            else:
+                #thresholds[-1]=variance
+                counts[-1]+=count
+
+        thresholds.sort()
+        return thresholds
+       
     def ensemble_summary(self,ensemble_data):
         
         #cluster
@@ -386,48 +478,154 @@ e.ensemble_directory
         self.side_chain_treatments=None
         return
     
-    def truncate_models(self,models,model_data):
+    def subcluster_models(self,truncated_models,truncated_models_data,radius_thresholds=[1,2,3],max_ensemble_models=30):
+        
+        ensembles=[]
+        ensembles_data=[]
+        
+        # Use first model to get data on level
+        truncation_level=truncated_models_data.truncation_level
+        truncation_dir=truncated_models_data.truncation_dir
+            
+        # Run maxcluster to generate the distance matrix
+        clusterer = subcluster.MaxClusterer(self.maxcluster_exe)
+        clusterer.generate_distance_matrix(truncated_models)
 
+        # Loop through the radius thresholds
+        num_previous_models=-1 # set to -1 so comparison always false on first pass
+        for radius in radius_thresholds:
+
+            logging.debug("subclustering files under radius: {0}".format(radius))
+
+            # Get list of pdbs clustered according to radius threshold
+            cluster_files = clusterer.cluster_by_radius(radius)
+            logging.debug("Clustered {0} files".format(len(cluster_files)))
+            if cluster_files < 2:
+                logging.info( 'Could not cluster files using radius {0}'.format(radius))
+                continue
+
+            # For naming all files
+            basename='tl{0}_r{1}'.format(truncation_level, radius)
+
+            # Check if there are the same number of models in this ensemble as the previous one - if so
+            # the ensembles will be identical and we can skip this one
+            if num_previous_models == len(cluster_files):
+                logging.debug( 'Number of decoys in cluster ({0}) is the same as under previous threshold so excluding cluster {1}'.format( len( cluster_files ), basename ) )
+                continue
+            else:
+                num_previous_models = len(cluster_files)
+
+            # Got files so create the directories
+            subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
+            os.mkdir(subcluster_dir)
+            os.chdir(subcluster_dir)
+
+            # Restrict cluster to max_ensemble_models
+            if len(cluster_files) > max_ensemble_models:
+                logging.debug("{0} files in cluster so truncating list to first {1}".format(len(cluster_files), max_ensemble_models))
+                cluster_files = cluster_files[:max_ensemble_models]
+
+            # Write out the files for reference
+            file_list = "maxcluster_radius_{0}_files.list".format(radius)
+            with open(file_list, "w") as f:
+                for c in cluster_files:
+                    f.write(c+"\n")
+                f.write("\n")
+
+            # Run theseus to generate a file containing the aligned clusters
+            cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files
+            retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
+            if retcode != 0:
+                logging.debug( 'Could not create ensemble for files (models too diverse): {0}'.format( basename ) )
+                continue
+
+            # jmht - the previous Align_rosetta_fine_clusters_with_theseus routine was running theseus twice and adding the averaged
+            # ensemble from the first run to the ensemble. This seems to improve the results for the TOXD test case - maybe something to
+            # look at?
+            #cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files + [ basename+"run1_ave.pdb" ]
+            #retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
+
+            # Rename the file with the aligned files and append the path to the ensembles
+            cluster_file = os.path.join(subcluster_dir, basename+'_sup.pdb')
+            ensemble = os.path.join(subcluster_dir, basename+'.pdb')
+            shutil.move(cluster_file, ensemble)
+
+            # Count the number of atoms in the ensemble-only required for benchmark mode
+            natoms,nresidues=pdb_edit.PDBEdit().num_atoms_and_residues(ensemble,first=True)
+
+            # The data we've collected is the same for all pdbs in this level so just keep using the first  
+            ensemble_data=copy.copy(truncated_models_data)
+            ensemble_data.name = basename
+            ensemble_data.num_models = len( cluster_files )
+            ensemble_data.num_atoms=natoms
+            ensemble_data.radius_threshold = radius
+            ensemble_data.pdb = ensemble
+
+            # Get the centroid model name from the list of files given to theseus - we can't parse
+            # the pdb file as theseus truncates the filename
+            ensemble_data.centroid_model=os.path.splitext( os.path.basename(cluster_files[0]) )[0]
+            
+            ensembles.append(ensemble)
+            ensembles_data.append(ensemble_data)
+        
+        return ensembles,ensembles_data
+    
+    
+    def truncate_models(self,models,models_data,mode='percent'):
 
         # Create the directories we'll be working in
-        self.work_dir =  os.path.join( root_dir, 'fine_cluster_{0}'.format( ensemble_id ) )
+        truncate_dir =  os.path.join(self.work_dir, 'truncate')
         os.mkdir( self.work_dir )
         os.chdir( self.work_dir )
-
-        self.ensemble_dir = os.path.join( root_dir, 'ensembles_{0}'.format( ensemble_id ) )
-        os.mkdir( self.ensemble_dir )
+        
+        # Calculate variances between pdb
+        var_by_res=self.calculate_variances()
 
         # Calculate which residues to keep under the different methods
-        if mode=='threshold':
-            self.calculate_residues_thresh()
-        elif mode=='percent':
-            self.calculate_residues_percent()
+        truncation_levels, truncation_variances, truncation_residues=None
+        if mode=='percent':
+            truncation_levels, truncation_variances, truncation_residues=self.calculate_residues_percent(var_by_res)
+        elif mode=='threshold':
+            truncation_levels, truncation_variances, truncation_residues=self.calculate_residues_thresh(var_by_res)
         else:
             raise RuntimeError,"Unrecognised ensembling mode: {0}".format(mode)
 
-        self.truncation_dirs=[]
-        self.truncation_models=[]
-        for i in range(len(self.truncation_levels)):
-            trunc_dir = os.path.join( self.work_dir, 'trunc_files_{0}'.format(self.truncation_levels[i]))
+        truncated_models=[]
+        truncated_models_data=[]
+        for i in range(len(truncation_levels)):
+            tlevel=truncation_levels[i]
+            tvar=truncation_variances[i]
+            tresidues=truncation_residues[i]
+            trunc_dir = os.path.join( truncate_dir, 'tlevel_{0}'.format(tlevel))
             os.mkdir(trunc_dir)
-            logging.info( 'truncating at: {0} in directory {1}'.format(self.truncation_thresholds[i],trunc_dir))
-            self.truncation_dirs.append(trunc_dir)
+            logging.info( 'truncating at: {0} in directory {1}'.format(tvar,trunc_dir))
 
             # list of models for this truncation level
             level_models = []
             pdbed = pdb_edit.PDBEdit()
-            for infile in self.cluster_models:
+            for infile in models:
                 pdbname = os.path.basename( infile )
-                pdbout = os.path.join( trunc_dir, pdbname )
+                pdbout = os.path.join(trunc_dir, pdbname)
                 # Loop through PDB files and create new ones that only contain the residues left after truncation
-                pdbed.select_residues( inpath=infile, outpath=pdbout, residues=self.truncation_residues[i] )
-                level_models.append( pdbout )
+                pdbed.select_residues(inpath=infile, outpath=pdbout, residues=tresidues)
+                level_models.append(pdbout)
+            
+            # Add the model
+            truncated_models.append(level_models)
 
-            self.truncated_models.append( level_models )
-        return
+            # Add the data
+            model_data=copy.copy(models_data)
+            model_data.truncation_level=tlevel
+            model_data.truncation_variance=tvar
+            model_data.truncation_residues=tresidues
+            model_data.num_residues=len(tresidues)
+            model_data.truncation_dir=trunc_dir
+            model_data.num_truncated_models = len(models)
+            
+            truncated_models_data.append(model_data)
+            
+        return truncated_models, truncated_models_data
 
-
-        return
 
 class Ensembler(object):
     """Class to generate ensembles from cluster of models"""
