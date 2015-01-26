@@ -69,7 +69,7 @@ def extractFile(tarArchive,fileName,directory=None):
         else:
             return False
 
-def find_exe( executable, dirs=None ):
+def find_exe(executable, dirs=None):
     """Find the executable exename.
 
     Args:

@@ -64,9 +64,7 @@ def main():
     can be imported. We there need ample to be a python script that can be imported, hence the main routine with
     its calling protected by the if __name__=="__main__":...
     """ 
-    #-------------------------------------------
     # get command line options
-    #-------------------------------------------
     parser = argparse.ArgumentParser( prog="AMPLE", description='Structure solution by abinitio modelling', prefix_chars="-")
     
     parser.add_argument('-alignment_file', type=str, nargs=1,
@@ -87,17 +85,11 @@ def main():
     parser.add_argument('-buccaneer_cycles', type=int, nargs=1,
                        help='The number of Bucanner rebuilding cycles to run')
     
+    parser.add_argument('-cluster_method', type=str, nargs=1,
+                       help='How to cluster the models for ensembling spicker/???')
+    
     parser.add_argument('-ccp4_jobid', type=int, nargs=1,
                        help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
-    
-    parser.add_argument('-submit_array', metavar='True/False', type=str, nargs=1,
-                       help='Submit SGE jobs as array jobs')
-    
-    parser.add_argument('-submit_cluster', metavar='True/False', type=str, nargs=1,
-                       help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
-    
-    parser.add_argument('-submit_qtype', type=str, nargs=1,
-                       help='cluster submission queue type - currently support SGE and LSF')
     
     parser.add_argument('-debug', metavar='True/False', type=str, nargs=1,
                        help='Run in debug mode (CURRENTLY UNUSED)')
@@ -137,9 +129,6 @@ def main():
     
     parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
                        help='Flag for FREE column in the MTZ file')
-    
-    parser.add_argument('-import_cluster', metavar='import_cluster', type=str, nargs=1,
-                       help='Import an existing cluster of PDB files from a directory or list of pdb files')
     
     parser.add_argument('-improve_template', metavar='improve_template', type=str, nargs=1,
                        help='Path to a template to improve - NMR, homolog' )
@@ -261,6 +250,15 @@ def main():
     
     parser.add_argument('-split_mr', metavar='True/False', type=str, nargs=1,
                        help='Split MRBUMP Molecular Replacement jobs (phaser, molrep etc) into separate jobs')
+
+    parser.add_argument('-submit_array', metavar='True/False', type=str, nargs=1,
+                       help='Submit SGE jobs as array jobs')
+    
+    parser.add_argument('-submit_cluster', metavar='True/False', type=str, nargs=1,
+                       help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
+    
+    parser.add_argument('-submit_qtype', type=str, nargs=1,
+                       help='cluster submission queue type - currently support SGE and LSF')
     
     parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', type=str, nargs=1,
                        help='Path to theseus executable')
@@ -279,7 +277,10 @@ def main():
     
     parser.add_argument('-transmembrane_lipofile', metavar='transmembrane_lipofile', type=str, nargs=1,
                        help='Lips4 file for modelling transmembrane proteins')
-    
+
+    parser.add_argument('-truncation_method', type=str, nargs=1,
+                       help='How to truncate the models for ensembling percent/thresh')
+
     parser.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
                        help='True =use nhomologs, False= dont use them ')
     
@@ -461,16 +462,6 @@ def main():
         amopt.d['make_frags'] = False
         amopt.d['make_models'] = False
     
-    # Importing pre-clustered models
-    if amopt.d['import_cluster']:
-        if not os.path.exists(amopt.d['import_cluster']):
-            logger.critical('Cannot find cluster import directory: {0}'.format( amopt.d['import_cluster'] ))
-            sys.exit(1)
-    
-        logger.info("Found directory with cluster files: {0}\n".format( amopt.d['import_cluster'] ) )
-        amopt.d['make_frags'] = False
-        amopt.d['make_models'] = False
-        
     # Importing quark models
     if amopt.d['quark_models']:
         logger.info("Attempting to use quark models from file: {0}".format(amopt.d['quark_models']))
@@ -507,7 +498,7 @@ def main():
         amopt.d['make_models'] = False
     
     # Check import flags
-    if amopt.d['import_ensembles'] and (amopt.d['import_models'] or amopt.d['import_cluster'] ):
+    if amopt.d['import_ensembles'] and (amopt.d['import_models']):
             msg = "Cannot import both models and ensembles/clusters!"
             logger.critical(msg)
             sys.exit(1)
@@ -722,16 +713,12 @@ def main():
     
     logger.info('All needed programs are found, continuing Run')
     
-    #----------------------------
     # Running is the 'official' output file
-    #----------------------------
     RUNNING = open( amopt.d['work_dir'] + '/ROSETTA.log', "w")
     RUNNING.write( ample_util.header )
     RUNNING.flush()
     
-    #----------------------------
     # params used
-    #---------------------------
     with open( os.path.join( amopt.d['work_dir'], 'params_used.txt' ), "w") as f:
         param_str = amopt.prettify_parameters()
         f.write( param_str )
@@ -745,13 +732,9 @@ def main():
     ######################################################
     time_start = time.time()
     
-    #-----------------------------------
     # Do The Modelling
-    #-----------------------------------
     
-    #-----------------------------------
     # Make Rosetta fragments
-    #-----------------------------------
     if amopt.d['make_frags']:
         rosetta_modeller.generate_fragments( submit_cluster=amopt.d['submit_cluster'],
                                              submit_qtype=amopt.d['submit_qtype'],
@@ -759,17 +742,13 @@ def main():
         amopt.d['frags_3mers'] = rosetta_modeller.frags_3mers
         amopt.d['frags_9mers'] = rosetta_modeller.frags_9mers
     
-    #-----------------------------------
     # break here for NMR (frags needed but not modelling
     # if NMR process models first
-    #-----------------------------------
     if amopt.d['NMR_protocol']:
         nmr.doNMR(amopt, rosetta_modeller, logger)
     # return from nmr with models already made
     elif amopt.d['make_models']:
-    #-----------------------------------
     # Make the models
-    #-----------------------------------
     
         logger.info('----- making Rosetta models--------')
         logger.info('making ' + str(amopt.d['nmodels']) + ' models...')
@@ -820,26 +799,13 @@ def main():
     
     ensembles = [] # List of ensembles - 1 per cluster
     if amopt.d['import_ensembles']:
-    
-        #---------------------------------------
         # Importing pre-made ensembles
-        #---------------------------------------
     
         # Set list of ensembles to the one we are importing
         msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
         RUNNING.write(msg)
         logger.info( msg )
-        final_ensembles =  glob.glob( os.path.join(amopt.d['ensembles_dir'], '*.pdb') )
-    
-        if amopt.d['top_model_only']:
-            logger.info("Only using the top model" )
-            final_ensembles = truncateedit_MAX.One_model_only(final_ensembles , amopt.d['work_dir'])
-    
-        # Set ensembles
-        ensembles = [ final_ensembles ]
-    
-    elif amopt.d['import_cluster']:
-        ensembles = [ ensemble.import_cluster( amopt.d ) ]
+        ensembles =  glob.glob( os.path.join(amopt.d['ensembles_dir'], '*.pdb') )
     else:
         # Check we have some models to work with
         if not glob.glob(os.path.join(amopt.d['models_dir'],"*.pdb")):
@@ -851,9 +817,8 @@ def main():
         if amopt.d['submit_cluster']:
     
             # Pickle dictionary so it can be opened by the job to get the parameters
-            f = open( amopt.d['results_path'], 'w' )
-            cPickle.dump( amopt.d, f )
-            f.close()
+            with open( amopt.d['results_path'], 'w' ) as f:
+                cPickle.dump( amopt.d, f )
     
             mrBuild = clusterize.ClusterRun()
             mrBuild.ensembleOnCluster( amopt.d )
@@ -865,20 +830,16 @@ def main():
             ensemble.create_ensembles( amopt.d )
     
         # Check we have something to work with
-        if not amopt.d.has_key('ensemble_results') or not len( amopt.d['ensemble_results'] ):
+        if not amopt.d.has_key('ensembles') or not len( amopt.d['ensembles'] ):
             msg = "Could not load any ensembles after running create_ensembles!"
             logger.critical( msg )
             sys.exit(1)
-    
-        # Extract list of pdbs from ensemble results
-        for eresult in amopt.d['ensemble_results']:
-            if eresult:
-                ensembles.append( [ e.pdb for e in eresult ] )
-    
-    ensemble_summary = ensemble.ensemble_summary(amopt.d)
-    RUNNING.write(ensemble_summary)
-    RUNNING.flush()
-    logger.info(ensemble_summary)
+            
+        ensembles=amopt.d['ensembles']
+        ensemble_summary = ensemble.ensemble_summary(amopt.d['ensembles_data'])
+        RUNNING.write(ensemble_summary)
+        RUNNING.flush()
+        logger.info(ensemble_summary)
     #
     # Bail here if we didn't create anything
     #
@@ -887,9 +848,7 @@ def main():
         ample_util.saveAmoptd(amopt.d)
         sys.exit(1)
     
-    #---------------------------------------
-    # MR BUMP analysis of the ensembles
-    #---------------------------------------
+    # MRBUMP analysis of the ensembles
     bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
     logger.info("Running MRBUMP jobs in directory: {0}".format( bump_dir ) )
     if not os.path.exists(bump_dir):

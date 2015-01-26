@@ -27,8 +27,9 @@ class EnsembleData(object):
         # cluster info
         self.cluster_method = None
         self.num_clusters = None
+        self.cluster_num = None
         self.cluster_centroid=None
-        self.cluster_size=None
+        self.cluster_num_models=None
         
         # truncation info
         self.truncation_level = None
@@ -38,7 +39,6 @@ class EnsembleData(object):
         self.truncation_dir = None
         self.truncation_variance = None
         self.num_residues = None
-        self.num_truncated_models = None
 
         # subclustering info
         self.num_models = None
@@ -65,67 +65,7 @@ class EnsembleData(object):
         return "{0} : {1}".format(self.__repr__(),str(me))
 
 class Ensembler(object):
-    """Class to generate ensembles from cluster of models
-    
-Each method returns a list of pdbs and a corresponding list of dictionaries holding information on the returned pdbs
-
-create_ensembles
-= return a list of models
-
-    cluster_models
-    = return list of clusters - each a list of models
-    
-    DATA
-    * cluster_method
-    * cluster_number
-    * models
-    * centroid
-    
-    ######################################
-    
-    truncate_models
-    - calculate_variances
-    
-    - calculate_residue_list
-    
-    - prune_residue_list
-    
-    - _truncate_models
-    
-    = return a list of truncation_levels - each a list of models
-    
-    DATA
-    * truncation_level
-    * variance_level
-    * truncation_method
-    * pruning_strategy
-    
-    
-        ########################################
-        
-        - for each truncation_level:
-            subcluster_models
-        
-        = return a list of subclusters - each a list of models
-    
-            ########################################
-            
-            for all ensembles:
-               treat_side_chains
-
-
-e = Ensembler(work_dir,
-              cluster_method,
-              cluster_exe,
-              truncation_method,
-              pruning_strategy,
-              theseus_exe,
-              subclustering_method,
-              subclustering_exe,
-              side_chain_treatments)
-              
-ensembles = e.generate_ensembles()
-e.ensemble_directory
+    """Class to generate ensembles from ab inito models (all models must have same sequence)
     
     """
     
@@ -165,7 +105,7 @@ e.ensemble_directory
         
         return
     
-    def calculate_residues_percent(self,var_by_res,percent_interval):
+    def _calculate_residues_percent(self,var_by_res,percent_interval):
         """Calculate the list of residues to keep if we are keeping self.percent residues under
         each truncation bin. The threshold is just the threshold of the most variable residue"""
         
@@ -218,7 +158,7 @@ e.ensemble_directory
                 
         return truncation_levels, truncation_variances, truncation_residues
     
-    def calculate_residues_thresh(self,var_by_res,percent_interval):
+    def _calculate_residues_thresh(self,var_by_res,percent_interval):
         """Txxx
         """
 
@@ -310,8 +250,9 @@ e.ensemble_directory
                 # Data on the models
                 cluster_data=EnsembleData()
                 d=spickerer.results[i]
+                cluster_data.cluster_num=i+1
                 cluster_data.cluster_centroid=d.cluster_centroid
-                cluster_data.cluster_size=d.cluster_size
+                cluster_data.cluster_num_models=d.cluster_size
                 cluster_data.cluster_method=cluster_method
                 cluster_data.num_clusters=num_clusters
                 
@@ -350,6 +291,9 @@ e.ensemble_directory
                 # Process ensemble data
                 ensemble_data=copy.copy(raw_ensemble_data)
                 ensemble_data.side_chain_treatment=sct
+                ensemble_data.name='tl{0}_r{1}_{2}'.format(ensemble_data.truncation_level,
+                                                                    ensemble_data.subcluster_radius_threshold,
+                                                                    sct)
                 ensemble_data.pdb=fpath
                 ensemble_data.num_atoms=natoms
                 # check
@@ -369,14 +313,17 @@ e.ensemble_directory
                            ensembles_directory=None,
                            work_dir=None):
         
+        # Work dir set each time
+        if not work_dir:
+            raise RuntimeError,"Need to set work_dir!"
+        self.work_dir=work_dir
+        
         if not cluster_method:
             cluster_method=self.cluster_method
         if not cluster_exe:
             cluster_exe=self.cluster_exe
         if not num_clusters:
             num_clusters=self.num_clusters
-        if not work_dir:
-            work_dir=self.work_dir
         if not percent_truncation:
             percent_truncation=self.percent_truncation
         if not truncation_method:
@@ -385,6 +332,10 @@ e.ensemble_directory
             self.ensembles_directory=os.path.join(work_dir,"ensembles")
         else:
             self.ensembles_directory=ensembles_directory
+            
+            
+        # CHECK WE HAVE MODELS AT EACH STAGE
+        # CHECK WE CAN RESOLVE EXECUTABLE PATHS
         
         ensembles = []
         ensembles_data = []
@@ -504,40 +455,6 @@ e.ensemble_directory
         thresholds.sort()
         return thresholds
        
-    def ensemble_summary(self,ensemble_data):
-        
-        #cluster
-        #- truncation_level
-        #-- subcluster
-        #- variance_level
-        #-- radius_level
-        #--- side_chain_treatment
-        
-        clusters={}
-        # Loop through all ensemble data objects and build up a data tree
-        for e in ensemble_data:
-            if e.cluster not in clusters:
-                clusters[e.cluster] = {}
-            if e.truncation_level not in clusters[e.cluster]:
-                clusters[e.cluster] = {}
-        
-        return
-    
-    def init_from_dict(self,amoptd):
-        
-        self.work_dir=amoptd['work_dir'] 
-        self.cluster_method=amoptd['cluster_method']
-        if self.cluster_method=="spicker":
-            self.cluster_exe=amoptd['spicker_exe']
-            
-        self.truncation_method=amoptd['truncation_method']
-        self.pruning_strategy=amoptd['pruning_strategy']
-        self.theseus_exe=amoptd['theseus_exe']
-        self.subclustering_method="radius"
-        self.subclustering_exe=None
-        self.side_chain_treatments=None
-        return
-    
     def subcluster_models(self,
                           truncated_models,
                           truncated_models_data,
@@ -621,7 +538,7 @@ e.ensemble_directory
 
             # The data we've collected is the same for all pdbs in this level so just keep using the first  
             ensemble_data=copy.copy(truncated_models_data)
-            ensemble_data.name = basename
+            #ensemble_data.name = basename
             ensemble_data.num_models = len( cluster_files )
             ensemble_data.subcluster_radius_threshold = radius
             ensemble_data.pdb = ensemble
@@ -648,9 +565,9 @@ e.ensemble_directory
         # Calculate which residues to keep under the different methods
         truncation_levels, truncation_variances, truncation_residues=None,None,None
         if truncation_method=='percent':
-            truncation_levels, truncation_variances, truncation_residues=self.calculate_residues_percent(var_by_res,percent_truncation)
+            truncation_levels, truncation_variances, truncation_residues=self._calculate_residues_percent(var_by_res,percent_truncation)
         elif truncation_method=='thresh':
-            truncation_levels, truncation_variances, truncation_residues=self.calculate_residues_thresh(var_by_res,percent_truncation)
+            truncation_levels, truncation_variances, truncation_residues=self._calculate_residues_thresh(var_by_res,percent_truncation)
         else:
             raise RuntimeError,"Unrecognised ensembling mode: {0}".format(truncation_method)
 
@@ -684,7 +601,6 @@ e.ensemble_directory
             model_data.truncation_residues=tresidues
             model_data.num_residues=len(tresidues)
             model_data.truncation_dir=trunc_dir
-            model_data.num_truncated_models = len(models)
             model_data.percent_truncation = percent_truncation
             model_data.truncation_method = truncation_method
             
@@ -747,7 +663,7 @@ class Test(unittest.TestCase):
         cluster_models=glob.glob(mdir+os.sep+"*.pdb")
         
         var_by_res=ensembler.calculate_variances(cluster_models)
-        truncation_levels, truncation_variances, truncation_residues=ensembler.calculate_residues_thresh(var_by_res)
+        truncation_levels, truncation_variances, truncation_residues=ensembler._calculate_residues_thresh(var_by_res)
         
         self.assertEqual(truncation_levels,
                          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
@@ -804,7 +720,7 @@ class Test(unittest.TestCase):
         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
         cluster_models=glob.glob(mdir+os.sep+"*.pdb")
         var_by_res=ensembler.calculate_variances(cluster_models)
-        truncation_levels, truncation_variances, truncation_residues=ensembler.calculate_residues_percent(var_by_res,percent_interval=5)
+        truncation_levels, truncation_variances, truncation_residues=ensembler._calculate_residues_percent(var_by_res,percent_interval=5)
 
 
         residues=[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
@@ -868,7 +784,7 @@ class Test(unittest.TestCase):
         
         d = cluster_data[2]
         self.assertEqual(os.path.basename(d.cluster_centroid),'1_S_00000001.pdb')
-        self.assertEqual(d.cluster_size,1)
+        self.assertEqual(d.cluster_num_models,1)
         shutil.rmtree(ensembler.work_dir)
         return
     
@@ -878,7 +794,7 @@ class Test(unittest.TestCase):
 
         work_dir=os.path.join(os.getcwd(),"genthresh")
         os.mkdir(work_dir)
-        ensembler.work_dir=work_dir
+        
         ensembler.theseus_exe=self.theseus_exe
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
@@ -896,7 +812,7 @@ class Test(unittest.TestCase):
                                                  num_clusters=num_clusters,
                                                  percent_truncation=percent_truncation,
                                                  truncation_method=truncation_method,
-                                                 work_dir=None)
+                                                 work_dir=work_dir)
 
         eref=['tl100_r2_allatom.pdb', 'tl100_r2_reliable.pdb', 'tl100_r2_polya.pdb', 'tl100_r3_allatom.pdb',
               'tl100_r3_reliable.pdb', 'tl100_r3_polya.pdb', 'tl95_r2_allatom.pdb', 'tl95_r2_reliable.pdb',
@@ -928,7 +844,6 @@ class Test(unittest.TestCase):
         self.assertEqual(d.truncation_method,truncation_method)
         self.assertEqual(d.cluster_method,cluster_method)
         self.assertEqual(d.num_clusters,num_clusters)
-        self.assertEqual(d.num_truncated_models,13)
         self.assertEqual(d.truncation_variance,13.035172)
         self.assertEqual(d.num_atoms,290)
         self.assertEqual(d.subcluster_centroid_model,'4_S_00000002.pdb')
@@ -942,7 +857,7 @@ class Test(unittest.TestCase):
 
         work_dir=os.path.join(os.getcwd(),"genthresh")
         os.mkdir(work_dir)
-        ensembler.work_dir=work_dir
+        
         ensembler.theseus_exe=self.theseus_exe
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
@@ -960,13 +875,11 @@ class Test(unittest.TestCase):
                                                                  num_clusters=num_clusters,
                                                                  percent_truncation=percent_truncation,
                                                                  truncation_method=truncation_method,
-                                                                 work_dir=None)
+                                                                 work_dir=work_dir)
         
         self.assertEqual(len(ensembles),162,len(ensembles))
         d = ensembler.ensembles_data[5]
         
-        print d
-        self.assertEqual(d.num_truncated_models,13)
         self.assertEqual(d.truncation_variance,27.389253)
         self.assertEqual(d.percent_truncation,percent_truncation)
         self.assertEqual(d.truncation_method,truncation_method)
