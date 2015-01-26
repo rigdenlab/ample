@@ -101,7 +101,7 @@ class PDBEdit(object):
             # remove temporary files
             os.unlink(logfile)
         else:
-            raise RuntimeError,"Error stripping PDB to backbone atoms"
+            raise RuntimeError,"Error stripping PDB to backbone atoms. See log:{0}".format(logfile)
         
         return
     
