@@ -234,13 +234,14 @@ class Ensembler(object):
         if cluster_method=="spicker":
             
             # Spicker Alternative for clustering
+            self.logger.info( '* Running SPICKER to cluster models *' )
             spicker_rundir = os.path.join( self.work_dir, 'spicker')
             spickerer = run_spicker.SpickerCluster(run_dir=spicker_rundir,
                                                    spicker_exe=cluster_exe,
                                                    models=models,
                                                    num_clusters=num_clusters )
             spickerer.run_spicker()
-            self.logger.info( spickerer.results_summary() )
+            self.logger.debug( spickerer.results_summary() )
             
             for i in range(num_clusters):
                 # The models
@@ -333,10 +334,11 @@ class Ensembler(object):
         else:
             self.ensembles_directory=ensembles_directory
             
-            
         # CHECK WE HAVE MODELS AT EACH STAGE
         # CHECK WE CAN RESOLVE EXECUTABLE PATHS
         
+        self.logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
+
         ensembles = []
         ensembles_data = []
         for cluster, cluster_data in zip(*self.cluster_models(models=models,

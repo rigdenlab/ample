@@ -54,7 +54,6 @@ import mtz_util
 import nmr
 import rosetta_model
 import mrbump_results
-import truncateedit_MAX
 import version
 
 def main():
@@ -764,9 +763,9 @@ def main():
     
         ##End IF amopt.d['submit_cluster']
     
-        msg = '\nModelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n\n'
+        msg = 'Modelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n'
     elif amopt.d['import_models']:
-        msg = '\nImporting models from directory:\n   ' + amopt.d['models_dir'] + '\n\n'
+        msg = 'Importing models from directory:\n   ' + amopt.d['models_dir'] + '\n'
         RUNNING.write(msg)
         logger.info(msg)
         if amopt.d['use_scwrl']:
@@ -857,41 +856,35 @@ def main():
     amopt.d['mrbump_dir'] = bump_dir
     amopt.d['mrbump_results'] = []
     
-    # Loop over clusters
-    for i, ensemble_pdbs in enumerate(ensembles):
-    
-        clusterID=str(i+1)
-        logger.info('----- Running MRBUMP (cluster ' + clusterID+ ')--------\n\n')
-        logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble_pdbs),  clusterID ) )
-        logger.info("Running {0} MRBUMP jobs for cluster: {1}".format( len(ensemble_pdbs),  clusterID ) )
-    
-        if len(ensemble_pdbs) < 1:
-            msg = "ERROR! Cannot run MRBUMP for cluster {0} as there are no ensembles!".format( clusterID )
-            logger.critical( msg )
-            continue
-    
-        job_dir = os.path.join( amopt.d['mrbump_dir'], 'cluster_'+clusterID )
-    
-        logger.info("Running cluster {0} in directory: {1}".format( clusterID, job_dir ) )
-        if not os.path.exists( job_dir ):
-            os.mkdir( job_dir )
-        os.chdir( job_dir )
-    
-        # Create job scripts
-        logger.info("Generating MRBUMP runscripts in: {0}".format( job_dir ) )
-        job_scripts = mrbump_ensemble.generate_jobscripts( ensemble_pdbs, amopt.d )
-        #continue
-    
-        if amopt.d['submit_cluster']:
-            mrbump_ensemble.mrbump_ensemble_cluster( job_scripts, amopt.d )
-        else:
-            mrbump_ensemble.mrbump_ensemble_local( job_scripts, amopt.d )
-    
-        # Collect the MRBUMP results
-        results_summary = mrbump_results.ResultsSummary()
-        results_summary.extractResults( job_dir )
-        amopt.d['mrbump_results'].append( results_summary.results )
-        ample_util.saveAmoptd(amopt.d)
+    logger.info('----- Running MRBUMP on ensembles--------\n\n')
+
+    if len(ensembles) < 1:
+        msg = "ERROR! Cannot run MRBUMP as there are no ensembles!"
+        logger.critical( msg )
+        sys.exit()
+
+    job_dir = os.path.join( amopt.d['mrbump_dir'], 'MRBUMP' )
+
+    logger.info("Running {0} MRBUMP jobs in directory: {1}".format(len(ensembles),job_dir))
+    if not os.path.exists( job_dir ):
+        os.mkdir( job_dir )
+    os.chdir( job_dir )
+
+    # Create job scripts
+    logger.info("Generating MRBUMP runscripts in: {0}".format( job_dir ) )
+    job_scripts = mrbump_ensemble.generate_jobscripts( ensembles, amopt.d )
+    #continue
+
+    if amopt.d['submit_cluster']:
+        mrbump_ensemble.mrbump_ensemble_cluster( job_scripts, amopt.d )
+    else:
+        mrbump_ensemble.mrbump_ensemble_local( job_scripts, amopt.d )
+
+    # Collect the MRBUMP results
+    results_summary = mrbump_results.ResultsSummary()
+    results_summary.extractResults( job_dir )
+    amopt.d['mrbump_results'].append( results_summary.results )
+    ample_util.saveAmoptd(amopt.d)
         #summary = results_summary.summariseResults()
     
     

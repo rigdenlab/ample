@@ -14,8 +14,8 @@ $PATH
 # Path to the rosetta directory
 rosetta_dir=/opt/rosetta-3.5
 
-#/opt/ample-dev1/bin/ample.py \
-$CCP4/bin/ample.py \
+#$CCP4/bin/ample.py \
+/opt/ample-dev1.testset/bin/ample.py \
 -rosetta_dir $rosetta_dir \
 -fasta toxd_.fasta \
 -mtz 1dtx.mtz \
@@ -25,7 +25,7 @@ $CCP4/bin/ample.py \
 -percent 50 \
 -quick_mode True \
 -use_shelxe True \
--nproc 6 \
+-nproc 2 \
 -models_dir ./models \
 
 #-models_dir ./models \

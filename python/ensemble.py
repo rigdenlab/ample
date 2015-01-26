@@ -33,6 +33,10 @@ def create_ensembles( amoptd ):
     ensembler.max_ensemble_models = amoptd['max_ensemble_models']
     if amoptd['cluster_method'] == 'spicker':
         cluster_exe = amoptd['spicker_exe']
+    
+    work_dir=os.path.join(amoptd['work_dir'],'ensembling')
+    os.mkdir(work_dir)
+    os.chdir(work_dir)
         
     models=glob.glob(os.path.join(amoptd['models_dir'],"*.pdb"))
     ensembles=ensembler.generate_ensembles(models,
@@ -41,7 +45,7 @@ def create_ensembles( amoptd ):
                                            num_clusters=amoptd['num_clusters'] ,
                                            percent_truncation=amoptd['percent'],
                                            truncation_method=amoptd['truncation_method'],
-                                           work_dir=amoptd['work_dir'] )
+                                           work_dir=work_dir)
     
     amoptd['ensembles'] = ensembles
     amoptd['ensembles_data'] = ensembler.ensembles_data
@@ -50,20 +54,6 @@ def create_ensembles( amoptd ):
 
 def ensemble_summary(ensembles_data):
     """Print a summary of the ensembling process"""
-
-
-# Truncation Threshold (A^2)   No. Residues  Radius Threshold (A)  No. Decoys
-# 0.753717                               29                     1          10
-#                                                               2          10
-# 17.398202                              58                     2           5
-#                                                               3          10
-# 28.086684                              59                     2           3
-#                                                               3           8
-    #
-    #
-    #
-    #
-
 
     clusters={}
     # Loop through all ensemble data objects and build up a data tree
