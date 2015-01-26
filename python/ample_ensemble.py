@@ -68,16 +68,29 @@ class EnsembleData2(object):
         # cluster info
         self.cluster_centroid=None
         self.cluster_size=None
-
+        
+        
+        self.truncation_level = None
+        self.truncation_residues = None
+        self.truncation_dir = None
+        
         self.side_chain_treatment = None
         self.radius_threshold = None
-        self.truncation_threshold = None # The variance used to truncate
-        self.truncation_level = None # the index of the truncation threshold
 
         self.pdb = None # path to the ensemble file
 
         return
+    
+    def __str__(self):
+        """List the data attributes of this object"""
+        me = {}
+        for slot in dir(self):
+            attr = getattr(self, slot)
+            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
+              isinstance(attr, types.FunctionType) ):
+                me[slot] = attr
 
+        return "{0} : {1}".format(self.__repr__(),str(me))
 
 class Ensembler2(object):
     """Class to generate ensembles from cluster of models
@@ -145,35 +158,56 @@ e.ensemble_directory
     """
     
     def __init__(self):
-        self.work_dir=None # top directory where everything gets donw
+        
+        # For all
+        self.work_dir=None # top directory where everything gets done
+        self.theseus_exe=None
+        
+        # clustering
         self.cluster_method="spicker" # the method for initial clustering
         self.cluster_exe=None
+        self.num_clusters=1
+        
+        # truncation
         self.truncation_method="percent"
+        self.percent_truncation=5
         self.pruning_strategy="none"
-        self.theseus_exe=None
+        
+        # subclustering
+        self.subcluster_program="maxcluster"
+        self.subcluster_exe=None
         self.subclustering_method="radius"
-        self.subclustering_exe=None
+        self.subcluster_radius_thresholds=[1,2,3]
+        self.ensemble_max_models=30
+        
+        # Side chains
         self.side_chain_treatments=['allatom','reliable','polya']
+        
+        # ensembles
+        self.ensembles_directory=None
+        self.ensembles=None
+        self.ensembles_data=None
+        
+        # misc
+        self.logger=logging.getLogger()
+        
         return
     
-    def calculate_residues_percent(self):
+    def calculate_residues_percent(self,var_by_res,percent_interval):
         """Calculate the list of residues to keep if we are keeping self.percent residues under
         each truncation bin. The threshold is just the threshold of the most variable residue"""
         
-        # Calculate variances between pdb
-        var_by_res=self.calculate_variances()
-
         length = len(var_by_res)
         if not length > 0:
             msg = "Error reading residue variances!"
-            logging.critical(msg)
+            self.logger.critical(msg)
             raise RuntimeError,msg
         
         # How many residues should fit in each bin
-        chunk_size=int(round(float(length) * float(self.percent_interval)/100.0))
+        chunk_size=int(round(float(length) * float(percent_interval)/100.0))
         if chunk_size < 1:
             msg = "Error generating thresholds, got < 1 AA in chunk_size"
-            logging.critical(msg)
+            self.logger.critical(msg)
             raise RuntimeError,msg
         
         nchunks=int(round(length/chunk_size))+1
@@ -186,9 +220,9 @@ e.ensemble_directory
         resSeq=[ x[0] for x in var_by_res ]
         
         # Get list of residues to keep under the different intevals
-        self.truncation_levels=[]
-        self.truncation_thresholds=[]
-        self.truncation_residues=[]
+        truncation_levels=[]
+        truncation_variances=[]
+        truncation_residues=[]
         for i in range(nchunks):
             if i==0:
                 residues=copy.copy(resSeq)
@@ -203,43 +237,43 @@ e.ensemble_directory
                 if idx > length-1: # Need to make sure we have a full final chunk
                     idx=length-1
                 thresh=var_by_res[idx][1]
-                self.truncation_thresholds.append(thresh)
-                self.truncation_levels.append(percent)
+                truncation_variances.append(thresh)
+                truncation_levels.append(percent)
                 #print "GOT PERCENT,THRESH ",percent,thresh
                 #print "residues ",residues
                 residues.sort()
-                self.truncation_residues.append(residues)
+                truncation_residues.append(residues)
                 
-        return
+        return truncation_levels, truncation_variances, truncation_residues
     
-    def calculate_residues_thresh(self):
+    def calculate_residues_thresh(self,var_by_res):
         """Txxx
         """
 
         # calculate the thresholds
-        self.truncation_thresholds=self.generate_thresholds()
+        truncation_variances=self.generate_thresholds(var_by_res)
 
         # We run in reverse as that's how the original code worked
-        self.truncation_residues=[]
-        self.truncation_levels=[]
-        lt=len(self.truncation_thresholds)
-        for i, truncation_threshold in enumerate(self.truncation_thresholds):
+        truncation_residues=[]
+        truncation_levels=[]
+        lt=len(truncation_variances)
+        for i, truncation_threshold in enumerate(truncation_variances):
             
             truncation_level=lt-i # as going backwards
-            self.truncation_levels.append(truncation_level)
+            truncation_levels.append(truncation_level)
             
             # Get a list of the indexes of the residues to keep
-            to_keep=[resSeq for resSeq,variance in self.var_by_res if variance <= truncation_threshold]
-            self.truncation_residues.append( to_keep )
+            to_keep=[resSeq for resSeq,variance in var_by_res if variance <= truncation_threshold]
+            truncation_residues.append( to_keep )
         
         # We went through in reverse so put things the right way around
-        self.truncation_levels.reverse()
-        self.truncation_thresholds.reverse()
-        self.truncation_residues.reverse()
-        return
+        truncation_levels.reverse()
+        truncation_variances.reverse()
+        truncation_residues.reverse()
+        return truncation_levels, truncation_variances, truncation_residues
         
     def calculate_variances(self,cluster_models):
-        """CONVERT TO RETURN LIST"""
+        """Return a list of tuples: (resSeq,variance)"""
         
         #--------------------------------
         # get variations between pdbs
@@ -250,7 +284,7 @@ e.ensemble_directory
                                          directory=self.work_dir)
         if retcode != 0:
             msg = "non-zero return code for theseus in generate_thresholds!"
-            logging.critical( msg )
+            self.logger.critical( msg )
             raise RuntimeError, msg
 
         variances=[]
@@ -277,41 +311,44 @@ e.ensemble_directory
                 resSeq=int(tokens[idxResSeq])
                 variance=float(tokens[idxVariance])
                 assert resSeq==i,"Residue numbering doesn't match residue position in calculate_variances!"
-                variances.append(variance)
+                variances.append((resSeq,variance))
                 
         return variances
     
-    def cluster_models(self, models, cluster_method, cluster_exe, work_dir):
+    def cluster_models(self, models=None, cluster_method=None, num_clusters=None, cluster_exe=None):
         
         clusters=[]
         clusters_data=[]
         if cluster_method=="spicker":
             
             # Spicker Alternative for clustering
-            spicker_rundir = os.path.join( work_dir, 'spicker')
-            num_clusters=1
+            spicker_rundir = os.path.join( self.work_dir, 'spicker')
             spickerer = run_spicker.SpickerCluster(run_dir=spicker_rundir,
                                                    spicker_exe=cluster_exe,
                                                    models=models,
                                                    num_clusters=num_clusters )
-            
+            spickerer.run_spicker()
             self.logger.info( spickerer.results_summary() )
             
-            # The models
-            cluster=spickerer.results[0]
-            clusters.append(cluster)
-            
-            # Data on the models
-            cluster_data=EnsembleData2()
-            d=spickerer.results[0]
-            cluster_data.cluster_centroid=d.cluster_centroid
-            cluster_data.cluster_size=d.cluster_size
-            clusters_data.append(cluster_data)
+            for i in range(num_clusters):
+                # The models
+                cluster=spickerer.results[i].pdb_list
+                clusters.append(cluster)
+                
+                # Data on the models
+                cluster_data=EnsembleData2()
+                d=spickerer.results[i]
+                cluster_data.cluster_centroid=d.cluster_centroid
+                cluster_data.cluster_size=d.cluster_size
+                clusters_data.append(cluster_data)
+        else:
+            raise RuntimeError,'Unrecognised clustering method: {0}'.format(cluster_method)
 
-        return clusters, cluster_data
+        return clusters, clusters_data
     
-    def edit_side_chains(self,raw_ensembles,raw_ensembles_data):
+    def edit_side_chains(self,raw_ensembles,raw_ensembles_data,ensembles_directory):
         
+        assert os.path.isdir(ensembles_directory),"Cannot find ensembles directory: {0}".format(ensembles_directory)
         pdbed = pdb_edit.PDBEdit()
         ensembles=[]
         ensembles_data=[]
@@ -319,12 +356,12 @@ e.ensemble_directory
             for sct in self.side_chain_treatments:
                 
                 # create filename based on side chain treatment
-                fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=self.ensembles_directory)
+                fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=ensembles_directory)
                 ensemble_data=copy.copy(raw_ensemble_data)
                 ensemble_data.side_chain_treatment=sct
                 ensemble_data.pdb=fpath
-                self.ensembles.append(fpath)
-                self.ensembles_data.append(ensemble_data)
+                ensembles.append(fpath)
+                ensembles_data.append(ensemble_data)
                 
                 # Create the files
                 if sct == "allatom":
@@ -332,26 +369,154 @@ e.ensemble_directory
                     shutil.copy2(raw_ensemble,fpath)
                 elif sct == "reliable":
                     pdbed.reliable_sidechains(raw_ensemble,fpath)
-                elif sct == "reliable":
+                elif sct == "polya":
                     pdbed.backbone(raw_ensemble,fpath)
                 else:
                     raise RuntimeError,"Unrecognised side_chain_treatment: {0}\n{1}".format(sct,ensemble_data)
         
         return ensembles,ensembles_data
   
-    def generate_ensembles(self, models, cluster_method, cluster_exe, work_dir):
+    def generate_ensembles(self,models,
+                           cluster_method=None,
+                           cluster_exe=None,
+                           num_clusters=None,
+                           percent_truncation=None,
+                           ensembles_directory=None,
+                           work_dir=None):
+        
+        if not cluster_method:
+            cluster_method=self.cluster_method
+        if not cluster_exe:
+            cluster_exe=self.cluster_exe
+        if not num_clusters:
+            num_clusters=self.num_clusters
+        if not work_dir:
+            work_dir=self.work_dir
+        if not percent_truncation:
+            percent_truncation=self.percent_truncation
+        if not ensembles_directory:
+            self.ensembles_directory=os.path.join(work_dir,"ensembles")
+        else:
+            self.ensembles_directory=ensembles_directory
+        
         ensembles = []
         ensembles_data = []
-        for cluster, cluster_data in self.cluster_models(models, cluster_method, cluster_exe, work_dir):
-            for truncated_models, truncated_models_data in self.truncate_models(cluster,cluster_data):
-                for subcluster, subcluster_data in self.subcluster_models(truncated_models,truncated_models_data):
+        for cluster, cluster_data in zip(*self.cluster_models(models=models,
+                                                              cluster_method=cluster_method,
+                                                              num_clusters=num_clusters,
+                                                              cluster_exe=cluster_exe)):
+            for truncated_models, truncated_models_data in zip(*self.truncate_models(cluster,
+                                                                                     cluster_data,
+                                                                                     truncation_method=self.truncation_method,
+                                                                                     percent_truncation=percent_truncation)):
+                for subcluster, subcluster_data in zip(*self.subcluster_models(truncated_models,
+                                                                               truncated_models_data,
+                                                                               radius_thresholds=self.subcluster_radius_thresholds,
+                                                                               subcluster_program=self.subcluster_program,
+                                                                               subcluster_exe=self.subcluster_program,
+                                                                               ensemble_max_models=self.ensemble_max_models)):
                     ensembles.append(subcluster)
                     ensembles_data.append(subcluster_data)
-        ensembles,ensembles_data = self.edit_side_chains(ensembles,ensembles_data)
+        
+        # Have all-atom side-chains so now prune down the side chains
+        if not os.path.isdir(self.ensembles_directory):
+            os.mkdir(self.ensembles_directory)
+        ensembles,ensembles_data = self.edit_side_chains(ensembles,ensembles_data,self.ensembles_directory)
+        
         self.ensembles=ensembles
         self.ensembles_data=ensembles_data
+        
         return ensembles
-            
+
+    def generate_thresholds(self,var_by_res):
+        """
+        This is the original method developed by Jaclyn and used in all work until November 2014 (including the coiled-coil paper)
+        
+        Calculate the residue variance thresholds that will keep self.percent_interval residues for each truncation level
+        """
+        #--------------------------------
+        # choose threshold type
+        #-------------------------------
+        FIXED_INTERVALS=False
+        if FIXED_INTERVALS:
+            self.thresholds = [ 1, 1.5, 2 , 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8 ]
+            self.logger.debug("Got {0} thresholds: {1}".format( len(self.thresholds), self.thresholds ))
+            return
+
+        # List of variances ordered by residue index
+        var_list=[var for (resSeq,var) in var_by_res]
+
+        length = len(var_list)
+        if length == 0:
+            msg = "Error generating thresholds, got len: {0}".format(length)
+            self.logger.critical(msg)
+            raise RuntimeError,msg
+
+        # How many residues should fit in each bin
+        # NB - Should round up not down with int!
+        chunk_size=int( ( float(length)/100 ) *float(self.percent_interval) )
+        if chunk_size < 1:
+            msg = "Error generating thresholds, got < 1 AA in chunk_size"
+            self.logger.critical(msg)
+            raise RuntimeError,msg
+
+        ## try to find intervals for truncation
+        truncation_thresholds=self._generate_thresholds(var_list, chunk_size)
+        
+        # Jens' new untested method
+        #truncation_thresholds=self._generate_thresholds2(var_list, chunk_size)
+        
+        self.logger.debug("Got {0} thresholds: {1}".format( len(truncation_thresholds), truncation_thresholds ))
+
+        return truncation_thresholds
+
+    def _generate_thresholds(self,values,chunk_size):
+        """Jaclyn's threshold method
+        """
+        try_list=copy.deepcopy(values)
+        try_list.sort()
+        #print "try_list ",try_list
+
+        # print list(chunks(try_list, int(chunk_size)))
+        # For chunking list
+        def chunks(a_list, chunk_size):
+            for i in xrange(0, len(a_list), chunk_size):
+                yield a_list[i:i+chunk_size ]
+
+        thresholds=[]
+        for x in list( chunks(try_list, chunk_size ) ):
+            #print x, x[-1]
+            # For some cases, multiple residues share the same variance so we don't create a separate thereshold
+            if x[-1] not in thresholds:
+                thresholds.append(x[-1])
+                
+        return thresholds
+
+    def _generate_thresholds2(self,values,chunk_size):
+        """
+        This is Jens's update to Jaclyn's method that groups the residues by variances so that we split
+        them by variance, and try and fit chunk_size in each bin. Previously we tried to split by variance but didn't
+        group the residues by variance, so the same variance bin could cover multiple residue groups. 
+        """
+
+        # Create tuple mapping values to counts
+        data=[(i,values.count(i)) for i in sorted(set(values),reverse=True)]
+
+        thresholds=[]
+        counts=[]
+        first=True
+        for variance,count in data:
+            if first or counts[-1] + count > chunk_size:
+                thresholds.append(variance)
+                counts.append(count)
+                if first: first=False
+            else:
+                #thresholds[-1]=variance
+                counts[-1]+=count
+
+        thresholds.sort()
+        return thresholds
+       
     def ensemble_summary(self,ensemble_data):
         
         #cluster
@@ -386,48 +551,163 @@ e.ensemble_directory
         self.side_chain_treatments=None
         return
     
-    def truncate_models(self,models,model_data):
+    def subcluster_models(self,
+                          truncated_models,
+                          truncated_models_data,
+                          subcluster_program=None,
+                          subcluster_exe=None,
+                          radius_thresholds=None,
+                          ensemble_max_models=None):
+        
+        ensembles=[]
+        ensembles_data=[]
+        
+        # Use first model to get data on level
+        truncation_level=truncated_models_data.truncation_level
+        truncation_dir=truncated_models_data.truncation_dir
+            
+        # Run maxcluster to generate the distance matrix
+        if subcluster_program=='maxcluster':
+            clusterer = subcluster.MaxClusterer(self.subcluster_exe)
+        else:
+            assert False
+        clusterer.generate_distance_matrix(truncated_models)
 
+        # Loop through the radius thresholds
+        num_previous_models=-1 # set to -1 so comparison always false on first pass
+        for radius in radius_thresholds:
+
+            self.logger.debug("subclustering files under radius: {0}".format(radius))
+
+            # Get list of pdbs clustered according to radius threshold
+            cluster_files = clusterer.cluster_by_radius(radius)
+            self.logger.debug("Clustered {0} files".format(len(cluster_files)))
+            if cluster_files < 2:
+                self.logger.info( 'Could not cluster files using radius {0}'.format(radius))
+                continue
+
+            # For naming all files
+            basename='tl{0}_r{1}'.format(truncation_level, radius)
+
+            # Check if there are the same number of models in this ensemble as the previous one - if so
+            # the ensembles will be identical and we can skip this one
+            if num_previous_models == len(cluster_files):
+                self.logger.debug( 'Number of decoys in cluster ({0}) is the same as under previous threshold so excluding cluster {1}'.format( len( cluster_files ), basename ) )
+                continue
+            else:
+                num_previous_models = len(cluster_files)
+
+            # Got files so create the directories
+            subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
+            os.mkdir(subcluster_dir)
+            os.chdir(subcluster_dir)
+
+            # Restrict cluster to max_ensemble_models
+            if len(cluster_files) > ensemble_max_models:
+                self.logger.debug("{0} files in cluster so truncating list to first {1}".format(len(cluster_files), ensemble_max_models))
+                cluster_files = cluster_files[:ensemble_max_models]
+
+            # Write out the files for reference
+            file_list = "maxcluster_radius_{0}_files.list".format(radius)
+            with open(file_list, "w") as f:
+                for c in cluster_files:
+                    f.write(c+"\n")
+                f.write("\n")
+
+            # Run theseus to generate a file containing the aligned clusters
+            cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files
+            retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
+            if retcode != 0:
+                self.logger.debug( 'Could not create ensemble for files (models too diverse): {0}'.format( basename ) )
+                continue
+
+            # jmht - the previous Align_rosetta_fine_clusters_with_theseus routine was running theseus twice and adding the averaged
+            # ensemble from the first run to the ensemble. This seems to improve the results for the TOXD test case - maybe something to
+            # look at?
+            #cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files + [ basename+"run1_ave.pdb" ]
+            #retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
+
+            # Rename the file with the aligned files and append the path to the ensembles
+            cluster_file = os.path.join(subcluster_dir, basename+'_sup.pdb')
+            ensemble = os.path.join(subcluster_dir, basename+'.pdb')
+            shutil.move(cluster_file, ensemble)
+
+            # Count the number of atoms in the ensemble-only required for benchmark mode
+            natoms,nresidues=pdb_edit.PDBEdit().num_atoms_and_residues(ensemble,first=True)
+
+            # The data we've collected is the same for all pdbs in this level so just keep using the first  
+            ensemble_data=copy.copy(truncated_models_data)
+            ensemble_data.name = basename
+            ensemble_data.num_models = len( cluster_files )
+            ensemble_data.num_atoms=natoms
+            ensemble_data.radius_threshold = radius
+            ensemble_data.pdb = ensemble
+
+            # Get the centroid model name from the list of files given to theseus - we can't parse
+            # the pdb file as theseus truncates the filename
+            ensemble_data.centroid_model=os.path.splitext( os.path.basename(cluster_files[0]) )[0]
+            
+            ensembles.append(ensemble)
+            ensembles_data.append(ensemble_data)
+        
+        return ensembles,ensembles_data
+    
+    
+    def truncate_models(self,models,models_data,truncation_method,percent_truncation):
 
         # Create the directories we'll be working in
-        self.work_dir =  os.path.join( root_dir, 'fine_cluster_{0}'.format( ensemble_id ) )
-        os.mkdir( self.work_dir )
-        os.chdir( self.work_dir )
-
-        self.ensemble_dir = os.path.join( root_dir, 'ensembles_{0}'.format( ensemble_id ) )
-        os.mkdir( self.ensemble_dir )
+        truncate_dir =  os.path.join(self.work_dir, 'truncate')
+        os.mkdir(truncate_dir)
+        os.chdir(truncate_dir)
+        
+        # Calculate variances between pdb
+        var_by_res=self.calculate_variances(models)
 
         # Calculate which residues to keep under the different methods
-        if mode=='threshold':
-            self.calculate_residues_thresh()
-        elif mode=='percent':
-            self.calculate_residues_percent()
+        truncation_levels, truncation_variances, truncation_residues=None,None,None
+        if truncation_method=='percent':
+            truncation_levels, truncation_variances, truncation_residues=self.calculate_residues_percent(var_by_res,percent_truncation)
+        elif truncation_method=='threshold':
+            truncation_levels, truncation_variances, truncation_residues=self.calculate_residues_thresh(var_by_res)
         else:
-            raise RuntimeError,"Unrecognised ensembling mode: {0}".format(mode)
+            raise RuntimeError,"Unrecognised ensembling mode: {0}".format(truncation_method)
 
-        self.truncation_dirs=[]
-        self.truncation_models=[]
-        for i in range(len(self.truncation_levels)):
-            trunc_dir = os.path.join( self.work_dir, 'trunc_files_{0}'.format(self.truncation_levels[i]))
+        truncated_models=[]
+        truncated_models_data=[]
+        for i in range(len(truncation_levels)):
+            tlevel=truncation_levels[i]
+            tvar=truncation_variances[i]
+            tresidues=truncation_residues[i]
+            trunc_dir = os.path.join(truncate_dir, 'tlevel_{0}'.format(tlevel))
             os.mkdir(trunc_dir)
-            logging.info( 'truncating at: {0} in directory {1}'.format(self.truncation_thresholds[i],trunc_dir))
-            self.truncation_dirs.append(trunc_dir)
+            self.logger.info( 'truncating at: {0} in directory {1}'.format(tvar,trunc_dir))
 
             # list of models for this truncation level
             level_models = []
             pdbed = pdb_edit.PDBEdit()
-            for infile in self.cluster_models:
+            for infile in models:
                 pdbname = os.path.basename( infile )
-                pdbout = os.path.join( trunc_dir, pdbname )
+                pdbout = os.path.join(trunc_dir, pdbname)
                 # Loop through PDB files and create new ones that only contain the residues left after truncation
-                pdbed.select_residues( inpath=infile, outpath=pdbout, residues=self.truncation_residues[i] )
-                level_models.append( pdbout )
+                pdbed.select_residues(inpath=infile, outpath=pdbout, residues=tresidues)
+                level_models.append(pdbout)
+            
+            # Add the model
+            truncated_models.append(level_models)
 
-            self.truncated_models.append( level_models )
-        return
+            # Add the data
+            model_data=copy.copy(models_data)
+            model_data.truncation_level=tlevel
+            model_data.truncation_variance=tvar
+            model_data.truncation_residues=tresidues
+            model_data.num_residues=len(tresidues)
+            model_data.truncation_dir=trunc_dir
+            model_data.num_truncated_models = len(models)
+            
+            truncated_models_data.append(model_data)
+            
+        return truncated_models, truncated_models_data
 
-
-        return
 
 class Ensembler(object):
     """Class to generate ensembles from cluster of models"""
@@ -915,7 +1195,203 @@ class Ensembler(object):
             self.truncated_models.append( level_models )
         return
 
-class Test(unittest.TestCase):
+
+# class Test(unittest.TestCase):
+# 
+#     def setUp(self):
+#         """
+#         Get paths need to think of a sensible way to do this
+#         """
+# 
+#         thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+#         paths = thisd.split( os.sep )
+#         self.ample_dir = os.sep.join( paths[ : -1 ] )
+#         self.theseus_exe=ample_util.find_exe('theseus')
+# 
+#         return
+# 
+#     def testThresholds(self):
+#         """Test we can reproduce the original thresholds"""
+# 
+#         ensembler=Ensembler()
+# 
+#         ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
+#         os.mkdir(ensembler.work_dir)
+#         ensembler.theseus_exe=self.theseus_exe
+#         ensembler.percent_interval=5
+#         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+#         ensembler.cluster_models=glob.glob(mdir+os.sep+"*.pdb")
+#         thresholds=ensembler.generate_thresholds()
+# 
+#         self.assertEqual(29,len(thresholds))
+#         self.assertEqual([0.030966, 0.070663, 0.084085, 0.099076, 0.185523, 0.723045,
+#                           1.79753, 3.266976, 4.886417, 6.478746, 10.378687, 11.229685,
+#                           16.701308, 18.823698, 22.837544, 23.741723, 25.736834, 27.761794,
+#                           36.255004, 37.780944, 42.318928, 49.650732, 51.481748, 56.60685,
+#                           58.865232, 60.570085, 70.749036, 81.15141, 87.045704],
+#                          thresholds,
+#                          "Wrong truncation thresholds"
+#                          )
+#         shutil.rmtree(ensembler.work_dir)
+#         return
+#     
+#     def testCalculateResiduesThresh(self):
+#         """Test we can calculate the original list of residues"""
+# 
+#         ensembler=Ensembler()
+#         
+#         # This test for percent
+#         ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
+#         os.mkdir(ensembler.work_dir)
+#         ensembler.theseus_exe=self.theseus_exe
+#         ensembler.percent_interval=5
+#         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+#         ensembler.cluster_models=glob.glob(mdir+os.sep+"*.pdb")
+#         ensembler.calculate_residues_thresh()
+# 
+#         r=[[26, 27, 31, 32],
+#            [26, 27, 28, 30, 31, 32],
+#            [26, 27, 28, 29, 30, 31, 32, 33],
+#            [25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+#            [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+#            [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+#            [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+#            [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+#            [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+#            [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+#            [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
+#            [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
+#            [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#            [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#            [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#            [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#            [7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+#            [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+#            [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45],
+#            [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
+#            [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
+#            [2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
+#            [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 50, 53],
+#            [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53],
+#            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 57],
+#            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 56, 57],
+#            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
+#            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58],
+#            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
+#            ]
+# 
+#         r.reverse() # was set up for the old way
+#         self.assertEqual(r,ensembler.truncation_residues)
+# 
+#         self.assertEqual(ensembler.truncation_levels,
+#                          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29])
+#         
+#         self.assertEqual(ensembler.truncation_thresholds,
+#                          [87.045704, 81.15141, 70.749036, 60.570085, 58.865232, 56.60685, 51.481748, 49.650732, 42.318928, 37.780944, 
+#                           36.255004, 27.761794, 25.736834, 23.741723, 22.837544, 18.823698, 16.701308, 11.229685, 10.378687, 6.478746, 
+#                           4.886417, 3.266976, 1.79753, 0.723045, 0.185523, 0.099076, 0.084085, 0.070663, 0.030966])
+# 
+#         shutil.rmtree(ensembler.work_dir)
+#         return
+#     
+#     def testCalculateResiduesPercent(self):
+# 
+#         ensembler=Ensembler()
+# 
+#         ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
+#         os.mkdir(ensembler.work_dir)
+#         ensembler.theseus_exe=self.theseus_exe
+#         ensembler.percent_interval=5
+#         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+#         ensembler.cluster_models=glob.glob(mdir+os.sep+"*.pdb")
+#         if not ensembler.cluster_models:
+#             raise RuntimeError,"Cannot find any models in: {0}".format(mdir)
+#         ensembler.calculate_residues_percent()
+#         
+#         r=[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
+#            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
+#            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 57],
+#            [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53],
+#            [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
+#            [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
+#            [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
+#            [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+#            [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+#            [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#            [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#            [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
+#            [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
+#            [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+#            [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+#            [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+#            [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+#            [26, 27, 28, 29, 30, 31, 32, 33],
+#            [26, 27, 30, 31, 32],
+#            [31, 32]]
+#         
+#         
+# 
+#         self.assertEqual(ensembler.truncation_levels,
+#                          [100, 95, 90, 85, 80, 75, 69, 64, 59, 54, 49, 44, 39, 34, 29, 24, 19, 14, 8, 3])
+#         
+#         self.assertEqual(ensembler.truncation_thresholds,
+#                          [75.058226, 60.570085, 56.907929, 51.481748, 43.711297, 37.780944, 31.117855,
+#                           25.736834, 23.545518, 18.823698, 15.471155, 10.378687, 5.878349, 3.266976,
+#                           0.901114, 0.185523, 0.08613, 0.070663, 0.030966, 0.030966])
+# 
+#         shutil.rmtree(ensembler.work_dir)
+#         return
+# 
+# 
+#     def XtestGenThresh(self):
+#         l1=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+#         l2=[0,5,6,7,9,1,2,2,2,3,3,8,8,8,8,8,8,8,8,8,8,8,3,3,3,3,3,4,5,9]
+#         l3=[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5]
+#         
+#         e=Ensembler()
+#         
+#         
+#         for percent in [20,50]:
+#             
+#             chunk_size1=int(len(l1)*float(percent)/float(100))
+#             chunk_size2=int(math.ceil(len(l1)*float(percent)/float(100)))
+#             
+#             print "PERCENT ",percent
+#             t=e._generate_thresholds(l1,chunk_size1)
+#             print t
+#             t=e._generate_thresholds2(l1,chunk_size2)
+#             print t
+#             print
+#             
+#             chunk_size=int(math.ceil(len(l2)*float(percent)/float(100)))
+#             t=e._generate_thresholds(l2,chunk_size1)
+#             print t
+#             t=e._generate_thresholds2(l2,chunk_size2)
+#             print t
+#             print
+#             
+#             chunk_size=int(math.ceil(len(l3)*float(percent)/float(100)))
+#             t=e._generate_thresholds(l3,chunk_size1)
+#             print t
+#             t=e._generate_thresholds2(l3,chunk_size2)
+#             print t
+# 
+#         return
+#     
+#     def XtestTruncate(self):
+#         
+#         ensembler=Ensembler()
+#         ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
+#         os.mkdir(ensembler.work_dir)
+#         ensembler.theseus_exe=self.theseus_exe
+#         ensembler.percent_interval=80
+#         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+#         ensembler.cluster_models=glob.glob(mdir+os.sep+"*.pdb")
+#         
+#                 #print ensembler.truncate_models2()
+#         return
+
+class Test2(unittest.TestCase):
 
     def setUp(self):
         """
@@ -926,28 +1402,30 @@ class Test(unittest.TestCase):
         paths = thisd.split( os.sep )
         self.ample_dir = os.sep.join( paths[ : -1 ] )
         self.theseus_exe=ample_util.find_exe('theseus')
+        self.spicker_exe=ample_util.find_exe('spicker')
+        self.maxcluster_exe=ample_util.find_exe('maxcluster')
 
         return
 
     def testThresholds(self):
         """Test we can reproduce the original thresholds"""
 
-        ensembler=Ensembler()
+        ensembler=Ensembler2()
 
         ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
         os.mkdir(ensembler.work_dir)
         ensembler.theseus_exe=self.theseus_exe
         ensembler.percent_interval=5
         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
-        ensembler.cluster_models=glob.glob(mdir+os.sep+"*.pdb")
-        thresholds=ensembler.generate_thresholds()
-
-        self.assertEqual(29,len(thresholds))
-        self.assertEqual([0.030966, 0.070663, 0.084085, 0.099076, 0.185523, 0.723045,
-                          1.79753, 3.266976, 4.886417, 6.478746, 10.378687, 11.229685,
-                          16.701308, 18.823698, 22.837544, 23.741723, 25.736834, 27.761794,
-                          36.255004, 37.780944, 42.318928, 49.650732, 51.481748, 56.60685,
-                          58.865232, 60.570085, 70.749036, 81.15141, 87.045704],
+        cluster_models=glob.glob(mdir+os.sep+"*.pdb")
+        var_by_res=ensembler.calculate_variances(cluster_models)
+        thresholds=ensembler.generate_thresholds(var_by_res)
+        
+        self.assertEqual(30,len(thresholds),thresholds)
+        self.assertEqual([0.02235, 0.041896, 0.08155, 0.085867, 0.103039, 0.185265, 0.7058, 1.772884, 3.152793,
+                          4.900255, 6.206563, 10.250043, 10.772177, 16.071345, 18.292366, 22.432564, 23.265938,
+                          25.348501, 27.37951, 35.877391, 37.227859, 41.759805, 49.037625, 50.992344, 56.091738,
+                          58.09387, 59.917999, 70.052007, 80.235358, 86.028994],
                          thresholds,
                          "Wrong truncation thresholds"
                          )
@@ -957,7 +1435,7 @@ class Test(unittest.TestCase):
     def testCalculateResiduesThresh(self):
         """Test we can calculate the original list of residues"""
 
-        ensembler=Ensembler()
+        ensembler=Ensembler2()
         
         # This test for percent
         ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
@@ -965,150 +1443,122 @@ class Test(unittest.TestCase):
         ensembler.theseus_exe=self.theseus_exe
         ensembler.percent_interval=5
         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
-        ensembler.cluster_models=glob.glob(mdir+os.sep+"*.pdb")
-        ensembler.calculate_residues_thresh()
-
-        r=[[26, 27, 31, 32],
-           [26, 27, 28, 30, 31, 32],
-           [26, 27, 28, 29, 30, 31, 32, 33],
-           [25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
-           [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
-           [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
-           [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
-           [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
-           [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
-           [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
-           [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
-           [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
-           [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-           [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-           [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-           [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-           [7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-           [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-           [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45],
-           [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
-           [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
-           [2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
-           [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 50, 53],
-           [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53],
-           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 57],
-           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 56, 57],
-           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
-           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58],
-           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59]
-           ]
-
-        r.reverse() # was set up for the old way
-        self.assertEqual(r,ensembler.truncation_residues)
-
-        self.assertEqual(ensembler.truncation_levels,
-                         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29])
+        cluster_models=glob.glob(mdir+os.sep+"*.pdb")
         
-        self.assertEqual(ensembler.truncation_thresholds,
-                         [87.045704, 81.15141, 70.749036, 60.570085, 58.865232, 56.60685, 51.481748, 49.650732, 42.318928, 37.780944, 
-                          36.255004, 27.761794, 25.736834, 23.741723, 22.837544, 18.823698, 16.701308, 11.229685, 10.378687, 6.478746, 
-                          4.886417, 3.266976, 1.79753, 0.723045, 0.185523, 0.099076, 0.084085, 0.070663, 0.030966])
+        var_by_res=ensembler.calculate_variances(cluster_models)
+        truncation_levels, truncation_variances, truncation_residues=ensembler.calculate_residues_thresh(var_by_res)
+        
+        self.assertEqual(truncation_levels,
+                         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
+        
+        self.assertEqual(truncation_variances,
+                         [86.028994, 80.235358, 70.052007, 59.917999, 58.09387, 56.091738, 50.992344, 49.037625, 41.759805, 37.227859, 35.877391,
+                          27.37951, 25.348501, 23.265938, 22.432564, 18.292366, 16.071345, 10.772177, 10.250043, 6.206563, 4.900255, 3.152793,
+                          1.772884, 0.7058, 0.185265, 0.103039, 0.085867, 0.08155, 0.041896, 0.02235],
+                         truncation_variances)
+        
+
+        #residues=[]
+        #self.assertEqual(len(r),len(truncation_residues))
 
         shutil.rmtree(ensembler.work_dir)
         return
     
     def testCalculateResiduesPercent(self):
 
-        ensembler=Ensembler()
+        ensembler=Ensembler2()
 
         ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
         os.mkdir(ensembler.work_dir)
         ensembler.theseus_exe=self.theseus_exe
         ensembler.percent_interval=5
         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
-        ensembler.cluster_models=glob.glob(mdir+os.sep+"*.pdb")
-        if not ensembler.cluster_models:
-            raise RuntimeError,"Cannot find any models in: {0}".format(mdir)
-        ensembler.calculate_residues_percent()
-        
-        r=[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
-           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
-           [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 57],
-           [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53],
-           [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
-           [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
-           [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
-           [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-           [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-           [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-           [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-           [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
-           [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
-           [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
-           [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
-           [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
-           [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
-           [26, 27, 28, 29, 30, 31, 32, 33],
-           [26, 27, 30, 31, 32],
-           [31, 32]]
-        
-        
+        cluster_models=glob.glob(mdir+os.sep+"*.pdb")
+        var_by_res=ensembler.calculate_variances(cluster_models)
+        truncation_levels, truncation_variances, truncation_residues=ensembler.calculate_residues_percent(var_by_res,percent=5)
 
-        self.assertEqual(ensembler.truncation_levels,
+
+        ref=[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 57],
+            [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53],
+            [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
+            [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
+            [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
+            [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+            [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+            [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+            [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+            [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
+            [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
+            [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+            [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+            [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+            [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+            [26, 27, 28, 30, 31, 32, 33, 34],
+            [26, 27, 30, 31, 32],
+            [31, 32]]
+        self.assertEqual(ref,truncation_residues)
+
+        self.assertEqual(truncation_levels,
                          [100, 95, 90, 85, 80, 75, 69, 64, 59, 54, 49, 44, 39, 34, 29, 24, 19, 14, 8, 3])
         
-        self.assertEqual(ensembler.truncation_thresholds,
-                         [75.058226, 60.570085, 56.907929, 51.481748, 43.711297, 37.780944, 31.117855,
-                          25.736834, 23.545518, 18.823698, 15.471155, 10.378687, 5.878349, 3.266976,
-                          0.901114, 0.185523, 0.08613, 0.070663, 0.030966, 0.030966])
+        self.assertEqual(truncation_variances,
+                         [74.272253, 59.917999, 56.260987, 50.992344, 43.268754, 37.227859, 30.767268, 25.348501,
+                          23.050357, 18.292366, 15.287348, 10.250043, 5.66545, 3.152793, 0.874899, 0.185265, 0.090917,
+                          0.08155, 0.039639, 0.018215])
 
         shutil.rmtree(ensembler.work_dir)
         return
 
+    def testClustering(self):
 
-    def XtestGenThresh(self):
-        l1=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
-        l2=[0,5,6,7,9,1,2,2,2,3,3,8,8,8,8,8,8,8,8,8,8,8,3,3,3,3,3,4,5,9]
-        l3=[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,3,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5]
-        
-        e=Ensembler()
-        
-        
-        for percent in [20,50]:
-            
-            chunk_size1=int(len(l1)*float(percent)/float(100))
-            chunk_size2=int(math.ceil(len(l1)*float(percent)/float(100)))
-            
-            print "PERCENT ",percent
-            t=e._generate_thresholds(l1,chunk_size1)
-            print t
-            t=e._generate_thresholds2(l1,chunk_size2)
-            print t
-            print
-            
-            chunk_size=int(math.ceil(len(l2)*float(percent)/float(100)))
-            t=e._generate_thresholds(l2,chunk_size1)
-            print t
-            t=e._generate_thresholds2(l2,chunk_size2)
-            print t
-            print
-            
-            chunk_size=int(math.ceil(len(l3)*float(percent)/float(100)))
-            t=e._generate_thresholds(l3,chunk_size1)
-            print t
-            t=e._generate_thresholds2(l3,chunk_size2)
-            print t
+        ensembler=Ensembler2()
 
+        work_dir=os.path.join(os.getcwd(),"genthresh")
+        os.mkdir(work_dir)
+        ensembler.work_dir=work_dir
+        
+        ensembler.theseus_exe=self.theseus_exe
+        
+        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+        models=glob.glob(mdir+os.sep+"*.pdb")
+        
+        cluster_models,cluster_data=ensembler.cluster_models(models=models,
+                                                             cluster_method='spicker',
+                                                             num_clusters=3,
+                                                             cluster_exe=self.spicker_exe)
+        print cluster_models
+        print cluster_data
+        shutil.rmtree(ensembler.work_dir)
         return
     
-    def XtestTruncate(self):
-        
-        ensembler=Ensembler()
-        ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
-        os.mkdir(ensembler.work_dir)
+    def testEnsembling(self):
+
+        ensembler=Ensembler2()
+
+        work_dir=os.path.join(os.getcwd(),"genthresh")
+        os.mkdir(work_dir)
+        ensembler.work_dir=work_dir
         ensembler.theseus_exe=self.theseus_exe
-        ensembler.percent_interval=80
-        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
-        ensembler.cluster_models=glob.glob(mdir+os.sep+"*.pdb")
+        ensembler.cluster_exe=self.spicker_exe
+        ensembler.subcluster_exe=self.maxcluster_exe
         
-                #print ensembler.truncate_models2()
+        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+        models=glob.glob(mdir+os.sep+"*.pdb")
+        
+        ensembles,ensembles_data=ensembler.generate_ensembles(models,
+                                                                 cluster_method='spicker',
+                                                                 cluster_exe=self.spicker_exe,
+                                                                 num_clusters=1,
+                                                                 percent_truncation=5,
+                                                                 work_dir=None)
+        
+        print ensembles
+        print ensembles_data
+        shutil.rmtree(ensembler.work_dir)
         return
+
 
 def testSuite():
     suite = unittest.TestSuite()
@@ -1116,12 +1566,19 @@ def testSuite():
     suite.addTest(Test('testCalculateResiduesThresh'))
     suite.addTest(Test('testCalculateResiduesPercent'))
     return suite
+
+def testSuite2():
+    suite = unittest.TestSuite()
+    suite.addTest(Test2('testThresholds'))
+    suite.addTest(Test2('testCalculateResiduesThresh'))
+    suite.addTest(Test2('testCalculateResiduesPercent'))
+    return suite
     
 #
 # Run unit tests
 if __name__ == "__main__":
 
-    if False:
+    if True:
         root = logging.getLogger()
         root.setLevel(logging.DEBUG)
         ch = logging.StreamHandler(sys.stdout)
@@ -1131,5 +1588,5 @@ if __name__ == "__main__":
         ch.setFormatter(formatter)
         root.addHandler(ch)
 
-    unittest.TextTestRunner(verbosity=2).run(testSuite())
+    unittest.TextTestRunner(verbosity=2).run(testSuite2())
 
