@@ -265,45 +265,45 @@ class Ensembler(object):
 
         return clusters, clusters_data
     
-    def edit_side_chains(self,raw_ensembles,raw_ensembles_data,ensembles_directory):
+    def edit_side_chains(self,raw_ensemble,raw_ensemble_data,ensembles_directory):
         
         assert os.path.isdir(ensembles_directory),"Cannot find ensembles directory: {0}".format(ensembles_directory)
         pdbed = pdb_edit.PDBEdit()
         ensembles=[]
         ensembles_data=[]
-        for raw_ensemble, raw_ensemble_data in zip(raw_ensembles,raw_ensembles_data):
-            for sct in self.side_chain_treatments:
-                
-                # create filename based on side chain treatment
-                fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=ensembles_directory)
-                
-                # Create the files
-                if sct == "allatom":
-                    # For all atom just copy the file
-                    shutil.copy2(raw_ensemble,fpath)
-                elif sct == "reliable":
-                    pdbed.reliable_sidechains(raw_ensemble,fpath)
-                elif sct == "polya":
-                    pdbed.backbone(raw_ensemble,fpath)
-                else:
-                    raise RuntimeError,"Unrecognised side_chain_treatment: {0}".format(sct)
-                
-                # Count the number of atoms in the ensemble-only required for benchmark mode
-                natoms,nresidues=pdb_edit.PDBEdit().num_atoms_and_residues(fpath,first=True)
-                
-                # Process ensemble data
-                ensemble_data=copy.copy(raw_ensemble_data)
-                ensemble_data.side_chain_treatment=sct
-                ensemble_data.name='tl{0}_r{1}_{2}'.format(ensemble_data.truncation_level,
-                                                                    ensemble_data.subcluster_radius_threshold,
-                                                                    sct)
-                ensemble_data.pdb=fpath
-                ensemble_data.num_atoms=natoms
-                # check
-                assert ensemble_data.num_residues==nresidues,"Unmatching number of residues!"
-                
-                ensembles.append(fpath)
-                ensembles_data.append(ensemble_data)
+        for sct in self.side_chain_treatments:
+            
+            # create filename based on side chain treatment
+            fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=ensembles_directory)
+            
+            # Create the files
+            if sct == "allatom":
+                # For all atom just copy the file
+                shutil.copy2(raw_ensemble,fpath)
+            elif sct == "reliable":
+                pdbed.reliable_sidechains(raw_ensemble,fpath)
+            elif sct == "polya":
+                pdbed.backbone(raw_ensemble,fpath)
+            else:
+                raise RuntimeError,"Unrecognised side_chain_treatment: {0}".format(sct)
+            
+            # Count the number of atoms in the ensemble-only required for benchmark mode
+            natoms,nresidues=pdb_edit.PDBEdit().num_atoms_and_residues(fpath,first=True)
+            
+            # Process ensemble data
+            ensemble_data=copy.copy(raw_ensemble_data)
+            ensemble_data.side_chain_treatment=sct
+            ensemble_data.name='c{0}_tl{1}_r{2}_{3}'.format(ensemble_data.cluster_num,
+                                                            ensemble_data.truncation_level,
+                                                            ensemble_data.subcluster_radius_threshold,
+                                                            sct)
+            ensemble_data.pdb=fpath
+            ensemble_data.num_atoms=natoms
+            # check
+            assert ensemble_data.num_residues==nresidues,"Unmatching number of residues!"
+            
+            ensembles.append(fpath)
+            ensembles_data.append(ensemble_data)
                 
         return ensembles,ensembles_data
   
@@ -340,9 +340,13 @@ class Ensembler(object):
         # CHECK WE CAN RESOLVE EXECUTABLE PATHS
         
         self.logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
+    
+        # Create final ensembles directory
+        if not os.path.isdir(self.ensembles_directory):
+            os.mkdir(self.ensembles_directory)
 
-        ensembles = []
-        ensembles_data = []
+        self.ensembles = []
+        self.ensembles_data = []
         for cluster, cluster_data in zip(*self.cluster_models(models=models,
                                                               cluster_method=cluster_method,
                                                               num_clusters=num_clusters,
@@ -360,18 +364,11 @@ class Ensembler(object):
                                                                                subcluster_program=self.subcluster_program,
                                                                                subcluster_exe=self.subcluster_program,
                                                                                ensemble_max_models=self.ensemble_max_models)):
-                    ensembles.append(subcluster)
-                    ensembles_data.append(subcluster_data)
+                    for ensemble, ensemble_data in zip(*self.edit_side_chains(subcluster, subcluster_data, self.ensembles_directory)):
+                        self.ensembles.append(ensemble)
+                        self.ensembles_data.append(ensemble_data)
         
-        # Have all-atom side-chains so now prune down the side chains
-        if not os.path.isdir(self.ensembles_directory):
-            os.mkdir(self.ensembles_directory)
-        ensembles,ensembles_data = self.edit_side_chains(ensembles,ensembles_data,self.ensembles_directory)
-        
-        self.ensembles=ensembles
-        self.ensembles_data=ensembles_data
-        
-        return ensembles
+        return self.ensembles
 
     def generate_thresholds(self,var_by_res,percent_interval):
         """
@@ -474,6 +471,7 @@ class Ensembler(object):
         ensembles_data=[]
         
         # Use first model to get data on level
+        cluster_num=truncated_models_data.cluster_num
         truncation_level=truncated_models_data.truncation_level
         truncation_dir=truncated_models_data.truncation_dir
             
@@ -498,7 +496,7 @@ class Ensembler(object):
                 continue
 
             # For naming all files
-            basename='tl{0}_r{1}'.format(truncation_level, radius)
+            basename='c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)
 
             # Check if there are the same number of models in this ensemble as the previous one - if so
             # the ensembles will be identical and we can skip this one
