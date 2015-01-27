@@ -161,13 +161,13 @@ class Test(unittest.TestCase):
         cluster_method='spicker'
         percent_truncation=20
         truncation_method="percent"
-        ensembles=ensembler.generate_ensembles(models,
-                                                 cluster_method=cluster_method,
-                                                 cluster_exe=self.spicker_exe,
-                                                 num_clusters=num_clusters,
-                                                 percent_truncation=percent_truncation,
-                                                 truncation_method=truncation_method,
-                                                 work_dir=work_dir)
+        ensembler.generate_ensembles(models,
+                                     cluster_method=cluster_method,
+                                     cluster_exe=self.spicker_exe,
+                                     num_clusters=num_clusters,
+                                     percent_truncation=percent_truncation,
+                                     truncation_method=truncation_method,
+                                     work_dir=work_dir)
         
         print ensemble_summary(ensembler.ensembles_data)
         

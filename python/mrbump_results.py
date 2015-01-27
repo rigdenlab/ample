@@ -1,16 +1,18 @@
 #!/usr/bin/env ccp4-python
 
+import copy
+import cPickle
 import glob
 import logging
 import os
 import sys
 import types
+import unittest
 
 # Hack to make sure we can find the modules we need
 if __name__ == "__main__":
     root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
     sys.path.insert( 0, os.path.join( root, "scripts" ) )
-
 
 # Our imports
 import parse_arpwarp
@@ -148,10 +150,17 @@ class MrBumpResult(object):
         self.shelxePdb=None
         self.buccaneerPdb=None
         self.arpWarpPdb=None
-        self.buccaneerPdb=None
+
+        # misc data
+        self.phaserTFZ = None
+        self.phaserLLG = None
+        self.phaserTime = None
+        self.phaserKilled = None
+        self.molrepScore = None
+        self.molrepTime = None
 
         self.header = [] # The header format for this table
-
+        
         return
 
     def __str__(self):
@@ -205,98 +214,67 @@ class ResultsSummary(object):
         self.logger = logging.getLogger()
         # Add Null logger so we can be used without requiring a logger
         self.logger.addHandler(NullHandler())
+
         return
 
-    def _addFailedResults(self, mrbumpDir, failed, header):
+    def _addFailedResults(self, mrbumpDir, failed):
         """Add failures to self.results
 
         Args:
         failed: dict of {ensemble : result}
         header: list with header for results table
         """
-        assert failed and header
-
         count=0
         for ensemble, reason in failed.iteritems():
-            result = MrBumpResult()
+            d = self.createDict()
             # name hard-coded
-            result.name = "loc0_ALL_" + ensemble + "_UNMOD"
-            result.ensembleName=ensemble 
-            result.jobDir = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
-            result.header = header
-            result.solution = reason
-            self._getUnfinishedResult( result )
-            self.results.append( result )
+            d['Name'] = "loc0_ALL_" + ensemble + "_UNMOD"
+            d['SearchModel_name']=ensemble 
+            d['Job_dir'] = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
+            d['Solution_Type'] = reason
+            self.results.append( d )
             count += 1
-
         self.logger.debug("Added {0} MRBUMP result failures".format(count) )
         return
 
-#     def addBuccaneerResult(self, result ):
-#         """Add the buccaneer rebuild information to the result"""
-# 
-# 
-#         buccaneerPdb = os.path.join( result.mrDir,
-#                                      "build/shelxe/rebuild/build",
-#                                      "buccSX_output.pdb" )
-#         buccaneerLog = os.path.join( result.mrDir,
-#                                      "build/shelxe/rebuild/build",
-#                                      "buccaneer.log" )
-# 
-#         bp = parse_buccaneer.BuccaneerLogParser()
-#         if os.path.isfile( buccaneerLog ):
-#             bp.parse( buccaneerLog )
-#             result.buccFinalRfree = bp.finalRfree
-#             result.buccFinalRfact = bp.finalRfact
-# 
-#         if os.path.isfile( buccaneerPdb ):
-#             result.buccaneerPdb = buccaneerPdb
-# 
-#         return
-# 
-#     def addShelxeResult(self, result ):
-#         """Add the shelxe information to the result"""
-# 
-#         shelxePdb = os.path.join( result.mrDir,
-#                                   "build",
-#                                   "shelxe",
-#                                   "shelxe_{0}_loc0_ALL_{1}_UNMOD.pdb".format( result.program,
-#                                                                               result.ensembleName ) )
-#         if os.path.isfile( shelxePdb):
-#             result.shelxePdb = shelxePdb
-# 
-#         shelxeLog = os.path.join( result.mrDir,
-#                                   "build",
-#                                   "shelxe",
-#                                   "shelxe_run.log" )
-# 
-#         if os.path.isfile( shelxeLog ):
-#             shelxeP = parse_shelxe.ShelxeLogParser( shelxeLog )
-#             #assert result.shelxeCC == shelxeP.CC,"Mismatching ShelxeCC scores"
-#             result.shelxeAvgChainLength = shelxeP.avgChainLength
-#             result.shelxeLog            = shelxeLog
-#             result.shelxeMaxChainLength = shelxeP.maxChainLength
-#             result.shelxeNumChains      = shelxeP.numChains
-# 
-#             # Another horrible hack - add the title to the header
-#             result.header.append('SHELXE_ACL')
-#         else:
-#             #assert result.shelxeCC == shelxeP.CC,"Mismatching ShelxeCC scores"
-#             result.shelxeAvgChainLength = 0
-#             result.shelxeLog            = ""
-#             result.shelxeMaxChainLength = 0
-#             result.shelxeNumChains      = 0
-# 
-#             # Another horrible hack - add the title to the header
-#             result.header.append('SHELXE_ACL')
-# 
-#         return
-
+    def createDict(self):
+        d = {}
+        d['Job_dir'] = None
+        d['MR_dir'] = None
+        d['SearchModel_name'] = None
+        d['MR_program'] = None
+        d['Solution_Type'] = None
+        d['final_Rfact'] = None
+        d['final_Rfree'] = None
+        d['SHELXE_CC'] = None
+        d['SHELXE_ACL'] = None
+        d['Bucc_final_Rfact'] = None
+        d['Bucc_final_Rfree'] = None
+        d['ARP_final_Rfact'] = None
+        d['ARP_final_Rfree'] = None
+        
+        d['PHASER_pdb'] = None
+        d['MOLREP_pdb'] = None
+        d['REFMAC_pdb'] = None
+        d['SHELXE_pdb'] = None
+        d['Bucc_final_pdb'] = None
+        d['ARP_final_pdb'] = None
+        
+        d['PHASER_TFZ'] = None
+        d['PHASER_LLG'] = None
+        d['PHASER_time'] = None
+        d['PHASER_killed'] = None
+        
+        d['MOLREP_score'] = None
+        d['MOLREP_time'] = None
+        
+        return d
 
     def extractResults( self, mrbumpDir ):
         """
         Find the results from running MRBUMP and sort them
         """
+        
         mrbumpDir = os.path.abspath( mrbumpDir )
         
         if not os.path.isdir(mrbumpDir):
@@ -330,7 +308,6 @@ class ResultsSummary(object):
                 continue
 
             self.logger.debug(" -- checking directory for results: {0}".format( jobDir ) )
-
             # Check if finished
             if not os.path.exists( os.path.join( jobDir, "results", "finished.txt" ) ):
                 self.logger.debug(" Found unfinished job: {0}".format( jobDir ) )
@@ -339,28 +316,27 @@ class ResultsSummary(object):
 
             # Check resultsTable.dat
             resultsTable = os.path.join( jobDir,"results", "resultsTable.dat" )
-            if not os.path.exists(resultsTable):
-                self.logger.debug(" -- Could not find file: {0}".format( resultsTable ) )
-                failed[ ensemble ] = "missing-resultsTable.dat"
+            resultsDict = os.path.join( jobDir,"results", "resultsTable.pkl" )
+            if os.path.isfile(resultsDict):
+                self.mode="dict"
+                self.results += self.processResultsPkl(resultsDict)
+            elif os.path.isfile(resultsTable):
+                self.results += self.parseTableDat(resultsTable)
+            else:
+                self.logger.debug(" -- Could not find results files: {0} or {1}".format(resultsTable,resultsDict))
+                failed[ ensemble ] = "missing-results-file"
                 continue
-
-            # Extract the result
-            self.results += self.parseTableDat(resultsTable)
-
-#         if not header or not len(header):
-#             self.logger.warn("Could not extract any results from directory - no header: {0}".format( mrbumpDir ) )
-#             return False
 
         # Process the failed results
         if failed and len(self.results):
-            self._addFailedResults( mrbumpDir, failed, self.results[0].header )
+            self._addFailedResults(mrbumpDir, failed)
 
         if not len(self.results):
             self.logger.warn("Could not extract any results from directory: {0}".format( mrbumpDir ) )
             return False
 
         # Sort the results
-        self.sortResults(self.results)
+        self.sortResultsD(self.results)
 
         return True
 
@@ -392,6 +368,49 @@ class ResultsSummary(object):
         return
 
     def parseTableDat(self, tfile):
+        
+        tresults = self._parseTableDat(tfile)
+        
+        results=[]
+        # Now convert to the dict form
+        for r in tresults:
+            d = {}
+            d['Job_dir'] = r.jobDir
+            d['MR_dir'] = r.mrDir
+            d['Name'] = r.name
+            d['SearchModel_name'] = r.ensembleName
+            d['MR_program'] = r.program
+            d['Solution_Type'] = r.solution
+            d['final_Rfact'] = r.rfact
+            d['final_Rfree'] = r.rfree
+            d['SHELXE_CC'] = r.shelxeCC
+            d['SHELXE_ACL'] = r.shelxeACL
+            d['Bucc_final_Rfact'] = r.buccFinalRfact
+            d['Bucc_final_Rfree'] = r.buccFinalRfree
+            d['ARP_final_Rfact'] = r.arpWarpFinalRfact
+            d['ARP_final_Rfree'] = r.arpWarpFinalRfree
+            
+            d['PHASER_pdb'] = r.phaserPdb
+            d['MOLREP_pdb'] = r.molrepPdb
+            d['REFMAC_pdb'] = r.refmacPdb
+            d['SHELXE_pdb'] = r.shelxePdb
+            d['Bucc_final_pdb'] = r.buccaneerPdb
+            d['ARP_final_pdb'] = r.arpWarpPdb
+            
+            d['PHASER_TFZ'] = r.phaserTFZ
+            d['PHASER_LLG'] = r.phaserLLG
+            d['PHASER_time'] = r.phaserTime
+            d['PHASER_killed'] = r.phaserKilled
+            
+            d['MOLREP_score'] = r.molrepScore
+            d['MOLREP_time'] = r.molrepTime
+            
+            results.append(d)
+        
+        return results
+    
+    
+    def _parseTableDat(self, tfile):
         """Read a resultsTable file and return a list of MrBump results objects"""
 
         # Extract the various components from the path
@@ -513,6 +532,45 @@ class ResultsSummary(object):
 
         return results
     
+    def processResultsPkl(self,resultsPkl):
+        """Process dictionary of form:
+        
+        {'loc0_ALL_c1_tl100_r2_allatom_UNMOD':
+           {'MOLREP': {'Molrep_time': None,
+                       'Solution_Type': 'PHASER_FAIL',
+                       'Phaser_killed': None,
+                       'Phaser_time': None,
+                       'ARP_final_Rfree': None,
+                       'Molrep_score': None,
+                       'Phaser_TFZ': None,
+                       'ARP_final_Rfact': None,
+                       'Bucc_final_Rfree': None,
+                       'final_Rfree': 1.0,
+                       'SHELXE_ACL': None,
+                       'final_Rfact': 1.0,
+                       'SHELXE_CC': None,
+                       'SHELXE_time': None,
+                       'SHELXE_MCL': None,
+                       'Bucc_final_Rfact': None,
+                       'SHELXE_NC': None,
+                       'Phaser_LLG': None},
+            {'PHASER' : ...
+        """
+        with open(resultsPkl) as f:
+            rD=cPickle.load(f)
+        if not rD: return []
+        
+        results=[]
+        for name,d1 in rD.iteritems():
+            for mrprog,d2 in d1.iteritems():
+                # Add MR program as dictionary entry
+                d = copy.copy(d2)
+                d['SearchModel_name'] = name
+                d['MR_program'] = mrprog
+                results.append(d)
+                
+        return results
+    
     def analyseResult(self,result):
         
         mrDir = result.mrDir
@@ -608,7 +666,35 @@ class ResultsSummary(object):
         if sortf:
             # Now sort by the key
             results.sort(key=sortf, reverse=reverse)
+        return
+    
+    def sortResultsD( self, results ):
+        """
+        Sort the results
+        """
+        
+        # Check each result to see what attributes are set and use this to work out how we rate this run
+        reverse=False
+        sortf=False
+        for r in results:
+            if 'SHELXE_CC' in r and r['SHELXE_CC'] and float(r['SHELXE_CC']) > -1.0:
+                reverse=True
+                sortf = lambda x: float(0) if x['SHELXE_CC']  is None else float( x['SHELXE_CC'])
+                break
+            # Not sure what to do about buccaneer/arpwarp when no shelxe?
+#             elif r.buccRfree and r.buccRfree != "--" and float(r.buccRfree) < 1.0:
+#                 sortf = lambda x: float( x.buccRfree )
+#                 break
+#             elif r.arpWarpRfree and r.arpWarpRfree != "--" and float(r.arpWarpRfree) < 1.0:
+#                 sortf = lambda x: float( x.arpWarpRfree )
+#                 break
+            elif 'final_Rfree' in r and r['final_Rfree'] and float(r['final_Rfree']) < 1.0:
+                sortf = lambda x: float('inf') if x['final_Rfree']  is None else float( x['final_Rfree'] )
+                break
 
+        if sortf:
+            # Now sort by the key
+            results.sort(key=sortf, reverse=reverse)
         return
 
     def summariseResults( self, mrbumpDir ):
@@ -624,22 +710,13 @@ class ResultsSummary(object):
         """Return a string suitable for printing the sorted results"""
 
         resultsTable = []
-
-        #Header
-        # The best result may have more info (e.g. shelxe info) aso we use this to
-        # work out what data we should present
-        topHeader = self.results[0].header
-        resultsTable.append( topHeader )
-
+        keys = ['SearchModel_name','MR_program','Solution_Type','final_Rfact','final_Rfree','SHELXE_CC',
+                'SHELXE_ACL','Bucc_final_Rfact','Bucc_final_Rfree','ARP_final_Rfact','ARP_final_Rfree']
+        resultsTable.append(keys)
         for result in self.results:
             resultLine = []
-            #for h in result.header:
-            for h in topHeader:
-                if h == 'Ensemble_Name':
-                    a=result.ensembleName
-                else:
-                    a=getattr(result, self.title2attr[h])
-                resultLine.append(a)
+            for k in keys:
+                resultLine.append(result[k])
             resultsTable.append( resultLine )
 
         # Format the results
@@ -649,141 +726,35 @@ class ResultsSummary(object):
         r = "\n\nOverall Summary:\n\n"
         r += summary
 
-        r += '\nBest Molecular Replacement results so far are in:\n\n'
-        r +=  self.results[0].mrDir
+#         r += '\nBest Molecular Replacement results so far are in:\n\n'
+#         r +=  self.results[0]['MR_dir']
 
-        if self.results[0].pdb and os.path.isfile(self.results[0].pdb):
-            r += '\n\nFinal PDB is:\n\n'
-            r +=  self.results[0].pdb
+#         if self.results[0].pdb and os.path.isfile(self.results[0].pdb):
+#             r += '\n\nFinal PDB is:\n\n'
+#             r +=  self.results[0].pdb
         r += '\n\n'
 
         return r
-#
-# DEPRECATED CODE BELOW HERE
-#
-#def get_rfree(pdb):
-#  pdb = open(pdb)
-#
-#  freer_pattern = re.compile('REMARK\s*\d*\s*FREE R VALUE\s*\:\s*(\d*\.\d*)')
-#  FreeR = 'nan'
-#
-#  for line in pdb:
-#
-#    if re.search(freer_pattern, line):
-#    #  print line
-#      split=  re.split(freer_pattern, line)
-#   #   print split
-#      FreeR = split[1]
-#
-#  return FreeR
-############################
-#
-#def get_shelx_score(RESULT):
-#
-#    Best_result = 0
-#    result = open(RESULT)
-#    fail_pattern = ('\*\* Unable to trace map - giving up \*\*')
-#    pattern = re.compile('CC for partial structure against native data =\s*(\d*\.\d*)\s*%')
-#    for line in result:
-#       if re.search(pattern, line):
-#        split= re.split(pattern, line)
-#      #  print split
-#        if float(split[1]) > Best_result:
-#          Best_result = float(split[1])
-#       if re.search(fail_pattern, line):
-#        Best_result = line.rstrip('\n')
-#
-#    return Best_result
-#
-###########################
-#def make_log(mr_bump_path, final_log):
-#  final_log = open(final_log, "w")
-#
-#  list_dir = os.listdir(mr_bump_path)
-#  for a_dir in list_dir:
-#    if os.path.isdir(mr_bump_path + '/'+a_dir):
-#
-#     name=re.sub('search_', '', a_dir)
-#     name=re.sub('_mrbump', '', name)
-#
-#     phaser_pdb = mr_bump_path + '/'+a_dir+'/data/loc0_ALL_'+name+'/unmod/mr/phaser/refine/refmac_phaser_loc0_ALL_'+name+'_UNMOD.pdb'
-#     molrep_pdb = mr_bump_path + '/'+a_dir+'/data/loc0_ALL_'+name+'/unmod/mr/molrep/refine/refmac_molrep_loc0_ALL_'+name+'_UNMOD.pdb'
-#     phaser_log = mr_bump_path + '/'+a_dir+'/data/loc0_ALL_'+name+'/unmod/mr/phaser/phaser_loc0_ALL_'+name+'_UNMOD.1.pdb'
-#
-#     shelx_phaser = mr_bump_path + '/'+a_dir+'/phaser_shelx/RESULT'
-#     shelx_molrep = mr_bump_path + '/'+a_dir+'/molrep_shelx/RESULT'
-#
-#     if os.path.exists(phaser_pdb):
-#      if os.path.exists(shelx_phaser):
-#        phaser_FreeR =   get_rfree(phaser_pdb)
-#        phaser_shelx =   get_shelx_score(shelx_phaser)
-#        final_log.write('Ensembe ' + name+'  phaser FreeR: '+phaser_FreeR +  '  shelx score: '+str(phaser_shelx) + '\n')
-#        final_log.flush()
-#
-#     if os.path.exists(molrep_pdb):
-#      if os.path.exists(shelx_molrep):
-#        molrep_FreeR =   get_rfree(molrep_pdb)
-#        molrep_shelx =   get_shelx_score(shelx_molrep)
-#        final_log.write('Ensembe ' + name+'  molrep FreeR: '+molrep_FreeR +  '  shelx score: '+str(molrep_shelx) + '\n')
-#        final_log.flush()
-#
-#
-#def get_shel_score(pdb):
-#  print 'here'
-#  pdb=open(pdb)
-#  score = 0
-#
-#  pattern=re.compile('CC\s*=\s*(\d*\.\d*)')
-#  for line in pdb:
-#
-#   if re.search(pattern, line):
-#
-#     split = re.split(pattern,line)
-#
-#     score = split[1]
-#  return score
-## # # # # # # # # # # # # # # #
-#
-#def rank_results(mrbump_path, overpath):
-#
-# order = []
-#
-# if not os.path.exists( os.path.join(overpath, 'RESULTS')):
-#   os.mkdir(os.path.join(overpath, 'RESULTS'))
-#
-#
-#
-# for folder in os.listdir(mrbump_path):
-#  if  os.path.isdir(mrbump_path+'/'+folder):
-#
-#
-#    if os.path.exists(mrbump_path+'/'+folder+'/phaser_shelx'): # phaser shelx
-#       if os.path.exists(mrbump_path+'/'+folder+'/phaser_shelx/orig.pdb'):
-#          score = get_shel_score(mrbump_path+'/'+folder+'/phaser_shelx/orig.pdb')
-#          order.append([mrbump_path+'/'+folder+'/phaser_shelx/XYZOUT', float( score), mrbump_path+'/'+folder+'/phaser_shelx/HKLOUT' ])
-#
-#    if os.path.exists(mrbump_path+'/'+folder+'/molrep_shelx'): # phaser shelx
-#       if os.path.exists(mrbump_path+'/'+folder+'/molrep_shelx/orig.pdb'):
-#          score = get_shel_score(mrbump_path+'/'+folder+'/molrep_shelx/orig.pdb')
-#          order.append([mrbump_path+'/'+folder+'/molrep_shelx/XYZOUT', float( score), mrbump_path+'/'+folder+'/molrep_shelx/HKOUT' ])
-#          print 'GOT'
-#
-#
-#
-# index=1
-# order.sort(key=lambda tup: tup[1])
-# order.reverse()
-# for x in order:
-#   print x
-#   os.system('cp  ' + x[0] + ' '+ os.path.join(overpath, 'RESULTS', 'result_'+str(index)+'.pdb') )
-#   os.system('cp  ' + x[2] + ' '+ os.path.join(overpath, 'RESULTS', 'result_'+str(index)+'.mtz') )
-#
-#   index+=1
-#############
-##mr_bump_path = '/home/jaclyn/Baker/test_cases/1MB1/MRBUMP'
-##final_log = '/home/jaclyn/Baker/test_cases/1MB1/MRBUMP/FINAL'
-##make_log(mr_bump_path,final_log)
 
+class Test(unittest.TestCase):
+
+
+    def testResultsDict(self):
+        """Parse a results file"""
+        
+        resultsPkl="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_0/MRBUMP/MRBUMP/search_c1_tl100_r2_allatom_mrbump/results/resultsTable.pkl"
+
+        rs=ResultsSummary()
+        print rs.processResultsPkl(resultsPkl)
+        
+    def testProcess(self):
+        """Parse a results file"""
+        
+        mrbdir="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_0/MRBUMP/MRBUMP"
+        rs=ResultsSummary()
+        print rs.summariseResults(mrbdir)
+
+        return
 
 if __name__ == "__main__":
     if len(sys.argv) == 2:

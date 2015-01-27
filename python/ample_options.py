@@ -167,7 +167,6 @@ class AmpleOptions(object):
                         'SHELXE_Avg_Chain' : 'shelxeAvgChainLength',
                     }
 
-
         if not cluster:
             # Get number of clusters from the length of the mrbump results lists
             clusters = [ i for i in range( len( self.d['mrbump_results'] ) ) ]
