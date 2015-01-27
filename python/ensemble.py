@@ -96,9 +96,9 @@ def ensemble_summary(ensembles_data):
     rstr += "Truncation method: {0}\n".format(truncation_method)
     rstr += "Percent truncation: {0}\n".format(percent_truncation)
     rstr += "Number of clusters: {0}\n".format(num_clusters)
-    rstr += "\n"
     
     for cn in sorted(clusters.keys()):
+        rstr += "\n"
         rstr += "Cluster {0}\n".format(cn)
         rstr += "Number of models: {0}\n".format(clusters[cn]['cluster_num_models'])
         rstr += "Cluster centroid: {0}\n".format(clusters[cn]['cluster_centroid'])

@@ -190,17 +190,19 @@ class Ensembler(object):
         #--------------------------------
         # get variations between pdbs
         #--------------------------------
+        work_dir=os.getcwd()
         cmd = [ self.theseus_exe, "-a0" ] + cluster_models
+        logfile=os.path.join(work_dir,"theseus.log")
         retcode = ample_util.run_command(cmd,
-                                         logfile=os.path.join(self.work_dir,"theseus.log"),
-                                         directory=self.work_dir)
+                                         logfile=logfile,
+                                         directory=work_dir)
         if retcode != 0:
-            msg = "non-zero return code for theseus in generate_thresholds!"
-            self.logger.critical( msg )
+            msg = "non-zero return code for theseus in generate_thresholds!\n See log: {0}".format(logfile)
+            self.logger.critical(msg)
             raise RuntimeError, msg
 
         variances=[]
-        variance_log=os.path.join(self.work_dir,'theseus_variances.txt')
+        variance_log=os.path.join(work_dir,'theseus_variances.txt')
         with open(variance_log) as f:
             for i, line in enumerate(f):
                 # Skip header
@@ -345,6 +347,9 @@ class Ensembler(object):
                                                               cluster_method=cluster_method,
                                                               num_clusters=num_clusters,
                                                               cluster_exe=cluster_exe)):
+            if len(cluster) < 2:
+                self.logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data.cluster_num))
+                continue
             for truncated_models, truncated_models_data in zip(*self.truncate_models(cluster,
                                                                                      cluster_data,
                                                                                      truncation_method=truncation_method,
@@ -555,9 +560,11 @@ class Ensembler(object):
         return ensembles,ensembles_data
     
     def truncate_models(self,models,models_data,truncation_method,percent_truncation):
+        
+        assert len(models) > 1,"Cannot truncate as < 2 models!"
 
         # Create the directories we'll be working in
-        truncate_dir =  os.path.join(self.work_dir, 'truncate')
+        truncate_dir =  os.path.join(self.work_dir, 'truncate_{0}'.format(models_data.cluster_num))
         os.mkdir(truncate_dir)
         os.chdir(truncate_dir)
         
