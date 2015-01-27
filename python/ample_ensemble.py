@@ -251,19 +251,52 @@ class Ensembler(object):
                 clusters.append(cluster)
                 
                 # Data on the models
-                cluster_data=EnsembleData()
+                cluster_data=self.createDict()
                 d=spickerer.results[i]
-                cluster_data.cluster_num=i+1
-                cluster_data.cluster_centroid=d.cluster_centroid
-                cluster_data.cluster_num_models=d.cluster_size
-                cluster_data.cluster_method=cluster_method
-                cluster_data.num_clusters=num_clusters
+                cluster_data['cluster_num']=i+1
+                cluster_data['cluster_centroid']=d.cluster_centroid
+                cluster_data['cluster_num_models']=d.cluster_size
+                cluster_data['cluster_method']=cluster_method
+                cluster_data['num_clusters']=num_clusters
                 
                 clusters_data.append(cluster_data)
         else:
             raise RuntimeError,'Unrecognised clustering method: {0}'.format(cluster_method)
 
         return clusters, clusters_data
+    
+    def createDict(self):
+        """Create an empty dictionary
+        Not strictly necessary but it's a place to remember what we capture
+        """
+        d={}
+        d['cluster_method'] = None
+        d['num_clusters'] = None
+        d['cluster_num'] = None
+        d['cluster_centroid'] = None
+        d['cluster_num_models'] = None
+        
+        # truncation info
+        d['truncation_level'] = None
+        d['percent_truncation'] = None
+        d['truncation_method'] = None
+        d['truncation_residues'] = None
+        d['truncation_dir'] = None
+        d['truncation_variance'] = None
+        d['num_residues'] = None
+
+        # subclustering info
+        d['num_models'] = None
+        d['subcluster_radius_threshold'] = None
+        d['subcluster_centroid_model'] = None
+    
+        # ensemble info
+        d['name'] = None
+        d['side_chain_treatment'] = None
+        d['num_atoms'] = None
+        d['pdb'] = None # path to the ensemble file
+        
+        return d
     
     def edit_side_chains(self,raw_ensemble,raw_ensemble_data,ensembles_directory):
         
@@ -292,15 +325,15 @@ class Ensembler(object):
             
             # Process ensemble data
             ensemble_data=copy.copy(raw_ensemble_data)
-            ensemble_data.side_chain_treatment=sct
-            ensemble_data.name='c{0}_tl{1}_r{2}_{3}'.format(ensemble_data.cluster_num,
-                                                            ensemble_data.truncation_level,
-                                                            ensemble_data.subcluster_radius_threshold,
+            ensemble_data['side_chain_treatment']=sct
+            ensemble_data['name']='c{0}_tl{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
+                                                            ensemble_data['truncation_level'],
+                                                            ensemble_data['subcluster_radius_threshold'],
                                                             sct)
-            ensemble_data.pdb=fpath
-            ensemble_data.num_atoms=natoms
+            ensemble_data['pdb']=fpath
+            ensemble_data['num_atoms']=natoms
             # check
-            assert ensemble_data.num_residues==nresidues,"Unmatching number of residues!"
+            assert ensemble_data['num_residues']==nresidues,"Unmatching number of residues!"
             
             ensembles.append(fpath)
             ensembles_data.append(ensemble_data)
@@ -471,9 +504,9 @@ class Ensembler(object):
         ensembles_data=[]
         
         # Use first model to get data on level
-        cluster_num=truncated_models_data.cluster_num
-        truncation_level=truncated_models_data.truncation_level
-        truncation_dir=truncated_models_data.truncation_dir
+        cluster_num=truncated_models_data['cluster_num']
+        truncation_level=truncated_models_data['truncation_level']
+        truncation_dir=truncated_models_data['truncation_dir']
             
         # Run maxcluster to generate the distance matrix
         if subcluster_program=='maxcluster':
@@ -543,14 +576,13 @@ class Ensembler(object):
 
             # The data we've collected is the same for all pdbs in this level so just keep using the first  
             ensemble_data=copy.copy(truncated_models_data)
-            #ensemble_data.name = basename
-            ensemble_data.num_models = len( cluster_files )
-            ensemble_data.subcluster_radius_threshold = radius
-            ensemble_data.pdb = ensemble
+            ensemble_data['num_models'] = len( cluster_files )
+            ensemble_data['subcluster_radius_threshold'] = radius
+            ensemble_data['pdb'] = ensemble
 
             # Get the centroid model name from the list of files given to theseus - we can't parse
             # the pdb file as theseus truncates the filename
-            ensemble_data.subcluster_centroid_model=os.path.basename(cluster_files[0])
+            ensemble_data['subcluster_centroid_model']=os.path.basename(cluster_files[0])
             
             ensembles.append(ensemble)
             ensembles_data.append(ensemble_data)
@@ -562,7 +594,7 @@ class Ensembler(object):
         assert len(models) > 1,"Cannot truncate as < 2 models!"
 
         # Create the directories we'll be working in
-        truncate_dir =  os.path.join(self.work_dir, 'truncate_{0}'.format(models_data.cluster_num))
+        truncate_dir =  os.path.join(self.work_dir, 'truncate_{0}'.format(models_data['cluster_num']))
         os.mkdir(truncate_dir)
         os.chdir(truncate_dir)
         
@@ -603,13 +635,13 @@ class Ensembler(object):
 
             # Add the data
             model_data=copy.copy(models_data)
-            model_data.truncation_level=tlevel
-            model_data.truncation_variance=tvar
-            model_data.truncation_residues=tresidues
-            model_data.num_residues=len(tresidues)
-            model_data.truncation_dir=trunc_dir
-            model_data.percent_truncation = percent_truncation
-            model_data.truncation_method = truncation_method
+            model_data['truncation_level']=tlevel
+            model_data['truncation_variance']=tvar
+            model_data['truncation_residues']=tresidues
+            model_data['num_residues']=len(tresidues)
+            model_data['truncation_dir']=trunc_dir
+            model_data['percent_truncation'] = percent_truncation
+            model_data['truncation_method'] = truncation_method
             
             truncated_models_data.append(model_data)
             
@@ -791,7 +823,7 @@ class Test(unittest.TestCase):
         
         d = cluster_data[2]
         self.assertEqual(os.path.basename(d.cluster_centroid),'1_S_00000001.pdb')
-        self.assertEqual(d.cluster_num_models,1)
+        self.assertEqual(d['cluster_num_models'],1)
         shutil.rmtree(ensembler.work_dir)
         return
     
@@ -846,14 +878,13 @@ class Test(unittest.TestCase):
         self.assertEqual([os.path.basename(m) for m in ensembles],eref)
         d = ensembler.ensembles_data[5]
 
-
-        self.assertEqual(d.percent_truncation,percent_truncation)
-        self.assertEqual(d.truncation_method,truncation_method)
-        self.assertEqual(d.cluster_method,cluster_method)
-        self.assertEqual(d.num_clusters,num_clusters)
-        self.assertEqual(d.truncation_variance,13.035172)
-        self.assertEqual(d.num_atoms,290)
-        self.assertEqual(d.subcluster_centroid_model,'4_S_00000002.pdb')
+        self.assertEqual(d['percent_truncation'],percent_truncation)
+        self.assertEqual(d['truncation_method'],truncation_method)
+        self.assertEqual(d['cluster_method'],cluster_method)
+        self.assertEqual(d['num_clusters'],num_clusters)
+        self.assertEqual(d['truncation_variance'],13.035172)
+        self.assertEqual(d['num_atoms'],290)
+        self.assertEqual(d['subcluster_centroid_model'],'4_S_00000002.pdb')
         
         shutil.rmtree(ensembler.work_dir)
         return
@@ -887,14 +918,14 @@ class Test(unittest.TestCase):
         self.assertEqual(len(ensembles),162,len(ensembles))
         d = ensembler.ensembles_data[5]
         
-        self.assertEqual(d.truncation_variance,27.389253)
-        self.assertEqual(d.percent_truncation,percent_truncation)
-        self.assertEqual(d.truncation_method,truncation_method)
-        self.assertEqual(d.cluster_method,cluster_method)
-        self.assertEqual(d.num_clusters,num_clusters)
-        self.assertEqual(d.num_atoms,290)
-        self.assertEqual(d.side_chain_treatment,'polya')
-        self.assertEqual(d.subcluster_centroid_model,'4_S_00000002.pdb')
+        self.assertEqual(d['truncation_variance'],27.389253)
+        self.assertEqual(d['percent_truncation'],percent_truncation)
+        self.assertEqual(d['truncation_method'],truncation_method)
+        self.assertEqual(d['cluster_method'],cluster_method)
+        self.assertEqual(d['num_clusters'],num_clusters)
+        self.assertEqual(d['num_atoms'],290)
+        self.assertEqual(d['side_chain_treatment'],'polya')
+        self.assertEqual(d['subcluster_centroid_model'],'4_S_00000002.pdb')
         
         #shutil.rmtree(ensembler.work_dir)
         return

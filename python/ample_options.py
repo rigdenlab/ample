@@ -2,18 +2,11 @@
 Class to hold the options for ample
 '''
 # python imports
-import copy
 import os
-
-# Our imports
-import printTable
 
 class AmpleOptions(object):
 
     def __init__(self):
-
-
-
         # The dictionary with all the options
         self.d = {}
 
@@ -139,104 +132,7 @@ class AmpleOptions(object):
         self.debug = False
 
         return
-
-
-    def final_summary(self, cluster=None):
-        """Return a string summarising the results of the run.
-
-        Args:
-        cluster -- the number of the cluster to summarise (COUNTING FROM 0)
-                   otherwise all clusters are summarised
-        """
-
-        # List of all the possible column titles and their result object attributes
-        # see python/mrbump_results.py
-        title2attr = {
-                        'Ensemble_Name' :'ensembleName',
-                        'Model_Name' :'name',
-                        'MR_Program': 'program',
-                        'Solution_Type': 'solution',
-                        'final_Rfact' : 'rfact',
-                        'final_Rfree' :'rfree',
-                        'Bucc_final_Rfact' :'buccFinalRfact',
-                        'Bucc_final_Rfree' :'buccFinalRfree',
-                        'ARP_final_Rfact' : 'arpWarpFinalRfact',
-                        'ARP_final_Rfree' :'arpWarpFinalRfree',
-                        'SHELXE_CC' : 'shelxeCC',
-                        'SHELXE_ACL' : 'shelxeACL',
-                        'SHELXE_Avg_Chain' : 'shelxeAvgChainLength',
-                    }
-
-        if not cluster:
-            # Get number of clusters from the length of the mrbump results lists
-            clusters = [ i for i in range( len( self.d['mrbump_results'] ) ) ]
-        else:
-            if cluster >= len( self.d['mrbump_results'] ):
-                raise RuntimeError, "Cluster number is not in results list"
-            clusters = [ cluster ]
-
-        # String to hold the results summary
-        summary = ""
-        for cluster in clusters:
-
-            summary+="\n\nResults for cluster: {0}\n\n".format( cluster+1 )
-
-            # Table for results with header
-            results_table = []
-
-            ensemble_results = None
-            if self.d.has_key('ensemble_results'):
-                ensemble_results = self.d['ensemble_results'][ cluster ]
-
-                # Get map of ensemble name -> ensemble result
-                name2result = {}
-                for i, e in enumerate( ensemble_results ):
-                    if name2result.has_key( e.name ):
-                        raise RuntimeError, "Duplicate key: {0}".format( e.name )
-                    name2result[ e.name ] = ensemble_results[ i ]
-
-            # Assume mrbump_results are already sorted
-            mrbump_results = self.d['mrbump_results'][ cluster ]
-            if not len(mrbump_results):
-                print "!!!  No results found for cluster {0} !!!".format( cluster+1 )
-                continue
-
-            # Get header from first object - need to copy or the assignment just creates a reference
-            header = copy.copy( mrbump_results[0].header )
-            if ensemble_results:
-                header += [ "#Decoys", "#Residues" ]
-            results_table.append( header )
-
-            best=mrbump_results[0] # remember best (first) result
-
-            for result in mrbump_results:
-                result_summary = []
-                for h in result.header:
-                    result_summary.append( getattr( result, title2attr[ h ] )  )
-
-                if ensemble_results:
-                    # MRBUMP Results have loc0_ALL_ prepended and  _UNMOD appended
-                    name = result.name[9:-6]
-                    result_summary += [ name2result[ name ].num_models, name2result[ name ].num_residues ]
-
-                results_table.append( result_summary )
-
-            # Get nicely formatted string summarising the results
-            table = printTable.Table()
-            summary += table.pprint_table( results_table )
-
-            # Show where it happened
-            summary += '\nBest Molecular Replacement results so far are in:\n\n'
-            summary +=  best.mrDir
-
-            if best.pdb and os.path.isfile(best.pdb):
-                summary += '\n\nFinal PDB is:\n\n'
-                summary +=  best.pdb
-            summary += '\n\n'
-
-        return summary
-
-
+    
     def populate( self, parser_args ):
         """
         Fill ourselves with the options from the parser
@@ -407,24 +303,3 @@ class AmpleOptions(object):
                 pstr += "{0} : {1}\n".format( k, v )
 
         return pstr
-
-
-if __name__ == "__main__":
-
-    import sys
-    import cPickle
-
-    if len(sys.argv) == 2:
-        pfile = sys.argv[1]
-    else:
-        pfile = "/opt/ample-dev1/examples/toxd-example/ROSETTA_MR_10/resultsd.pkl"
-
-    f = open(pfile)
-    d = cPickle.load(f)
-
-    AD = AmpleOptions()
-    AD.d = d
-    print AD.final_summary()
-#    for k,v in d.iteritems():
-#        AD.d[k] = v
-#    print AD.final_summary()

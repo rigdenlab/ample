@@ -686,12 +686,12 @@ def main():
         else:
             logger.info('Making fragments EXCLUDING HOMOLOGUES')
     else:
-        logger.info('NOT Making Fragments')
+        logger.info('NOT making Fragments')
     
     if amopt.d['make_models']:
         logger.info('\nMaking Rosetta Models')
     else:
-        logger.info('NOT Making Rosetta Models')
+        logger.info('NOT making Rosetta Models')
         
         # Print out what is being done
     if amopt.d['use_buccaneer']:
@@ -848,30 +848,22 @@ def main():
         sys.exit(1)
     
     # MRBUMP analysis of the ensembles
+    logger.info('----- Running MRBUMP on ensembles--------\n\n')
+    if len(ensembles) < 1:
+        msg = "ERROR! Cannot run MRBUMP as there are no ensembles!"
+        logger.critical( msg )
+        sys.exit()
+    
     bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
-    logger.info("Running MRBUMP jobs in directory: {0}".format( bump_dir ) )
     if not os.path.exists(bump_dir):
         os.mkdir(bump_dir)
     os.chdir(bump_dir)
     amopt.d['mrbump_dir'] = bump_dir
     amopt.d['mrbump_results'] = []
+    logger.info("Running MRBUMP jobs in directory: {0}".format( bump_dir ) )
     
-    logger.info('----- Running MRBUMP on ensembles--------\n\n')
-
-    if len(ensembles) < 1:
-        msg = "ERROR! Cannot run MRBUMP as there are no ensembles!"
-        logger.critical( msg )
-        sys.exit()
-
-    job_dir = os.path.join( amopt.d['mrbump_dir'], 'MRBUMP' )
-
-    logger.info("Running {0} MRBUMP jobs in directory: {1}".format(len(ensembles),job_dir))
-    if not os.path.exists( job_dir ):
-        os.mkdir( job_dir )
-    os.chdir( job_dir )
-
     # Create job scripts
-    logger.info("Generating MRBUMP runscripts in: {0}".format( job_dir ) )
+    logger.info("Generating MRBUMP runscripts")
     job_scripts = mrbump_ensemble.generate_jobscripts( ensembles, amopt.d )
     #continue
 
@@ -882,16 +874,9 @@ def main():
 
     # Collect the MRBUMP results
     results_summary = mrbump_results.ResultsSummary()
-    results_summary.extractResults( job_dir )
-    amopt.d['mrbump_results'].append( results_summary.results )
+    results_summary.extractResults(bump_dir)
+    amopt.d['mrbump_results'] = results_summary.results
     ample_util.saveAmoptd(amopt.d)
-        #summary = results_summary.summariseResults()
-    
-    
-    #results_summary = mrbump_results.ResultsSummary()
-    #results_summary.extractResults("/opt/ample-dev1/examples/3twe/ROSETTA_MR_1/MRBUMP/cluster_1")
-    #amopt.d['mrbump_results'].append( results_summary.results )
-    
     
     # Timing data
     time_stop = time.time()
@@ -906,23 +891,13 @@ def main():
     # Save results
     ample_util.saveAmoptd(amopt.d)
     
-    # Copy best pdb to output_pdb - hack - just take best from the first cluster#
-    if amopt.d['mrbump_results'] and len(amopt.d['mrbump_results'][0]):
-        result_pdb = amopt.d['mrbump_results'][0][0].pdb
-        output_pdb = os.path.join( amopt.d['work_dir'], amopt.d['output_pdb'])
-        if os.path.isfile( output_pdb ):
-            logging.info("Copying result pdb to: {0}\n".format( output_pdb ) )
-            shutil.copy2( result_pdb, output_pdb )
-    else:
-        logging.critical("Failed to generate a final pdb for cluster 1")
-
     # Benchmark mode
     if amopt.d['benchmark_mode']:
         benchmark.analyse(amopt.d)
         ample_util.saveAmoptd(amopt.d)
 
     # Now print out the final summary
-    summary = amopt.final_summary()
+    summary = mrbump_results.finalSummary(amopt.d)
     logger.info( summary )
     RUNNING.write(summary)
     RUNNING.flush()
