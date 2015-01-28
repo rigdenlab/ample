@@ -39,7 +39,6 @@ import clusterize
 import cPickle
 import glob
 import logging
-import shutil
 import time
 
 # Our imports
