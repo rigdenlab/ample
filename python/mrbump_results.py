@@ -466,9 +466,6 @@ def finalSummary(amoptd):
     ensembles_data=amoptd['ensembles_data']
     mrbump_data=amoptd['mrbump_results']
     
-    print "GOT 1",ensembles_data
-    print "GOT 2",mrbump_data
-    
     # Merge dictionaries together
     results=[]
     for mrb in mrbump_data:
