@@ -120,11 +120,10 @@ def ensemble_summary(ensembles_data):
                 for j, sct in enumerate(['polya','reliable','allatom']):
                     name=clusters[cn]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['name']
                     num_atoms=clusters[cn]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['num_atoms']
-                    if i==0:
-                        if j==0:
-                            tdata.append((name, tl, tvar, nresidues, rt, nmodels, num_atoms, sct))
-                        else:    
-                            tdata.append((name, "", "", "", rt, nmodels, num_atoms, sct))   
+                    if i==0 and j==0: # change of radius
+                        tdata.append((name, tl, tvar, nresidues, rt, nmodels, num_atoms, sct))
+                    elif i > 0 and j==0: # change of side_chain
+                        tdata.append((name, "", "", "", rt, nmodels, num_atoms, sct))
                     else:
                         tdata.append((name, "", "", "", "", "", num_atoms, sct))
                     
