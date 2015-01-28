@@ -10,7 +10,6 @@ import logging
 import os
 import shutil
 import sys
-import types
 import unittest
 
 # our imports
@@ -18,51 +17,6 @@ import ample_util
 import pdb_edit
 import run_spicker
 import subcluster
-
-class EnsembleData(object):
-    """Class to hold data about an ensemble"""
-
-    def __init(self):
-
-        # cluster info
-        self.cluster_method = None
-        self.num_clusters = None
-        self.cluster_num = None
-        self.cluster_centroid=None
-        self.cluster_num_models=None
-        
-        # truncation info
-        self.truncation_level = None
-        self.percent_truncation = None
-        self.truncation_method = None
-        self.truncation_residues = None
-        self.truncation_dir = None
-        self.truncation_variance = None
-        self.num_residues = None
-
-        # subclustering info
-        self.num_models = None
-        self.subcluster_radius_threshold = None
-        self.subcluster_centroid_model = None
-    
-        # ensemble info
-        self.name = None
-        self.side_chain_treatment = None
-        self.num_atoms = None
-        self.pdb = None # path to the ensemble file
-
-        return
-    
-    def __str__(self):
-        """List the data attributes of this object"""
-        me = {}
-        for slot in dir(self):
-            attr = getattr(self, slot)
-            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
-              isinstance(attr, types.FunctionType) ):
-                me[slot] = attr
-
-        return "{0} : {1}".format(self.__repr__(),str(me))
 
 class Ensembler(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
@@ -251,7 +205,7 @@ class Ensembler(object):
                 clusters.append(cluster)
                 
                 # Data on the models
-                cluster_data=self.createDict()
+                cluster_data=self.create_dict()
                 d=spickerer.results[i]
                 cluster_data['cluster_num']=i+1
                 cluster_data['cluster_centroid']=d.cluster_centroid
@@ -265,7 +219,7 @@ class Ensembler(object):
 
         return clusters, clusters_data
     
-    def createDict(self):
+    def create_dict(self):
         """Create an empty dictionary
         Not strictly necessary but it's a place to remember what we capture
         """
@@ -419,7 +373,7 @@ class Ensembler(object):
             return
 
         # List of variances ordered by residue index
-        var_list=[var for (resSeq,var) in var_by_res]
+        var_list=[var for (_,var) in var_by_res]
 
         length = len(var_list)
         if length == 0:
