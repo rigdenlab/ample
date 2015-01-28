@@ -147,19 +147,18 @@ class Ensembler(object):
         if not os.path.exists(self.theseus_exe) and os.access(self.theseus_exe, os.X_OK):
             raise RuntimeError,"Cannot find theseus_exe: {0}".format(self.theseus_exe) 
         
-        work_dir=os.getcwd()
         cmd = [ self.theseus_exe, "-a0" ] + cluster_models
-        logfile=os.path.join(work_dir,"theseus.log")
+        logfile=os.path.join(self.work_dir,"theseus.log")
         retcode = ample_util.run_command(cmd,
                                          logfile=logfile,
-                                         directory=work_dir)
+                                         directory=self.work_dir)
         if retcode != 0:
             msg = "non-zero return code for theseus in generate_thresholds!\n See log: {0}".format(logfile)
             self.logger.critical(msg)
             raise RuntimeError, msg
 
         variances=[]
-        variance_log=os.path.join(work_dir,'theseus_variances.txt')
+        variance_log=os.path.join(self.work_dir,'theseus_variances.txt')
         with open(variance_log) as f:
             for i, line in enumerate(f):
                 # Skip header
@@ -613,6 +612,9 @@ class Test(unittest.TestCase):
         thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         paths = thisd.split( os.sep )
         self.ample_dir = os.sep.join( paths[ : -1 ] )
+        
+        
+        self.work_dir=os.path.join(self.ample_dir,"tests")
         self.theseus_exe=ample_util.find_exe('theseus')
         self.spicker_exe=ample_util.find_exe('spicker')
         self.maxcluster_exe=ample_util.find_exe('maxcluster')
@@ -623,24 +625,28 @@ class Test(unittest.TestCase):
         """Test we can reproduce the original thresholds"""
 
         ensembler=Ensembler()
-
-        ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
+        
+        ensembler.work_dir=os.path.join(self.work_dir,"genthresh1")
+        if os.path.isdir(ensembler.work_dir):
+            shutil.rmtree(ensembler.work_dir)
         os.mkdir(ensembler.work_dir)
+        
         ensembler.theseus_exe=self.theseus_exe
-        ensembler.percent_interval=5
+        percent_interval=5
         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
         cluster_models=glob.glob(mdir+os.sep+"*.pdb")
         var_by_res=ensembler.calculate_variances(cluster_models)
-        thresholds=ensembler.generate_thresholds(var_by_res)
+        thresholds=ensembler.generate_thresholds(var_by_res,percent_interval)
         
         self.assertEqual(30,len(thresholds),thresholds)
-        self.assertEqual([0.02235, 0.041896, 0.08155, 0.085867, 0.103039, 0.185265, 0.7058, 1.772884, 3.152793,
-                          4.900255, 6.206563, 10.250043, 10.772177, 16.071345, 18.292366, 22.432564, 23.265938,
-                          25.348501, 27.37951, 35.877391, 37.227859, 41.759805, 49.037625, 50.992344, 56.091738,
-                          58.09387, 59.917999, 70.052007, 80.235358, 86.028994],
-                         thresholds,
-                         "Wrong truncation thresholds"
-                         )
+        reft=[0.02235, 0.041896, 0.08155, 0.085867, 0.103039, 0.185265, 0.7058, 1.772884, 3.152793,
+              4.900255, 6.206563, 10.250043, 10.772177, 16.071345, 18.292366, 22.432564, 23.265938,
+              25.348501, 27.37951, 35.877391, 37.227859, 41.759805, 49.037625, 50.992344, 56.091738,
+              58.09387, 59.917999, 70.052007, 80.235358, 86.028994]
+        
+        self.assertTrue(all([ abs(r-c) < 0.0001 for r,c in zip(reft,thresholds)]),
+                         "Wrong truncation thresholds: {0}".format(thresholds))
+        
         shutil.rmtree(ensembler.work_dir)
         return
     
@@ -650,25 +656,30 @@ class Test(unittest.TestCase):
         ensembler=Ensembler()
         
         # This test for percent
-        ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
+        ensembler.work_dir=os.path.join(self.work_dir,"genthresh2")
+        if os.path.isdir(ensembler.work_dir):
+            shutil.rmtree(ensembler.work_dir)
         os.mkdir(ensembler.work_dir)
+        os.chdir(ensembler.work_dir)
+        
         ensembler.theseus_exe=self.theseus_exe
-        ensembler.percent_interval=5
+        percent_interval=5
         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
         cluster_models=glob.glob(mdir+os.sep+"*.pdb")
         
         var_by_res=ensembler.calculate_variances(cluster_models)
-        truncation_levels, truncation_variances, truncation_residues=ensembler._calculate_residues_thresh(var_by_res)
+        truncation_levels, truncation_variances, truncation_residues=ensembler._calculate_residues_thresh(var_by_res,percent_interval)
         
         self.assertEqual(truncation_levels,
                          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
         
-        self.assertEqual(truncation_variances,
-                         [86.028994, 80.235358, 70.052007, 59.917999, 58.09387, 56.091738, 50.992344, 49.037625, 41.759805, 37.227859, 35.877391,
-                          27.37951, 25.348501, 23.265938, 22.432564, 18.292366, 16.071345, 10.772177, 10.250043, 6.206563, 4.900255, 3.152793,
-                          1.772884, 0.7058, 0.185265, 0.103039, 0.085867, 0.08155, 0.041896, 0.02235],
-                         truncation_variances)
         
+        refv = [86.028994, 80.235358, 70.052007, 59.917999, 58.09387, 56.091738, 50.992344, 49.037625, 41.759805, 37.227859, 35.877391,
+                27.37951, 25.348501, 23.265938, 22.432564, 18.292366, 16.071345, 10.772177, 10.250043, 6.206563, 4.900255, 3.152793,
+                1.772884, 0.7058, 0.185265, 0.103039, 0.085867, 0.08155, 0.041896, 0.02235]
+        self.assertTrue(all([ abs(r-c) < 0.0001 for r,c in zip(refv,truncation_variances)]),
+                         "Wrong truncation variances: {0}".format(truncation_variances))
+
         residues=[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
                   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58],
                   [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
@@ -708,8 +719,11 @@ class Test(unittest.TestCase):
 
         ensembler=Ensembler()
 
-        ensembler.work_dir=os.path.join(os.getcwd(),"genthresh")
+        ensembler.work_dir=os.path.join(self.work_dir,"genthresh3")
+        if os.path.isdir(ensembler.work_dir):
+            shutil.rmtree(ensembler.work_dir)
         os.mkdir(ensembler.work_dir)
+        os.chdir(ensembler.work_dir)
         ensembler.theseus_exe=self.theseus_exe
         ensembler.percent_interval=5
         mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
@@ -743,11 +757,11 @@ class Test(unittest.TestCase):
         self.assertEqual(truncation_levels,
                          [100, 95, 90, 85, 80, 75, 69, 64, 59, 54, 49, 44, 39, 34, 29, 24, 19, 14, 8, 3])
         
-        self.assertEqual(truncation_variances,
-                         [74.272253, 59.917999, 56.260987, 50.992344, 43.268754, 37.227859, 30.767268, 25.348501,
-                          23.050357, 18.292366, 15.287348, 10.250043, 5.66545, 3.152793, 0.874899, 0.185265, 0.090917,
-                          0.08155, 0.039639, 0.018215])
-
+        refv=[74.272253, 59.917999, 56.260987, 50.992344, 43.268754, 37.227859, 30.767268, 25.348501,
+              23.050357, 18.292366, 15.287348, 10.250043, 5.66545, 3.152793, 0.874899, 0.185265, 0.090917,
+            0.08155, 0.039639, 0.018215]
+        self.assertTrue(all([ abs(r-c) < 0.0001 for r,c in zip(refv,truncation_variances)]),
+                         "Wrong truncation variances: {0}".format(truncation_variances))
         shutil.rmtree(ensembler.work_dir)
         return
 
@@ -755,9 +769,10 @@ class Test(unittest.TestCase):
 
         ensembler=Ensembler()
 
-        work_dir=os.path.join(os.getcwd(),"genthresh")
-        os.mkdir(work_dir)
-        ensembler.work_dir=work_dir
+        ensembler.work_dir=os.path.join(self.work_dir,"genthresh4")
+        if os.path.isdir(ensembler.work_dir):
+            shutil.rmtree(ensembler.work_dir)
+        os.mkdir(ensembler.work_dir)
         
         ensembler.theseus_exe=self.theseus_exe
         
@@ -787,7 +802,9 @@ class Test(unittest.TestCase):
 
         ensembler=Ensembler()
 
-        work_dir=os.path.join(os.getcwd(),"genthresh")
+        work_dir=os.path.join(self.work_dir,"genthresh5")
+        if os.path.isdir(work_dir):
+            shutil.rmtree(work_dir)
         os.mkdir(work_dir)
         
         ensembler.theseus_exe=self.theseus_exe
@@ -849,7 +866,9 @@ class Test(unittest.TestCase):
 
         ensembler=Ensembler()
 
-        work_dir=os.path.join(os.getcwd(),"genthresh")
+        work_dir=os.path.join(self.work_dir,"genthresh6")
+        if os.path.isdir(work_dir):
+            shutil.rmtree(work_dir)
         os.mkdir(work_dir)
         
         ensembler.theseus_exe=self.theseus_exe
@@ -883,16 +902,17 @@ class Test(unittest.TestCase):
         self.assertEqual(d['side_chain_treatment'],'polya')
         self.assertEqual(d['subcluster_centroid_model'],'4_S_00000002.pdb')
         
-        #shutil.rmtree(ensembler.work_dir)
+        shutil.rmtree(ensembler.work_dir)
         return
 
 def testSuite():
     suite = unittest.TestSuite()
     suite.addTest(Test('testThresholds'))
-    suite.addTest(Test('testResiduesThresh'))
-    suite.addTest(Test('testResiduesPercent'))
-    suite.addTest(Test('testClustering'))
-    suite.addTest(Test('testEnsembling'))
+#     suite.addTest(Test('testResiduesThresh'))
+#     suite.addTest(Test('testResiduesPercent'))
+#     suite.addTest(Test('testClustering'))
+#     suite.addTest(Test('testEnsemblingThresh'))
+#     suite.addTest(Test('testEnsemblingPercent'))
     return suite
     
 #

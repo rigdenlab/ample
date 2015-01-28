@@ -133,6 +133,11 @@ def ensemble_summary(ensembles_data):
     
     return rstr
 
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testSummary'))
+    return suite
+
 class Test(unittest.TestCase):
 
     def setUp(self):

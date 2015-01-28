@@ -27,14 +27,17 @@ testsuite = unittest.TestSuite()
 # Add all the tests
 #
 ###############################################################
+import ample_ensemble
+testsuite.addTests(ample_ensemble.testSuite())
+
 import csymmatch
 testsuite.addTests(csymmatch.testSuite())
 
-import cluster_with_MAX
-testsuite.addTests(cluster_with_MAX.testSuite())
-
 import dssp
 testsuite.addTests(dssp.testSuite())
+
+import ensemble
+testsuite.addTests(ensemble.testSuite())
 
 import fasta_parser
 testsuite.addTests(fasta_parser.testSuite())
@@ -71,6 +74,9 @@ testsuite.addTests(rio.testSuite())
 
 import rosetta_model
 testsuite.addTests(rosetta_model.testSuite())
+
+import subcluster
+testsuite.addTests(subcluster.testSuite())
 
 import workers
 testsuite.addTests(workers.testSuite())
