@@ -144,6 +144,9 @@ class Ensembler(object):
         #--------------------------------
         # get variations between pdbs
         #--------------------------------
+        if not os.path.exists(self.theseus_exe) and os.access(self.theseus_exe, os.X_OK):
+            raise RuntimeError,"Cannot find theseus_exe: {0}".format(self.theseus_exe) 
+        
         work_dir=os.getcwd()
         cmd = [ self.theseus_exe, "-a0" ] + cluster_models
         logfile=os.path.join(work_dir,"theseus.log")
@@ -322,9 +325,11 @@ class Ensembler(object):
             self.ensembles_directory=os.path.join(work_dir,"ensembles")
         else:
             self.ensembles_directory=ensembles_directory
-            
-        # CHECK WE HAVE MODELS AT EACH STAGE
-        # CHECK WE CAN RESOLVE EXECUTABLE PATHS
+        
+        if not len(models):
+            raise RuntimeError,"Cannot find any models for ensembling!" 
+        if not all([os.path.isfile(m) for m in models]):
+            raise RuntimeError,"Problem reading models given to Ensembler: {0}".format(models) 
         
         self.logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
     

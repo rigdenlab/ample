@@ -139,6 +139,9 @@ class SpickerCluster( object ):
         
         self.logger.debug("Running spicker in directory: {0}".format( self.rundir ) )
         self.create_input_files()
+        
+        if not os.path.exists(self.spicker_exe) and os.access(self.spicker_exe, os.X_OK):
+            raise RuntimeError,"Cannot find spicker_exe: {0}".format(self.spicker_exe) 
         ample_util.run_command([ self.spicker_exe ], logfile="spicker.log" )
     
         # Read the log and generate the results

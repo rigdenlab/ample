@@ -81,7 +81,6 @@ class ResultsSummary(object):
         d["MR_program"] = None
         d["Name"] = None
         
-        
         d["JobDirectory"]        = None
         d["Solution_Type"]       = None
         

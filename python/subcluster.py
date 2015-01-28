@@ -17,6 +17,8 @@ class SubClusterer(object):
     """
     
     def __init__(self,executable):
+        if not os.path.exists(executable) and os.access(executable, os.X_OK):
+            raise RuntimeError,"Cannot find subclusterer executable: {0}".format(executable) 
         self.executable = executable
         self.distance_matrix = None
         self.index2pdb = []
