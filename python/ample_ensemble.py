@@ -612,10 +612,7 @@ class Ensembler(object):
 
         truncated_models=[]
         truncated_models_data=[]
-        for i in range(len(truncation_levels)):
-            tlevel=truncation_levels[i]
-            tvar=truncation_variances[i]
-            tresidues=truncation_residues[i]
+        for tlevel,tvar,tresidues in zip(truncation_levels, truncation_variances, truncation_residues):
             trunc_dir = os.path.join(truncate_dir, 'tlevel_{0}'.format(tlevel))
             os.mkdir(trunc_dir)
             self.logger.info( 'truncating at: {0} in directory {1}'.format(tvar,trunc_dir))
