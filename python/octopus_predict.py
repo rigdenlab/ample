@@ -6,7 +6,6 @@ Created on 18 Feb 2013
 Query the octopus server http://octopus.cbr.su.se to get transmembrane predictions
 '''
 
-import sys
 import os
 
 from HTMLParser import HTMLParser
@@ -194,8 +193,8 @@ class Test(unittest.TestCase):
         variable is updated whenever the cwd is changed in a test and the next test
         gets the wrong paths.
         """
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
         cls.ample_dir = os.sep.join( paths[ : -1 ] )
         cls.tests_dir=os.path.join(cls.ample_dir,"tests")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
@@ -203,7 +202,7 @@ class Test(unittest.TestCase):
 
     def testGetPredict(self):
         """See we can get the prediction"""
-        
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()        
         logging.basicConfig()
         logging.getLogger().setLevel(logging.DEBUG)
          

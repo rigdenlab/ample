@@ -869,8 +869,8 @@ class Test(unittest.TestCase):
         variable is updated whenever the cwd is changed in a test and the next test
         gets the wrong paths.
         """
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
         cls.ample_dir = os.sep.join( paths[ : -1 ] )
         cls.tests_dir=os.path.join(cls.ample_dir,"tests")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
@@ -907,9 +907,10 @@ class Test(unittest.TestCase):
         """
         Test without Rosetta
         """
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
 
         ## Create a dummy script
-        script = self.path.join(self.tests_dir,"dummy_rosetta.sh")
+        script = "dummy_rosetta.sh"
         with open(script,"w") as f:
             content = """#!/usr/bin/env python
 for i in range(10):
@@ -920,8 +921,8 @@ for i in range(10):
         os.chmod(script, 0o777)
         
         # Create dummy fragment files
-        frags3=self.path.join(self.tests_dir,'3mers')
-        frags9=self.path.join(self.tests_dir,'9mers')
+        frags3='3mers'
+        frags9='9mers'
         with open(frags3,'w') as f3,open(frags9,'w') as f9:
             f3.write(frags3+"\n")
             f9.write(frags9+"\n")
@@ -930,10 +931,11 @@ for i in range(10):
         optd={}
         optd['nproc'] = 3
         optd['nmodels'] = 30
-        optd['work_dir'] = self.tests_dir
-        optd['models_dir'] = os.path.join(self.tests_dir, "XXXmodelsXXX")
+        optd['work_dir'] = os.getcwd()
+        optd['models_dir'] = "XXXmodelsXXX"
+        optd['rosetta_db'] = None
         optd['rosetta_dir'] = "/opt/rosetta3.4"
-        optd['rosetta_AbinitioRelax'] = script
+        optd['rosetta_AbinitioRelax'] = os.path.join(os.getcwd(),script)
         optd['frags_3mers'] = frags3
         optd['frags_9mers'] = frags9
         optd['rosetta_fragments_exe'] = None

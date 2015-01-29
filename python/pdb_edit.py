@@ -1520,8 +1520,8 @@ class Test(unittest.TestCase):
         variable is updated whenever the cwd is changed in a test and the next test
         gets the wrong paths.
         """
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
         cls.ample_dir = os.sep.join( paths[ : -1 ] )
         cls.tests_dir=os.path.join(cls.ample_dir,"tests")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
@@ -1586,7 +1586,7 @@ class Test(unittest.TestCase):
     def testStdResidues(self):
 
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
-        pdbout=os.path.join(self.tests_dir,"std.pdb")
+        pdbout="std.pdb"
         
         PDBEdit().std_residues(pdbin, pdbout)
         
@@ -1619,7 +1619,7 @@ GEIAALKQEIAALKKEIAALKEIAALKQGYY
     def testStdResiduesCctbx(self):
 
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
-        pdbout=os.path.join(self.tests_dir,"std.pdb")
+        pdbout="std.pdb"
         
         PDBEdit().std_residues_cctbx(pdbin, pdbout)
         
@@ -1637,7 +1637,6 @@ GEIAALKQEIAALKKEIAALKEIAALKQGYY
         
         return
 
-
 def testSuite():
     suite = unittest.TestSuite()
     suite.addTest(Test('testGetInfo1'))
@@ -1645,7 +1644,6 @@ def testSuite():
     suite.addTest(Test('testStdResidues'))
     suite.addTest(Test('testStdResiduesCctbx'))
     return suite
-    
 
 if __name__ == "__main__":
     #unittest.TextTestRunner(verbosity=2).run(testSuite())

@@ -147,8 +147,8 @@ class Test(unittest.TestCase):
         variable is updated whenever the cwd is changed in a test and the next test
         gets the wrong paths.
         """
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
         cls.ample_dir = os.sep.join( paths[ : -1 ] )
         cls.tests_dir=os.path.join(cls.ample_dir,"tests")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
@@ -160,6 +160,7 @@ class Test(unittest.TestCase):
     
     def testSummary(self):
 
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=ample_ensemble.Ensembler()
 
         work_dir=os.path.join(os.getcwd(),"summary")

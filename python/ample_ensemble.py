@@ -611,8 +611,8 @@ class Test(unittest.TestCase):
         variable is updated whenever the cwd is changed in a test and the next test
         gets the wrong paths.
         """
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
         cls.ample_dir = os.sep.join( paths[ : -1 ] )
         cls.tests_dir=os.path.join(cls.ample_dir,"tests")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
@@ -625,6 +625,7 @@ class Test(unittest.TestCase):
 
     def testThresholds(self):
         """Test we can reproduce the original thresholds"""
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
 
         ensembler=Ensembler()
         
@@ -654,7 +655,7 @@ class Test(unittest.TestCase):
     
     def testResiduesThresh(self):
         """Test we can calculate the original list of residues"""
-
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
         
         # This test for percent
@@ -718,7 +719,7 @@ class Test(unittest.TestCase):
         return
     
     def testResiduesPercent(self):
-
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
 
         ensembler.work_dir=os.path.join(self.tests_dir,"genthresh3")
@@ -768,7 +769,7 @@ class Test(unittest.TestCase):
         return
 
     def testClustering(self):
-
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
 
         ensembler.work_dir=os.path.join(self.tests_dir,"genthresh4")
@@ -801,7 +802,7 @@ class Test(unittest.TestCase):
         return
     
     def testEnsemblingPercent(self):
-
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
 
         work_dir=os.path.join(self.tests_dir,"genthresh5")
@@ -865,7 +866,7 @@ class Test(unittest.TestCase):
         return
     
     def testEnsemblingThresh(self):
-
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
 
         work_dir=os.path.join(self.tests_dir,"genthresh6")

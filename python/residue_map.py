@@ -480,8 +480,8 @@ class Test(unittest.TestCase):
         variable is updated whenever the cwd is changed in a test and the next test
         gets the wrong paths.
         """
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
         cls.ample_dir = os.sep.join( paths[ : -1 ] )
         cls.tests_dir=os.path.join(cls.ample_dir,"tests")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
@@ -553,9 +553,9 @@ class Test(unittest.TestCase):
         modelPdb = os.path.join(self.testfiles_dir,"2UUI_S_00000001.pdb")
         
         PE = pdb_edit.PDBEdit()
-        chainA = self.path.join(self.tests_dir,"2UUI_A.pdb")
+        chainA = "2UUI_A.pdb"
         PE.extract_chain( nativePdb, chainA, chainID='A' )
-        chainAstd = self.path.join(self.tests_dir,"2UUI_A_std.pdb")
+        chainAstd = "2UUI_A_std.pdb"
         PE.standardise(chainA, chainAstd)
         
         resSeqMap = residueSequenceMap( chainA, modelPdb )
@@ -589,7 +589,7 @@ class Test(unittest.TestCase):
         modelPdb = os.path.join(self.testfiles_dir,"1K33_S_00000001.pdb")
         
         PE = pdb_edit.PDBEdit()
-        nativePdbStd = self.path.join(self.tests_dir,"1K33_std.pdb")
+        nativePdbStd = "1K33_std.pdb"
         PE.standardise( nativePdb, nativePdbStd )
         
         nativeInfo = PE.get_info( nativePdbStd )

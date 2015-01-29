@@ -175,23 +175,15 @@ class TestContacts( unittest.TestCase ):
         variable is updated whenever the cwd is changed in a test and the next test
         gets the wrong paths.
         """
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
         cls.ample_dir = os.sep.join( paths[ : -1 ] )
         cls.tests_dir=os.path.join(cls.ample_dir,"tests")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
-    def setUp(self):
-        
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
-        self.ampleDir = os.sep.join( paths[ : -1 ] )
-        
-        return
-    
     def testParse1(self):
-        
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()        
         logfile = os.path.join( self.testfiles_dir, "csymmatch1.log" )
         
         c = Csymmatch()
@@ -205,6 +197,7 @@ class TestContacts( unittest.TestCase ):
         return
     
     def testParse2(self):
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         
         logfile = os.path.join( self.testfiles_dir, "csymmatch2.log" )
         
