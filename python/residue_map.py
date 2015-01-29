@@ -552,11 +552,10 @@ class Test(unittest.TestCase):
         nativePdb = os.path.join(self.testfiles_dir,"2UUI.pdb")
         modelPdb = os.path.join(self.testfiles_dir,"2UUI_S_00000001.pdb")
         
-        PE = pdb_edit.PDBEdit()
         chainA = "2UUI_A.pdb"
-        PE.extract_chain( nativePdb, chainA, chainID='A' )
+        pdb_edit.extract_chain( nativePdb, chainA, chainID='A' )
         chainAstd = "2UUI_A_std.pdb"
-        PE.standardise(chainA, chainAstd)
+        pdb_edit.standardise(chainA, chainAstd)
         
         resSeqMap = residueSequenceMap( chainA, modelPdb )
         
@@ -588,12 +587,11 @@ class Test(unittest.TestCase):
         nativePdb = os.path.join(self.testfiles_dir,"1K33.pdb")
         modelPdb = os.path.join(self.testfiles_dir,"1K33_S_00000001.pdb")
         
-        PE = pdb_edit.PDBEdit()
         nativePdbStd = "1K33_std.pdb"
-        PE.standardise( nativePdb, nativePdbStd )
+        pdb_edit.standardise( nativePdb, nativePdbStd )
         
-        nativeInfo = PE.get_info( nativePdbStd )
-        modelInfo = PE.get_info( modelPdb )
+        nativeInfo = pdb_edit.get_info( nativePdbStd )
+        modelInfo = pdb_edit.get_info( modelPdb )
         
         resSeqMap = residueSequenceMap( )
         resSeqMap.fromInfo( nativeInfo, 'A', modelInfo, 'A' )

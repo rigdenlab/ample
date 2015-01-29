@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
-
 """
-
-
-
 run_csymmatch
 # Gives pdb with oriented model
 create copy of csymmatch pdb with residue numbering matching native and rename chain to X
@@ -23,7 +19,6 @@ import ample_util
 import csymmatch
 import dssp
 import pdb_edit
-
 
 class RioData(object):
     def __init__(self):
@@ -233,14 +228,12 @@ class Rio(object):
         """Find the origin using the maximum number of contacts as metric"""
         
         self.workdir = workdir
-        pdbedit = pdb_edit.PDBEdit()
-
         if not resSeqMap.resSeqMatch():
             #print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
             mrPdbRes = ample_util.filename_append( filename=mrPdbInfo.pdb, astr="reseq", directory=self.workdir )
-            pdbedit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
+            pdb_edit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
             mrPdb = mrPdbRes
         else:
             mrPdb = mrPdbInfo.pdb
@@ -249,7 +242,7 @@ class Rio(object):
         ucChains = mrPdbInfo.models[0].chains
         toChains = [ c.lower() for c in ucChains ]
         placedAaPdb = ample_util.filename_append( filename=mrPdb, astr="ren", directory=self.workdir )
-        pdbedit.rename_chains( inpdb=mrPdb, outpdb=placedAaPdb, fromChain=ucChains, toChain=toChains )
+        pdb_edit.rename_chains( inpdb=mrPdb, outpdb=placedAaPdb, fromChain=ucChains, toChain=toChains )
 
         # The list of chains in the native that we will be checking contacts from
         fromChains = nativePdbInfo.models[0].chains
@@ -266,11 +259,11 @@ class Rio(object):
                 #ostr="origin{0}".format(i)
                 ostr="o{0}".format( origin ).replace(" ","" )
                 placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr=ostr, directory=self.workdir )
-                pdbedit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
+                pdb_edit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
             
             # Concatenate into one file
             joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
-            pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
+            pdb_edit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
             
             # Set up object to hold data
             data            = RioData()
@@ -593,8 +586,8 @@ class Rio(object):
     def helixFromPdbs(self, origin, mrPdb, nativePdb, nativeChain, dsspLog, workdir=os.getcwd() ):
         """This is a wrapper to generate the info and resSeqMap objects needed by score Origin"""
         
-        mrPdbInfo = pdb_edit.PDBEdit().get_info(mrPdb)
-        nativePdbInfo = pdb_edit.PDBEdit().get_info(nativePdb)
+        mrPdbInfo = pdb_edit.get_info(mrPdb)
+        nativePdbInfo = pdb_edit.get_info(nativePdb)
         
         assert nativeChain in nativePdbInfo.models[0].chains
         
@@ -622,14 +615,12 @@ class Rio(object):
                      ):
         
         self.workdir = workdir
-        pdbedit = pdb_edit.PDBEdit()
-
         if not resSeqMap.resSeqMatch():
             #print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
             mrPdbRes = ample_util.filename_append( filename=mrPdbInfo.pdb, astr="reseq", directory=self.workdir )
-            pdbedit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
+            pdb_edit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
             mrPdb = mrPdbRes
         else:
             mrPdb = mrPdbInfo.pdb
@@ -638,7 +629,7 @@ class Rio(object):
         ucChains = mrPdbInfo.models[0].chains
         toChains = [ c.lower() for c in ucChains ]
         mrAaPdb = ample_util.filename_append( filename=mrPdb, astr="ren", directory=self.workdir )
-        pdbedit.rename_chains( inpdb=mrPdb, outpdb=mrAaPdb, fromChain=ucChains, toChain=toChains )
+        pdb_edit.rename_chains( inpdb=mrPdb, outpdb=mrAaPdb, fromChain=ucChains, toChain=toChains )
 
         # The list of chains in the native that we will be checking contacts from
         fromChains = nativePdbInfo.models[0].chains
@@ -649,11 +640,11 @@ class Rio(object):
             #ostr="origin{0}".format(i)
             ostr="o{0}".format( origin ).replace(" ","" )
             mrOriginPdb = ample_util.filename_append( filename=mrAaPdb, astr=ostr, directory=self.workdir )
-            pdbedit.translate( inpdb=mrAaPdb, outpdb=mrOriginPdb, ftranslate=origin )
+            pdb_edit.translate( inpdb=mrAaPdb, outpdb=mrOriginPdb, ftranslate=origin )
         
         # Concatenate into one file
         joinedPdb = ample_util.filename_append( filename=mrOriginPdb, astr="joined", directory=self.workdir )
-        pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=mrOriginPdb, pdbout=joinedPdb )
+        pdb_edit.merge( pdb1=nativePdbInfo.pdb, pdb2=mrOriginPdb, pdbout=joinedPdb )
             
         # Run ncont
         data = RioData()

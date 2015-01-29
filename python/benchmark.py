@@ -146,8 +146,7 @@ def analyseSolution(amoptd,result,d):
     # debug - copy into work directory as reforigin struggles with long pathnames
     shutil.copy(mrPdb, os.path.join(amoptd['benchmark_dir'], os.path.basename(mrPdb)))
     
-    pdbedit=pdb_edit.PDBEdit()
-    mrPdbInfo=pdbedit.get_info( mrPdb )
+    mrPdbInfo=pdb_edit.get_info( mrPdb )
     
     d['numPlacedAtoms']=mrPdbInfo.numAtoms()
     d['numPlacedCA']=mrPdbInfo.numCalpha()
@@ -278,12 +277,10 @@ def addMrbumpData(result,d):
 def analysePdb(amoptd):
     
     nativePdb=amoptd['native_pdb']
-    
-    pdbedit = pdb_edit.PDBEdit()
-    nativePdbInfo = pdbedit.get_info( nativePdb )
+    nativePdbInfo = pdb_edit.get_info( nativePdb )
     
     # number atoms/residues
-    natoms, nresidues = pdb_edit.PDBEdit().num_atoms_and_residues(nativePdb)
+    natoms, nresidues = pdb_edit.num_atoms_and_residues(nativePdb)
 
     # Get information on the origins for this spaceGroup
     originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
@@ -302,16 +299,16 @@ def analysePdb(amoptd):
     if len( nativePdbInfo.models ) > 1:
         _logger.info("nativePdb has > 1 model - using first")
         nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=amoptd['benchmark_dir'] )
-        pdbedit.extract_model( nativePdb, nativePdb1, modelID=nativePdbInfo.models[0].serial )
+        pdb_edit.extract_model( nativePdb, nativePdb1, modelID=nativePdbInfo.models[0].serial )
         nativePdb = nativePdb1
         
     # Standardise the PDB to rename any non-standard AA, remove solvent etc
     nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std", directory=amoptd['benchmark_dir'] )
-    pdbedit.standardise( nativePdb, nativePdbStd )
+    pdb_edit.standardise( nativePdb, nativePdbStd )
     nativePdb = nativePdbStd
     
     # Get the new Info about the native
-    nativePdbInfo = pdbedit.get_info( nativePdb )
+    nativePdbInfo = pdb_edit.get_info( nativePdb )
     
     # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
     if len( nativePdbInfo.models[0].chains ) > 1:
@@ -319,7 +316,7 @@ def analysePdb(amoptd):
         nativeChain1  = ample_util.filename_append( filename=nativePdbInfo.pdb,
                                                        astr="chain1".format( chainID ), 
                                                        directory=amoptd['benchmark_dir'])
-        pdbedit.to_single_chain( nativePdbInfo.pdb, nativeChain1 )
+        pdb_edit.to_single_chain( nativePdbInfo.pdb, nativeChain1 )
     else:
         nativeChain1 = nativePdbInfo.pdb
     
@@ -340,7 +337,7 @@ def analyseModels(amoptd):
     nativePdbInfo=amoptd['nativePdbInfo']
     
     resSeqMap = residue_map.residueSequenceMap()
-    refModelPdbInfo = pdb_edit.PDBEdit().get_info(refModelPdb)
+    refModelPdbInfo = pdb_edit.get_info(refModelPdb)
     resSeqMap.fromInfo( refInfo=refModelPdbInfo,
                         refChainID=refModelPdbInfo.models[0].chains[0], # Only 1 chain in model
                         targetInfo=nativePdbInfo,

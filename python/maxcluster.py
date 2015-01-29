@@ -117,7 +117,6 @@ class Maxcluster(object):
         
         # Check if > 1 chain
         chainID=None
-        PE = pdb_edit.PDBEdit()
         if len( nativePdbInfo.models[0].chains ) > 1:
             
             chainID=nativePdbInfo.models[0].chains[0]
@@ -126,7 +125,7 @@ class Maxcluster(object):
             # Extract the chain if > 1
             nativePdbChain = ample_util.filename_append( filename=nativePdbInfo.pdb,
                                                          astr="chain{0}".format(chainID) )
-            PE.extract_chain(nativePdbInfo.pdb, nativePdbChain, chainID)
+            pdb_edit.extract_chain(nativePdbInfo.pdb, nativePdbChain, chainID)
             nativePdb = nativePdbChain
         else:
             nativePdb = nativePdbInfo.pdb
@@ -136,7 +135,7 @@ class Maxcluster(object):
             # We need to create a copy of the native with numbering matching the model
             nativeRenumber = ample_util.filename_append( filename=nativePdb,
                                                          astr="ren".format(chainID) )
-            PE.match_resseq( targetPdb=nativePdb, outPdb=nativeRenumber, resMap=resSeqMap )
+            pdb_edit.match_resseq( targetPdb=nativePdb, outPdb=nativeRenumber, resMap=resSeqMap )
             nativePdb = nativeRenumber
         
         return nativePdb

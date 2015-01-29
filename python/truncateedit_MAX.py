@@ -309,13 +309,12 @@ def truncate( theseus_exe, models_list, work_dir, percent, FIXED_INTERVALS=False
         os.mkdir(trunc_out)
         logging.info( 'truncating at: {0} in directory {1}'.format( threshold, trunc_out ) )
         
-        pdbed = pdb_edit.PDBEdit()
         for infile in models_list:
             pdbname = os.path.split( infile )[1]
             pdbout = os.path.join( trunc_out, pdbname )
 
             # Loop through PDB files and create new ones that only contain the residues left after truncation
-            pdbed.select_residues( inpath=infile, outpath=pdbout, residues=add_list )
+            pdb_edit.select_residues( inpath=infile, outpath=pdbout, residues=add_list )
         
         truncation_result.append( ( threshold, trunc_out ) )
             

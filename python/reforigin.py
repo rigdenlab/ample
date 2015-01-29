@@ -114,9 +114,6 @@ class ReforiginRmsd(object):
         self.cAlphaOnly = cAlphaOnly# Whether to only compare c-alpha atoms
         
         # Run a pass to find the # chains
-        pdbedit = pdb_edit.PDBEdit()
-        #refinedInfo = pdbedit.get_info( refinedPdb )
-        #nativeInfo = pdbedit.get_info( nativePdb )
         native_chains = nativePdbInfo.models[ 0 ].chains
         placed_chains = placedPdbInfo.models[ 0 ].chains
         
@@ -137,7 +134,7 @@ class ReforiginRmsd(object):
                 # Extract the chain from the pdb
                 astr = "chain{0}".format( nativeChainID )
                 nativeChainPdb = ample_util.filename_append( filename=nativePdbInfo.pdb, astr=astr, directory=self.workdir )
-                pdbedit.extract_chain( nativePdbInfo.pdb, nativeChainPdb, chainID=nativeChainID )
+                pdb_edit.extract_chain( nativePdbInfo.pdb, nativeChainPdb, chainID=nativeChainID )
                 
             # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
             # The second chain may be a different composition to the first, so we only generate a traceback if we fail
@@ -169,7 +166,7 @@ class ReforiginRmsd(object):
                 
                 # Now create a PDB with the matching atoms from native that are in refined
                 nativePdbMatch = ample_util.filename_append( filename=nativeChainPdb, astr="matched", directory=self.workdir )
-                pdbedit.keep_matching( refpdb=placedChainPdb, targetpdb=nativeChainPdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
+                pdb_edit.keep_matching( refpdb=placedChainPdb, targetpdb=nativeChainPdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
                 
                 # Now get the rmsd
                 astr = "chain{0}_reforigin".format( nativeChainID )

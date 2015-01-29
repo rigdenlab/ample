@@ -23,7 +23,7 @@ class Csymmatch( object ):
         self.chainShifts = {}
         return
         
-    def run( self, refPdb=None, inPdb=None, outPdb=None, connectivityRadius=None, originHand=True ):
+    def run(self, refPdb=None, inPdb=None, outPdb=None, connectivityRadius=None, originHand=True):
         """FOO
         """
         
@@ -147,14 +147,14 @@ class Csymmatch( object ):
             # Move pdb to new origin
             #ostr="origin{0}".format(i)
             ostr="o{0}".format( origin ).replace(" ","" )
-            originMrPdb = ample_util.filename_append( filename=mrPdb, astr=ostr, directory=workdir )
-            pdb_edit.PDBEdit().translate( inpdb=mrPdb, outpdb=originMrPdb, ftranslate=origin )
+            originMrPdb = ample_util.filename_append(filename=mrPdb, astr=ostr, directory=workdir )
+            pdb_edit.translate(inpdb=mrPdb, outpdb=originMrPdb, ftranslate=origin)
             mrPdb = originMrPdb
         
         if csymmatchPdb is None:
-            csymmatchPdb = ample_util.filename_append( filename=mrPdb,
-                                                       astr="csymmatch",
-                                                       directory=workdir )
+            csymmatchPdb = ample_util.filename_append(filename=mrPdb,
+                                                      astr="csymmatch",
+                                                    directory=workdir)
         self.run( refPdb=nativePdb,
                   inPdb=mrPdb,
                   outPdb=csymmatchPdb,

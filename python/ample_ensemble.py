@@ -257,7 +257,6 @@ class Ensembler(object):
     def edit_side_chains(self,raw_ensemble,raw_ensemble_data,ensembles_directory):
         
         assert os.path.isdir(ensembles_directory),"Cannot find ensembles directory: {0}".format(ensembles_directory)
-        pdbed = pdb_edit.PDBEdit()
         ensembles=[]
         ensembles_data=[]
         for sct in self.side_chain_treatments:
@@ -270,9 +269,9 @@ class Ensembler(object):
                 # For all atom just copy the file
                 shutil.copy2(raw_ensemble,fpath)
             elif sct == "reliable":
-                pdbed.reliable_sidechains(raw_ensemble,fpath)
+                pdb_edit.reliable_sidechains(raw_ensemble,fpath)
             elif sct == "polya":
-                pdbed.backbone(raw_ensemble,fpath)
+                pdb_edit.backbone(raw_ensemble,fpath)
             else:
                 raise RuntimeError,"Unrecognised side_chain_treatment: {0}".format(sct)
             
@@ -577,12 +576,11 @@ class Ensembler(object):
 
             # list of models for this truncation level
             level_models = []
-            pdbed = pdb_edit.PDBEdit()
             for infile in models:
                 pdbname = os.path.basename( infile )
                 pdbout = os.path.join(trunc_dir, pdbname)
                 # Loop through PDB files and create new ones that only contain the residues left after truncation
-                pdbed.select_residues(inpath=infile, outpath=pdbout, residues=tresidues)
+                pdb_edit.select_residues(inpath=infile, outpath=pdbout, residues=tresidues)
                 level_models.append(pdbout)
             
             # Add the model
