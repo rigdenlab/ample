@@ -21,10 +21,12 @@ rosetta_dir=/opt/rosetta-3.5
 -mtz 1dtx.mtz \
 -frags_3mers aat000_03_05.200_v1_3 \
 -frags_9mers aat000_09_05.200_v1_3 \
+-num_clusters 1 \
 -nmodels 30 \
 -percent 50 \
 -quick_mode True \
 -use_shelxe True \
+-shelxe_rebuild False \
 -nproc 2 \
 -models_dir ./models \
 

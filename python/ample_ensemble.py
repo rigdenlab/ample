@@ -604,20 +604,22 @@ class Ensembler(object):
 
 class Test(unittest.TestCase):
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """
-        Get paths need to think of a sensible way to do this
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
         """
-
         thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         paths = thisd.split( os.sep )
-        self.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         
-        
-        self.work_dir=os.path.join(self.ample_dir,"tests")
-        self.theseus_exe=ample_util.find_exe('theseus')
-        self.spicker_exe=ample_util.find_exe('spicker')
-        self.maxcluster_exe=ample_util.find_exe('maxcluster')
+        cls.theseus_exe=ample_util.find_exe('theseus')
+        cls.spicker_exe=ample_util.find_exe('spicker')
+        cls.maxcluster_exe=ample_util.find_exe('maxcluster')
 
         return
 
@@ -626,7 +628,7 @@ class Test(unittest.TestCase):
 
         ensembler=Ensembler()
         
-        ensembler.work_dir=os.path.join(self.work_dir,"genthresh1")
+        ensembler.work_dir=os.path.join(self.tests_dir,"genthresh1")
         if os.path.isdir(ensembler.work_dir):
             shutil.rmtree(ensembler.work_dir)
         os.mkdir(ensembler.work_dir)
@@ -656,7 +658,7 @@ class Test(unittest.TestCase):
         ensembler=Ensembler()
         
         # This test for percent
-        ensembler.work_dir=os.path.join(self.work_dir,"genthresh2")
+        ensembler.work_dir=os.path.join(self.tests_dir,"genthresh2")
         if os.path.isdir(ensembler.work_dir):
             shutil.rmtree(ensembler.work_dir)
         os.mkdir(ensembler.work_dir)
@@ -719,7 +721,7 @@ class Test(unittest.TestCase):
 
         ensembler=Ensembler()
 
-        ensembler.work_dir=os.path.join(self.work_dir,"genthresh3")
+        ensembler.work_dir=os.path.join(self.tests_dir,"genthresh3")
         if os.path.isdir(ensembler.work_dir):
             shutil.rmtree(ensembler.work_dir)
         os.mkdir(ensembler.work_dir)
@@ -769,7 +771,7 @@ class Test(unittest.TestCase):
 
         ensembler=Ensembler()
 
-        ensembler.work_dir=os.path.join(self.work_dir,"genthresh4")
+        ensembler.work_dir=os.path.join(self.tests_dir,"genthresh4")
         if os.path.isdir(ensembler.work_dir):
             shutil.rmtree(ensembler.work_dir)
         os.mkdir(ensembler.work_dir)
@@ -793,7 +795,7 @@ class Test(unittest.TestCase):
                          )
         
         d = cluster_data[2]
-        self.assertEqual(os.path.basename(d.cluster_centroid),'1_S_00000001.pdb')
+        self.assertEqual(os.path.basename(d['cluster_centroid']),'1_S_00000001.pdb')
         self.assertEqual(d['cluster_num_models'],1)
         shutil.rmtree(ensembler.work_dir)
         return
@@ -802,7 +804,7 @@ class Test(unittest.TestCase):
 
         ensembler=Ensembler()
 
-        work_dir=os.path.join(self.work_dir,"genthresh5")
+        work_dir=os.path.join(self.tests_dir,"genthresh5")
         if os.path.isdir(work_dir):
             shutil.rmtree(work_dir)
         os.mkdir(work_dir)
@@ -826,28 +828,28 @@ class Test(unittest.TestCase):
                                                  truncation_method=truncation_method,
                                                  work_dir=work_dir)
 
-        eref=['tl100_r2_allatom.pdb', 'tl100_r2_reliable.pdb', 'tl100_r2_polya.pdb', 'tl100_r3_allatom.pdb',
-              'tl100_r3_reliable.pdb', 'tl100_r3_polya.pdb', 'tl95_r2_allatom.pdb', 'tl95_r2_reliable.pdb',
-              'tl95_r2_polya.pdb', 'tl95_r3_allatom.pdb', 'tl95_r3_reliable.pdb', 'tl95_r3_polya.pdb', 'tl90_r1_allatom.pdb',
-              'tl90_r1_reliable.pdb', 'tl90_r1_polya.pdb', 'tl90_r2_allatom.pdb', 'tl90_r2_reliable.pdb', 'tl90_r2_polya.pdb',
-              'tl90_r3_allatom.pdb', 'tl90_r3_reliable.pdb', 'tl90_r3_polya.pdb', 'tl85_r1_allatom.pdb', 'tl85_r1_reliable.pdb',
-              'tl85_r1_polya.pdb', 'tl85_r2_allatom.pdb', 'tl85_r2_reliable.pdb', 'tl85_r2_polya.pdb', 'tl85_r3_allatom.pdb',
-              'tl85_r3_reliable.pdb', 'tl85_r3_polya.pdb', 'tl80_r1_allatom.pdb', 'tl80_r1_reliable.pdb', 'tl80_r1_polya.pdb',
-              'tl80_r2_allatom.pdb', 'tl80_r2_reliable.pdb', 'tl80_r2_polya.pdb', 'tl80_r3_allatom.pdb', 'tl80_r3_reliable.pdb',
-              'tl80_r3_polya.pdb', 'tl75_r1_allatom.pdb', 'tl75_r1_reliable.pdb', 'tl75_r1_polya.pdb', 'tl75_r2_allatom.pdb',
-              'tl75_r2_reliable.pdb', 'tl75_r2_polya.pdb', 'tl75_r3_allatom.pdb', 'tl75_r3_reliable.pdb', 'tl75_r3_polya.pdb',
-              'tl69_r1_allatom.pdb', 'tl69_r1_reliable.pdb', 'tl69_r1_polya.pdb', 'tl69_r2_allatom.pdb', 'tl69_r2_reliable.pdb',
-              'tl69_r2_polya.pdb', 'tl64_r1_allatom.pdb', 'tl64_r1_reliable.pdb', 'tl64_r1_polya.pdb', 'tl64_r2_allatom.pdb',
-              'tl64_r2_reliable.pdb', 'tl64_r2_polya.pdb', 'tl59_r1_allatom.pdb', 'tl59_r1_reliable.pdb', 'tl59_r1_polya.pdb',
-              'tl59_r2_allatom.pdb', 'tl59_r2_reliable.pdb', 'tl59_r2_polya.pdb', 'tl54_r1_allatom.pdb', 'tl54_r1_reliable.pdb',
-              'tl54_r1_polya.pdb', 'tl54_r2_allatom.pdb', 'tl54_r2_reliable.pdb', 'tl54_r2_polya.pdb', 'tl49_r1_allatom.pdb',
-              'tl49_r1_reliable.pdb', 'tl49_r1_polya.pdb', 'tl49_r2_allatom.pdb', 'tl49_r2_reliable.pdb', 'tl49_r2_polya.pdb',
-              'tl44_r1_allatom.pdb', 'tl44_r1_reliable.pdb', 'tl44_r1_polya.pdb', 'tl44_r2_allatom.pdb', 'tl44_r2_reliable.pdb',
-              'tl44_r2_polya.pdb', 'tl39_r1_allatom.pdb', 'tl39_r1_reliable.pdb', 'tl39_r1_polya.pdb', 'tl34_r1_allatom.pdb',
-              'tl34_r1_reliable.pdb', 'tl34_r1_polya.pdb', 'tl29_r1_allatom.pdb', 'tl29_r1_reliable.pdb', 'tl29_r1_polya.pdb', 
-              'tl24_r1_allatom.pdb', 'tl24_r1_reliable.pdb', 'tl24_r1_polya.pdb', 'tl19_r1_allatom.pdb', 'tl19_r1_reliable.pdb',
-              'tl19_r1_polya.pdb', 'tl14_r1_allatom.pdb', 'tl14_r1_reliable.pdb', 'tl14_r1_polya.pdb', 'tl8_r1_allatom.pdb',
-              'tl8_r1_reliable.pdb', 'tl8_r1_polya.pdb']
+        eref=['c1_tl100_r2_allatom.pdb', 'c1_tl100_r2_reliable.pdb', 'c1_tl100_r2_polya.pdb', 'c1_tl100_r3_allatom.pdb',
+              'c1_tl100_r3_reliable.pdb', 'c1_tl100_r3_polya.pdb', 'c1_tl95_r2_allatom.pdb', 'c1_tl95_r2_reliable.pdb',
+              'c1_tl95_r2_polya.pdb', 'c1_tl95_r3_allatom.pdb', 'c1_tl95_r3_reliable.pdb', 'c1_tl95_r3_polya.pdb', 'c1_tl90_r1_allatom.pdb',
+              'c1_tl90_r1_reliable.pdb', 'c1_tl90_r1_polya.pdb', 'c1_tl90_r2_allatom.pdb', 'c1_tl90_r2_reliable.pdb', 'c1_tl90_r2_polya.pdb',
+              'c1_tl90_r3_allatom.pdb', 'c1_tl90_r3_reliable.pdb', 'c1_tl90_r3_polya.pdb', 'c1_tl85_r1_allatom.pdb', 'c1_tl85_r1_reliable.pdb',
+              'c1_tl85_r1_polya.pdb', 'c1_tl85_r2_allatom.pdb', 'c1_tl85_r2_reliable.pdb', 'c1_tl85_r2_polya.pdb', 'c1_tl85_r3_allatom.pdb',
+              'c1_tl85_r3_reliable.pdb', 'c1_tl85_r3_polya.pdb', 'c1_tl80_r1_allatom.pdb', 'c1_tl80_r1_reliable.pdb', 'c1_tl80_r1_polya.pdb',
+              'c1_tl80_r2_allatom.pdb', 'c1_tl80_r2_reliable.pdb', 'c1_tl80_r2_polya.pdb', 'c1_tl80_r3_allatom.pdb', 'c1_tl80_r3_reliable.pdb',
+              'c1_tl80_r3_polya.pdb', 'c1_tl75_r1_allatom.pdb', 'c1_tl75_r1_reliable.pdb', 'c1_tl75_r1_polya.pdb', 'c1_tl75_r2_allatom.pdb',
+              'c1_tl75_r2_reliable.pdb', 'c1_tl75_r2_polya.pdb', 'c1_tl75_r3_allatom.pdb', 'c1_tl75_r3_reliable.pdb', 'c1_tl75_r3_polya.pdb',
+              'c1_tl69_r1_allatom.pdb', 'c1_tl69_r1_reliable.pdb', 'c1_tl69_r1_polya.pdb', 'c1_tl69_r2_allatom.pdb', 'c1_tl69_r2_reliable.pdb',
+              'c1_tl69_r2_polya.pdb', 'c1_tl64_r1_allatom.pdb', 'c1_tl64_r1_reliable.pdb', 'c1_tl64_r1_polya.pdb', 'c1_tl64_r2_allatom.pdb',
+              'c1_tl64_r2_reliable.pdb', 'c1_tl64_r2_polya.pdb', 'c1_tl59_r1_allatom.pdb', 'c1_tl59_r1_reliable.pdb', 'c1_tl59_r1_polya.pdb',
+              'c1_tl59_r2_allatom.pdb', 'c1_tl59_r2_reliable.pdb', 'c1_tl59_r2_polya.pdb', 'c1_tl54_r1_allatom.pdb', 'c1_tl54_r1_reliable.pdb',
+              'c1_tl54_r1_polya.pdb', 'c1_tl54_r2_allatom.pdb', 'c1_tl54_r2_reliable.pdb', 'c1_tl54_r2_polya.pdb', 'c1_tl49_r1_allatom.pdb',
+              'c1_tl49_r1_reliable.pdb', 'c1_tl49_r1_polya.pdb', 'c1_tl49_r2_allatom.pdb', 'c1_tl49_r2_reliable.pdb', 'c1_tl49_r2_polya.pdb',
+              'c1_tl44_r1_allatom.pdb', 'c1_tl44_r1_reliable.pdb', 'c1_tl44_r1_polya.pdb', 'c1_tl44_r2_allatom.pdb', 'c1_tl44_r2_reliable.pdb',
+              'c1_tl44_r2_polya.pdb', 'c1_tl39_r1_allatom.pdb', 'c1_tl39_r1_reliable.pdb', 'c1_tl39_r1_polya.pdb', 'c1_tl34_r1_allatom.pdb',
+              'c1_tl34_r1_reliable.pdb', 'c1_tl34_r1_polya.pdb', 'c1_tl29_r1_allatom.pdb', 'c1_tl29_r1_reliable.pdb', 'c1_tl29_r1_polya.pdb', 
+              'c1_tl24_r1_allatom.pdb', 'c1_tl24_r1_reliable.pdb', 'c1_tl24_r1_polya.pdb', 'c1_tl19_r1_allatom.pdb', 'c1_tl19_r1_reliable.pdb',
+              'c1_tl19_r1_polya.pdb', 'c1_tl14_r1_allatom.pdb', 'c1_tl14_r1_reliable.pdb', 'c1_tl14_r1_polya.pdb', 'c1_tl8_r1_allatom.pdb',
+              'c1_tl8_r1_reliable.pdb', 'c1_tl8_r1_polya.pdb']
         self.assertEqual([os.path.basename(m) for m in ensembles],eref)
         d = ensembler.ensembles_data[5]
 
@@ -866,7 +868,7 @@ class Test(unittest.TestCase):
 
         ensembler=Ensembler()
 
-        work_dir=os.path.join(self.work_dir,"genthresh6")
+        work_dir=os.path.join(self.tests_dir,"genthresh6")
         if os.path.isdir(work_dir):
             shutil.rmtree(work_dir)
         os.mkdir(work_dir)

@@ -1513,23 +1513,24 @@ mostprob
 
 class Test(unittest.TestCase):
 
-
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """
-        Get paths need to think of a sensible way to do this
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
         """
-
         thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         paths = thisd.split( os.sep )
-        self.ampleDir = os.sep.join( paths[ : -1 ] )
-        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
-
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
     def testGetInfo1(self):
         """"""
 
-        pdbfile = os.path.join(self.testfilesDir,"1GU8.pdb")
+        pdbfile = os.path.join(self.testfiles_dir,"1GU8.pdb")
         
         PE = PDBEdit()
         
@@ -1563,7 +1564,7 @@ class Test(unittest.TestCase):
     def testGetInfo2(self):
         """"""
 
-        pdbfile = os.path.join(self.testfilesDir,"2UUI.pdb")
+        pdbfile = os.path.join(self.testfiles_dir,"2UUI.pdb")
         
         PE = PDBEdit()
         
@@ -1584,8 +1585,8 @@ class Test(unittest.TestCase):
     
     def testStdResidues(self):
 
-        pdbin=os.path.join(self.testfilesDir,"4DZN.pdb")
-        pdbout="std.pdb"
+        pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
+        pdbout=os.path.join(self.tests_dir,"std.pdb")
         
         PDBEdit().std_residues(pdbin, pdbout)
         
@@ -1604,7 +1605,7 @@ class Test(unittest.TestCase):
         return
     
     def testSequence(self):
-        pdbin=os.path.join(self.testfilesDir,"4DZN.pdb")
+        pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
         ref=""">4DZN chain: A length: 31
 GEIAALKQEIAALKKEIAALKEIAALKQGYY
 >4DZN chain: C length: 31
@@ -1617,8 +1618,8 @@ GEIAALKQEIAALKKEIAALKEIAALKQGYY
     
     def testStdResiduesCctbx(self):
 
-        pdbin=os.path.join(self.testfilesDir,"4DZN.pdb")
-        pdbout="std.pdb"
+        pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
+        pdbout=os.path.join(self.tests_dir,"std.pdb")
         
         PDBEdit().std_residues_cctbx(pdbin, pdbout)
         

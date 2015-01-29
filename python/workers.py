@@ -108,6 +108,20 @@ def _check_success_test( job ):
     return False
  
 class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        return
      
     def makeJob(self, name):
          

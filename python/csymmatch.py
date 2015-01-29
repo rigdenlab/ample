@@ -167,19 +167,32 @@ class Csymmatch( object ):
         
 
 class TestContacts( unittest.TestCase ):
-    
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        return
+
     def setUp(self):
         
         thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         paths = thisd.split( os.sep )
         self.ampleDir = os.sep.join( paths[ : -1 ] )
-        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
         
         return
     
     def testParse1(self):
         
-        logfile = os.path.join( self.testfilesDir, "csymmatch1.log" )
+        logfile = os.path.join( self.testfiles_dir, "csymmatch1.log" )
         
         c = Csymmatch()
         c.parseLog( logfile=logfile )
@@ -193,7 +206,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse2(self):
         
-        logfile = os.path.join( self.testfilesDir, "csymmatch2.log" )
+        logfile = os.path.join( self.testfiles_dir, "csymmatch2.log" )
         
         c = Csymmatch()
         c.parseLog( logfile=logfile )

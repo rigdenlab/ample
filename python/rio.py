@@ -757,18 +757,23 @@ class Rio(object):
     
 class TestContacts( unittest.TestCase ):
     
-    def setUp(self):
-        
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
         thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         paths = thisd.split( os.sep )
-        self.ampleDir = os.sep.join( paths[ : -1 ] )
-        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
-        
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
     def testParse1(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont1.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont1.log" )
         
         c = Rio()
         contactData = RioData()
@@ -784,7 +789,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse2(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont2.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont2.log" )
         
         c = Rio()
         contactData = RioData()
@@ -800,7 +805,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse3(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont3.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont3.log" )
         
         c = Rio()
         contactData = RioData()
@@ -816,7 +821,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse4(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont4.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont4.log" )
         
         c = Rio()
         contactData = RioData()
@@ -832,7 +837,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse5(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont5.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont5.log" )
         
         c = Rio()
         contactData = RioData()
@@ -848,7 +853,7 @@ class TestContacts( unittest.TestCase ):
 
     def testParse7(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont7.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont7.log" )
         
         c = Rio()
         contactData = RioData()
@@ -864,7 +869,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse8(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont8.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont8.log" )
         
         c = Rio()
         contactData = RioData()
@@ -881,8 +886,8 @@ class TestContacts( unittest.TestCase ):
 
     def testHelix5(self):
 
-        logfile = os.path.join( self.testfilesDir, "ncont5.log" )
-        dssplog = os.path.join( self.testfilesDir, "3RA3.dssp" )
+        logfile = os.path.join( self.testfiles_dir, "ncont5.log" )
+        dssplog = os.path.join( self.testfiles_dir, "3RA3.dssp" )
         
         c = Rio()
         contactData = RioData()

@@ -473,14 +473,18 @@ class residueSequenceMap( object ):
 
 class Test(unittest.TestCase):
 
-
-    def setUp(self):
-        
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
         thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         paths = thisd.split( os.sep )
-        self.ampleDir = os.sep.join( paths[ : -1 ] )
-        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
-        
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
     def testResSeqMap1(self):
@@ -526,8 +530,8 @@ class Test(unittest.TestCase):
         """See if we can sort out the indexing between the native and model"""
         
         
-        nativePdb = os.path.join(self.testfilesDir,"2XOV.pdb")
-        modelPdb = os.path.join(self.testfilesDir,"2XOV_S_00000001.pdb")
+        nativePdb = os.path.join(self.testfiles_dir,"2XOV.pdb")
+        modelPdb = os.path.join(self.testfiles_dir,"2XOV_S_00000001.pdb")
         
         resSeqMap = residueSequenceMap( nativePdb, modelPdb )
         
@@ -545,13 +549,13 @@ class Test(unittest.TestCase):
         """See if we can sort out the indexing between the native and model"""
         
         
-        nativePdb = os.path.join(self.testfilesDir,"2UUI.pdb")
-        modelPdb = os.path.join(self.testfilesDir,"2UUI_S_00000001.pdb")
+        nativePdb = os.path.join(self.testfiles_dir,"2UUI.pdb")
+        modelPdb = os.path.join(self.testfiles_dir,"2UUI_S_00000001.pdb")
         
         PE = pdb_edit.PDBEdit()
-        chainA = "2UUI_A.pdb"
+        chainA = self.path.join(self.tests_dir,"2UUI_A.pdb")
         PE.extract_chain( nativePdb, chainA, chainID='A' )
-        chainAstd = "2UUI_A_std.pdb"
+        chainAstd = self.path.join(self.tests_dir,"2UUI_A_std.pdb")
         PE.standardise(chainA, chainAstd)
         
         resSeqMap = residueSequenceMap( chainA, modelPdb )
@@ -581,11 +585,11 @@ class Test(unittest.TestCase):
         """See if we can sort out the indexing between the native and model"""
         
         
-        nativePdb = os.path.join(self.testfilesDir,"1K33.pdb")
-        modelPdb = os.path.join(self.testfilesDir,"1K33_S_00000001.pdb")
+        nativePdb = os.path.join(self.testfiles_dir,"1K33.pdb")
+        modelPdb = os.path.join(self.testfiles_dir,"1K33_S_00000001.pdb")
         
         PE = pdb_edit.PDBEdit()
-        nativePdbStd = "1K33_std.pdb"
+        nativePdbStd = self.path.join(self.tests_dir,"1K33_std.pdb")
         PE.standardise( nativePdb, nativePdbStd )
         
         nativeInfo = PE.get_info( nativePdbStd )

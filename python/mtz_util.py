@@ -168,23 +168,24 @@ class Test(unittest.TestCase):
     Unit test
     """
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """
-        Get paths need to think of a sensible way to do this
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
         """
-
         thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         paths = thisd.split( os.sep )
-        self.ampleDir = os.sep.join( paths[ : -1 ] )
-        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
-
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
     def testProcessReflectionFile(self):
         """Get MTZ flags"""
 
-
-        mtz = os.path.join( self.ampleDir, "examples", "toxd-example" , "1dtx.mtz" )
+        mtz = os.path.join( self.ample_dir, "examples", "toxd-example" , "1dtx.mtz" )
 
 
         d = { 'mtz'    : mtz,
@@ -206,7 +207,7 @@ class Test(unittest.TestCase):
     def testProcessReflectionFileNORFREE(self):
         """Get MTZ flags"""
 
-        mtz = os.path.join( self.testfilesDir, "2uui_sigmaa.mtz" )
+        mtz = os.path.join( self.testfiles_dir, "2uui_sigmaa.mtz" )
 
         d = { 'mtz'    : mtz,
               'sf_cif' : None,
@@ -232,7 +233,7 @@ class Test(unittest.TestCase):
     def testProcessReflectionFileCIF(self):
         """Get MTZ flags"""
 
-        cif = os.path.join( self.testfilesDir, "1x79-sf.cif" )
+        cif = os.path.join( self.testfiles_dir, "1x79-sf.cif" )
 
         d = { 'mtz'     : None,
               'sf_cif'  : cif,

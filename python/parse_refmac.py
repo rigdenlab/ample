@@ -48,19 +48,24 @@ class RefmacLogParser(object):
 class Test(unittest.TestCase):
 
 
-    def setUp(self):
-        
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
         thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         paths = thisd.split( os.sep )
-        self.ampleDir = os.sep.join( paths[ : -1 ] )
-        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
-        
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
     
     def testParse1(self):
         """parse 2bhw"""
         
-        logFile = os.path.join(self.testfilesDir,"refmac.log")
+        logFile = os.path.join(self.testfiles_dir,"refmac.log")
         ap = RefmacLogParser( logFile )
         
         #self.assertEqual( ap.initRfact, 0.452)

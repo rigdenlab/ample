@@ -12,7 +12,6 @@ import random
 import re
 import shutil
 import subprocess
-import sys
 import time
 import unittest
 
@@ -863,16 +862,19 @@ class RosettaScoreParser(object):
 
 class Test(unittest.TestCase):
 
-
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """
-        Set paths
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
         """
-        logging.basicConfig()
-        logging.getLogger().setLevel(logging.DEBUG)
-        thisdir = os.getcwd()
-        self.ampledir = os.path.abspath( thisdir+os.sep+"..")
-
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        return
 
     def XtestMakeFragments(self):
         """See we can create fragments"""
@@ -907,35 +909,31 @@ class Test(unittest.TestCase):
         """
 
         ## Create a dummy script
-        script = "dummy_rosetta.sh"
-        f = open(script,"w")
-        content = """#!/usr/bin/env python
+        script = self.path.join(self.tests_dir,"dummy_rosetta.sh")
+        with open(script,"w") as f:
+            content = """#!/usr/bin/env python
 for i in range(10):
     f = open( "rosy_{0}.pdb".format(i), "w")
     f.write( "rosy_{0}.pdb".format(i) )
     f.close()"""
-        f.write(content)
-        f.close()
+            f.write(content)
         os.chmod(script, 0o777)
         
         # Create dummy fragment files
-        frags3='3mers'
-        frags9='9mers'
-        
-        with open(frags3,'w') as f:
-            f.write(frags3+"\n")
-        with open(frags9,'w') as f:
-            f.write(frags9+"\n")
+        frags3=self.path.join(self.tests_dir,'3mers')
+        frags9=self.path.join(self.tests_dir,'9mers')
+        with open(frags3,'w') as f3,open(frags9,'w') as f9:
+            f3.write(frags3+"\n")
+            f9.write(frags9+"\n")
 
         # Set options
         optd={}
         optd['nproc'] = 3
         optd['nmodels'] = 30
-        optd['work_dir'] = os.getcwd()
-        optd['models_dir'] = os.getcwd() + os.sep + "XXXmodelsXXX"
+        optd['work_dir'] = self.tests_dir
+        optd['models_dir'] = os.path.join(self.tests_dir, "XXXmodelsXXX")
         optd['rosetta_dir'] = "/opt/rosetta3.4"
-        optd['rosetta_AbinitioRelax'] = os.getcwd() + os.sep + "dummy_rosetta.sh"
-        optd['rosetta_db'] = None
+        optd['rosetta_AbinitioRelax'] = script
         optd['frags_3mers'] = frags3
         optd['frags_9mers'] = frags9
         optd['rosetta_fragments_exe'] = None
@@ -960,14 +958,11 @@ for i in range(10):
         rm = RosettaModel(optd=optd)
         mdir = rm.doModelling()
         
-        print "GOT mdir ",mdir
-        
         os.unlink(script)
         os.unlink('seedlist')
         os.unlink(frags3)
         os.unlink(frags9)
         shutil.rmtree(mdir)
-        
         
         return
 
