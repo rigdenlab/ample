@@ -34,7 +34,7 @@ class ResultsSummary(object):
         self.results = []
         # List of all the possible column titles and their result object attributes
         self.title2key = {
-                            'Model_Name'       : 'Name',
+                            'Model_Name'       : 'name',
                             'MR_Program'       : 'MR_program',
                             'Solution_Type'    : 'Solution_Type',
                             'final_Rfact'      : 'final_Rfact',
@@ -64,8 +64,8 @@ class ResultsSummary(object):
         for ensemble, reason in failed.iteritems():
             d = self.createDict()
             # name hard-coded
-            d['Name'] = "loc0_ALL_" + ensemble + "_UNMOD"
-            d['Ensemble_name']=ensemble 
+            d['name'] = "loc0_ALL_" + ensemble + "_UNMOD"
+            d['ensemble_name']=ensemble 
             d['JobDirectory'] = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
             d['Solution_Type'] = reason
             self.results.append( d )
@@ -77,9 +77,9 @@ class ResultsSummary(object):
         d = {}
         
         # our additional keys
-        d["Ensemble_name"] = None
+        d["ensemble_name"] = None
         d["MR_program"] = None
-        d["Name"] = None
+        d["name"] = None
         
         d["JobDirectory"]        = None
         d["Solution_Type"]       = None
@@ -200,7 +200,7 @@ class ResultsSummary(object):
 
     def _getUnfinishedResult(self, result ):
         """Return a result for an unfinished job"""
-        if not result['Name']:
+        if not result['name']:
             # Use directory name for job name
             dlist = os.listdir( os.path.join( result.jobDir, "data") )
             if len( dlist ) != 1:
@@ -211,15 +211,15 @@ class ResultsSummary(object):
                 if dname.endswith("_molrep") or dname.endswith("_phaser"):
                     dname = dname[:-7]
                 # Add loc0_ALL_ and append _UNMOD. shudder...
-                result['Ensemble_name'] = dname
-                result['Name'] = "loc0_ALL_" + dname + "_UNMOD"
+                result['ensemble_name'] = dname
+                result['name'] = "loc0_ALL_" + dname + "_UNMOD"
                 result["Solution_Type"] = "ERROR"
             else:
                 # Use dirname but remove "loc0_ALL_" from front
                 #result.name = os.path.basename( dlist[0] )[9:]
                 # Use dirname but add "_UNMOD" to back
-                result['Ensemble_name'] = os.path.basename( dlist[0] )
-                result['Name'] = result.ensembleName + "_UNMOD"
+                result['ensemble_name'] = os.path.basename( dlist[0] )
+                result['name'] = result.ensembleName + "_UNMOD"
         result["MR_program"] = "unknown"
         return
     
@@ -240,7 +240,7 @@ class ResultsSummary(object):
 
             # Create a result object for each line in the output file
             result = self.createDict()
-            result['Ensemble_name'] = ensemble
+            result['ensemble_name'] = ensemble
 
             line = line.strip()
             if not header:
@@ -274,31 +274,31 @@ class ResultsSummary(object):
                 if v == '--': v=None # non-valid values in table are indicated by --
                 result[self.title2key[title]] = v
 
-            dirName = result['Name'][:-6]
+            dirName = result['name'][:-6]
             result["JobDirectory"] = os.path.join( jobDir,'data',dirName,'unmod','mr',result["MR_program"].lower() )
             
             # See which pdb files were created
             if result["MR_program"]=='PHASER':
                 phaserPdb=os.path.join(result["JobDirectory"],
                                        "refine",
-                                       "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(),result['Ensemble_name']))
+                                       "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(),result['ensemble_name']))
                 if os.path.isfile(phaserPdb):
                     result.phaserPdb=phaserPdb
             elif result.program=='molrep':
                 molrepPdb=os.path.join(result["JobDirectory"],
                                        "refine",
-                                       "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(),result['Ensemble_name']) )
+                                       "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(),result['ensemble_name']) )
                 if os.path.isfile(molrepPdb):
                     result.molrepPdb=molrepPdb
 
             refmacPdb=os.path.join(result["JobDirectory"],
                                    'refine',
-                                   "refmac_" + result["MR_program"].lower() + "_loc0_ALL_" + result['Ensemble_name'] + "_UNMOD.pdb" )
+                                   "refmac_" + result["MR_program"].lower() + "_loc0_ALL_" + result['ensemble_name'] + "_UNMOD.pdb" )
             if os.path.isfile(refmacPdb):
                 result["REFMAC_pdbout"]=refmacPdb
                 
             shelxePdb=os.path.join(result["JobDirectory"],'build','shelxe',
-                                   "shelxe_" + result["MR_program"].lower() + "_loc0_ALL_" + result['Ensemble_name'] + "_UNMOD.pdb" )
+                                   "shelxe_" + result["MR_program"].lower() + "_loc0_ALL_" + result['ensemble_name'] + "_UNMOD.pdb" )
             if os.path.isfile(shelxePdb):
                 result["SHELXE_pdbout"]=shelxePdb
                 
@@ -333,8 +333,8 @@ class ResultsSummary(object):
                 assert not len(d['SearchModel_filename']) > 1,"SearchModel_filename is >1 - not thought about this!"
                 en=d['SearchModel_filename'][0]
                 del d['SearchModel_filename']
-                d['Name'] = name
-                d['Ensemble_name'] = en
+                d['name'] = name
+                d['ensemble_name'] = en
                 d['MR_program'] = mrprog
                 results.append(d)
         return results
@@ -355,7 +355,7 @@ class ResultsSummary(object):
                 result["PHASER_LLG"] = phaserP.LLG
                 result["PHASER_TFZ"] = phaserP.TFZ
             
-            phaserLog = os.path.join( mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(result["MR_program"].lower(),result['Ensemble_name']) )
+            phaserLog = os.path.join( mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(result["MR_program"].lower(),result['ensemble_name']) )
             if os.path.isfile( phaserLog ):
                 phaserP = parse_phaser.PhaserLogParser( phaserLog, onlyTime=True )
                 #result.phaserLog    = phaserLog
@@ -432,7 +432,7 @@ class ResultsSummary(object):
         """Return a string suitable for printing the sorted results"""
 
         resultsTable = []
-        keys = ['Ensemble_name','MR_program','Solution_Type','final_Rfact','final_Rfree','SHELXE_CC',
+        keys = ['ensemble_name','MR_program','Solution_Type','final_Rfact','final_Rfree','SHELXE_CC',
                 'SHELXE_ACL','BUCC_final_Rfact','BUCC_final_Rfree','ARP_final_Rfact','ARP_final_Rfree']
         resultsTable.append(keys)
         for result in self.results:
@@ -470,12 +470,12 @@ def finalSummary(amoptd):
     for mrb in mrbump_data:
         d=copy.copy(mrb)
         for ed in ensembles_data:
-            if ed['name'] == d['Ensemble_name']:
+            if ed['name'] == d['ensemble_name']:
                 d.update(ed)
                 results.append(d)
 
     resultsTable = []
-    keys = ['Ensemble_name','MR_program',"PHASER_LLG","PHASER_TFZ",'SHELXE_CC','SHELXE_ACL',"SXRBUCC_final_Rfact","SXRBUCC_final_Rfree",
+    keys = ['ensemble_name','MR_program',"PHASER_LLG","PHASER_TFZ",'SHELXE_CC','SHELXE_ACL',"SXRBUCC_final_Rfact","SXRBUCC_final_Rfree",
             'SXRARP_final_Rfact','SXRARP_final_Rfree','num_models','num_residues']
 
     resultsTable.append(keys)

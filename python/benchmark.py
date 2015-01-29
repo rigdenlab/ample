@@ -5,6 +5,7 @@ Created on 24 Oct 2014
 '''
 
 # Python imports
+import copy
 import csv
 import glob
 import logging
@@ -32,62 +33,55 @@ def analyse(amoptd):
     os.chdir(amoptd['benchmark_dir'])
 
     analysePdb(amoptd)
-    
     analyseModels(amoptd)
     
     _logger.info("Benchmark: generating naitive density map")
     # Generate map so that we can do origin searching
-    amoptd['nativeDensityMap']=phenixer.generateMap(amoptd['mtz'],
+    amoptd['native_density_map']=phenixer.generateMap(amoptd['mtz'],
                                                      amoptd['native_pdb'],
                                                      FP=amoptd['F'],
                                                      SIGFP=amoptd['SIGF'],
                                                      FREE=amoptd['FREE'],
-                                                     directory=amoptd['benchmark_dir']
-                                                     )
-    
+                                                     directory=amoptd['benchmark_dir'])
     data=[]
-    # Only look at first cluster
-    cluster=0
-    
     # Get the ensembling data
-    ensemble_results={} # Maps ensemble name to the data object
-    if amoptd.has_key('ensemble_results'):
-        ensemble_data = amoptd['ensemble_results'][cluster]
-        if not len(ensemble_data):
-            _logger.critical("Benchmark cannot find any ensemble data!")
-            return
+    if not len(amoptd['ensemble_results']):
+        _logger.critical("Benchmark cannot find any ensemble data!")
+        return
 
-        # Get map of ensemble name -> ensemble result
-        for e in ensemble_data:
-            if ensemble_results.has_key( e.name ):
-                raise RuntimeError, "Duplicate key: {0}".format( e.name )
-            ensemble_results[ e.name ] = e
+    # Get dict of ensemble name -> ensemble result
+    ensemble_results = { e['ensemble_name'] : e for e in amoptd['ensemble_results'] }
                     
     # Get mrbump_results for cluster
-    mrbump_results = amoptd['mrbump_results'][cluster]
+    mrbump_results = amoptd['mrbump_results']
     if not len(mrbump_results):
         _logger.critical("Benchmark cannot find any mrbump results!")
         return
 
     for result in mrbump_results:
         
-        d=mkDataDict(amoptd)
+        # use mrbump dict as basis for result object
+        d = copy.copy(result)
+        
+        # Add in the data from the ensemble
+        d.update(ensemble_results[d['ensemble_name']])
+        
+        # Add in stuff we've cleaned from the pdb
+        d['native_pdb_code']=amoptd['native_pdb_code']
+        d['native_pdb_title']=amoptd['native_pdb_title']
+        d['native_pdb_resolution']=amoptd['native_pdb_resolution']
+        d['native_pdb_solvent_content']=amoptd['native_pdb_solvent_content']
+        d['native_pdb_solvent_content']=amoptd['native_pdb_solvent_content']
+        d['native_pdb_native_pdb_space_groupcontent']=amoptd['native_pdb_native_pdb_space_groupcontent']
+        d['native_pdb_num_atoms']=amoptd['native_pdb_num_atoms']
+        d['native_pdb_num_residues']=amoptd['native_pdb_num_residues']
  
         # Get the ensemble data and add to the MRBUMP data
-        edata=ensemble_results[result.ensembleName]
-        d['ensembleNumModels'] =  edata.num_models
-        d['ensembleNumResidues'] =  edata.num_residues
-        d['ensembleSideChainTreatment'] = edata.side_chain_treatment
-        d['ensembleRadiusThreshold'] = edata.radius_threshold
-        d['ensembleTruncationThreshold'] =  edata.truncation_threshold
-        d['ensemblePercentModel'] = int( ( float( edata.num_residues ) / float( amoptd['fasta_length'] ) ) * 100 )
-        d['ensembleNumAtoms'] = edata.num_atoms
-        d['ensembleCentroidModel'] = edata.centroid_model
-        
+        d['ensemble_percent_model'] = int( ( float( d['num_residues'] ) / float( amoptd['fasta_length'] ) ) * 100 )
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
-        d['ensembleNativeTM'] = amoptd['maxComp'].tm(d['ensembleCentroidModel'])
+        d['ensemble_native_TM'] = amoptd['maxComp'].tm(d['ensembleCentroidModel'])
         
-        analyseSolution(amoptd,result,d)
+        analyseSolution(amoptd,d)
         data.append(d)
 
     fileName=os.path.join(amoptd['benchmark_dir'],'results.csv' )
@@ -107,88 +101,72 @@ def writeCsv(fileName,resultList):
         csvwriter.writerows(resultList)
     return
     
-def mkDataDict(amoptd):
+def analyseSolution(amoptd,d):
 
-    d={}
-    d['nativePdbCode']=amoptd['nativePdbCode']
-    d['nativePdbTitle']=amoptd['nativePdbTitle']
-    d['nativePdbResolution']=amoptd['nativePdbResolution']
-    d['nativePdbSolventContent']=amoptd['nativePdbSolventContent']
-    d['nativePdbMatthewsCoefficient']=amoptd['nativePdbMatthewsCoefficient']
-    d['nativePdbSpaceGroup']=amoptd['nativePdbSpaceGroup']
-    d['nativePdbNumAtoms']=amoptd['nativePdbNumAtoms']
-    d['nativePdbNumResidues']=amoptd['nativePdbNumResidues']
-    
-    return d
+    _logger.info("Benchmark: analysing result: {0}".format(d['ensemble_Name']))
 
-def analyseSolution(amoptd,result,d):
-
-    _logger.info("Benchmark: analysing result: {0}".format(result.ensembleName))
-
-    if result.program=="phaser":
-        mrPdb = result.phaserPdb
-    elif result.program=="molrep":
-        mrPdb = result.molrepPdb
-    elif result.program=="unknown":
+    mrPdb=None
+    if d['MR_program']=="phaser":
+        mrPdb = d["PHASER_pdbout"]
+    elif d['MR_program']=="molrep":
+        mrPdb = ["MOLREP_pdbout"]
+    elif d['MR_program']=="unknown":
         return
     else:
-        assert False,result
+        assert False,d
 
     if not mrPdb:
-        if result.refmacPdb:
-            mrPdb=result.refmacPdb
+        if d["REFMAC_pdbout"]:
+            mrPdb=d["REFMAC_pdbout"]
         if not mrPdb:
             return
-    
-    # Copy in attributes
-    addMrbumpData(result, d)
     
     # debug - copy into work directory as reforigin struggles with long pathnames
     shutil.copy(mrPdb, os.path.join(amoptd['benchmark_dir'], os.path.basename(mrPdb)))
     
     mrPdbInfo=pdb_edit.get_info( mrPdb )
     
-    d['numPlacedAtoms']=mrPdbInfo.numAtoms()
-    d['numPlacedCA']=mrPdbInfo.numCalpha()
+    d['num_placed_atoms']=mrPdbInfo.numAtoms()
+    d['num_placed_CA']=mrPdbInfo.numCalpha()
 
     # Get reforigin info
     rmsder = reforigin.ReforiginRmsd()
-    rmsder.getRmsd(  nativePdbInfo=amoptd['nativePdbInfo'],
+    rmsder.getRmsd(  nativePdbInfo=amoptd['native_pdb_info'],
                      placedPdbInfo=mrPdbInfo,
-                     refModelPdbInfo=amoptd['refModelPdbInfo'],
+                     refModelPdbInfo=amoptd['ref_model_pdb_info'],
                      cAlphaOnly=True,
                      workdir=amoptd['benchmark_dir']
                      )
-    d['reforiginRMSD']=rmsder.rmsd
+    d['reforigin_RMSD']=rmsder.rmsd
 
 
     # 1. run reforigin to generate map for native with mtz (before this routine is called)
     # 2. run get_cc_mtz_pdb to calculate an origin
-    mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['nativeDensityMap'], mrPdb=mrPdb)
+    mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
     
     # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
     csymmatch.Csymmatch().wrapModelToNative("offset.pdb",
                                             amoptd['native_pdb'],
                                             csymmatchPdb=os.path.join(amoptd['benchmark_dir'],
-                                            "phaser_{0}_csymmatch.pdb".format(result.ensembleName))
+                                            "phaser_{0}_csymmatch.pdb".format(d['ensemble_name']))
                                             )
 
     # Score the origin with all-atom and rio
     rioData=rio.Rio().scoreOrigin(mrOrigin,
                                   mrPdbInfo=mrPdbInfo,
-                                  nativePdbInfo=amoptd['nativePdbInfo'],
-                                  resSeqMap=amoptd['resSeqMap'],
+                                  nativePdbInfo=amoptd['native_pdb_info'],
+                                  resSeqMap=amoptd['res_seq_map'],
                                   workdir=amoptd['benchmark_dir']
                                   )
 
     # Set attributes
-    d['aaNumContacts']  = rioData.aaNumContacts
-    d['rioNumContacts'] = rioData.rioNumContacts
-    d['rioInregister']  = rioData.rioInRegister
-    d['rioOoRegister'] = rioData.rioOoRegister
-    d['rioBackwards']   = rioData.rioBackwards
-    d['rio']            = rioData.rioInRegister + rioData.rioOoRegister
-    d['rioNoCat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
+    d['AA_num_contacts']  = rioData.aaNumContacts
+    d['RIO_num_contacts'] = rioData.rioNumContacts
+    d['RIO_in_register']  = rioData.rioInRegister
+    d['RIO_oo_register'] = rioData.rioOoRegister
+    d['RIO_backwards']   = rioData.rioBackwards
+    d['RIO']            = rioData.rioInRegister + rioData.rioOoRegister
+    d['RIO_no_cat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
 
 #     # Now get the helix
 #     helixSequence = contacts.Rio().helixFromContacts( contacts=rioData.contacts,
@@ -204,75 +182,35 @@ def analyseSolution(amoptd,result,d):
     # This purely for checking and so we have pdbs to view
     # 
     # Wrap shelxe trace onto native using Csymmatch
-    if not result.shelxePdb is None and os.path.isfile(result.shelxePdb):
-        csymmatch.Csymmatch().wrapModelToNative( result.shelxePdb,
+    if not d['SHELXE_pdbout'] is None and os.path.isfile(d['SHELXE_pdbout']):
+        csymmatch.Csymmatch().wrapModelToNative( d['SHELXE_pdbout'],
                                                  amoptd['native_pdb'],
                                                  origin=mrOrigin,
                                                  workdir=amoptd['benchmark_dir'])
 
     # Wrap parse_buccaneer model onto native
-    if result.buccaneerPdb:
+    if d['SXRBUCC_pdbout']:
         # Need to rename Pdb as is just called buccSX_output.pdb
-        csymmatchPdb = os.path.join(amoptd['benchmark_dir'], "buccaneer_{0}_csymmatch.pdb".format(result.ensembleName))
+        csymmatchPdb = os.path.join(amoptd['benchmark_dir'], "buccaneer_{0}_csymmatch.pdb".format(d['ensemble_name']))
 
-        csymmatch.Csymmatch().wrapModelToNative( result.buccaneerPdb,
+        csymmatch.Csymmatch().wrapModelToNative( d['SXRBUCC_pdbout'],
                                                  amoptd['native_pdb'],
                                                  origin=mrOrigin,
                                                  csymmatchPdb=csymmatchPdb,
                                                  workdir=amoptd['benchmark_dir'])
         
     # Wrap parse_buccaneer model onto native
-    if result.arpWarpPdb:
+    if d['SXRARP_pdbout']:
         # Need to rename Pdb as is just called buccSX_output.pdb
-        csymmatchPdb = os.path.join(amoptd['benchmark_dir'], "arpwarp_{0}_csymmatch.pdb".format(result.ensembleName))
+        csymmatchPdb = os.path.join(amoptd['benchmark_dir'], "arpwarp_{0}_csymmatch.pdb".format(d['ensemble_name']))
 
-        csymmatch.Csymmatch().wrapModelToNative( result.arpWarpPdb,
+        csymmatch.Csymmatch().wrapModelToNative( d['SXRARP_pdbout'],
                                                  amoptd['native_pdb'],
                                                  origin=mrOrigin,
                                                  csymmatchPdb=csymmatchPdb,
                                                  workdir=amoptd['benchmark_dir'])
 
     return
-
-def addMrbumpData(result,d):
-    """Copy data from mrbump result into dict"""
-    
-    attrs = [
-             # 'jobDir',
-             # 'mrDir',
-             # 'name',
-             # 'pdb',
-             # 'ensembleName',
-             'program',
-             'solution',
-             'rfact',
-             'rfree',
-             'buccRfact',
-             'buccRfree',
-             'arpWarpRfact',
-             'arpWarpRfree',
-             'shelxeCC',
-             'shelxeACL',
-             'buccFinalRfact',
-             'buccFinalRfree',
-             'arpWarpFinalRfact',
-             'arpWarpFinalRfree',
-             'phaserLLG',
-             'phaserTFZ',
-             'phaserTime',
-             'phaserKilled',
-             'molrepScore',
-             'molrepTime'
-             ]
-
-    for a in attrs:
-        if hasattr(result,a):
-            d[a]=getattr(result, a)
-        else:
-            d[a]=None
-    
-    return
-
 
 def analysePdb(amoptd):
     
@@ -286,14 +224,14 @@ def analysePdb(amoptd):
     originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
 
     # Do this here as a bug in pdbcur can knacker the CRYST1 data
-    amoptd['nativePdbCode'] = nativePdbInfo.pdbCode
-    amoptd['nativePdbTitle'] = nativePdbInfo.title
-    amoptd['nativePdbResolution'] = nativePdbInfo.resolution
-    amoptd['nativePdbSolventContent'] = nativePdbInfo.solventContent
-    amoptd['nativePdbMatthewsCoefficient'] = nativePdbInfo.matthewsCoefficient
-    amoptd['nativePdbSpaceGroup'] = originInfo.spaceGroup()
-    amoptd['nativePdbNumAtoms'] = natoms
-    amoptd['nativePdbNumResidues'] = nresidues
+    amoptd['native_pdb_code'] = nativePdbInfo.pdbCode
+    amoptd['native_pdb_title'] = nativePdbInfo.title
+    amoptd['native_pdb_resolution'] = nativePdbInfo.resolution
+    amoptd['native_pdb_solvent_content'] = nativePdbInfo.solventContent
+    amoptd['native_pdb_solvent_content'] = nativePdbInfo.matthewsCoefficient
+    amoptd['native_pdb_native_pdb_space_groupcontent'] = originInfo.spaceGroup()
+    amoptd['native_pdb_num_atoms'] = natoms
+    amoptd['native_pdb_num_residues'] = nresidues
     
     # First check if the native has > 1 model and extract the first if so
     if len( nativePdbInfo.models ) > 1:
@@ -321,11 +259,11 @@ def analysePdb(amoptd):
         nativeChain1 = nativePdbInfo.pdb
     
     # Additional data
-    amoptd['nativePdbNumChains'] = len( nativePdbInfo.models[0].chains )
-    amoptd['nativePdbInfo']=nativePdbInfo
-    amoptd['nativePdbStd']=nativePdbStd
-    amoptd['nativePdb1Chain']=nativeChain1
-    amoptd['nativePdbOriginInfo']=originInfo
+    amoptd['native_pdb_num_chains'] = len( nativePdbInfo.models[0].chains )
+    amoptd['native_pdb_info']=nativePdbInfo
+    amoptd['native_pdb_std']=nativePdbStd
+    amoptd['native_pdb_1chain']=nativeChain1
+    amoptd['native_pdb_origin_info']=originInfo
     
     return
 
@@ -334,7 +272,7 @@ def analyseModels(amoptd):
     # Get hold of a full model so we can do the mapping of residues
     refModelPdb = glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))[0]
     
-    nativePdbInfo=amoptd['nativePdbInfo']
+    nativePdbInfo=amoptd['native_pdb_info']
     
     resSeqMap = residue_map.residueSequenceMap()
     refModelPdbInfo = pdb_edit.get_info(refModelPdb)
@@ -343,8 +281,8 @@ def analyseModels(amoptd):
                         targetInfo=nativePdbInfo,
                         targetChainID=nativePdbInfo.models[0].chains[0]
                       )
-    amoptd['resSeqMap']=resSeqMap
-    amoptd['refModelPdbInfo']=refModelPdbInfo
+    amoptd['res_seq_map']=resSeqMap
+    amoptd['ref_model_pdb_info']=refModelPdbInfo
     
     # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
     # requires a separate run to generate total RMSD

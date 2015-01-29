@@ -276,7 +276,7 @@ class Ensembler(object):
                 raise RuntimeError,"Unrecognised side_chain_treatment: {0}".format(sct)
             
             # Count the number of atoms in the ensemble-only required for benchmark mode
-            natoms,nresidues=pdb_edit.PDBEdit().num_atoms_and_residues(fpath,first=True)
+            natoms,nresidues=pdb_edit.num_atoms_and_residues(fpath,first=True)
             
             # Process ensemble data
             ensemble_data=copy.copy(raw_ensemble_data)
