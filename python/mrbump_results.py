@@ -400,7 +400,7 @@ class ResultsSummary(object):
         reverse=False
         sortf=False
         for r in results:
-            if 'SHELXE_CC' in r and r['SHELXE_CC'] and float(r['SHELXE_CC']) > -1.0:
+            if 'SHELXE_CC' in r and r['SHELXE_CC'] and float(r['SHELXE_CC']) > 0.0:
                 reverse=True
                 sortf = lambda x: float(0) if x['SHELXE_CC']  is None else float( x['SHELXE_CC'])
                 break
