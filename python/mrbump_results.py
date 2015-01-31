@@ -64,6 +64,7 @@ class ResultsSummary(object):
         for ensemble, reason in failed.iteritems():
             d = self.createDict()
             # name hard-coded
+            #d['name'] = "loc0_ALL_" + ensemble + "_UNMOD"
             d['name'] = "loc0_ALL_" + ensemble + "_UNMOD"
             d['ensemble_name']=ensemble 
             d['JobDirectory'] = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
@@ -175,14 +176,14 @@ class ResultsSummary(object):
                 continue
 
             # Check resultsTable.dat
+            resultsDict = os.path.join( jobDir,"results", "resultsTable.pkl" )
             resultsTable = os.path.join( jobDir,"results", "resultsTable.dat" )
-            resultsDict = os.path.join( jobDir,"results", "resultsTable.pklX" )
             if os.path.isfile(resultsDict):
                 self.results += self.processResultsPkl(resultsDict)
             elif os.path.isfile(resultsTable):
                 self.results += self.parseTableDat(resultsTable)
             else:
-                self.logger.debug(" -- Could not find results files: {0} or {1}".format(resultsTable,resultsDict))
+                self.logger.debug(" -- Could not find results files: {0} or {1}".format(resultsDict,resultsTable))
                 failed[ ensemble ] = "missing-results-file"
                 continue
 
@@ -330,11 +331,10 @@ class ResultsSummary(object):
             for mrprog,d2 in d1.iteritems():
                 # Add MR program as dictionary entry
                 d = copy.copy(d2)
-                assert not len(d['SearchModel_filename']) > 1,"SearchModel_filename is >1 - not thought about this!"
-                en=d['SearchModel_filename'][0]
                 del d['SearchModel_filename']
                 d['name'] = name
-                d['ensemble_name'] = en
+                # name is e.g.: loc0_ALL_c1_tl100_r2_allatom_UNMOD
+                d['ensemble_name'] = name[9:-6]
                 d['MR_program'] = mrprog
                 results.append(d)
         return results
