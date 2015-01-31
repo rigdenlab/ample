@@ -55,6 +55,32 @@ def addRfree(file_name,directory=None,overwrite=True):
     else:
         return mtzUnique
 
+def getLabels(file_name):
+    """Return the F, FP and FREE column labels"""
+    
+    reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
+    if not reflection_file.file_type()=="ccp4_mtz":
+        msg="File is not of type ccp4_mtz: {0}".format(file_name)
+        logging.critical(msg)
+        raise RuntimeError,msg
+    
+    content=reflection_file.file_content()
+    
+    ctypes=content.column_types()
+    clabels=content.column_labels()
+    ftype='F'
+    if not ftype in ctypes:
+        raise RuntimeError,"Cannot find any structure amplitudes in: {0}".format(file_name)
+    F=clabels[ctypes.index(ftype)]
+    
+    # FP derived from F
+    FP='SIG'+F
+    if not FP in clabels:
+        raise RuntimeError,"Cannot find label {0} in file: {1}".format(FP,file_name)
+    
+    FREE=_getRfree(content)
+    return F,FP,FREE
+
 def getRfree(file_name):
     """Return the Rfree label"""
 
@@ -88,7 +114,6 @@ def _getRfree(content):
                 if rfree_label:
                     _logger.warning("FOUND >1 RFREE label in file!")
                 rfree_label=label
-                
     return rfree_label
 
 def processReflectionFile( amoptd ):
@@ -259,6 +284,19 @@ class Test(unittest.TestCase):
         os.unlink('1x79-sf_uniqueify.log')
 
         return
+    
+    def testProcessMtzLabels(self):
+        """Get MTZ flags"""
+        
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        mtz = os.path.join( self.testfiles_dir, "2uui_sigmaa.mtz" )
+        
+        FP,SIGFP,FREE=getLabels(mtz)
+        self.assertEqual(FP,'F')
+        self.assertEqual(SIGFP,'SIGF')
+        self.assertEqual(FREE,None)
+        return    
+        
     
 def testSuite():
     suite = unittest.TestSuite()
