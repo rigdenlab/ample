@@ -51,7 +51,7 @@ def run( nativePdb, nativeMtz=None, nativeMap=None, mrPdbs=None, outDir=None ):
             print "Found origin: {0}\nOffset pdb is: {1}".format( origin, offsetPdb )
         else:
             originShift=shelxeOrigin(shelxeExe,nativePdb, nativeMtz, mrPdb)
-            # NEED TO MOVE mrPDB onto origin
+            print "Found origin: {0}".format( originShift )
             offsetPdb=ample_util.filename_append(mrPdb, astr='offset', directory=os.getcwd())
             pdb_edit.translate(mrPdb, offsetPdb, originShift)
         
@@ -80,11 +80,13 @@ def generateMap(nativePdb,nativeMtz):
                                   )
 
 def shelxeOrigin(shelxeExe,nativePdb,nativeMtz,mrPdb):
+    
+    stem="shelxe-input" # stem name for all shelxe files
+    
     print "Parsing MTZ file {0} to determine column labels".format(nativeMtz)
     F,SIGF,FREE=mtz_util.getLabels(nativeMtz)
     
-    #nativeHkl=os.path.splitext(nativeMtz)[0] + ".hkl"
-    nativeHkl="shelxe-input.hkl"
+    nativeHkl=stem+".hkl"
     print "Creating HKL format file".format(nativeHkl)
     
     cmd=['mtz2various','HKLIN',nativeMtz,'HKLOUT', nativeHkl]
@@ -101,8 +103,8 @@ END""".format(F,SIGF,FREE)
         os.unlink(logfile)
         
     # Rename nativePdb and mrPdb
-    shutil.copyfile(mrPdb, "shelxe-input.pda")
-    shutil.copyfile(nativePdb, "shelxe-input.ent")
+    shutil.copyfile(mrPdb, stem+".pda")
+    shutil.copyfile(nativePdb, stem+".ent")
     traceCycles=0
     fracSolvent=0.5
     cmd=[shelxeExe,'shelxe-input.pda','-a{0}'.format(traceCycles),'-q', '-s{0}'.format(fracSolvent),'-o','-n','-t0','-m0','-x']
@@ -110,6 +112,9 @@ END""".format(F,SIGF,FREE)
     ret = ample_util.run_command(cmd=cmd, logfile=logfile, directory=None, dolog=True, stdin=None)
     if not ret==0:
         raise RuntimeError,"Error running shelxe - see log: {0}".format(logfile)
+    else:
+        for ext in ['.pda','.hkl','.ent','.pdo','.phs','.lst','_trace.ps']:
+            os.unlink(stem+ext)
     
     sp=parse_shelxe.ShelxeLogParser(logfile)
     os.unlink(logfile)
