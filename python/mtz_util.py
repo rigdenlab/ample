@@ -41,11 +41,10 @@ def addRfree(file_name,directory=None,overwrite=True):
     mtzUnique = ample_util.filename_append(file_name, "uniqueify", directory=directory)
 
     cmd = ['uniqueify', file_name, mtzUnique]
-    #uniqueify {-p fraction} mydata.mtz.
     logfile = os.path.join( os.getcwd(), "uniqueify.log" )
     retcode = ample_util.run_command(cmd, logfile=logfile)
     if retcode != 0:
-        msg = "Error running sfcif2mtz. Check the logfile: {0}".format(logfile)
+        msg = "Error running command: {0}. Check the logfile: {1}".format(" ".join(cmd),logfile)
         _logger.critical(msg)
         raise RuntimeError, msg
 
@@ -65,7 +64,6 @@ def getLabels(file_name):
         raise RuntimeError,msg
     
     content=reflection_file.file_content()
-    
     ctypes=content.column_types()
     clabels=content.column_labels()
     ftype='F'
@@ -100,11 +98,10 @@ def _getRfree(content):
     for label in content.column_labels():
         if 'free' in label.lower():
             column = content.get_column(label=label)
-            #print "size ",column.array_size()
-            #print "valid ",column.n_valid_values()
             selection_valid = column.selection_valid()
             flags = column.extract_values()
             sel_0 = (flags == 0)
+            # extract number of work/test reflections
             n0=( sel_0 & selection_valid).count(True)
             n1=(~sel_0 & selection_valid).count(True)
             #print "Number of 0 (work):",n0
@@ -295,6 +292,18 @@ class Test(unittest.TestCase):
         self.assertEqual(FP,'F')
         self.assertEqual(SIGFP,'SIGF')
         self.assertEqual(FREE,None)
+        return
+    
+    def testProcessMtzLabels2(self):
+        """Get MTZ flags"""
+        
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        mtz = os.path.join( self.testfiles_dir, "1dtx.mtz" )
+        
+        FP,SIGFP,FREE=getLabels(mtz)
+        self.assertEqual(FP,'FP')
+        self.assertEqual(SIGFP,'SIGFP')
+        self.assertEqual(FREE,'FreeR_flag')
         return    
         
     
