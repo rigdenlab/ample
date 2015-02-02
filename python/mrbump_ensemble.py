@@ -6,7 +6,6 @@ Created on Feb 28, 2013
 
 # python imports
 import logging
-import multiprocessing
 import os
 import sys
 import unittest
@@ -190,51 +189,8 @@ def mrbump_ensemble_local( job_scripts, amoptd ):
     js.setJobs( job_scripts )
     js.start( nproc=amoptd['nproc'],
               early_terminate=amoptd['early_terminate'],
-              check_success=check_success )
+              check_success=mrbump_results.checkSuccess )
     return
-
-def check_success( job ):
-    """
-    Check if a job ran successfully.
-    
-    Args:
-    directory -- directory mr bump ran the job
-    
-    Returns:
-    True if success
-    
-    Success is assumed as a SHELX CC score of >= SHELXSUCCESS
-    """
-    
-    
-    directory, script = os.path.split( job )
-    scriptname = os.path.splitext( script )[0]
-    rfile = os.path.join(directory, 'search_'+scriptname+'_mrbump','results/resultsTable.dat')
-    #print "{0} checking for file: {1}".format(multiprocessing.current_process().name,rfile)
-    if not os.path.isfile(rfile):
-        print "{0} cannot find results file: {1}".format(multiprocessing.current_process().name,rfile)
-        return False
-    
-    # Results summary object to parse table file
-    mrbR = mrbump_results.ResultsSummary()
-    
-    # Put into order and take top one
-    results = mrbR.parseTableDat(rfile)
-    mrbR.sortResults(results)
-    r = results[0]
-
-    success=False
-    rFreeSuccess=0.4
-    if 'SHELXE_CC' in r and r['SHELXE_CC'] and float(r['SHELXE_CC']) >= 25.0:
-        success=True
-    elif 'BUCC_final_Rfact' in r and r['BUCC_final_Rfact'] and float(r['BUCC_final_Rfact']) <= rFreeSuccess:
-        success=True
-    elif 'ARP_final_Rfree' in r and r['ARP_final_Rfree'] and float(r['ARP_final_Rfree']) <= rFreeSuccess:
-        success=True
-    elif 'final_Rfree' in r and r['final_Rfree'] and float(r['final_Rfree']) <= rFreeSuccess:
-        success=True
-        
-    return success
 
 class Test(unittest.TestCase):
 
