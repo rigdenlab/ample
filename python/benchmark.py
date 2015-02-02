@@ -6,11 +6,13 @@ Created on 24 Oct 2014
 
 # Python imports
 import copy
+import cPickle
 import csv
 import glob
 import logging
 import os
 import shutil
+import unittest
 
 # Our imports
 import ample_util
@@ -22,7 +24,7 @@ import pdb_model
 import reforigin
 import residue_map
 import rio
-import rosetta_model
+#import rosetta_model
 
 _logger=logging.getLogger()
 
@@ -35,22 +37,22 @@ def analyse(amoptd):
     analysePdb(amoptd)
     analyseModels(amoptd)
     
-    _logger.info("Benchmark: generating naitive density map")
-    # Generate map so that we can do origin searching
-    amoptd['native_density_map']=phenixer.generateMap(amoptd['mtz'],
-                                                     amoptd['native_pdb'],
-                                                     FP=amoptd['F'],
-                                                     SIGFP=amoptd['SIGF'],
-                                                     FREE=amoptd['FREE'],
-                                                     directory=amoptd['benchmark_dir'])
+#     _logger.info("Benchmark: generating naitive density map")
+#     # Generate map so that we can do origin searching
+#     amoptd['native_density_map']=phenixer.generateMap(amoptd['mtz'],
+#                                                      amoptd['native_pdb'],
+#                                                      FP=amoptd['F'],
+#                                                      SIGFP=amoptd['SIGF'],
+#                                                      FREE=amoptd['FREE'],
+#                                                      directory=amoptd['benchmark_dir'])
     data=[]
     # Get the ensembling data
-    if not len(amoptd['ensemble_results']):
+    if not len(amoptd['ensembles_data']):
         _logger.critical("Benchmark cannot find any ensemble data!")
         return
 
     # Get dict of ensemble name -> ensemble result
-    ensemble_results = { e['ensemble_name'] : e for e in amoptd['ensemble_results'] }
+    ensemble_results = { e['name'] : e for e in amoptd['ensembles_data'] }
                     
     # Get mrbump_results for cluster
     mrbump_results = amoptd['mrbump_results']
@@ -65,21 +67,22 @@ def analyse(amoptd):
         
         # Add in the data from the ensemble
         d.update(ensemble_results[d['ensemble_name']])
+        assert d['ensemble_name']==d['name'],d
         
         # Add in stuff we've cleaned from the pdb
         d['native_pdb_code']=amoptd['native_pdb_code']
         d['native_pdb_title']=amoptd['native_pdb_title']
         d['native_pdb_resolution']=amoptd['native_pdb_resolution']
         d['native_pdb_solvent_content']=amoptd['native_pdb_solvent_content']
-        d['native_pdb_solvent_content']=amoptd['native_pdb_solvent_content']
-        d['native_pdb_native_pdb_space_groupcontent']=amoptd['native_pdb_native_pdb_space_groupcontent']
+        d['native_pdb_space_group']=amoptd['native_pdb_space_group']
         d['native_pdb_num_atoms']=amoptd['native_pdb_num_atoms']
         d['native_pdb_num_residues']=amoptd['native_pdb_num_residues']
  
         # Get the ensemble data and add to the MRBUMP data
         d['ensemble_percent_model'] = int( ( float( d['num_residues'] ) / float( amoptd['fasta_length'] ) ) * 100 )
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
-        d['ensemble_native_TM'] = amoptd['maxComp'].tm(d['ensembleCentroidModel'])
+        d['ensemble_native_TM'] = amoptd['maxComp'].tm(d['cluster_centroid'])
+        d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(d['cluster_centroid'])
         
         analyseSolution(amoptd,d)
         data.append(d)
@@ -103,13 +106,13 @@ def writeCsv(fileName,resultList):
     
 def analyseSolution(amoptd,d):
 
-    _logger.info("Benchmark: analysing result: {0}".format(d['ensemble_Name']))
+    _logger.info("Benchmark: analysing result: {0}".format(d['ensemble_name']))
 
     mrPdb=None
-    if d['MR_program']=="phaser":
-        mrPdb = d["PHASER_pdbout"]
-    elif d['MR_program']=="molrep":
-        mrPdb = ["MOLREP_pdbout"]
+    if d['MR_program']=="PHASER":
+        mrPdb = d['PHASER_pdbout']
+    elif d['MR_program']=="MOLREP":
+        mrPdb = d['MOLREP_pdbout']
     elif d['MR_program']=="unknown":
         return
     else:
@@ -117,10 +120,10 @@ def analyseSolution(amoptd,d):
 
     if not mrPdb:
         if d["REFMAC_pdbout"]:
-            mrPdb=d["REFMAC_pdbout"]
+            mrPdb=d['REFMAC_pdbout']
         if not mrPdb:
             return
-    
+        
     # debug - copy into work directory as reforigin struggles with long pathnames
     shutil.copy(mrPdb, os.path.join(amoptd['benchmark_dir'], os.path.basename(mrPdb)))
     
@@ -131,12 +134,11 @@ def analyseSolution(amoptd,d):
 
     # Get reforigin info
     rmsder = reforigin.ReforiginRmsd()
-    rmsder.getRmsd(  nativePdbInfo=amoptd['native_pdb_info'],
-                     placedPdbInfo=mrPdbInfo,
-                     refModelPdbInfo=amoptd['ref_model_pdb_info'],
-                     cAlphaOnly=True,
-                     workdir=amoptd['benchmark_dir']
-                     )
+    rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
+                   placedPdbInfo=mrPdbInfo,
+                   refModelPdbInfo=amoptd['ref_model_pdb_info'],
+                   cAlphaOnly=True,
+                   workdir=amoptd['benchmark_dir'])
     d['reforigin_RMSD']=rmsder.rmsd
 
 
@@ -228,8 +230,8 @@ def analysePdb(amoptd):
     amoptd['native_pdb_title'] = nativePdbInfo.title
     amoptd['native_pdb_resolution'] = nativePdbInfo.resolution
     amoptd['native_pdb_solvent_content'] = nativePdbInfo.solventContent
-    amoptd['native_pdb_solvent_content'] = nativePdbInfo.matthewsCoefficient
-    amoptd['native_pdb_native_pdb_space_groupcontent'] = originInfo.spaceGroup()
+    amoptd['native_pdb_matthews_coefficient'] = nativePdbInfo.matthewsCoefficient
+    amoptd['native_pdb_space_group'] = originInfo.spaceGroup()
     amoptd['native_pdb_num_atoms'] = natoms
     amoptd['native_pdb_num_residues'] = nresidues
     
@@ -287,11 +289,11 @@ def analyseModels(amoptd):
     # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
     # requires a separate run to generate total RMSD
     #if False:
-    _logger.info("Analysing RMSD scores for Rosetta models")
-    try:
-        amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
-    except RuntimeError,e:
-        print e
+#     _logger.info("Analysing RMSD scores for Rosetta models")
+#     try:
+#         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
+#     except RuntimeError,e:
+#         print e
     amoptd['maxComp'] = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
     _logger.info("Analysing Rosetta models with Maxcluster")
     amoptd['maxComp'].compareDirectory( nativePdbInfo=nativePdbInfo,
@@ -309,3 +311,30 @@ def analyseSS(amoptd):
     dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode ) )
     dsspP = dssp.DsspParser( dsspLog )
     return
+
+
+class Test(unittest.TestCase):
+
+    def testBenchmark(self):
+        pklfile="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_3/resultsd.pkl"
+        with open(pklfile) as f:
+            d=cPickle.load(f)
+        bd="/opt/ample-dev1.testset/python/foo"
+        if not os.path.isdir(bd): os.mkdir(bd)
+        d['benchmark_dir']=bd
+        analyse(d)
+        
+        print d
+
+        return
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testBenchmark'))
+    return suite
+
+#
+# Run unit tests
+if __name__ == "__main__":
+    unittest.TextTestRunner(verbosity=2).run(testSuite())
+
