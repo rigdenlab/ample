@@ -141,7 +141,7 @@ class Csymmatch( object ):
         if workdir is None:
             workdir = os.getcwd()
         
-        assert os.path.isfile( mrPdb ) and os.path.isfile( nativePdb )
+        assert os.path.isfile(mrPdb) and os.path.isfile(nativePdb),"Cannot find: {0} or {1}".format(mrPdb,nativePdb)
         
         if origin != [ 0.0, 0.0, 0.0 ]:
             # Move pdb to new origin
