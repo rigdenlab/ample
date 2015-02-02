@@ -1077,7 +1077,7 @@ def num_atoms_and_residues(pdbin,first=False):
                                          logfile=logfile,
                                          stdin=stdin)
         if retcode != 0:
-            raise RuntimeError,"Error running rwcontents {0}".format( pdbin  )
+            raise RuntimeError,"Error running cmd {0}\nSee logfile: {1}".format(cmd,logfile)
         
         natoms=0
         nresidues = 0
@@ -1089,6 +1089,7 @@ def num_atoms_and_residues(pdbin,first=False):
                 if line.startswith(" Total number of         atoms (including hydrogens)"):
                     natoms = int(float(line.strip().split()[6]))
                     break
+        os.unlink(logfile)
     else:
         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
         model=pdb_obj.hierarchy.models()[0]
