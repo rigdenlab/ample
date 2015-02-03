@@ -94,15 +94,111 @@ def analyse(amoptd):
 
 def writeCsv(fileName,resultList):
     
-    # Hack find all possible keys
-    keys=set()
-    for r in resultList:
-        keys.update(r.keys())
-    keys=list(sorted(keys))
+    # List of all the keys we want to write out in order
+    keylist= [
+                # Native info
+                'native_pdb_code'
+                'native_pdb_title'
+                'native_pdb_resolution'
+                'native_pdb_solvent_content'
+                'native_pdb_space_group'
+                'native_pdb_num_atoms'
+                'native_pdb_num_residues'
+                'native_pdb_num_chains'
+                
+                # Get the ensemble data and add to the MRBUMP data
+                'ensemble_name',
+                'ensemble_percent_model',
+                'ensemble_native_TM',
+                'ensemble_native_RMSD',
+                
+                # cluster info
+                'cluster_method',
+                'num_clusters',
+                'cluster_num',
+                'cluster_centroid',
+                'cluster_num_models',
+                
+                # truncation info
+                'truncation_level',
+                'percent_truncation',
+                'truncation_method',
+                'truncation_variance',
+                'truncation_num_residues',
+                
+                # subclustering info
+                'subcluster_num_models',
+                'subcluster_radius_threshold',
+                'subcluster_centroid_model',
+                
+                # ensemble info
+                #'name',
+                'side_chain_treatment',
+                'ensemble_num_atoms',
+                
+                # MR result info
+                #'name',
+                'MR_program',
+                'Solution_Type',
+                
+                'PHASER_LLG',
+                'PHASER_TFZ',
+                'PHASER_RFZ',
+                'PHASER_time',
+                'PHASER_killed',
+                'PHASER_version',
+                
+                'MOLREP_score',
+                'MOLREP_time',
+                'MOLREP_version',
+                
+                'final_Rfact',
+                'final_Rfree',
+                'REFMAC_version',
+                
+                'BUCC_final_Rfact',
+                'BUCC_final_Rfree',
+                'BUCC_version',
+                
+                'ARP_final_Rfact',
+                'ARP_final_Rfree',
+                'ARP_version',
+                
+                'SHELXE_CC',
+                'SHELXE_ACL',
+                'SHELXE_MCL',
+                'SHELXE_NC',
+                'SHELXE_wMPE',
+                'SHELXE_os',
+                'SHELXE_time',
+                'SHELXE_version',
+                
+                'SXRBUCC_version',
+                'SXRBUCC_final_Rfact',
+                'SXRBUCC_final_Rfree',
+                
+                'SXRARP_version',
+                'SXRARP_final_Rfact',
+                'SXRARP_final_Rfree',
+                
+                'num_placed_atoms',
+                'reforigin_RMSD',
+                
+                'AA_num_contacts',
+                'RIO_num_contacts',
+                'RIO_in_register',
+                'RIO_oo_register',
+                'RIO_backwards',
+                'RIO',
+                'RIO_no_cat'
+    
+    ]
+    
     
     with open(fileName,'wb') as csvfile:
         csvwriter=csv.DictWriter(csvfile,
-                                 fieldnames=keys,
+                                 fieldnames=keylist,
+                                 extrasaction='ignore',
                                  delimiter=',',
                                  quotechar='"',
                                  quoting=csv.QUOTE_MINIMAL)
@@ -148,7 +244,11 @@ def analyseSolution(amoptd,d):
 
     # Find the MR origin wrt to the native
     #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
-    mrOrigin=shelxe.shelxeOrigin(amoptd['shelxe_exe'],amoptd['native_pdb'],amoptd['mtz'],mrPdb=mrPdb)
+    #mrOrigin=shelxe.shelxe_origin(amoptd['shelxe_exe'],amoptd['native_pdb'],amoptd['mtz'],mrPdb=mrPdb)
+    if not d['SHELXE_os']:
+        _logger.critical("mrPdb {0} has no SHELXE_os origin shift.\n{1}".format(mrPdb,d))
+    else:
+        mrOrigin=[c*-1 for c in d['SHELXE_os']]
     
     # Move pdb onto new origin
     originPdb=ample_util.filename_append(mrPdb, astr='offset')
