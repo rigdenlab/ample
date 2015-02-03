@@ -239,10 +239,10 @@ class Ensembler(object):
         d['truncation_residues'] = None
         d['truncation_dir'] = None
         d['truncation_variance'] = None
-        d['num_residues'] = None
+        d['truncation_num_residues'] = None
 
         # subclustering info
-        d['num_models'] = None
+        d['subcluster_num_models'] = None
         d['subcluster_radius_threshold'] = None
         d['subcluster_centroid_model'] = None
     
@@ -288,7 +288,7 @@ class Ensembler(object):
             ensemble_data['pdb']=fpath
             ensemble_data['num_atoms']=natoms
             # check
-            assert ensemble_data['num_residues']==nresidues,"Unmatching number of residues!"
+            assert ensemble_data['truncation_num_residues']==nresidues,"Unmatching number of residues!"
             
             ensembles.append(fpath)
             ensembles_data.append(ensemble_data)
@@ -533,7 +533,7 @@ class Ensembler(object):
 
             # The data we've collected is the same for all pdbs in this level so just keep using the first  
             ensemble_data=copy.copy(truncated_models_data)
-            ensemble_data['num_models'] = len( cluster_files )
+            ensemble_data['subcluster_num_models'] = len( cluster_files )
             ensemble_data['subcluster_radius_threshold'] = radius
             ensemble_data['pdb'] = ensemble
 
@@ -591,7 +591,7 @@ class Ensembler(object):
             model_data['truncation_level']=tlevel
             model_data['truncation_variance']=tvar
             model_data['truncation_residues']=tresidues
-            model_data['num_residues']=len(tresidues)
+            model_data['truncation_num_residues']=len(tresidues)
             model_data['truncation_dir']=trunc_dir
             model_data['percent_truncation'] = percent_truncation
             model_data['truncation_method'] = truncation_method
