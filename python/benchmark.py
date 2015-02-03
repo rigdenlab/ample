@@ -97,14 +97,14 @@ def writeCsv(fileName,resultList):
     # List of all the keys we want to write out in order
     keylist= [
                 # Native info
-                'native_pdb_code'
-                'native_pdb_title'
-                'native_pdb_resolution'
-                'native_pdb_solvent_content'
-                'native_pdb_space_group'
-                'native_pdb_num_atoms'
-                'native_pdb_num_residues'
-                'native_pdb_num_chains'
+                'native_pdb_code',
+                'native_pdb_title',
+                'native_pdb_resolution',
+                'native_pdb_solvent_content',
+                'native_pdb_space_group',
+                'native_pdb_num_atoms',
+                'native_pdb_num_residues',
+                'native_pdb_num_chains',
                 
                 # Get the ensemble data and add to the MRBUMP data
                 'ensemble_name',
@@ -194,17 +194,33 @@ def writeCsv(fileName,resultList):
     
     ]
     
+    #for d in resultList:
+    #    for k in sorted(d.keys()):
+    #        print "GOT ",k,d[k]
     
     with open(fileName,'wb') as csvfile:
-        csvwriter=csv.DictWriter(csvfile,
-                                 fieldnames=keylist,
-                                 extrasaction='ignore',
-                                 delimiter=',',
-                                 quotechar='"',
-                                 quoting=csv.QUOTE_MINIMAL)
+        csvfile.write(",".join(keylist)+"\n")
+        for d in resultList:
+            #csvfile.write(",".join([d[k] for k in keylist]+"\n"))
+            values=[]
+            for k in keylist:
+                if k in d and d[k] is not None:
+                    values.append(str(d[k]).replace(",","^"))
+                else:
+                    values.append("N/A")
+            csvfile.write(",".join(values)+"\n")
+        csvfile.write("\n")
 
-        csvwriter.writeheader()
-        csvwriter.writerows(resultList)
+# Doesnt' seem to work       
+#         csvwriter=csv.DictWriter(csvfile,
+#                                  fieldnames=keylist,
+#                                  extrasaction='ignore',
+#                                  restval='N/A',
+#                                  delimiter=',',
+#                                  quotechar='"',
+#                                  quoting=csv.QUOTE_MINIMAL)
+#         csvwriter.writeheader()
+#         csvwriter.writerows(resultList)
     return
     
 def analyseSolution(amoptd,d):
@@ -432,8 +448,6 @@ class Test(unittest.TestCase):
         d['benchmark_dir']=bd
         analyse(d)
         
-        print d
-
         return
 
 def testSuite():
