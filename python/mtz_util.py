@@ -18,7 +18,7 @@ import cif_parser
 _logger = logging.getLogger()
 _logger.setLevel(logging.DEBUG)
 
-def delColumn(file_name, column, overwrite=True):
+def del_column(file_name, column, overwrite=True):
     """Delete a column from an mtz file and return a path to the file"""
     mtzDel = ample_util.filename_append(file_name, "d{0}".format(column) )
     cmd = [ "mtzutils", "hklin1", file_name, "hklout", mtzDel ]
@@ -36,7 +36,7 @@ def delColumn(file_name, column, overwrite=True):
     else:
         return mtzDel
 
-def addRfree(file_name,directory=None,overwrite=True):
+def add_rfree(file_name,directory=None,overwrite=True):
     """Run uniqueify on mtz file to generate RFREE data column"""
     mtzUnique = ample_util.filename_append(file_name, "uniqueify", directory=directory)
 
@@ -54,7 +54,7 @@ def addRfree(file_name,directory=None,overwrite=True):
     else:
         return mtzUnique
 
-def getLabels(file_name):
+def get_labels(file_name):
     """Return the F, FP and FREE column labels"""
     
     reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
@@ -76,10 +76,10 @@ def getLabels(file_name):
     if not FP in clabels:
         raise RuntimeError,"Cannot find label {0} in file: {1}".format(FP,file_name)
     
-    FREE=_getRfree(content)
+    FREE=_get_rfree(content)
     return F,FP,FREE
 
-def getRfree(file_name):
+def get_rfree(file_name):
     """Return the Rfree label"""
 
     reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
@@ -90,9 +90,9 @@ def getRfree(file_name):
     
     # Read the file
     content=reflection_file.file_content()
-    return _getRfree(content)
+    return _get_rfree(content)
     
-def _getRfree(content):
+def _get_rfree(content):
     rfree_label=None
     #print "GOT ",content.column_labels()
     for label in content.column_labels():
@@ -113,7 +113,7 @@ def _getRfree(content):
                 rfree_label=label
     return rfree_label
 
-def processReflectionFile( amoptd ):
+def processReflectionFile(amoptd):
     """Make sure we have a valid mtz file. If necessary convert a given cif file.
        Set the mtz variable in the given amoptd to the reflection file to use
        Return True if it all worked or raise an exception if it failed
@@ -163,20 +163,20 @@ def processReflectionFile( amoptd ):
         
     if amoptd['FREE']:
         # Check is valid
-        rfree=_getRfree(content)
+        rfree=_get_rfree(content)
         if not rfree or not rfree==amoptd['FREE']:
             _logger.critical("Given RFREE label {0} is not valid for mtz file: {0}".format( amoptd['FREE'], amoptd['mtz'] ) )
             sys.exit(1)
     else:
         # See if we can find a valid label in the file
-        rfree=_getRfree(content)
+        rfree=_get_rfree(content)
         if not rfree:
             # Need to generate RFREE
             _logger.warning("Cannot find a valid FREE flag - running uniquefy to generate column with RFREE data." )
-            amoptd['mtz'] = addRfree( amoptd['mtz'], directory=amoptd['work_dir'],overwrite=False)
+            amoptd['mtz'] = add_rfree( amoptd['mtz'], directory=amoptd['work_dir'],overwrite=False)
 
             # Check file and get new FREE flag
-            rfree=getRfree(amoptd['mtz'])
+            rfree=get_rfree(amoptd['mtz'])
             if not rfree:
                 _logger.critical("Cannot find valid rfree flag in mtz file {0} after running uniquiefy".format(amoptd['mtz']))
                 sys.exit(1)
@@ -288,7 +288,7 @@ class Test(unittest.TestCase):
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         mtz = os.path.join( self.testfiles_dir, "2uui_sigmaa.mtz" )
         
-        FP,SIGFP,FREE=getLabels(mtz)
+        FP,SIGFP,FREE=get_labels(mtz)
         self.assertEqual(FP,'F')
         self.assertEqual(SIGFP,'SIGF')
         self.assertEqual(FREE,None)
@@ -300,7 +300,7 @@ class Test(unittest.TestCase):
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         mtz = os.path.join( self.testfiles_dir, "1dtx.mtz" )
         
-        FP,SIGFP,FREE=getLabels(mtz)
+        FP,SIGFP,FREE=get_labels(mtz)
         self.assertEqual(FP,'FP')
         self.assertEqual(SIGFP,'SIGFP')
         self.assertEqual(FREE,'FreeR_flag')

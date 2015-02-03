@@ -25,7 +25,7 @@ def shelxeOrigin(shelxeExe,nativePdb,nativeMtz,mrPdb):
     stem="shelxe-input" # stem name for all shelxe files
     
     print "Parsing MTZ file {0} to determine column labels".format(nativeMtz)
-    F,SIGF,FREE=mtz_util.getLabels(nativeMtz)
+    F,SIGF,FREE=mtz_util.get_labels(nativeMtz)
     
     nativeHkl=stem+".hkl"
     print "Creating HKL format file".format(nativeHkl)
