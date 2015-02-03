@@ -18,12 +18,12 @@ import unittest
 import ample_util
 import csymmatch
 import maxcluster
-import phenixer
 import pdb_edit
 import pdb_model
 import reforigin
 import residue_map
 import rio
+import shelxe
 #import rosetta_model
 
 _logger=logging.getLogger()
@@ -45,7 +45,6 @@ def analyse(amoptd):
 #                                                      SIGFP=amoptd['SIGF'],
 #                                                      FREE=amoptd['FREE'],
 #                                                      directory=amoptd['benchmark_dir'])
-    data=[]
     # Get the ensembling data
     if not len(amoptd['ensembles_data']):
         _logger.critical("Benchmark cannot find any ensemble data!")
@@ -59,7 +58,8 @@ def analyse(amoptd):
     if not len(mrbump_results):
         _logger.critical("Benchmark cannot find any mrbump results!")
         return
-
+    
+    data=[]
     for result in mrbump_results:
         
         # use mrbump dict as basis for result object
@@ -93,9 +93,16 @@ def analyse(amoptd):
     return
 
 def writeCsv(fileName,resultList):
+    
+    # Hack find all possible keys
+    keys=set()
+    for r in resultList:
+        keys.update(r.keys())
+    keys=list(sorted(keys))
+    
     with open(fileName,'wb') as csvfile:
         csvwriter=csv.DictWriter(csvfile,
-                                 fieldnames=sorted(resultList[0].keys()),
+                                 fieldnames=keys,
                                  delimiter=',',
                                  quotechar='"',
                                  quoting=csv.QUOTE_MINIMAL)
@@ -115,15 +122,13 @@ def analyseSolution(amoptd,d):
         mrPdb = d['MOLREP_pdbout']
     elif d['MR_program']=="unknown":
         return
-    else:
-        assert False,d
 
-    if not mrPdb:
-        if d["REFMAC_pdbout"]:
-            mrPdb=d['REFMAC_pdbout']
-        if not mrPdb:
-            return
-        
+    if mrPdb is None or not os.path.isfile(mrPdb):
+        #for k in sorted(d.keys()):
+        #    print k,d[k]
+        _logger.critical("Cannot find mrPdb {0} for solution {1}".format(mrPdb,d))
+        return
+
     # debug - copy into work directory as reforigin struggles with long pathnames
     shutil.copy(mrPdb, os.path.join(amoptd['benchmark_dir'], os.path.basename(mrPdb)))
     
@@ -141,13 +146,16 @@ def analyseSolution(amoptd,d):
                    workdir=amoptd['benchmark_dir'])
     d['reforigin_RMSD']=rmsder.rmsd
 
-
-    # 1. run reforigin to generate map for native with mtz (before this routine is called)
-    # 2. run get_cc_mtz_pdb to calculate an origin
-    mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
+    # Find the MR origin wrt to the native
+    #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
+    mrOrigin=shelxe.shelxeOrigin(amoptd['shelxe_exe'],amoptd['native_pdb'],amoptd['mtz'],mrPdb=mrPdb)
+    
+    # Move pdb onto new origin
+    originPdb=ample_util.filename_append(mrPdb, astr='offset')
+    pdb_edit.translate(mrPdb, originPdb, mrOrigin)
     
     # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
-    csymmatch.Csymmatch().wrapModelToNative("offset.pdb",
+    csymmatch.Csymmatch().wrapModelToNative(originPdb,
                                             amoptd['native_pdb'],
                                             csymmatchPdb=os.path.join(amoptd['benchmark_dir'],
                                             "phaser_{0}_csymmatch.pdb".format(d['ensemble_name']))
@@ -316,7 +324,7 @@ def analyseSS(amoptd):
 class Test(unittest.TestCase):
 
     def testBenchmark(self):
-        pklfile="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_3/resultsd.pkl"
+        pklfile="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_4/resultsd.pkl"
         with open(pklfile) as f:
             d=cPickle.load(f)
         bd="/opt/ample-dev1.testset/python/foo"
