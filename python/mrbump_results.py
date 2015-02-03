@@ -17,6 +17,7 @@ if __name__ == "__main__":
 if not "CCP4" in os.environ.keys():
     raise RuntimeError('CCP4 not found')
 mrbumpd=os.path.join(os.environ['CCP4'],"include","mrbump","include","parsers")
+mrbumpd="/opt/mrbump-trunk/include/parsers"
 sys.path.insert(0,mrbumpd)
 import parse_arpwarp
 import parse_buccaneer
@@ -541,7 +542,7 @@ def finalSummary(amoptd):
 
     resultsTable = []
     keys = ['ensemble_name','MR_program',"PHASER_LLG","PHASER_TFZ",'SHELXE_CC','SHELXE_ACL',"SXRBUCC_final_Rfact","SXRBUCC_final_Rfree",
-            'SXRARP_final_Rfact','SXRARP_final_Rfree','num_models','num_residues']
+            'SXRARP_final_Rfact','SXRARP_final_Rfree','subcluster_num_models','truncation_num_residues']
 
     resultsTable.append(keys)
     for result in results:
@@ -568,7 +569,7 @@ class Test(unittest.TestCase):
     def testResultsDict(self):
         """Parse a results file"""
         
-        resultsPkl="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_0/MRBUMP/MRBUMP/search_c1_tl100_r2_allatom_mrbump/results/resultsTable.pkl"
+        resultsPkl="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_4/MRBUMP/MRBUMP/search_c1_tl100_r2_allatom_mrbump/results/resultsTable.pkl"
 
         rs=ResultsSummary()
         print rs.processResultsPkl(resultsPkl)
@@ -583,7 +584,7 @@ class Test(unittest.TestCase):
     
     def testFinalSummary(self):
         """Parse a results file"""
-        pkl="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_0/rnew.pkl"
+        pkl="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_4/resultsd.pkl"
         with open(pkl) as f:
             d=cPickle.load(f)
         print finalSummary(d)
