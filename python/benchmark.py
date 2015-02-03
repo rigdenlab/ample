@@ -79,7 +79,7 @@ def analyse(amoptd):
         d['native_pdb_num_residues']=amoptd['native_pdb_num_residues']
  
         # Get the ensemble data and add to the MRBUMP data
-        d['ensemble_percent_model'] = int( ( float( d['num_residues'] ) / float( amoptd['fasta_length'] ) ) * 100 )
+        d['ensemble_percent_model'] = int( ( float( d['truncation_num_residues'] ) / float( amoptd['fasta_length'] ) ) * 100 )
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
         d['ensemble_native_TM'] = amoptd['maxComp'].tm(d['cluster_centroid'])
         d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(d['cluster_centroid'])
@@ -247,8 +247,8 @@ def analyseSolution(amoptd,d):
     #mrOrigin=shelxe.shelxe_origin(amoptd['shelxe_exe'],amoptd['native_pdb'],amoptd['mtz'],mrPdb=mrPdb)
     if not d['SHELXE_os']:
         _logger.critical("mrPdb {0} has no SHELXE_os origin shift.\n{1}".format(mrPdb,d))
-    else:
-        mrOrigin=[c*-1 for c in d['SHELXE_os']]
+        return
+    mrOrigin=[c*-1 for c in d['SHELXE_os']]
     
     # Move pdb onto new origin
     originPdb=ample_util.filename_append(mrPdb, astr='offset')
