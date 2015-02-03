@@ -78,20 +78,20 @@ def ensemble_summary(ensembles_data):
         if tlvl not in clusters[cnum]['tlevels']:
             clusters[cnum]['tlevels'][tlvl] = {}
             clusters[cnum]['tlevels'][tlvl]['truncation_variance']=e['truncation_variance']
-            clusters[cnum]['tlevels'][tlvl]['num_residues']=e['num_residues']
+            clusters[cnum]['tlevels'][tlvl]['num_residues']=e['truncation_num_residues']
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds']={}
         
         srt=e['subcluster_radius_threshold'] 
         if srt not in clusters[cnum]['tlevels'][tlvl]['radius_thresholds']:
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]={}
-            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['num_models']=e['num_models']
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['num_models']=e['subcluster_num_models']
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct']={}
 
         sct=e['side_chain_treatment']
         if sct not in clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct']:
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]={}
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['name']=e['name']
-            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['num_atoms']=e['num_atoms']
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['num_atoms']=e['ensemble_num_atoms']
     
     tableFormat = printTable.Table()
     rstr = "\n"
