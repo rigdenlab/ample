@@ -539,7 +539,7 @@ class Ensembler(object):
 
             # Get the centroid model name from the list of files given to theseus - we can't parse
             # the pdb file as theseus truncates the filename
-            ensemble_data['subcluster_centroid_model']=os.path.basename(cluster_files[0])
+            ensemble_data['subcluster_centroid_model']=os.path.abspath(cluster_files[0])
             
             ensembles.append(ensemble)
             ensembles_data.append(ensemble_data)
@@ -856,9 +856,9 @@ class Test(unittest.TestCase):
         self.assertEqual(d['truncation_method'],truncation_method)
         self.assertEqual(d['cluster_method'],cluster_method)
         self.assertEqual(d['num_clusters'],num_clusters)
-        self.assertEqual(d['truncation_variance'],13.035172)
+        self.assertTrue(abs(d['truncation_variance']-13.035172) < 0001)
         self.assertEqual(d['ensemble_num_atoms'],290)
-        self.assertEqual(d['subcluster_centroid_model'],'4_S_00000002.pdb')
+        self.assertEqual(os.path.basename(d['subcluster_centroid_model']),'4_S_00000002.pdb')
         
         shutil.rmtree(ensembler.work_dir)
         return
@@ -894,14 +894,14 @@ class Test(unittest.TestCase):
         self.assertEqual(len(ensembles),162,len(ensembles))
         d = ensembler.ensembles_data[5]
         
-        self.assertEqual(d['truncation_variance'],27.389253)
+        self.assertTrue(abs(d['truncation_variance']-27.389253) < 0001)
         self.assertEqual(d['percent_truncation'],percent_truncation)
         self.assertEqual(d['truncation_method'],truncation_method)
         self.assertEqual(d['cluster_method'],cluster_method)
         self.assertEqual(d['num_clusters'],num_clusters)
         self.assertEqual(d['ensemble_num_atoms'],290)
         self.assertEqual(d['side_chain_treatment'],'polya')
-        self.assertEqual(d['subcluster_centroid_model'],'4_S_00000002.pdb')
+        self.assertEqual(os.path.basename(d['subcluster_centroid_model']),'4_S_00000002.pdb')
         
         shutil.rmtree(ensembler.work_dir)
         return
@@ -909,11 +909,11 @@ class Test(unittest.TestCase):
 def testSuite():
     suite = unittest.TestSuite()
     suite.addTest(Test('testThresholds'))
-#     suite.addTest(Test('testResiduesThresh'))
-#     suite.addTest(Test('testResiduesPercent'))
-#     suite.addTest(Test('testClustering'))
-#     suite.addTest(Test('testEnsemblingThresh'))
-#     suite.addTest(Test('testEnsemblingPercent'))
+    suite.addTest(Test('testResiduesThresh'))
+    suite.addTest(Test('testResiduesPercent'))
+    suite.addTest(Test('testClustering'))
+    suite.addTest(Test('testEnsemblingThresh'))
+    suite.addTest(Test('testEnsemblingPercent'))
     return suite
     
 #
