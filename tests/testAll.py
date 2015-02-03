@@ -48,18 +48,6 @@ testsuite.addTests(mtz_util.testSuite())
 import octopus_predict
 testsuite.addTests(octopus_predict.testSuite())
 
-import parse_arpwarp
-testsuite.addTests(parse_arpwarp.testSuite())
-
-import parse_buccaneer
-testsuite.addTests(parse_buccaneer.testSuite())
-
-import parse_phaser
-testsuite.addTests(parse_phaser.testSuite())
-
-import parse_refmac
-testsuite.addTests(parse_refmac.testSuite())
-
 import pdb_edit
 testsuite.addTests(pdb_edit.testSuite())
 
