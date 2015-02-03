@@ -82,57 +82,76 @@ class ResultsSummary(object):
         d = {}
         
         # our additional keys
-        d["ensemble_name"] = None
-        d["MR_program"] = None
-        d["name"] = None
+        d['ensemble_name'] = None
+        d['MR_program'] = None
+        d['name'] = None
         
-        d["JobDirectory"]        = None
-        d["Solution_Type"]       = None
+        d['JobDirectory']        = None
+        d['Solution_Type']       = None
         
-        d["PHASER_LLG"]          = None
-        d["PHASER_TFZ"]          = None
-        d["PHASER_time"]         = None
-        d["PHASER_killed"]       = None
-        d["PHASER_pdbout"]       = None
-        d["PHASER_mtzout"]       = None
+        d['PHASER_LLG']         = None
+        d['PHASER_TFZ']         = None
+        d['PHASER_RFZ']         = None
+        d['PHASER_time']        = None
+        d['PHASER_killed']      = None
+        d['PHASER_pdbout']      = None
+        d['PHASER_mtzout']      = None
+        d['PHASER_logfile']      = None
+        d['PHASER_version']         = None
         
-        d["MOLREP_score"]        = None
-        d["MOLREP_time"]         = None
-        d["MOLREP_pdbout"]       = None
+        d['MOLREP_score']      = None
+        d['MOLREP_time']      = None
+        d['MOLREP_pdbout']      = None
+        d['MOLREP_logfile']      = None
+        d['MOLREP_version']         = None
         
-        d["final_Rfact"]         = None
-        d["final_Rfree"]         = None
-        d["REFMAC_pdbout"]       = None
-        d["REFMAC_mtzout"]       = None
+        d['final_Rfact']       = None
+        d['final_Rfree']       = None
+        d['REFMAC_pdbout']      = None
+        d['REFMAC_mtzout']      = None
+        d['REFMAC_logfile']      = None
+        d['REFMAC_version']         = None
         
-        d["BUCC_final_Rfact"]    = None
-        d["BUCC_final_Rfree"]    = None
-        d["BUCC_pdbout"]         = None
-        d["BUCC_mtzout"]         = None
+        d['BUCC_final_Rfact']       = None
+        d['BUCC_final_Rfree']       = None
+        d['BUCC_pdbout']      = None
+        d['BUCC_mtzout']      = None
+        d['BUCC_logfile']      = None
+        d['BUCC_version']         = None
         
-        d["ARP_final_Rfact"]     = None
-        d["ARP_final_Rfree"]     = None
-        d["ARP_pdbout"]          = None
-        d["ARP_mtzout"]          = None
+        d['ARP_final_Rfact']       = None
+        d['ARP_final_Rfree']       = None
+        d['ARP_pdbout']      = None
+        d['ARP_mtzout']      = None
+        d['ARP_logfile']      = None
+        d['ARP_version']         = None
         
-        d["SHELXE_CC"]           = None
-        d["SHELXE_ACL"]          = None
-        d["SHELXE_MCL"]          = None
-        d["SHELXE_NC"]           = None
-        d["SHELXE_time"]         = None
-        d["SHELXE_pdbout"]       = None
-        d["SHELXE_phsout"]       = None
-        d["SHELXE_mtzout"]       = None
+        d['SHELXE_CC']          = None
+        d['SHELXE_ACL']         = None
+        d['SHELXE_MCL']         = None
+        d['SHELXE_NC']         = None
+        d['SHELXE_wMPE']     = None
+        d['SHELXE_os']         = None
+        d['SHELXE_time']     = None
+        d['SHELXE_pdbout']     = None
+        d['SHELXE_phsout']     = None
+        d['SHELXE_mtzout']     = None
+        d['SHELXE_logfile']     = None
+        d['SHELXE_version']     = None
         
-        d["SXRBUCC_final_Rfact"] = None
-        d["SXRBUCC_final_Rfree"] = None
-        d["SXRBUCC_pdbout"]      = None
-        d["SXRBUCC_mtzout"]      = None
+        d['SXRBUCC_version']        = None
+        d['SXRBUCC_final_Rfact']    = None
+        d['SXRBUCC_final_Rfree']    = None
+        d['SXRBUCC_pdbout']      = None
+        d['SXRBUCC_mtzout']      = None
+        d['SXRBUCC_logfile']      = None
         
-        d["SXRARP_final_Rfact"]  = None
-        d["SXRARP_final_Rfree"]  = None
-        d["SXRARP_pdbout"]       = None
-        d["SXRARP_mtzout"]       = None
+        d['SXRARP_version']         = None
+        d['SXRARP_final_Rfact']     = None
+        d['SXRARP_final_Rfree']     = None
+        d['SXRARP_pdbout']      = None
+        d['SXRARP_mtzout']      = None
+        d['SXRARP_logfile']      = None
         
         return d
 
