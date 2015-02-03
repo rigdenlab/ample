@@ -249,8 +249,8 @@ class Ensembler(object):
         # ensemble info
         d['name'] = None
         d['side_chain_treatment'] = None
-        d['num_atoms'] = None
-        d['pdb'] = None # path to the ensemble file
+        d['ensemble_num_atoms'] = None
+        d['ensemble_pdb'] = None # path to the ensemble file
         
         return d
     
@@ -285,8 +285,8 @@ class Ensembler(object):
                                                             ensemble_data['truncation_level'],
                                                             ensemble_data['subcluster_radius_threshold'],
                                                             sct)
-            ensemble_data['pdb']=fpath
-            ensemble_data['num_atoms']=natoms
+            ensemble_data['ensemble_pdb']=fpath
+            ensemble_data['ensemble_num_atoms']=natoms
             # check
             assert ensemble_data['truncation_num_residues']==nresidues,"Unmatching number of residues!"
             
@@ -535,7 +535,7 @@ class Ensembler(object):
             ensemble_data=copy.copy(truncated_models_data)
             ensemble_data['subcluster_num_models'] = len( cluster_files )
             ensemble_data['subcluster_radius_threshold'] = radius
-            ensemble_data['pdb'] = ensemble
+            ensemble_data['ensemble_pdb'] = ensemble
 
             # Get the centroid model name from the list of files given to theseus - we can't parse
             # the pdb file as theseus truncates the filename
@@ -857,7 +857,7 @@ class Test(unittest.TestCase):
         self.assertEqual(d['cluster_method'],cluster_method)
         self.assertEqual(d['num_clusters'],num_clusters)
         self.assertEqual(d['truncation_variance'],13.035172)
-        self.assertEqual(d['num_atoms'],290)
+        self.assertEqual(d['ensemble_num_atoms'],290)
         self.assertEqual(d['subcluster_centroid_model'],'4_S_00000002.pdb')
         
         shutil.rmtree(ensembler.work_dir)
@@ -899,7 +899,7 @@ class Test(unittest.TestCase):
         self.assertEqual(d['truncation_method'],truncation_method)
         self.assertEqual(d['cluster_method'],cluster_method)
         self.assertEqual(d['num_clusters'],num_clusters)
-        self.assertEqual(d['num_atoms'],290)
+        self.assertEqual(d['ensemble_num_atoms'],290)
         self.assertEqual(d['side_chain_treatment'],'polya')
         self.assertEqual(d['subcluster_centroid_model'],'4_S_00000002.pdb')
         
