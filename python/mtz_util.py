@@ -113,6 +113,33 @@ def _get_rfree(content):
                 rfree_label=label
     return rfree_label
 
+def to_hkl(mtz_file,hkl_file=None,directory=None,F=None,SIGF=None,FREE=None):
+    
+    if directory is None:
+        directory=os.getcwd()
+    
+    if hkl_file is None:
+        name=os.path.splitext(os.path.basename(mtz_file))[0]
+        hkl_file=os.path.join(directory,name+".hkl")
+        
+    if F is None or SIGF is None or FREE is None:
+        F,SIGF,FREE=get_labels(mtz_file)
+        
+    cmd=['mtz2various','HKLIN',mtz_file,'HKLOUT', hkl_file]
+    logfile="mtz2various.log"
+    stdin  = """LABIN FP={0} SIGFP={1} FREE={2}
+OUTPUT SHELX
+FSQUARED
+END""".format(F,SIGF,FREE)
+    
+    ret = ample_util.run_command(cmd=cmd, logfile=logfile, directory=None, dolog=False, stdin=stdin)
+    if not ret==0:
+        raise RuntimeError,"Error converting {0} to HKL format - see log: {1}".format(mtz_file,logfile)
+    else:
+        os.unlink(logfile)
+        
+    return hkl_file
+
 def processReflectionFile(amoptd):
     """Make sure we have a valid mtz file. If necessary convert a given cif file.
        Set the mtz variable in the given amoptd to the reflection file to use

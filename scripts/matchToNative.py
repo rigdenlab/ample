@@ -48,7 +48,7 @@ def run( nativePdb, nativeMtz=None, nativeMap=None, mrPdbs=None, outDir=None ):
             offsetPdb = "offset.pdb"
             print "Found origin: {0}\nOffset pdb is: {1}".format( origin, offsetPdb )
         else:
-            originShift=shelxe.shelxeOrigin(shelxeExe,nativePdb, nativeMtz, mrPdb)
+            originShift=shelxe.shelxe_origin(shelxeExe,nativePdb, nativeMtz, mrPdb)
             print "Found origin: {0}".format( originShift )
             offsetPdb=ample_util.filename_append(mrPdb, astr='offset', directory=os.getcwd())
             pdb_edit.translate(mrPdb, offsetPdb, originShift)
@@ -66,7 +66,7 @@ def generateMap(nativePdb,nativeMtz):
     
     # Get the labels from the MTZ file
     print "Parsing MTZ file {0} to determine column labels".format( nativeMtz )
-    F,SIGF,FREE=mtz_util.getLabels(nativeMtz)
+    F,SIGF,FREE=mtz_util.get_labels(nativeMtz)
     # Generate map from 
     print "Generating map from: {0} {1}".format( nativeMtz,
                                                  nativePdb )
