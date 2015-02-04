@@ -28,9 +28,8 @@ rosetta_dir=/opt/rosetta-3.5
 -use_shelxe True \
 -shelxe_rebuild False \
 -nproc 2 \
--models_dir ./models \
+-models_dir ../../tests/testfiles/models \
 
-#-models_dir ./models \
 #-ensembles_dir ./ROSETTA_MR_0/ensembles_1 \
 
 
