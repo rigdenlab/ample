@@ -209,21 +209,6 @@ class Test(unittest.TestCase):
         cls.fpc_exe="/opt/fast_protein_cluster.1.1.2/fast_protein_cluster"
         return
 
-    def testIndicesMaxcluster(self):
-        """Test we can reproduce the original thresholds"""
-
-        radius = 4
-        clusterer = MaxClusterer( self.maxcluster_exe )
-        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
-        clusterer.generate_distance_matrix( pdb_list )
-        indices=clusterer._cluster_indices(radius) 
-
-        ref=[2, 3, 5, 6, 13, 14, 15, 16, 22, 23, 25, 26, 27]
-        self.assertEqual(ref,indices)
-        os.unlink('files.list')
-        os.unlink('maxcluster.log')
-        return
-    
     def testRadiusMaxcluster(self):
         """Test we can reproduce the original thresholds"""
 
