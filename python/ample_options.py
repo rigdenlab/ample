@@ -65,6 +65,7 @@ class AmpleOptions(object):
                             'output_pdb' : 'ample_output.pdb',
                             'percent' : 5,
                             'phaser_only' : False,
+                            'phaser_kill' : 0,
                             'phenix_exe' : None,
                             'psipred_ss2' : None,
                             'quark_models' : None,
@@ -85,7 +86,7 @@ class AmpleOptions(object):
                             'SIGF' : None,
                             'spicker_exe' : None,
                             'split_mr' : False,
-                            'submit_array' : False,
+                            'submit_array' : True,
                             'submit_cluster' : False,
                             'submit_qtype' : None,
                             'theseus_exe' : None,
@@ -100,7 +101,6 @@ class AmpleOptions(object):
                             'use_homs' : True,
                             'use_scwrl' : False,
                             'use_shelxe' : True,
-
                          }
 
         self.quick_mode = {
@@ -112,9 +112,7 @@ class AmpleOptions(object):
                            'shelx_cycles' : 5,
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
-                           # This kills phaser after 15 minutes
-                           # Needs to be a list of lists as there can be multiple mr_keys
-                           'mr_keys' : [ [ 'PKEY', 'KILL','TIME','15'  ] ],
+                           'phaser_kill' : 15
                         }
 
         # Test use scrwl
@@ -127,8 +125,8 @@ class AmpleOptions(object):
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
                            # This kills phaser after 6 hours
-                           # Needs to be a list of lists as there can be multiple mr_keys
-                           'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
+                           'phaser_kill' : 360,
+                           #'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
                         }
 
         # We have a debug mode as the logger isn't activated when we run

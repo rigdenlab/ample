@@ -198,6 +198,9 @@ def main():
     parser.add_argument('-psipred_ss2', metavar='psipred file', type=str, nargs=1,
                        help='Psipred secondary structure prediction file')
     
+    parser.add_argument('-phaser_kill', metavar='phaser_kill', type=int, nargs=1,
+                       help='Time in minutes after which phaser will be killed (0 to leave running)')
+    
     parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
                        help='Path to Phenix executable')
     

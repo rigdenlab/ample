@@ -97,6 +97,9 @@ def writeCsv(fileName,resultList):
     
     # List of all the keys we want to write out in order
     keylist= [
+                'ample_version',
+                'native_pdb_code',
+                
                 # Native info
                 'native_pdb_code',
                 'native_pdb_title',
@@ -124,6 +127,7 @@ def writeCsv(fileName,resultList):
                 'truncation_level',
                 'percent_truncation',
                 'truncation_method',
+                'truncation_pruning',
                 'truncation_variance',
                 'truncation_num_residues',
                 

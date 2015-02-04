@@ -85,6 +85,9 @@ def mrbump_keywords(adict=None, jobid=None, ensemble_pdb=None, fixed_iden=0.6):
         mrs+='FIXED_XYZIN {0} IDEN {1}\n'.format( adict['domain_all_chains_pdb'], fixed_iden )
     if adict['native_pdb']:
         mrs+='PDBNATIVE {0}\n'.format( adict['native_pdb'] )
+    if adict['phaser_kill'] > 0:
+        mrs+='PKEY KILL TIME {0}\n'.format(adict['phaser_kill'])
+        
     
     # Extra keywords
     # This assumes everything in mr_keys is a list of [ KEYWORD, VALUE0, VALUE1, ...]
