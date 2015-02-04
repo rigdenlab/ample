@@ -15,7 +15,7 @@ $PATH
 rosetta_dir=/opt/rosetta-3.5
 
 #$CCP4/bin/ample.py \
-/opt/ample-dev1.testset/bin/ample.py \
+/opt/ample-dev1/bin/ample.py \
 -rosetta_dir $rosetta_dir \
 -fasta toxd_.fasta \
 -mtz 1dtx.mtz \
@@ -26,9 +26,10 @@ rosetta_dir=/opt/rosetta-3.5
 -percent 50 \
 -quick_mode True \
 -use_shelxe True \
--shelxe_rebuild False \
+-shelxe_rebuild True \
 -nproc 2 \
 -models_dir ../../tests/testfiles/models \
+-native_pdb  1DTX.pdb \
 
 #-ensembles_dir ./ROSETTA_MR_0/ensembles_1 \
 
