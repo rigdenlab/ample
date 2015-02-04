@@ -214,7 +214,7 @@ class Test(unittest.TestCase):
 
         radius = 4
         clusterer = MaxClusterer( self.maxcluster_exe )
-        pdb_list = glob.glob(os.path.join(self.ample_dir,'examples','toxd-example','models','*.pdb'))
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
         indices=clusterer._cluster_indices(radius) 
 
@@ -229,7 +229,7 @@ class Test(unittest.TestCase):
 
         radius = 4
         clusterer = MaxClusterer( self.maxcluster_exe )
-        pdb_list = glob.glob(os.path.join(self.ample_dir,'examples','toxd-example','models','*.pdb'))
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius( radius )]
         
@@ -248,7 +248,7 @@ class Test(unittest.TestCase):
     
         radius = 4
         clusterer = FpcClusterer( self.fpc_exe )
-        pdb_list = glob.glob(os.path.join(self.ample_dir,'examples','toxd-example','models','*.pdb'))
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
         indices=clusterer._cluster_indices(radius) 
     
@@ -267,7 +267,7 @@ class Test(unittest.TestCase):
     
         radius = 4
         clusterer = FpcClusterer( self.fpc_exe )
-        pdb_list = glob.glob(os.path.join(self.ample_dir,'examples','toxd-example','models','*.pdb'))
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
 
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius( radius )]

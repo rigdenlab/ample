@@ -170,7 +170,7 @@ class Test(unittest.TestCase):
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
         
-        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+        mdir=os.path.join(self.testfiles_dir,"models")
         models=glob.glob(mdir+os.sep+"*.pdb")
 
         num_clusters=1

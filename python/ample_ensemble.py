@@ -634,7 +634,7 @@ class Test(unittest.TestCase):
         
         ensembler.theseus_exe=self.theseus_exe
         percent_interval=5
-        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+        mdir=os.path.join(self.testfiles_dir,"models")
         cluster_models=glob.glob(mdir+os.sep+"*.pdb")
         var_by_res=ensembler.calculate_variances(cluster_models)
         thresholds=ensembler.generate_thresholds(var_by_res,percent_interval)
@@ -665,7 +665,7 @@ class Test(unittest.TestCase):
         
         ensembler.theseus_exe=self.theseus_exe
         percent_interval=5
-        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+        mdir=os.path.join(self.testfiles_dir,"models")
         cluster_models=glob.glob(mdir+os.sep+"*.pdb")
         
         var_by_res=ensembler.calculate_variances(cluster_models)
@@ -727,7 +727,7 @@ class Test(unittest.TestCase):
         os.chdir(ensembler.work_dir)
         ensembler.theseus_exe=self.theseus_exe
         ensembler.percent_interval=5
-        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+        mdir=os.path.join(self.testfiles_dir,"models")
         cluster_models=glob.glob(mdir+os.sep+"*.pdb")
         var_by_res=ensembler.calculate_variances(cluster_models)
         truncation_levels, truncation_variances, truncation_residues=ensembler._calculate_residues_percent(var_by_res,percent_interval=5)
@@ -777,7 +777,7 @@ class Test(unittest.TestCase):
         
         ensembler.theseus_exe=self.theseus_exe
         
-        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+        mdir=os.path.join(self.testfiles_dir,"models")
         models=glob.glob(mdir+os.sep+"*.pdb")
         
         cluster_models,cluster_data=ensembler.cluster_models(models=models,
@@ -812,7 +812,7 @@ class Test(unittest.TestCase):
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
         
-        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+        mdir=os.path.join(self.testfiles_dir,"models")
         models=glob.glob(mdir+os.sep+"*.pdb")
 
         num_clusters=1
@@ -876,7 +876,7 @@ class Test(unittest.TestCase):
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
         
-        mdir=os.path.join(self.ample_dir,"examples","toxd-example","models")
+        mdir=os.path.join(self.testfiles_dir,"models")
         models=glob.glob(mdir+os.sep+"*.pdb")
         
         num_clusters=1
