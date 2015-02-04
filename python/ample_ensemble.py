@@ -36,6 +36,7 @@ class Ensembler(object):
         
         # truncation
         self.truncation_method="percent"
+        self.truncation_pruning="none"
         self.percent_truncation=5
         self.pruning_strategy="none"
         
@@ -301,6 +302,7 @@ class Ensembler(object):
                            num_clusters=None,
                            percent_truncation=None,
                            truncation_method=None,
+                           truncation_pruning=None,
                            ensembles_directory=None,
                            work_dir=None):
         
@@ -319,6 +321,8 @@ class Ensembler(object):
             percent_truncation=self.percent_truncation
         if not truncation_method:
             truncation_method=self.truncation_method
+        if not truncation_pruning:
+            truncation_pruning=self.truncation_pruning
         if not ensembles_directory:
             self.ensembles_directory=os.path.join(work_dir,"ensembles")
         else:
@@ -347,6 +351,7 @@ class Ensembler(object):
             for truncated_models, truncated_models_data in zip(*self.truncate_models(cluster,
                                                                                      cluster_data,
                                                                                      truncation_method=truncation_method,
+                                                                                     truncation_pruning=truncation_pruning,
                                                                                      percent_truncation=percent_truncation)):
                 for subcluster, subcluster_data in zip(*self.subcluster_models(truncated_models,
                                                                                truncated_models_data,
@@ -546,7 +551,7 @@ class Ensembler(object):
         
         return ensembles,ensembles_data
     
-    def truncate_models(self,models,models_data,truncation_method,percent_truncation):
+    def truncate_models(self,models,models_data,truncation_method,percent_truncation,truncation_pruning='none'):
         
         assert len(models) > 1,"Cannot truncate as < 2 models!"
 
@@ -595,6 +600,7 @@ class Ensembler(object):
             model_data['truncation_dir']=trunc_dir
             model_data['percent_truncation'] = percent_truncation
             model_data['truncation_method'] = truncation_method
+            model_data['truncation_pruning'] = truncation_pruning
             
             truncated_models_data.append(model_data)
             

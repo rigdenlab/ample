@@ -7,7 +7,6 @@ Created on 24 Oct 2014
 # Python imports
 import copy
 import cPickle
-import csv
 import glob
 import logging
 import os
@@ -23,8 +22,7 @@ import pdb_model
 import reforigin
 import residue_map
 import rio
-import shelxe
-#import rosetta_model
+import version
 
 _logger=logging.getLogger()
 
@@ -68,6 +66,9 @@ def analyse(amoptd):
         # Add in the data from the ensemble
         d.update(ensemble_results[d['ensemble_name']])
         assert d['ensemble_name']==d['name'],d
+        
+        # General stuff
+        d['ample_version']=amoptd['ample_version']
         
         # Add in stuff we've cleaned from the pdb
         d['native_pdb_code']=amoptd['native_pdb_code']

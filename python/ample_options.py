@@ -4,6 +4,9 @@ Class to hold the options for ample
 # python imports
 import os
 
+# our imports
+import version
+
 class AmpleOptions(object):
 
     def __init__(self):
@@ -168,6 +171,9 @@ class AmpleOptions(object):
 
     def process_options(self):
         """Check the options and process any preset defaults"""
+        
+        # Add the version
+        self.d['ample_version']=version.__version__
 
         # First set anything that hasn't been set to its default option
         for k, v in self.defaults.iteritems():
