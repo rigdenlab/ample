@@ -48,7 +48,11 @@ one2three =  dict((v, k) for (k, v) in three2one.items())
 def backbone(inpath=None, outpath=None):
     """Only output backbone atoms.
     """        
-    
+
+    # pdbcur segfaults with long pathnames
+    inpath=os.path.relpath(inpath)
+    outpath=os.path.relpath(outpath)
+
     logfile = outpath+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( inpath, outpath ).split()
     
