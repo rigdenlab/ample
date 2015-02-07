@@ -75,6 +75,7 @@ def analyse(amoptd):
         d['native_pdb_resolution']=amoptd['native_pdb_resolution']
         d['native_pdb_solvent_content']=amoptd['native_pdb_solvent_content']
         d['native_pdb_space_group']=amoptd['native_pdb_space_group']
+        d['native_pdb_num_chains']=amoptd['native_pdb_num_chains']
         d['native_pdb_num_atoms']=amoptd['native_pdb_num_atoms']
         d['native_pdb_num_residues']=amoptd['native_pdb_num_residues']
  
@@ -203,7 +204,8 @@ def writeCsv(fileName,resultList):
                 'RIO_oo_register',
                 'RIO_backwards',
                 'RIO',
-                'RIO_no_cat'
+                'RIO_no_cat',
+                'RIO_norm'
     
     ]
     
@@ -249,9 +251,7 @@ def analyseSolution(amoptd,d):
         return
 
     if mrPdb is None or not os.path.isfile(mrPdb):
-        #for k in sorted(d.keys()):
-        #    print k,d[k]
-        _logger.critical("Cannot find mrPdb {0} for solution {1}".format(mrPdb,d))
+        #_logger.critical("Cannot find mrPdb {0} for solution {1}".format(mrPdb,d))
         return
 
     # debug - copy into work directory as reforigin struggles with long pathnames
@@ -306,6 +306,7 @@ def analyseSolution(amoptd,d):
     d['RIO_backwards']   = rioData.rioBackwards
     d['RIO']            = rioData.rioInRegister + rioData.rioOoRegister
     d['RIO_no_cat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
+    d['RIO_norm']       = float(d['RIO']) / float(d['native_pdb_num_residues'])
 
 #     # Now get the helix
 #     helixSequence = contacts.Rio().helixFromContacts( contacts=rioData.contacts,
@@ -453,10 +454,10 @@ def analyseSS(amoptd):
 class Test(unittest.TestCase):
 
     def testBenchmark(self):
-        pklfile="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_4/resultsd.pkl"
+        pklfile="/home/jmht/ample-dev1/examples/toxd-example/ROSETTA_MR_0/resultsd.pkl"
         with open(pklfile) as f:
             d=cPickle.load(f)
-        bd="/opt/ample-dev1.testset/python/foo"
+        bd="/home/jmht/ample-dev1/python/foo"
         if not os.path.isdir(bd): os.mkdir(bd)
         d['benchmark_dir']=bd
         analyse(d)
