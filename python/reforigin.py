@@ -35,7 +35,6 @@ class ReforiginRmsd(object):
         cmd="reforigin xyzin {0} xyzref {1} xyzout {2} DMAX {3}".format( targetpdb, refpdb, outpdb, DMAX ).split()
         
         retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False)
-        
         if retcode != 0:
             raise RuntimeError, "Error running command: {0}".format( " ".join(cmd) )
         
@@ -48,6 +47,8 @@ class ReforiginRmsd(object):
         
         if not rms:
             raise RuntimeError, "Error extracting RMS from logfile: {0}".format( logfile )
+        else:
+            os.unlink(logfile)
         
         return rms
 
@@ -92,12 +93,11 @@ class ReforiginRmsd(object):
         cmd="pdbcur xyzin {0} xyzout {1}".format( placedPdb, placedChainPdb ).split()
         logfile = "{0}.log".format( placedChainPdb )
         retcode = ample_util.run_command( cmd=cmd, logfile=logfile, directory=self.workdir, dolog=False, stdin=stdin)
-        
         if retcode != 0:
             raise RuntimeError,"Error extracting chain from placed PDB {0} in directory {1}".format( placedPdb, self.workdir )
         
         # remove temporary files
-        #os.unlink(logfile)
+        os.unlink(logfile)
         return placedChainPdb
     
     def getRmsd( self, nativePdbInfo=None, placedPdbInfo=None, refModelPdbInfo=None, workdir=None, cAlphaOnly=True  ):
@@ -140,11 +140,6 @@ class ReforiginRmsd(object):
             # The second chain may be a different composition to the first, so we only generate a traceback if we fail
             # on the first chain. The model only has one chain, so the residueMap has to be the same for all the chains
             try:
-#                 resSeqMap = residue_map.residueSequenceMap( refPdb=nativeChainPdb,
-#                                                             refChainID=nativeChainID,
-#                                                             targetPdb=refModelPdbInfo.pdb,
-#                                                             targetChainID='A')
-                
                 resSeqMap = residue_map.residueSequenceMap()
                 resSeqMap.fromInfo( refInfo=nativePdbInfo,
                                     refChainID=nativeChainID,
@@ -180,6 +175,10 @@ class ReforiginRmsd(object):
                     rms = 99999
                  
                 rmsds[ rms ] = ( nativeChainID, placedChainID, reforiginOut )
+                
+                # Clean up
+                os.unlink(placedChainPdb)
+                os.unlink(nativePdbMatch)
                 
         # End loop over chains
         # Now pick the best...
