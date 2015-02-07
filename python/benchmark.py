@@ -22,7 +22,6 @@ import pdb_model
 import reforigin
 import residue_map
 import rio
-import version
 
 _logger=logging.getLogger()
 
@@ -82,9 +81,19 @@ def analyse(amoptd):
         # Get the ensemble data and add to the MRBUMP data
         d['ensemble_percent_model'] = int( ( float( d['truncation_num_residues'] ) / float( amoptd['fasta_length'] ) ) * 100 )
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
-        d['ensemble_native_TM'] = amoptd['maxComp'].tm(d['cluster_centroid'])
-        d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(d['cluster_centroid'])
         
+        # Need to get the subcluster_centroid_model and then get the path to the original model
+        n=os.path.basename(d['subcluster_centroid_model'])
+        cm=None
+        for pdb in glob.glob(os.path.join(amoptd['models_dir'],"*.pdb")):
+            if os.path.basename(pdb)==n:
+                cm=pdb
+                break
+        if not cm:
+            raise RuntimeError,"Cannot find model for subcluster_centroid_model {0}".format(d['subcluster_centroid_model'])
+        #cm=d['cluster_centroid']
+        d['ensemble_native_TM'] = amoptd['maxComp'].tm(cm)
+        d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(cm)
         analyseSolution(amoptd,d)
         data.append(d)
 
@@ -98,7 +107,6 @@ def writeCsv(fileName,resultList):
     # List of all the keys we want to write out in order
     keylist= [
                 'ample_version',
-                'native_pdb_code',
                 
                 # Native info
                 'native_pdb_code',
