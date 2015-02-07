@@ -471,7 +471,7 @@ class Rio(object):
         
         return
     
-    def parseNcontLog( self, contactData, logfile=None ):
+    def parseNcontLog( self, contactData, logfile=None, clean_up=True):
         """
         
         Lines are of format
@@ -580,6 +580,9 @@ class Rio(object):
             #    print "chainId1 {0} resSeq1 {1} chainId2 {2} resSeq2 {3}\n".format(  c['chainId1'], c['resSeq1'], c['chainId2'], c['resSeq2']  )
     
         contactData.contacts = contacts
+        
+        if clean_up:
+            os.unlink(logfile)
                     
         return
     
@@ -660,6 +663,10 @@ class Rio(object):
         # Then score RIO
         self.calcRio( data )
         #data.numGood = data.inregister + data.ooregister
+        
+        # clean up
+        os.unlink(mrOriginPdb)
+        os.unlink(joinedPdb)
         
         return data
  
