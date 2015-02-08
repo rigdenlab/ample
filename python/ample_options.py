@@ -119,6 +119,7 @@ class AmpleOptions(object):
         self.devel_mode = {
                            'early_terminate': False,
                            'benchmark_mode': True,
+                           'phaser_only': True,
                            'use_shelxe' : True,
                            'shelxe_rebuild' : True,
                            'use_scwrl' : False,
