@@ -117,7 +117,7 @@ def write_jobscript( name, pdb, amoptd, directory=None ):
             job_script.write("pushd " + directory + "\n\n")
             # Required on the RAL cluster as the default tmp can be deleted on the nodes
             if amoptd['submit_qtype'] == "SGE":
-                job_script.write("setenv CCP4_SCR $TMPDIR\n\n")
+                job_script.write("export CCP4_SCR=$TMPDIR\n\n")
     
         else:
             if not sys.platform.startswith("win"):
