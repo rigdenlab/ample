@@ -71,8 +71,11 @@ class ClusterRun:
             else:
                 newLog = os.path.join( logDir, "{0}.log".format( jobName ) )
                 
-            self.logger.debug( "Moving {0} to {1}".format( oldLog, newLog ) )
-            os.rename( oldLog, newLog ) 
+            if os.path.isfile(oldLog):
+                self.logger.debug( "Moving {0} to {1}".format( oldLog, newLog ) )
+                os.rename( oldLog, newLog ) 
+            else:
+                self.logger.critical( "Cannot find logfile {0} to copy to {1}".format( oldLog, newLog ) )
         
         return
 
