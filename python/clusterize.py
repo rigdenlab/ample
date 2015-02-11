@@ -48,34 +48,36 @@ class ClusterRun:
         
         return
 
-    def cleanUpArrayJob(self,logDir=None):
+    def cleanUpArrayJob(self,scriptFile=None,logDir=None):
         """Rename all the log files
         Args:
         logDir: directory that the logfiles should end up in
         """
         
-        assert os.path.isfile(self._scriptFile)
+        if not scriptFile:
+            scriptFile=self._scriptFile
+        assert os.path.isfile(scriptFile),"Cannot find scriptFile {0}".format(scriptFile)
         
         scriptFiles = []
-        with open( self._scriptFile ) as f:
+        with open(scriptFile) as f:
             for line in f:
                 scriptFiles.append(line.strip())
         
-        for i, line in enumerate( scriptFiles ):
-            jobDir, script = os.path.split( line )
+        for i, line in enumerate(scriptFiles):
+            jobDir, script = os.path.split(line)
             jobName = os.path.splitext(script)[0]
-            oldLog = "arrayJob_{0}.log".format( i+1 )
+            oldLog = "arrayJob_{0}.log".format(i+1)
             if logDir is None:
                 # Put log in script directory
-                newLog = os.path.join( jobDir, "{0}.log".format( jobName ) )
+                newLog = os.path.join(jobDir, "{0}.log".format(jobName))
             else:
-                newLog = os.path.join( logDir, "{0}.log".format( jobName ) )
+                newLog = os.path.join(logDir, "{0}.log".format(jobName))
                 
             if os.path.isfile(oldLog):
-                self.logger.debug( "Moving {0} to {1}".format( oldLog, newLog ) )
-                os.rename( oldLog, newLog ) 
+                self.logger.debug("Moving {0} to {1}".format(oldLog, newLog))
+                os.rename(oldLog, newLog ) 
             else:
-                self.logger.critical( "Cannot find logfile {0} to copy to {1}".format( oldLog, newLog ) )
+                self.logger.critical("Cannot find logfile {0} to copy to {1}".format(oldLog, newLog))
         
         return
 
