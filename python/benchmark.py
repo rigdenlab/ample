@@ -161,6 +161,7 @@ def writeCsv(fileName,resultList):
                 'PHASER_time',
                 'PHASER_killed',
                 'PHASER_version',
+                'PHASER_errors',
                 
                 'MOLREP_score',
                 'MOLREP_time',

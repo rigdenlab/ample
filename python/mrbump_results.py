@@ -17,7 +17,7 @@ if __name__ == "__main__":
 if not "CCP4" in os.environ.keys():
     raise RuntimeError('CCP4 not found')
 mrbumpd=os.path.join(os.environ['CCP4'],"include","mrbump","include","parsers")
-#mrbumpd="/opt/mrbump-trunk/include/parsers"
+mrbumpd="/opt/mrbump-trunk/include/parsers"
 sys.path.insert(0,mrbumpd)
 import parse_buccaneer
 import parse_phaser
@@ -96,46 +96,47 @@ class ResultsSummary(object):
         d['PHASER_killed']      = None
         d['PHASER_pdbout']      = None
         d['PHASER_mtzout']      = None
-        d['PHASER_logfile']      = None
-        d['PHASER_version']         = None
+        d['PHASER_logfile']     = None
+        d['PHASER_version']     = None
+        d['PHASER_error']       = None
         
-        d['MOLREP_score']      = None
-        d['MOLREP_time']      = None
+        d['MOLREP_score']       = None
+        d['MOLREP_time']        = None
         d['MOLREP_pdbout']      = None
-        d['MOLREP_logfile']      = None
-        d['MOLREP_version']         = None
+        d['MOLREP_logfile']     = None
+        d['MOLREP_version']     = None
         
-        d['final_Rfact']       = None
-        d['final_Rfree']       = None
+        d['final_Rfact']        = None
+        d['final_Rfree']        = None
         d['REFMAC_pdbout']      = None
         d['REFMAC_mtzout']      = None
-        d['REFMAC_logfile']      = None
-        d['REFMAC_version']         = None
+        d['REFMAC_logfile']     = None
+        d['REFMAC_version']     = None
         
-        d['BUCC_final_Rfact']       = None
-        d['BUCC_final_Rfree']       = None
-        d['BUCC_pdbout']      = None
-        d['BUCC_mtzout']      = None
-        d['BUCC_logfile']      = None
-        d['BUCC_version']         = None
+        d['BUCC_final_Rfact']   = None
+        d['BUCC_final_Rfree']   = None
+        d['BUCC_pdbout']        = None
+        d['BUCC_mtzout']        = None
+        d['BUCC_logfile']       = None
+        d['BUCC_version']       = None
         
-        d['ARP_final_Rfact']       = None
-        d['ARP_final_Rfree']       = None
-        d['ARP_pdbout']      = None
-        d['ARP_mtzout']      = None
-        d['ARP_logfile']      = None
-        d['ARP_version']         = None
+        d['ARP_final_Rfact']    = None
+        d['ARP_final_Rfree']    = None
+        d['ARP_pdbout']         = None
+        d['ARP_mtzout']         = None
+        d['ARP_logfile']        = None
+        d['ARP_version']        = None
         
         d['SHELXE_CC']          = None
         d['SHELXE_ACL']         = None
         d['SHELXE_MCL']         = None
-        d['SHELXE_NC']         = None
-        d['SHELXE_wMPE']     = None
-        d['SHELXE_os']         = None
-        d['SHELXE_time']     = None
-        d['SHELXE_pdbout']     = None
-        d['SHELXE_phsout']     = None
-        d['SHELXE_mtzout']     = None
+        d['SHELXE_NC']          = None
+        d['SHELXE_wMPE']        = None
+        d['SHELXE_os']          = None
+        d['SHELXE_time']        = None
+        d['SHELXE_pdbout']      = None
+        d['SHELXE_phsout']      = None
+        d['SHELXE_mtzout']      = None
         d['SHELXE_logfile']     = None
         d['SHELXE_version']     = None
         
