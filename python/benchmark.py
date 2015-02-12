@@ -330,7 +330,7 @@ def analyseSolution(amoptd,d):
                                                  workdir=amoptd['benchmark_dir'])
 
     # Wrap parse_buccaneer model onto native
-    if d['SXRBUCC_pdbout']:
+    if d['SXRBUCC_pdbout'] and os.path.isfile(d['SXRBUCC_pdbout']):
         # Need to rename Pdb as is just called buccSX_output.pdb
         csymmatchPdb = os.path.join(amoptd['benchmark_dir'], "buccaneer_{0}_csymmatch.pdb".format(d['ensemble_name']))
 
@@ -341,7 +341,7 @@ def analyseSolution(amoptd,d):
                                                  workdir=amoptd['benchmark_dir'])
         
     # Wrap parse_buccaneer model onto native
-    if d['SXRARP_pdbout']:
+    if d['SXRARP_pdbout'] and os.path.isfile(d['SXRARP_pdbout']):
         # Need to rename Pdb as is just called buccSX_output.pdb
         csymmatchPdb = os.path.join(amoptd['benchmark_dir'], "arpwarp_{0}_csymmatch.pdb".format(d['ensemble_name']))
 
