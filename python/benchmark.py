@@ -281,7 +281,7 @@ def analyseSolution(amoptd,d):
     mrOrigin=[c*-1 for c in d['SHELXE_os']]
     
     # Move pdb onto new origin
-    originPdb=ample_util.filename_append(mrPdb, astr='offset')
+    originPdb=ample_util.filename_append(mrPdb, astr='offset',directory=amoptd['benchmark_dir'])
     pdb_edit.translate(mrPdb, originPdb, mrOrigin)
     
     # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
