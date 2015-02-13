@@ -453,7 +453,49 @@ class Ensembler(object):
 
         thresholds.sort()
         return thresholds
-       
+    
+    def prune_residues(self,residues,chunk_size=3,allowed_gap=2):
+        """use sliding window to find isolated residue chunks and remove from the list"""
+        
+        pruned_residues=[]
+        lenr=len(residues)
+        previous=None
+        i=0
+        while i < lenr-1:
+            # Find contiguous chunk <= chunk_size starting here
+            if i==0: # start so make gap to previous larger than allowed_gap
+                previous=residues[0]-(allowed_gap+1)
+            else:
+                previous=residues[i-1]
+            chunk=[residues[i]] # Add this residue to the chunk
+            nextr=None
+            nextri=None
+            for j in range(1,chunk_size+1):
+                #  LIMIT            # TEST
+                if i + j < lenr and residues[i+j] == chunk[j-1]+1: # see if next is contiguous
+                    chunk.append(residues[i+j]) # if so add to chunk and update nextr
+                    nextr=residues[i+j+1]
+                    nextri=i+j+1
+                else:
+                    # next isn't contiguous so make this one the nextr & stop
+                    nextri=i+j
+                    nextr=residues[nextri]
+                    break
+                
+            # Check if satisfies the rules
+            start=chunk[0]
+            end=chunk[-1]
+            pregap=start-previous
+            postgap=nextr-end
+            # only add this residue if it doesn't satisfy the chunk requirements
+            if not (len(chunk) <= chunk_size and pregap >= allowed_gap and postgap >= allowed_gap):
+                pruned_residues.append(residues[i])
+                
+            # Update where we are in the sequence
+            i=nextri
+        
+        return pruned_residues
+
     def subcluster_models(self,
                           truncated_models,
                           truncated_models_data,
@@ -624,6 +666,18 @@ class Test(unittest.TestCase):
         cls.theseus_exe=ample_util.find_exe('theseus')
         cls.spicker_exe=ample_util.find_exe('spicker')
         cls.maxcluster_exe=ample_util.find_exe('maxcluster')
+
+        return
+
+    def testPruneResidues(self):
+        """Test we can reproduce the original thresholds"""
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+
+        ensembler=Ensembler()
+        residues=[1,2,3,7,11,12,16,17,18,22,23,24,27]
+        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres,[1,2,3,16,17,18,22,23,24,27])
+        
 
         return
 
