@@ -546,6 +546,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 {0}
 #$ -o arrayJob_$TASK_ID.log
 #$ -t 1-{1}
+#$ -S /bin/bash
 #
 # Ignore for now as we always run single processor jobs
 ##$ -pe smp 16
