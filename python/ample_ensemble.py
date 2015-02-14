@@ -471,15 +471,20 @@ class Ensembler(object):
             nextr=None
             nextri=None
             for j in range(1,chunk_size+1):
-                #  LIMIT            # TEST
-                if i + j < lenr and residues[i+j] == chunk[j-1]+1: # see if next is contiguous
+                print "i {0} j {1} chunk {2}".format(i,j,chunk)
+                if residues[i+j] == chunk[-1]: # see if next is contiguous
                     chunk.append(residues[i+j]) # if so add to chunk and update nextr
-                    nextr=residues[i+j+1]
-                    nextri=i+j+1
+                    if i + j == lenr: # end of residues
+                        nextr=residues[-1]+(allowed_gap+1)
+                        nextri=lenr
+                    else:
+                        nextr=residues[i+j+1]
+                        nextri=i+j+1
                 else:
                     # next isn't contiguous so make this one the nextr & stop
                     nextri=i+j
                     nextr=residues[nextri]
+                    
                     break
                 
             # Check if satisfies the rules
@@ -674,9 +679,9 @@ class Test(unittest.TestCase):
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
 
         ensembler=Ensembler()
-        residues=[1,2,3,7,11,12,16,17,18,22,23,24,27]
+        residues=[1,2,3,4,8,12,13,14]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
-        self.assertEqual(pres,[1,2,3,16,17,18,22,23,24,27])
+        self.assertEqual(pres,[1,2,3,4,12,13,14])
         
 
         return
