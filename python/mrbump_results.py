@@ -71,7 +71,7 @@ class ResultsSummary(object):
             #d['name'] = "loc0_ALL_" + ensemble + "_UNMOD"
             d['name'] = "loc0_ALL_" + ensemble + "_UNMOD"
             d['ensemble_name']=ensemble 
-            d['JobDirectory'] = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
+            d['Search_directory'] = os.path.join( mrbumpDir, 'search_'+ensemble+'_mrbump' )
             d['Solution_Type'] = reason
             self.results.append( d )
             count += 1
@@ -85,8 +85,10 @@ class ResultsSummary(object):
         d['ensemble_name'] = None
         d['MR_program'] = None
         d['name'] = None
+        d['Search_directory'] = None
+        # END
         
-        d['JobDirectory']        = None
+        d['Job_directory']        = None
         d['Solution_Type']       = None
         
         d['PHASER_LLG']         = None
@@ -223,7 +225,7 @@ class ResultsSummary(object):
         self.sortResults(self.results)
         return True
 
-    def _getUnfinishedResult(self, result ):
+    def X_getUnfinishedResult(self, result ):
         """Return a result for an unfinished job"""
         if not result['name']:
             # Use directory name for job name
@@ -300,39 +302,39 @@ class ResultsSummary(object):
                 result[self.title2key[title]] = v
 
             dirName = result['name'][:-6]
-            result["JobDirectory"] = os.path.join( jobDir,'data',dirName,'unmod','mr',result["MR_program"].lower() )
+            result["Job_directory"] = os.path.join( jobDir,'data',dirName,'unmod','mr',result["MR_program"].lower() )
             
             # See which pdb files were created
             if result["MR_program"]=='PHASER':
-                phaserPdb=os.path.join(result["JobDirectory"],
+                phaserPdb=os.path.join(result["Job_directory"],
                                        "refine",
                                        "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(),result['ensemble_name']))
                 if os.path.isfile(phaserPdb):
                     result.phaserPdb=phaserPdb
             elif result.program=='molrep':
-                molrepPdb=os.path.join(result["JobDirectory"],
+                molrepPdb=os.path.join(result["Job_directory"],
                                        "refine",
                                        "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(),result['ensemble_name']) )
                 if os.path.isfile(molrepPdb):
                     result.molrepPdb=molrepPdb
 
-            refmacPdb=os.path.join(result["JobDirectory"],
+            refmacPdb=os.path.join(result["Job_directory"],
                                    'refine',
                                    "refmac_" + result["MR_program"].lower() + "_loc0_ALL_" + result['ensemble_name'] + "_UNMOD.pdb" )
             if os.path.isfile(refmacPdb):
                 result["REFMAC_pdbout"]=refmacPdb
                 
-            shelxePdb=os.path.join(result["JobDirectory"],'build','shelxe',
+            shelxePdb=os.path.join(result["Job_directory"],'build','shelxe',
                                    "shelxe_" + result["MR_program"].lower() + "_loc0_ALL_" + result['ensemble_name'] + "_UNMOD.pdb" )
             if os.path.isfile(shelxePdb):
                 result["SHELXE_pdbout"]=shelxePdb
                 
-            buccaneerPdb=os.path.join(result["JobDirectory"],'build','shelxe','rebuild','buccaneer',
+            buccaneerPdb=os.path.join(result["Job_directory"],'build','shelxe','rebuild','buccaneer',
                                       "buccSX_output.pdb" )
             if os.path.isfile(buccaneerPdb):
                 result["SXRBUCC_pdbout"]=buccaneerPdb
                 
-            arpWarpPdb=os.path.join(result["JobDirectory"],'build','shelxe','rebuild','arpwarp',
+            arpWarpPdb=os.path.join(result["Job_directory"],'build','shelxe','rebuild','arpwarp',
                                       "refmacSX_output_warpNtrace.pdb" )
             if os.path.isfile(arpWarpPdb):
                 result["SXRARP_pdbout"]=arpWarpPdb
@@ -363,12 +365,17 @@ class ResultsSummary(object):
                 # name is e.g.: loc0_ALL_c1_tl100_r2_allatom_UNMOD
                 d['ensemble_name'] = name[9:-6]
                 d['MR_program'] = mrprog
+                # Hack for old versions
+                if 'JobDirectory' in d:
+                    d['Job_directory']=d['JobDirectory']
+                    del d['JobDirectory']
+                    d['Search_directory']=os.sep.join(d['Job_directory'].split(os.sep)[:-5])
                 results.append(d)
         return results
     
     def analyseResult(self,result):
         
-        mrDir = result["JobDirectory"]
+        mrDir = result["Job_directory"]
         
         #result.ensembleName = result.name[9:-6]
         
@@ -476,7 +483,7 @@ class ResultsSummary(object):
         r += summary
 
         r += '\nBest Molecular Replacement results so far are in:\n\n'
-        r +=  self.results[0]["JobDirectory"]
+        r +=  self.results[0]["Job_directory"]
 
 #         if self.results[0].pdb and os.path.isfile(self.results[0].pdb):
 #             r += '\n\nFinal PDB is:\n\n'
@@ -564,7 +571,7 @@ def finalSummary(amoptd):
     r += summary
 
     r += '\nBest Molecular Replacement results so far are in:\n\n'
-    r +=  results[0]["JobDirectory"]
+    r +=  results[0]["Job_directory"]
     r += '\n\n'
     return r
 
