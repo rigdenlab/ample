@@ -63,8 +63,8 @@ $script
     return arrayScript
             
             
-#with open("")
-pdb_codes=["1UCS"]
+#pdb_codes=["1MIX", "1P9G", "1UCS", "1XKR", "2BL2", "2EFR", "2FM9", "2JKU", "2QIH", "2QSK", "2UUI", "2XFD", "2YKT", "3CI9", "3CVF", "3GD8", "3GHF", "3HAP", "3HFE"]
+pdb_codes=["1XKR", "2BL2", "2FM9", "2JKU", "2QSK", "2UUI", "2XFD", "2YKT", "3CVF", "3GD8", "3GHF", "3HAP", "3HFE"]
 root="/volatile/jmht42/testset/percent"
 
 for pdb in pdb_codes:
@@ -78,8 +78,7 @@ for pdb in pdb_codes:
         search_dir=r['Search_directory']
         ensemble=r['ensemble_name']
         x=os.path.join(search_dir,"results","finished.txt")
-        #if r['Solution_Type']=='unfinished':
-        if r['Solution_Type']=='no_job_directory':
+        if r['Solution_Type']=='unfinished' or r['Solution_Type']=='no_job_directory':
            ensembles.append(ensemble)
            if os.path.isfile(search_dir): shutil.rmtree(search_dir)
            log=ensemble+".log"
