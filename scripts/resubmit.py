@@ -5,6 +5,7 @@ import sys
 ample_root="/home/jmht42/ample-dev1"
 sys.path.insert(0,os.path.join(ample_root,"python"))
 import mrbump_results
+import clusterize
 
 #with open("")
 pdb_codes=["1UCS"]
@@ -22,4 +23,68 @@ for pdb in pdb_codes:
         ensemble=r['ensemble_name']
         x=os.path.join(search_dir,"results","finished.txt")
         if r['Solution_Type']=='unfinished':
-           ensembles.append(ensemble) 
+           ensembles.append(ensemble)
+           #shutil.rmtree(search_dir)
+           #os.unlink(ensemble+".log")
+    
+    scripts=[ os.path.abspath(e+".sh") for e in ensembles]
+    prep_array(scripts,mrbd)
+    
+    # Submit job
+
+
+def prep_array(jobScripts,jobDir):
+    os.chdir(jobDir)
+    
+    # Create the list of scripts
+    scriptFile = os.path.abspath(os.path.join(jobDir,"resub.jobs"))
+    nJobs=len(jobScripts)
+    with open(scriptFile,'w') as f:
+        for s in jobScripts:
+            # Check the scripts are of the correct format - abspath and .sh extension
+            if not s.startswith("/") or not s.endswith(".sh"):
+                raise RuntimeError,"Scripts for array jobs must be absolute paths with a .sh extension: {0}".format(s)
+            f.write(s+"\n")
+            
+    # Generate the qsub array script
+    arrayScript = os.path.abspath(os.path.join(jobDir,"resub.script"))
+    
+    # Write head of script
+    s = """#!/bin/bash
+# Set up SGE variables
+#$ -j y
+#$ -cwd
+#$ -w e
+#$ -V
+#$ -l h_rt=86400
+#$ -o arrayJob_$TASK_ID.log
+#$ -t 1-{0}
+#$ -S /bin/bash
+#
+# Ignore for now as we always run single processor jobs
+##$ -pe smp 16
+
+scriptlist={1}
+""".format(nJobs,scriptFile)
+
+    # Add on the rest of the script - need to do in two bits or the stuff in here gets interpreted by format
+    s += """
+# Extract info on what we need to run
+script=`sed -n "${SGE_TASK_ID}p" $scriptlist`
+
+jobdir=`dirname $script`
+jobname=`basename $script .sh`
+
+# cd to jobdir and runit
+cd $jobdir
+
+# Run the script
+$script
+"""
+    
+    with open(arrayScript,'w') as f:
+        f.write(s)
+    
+    return arrayScript
+            
+            
