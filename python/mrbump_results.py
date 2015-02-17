@@ -17,7 +17,7 @@ if __name__ == "__main__":
 if not "CCP4" in os.environ.keys():
     raise RuntimeError('CCP4 not found')
 mrbumpd=os.path.join(os.environ['CCP4'],"include","mrbump","include","parsers")
-#mrbumpd="/opt/mrbump-trunk/include/parsers"
+#mrbumpd="/home/jmht/mrbump-trunk/include/parsers"
 sys.path.insert(0,mrbumpd)
 import parse_buccaneer
 import parse_phaser
@@ -357,7 +357,7 @@ class ResultsSummary(object):
             for mrprog,d2 in d1.iteritems():
                 # Check if all the entries are None - means job didn't run.
                 # Should probably think of a better way to spot that (Search_directory is always set)
-                if not any([v for k, v in id2.iteritems() if k != 'Search_directory']): continue
+                if not any([v for k, v in d2.iteritems() if k != 'Search_directory']): continue
                 # Add MR program as dictionary entry
                 d = copy.copy(d2)
                 del d['SearchModel_filename']
