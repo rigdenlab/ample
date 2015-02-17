@@ -356,8 +356,8 @@ class ResultsSummary(object):
         for name,d1 in rD.iteritems():
             for mrprog,d2 in d1.iteritems():
                 # Check if all the entries are None - means job didn't run.
-                # Should probably think of a better way to spot that
-                if not any(d2.values()): continue
+                # Should probably think of a better way to spot that (Search_directory is always set)
+                if not any([v for k, v in id2.iteritems() if k != 'Search_directory']): continue
                 # Add MR program as dictionary entry
                 d = copy.copy(d2)
                 del d['SearchModel_filename']
