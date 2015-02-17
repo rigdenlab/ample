@@ -34,27 +34,10 @@ class ResultsSummary(object):
     """
 
     def __init__(self):
-
         self.results = []
-        # List of all the possible column titles and their result object attributes
-        self.title2key = {
-                            'Model_Name'       : 'name',
-                            'MR_Program'       : 'MR_program',
-                            'Solution_Type'    : 'Solution_Type',
-                            'final_Rfact'      : 'final_Rfact',
-                            'final_Rfree'      : 'final_Rfree',
-                            'SHELXE_CC'        : 'SHELXE_CC',
-                            'SHELXE_ACL'       : 'SHELXE_ACL',
-                            'Bucc_final_Rfact' : 'BUCC_final_Rfact',
-                            'Bucc_final_Rfree' : 'BUCC_final_Rfree',
-                            'ARP_final_Rfact'  : 'ARP_final_Rfact',
-                            'ARP_final_Rfree'  : 'ARP_final_Rfree',
-                             }
-
         self.logger = logging.getLogger()
         # Add Null logger so we can be used without requiring a logger
         self.logger.addHandler(NullHandler())
-
         return
 
     def _addFailedResults(self, mrbumpDir, failed):
@@ -259,6 +242,22 @@ class ResultsSummary(object):
         jobDir = os.path.abspath( os.sep.join( paths[:-2] ) )
         ensemble = paths[-3][7:-7] #  remove search_..._mrbump: 'search_All_atom_trunc_0.005734_rad_1_mrbump'
 
+
+        # List of all the possible column titles and their result object attributes
+        title2key = {
+                     'Model_Name'       : 'name',
+                     'MR_Program'       : 'MR_program',
+                     'Solution_Type'    : 'Solution_Type',
+                     'final_Rfact'      : 'final_Rfact',
+                     'final_Rfree'      : 'final_Rfree',
+                     'SHELXE_CC'        : 'SHELXE_CC',
+                     'SHELXE_ACL'       : 'SHELXE_ACL',
+                     'Bucc_final_Rfact' : 'BUCC_final_Rfact',
+                     'Bucc_final_Rfree' : 'BUCC_final_Rfree',
+                     'ARP_final_Rfact'  : 'ARP_final_Rfact',
+                      'ARP_final_Rfree'  : 'ARP_final_Rfree',
+                      }
+
         results = []
         header = None
         nfields=None
@@ -276,7 +275,7 @@ class ResultsSummary(object):
                 nfields = len(header) # count as check
                 for f in header:
                     # Map the data fields to their titles
-                    if f not in self.title2key.keys():
+                    if f not in title2key.keys():
                         self.logger.critical("jobDir {0}: Problem with field {1} in headerline: {2}".format( jobDir, f, line ) )
                         result['Solution_Type'] = "problem-header-file.dat"
                         self._getUnfinishedResult( result )
@@ -299,7 +298,7 @@ class ResultsSummary(object):
             for i, title in enumerate(header):
                 v=fields[i]
                 if v == '--': v=None # non-valid values in table are indicated by --
-                result[self.title2key[title]] = v
+                result[title2key[title]] = v
 
             dirName = result['name'][:-6]
             result["Job_directory"] = os.path.join( jobDir,'data',dirName,'unmod','mr',result["MR_program"].lower() )
@@ -466,8 +465,21 @@ class ResultsSummary(object):
         """Return a string suitable for printing the sorted results"""
 
         resultsTable = []
-        keys = ['ensemble_name','MR_program','Solution_Type','final_Rfact','final_Rfree','SHELXE_CC',
-                'SHELXE_ACL','BUCC_final_Rfact','BUCC_final_Rfree','ARP_final_Rfact','ARP_final_Rfree']
+        #keys = ['ensemble_name','MR_program','Solution_Type','final_Rfact','final_Rfree','SHELXE_CC',
+        #        'SHELXE_ACL','BUCC_final_Rfact','BUCC_final_Rfree','ARP_final_Rfact','ARP_final_Rfree']
+        keys = ['ensemble_name','MR_program','Solution_Type','final_Rfact','final_Rfree']
+        # Build up list of keys we want to print based on what we find in the results
+        if any([True for r in self.results if r['BUCC_final_Rfact']]):
+            keys += ['BUCC_final_Rfact','BUCC_final_Rfree']
+        if any([True for r in self.results if r['ARP_final_Rfact']]):
+            keys += ['ARP_final_Rfact','ARP_final_Rfree']
+        if any([True for r in self.results if r['SHELXE_CC']]):
+            keys += ['SHELXE_CC','SHELXE_ACL']
+        if any([True for r in self.results if r['SXRBUCC_final_Rfact']]):
+            keys += ['SXRBUCC_final_Rfact','SXRBUCC_final_Rfree']
+        if any([True for r in self.results if r['SXRARP_final_Rfact']]):
+            keys += ['SXRARP_final_Rfact','SXRARP_final_Rfree']
+        
         resultsTable.append(keys)
         for result in self.results:
             resultLine = []
