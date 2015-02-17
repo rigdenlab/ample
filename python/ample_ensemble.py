@@ -457,12 +457,15 @@ class Ensembler(object):
     def prune_residues(self,residues,chunk_size=1,allowed_gap=2):
         """Remove any residues that are < chunk_size where the gap before and after is > allowed_gap"""
         
-        if not len(residues): return residues
         
         assert chunk_size > 0 and allowed_gap > 0, "chunk_size and allowed_gap must be > 0!: {0} {1}".format(chunk_size,allowed_gap)
         
-        # Build up a list of residues to remove
+        if not len(residues): return residues
         lenr=len(residues)
+        if lenr <= chunk_size:
+            return []
+        
+        # Build up a list of residues to remove
         to_remove=[]
         start=residues[0]
         last=residues[0]
@@ -471,7 +474,9 @@ class Ensembler(object):
         while i <= lenr-1:
             if i==lenr-1 or residues[i] != last + 1:
                 if i == lenr-1: # Need to fiddle things at the end
-                    if residues[i] != last + 1: start=residues[i]
+                    if residues[i] != last + 1:
+                        start=residues[i]
+                        last_chunk_end=last
                     last=residues[i]
                     postgap=allowed_gap+1
                 else:
@@ -479,6 +484,8 @@ class Ensembler(object):
                 
                 pregap=(start-last_chunk_end)-1
                 this_chunk_size=(last-start)+1
+                
+                #print "GOT ",pregap,postgap,this_chunk_size
                 
                 # remove if it satisfies the requirements
                 if (this_chunk_size <= chunk_size and pregap >= allowed_gap and postgap >= allowed_gap):
@@ -679,40 +686,47 @@ class Test(unittest.TestCase):
         residues=[]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[])
-        
+          
         residues=[1]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[])
-        
+         
+        residues=[1,2]
+        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres,[])
+         
+        residues=[1,2,4]
+        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres,[1,2,4])
+         
         # Big enough gap 
         residues=[1,2,3,4,8,13,14,15]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[1,2,3,4,13,14,15])
-          
+           
         residues=[1,2,3,4,8,9,13,14,15]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[1,2,3,4,13,14,15])
-          
+           
         residues=[1,2,3,4,8,9,10,13,14,15]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,residues)
-          
+           
         # end gap not big enough
         residues=[1,2,3,4,8,9,11,12,13]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,residues)
-          
+           
         # Lone residue at start
         residues=[1,11,12,13]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[11,12,13])
-         
-         
+          
         # Lone residue at end
         residues=[11,12,13,19]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[11,12,13])
-         
+          
         # Mixed
         residues=[1,3,4,7,10,11,13,15,16,19]
         pres=ensembler.prune_residues(residues, chunk_size=1, allowed_gap=2)
