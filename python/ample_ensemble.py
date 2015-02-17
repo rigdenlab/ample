@@ -457,7 +457,6 @@ class Ensembler(object):
     def prune_residues(self,residues,chunk_size=1,allowed_gap=2):
         """Remove any residues that are < chunk_size where the gap before and after is > allowed_gap"""
         
-        
         assert chunk_size > 0 and allowed_gap > 0, "chunk_size and allowed_gap must be > 0!: {0} {1}".format(chunk_size,allowed_gap)
         
         if not len(residues): return residues
@@ -485,8 +484,6 @@ class Ensembler(object):
                 pregap=(start-last_chunk_end)-1
                 this_chunk_size=(last-start)+1
                 
-                #print "GOT ",pregap,postgap,this_chunk_size
-                
                 # remove if it satisfies the requirements
                 if (this_chunk_size <= chunk_size and pregap >= allowed_gap and postgap >= allowed_gap):
                     chunk=[x for x in range(start,last+1)]
@@ -501,8 +498,7 @@ class Ensembler(object):
             i+=1
         
         # Remove the chunks and return
-        pruned_res = [r for r in residues if r not in to_remove]
-        return pruned_res
+        return [r for r in residues if r not in to_remove]
 
     def subcluster_models(self,
                           truncated_models,
@@ -625,6 +621,19 @@ class Ensembler(object):
         truncated_models=[]
         truncated_models_data=[]
         for tlevel,tvar,tresidues in zip(truncation_levels, truncation_variances, truncation_residues):
+            # Prune singletone/doubletone etc. residues if required
+            if truncation_pruning=='single':
+                tresidues=self.prune_residues(tresidues, chunk_size=1, allowed_gap=2)
+            elif truncation_pruning=='none':
+                pass
+            else:
+                raise RuntimeError,"Unrecognised truncation_pruning: {0}".format(truncation_pruning)
+            
+            # Skip if there are no residues
+            if not len(tresidues):
+                self.logger.debug("Skipping truncation level {0} with variance {1} as no residues".format(tlevel,tvar))
+                continue
+            
             trunc_dir = os.path.join(truncate_dir, 'tlevel_{0}'.format(tlevel))
             os.mkdir(trunc_dir)
             self.logger.info( 'truncating at: {0} in directory {1}'.format(tvar,trunc_dir))
