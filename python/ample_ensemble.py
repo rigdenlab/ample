@@ -457,40 +457,44 @@ class Ensembler(object):
     def prune_residues(self,residues,chunk_size=1,allowed_gap=2):
         """Remove any residues that are < chunk_size where the gap before and after is > allowed_gap"""
         
-        lenr=len(residues)
+        if not len(residues): return residues
+        
+        assert chunk_size > 0 and allowed_gap > 0, "chunk_size and allowed_gap must be > 0!: {0} {1}".format(chunk_size,allowed_gap)
         
         # Build up a list of residues to remove
+        lenr=len(residues)
         to_remove=[]
-        idxStart=0
-        idxLast=0
-        previous=residues[0]-(allowed_gap+1) # make sure starting gap is bigger than allowed 
+        start=residues[0]
+        last=residues[0]
+        last_chunk_end=residues[0]-(allowed_gap+1) # make sure starting gap is bigger than allowed 
         i=1
         while i <= lenr-1:
-            idxLast=i-1
-            if i==lenr-1 or residues[i] != residues[idxLast] + 1:
+            if i==lenr-1 or residues[i] != last + 1:
                 if i == lenr-1: # Need to fiddle things at the end
-                    if residues[i] != residues[idxLast] + 1: idxStart=i
-                    idxLast=i
+                    if residues[i] != last + 1: start=residues[i]
+                    last=residues[i]
                     postgap=allowed_gap+1
                 else:
-                    postgap=(residues[i]-residues[idxLast])-1
+                    postgap=(residues[i]-last)-1
                 
-                pregap=(residues[idxStart]-previous)-1
-                this_chunk_size=(residues[idxLast]-residues[idxStart])+1
+                pregap=(start-last_chunk_end)-1
+                this_chunk_size=(last-start)+1
                 
-                # only add this residue if it doesn't satisfy the chunk requirements
+                # remove if it satisfies the requirements
                 if (this_chunk_size <= chunk_size and pregap >= allowed_gap and postgap >= allowed_gap):
-                    chunk=[x for x in range(residues[idxStart],residues[idxLast]+1)]
+                    chunk=[x for x in range(start,last+1)]
                     to_remove += chunk
                 
-                # reset idxStart and previous
-                idxStart=i
-                previous=residues[idxLast]
-            
+                # reset start and last_chunk_end
+                start=residues[i]
+                last_chunk_end=last
+                
+            # update loop
+            last=residues[i]
             i+=1
         
         # Remove the chunks and return
-        pruned_res = [r for r in residues if r not in to_remove ]
+        pruned_res = [r for r in residues if r not in to_remove]
         return pruned_res
 
     def subcluster_models(self,
@@ -672,12 +676,18 @@ class Test(unittest.TestCase):
 
         ensembler=Ensembler()
         
-        # Big enough gap 
+        residues=[]
+        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres,[])
         
+        residues=[1]
+        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres,[])
+        
+        # Big enough gap 
         residues=[1,2,3,4,8,13,14,15]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[1,2,3,4,13,14,15])
-          
           
         residues=[1,2,3,4,8,9,13,14,15]
         pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
