@@ -468,18 +468,21 @@ class Ensembler(object):
         to_remove=[]
         start=residues[0]
         last=residues[0]
+        this_residue=None
         last_chunk_end=residues[0]-(allowed_gap+1) # make sure starting gap is bigger than allowed 
         i=1
-        while i <= lenr-1:
-            if i==lenr-1 or residues[i] != last + 1:
-                if i == lenr-1: # Need to fiddle things at the end
-                    if residues[i] != last + 1:
-                        start=residues[i]
+        idxLast=lenr-1
+        while i <= idxLast:
+            this_residue=residues[i]
+            if i==idxLast or this_residue != last+1:
+                if i==idxLast: # Need to fiddle things at the end
+                    if this_residue != last + 1: # handle last if a singleton
+                        start=this_residue
                         last_chunk_end=last
-                    last=residues[i]
-                    postgap=allowed_gap+1
+                    last=this_residue
+                    postgap=allowed_gap+1 # at end so just larger then gap
                 else:
-                    postgap=(residues[i]-last)-1
+                    postgap=(this_residue-last)-1
                 
                 pregap=(start-last_chunk_end)-1
                 this_chunk_size=(last-start)+1
@@ -490,11 +493,11 @@ class Ensembler(object):
                     to_remove += chunk
                 
                 # reset start and last_chunk_end
-                start=residues[i]
+                start=this_residue
                 last_chunk_end=last
                 
             # update loop
-            last=residues[i]
+            last=this_residue
             i+=1
         
         # Remove the chunks and return
