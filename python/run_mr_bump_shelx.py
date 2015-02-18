@@ -334,7 +334,7 @@ def  make_MRBUMP_run(mtz, pdb, run_dir, fasta, name, mrbump_programs):
      
 ############
 if __name__ == "__main__":
-   RUNNING=open('/home/jaclyn/Baker/test_cases/1AAR/TESTLOG', "w")
+  RUNNING=open('/home/jaclyn/Baker/test_cases/1AAR/TESTLOG', "w")
    
   final_ensembles=[]
   for infile in glob.glob( os.path.join('/home/jaclyn/Baker/test_cases/1AAR/ensembles', '*.pdb') ):

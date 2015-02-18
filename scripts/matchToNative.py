@@ -15,7 +15,7 @@ import csymmatch
 import phenixer
 import MTZ_parse
 
-def run( nativePdb, nativeMtz=None, nativeMap=None, mrPdbs, outDir=None ):
+def run( nativePdb, nativeMtz=None, nativeMap=None, mrPdbs=None, outDir=None ):
 
     # Find out where we're running from
     if outDir is not None:
