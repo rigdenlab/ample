@@ -714,17 +714,17 @@ def main():
     
     logger.info('All needed programs are found, continuing Run')
     
-    # Running is the 'official' output file
-    RUNNING = open( amopt.d['work_dir'] + '/ROSETTA.log', "w")
-    RUNNING.write( ample_util.header )
-    RUNNING.flush()
+    # ample_log is the 'official' output file
+    ample_log = open(os.path.join(amopt.d['work_dir'],'AMPLE.log'), "w")
+    ample_log.write(ample_util.header)
+    ample_log.flush()
     
     # params used
-    with open( os.path.join( amopt.d['work_dir'], 'params_used.txt' ), "w") as f:
+    with open(os.path.join( amopt.d['work_dir'], 'params_used.txt' ), "w") as f:
         param_str = amopt.prettify_parameters()
-        f.write( param_str )
+        f.write(param_str)
     # Echo to log too
-    logger.debug( param_str )
+    logger.debug(param_str)
     
     #######################################################
     #
@@ -768,7 +768,7 @@ def main():
         msg = 'Modelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n'
     elif amopt.d['import_models']:
         msg = 'Importing models from directory:\n   ' + amopt.d['models_dir'] + '\n'
-        RUNNING.write(msg)
+        ample_log.write(msg)
         logger.info(msg)
         if amopt.d['use_scwrl']:
             msg = "Processing sidechains of imported models from {0} with Scwl\n".format( amopt.d['models_dir'] )
@@ -780,7 +780,7 @@ def main():
             os.mkdir( models_dir_scwrl )
             msg += "Scwrl-processed models will be placed in directory: {0}".format( models_dir_scwrl )
             msg += "Running Scwrl..."
-            RUNNING.write(msg)
+            ample_log.write(msg)
             logger.info( msg )
             scwrl = add_sidechains_SCWRL.Scwrl( scwrlExe=amopt.d['scwrl_exe'] )
             scwrl.processDirectory( inDirectory=amopt.d['models_dir'], outDirectory=models_dir_scwrl )
@@ -804,7 +804,7 @@ def main():
     
         # Set list of ensembles to the one we are importing
         msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
-        RUNNING.write(msg)
+        ample_log.write(msg)
         logger.info( msg )
         ensembles =  glob.glob( os.path.join(amopt.d['ensembles_dir'], '*.pdb') )
     else:
@@ -838,8 +838,8 @@ def main():
             
         ensembles=amopt.d['ensembles']
         ensemble_summary = ensemble.ensemble_summary(amopt.d['ensembles_data'])
-        RUNNING.write(ensemble_summary)
-        RUNNING.flush()
+        ample_log.write(ensemble_summary)
+        ample_log.flush()
         logger.info(ensemble_summary)
     #
     # Bail here if we didn't create anything
@@ -887,8 +887,8 @@ def main():
     run_in_hours = run_in_min / 60
     msg = '\nMR and shelx DONE\n\n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
     logging.info(msg)
-    RUNNING.write(msg)
-    RUNNING.flush()
+    ample_log.write(msg)
+    ample_log.flush()
     
     # Save results
     ample_util.saveAmoptd(amopt.d)
@@ -901,9 +901,9 @@ def main():
     # Now print out the final summary
     summary = mrbump_results.finalSummary(amopt.d)
     logger.info( summary )
-    RUNNING.write(summary)
-    RUNNING.flush()
-    RUNNING.close()
+    ample_log.write(summary)
+    ample_log.flush()
+    ample_log.close()
 
     sys.exit(0)
     #------------------------------------

@@ -211,7 +211,7 @@ def get_psipred_prediction(psipred):
 
 ########
 
-def make_workdir(work_dir, ccp4_jobid=None, rootname='ROSETTA_MR_'):
+def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     """
     Make a work directory rooted at work_dir and return its path
     """
