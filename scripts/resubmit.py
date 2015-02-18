@@ -86,13 +86,14 @@ for pdb in pdb_codes:
            if os.path.isfile(log): os.unlink(log)
 
     # Remove old array scripts
-    old=glob.glob("arrayJob*")
-    for s in old:
-        os.unlink(s)
+    #old=glob.glob("arrayJob*")
+    #for s in old:
+    #    os.unlink(s)
     
-    scripts=[os.path.abspath(e+".sh") for e in ensembles]
-    jscript=prep_array(scripts,mrbd)
+    if len(ensembles):
+        scripts=[os.path.abspath(e+".sh") for e in ensembles]
+        jscript=prep_array(scripts,mrbd)
     
-    # Submit job
-    ample_util.run_command(["qsub",jscript])
+        # Submit job
+        ample_util.run_command(["qsub",jscript])
 
