@@ -32,7 +32,7 @@ def prep_array(jobScripts,jobDir):
 #$ -cwd
 #$ -w e
 #$ -V
-#$ -l h_rt=86400
+#$ -l h_rt=172800
 #$ -o arrayJob_$TASK_ID.log
 #$ -t 1-{0}
 #$ -S /bin/bash
@@ -64,8 +64,8 @@ $script
     return arrayScript
             
             
-#pdb_codes=["1MIX", "1P9G", "1UCS", "1XKR", "2BL2", "2EFR", "2FM9", "2JKU", "2QIH", "2QSK", "2UUI", "2XFD", "2YKT", "3CI9", "3CVF", "3GD8", "3GHF", "3HAP", "3HFE"]
-pdb_codes=["2BL2", "2FM9", "2JKU", "2QSK", "2UUI", "2XFD", "2YKT", "3CVF", "3GD8", "3GHF", "3HAP", "3HFE"]
+pdb_codes=["1MIX", "1P9G", "1UCS", "1XKR", "2BL2", "2EFR", "2FM9", "2JKU", "2QIH", "2QSK", "2UUI", "2XFD", "2YKT", "3CI9", "3CVF", "3GD8", "3GHF", "3HAP", "3HFE"]
+#pdb_codes=["2BL2", "2FM9", "2JKU", "2QSK", "2UUI", "2XFD", "2YKT", "3CVF", "3GD8", "3GHF", "3HAP", "3HFE"]
 root="/volatile/jmht42/testset/percent"
 
 for pdb in pdb_codes:
@@ -78,10 +78,10 @@ for pdb in pdb_codes:
     for r in res_sum.results:
         search_dir=r['Search_directory']
         ensemble=r['ensemble_name']
-        x=os.path.join(search_dir,"results","finished.txt")
-        if r['Solution_Type']=='unfinished' or r['Solution_Type']=='no_job_directory':
+        if r['Solution_Type']=='unfinished' or r['Solution_Type']=='no_job_directory' or (r['Solution_Type']=='PHASER_FAIL' and r['SHELXE_CC'] is not None):
            ensembles.append(ensemble)
-           if r['Solution_Type']=='unfinished' and os.path.isdir(search_dir): shutil.rmtree(search_dir)
+           #if r['Solution_Type']=='unfinished' and os.path.isdir(search_dir): shutil.rmtree(search_dir)
+           if os.path.isdir(search_dir): shutil.rmtree(search_dir)
            log=ensemble+".log"
            if os.path.isfile(log): os.unlink(log)
 
