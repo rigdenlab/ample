@@ -346,7 +346,7 @@ class Ensembler(object):
                                                               num_clusters=num_clusters,
                                                               cluster_exe=cluster_exe)):
             if len(cluster) < 2:
-                self.logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data.cluster_num))
+                self.logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data['cluster_num']))
                 continue
             for truncated_models, truncated_models_data in zip(*self.truncate_models(cluster,
                                                                                      cluster_data,
