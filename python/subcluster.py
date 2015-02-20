@@ -88,12 +88,12 @@ class MaxClusterer(SubClusterer):
             f.write( "\n".join( pdb_list )+"\n" )
             
         #log_name = "maxcluster_radius_{0}.log".format(radius)
-        log_name = "maxcluster.log"
+        log_name = os.path.abspath("maxcluster.log")
         cmd = [ self.executable, "-l", fname, "-L", "4", "-rmsd", "-d", "1000", "-bb", "-C0" ]
         retcode = ample_util.run_command( cmd, logfile=log_name )
         
         if retcode != 0:
-            msg = "non-zero return code for maxcluster in generate_distance_matrix!"
+            msg = "non-zero return code for maxcluster in generate_distance_matrix!\nSee logfile: {0}".format(log_name)
             logging.critical( msg )
             raise RuntimeError, msg
         
