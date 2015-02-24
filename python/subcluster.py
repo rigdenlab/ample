@@ -144,7 +144,7 @@ class FpcClusterer(SubClusterer):
         # Run fast_protein_cluster - this is just to generate the distance matrix, but there
         # doesn't seem to be a way to stop it clustering as well - not a problem as it just
         # generates more files
-        log_name = "fast_protein_cluster.log"
+        log_name = os.path.abspath("fast_protein_cluster.log")
         matrix_file = "fpc.matrix"
         cmd = [self.executable,
                "--cluster_write_text_matrix",
@@ -154,7 +154,7 @@ class FpcClusterer(SubClusterer):
                
         retcode = ample_util.run_command( cmd, logfile=log_name )
         if retcode != 0:
-            msg = "non-zero return code for fast_protein_cluster in generate_distance_matrix!"
+            msg = "non-zero return code for fast_protein_cluster in generate_distance_matrix!\nCheck logfile:{0}".format(log_name)
             logging.critical( msg )
             raise RuntimeError, msg
 
