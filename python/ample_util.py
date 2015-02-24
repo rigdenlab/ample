@@ -77,8 +77,6 @@ def find_exe(executable, dirs=None):
     dirs - additional directories to search for the location
     
     """
-    def is_exe(fpath):
-        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
     logger = logging.getLogger()
     logger.debug('Looking for executable: {0}'.format(executable) )
@@ -126,6 +124,9 @@ def find_maxcluster( amopt ):
     If we can't find one in the path, we create a $HOME/.ample
     directory and downlod it to there
     """
+
+    if amopt.d['maxcluster_exe'] and is_exe(amopt.d['maxcluster_exe']):
+        return amopt.d['maxcluster_exe']
 
     if not amopt.d['maxcluster_exe']:
         if sys.platform.startswith("win"):
@@ -210,6 +211,9 @@ def get_psipred_prediction(psipred):
         print  'Your protein is has no predicted secondary structure, your chances of success are low'
 
 ########
+
+def is_exe(fpath):
+    return os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
 def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     """
