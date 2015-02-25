@@ -17,7 +17,7 @@ if __name__ == "__main__":
 if not "CCP4" in os.environ.keys():
     raise RuntimeError('CCP4 not found')
 mrbumpd=os.path.join(os.environ['CCP4'],"include","mrbump","include","parsers")
-#mrbumpd="/home/jmht/mrbump-trunk/include/parsers"
+#mrbumpd="/home/jmht42/mrbump-trunk/include/parsers"
 sys.path.insert(0,mrbumpd)
 import parse_buccaneer
 import parse_phaser
@@ -197,8 +197,7 @@ class ResultsSummary(object):
                 continue
 
         # Process the failed results
-        if failed and len(self.results):
-            self._addFailedResults(mrbumpDir, failed)
+        if failed: self._addFailedResults(mrbumpDir, failed)
 
         if not len(self.results):
             self.logger.warn("Could not extract any results from directory: {0}".format( mrbumpDir ) )
@@ -494,8 +493,10 @@ class ResultsSummary(object):
         r = "\n\nOverall Summary:\n\n"
         r += summary
 
-        r += '\nBest Molecular Replacement results so far are in:\n\n'
-        r +=  self.results[0]["Job_directory"]
+        # Hack need to think of a better way to do this
+        if self.results[0]["Job_directory"]:
+            r += '\nBest Molecular Replacement results so far are in:\n\n'
+            r +=  self.results[0]["Job_directory"]
 
 #         if self.results[0].pdb and os.path.isfile(self.results[0].pdb):
 #             r += '\n\nFinal PDB is:\n\n'
