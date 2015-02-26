@@ -1,5 +1,19 @@
 
-data <- read.table(file="/home/jmht/Documents/work/CC/all_results/results.csv",sep=',', header=T)
+
+cls <- c(SHELXE_CC="numeric",
+		SHELXE_ACL="numeric",
+		SXRARP_final_Rfree="numeric",
+		SXRBUCC_final_Rfree="numeric",
+		final_Rfree="numeric",
+		PHASER_TFZ="numeric",
+		PHASER_LLG="numeric"
+)
+
+data <- read.csv(file="/home/jmht/Downloads/results.csv",sep=',', header=T, stringsAsFactors=FALSE, na.strings="N/A", colClasses=cls)
+
+# Convert to numeric
+# Need to replace all N/As with none
+data[data=="N/A"]<-NA
 
 updateData <- function(data){
 	data$SHELXE_OK <- as.numeric( data$SHELXE_CC >= 25 & data$SHELXE_ACL >= 10 )
@@ -8,16 +22,14 @@ updateData <- function(data){
 	# Definition of success where at least one rebuild worked 
 	data$minRfree <- pmin( data$SXRARP_final_Rfree, data$SXRBUCC_final_Rfree, na.rm=TRUE )
 	data$REBUILD_OK <- as.numeric( data$minRfree <= 0.45 )
-	#data$REBUILD_OK <- as.numeric(  data$SXRBUCC_final_Rfree <= 0.45 )
 	data$REBUILD_OK <- replace( data$REBUILD_OK, is.na(data$REBUILD_OK), 0 )
 	
-	
 	# Data where MR seemingly worked according to refmac rfree
-	data$REFMAC_OK <- as.numeric( data$rfree <= 0.45 )
+	data$REFMAC_OK <- as.numeric( data$final_Rfree <= 0.45 )
 	data$REFMAC_OK <- replace( data$REFMAC_OK, is.na(data$REFMAC_OK), 0 )
 	
 	# Data where MR seemingly worked according to phaser
-	data$PHASER_OK <- as.numeric( data$phaserTFZ > 8.0 | data$phaserLLG > 120 )
+	data$PHASER_OK <- as.numeric( data$PHASER_TFZ > 8.0 | data$PHASER_LLG > 120 )
 	data$PHASER_OK <- replace( data$PHASER_OK, is.na(data$PHASER_OK), 0 )
 	
 	# Gold standard
@@ -35,11 +47,9 @@ data <- updateData(data)
 summaryData <- data[ order( data$native_pdb_code, data$success, data$SHELXE_CC, decreasing=TRUE ), ]
 
 # Select top by selecting not duplicates on native_pdb_code
-summaryData <- summaryData[ !duplicated(summaryData$native_pdb_code), c("native_pdb_code","fastaLength","resolution","spaceGroup","numChains",
-				"estChainsASU","matthewsCoefficient","numResidues","numAtoms", "SHELXE_CC", "SHELXE_ACL","shelxeNumChains")  ]
-
-# For helix
-#summaryData <- summaryData[ !duplicated(summaryData$native_pdb_code), c("native_pdb_code","polyaLength","resolution","SHELXE_CC", "SHELXE_ACL","shelxeNumChains")  ]
+summaryData <- summaryData[ !duplicated(summaryData$native_pdb_code),
+		c("native_pdb_code","native_pdb_resolution","native_pdb_num_residues","ensemble_name","truncation_num_residues","subcluster_num_models",
+				"PHASER_LLG","PHASER_TFZ", "PHASER_RFZ", "SHELXE_CC", "SHELXE_ACL","SXRBUCC_final_Rfree","SXRARP_final_Rfree")  ]
 
 # Now put in alphabetical order
 summaryData <- summaryData[ order( summaryData$native_pdb_code ), ]
@@ -61,16 +71,16 @@ summaryData["REBUILD_OK"] <- aggregate( data$REBUILD_OK, by=list(data$native_pdb
 
 # side-chain treatment
 summaryData["successPolyAla"]  <- aggregate( 
-		data[ data$ensembleSideChain == "poly_ala", ]$success,
-		by=list( data[ data$ensembleSideChain == "poly_ala", ]$native_pdb_code ),
+		data[ data$side_chain_treatment == "polya", ]$success,
+		by=list( data[ data$side_chain_treatment == "polya", ]$native_pdb_code ),
 		FUN=function(x){ sum( x == 1 ) } )[2]
 summaryData["successScwrl"]  <- aggregate(
-		data[ data$ensembleSideChain == "SCWRL_reliable_sidechains", ]$success,
-		by=list( data[ data$ensembleSideChain == "SCWRL_reliable_sidechains", ]$native_pdb_code ),
+		data[ data$side_chain_treatment == "reliable", ]$success,
+		by=list( data[ data$side_chain_treatment == "reliable", ]$native_pdb_code ),
 		FUN=function(x){ sum( x == 1 ) } )[2]
-summaryData["successAllAtom"]  <- aggregate(
-		data[ data$ensembleSideChain == "All_atom", ]$success,
-		by=list( data[ data$ensembleSideChain == "All_atom", ]$native_pdb_code ),
+summaryData["allatom"]  <- aggregate(
+		data[ data$side_chain_treatment == "allatom", ]$success,
+		by=list( data[ data$side_chain_treatment == "allatom", ]$native_pdb_code ),
 		FUN=function(x){ sum( x == 1 ) } )[2]
 
 # Subclustering radii
@@ -79,7 +89,7 @@ native_pdb_codes <- unique( data$native_pdb_code )
 x <- aggregate( success~native_pdb_code,
 		data=data,
 		FUN=function(x){ sum( x == 1 ) },
-		subset=data$ensembleRadiusThreshold==1 )
+		subset=data$subcluster_radius_threshold==1 )
 missing <- setdiff( native_pdb_codes, x$native_pdb_code)
 y<-rep(0,length(missing)) # Make vector of zeros as long as the missing codes
 y <- data.frame( missing, y) # Create a data frame and name it
@@ -91,7 +101,7 @@ summaryData$subclustering1A <- y$success
 x <- aggregate( success~native_pdb_code,
 		data=data,
 		FUN=function(x){ sum( x == 1 ) },
-		subset=data$ensembleRadiusThreshold==2 )
+		subset=data$subcluster_radius_threshold==2 )
 missing <- setdiff( native_pdb_codes, x$native_pdb_code)
 y<-rep(0,length(missing)) # Make vector of zeros as long as the missing codes
 y <- data.frame( missing, y) # Create a data frame and name it
@@ -103,7 +113,7 @@ summaryData$subclustering2A <- y$success
 x <- aggregate( success~native_pdb_code,
 		data=data,
 		FUN=function(x){ sum( x == 1 ) },
-		subset=data$ensembleRadiusThreshold==3 )
+		subset=data$subcluster_radius_threshold==3 )
 missing <- setdiff( native_pdb_codes, x$native_pdb_code)
 y<-rep(0,length(missing)) # Make vector of zeros as long as the missing codes
 y <- data.frame( missing, y) # Create a data frame and name it
@@ -112,14 +122,8 @@ y<-rbind(x,y)
 y <- y[ order(y$native_pdb_code), ]
 summaryData$subclustering3A <- y$success
 
-# ADD SINGLE MODEL AND HELIX
-#x["successfulSingleModel"] <- aggregate( data$successSingleStructure, by=list(data$native_pdb_code), FUN=function(x){ sum( x == 1 ) } )[2]
-#x$successfulSingleModel[ x$successfulSingleModel >= 1 ] <- 1
-#x["successfulHelix"] <- aggregate( data$helix_success, by=list(data$native_pdb_code), FUN=function(x){ sum( x == 1 ) } )[2]
-#x$successfulHelix[ x$successfulHelix >= 1 ] <- 1
-
 # NB LOOK AT REORDER
 # Now put in order by success, resolution
-summaryData <- summaryData[ order( -summaryData$worked, summaryData$resolution ), ]
+#summaryData <- summaryData[ order( -summaryData$worked, summaryData$native_pdb_resolution ), ]
 #x <- x[ order( x$success, decreasing=TRUE ), ]
 write.csv(summaryData, "summary.csv", row.names=FALSE)
