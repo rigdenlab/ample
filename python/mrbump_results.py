@@ -18,6 +18,7 @@ if not "CCP4" in os.environ.keys():
     raise RuntimeError('CCP4 not found')
 mrbumpd=os.path.join(os.environ['CCP4'],"include","mrbump","include","parsers")
 #mrbumpd="/home/jmht42/mrbump-trunk/include/parsers"
+#mrbumpd="/opt/mrbump-trunk/include/parsers"
 sys.path.insert(0,mrbumpd)
 import parse_buccaneer
 import parse_phaser
@@ -464,10 +465,16 @@ class ResultsSummary(object):
         """Return a string suitable for printing the sorted results"""
 
         resultsTable = []
-        #keys = ['ensemble_name','MR_program','Solution_Type','final_Rfact','final_Rfree','SHELXE_CC',
-        #        'SHELXE_ACL','BUCC_final_Rfact','BUCC_final_Rfree','ARP_final_Rfact','ARP_final_Rfree']
-        keys = ['ensemble_name','MR_program','Solution_Type','final_Rfact','final_Rfree']
+        keys = ['ensemble_name','MR_program','Solution_Type']
         # Build up list of keys we want to print based on what we find in the results
+        if any([True for r in self.results if r['PHASER_LLG']]):
+            keys += ['PHASER_LLG']
+        if any([True for r in self.results if r['PHASER_TFZ']]):
+            keys += ['PHASER_TFZ']
+        if any([True for r in self.results if r['final_Rfree']]):
+            keys += ['final_Rfact','final_Rfree']
+        if any([True for r in self.results if r['final_Rfree']]):
+            keys += ['final_Rfact','final_Rfree']
         if any([True for r in self.results if r['BUCC_final_Rfact']]):
             keys += ['BUCC_final_Rfact','BUCC_final_Rfree']
         if any([True for r in self.results if r['ARP_final_Rfact']]):
@@ -493,7 +500,7 @@ class ResultsSummary(object):
         r = "\n\nOverall Summary:\n\n"
         r += summary
 
-        # Hack need to think of a better way to do this
+        # Hack need to think of a better way to do this when there are no valid results
         if self.results[0]["Job_directory"]:
             r += '\nBest Molecular Replacement results so far are in:\n\n'
             r +=  self.results[0]["Job_directory"]
