@@ -89,6 +89,9 @@ def main():
     parser.add_argument('-ccp4_jobid', type=int, nargs=1,
                        help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
     
+    parser.add_argument('-constraints_file', type=str, nargs=1,
+                       help='Residue constraints for ab initio modelling')
+    
     parser.add_argument('-debug', metavar='True/False', type=str, nargs=1,
                        help='Run in debug mode (CURRENTLY UNUSED)')
     
@@ -889,9 +892,6 @@ def main():
     logging.info(msg)
     ample_log.write(msg)
     ample_log.flush()
-    
-    # Save results
-    ample_util.saveAmoptd(amopt.d)
     
     # Benchmark mode
     if amopt.d['benchmark_mode']:

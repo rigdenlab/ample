@@ -22,8 +22,9 @@ class AmpleOptions(object):
                             'benchmark_mode' : False,
                             'blast_dir' : None,
                             'buccaneer_cycles' : 5,
-                            'cluster_method' : 'spicker',
                             'ccp4_jobid' : None,
+                            'cluster_method' : 'spicker',
+                            'constraints_file' : None,
                             'debug' : False,
                             'domain_all_chains_pdb' : None,
                             'domain_termini_distance' : 0,
@@ -195,6 +196,7 @@ class AmpleOptions(object):
         paths = [
                  'alignment_file',
                 'blast_dir',
+                'constraints_file',
                 'domain_all_chains_pdb',
                 'ensembles_dir',
                 'fasta',

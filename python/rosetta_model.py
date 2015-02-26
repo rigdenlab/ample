@@ -81,6 +81,7 @@ class RosettaModel(object):
         self.rad_gyr_reweight = None
         self.improve_template = None
         self.nativePdbStd = None
+        self.constraints_file = None
 
         self.logger = logging.getLogger()
 
@@ -406,10 +407,17 @@ class RosettaModel(object):
                      '-mute core.scoring.MembranePotential'
                     ]
 
-        # Domain constraints
-        if self.domain_termini_distance  > 0:
-            dcmd = self.setup_domain_constraints()
-            cmd += dcmd
+        # Constraints file or domain constraints
+        if self.constraints_file or self.domain_termini_distance  > 0:
+            if self.domain_termini_distance  > 0:
+                constraints_file=self.setup_domain_constraints()
+            else:
+                constraints_file=self.constraints_file
+            if not os.path.isfile(constraints_file):
+                msg="Cannot find constraints file: {0}".format(constraints_file)
+                self.logger.critical(msg)
+                raise RuntimeError,msg
+            cmd+=['-constraints:cst_file',constraints_file,'-constraints:cst_fa_file',constraints_file]
 
         # Radius of gyration reweight
         if self.rad_gyr_reweight is not None:
@@ -521,10 +529,9 @@ class RosettaModel(object):
 
     def setup_domain_constraints(self):
         """
-        Create the file for restricting the domain termini and return a list suitable
-        for adding to the rosetta command
+        Create the file for restricting the domain termini and return the path to the file
         """
-
+        self.logger.info('restricting termini distance: {0}'.format( self.domain_termini_distance ))
         fas = open(self.fasta)
         seq = ''
         for line in fas:
@@ -534,14 +541,11 @@ class RosettaModel(object):
         for x in seq:
             if re.search('\w', x):
                 length += 1
-
-        self.logger.info('restricting termini distance: {0}'.format( self.domain_termini_distance ))
+                
         constraints_file = os.path.join(self.work_dir, 'constraints')
-        conin = open(constraints_file, "w")
-        conin.write('AtomPair CA 1 CA ' + str(length) + ' GAUSSIANFUNC ' + str(self.domain_termini_distance) + ' 5.0 TAG')
-        cmd = '-constraints:cst_fa_file', constraints_file, '-constraints:cst_file', constraints_file
-
-        return cmd
+        with open(constraints_file, "w") as conin:
+            conin.write('AtomPair CA 1 CA {0} GAUSSIANFUNC {1} 5.0 TAG\n'.format(length,self.domain_termini_distance))
+        return constraints_file
 
     def set_from_dict(self, optd ):
         """
@@ -642,7 +646,13 @@ class RosettaModel(object):
                 self.logger.critical( msg)
                 raise RuntimeError(msg)
             self.improve_template = optd['improve_template']
-
+            if optd['constraints_file']:
+                if not os.path.exists(optd['constraints_file']):
+                    msg = "Cannot find constraints file: {0}".format(optd['constraints_file'])
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg
+                self.constraints_file=optd['constraints_file']
+                
             self.use_scwrl = optd['use_scwrl']
             self.scwrl_exe = optd['scwrl_exe']
         return
