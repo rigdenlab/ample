@@ -1043,6 +1043,35 @@ def reliable_sidechains(inpath=None, outpath=None ):
     
     return
 
+def reliable_sidechains_cctbx(pdbin=None, pdbout=None ):
+    """Only output non-backbone atoms for residues in the res_names list.
+    """
+    
+    # Remove sidechains that are in res_names where the atom name is not in atom_names
+    res_names = [ 'MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
+    atom_names = [ 'N', 'CA', 'C', 'O', 'CB' ]
+
+    pdb_input=iotbx.pdb.pdb_input(pdbin)
+    hierachy=pdb_input.construct_hierarchy()
+    # Remove HETATMS
+    for model in hierachy.models():
+        for chain in model.chains():
+            for residue_group in chain.residue_groups():
+                assert not residue_group.have_conformers(),"Fix for conformers"
+                if residue_group.unique_resnames()[0] not in res_names:
+                    # removing whilst looping through?!? - maybe...
+                    chain.remove_residue_group(residue_group)
+                    continue
+                for atom_group in residue_group.atom_groups():
+                    # Can't use below as it uses indexes which change as we remove atoms
+                    # ag.atoms().extract_hetero()]
+                    todel=[a for a in atom_group.atoms() if a.name.strip() in atom_names ]
+                    for a in todel: atom_group.remove_atom(a) 
+    
+    # Need to get crystal info and include
+    hierachy.write_pdb_file(pdbout,anisou=False)
+    return
+
 def merge(pdb1=None, pdb2=None, pdbout=None  ):
     """Merge two pdb files into one"""
     
@@ -1543,6 +1572,18 @@ class Test(unittest.TestCase):
         
         return
     
+    def testSequence(self):
+        pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
+        ref=""">4DZN chain: A length: 31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+>4DZN chain: C length: 31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+>4DZN chain: B length: 31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+"""
+        self.assertEqual(ref,sequence(pdbin))
+        return
+    
     def testStdResidues(self):
 
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
@@ -1562,18 +1603,6 @@ class Test(unittest.TestCase):
         
         os.unlink(pdbout)
         
-        return
-    
-    def testSequence(self):
-        pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
-        ref=""">4DZN chain: A length: 31
-GEIAALKQEIAALKKEIAALKEIAALKQGYY
->4DZN chain: C length: 31
-GEIAALKQEIAALKKEIAALKEIAALKQGYY
->4DZN chain: B length: 31
-GEIAALKQEIAALKKEIAALKEIAALKQGYY
-"""
-        self.assertEqual(ref,sequence(pdbin))
         return
     
     def testStdResiduesCctbx(self):
@@ -1596,6 +1625,44 @@ GEIAALKQEIAALKKEIAALKEIAALKQGYY
         os.unlink(pdbout)
         
         return
+    
+    def testReliableSidechains(self):
+
+        pdbin=os.path.join(self.testfiles_dir,"1GU8.pdb")
+        pdbout="std.pdb"
+        
+        reliable_sidechains(pdbin, pdbout)
+        
+        # Check it's valid
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+        
+        #Get list of all the residue names in chain 1
+        resnames=[g.unique_resnames()[0]  for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
+        ref=['VAL', 'GLY', 'LEU', 'THR', 'THR', 'LEU', 'PHE', 'TRP', 'LEU', 'GLY', 'ALA', 'ILE', 'GLY', 'MET',
+             'LEU', 'VAL', 'GLY', 'THR', 'LEU', 'ALA', 'PHE', 'ALA', 'TRP', 'ALA', 'GLY', 'ARG', 'ASP', 'ALA',
+             'GLY', 'SER', 'GLY', 'GLU', 'ARG', 'ARG', 'TYR', 'TYR', 'VAL', 'THR', 'LEU', 'VAL', 'GLY', 'ILE',
+             'SER', 'GLY', 'ILE', 'ALA', 'ALA', 'VAL', 'ALA', 'TYR', 'VAL', 'VAL', 'MET', 'ALA', 'LEU', 'GLY',
+             'VAL', 'GLY', 'TRP', 'VAL', 'PRO', 'VAL', 'ALA', 'GLU', 'ARG', 'THR', 'VAL', 'PHE', 'ALA', 'PRO',
+             'ARG', 'TYR', 'ILE', 'ASP', 'TRP', 'ILE', 'LEU', 'THR', 'THR', 'PRO', 'LEU', 'ILE', 'VAL', 'TYR',
+             'PHE', 'LEU', 'GLY', 'LEU', 'LEU', 'ALA', 'GLY', 'LEU', 'ASP', 'SER', 'ARG', 'GLU', 'PHE', 'GLY',
+             'ILE', 'VAL', 'ILE', 'THR', 'LEU', 'ASN', 'THR', 'VAL', 'VAL', 'MET', 'LEU', 'ALA', 'GLY', 'PHE',
+             'ALA', 'GLY', 'ALA', 'MET', 'VAL', 'PRO', 'GLY', 'ILE', 'GLU', 'ARG', 'TYR', 'ALA', 'LEU', 'PHE',
+             'GLY', 'MET', 'GLY', 'ALA', 'VAL', 'ALA', 'PHE', 'LEU', 'GLY', 'LEU', 'VAL', 'TYR', 'TYR', 'LEU',
+             'VAL', 'GLY', 'PRO', 'MET', 'THR', 'GLU', 'SER', 'ALA', 'SER', 'GLN', 'ARG', 'SER', 'SER', 'GLY',
+             'ILE', 'LYS', 'SER', 'LEU', 'TYR', 'VAL', 'ARG', 'LEU', 'ARG', 'ASN', 'LEU', 'THR', 'VAL', 'ILE',
+             'LEU', 'TRP', 'ALA', 'ILE', 'TYR', 'PRO', 'PHE', 'ILE', 'TRP', 'LEU', 'LEU', 'GLY', 'PRO', 'PRO',
+             'GLY', 'VAL', 'ALA', 'LEU', 'LEU', 'THR', 'PRO', 'THR', 'VAL', 'ASP', 'VAL', 'ALA', 'LEU', 'ILE',
+             'VAL', 'TYR', 'LEU', 'ASP', 'LEU', 'VAL', 'THR', 'LYS', 'VAL', 'GLY', 'PHE', 'GLY', 'PHE', 'ILE',
+             'ALA', 'LEU', 'ASP', 'ALA', 'ALA', 'ALA', 'THR', 'LEU']
+
+        self.assertEqual(resnames,ref)
+        
+        reliable_sidechains_cctbx(pdbin, pdbout)
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+        self.assertEqual(resnames,ref)
+        os.unlink(pdbout)
+        
+        return
 
 def testSuite():
     suite = unittest.TestSuite()
@@ -1603,6 +1670,7 @@ def testSuite():
     suite.addTest(Test('testGetInfo2'))
     suite.addTest(Test('testStdResidues'))
     suite.addTest(Test('testStdResiduesCctbx'))
+    suite.addTest(Test('testReliableSidechains'))
     return suite
 
 if __name__ == "__main__":
@@ -1610,6 +1678,7 @@ if __name__ == "__main__":
     #
     # Command-line handling
     #
+    #unittest.TextTestRunner(verbosity=2).run(testSuite())
     import argparse
     parser = argparse.ArgumentParser(description='Manipulate PDB files', prefix_chars="-")
     
