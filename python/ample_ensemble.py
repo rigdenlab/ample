@@ -629,6 +629,7 @@ class Ensembler(object):
         pruned_residues=None
         for tlevel,tvar,tresidues in zip(truncation_levels, truncation_variances, truncation_residues):
             # Prune singletone/doubletone etc. residues if required
+            self.logger.debug("truncation_pruning: {0}".format(truncation_pruning))
             if truncation_pruning=='single':
                 tresidues,pruned_residues=self.prune_residues(tresidues, chunk_size=1, allowed_gap=2)
                 if pruned_residues: self.logger.debug("prune_residues removing: {0}".format(pruned_residues))
