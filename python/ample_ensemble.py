@@ -631,14 +631,14 @@ class Ensembler(object):
             # Prune singletone/doubletone etc. residues if required
             if truncation_pruning=='single':
                 tresidues,pruned_residues=self.prune_residues(tresidues, chunk_size=1, allowed_gap=2)
-                if len(pruned_residues): self.logger.debug("prune_residues removing: {0}".format(pruned_residues))
+                if pruned_residues: self.logger.debug("prune_residues removing: {0}".format(pruned_residues))
             elif truncation_pruning=='none':
                 pass
             else:
                 raise RuntimeError,"Unrecognised truncation_pruning: {0}".format(truncation_pruning)
             
             # Skip if there are no residues
-            if not len(tresidues):
+            if not tresidues:
                 self.logger.debug("Skipping truncation level {0} with variance {1} as no residues".format(tlevel,tvar))
                 continue
             
