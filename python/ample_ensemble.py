@@ -459,10 +459,10 @@ class Ensembler(object):
         
         assert chunk_size > 0 and allowed_gap > 0, "chunk_size and allowed_gap must be > 0!: {0} {1}".format(chunk_size,allowed_gap)
         
-        if not len(residues): return residues
+        if not len(residues): return residues,None
         lenr=len(residues)
         if lenr <= chunk_size:
-            return []
+            return [],residues
         
         # Build up a list of residues to remove
         to_remove=[]
@@ -501,7 +501,10 @@ class Ensembler(object):
             i+=1
         
         # Remove the chunks and return
-        return [r for r in residues if r not in to_remove]
+        if len(to_remove):
+            return [r for r in residues if r not in to_remove],to_remove
+        else:
+            return residues,None
 
     def subcluster_models(self,
                           truncated_models,
@@ -623,10 +626,12 @@ class Ensembler(object):
 
         truncated_models=[]
         truncated_models_data=[]
+        pruned_residues=None
         for tlevel,tvar,tresidues in zip(truncation_levels, truncation_variances, truncation_residues):
             # Prune singletone/doubletone etc. residues if required
             if truncation_pruning=='single':
-                tresidues=self.prune_residues(tresidues, chunk_size=1, allowed_gap=2)
+                tresidues,pruned_residues=self.prune_residues(tresidues, chunk_size=1, allowed_gap=2)
+                if len(pruned_residues): self.logger.debug("prune_residues removing: {0}".format(pruned_residues))
             elif truncation_pruning=='none':
                 pass
             else:
@@ -655,14 +660,15 @@ class Ensembler(object):
 
             # Add the data
             model_data=copy.copy(models_data)
-            model_data['truncation_level']=tlevel
-            model_data['truncation_variance']=tvar
-            model_data['truncation_residues']=tresidues
-            model_data['truncation_num_residues']=len(tresidues)
-            model_data['truncation_dir']=trunc_dir
-            model_data['percent_truncation'] = percent_truncation
-            model_data['truncation_method'] = truncation_method
-            model_data['truncation_pruning'] = truncation_pruning
+            model_data['truncation_level']        = tlevel
+            model_data['truncation_variance']     = tvar
+            model_data['truncation_residues']     = tresidues
+            model_data['truncation_num_residues'] = len(tresidues)
+            model_data['truncation_dir']          = trunc_dir
+            model_data['percent_truncation']      = percent_truncation
+            model_data['truncation_method']       = truncation_method
+            model_data['truncation_pruning']      = truncation_pruning
+            model_data['pruned_residues']         = pruned_residues
             
             truncated_models_data.append(model_data)
             
@@ -696,53 +702,64 @@ class Test(unittest.TestCase):
         ensembler=Ensembler()
         
         residues=[]
-        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[])
+        self.assertEqual(pruned,None)
           
         residues=[1]
-        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[])
+        self.assertEqual(pruned,[1])
          
         residues=[1,2]
-        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[])
+        self.assertEqual(pruned,[1,2])
          
         residues=[1,2,4]
-        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[1,2,4])
+        self.assertEqual(pruned,None)
          
         # Big enough gap 
         residues=[1,2,3,4,8,13,14,15]
-        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[1,2,3,4,13,14,15])
+        self.assertEqual(pruned,[8])
            
         residues=[1,2,3,4,8,9,13,14,15]
-        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[1,2,3,4,13,14,15])
+        self.assertEqual(pruned,[8,9])
            
         residues=[1,2,3,4,8,9,10,13,14,15]
-        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,residues)
+        self.assertEqual(pruned,None)
            
         # end gap not big enough
         residues=[1,2,3,4,8,9,11,12,13]
-        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,residues)
+        self.assertEqual(pruned,None)
            
         # Lone residue at start
         residues=[1,11,12,13]
-        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[11,12,13])
-          
+        self.assertEqual(pruned,[1])
+        
         # Lone residue at end
         residues=[11,12,13,19]
-        pres=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres,[11,12,13])
+        self.assertEqual(pruned,[19])
           
         # Mixed
         residues=[1,3,4,7,10,11,13,15,16,19]
-        pres=ensembler.prune_residues(residues, chunk_size=1, allowed_gap=2)
+        pres,pruned=ensembler.prune_residues(residues, chunk_size=1, allowed_gap=2)
         self.assertEqual(pres,[1,3,4,10,11,13,15,16])
+        self.assertEqual(pruned,[7,19])
 
         return
 

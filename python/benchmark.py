@@ -139,6 +139,7 @@ def writeCsv(fileName,resultList):
                 'truncation_pruning',
                 'truncation_variance',
                 'truncation_num_residues',
+                'pruned_residues',
                 
                 # subclustering info
                 'subcluster_num_models',
