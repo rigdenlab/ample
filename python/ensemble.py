@@ -46,6 +46,7 @@ def create_ensembles( amoptd ):
                                            num_clusters=amoptd['num_clusters'] ,
                                            percent_truncation=amoptd['percent'],
                                            truncation_method=amoptd['truncation_method'],
+                                           truncation_pruning=amoptd['truncation_pruning'],
                                            work_dir=work_dir)
     
     amoptd['ensembles'] = ensembles

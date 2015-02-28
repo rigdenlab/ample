@@ -104,9 +104,6 @@ def main():
     parser.add_argument('-early_terminate', metavar='True/False', type=str, nargs=1,
                          help='Stop the run as soon as a success has been found.')
     
-    parser.add_argument('-ensemble_mode', type=str, nargs=1,
-                       help='How to ensemble the decoys (threshold|percent)')
-    
     parser.add_argument('-ensembler', type=str, nargs=1,
                        help='Use the Phenix ensembler')
     
@@ -283,8 +280,11 @@ def main():
                        help='Lips4 file for modelling transmembrane proteins')
 
     parser.add_argument('-truncation_method', type=str, nargs=1,
-                       help='How to truncate the models for ensembling percent/thresh')
-
+                       help='How to truncate the models for ensembling percent|thresh')
+    
+    parser.add_argument('-truncation_pruning', type=str, nargs=1,
+                       help='Whether to remove isolated residues none|single')
+    
     parser.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
                        help='True =use nhomologs, False= dont use them ')
     
