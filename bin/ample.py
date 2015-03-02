@@ -149,8 +149,8 @@ def main():
     parser.add_argument('-missing_domain', metavar='True/False', type=str, nargs=1,
                        help='Modelling a missing domain - requires domain_all_chains_pdb argument')
     
-    parser.add_argument('-models_dir', metavar='folder of decoys', type=str, nargs=1,
-                       help='Path to folder of PDB decoys to use for this run')
+    parser.add_argument('-models', metavar='models', type=str, nargs=1,
+                       help='Path to a folder of PDB decoys, or a tarred and gzipped/bziped, or zipped collection of decoys')
     
     parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
                        help='Additional keywords for MRBUMP - are passed through without editing')
@@ -454,6 +454,9 @@ def main():
     #
     ###############################################################################
     
+    # Set default name for modelling directory
+    amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
+    
     # Check if importing ensembles
     if amopt.d['ensembles_dir']:
         if not os.path.isdir( amopt.d['ensembles_dir'] ) or not len( glob.glob( os.path.join( amopt.d['ensembles_dir'], "*.pdb" ) ) ):
@@ -489,14 +492,8 @@ def main():
         quark_models=os.path.join(amopt.d['work_dir'],'quark_models')
         ample_util.splitQuark(amopt.d['quark_models'],directory=quark_models)
         amopt.d['models_dir']=quark_models
-        
-    # Check if importing models
-    if amopt.d['models_dir']:
-        if not os.path.isdir( amopt.d['models_dir'] ) or not len( glob.glob( os.path.join( amopt.d['models_dir'], "*.pdb" ) ) ):
-            msg = "Cannot import models from the directory: {0}".format( amopt.d['models_dir'] )
-            logger.critical(msg)
-            sys.exit(1)
-    
+    elif amopt.d['models']:
+        amopt.d['models_dir']=ample_util.extractModels(amopt.d['models'],amopt.d['models_dir'])
         amopt.d['import_models'] = True
         amopt.d['make_frags'] = False
         amopt.d['make_models'] = False
@@ -522,9 +519,7 @@ def main():
             amopt.d['NMR_remodel_fasta'] =  amopt.d['fasta']
     
     if amopt.d['make_models']:
-        # Create the models_dir
-        amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
-        os.mkdir( amopt.d['models_dir'] )
+        if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
         # If the user has given both fragment files we check they are ok and unset make_frags
         if amopt.d['frags_3mers'] and amopt.d['frags_9mers']:
             if not os.path.isfile( amopt.d['frags_3mers'] ) or not os.path.isfile( amopt.d['frags_9mers'] ):
@@ -773,6 +768,10 @@ def main():
         msg = 'Importing models from directory:\n   ' + amopt.d['models_dir'] + '\n'
         ample_log.write(msg)
         logger.info(msg)
+        if not ample_util.check_pdbs(amopt.d['models_dir']):
+            msg = "Cannot import models from the directory: {0}".format(amopt.d['models_dir'])
+            logger.critical(msg)
+            sys.exit(1)
         if amopt.d['use_scwrl']:
             msg = "Processing sidechains of imported models from {0} with Scwl\n".format( amopt.d['models_dir'] )
             models_dir_scwrl = os.path.join(amopt.d['work_dir'],os.path.basename(amopt.d['models_dir'])+"_scwrl")
@@ -800,7 +799,6 @@ def main():
     #f.close()
     #logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
     #
-    
     ensembles = [] # List of ensembles - 1 per cluster
     if amopt.d['import_ensembles']:
         # Importing pre-made ensembles

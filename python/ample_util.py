@@ -5,6 +5,7 @@ Might end up somewhere else at somepoint.
 
 # Python modules
 import cPickle
+import glob
 import logging
 import os
 import platform
@@ -14,6 +15,7 @@ import sys
 import tarfile
 import tempfile
 import urllib
+import zipfile
 
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
@@ -57,6 +59,14 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
+def check_pdbs(directory):
+    if not os.path.isdir(directory):
+        return False
+    if not len(glob.glob(os.path.join(directory,"*.pdb"))):
+        return False
+    # could add cctbx check here on # chains etc
+    return True
+
 def extractFile(tarArchive,fileName,directory=None):
     """Extract a file from a tar.gz archive into the directory and return the name of the file"""
     with tarfile.open(tarArchive,'r:*') as tf:
@@ -68,6 +78,98 @@ def extractFile(tarArchive,fileName,directory=None):
             return m[0].name
         else:
             return False
+        
+def extractModels(filename,directory=None):
+    """Extract pdb files from a given tar/zip file or directory of pdbs"""
+    
+    logger = logging.getLogger()
+    
+    def pdb_files(members):
+        for tarinfo in members:
+            if os.path.splitext(tarinfo.name)[1] == ".pdb":
+                # Hack the name so that we only get the filename, not the path
+                tarinfo.name=os.path.basename(tarinfo.name)
+                yield tarinfo
+    
+    # If it's already a directory, just check it's valid   
+    if os.path.isdir(filename):
+        if not check_pdbs(filename):
+            msg="Cannot extract pdb files from directory: {0}".format(filename)
+            logger.critical(msg)
+            raise RuntimeError,msg
+        return filename
+
+    # Here we are extracting from a file
+    if not os.path.isfile(filename):
+        msg="Cannot find models file: {0}".format(filename)
+        logger.critical(msg)
+        raise RuntimeError,msg
+        
+    # we need a directory to extract into
+    assert directory,"extractModels needs a directory path!"
+    if not os.path.isdir(directory):
+        os.mkdir(directory)
+    models_dir=directory
+    
+    # See what sort of file this is:
+    f,suffix=os.path.splitext(filename)
+    if suffix in ['.gz','.bz']:
+        f,s2=os.path.splitext(f)
+        if s2 == '.tar': suffix=s2+suffix
+    
+    tsuffixes=['.tar.gz','.tgz','.tar.bz','.tbz']
+    suffixes=tsuffixes + ['.zip']
+    if suffix not in suffixes:
+        msg="Do not know how to extract files from file: {0}\n Acceptable file types are: {1}".format(filename,suffixes)
+        logger.critical(msg)
+        raise RuntimeError,msg
+        
+    if suffix in tsuffixes:
+        # Extracting tarfile
+        logger.info('Extracting models from tarfile: {0}'.format(filename) )
+        with tarfile.open(filename,'r:*') as tf:
+            memb = tf.getmembers()
+            if not len(memb):
+                msg='Empty archive: {0}'.format(filename)
+                logger.critical(msg)
+                raise RuntimeError,msg
+            got=False
+            for m in memb:
+                if os.path.splitext(m.name)[1] == '.pdb':
+                    # Hack to remove any paths
+                    m.name=os.path.basename(m.name)
+                    tf.extract(m,path=models_dir)
+                    got=True
+            if not got:
+                msg='Could not find any pdb files in archive: {0}'.format(filename)
+                logger.critical(msg)
+                raise RuntimeError,msg
+            #tf.extractall(members=pdb_files(m), path=models_dir)            
+    else:
+        # zip file extraction
+        if not zipfile.is_zipfile(filename):
+                msg='File is not a valid zip archive: {0}'.format(filename)
+                logger.critical(msg)
+                raise RuntimeError,msg
+        zipf=zipfile.ZipFile(filename)
+        zif=zipf.infolist()
+        if not len(zif):
+            msg='Empty zip file: {0}'.format(filename)
+            logger.critical(msg)
+            raise RuntimeError,msg
+        got=False
+        for f in zif:
+            if os.path.splitext(f.filename)[1] == '.pdb':
+                # Hack to rewrite name 
+                f.filename=os.path.basename(f.filename)
+                zipf.extract(f, path=models_dir)
+                got=True
+        if not got:
+            msg='Could not find any pdb files in zipfile: {0}'.format(filename)
+            logger.critical(msg)
+            raise RuntimeError,msg
+    
+    return models_dir
 
 def find_exe(executable, dirs=None):
     """Find the executable exename.
