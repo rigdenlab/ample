@@ -66,30 +66,10 @@ def check_pdbs(directory):
         return False
     return True
 
-def extractFile(tarArchive,fileName,directory=None):
-    """Extract a file from a tar.gz archive into the directory and return the name of the file"""
-    with tarfile.open(tarArchive,'r:*') as tf:
-        m = tf.getmembers()
-        if not len(m):
-            raise RuntimeError,'Empty archive: {0}'.format(tarArchive)
-        if len(m)==1 and m[0].name==fileName:
-            tf.extractall(path=directory)
-            return m[0].name
-        else:
-            return False
-        
-def extractModels(filename,directory=None):
+def extract_models(filename,directory=None):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
     
     logger = logging.getLogger()
-    
-    def pdb_files(members):
-        for tarinfo in members:
-            if os.path.splitext(tarinfo.name)[1] == ".pdb":
-                # Hack the name so that we only get the filename, not the path
-                tarinfo.name=os.path.basename(tarinfo.name)
-                yield tarinfo
-    
     # If it's already a directory, just check it's valid   
     if os.path.isdir(filename):
         if not check_pdbs(filename):
@@ -122,53 +102,83 @@ def extractModels(filename,directory=None):
         msg="Do not know how to extract files from file: {0}\n Acceptable file types are: {1}".format(filename,suffixes)
         logger.critical(msg)
         raise RuntimeError,msg
-        
+    
     if suffix in tsuffixes:
-        # Extracting tarfile
-        logger.info('Extracting models from tarfile: {0}'.format(filename) )
-        with tarfile.open(filename,'r:*') as tf:
-            memb = tf.getmembers()
-            if not len(memb):
-                msg='Empty archive: {0}'.format(filename)
-                logger.critical(msg)
-                raise RuntimeError,msg
-            got=False
-            for m in memb:
-                if os.path.splitext(m.name)[1] == '.pdb':
-                    # Hack to remove any paths
-                    m.name=os.path.basename(m.name)
-                    tf.extract(m,path=models_dir)
-                    got=True
-            if not got:
-                msg='Could not find any pdb files in archive: {0}'.format(filename)
-                logger.critical(msg)
-                raise RuntimeError,msg
-            #tf.extractall(members=pdb_files(m), path=models_dir)            
+        extract_tar(filename, directory)
     else:
-        # zip file extraction
-        if not zipfile.is_zipfile(filename):
-                msg='File is not a valid zip archive: {0}'.format(filename)
-                logger.critical(msg)
-                raise RuntimeError,msg
-        zipf=zipfile.ZipFile(filename)
-        zif=zipf.infolist()
-        if not len(zif):
-            msg='Empty zip file: {0}'.format(filename)
+        extract_zip(filename, directory)
+    return models_dir
+
+def _extract_quark(tarfile,member,filename,models_dir):
+    logger = logging.getLogger()
+    # This is only acceptable if it is the quark decoys
+    quark_name='alldecoy.pdb'
+    if not member.name==quark_name:
+        msg="Only found one member ({0}) in file: {1} and the name was not {2}\n".format(member.name,filename,quark_name)
+        msg+="If this file contains valid QUARK decoys, please email: ccp4@stfc.ac.uk"
+        logger.critical(msg)
+        raise RuntimeError,msg
+    
+    # extract into current (work) directory
+    tarfile.extract(member)
+    
+    # Now extract the quark pdb files from the monolithic file
+    split_quark(member.name, models_dir)
+    return
+
+def extract_tar(filename,models_dir):
+    # Extracting tarfile
+    logger = logging.getLogger()
+    logger.info('Extracting models from tarfile: {0}'.format(filename) )
+    with tarfile.open(filename,'r:*') as tf:
+        memb = tf.getmembers()
+        if not len(memb):
+            msg='Empty archive: {0}'.format(filename)
             logger.critical(msg)
             raise RuntimeError,msg
+        if len(memb) == 1:
+            # Assume anything with one member is quark decoys
+            logger.info('Checking if file contains quark decoys'.format(filename))
+            _extract_quark(tf,memb[0],filename,models_dir)
         got=False
-        for f in zif:
-            if os.path.splitext(f.filename)[1] == '.pdb':
-                # Hack to rewrite name 
-                f.filename=os.path.basename(f.filename)
-                zipf.extract(f, path=models_dir)
+        for m in memb:
+            if os.path.splitext(m.name)[1] == '.pdb':
+                # Hack to remove any paths
+                m.name=os.path.basename(m.name)
+                tf.extract(m,path=models_dir)
                 got=True
         if not got:
-            msg='Could not find any pdb files in zipfile: {0}'.format(filename)
+            msg='Could not find any pdb files in archive: {0}'.format(filename)
             logger.critical(msg)
             raise RuntimeError,msg
-    
-    return models_dir
+    return
+
+def extract_zip(filename,models_dir,suffix='.pdb'):
+    # zip file extraction
+    logger = logging.getLogger()
+    logger.info('Extracting models from zipfile: {0}'.format(filename) )
+    if not zipfile.is_zipfile(filename):
+            msg='File is not a valid zip archive: {0}'.format(filename)
+            logger.critical(msg)
+            raise RuntimeError,msg
+    zipf=zipfile.ZipFile(filename)
+    zif=zipf.infolist()
+    if not len(zif):
+        msg='Empty zip file: {0}'.format(filename)
+        logger.critical(msg)
+        raise RuntimeError,msg
+    got=False
+    for f in zif:
+        if os.path.splitext(f.filename)[1] == suffix:
+            # Hack to rewrite name 
+            f.filename=os.path.basename(f.filename)
+            zipf.extract(f, path=models_dir)
+            got=True
+    if not got:
+        msg='Could not find any pdb files in zipfile: {0}'.format(filename)
+        logger.critical(msg)
+        raise RuntimeError,msg    
+    return
 
 def find_exe(executable, dirs=None):
     """Find the executable exename.
@@ -438,7 +448,9 @@ def saveAmoptd(amoptd):
         logging.info("Saved results as file: {0}\n".format( amoptd['results_path'] ) )
     return
 
-def splitQuark(dfile,directory='quark_models'):
+def split_quark(dfile,directory):
+    logger = logging.getLogger()
+    logger.info("Extracting QUARK decoys from: {0} into {1}".format(dfile,directory))
     smodels=[]
     with open(dfile,'r') as f:
         m=[]
@@ -449,13 +461,7 @@ def splitQuark(dfile,directory='quark_models'):
                 m=[]
             else:
                 m.append(line)
-
-    if not len(smodels):
-        raise RuntimeError,"Could not extract any models from: {0}".format(dfile)
-
-    if not os.path.isdir(directory):
-        os.mkdir(directory)
-
+    if not len(smodels): raise RuntimeError,"Could not extract any models from: {0}".format(dfile)
     for i,m in enumerate(smodels):
         fpath=os.path.join(directory,"quark_{0}.pdb".format(i))
         with open(fpath,'w') as f:
@@ -464,8 +470,7 @@ def splitQuark(dfile,directory='quark_models'):
                 if l.startswith("ATOM"):
                     l=l[:54]+"  1.00  0.00              \n"
                 f.write(l)
-        logging.debug("Wrote: {0}".format(fpath))
-
+        logger.debug("Wrote: {0}".format(fpath))
     return
 
 def tmpFileName():

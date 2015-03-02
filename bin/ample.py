@@ -204,9 +204,6 @@ def main():
     parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
                        help='Path to Phenix executable')
     
-    parser.add_argument('-quark_models', type=str, nargs=1,
-                       help='A file containing quark models (either a tar.gz file with a pdb containing the models, or the pdb file itself)')
-    
     parser.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, nargs=1,
                        help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
     
@@ -463,41 +460,16 @@ def main():
             msg = "Cannot import ensembles from the directory: {0}".format(amopt.d['ensembles_dir'])
             logger.critical(msg)
             sys.exit(1)
-    
         amopt.d['import_ensembles'] = True
         logger.info("Found directory with ensemble files: {0}\n".format( amopt.d['ensembles_dir'] ) )
         amopt.d['make_frags'] = False
         amopt.d['make_models'] = False
-    
-    # Importing quark models
-    if amopt.d['quark_models']:
-        logger.info("Attempting to use quark models from file: {0}".format(amopt.d['quark_models']))
-        if not os.path.isfile(amopt.d['quark_models']):
-            logger.critical('Cannot find quark model file: {0}'.format(amopt.d['quark_models']))
-            sys.exit(1)
-            
-        dirname,fname = os.path.split(amopt.d['quark_models'])
-        # First see if we need to extract the files from the archive
-        if fname.endswith(".tar.gz") or fname.endswith(".tgz"):
-            logger.info("Extracting quark alldecoy.pdb file from archive: {0}".format(amopt.d['quark_models']))
-            # Extract the alldecoy.pdb file from the archive
-            fname=ample_util.extractFile(amopt.d['quark_models'],fileName='alldecoy.pdb',directory=amopt.d['work_dir'])
-            if not fname:
-                logger.critical('Cannot extract alldecoy.pdb from archive: {0}'.format(amopt.d['quark_models']))
-                sys.exit(1)            
-            amopt.d['quark_models']=os.path.join(amopt.d['work_dir'],fname) # Construct new path to file
-    
-        # Need to create the quark pdbs from the monolithic quark pdb
-        logger.info("Creating directory of quark models from: {0}".format(amopt.d['quark_models']))
-        quark_models=os.path.join(amopt.d['work_dir'],'quark_models')
-        ample_util.splitQuark(amopt.d['quark_models'],directory=quark_models)
-        amopt.d['models_dir']=quark_models
     elif amopt.d['models']:
-        amopt.d['models_dir']=ample_util.extractModels(amopt.d['models'],amopt.d['models_dir'])
+        amopt.d['models_dir']=ample_util.extract_models(amopt.d['models'],amopt.d['models_dir'])
         amopt.d['import_models'] = True
         amopt.d['make_frags'] = False
         amopt.d['make_models'] = False
-    
+        
     # Check import flags
     if amopt.d['import_ensembles'] and (amopt.d['import_models']):
             msg = "Cannot import both models and ensembles/clusters!"
