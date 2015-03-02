@@ -64,7 +64,6 @@ def check_pdbs(directory):
         return False
     if not len(glob.glob(os.path.join(directory,"*.pdb"))):
         return False
-    # could add cctbx check here on # chains etc
     return True
 
 def extractFile(tarArchive,fileName,directory=None):
