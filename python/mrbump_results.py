@@ -16,7 +16,7 @@ if __name__ == "__main__":
 # Our imports
 if not "CCP4" in os.environ.keys():
     raise RuntimeError('CCP4 not found')
-mrbumpd=os.path.join(os.environ['CCP4'],"include","mrbump","include","parsers")
+mrbumpd=os.path.join(os.environ['CCP4'],"share","mrbump","include","parsers")
 #mrbumpd="/home/jmht/mrbump-trunk/include/parsers"
 sys.path.insert(0,mrbumpd)
 import parse_buccaneer
