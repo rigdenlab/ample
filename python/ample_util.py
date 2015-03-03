@@ -17,6 +17,9 @@ import tempfile
 import urllib
 import zipfile
 
+# External imports
+import iotbx.pdb
+
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
 AMPLE: a cluster-and-truncate approach to solve the crystal structures of small proteins using
@@ -59,12 +62,28 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
-def check_pdbs(directory):
+def check_pdbs(directory,single=True):
+    logger = logging.getLogger()
     if not os.path.isdir(directory):
         return False
-    if not len(glob.glob(os.path.join(directory,"*.pdb"))):
+    models=glob.glob(os.path.join(directory,"*.pdb"))
+    if not len(models):
         return False
-    return True
+    
+    if not single: return True
+    # Check all models have 1 model and 1 chain
+    #not_single = [ pdb for pdb in models if not iotbx.pdb.pdb_input(pdb).construct_hierarchy().only_chain() ]
+    not_single=[]
+    for pdb in models:
+        try: iotbx.pdb.pdb_input(pdb).construct_hierarchy().only_chain()
+        except: not_single.append(pdb)
+    if len(not_single):
+        msg="check_pdbs - the following pdb files have more than 1 chain or model\n{0}".format(not_single)
+        logger.critical(msg)
+        return False
+    else:
+        logger.info("check_pdbs - pdb files all seem valid")
+        return True
 
 def extract_models(filename,directory=None):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
@@ -107,6 +126,12 @@ def extract_models(filename,directory=None):
         extract_tar(filename, directory)
     else:
         extract_zip(filename, directory)
+        
+    if not check_pdbs(models_dir):
+        msg="Problem importing pdb files - please check the log for more information"
+        logger.critical(msg)
+        raise RuntimeError,msg
+        
     return models_dir
 
 def _extract_quark(tarfile,member,filename,models_dir):
@@ -140,17 +165,18 @@ def extract_tar(filename,models_dir):
             # Assume anything with one member is quark decoys
             logger.info('Checking if file contains quark decoys'.format(filename))
             _extract_quark(tf,memb[0],filename,models_dir)
-        got=False
-        for m in memb:
-            if os.path.splitext(m.name)[1] == '.pdb':
-                # Hack to remove any paths
-                m.name=os.path.basename(m.name)
-                tf.extract(m,path=models_dir)
-                got=True
-        if not got:
-            msg='Could not find any pdb files in archive: {0}'.format(filename)
-            logger.critical(msg)
-            raise RuntimeError,msg
+        else:
+            got=False
+            for m in memb:
+                if os.path.splitext(m.name)[1] == '.pdb':
+                    # Hack to remove any paths
+                    m.name=os.path.basename(m.name)
+                    tf.extract(m,path=models_dir)
+                    got=True
+            if not got:
+                msg='Could not find any pdb files in archive: {0}'.format(filename)
+                logger.critical(msg)
+                raise RuntimeError,msg
     return
 
 def extract_zip(filename,models_dir,suffix='.pdb'):
@@ -221,7 +247,7 @@ def find_exe(executable, dirs=None):
     logger.debug('find_exe found executable: {0}'.format(exe_file) )
     return exe_file
 
-def filename_append( filename=None, astr=None,directory=None, separator="_",  ):
+def filename_append(filename=None, astr=None,directory=None, separator="_"):
     """Append astr to filename, before the suffix, and return the new filename."""
     dirname, fname = os.path.split( filename )
     name, suffix = os.path.splitext( fname )
@@ -230,27 +256,27 @@ def filename_append( filename=None, astr=None,directory=None, separator="_",  ):
         directory = dirname
     return os.path.join( directory, name )
 
-def find_maxcluster( amopt ):
+def find_maxcluster(amoptd):
     """Return path to maxcluster binary.
     If we can't find one in the path, we create a $HOME/.ample
     directory and downlod it to there
     """
 
-    if amopt.d['maxcluster_exe'] and is_exe(amopt.d['maxcluster_exe']):
-        return amopt.d['maxcluster_exe']
+    if amoptd['maxcluster_exe'] and is_exe(amoptd['maxcluster_exe']):
+        return amoptd['maxcluster_exe']
 
-    if not amopt.d['maxcluster_exe']:
+    if not amoptd['maxcluster_exe']:
         if sys.platform.startswith("win"):
-            amopt.d['maxcluster_exe']='maxcluster.exe'
+            amoptd['maxcluster_exe']='maxcluster.exe'
         else:
-            amopt.d['maxcluster_exe']='maxcluster'
+            amoptd['maxcluster_exe']='maxcluster'
     
     try:
-        maxcluster_exe = find_exe(amopt.d['maxcluster_exe'], dirs=[ amopt.d['rcdir'] ] )
+        maxcluster_exe = find_exe(amoptd['maxcluster_exe'], dirs=[ amoptd['rcdir'] ] )
     except Exception:
         # Cannot find so we need to try and download it
         logger = logging.getLogger()
-        rcdir = amopt.d['rcdir']
+        rcdir = amoptd['rcdir']
         logger.info("Cannot find maxcluster binary in path so attempting to download it directory: {0}".format( rcdir )  )
         if not os.path.isdir( rcdir ):
             logger.info("No ample rcdir found so creating in: {0}".format( rcdir ) )
