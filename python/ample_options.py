@@ -28,6 +28,7 @@ class AmpleOptions(object):
                             'debug' : False,
                             'domain_all_chains_pdb' : None,
                             'domain_termini_distance' : 0,
+                            'dry_run' : False,
                             'early_terminate' : True,
                             'ensembler' : False,
                             'ensembles_dir' : None,

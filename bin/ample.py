@@ -39,6 +39,7 @@ import clusterize
 import cPickle
 import glob
 import logging
+import shutil
 import time
 
 # Our imports
@@ -55,13 +56,8 @@ import rosetta_model
 import mrbump_results
 import version
 
-def main():
-    """Main AMPLE routine.
-    
-    We require this as the multiprocessing module (only on **!!*%$$!! Windoze) requires that the main module
-    can be imported. We there need ample to be a python script that can be imported, hence the main routine with
-    its calling protected by the if __name__=="__main__":...
-    """ 
+
+def process_command_line():
     # get command line options
     parser = argparse.ArgumentParser( prog="AMPLE", description='Structure solution by abinitio modelling', prefix_chars="-")
     
@@ -100,6 +96,9 @@ def main():
     
     parser.add_argument('-domain_termini_distance', type=str, nargs=1,
                        help='distance between termini for insert domains')
+    
+    parser.add_argument('-dry_run', metavar='True/False', type=str, nargs=1,
+                         help='Check if input files and supplied options are valid.')
     
     parser.add_argument('-early_terminate', metavar='True/False', type=str, nargs=1,
                          help='Stop the run as soon as a success has been found.')
@@ -359,31 +358,19 @@ def main():
     
     # Now put them in the amopt object - this also sets/checks any defaults
     amopt.populate( args )
-    
+
     # Now set MRKeys - might already have pre-set values so check if None or a list
     if isinstance( amopt.d['mr_keys'],list ):
         amopt.d['mr_keys'] += MRkeys
     else:
         amopt.d['mr_keys'] = MRkeys
     
-    # Make a work directory and go there - this way all output goes into this directory
-    if not os.path.exists( amopt.d['run_dir'] ):
-        print 'Cannot find run directory: {0}'.format( amopt.d['run_dir'] )
-        sys.exit()
-    
-    print 'Making a Run Directory: checking for previous runs\n'
-    amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'] )
-    #amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], rootname="ENSEMBLE_2_" )
-    os.chdir( amopt.d['work_dir'] )
-    
-    # Set up logging
-    logger = ample_util.setup_logging()
-    
-    # Print out Version and invocation
-    logger.info( """AMPLE version: {0}\n\nInvoked with command-line:\n\n{1}""".format( version.__version__, orig_argv ) )
+    return amopt, orig_argv
+
+def process_options(amoptd,logger):
     
     # Path for pickling results
-    amopt.d['results_path'] = os.path.join( amopt.d['work_dir'], "resultsd.pkl" )
+    amoptd['results_path'] = os.path.join( amoptd['work_dir'], "resultsd.pkl" )
     
     ###############################################################################
     #
@@ -391,59 +378,59 @@ def main():
     #
     ###############################################################################
     # Check to see if mr_sequence was given and if not mr_sequence defaults to fasta
-    if amopt.d['mr_sequence'] != None:
-        if not ( os.path.exists( str(amopt.d['mr_sequence']) )):
-            msg = 'Cannot find mr sequence file: {0}'.format( amopt.d['mr_sequence'] )
+    if amoptd['mr_sequence'] != None:
+        if not ( os.path.exists( str(amoptd['mr_sequence']) )):
+            msg = 'Cannot find mr sequence file: {0}'.format( amoptd['mr_sequence'] )
             logger.critical(msg)
             sys.exit(1)
     else:
-        amopt.d['mr_sequence']=amopt.d['fasta']
+        amoptd['mr_sequence']=amoptd['fasta']
     
     # Check we can find the input fasta
-    if not ( os.path.exists( str(amopt.d['fasta']) ) or os.path.exists( str( amopt.d['NMR_remodel_fasta'] ) ) ):
-        msg = 'Cannot find fasta file: {0}'.format( amopt.d['fasta'] )
+    if not ( os.path.exists( str(amoptd['fasta']) ) or os.path.exists( str( amoptd['NMR_remodel_fasta'] ) ) ):
+        msg = 'Cannot find fasta file: {0}'.format( amoptd['fasta'] )
         logger.critical(msg)
         sys.exit(1)
     
     # Reformat to what we need
     logger.debug('Parsing FASTA file')
-    outfasta = os.path.join( amopt.d['work_dir'], amopt.d['name'] + '_.fasta')
+    outfasta = os.path.join( amoptd['work_dir'], amoptd['name'] + '_.fasta')
     fp = fasta_parser.FastaParser()
-    fp.reformat_fasta( amopt.d['fasta'], outfasta )
-    amopt.d['fasta'] = outfasta
-    amopt.d['fasta_length'] = fp.length
-    logger.info( "Fasta is {0} amino acids long".format( amopt.d['fasta_length'] ) )
+    fp.reformat_fasta( amoptd['fasta'], outfasta )
+    amoptd['fasta'] = outfasta
+    amoptd['fasta_length'] = fp.length
+    logger.info( "Fasta is {0} amino acids long".format( amoptd['fasta_length'] ) )
     
     # Check we have a decent length
-    if amopt.d['fasta_length'] < 9:
-        msg = "ERROR! Fasta is of length {0}. This is much too short!".format( amopt.d['fasta_length'] )
+    if amoptd['fasta_length'] < 9:
+        msg = "ERROR! Fasta is of length {0}. This is much too short!".format( amoptd['fasta_length'] )
         logger.critical(msg)
         sys.exit(1)
     
     # Check we will be able to truncate at this level
-    if ( float( amopt.d['fasta_length'] ) / 100 ) * float( amopt.d['percent'] ) < 1:
-        msg = "Cannot truncate a fasta sequence of length {0} with {1} percent intervals. Please select a larger interval.".format( amopt.d['fasta_length'], amopt.d['percent'] )
+    if ( float( amoptd['fasta_length'] ) / 100 ) * float( amoptd['percent'] ) < 1:
+        msg = "Cannot truncate a fasta sequence of length {0} with {1} percent intervals. Please select a larger interval.".format( amoptd['fasta_length'], amoptd['percent'] )
         logger.critical(msg)
         sys.exit(1)
     
     #
     # Not sure if name actually required - see make_fragments.pl
     #
-    if amopt.d['name'] and len(amopt.d['name']) != 4:
+    if amoptd['name'] and len(amoptd['name']) != 4:
         msg = '-name argument is the wrong length, use 4 chars eg ABCD'
         logger.critical(msg)
         sys.exit(1)
         
     # Underscore required by rosetta make_fragments.pl
-    amopt.d['name'] += '_'
+    amoptd['name'] += '_'
     
     ###############################################################################
     #
     # MTZ file processing
     #
     ###############################################################################
-    mtz_util.processReflectionFile( amopt.d )
-    logger.info( "Using MTZ file: {0}".format( amopt.d['mtz'] ) )
+    mtz_util.processReflectionFile(amoptd)
+    logger.info( "Using MTZ file: {0}".format( amoptd['mtz'] ) )
     
     ###############################################################################
     #
@@ -452,60 +439,59 @@ def main():
     ###############################################################################
     
     # Set default name for modelling directory
-    amopt.d['models_dir'] = amopt.d['work_dir'] + os.sep + "models"
+    amoptd['models_dir'] = amoptd['work_dir'] + os.sep + "models"
     
     # Check if importing ensembles
-    if amopt.d['ensembles_dir']:
-        if not os.path.isdir( amopt.d['ensembles_dir'] ) or not len( glob.glob( os.path.join( amopt.d['ensembles_dir'], "*.pdb" ) ) ):
-            msg = "Cannot import ensembles from the directory: {0}".format(amopt.d['ensembles_dir'])
+    if amoptd['ensembles_dir']:
+        if not ample_util.check_pdbs(amoptd['ensembles_dir'], "*.pdb"):
+            msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles_dir'])
             logger.critical(msg)
             sys.exit(1)
-        amopt.d['import_ensembles'] = True
-        logger.info("Found directory with ensemble files: {0}\n".format( amopt.d['ensembles_dir'] ) )
-        amopt.d['make_frags'] = False
-        amopt.d['make_models'] = False
-    elif amopt.d['models']:
-        amopt.d['models_dir']=ample_util.extract_models(amopt.d['models'],amopt.d['models_dir'])
-        amopt.d['import_models'] = True
-        amopt.d['make_frags'] = False
-        amopt.d['make_models'] = False
+        amoptd['import_ensembles'] = True
+        logger.info("Found directory with ensemble files: {0}\n".format( amoptd['ensembles_dir'] ) )
+        amoptd['make_frags'] = False
+        amoptd['make_models'] = False
+    elif amoptd['models']:
+        amoptd['models_dir']=ample_util.extract_models(amoptd['models'],amoptd['models_dir'])
+        amoptd['import_models'] = True
+        amoptd['make_frags'] = False
+        amoptd['make_models'] = False
         
     # Check import flags
-    if amopt.d['import_ensembles'] and (amopt.d['import_models']):
+    if amoptd['import_ensembles'] and (amoptd['import_models']):
             msg = "Cannot import both models and ensembles/clusters!"
             logger.critical(msg)
             sys.exit(1)
     
     # NMR Checks
-    if amopt.d['NMR_model_in']:
-        if not os.path.isfile( amopt.d['NMR_model_in'] ):
-            msg = "NMR_model_in flag given, but cannot find file: {0}".format( amopt.d['NMR_model_in'] )
+    if amoptd['NMR_model_in']:
+        if not os.path.isfile( amoptd['NMR_model_in'] ):
+            msg = "NMR_model_in flag given, but cannot find file: {0}".format( amoptd['NMR_model_in'] )
             logger.critical(msg)
             sys.exit(1)
+        amoptd['NMR_protocol'] = True
+        amoptd['make_frags'] = False
+        amoptd['make_models'] = False
     
-        amopt.d['NMR_protocol'] = True
-        amopt.d['make_frags'] = False
-        amopt.d['make_models'] = False
+        if not os.path.isfile( str(amoptd['NMR_remodel_fasta']) ):
+            amoptd['NMR_remodel_fasta'] =  amoptd['fasta']
     
-        if not os.path.isfile( str(amopt.d['NMR_remodel_fasta']) ):
-            amopt.d['NMR_remodel_fasta'] =  amopt.d['fasta']
-    
-    if amopt.d['make_models']:
-        if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
+    if amoptd['make_models']:
+        if not os.path.isdir(amoptd['models_dir']): os.mkdir(amoptd['models_dir'])
         # If the user has given both fragment files we check they are ok and unset make_frags
-        if amopt.d['frags_3mers'] and amopt.d['frags_9mers']:
-            if not os.path.isfile( amopt.d['frags_3mers'] ) or not os.path.isfile( amopt.d['frags_9mers'] ):
-                msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format( amopt.d['frags_3mers'], amopt.d['frags_9mers'] )
+        if amoptd['frags_3mers'] and amoptd['frags_9mers']:
+            if not os.path.isfile( amoptd['frags_3mers'] ) or not os.path.isfile( amoptd['frags_9mers'] ):
+                msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format( amoptd['frags_3mers'], amoptd['frags_9mers'] )
                 logger.critical(msg)
                 sys.exit(1)
-            amopt.d['make_frags'] = False
+            amoptd['make_frags'] = False
     
-        if amopt.d['make_frags'] and ( amopt.d['frags_3mers'] or  amopt.d['frags_9mers'] ):
+        if amoptd['make_frags'] and ( amoptd['frags_3mers'] or  amoptd['frags_9mers'] ):
             msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
             logger.critical(msg)
             sys.exit(1)
     
-        if not amopt.d['make_frags'] and not ( amopt.d['frags_3mers'] and amopt.d['frags_9mers'] ):
+        if not amoptd['make_frags'] and not ( amoptd['frags_3mers'] and amoptd['frags_9mers'] ):
             msg = """*** Missing fragment files! ***
     Please supply the paths to the fragment files using the -frags_3mers and -frags_9mers flags.
     These can be generated using the Robetta server: http://robetta.bakerlab.org
@@ -520,37 +506,37 @@ def main():
     ###############################################################################
     
     # Missing domains
-    if amopt.d['missing_domain']:
+    if amoptd['missing_domain']:
         logger.info('Processing missing domain\n')
-        if not os.path.exists( amopt.d['domain_all_chains_pdb'] ):
-            msg = 'Cannot find file domain_all_chains_pdb: {0}'.format( amopt.d['domain_all_chains_pdb'] )
+        if not os.path.exists( amoptd['domain_all_chains_pdb'] ):
+            msg = 'Cannot find file domain_all_chains_pdb: {0}'.format( amoptd['domain_all_chains_pdb'] )
             logger.critical( msg )
             sys.exit(1)
     
     # MR programs
-    if amopt.d['molrep_only'] and amopt.d['phaser_only']:
+    if amoptd['molrep_only'] and amoptd['phaser_only']:
             logger.critical('you say you want molrep only AND phaser only, choose one or both')
             sys.exit(1)
     
-    if amopt.d['molrep_only']:
-        amopt.d['mrbump_programs'] = [ 'molrep' ]
-    elif amopt.d['phaser_only']:
-        amopt.d['mrbump_programs'] = [ 'phaser' ]
+    if amoptd['molrep_only']:
+        amoptd['mrbump_programs'] = [ 'molrep' ]
+    elif amoptd['phaser_only']:
+        amoptd['mrbump_programs'] = [ 'phaser' ]
     else:
-        amopt.d['mrbump_programs'] = ['molrep', 'phaser']
+        amoptd['mrbump_programs'] = ['molrep', 'phaser']
     
     #
     # Benchmark Mode
     #
-    if amopt.d['native_pdb']:
-        if not os.path.isfile(amopt.d['native_pdb']):
-            msg = "Cannot find crystal structure PDB: {0}".format(amopt.d['native_pdb'])
+    if amoptd['native_pdb']:
+        if not os.path.isfile(amoptd['native_pdb']):
+            msg = "Cannot find crystal structure PDB: {0}".format(amoptd['native_pdb'])
             logger.critical(msg)
             sys.exit(1)
-        amopt.d['benchmark_mode']=True
+        amoptd['benchmark_mode']=True
         logger.info("*** AMPLE running in benchmark mode ***")
-        amopt.d['benchmark_dir']=os.path.join(amopt.d['work_dir'],"benchmark")
-        os.mkdir(amopt.d['benchmark_dir'])
+        amoptd['benchmark_dir']=os.path.join(amoptd['work_dir'],"benchmark")
+        os.mkdir(amoptd['benchmark_dir'])
 
     ###############################################################################
     #
@@ -560,127 +546,162 @@ def main():
     ###############################################################################
     
     # Model building programs
-    if amopt.d['use_arpwarp']:
+    if amoptd['use_arpwarp']:
         if not ( os.environ.has_key('warpbin') and os.path.isfile( os.path.join(os.environ['warpbin'], "auto_tracing.sh") ) ):
             logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
-            amopt.d['use_arpwarp'] = False
+            amoptd['use_arpwarp'] = False
         else:
             logger.info('Using arpwarp script: {0}'.format( os.path.join(os.environ['warpbin'], "auto_tracing.sh") ) )
-    
     #
     #Check we can find all the required programs
     #
     # Maxcluster handled differently as we may need to download the binary
-    amopt.d['maxcluster_exe'] = ample_util.find_maxcluster( amopt )
+    amoptd['maxcluster_exe'] = ample_util.find_maxcluster(amoptd)
     
     #
     # SPICKER and Theseus now shipped with CCP4
     #
-    if not amopt.d['spicker_exe']:
+    if not amoptd['spicker_exe']:
         if sys.platform.startswith("win"):
-            amopt.d['spicker_exe']='spicker.exe'
+            amoptd['spicker_exe']='spicker.exe'
         else:
-            amopt.d['spicker_exe']='spicker'
+            amoptd['spicker_exe']='spicker'
     try:
-        amopt.d['spicker_exe'] = ample_util.find_exe(amopt.d['spicker_exe'])
+        amoptd['spicker_exe'] = ample_util.find_exe(amoptd['spicker_exe'])
     except Exception:
-        logger.critical("Cannot find spicker executable: {0}".format(amopt.d['spicker_exe']))
+        logger.critical("Cannot find spicker executable: {0}".format(amoptd['spicker_exe']))
         sys.exit(1)    
     #
     # Ensembler
     #
-    if amopt.d['ensembler']:
+    if amoptd['ensembler']:
         logger.info('You are using Phenix ensembler')
-        amopt.d['phenix_exe'] = ample_util.find_exe(amopt.d['phenix_exe'])
+        amoptd['phenix_exe'] = ample_util.find_exe(amoptd['phenix_exe'])
     else:
-        if not amopt.d['theseus_exe']:
+        if not amoptd['theseus_exe']:
             if sys.platform.startswith("win"):
-                amopt.d['theseus_exe']='theseus.exe'
+                amoptd['theseus_exe']='theseus.exe'
             else:
-                amopt.d['theseus_exe']='theseus'
+                amoptd['theseus_exe']='theseus'
         try:
-            amopt.d['theseus_exe'] = ample_util.find_exe(amopt.d['theseus_exe'])
+            amoptd['theseus_exe'] = ample_util.find_exe(amoptd['theseus_exe'])
         except Exception:
-            logger.critical("Cannot find theseus executable: {0}".format(amopt.d['theseus_exe']))
+            logger.critical("Cannot find theseus executable: {0}".format(amoptd['theseus_exe']))
             sys.exit(1)
     #
     # Scwrl
     #
-    if amopt.d['use_scwrl']:
-        if not amopt.d['scwrl_exe']:
+    if amoptd['use_scwrl']:
+        if not amoptd['scwrl_exe']:
             if sys.platform.startswith("win"):
-                amopt.d['scwrl_exe']='Scwrl4.exe'
+                amoptd['scwrl_exe']='Scwrl4.exe'
             else:
-                amopt.d['scwrl_exe']='Scwrl4'
+                amoptd['scwrl_exe']='Scwrl4'
         if True:
         #try:
-            amopt.d['scwrl_exe'] = ample_util.find_exe(amopt.d['scwrl_exe'])
+            amoptd['scwrl_exe'] = ample_util.find_exe(amoptd['scwrl_exe'])
         #except Exception:
-        #    logger.critical("Cannot find Scwrl executable: {0}".format(amopt.d['scwrl_exe']))
+        #    logger.critical("Cannot find Scwrl executable: {0}".format(amoptd['scwrl_exe']))
         #    sys.exit(1)
     
     #
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     #
-    if amopt.d['use_shelxe']:
-        if not amopt.d['shelxe_exe']:
+    if amoptd['use_shelxe']:
+        if not amoptd['shelxe_exe']:
             if sys.platform.startswith("win"):
-                amopt.d['shelxe_exe']='shelxe.exe'
+                amoptd['shelxe_exe']='shelxe.exe'
             else:
-                amopt.d['shelxe_exe']='shelxe'
+                amoptd['shelxe_exe']='shelxe'
         try:
-            amopt.d['shelxe_exe'] = ample_util.find_exe(amopt.d['shelxe_exe'])
+            amoptd['shelxe_exe'] = ample_util.find_exe(amoptd['shelxe_exe'])
         except Exception:
             msg = """*** Cannot find shelxe executable in PATH - turning off use of SHELXE. ***
     SHELXE is recommended for the best chance of success. We recommend you install shelxe from:
     http://shelx.uni-ac.gwdg.de/SHELX/
     and install it in your PATH so that AMPLE can use it.
     """
-            logger.warn( msg )
-            amopt.d['use_shelxe'] = False
+            logger.warn(msg)
+            amoptd['use_shelxe'] = False
     #
     # If shelxe_rebuild is set we need use_shelxe to be set
     #
-    if amopt.d['shelxe_rebuild'] and not amopt.d['use_shelxe']:
+    if amoptd['shelxe_rebuild'] and not amoptd['use_shelxe']:
         msg = 'shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.'
         logger.critical(msg)
         sys.exit(1)
     
     # Create the rosetta modeller - this runs all the checks required
-    if amopt.d['make_models'] or amopt.d['make_frags'] or amopt.d['NMR_protocol']:  # only need Rosetta if making models
+    rosetta_modeller=None
+    if amoptd['make_models'] or amoptd['make_frags'] or amoptd['NMR_protocol']:  # only need Rosetta if making models
         logger.info('Using ROSETTA so checking options')
-        rosetta_modeller = rosetta_model.RosettaModel(optd=amopt.d)
+        rosetta_modeller = rosetta_model.RosettaModel(optd=amoptd)
     
-    
-    if amopt.d['make_frags']:
-        if amopt.d['use_homs']:
+    if amoptd['make_frags']:
+        if amoptd['use_homs']:
             logger.info('Making fragments (including homologues)')
         else:
             logger.info('Making fragments EXCLUDING HOMOLOGUES')
     else:
         logger.info('NOT making Fragments')
     
-    if amopt.d['make_models']:
+    if amoptd['make_models']:
         logger.info('\nMaking Rosetta Models')
     else:
         logger.info('NOT making Rosetta Models')
         
         # Print out what is being done
-    if amopt.d['use_buccaneer']:
+    if amoptd['use_buccaneer']:
         logger.info('Rebuilding in Bucaneer')
     else:
         logger.info('Not rebuilding in Bucaneer')
     
-    if amopt.d['use_arpwarp']:
+    if amoptd['use_arpwarp']:
         logger.info('Rebuilding in ARP/wARP')
     else:
         logger.info('Not rebuilding in ARP/wARP')
     
     # cluster queueing
-    if amopt.d['submit_cluster'] and not amopt.d['submit_qtype']:
+    if amoptd['submit_cluster'] and not amoptd['submit_qtype']:
         msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
         logger.critical(msg)
-        sys.exit(1)
+        sys.exit(1)   
+         
+    return rosetta_modeller
+
+def main():
+    """Main AMPLE routine.
+    
+    We require this as the multiprocessing module (only on **!!*%$$!! Windoze) requires that the main module
+    can be imported. We there need ample to be a python script that can be imported, hence the main routine with
+    its calling protected by the if __name__=="__main__":...
+    """ 
+    amopt, orig_argv = process_command_line()
+    
+    # Make a work directory and go there - this way all output goes into this directory
+    if not os.path.exists( amopt.d['run_dir'] ):
+        print 'Cannot find run directory: {0}'.format( amopt.d['run_dir'] )
+        sys.exit()
+    
+    print 'Making a Run Directory: checking for previous runs\n'
+    amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'] )
+    os.chdir( amopt.d['work_dir'] )
+    
+    # Set up logging
+    logger = ample_util.setup_logging()
+    
+    # Print out Version and invocation
+    logger.info( """AMPLE version: {0}\n\nInvoked with command-line:\n\n{1}""".format( version.__version__, orig_argv ) )
+    
+    # Bit clunky but the rosetta_modeller object checks the rosetta options so we create it and return it if needed
+    rosetta_modeller = process_options(amopt.d,logger)
+    
+    # Bail and clean up if we were only checking the options
+    if amopt.d['dry_run']:
+        logger.info('Dry run finished checking options - cleaning up...')
+        os.chdir(amopt.d['run_dir'])
+        shutil.rmtree(amopt.d['work_dir'])
+        sys.exit(0)
     
     logger.info('All needed programs are found, continuing Run')
     
@@ -713,37 +734,32 @@ def main():
         amopt.d['frags_3mers'] = rosetta_modeller.frags_3mers
         amopt.d['frags_9mers'] = rosetta_modeller.frags_9mers
     
-    # break here for NMR (frags needed but not modelling
     # if NMR process models first
+    # break here for NMR (frags needed but not modelling
     if amopt.d['NMR_protocol']:
         nmr.doNMR(amopt, rosetta_modeller, logger)
-    # return from nmr with models already made
+        # return from nmr with models already made
     elif amopt.d['make_models']:
-    # Make the models
-    
+        # Make the models
         logger.info('----- making Rosetta models--------')
-        logger.info('making ' + str(amopt.d['nmodels']) + ' models...')
+        logger.info('making {0} models...'.format(amopt.d['nmodels']))
     
         # If we are running with cluster support submit all modelling jobs to the cluster queue
         if amopt.d['submit_cluster']:
-            # Invoke the cluster run class
-            cluster_run = clusterize.ClusterRun()
-            cluster_run.modelOnCluster(rosetta_modeller, amopt.d)
+            clusterize.ClusterRun().modelOnCluster(rosetta_modeller, amopt.d)
         else:
-            # Run locally
-            amopt.d['models_dir'] = rosetta_modeller.doModelling()
-    
-        ##End IF amopt.d['submit_cluster']
-    
-        msg = 'Modelling complete - models stored in:\n   ' + amopt.d['models_dir'] + '\n'
-    elif amopt.d['import_models']:
-        msg = 'Importing models from directory:\n   ' + amopt.d['models_dir'] + '\n'
-        ample_log.write(msg)
-        logger.info(msg)
+            amopt.d['models_dir'] = rosetta_modeller.doModelling() # run locally
+            
         if not ample_util.check_pdbs(amopt.d['models_dir']):
-            msg = "Cannot import models from the directory: {0}".format(amopt.d['models_dir'])
+            msg="Problem with rosetta pdb files - please check the log for more information"
             logger.critical(msg)
             sys.exit(1)
+            
+        msg = 'Modelling complete - models stored in: {0}\n'.format(amopt.d['models_dir'])
+    elif amopt.d['import_models']:
+        msg = 'Importing models from directory: {0}\n'.format(amopt.d['models_dir'])
+        ample_log.write(msg)
+        logger.info(msg)
         if amopt.d['use_scwrl']:
             msg = "Processing sidechains of imported models from {0} with Scwl\n".format( amopt.d['models_dir'] )
             models_dir_scwrl = os.path.join(amopt.d['work_dir'],os.path.basename(amopt.d['models_dir'])+"_scwrl")
@@ -761,20 +777,10 @@ def main():
             amopt.d['models_dir'] = models_dir_scwrl
             logger.info( "Finished processing models with Scwrl" )
     
-    #---------------------------------------
     # Do the clustering
-    #---------------------------------------
-    
-    ## Save results
-    #f = open( amopt.d['results_path'], 'w' )
-    #cPickle.dump( amopt.d, f )
-    #f.close()
-    #logging.info("Saved results as file: {0}\n".format( amopt.d['results_path'] ) )
-    #
     ensembles = [] # List of ensembles - 1 per cluster
     if amopt.d['import_ensembles']:
         # Importing pre-made ensembles
-    
         # Set list of ensembles to the one we are importing
         msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
         ample_log.write(msg)
@@ -789,15 +795,11 @@ def main():
             sys.exit(1)
         
         if amopt.d['submit_cluster']:
-    
             # Pickle dictionary so it can be opened by the job to get the parameters
-            with open( amopt.d['results_path'], 'w' ) as f:
-                cPickle.dump( amopt.d, f )
-    
+            with open( amopt.d['results_path'], 'w' ) as f: cPickle.dump(amopt.d, f)
             mrBuild = clusterize.ClusterRun()
             mrBuild.ensembleOnCluster( amopt.d )
             mrBuild.monitorQueue()
-    
             # queue finished so unpickle results
             with open( amopt.d['results_path'], "r" ) as f: amopt.d = cPickle.load( f )
         else:
@@ -827,7 +829,7 @@ def main():
     if len(ensembles) < 1:
         msg = "ERROR! Cannot run MRBUMP as there are no ensembles!"
         logger.critical( msg )
-        sys.exit()
+        sys.exit(1)
     
     bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
     if not os.path.exists(bump_dir):
@@ -876,9 +878,7 @@ def main():
     ample_log.close()
 
     sys.exit(0)
-    #------------------------------------
     # END
-    #----------------------------------
 
 if __name__=="__main__":
     main()
