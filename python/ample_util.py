@@ -85,8 +85,8 @@ def check_pdbs(directory,single=True):
         return False
     
     if len(not_single):
-        msg="check_pdbs - the following pdb files have more than 1 chain/model\n{0}".format(not_single)
-        #for pdb,msg in problems: msg+="{0} : {1}\n".format(pdb,problems)
+        msg="check_pdbs - the following pdb files have more than 1 chain/model:\n\n"
+        for pdb in not_single: msg+="{0}\n".format(pdb)
         logger.critical(msg)
         return False
     else:
