@@ -71,14 +71,22 @@ def check_pdbs(directory,single=True):
         return False
     
     if not single: return True
+    
     # Check all models have 1 model and 1 chain
-    #not_single = [ pdb for pdb in models if not iotbx.pdb.pdb_input(pdb).construct_hierarchy().only_chain() ]
-    not_single=[]
-    for pdb in models:
-        try: iotbx.pdb.pdb_input(pdb).construct_hierarchy().only_chain()
-        except: not_single.append(pdb)
+    def is_single(pdb):
+        h=iotbx.pdb.pdb_input(pdb).construct_hierarchy()
+        return h.models_size()==1 and h.models()[0].chains_size()==1
+    
+    try:
+        not_single = [ pdb for pdb in models if not is_single(pdb) ]
+    except Exception,e:
+        msg="Error processing pdbs in directory: {0}\n{1}".format(directory,e)
+        logger.critical(msg)
+        return False
+    
     if len(not_single):
-        msg="check_pdbs - the following pdb files have more than 1 chain or model\n{0}".format(not_single)
+        msg="check_pdbs - the following pdb files have more than 1 chain/model\n{0}".format(not_single)
+        #for pdb,msg in problems: msg+="{0} : {1}\n".format(pdb,problems)
         logger.critical(msg)
         return False
     else:
