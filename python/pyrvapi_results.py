@@ -114,7 +114,7 @@ def results_tab(results_dict):
         # PHASER
         if r['PHASER_logfile'] or (r['PHASER_pdbout'] and r['PHASER_mtzout']):
             sec_phaser="sec_phaser_{0}".format(name)
-            pyrvapi.rvapi_add_section(sec_phaser,"PHASER Outputs",sec_id,0,0,1,1,True )
+            pyrvapi.rvapi_add_section(sec_phaser,"PHASER Outputs",sec_id,0,0,1,1,False )
             if r['PHASER_pdbout'] and r['PHASER_mtzout']:
                 data_phaser="data_phaser_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_phaser,
@@ -135,7 +135,7 @@ def results_tab(results_dict):
         # REFMAC
         if r['REFMAC_logfile'] or (r['REFMAC_pdbout'] and r['REFMAC_mtzout']):
             sec_refmac="sec_refmac_{0}".format(name)
-            pyrvapi.rvapi_add_section(sec_refmac,"REFMAC Outputs",sec_id,0,0,1,1,True )
+            pyrvapi.rvapi_add_section(sec_refmac,"REFMAC Outputs",sec_id,0,0,1,1,False )
             if r['REFMAC_pdbout'] and r['REFMAC_mtzout']:
                 data_refmac="data_refmac_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_refmac,
@@ -156,7 +156,7 @@ def results_tab(results_dict):
         # SHELXE
         if r['SHELXE_logfile'] or (r['SHELXE_pdbout'] and r['SHELXE_mtzout']):
             sec_shelxe="sec_shelxe_{0}".format(name)
-            pyrvapi.rvapi_add_section(sec_shelxe,"SHELXE Outputs",sec_id,0,0,1,1,True )
+            pyrvapi.rvapi_add_section(sec_shelxe,"SHELXE Outputs",sec_id,0,0,1,1,False )
             if r['SHELXE_pdbout'] and r['SHELXE_mtzout']:
                 data_shelxe="data_shelxe_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_shelxe,
@@ -194,7 +194,7 @@ def display_results(results_dict,logfile,run_dir=None):
     share_jsrview = os.path.join(ccp4, "share", "jsrview")
     jsrview = os.path.join(ccp4, "libexec", "jsrview")
     if not run_dir: run_dir=results_dict['work_dir']
-    pyrvapi.rvapi_init_document ("TestRun",run_dir,"RVAPI Demo 1",1,7,share_jsrview,None,None,None)
+    pyrvapi.rvapi_init_document ("AMPLE_results",run_dir,"AMPLE Results",1,7,share_jsrview,None,None,None)
     subprocess.Popen([jsrview, os.path.join("index.html")])
     pyrvapi.rvapi_add_header("AMPLE Results")
     summary_tab(results_dict)
