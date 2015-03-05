@@ -62,9 +62,9 @@ def summary_tab(results_dict):
     #
     # Summary Tab
     #
-    print "ADDING SUMMARY TAB"
     if not('ensembles_data' in results_dict and len(results_dict['ensembles_data'])): return
     ensembles_data=results_dict['ensembles_data']
+    print "ADDING SUMMARY TAB ",len(ensembles_data)
     
     summary_tab="summary_tab"
     pyrvapi.rvapi_add_tab(summary_tab,"Summary",True) # Last arg is "open" - i.e. show or hide
@@ -116,6 +116,7 @@ def results_tab(results_dict):
     #
     if not ('mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
     mrb_results=results_dict['mrbump_results']
+    print "ADDING RESULTS TAB ",len(mrb_results)
     
     results_tab="results_tab"
     pyrvapi.rvapi_add_tab(results_tab,"Results",True) # Last arg is "open" - i.e. show or hide
@@ -194,7 +195,6 @@ def results_tab(results_dict):
                                         "text",
                                         sec_shelxe,
                                         2,0,1,1,True)
-                
         
         pyrvapi.rvapi_set_tree_node("results_tree",sec_id,"{0}".format(name),"auto","" )
         pyrvapi.rvapi_flush()
@@ -242,6 +242,9 @@ def display_results(results_dict,run_dir=None):
         pyrvapi.rvapi_remove_widget(_log_tab)
         pyrvapi.rvapi_flush()
         
+    
+    print "RUNNING display_results ",len(results_dict['mrbump_results']) if 'mrbump_results' in results_dict else "NO RESULTS"
+        
     _summary_tab=summary_tab(results_dict)
     _results_tab=results_tab(results_dict)
     _log_tab=log_tab(results_dict['ample_log'])
@@ -253,18 +256,18 @@ if __name__=="__main__":
     pklfile="/opt/ample-dev1/examples/toxd-example/resultsd1.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
-    #results_dict['webserver_uri']=None
+    results_dict['webserver_uri']=None
     display_results(results_dict)
     time.sleep(5)
     pklfile="/opt/ample-dev1/examples/toxd-example/resultsd2.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
-    #results_dict['webserver_uri']=None
+    results_dict['webserver_uri']=None
     display_results(results_dict)
     time.sleep(5)
     pklfile="/opt/ample-dev1/examples/toxd-example/resultsd3.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
-    #results_dict['webserver_uri']=None
+    results_dict['webserver_uri']=None
     display_results(results_dict)
 
