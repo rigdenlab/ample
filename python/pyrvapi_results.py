@@ -6,6 +6,7 @@ Created on 3 Mar 2015
 '''
 
 import cPickle
+import logging
 import os
 import subprocess
 import sys
@@ -14,9 +15,8 @@ sys.path.insert(0,"/opt/ample-dev1/python")
 import ensemble
 import mrbump_results
 
-import pyrvapi
-# try: import pyrvapi
-# except: pyrvapi=None
+try: import pyrvapi
+except: pyrvapi=None
 
 def fill_table(table_id, tdata):
     # Make column headers
@@ -189,22 +189,33 @@ def log_tab(logfile):
     return
 
 def display_results(results_dict,logfile,run_dir=None):
+    logger=logging.getLogger()
+    if not pyrvapi:
+        msg="Cannot display results using pyrvapi!"
+        logger.critical(msg)
+        return False
+    
     # Infrastructure to run
     ccp4 = os.environ["CCP4"]
     share_jsrview = os.path.join(ccp4, "share", "jsrview")
     jsrview = os.path.join(ccp4, "libexec", "jsrview")
-    if not run_dir: run_dir=results_dict['work_dir']
+    if not run_dir: run_dir=os.path.join(results_dict['work_dir'],"jsrview_tmp")
+    if not os.path.isdir(run_dir): os.mkdir(run_dir)
+    
     pyrvapi.rvapi_init_document ("AMPLE_results",run_dir,"AMPLE Results",1,7,share_jsrview,None,None,None)
-    subprocess.Popen([jsrview, os.path.join("index.html")])
+    subprocess.Popen([jsrview, os.path.join(run_dir,"index.html")])
+    
     pyrvapi.rvapi_add_header("AMPLE Results")
     summary_tab(results_dict)
     results_tab(results_dict)
     log_tab(logfile)
-    return
+    
+    return True
 
-
-pklfile="/opt/ample-dev1/tests/testfiles/resultsd1.pkl"
-with open(pklfile) as f: results_dict=cPickle.load(f)
-logfile="/opt/ample-dev1/python/pyrvapi_results.py"
-display_results(results_dict,logfile,run_dir=os.getcwd())
+if __name__=="__main__":
+    pklfile="/opt/ample-dev1/tests/testfiles/resultsd1.pkl"
+    with open(pklfile) as f: results_dict=cPickle.load(f)
+    logfile="/opt/ample-dev1/python/pyrvapi_results.py"
+    run_dir="jsrview_tmp"
+    display_results(results_dict,logfile,run_dir=run_dir)
 
