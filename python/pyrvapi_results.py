@@ -19,9 +19,7 @@ import mrbump_results
 try: import pyrvapi
 except: pyrvapi=None
 
-_results_tab=None
-_summary_tab=None
-_log_tab=None
+_widgets=None
 _running=None
 
 _webserver_uri=None
@@ -68,7 +66,8 @@ def summary_tab(results_dict):
     
     summary_tab="summary_tab"
     pyrvapi.rvapi_add_tab(summary_tab,"Summary",True) # Last arg is "open" - i.e. show or hide
-    pyrvapi.rvapi_add_section("ensembles","Ensembles",summary_tab,0,0,1,1,False)
+    ensemble_sec="ensembles"
+    pyrvapi.rvapi_add_section(ensemble_sec,"Ensembles",summary_tab,0,0,1,1,False)
     
     # Get the ensembling data
     clusters, cluster_method, truncation_method, percent_truncation = ensemble.collate_cluster_data(ensembles_data)
@@ -81,10 +80,10 @@ def summary_tab(results_dict):
     rstr += "Percent truncation: {0}<br/>".format(percent_truncation)
     rstr += "Number of clusters: {0}<br/><br/>".format(len(clusters.keys()))
     rstr += "Generated {0} ensembles<br/><br/>".format(len(ensembles_data))
-    pyrvapi.rvapi_add_text(rstr,"ensembles",0,0,1,1 )
-    #
+    pyrvapi.rvapi_add_text(rstr,ensemble_sec,0,0,1,1 )
     
-    pyrvapi.rvapi_add_table1("ensembles/ensemble_table","Ensembling Results",1,0,1,1,True)
+    ensemble_table="ensemble_table"
+    pyrvapi.rvapi_add_table1(ensemble_sec+"/"+ensemble_table,"Ensembling Results",1,0,1,1,True)
     # for cluster_num in sorted(clusters.keys()):
     #     rstr += "\n"
     #     rstr += "Cluster {0}\n".format(cluster_num)
@@ -96,17 +95,19 @@ def summary_tab(results_dict):
     # 
     cluster_num=1
     tdata = ensemble.cluster_table_data(clusters, cluster_num)
-    fill_table("ensemble_table", tdata)
+    fill_table(ensemble_table, tdata)
     
     #
     # MRBUMP Results
     #
-    if not( 'mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
+    if not( 'mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return summary_tab
     mrb_results=results_dict['mrbump_results']
-    pyrvapi.rvapi_add_section("mrbump","MRBUMP",summary_tab,0,0,1,1,True)
-    pyrvapi.rvapi_add_table1("mrbump/mrbump_table","MRBUMP Results",1,0,1,1,True)
+    mrbump_sec="mrbump"
+    pyrvapi.rvapi_add_section(mrbump_sec,"MRBUMP",summary_tab,0,0,1,1,True)
+    mrbump_table="mrbump_table"
+    pyrvapi.rvapi_add_table1(mrbump_sec+"/"+mrbump_table,"MRBUMP Results",1,0,1,1,True)
     mrb_data = mrbump_results.ResultsSummary().results_table(mrb_results)
-    fill_table("mrbump_table", mrb_data)
+    fill_table(mrbump_table, mrb_data)
     pyrvapi.rvapi_flush()
     return summary_tab
 
@@ -120,18 +121,19 @@ def results_tab(results_dict):
     
     results_tab="results_tab"
     pyrvapi.rvapi_add_tab(results_tab,"Results",True) # Last arg is "open" - i.e. show or hide
-    pyrvapi.rvapi_add_tree_widget("results_tree","Final Results",results_tab,0,0,1,1)
+    results_tree="results_tree"
+    pyrvapi.rvapi_add_tree_widget(results_tree,"Final Results",results_tab,0,0,1,1)
     
     for r in mrb_results:
         name=r['ensemble_name']
         sec_id="sec_{0}".format(name)
-        pyrvapi.rvapi_add_section(sec_id,"Results for: {0}".format(name),"results_tree",0,0,1,1,True )
+        pyrvapi.rvapi_add_section(sec_id,"Results for: {0}".format(name),results_tree,0,0,1,1,True)
         sec_table="sec_table_{0}".format(name)
-        pyrvapi.rvapi_add_section(sec_table,"Results table: {0}".format(name),sec_id,0,0,1,1,True )
-        tableId="table_{0}".format(name)
-        pyrvapi.rvapi_add_table(tableId,"",sec_table,1,0,1,1,False)
+        pyrvapi.rvapi_add_section(sec_table,"Results table: {0}".format(name),sec_id,0,0,1,1,True)
+        table_id="table_{0}".format(name)
+        pyrvapi.rvapi_add_table(table_id,"",sec_table,1,0,1,1,False)
         tdata=mrbump_results.ResultsSummary().results_table([r])
-        fill_table(tableId,tdata)
+        fill_table(table_id,tdata)
         
         # PHASER
         if r['PHASER_logfile'] or (r['PHASER_pdbout'] and r['PHASER_mtzout']):
@@ -145,7 +147,7 @@ def results_tab(results_dict):
                                         "xyz:map",
                                         sec_phaser,
                                         2,0,1,1,True)
-                pyrvapi.rvapi_append_to_data(data_phaser,fix_path(r['PHASER_mtzout']),"xyz:map" )
+                pyrvapi.rvapi_append_to_data(data_phaser,fix_path(r['PHASER_mtzout']),"xyz:map")
             if r['PHASER_logfile']:
                 pyrvapi.rvapi_add_data("data_phaser_logfile_{0}".format(name),
                                         "PHASER Logfile",
@@ -157,7 +159,7 @@ def results_tab(results_dict):
         # REFMAC
         if r['REFMAC_logfile'] or (r['REFMAC_pdbout'] and r['REFMAC_mtzout']):
             sec_refmac="sec_refmac_{0}".format(name)
-            pyrvapi.rvapi_add_section(sec_refmac,"REFMAC Outputs",sec_id,0,0,1,1,False )
+            pyrvapi.rvapi_add_section(sec_refmac,"REFMAC Outputs",sec_id,0,0,1,1,False)
             if r['REFMAC_pdbout'] and r['REFMAC_mtzout']:
                 data_refmac="data_refmac_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_refmac,
@@ -166,7 +168,7 @@ def results_tab(results_dict):
                                         "xyz:map",
                                         sec_refmac,
                                         2,0,1,1,True)
-                pyrvapi.rvapi_append_to_data(data_refmac,fix_path(r['REFMAC_mtzout']),"xyz:map" )
+                pyrvapi.rvapi_append_to_data(data_refmac,fix_path(r['REFMAC_mtzout']),"xyz:map")
             if r['REFMAC_logfile']:
                 pyrvapi.rvapi_add_data("data_refmac_logfile_{0}".format(name),
                                         "REFMAC Logfile",
@@ -178,7 +180,7 @@ def results_tab(results_dict):
         # SHELXE
         if r['SHELXE_logfile'] or (r['SHELXE_pdbout'] and r['SHELXE_mtzout']):
             sec_shelxe="sec_shelxe_{0}".format(name)
-            pyrvapi.rvapi_add_section(sec_shelxe,"SHELXE Outputs",sec_id,0,0,1,1,False )
+            pyrvapi.rvapi_add_section(sec_shelxe,"SHELXE Outputs",sec_id,0,0,1,1,False)
             if r['SHELXE_pdbout'] and r['SHELXE_mtzout']:
                 data_shelxe="data_shelxe_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_shelxe,
@@ -187,7 +189,7 @@ def results_tab(results_dict):
                                         "xyz:map",
                                         sec_shelxe,
                                         2,0,1,1,True)
-                pyrvapi.rvapi_append_to_data(data_shelxe,fix_path(r['SHELXE_mtzout']),"xyz:map" )
+                pyrvapi.rvapi_append_to_data(data_shelxe,fix_path(r['SHELXE_mtzout']),"xyz:map")
             if r['SHELXE_logfile']:
                 pyrvapi.rvapi_add_data("data_shelxe_logfile_{0}".format(name),
                                         "SHELXE Logfile",
@@ -196,8 +198,9 @@ def results_tab(results_dict):
                                         sec_shelxe,
                                         2,0,1,1,True)
         
-        pyrvapi.rvapi_set_tree_node("results_tree",sec_id,"{0}".format(name),"auto","" )
+        pyrvapi.rvapi_set_tree_node("results_tree",sec_id,"{0}".format(name),"auto","")
         pyrvapi.rvapi_flush()
+        
     return results_tab
         
 def log_tab(logfile):
@@ -211,7 +214,7 @@ def log_tab(logfile):
     return log_tab
 
 def display_results(results_dict,run_dir=None):
-    global _running,_summary_tab,_results_tab,_log_tab
+    global _running,_widgets
     global _webserver_uri,_webserver_start
     logger=logging.getLogger()
     if not pyrvapi:
@@ -237,17 +240,19 @@ def display_results(results_dict,run_dir=None):
         pyrvapi.rvapi_add_header("AMPLE Results")
         _running=True
     else:
-        pyrvapi.rvapi_remove_widget(_summary_tab)
-        pyrvapi.rvapi_remove_widget(_results_tab)
-        pyrvapi.rvapi_remove_widget(_log_tab)
+        for w in _widgets: pyrvapi.rvapi_remove_widget(w)
         pyrvapi.rvapi_flush()
         
     
     print "RUNNING display_results ",len(results_dict['mrbump_results']) if 'mrbump_results' in results_dict else "NO RESULTS"
         
-    _summary_tab=summary_tab(results_dict)
-    _results_tab=results_tab(results_dict)
-    _log_tab=log_tab(results_dict['ample_log'])
+    _widgets=[]
+    w=summary_tab(results_dict)
+    if w: _widgets.append(w)
+    w=results_tab(results_dict)
+    if w: _widgets.append(w)
+    w=log_tab(results_dict['ample_log'])
+    if w: _widgets.append(w)
     
     return True
 
@@ -258,13 +263,13 @@ if __name__=="__main__":
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
     results_dict['webserver_uri']=None
     display_results(results_dict)
-    time.sleep(5)
+    time.sleep(10)
     pklfile="/opt/ample-dev1/examples/toxd-example/resultsd2.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
     results_dict['webserver_uri']=None
     display_results(results_dict)
-    time.sleep(5)
+    time.sleep(10)
     pklfile="/opt/ample-dev1/examples/toxd-example/resultsd3.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
