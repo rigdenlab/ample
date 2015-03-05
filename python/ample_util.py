@@ -57,8 +57,9 @@ Supplementary Materials for Theobald and Wuttke 2006b."""
 header ="""#########################################################################
 #########################################################################
 #########################################################################
-# CCP4: AMPLE -Ab Initio Modelling Molecular Replacement (Beta version) #
+# CCP4: AMPLE - Ab Initio Modelling Molecular Replacement               #
 #########################################################################
+
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
@@ -431,7 +432,7 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     
     return p.returncode
 
-def setup_logging():
+def setup_logging(logfile,debug_log="debug.log"):
     """
     Set up the various log files/console logging
     and return the logger
@@ -440,17 +441,11 @@ def setup_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    # create file handler and set level to debug
-    fl = logging.FileHandler("debug.log")
+    # create file handler for debug output
+    fl = logging.FileHandler(debug_log)
     fl.setLevel(logging.DEBUG)
-
-    # create formatter for fl
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    # add formatter to fl
     fl.setFormatter(formatter)
-
-    # add fl to logger
     logger.addHandler(fl)
 
     # Now create console logger for outputting stuff
@@ -460,19 +455,17 @@ def setup_logging():
         cl = logging.StreamHandler(stream=sys.stdout)
     except TypeError:
         cl = logging.StreamHandler(strm=sys.stdout)
-
     cl.setLevel(logging.INFO)
-
-    # create formatter for fl
-    # Always add a blank line after every print
-    formatter = logging.Formatter('%(message)s\n')
-
-    # add formatter to fl
+    formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
     cl.setFormatter(formatter)
-
-    # add fl to logger
     logger.addHandler(cl)
-
+    
+    # Finally create the main logger
+    fl = logging.FileHandler(logfile)
+    fl.setLevel(logging.INFO)
+    fl.setFormatter(formatter) # Same formatter as screen
+    logger.addHandler(fl)
+    
     return logger
 
 def saveAmoptd(amoptd):

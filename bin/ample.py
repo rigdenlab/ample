@@ -52,6 +52,7 @@ import fasta_parser
 import mrbump_ensemble
 import mtz_util
 import nmr
+import pyrvapi_results
 import rosetta_model
 import mrbump_results
 import version
@@ -280,6 +281,9 @@ def process_command_line():
     
     parser.add_argument('-truncation_pruning', type=str, nargs=1,
                        help='Whether to remove isolated residues none|single')
+    
+    parser.add_argument('-webserver_uri', type=str, nargs=1,
+                       help='URI of the webserver directory - also indicates we are running as a webserver')
     
     parser.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
                        help='True =use nhomologs, False= dont use them ')
@@ -688,10 +692,16 @@ def main():
     os.chdir( amopt.d['work_dir'] )
     
     # Set up logging
-    logger = ample_util.setup_logging()
+    ample_log=os.path.join(amopt.d['work_dir'],'AMPLE.log')
+    amopt.d['ample_log']=ample_log
+    logger = ample_util.setup_logging(ample_log)
+    logger.info(ample_util.header)
     
     # Print out Version and invocation
     logger.info( """AMPLE version: {0}\n\nInvoked with command-line:\n\n{1}""".format( version.__version__, orig_argv ) )
+    
+    # Display pyrvapi results
+    pyrvapi_results.display_results(amopt.d)
     
     # Bit clunky but the rosetta_modeller object checks the rosetta options so we create it and return it if needed
     rosetta_modeller = process_options(amopt.d,logger)
@@ -704,11 +714,6 @@ def main():
         sys.exit(0)
     
     logger.info('All needed programs are found, continuing Run')
-    
-    # ample_log is the 'official' output file
-    ample_log = open(os.path.join(amopt.d['work_dir'],'AMPLE.log'), "w")
-    ample_log.write(ample_util.header)
-    ample_log.flush()
     
     # params used
     with open(os.path.join( amopt.d['work_dir'], 'params_used.txt' ), "w") as f:
@@ -757,9 +762,7 @@ def main():
             
         msg = 'Modelling complete - models stored in: {0}\n'.format(amopt.d['models_dir'])
     elif amopt.d['import_models']:
-        msg = 'Importing models from directory: {0}\n'.format(amopt.d['models_dir'])
-        ample_log.write(msg)
-        logger.info(msg)
+        logger.info('Importing models from directory: {0}\n'.format(amopt.d['models_dir']))
         if amopt.d['use_scwrl']:
             msg = "Processing sidechains of imported models from {0} with Scwl\n".format( amopt.d['models_dir'] )
             models_dir_scwrl = os.path.join(amopt.d['work_dir'],os.path.basename(amopt.d['models_dir'])+"_scwrl")
@@ -770,7 +773,6 @@ def main():
             os.mkdir( models_dir_scwrl )
             msg += "Scwrl-processed models will be placed in directory: {0}".format( models_dir_scwrl )
             msg += "Running Scwrl..."
-            ample_log.write(msg)
             logger.info( msg )
             scwrl = add_sidechains_SCWRL.Scwrl( scwrlExe=amopt.d['scwrl_exe'] )
             scwrl.processDirectory( inDirectory=amopt.d['models_dir'], outDirectory=models_dir_scwrl )
@@ -783,8 +785,7 @@ def main():
         # Importing pre-made ensembles
         # Set list of ensembles to the one we are importing
         msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
-        ample_log.write(msg)
-        logger.info( msg )
+        logger.info(msg)
         ensembles =  glob.glob( os.path.join(amopt.d['ensembles_dir'], '*.pdb') )
     else:
         # Check we have some models to work with
@@ -808,14 +809,16 @@ def main():
         # Check we have something to work with
         if not amopt.d.has_key('ensembles') or not len( amopt.d['ensembles'] ):
             msg = "Could not load any ensembles after running create_ensembles!"
-            logger.critical( msg )
+            logger.critical(msg)
             sys.exit(1)
             
         ensembles=amopt.d['ensembles']
         ensemble_summary = ensemble.ensemble_summary(amopt.d['ensembles_data'])
-        ample_log.write(ensemble_summary)
-        ample_log.flush()
         logger.info(ensemble_summary)
+    
+    time.sleep(5)
+    pyrvapi_results.display_results(amopt.d)
+    
     #
     # Bail here if we didn't create anything
     #
@@ -828,7 +831,7 @@ def main():
     logger.info('----- Running MRBUMP on ensembles--------\n\n')
     if len(ensembles) < 1:
         msg = "ERROR! Cannot run MRBUMP as there are no ensembles!"
-        logger.critical( msg )
+        logger.critical(msg)
         sys.exit(1)
     
     bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
@@ -862,20 +865,18 @@ def main():
     run_in_hours = run_in_min / 60
     msg = '\nMR and shelx DONE\n\n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
     logging.info(msg)
-    ample_log.write(msg)
-    ample_log.flush()
     
     # Benchmark mode
     if amopt.d['benchmark_mode']:
         benchmark.analyse(amopt.d)
         ample_util.saveAmoptd(amopt.d)
-
+        
     # Now print out the final summary
     summary = mrbump_results.finalSummary(amopt.d)
-    logger.info( summary )
-    ample_log.write(summary)
-    ample_log.flush()
-    ample_log.close()
+    logger.info(summary)
+    
+    # Display results with pyrvapi
+    pyrvapi_results.display_results(amopt.d)
 
     sys.exit(0)
     # END

@@ -97,6 +97,7 @@ class AmpleOptions(object):
                             'transmembrane_spanfile' : None,
                             'truncation_method' : 'percent',
                             'truncation_pruning' : 'none',
+                            'webserver_uri' : None,
                             'use_arpwarp' : True,
                             'use_buccaneer' : True,
                             'use_homs' : True,
