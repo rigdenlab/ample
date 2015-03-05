@@ -17,7 +17,7 @@ import mrbump_results
 import workers
 
 
-def generate_jobscripts( ensemble_pdbs, amoptd ):
+def generate_jobscripts(ensemble_pdbs, amoptd):
     """Write the MRBUMP shell scripts for all the ensembles.
 
     Args:
@@ -30,9 +30,7 @@ def generate_jobscripts( ensemble_pdbs, amoptd ):
     """
     
     # Remember programs = also used for looping
-    if amoptd['split_mr']:
-        mrbump_programs = amoptd['mrbump_programs']
-        nproc = amoptd['nproc']
+    if amoptd['split_mr']: mrbump_programs = amoptd['mrbump_programs']
     
     job_scripts = []
     for ensemble_pdb in ensemble_pdbs:
@@ -59,17 +57,16 @@ def generate_jobscripts( ensemble_pdbs, amoptd ):
             job_scripts.append( script )
             
     # Reset amoptd
-    if amoptd['split_mr']:
-        amoptd['mrbump_programs'] = mrbump_programs
+    if amoptd['split_mr']: amoptd['mrbump_programs'] = mrbump_programs
             
-    if not len( job_scripts ):
+    if not len(job_scripts):
         msg = "No job scripts created!"
-        logging.critical( msg )
+        logging.critical(msg)
         raise RuntimeError, msg
     
     return job_scripts
         
-def write_jobscript( name, pdb, amoptd, directory=None ):
+def write_jobscript(name, pdb, amoptd, directory=None):
     """
     Create the script to run MrBump for this PDB.
     
@@ -88,9 +85,7 @@ def write_jobscript( name, pdb, amoptd, directory=None ):
     across two modules.
     """
     
-    # Path
-    if not directory:
-        directory = os.getcwd()
+    if not directory: directory = os.getcwd()
         
     # First write mrbump keyword file
     keyword_file = os.path.join(directory,name+'.mrbump')
@@ -116,27 +111,20 @@ def write_jobscript( name, pdb, amoptd, directory=None ):
             job_script.write( script_header )
             job_script.write("pushd " + directory + "\n\n")
             # Required on the RAL cluster as the default tmp can be deleted on the nodes
-            if amoptd['submit_qtype'] == "SGE":
-                job_script.write("export CCP4_SCR=$TMPDIR\n\n")
-    
+            if amoptd['submit_qtype'] == "SGE": job_script.write("export CCP4_SCR=$TMPDIR\n\n")
         else:
-            if not sys.platform.startswith("win"):
-                job_script.write('#!/bin/sh\n') 
+            if not sys.platform.startswith("win"): job_script.write('#!/bin/sh\n') 
         
         # Get the mrbump command-line
         jobcmd = mrbump_cmd.mrbump_cmd(amoptd,name,keyword_file)
         job_script.write(jobcmd)
         
-        #if amoptd['submit_cluster']:
-        #    job_script.write('\n\npopd\n\n')
-        
     # Make executable
     os.chmod(script_path, 0o777)
     
     return script_path
-##End create_jobscript
 
-def mrbump_ensemble_cluster( job_scripts, amoptd ):
+def mrbump_ensemble_cluster(job_scripts, amoptd, monitor=None):
     """
     Process the list of ensembles using MrBump on a cluster.
     
@@ -154,42 +142,22 @@ def mrbump_ensemble_cluster( job_scripts, amoptd ):
         mrBuild.submitArrayJob(job_scripts,jobTime=172800)
     else:
         for script in job_scripts:
-            job_number = mrBuild.submitJob( subScript=script )
+            mrBuild.submitJob( subScript=script )
 
     # Monitor the cluster queue to see when all jobs have finished
-    mrBuild.monitorQueue()
+    mrBuild.monitorQueue(monitor=monitor)
     
-    if amoptd['submit_array']:
-        mrBuild.cleanUpArrayJob()
-    
-    # Cleanup code
-    #shutil.rmtree(work_dir + '/fine_cluster_' + str(clusterID))
-    # shutil.rmtree(work_dir+'/pre_models')
-    #for l in os.listdir(work_dir + '/spicker_run'):
-    #    if os.path.splitext(l)[1] == 'pdb':
-    #        os.remove(work_dir + '/spicker_run/' + l)
-    #os.remove(work_dir + '/spicker_run/rep1.tra1')
+    if amoptd['submit_array']: mrBuild.cleanUpArrayJob()
+    return
 
-    # for each_run in os.listdir(mrBuildClusterDir ):
-        #   if os.path.isdir(  os.path.join(mrBuildClusterDir, each_run)):
-        #      name=re.split('_', each_run)
-        #      mrBuildOutputDir=os.path.join(bump_dir, "cluster_run"+str(cluster)+"result"+name[1])
-        #      os.mkdir(mrBuildOutputDir)
-        #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","phaser_shelx" ),mrBuildOutputDir  )
-        #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","molrep_shelx" ),mrBuildOutputDir  )
-        #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "search_"+name[1]+"_mrbump","data" ),mrBuildOutputDir  )
-        #      shutil.move (os.path.join(mrBuildClusterDir, each_run, "logs" ),mrBuildOutputDir  )
-        # shutil.rmtree(mrBuildClusterDir)
-    
-##End mrbump_ensemble_cluster
-
-def mrbump_ensemble_local( job_scripts, amoptd ):
+def mrbump_ensemble_local(job_scripts, amoptd, monitor=None):
     """Run ensembling locally"""
     js = workers.JobServer()
-    js.setJobs( job_scripts )
-    js.start( nproc=amoptd['nproc'],
-              early_terminate=amoptd['early_terminate'],
-              check_success=mrbump_results.checkSuccess )
+    js.setJobs(job_scripts)
+    js.start(nproc=amoptd['nproc'],
+             early_terminate=amoptd['early_terminate'],
+             check_success=mrbump_results.checkSuccess,
+             monitor=monitor)
     return
 
 class Test(unittest.TestCase):

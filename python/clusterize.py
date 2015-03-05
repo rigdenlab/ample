@@ -347,7 +347,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         return
 
-    def monitorQueue(self, user=""):
+    def monitorQueue(self, user="",monitor=None):
         """ Monitor the Cluster queue to see when all jobs are completed """
 
         if not len(self.qList):
@@ -372,6 +372,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 self.logger.info("Queue Monitor: All jobs complete!")
             runningList=newRunningList
             newRunningList=[]
+            if monitor: monitor()
             
         return
     

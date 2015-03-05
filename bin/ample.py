@@ -1,26 +1,7 @@
 #!/usr/bin/env ccp4-python
-
-
 """
-Version 0.1
-no speed buffs, no extra functionality, no optimisation
-Basic Pipeline
-for multi core desktops, not clusters
-
-Issues:
-1) if this script is killed, the rosetta will continue
-2) Theseus can hang, this is killed after a timeout
-3) is clustered by all atom RMSD to make fine clusters (option to cluster by CA only i included)
-4) ASU content is the number of search models placed by MrBUMP. -- need to set this manually
-
-
-================================
-
-so...
-Only data passed between different stages are the pdb files, so each stage could just start from a directory of files
-
+This is AMPLE
 """
-
 import os
 import sys
 
@@ -50,11 +31,11 @@ import benchmark
 import ensemble
 import fasta_parser
 import mrbump_ensemble
+import mrbump_results
 import mtz_util
 import nmr
 import pyrvapi_results
 import rosetta_model
-import mrbump_results
 import version
 
 
@@ -816,7 +797,7 @@ def main():
         ensemble_summary = ensemble.ensemble_summary(amopt.d['ensembles_data'])
         logger.info(ensemble_summary)
     
-    time.sleep(5)
+    # Update results
     pyrvapi_results.display_results(amopt.d)
     
     #
@@ -846,11 +827,23 @@ def main():
     logger.info("Generating MRBUMP runscripts")
     job_scripts = mrbump_ensemble.generate_jobscripts( ensembles, amopt.d )
     #continue
-
-    if amopt.d['submit_cluster']:
-        mrbump_ensemble.mrbump_ensemble_cluster( job_scripts, amopt.d )
+    
+    # Create function for monitoring jobs
+    if pyrvapi_results.pyrvapi:
+        def monitor():
+            print "RUNNING MONITOR"
+            r=mrbump_results.ResultsSummary()
+            r.extractResults(amopt.d['mrbump_dir'])
+            amopt.d['mrbump_results']=r.results
+            pyrvapi_results.display_results(amopt.d)
+            return
     else:
-        mrbump_ensemble.mrbump_ensemble_local( job_scripts, amopt.d )
+        monitor=None
+    
+    if amopt.d['submit_cluster']:
+        mrbump_ensemble.mrbump_ensemble_cluster(job_scripts, amopt.d, monitor=monitor)
+    else:
+        mrbump_ensemble.mrbump_ensemble_local(job_scripts, amopt.d,monitor=monitor)
 
     # Collect the MRBUMP results
     results_summary = mrbump_results.ResultsSummary()
@@ -875,7 +868,7 @@ def main():
     summary = mrbump_results.finalSummary(amopt.d)
     logger.info(summary)
     
-    # Display results with pyrvapi
+    # Finally update pyrvapi results
     pyrvapi_results.display_results(amopt.d)
 
     sys.exit(0)

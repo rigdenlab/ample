@@ -21,7 +21,6 @@ except: pyrvapi=None
 
 _widgets=None
 _running=None
-
 _webserver_uri=None
 _wbeserver_start=None
 
@@ -62,7 +61,7 @@ def summary_tab(results_dict):
     #
     if not('ensembles_data' in results_dict and len(results_dict['ensembles_data'])): return
     ensembles_data=results_dict['ensembles_data']
-    print "ADDING SUMMARY TAB ",len(ensembles_data)
+    #print "ADDING SUMMARY TAB ",len(ensembles_data)
     
     summary_tab="summary_tab"
     pyrvapi.rvapi_add_tab(summary_tab,"Summary",True) # Last arg is "open" - i.e. show or hide
@@ -117,7 +116,7 @@ def results_tab(results_dict):
     #
     if not ('mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
     mrb_results=results_dict['mrbump_results']
-    print "ADDING RESULTS TAB ",len(mrb_results)
+    #print "ADDING RESULTS TAB ",len(mrb_results)
     
     results_tab="results_tab"
     pyrvapi.rvapi_add_tab(results_tab,"Results",True) # Last arg is "open" - i.e. show or hide
@@ -204,7 +203,7 @@ def results_tab(results_dict):
     return results_tab
         
 def log_tab(logfile):
-    print "ADDING LOG TAB"
+    #print "ADDING LOG TAB"
     log_tab="log_tab"
     pyrvapi.rvapi_add_tab(log_tab,"Log file",True) # Last arg is "open" - i.e. show or hide
     # Add watched (updatable) content to the log tab. Note that the
@@ -242,9 +241,8 @@ def display_results(results_dict,run_dir=None):
     else:
         for w in _widgets: pyrvapi.rvapi_remove_widget(w)
         pyrvapi.rvapi_flush()
-        
     
-    print "RUNNING display_results ",len(results_dict['mrbump_results']) if 'mrbump_results' in results_dict else "NO RESULTS"
+    #print "RUNNING display_results ",len(results_dict['mrbump_results']) if 'mrbump_results' in results_dict else "NO RESULTS"
         
     _widgets=[]
     w=summary_tab(results_dict)
