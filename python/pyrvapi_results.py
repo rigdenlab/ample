@@ -10,6 +10,7 @@ import logging
 import os
 import subprocess
 import sys
+import urlparse
 
 sys.path.insert(0,"/opt/ample-dev1/python")
 import ensemble
@@ -18,6 +19,21 @@ import mrbump_results
 try: import pyrvapi
 except: pyrvapi=None
 
+_results_tab=None
+_summary_tab=None
+_log_tab=None
+_running=None
+
+_webserver_uri=None
+_wbeserver_start=None
+
+def fix_path(path):
+    """Ammend path so it's suitable for the webserver"""
+    global _webserver_uri,_webserver_start
+    if _webserver_uri:
+        return urlparse.urljoin(_webserver_uri,path[_webserver_start:])
+    else: return path
+    
 def fill_table(table_id, tdata):
     # Make column headers
     for i in range(len(tdata[0])): # Skip name as it's the row header
@@ -46,14 +62,15 @@ def summary_tab(results_dict):
     #
     # Summary Tab
     #
-    pyrvapi.rvapi_add_tab("summary_tab","Summary",True) # Last arg is "open" - i.e. show or hide
-    #
-    # Ensemble Results
-    #
-    pyrvapi.rvapi_add_section("ensembles","Ensembles","summary_tab",0,0,1,1,False)
+    print "ADDING SUMMARY TAB"
+    if not('ensembles_data' in results_dict and len(results_dict['ensembles_data'])): return
+    ensembles_data=results_dict['ensembles_data']
+    
+    summary_tab="summary_tab"
+    pyrvapi.rvapi_add_tab(summary_tab,"Summary",True) # Last arg is "open" - i.e. show or hide
+    pyrvapi.rvapi_add_section("ensembles","Ensembles",summary_tab,0,0,1,1,False)
     
     # Get the ensembling data
-    ensembles_data=results_dict['ensembles_data']
     clusters, cluster_method, truncation_method, percent_truncation = ensemble.collate_cluster_data(ensembles_data)
     
     rstr = ""
@@ -84,22 +101,26 @@ def summary_tab(results_dict):
     #
     # MRBUMP Results
     #
-    pyrvapi.rvapi_add_section("mrbump","MRBUMP","summary_tab",0,0,1,1,True)
+    if not( 'mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
+    mrb_results=results_dict['mrbump_results']
+    pyrvapi.rvapi_add_section("mrbump","MRBUMP",summary_tab,0,0,1,1,True)
     pyrvapi.rvapi_add_table1("mrbump/mrbump_table","MRBUMP Results",1,0,1,1,True)
-    mrb_data = mrbump_results.ResultsSummary().results_table(results_dict['mrbump_results'])
+    mrb_data = mrbump_results.ResultsSummary().results_table(mrb_results)
     fill_table("mrbump_table", mrb_data)
     pyrvapi.rvapi_flush()
-    return
+    return summary_tab
 
 def results_tab(results_dict):
     #
     # Results Tab
     #
-    pyrvapi.rvapi_add_tab("results_tab","Results",True) # Last arg is "open" - i.e. show or hide
-    pyrvapi.rvapi_add_tree_widget("results_tree","Final Results","results_tab",0,0,1,1)
-    
+    if not ('mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
     mrb_results=results_dict['mrbump_results']
-    #mrbump_results.ResultsSummary().results_table()
+    
+    results_tab="results_tab"
+    pyrvapi.rvapi_add_tab(results_tab,"Results",True) # Last arg is "open" - i.e. show or hide
+    pyrvapi.rvapi_add_tree_widget("results_tree","Final Results",results_tab,0,0,1,1)
+    
     for r in mrb_results:
         name=r['ensemble_name']
         sec_id="sec_{0}".format(name)
@@ -119,15 +140,15 @@ def results_tab(results_dict):
                 data_phaser="data_phaser_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_phaser,
                                         "PHASER PDB",
-                                        r['PHASER_pdbout'],
+                                        fix_path(r['PHASER_pdbout']),
                                         "xyz:map",
                                         sec_phaser,
                                         2,0,1,1,True)
-                pyrvapi.rvapi_append_to_data(data_phaser,r['PHASER_mtzout'],"xyz:map" )
+                pyrvapi.rvapi_append_to_data(data_phaser,fix_path(r['PHASER_mtzout']),"xyz:map" )
             if r['PHASER_logfile']:
                 pyrvapi.rvapi_add_data("data_phaser_logfile_{0}".format(name),
                                         "PHASER Logfile",
-                                        r['PHASER_logfile'],
+                                        fix_path(r['PHASER_logfile']),
                                         "text",
                                         sec_phaser,
                                         2,0,1,1,True)
@@ -140,15 +161,15 @@ def results_tab(results_dict):
                 data_refmac="data_refmac_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_refmac,
                                         "REFMAC PDB",
-                                        r['REFMAC_pdbout'],
+                                        fix_path(r['REFMAC_pdbout']),
                                         "xyz:map",
                                         sec_refmac,
                                         2,0,1,1,True)
-                pyrvapi.rvapi_append_to_data(data_refmac,r['REFMAC_mtzout'],"xyz:map" )
+                pyrvapi.rvapi_append_to_data(data_refmac,fix_path(r['REFMAC_mtzout']),"xyz:map" )
             if r['REFMAC_logfile']:
                 pyrvapi.rvapi_add_data("data_refmac_logfile_{0}".format(name),
                                         "REFMAC Logfile",
-                                        r['REFMAC_logfile'],
+                                        fix_path(r['REFMAC_logfile']),
                                         "text",
                                         sec_refmac,
                                         2,0,1,1,True)
@@ -161,15 +182,15 @@ def results_tab(results_dict):
                 data_shelxe="data_shelxe_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_shelxe,
                                         "SHELXE PDB",
-                                        r['SHELXE_pdbout'],
+                                        fix_path(r['SHELXE_pdbout']),
                                         "xyz:map",
                                         sec_shelxe,
                                         2,0,1,1,True)
-                pyrvapi.rvapi_append_to_data(data_shelxe,r['SHELXE_mtzout'],"xyz:map" )
+                pyrvapi.rvapi_append_to_data(data_shelxe,fix_path(r['SHELXE_mtzout']),"xyz:map" )
             if r['SHELXE_logfile']:
                 pyrvapi.rvapi_add_data("data_shelxe_logfile_{0}".format(name),
                                         "SHELXE Logfile",
-                                        r['SHELXE_logfile'],
+                                        fix_path(r['SHELXE_logfile']),
                                         "text",
                                         sec_shelxe,
                                         2,0,1,1,True)
@@ -177,45 +198,73 @@ def results_tab(results_dict):
         
         pyrvapi.rvapi_set_tree_node("results_tree",sec_id,"{0}".format(name),"auto","" )
         pyrvapi.rvapi_flush()
-    return
+    return results_tab
         
 def log_tab(logfile):
-    pyrvapi.rvapi_add_tab("log_tab","Log file",True) # Last arg is "open" - i.e. show or hide
-    
+    print "ADDING LOG TAB"
+    log_tab="log_tab"
+    pyrvapi.rvapi_add_tab(log_tab,"Log file",True) # Last arg is "open" - i.e. show or hide
     # Add watched (updatable) content to the log tab. Note that the
     # log file does not exist yet.
-    pyrvapi.rvapi_append_content(logfile,True,"log_tab" )
+    pyrvapi.rvapi_append_content(logfile,True,log_tab)
     pyrvapi.rvapi_flush()
-    return
+    return log_tab
 
-def display_results(results_dict,logfile,run_dir=None):
+def display_results(results_dict,run_dir=None):
+    global _running,_summary_tab,_results_tab,_log_tab
+    global _webserver_uri,_webserver_start
     logger=logging.getLogger()
     if not pyrvapi:
         msg="Cannot display results using pyrvapi!"
         logger.critical(msg)
         return False
     
-    # Infrastructure to run
-    ccp4 = os.environ["CCP4"]
-    share_jsrview = os.path.join(ccp4, "share", "jsrview")
-    jsrview = os.path.join(ccp4, "libexec", "jsrview")
-    if not run_dir: run_dir=os.path.join(results_dict['work_dir'],"jsrview_tmp")
-    if not os.path.isdir(run_dir): os.mkdir(run_dir)
-    
-    pyrvapi.rvapi_init_document ("AMPLE_results",run_dir,"AMPLE Results",1,7,share_jsrview,None,None,None)
-    subprocess.Popen([jsrview, os.path.join(run_dir,"index.html")])
-    
-    pyrvapi.rvapi_add_header("AMPLE Results")
-    summary_tab(results_dict)
-    results_tab(results_dict)
-    log_tab(logfile)
+    if not _running:
+        # Infrastructure to run
+        ccp4 = os.environ["CCP4"]
+        share_jsrview = os.path.join(ccp4, "share", "jsrview")
+        if not run_dir: run_dir=os.path.join(results_dict['work_dir'],"jsrview_tmp")
+        if not os.path.isdir(run_dir): os.mkdir(run_dir)
+        pyrvapi.rvapi_init_document ("AMPLE_results",run_dir,"AMPLE Results",1,7,share_jsrview,None,None,None)
+        if 'webserver_uri' in results_dict and results_dict['webserver_uri']:
+            # don't start browser and setup variables for the path on the webserver
+            _webserver_start=len(results_dict['run_dir'])+1
+            _webserver_uri=results_dict['webserver_uri']
+        else:
+            # We start our own browser
+            jsrview = os.path.join(ccp4, "libexec", "jsrview")
+            subprocess.Popen([jsrview, os.path.join(run_dir,"index.html")])
+        pyrvapi.rvapi_add_header("AMPLE Results")
+        _running=True
+    else:
+        pyrvapi.rvapi_remove_widget(_summary_tab)
+        pyrvapi.rvapi_remove_widget(_results_tab)
+        pyrvapi.rvapi_remove_widget(_log_tab)
+        pyrvapi.rvapi_flush()
+        
+    _summary_tab=summary_tab(results_dict)
+    _results_tab=results_tab(results_dict)
+    _log_tab=log_tab(results_dict['ample_log'])
     
     return True
 
 if __name__=="__main__":
-    pklfile="/opt/ample-dev1/tests/testfiles/resultsd1.pkl"
+    import time
+    pklfile="/opt/ample-dev1/examples/toxd-example/resultsd1.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
-    logfile="/opt/ample-dev1/python/pyrvapi_results.py"
-    run_dir="jsrview_tmp"
-    display_results(results_dict,logfile,run_dir=run_dir)
+    results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
+    #results_dict['webserver_uri']=None
+    display_results(results_dict)
+    time.sleep(5)
+    pklfile="/opt/ample-dev1/examples/toxd-example/resultsd2.pkl"
+    with open(pklfile) as f: results_dict=cPickle.load(f)
+    results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
+    #results_dict['webserver_uri']=None
+    display_results(results_dict)
+    time.sleep(5)
+    pklfile="/opt/ample-dev1/examples/toxd-example/resultsd3.pkl"
+    with open(pklfile) as f: results_dict=cPickle.load(f)
+    results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
+    #results_dict['webserver_uri']=None
+    display_results(results_dict)
 
