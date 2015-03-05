@@ -54,45 +54,67 @@ def create_ensembles( amoptd ):
 
     return
 
-def ensemble_summary(ensembles_data):
-    """Print a summary of the ensembling process"""
-
-    clusters={}
-    # Loop through all ensemble data objects and build up a data tree
-    cluster_method=None
-    truncation_method=None
-    percent_truncation=None
+def collate_cluster_data(ensembles_data):
+    clusters = {} # Loop through all ensemble data objects and build up a data tree
+    cluster_method = None
+    truncation_method = None
+    percent_truncation = None
     for e in ensembles_data:
         if not cluster_method:
             cluster_method = e['cluster_method']
             percent_truncation = e['percent_truncation']
             truncation_method = e['truncation_method']
-            num_clusters = e['num_clusters']
-        cnum=e['cluster_num']
+            #num_clusters = e['num_clusters']
+        cnum = e['cluster_num']
         if cnum not in clusters:
             clusters[cnum] = {}
             clusters[cnum]['cluster_centroid'] = e['cluster_centroid']
             clusters[cnum]['cluster_num_models'] = e['cluster_num_models']
             clusters[cnum]['tlevels'] = {}
-        
-        tlvl=e['truncation_level']
+        tlvl = e['truncation_level']
         if tlvl not in clusters[cnum]['tlevels']:
             clusters[cnum]['tlevels'][tlvl] = {}
-            clusters[cnum]['tlevels'][tlvl]['truncation_variance']=e['truncation_variance']
-            clusters[cnum]['tlevels'][tlvl]['num_residues']=e['truncation_num_residues']
-            clusters[cnum]['tlevels'][tlvl]['radius_thresholds']={}
-        
-        srt=e['subcluster_radius_threshold'] 
+            clusters[cnum]['tlevels'][tlvl]['truncation_variance'] = e['truncation_variance']
+            clusters[cnum]['tlevels'][tlvl]['num_residues'] = e['truncation_num_residues']
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'] = {}
+        srt = e['subcluster_radius_threshold']
         if srt not in clusters[cnum]['tlevels'][tlvl]['radius_thresholds']:
-            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]={}
-            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['num_models']=e['subcluster_num_models']
-            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct']={}
-
-        sct=e['side_chain_treatment']
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt] = {}
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['num_models'] = e['subcluster_num_models']
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'] = {}
+        sct = e['side_chain_treatment']
         if sct not in clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct']:
-            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]={}
-            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['name']=e['name']
-            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['num_atoms']=e['ensemble_num_atoms']
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct] = {}
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['name'] = e['name']
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['num_atoms'] = e['ensemble_num_atoms']
+    
+    return clusters, cluster_method, truncation_method, percent_truncation
+
+def cluster_table_data(clusters, cluster_num):
+    tdata = [("Name", "Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
+    for tl in sorted(clusters[cluster_num]['tlevels']):
+        tvar = clusters[cluster_num]['tlevels'][tl]['truncation_variance']
+        nresidues = clusters[cluster_num]['tlevels'][tl]['num_residues']
+        for i, rt in enumerate(sorted(clusters[cluster_num]['tlevels'][tl]['radius_thresholds'])):
+            nmodels = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['num_models']
+        # Hack so that side chains come in size order
+        #for j, sct in enumerate(sorted(clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'])):
+            for j, sct in enumerate(['polya', 'reliable', 'allatom']):
+                name = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['name']
+                num_atoms = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['num_atoms']
+                if i == 0 and j == 0: # change of radius
+                    tdata.append((name, tl, tvar, nresidues, rt, nmodels, num_atoms, sct))
+                elif i > 0 and j == 0: # change of side_chain
+                    tdata.append((name, "", "", "", rt, nmodels, num_atoms, sct))
+                else:
+                    tdata.append((name, "", "", "", "", "", num_atoms, sct))
+    return tdata
+
+def ensemble_summary(ensembles_data):
+    """Print a summary of the ensembling process"""
+
+    clusters, cluster_method, truncation_method, percent_truncation = collate_cluster_data(ensembles_data)
+    num_clusters=len(clusters)
     
     tableFormat = printTable.Table()
     rstr = "\n"
@@ -103,32 +125,14 @@ def ensemble_summary(ensembles_data):
     rstr += "Percent truncation: {0}\n".format(percent_truncation)
     rstr += "Number of clusters: {0}\n".format(num_clusters)
     
-    for cn in sorted(clusters.keys()):
+    for cluster_num in sorted(clusters.keys()):
         rstr += "\n"
-        rstr += "Cluster {0}\n".format(cn)
-        rstr += "Number of models: {0}\n".format(clusters[cn]['cluster_num_models'])
-        rstr += "Cluster centroid: {0}\n".format(clusters[cn]['cluster_centroid'])
+        rstr += "Cluster {0}\n".format(cluster_num)
+        rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
+        rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
         rstr += "\n"
-        
-        tdata = [("Name","Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment" ) ]
-        for tl in sorted(clusters[cn]['tlevels']):
-            tvar=clusters[cn]['tlevels'][tl]['truncation_variance']
-            nresidues=clusters[cn]['tlevels'][tl]['num_residues']
-            for i, rt in enumerate(sorted(clusters[cn]['tlevels'][tl]['radius_thresholds'])):
-                nmodels=clusters[cn]['tlevels'][tl]['radius_thresholds'][rt]['num_models']
-                # Hack so that side chains come in size order
-                #for j, sct in enumerate(sorted(clusters[cn]['tlevels'][tl]['radius_thresholds'][rt]['sct'])):
-                for j, sct in enumerate(['polya','reliable','allatom']):
-                    name=clusters[cn]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['name']
-                    num_atoms=clusters[cn]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['num_atoms']
-                    if i==0 and j==0: # change of radius
-                        tdata.append((name, tl, tvar, nresidues, rt, nmodels, num_atoms, sct))
-                    elif i > 0 and j==0: # change of side_chain
-                        tdata.append((name, "", "", "", rt, nmodels, num_atoms, sct))
-                    else:
-                        tdata.append((name, "", "", "", "", "", num_atoms, sct))
-                    
-        rstr += tableFormat.pprint_table( tdata )        
+        tdata = cluster_table_data(clusters, cluster_num)
+        rstr += tableFormat.pprint_table(tdata)        
     
     rstr += "\nGenerated {0} ensembles\n\n".format(len(ensembles_data))
     
