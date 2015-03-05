@@ -48,7 +48,7 @@ class JobServer(object):
         
         return
     
-    def start( self, nproc=None, early_terminate=False, check_success=None ):
+    def start(self, nproc=None, early_terminate=False, check_success=None, monitor=None):
         
         assert nproc != None
 
@@ -62,11 +62,13 @@ class JobServer(object):
             processes.append(process)
         
         # Loop through the processes checking if any are done
-        timeout=10*60
         timeout=1*60
         
         # Broken on OSX 
         #qsize=self.outqueue.qsize()
+        
+        if monitor: monitor()
+        
         while len(processes):
             
             for i, process in enumerate(processes):
@@ -94,6 +96,9 @@ class JobServer(object):
                                 print "Removed job [{0}] from inqueue".format(job)
                         else:
                             print "Got empty queue - all jobs done"
+                    
+                    # A process has finished so run the monitor function
+                    if monitor: monitor()
                             
         # need to wait here as sometimes it takes a while for the results files to get written
         time.sleep( 3 )
@@ -101,10 +106,8 @@ class JobServer(object):
 
 # Need this defined outside of the test or it can't be pickled on Windoze
 def _check_success_test( job ):
-    import os
     jobname = os.path.splitext( os.path.basename( job ) )[0]
-    if jobname == "job_2":
-        return True
+    if jobname == "job_2": return True
     return False
  
 class Test(unittest.TestCase):
@@ -132,10 +135,8 @@ time.sleep( 3 )
 sys.exit(0)
 """.format( name )
  
-        f = open( name, 'w' )
-        f.write( script )
-        f.close()
-        os.chmod( name, 0o777)
+        with open( name, 'w' ) as f: f.write( script )
+        os.chmod(name, 0o77)
          
         return name
  
@@ -143,20 +144,17 @@ sys.exit(0)
          
         #print "running in ",os.getcwd()
         jobs = []
-        for j in range( 15 ):
-            j = os.path.abspath("job_{0}.py".format( j ))
-            jobs.append( self.makeJob(j))
+        for j in range(15):
+            j = os.path.abspath("job_{0}.py".format(j))
+            jobs.append(self.makeJob(j))
              
         js = JobServer()
-        js.setJobs( jobs )
-        js.start( nproc=2, early_terminate=True, check_success=_check_success_test )
+        js.setJobs(jobs)
+        js.start(nproc=2, early_terminate=True, check_success=_check_success_test)
          
         # Cleanup
-        for j in jobs:
-            os.unlink(j)
-        for l in glob.glob("job_*.log"):
-            os.unlink(l)
-         
+        for j in jobs: os.unlink(j)
+        for l in glob.glob("job_*.log"): os.unlink(l)
         pass
  
 def testSuite():
