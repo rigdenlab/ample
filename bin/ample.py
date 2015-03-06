@@ -124,6 +124,9 @@ def process_command_line():
     parser.add_argument('-maxcluster_exe', type=str, nargs=1,
                        help='Path to Maxcluster executable')
     
+    parser.add_argument('-max_array_jobs', type=str, nargs=1,
+                       help='Maximum number of array jobs to run')
+    
     parser.add_argument('-max_ensemble_models', type=str, nargs=1,
                        help='Maximum number of models permitted in an ensemble')
     
@@ -266,9 +269,6 @@ def process_command_line():
     parser.add_argument('-truncation_pruning', type=str, nargs=1,
                        help='Whether to remove isolated residues none|single')
     
-    parser.add_argument('-webserver_uri', type=str, nargs=1,
-                       help='URI of the webserver directory - also indicates we are running as a webserver')
-    
     parser.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
                        help='True =use nhomologs, False= dont use them ')
     
@@ -285,6 +285,9 @@ def process_command_line():
                        help='True to use shelxe')
     
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(version.__version__) )
+    
+    parser.add_argument('-webserver_uri', type=str, nargs=1,
+                       help='URI of the webserver directory - also indicates we are running as a webserver')
     
     # Mutually exclusive options
     group = parser.add_mutually_exclusive_group(required=True)

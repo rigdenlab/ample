@@ -343,6 +343,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                                 jobDir=amoptd['work_dir'],
                                 qtype=amoptd['submit_qtype'],
                                 queue=amoptd['submit_queue'],
+                                maxArrayJobs=amoptd['max_array_jobs']
                                 )
             
         # Monitor the cluster queue to see when all jobs have finished
@@ -390,6 +391,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                         queue=None,
                         qtype=None,
                         numArrayJobs=None,
+                        maxArrayJobs=None
                         ):
         """
         Create a string suitable for writing out as the header of the submission script
@@ -409,7 +411,9 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 sh += '#$ -q {0}\n'.format(queue)
             if numArrayJobs:
                 sh += '#$ -o arrayJob_$TASK_ID.log\n'
-                sh += '#$ -t 1-{0}\n'.format(numArrayJobs)    
+                sh += '#$ -t 1-{0}\n'.format(numArrayJobs)
+                if maxArrayJobs:
+                    sh += '#$ -tc {0}\n'.format(maxArrayJobs)
             else:
                 sh += '#$ -o {0}\n'.format(logFile) 
                 sh += '#$ -N {0}\n'.format(jobName)
@@ -529,7 +533,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         return str(qNumber)
     
-    def submitArrayJob(self,jobScripts,jobDir=None,jobTime=None,queue=None,qtype=None):
+    def submitArrayJob(self,jobScripts,jobDir=None,jobTime=None,queue=None,qtype=None,maxArrayJobs=None):
         """Submit a list of jobs as an SGE array job"""
         
         if qtype != "SGE": raise RuntimeError,"Need to add code for non-SGE array jobs"
@@ -561,7 +565,8 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                                   jobTime=jobTime,
                                   queue=queue,
                                   qtype=qtype,
-                                  numArrayJobs=nJobs
+                                  numArrayJobs=nJobs,
+                                  maxArrayJobs=maxArrayJobs
                                   )
         # Command to run 
         s += "scriptlist={0}\n".format(self._scriptFile)

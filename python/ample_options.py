@@ -44,6 +44,7 @@ class AmpleOptions(object):
                             'make_frags' : False,
                             'make_models' : True,
                             'maxcluster_exe' : None,
+                            'max_array_jobs' : None,
                             'max_ensemble_models' : 30,
                             'missing_domain' : False,
                             'models' : None,

@@ -142,14 +142,17 @@ def mrbump_ensemble_cluster(job_scripts, amoptd, monitor=None):
     mrBuild.QTYPE = amoptd['submit_qtype']
     
     if amoptd['submit_array']:
-        mrBuild.submitArrayJob(job_scripts,jobTime=172800,qtype=qtype,queue=amoptd['submit_queue'])
+        mrBuild.submitArrayJob(job_scripts,
+                               jobTime=172800,
+                               qtype=qtype,
+                               queue=amoptd['submit_queue'],
+                               maxArrayJobs=amoptd['max_array_jobs']
+                               )
     else:
-        for script in job_scripts:
-            mrBuild.submitJob(subScript=script)
+        for script in job_scripts: mrBuild.submitJob(subScript=script)
 
     # Monitor the cluster queue to see when all jobs have finished
     mrBuild.monitorQueue(monitor=monitor)
-    
     if amoptd['submit_array']: mrBuild.cleanUpArrayJob()
     return
 
