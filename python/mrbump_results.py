@@ -17,7 +17,7 @@ if __name__ == "__main__":
 if not "CCP4" in os.environ.keys():
     raise RuntimeError('CCP4 not found')
 mrbumpd=os.path.join(os.environ['CCP4'],"share","mrbump","include","parsers")
-#mrbumpd="/home/jmht/mrbump-trunk/include/parsers"
+#mrbumpd="/opt/mrbump-trunk/include/parsers"
 sys.path.insert(0,mrbumpd)
 import parse_buccaneer
 import parse_phaser
@@ -59,6 +59,59 @@ class ResultsSummary(object):
             self.results.append( d )
             count += 1
         self.logger.debug("Added {0} MRBUMP result failures".format(count) )
+        return
+
+    def analyseResult(self,result):
+        
+        mrDir = result["Job_directory"]
+        
+        #result.ensembleName = result.name[9:-6]
+        
+        # Process log
+        #mrbumpP = MrbumpLogParser(result.mrbumpLog)
+        #result.estChainsASU=mrbumpP.noChainsTarget
+        
+        if result["MR_program"] == "PHASER":
+            if result["PHASER_pdbout"]:
+                phaserP = parse_phaser.PhaserPdbParser(result["PHASER_pdbout"])
+                result["PHASER_LLG"] = phaserP.LLG
+                result["PHASER_TFZ"] = phaserP.TFZ
+            
+            phaserLog = os.path.join( mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(result["MR_program"].lower(),result['ensemble_name']) )
+            if os.path.isfile( phaserLog ):
+                phaserP = parse_phaser.PhaserLogParser( phaserLog, onlyTime=True )
+                #result.phaserLog    = phaserLog
+                result["PHASER_time"]   = phaserP.time
+                result["PHASER_killed"] = phaserP.killed
+            
+        #
+        # SHELXE PROCESSING
+        #
+        #
+        # Buccaneer Rebuild Processing
+        #
+        buccaneerLog = os.path.join( mrDir,
+                                     "build/shelxe/rebuild/buccaneer",
+                                     "buccaneer.log" )
+    
+        bp = parse_buccaneer.BuccaneerLogParser()
+        if os.path.isfile( buccaneerLog ):
+            bp.parse( buccaneerLog )
+            result["SXRBUCC_final_Rfree"] = bp.finalRfree
+            result["SXRBUCC_final_Rfact"] = bp.finalRfact
+
+        #
+        # Arpwarp Rebuild Processing
+        #
+        arpLog = os.path.join(mrDir,
+                              "build/shelxe/rebuild/arpwarp",
+                              "arpwarp.log")
+        if os.path.isfile(arpLog):
+                        ap=parse_arpwarp.ArpwarpLogParser()
+                        ap.parse(arpLog)
+                        result["SXRARP_final_Rfact"]=ap.finalRfact
+                        result["SXRARP_final_Rfree"]=ap.finalRfree
+        
         return
 
     def createDict(self):
@@ -371,58 +424,7 @@ class ResultsSummary(object):
                 results.append(d)
         return results
     
-    def analyseResult(self,result):
-        
-        mrDir = result["Job_directory"]
-        
-        #result.ensembleName = result.name[9:-6]
-        
-        # Process log
-        #mrbumpP = MrbumpLogParser(result.mrbumpLog)
-        #result.estChainsASU=mrbumpP.noChainsTarget
-        
-        if result["MR_program"] == "PHASER":
-            if result["PHASER_pdbout"]:
-                phaserP = parse_phaser.PhaserPdbParser(result["PHASER_pdbout"])
-                result["PHASER_LLG"] = phaserP.LLG
-                result["PHASER_TFZ"] = phaserP.TFZ
-            
-            phaserLog = os.path.join( mrDir, "{0}_loc0_ALL_{1}_UNMOD.log".format(result["MR_program"].lower(),result['ensemble_name']) )
-            if os.path.isfile( phaserLog ):
-                phaserP = parse_phaser.PhaserLogParser( phaserLog, onlyTime=True )
-                #result.phaserLog    = phaserLog
-                result["PHASER_time"]   = phaserP.time
-                result["PHASER_killed"] = phaserP.killed
-            
-        #
-        # SHELXE PROCESSING
-        #
-        #
-        # Buccaneer Rebuild Processing
-        #
-        buccaneerLog = os.path.join( mrDir,
-                                     "build/shelxe/rebuild/buccaneer",
-                                     "buccaneer.log" )
-    
-        bp = parse_buccaneer.BuccaneerLogParser()
-        if os.path.isfile( buccaneerLog ):
-            bp.parse( buccaneerLog )
-            result["SXRBUCC_final_Rfree"] = bp.finalRfree
-            result["SXRBUCC_final_Rfact"] = bp.finalRfact
 
-        #
-        # Arpwarp Rebuild Processing
-        #
-        arpLog = os.path.join(mrDir,
-                              "build/shelxe/rebuild/arpwarp",
-                              "arpwarp.log")
-        if os.path.isfile(arpLog):
-                        ap=parse_arpwarp.ArpwarpLogParser()
-                        ap.parse(arpLog)
-                        result["SXRARP_final_Rfact"]=ap.finalRfact
-                        result["SXRARP_final_Rfree"]=ap.finalRfree
-        
-        return
 
     def sortResults( self, results ):
         """
@@ -460,39 +462,39 @@ class ResultsSummary(object):
         else:
             return "\n!!! No results found in directory: {0}\n".format( mrbumpDir )
 
+    def results_table(self,results):
+        resultsTable = []
+        keys = ['ensemble_name', 'MR_program', 'Solution_Type']
+        # Build up list of keys we want to print based on what we find in the results
+        if any([True for r in results if r['PHASER_LLG']]):
+            keys += ['PHASER_LLG']
+        if any([True for r in results if r['PHASER_TFZ']]):
+            keys += ['PHASER_TFZ']
+        if any([True for r in results if r['final_Rfree']]):
+            keys += ['final_Rfact', 'final_Rfree']
+        if any([True for r in results if r['BUCC_final_Rfact']]):
+            keys += ['BUCC_final_Rfact', 'BUCC_final_Rfree']
+        if any([True for r in results if r['ARP_final_Rfact']]):
+            keys += ['ARP_final_Rfact', 'ARP_final_Rfree']
+        if any([True for r in results if r['SHELXE_CC']]):
+            keys += ['SHELXE_CC', 'SHELXE_ACL']
+        if any([True for r in results if r['SXRBUCC_final_Rfact']]):
+            keys += ['SXRBUCC_final_Rfact', 'SXRBUCC_final_Rfree']
+        if any([True for r in results if r['SXRARP_final_Rfact']]):
+            keys += ['SXRARP_final_Rfact', 'SXRARP_final_Rfree']
+        
+        resultsTable.append(keys)
+        for r in results: resultsTable.append([r[k] for k in keys])
+        return resultsTable
+
     def summaryString( self ):
         """Return a string suitable for printing the sorted results"""
 
-        resultsTable = []
-        keys = ['ensemble_name','MR_program','Solution_Type']
-        # Build up list of keys we want to print based on what we find in the results
-        if any([True for r in self.results if r['PHASER_LLG']]):
-            keys += ['PHASER_LLG']
-        if any([True for r in self.results if r['PHASER_TFZ']]):
-            keys += ['PHASER_TFZ']
-        if any([True for r in self.results if r['final_Rfree']]):
-            keys += ['final_Rfact','final_Rfree']
-        if any([True for r in self.results if r['BUCC_final_Rfact']]):
-            keys += ['BUCC_final_Rfact','BUCC_final_Rfree']
-        if any([True for r in self.results if r['ARP_final_Rfact']]):
-            keys += ['ARP_final_Rfact','ARP_final_Rfree']
-        if any([True for r in self.results if r['SHELXE_CC']]):
-            keys += ['SHELXE_CC','SHELXE_ACL']
-        if any([True for r in self.results if r['SXRBUCC_final_Rfact']]):
-            keys += ['SXRBUCC_final_Rfact','SXRBUCC_final_Rfree']
-        if any([True for r in self.results if r['SXRARP_final_Rfact']]):
-            keys += ['SXRARP_final_Rfact','SXRARP_final_Rfree']
-        
-        resultsTable.append(keys)
-        for result in self.results:
-            resultLine = []
-            for k in keys:
-                resultLine.append(result[k])
-            resultsTable.append( resultLine )
+        resultsTable = self.results_table(self.results)
 
         # Format the results
         table = printTable.Table()
-        summary = table.pprint_table( resultsTable )
+        summary = table.pprint_table(resultsTable)
 
         r = "\n\nOverall Summary:\n\n"
         r += summary
@@ -570,8 +572,9 @@ def finalSummary(amoptd):
                 results.append(d)
 
     resultsTable = []
-    keys = ['ensemble_name','MR_program',"PHASER_LLG","PHASER_TFZ",'SHELXE_CC','SHELXE_ACL',"SXRBUCC_final_Rfact","SXRBUCC_final_Rfree",
-            'SXRARP_final_Rfact','SXRARP_final_Rfree','subcluster_num_models','truncation_num_residues']
+    keys = ['ensemble_name','Solution_Type','MR_program',"PHASER_LLG","PHASER_TFZ",'SHELXE_CC','SHELXE_ACL',
+            'SXRBUCC_final_Rfact','SXRBUCC_final_Rfree', 'SXRARP_final_Rfact','SXRARP_final_Rfree',
+            'subcluster_num_models','truncation_num_residues']
 
     resultsTable.append(keys)
     for result in results:
@@ -586,10 +589,10 @@ def finalSummary(amoptd):
 
     r = "\n\nOverall Summary:\n\n"
     r += summary
-
-    r += '\nBest Molecular Replacement results so far are in:\n\n'
-    r +=  results[0]["Job_directory"]
-    r += '\n\n'
+    if len(results) and "Job_directory" in results[0]:
+        r += '\nBest Molecular Replacement results so far are in:\n\n'
+        r +=  str(results[0]["Job_directory"])
+        r += '\n\n'
     return r
 
 
