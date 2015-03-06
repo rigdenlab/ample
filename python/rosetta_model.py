@@ -188,37 +188,39 @@ class RosettaModel(object):
     ##End fragment_cmd
 
 
-    def generate_fragments(self, submit_cluster=None, submit_qtype=None, nproc=None ):
+    def generate_fragments(self, amoptd):
         """
         Run the script to generate the fragments
         """
-
         self.logger.info('----- making fragments--------')
-
-        if not os.path.exists( self.fragments_directory ):
+        if not os.path.exists( self.fragments_directory):
             os.mkdir( self.fragments_directory )
 
         # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
         # so we need to copy the fasta file into the fragments directory
-        fasta = os.path.split(  self.fasta )[1]
-        shutil.copy2( self.fasta, self.fragments_directory + os.sep + fasta )
+        fasta = os.path.split(self.fasta)[1]
+        shutil.copy2(self.fasta, self.fragments_directory + os.sep + fasta)
 
         cmd = self.fragment_cmd()
-        logfile = os.path.join( self.fragments_directory, "make_fragments.log" )
+        logfile = os.path.join(self.fragments_directory, "make_fragments.log")
 
-        if submit_cluster:
+        if amoptd['submit_cluster']:
+            submit_qtype=amoptd['submit_qtype']
             cluster_run = clusterize.ClusterRun()
-            cluster_run.QTYPE = submit_qtype
-            self.logger.info('Submitting fragment generation jobs to a queueing system of type: {0}\n'.format( submit_qtype ) )
-            cluster_run.generateFragmentsOnCluster( cmd=" ".join(cmd),
-                                                    fragmentsDir=self.fragments_directory,
-                                                    nProc=nproc,
-                                                    logFile=logfile )
-            # Monitor the cluster queue to see when all jobs have finished
-            cluster_run.monitorQueue()
-
+            cluster_run.QTYPE=submit_qtype
+            self.logger.info('Submitting fragment generation jobs to a queueing system of type: {0}\n'.format(submit_qtype))
+            script_path = os.path.join(self.fragments_directory, "submit_fragments.sh" )
+            cluster_run.writeFragmentsSubscript(cmd=" ".join(cmd),
+                                                script_path=script_path,
+                                                nProc=amoptd['nproc'],
+                                                logFile=logfile,
+                                                qtype=submit_qtype,
+                                                queue=amoptd['submit_queue']
+                                                )
+            cluster_run.submitJob(subScript=script_path, jobDir=self.fragments_directory)
+            cluster_run.monitorQueue() # Monitor the cluster queue to see when all jobs have finished
         else:
-            retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.fragments_directory )
+            retcode = ample_util.run_command(cmd, logfile=logfile, directory=self.fragments_directory)
             if retcode != 0:
                 msg = "Error generating fragments!\nPlease check the logfile {0}".format( logfile )
                 self.logger.critical( msg )

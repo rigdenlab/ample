@@ -87,19 +87,24 @@ class ClusterRun:
         # write out script
         work_dir = amoptd['work_dir']
         script_path = os.path.join( work_dir, "submit_ensemble.sh" )
-        job_script = open(script_path, "w")
-
-        self.QTYPE = amoptd['submit_qtype']
+        qtype=amoptd['submit_qtype']
+        self.QTYPE = qtype
         logFile= script_path+".log"
-        script_header = self.subScriptHeader( nProc=1, logFile=logFile, jobName="ensemble", jobTime="1:00")
-        job_script.write( script_header )
-
-        # Find path to this directory to get path to python ensemble.py script
-        pydir=os.path.abspath( os.path.dirname( __file__ ) )
-        ensemble_script = os.path.join( pydir, "ensemble.py" )
-
-        job_script.write("{0} {1} {2}\n".format( self.pythonPath, ensemble_script, amoptd['results_path'] ) )
-        job_script.close()
+        with open(script_path, "w") as job_script:
+            script_header = "#!/bin/sh\n"
+            script_header += self.queueDirectives(nProc=1,
+                                                 logFile=logFile,
+                                                 jobName="ensemble",
+                                                 jobTime="1:00",
+                                                 qtype=qtype,
+                                                 queue=amoptd['submit_queue']
+                                                 )
+            job_script.write(script_header)
+    
+            # Find path to this directory to get path to python ensemble.py script
+            pydir=os.path.abspath( os.path.dirname( __file__ ) )
+            ensemble_script = os.path.join(pydir, "ensemble.py")
+            job_script.write("{0} {1} {2}\n".format(self.pythonPath, ensemble_script, amoptd['results_path']))
 
         # Make executable
         os.chmod(script_path, 0o777)
@@ -143,23 +148,21 @@ class ClusterRun:
 
         return status
     
-    def generateFragmentsOnCluster(self, cmd=None, fragmentsDir=None, nProc=None, logFile=None ):
+    def writeFragmentsSubscript(self, cmd=None, script_path=None, nProc=None, logFile=None, queue=None, qtype=None):
         """ Run the modelling step on a cluster """
-
-        # write out script
-        script_path = os.path.join( fragmentsDir, "submit_fragments.sh" )
-        job_script = open(script_path, "w")
-
-        script_header = self.subScriptHeader( nProc=nProc, logFile=logFile, jobName="genFrags")
-        job_script.write( script_header )
-        job_script.write("\n{0}\n".format( cmd ) )
-        job_script.close()
+        with open(script_path, "w") as job_script:
+            script_header="#!/bin/sh\n"
+            script_header+=self.queueDirectives(nProc=nProc,
+                                               logFile=logFile,
+                                               jobName="genFrags",
+                                               qtype=qtype,
+                                               queue=queue
+                                               )
+            job_script.write(script_header)
+            job_script.write("\n{0}\n".format(cmd))
 
         # Make executable
         os.chmod(script_path, 0o777)
-  
-        self.submitJob( subScript=script_path, jobDir=fragmentsDir )
-
         return
 
     def getRunningJobList(self, user=""):
@@ -250,59 +253,57 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         #self.jobLogsList.append(os.path.join(runDir, "pre_models", "logs", jobName + '.log'))
 
         logFile = os.path.join(RunDir, "pre_models", "logs", jobName + '.log')
-        scriptFile=open(sub_script, "w")
-        
-        script_header = self.subScriptHeader(logFile=logFile, jobName=jobName)
-        scriptFile.write(script_header)
-
-        #scriptFile.write("export CCP4_SCR=$TMPDIR\n\n")
-
-        # jmht - this needs to go in the rosetta object
-        scriptFile.write('cd '+ os.path.join(RunDir, "pre_models", "model_" + str(jobNumber)) +'\n\n'+
-             MR_ROSETTA +' \\\n'+
-             '-database '+ROSETTA_DB+' \\\n'+
-             '-MR:mode cm \\\n'+
-             '-in:scriptFile:extended_pose 1 \\\n'+
-             '-in:scriptFile:fasta '+FASTA+' \\\n'+
-             '-in:scriptFile:alignment '+ALI+' \\\n'+
-             '-in:scriptFile:template_pdb '+ideal_homolog+' \\\n'+
-             '-loops:frag_sizes 9 3 1 \\\n'+
-             '-loops:frag_files '+frags_9_mers+' '+frags_3_mers+' none \\\n'+
-             '-loops:random_order \\\n'+
-             '-loops:random_grow_loops_by 5 \\\n'+
-             '-loops:extended \\\n'+
-             '-loops:remodel quick_ccd \\\n'+
-             '-loops:relax relax \\\n'+
-             '-relax:default_repeats 4 \\\n'+
-             '-relax:jump_move true    \\\n'+
-             '-cm:aln_format grishin \\\n'+
-             '-MR:max_gaplength_to_model 8 \\\n'+
-             '-nstruct 1  \\\n'+
-             '-ignore_unrecognized_res \\\n'+
-             '-overwrite \n\n')
-
-        scriptFile.write("pushd " + os.path.join(preModelDir) + "\n\n" +
-
-        self.pdbsetEXE + " xyzin " + PDBInFile + " xyzout " + PDBSetOutFile + "<<eof\n" +
-        "sequence single\n" +
-        "eof\n\n" +
-
-        "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" +
-        "popd\n\n"  )
-        if self.modeller.use_scwrl:
-            scriptFile.write( self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
-            "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" +
-             "\n")
-        else:
-            scriptFile.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )
-
-        # Clean up non-essential files unless we are debugging
-        if self.debug == False:
-            scriptFile.write("rm " + PDBSetOutFile + "\n" +
-            "rm " + os.path.join(preModelDir, "SEQUENCE") + "\n" +
-            "rm " + PDBScwrlFile + "\n\n")
-
-        scriptFile.close()
+        with open(sub_script, "w") as scriptFile:
+            script_header="#!/bin/bash\n"
+            script_header += self.queueDirectives(logFile=logFile, jobName=jobName)
+            scriptFile.write(script_header)
+    
+            #scriptFile.write("export CCP4_SCR=$TMPDIR\n\n")
+    
+            # jmht - this needs to go in the rosetta object
+            scriptFile.write('cd '+ os.path.join(RunDir, "pre_models", "model_" + str(jobNumber)) +'\n\n'+
+                 MR_ROSETTA +' \\\n'+
+                 '-database '+ROSETTA_DB+' \\\n'+
+                 '-MR:mode cm \\\n'+
+                 '-in:scriptFile:extended_pose 1 \\\n'+
+                 '-in:scriptFile:fasta '+FASTA+' \\\n'+
+                 '-in:scriptFile:alignment '+ALI+' \\\n'+
+                 '-in:scriptFile:template_pdb '+ideal_homolog+' \\\n'+
+                 '-loops:frag_sizes 9 3 1 \\\n'+
+                 '-loops:frag_files '+frags_9_mers+' '+frags_3_mers+' none \\\n'+
+                 '-loops:random_order \\\n'+
+                 '-loops:random_grow_loops_by 5 \\\n'+
+                 '-loops:extended \\\n'+
+                 '-loops:remodel quick_ccd \\\n'+
+                 '-loops:relax relax \\\n'+
+                 '-relax:default_repeats 4 \\\n'+
+                 '-relax:jump_move true    \\\n'+
+                 '-cm:aln_format grishin \\\n'+
+                 '-MR:max_gaplength_to_model 8 \\\n'+
+                 '-nstruct 1  \\\n'+
+                 '-ignore_unrecognized_res \\\n'+
+                 '-overwrite \n\n')
+    
+            scriptFile.write("pushd " + os.path.join(preModelDir) + "\n\n" +
+    
+            self.pdbsetEXE + " xyzin " + PDBInFile + " xyzout " + PDBSetOutFile + "<<eof\n" +
+            "sequence single\n" +
+            "eof\n\n" +
+    
+            "tail -n +2 SEQUENCE | sed s'/ //g' >> " + SEQFile + "\n" +
+            "popd\n\n"  )
+            if self.modeller.use_scwrl:
+                scriptFile.write( self.modeller.scwrl_exe + " -i " + PDBInFile + " -o " + PDBScwrlFile + " -s " + SEQFile + "\n\n" +
+                "head -n -1 " + PDBScwrlFile + " >> " + PDBOutFile + "\n" +
+                 "\n")
+            else:
+                scriptFile.write('cp ' + PDBInFile + ' ' +  PDBOutFile + "\n" )
+    
+            # Clean up non-essential files unless we are debugging
+            if self.debug == False:
+                scriptFile.write("rm " + PDBSetOutFile + "\n" +
+                "rm " + os.path.join(preModelDir, "SEQUENCE") + "\n" +
+                "rm " + PDBScwrlFile + "\n\n")
 
         jobDir = os.path.join(self.modeller.work_dir, "pre_models", "submit_scripts")
         
@@ -323,13 +324,13 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         if self.modeller.transmembrane:
             self.modeller.generate_tm_predict()    
         
-        self.setupModellingDir( self.modeller.models_dir )
+        self.setupModellingDir(self.modeller.models_dir)
         
         jobScripts = []
         # loop over the number of models and submit a job to the cluster
         for i in range( amoptd['nmodels'] ):
             jobNumber=i+1
-            jobScript, jobDir = self.writeModelScript(jobNumber)
+            jobScript, jobDir = self.writeModelScript(jobNumber,amoptd)
             if amoptd['submit_array']:
                 jobScripts.append(jobScript)
             else:
@@ -337,7 +338,12 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         # For array jobs we submit as one
         if amoptd['submit_array']:
-            self.submitArrayJob(jobScripts, jobTime=7200, jobDir=amoptd['work_dir'])
+            self.submitArrayJob(jobScripts,
+                                jobTime=7200,
+                                jobDir=amoptd['work_dir'],
+                                qtype=amoptd['submit_qtype'],
+                                queue=amoptd['submit_queue'],
+                                )
             
         # Monitor the cluster queue to see when all jobs have finished
         self.monitorQueue()
@@ -375,6 +381,65 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             if monitor: monitor()
             
         return
+
+    def queueDirectives(self,
+                        nProc=None,
+                        logFile=None,
+                        jobName=None,
+                        jobTime=None,
+                        queue=None,
+                        qtype=None,
+                        numArrayJobs=None,
+                        ):
+        """
+        Create a string suitable for writing out as the header of the submission script
+        for submitting to a particular queueing system
+        """
+        
+        sh = ""
+        if qtype=="SGE":
+            sh += '#$ -j y\n'
+            sh += '#$ -cwd\n'
+            sh += '#$ -w e\n'
+            sh += '#$ -V\n'
+            sh += '#$ -S /bin/bash\n'
+            if jobTime:
+                sh += '#$ -l h_rt={0}\n'.format(jobTime)
+            if queue:
+                sh += '#$ -q {0}\n'.format(queue)
+            if numArrayJobs:
+                '#$ -o arrayJob_$TASK_ID.log\n'
+                '#$ -t 1-{0}\n'.format(numArrayJobs)    
+            else:
+                sh += '#$ -o {0}\n'.format(logFile) 
+                sh += '#$ -N {0}\n'.format(jobName)
+            # jmht hack for morrigan
+            if nProc and nProc > 1:
+                sh += '#$ -pe threaded {0}\n'.format( nProc )
+            sh += '\n'
+        elif qtype=="LSF":
+            assert not numArrayJobs,"Array jobs not supported yet for LSF"
+            # jmht - hard-wired for hartree wonder
+            if nProc and nProc < 16:
+                sh += '#BSUB -R "span[ptile={0}]"\n'.format(nProc)
+            else:
+                sh += '#BSUB -R "span[ptile=16]"\n'
+            if jobTime:
+                sh += '#BSUB -W {0}\n'.format(jobTime)
+            else:
+                sh += '#BSUB -W 4:00\n'
+            if nProc:
+                sh += '#BSUB -n {0}\n'.format(nProc) 
+            if queue:
+                sh += '#BSUB -q {0}\n'.format(queue) 
+            sh += '#BSUB -o {0}\n'.format(logFile) 
+            sh += '#BSUB -J {0}\n'.format(jobName)         
+            sh += '\n'
+        else:
+            raise RuntimeError,"Unrecognised QTYPE: {0}".format(qtype)
+        sh += '\n'
+        
+        return sh
     
     def setupModellingDir(self, RunDir):
         """ A function to create the necessary directories for the modelling step """
@@ -396,48 +461,6 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             os.mkdir(self.logDir)
         
         return
-
-    def subScriptHeader(self, nProc=None, logFile=None, jobName=None, jobTime=None):
-        """
-        Create a string suitable for writing out as the header of the submission script
-        for submitting to a particular queueing system
-        """
-        
-        sh = ""
-        if self.QTYPE=="SGE":
-            sh += '#!/bin/sh\n'
-            sh += '#$ -j y\n'
-            sh += '#$ -cwd\n'
-            sh += '#$ -w e\n'
-            sh += '#$ -V\n'
-            sh += '#$ -S /bin/bash\n'
-            sh += '#$ -o {0}\n'.format(logFile) 
-            sh += '#$ -N {0}\n\n'.format(jobName)
-            # jmht hack for morrigan
-            if nProc and nProc > 1:
-                sh += '#$ -pe threaded {0}\n\n'.format( nProc )
-        elif self.QTYPE=="LSF":
-            sh += '#!/bin/sh\n'
-            # jmht - hard-wired for hartree wonder
-            if nProc and nProc < 16:
-                sh += '#BSUB -R "span[ptile={0}]"\n'.format(nProc)
-            else:
-                sh += '#BSUB -R "span[ptile=16]"\n'
-            if jobTime:
-                sh += '#BSUB -W {0}\n'.format(jobTime)
-            else:
-                sh += '#BSUB -W 4:00\n'
-            if nProc:
-                sh += '#BSUB -n {0}\n'.format(nProc) 
-            sh += '#BSUB -o {0}\n'.format(logFile) 
-            sh += '#BSUB -J {0}\n\n'.format(jobName)         
-        else:
-            raise RuntimeError,"Unrecognised QTYPE: {0}".format(self.QTYPE)
-        
-        # Make sure the CCP4 scratch directory is available
-        sh += '[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n'
-        
-        return sh+'\n\n'
     
     def submitJob(self, subScript=None, jobDir=None):
         """
@@ -506,7 +529,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         return str(qNumber)
     
-    def submitArrayJob(self,jobScripts,jobDir=None,jobTime=None):
+    def submitArrayJob(self,jobScripts,jobDir=None,jobTime=None,queue=None,qtype=None):
         """Submit a list of jobs as an SGE array job"""
         
         if self.QTYPE != "SGE":
@@ -531,29 +554,19 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 
         # Generate the qsub array script
         arrayScript = os.path.abspath(os.path.join(jobDir,"array.script"))
-        if jobTime is None:
-            jobTime="# No runtime specified"
-        else:
-            jobTime="#$ -l h_rt={0}".format(jobTime)
  
         # Write head of script
-        s = """#!/bin/bash
-
-# Set up SGE variables
-#$ -j y
-#$ -cwd
-#$ -w e
-#$ -V
-{0}
-#$ -o arrayJob_$TASK_ID.log
-#$ -t 1-{1}
-#$ -S /bin/bash
-#
-# Ignore for now as we always run single processor jobs
-##$ -pe smp 16
-
-scriptlist={2}
-""".format(jobTime,nJobs,self._scriptFile)
+        s = "#!/bin/sh\n"
+        s += self.queueDirectives(nProc=None,
+                                  logFile=None,
+                                  jobName=None,
+                                  jobTime=jobTime,
+                                  queue=queue,
+                                  qtype=qtype,
+                                  numArrayJobs=nJobs
+                                  )
+        # Command to run 
+        s += "scriptlist={0}\n".format(self._scriptFile)
 
         # Add on the rest of the script - need to do in two bits or the stuff in here gets interpreted by format
         s += """
@@ -569,16 +582,11 @@ cd $jobdir
 # Run the script
 $script
 """
-        
-        with open(arrayScript,'w') as f:
-            f.write(s)
-        
-        # submit the array script
+        with open(arrayScript,'w') as f: f.write(s)
         self.submitJob( subScript=arrayScript, jobDir=jobDir )
-        
         return
 
-    def writeModelScript(self, jobNumber):
+    def writeModelScript(self, jobNumber,amoptd):
         """ Farm out the modelling step on a cluster (SGE) """
         
         nProc=1
@@ -622,7 +630,12 @@ $script
         
         with open(scriptPath, "w") as scriptFile:
             # Modelling always run on single processor
-            script_header = self.subScriptHeader( nProc=1, logFile=logFile, jobName=jobName)
+            script_header="#!/bin/sh\n"
+            script_header += self.queueDirectives(nProc=1,
+                                                  logFile=logFile,
+                                                  jobName=jobName,
+                                                  qtype=amoptd['qtype'],
+                                                  queue=amoptd['queue'])
             scriptFile.write(script_header+"\n\n")
             #scriptFile.write("export CCP4_SCR=$TMPDIR\n\n")
     
@@ -676,8 +689,9 @@ echo "I am script {0}"
         jobScripts.append(script)
     
     c=ClusterRun()
-    c.QTYPE="SGE"
+    qtype="SGE"
+    c.QTYPE=qtype
     
-    c.submitArrayJob(jobScripts)
+    c.submitArrayJob(jobScripts,qtype=qtype)
     c.monitorQueue()
     c.cleanUpArrayJob()

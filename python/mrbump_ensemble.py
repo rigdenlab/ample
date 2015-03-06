@@ -36,25 +36,25 @@ def generate_jobscripts(ensemble_pdbs, amoptd):
     for ensemble_pdb in ensemble_pdbs:
         
         # Get name from pdb path
-        name = os.path.splitext( os.path.basename( ensemble_pdb ) )[0]
+        name = os.path.splitext(os.path.basename(ensemble_pdb))[0]
         
         # May need to run MR separately
         if amoptd['split_mr']:
             # create multiple jobs
             for program in mrbump_programs:
-                jname = "{0}_{1}".format( name, program )
+                jname = "{0}_{1}".format(name, program)
                 amoptd['mrbump_programs'] = [ program ]
                 # HACK - molrep only runs on a single processor
                 # Can't do this any more as any job < 16 can't run on the 12 hour queue
                 #if program == "molrep":
                 #    amoptd['nproc'] = 1
-                script = write_jobscript( name=jname, pdb=ensemble_pdb, amoptd=amoptd )
+                script = write_jobscript(name=jname, pdb=ensemble_pdb, amoptd=amoptd)
                 #amoptd['nproc'] = nproc
                 job_scripts.append( script )
         else:
             # Just run as usual
-            script = write_jobscript( name=name, pdb=ensemble_pdb, amoptd=amoptd )
-            job_scripts.append( script )
+            script = write_jobscript(name=name, pdb=ensemble_pdb, amoptd=amoptd)
+            job_scripts.append(script)
             
     # Reset amoptd
     if amoptd['split_mr']: amoptd['mrbump_programs'] = mrbump_programs
@@ -90,30 +90,33 @@ def write_jobscript(name, pdb, amoptd, directory=None):
     # First write mrbump keyword file
     keyword_file = os.path.join(directory,name+'.mrbump')
     keywords = mrbump_cmd.mrbump_keywords(amoptd, jobid=name, ensemble_pdb=pdb)
-    with open(keyword_file,'w') as f:
-        f.write(keywords)
+    with open(keyword_file,'w') as f: f.write(keywords)
         
     # Next the script to run mrbump
-    ext='.sh'
-    if sys.platform.startswith("win"):
-        ext='.bat'
+    ext='.bat' if sys.platform.startswith("win") else '.sh'
     script_path = os.path.join(directory,name+ext)
-    
     with open(script_path, "w") as job_script:
-        
-        # If on cluster, insert queue header 
+        # Header
+        script_header=""
+        if not sys.platform.startswith("win"): script_header+='#!/bin/sh\n'
         if amoptd['submit_cluster']:
-            # Messy - create an instance to get the script header. Could pass one in to save creating one each time
+            # Add queue directives
             mrBuild = clusterize.ClusterRun()
             mrBuild.QTYPE = amoptd['submit_qtype']
-            logFile=os.path.join( directory, name + ".log" )
-            script_header = mrBuild.subScriptHeader( nProc=amoptd['nproc'], logFile=logFile, jobName=name)
-            job_script.write( script_header )
-            job_script.write("pushd " + directory + "\n\n")
-            # Required on the RAL cluster as the default tmp can be deleted on the nodes
-            if amoptd['submit_qtype'] == "SGE": job_script.write("export CCP4_SCR=$TMPDIR\n\n")
-        else:
-            if not sys.platform.startswith("win"): job_script.write('#!/bin/sh\n') 
+            logFile=os.path.join(directory, name + ".log")
+            script_header += mrBuild.queueDirectives(nProc=amoptd['nproc'],
+                                                     logFile=logFile,
+                                                     jobName=name,
+                                                     queue=amoptd['submit_queue'],
+                                                     qtype=amoptd['submit_qtype']
+                                                     )
+            # Make sure the CCP4 scratch directory is available
+            #if amoptd['submit_qtype'] == "SGE":
+            script_header += "pushd {0}\n".format(directory)
+        
+        script_header += "\nexport CCP4_SCR=$TMPDIR\n"
+        script_header += '[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n'
+        job_script.write(script_header)
         
         # Get the mrbump command-line
         jobcmd = mrbump_cmd.mrbump_cmd(amoptd,name,keyword_file)
@@ -136,13 +139,14 @@ def mrbump_ensemble_cluster(job_scripts, amoptd, monitor=None):
     logger.info("Running MR and model building on a cluster\n\n")
 
     mrBuild = clusterize.ClusterRun()
+    qtype = amoptd['submit_qtype']
     mrBuild.QTYPE = amoptd['submit_qtype']
     
     if amoptd['submit_array']:
-        mrBuild.submitArrayJob(job_scripts,jobTime=172800)
+        mrBuild.submitArrayJob(job_scripts,jobTime=172800,qtype=qtype,queue=amoptd['submit_queue'])
     else:
         for script in job_scripts:
-            mrBuild.submitJob( subScript=script )
+            mrBuild.submitJob(subScript=script)
 
     # Monitor the cluster queue to see when all jobs have finished
     mrBuild.monitorQueue(monitor=monitor)

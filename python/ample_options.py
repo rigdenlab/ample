@@ -89,6 +89,7 @@ class AmpleOptions(object):
                             'submit_array' : True,
                             'submit_cluster' : False,
                             'submit_qtype' : None,
+                            'submit_queue' : None,
                             'theseus_exe' : None,
                             'top_model_only' : False,
                             'transmembrane' : False,

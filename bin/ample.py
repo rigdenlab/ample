@@ -239,6 +239,9 @@ def process_command_line():
     parser.add_argument('-submit_qtype', type=str, nargs=1,
                        help='cluster submission queue type - currently support SGE and LSF')
     
+    parser.add_argument('-submit_queue', type=str, nargs=1,
+                       help='The queue to submit to on the cluster.')
+    
     parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', type=str, nargs=1,
                        help='Path to theseus executable')
     
@@ -428,7 +431,7 @@ def process_options(amoptd,logger):
     
     # Check if importing ensembles
     if amoptd['ensembles_dir']:
-        if not ample_util.check_pdbs(amoptd['ensembles_dir'], "*.pdb"):
+        if not ample_util.check_pdbs(amoptd['ensembles_dir'],single=False):
             msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles_dir'])
             logger.critical(msg)
             sys.exit(1)
@@ -714,9 +717,7 @@ def main():
     
     # Make Rosetta fragments
     if amopt.d['make_frags']:
-        rosetta_modeller.generate_fragments( submit_cluster=amopt.d['submit_cluster'],
-                                             submit_qtype=amopt.d['submit_qtype'],
-                                             nproc=amopt.d['nproc'] )
+        rosetta_modeller.generate_fragments(amopt.d)
         amopt.d['frags_3mers'] = rosetta_modeller.frags_3mers
         amopt.d['frags_9mers'] = rosetta_modeller.frags_9mers
     
@@ -821,11 +822,11 @@ def main():
     os.chdir(bump_dir)
     amopt.d['mrbump_dir'] = bump_dir
     amopt.d['mrbump_results'] = []
-    logger.info("Running MRBUMP jobs in directory: {0}".format( bump_dir ) )
+    logger.info("Running MRBUMP jobs in directory: {0}".format(bump_dir))
     
     # Create job scripts
     logger.info("Generating MRBUMP runscripts")
-    job_scripts = mrbump_ensemble.generate_jobscripts( ensembles, amopt.d )
+    job_scripts = mrbump_ensemble.generate_jobscripts(ensembles, amopt.d)
     #continue
     
     # Create function for monitoring jobs
