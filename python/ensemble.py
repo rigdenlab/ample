@@ -99,7 +99,7 @@ def cluster_table_data(clusters, cluster_num):
             nmodels = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['num_models']
         # Hack so that side chains come in size order
         #for j, sct in enumerate(sorted(clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'])):
-            for j, sct in enumerate(['polya', 'reliable', 'allatom']):
+            for j, sct in enumerate(['polyAla', 'reliable', 'allatom']):
                 name = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['name']
                 num_atoms = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['num_atoms']
                 if i == 0 and j == 0: # change of radius

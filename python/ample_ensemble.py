@@ -48,7 +48,7 @@ class Ensembler(object):
         self.ensemble_max_models=30
         
         # Side chains
-        self.side_chain_treatments=['allatom','reliable','polya']
+        self.side_chain_treatments=['allatom','reliable','polyAla']
         
         # ensembles
         self.ensembles_directory=None
@@ -271,7 +271,7 @@ class Ensembler(object):
                 shutil.copy2(raw_ensemble,fpath)
             elif sct == "reliable":
                 pdb_edit.reliable_sidechains(raw_ensemble,fpath)
-            elif sct == "polya":
+            elif sct == "polyAla":
                 pdb_edit.backbone(raw_ensemble,fpath)
             else:
                 raise RuntimeError,"Unrecognised side_chain_treatment: {0}".format(sct)
@@ -970,28 +970,28 @@ class Test(unittest.TestCase):
                                                  truncation_method=truncation_method,
                                                  work_dir=work_dir)
 
-        eref=['c1_tl100_r2_allatom.pdb', 'c1_tl100_r2_reliable.pdb', 'c1_tl100_r2_polya.pdb', 'c1_tl100_r3_allatom.pdb',
-              'c1_tl100_r3_reliable.pdb', 'c1_tl100_r3_polya.pdb', 'c1_tl95_r2_allatom.pdb', 'c1_tl95_r2_reliable.pdb',
-              'c1_tl95_r2_polya.pdb', 'c1_tl95_r3_allatom.pdb', 'c1_tl95_r3_reliable.pdb', 'c1_tl95_r3_polya.pdb', 'c1_tl90_r1_allatom.pdb',
-              'c1_tl90_r1_reliable.pdb', 'c1_tl90_r1_polya.pdb', 'c1_tl90_r2_allatom.pdb', 'c1_tl90_r2_reliable.pdb', 'c1_tl90_r2_polya.pdb',
-              'c1_tl90_r3_allatom.pdb', 'c1_tl90_r3_reliable.pdb', 'c1_tl90_r3_polya.pdb', 'c1_tl85_r1_allatom.pdb', 'c1_tl85_r1_reliable.pdb',
-              'c1_tl85_r1_polya.pdb', 'c1_tl85_r2_allatom.pdb', 'c1_tl85_r2_reliable.pdb', 'c1_tl85_r2_polya.pdb', 'c1_tl85_r3_allatom.pdb',
-              'c1_tl85_r3_reliable.pdb', 'c1_tl85_r3_polya.pdb', 'c1_tl80_r1_allatom.pdb', 'c1_tl80_r1_reliable.pdb', 'c1_tl80_r1_polya.pdb',
-              'c1_tl80_r2_allatom.pdb', 'c1_tl80_r2_reliable.pdb', 'c1_tl80_r2_polya.pdb', 'c1_tl80_r3_allatom.pdb', 'c1_tl80_r3_reliable.pdb',
-              'c1_tl80_r3_polya.pdb', 'c1_tl75_r1_allatom.pdb', 'c1_tl75_r1_reliable.pdb', 'c1_tl75_r1_polya.pdb', 'c1_tl75_r2_allatom.pdb',
-              'c1_tl75_r2_reliable.pdb', 'c1_tl75_r2_polya.pdb', 'c1_tl75_r3_allatom.pdb', 'c1_tl75_r3_reliable.pdb', 'c1_tl75_r3_polya.pdb',
-              'c1_tl69_r1_allatom.pdb', 'c1_tl69_r1_reliable.pdb', 'c1_tl69_r1_polya.pdb', 'c1_tl69_r2_allatom.pdb', 'c1_tl69_r2_reliable.pdb',
-              'c1_tl69_r2_polya.pdb', 'c1_tl64_r1_allatom.pdb', 'c1_tl64_r1_reliable.pdb', 'c1_tl64_r1_polya.pdb', 'c1_tl64_r2_allatom.pdb',
-              'c1_tl64_r2_reliable.pdb', 'c1_tl64_r2_polya.pdb', 'c1_tl59_r1_allatom.pdb', 'c1_tl59_r1_reliable.pdb', 'c1_tl59_r1_polya.pdb',
-              'c1_tl59_r2_allatom.pdb', 'c1_tl59_r2_reliable.pdb', 'c1_tl59_r2_polya.pdb', 'c1_tl54_r1_allatom.pdb', 'c1_tl54_r1_reliable.pdb',
-              'c1_tl54_r1_polya.pdb', 'c1_tl54_r2_allatom.pdb', 'c1_tl54_r2_reliable.pdb', 'c1_tl54_r2_polya.pdb', 'c1_tl49_r1_allatom.pdb',
-              'c1_tl49_r1_reliable.pdb', 'c1_tl49_r1_polya.pdb', 'c1_tl49_r2_allatom.pdb', 'c1_tl49_r2_reliable.pdb', 'c1_tl49_r2_polya.pdb',
-              'c1_tl44_r1_allatom.pdb', 'c1_tl44_r1_reliable.pdb', 'c1_tl44_r1_polya.pdb', 'c1_tl44_r2_allatom.pdb', 'c1_tl44_r2_reliable.pdb',
-              'c1_tl44_r2_polya.pdb', 'c1_tl39_r1_allatom.pdb', 'c1_tl39_r1_reliable.pdb', 'c1_tl39_r1_polya.pdb', 'c1_tl34_r1_allatom.pdb',
-              'c1_tl34_r1_reliable.pdb', 'c1_tl34_r1_polya.pdb', 'c1_tl29_r1_allatom.pdb', 'c1_tl29_r1_reliable.pdb', 'c1_tl29_r1_polya.pdb', 
-              'c1_tl24_r1_allatom.pdb', 'c1_tl24_r1_reliable.pdb', 'c1_tl24_r1_polya.pdb', 'c1_tl19_r1_allatom.pdb', 'c1_tl19_r1_reliable.pdb',
-              'c1_tl19_r1_polya.pdb', 'c1_tl14_r1_allatom.pdb', 'c1_tl14_r1_reliable.pdb', 'c1_tl14_r1_polya.pdb', 'c1_tl8_r1_allatom.pdb',
-              'c1_tl8_r1_reliable.pdb', 'c1_tl8_r1_polya.pdb']
+        eref=['c1_tl100_r2_allatom.pdb', 'c1_tl100_r2_reliable.pdb', 'c1_tl100_r2_polyAla.pdb', 'c1_tl100_r3_allatom.pdb',
+              'c1_tl100_r3_reliable.pdb', 'c1_tl100_r3_polyAla.pdb', 'c1_tl95_r2_allatom.pdb', 'c1_tl95_r2_reliable.pdb',
+              'c1_tl95_r2_polyAla.pdb', 'c1_tl95_r3_allatom.pdb', 'c1_tl95_r3_reliable.pdb', 'c1_tl95_r3_polyAla.pdb', 'c1_tl90_r1_allatom.pdb',
+              'c1_tl90_r1_reliable.pdb', 'c1_tl90_r1_polyAla.pdb', 'c1_tl90_r2_allatom.pdb', 'c1_tl90_r2_reliable.pdb', 'c1_tl90_r2_polyAla.pdb',
+              'c1_tl90_r3_allatom.pdb', 'c1_tl90_r3_reliable.pdb', 'c1_tl90_r3_polyAla.pdb', 'c1_tl85_r1_allatom.pdb', 'c1_tl85_r1_reliable.pdb',
+              'c1_tl85_r1_polyAla.pdb', 'c1_tl85_r2_allatom.pdb', 'c1_tl85_r2_reliable.pdb', 'c1_tl85_r2_polyAla.pdb', 'c1_tl85_r3_allatom.pdb',
+              'c1_tl85_r3_reliable.pdb', 'c1_tl85_r3_polyAla.pdb', 'c1_tl80_r1_allatom.pdb', 'c1_tl80_r1_reliable.pdb', 'c1_tl80_r1_polyAla.pdb',
+              'c1_tl80_r2_allatom.pdb', 'c1_tl80_r2_reliable.pdb', 'c1_tl80_r2_polyAla.pdb', 'c1_tl80_r3_allatom.pdb', 'c1_tl80_r3_reliable.pdb',
+              'c1_tl80_r3_polyAla.pdb', 'c1_tl75_r1_allatom.pdb', 'c1_tl75_r1_reliable.pdb', 'c1_tl75_r1_polyAla.pdb', 'c1_tl75_r2_allatom.pdb',
+              'c1_tl75_r2_reliable.pdb', 'c1_tl75_r2_polyAla.pdb', 'c1_tl75_r3_allatom.pdb', 'c1_tl75_r3_reliable.pdb', 'c1_tl75_r3_polyAla.pdb',
+              'c1_tl69_r1_allatom.pdb', 'c1_tl69_r1_reliable.pdb', 'c1_tl69_r1_polyAla.pdb', 'c1_tl69_r2_allatom.pdb', 'c1_tl69_r2_reliable.pdb',
+              'c1_tl69_r2_polyAla.pdb', 'c1_tl64_r1_allatom.pdb', 'c1_tl64_r1_reliable.pdb', 'c1_tl64_r1_polyAla.pdb', 'c1_tl64_r2_allatom.pdb',
+              'c1_tl64_r2_reliable.pdb', 'c1_tl64_r2_polyAla.pdb', 'c1_tl59_r1_allatom.pdb', 'c1_tl59_r1_reliable.pdb', 'c1_tl59_r1_polyAla.pdb',
+              'c1_tl59_r2_allatom.pdb', 'c1_tl59_r2_reliable.pdb', 'c1_tl59_r2_polyAla.pdb', 'c1_tl54_r1_allatom.pdb', 'c1_tl54_r1_reliable.pdb',
+              'c1_tl54_r1_polyAla.pdb', 'c1_tl54_r2_allatom.pdb', 'c1_tl54_r2_reliable.pdb', 'c1_tl54_r2_polyAla.pdb', 'c1_tl49_r1_allatom.pdb',
+              'c1_tl49_r1_reliable.pdb', 'c1_tl49_r1_polyAla.pdb', 'c1_tl49_r2_allatom.pdb', 'c1_tl49_r2_reliable.pdb', 'c1_tl49_r2_polyAla.pdb',
+              'c1_tl44_r1_allatom.pdb', 'c1_tl44_r1_reliable.pdb', 'c1_tl44_r1_polyAla.pdb', 'c1_tl44_r2_allatom.pdb', 'c1_tl44_r2_reliable.pdb',
+              'c1_tl44_r2_polyAla.pdb', 'c1_tl39_r1_allatom.pdb', 'c1_tl39_r1_reliable.pdb', 'c1_tl39_r1_polyAla.pdb', 'c1_tl34_r1_allatom.pdb',
+              'c1_tl34_r1_reliable.pdb', 'c1_tl34_r1_polyAla.pdb', 'c1_tl29_r1_allatom.pdb', 'c1_tl29_r1_reliable.pdb', 'c1_tl29_r1_polyAla.pdb', 
+              'c1_tl24_r1_allatom.pdb', 'c1_tl24_r1_reliable.pdb', 'c1_tl24_r1_polyAla.pdb', 'c1_tl19_r1_allatom.pdb', 'c1_tl19_r1_reliable.pdb',
+              'c1_tl19_r1_polyAla.pdb', 'c1_tl14_r1_allatom.pdb', 'c1_tl14_r1_reliable.pdb', 'c1_tl14_r1_polyAla.pdb', 'c1_tl8_r1_allatom.pdb',
+              'c1_tl8_r1_reliable.pdb', 'c1_tl8_r1_polyAla.pdb']
         self.assertEqual([os.path.basename(m) for m in ensembles],eref)
         d = ensembler.ensembles_data[5]
 
@@ -1043,7 +1043,7 @@ class Test(unittest.TestCase):
         self.assertEqual(d['cluster_method'],cluster_method)
         self.assertEqual(d['num_clusters'],num_clusters)
         self.assertEqual(d['ensemble_num_atoms'],290)
-        self.assertEqual(d['side_chain_treatment'],'polya')
+        self.assertEqual(d['side_chain_treatment'],'polyAla')
         self.assertEqual(os.path.basename(d['subcluster_centroid_model']),'4_S_00000002.pdb')
         
         shutil.rmtree(ensembler.work_dir)
