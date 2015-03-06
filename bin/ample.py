@@ -224,6 +224,12 @@ def process_command_line():
     parser.add_argument('-shelxe_rebuild', metavar='True/False', type=str, nargs=1,
                        help='Rebuild shelxe traced pdb with buccaneer and arpwarp')
     
+    parser.add_argument('-shelxe_rebuild_arpwarp', metavar='True/False', type=str, nargs=1,
+                       help='Rebuild shelxe traced pdb with arpwarp')
+    
+    parser.add_argument('-shelxe_rebuild_buccaneer', metavar='True/False', type=str, nargs=1,
+                       help='Rebuild shelxe traced pdb with buccaneer')
+    
     parser.add_argument('-SIGF', metavar='SIGF', type=str, nargs=1,
                        help='Flag for SIGF column in the MTZ file')
     

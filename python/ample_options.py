@@ -84,6 +84,8 @@ class AmpleOptions(object):
                             'shelx_cycles' : 15,
                             'shelxe_exe' : None,
                             'shelxe_rebuild' : False,
+                            'shelxe_rebuild_arpwarp' : False,
+                            'shelxe_rebuild_buccaneer' : False,
                             'SIGF' : None,
                             'spicker_exe' : None,
                             'split_mr' : False,
@@ -193,7 +195,11 @@ class AmpleOptions(object):
         # Any changes here
         if self.d['submit_qtype']:
             self.d['submit_qtype'] = self.d['submit_qtype'].upper()
-
+            
+        
+        if self.d['shelxe_rebuild']:
+            self.d['shelxe_rebuild_arpwap']=True
+            self.d['shelxe_rebuild_buccaneer']=True
 
         # Convert all paths to absolute paths
         paths = [
