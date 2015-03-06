@@ -408,8 +408,8 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             if queue:
                 sh += '#$ -q {0}\n'.format(queue)
             if numArrayJobs:
-                '#$ -o arrayJob_$TASK_ID.log\n'
-                '#$ -t 1-{0}\n'.format(numArrayJobs)    
+                sh += '#$ -o arrayJob_$TASK_ID.log\n'
+                sh += '#$ -t 1-{0}\n'.format(numArrayJobs)    
             else:
                 sh += '#$ -o {0}\n'.format(logFile) 
                 sh += '#$ -N {0}\n'.format(jobName)
@@ -532,9 +532,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
     def submitArrayJob(self,jobScripts,jobDir=None,jobTime=None,queue=None,qtype=None):
         """Submit a list of jobs as an SGE array job"""
         
-        if self.QTYPE != "SGE":
-            raise RuntimeError,"Need to add code for non-SGE array jobs"
-
+        if qtype != "SGE": raise RuntimeError,"Need to add code for non-SGE array jobs"
         if jobDir is None:
             if self.scriptDir and os.path.isdir(self.scriptDir):
                 jobDir=self.scriptDir

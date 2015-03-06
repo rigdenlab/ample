@@ -84,7 +84,6 @@ def write_jobscript(name, pdb, amoptd, directory=None):
     Should think about a neater way to do this rather then split the parallel stuff
     across two modules.
     """
-    
     if not directory: directory = os.getcwd()
         
     # First write mrbump keyword file
