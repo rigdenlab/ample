@@ -135,6 +135,14 @@ class AmpleOptions(object):
                            'phaser_kill' : 360,
                            #'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
                         }
+        
+        self.webserver_uri = {
+                               'submit_cluster' : True,
+                               'submit_qtype' : "SGE",
+                               'submit_queue' : "all.q",
+                               'max_array_jobs' : 10,
+                               'shelxe_rebuild_buccaneer': True
+                               }
 
         # We have a debug mode as the logger isn't activated when we run
         self.debug = False
@@ -195,7 +203,6 @@ class AmpleOptions(object):
         # Any changes here
         if self.d['submit_qtype']:
             self.d['submit_qtype'] = self.d['submit_qtype'].upper()
-            
         
         if self.d['shelxe_rebuild']:
             self.d['shelxe_rebuild_arpwap']=True
@@ -238,40 +245,29 @@ class AmpleOptions(object):
                 self.d[ k ] = os.path.abspath( v )
 
         # Check if using any preset options
-        if self.d['devel_mode']:
-            for k, v in self.devel_mode.iteritems():
-                # Set any that haven't been set
-                if self.d[k] == None:
-                    self.d[k] = v
-                else:
-                    # Already set - only overwrite if it's set to a default value, otherwise we
-                    # let the user go with what they've chosen but warn
-                    if self.d[k] != self.defaults[k] and self.d[k] != v  :
-                        print "WARNING! Overriding devel_mode setting: {0} : {1} with user setting {2}".format( k, v, self.d[k] )
-                    else:
-                        # We overwrite the default with our value
-                        if self.debug:
-                            print "Overriding default setting: {0} : {1} with devel_mode setting {2}".format( k, self.defaults[k], v )
-                        self.d[k] = v
-
-        if self.d['quick_mode']:
-            for k, v in self.quick_mode.iteritems():
-                # Set any that haven't been set
-                if self.d[k] == None:
-                    self.d[k] = v
-                else:
-                    # Already set - only overwrite if it's set to a default value, otherwise we
-                    # let the user go with what they've chosen but warn
-                    if self.d[k] != self.defaults[k] and self.d[k] != v  :
-                        print "WARNING! Overriding quick_mode setting: {0} : {1} with user setting {2}".format( k, v, self.d[k] )
-                    else:
-                        # We overwrite the default with our value
-                        if self.debug:
-                            print "Overriding default setting: {0} : {1} with quick_mode setting {2}".format( k, self.defaults[k], v )
-                        self.d[k] = v
-
+        if self.d['devel_mode']: self.preset_options('devel_mode')
+        if self.d['quick_mode']:self.preset_options('quick_mode')
+        if self.d['webserver_uri']:self.preset_options('webserver_uri')
         return
-
+    
+    def preset_options(self,mode):
+        assert hasattr(self,mode),"Unknown mode: {0}".format(mode)
+        for k, v in getattr(self, mode).iteritems():
+            # Set any that haven't been set
+            if self.d[k] == None:
+                self.d[k] = v
+            else:
+                # Already set - only overwrite if it's set to a default value, otherwise we
+                # let the user go with what they've chosen but warn
+                if self.d[k] != self.defaults[k] and self.d[k] != v  :
+                    print "WARNING! Overriding {0} setting: {1} : {2} with user setting {3}".format(mode, k, v, self.d[k])
+                else:
+                    # We overwrite the default with our value
+                    if self.debug:
+                        print "Overriding default setting: {0} : {1} with {2} setting {3}".format(k, mode, self.defaults[k], v)
+                    self.d[k] = v
+        return
+       
     def prettify_parameters(self):
         """
         Return the parameters nicely formated as a list of strings suitable for writing out to a file
