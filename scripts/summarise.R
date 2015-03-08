@@ -9,7 +9,8 @@ cls <- c(SHELXE_CC="numeric",
 		PHASER_LLG="numeric"
 )
 
-data <- read.csv(file="/home/jmht/Downloads/results.csv",sep=',', header=T, stringsAsFactors=FALSE, na.strings="N/A", colClasses=cls)
+f=allresults.csv
+data <- read.csv(file=f,sep=',', header=T, stringsAsFactors=FALSE, na.strings="N/A", colClasses=cls)
 
 # Convert to numeric
 # Need to replace all N/As with none
