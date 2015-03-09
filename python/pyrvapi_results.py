@@ -19,8 +19,8 @@ import mrbump_results
 try: import pyrvapi
 except: pyrvapi=None
 
-_widgets=None
 _running=None
+_tabs=None
 _webserver_uri=None
 _wbeserver_start=None
 
@@ -52,7 +52,7 @@ def fill_table(table_id, tdata):
             1, # rowSpan
             1) # colSpan
     
-    pyrvapi.rvapi_flush()
+    #pyrvapi.rvapi_flush()
     return
 
 def summary_tab(results_dict):
@@ -61,7 +61,7 @@ def summary_tab(results_dict):
     #
     if not('ensembles_data' in results_dict and len(results_dict['ensembles_data'])): return
     ensembles_data=results_dict['ensembles_data']
-    #print "ADDING SUMMARY TAB ",len(ensembles_data)
+    print "ADDING SUMMARY TAB ",len(ensembles_data)
     
     summary_tab="summary_tab"
     pyrvapi.rvapi_add_tab(summary_tab,"Summary",True) # Last arg is "open" - i.e. show or hide
@@ -107,7 +107,7 @@ def summary_tab(results_dict):
     pyrvapi.rvapi_add_table1(mrbump_sec+"/"+mrbump_table,"MRBUMP Results",1,0,1,1,True)
     mrb_data = mrbump_results.ResultsSummary().results_table(mrb_results)
     fill_table(mrbump_table, mrb_data)
-    pyrvapi.rvapi_flush()
+    #pyrvapi.rvapi_flush()
     return summary_tab
 
 def results_tab(results_dict):
@@ -116,7 +116,7 @@ def results_tab(results_dict):
     #
     if not ('mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
     mrb_results=results_dict['mrbump_results']
-    #print "ADDING RESULTS TAB ",len(mrb_results)
+    print "ADDING RESULTS TAB ",len(mrb_results)
     
     results_tab="results_tab"
     pyrvapi.rvapi_add_tab(results_tab,"Results",True) # Last arg is "open" - i.e. show or hide
@@ -198,34 +198,38 @@ def results_tab(results_dict):
                                         2,0,1,1,True)
         
         pyrvapi.rvapi_set_tree_node("results_tree",sec_id,"{0}".format(name),"auto","")
-        pyrvapi.rvapi_flush()
+        #pyrvapi.rvapi_flush()
         
     return results_tab
         
 def log_tab(logfile):
-    #print "ADDING LOG TAB"
+    print "ADDING LOG TAB"
     log_tab="log_tab"
     pyrvapi.rvapi_add_tab(log_tab,"Log file",True) # Last arg is "open" - i.e. show or hide
     # Add watched (updatable) content to the log tab. Note that the
     # log file does not exist yet.
     pyrvapi.rvapi_append_content(logfile,True,log_tab)
-    pyrvapi.rvapi_flush()
+    #pyrvapi.rvapi_flush()
     return log_tab
 
 def display_results(results_dict,run_dir=None):
-    global _running,_widgets
-    global _webserver_uri,_webserver_start
+    global _running,_tabs,_webserver_uri,_webserver_start
     logger=logging.getLogger()
     if not pyrvapi:
         msg="Cannot display results using pyrvapi!"
         logger.critical(msg)
         return False
     
-    if not _running:
+    # Remove all tabs
+    if _tabs:
+        for t in _tabs: pyrvapi.rvapi_remove_tab(t)
+        pyrvapi.rvapi_flush()
+
+    if not _running:        
         # Infrastructure to run
         ccp4 = os.environ["CCP4"]
         share_jsrview = os.path.join(ccp4, "share", "jsrview")
-        if not run_dir: run_dir=os.path.join(results_dict['work_dir'],"jsrview_tmp")
+        if not run_dir: run_dir=os.path.join(results_dict['work_dir'],"jsrview")
         if not os.path.isdir(run_dir): os.mkdir(run_dir)
         pyrvapi.rvapi_init_document ("AMPLE_results",run_dir,"AMPLE Results",1,7,share_jsrview,None,None,None)
         if 'webserver_uri' in results_dict and results_dict['webserver_uri']:
@@ -237,20 +241,17 @@ def display_results(results_dict,run_dir=None):
             jsrview = os.path.join(ccp4, "libexec", "jsrview")
             subprocess.Popen([jsrview, os.path.join(run_dir,"index.html")])
         pyrvapi.rvapi_add_header("AMPLE Results")
+        #print "RUNNING display_results ",len(results_dict['mrbump_results']) if 'mrbump_results' in results_dict else "NO RESULTS"
         _running=True
-    else:
-        for w in _widgets: pyrvapi.rvapi_remove_widget(w)
-        pyrvapi.rvapi_flush()
-    
-    #print "RUNNING display_results ",len(results_dict['mrbump_results']) if 'mrbump_results' in results_dict else "NO RESULTS"
         
-    _widgets=[]
-    w=summary_tab(results_dict)
-    if w: _widgets.append(w)
-    w=results_tab(results_dict)
-    if w: _widgets.append(w)
-    w=log_tab(results_dict['ample_log'])
-    if w: _widgets.append(w)
+    _tabs=[]
+    t=summary_tab(results_dict)
+    if t: _tabs.append(t)
+    t=results_tab(results_dict)
+    if t: _tabs.append(t)
+    t=log_tab(results_dict['ample_log'])
+    if t: _tabs.append(t)
+    pyrvapi.rvapi_flush()
     
     return True
 
@@ -261,16 +262,19 @@ if __name__=="__main__":
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
     results_dict['webserver_uri']=None
     display_results(results_dict)
-    time.sleep(10)
+    print "TAB 1"
+    time.sleep(5)
     pklfile="/opt/ample-dev1/examples/toxd-example/resultsd2.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
     results_dict['webserver_uri']=None
     display_results(results_dict)
-    time.sleep(10)
+    print "TAB 2"
+    time.sleep(5)
     pklfile="/opt/ample-dev1/examples/toxd-example/resultsd3.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
     results_dict['webserver_uri']=None
     display_results(results_dict)
+    print "TAB 3"
 
