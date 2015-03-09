@@ -24,6 +24,31 @@ _tabs=None
 _webserver_uri=None
 _wbeserver_start=None
 
+_tooltips={
+           "ensemble_name" : "The identifier of the AMPLE ensemble search model",
+           "MR_program" : "Molecular replacement program",
+           "Solution_Type" : "MRBUMP categorisation of the solution",
+           "PHASER_LLG" : "PHASER Log-likelihood gain for the Molecular Replacment solution",
+           "PHASER_TFZ" : "PHASER Translation Function Z-score for the Molecular Replacment solution",
+           "final_Rfact" : "Rfact score for REFMAC refinement of the Molecular Replacement solution",
+           "final_Rfree" : "Rfree score for REFMAC refinement of the Molecular Replacement solution",
+           "SHELXE_CC" : "SHELXE Correlation Coefficient score after C-alpha trace",
+           "SHELXE_ACL" : "Average Chain Length of the fragments of the SHELXE C-alpha trace",
+           "SXRBUCC_final_Rfact" : "Rfact score for BUCCANEER rebuild of the SHELXE C-alpha trace",
+           "SXRBUCC_final_Rfree" : "Rfact score for BUCCANEER rebuild of the SHELXE C-alpha trace",
+           "SXRARP_final_Rfact" : "Rfact score for ARPWARP rebuild of the SHELXE C-alpha trace",
+           "SXRAP_final_Rfree" : "Rfact score for ARPWARP rebuild of the SHELXE C-alpha trace",
+           }
+
+def ensemble_pdb(mrbump_result,results_dict):
+    ed=None
+    for e in results_dict['ensembles_data']:
+        if e['name']==mrbump_result['ensemble_name']:
+            ed=e
+            break
+    assert ed,"Could not find ensemble!"
+    return ed['ensemble_pdb']
+
 def fix_path(path):
     """Ammend path so it's suitable for the webserver"""
     global _webserver_uri,_webserver_start
@@ -32,10 +57,12 @@ def fix_path(path):
     else: return path
     
 def fill_table(table_id, tdata):
+    global _tooltips
     # Make column headers
     for i in range(len(tdata[0])): # Skip name as it's the row header
         h=tdata[0][i]
-        pyrvapi.rvapi_put_horz_theader(table_id, h.encode('utf-8'), "", i) # Add table data
+        tt=_tooltips[h] if h in _tooltips else ""
+        pyrvapi.rvapi_put_horz_theader(table_id, h.encode('utf-8'), tt, i) # Add table data
     
     ir=len(tdata)-1 if len(tdata) > 2 else 2
     for i in range(1, ir):
@@ -60,7 +87,6 @@ def summary_tab(results_dict):
     #
     if not('ensembles_data' in results_dict and len(results_dict['ensembles_data'])): return
     ensembles_data=results_dict['ensembles_data']
-    print "ADDING SUMMARY TAB ",len(ensembles_data)
     
     summary_tab="summary_tab"
     pyrvapi.rvapi_add_tab(summary_tab,"Summary",True) # Last arg is "open" - i.e. show or hide
@@ -114,7 +140,6 @@ def results_tab(results_dict):
     #
     if not ('mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
     mrb_results=results_dict['mrbump_results']
-    print "ADDING RESULTS TAB ",len(mrb_results)
     
     results_tab="results_tab"
     pyrvapi.rvapi_add_tab(results_tab,"Results",True) # Last arg is "open" - i.e. show or hide
@@ -123,19 +148,38 @@ def results_tab(results_dict):
     
     for r in mrb_results:
         name=r['ensemble_name']
-        sec_id="sec_{0}".format(name)
-        pyrvapi.rvapi_add_section(sec_id,"Results for: {0}".format(name),results_tree,0,0,1,1,True)
+        #container_id="sec_{0}".format(name)
+        #pyrvapi.rvapi_add_section(container_id,"Results for: {0}".format(name),results_tree,0,0,1,1,True)
+        container_id="sec_{0}".format(name)
+        pyrvapi.rvapi_add_panel(container_id,results_tree,0,0,1,1)
+        
+        header="<h3>Results for ensemble: {0}</h3>".format(name)
+        pyrvapi.rvapi_add_text(header,container_id,0,0,1,1 )
+        
         sec_table="sec_table_{0}".format(name)
-        pyrvapi.rvapi_add_section(sec_table,"Results table: {0}".format(name),sec_id,0,0,1,1,True)
+        title="Results table: {0}".format(name)
+        title="Summary"
+        pyrvapi.rvapi_add_section(sec_table,title,container_id,0,0,1,1,True)
         table_id="table_{0}".format(name)
         pyrvapi.rvapi_add_table(table_id,"",sec_table,1,0,1,1,False)
         tdata=mrbump_results.ResultsSummary().results_table([r])
         fill_table(table_id,tdata)
         
+        # Ensemble
+        epdb=ensemble_pdb(r,results_dict)
+        sec_ensemble="sec_ensemble_{0}".format(name)
+        pyrvapi.rvapi_add_section(sec_ensemble,"Ensemble Search Model",container_id,0,0,1,1,False )
+        data_ensemble="data_ensemble_{0}".format(name)
+        pyrvapi.rvapi_add_data(data_ensemble,
+                                "Ensemble PDB",
+                                fix_path(epdb),
+                                "XYZOUT",
+                                sec_ensemble,
+                                2,0,1,1,True)
         # PHASER
         if r['PHASER_logfile'] or (r['PHASER_pdbout'] and r['PHASER_mtzout']):
             sec_phaser="sec_phaser_{0}".format(name)
-            pyrvapi.rvapi_add_section(sec_phaser,"PHASER Outputs",sec_id,0,0,1,1,False )
+            pyrvapi.rvapi_add_section(sec_phaser,"PHASER Outputs",container_id,0,0,1,1,False )
             if r['PHASER_pdbout'] and r['PHASER_mtzout']:
                 data_phaser="data_phaser_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_phaser,
@@ -156,7 +200,7 @@ def results_tab(results_dict):
         # REFMAC
         if r['REFMAC_logfile'] or (r['REFMAC_pdbout'] and r['REFMAC_mtzout']):
             sec_refmac="sec_refmac_{0}".format(name)
-            pyrvapi.rvapi_add_section(sec_refmac,"REFMAC Outputs",sec_id,0,0,1,1,False)
+            pyrvapi.rvapi_add_section(sec_refmac,"REFMAC Outputs",container_id,0,0,1,1,False)
             if r['REFMAC_pdbout'] and r['REFMAC_mtzout']:
                 data_refmac="data_refmac_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_refmac,
@@ -177,7 +221,7 @@ def results_tab(results_dict):
         # SHELXE
         if r['SHELXE_logfile'] or (r['SHELXE_pdbout'] and r['SHELXE_mtzout']):
             sec_shelxe="sec_shelxe_{0}".format(name)
-            pyrvapi.rvapi_add_section(sec_shelxe,"SHELXE Outputs",sec_id,0,0,1,1,False)
+            pyrvapi.rvapi_add_section(sec_shelxe,"SHELXE Outputs",container_id,0,0,1,1,False)
             if r['SHELXE_pdbout'] and r['SHELXE_mtzout']:
                 data_shelxe="data_shelxe_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_shelxe,
@@ -195,11 +239,52 @@ def results_tab(results_dict):
                                         sec_shelxe,
                                         2,0,1,1,True)
         
-        pyrvapi.rvapi_set_tree_node("results_tree",sec_id,"{0}".format(name),"auto","")
+        # Buccaner Rebuild
+        if r['SXRBUCC_logfile'] or (r['SXRBUCC_pdbout'] and r['SXRBUCC_mtzout']):
+            sec_sxrbucc="sec_sxrbucc_{0}".format(name)
+            pyrvapi.rvapi_add_section(sec_shelxe,"BUCCANEER SHELXE Trace Rebuild Outputs",container_id,0,0,1,1,False)
+            if r['SXRBUCC_pdbout'] and r['SXRBUCC_mtzout']:
+                data_sxrbucc="data_sxrbucc_out_{0}".format(name)
+                pyrvapi.rvapi_add_data(data_sxrbucc,
+                                        "SXRBUCC PDB",
+                                        fix_path(r['SXRBUCC_pdbout']),
+                                        "xyz:map",
+                                        sec_sxrbucc,
+                                        2,0,1,1,True)
+                pyrvapi.rvapi_append_to_data(data_sxrbucc,fix_path(r['SXRBUCC_mtzout']),"xyz:map")
+            if r['SXRBUCC_logfile']:
+                pyrvapi.rvapi_add_data("data_shelxe_logfile_{0}".format(name),
+                                        "SXRBUCC Logfile",
+                                        fix_path(r['SXRBUCC_logfile']),
+                                        "text",
+                                        sec_sxrbucc,
+                                        2,0,1,1,True)
+                
+        # Arpwarp Rebuild
+        if r['SXRARP_logfile'] or (r['SXRARP_pdbout'] and r['SXRARP_mtzout']):
+            sec_sxrarp="sec_sxrarp_{0}".format(name)
+            pyrvapi.rvapi_add_section(sec_shelxe,"ARPWARP SHELXE Trace Redbuild Outputs",container_id,0,0,1,1,False)
+            if r['SXRARP_pdbout'] and r['SXRARP_mtzout']:
+                data_sxrarp="data_sxrarp_out_{0}".format(name)
+                pyrvapi.rvapi_add_data(data_sxrarp,
+                                        "SXRARP PDB",
+                                        fix_path(r['SXRARP_pdbout']),
+                                        "xyz:map",
+                                        sec_sxrarp,
+                                        2,0,1,1,True)
+                pyrvapi.rvapi_append_to_data(data_sxrarp,fix_path(r['SXRARP_mtzout']),"xyz:map")
+            if r['SXRARP_logfile']:
+                pyrvapi.rvapi_add_data("data_sxrarp_logfile_{0}".format(name),
+                                        "SXRARP Logfile",
+                                        fix_path(r['SXRARP_logfile']),
+                                        "text",
+                                        sec_sxrarp,
+                                        2,0,1,1,True)
+        
+        pyrvapi.rvapi_set_tree_node("results_tree",container_id,"{0}".format(name),"auto","")
     return results_tab
         
 def log_tab(logfile):
-    print "ADDING LOG TAB"
     log_tab="log_tab"
     pyrvapi.rvapi_add_tab(log_tab,"Log file",True) # Last arg is "open" - i.e. show or hide
     # Add watched (updatable) content to the log tab. Note that the
@@ -213,7 +298,7 @@ def display_results(results_dict,run_dir=None):
     logger=logging.getLogger()
     if not pyrvapi:
         msg="Cannot display results using pyrvapi!"
-        logger.critical(msg)
+        logger.debug(msg)
         return False
     
     # Remove all tabs
@@ -247,7 +332,6 @@ def display_results(results_dict,run_dir=None):
     t=log_tab(results_dict['ample_log'])
     if t: _tabs.append(t)
     pyrvapi.rvapi_flush()
-    
     return True
 
 if __name__=="__main__":
