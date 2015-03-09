@@ -34,7 +34,8 @@ def fix_path(path):
 def fill_table(table_id, tdata):
     # Make column headers
     for i in range(len(tdata[0])): # Skip name as it's the row header
-        pyrvapi.rvapi_put_horz_theader(table_id, tdata[0][i], "", i) # Add table data
+        h=tdata[0][i]
+        pyrvapi.rvapi_put_horz_theader(table_id, h.encode('utf-8'), "", i) # Add table data
     
     ir=len(tdata)-1 if len(tdata) > 2 else 2
     for i in range(1, ir):
@@ -51,8 +52,6 @@ def fill_table(table_id, tdata):
             "table-blue-vh", #cell_style
             1, # rowSpan
             1) # colSpan
-    
-    #pyrvapi.rvapi_flush()
     return
 
 def summary_tab(results_dict):
@@ -107,7 +106,6 @@ def summary_tab(results_dict):
     pyrvapi.rvapi_add_table1(mrbump_sec+"/"+mrbump_table,"MRBUMP Results",1,0,1,1,True)
     mrb_data = mrbump_results.ResultsSummary().results_table(mrb_results)
     fill_table(mrbump_table, mrb_data)
-    #pyrvapi.rvapi_flush()
     return summary_tab
 
 def results_tab(results_dict):
@@ -198,8 +196,6 @@ def results_tab(results_dict):
                                         2,0,1,1,True)
         
         pyrvapi.rvapi_set_tree_node("results_tree",sec_id,"{0}".format(name),"auto","")
-        #pyrvapi.rvapi_flush()
-        
     return results_tab
         
 def log_tab(logfile):
@@ -223,7 +219,6 @@ def display_results(results_dict,run_dir=None):
     # Remove all tabs
     if _tabs:
         for t in _tabs: pyrvapi.rvapi_remove_tab(t)
-        pyrvapi.rvapi_flush()
 
     if not _running:        
         # Infrastructure to run
@@ -263,14 +258,14 @@ if __name__=="__main__":
     results_dict['webserver_uri']=None
     display_results(results_dict)
     print "TAB 1"
-    time.sleep(5)
+    time.sleep(10)
     pklfile="/opt/ample-dev1/examples/toxd-example/resultsd2.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
     results_dict['webserver_uri']=None
     display_results(results_dict)
     print "TAB 2"
-    time.sleep(5)
+    time.sleep(10)
     pklfile="/opt/ample-dev1/examples/toxd-example/resultsd3.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
     results_dict['webserver_uri']="http:www.jensrules.co.uk/ample/stuff"
