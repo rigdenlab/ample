@@ -91,7 +91,8 @@ def collate_cluster_data(ensembles_data):
     return clusters, cluster_method, truncation_method, percent_truncation
 
 def cluster_table_data(clusters, cluster_num):
-    tdata = [("Name", "Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
+    tdata = [("Name", "Truncation Level", u"Variance Threshold (\u212B^2)", "No. Residues", u"Radius Threshold (\u212B)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
+    #tdata = [("Name", "Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
     for tl in sorted(clusters[cluster_num]['tlevels']):
         tvar = clusters[cluster_num]['tlevels'][tl]['truncation_variance']
         nresidues = clusters[cluster_num]['tlevels'][tl]['num_residues']
@@ -99,7 +100,7 @@ def cluster_table_data(clusters, cluster_num):
             nmodels = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['num_models']
         # Hack so that side chains come in size order
         #for j, sct in enumerate(sorted(clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'])):
-            for j, sct in enumerate(['polyAla', 'reliable', 'allatom']):
+            for j, sct in enumerate(ample_ensemble.SIDE_CHAIN_TREATMENTS):
                 name = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['name']
                 num_atoms = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['num_atoms']
                 if i == 0 and j == 0: # change of radius

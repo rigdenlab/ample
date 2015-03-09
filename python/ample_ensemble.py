@@ -18,6 +18,11 @@ import pdb_edit
 import run_spicker
 import subcluster
 
+POLYALA='polyAla'
+RELIABLE='reliable'
+ALLATOM='allatom'
+SIDE_CHAIN_TREATMENTS=[POLYALA,RELIABLE,ALLATOM]
+
 class Ensembler(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
     
@@ -48,7 +53,7 @@ class Ensembler(object):
         self.ensemble_max_models=30
         
         # Side chains
-        self.side_chain_treatments=['allatom','reliable','polyAla']
+        self.side_chain_treatments=SIDE_CHAIN_TREATMENTS
         
         # ensembles
         self.ensembles_directory=None
@@ -266,12 +271,12 @@ class Ensembler(object):
             fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=ensembles_directory)
             
             # Create the files
-            if sct == "allatom":
+            if sct == ALLATOM:
                 # For all atom just copy the file
                 shutil.copy2(raw_ensemble,fpath)
-            elif sct == "reliable":
+            elif sct == RELIABLE:
                 pdb_edit.reliable_sidechains(raw_ensemble,fpath)
-            elif sct == "polyAla":
+            elif sct == POLYALA:
                 pdb_edit.backbone(raw_ensemble,fpath)
             else:
                 raise RuntimeError,"Unrecognised side_chain_treatment: {0}".format(sct)
@@ -1043,7 +1048,7 @@ class Test(unittest.TestCase):
         self.assertEqual(d['cluster_method'],cluster_method)
         self.assertEqual(d['num_clusters'],num_clusters)
         self.assertEqual(d['ensemble_num_atoms'],290)
-        self.assertEqual(d['side_chain_treatment'],'polyAla')
+        self.assertEqual(d['side_chain_treatment'],POLYALA)
         self.assertEqual(os.path.basename(d['subcluster_centroid_model']),'4_S_00000002.pdb')
         
         shutil.rmtree(ensembler.work_dir)
