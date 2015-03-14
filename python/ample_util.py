@@ -14,11 +14,13 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import unittest
 import urllib
 import zipfile
 
-# External imports
-import iotbx.pdb
+# our imports
+import pdb_edit
+
 
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
@@ -63,44 +65,13 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
-def check_pdbs(directory,single=True):
-    logger = logging.getLogger()
-    if not os.path.isdir(directory):
-        return False
-    models=glob.glob(os.path.join(directory,"*.pdb"))
-    if not len(models):
-        return False
-    
-    if not single: return True
-    
-    # Check all models have 1 model and 1 chain
-    def is_single(pdb):
-        h=iotbx.pdb.pdb_input(pdb).construct_hierarchy()
-        return h.models_size()==1 and h.models()[0].chains_size()==1
-    
-    try:
-        not_single = [ pdb for pdb in models if not is_single(pdb) ]
-    except Exception,e:
-        msg="Error processing pdbs in directory: {0}\n{1}".format(directory,e)
-        logger.critical(msg)
-        return False
-    
-    if len(not_single):
-        msg="check_pdbs - the following pdb files have more than 1 chain/model:\n\n"
-        for pdb in not_single: msg+="{0}\n".format(pdb)
-        logger.critical(msg)
-        return False
-    else:
-        logger.info("check_pdbs - pdb files all seem valid")
-        return True
-
 def extract_models(filename,directory=None):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
     
     logger = logging.getLogger()
     # If it's already a directory, just check it's valid   
     if os.path.isdir(filename):
-        if not check_pdbs(filename):
+        if not pdb_edit.check_pdbs(filename):
             msg="Cannot extract pdb files from directory: {0}".format(filename)
             logger.critical(msg)
             raise RuntimeError,msg
@@ -136,7 +107,7 @@ def extract_models(filename,directory=None):
     else:
         extract_zip(filename, directory)
         
-    if not check_pdbs(models_dir):
+    if not pdb_edit.check_pdbs(models_dir):
         msg="Problem importing pdb files - please check the log for more information"
         logger.critical(msg)
         raise RuntimeError,msg
@@ -508,3 +479,4 @@ def tmpFileName():
     tmp1 = t.name
     t.close()
     return tmp1
+

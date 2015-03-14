@@ -5,6 +5,8 @@ Useful manipulations on PDB files
 
 # Python imports
 import copy
+import glob
+import logging
 import os
 import re
 import unittest
@@ -130,14 +132,68 @@ def calpha_only(inpdb, outpdb):
 #             o.writelines( lines )
 #         
 #         return
+
+def check_pdbs(directory,single=True,sequence=None):
+    logger = logging.getLogger()
+    if not os.path.isdir(directory):
+        logger.critical("Cannot find directory: {0}".format(directory))
+        return False
+    models=glob.glob(os.path.join(directory,"*.pdb"))
+    if not len(models):
+        logger.critical("Cannot find any pdb files in directory: {0}".format(directory))
+        return False
+    if not single or sequence: return True
+    return _check_pdbs(models,sequence=sequence,single=single)
+
+def _check_pdbs(models,single=True,sequence=None):
+    logger = logging.getLogger()
+    errors=[]
+    multi=[]
+    sequence_err=[]
+    for pdb in models:
+        try:
+            h=iotbx.pdb.pdb_input(pdb).construct_hierarchy()
+        except Exception,e:
+            errors.append((pdb,e))
+            continue
+        if not single: continue
+        if not (h.models_size()==1 and h.models()[0].chains_size()==1):
+            multi.append(pdb)
+            continue
+        if sequence:
+            _,s=_sequence(h)[0] # only one chain/model
+            if not s == sequence: sequence_err.append((pdb,s))
     
+    if not (len(errors) or len(multi) or len(sequence_err)):
+        logger.info("check_pdbs - pdb files all seem valid")
+        return True
+    
+    s="\n"
+    if len(errors):
+        s="*** ERROR ***\n"
+        s+="The following pdb files have errors:\n"
+        for pdb,e in errors:
+            s+="{0}: {1}\n".format(pdb,e)
+    
+    if len(multi):
+        s+="\n"
+        s+="The following pdb files have more than one chain:\n"
+        for pdb in multi:
+            s+="{0}\n".format(pdb)
+            
+    if len(sequence_err):
+        s+="\n"
+        s+="The following pdb files have differing sequences from the reference sequence\n{0}\n".format(sequence)
+        for pdb,seq in sequence_err:
+            s+="PDB: {0}\n{1}\n".format(pdb,seq)
+
+    logger.critical(s)
+    return False
 
 def extract_chain(inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False, renumber=True ):
     """Extract chainID from inpdb and renumner.
     If cAlphaOnly is set, strip down to c-alpha atoms
     """
-    
-    
     logfile = outpdb+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
     
@@ -189,14 +245,14 @@ def extract_model(inpdb, outpdb, modelID ):
 #         """
 #         
 #         def _get_indices( pdb ):
-#             """Get sequence as string of 1AA
+#             """Get fastaSequence as string of 1AA
 #             get list of matching resSeq
 #             """
 #             
 #             
 #             print "GETTING INDICES ",pdb
 #             
-#             sequence = ""
+#             fastaSequence = ""
 #             resSeq = []
 #             
 #             atomTypes = [] # For checking we have all required atom types
@@ -240,7 +296,7 @@ def extract_model(inpdb, outpdb, modelID ):
 # 
 #                         
 #                         # Add the atom we've just finished reading
-#                         sequence += three2one[ readingResName ]
+#                         fastaSequence += three2one[ readingResName ]
 #                         resSeq.append( readingResSeq )
 #                         
 #                         got=False
@@ -269,7 +325,7 @@ def extract_model(inpdb, outpdb, modelID ):
 #                         readingResName = atom.resName
 #                         atomTypes = []
 #                         
-#             return ( sequence, resSeq, cAlphaMask, backboneMask )
+#             return ( fastaSequence, resSeq, cAlphaMask, backboneMask )
 #       
 #         native_seq, native_idx = _get_indices( nativePdb )
 #         model_seq, model_idx = _get_indices( modelPdb )
@@ -1185,29 +1241,14 @@ def select_residues(inpath=None, outpath=None, residues=None):
     
     return count
 
-def sequence(pdbin,maxwidth=None):
+def fastaSequence(pdbin,maxwidth=None):
     """Extract the sequence of residues from a pdb file.
     Currently prints a fasta string."""
     
     name=os.path.splitext(os.path.basename(pdbin))[0]
-    pdb_input=iotbx.pdb.pdb_input(pdbin)
-    chain2seq={}
-    hierachy=pdb_input.construct_hierarchy()
-    for chain in hierachy.models()[0].chains(): # only the first model
-        # Seems we sometimes loop over the chains twice - not sure why - something
-        # to do with conformers, but why when we deal with that below?
-        if chain.id in chain2seq:
-            continue
-        chain2seq[chain.id]=""
-        # Only look at the first conformer
-        for residue in chain.conformers()[0].residues():
-            # See if any of the atoms are non-hetero - if so we add this residue
-            if any([not atom.hetero for atom in residue.atoms()]):
-                chain2seq[chain.id]+=three2one[residue.resname]
-    
-    #maxwidth=5
+    chain2seq = _sequence(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
     s=""
-    for chain,seq in chain2seq.iteritems():
+    for chain,seq in chain2seq:
         s+=">{0} chain: {1} length: {2}\n".format(name,chain,len(seq))
         if maxwidth:
             assert maxwidth > 0
@@ -1215,9 +1256,20 @@ def sequence(pdbin,maxwidth=None):
                 s+="{0}\n".format(seq[i:i+maxwidth])
         else:
             s+="{0}\n".format(seq)
-    
     return s
 
+def _sequence(hierarchy,):
+    """Extract the sequence of residues from a pdb file."""
+    chain2seq=[]
+    for chain in set(hierarchy.models()[0].chains()): # only the first model
+        seq=""
+        for residue in chain.conformers()[0].residues():
+            # See if any of the atoms are non-hetero - if so we add this residue
+            if any([not atom.hetero for atom in residue.atoms()]):
+                seq += three2one[residue.resname]
+        chain2seq.append((chain.id,seq))
+    return chain2seq
+    
 def split(pdbin):
     """Split a pdb into separate models"""
     
@@ -1571,6 +1623,20 @@ class Test(unittest.TestCase):
         self.assertEqual( info.numAtoms( modelIdx=0 ), 1263 )
         
         return
+
+    def testCheckPdbs(self):
+        logging.basicConfig()
+        logging.getLogger().setLevel(logging.DEBUG)
+        
+        pdbs=glob.glob(os.path.join(self.testfiles_dir,"models","*.pdb"))
+        self.assertTrue(_check_pdbs(pdbs))
+        
+        self.assertFalse(_check_pdbs(pdbs, single=True,sequence="AABBCC"))
+        
+        pdbs += [ os.path.join(self.testfiles_dir,"1GU8.pdb") ]
+        self.assertFalse(_check_pdbs(pdbs,single=True,sequence="AABBCC"))
+        
+        return
     
     def testSequence(self):
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
@@ -1581,7 +1647,7 @@ GEIAALKQEIAALKKEIAALKEIAALKQGYY
 >4DZN chain: B length: 31
 GEIAALKQEIAALKKEIAALKEIAALKQGYY
 """
-        self.assertEqual(ref,sequence(pdbin))
+        self.assertEqual(ref,fastaSequence(pdbin))
         return
     
     def testStdResidues(self):
@@ -1716,7 +1782,7 @@ if __name__ == "__main__":
     elif args.std:
         standardise(args.input_file, args.output_file)
     elif args.seq:
-        print sequence(args.input_file)
+        print fastaSequence(args.input_file)
     elif args.split:
         print split(args.input_file)
         

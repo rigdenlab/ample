@@ -34,6 +34,7 @@ import mrbump_ensemble
 import mrbump_results
 import mtz_util
 import nmr
+import pdb_edit
 import pyrvapi_results
 import rosetta_model
 import version
@@ -391,12 +392,16 @@ def process_options(amoptd,logger):
     
     # Reformat to what we need
     logger.debug('Parsing FASTA file')
-    outfasta = os.path.join( amoptd['work_dir'], amoptd['name'] + '_.fasta')
-    fp = fasta_parser.FastaParser()
-    fp.reformat_fasta( amoptd['fasta'], outfasta )
-    amoptd['fasta'] = outfasta
-    amoptd['fasta_length'] = fp.length
-    logger.info( "Fasta is {0} amino acids long".format( amoptd['fasta_length'] ) )
+    fp = fasta_parser.Sequence()
+    fp.parse_fasta(amoptd['fasta'])
+    if fp.numSequences() != 1:
+        msg = "ERROR! Fasta file {0} has > 1 sequence in it.".format( amoptd['fasta'] )
+        logger.critical(msg)
+        sys.exit(1)
+    
+    # Length checks
+    amoptd['fasta_length'] = fp.length()
+    logger.info( "Fasta is {0} amino acids long".format(amoptd['fasta_length']))
     
     # Check we have a decent length
     if amoptd['fasta_length'] < 9:
@@ -410,6 +415,10 @@ def process_options(amoptd,logger):
         logger.critical(msg)
         sys.exit(1)
     
+    # Fasta is ok, so write out a canonical fasta in the work directory
+    outfasta = os.path.join( amoptd['work_dir'], amoptd['name'] + '_.fasta')
+    fp.writeFasta(outfasta)
+    amoptd['fasta'] = outfasta
     #
     # Not sure if name actually required - see make_fragments.pl
     #
@@ -440,7 +449,7 @@ def process_options(amoptd,logger):
     
     # Check if importing ensembles
     if amoptd['ensembles_dir']:
-        if not ample_util.check_pdbs(amoptd['ensembles_dir'],single=False):
+        if not pdb_edit.check_pdbs(amoptd['ensembles_dir'],single=False):
             msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles_dir'])
             logger.critical(msg)
             sys.exit(1)
@@ -746,7 +755,7 @@ def main():
         else:
             amopt.d['models_dir'] = rosetta_modeller.doModelling() # run locally
             
-        if not ample_util.check_pdbs(amopt.d['models_dir']):
+        if not pdb_edit.check_pdbs(amopt.d['models_dir']):
             msg="Problem with rosetta pdb files - please check the log for more information"
             logger.critical(msg)
             sys.exit(1)
@@ -838,7 +847,7 @@ def main():
     job_scripts = mrbump_ensemble.generate_jobscripts(ensembles, amopt.d)
     #continue
     
-    # Create function for monitoring jobs
+    # Create function for monitoring jobs - static function decorator?
     if pyrvapi_results.pyrvapi:
         def monitor():
             print "RUNNING MONITOR"
