@@ -10,9 +10,9 @@ if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
 # Add the ample python folder to the PYTHONPATH
-sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
-#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
-#sys.path.append( os.path.join( root, "python" ) )
+#sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
 import argparse
@@ -419,6 +419,7 @@ def process_options(amoptd,logger):
     outfasta = os.path.join( amoptd['work_dir'], amoptd['name'] + '_.fasta')
     fp.writeFasta(outfasta)
     amoptd['fasta'] = outfasta
+    amoptd['sequence']=fp.sequence()
     #
     # Not sure if name actually required - see make_fragments.pl
     #
@@ -449,7 +450,7 @@ def process_options(amoptd,logger):
     
     # Check if importing ensembles
     if amoptd['ensembles_dir']:
-        if not pdb_edit.check_pdbs(amoptd['ensembles_dir'],single=False):
+        if not pdb_edit.check_pdbs(amoptd['ensembles_dir'],single=False,sequence=amoptd['sequence']):
             msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles_dir'])
             logger.critical(msg)
             sys.exit(1)
@@ -458,7 +459,7 @@ def process_options(amoptd,logger):
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
     elif amoptd['models']:
-        amoptd['models_dir']=ample_util.extract_models(amoptd['models'],amoptd['models_dir'])
+        amoptd['models_dir']=ample_util.extract_models(amoptd['models'],amoptd['models_dir'],sequence=amoptd['sequence'])
         amoptd['import_models'] = True
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
@@ -754,8 +755,8 @@ def main():
             clusterize.ClusterRun().modelOnCluster(rosetta_modeller, amopt.d)
         else:
             amopt.d['models_dir'] = rosetta_modeller.doModelling() # run locally
-            
-        if not pdb_edit.check_pdbs(amopt.d['models_dir']):
+        
+        if not pdb_edit.check_pdbs(amopt.d['models_dir'],sequence=amopt.d['sequence']):
             msg="Problem with rosetta pdb files - please check the log for more information"
             logger.critical(msg)
             sys.exit(1)
@@ -845,7 +846,7 @@ def main():
     # Create job scripts
     logger.info("Generating MRBUMP runscripts")
     job_scripts = mrbump_ensemble.generate_jobscripts(ensembles, amopt.d)
-    #continue
+    #print "EXITING";sys.exit()
     
     # Create function for monitoring jobs - static function decorator?
     if pyrvapi_results.pyrvapi:

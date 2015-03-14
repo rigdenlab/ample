@@ -135,6 +135,7 @@ def calpha_only(inpdb, outpdb):
 
 def check_pdbs(directory,single=True,sequence=None):
     logger = logging.getLogger()
+    logger.info("Checking pdbs in directory: {0}".format(directory))
     if not os.path.isdir(directory):
         logger.critical("Cannot find directory: {0}".format(directory))
         return False
@@ -142,7 +143,7 @@ def check_pdbs(directory,single=True,sequence=None):
     if not len(models):
         logger.critical("Cannot find any pdb files in directory: {0}".format(directory))
         return False
-    if not single or sequence: return True
+    if not (single or sequence): return True
     return _check_pdbs(models,sequence=sequence,single=single)
 
 def _check_pdbs(models,single=True,sequence=None):

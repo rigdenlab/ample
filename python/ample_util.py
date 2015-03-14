@@ -65,13 +65,13 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
-def extract_models(filename,directory=None):
+def extract_models(filename,directory=None,sequence=None):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
     
     logger = logging.getLogger()
     # If it's already a directory, just check it's valid   
     if os.path.isdir(filename):
-        if not pdb_edit.check_pdbs(filename):
+        if not pdb_edit.check_pdbs(filename,sequence=sequence):
             msg="Cannot extract pdb files from directory: {0}".format(filename)
             logger.critical(msg)
             raise RuntimeError,msg
@@ -107,7 +107,7 @@ def extract_models(filename,directory=None):
     else:
         extract_zip(filename, directory)
         
-    if not pdb_edit.check_pdbs(models_dir):
+    if not pdb_edit.check_pdbs(models_dir,sequence=sequence):
         msg="Problem importing pdb files - please check the log for more information"
         logger.critical(msg)
         raise RuntimeError,msg
