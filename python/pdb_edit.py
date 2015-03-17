@@ -1285,6 +1285,51 @@ def split(pdbin):
         h.write_pdb_file(pdbout,anisou=False)
     return
 
+def split_pdb(pdbin, directory=None):
+    """Split a pdb file into its separate models"""
+
+    if directory is None: directory = os.path.dirname(pdbin)
+    
+    # Largely stolen from pdb_split_models.py in phenix
+    #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
+    import iotbx.file_reader
+    
+    pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
+    pdbf.check_file_type("pdb")
+    hierarchy = pdbf.file_object.construct_hierarchy()
+    
+    # Nothing to do
+    n_models = hierarchy.models_size()
+    if n_models == 1: raise RuntimeError,"split_pdb {0} only contained 1 model!".format( pdbin )
+    
+    crystal_symmetry=pdbf.file_object.crystal_symmetry()
+    
+    output_files = []
+    for k, model in enumerate(hierarchy.models()) :
+        k += 1
+        new_hierarchy = iotbx.pdb.hierarchy.root()
+        new_hierarchy.append_model(model.detached_copy())
+        if (model.id == "") :
+            model_id = str(k)
+        else:
+            model_id = model.id.strip()
+            
+        output_file = ample_util.filename_append(pdbin, model_id, directory)
+        with open(output_file, "w") as f:
+            if (crystal_symmetry is not None) :
+                print >> f, iotbx.pdb.format_cryst1_and_scale_records(
+                                                                      crystal_symmetry=crystal_symmetry,
+                                                                      write_scale_records=True)
+            print >> f, "REMARK Model %d of %d" % (k, n_models)
+            if (pdbin is not None) :
+                print >> f, "REMARK Original file:"
+                print >> f, "REMARK   %s" % pdbin
+            f.write(new_hierarchy.as_pdb_string())
+    
+        output_files.append( output_file )
+        
+    return output_files
+
 def standardise(inpdb, outpdb, chain=None):
     """Rename any non-standard AA, remove solvent and only keep most probably conformation.
     """
