@@ -10,9 +10,9 @@ if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
 # Add the ample python folder to the PYTHONPATH
-#sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
-root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
-sys.path.append( os.path.join( root, "python" ) )
+sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+#sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
 import argparse
@@ -476,7 +476,8 @@ def process_options(amoptd,logger):
             msg = "NMR_model_in flag given, but cannot find file: {0}".format( amoptd['NMR_model_in'] )
             logger.critical(msg)
             sys.exit(1)
-        amoptd['NMR_protocol'] = True
+        if not amoptd['NMR_Truncate_only']:
+            amoptd['NMR_protocol'] = True
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
     
@@ -701,7 +702,7 @@ def main():
     logger.info(ample_util.header)
     
     # Print out Version and invocation
-    logger.info( """AMPLE version: {0}\n\nInvoked with command-line:\n\n{1}""".format( version.__version__, orig_argv ) )
+    logger.info("""AMPLE version: {0}\n\nInvoked with command-line:\n\n{1}""".format( version.__version__, orig_argv ))
     
     # Display pyrvapi results
     pyrvapi_results.display_results(amopt.d)
@@ -742,7 +743,11 @@ def main():
     
     # if NMR process models first
     # break here for NMR (frags needed but not modelling
-    if amopt.d['NMR_protocol']:
+    if amopt.d['NMR_Truncate_only']:
+        if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
+        pdb_edit.split_pdb(amopt.d['NMR_model_in'], amopt.d['models_dir'])
+        nmr.standardise_lengths(amopt.d['models_dir'])
+    elif amopt.d['NMR_protocol']:
         nmr.doNMR(amopt, rosetta_modeller, logger)
         # return from nmr with models already made
     elif amopt.d['make_models']:
@@ -859,7 +864,7 @@ def main():
             return
     else:
         monitor=None
-    
+        
     if amopt.d['submit_cluster']:
         mrbump_ensemble.mrbump_ensemble_cluster(job_scripts, amopt.d, monitor=monitor)
     else:
