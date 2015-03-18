@@ -450,7 +450,7 @@ def process_options(amoptd,logger):
     
     # Check if importing ensembles
     if amoptd['ensembles_dir']:
-        if not pdb_edit.check_pdbs(amoptd['ensembles_dir'],single=False,sequence=amoptd['sequence']):
+        if not pdb_edit.check_pdbs(amoptd['ensembles_dir'],single=False):
             msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles_dir'])
             logger.critical(msg)
             sys.exit(1)
@@ -702,7 +702,9 @@ def main():
     logger.info(ample_util.header)
     
     # Print out Version and invocation
-    logger.info("""AMPLE version: {0}\n\nInvoked with command-line:\n\n{1}""".format( version.__version__, orig_argv ))
+    logger.info( "AMPLE version: {0}\n".format(version.__version__))
+    logger.info( "Invoked with command-line:\n{0}\n".format(orig_argv))
+    logger.info( "Running in directory: {0}\n".format(amopt.d['work_dir']))
     
     # Display pyrvapi results
     pyrvapi_results.display_results(amopt.d)
