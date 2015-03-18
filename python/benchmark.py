@@ -25,11 +25,31 @@ import rio
 
 _logger=logging.getLogger()
 
-def analyse(amoptd):
+_oldroot=None
+_newroot=None
+
+def fixpath(path):
+    # fix for analysing on a different machine
+    if _oldroot and _newroot:
+        return os.path.join(_newroot,path[len(_oldroot)+1:])
+    else:
+        return path
+
+def analyse(amoptd,newroot=None):
+    if newroot:
+        #if newroot.endswith("/"): newroot=newroot[:-1]
+        assert os.path.isdir(newroot)
+        global _oldroot,_newroot
+        _newroot=newroot
+        _oldroot=amoptd['work_dir']
+        # hack
+        amoptd['maxcluster_exe']="/opt/maxcluster/maxcluster"
+        amoptd['native_pdb']=os.path.join("/media/data/shared/testset/data",os.path.basename(amoptd['native_pdb']))
+        amoptd['models_dir']=os.path.join("/media/data/shared/testset/models",amoptd['native_pdb_code'],"models")
     
-    if not os.path.isdir(amoptd['benchmark_dir']):
+    if not os.path.isdir(fixpath(amoptd['benchmark_dir'])):
         raise RuntimeError,"Cannot find benchmark dir: {0}".format(amoptd['benchmark_dir'])
-    os.chdir(amoptd['benchmark_dir'])
+    os.chdir(fixpath(amoptd['benchmark_dir']))
 
     analysePdb(amoptd)
     analyseModels(amoptd)
@@ -98,7 +118,7 @@ def analyse(amoptd):
         analyseSolution(amoptd,d)
         data.append(d)
 
-    fileName=os.path.join(amoptd['benchmark_dir'],'results.csv' )
+    fileName=os.path.join(fixpath(amoptd['benchmark_dir']),'results.csv' )
     writeCsv(fileName,data)
     amoptd['benchmark_results']=data
     return
@@ -257,7 +277,7 @@ def analyseSolution(amoptd,d):
         return
 
     # debug - copy into work directory as reforigin struggles with long pathnames
-    shutil.copy(mrPdb, os.path.join(amoptd['benchmark_dir'], os.path.basename(mrPdb)))
+    shutil.copy(mrPdb, os.path.join(fixpath(amoptd['benchmark_dir']), os.path.basename(mrPdb)))
     
     mrPdbInfo=pdb_edit.get_info( mrPdb )
     
@@ -270,7 +290,7 @@ def analyseSolution(amoptd,d):
                    placedPdbInfo=mrPdbInfo,
                    refModelPdbInfo=amoptd['ref_model_pdb_info'],
                    cAlphaOnly=True,
-                   workdir=amoptd['benchmark_dir'])
+                   workdir=fixpath(amoptd['benchmark_dir']))
     d['reforigin_RMSD']=rmsder.rmsd
 
     # Find the MR origin wrt to the native
@@ -282,13 +302,13 @@ def analyseSolution(amoptd,d):
     mrOrigin=[c*-1 for c in d['SHELXE_os']]
     
     # Move pdb onto new origin
-    originPdb=ample_util.filename_append(mrPdb, astr='offset',directory=amoptd['benchmark_dir'])
+    originPdb=ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
     pdb_edit.translate(mrPdb, originPdb, mrOrigin)
     
     # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
     csymmatch.Csymmatch().wrapModelToNative(originPdb,
                                             amoptd['native_pdb'],
-                                            csymmatchPdb=os.path.join(amoptd['benchmark_dir'],
+                                            csymmatchPdb=os.path.join(fixpath(amoptd['benchmark_dir']),
                                             "phaser_{0}_csymmatch.pdb".format(d['ensemble_name']))
                                             )
 
@@ -297,7 +317,7 @@ def analyseSolution(amoptd,d):
                                   mrPdbInfo=mrPdbInfo,
                                   nativePdbInfo=amoptd['native_pdb_info'],
                                   resSeqMap=amoptd['res_seq_map'],
-                                  workdir=amoptd['benchmark_dir']
+                                  workdir=fixpath(amoptd['benchmark_dir'])
                                   )
 
     # Set attributes
@@ -324,33 +344,33 @@ def analyseSolution(amoptd,d):
     # This purely for checking and so we have pdbs to view
     # 
     # Wrap shelxe trace onto native using Csymmatch
-    if not d['SHELXE_pdbout'] is None and os.path.isfile(d['SHELXE_pdbout']):
-        csymmatch.Csymmatch().wrapModelToNative( d['SHELXE_pdbout'],
+    if not d['SHELXE_pdbout'] is None and os.path.isfile(fixpath(d['SHELXE_pdbout'])):
+        csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SHELXE_pdbout']),
                                                  amoptd['native_pdb'],
                                                  origin=mrOrigin,
-                                                 workdir=amoptd['benchmark_dir'])
+                                                 workdir=fixpath(amoptd['benchmark_dir']))
 
     # Wrap parse_buccaneer model onto native
-    if d['SXRBUCC_pdbout'] and os.path.isfile(d['SXRBUCC_pdbout']):
+    if d['SXRBUCC_pdbout'] and os.path.isfile(fixpath(d['SXRBUCC_pdbout'])):
         # Need to rename Pdb as is just called buccSX_output.pdb
-        csymmatchPdb = os.path.join(amoptd['benchmark_dir'], "buccaneer_{0}_csymmatch.pdb".format(d['ensemble_name']))
+        csymmatchPdb = os.path.join(fixpath(amoptd['benchmark_dir']), "buccaneer_{0}_csymmatch.pdb".format(d['ensemble_name']))
 
-        csymmatch.Csymmatch().wrapModelToNative( d['SXRBUCC_pdbout'],
+        csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SXRBUCC_pdbout']),
                                                  amoptd['native_pdb'],
                                                  origin=mrOrigin,
                                                  csymmatchPdb=csymmatchPdb,
-                                                 workdir=amoptd['benchmark_dir'])
+                                                 workdir=fixpath(amoptd['benchmark_dir']))
         
     # Wrap parse_buccaneer model onto native
-    if d['SXRARP_pdbout'] and os.path.isfile(d['SXRARP_pdbout']):
+    if d['SXRARP_pdbout'] and os.path.isfile(fixpath(d['SXRARP_pdbout'])):
         # Need to rename Pdb as is just called buccSX_output.pdb
-        csymmatchPdb = os.path.join(amoptd['benchmark_dir'], "arpwarp_{0}_csymmatch.pdb".format(d['ensemble_name']))
+        csymmatchPdb = os.path.join(fixpath(amoptd['benchmark_dir']), "arpwarp_{0}_csymmatch.pdb".format(d['ensemble_name']))
 
-        csymmatch.Csymmatch().wrapModelToNative( d['SXRARP_pdbout'],
+        csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SXRARP_pdbout']),
                                                  amoptd['native_pdb'],
                                                  origin=mrOrigin,
                                                  csymmatchPdb=csymmatchPdb,
-                                                 workdir=amoptd['benchmark_dir'])
+                                                 workdir=fixpath(amoptd['benchmark_dir']))
 
     return
 
@@ -378,12 +398,12 @@ def analysePdb(amoptd):
     # First check if the native has > 1 model and extract the first if so
     if len( nativePdbInfo.models ) > 1:
         _logger.info("nativePdb has > 1 model - using first")
-        nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=amoptd['benchmark_dir'] )
+        nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=fixpath(amoptd['benchmark_dir']))
         pdb_edit.extract_model( nativePdb, nativePdb1, modelID=nativePdbInfo.models[0].serial )
         nativePdb = nativePdb1
         
     # Standardise the PDB to rename any non-standard AA, remove solvent etc
-    nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std", directory=amoptd['benchmark_dir'] )
+    nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std", directory=fixpath(amoptd['benchmark_dir']))
     pdb_edit.standardise( nativePdb, nativePdbStd )
     nativePdb = nativePdbStd
     
@@ -395,7 +415,7 @@ def analysePdb(amoptd):
         chainID = nativePdbInfo.models[0].chains[0]
         nativeChain1  = ample_util.filename_append( filename=nativePdbInfo.pdb,
                                                        astr="chain1".format( chainID ), 
-                                                       directory=amoptd['benchmark_dir'])
+                                                       directory=fixpath(amoptd['benchmark_dir']))
         pdb_edit.to_single_chain( nativePdbInfo.pdb, nativeChain1 )
     else:
         nativeChain1 = nativePdbInfo.pdb
@@ -439,7 +459,7 @@ def analyseModels(amoptd):
     amoptd['maxComp'].compareDirectory( nativePdbInfo=nativePdbInfo,
                               resSeqMap=resSeqMap,
                               modelsDirectory=amoptd['models_dir'],
-                              workdir=amoptd['benchmark_dir'])
+                              workdir=fixpath(amoptd['benchmark_dir']))
     
     return
 
