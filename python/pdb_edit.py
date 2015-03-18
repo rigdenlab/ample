@@ -133,7 +133,7 @@ def calpha_only(inpdb, outpdb):
 #         
 #         return
 
-def check_pdbs(directory,single=True,sequence=None):
+def check_pdbs(directory,single=True,allsame=True,sequence=None):
     logger = logging.getLogger()
     logger.info("Checking pdbs in directory: {0}".format(directory))
     if not os.path.isdir(directory):
@@ -143,11 +143,20 @@ def check_pdbs(directory,single=True,sequence=None):
     if not len(models):
         logger.critical("Cannot find any pdb files in directory: {0}".format(directory))
         return False
-    if not (single or sequence): return True
-    return _check_pdbs(models,sequence=sequence,single=single)
+    if not (single or sequence or allsame): return True
+    return _check_pdbs(models,sequence=sequence,single=single,allsame=allsame)
 
-def _check_pdbs(models,single=True,sequence=None):
+def _check_pdbs(models,single=True,allsame=True,sequence=None):
     logger = logging.getLogger()
+    if allsame and not sequence:
+        # Get sequence from first model
+        try:
+            h=iotbx.pdb.pdb_input(models[0]).construct_hierarchy()
+        except Exception,e:
+            s="*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0],e)
+            logger.critical(s)
+            return False
+        sequence=_sequence(h)[0][1] # only one chain/model
     errors=[]
     multi=[]
     sequence_err=[]
@@ -172,19 +181,19 @@ def _check_pdbs(models,single=True,sequence=None):
     s="\n"
     if len(errors):
         s="*** ERROR ***\n"
-        s+="The following pdb files have errors:\n"
+        s+="The following pdb files have errors:\n\n"
         for pdb,e in errors:
             s+="{0}: {1}\n".format(pdb,e)
     
     if len(multi):
         s+="\n"
-        s+="The following pdb files have more than one chain:\n"
+        s+="The following pdb files have more than one chain:\n\n"
         for pdb in multi:
             s+="{0}\n".format(pdb)
             
     if len(sequence_err):
         s+="\n"
-        s+="The following pdb files have differing sequences from the reference sequence\n{0}\n".format(sequence)
+        s+="The following pdb files have differing sequences from the reference sequence:\n\n{0}\n\n".format(sequence)
         for pdb,seq in sequence_err:
             s+="PDB: {0}\n{1}\n".format(pdb,seq)
 
