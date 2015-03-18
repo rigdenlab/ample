@@ -32,13 +32,13 @@ cls <- c(SHELXE_CC="numeric",
 		PHASER_LLG="numeric"
 )
 
-f="/Users/jmht/Dropbox/PHD/TestSet/results/results_truncate_single.csv"
+f="/media/data/shared/testset/truncate_single/results_truncate_single.csv"
 dts <- read.csv(file=f,sep=',', header=T, stringsAsFactors=FALSE, na.strings="N/A", colClasses=cls)
 dts[dts=="N/A"]<-NA
-f="/Users/jmht/Dropbox/PHD/TestSet/results/results_percent.csv"
+f="/media/data/shared/testset/percent_chadwick/results_percent.csv"
 dp <- read.csv(file=f,sep=',', header=T, stringsAsFactors=FALSE, na.strings="N/A", colClasses=cls)
 dp[dp=="N/A"]<-NA
-f="/Users/jmht/Dropbox/PHD/TestSet/results/results_thresh.csv"
+f="/media/data/shared/testset/thresh_morrigan/results_thresh.csv"
 dt <- read.csv(file=f,sep=',', header=T, stringsAsFactors=FALSE, na.strings="N/A", colClasses=cls)
 dt[dt=="N/A"]<-NA
 
@@ -51,19 +51,14 @@ dts <- updateData(dts)
 epr <- c(dp$ensemble_percent_model,dt$ensemble_percent_model, dts$ensemble_percent_model)
 epr <- sort(unique(epr))
 
-ept <-sort(unique(dt$ensemble_percent_model))
-epp <-sort(unique(dp$ensemble_percent_model))
-epts <-sort(unique(dts$ensemble_percent_model))
-
 ids <- sort(unique(dp$native_pdb_code))
 column_labels <- c("native_pdb_code","treatment",epr)
-
 
 d <- data.frame(matrix(NA, nrow = length(ids)*3, ncol = length(column_labels)))
 colnames(d) <- column_labels
 
 x=1
-treatments <- c("percent","threshold","truncate_single")
+treatments <- c("threshold","percent","truncate_single")
 for (p in ids) {
     for (i in c(1,2,3)){
         d$native_pdb_code[x] <- p
@@ -76,8 +71,8 @@ for (p in ids) {
 for ( p in ids ){
     for ( i in epr ) {
         #d[ d$native_pdb_code == p, match(i,column_labels) ] <- sum( dp$native_pdb_code == p & dp$ensemble_percent_model == i & dp$success == 1, na.rm=TRUE)
-        d[ d$native_pdb_code == p & d$treatment == "percent", match(i,column_labels) ] <- sum( dp$native_pdb_code == p & dp$ensemble_percent_model == i & dp$success == 1, na.rm=TRUE)
         d[ d$native_pdb_code == p & d$treatment == "threshold", match(i,column_labels) ] <- sum( dt$native_pdb_code == p & dt$ensemble_percent_model == i & dt$success == 1, na.rm=TRUE)
+        d[ d$native_pdb_code == p & d$treatment == "percent", match(i,column_labels) ] <- sum( dp$native_pdb_code == p & dp$ensemble_percent_model == i & dp$success == 1, na.rm=TRUE)
         d[ d$native_pdb_code == p & d$treatment == "truncate_single", match(i,column_labels) ] <- sum( dts$native_pdb_code == p & dts$ensemble_percent_model == i & dts$success == 1, na.rm=TRUE)
     }
 }
