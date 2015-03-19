@@ -186,7 +186,6 @@ class Ensembler(object):
                     idxVariance=3
                 resSeq=int(tokens[idxResSeq])
                 variance=float(tokens[idxVariance])
-                assert resSeq==i,"Residue numbering doesn't match residue position in calculate_variances!"
                 variances.append((resSeq,variance))
                 
         return variances
