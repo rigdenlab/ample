@@ -152,9 +152,6 @@ def process_command_line():
     parser.add_argument('-nr', metavar='nr', type=str, nargs=1,
                        help='Path to the NR non-redundant sequence database')
     
-    parser.add_argument('-old_shelx', metavar='old_shelx', type=str, nargs=1,
-                       help='old_shelx')
-    
     parser.add_argument('-NMR_model_in', metavar='NMR_model_in', type=str, nargs=1,
                        help='use nmr input')
     
@@ -174,8 +171,14 @@ def process_command_line():
     parser.add_argument('-num_clusters', type=int, nargs=1,
                        help='The number of Spicker clusters of the original decoys that will be sampled [1]')
     
+    parser.add_argument('-old_shelx', metavar='old_shelx', type=str, nargs=1,
+                       help='old_shelx')    
+    
     parser.add_argument('-output_pdb', type=str, nargs=1,
                        help='Name of the final result pdb to output [ample_output.pdb]')
+    
+    parser.add_argument('-purge', metavar='True/False', type=str, nargs=1,
+                       help='Delete all intermediate files and failed MRBUMP results')
     
     parser.add_argument('-percent', metavar='percent_truncation', type=str, nargs=1,
                        help='percent interval for truncation')
@@ -657,7 +660,11 @@ def process_options(amoptd,logger):
     if amoptd['submit_cluster'] and not amoptd['submit_qtype']:
         msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
         ample_exit.exit(msg)
-         
+    
+    
+    if amoptd['purge']:
+        logger.info('*** Purge mode specified - all intermediate files will be deleted ***')
+    
     return rosetta_modeller
 
 def main():
@@ -785,21 +792,20 @@ def main():
         
         if amopt.d['submit_cluster']:
             # Pickle dictionary so it can be opened by the job to get the parameters
-            with open( amopt.d['results_path'], 'w' ) as f: cPickle.dump(amopt.d, f)
+            with open(amopt.d['results_path'], 'w' ) as f: cPickle.dump(amopt.d, f)
             mrBuild = clusterize.ClusterRun()
-            mrBuild.ensembleOnCluster( amopt.d )
+            mrBuild.ensembleOnCluster(amopt.d)
             mrBuild.monitorQueue()
             # queue finished so unpickle results
-            with open( amopt.d['results_path'], "r" ) as f: amopt.d = cPickle.load( f )
+            with open( amopt.d['results_path'], "r" ) as f: amopt.d = cPickle.load(f)
         else:
-            try:
-                ensemble.create_ensembles( amopt.d )
+            try: ensemble.create_ensembles(amopt.d)
             except Exception,e:
                 msg="Error creating ensembles: {0}".format(e)
                 ample_exit.exit(msg)
     
         # Check we have something to work with
-        if not amopt.d.has_key('ensembles') or not len( amopt.d['ensembles'] ):
+        if not amopt.d.has_key('ensembles') or not len(amopt.d['ensembles']):
             msg = "Could not load any ensembles after running create_ensembles!"
             ample_exit.exit(msg)
             
@@ -839,9 +845,8 @@ def main():
     # Create function for monitoring jobs - static function decorator?
     if pyrvapi_results.pyrvapi:
         def monitor():
-            print "RUNNING MONITOR"
             r=mrbump_results.ResultsSummary()
-            r.extractResults(amopt.d['mrbump_dir'])
+            r.extractResults(amopt.d['mrbump_dir'],purge=amopt.d['purge'])
             amopt.d['mrbump_results']=r.results
             pyrvapi_results.display_results(amopt.d)
             return
@@ -851,15 +856,14 @@ def main():
     if amopt.d['submit_cluster']:
         mrbump_ensemble.mrbump_ensemble_cluster(job_scripts, amopt.d, monitor=monitor)
     else:
-        try:
-            mrbump_ensemble.mrbump_ensemble_local(job_scripts, amopt.d,monitor=monitor)
+        try: mrbump_ensemble.mrbump_ensemble_local(job_scripts, amopt.d,monitor=monitor)
         except Exception,e:
             msg="Error running MRBUMP on the ensembles: {0}".format(e)
             ample_exit.exit(msg)
             
     # Collect the MRBUMP results
     results_summary = mrbump_results.ResultsSummary()
-    results_summary.extractResults(bump_dir)
+    results_summary.extractResults(bump_dir,purge=amopt.d['purge'])
     amopt.d['mrbump_results'] = results_summary.results
     ample_util.saveAmoptd(amopt.d)
     
@@ -883,8 +887,7 @@ def main():
     # Finally update pyrvapi results
     pyrvapi_results.display_results(amopt.d)
 
-    sys.exit(0)
-    # END
+    return
 
 if __name__=="__main__":
     main()

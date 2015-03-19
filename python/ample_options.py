@@ -70,6 +70,7 @@ class AmpleOptions(object):
                             'phaser_kill' : 0,
                             'phenix_exe' : None,
                             'psipred_ss2' : None,
+                            'purge' : False,
                             'rg_reweight' : None,
                             'ROSETTA_cluster' : None,
                             'rosetta_db' : None,
@@ -137,11 +138,12 @@ class AmpleOptions(object):
                         }
         
         self.webserver_uri = {
+                               'max_array_jobs' : 10,
+                               'purge': True,
+                               'shelxe_rebuild_buccaneer': True,
                                'submit_cluster' : True,
                                'submit_qtype' : "SGE",
                                'submit_queue' : "all.q",
-                               'max_array_jobs' : 10,
-                               'shelxe_rebuild_buccaneer': True
                                }
 
         # We have a debug mode as the logger isn't activated when we run

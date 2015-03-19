@@ -34,8 +34,12 @@ def create_ensembles( amoptd ):
     ensembler.max_ensemble_models = amoptd['max_ensemble_models']
     if amoptd['cluster_method'] == 'spicker':
         cluster_exe = amoptd['spicker_exe']
+        
+    ensembles_directory=os.path.join(amoptd['work_dir'],'ensembles')
+    if not os.path.isdir(ensembles_directory): os.mkdir(ensembles_directory)
+    amoptd['ensembles_directory']=ensembles_directory
     
-    work_dir=os.path.join(amoptd['work_dir'],'ensembling')
+    work_dir=os.path.join(amoptd['work_dir'],'ensemble_workdir')
     os.mkdir(work_dir)
     os.chdir(work_dir)
         
@@ -47,11 +51,14 @@ def create_ensembles( amoptd ):
                                            percent_truncation=amoptd['percent'],
                                            truncation_method=amoptd['truncation_method'],
                                            truncation_pruning=amoptd['truncation_pruning'],
+                                           ensembles_directory=ensembles_directory,
                                            work_dir=work_dir)
     
     amoptd['ensembles'] = ensembles
     amoptd['ensembles_data'] = ensembler.ensembles_data
-
+    
+    # Delete all intermediate files if we're purging
+    if amoptd['purge']: shutil.rmtree(work_dir)
     return
 
 def collate_cluster_data(ensembles_data):
@@ -224,5 +231,5 @@ if __name__ == "__main__":
     logger.addHandler(fl)
 
     # Create the ensembles & save them
-    create_ensembles( amoptd )
+    create_ensembles(amoptd)
     ample_util.saveAmoptd(amoptd)
