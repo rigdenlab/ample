@@ -113,8 +113,9 @@ def write_jobscript(name, pdb, amoptd, directory=None):
             #if amoptd['submit_qtype'] == "SGE":
             script_header += "pushd {0}\n".format(directory)
         
-        script_header += "\nexport CCP4_SCR=$TMPDIR\n"
-        script_header += '[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n'
+        if not sys.platform.startswith("win"):
+            script_header += "\nexport CCP4_SCR=$TMPDIR\n"
+            script_header += '[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n'
         job_script.write(script_header)
         
         # Get the mrbump command-line
@@ -153,6 +154,8 @@ def mrbump_ensemble_cluster(job_scripts, amoptd, monitor=None):
 
     # Monitor the cluster queue to see when all jobs have finished
     mrBuild.monitorQueue(monitor=monitor)
+    
+    # Rename scripts for array jobs
     if amoptd['submit_array']: mrBuild.cleanUpArrayJob()
     return
 
