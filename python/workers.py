@@ -44,7 +44,7 @@ class JobServer(object):
         #self.inqueue.close()
         # We can't call inqueue.close() even though we've finished as it all goes horribly wrong
         # We sleep to allow enough time for the objects to be picked and put on the queue
-        time.sleep( 2 )
+        time.sleep(2)
         
         return
     
@@ -70,18 +70,11 @@ class JobServer(object):
         if monitor: monitor()
         
         while len(processes):
-            
             for i, process in enumerate(processes):
-                
-                # Join process for timeout seconds and if we haven't finished by then
-                # move onto the next process
+                # Join process for timeout seconds and if we haven't finished by then move onto the next process
                 process.join(timeout)
-                
                 if not process.is_alive():
-                    print "Checking completed process {0} with exitcode {1}".format(process,process.exitcode)
-                    # Remove from processes to check
-                    del processes[i]
-                    
+                    self.logger.debug("Checking completed process {0} with exitcode {1}".format(process,process.exitcode))
                     # Finished so see what happened
                     if process.exitcode == 0 and early_terminate:
                         if not self.inqueue.empty():
@@ -93,12 +86,14 @@ class JobServer(object):
                             while not self.inqueue.empty():
                                 job = self.inqueue.get()
                                 self.logger.debug( "Removed job [{0}] from inqueue".format(job) )
-                                print "Removed job [{0}] from inqueue".format(job)
                         else:
                             print "Got empty queue - all jobs done"
+                            
+                    # Remove from processes to check
+                    del processes[i]
                     
-                    # A process has finished so run the monitor function
-                    if monitor: monitor()
+                # Run the monitor function
+                if monitor: monitor()
                             
         # need to wait here as sometimes it takes a while for the results files to get written
         time.sleep( 3 )
