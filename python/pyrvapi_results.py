@@ -177,7 +177,7 @@ def results_tab(results_dict):
                                 sec_ensemble,
                                 2,0,1,1,True)
         # PHASER
-        if r['PHASER_logfile'] or (r['PHASER_pdbout'] and r['PHASER_mtzout']):
+        if os.path.isfile(str(r['PHASER_logfile'])) or (os.path.isfile(str(r['PHASER_pdbout'])) and os.path.isfile(str(r['PHASER_mtzout']))):
             sec_phaser="sec_phaser_{0}".format(name)
             pyrvapi.rvapi_add_section(sec_phaser,"PHASER Outputs",container_id,0,0,1,1,False )
             if os.path.isfile(str(r['PHASER_pdbout'])) and os.path.isfile(str(r['PHASER_mtzout'])):
@@ -198,7 +198,7 @@ def results_tab(results_dict):
                                         2,0,1,1,True)
                 
         # REFMAC
-        if r['REFMAC_logfile'] or (r['REFMAC_pdbout'] and r['REFMAC_mtzout']):
+        if os.path.isfile(str(r['REFMAC_logfile'])) or (os.path.isfile(str(r['REFMAC_pdbout'])) and os.path.isfile(str(r['REFMAC_mtzout']))):
             sec_refmac="sec_refmac_{0}".format(name)
             pyrvapi.rvapi_add_section(sec_refmac,"REFMAC Outputs",container_id,0,0,1,1,False)
             if os.path.isfile(str(r['REFMAC_pdbout'])) and os.path.isfile(str(r['REFMAC_mtzout'])):
@@ -219,7 +219,7 @@ def results_tab(results_dict):
                                         2,0,1,1,True)
                 
         # SHELXE
-        if r['SHELXE_logfile'] or (r['SHELXE_pdbout'] and r['SHELXE_mtzout']):
+        if os.path.isfile(str(r['SHELXE_logfile'])) or (os.path.isfile(str(r['SHELXE_pdbout'])) and os.path.isfile(str(r['SHELXE_mtzout']))):
             sec_shelxe="sec_shelxe_{0}".format(name)
             pyrvapi.rvapi_add_section(sec_shelxe,"SHELXE Outputs",container_id,0,0,1,1,False)
             if os.path.isfile(str(r['SHELXE_pdbout'])) and os.path.isfile(str(r['SHELXE_mtzout'])):
@@ -240,7 +240,7 @@ def results_tab(results_dict):
                                         2,0,1,1,True)
         
         # Buccaner Rebuild
-        if r['SXRBUCC_logfile'] or (r['SXRBUCC_pdbout'] and r['SXRBUCC_mtzout']):
+        if os.path.isfile(str(r['SXRBUCC_logfile'])) or (os.path.isfile(str(r['SXRBUCC_pdbout'])) and os.path.isfile(str(r['SXRBUCC_mtzout']))):
             sec_sxrbucc="sec_sxrbucc_{0}".format(name)
             pyrvapi.rvapi_add_section(sec_shelxe,"BUCCANEER SHELXE Trace Rebuild Outputs",container_id,0,0,1,1,False)
             if os.path.isfile(str(r['SXRBUCC_pdbout'])) and os.path.isfile(str(r['SXRBUCC_mtzout'])):
@@ -261,7 +261,7 @@ def results_tab(results_dict):
                                         2,0,1,1,True)
                 
         # Arpwarp Rebuild
-        if r['SXRARP_logfile'] or (r['SXRARP_pdbout'] and r['SXRARP_mtzout']):
+        if os.path.isfile(str(r['SXRARP_logfile'])) or (os.path.isfile(str(r['SXRARP_pdbout'])) and os.path.isfile(str(r['SXRARP_mtzout']))):
             sec_sxrarp="sec_sxrarp_{0}".format(name)
             pyrvapi.rvapi_add_section(sec_shelxe,"ARPWARP SHELXE Trace Redbuild Outputs",container_id,0,0,1,1,False)
             if os.path.isfile(str(r['SXRARP_pdbout'])) and os.path.isfile(str(r['SXRARP_mtzout'])):
