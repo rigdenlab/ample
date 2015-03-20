@@ -184,7 +184,7 @@ class ResultsSummary(object):
         return old_results
 
     def extractResults(self, mrbump_dir, purge=False):
-        
+        old_results={}
         if purge: old_results = self._extractOld(mrbump_dir)
         results = self._extractResults(mrbump_dir, archived_ensembles=old_results.keys())
         
