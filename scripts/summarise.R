@@ -36,6 +36,10 @@ updateData <- function(data){
 	# Gold standard
 	data$success <- as.numeric( data$SHELXE_OK == 1 & data$REBUILD_OK == 1 )
 	data$success <- replace( data$success, is.na(data$success), 0 )
+
+	data$PHASER_killed <- replace( data$PHASER_killed, data$PHASER_killed=="True", 1 )
+	data$PHASER_killed <- replace( data$PHASER_killed, data$PHASER_killed=="False", 0 )
+	data$PHASER_killed <- replace( data$PHASER_killed, is.na(data$PHASER_killed), 0 )
 	
 	return(data)
 }
