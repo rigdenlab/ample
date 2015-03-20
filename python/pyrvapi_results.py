@@ -180,7 +180,7 @@ def results_tab(results_dict):
         if r['PHASER_logfile'] or (r['PHASER_pdbout'] and r['PHASER_mtzout']):
             sec_phaser="sec_phaser_{0}".format(name)
             pyrvapi.rvapi_add_section(sec_phaser,"PHASER Outputs",container_id,0,0,1,1,False )
-            if r['PHASER_pdbout'] and r['PHASER_mtzout']:
+            if os.path.isfile(str(r['PHASER_pdbout'])) and os.path.isfile(str(r['PHASER_mtzout'])):
                 data_phaser="data_phaser_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_phaser,
                                         "PHASER PDB",
@@ -189,7 +189,7 @@ def results_tab(results_dict):
                                         sec_phaser,
                                         2,0,1,1,True)
                 pyrvapi.rvapi_append_to_data(data_phaser,fix_path(r['PHASER_mtzout']),"xyz:map")
-            if r['PHASER_logfile']:
+            if os.path.isfile(str(r['PHASER_logfile'])):
                 pyrvapi.rvapi_add_data("data_phaser_logfile_{0}".format(name),
                                         "PHASER Logfile",
                                         fix_path(r['PHASER_logfile']),
@@ -201,7 +201,7 @@ def results_tab(results_dict):
         if r['REFMAC_logfile'] or (r['REFMAC_pdbout'] and r['REFMAC_mtzout']):
             sec_refmac="sec_refmac_{0}".format(name)
             pyrvapi.rvapi_add_section(sec_refmac,"REFMAC Outputs",container_id,0,0,1,1,False)
-            if r['REFMAC_pdbout'] and r['REFMAC_mtzout']:
+            if os.path.isfile(str(r['REFMAC_pdbout'])) and os.path.isfile(str(r['REFMAC_mtzout'])):
                 data_refmac="data_refmac_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_refmac,
                                         "REFMAC PDB",
@@ -210,7 +210,7 @@ def results_tab(results_dict):
                                         sec_refmac,
                                         2,0,1,1,True)
                 pyrvapi.rvapi_append_to_data(data_refmac,fix_path(r['REFMAC_mtzout']),"xyz:map")
-            if r['REFMAC_logfile']:
+            if os.path.isfile(str(r['REFMAC_logfile'])):
                 pyrvapi.rvapi_add_data("data_refmac_logfile_{0}".format(name),
                                         "REFMAC Logfile",
                                         fix_path(r['REFMAC_logfile']),
@@ -222,7 +222,7 @@ def results_tab(results_dict):
         if r['SHELXE_logfile'] or (r['SHELXE_pdbout'] and r['SHELXE_mtzout']):
             sec_shelxe="sec_shelxe_{0}".format(name)
             pyrvapi.rvapi_add_section(sec_shelxe,"SHELXE Outputs",container_id,0,0,1,1,False)
-            if r['SHELXE_pdbout'] and r['SHELXE_mtzout']:
+            if os.path.isfile(str(r['SHELXE_pdbout'])) and os.path.isfile(str(r['SHELXE_mtzout'])):
                 data_shelxe="data_shelxe_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_shelxe,
                                         "SHELXE PDB",
@@ -231,7 +231,7 @@ def results_tab(results_dict):
                                         sec_shelxe,
                                         2,0,1,1,True)
                 pyrvapi.rvapi_append_to_data(data_shelxe,fix_path(r['SHELXE_mtzout']),"xyz:map")
-            if r['SHELXE_logfile']:
+            if os.path.isfile(str(r['SHELXE_logfile'])):
                 pyrvapi.rvapi_add_data("data_shelxe_logfile_{0}".format(name),
                                         "SHELXE Logfile",
                                         fix_path(r['SHELXE_logfile']),
@@ -243,7 +243,7 @@ def results_tab(results_dict):
         if r['SXRBUCC_logfile'] or (r['SXRBUCC_pdbout'] and r['SXRBUCC_mtzout']):
             sec_sxrbucc="sec_sxrbucc_{0}".format(name)
             pyrvapi.rvapi_add_section(sec_shelxe,"BUCCANEER SHELXE Trace Rebuild Outputs",container_id,0,0,1,1,False)
-            if r['SXRBUCC_pdbout'] and r['SXRBUCC_mtzout']:
+            if os.path.isfile(str(r['SXRBUCC_pdbout'])) and os.path.isfile(str(r['SXRBUCC_mtzout'])):
                 data_sxrbucc="data_sxrbucc_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_sxrbucc,
                                         "SXRBUCC PDB",
@@ -252,7 +252,7 @@ def results_tab(results_dict):
                                         sec_sxrbucc,
                                         2,0,1,1,True)
                 pyrvapi.rvapi_append_to_data(data_sxrbucc,fix_path(r['SXRBUCC_mtzout']),"xyz:map")
-            if r['SXRBUCC_logfile']:
+            if os.path.isfile(str(r['SXRBUCC_logfile'])):
                 pyrvapi.rvapi_add_data("data_shelxe_logfile_{0}".format(name),
                                         "SXRBUCC Logfile",
                                         fix_path(r['SXRBUCC_logfile']),
@@ -264,7 +264,7 @@ def results_tab(results_dict):
         if r['SXRARP_logfile'] or (r['SXRARP_pdbout'] and r['SXRARP_mtzout']):
             sec_sxrarp="sec_sxrarp_{0}".format(name)
             pyrvapi.rvapi_add_section(sec_shelxe,"ARPWARP SHELXE Trace Redbuild Outputs",container_id,0,0,1,1,False)
-            if r['SXRARP_pdbout'] and r['SXRARP_mtzout']:
+            if os.path.isfile(str(r['SXRARP_pdbout'])) and os.path.isfile(str(r['SXRARP_mtzout'])):
                 data_sxrarp="data_sxrarp_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_sxrarp,
                                         "SXRARP PDB",
@@ -273,7 +273,7 @@ def results_tab(results_dict):
                                         sec_sxrarp,
                                         2,0,1,1,True)
                 pyrvapi.rvapi_append_to_data(data_sxrarp,fix_path(r['SXRARP_mtzout']),"xyz:map")
-            if r['SXRARP_logfile']:
+            if os.path.isfile(str(r['SXRARP_logfile'])):
                 pyrvapi.rvapi_add_data("data_sxrarp_logfile_{0}".format(name),
                                         "SXRARP Logfile",
                                         fix_path(r['SXRARP_logfile']),
