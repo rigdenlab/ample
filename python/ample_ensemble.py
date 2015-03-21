@@ -191,7 +191,14 @@ class Ensembler(object):
                 
         return variances
     
-    def cluster_models(self, models=None, cluster_method=None, num_clusters=None, cluster_exe=None, nproc=1):
+    def cluster_models(self,
+                       models=None,
+                       cluster_method=None,
+                       num_clusters=None,
+                       cluster_exe=None,
+                       nproc=1,
+                       max_cluster_size=200
+                       ):
         clusters=[]
         clusters_data=[]
         if cluster_method=="spicker":
@@ -202,6 +209,7 @@ class Ensembler(object):
                                                    spicker_exe=cluster_exe,
                                                    models=models,
                                                    num_clusters=num_clusters)
+            spickerer.max_cluster_size=max_cluster_size
             spickerer.run_spicker()
             self.logger.debug(spickerer.results_summary())
             
@@ -233,7 +241,8 @@ class Ensembler(object):
                                                 cluster_method=CLUSTER_METHOD,
                                                 work_dir=fpc_rundir,
                                                 fpc_exe=cluster_exe,
-                                                nproc=nproc)
+                                                nproc=nproc,
+                                                max_cluster_size=max_cluster_size)
         else:
             raise RuntimeError,'Unrecognised clustering method: {0}'.format(cluster_method)
 

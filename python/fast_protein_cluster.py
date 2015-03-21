@@ -22,6 +22,7 @@ class FPC(object):
                 cluster_method="kmeans",
                 work_dir=None,
                 fpc_exe=None,
+                max_cluster_size=200,
                 benchmark=False
                 ):
         
@@ -118,6 +119,11 @@ class FPC(object):
                     maxc=cs
                 else:
                     if cs > maxc: raise RuntimeError,"Clusters do not appear to be in size order!"
+                    
+        # make sure all clusters are < max_cluster_size
+        for i, c in all_clusters:
+            if len(c) > max_cluster_size:
+                all_clusters[i]=c[:max_cluster_size]
         
         # Create the data - we loop through the number of clusters specified by the user
         clusters=[]
