@@ -95,7 +95,7 @@ class ClusterRun:
             script_header += self.queueDirectives(nProc=1,
                                                  logFile=logFile,
                                                  jobName="ensemble",
-                                                 jobTime="1:00",
+                                                 jobTime="01:00:00",
                                                  qtype=qtype,
                                                  queue=amoptd['submit_queue']
                                                  )
