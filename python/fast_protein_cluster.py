@@ -121,7 +121,7 @@ class FPC(object):
                     if cs > maxc: raise RuntimeError,"Clusters do not appear to be in size order!"
                     
         # make sure all clusters are < max_cluster_size
-        for i, c in all_clusters:
+        for i, c in enumerate(all_clusters):
             if len(c) > max_cluster_size:
                 all_clusters[i]=c[:max_cluster_size]
         
