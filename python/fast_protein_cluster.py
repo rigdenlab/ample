@@ -132,9 +132,7 @@ class FPC(object):
             cluster_data['num_clusters']=num_clusters
             clusters_data.append(cluster_data)
             clusters.append(all_clusters[i])
-        
         os.chdir(owd)
-      
         return clusters, clusters_data
  
 class Test(unittest.TestCase):
@@ -200,11 +198,11 @@ class Test(unittest.TestCase):
         cluster_method='hcomplete'
         clusters,cluster_data=fpc.cluster(models=models,
                                           num_clusters=num_clusters,
-                                          nproc=4,
                                           score_type=score_type,
                                           cluster_method=cluster_method,
                                           work_dir=wdir,
                                           fpc_exe='/opt/fast_protein_cluster.1.1.2/fast_protein_cluster',
+                                          nproc=4,
                                           benchmark=True
                                           )
         

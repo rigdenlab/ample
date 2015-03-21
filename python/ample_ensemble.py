@@ -14,6 +14,7 @@ import unittest
 
 # our imports
 import ample_util
+import fast_protein_cluster
 import pdb_edit
 import run_spicker
 import subcluster
@@ -190,27 +191,24 @@ class Ensembler(object):
                 
         return variances
     
-    def cluster_models(self, models=None, cluster_method=None, num_clusters=None, cluster_exe=None):
-        
+    def cluster_models(self, models=None, cluster_method=None, num_clusters=None, cluster_exe=None, nproc=1):
         clusters=[]
         clusters_data=[]
         if cluster_method=="spicker":
-            
             # Spicker Alternative for clustering
-            self.logger.info( '* Running SPICKER to cluster models *' )
+            self.logger.info('* Running SPICKER to cluster models *')
             spicker_rundir = os.path.join( self.work_dir, 'spicker')
             spickerer = run_spicker.SpickerCluster(run_dir=spicker_rundir,
                                                    spicker_exe=cluster_exe,
                                                    models=models,
-                                                   num_clusters=num_clusters )
+                                                   num_clusters=num_clusters)
             spickerer.run_spicker()
-            self.logger.debug( spickerer.results_summary() )
+            self.logger.debug(spickerer.results_summary())
             
             for i in range(num_clusters):
                 # The models
                 cluster=spickerer.results[i].pdb_list
                 clusters.append(cluster)
-                
                 # Data on the models
                 cluster_data=self.create_dict()
                 d=spickerer.results[i]
@@ -219,8 +217,23 @@ class Ensembler(object):
                 cluster_data['cluster_num_models']=d.cluster_size
                 cluster_data['cluster_method']=cluster_method
                 cluster_data['num_clusters']=num_clusters
-                
                 clusters_data.append(cluster_data)
+        
+        elif cluster_method=="fast_protein_cluster":
+            fpc=fast_protein_cluster.FPC()
+            SCORE_TYPE='RMSD'
+            CLUSTER_METHOD='kmeans'
+            self.logger.info('Running fast_protein_cluster with: score_type: {0} cluster_method: {1}'.format(SCORE_TYPE,
+                                                                                                             CLUSTER_METHOD))
+            fpc_rundir = os.path.join(self.work_dir, 'fast_protein_cluster')
+            self.logger.info('fast_protein_cluster running in directory: {0}'.format(fpc_rundir))
+            clusters,cluster_data = fpc.cluster(models=models,
+                                                num_clusters=num_clusters,
+                                                score_type=SCORE_TYPE,
+                                                cluster_method=CLUSTER_METHOD,
+                                                work_dir=fpc_rundir,
+                                                fpc_exe=cluster_exe,
+                                                nproc=nproc)
         else:
             raise RuntimeError,'Unrecognised clustering method: {0}'.format(cluster_method)
 
@@ -308,7 +321,8 @@ class Ensembler(object):
                            truncation_method=None,
                            truncation_pruning=None,
                            ensembles_directory=None,
-                           work_dir=None):
+                           work_dir=None,
+                           nproc=None):
         
         # Work dir set each time
         if not work_dir:
@@ -348,7 +362,8 @@ class Ensembler(object):
         for cluster, cluster_data in zip(*self.cluster_models(models=models,
                                                               cluster_method=cluster_method,
                                                               num_clusters=num_clusters,
-                                                              cluster_exe=cluster_exe)):
+                                                              cluster_exe=cluster_exe,
+                                                              nproc=nproc)):
             if len(cluster) < 2:
                 self.logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data['cluster_num']))
                 continue

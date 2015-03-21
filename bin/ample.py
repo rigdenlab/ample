@@ -86,17 +86,14 @@ def process_command_line():
     parser.add_argument('-early_terminate', metavar='True/False', type=str, nargs=1,
                          help='Stop the run as soon as a success has been found.')
     
-    parser.add_argument('-ensembler', type=str, nargs=1,
-                       help='Use the Phenix ensembler')
-    
     parser.add_argument('-ensembles_dir', type=str, nargs=1,
                        help='Path to directory containing existing ensembles')
     
     parser.add_argument('-fasta', type=str, nargs=1, required=True,
                        help='protein fasta file. (required)')
     
-    parser.add_argument('-mr_sequence', type=str, nargs=1,
-                       help="sequence file for crystal content (if different from what's given by -fasta)")
+    parser.add_argument('-fast_protein_cluster_exe', type=str, nargs=1,
+                       help='path to fast_protein_cluster executable')
     
     parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
                        help='Flag for F column in the MTZ file')
@@ -139,6 +136,9 @@ def process_command_line():
     
     parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
                        help='Additional keywords for MRBUMP - are passed through without editing')
+
+    parser.add_argument('-mr_sequence', type=str, nargs=1,
+                       help="sequence file for crystal content (if different from what's given by -fasta)")
     
     parser.add_argument('-name', metavar='job_name', type=str, nargs=1,
                        help='4-letter identifier for job [ampl]')
@@ -474,7 +474,6 @@ def process_options(amoptd,logger):
             amoptd['NMR_protocol'] = True
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
-    
         if not os.path.isfile( str(amoptd['NMR_remodel_fasta']) ):
             amoptd['NMR_remodel_fasta'] =  amoptd['fasta']
     
@@ -486,7 +485,6 @@ def process_options(amoptd,logger):
                 msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(amoptd['frags_3mers'], amoptd['frags_9mers'])
                 ample_exit.exit(msg)
             amoptd['make_frags'] = False
-    
         if amoptd['make_frags'] and (amoptd['frags_3mers'] or  amoptd['frags_9mers']):
             msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
             ample_exit.exit(msg)
@@ -510,7 +508,6 @@ def process_options(amoptd,logger):
         if not os.path.exists( amoptd['domain_all_chains_pdb'] ):
             msg = 'Cannot find file domain_all_chains_pdb: {0}'.format(amoptd['domain_all_chains_pdb'])
             ample_exit.exit(msg)
-    
     # MR programs
     if amoptd['molrep_only'] and amoptd['phaser_only']:
             msg='you say you want molrep only AND phaser only, choose one or both'
@@ -522,7 +519,6 @@ def process_options(amoptd,logger):
         amoptd['mrbump_programs'] = [ 'phaser' ]
     else:
         amoptd['mrbump_programs'] = ['molrep', 'phaser']
-    
     #
     # Benchmark Mode
     #
@@ -556,35 +552,39 @@ def process_options(amoptd,logger):
     amoptd['maxcluster_exe'] = ample_util.find_maxcluster(amoptd)
     
     #
-    # SPICKER and Theseus now shipped with CCP4
+    # Ensemble options
     #
-    if not amoptd['spicker_exe']:
-        if sys.platform.startswith("win"):
-            amoptd['spicker_exe']='spicker.exe'
-        else:
-            amoptd['spicker_exe']='spicker'
-    try:
-        amoptd['spicker_exe'] = ample_util.find_exe(amoptd['spicker_exe'])
-    except Exception:
-        msg="Cannot find spicker executable: {0}".format(amoptd['spicker_exe'])
-        ample_exit.exit(msg)
-    #
-    # Ensembler
-    #
-    if amoptd['ensembler']:
-        logger.info('You are using Phenix ensembler')
-        amoptd['phenix_exe'] = ample_util.find_exe(amoptd['phenix_exe'])
-    else:
-        if not amoptd['theseus_exe']:
+    if amoptd['cluster_method'] == 'spicker':
+        if not amoptd['spicker_exe']:
             if sys.platform.startswith("win"):
-                amoptd['theseus_exe']='theseus.exe'
+                amoptd['spicker_exe']='spicker.exe'
             else:
-                amoptd['theseus_exe']='theseus'
+                amoptd['spicker_exe']='spicker'
         try:
-            amoptd['theseus_exe'] = ample_util.find_exe(amoptd['theseus_exe'])
+            amoptd['spicker_exe'] = ample_util.find_exe(amoptd['spicker_exe'])
         except Exception:
-            msg="Cannot find theseus executable: {0}".format(amoptd['theseus_exe'])
+            msg="Cannot find spicker executable: {0}".format(amoptd['spicker_exe'])
             ample_exit.exit(msg)
+    elif amoptd['cluster_method'] == 'fast_potein_cluster':
+        if not amoptd['fast_protein_cluster_exe']: amoptd['fast_protein_cluster_exe']='fast_protein_cluster'
+        try:
+            amoptd['fast_protein_cluster_exe'] = ample_util.find_exe(amoptd['fast_protein_cluster_exe'])
+        except Exception:
+            msg="Cannot find fast_protein_cluster executable: {0}".format(amoptd['fast_protein_cluster_exe'])
+            ample_exit.exit(msg)
+    else:
+        msg="Unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
+        ample_exit.exit(msg)
+    if not amoptd['theseus_exe']:
+        if sys.platform.startswith("win"):
+            amoptd['theseus_exe']='theseus.exe'
+        else:
+            amoptd['theseus_exe']='theseus'
+    try:
+        amoptd['theseus_exe'] = ample_util.find_exe(amoptd['theseus_exe'])
+    except Exception:
+        msg="Cannot find theseus executable: {0}".format(amoptd['theseus_exe'])
+        ample_exit.exit(msg)
     #
     # Scwrl
     #

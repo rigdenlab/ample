@@ -34,6 +34,10 @@ def create_ensembles( amoptd ):
     ensembler.max_ensemble_models = amoptd['max_ensemble_models']
     if amoptd['cluster_method'] == 'spicker':
         cluster_exe = amoptd['spicker_exe']
+    elif amoptd['cluster_method'] == 'fast_protein_cluster':
+        cluster_exe = amoptd['fast_protein_cluster_exe']
+    else:
+        raise RuntimeError,"create_ensembles - unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
         
     ensembles_directory=os.path.join(amoptd['work_dir'],'ensembles')
     if not os.path.isdir(ensembles_directory): os.mkdir(ensembles_directory)
@@ -52,7 +56,8 @@ def create_ensembles( amoptd ):
                                            truncation_method=amoptd['truncation_method'],
                                            truncation_pruning=amoptd['truncation_pruning'],
                                            ensembles_directory=ensembles_directory,
-                                           work_dir=work_dir)
+                                           work_dir=work_dir,
+                                           nproc=amoptd['nproc'])
     
     amoptd['ensembles'] = ensembles
     amoptd['ensembles_data'] = ensembler.ensembles_data
