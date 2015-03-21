@@ -27,8 +27,8 @@ class FPC(object):
         
         # FPC default if 5 clusters - we just run with this for the time being
         FPC_NUM_CLUSTERS=5
-        if num_clusters > FPC_NUM_CLUSTERS:
-            raise RuntimeError,"Cannot work with more than {0)} clusters.".format(FPC_NUM_CLUSTERS)
+        if num_clusters is None or num_clusters > FPC_NUM_CLUSTERS:
+            raise RuntimeError,"Cannot work with more than {0)} clusters, got: {1}.".format(FPC_NUM_CLUSTERS,num_clusters)
   
         owd=os.getcwd()
         if not os.path.isdir(work_dir): os.mkdir(work_dir)
@@ -214,8 +214,6 @@ class Test(unittest.TestCase):
         
         shutil.rmtree(wdir)
         return
-    
-    
 
 def testSuite():
     suite = unittest.TestSuite()
