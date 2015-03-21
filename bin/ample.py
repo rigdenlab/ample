@@ -565,7 +565,7 @@ def process_options(amoptd,logger):
         except Exception:
             msg="Cannot find spicker executable: {0}".format(amoptd['spicker_exe'])
             ample_exit.exit(msg)
-    elif amoptd['cluster_method'] == 'fast_potein_cluster':
+    elif amoptd['cluster_method'] == 'fast_protein_cluster':
         if not amoptd['fast_protein_cluster_exe']: amoptd['fast_protein_cluster_exe']='fast_protein_cluster'
         try:
             amoptd['fast_protein_cluster_exe'] = ample_util.find_exe(amoptd['fast_protein_cluster_exe'])
