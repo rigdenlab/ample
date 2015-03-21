@@ -221,13 +221,13 @@ class Ensembler(object):
         
         elif cluster_method=="fast_protein_cluster":
             fpc=fast_protein_cluster.FPC()
-            SCORE_TYPE='RMSD'
+            SCORE_TYPE='rmsd'
             CLUSTER_METHOD='kmeans'
             self.logger.info('Running fast_protein_cluster with: score_type: {0} cluster_method: {1}'.format(SCORE_TYPE,
                                                                                                              CLUSTER_METHOD))
             fpc_rundir = os.path.join(self.work_dir, 'fast_protein_cluster')
             self.logger.info('fast_protein_cluster running in directory: {0}'.format(fpc_rundir))
-            clusters,cluster_data = fpc.cluster(models=models,
+            clusters, clusters_data = fpc.cluster(models=models,
                                                 num_clusters=num_clusters,
                                                 score_type=SCORE_TYPE,
                                                 cluster_method=CLUSTER_METHOD,
