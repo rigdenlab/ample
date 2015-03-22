@@ -95,7 +95,7 @@ class ClusterRun:
             script_header += self.queueDirectives(nProc=1,
                                                  logFile=logFile,
                                                  jobName="ensemble",
-                                                 jobTime="01:00:00",
+                                                 jobTime="3600",
                                                  qtype=qtype,
                                                  queue=amoptd['submit_queue']
                                                  )
@@ -104,7 +104,7 @@ class ClusterRun:
             # Find path to this directory to get path to python ensemble.py script
             pydir=os.path.abspath( os.path.dirname( __file__ ) )
             ensemble_script = os.path.join(pydir, "ensemble.py")
-            job_script.write("{0} {1} {2}\n".format(self.pythonPath, ensemble_script, amoptd['results_path']))
+            job_script.write("{0} {1} {2} {3}\n".format(self.pythonPath, "-u", ensemble_script, amoptd['results_path']))
 
         # Make executable
         os.chmod(script_path, 0o777)
@@ -494,6 +494,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         else:
             raise RuntimeError,"Unrecognised QTYPE: ".format(self.QTYPE)            
 
+        self.logger.debug("Submitting job with command: {0}".format(command_line))
         process_args = shlex.split(command_line)
         p = subprocess.Popen(process_args, stdin = stdin,
                                       stdout = subprocess.PIPE)
