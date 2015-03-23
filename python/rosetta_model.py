@@ -97,17 +97,12 @@ class RosettaModel(object):
 
         """
         assert self.rosetta_bin and os.path.isdir(self.rosetta_bin)
-
         binaries = glob.glob( self.rosetta_bin + "/{0}.*".format( name )  )
-        if not len( binaries ):
-            return False
+        if not len( binaries ): return False
 
         # Could check for shortest - for now just return the first
-        binary = os.path.abspath( binaries[ 0 ] )
-
-        if os.path.isfile( binary ):
-            return binary
-
+        binary = os.path.abspath(binaries[0])
+        if os.path.isfile(binary): return binary
         return False
 
     def generate_seeds(self, nseeds):
@@ -346,12 +341,10 @@ class RosettaModel(object):
         """Determine the binary directory for the version"""
         assert self.rosetta_version and type(self.rosetta_version) is float,"self.rosetta_version needs to be set before calling get_bin_dir"
         assert os.path.isdir(self.rosetta_dir),"self.rosetta_dir needs to have been set before calling get_bin_dir"
-
-        if self.rosetta_version == 3.4 or self.rosetta_version == 3.5:
-            binDir = os.path.join(self.rosetta_dir,'rosetta_source','bin')
-        elif self.rosetta_version == 3.6:
-            binDir = os.path.join(self.rosetta_dir,'main','source','bin')
-        return binDir
+        bin_dir=os.path.join(self.rosetta_dir,'rosetta_source','bin') 
+        if self.rosetta_version >= 3.6:
+            bin_dir = os.path.join(self.rosetta_dir,'main','source','bin')
+        return bin_dir
 
     def modelling_cmd(self, wdir, nstruct, seed):
         """
