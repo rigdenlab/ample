@@ -554,8 +554,8 @@ def finalSummary(amoptd):
                 results.append(d)
 
     resultsTable = []
-    keys = ['ensemble_name','Solution_Type','MR_program',"PHASER_LLG","PHASER_TFZ",'SHELXE_CC','SHELXE_ACL',
-            'SXRBUCC_final_Rfact','SXRBUCC_final_Rfree', 'SXRARP_final_Rfact','SXRARP_final_Rfree',
+    keys = ['ensemble_name','Solution_Type','MR_program',"PHASER_LLG","PHASER_TFZ", 'final_Rfact', 'final_Rfree',
+            'SHELXE_CC','SHELXE_ACL', 'SXRBUCC_final_Rfact','SXRBUCC_final_Rfree', 'SXRARP_final_Rfact','SXRARP_final_Rfree',
             'subcluster_num_models','truncation_num_residues']
 
     resultsTable.append(keys)
