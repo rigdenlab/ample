@@ -121,8 +121,8 @@ class ResultsSummary(object):
         d['MOLREP_logfile']     = None
         d['MOLREP_version']     = None
         
-        d['final_Rfact']        = None
-        d['final_Rfree']        = None
+        d['REFMAC_Rfact']       = None
+        d['REFMAC_Rfree']       = None
         d['REFMAC_pdbout']      = None
         d['REFMAC_mtzout']      = None
         d['REFMAC_logfile']     = None
@@ -279,7 +279,7 @@ class ResultsSummary(object):
                      'Bucc_final_Rfact' : 'BUCC_final_Rfact',
                      'Bucc_final_Rfree' : 'BUCC_final_Rfree',
                      'ARP_final_Rfact'  : 'ARP_final_Rfact',
-                      'ARP_final_Rfree'  : 'ARP_final_Rfree',
+                     'ARP_final_Rfree'  : 'ARP_final_Rfree',
                       }
 
         results = []
@@ -431,8 +431,8 @@ class ResultsSummary(object):
             keys += ['PHASER_LLG']
         if any([True for r in results if r['PHASER_TFZ']]):
             keys += ['PHASER_TFZ']
-        if any([True for r in results if r['final_Rfree']]):
-            keys += ['final_Rfact', 'final_Rfree']
+        if any([True for r in results if r['REFMAC_Rfree']]):
+            keys += ['REFMAC_Rfact', 'REFMAC_Rfree']
         if any([True for r in results if r['BUCC_final_Rfact']]):
             keys += ['BUCC_final_Rfact', 'BUCC_final_Rfree']
         if any([True for r in results if r['ARP_final_Rfact']]):
@@ -466,8 +466,8 @@ class ResultsSummary(object):
             elif 'ARP_final_Rfree' in r and r['ARP_final_Rfree'] and float(r['ARP_final_Rfree']) < 1.0:
                 sortf = lambda x: float('inf') if x['ARP_final_Rfree']  is None else float( x['ARP_final_Rfree'] )
                 break
-            elif 'final_Rfree' in r and r['final_Rfree'] and float(r['final_Rfree']) < 1.0:
-                sortf = lambda x: float('inf') if x['final_Rfree']  is None else float( x['final_Rfree'] )
+            elif 'REFMAC_Rfree' in r and r['REFMAC_Rfree'] and float(r['REFMAC_Rfree']) < 1.0:
+                sortf = lambda x: float('inf') if x['REFMAC_Rfree']  is None else float( x['REFMAC_Rfree'] )
                 break
         if sortf:
             # Now sort by the key
@@ -554,7 +554,7 @@ def finalSummary(amoptd):
                 results.append(d)
 
     resultsTable = []
-    keys = ['ensemble_name','Solution_Type','MR_program',"PHASER_LLG","PHASER_TFZ", 'final_Rfact', 'final_Rfree',
+    keys = ['ensemble_name','Solution_Type','MR_program',"PHASER_LLG","PHASER_TFZ", 'REFMAC_Rfact', 'REFMAC_Rfree',
             'SHELXE_CC','SHELXE_ACL', 'SXRBUCC_final_Rfact','SXRBUCC_final_Rfree', 'SXRARP_final_Rfact','SXRARP_final_Rfree',
             'subcluster_num_models','truncation_num_residues']
 
@@ -589,7 +589,7 @@ def jobSucceeded(job_dict):
         success=True
     elif 'ARP_final_Rfree' in job_dict and job_dict['ARP_final_Rfree'] and float(job_dict['ARP_final_Rfree']) <= rFreeSuccess:
         success=True
-    elif 'final_Rfree' in job_dict and job_dict['final_Rfree'] and float(job_dict['final_Rfree']) <= rFreeSuccess:
+    elif 'REFMAC_Rfree' in job_dict and job_dict['REFMAC_Rfree'] and float(job_dict['REFMAC_Rfree']) <= rFreeSuccess:
         success=True
     return success
 

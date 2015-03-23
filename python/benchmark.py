@@ -188,8 +188,8 @@ def writeCsv(fileName,resultList):
                 'MOLREP_time',
                 'MOLREP_version',
                 
-                'final_Rfact',
-                'final_Rfree',
+                'REFMAC_Rfact',
+                'REFMAC_Rfree',
                 'REFMAC_version',
                 
                 'BUCC_final_Rfact',
