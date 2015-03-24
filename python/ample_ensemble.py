@@ -566,8 +566,8 @@ class Ensembler(object):
             # Get list of pdbs clustered according to radius threshold
             cluster_files = clusterer.cluster_by_radius(radius)
             self.logger.debug("Clustered {0} files".format(len(cluster_files)))
-            if cluster_files < 2:
-                self.logger.info( 'Could not cluster files using radius {0}'.format(radius))
+            if len(cluster_files) < 2:
+                self.logger.info('Clustered fewer than 2 files using radius {0} - SKIPPING'.format(radius))
                 continue
 
             # For naming all files
@@ -594,16 +594,19 @@ class Ensembler(object):
             # Write out the files for reference
             file_list = "maxcluster_radius_{0}_files.list".format(radius)
             with open(file_list, "w") as f:
-                for c in cluster_files:
-                    f.write(c+"\n")
+                for c in cluster_files: f.write(c+"\n")
                 f.write("\n")
 
             # Run theseus to generate a file containing the aligned clusters
             cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files
-            retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
+            logfile=os.path.abspath(basename+"_theseus.log")
+            retcode = ample_util.run_command( cmd, logfile=logfile )
             if retcode != 0:
-                self.logger.debug( 'Could not create ensemble for files (models too diverse): {0}'.format( basename ) )
-                continue
+                msg="Error running theseus on ensemble {0} in directory: {1}\n See log: {2}".format(basename,
+                                                                                                    subcluster_dir,
+                                                                                                    logfile)
+                self.logger.critical(msg)
+                raise RuntimeError,msg
 
             # jmht - the previous Align_rosetta_fine_clusters_with_theseus routine was running theseus twice and adding the averaged
             # ensemble from the first run to the ensemble. This seems to improve the results for the TOXD test case - maybe something to
