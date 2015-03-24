@@ -634,72 +634,6 @@ class Ensembler(object):
             ensembles_data.append(ensemble_data)
         
         return ensembles,ensembles_data
-    
-    def _cluster_nmodels(self,nmodels,radius,clusterer,direction):
-        MINRADIUS=0.1
-        MAXRADIUS=100
-        INCREMENT=1 if radius > 1 else 0.1
-        subcluster_models=[]
-        while True:
-            if radius > MAXRADIUS or radius < MINRADIUS: break
-            if radius <= 1 and INCREMENT==1: INCREMENT=0.1
-            subcluster_models=clusterer.cluster_by_radius(radius)
-            if direction=="up":
-                if len(subcluster_models) >= nmodels: break
-                radius+=INCREMENT
-            elif direction=='down':
-                if len(subcluster_models) <= nmodels: break
-                radius-=INCREMENT
-            else:
-                raise RuntimeError,"Unknown direction: {0}".format(direction)
-        return subcluster_models, radius
-    
-    def _subcluster_radius(self,models,radius,truncated_models_data):
-            cluster_num=truncated_models_data['cluster_num']
-            truncation_level=truncated_models_data['truncation_level']
-            truncation_dir=truncated_models_data['truncation_dir']
-    
-            # Got files so create the directories
-            subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
-            os.mkdir(subcluster_dir)
-            os.chdir(subcluster_dir)
-
-            # Write out the files for reference
-            file_list = "subcluster_radius_{0}_files.list".format(radius)
-            with open(file_list, "w") as f:
-                for c in models: f.write(c+"\n")
-                f.write("\n")
-
-            basename='c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)
-             
-            # Run theseus to generate a file containing the aligned clusters
-            cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + models
-            logfile=os.path.abspath(basename+"_theseus.log")
-            retcode = ample_util.run_command( cmd, logfile=logfile )
-            if retcode != 0:
-                msg="Error running theseus on ensemble {0} in directory: {1}\n See log: {2}".format(basename,
-                                                                                                    subcluster_dir,
-                                                                                                    logfile)
-                self.logger.critical(msg)
-                raise RuntimeError,msg
-
-
-            # Rename the file with the aligned files and append the path to the ensembles
-            cluster_file = os.path.join(subcluster_dir, basename+'_sup.pdb')
-            cluster = os.path.join(subcluster_dir, basename+'.pdb')
-            shutil.move(cluster_file, cluster)
-
-            # The data we've collected is the same for all pdbs in this level so just keep using the first  
-            subcluster_data=copy.copy(truncated_models_data)
-            subcluster_data['subcluster_num_models'] = len(models)
-            subcluster_data['subcluster_radius_threshold'] = radius
-            subcluster_data['ensemble_pdb'] = cluster
-
-            # Get the centroid model name from the list of files given to theseus - we can't parse
-            # the pdb file as theseus truncates the filename
-            subcluster_data['subcluster_centroid_model']=os.path.abspath(models[0])
-            
-            return cluster, subcluster_data
 
     def subcluster_models_new(self,
                               truncated_models,
@@ -722,21 +656,85 @@ class Ensembler(object):
         len_cluster=len(cluster_files)
         subclusters=[]
         subclusters_data=[]
-        # Expand radius until get 10, 20 and then ensemble_max_models models
         for nmodels in cluster_sizes:
             if len_cluster >= nmodels:
                 direction='down'
             elif len_cluster <= nmodels:
                 direction='up'
-            models,radius=self._cluster_nmodels(nmodels,radius,clusterer,direction)
-            scluster, data = self._subcluster_radius(models,radius,truncated_models_data)
+            models, radius = self._subcluster_nmodels(nmodels, radius, clusterer, direction)
+            scluster, data = self._subcluster_radius(models, radius, truncated_models_data)
             subclusters.append(scluster)
             subclusters_data.append(data)
             len_cluster=len(models)
             print "GOT 2 ",len_cluster,radius
         
         return subclusters, subclusters_data
+
+    def _subcluster_nmodels(self,nmodels,radius,clusterer,direction):
+        MINRADIUS=0.1
+        MAXRADIUS=100
+        INCREMENT=1 if radius > 1 else 0.1
+        subcluster_models=[]
+        while True:
+            if radius > MAXRADIUS or radius < MINRADIUS: break
+            if radius <= 1 and INCREMENT==1: INCREMENT=0.1
+            subcluster_models=clusterer.cluster_by_radius(radius)
+            if direction=="up":
+                if len(subcluster_models) >= nmodels: break
+                radius+=INCREMENT
+            elif direction=='down':
+                if len(subcluster_models) <= nmodels: break
+                radius-=INCREMENT
+            else:
+                raise RuntimeError,"Unknown direction: {0}".format(direction)
+        return subcluster_models, radius
     
+    def _subcluster_radius(self,models,radius,truncated_models_data):
+        # Extract data from dictionary
+        cluster_num=truncated_models_data['cluster_num']
+        truncation_level=truncated_models_data['truncation_level']
+        truncation_dir=truncated_models_data['truncation_dir']
+
+        # Got files so create the directories
+        subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
+        os.mkdir(subcluster_dir)
+        os.chdir(subcluster_dir)
+
+        # Write out the files for reference
+        file_list = "subcluster_radius_{0}_files.list".format(radius)
+        with open(file_list, "w") as f:
+            for c in models: f.write(c+"\n")
+            f.write("\n")
+
+        basename='c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)
+         
+        # Run theseus to generate a file containing the aligned clusters
+        cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + models
+        logfile=os.path.abspath(basename+"_theseus.log")
+        retcode = ample_util.run_command( cmd, logfile=logfile )
+        if retcode != 0:
+            msg="Error running theseus on ensemble {0} in directory: {1}\n See log: {2}".format(basename,
+                                                                                                subcluster_dir,
+                                                                                                logfile)
+            self.logger.critical(msg)
+            raise RuntimeError,msg
+
+        # Rename the file with the aligned files and append the path to the ensembles
+        cluster_file = os.path.join(subcluster_dir, basename+'_sup.pdb')
+        cluster = os.path.join(subcluster_dir, basename+'.pdb')
+        shutil.move(cluster_file, cluster)
+
+        # The data we've collected is the same for all pdbs in this level so just keep using the first  
+        subcluster_data=copy.copy(truncated_models_data)
+        subcluster_data['subcluster_num_models'] = len(models)
+        subcluster_data['subcluster_radius_threshold'] = radius
+        subcluster_data['ensemble_pdb'] = cluster
+
+        # Get the centroid model name from the list of files given to theseus - we can't parse
+        # the pdb file as theseus truncates the filename
+        subcluster_data['subcluster_centroid_model']=os.path.abspath(models[0])
+        return cluster, subcluster_data
+  
     def truncate_models(self,models,models_data,truncation_method,percent_truncation,truncation_pruning='none'):
         
         assert len(models) > 1,"Cannot truncate as < 2 models!"
