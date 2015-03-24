@@ -635,19 +635,72 @@ class Ensembler(object):
         
         return ensembles,ensembles_data
     
-    def _cluster_nmodels(self,nmodels,radius,clusterer):
+    def _cluster_nmodels(self,nmodels,radius,clusterer,direction):
+        MINRADIUS=0.1
         MAXRADIUS=100
-        INCREMENT=1
+        INCREMENT=1 if radius > 1 else 0.1
         subcluster_models=[]
         while True:
-            if radius > MAXRADIUS: break
+            if radius > MAXRADIUS or radius < MINRADIUS: break
+            if radius <= 1 and INCREMENT==1: INCREMENT=0.1
             subcluster_models=clusterer.cluster_by_radius(radius)
-            if len(subcluster_models) >= nmodels: break
-            radius+=INCREMENT
-        return subcluster_models
+            if direction=="up":
+                if len(subcluster_models) >= nmodels: break
+                radius+=INCREMENT
+            elif direction=='down':
+                if len(subcluster_models) <= nmodels: break
+                radius-=INCREMENT
+            else:
+                raise RuntimeError,"Unknown direction: {0}".format(direction)
+        return subcluster_models, radius
     
-    def _subcluster_radius(self,models,radius):
+    def _subcluster_radius(self,models,radius,truncated_models_data):
+            cluster_num=truncated_models_data['cluster_num']
+            truncation_level=truncated_models_data['truncation_level']
+            truncation_dir=truncated_models_data['truncation_dir']
     
+            # Got files so create the directories
+            subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
+            os.mkdir(subcluster_dir)
+            os.chdir(subcluster_dir)
+
+            # Write out the files for reference
+            file_list = "subcluster_radius_{0}_files.list".format(radius)
+            with open(file_list, "w") as f:
+                for c in models: f.write(c+"\n")
+                f.write("\n")
+
+            basename='c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)
+             
+            # Run theseus to generate a file containing the aligned clusters
+            cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + models
+            logfile=os.path.abspath(basename+"_theseus.log")
+            retcode = ample_util.run_command( cmd, logfile=logfile )
+            if retcode != 0:
+                msg="Error running theseus on ensemble {0} in directory: {1}\n See log: {2}".format(basename,
+                                                                                                    subcluster_dir,
+                                                                                                    logfile)
+                self.logger.critical(msg)
+                raise RuntimeError,msg
+
+
+            # Rename the file with the aligned files and append the path to the ensembles
+            cluster_file = os.path.join(subcluster_dir, basename+'_sup.pdb')
+            cluster = os.path.join(subcluster_dir, basename+'.pdb')
+            shutil.move(cluster_file, cluster)
+
+            # The data we've collected is the same for all pdbs in this level so just keep using the first  
+            subcluster_data=copy.copy(truncated_models_data)
+            subcluster_data['subcluster_num_models'] = len(models)
+            subcluster_data['subcluster_radius_threshold'] = radius
+            subcluster_data['ensemble_pdb'] = cluster
+
+            # Get the centroid model name from the list of files given to theseus - we can't parse
+            # the pdb file as theseus truncates the filename
+            subcluster_data['subcluster_centroid_model']=os.path.abspath(models[0])
+            
+            return cluster, subcluster_data
+
     def subcluster_models_new(self,
                               truncated_models,
                               truncated_models_data,
@@ -655,14 +708,6 @@ class Ensembler(object):
                               subcluster_exe=None,
                               ensemble_max_models=None):
         
-        ensembles=[]
-        ensembles_data=[]
-        
-        # Use first model to get data on level
-        cluster_num=truncated_models_data['cluster_num']
-        truncation_level=truncated_models_data['truncation_level']
-        truncation_dir=truncated_models_data['truncation_dir']
-            
         # Run maxcluster to generate the distance matrix
         if subcluster_program=='maxcluster':
             clusterer = subcluster.MaxClusterer(self.subcluster_exe)
@@ -671,23 +716,26 @@ class Ensembler(object):
         clusterer.generate_distance_matrix(truncated_models)
         #clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
         
-        r1=1
-        cluster_files = clusterer.cluster_by_radius(r1)
-        print "GOT ",cluster_files
-        lc=len(cluster_files)
-        if  lc > ensemble_max_models:
-            # shrink radius till only ensemble_max_models
-            pass
-        elif lc == 1:
-            # Expand radius until get 10, 20 and then ensemble_max_models models
-            for nmodels in [10, 20, ensemble_max_models]:
-                smodels=self._cluster_nmodels(nmodels,r1,clusterer)
-                print "GOT 2 ",len(smodels)
-        else:
-            # old code
-            pass
+        cluster_sizes=[10,20,30]
+        radius=1
+        cluster_files = clusterer.cluster_by_radius(radius)
+        len_cluster=len(cluster_files)
+        subclusters=[]
+        subclusters_data=[]
+        # Expand radius until get 10, 20 and then ensemble_max_models models
+        for nmodels in cluster_sizes:
+            if len_cluster >= nmodels:
+                direction='down'
+            elif len_cluster <= nmodels:
+                direction='up'
+            models,radius=self._cluster_nmodels(nmodels,radius,clusterer,direction)
+            scluster, data = self._subcluster_radius(models,radius,truncated_models_data)
+            subclusters.append(scluster)
+            subclusters_data.append(data)
+            len_cluster=len(models)
+            print "GOT 2 ",len_cluster,radius
         
-        return ensembles,ensembles_data
+        return subclusters, subclusters_data
     
     def truncate_models(self,models,models_data,truncation_method,percent_truncation,truncation_pruning='none'):
         
@@ -1135,7 +1183,7 @@ class Test(unittest.TestCase):
         shutil.rmtree(ensembler.work_dir)
         return
     
-    def testSubclusteringNew1(self):
+    def testSubclusterNew1(self):
         
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
@@ -1166,12 +1214,12 @@ class Test(unittest.TestCase):
         
         return
     
-    def testSubclusteringNew2(self):
+    def testSubclusterNew2(self):
         
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
 
-        work_dir=os.path.join(self.tests_dir,"genthresh7")
+        work_dir=os.path.join(self.tests_dir,"genthresh8")
         if os.path.isdir(work_dir):
             shutil.rmtree(work_dir)
         os.mkdir(work_dir)
@@ -1192,9 +1240,34 @@ class Test(unittest.TestCase):
                                                                       subcluster_program='maxcluster',
                                                                       subcluster_exe=self.maxcluster_exe,
                                                                       ensemble_max_models=30)
+        return
+    
+    def testSubclusterNew3(self):
         
-        #print "GOT ", subcluster, subcluster_data
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        ensembler=Ensembler()
+
+        work_dir=os.path.join(self.tests_dir,"genthresh9")
+        if os.path.isdir(work_dir):
+            shutil.rmtree(work_dir)
+        os.mkdir(work_dir)
         
+        ensembler.theseus_exe=self.theseus_exe
+        ensembler.cluster_exe=self.spicker_exe
+        ensembler.subcluster_exe=self.maxcluster_exe
+        
+        mdir=os.path.join(self.testfiles_dir,"models")
+        truncated_models=glob.glob(mdir+os.sep+"*.pdb")
+
+        truncated_models_data = { 'cluster_num'      : 1,
+                                  'truncation_level' : 1,
+                                  'truncation_dir'   : work_dir } 
+        
+        subcluster, subcluster_data = ensembler.subcluster_models_new(truncated_models,
+                                                                      truncated_models_data,
+                                                                      subcluster_program='maxcluster',
+                                                                      subcluster_exe=self.maxcluster_exe,
+                                                                      ensemble_max_models=30)
         return
 
 def testSuite():
