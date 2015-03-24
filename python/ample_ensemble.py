@@ -556,6 +556,7 @@ class Ensembler(object):
         else:
             assert False
         clusterer.generate_distance_matrix(truncated_models)
+        #clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
 
         # Loop through the radius thresholds
         num_previous_models=-1 # set to -1 so comparison always false on first pass
@@ -567,7 +568,7 @@ class Ensembler(object):
             cluster_files = clusterer.cluster_by_radius(radius)
             self.logger.debug("Clustered {0} files".format(len(cluster_files)))
             if len(cluster_files) < 2:
-                self.logger.info('Clustered fewer than 2 files using radius {0} - SKIPPING'.format(radius))
+                self.logger.debug('Clustered fewer than 2 files using radius {0} -  in truncation dir {1} SKIPPING'.format(radius,truncation_dir))
                 continue
 
             # For naming all files
