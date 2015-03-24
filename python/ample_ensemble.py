@@ -635,6 +635,60 @@ class Ensembler(object):
         
         return ensembles,ensembles_data
     
+    def _cluster_nmodels(self,nmodels,radius,clusterer):
+        MAXRADIUS=100
+        INCREMENT=1
+        subcluster_models=[]
+        while True:
+            if radius > MAXRADIUS: break
+            subcluster_models=clusterer.cluster_by_radius(radius)
+            if len(subcluster_models) >= nmodels: break
+            radius+=INCREMENT
+        return subcluster_models
+    
+    def _subcluster_radius(self,models,radius):
+    
+    def subcluster_models_new(self,
+                              truncated_models,
+                              truncated_models_data,
+                              subcluster_program=None,
+                              subcluster_exe=None,
+                              ensemble_max_models=None):
+        
+        ensembles=[]
+        ensembles_data=[]
+        
+        # Use first model to get data on level
+        cluster_num=truncated_models_data['cluster_num']
+        truncation_level=truncated_models_data['truncation_level']
+        truncation_dir=truncated_models_data['truncation_dir']
+            
+        # Run maxcluster to generate the distance matrix
+        if subcluster_program=='maxcluster':
+            clusterer = subcluster.MaxClusterer(self.subcluster_exe)
+        else:
+            assert False
+        clusterer.generate_distance_matrix(truncated_models)
+        #clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
+        
+        r1=1
+        cluster_files = clusterer.cluster_by_radius(r1)
+        print "GOT ",cluster_files
+        lc=len(cluster_files)
+        if  lc > ensemble_max_models:
+            # shrink radius till only ensemble_max_models
+            pass
+        elif lc == 1:
+            # Expand radius until get 10, 20 and then ensemble_max_models models
+            for nmodels in [10, 20, ensemble_max_models]:
+                smodels=self._cluster_nmodels(nmodels,r1,clusterer)
+                print "GOT 2 ",len(smodels)
+        else:
+            # old code
+            pass
+        
+        return ensembles,ensembles_data
+    
     def truncate_models(self,models,models_data,truncation_method,percent_truncation,truncation_pruning='none'):
         
         assert len(models) > 1,"Cannot truncate as < 2 models!"
@@ -1079,6 +1133,68 @@ class Test(unittest.TestCase):
         self.assertEqual(os.path.basename(d['subcluster_centroid_model']),'4_S_00000002.pdb')
         
         shutil.rmtree(ensembler.work_dir)
+        return
+    
+    def testSubclusteringNew1(self):
+        
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        ensembler=Ensembler()
+
+        work_dir=os.path.join(self.tests_dir,"genthresh7")
+        if os.path.isdir(work_dir):
+            shutil.rmtree(work_dir)
+        os.mkdir(work_dir)
+        
+        ensembler.theseus_exe=self.theseus_exe
+        ensembler.cluster_exe=self.spicker_exe
+        ensembler.subcluster_exe=self.maxcluster_exe
+        
+        mdir=os.path.join(self.testfiles_dir,"2qsk_models")
+        truncated_models=glob.glob(mdir+os.sep+"*.pdb")
+
+        truncated_models_data = { 'cluster_num'      : 1,
+                                  'truncation_level' : 1,
+                                  'truncation_dir'   : work_dir } 
+        
+        subcluster, subcluster_data = ensembler.subcluster_models_new(truncated_models,
+                                                                      truncated_models_data,
+                                                                      subcluster_program='maxcluster',
+                                                                      subcluster_exe=self.maxcluster_exe,
+                                                                      ensemble_max_models=30)
+        
+        #print "GOT ", subcluster, subcluster_data
+        
+        return
+    
+    def testSubclusteringNew2(self):
+        
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        ensembler=Ensembler()
+
+        work_dir=os.path.join(self.tests_dir,"genthresh7")
+        if os.path.isdir(work_dir):
+            shutil.rmtree(work_dir)
+        os.mkdir(work_dir)
+        
+        ensembler.theseus_exe=self.theseus_exe
+        ensembler.cluster_exe=self.spicker_exe
+        ensembler.subcluster_exe=self.maxcluster_exe
+        
+        mdir=os.path.join(self.testfiles_dir,"1mix_models")
+        truncated_models=glob.glob(mdir+os.sep+"*.pdb")
+
+        truncated_models_data = { 'cluster_num'      : 1,
+                                  'truncation_level' : 1,
+                                  'truncation_dir'   : work_dir } 
+        
+        subcluster, subcluster_data = ensembler.subcluster_models_new(truncated_models,
+                                                                      truncated_models_data,
+                                                                      subcluster_program='maxcluster',
+                                                                      subcluster_exe=self.maxcluster_exe,
+                                                                      ensemble_max_models=30)
+        
+        #print "GOT ", subcluster, subcluster_data
+        
         return
 
 def testSuite():
