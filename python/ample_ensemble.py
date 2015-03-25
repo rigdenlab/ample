@@ -651,43 +651,83 @@ class Ensembler(object):
         #clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
         
         cluster_sizes=[10,20,30]
-        radius=1
-        cluster_files = clusterer.cluster_by_radius(radius)
-        len_cluster=len(cluster_files)
         subclusters=[]
         subclusters_data=[]
         for nmodels in cluster_sizes:
+            radius=1
+            increment=1
+            cluster_files = clusterer.cluster_by_radius(radius)
+            len_cluster=len(cluster_files)
             if len_cluster >= nmodels:
                 direction='down'
             elif len_cluster <= nmodels:
                 direction='up'
-            models, radius = self._subcluster_nmodels(nmodels, radius, clusterer, direction)
+            models, radius = self._subcluster_nmodels(nmodels, radius, clusterer, direction,increment)
             scluster, data = self._subcluster_radius(models, radius, truncated_models_data)
             subclusters.append(scluster)
             subclusters_data.append(data)
             len_cluster=len(models)
-            print "GOT 2 ",len_cluster,radius
         
         return subclusters, subclusters_data
 
-    def _subcluster_nmodels(self,nmodels,radius,clusterer,direction):
+#     def X_subcluster_nmodels(self,nmodels,radius,clusterer,direction):
+#         MINRADIUS=0.1
+#         MAXRADIUS=100
+#         INCREMENT=1 if radius > 1 else 0.1
+#         subcluster_models=[]
+#         while True:
+#             if radius > MAXRADIUS or radius < MINRADIUS: break
+#             if radius <= 1 and INCREMENT==1: INCREMENT=0.1
+#             subcluster_models=clusterer.cluster_by_radius(radius)
+#             if direction=="up":
+#                 if len(subcluster_models) >= nmodels: break
+#                 radius+=INCREMENT
+#             elif direction=='down':
+#                 if len(subcluster_models) <= nmodels: break
+#                 radius-=INCREMENT
+#             else:
+#                 raise RuntimeError,"Unknown direction: {0}".format(direction)
+#         return subcluster_models, radius
+    
+    def _subcluster_nmodels(self,nmodels,radius,clusterer,direction,increment):
         MINRADIUS=0.1
         MAXRADIUS=100
-        INCREMENT=1 if radius > 1 else 0.1
-        subcluster_models=[]
-        while True:
-            if radius > MAXRADIUS or radius < MINRADIUS: break
-            if radius <= 1 and INCREMENT==1: INCREMENT=0.1
-            subcluster_models=clusterer.cluster_by_radius(radius)
-            if direction=="up":
-                if len(subcluster_models) >= nmodels: break
-                radius+=INCREMENT
-            elif direction=='down':
-                if len(subcluster_models) <= nmodels: break
-                radius-=INCREMENT
+        if radius < MINRADIUS or radius > MAXRADIUS: raise RuntimeError,"radius out of bounds: {0}".format(radius)
+        
+        subcluster_models=clusterer.cluster_by_radius(radius)
+        len_models=len(subcluster_models)
+        if len_models == nmodels: return subcluster_models, radius
+        
+        def lower_increment(increment):
+            if increment == 1:
+                increment = 0.1
+            elif increment == 0.1:
+                increment = 0.01
+            elif increment == 0.01:
+                increment = 0.001
+            elif increment == 0.001:
+                increment = 0.0001
             else:
-                raise RuntimeError,"Unknown direction: {0}".format(direction)
-        return subcluster_models, radius
+                raise RuntimeError,"increment out of bounds"
+            return increment
+        
+        # Am sure the logic could be improved here, but it seems to  work
+        if len_models > nmodels:
+            if direction == 'up':
+                direction = 'down'
+                increment = lower_increment(increment)
+            if radius == increment:
+                increment = lower_increment(increment)
+            radius -= increment
+        elif len_models < nmodels:
+            if direction == 'down':
+                direction = 'up'
+                increment = lower_increment(increment)
+            if radius == increment:
+                increment = lower_increment(increment)
+            radius += increment
+            
+        return self._subcluster_nmodels(nmodels, radius, clusterer, direction, increment)
     
     def _subcluster_radius(self,models,radius,truncated_models_data):
         # Extract data from dictionary
@@ -1202,14 +1242,19 @@ class Test(unittest.TestCase):
                                   'truncation_level' : 1,
                                   'truncation_dir'   : work_dir } 
         
-        subcluster, subcluster_data = ensembler.subcluster_models_new(truncated_models,
+        subcluster, data = ensembler.subcluster_models_new(truncated_models,
                                                                       truncated_models_data,
                                                                       subcluster_program='maxcluster',
                                                                       subcluster_exe=self.maxcluster_exe,
                                                                       ensemble_max_models=30)
         
-        #print "GOT ", subcluster, subcluster_data
-        
+        self.assertEqual(data[0]['subcluster_num_models'],10)
+        self.assertTrue(abs(data[0]['subcluster_radius_threshold']-8) < 0.0001)
+        self.assertEqual(data[1]['subcluster_num_models'],20)
+        self.assertTrue(abs(data[1]['subcluster_radius_threshold']-9.36) < 0.0001)
+        self.assertEqual(data[2]['subcluster_num_models'],30)
+        self.assertTrue(abs(data[2]['subcluster_radius_threshold']-10.63) < 0.0001)
+        shutil.rmtree(work_dir)
         return
     
     def testSubclusterNew2(self):
@@ -1233,11 +1278,20 @@ class Test(unittest.TestCase):
                                   'truncation_level' : 1,
                                   'truncation_dir'   : work_dir } 
         
-        subcluster, subcluster_data = ensembler.subcluster_models_new(truncated_models,
+        subcluster, data = ensembler.subcluster_models_new(truncated_models,
                                                                       truncated_models_data,
                                                                       subcluster_program='maxcluster',
                                                                       subcluster_exe=self.maxcluster_exe,
                                                                       ensemble_max_models=30)
+
+        self.assertEqual(data[0]['subcluster_num_models'],10)
+        self.assertTrue(abs(data[0]['subcluster_radius_threshold']-0.11) < 0.0001)
+        self.assertEqual(data[1]['subcluster_num_models'],20)
+        self.assertTrue(abs(data[1]['subcluster_radius_threshold']-0.155) < 0.0001)
+        self.assertEqual(data[2]['subcluster_num_models'],30)
+        self.assertTrue(abs(data[2]['subcluster_radius_threshold']-1) < 0.0001)
+        shutil.rmtree(work_dir)
+        
         return
     
     def testSubclusterNew3(self):
@@ -1261,11 +1315,18 @@ class Test(unittest.TestCase):
                                   'truncation_level' : 1,
                                   'truncation_dir'   : work_dir } 
         
-        subcluster, subcluster_data = ensembler.subcluster_models_new(truncated_models,
+        subcluster, data = ensembler.subcluster_models_new(truncated_models,
                                                                       truncated_models_data,
                                                                       subcluster_program='maxcluster',
                                                                       subcluster_exe=self.maxcluster_exe,
                                                                       ensemble_max_models=30)
+        self.assertEqual(data[0]['subcluster_num_models'],10)
+        self.assertTrue(abs(data[0]['subcluster_radius_threshold']-3.14) < 0.0001)
+        self.assertEqual(data[1]['subcluster_num_models'],20)
+        self.assertTrue(abs(data[1]['subcluster_radius_threshold']-8.7) < 0.0001)
+        self.assertEqual(data[2]['subcluster_num_models'],30)
+        self.assertTrue(abs(data[2]['subcluster_radius_threshold']-11) < 0.0001)
+        shutil.rmtree(work_dir)
         return
 
 def testSuite():
