@@ -393,6 +393,11 @@ class ResultsSummary(object):
                     d['Job_directory']=d['JobDirectory']
                     del d['JobDirectory']
                     d['Search_directory']=os.sep.join(d['Job_directory'].split(os.sep)[:-5])
+                if 'final_Rfree' in d:
+                    d['REFMAC_Rfree']=d['final_Rfree']
+                    d['REFMAC_Rfact']=d['final_Rfact']
+                    del d['final_Rfree']
+                    del d['final_Rfact']
                 results.append(d)
         return results
  
