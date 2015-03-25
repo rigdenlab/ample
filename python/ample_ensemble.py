@@ -383,7 +383,6 @@ class Ensembler(object):
                                                                                      percent_truncation=percent_truncation)):
                 for subcluster, subcluster_data in zip(*self.subcluster_models(truncated_models,
                                                                                truncated_models_data,
-                                                                               radius_thresholds=self.subcluster_radius_thresholds,
                                                                                subcluster_program=self.subcluster_program,
                                                                                subcluster_exe=self.subcluster_program,
                                                                                ensemble_max_models=self.ensemble_max_models)):
@@ -535,13 +534,33 @@ class Ensembler(object):
             return residues,None
 
     def subcluster_models(self,
-                          truncated_models,
-                          truncated_models_data,
-                          subcluster_program=None,
-                          subcluster_exe=None,
-                          radius_thresholds=None,
-                          ensemble_max_models=None):
+                           truncated_models,
+                           truncated_models_data,
+                           subcluster_program=None,
+                           subcluster_exe=None,
+                           ensemble_max_models=None):
+        METHOD="FIXED_ENSEMBLES"
+        METHOD="ORIGINAL"
+        if METHOD=="ORIGINAL":
+            f=self.subcluster_models_fixed_radii
+        elif METHOD=="FIXED_ENSEMBLES":
+            f=self.subcluster_models_floating_radii
+        else:
+            assert False
+        return f(truncated_models,
+                 truncated_models_data,
+                 subcluster_program,
+                 subcluster_exe,
+                 ensemble_max_models)
         
+    def subcluster_models_fixed_radii(self,
+                                      truncated_models,
+                                      truncated_models_data,
+                                      subcluster_program=None,
+                                      subcluster_exe=None,
+                                      ensemble_max_models=None):
+        
+        radius_thresholds=self.subcluster_radius_thresholds
         ensembles=[]
         ensembles_data=[]
         
@@ -635,12 +654,12 @@ class Ensembler(object):
         
         return ensembles,ensembles_data
 
-    def subcluster_models_new(self,
-                              truncated_models,
-                              truncated_models_data,
-                              subcluster_program=None,
-                              subcluster_exe=None,
-                              ensemble_max_models=None):
+    def subcluster_models_floating_radii(self,
+                                         truncated_models,
+                                         truncated_models_data,
+                                         subcluster_program=None,
+                                         subcluster_exe=None,
+                                         ensemble_max_models=None):
         
         # Run maxcluster to generate the distance matrix
         if subcluster_program=='maxcluster':
