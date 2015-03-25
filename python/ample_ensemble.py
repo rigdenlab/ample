@@ -539,8 +539,8 @@ class Ensembler(object):
                            subcluster_program=None,
                            subcluster_exe=None,
                            ensemble_max_models=None):
-        METHOD="FIXED_ENSEMBLES"
         METHOD="ORIGINAL"
+        METHOD="FIXED_ENSEMBLES"
         if METHOD=="ORIGINAL":
             f=self.subcluster_models_fixed_radii
         elif METHOD=="FIXED_ENSEMBLES":
@@ -673,19 +673,24 @@ class Ensembler(object):
         subclusters=[]
         subclusters_data=[]
         for nmodels in cluster_sizes:
-            radius=1
-            increment=1
-            cluster_files = clusterer.cluster_by_radius(radius)
-            len_cluster=len(cluster_files)
-            if len_cluster >= nmodels:
-                direction='down'
-            elif len_cluster <= nmodels:
-                direction='up'
-            models, radius = self._subcluster_nmodels(nmodels, radius, clusterer, direction,increment)
+            self.logger.debug("Subclustering models for truncation_level {0} with cluster_size {1}".format(truncated_models_data['truncation_level'],nmodels))
+            if len(truncated_models) > nmodels:
+                radius=1
+                increment=1
+                cluster_files = clusterer.cluster_by_radius(radius)
+                len_cluster=len(cluster_files)
+                if len_cluster >= nmodels:
+                    direction='down'
+                elif len_cluster <= nmodels:
+                    direction='up'
+                models, radius = self._subcluster_nmodels(nmodels, radius, clusterer, direction,increment)
+            else:
+                models=truncated_models
+                radius = -1
             scluster, data = self._subcluster_radius(models, radius, truncated_models_data)
             subclusters.append(scluster)
             subclusters_data.append(data)
-            len_cluster=len(models)
+            if len(truncated_models) <= nmodels: break
         
         return subclusters, subclusters_data
 
@@ -716,6 +721,8 @@ class Ensembler(object):
         subcluster_models=clusterer.cluster_by_radius(radius)
         len_models=len(subcluster_models)
         if len_models == nmodels: return subcluster_models, radius
+
+        self.logger.debug("_subcluster_nmodels: {0} {1} {2} {3} {4} {5}".format(len_models,nmodels,radius,clusterer,direction,increment))
         
         def lower_increment(increment):
             if increment == 1:
@@ -741,8 +748,6 @@ class Ensembler(object):
         elif len_models < nmodels:
             if direction == 'down':
                 direction = 'up'
-                increment = lower_increment(increment)
-            if radius == increment:
                 increment = lower_increment(increment)
             radius += increment
             
