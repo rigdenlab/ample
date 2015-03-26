@@ -48,6 +48,7 @@ class Ensembler(object):
         
         # subclustering
         self.subcluster_method='ORIGINAL'
+        self.subcluster_method='FIXED_ENSEMBLES'
         self.subcluster_program="maxcluster"
         self.subcluster_exe=None
         self.subclustering_method="radius"
@@ -651,8 +652,6 @@ class Ensembler(object):
             ensembles.append(ensemble)
             ensembles_data.append(ensemble_data)
         
-        print "RET ",ensembles,ensembles_data
-        
         return ensembles,ensembles_data
 
     def subcluster_models_floating_radii(self,
@@ -674,7 +673,9 @@ class Ensembler(object):
         subclusters=[]
         subclusters_data=[]
         last_cluster_size=1
+        last_radius=None
         for radius in self.subcluster_radius_thresholds:
+            if last_radius is not None and last_radius > radius: radius = last_radius + 1 # increment by 1 - arbitrary
             cluster_files = clusterer.cluster_by_radius(radius)
             len_cluster_files=len(cluster_files)
             if len_cluster_files > ensemble_max_models:
@@ -685,12 +686,13 @@ class Ensembler(object):
                 cluster_files, radius = self._subcluster_nmodels(last_cluster_size+1, radius, clusterer, direction='up',increment=1)
             
             len_cluster=len(cluster_files)
-            print "SUBCLUSTERING WITH RADIUS ",radius,len_cluster
+            self.logger.debug('Subclustering {0} files under radius {1}'.format(len_cluster,radius))
             cluster_ensemble, data = self._subcluster_radius(cluster_files, radius, truncated_models_data)
             subclusters.append(cluster_ensemble)
             subclusters_data.append(data)
             if len_cluster == ensemble_max_models or len_cluster==len_truncated_models: break
             last_cluster_size=len_cluster
+            last_radius=radius
                 
         return subclusters, subclusters_data
 
