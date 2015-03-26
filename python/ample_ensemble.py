@@ -47,6 +47,7 @@ class Ensembler(object):
         self.pruning_strategy="none"
         
         # subclustering
+        self.subcluster_method='ORIGINAL'
         self.subcluster_program="maxcluster"
         self.subcluster_exe=None
         self.subclustering_method="radius"
@@ -539,11 +540,9 @@ class Ensembler(object):
                            subcluster_program=None,
                            subcluster_exe=None,
                            ensemble_max_models=None):
-        METHOD="ORIGINAL"
-        METHOD="FIXED_ENSEMBLES"
-        if METHOD=="ORIGINAL":
+        if self.subcluster_method=="ORIGINAL":
             f=self.subcluster_models_fixed_radii
-        elif METHOD=="FIXED_ENSEMBLES":
+        elif self.subcluster_method=="FIXED_ENSEMBLES":
             f=self.subcluster_models_floating_radii
         else:
             assert False
@@ -652,6 +651,8 @@ class Ensembler(object):
             ensembles.append(ensemble)
             ensembles_data.append(ensemble_data)
         
+        print "RET ",ensembles,ensembles_data
+        
         return ensembles,ensembles_data
 
     def subcluster_models_floating_radii(self,
@@ -669,29 +670,28 @@ class Ensembler(object):
         clusterer.generate_distance_matrix(truncated_models)
         #clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
         
-        cluster_sizes=[10,20,30]
+        len_truncated_models=len(truncated_models)
         subclusters=[]
         subclusters_data=[]
-        for nmodels in cluster_sizes:
-            self.logger.debug("Subclustering models for truncation_level {0} with cluster_size {1}".format(truncated_models_data['truncation_level'],nmodels))
-            if len(truncated_models) > nmodels:
-                radius=1
-                increment=1
-                cluster_files = clusterer.cluster_by_radius(radius)
-                len_cluster=len(cluster_files)
-                if len_cluster >= nmodels:
-                    direction='down'
-                elif len_cluster <= nmodels:
-                    direction='up'
-                models, radius = self._subcluster_nmodels(nmodels, radius, clusterer, direction,increment)
-            else:
-                models=truncated_models
-                radius = -1
-            scluster, data = self._subcluster_radius(models, radius, truncated_models_data)
-            subclusters.append(scluster)
+        last_cluster_size=1
+        for radius in self.subcluster_radius_thresholds:
+            cluster_files = clusterer.cluster_by_radius(radius)
+            len_cluster_files=len(cluster_files)
+            if len_cluster_files > ensemble_max_models:
+                # Reduce radius until we have ensemble_max_models in cluster
+                cluster_files, radius = self._subcluster_nmodels(ensemble_max_models, radius, clusterer, direction='down',increment=0.1)
+            elif len_cluster_files == last_cluster_size or len_cluster_files==1:
+                # Increase radius till we have one more than the last one
+                cluster_files, radius = self._subcluster_nmodels(last_cluster_size+1, radius, clusterer, direction='up',increment=1)
+            
+            len_cluster=len(cluster_files)
+            print "SUBCLUSTERING WITH RADIUS ",radius,len_cluster
+            cluster_ensemble, data = self._subcluster_radius(cluster_files, radius, truncated_models_data)
+            subclusters.append(cluster_ensemble)
             subclusters_data.append(data)
-            if len(truncated_models) <= nmodels: break
-        
+            if len_cluster == ensemble_max_models or len_cluster==len_truncated_models: break
+            last_cluster_size=len_cluster
+                
         return subclusters, subclusters_data
 
 #     def X_subcluster_nmodels(self,nmodels,radius,clusterer,direction):
@@ -722,7 +722,7 @@ class Ensembler(object):
         len_models=len(subcluster_models)
         if len_models == nmodels: return subcluster_models, radius
 
-        self.logger.debug("_subcluster_nmodels: {0} {1} {2} {3} {4} {5}".format(len_models,nmodels,radius,clusterer,direction,increment))
+        self.logger.debug("_subcluster_nmodels: {0} {1} {2} {3} {4}".format(len_models,nmodels,radius,direction,increment))
         
         def lower_increment(increment):
             if increment == 1:
@@ -785,19 +785,19 @@ class Ensembler(object):
 
         # Rename the file with the aligned files and append the path to the ensembles
         cluster_file = os.path.join(subcluster_dir, basename+'_sup.pdb')
-        cluster = os.path.join(subcluster_dir, basename+'.pdb')
-        shutil.move(cluster_file, cluster)
+        ensemble = os.path.join(subcluster_dir, basename+'.pdb')
+        shutil.move(cluster_file, ensemble)
 
         # The data we've collected is the same for all pdbs in this level so just keep using the first  
         subcluster_data=copy.copy(truncated_models_data)
         subcluster_data['subcluster_num_models'] = len(models)
         subcluster_data['subcluster_radius_threshold'] = radius
-        subcluster_data['ensemble_pdb'] = cluster
+        subcluster_data['ensemble_pdb'] = ensemble
 
         # Get the centroid model name from the list of files given to theseus - we can't parse
         # the pdb file as theseus truncates the filename
         subcluster_data['subcluster_centroid_model']=os.path.abspath(models[0])
-        return cluster, subcluster_data
+        return ensemble, subcluster_data
   
     def truncate_models(self,models,models_data,truncation_method,percent_truncation,truncation_pruning='none'):
         
@@ -889,6 +889,17 @@ class Test(unittest.TestCase):
         cls.theseus_exe=ample_util.find_exe('theseus')
         cls.spicker_exe=ample_util.find_exe('spicker')
         cls.maxcluster_exe=ample_util.find_exe('maxcluster')
+
+
+        root = logging.getLogger()
+        root.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(logging.DEBUG)
+        #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(message)s')
+        ch.setFormatter(formatter)
+        root.addHandler(ch)
+
 
         return
 
@@ -1258,6 +1269,7 @@ class Test(unittest.TestCase):
         ensembler.theseus_exe=self.theseus_exe
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
+        ensembler.subcluster_method="FIXED_ENSEMBLES"
         
         mdir=os.path.join(self.testfiles_dir,"2qsk_models")
         truncated_models=glob.glob(mdir+os.sep+"*.pdb")
@@ -1266,18 +1278,18 @@ class Test(unittest.TestCase):
                                   'truncation_level' : 1,
                                   'truncation_dir'   : work_dir } 
         
-        subcluster, data = ensembler.subcluster_models_new(truncated_models,
-                                                                      truncated_models_data,
-                                                                      subcluster_program='maxcluster',
-                                                                      subcluster_exe=self.maxcluster_exe,
-                                                                      ensemble_max_models=30)
+        subcluster, data = ensembler.subcluster_models(truncated_models,
+                                                       truncated_models_data,
+                                                       subcluster_program='maxcluster',
+                                                       subcluster_exe=self.maxcluster_exe,
+                                                       ensemble_max_models=30)
         
-        self.assertEqual(data[0]['subcluster_num_models'],10)
-        self.assertTrue(abs(data[0]['subcluster_radius_threshold']-8) < 0.0001)
-        self.assertEqual(data[1]['subcluster_num_models'],20)
-        self.assertTrue(abs(data[1]['subcluster_radius_threshold']-9.36) < 0.0001)
-        self.assertEqual(data[2]['subcluster_num_models'],30)
-        self.assertTrue(abs(data[2]['subcluster_radius_threshold']-10.63) < 0.0001)
+        self.assertEqual(data[0]['subcluster_num_models'],2)
+        self.assertTrue(abs(data[0]['subcluster_radius_threshold']-5.82) < 0.0001)
+        self.assertEqual(data[1]['subcluster_num_models'],3)
+        self.assertTrue(abs(data[1]['subcluster_radius_threshold']-6) < 0.0001)
+        self.assertEqual(data[2]['subcluster_num_models'],4)
+        self.assertTrue(abs(data[2]['subcluster_radius_threshold']-6.9) < 0.0001)
         shutil.rmtree(work_dir)
         return
     
@@ -1294,6 +1306,7 @@ class Test(unittest.TestCase):
         ensembler.theseus_exe=self.theseus_exe
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
+        ensembler.subcluster_method="FIXED_ENSEMBLES"
         
         mdir=os.path.join(self.testfiles_dir,"1mix_models")
         truncated_models=glob.glob(mdir+os.sep+"*.pdb")
@@ -1302,18 +1315,15 @@ class Test(unittest.TestCase):
                                   'truncation_level' : 1,
                                   'truncation_dir'   : work_dir } 
         
-        subcluster, data = ensembler.subcluster_models_new(truncated_models,
-                                                                      truncated_models_data,
-                                                                      subcluster_program='maxcluster',
-                                                                      subcluster_exe=self.maxcluster_exe,
-                                                                      ensemble_max_models=30)
+        subcluster, data = ensembler.subcluster_models(truncated_models,
+                                                       truncated_models_data,
+                                                       subcluster_program='maxcluster',
+                                                       subcluster_exe=self.maxcluster_exe,
+                                                       ensemble_max_models=30)
 
-        self.assertEqual(data[0]['subcluster_num_models'],10)
-        self.assertTrue(abs(data[0]['subcluster_radius_threshold']-0.11) < 0.0001)
-        self.assertEqual(data[1]['subcluster_num_models'],20)
-        self.assertTrue(abs(data[1]['subcluster_radius_threshold']-0.155) < 0.0001)
-        self.assertEqual(data[2]['subcluster_num_models'],30)
-        self.assertTrue(abs(data[2]['subcluster_radius_threshold']-1) < 0.0001)
+        self.assertEqual(data[0]['subcluster_num_models'],30)
+        self.assertTrue(abs(data[0]['subcluster_radius_threshold']-1) < 0.0001)
+        self.assertEqual(len(data),1)
         shutil.rmtree(work_dir)
         
         return
@@ -1331,6 +1341,7 @@ class Test(unittest.TestCase):
         ensembler.theseus_exe=self.theseus_exe
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
+        ensembler.subcluster_method="FIXED_ENSEMBLES"
         
         mdir=os.path.join(self.testfiles_dir,"models")
         truncated_models=glob.glob(mdir+os.sep+"*.pdb")
@@ -1339,17 +1350,17 @@ class Test(unittest.TestCase):
                                   'truncation_level' : 1,
                                   'truncation_dir'   : work_dir } 
         
-        subcluster, data = ensembler.subcluster_models_new(truncated_models,
-                                                                      truncated_models_data,
-                                                                      subcluster_program='maxcluster',
-                                                                      subcluster_exe=self.maxcluster_exe,
-                                                                      ensemble_max_models=30)
-        self.assertEqual(data[0]['subcluster_num_models'],10)
-        self.assertTrue(abs(data[0]['subcluster_radius_threshold']-3.14) < 0.0001)
-        self.assertEqual(data[1]['subcluster_num_models'],20)
-        self.assertTrue(abs(data[1]['subcluster_radius_threshold']-8.7) < 0.0001)
-        self.assertEqual(data[2]['subcluster_num_models'],30)
-        self.assertTrue(abs(data[2]['subcluster_radius_threshold']-11) < 0.0001)
+        subcluster, data = ensembler.subcluster_models(truncated_models,
+                                                       truncated_models_data,
+                                                       subcluster_program='maxcluster',
+                                                       subcluster_exe=self.maxcluster_exe,
+                                                       ensemble_max_models=30)
+        self.assertEqual(data[0]['subcluster_num_models'],2)
+        self.assertTrue(abs(data[0]['subcluster_radius_threshold']-1.9) < 0.0001,"GOT {0}".format(data[0]['subcluster_radius_threshold']))
+        self.assertEqual(data[1]['subcluster_num_models'],3)
+        self.assertTrue(abs(data[1]['subcluster_radius_threshold']-2) < 0.0001,"GOT {0}".format(data[1]['subcluster_radius_threshold']))
+        self.assertEqual(data[2]['subcluster_num_models'],8)
+        self.assertTrue(abs(data[2]['subcluster_radius_threshold']-3) < 0.0001,"GOT {0}".format(data[2]['subcluster_radius_threshold']))
         shutil.rmtree(work_dir)
         return
 
