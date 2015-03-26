@@ -686,7 +686,7 @@ class Ensembler(object):
                 cluster_files, radius = self._subcluster_nmodels(last_cluster_size+1, radius, clusterer, direction='up',increment=1)
                 
             # Need to check in case we couldn't cluster under this radius
-            if len(cluster_files) == len_cluster_files:
+            if len(cluster_files) == len_cluster_files or radius == last_radius:
                 self.logger.debug('Could not cluster files under radius: {0} - got {1} files'.format(len(cluster_files),radius))
                 break
             
