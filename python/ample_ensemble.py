@@ -684,6 +684,11 @@ class Ensembler(object):
             elif len_cluster_files == last_cluster_size or len_cluster_files==1:
                 # Increase radius till we have one more than the last one
                 cluster_files, radius = self._subcluster_nmodels(last_cluster_size+1, radius, clusterer, direction='up',increment=1)
+                
+            # Need to check in case we couldn't cluster under this radius
+            if len(cluster_files) == len_cluster_files:
+                self.logger.debug('Could not cluster files under radius: {0} - got {1} files'.format(len(cluster_files),radius))
+                break
             
             len_cluster=len(cluster_files)
             self.logger.debug('Subclustering {0} files under radius {1}'.format(len_cluster,radius))
@@ -718,12 +723,9 @@ class Ensembler(object):
     def _subcluster_nmodels(self,nmodels,radius,clusterer,direction,increment):
         MINRADIUS=0.1
         MAXRADIUS=100
-        if radius < MINRADIUS or radius > MAXRADIUS: raise RuntimeError,"radius out of bounds: {0}".format(radius)
-        
         subcluster_models=clusterer.cluster_by_radius(radius)
         len_models=len(subcluster_models)
-        if len_models == nmodels: return subcluster_models, radius
-
+        if len_models == nmodels or radius < MINRADIUS or radius > MAXRADIUS: return subcluster_models, radius
         self.logger.debug("_subcluster_nmodels: {0} {1} {2} {3} {4}".format(len_models,nmodels,radius,direction,increment))
         
         def lower_increment(increment):
@@ -740,18 +742,22 @@ class Ensembler(object):
             return increment
         
         # Am sure the logic could be improved here, but it seems to  work
-        if len_models > nmodels:
-            if direction == 'up':
-                direction = 'down'
-                increment = lower_increment(increment)
-            if radius == increment:
-                increment = lower_increment(increment)
-            radius -= increment
-        elif len_models < nmodels:
-            if direction == 'down':
-                direction = 'up'
-                increment = lower_increment(increment)
-            radius += increment
+        try:
+            if len_models > nmodels:
+                if direction == 'up':
+                    direction = 'down'
+                    increment = lower_increment(increment)
+                if radius == increment:
+                    increment = lower_increment(increment)
+                radius -= increment
+            elif len_models < nmodels:
+                if direction == 'down':
+                    direction = 'up'
+                    increment = lower_increment(increment)
+                radius += increment
+        except RuntimeError:
+            # Can't get a match so just return what we have
+            return subcluster_models, radius
             
         return self._subcluster_nmodels(nmodels, radius, clusterer, direction, increment)
     
