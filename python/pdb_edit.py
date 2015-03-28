@@ -1279,19 +1279,41 @@ def _sequence(hierarchy,):
                 seq += three2one[residue.resname]
         chain2seq.append((chain.id,seq))
     return chain2seq
-    
+
+def extract_header_pdb_code(pdb_input):
+    for line in pdb_input.title_section():
+        if line.startswith("HEADER ") and len(line) >= 65: return line[62:66]
+    return None
+
+def extract_header_title(pdb_input):
+    for line in pdb_input.title_section():
+        if line.startswith('TITLE') : return line[10:-1].strip()
+    return None
+
 def split(pdbin):
     """Split a pdb into separate models"""
     
     name=os.path.splitext(os.path.basename(pdbin))[0]
     pdb_input=iotbx.pdb.pdb_input(pdbin)
     hierachy=pdb_input.construct_hierarchy()
+    
+    # Test code for getting info 
+#     print "GOT ",[ x for x in pdb_input.title_section()]
+#     print "GOT2 ",pdb_input.extract_header_year()
+#     print "GOT3 ",pdb_input.get_solvent_content()
+#     print "GOT3 ",pdb_input.get_matthews_coeff()
+#     from iotbx.pdb.mining import extract_best_resolution
+#     print "RES ",extract_best_resolution(pdb_input.remark_section())
+#     print "CODE ",extract_header_pdb_code(pdb_input)
+#     print "TITLE ",extract_header_title(pdb_input)
+    
+    crystal_symmetry=pdb_input.crystal_symmetry()
     for i,model in enumerate(hierachy.models()):
         m=model.detached_copy()
         h=iotbx.pdb.hierarchy.root()
         h.append_model(m)
         pdbout="{0}_{1}.pdb".format(name,i)
-        h.write_pdb_file(pdbout,anisou=False)
+        h.write_pdb_file(pdbout,crystal_symmetry=crystal_symmetry,anisou=False)
     return
 
 def split_pdb(pdbin, directory=None):
@@ -1705,6 +1727,16 @@ GEIAALKQEIAALKKEIAALKEIAALKQGYY
         self.assertEqual(ref,fastaSequence(pdbin))
         return
     
+    def testSplit(self):
+
+        pdbin=os.path.join(self.testfiles_dir,"1GU8.pdb")
+        split(pdbin)
+        
+        #os.unlink(pdbout)
+        
+        return
+
+
     def testStdResidues(self):
 
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
