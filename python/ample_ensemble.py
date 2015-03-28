@@ -729,25 +729,15 @@ class Ensembler(object):
         self.logger.debug("_subcluster_nmodels: {0} {1} {2} {3} {4}".format(len_models,nmodels,radius,direction,increment))
         
         def lower_increment(increment):
-            if increment == 1:
-                increment = 0.1
-            elif increment == 0.1:
-                increment = 0.01
-            elif increment == 0.01:
-                increment = 0.001
-            elif increment == 0.001:
-                increment = 0.0001
-            else:
-                raise RuntimeError,"increment out of bounds"
+            increment = increment / float(10)
+            if increment >= 0.00001: raise RuntimeError,"increment out of bounds"
             return increment
         
         # Am sure the logic could be improved here, but it seems to  work
         try:
             if len_models > nmodels:
-                if direction == 'up':
-                    direction = 'down'
-                    increment = lower_increment(increment)
-                if radius == increment:
+                if direction == 'up' or radius == increment:
+                    if direction == 'up': direction = 'down'
                     increment = lower_increment(increment)
                 radius -= increment
             elif len_models < nmodels:
