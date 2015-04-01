@@ -129,6 +129,8 @@ class AmpleOptions(object):
                            'phaser_only': True,
                            'use_shelxe' : True,
                            'shelxe_rebuild' : True,
+                           'shelxe_rebuild_arpwarp' : True,
+                           'shelxe_rebuild_buccaneer' : True,
                            'use_scwrl' : False,
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
