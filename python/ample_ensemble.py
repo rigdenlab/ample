@@ -672,32 +672,36 @@ class Ensembler(object):
         len_truncated_models=len(truncated_models)
         subclusters=[]
         subclusters_data=[]
-        last_cluster_size=1
-        last_radius=None
+        cluster_sizes=[]
+        radii=[]
         for radius in self.subcluster_radius_thresholds:
-            if last_radius is not None and last_radius > radius: radius = last_radius + 1 # increment by 1 - arbitrary
             cluster_files = clusterer.cluster_by_radius(radius)
-            len_cluster_files=len(cluster_files)
-            if len_cluster_files > ensemble_max_models:
+            cluster_size=len(cluster_files)
+            if cluster_size > ensemble_max_models:
                 # Reduce radius until we have ensemble_max_models in cluster
                 cluster_files, radius = self._subcluster_nmodels(ensemble_max_models, radius, clusterer, direction='down',increment=0.1)
-            elif len_cluster_files == last_cluster_size or len_cluster_files==1:
+            elif cluster_size==1 or cluster_size in cluster_sizes or radius in radii:
                 # Increase radius till we have one more than the last one
-                cluster_files, radius = self._subcluster_nmodels(last_cluster_size+1, radius, clusterer, direction='up',increment=1)
+                if cluster_size==1 and len(cluster_sizes)==0:
+                    nmodels=2
+                else:
+                    radius=radii[-1]
+                    nmodels=cluster_sizes[-1]+1
+                cluster_files, radius = self._subcluster_nmodels(nmodels, radius, clusterer, direction='up',increment=1)
                 
             # Need to check in case we couldn't cluster under this radius
-            if len(cluster_files) == len_cluster_files or radius == last_radius:
+            cluster_size=len(cluster_files)
+            if cluster_size==1 or cluster_size in cluster_sizes or radius in radii:
                 self.logger.debug('Could not cluster files under radius: {0} - got {1} files'.format(len(cluster_files),radius))
                 break
             
-            len_cluster=len(cluster_files)
-            self.logger.debug('Subclustering {0} files under radius {1}'.format(len_cluster,radius))
+            self.logger.debug('Subclustering {0} files under radius {1}'.format(cluster_size,radius))
             cluster_ensemble, data = self._subcluster_radius(cluster_files, radius, truncated_models_data)
             subclusters.append(cluster_ensemble)
             subclusters_data.append(data)
-            if len_cluster == ensemble_max_models or len_cluster==len_truncated_models: break
-            last_cluster_size=len_cluster
-            last_radius=radius
+            cluster_sizes.append(cluster_size)
+            radii.append(radius)
+            if cluster_size == ensemble_max_models or cluster_size==len_truncated_models: break
                 
         return subclusters, subclusters_data
 
@@ -721,7 +725,7 @@ class Ensembler(object):
 #         return subcluster_models, radius
     
     def _subcluster_nmodels(self,nmodels,radius,clusterer,direction,increment):
-        MINRADIUS=0.1
+        MINRADIUS=0.01
         MAXRADIUS=100
         subcluster_models=clusterer.cluster_by_radius(radius)
         len_models=len(subcluster_models)
