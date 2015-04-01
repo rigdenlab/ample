@@ -677,10 +677,7 @@ class Ensembler(object):
         for radius in self.subcluster_radius_thresholds:
             cluster_files = clusterer.cluster_by_radius(radius)
             cluster_size=len(cluster_files)
-            if cluster_size > ensemble_max_models:
-                # Reduce radius until we have ensemble_max_models in cluster
-                cluster_files, radius = self._subcluster_nmodels(ensemble_max_models, radius, clusterer, direction='down',increment=0.1)
-            elif cluster_size==1 or cluster_size in cluster_sizes or radius in radii:
+            if radius in radii or cluster_size in cluster_sizes or cluster_size==1:
                 # Increase radius till we have one more than the last one
                 if cluster_size==1 and len(cluster_sizes)==0:
                     nmodels=2
@@ -688,6 +685,9 @@ class Ensembler(object):
                     radius=radii[-1]
                     nmodels=cluster_sizes[-1]+1
                 cluster_files, radius = self._subcluster_nmodels(nmodels, radius, clusterer, direction='up',increment=1)
+            elif cluster_size > ensemble_max_models:
+                # Reduce radius until we have ensemble_max_models in cluster
+                cluster_files, radius = self._subcluster_nmodels(ensemble_max_models, radius, clusterer, direction='down',increment=0.1)
                 
             # Need to check in case we couldn't cluster under this radius
             cluster_size=len(cluster_files)
@@ -704,25 +704,6 @@ class Ensembler(object):
             if cluster_size == ensemble_max_models or cluster_size==len_truncated_models: break
                 
         return subclusters, subclusters_data
-
-#     def X_subcluster_nmodels(self,nmodels,radius,clusterer,direction):
-#         MINRADIUS=0.1
-#         MAXRADIUS=100
-#         INCREMENT=1 if radius > 1 else 0.1
-#         subcluster_models=[]
-#         while True:
-#             if radius > MAXRADIUS or radius < MINRADIUS: break
-#             if radius <= 1 and INCREMENT==1: INCREMENT=0.1
-#             subcluster_models=clusterer.cluster_by_radius(radius)
-#             if direction=="up":
-#                 if len(subcluster_models) >= nmodels: break
-#                 radius+=INCREMENT
-#             elif direction=='down':
-#                 if len(subcluster_models) <= nmodels: break
-#                 radius-=INCREMENT
-#             else:
-#                 raise RuntimeError,"Unknown direction: {0}".format(direction)
-#         return subcluster_models, radius
     
     def _subcluster_nmodels(self,nmodels,radius,clusterer,direction,increment):
         MINRADIUS=0.01
