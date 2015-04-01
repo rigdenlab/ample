@@ -63,13 +63,27 @@ $script
     
     return arrayScript
             
-            
 pdb_codes=["1MIX", "1P9G", "1UCS", "1XKR", "2BL2", "2EFR", "2FM9", "2JKU", "2QIH", "2QSK", "2UUI", "2XFD", "2YKT", "3CI9", "3CVF", "3GD8", "3GHF", "3HAP", "3HFE"]
-#pdb_codes=["2BL2", "2FM9", "2JKU", "2QSK", "2UUI", "2XFD", "2YKT", "3CVF", "3GD8", "3GHF", "3HAP", "3HFE"]
-root="/volatile/jmht42/testset/percent"
+pdb_codes=["1MIX", "1P9G", "1UCS", "1XKR", "2BL2", "2EFR", "2FM9", "2QIH", "2QSK", "2UUI", "2XFD", "2YKT", "3CI9", "3CVF", "3GD8", "3GHF", "3HAP", "3HFE"]
+#root="/volatile/jmht42/testset/truncate_single"
+root="/volatile/jmht42/testset/fpc_kmeans_rmsd"
+
+def fixKeys(fname):
+    tmp=fname+".bak"
+    os.rename(fname,tmp)
+    with open(tmp) as f,open(fname,'w') as w:
+        for line in f:
+            if line.startswith("FIXSG"):
+                w.write("SXREBUILD True\n") 
+                w.write("SXRBUCC True\n") 
+                w.write("SXRARPW True\n") 
+            w.write(line)
+    os.unlink(tmp)
+    return
 
 for pdb in pdb_codes:
-    mrbd=os.path.join(root,pdb,"ROSETTA_MR_0","MRBUMP")
+    print "CHECKING ",pdb
+    mrbd=os.path.join(root,pdb,"AMPLE_0","MRBUMP")
     os.chdir(mrbd)
     
     res_sum = mrbump_results.ResultsSummary()
@@ -78,7 +92,10 @@ for pdb in pdb_codes:
     for r in res_sum.results:
         search_dir=r['Search_directory']
         ensemble=r['ensemble_name']
-        if r['Solution_Type']=='unfinished' or r['Solution_Type']=='no_job_directory' or (r['Solution_Type']=='PHASER_FAIL' and r['SHELXE_CC'] is not None):
+        #if r['Solution_Type']=='unfinished' or r['Solution_Type']=='no_job_directory':
+        if r['SHELXE_CC'] and r['SHELXE_CC']>=25.0 and r['SHELXE_ACL'] and r['SHELXE_ACL']>=10:
+           mrkey=os.path.join(mrbd,"{0}.mrbump".format(ensemble))
+           fixKeys(mrkey)
            ensembles.append(ensemble)
            #if r['Solution_Type']=='unfinished' and os.path.isdir(search_dir): shutil.rmtree(search_dir)
            if os.path.isdir(search_dir): shutil.rmtree(search_dir)
