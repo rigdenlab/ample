@@ -1869,7 +1869,7 @@ if __name__ == "__main__":
     elif args.std:
         standardise(args.input_file, args.output_file)
     elif args.seq:
-        print fastaSequence(args.input_file)
+        print fastaSequence(args.input_file,maxwidth=80)
     elif args.split:
         print split(args.input_file)
         
