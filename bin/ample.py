@@ -153,16 +153,16 @@ def process_command_line():
                        help='Path to the NR non-redundant sequence database')
     
     parser.add_argument('-NMR_model_in', metavar='NMR_model_in', type=str, nargs=1,
-                       help='use nmr input')
+                       help='PDB with NMR models')
     
     parser.add_argument('-NMR_process', metavar='NMR_process', type=str, nargs=1,
-                       help='number of times to process the models')
+                       help='number of times to process the NMR models')
+    
+    parser.add_argument('-NMR_remodel', metavar='True/False', type=str, nargs=1,
+                       help='Remodel the NMR structures')
     
     parser.add_argument('-NMR_remodel_fasta', metavar='-NMR_remodel_fasta', type=str, nargs=1,
                        help='fasta_for_remodeling')
-    
-    parser.add_argument('-NMR_Truncate_only', metavar='True/False', type=str, nargs=1,
-                       help='do no remodelling only truncate the NMR')
     
     parser.add_argument('-nproc', metavar='Number of Processors', type=int, nargs=1,
                        help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
@@ -170,9 +170,6 @@ def process_command_line():
     
     parser.add_argument('-num_clusters', type=int, nargs=1,
                        help='The number of Spicker clusters of the original decoys that will be sampled [1]')
-    
-    parser.add_argument('-old_shelx', metavar='old_shelx', type=str, nargs=1,
-                       help='old_shelx')    
     
     parser.add_argument('-output_pdb', type=str, nargs=1,
                        help='Name of the final result pdb to output [ample_output.pdb]')
@@ -470,11 +467,13 @@ def process_options(amoptd,logger):
         if not os.path.isfile(amoptd['NMR_model_in']):
             msg = "NMR_model_in flag given, but cannot find file: {0}".format(amoptd['NMR_model_in'])
             ample_exit.exit(msg)
-        if not amoptd['NMR_Truncate_only']:
-            amoptd['NMR_protocol'] = True
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
-        if not os.path.isfile( str(amoptd['NMR_remodel_fasta']) ):
+        if amoptd['NMR_remodel_fasta']:
+            if not os.path.isfile(amoptd['NMR_remodel_fasta']):
+                msg = "NMR_remodel_fasta flag given, but cannot find file: {0}".format(amoptd['NMR_remodel_fasta'])
+                ample_exit.exit(msg)
+        else:
             amoptd['NMR_remodel_fasta'] =  amoptd['fasta']
     
     if amoptd['make_models']:
@@ -628,7 +627,7 @@ def process_options(amoptd,logger):
     
     # Create the rosetta modeller - this runs all the checks required
     rosetta_modeller=None
-    if amoptd['make_models'] or amoptd['make_frags'] or amoptd['NMR_protocol']:  # only need Rosetta if making models
+    if amoptd['make_models'] or amoptd['make_frags'] or amoptd['NMR_remodel']:  # only need Rosetta if making models
         logger.info('Using ROSETTA so checking options')
         rosetta_modeller = rosetta_model.RosettaModel(optd=amoptd)
     
@@ -735,11 +734,11 @@ def main():
     
     # if NMR process models first
     # break here for NMR (frags needed but not modelling
-    if amopt.d['NMR_Truncate_only']:
+    if amopt.d['NMR_model_in'] and not amopt.d['NMR_remodel']:
         if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
         pdb_edit.split_pdb(amopt.d['NMR_model_in'], amopt.d['models_dir'])
         nmr.standardise_lengths(amopt.d['models_dir'])
-    elif amopt.d['NMR_protocol']:
+    elif amopt.d['NMR_remodel']:
         nmr.doNMR(amopt, rosetta_modeller, logger)
         # return from nmr with models already made
     elif amopt.d['make_models']:
@@ -841,6 +840,7 @@ def main():
     # Create job scripts
     logger.info("Generating MRBUMP runscripts")
     job_scripts = mrbump_ensemble.generate_jobscripts(ensembles, amopt.d)
+    #print "EXITING ";sys.exit(1)
     
     # Create function for monitoring jobs - static function decorator?
     if pyrvapi_results.pyrvapi:

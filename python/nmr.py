@@ -134,16 +134,13 @@ def doNMR( amopt, rosetta_modeller, logger ):
     logger -- the root logger object
     """
 
-    assert not amopt.d['NMR_Truncate_only']
-
-    amopt.d['make_models'] = False
-
     # Strip HETATM lines from PDB
     amopt.d['NMR_model_in'] = strip_hetatm( amopt.d['NMR_model_in'] )
     logger.info('using NMR model: {0}'.format(  amopt.d['NMR_model_in'] ) )
 
-    omodel_dir = os.path.join( amopt.d['work_dir'], 'orig_models' )
-    os.mkdir( omodel_dir )
+    if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
+    omodel_dir = os.path.join(amopt.d['work_dir'], 'orig_models')
+    os.mkdir(omodel_dir)
 
     # Split NMR PDB into separate models
     modno = split_models.split( amopt.d['NMR_model_in'], omodel_dir )
@@ -425,8 +422,8 @@ def CLUSTER_RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, 
 ######################
 def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, NProc, homname, alignment_file, Models_dir ):
 
-    if not alignment_file:
-        raise RuntimeError,"Need alignment_file!"
+    #if not alignment_file:
+    #    raise RuntimeError,"Need alignment_file!"
 
     curdir = os.getcwd()
     os.mkdir(curdir+'/RUN_'+homname)
@@ -438,7 +435,7 @@ def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, 
     IDEALIZE          = rosetta_modeller.rosetta_idealize_jd2
     ROSETTA_DB        = rosetta_modeller.rosetta_db
 
-    if not ROSETTA_cluster or not MR_ROSETTA or not IDEALIZE:
+    if not ROSETTA_cluster or not os.path.isfile(ROSETTA_cluster) or not MR_ROSETTA or not os.path.isfile(MR_ROSETTA)or not IDEALIZE or not os.path.isfile(IDEALIZE):
         msg = "Cannot find Rosetta NMR programs in directory: {0}".format(rosetta_modeller.rosetta_dir)
         raise RuntimeError, msg
 
@@ -446,9 +443,9 @@ def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, 
     homolog, name = idealise(homolog, IDEALIZE, ROSETTA_DB )
 
     homolog_seq = get_sequence(homolog, 'homolog.fasta')
-    if os.path.exists(alignment_file):
+    if alignment_file and os.path.exists(alignment_file):
         ALI = alignment_file
-    if not os.path.exists(alignment_file):
+    else:
         ALI =  MAFFT(homolog_seq, fasta,  name)
 
     NMODELS = NProcess
@@ -478,7 +475,7 @@ def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, 
         no_models_have = 0
         proc = 1
         while proc < NProc +1:
-            list_of_files = [f for f in os.listdir(wdir) if file.lower().endswith('.pdb')]
+            list_of_files = [f for f in os.listdir(wdir) if f.lower().endswith('.pdb')]
             no_models_have  += len(list_of_files)
             proc+=1
         if no_models_have > finished_models:
@@ -497,6 +494,7 @@ def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, 
     proc = 1
     cat_string = ''
     while proc < NProc +1:
+        wdir=os.path.join( RunDir,'models_'+str(proc))
         for f in glob.glob( os.path.join(wdir,'*.pdb') ):
             name = re.split('/', f)
             pdbname = str(name.pop())
