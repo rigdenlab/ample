@@ -62,7 +62,6 @@ class AmpleOptions(object):
                             'nproc' : 1,
                             'nr' : None,
                             'num_clusters' : 1,
-                            'old_shelx' : False,
                             'output_pdb' : 'ample_output.pdb',
                             'percent' : 5,
                             'phaser_only' : False,
