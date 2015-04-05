@@ -715,7 +715,7 @@ class Ensembler(object):
         
         def lower_increment(increment):
             increment = increment / float(10)
-            if increment >= 0.00001: raise RuntimeError,"increment out of bounds"
+            if increment <= 0.00001: raise RuntimeError,"increment out of bounds"
             return increment
         
         # Am sure the logic could be improved here, but it seems to  work
