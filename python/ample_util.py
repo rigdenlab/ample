@@ -68,7 +68,7 @@ def extract_models(filename,directory=None,sequence=None):
     
     # If it's already a directory, just check it's valid   
     if os.path.isdir(filename):
-        if not pdb_edit.check_pdbs(filename,sequence=sequence):
+        if not pdb_edit.check_pdb_directory(filename,sequence=sequence):
             msg="Cannot extract pdb files from directory: {0}".format(filename)
             ample_exit.exit(msg)
         return filename
@@ -101,7 +101,7 @@ def extract_models(filename,directory=None,sequence=None):
     else:
         extract_zip(filename, directory)
         
-    if not pdb_edit.check_pdbs(models_dir,sequence=sequence):
+    if not pdb_edit.check_pdb_directory(models_dir,sequence=sequence):
         msg="Problem importing pdb files - please check the log for more information"
         ample_exit.exit(msg)
     return models_dir

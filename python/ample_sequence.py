@@ -2,6 +2,8 @@
 import os
 import unittest
 
+import pdb_edit
+
 class Sequence(object):
     """A class to handle a fasta file"""
     
@@ -15,6 +17,17 @@ class Sequence(object):
     def from_fasta(self,fastaFile):
         with open( fastaFile, "r") as f:
             self._parse_fasta( f )
+        return
+    
+    def from_pdb(self,pdbin):
+        name=os.path.splitext(os.path.basename(pdbin))[0]
+        chain2seq = pdb_edit.pdb_sequence(pdbin)
+        assert len(chain2seq),"Could not read sequence from pdb: {0}".format(pdbin)
+        
+        self._reset()
+        for chain,seq in chain2seq:
+            self.headers.append("From pdb: {0} chain {1} length {2}",format(name,chain,len(seq)))
+            self.sequences.append(seq)
         return
 
     def _reset( self ):
@@ -53,6 +66,14 @@ class Sequence(object):
         return
     
     def canonicalise(self):
+        """
+        Reformat the fasta file
+        Needed because Rosetta has problems reading fastas. For it to be read, it has to have no spaces in the sequence,
+        a name that is 4 characters and an underscore (ABCD_), everything has to be uppercase, and there has to be a
+        return carriage at the end - this has to be linux formatted as when I make a fasta in windows, it doesnt recognize
+        the return carriage.
+        Rosetta has a lot of problems with fastas so we put in this script to deal with it.
+        """
         aa = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V']
         for i,seq in enumerate(self.sequences):
             cs=""
@@ -86,22 +107,6 @@ class Sequence(object):
         pirStr.append("\n")
         
         return pirStr
-    
-    def reformat_fasta( self, input_fasta, output_fasta):
-        """
-        Reformat the fasta file
-        Needed because Rosetta has problems reading fastas. For it to be read, it has to have no spaces in the sequence,
-        a name that is 4 characters and an underscore (ABCD_), everything has to be uppercase, and there has to be a
-        return carriage at the end - this has to be linux formatted as when I make a fasta in windows, it doesnt recognize
-        the return carriage.
-        Rosetta has a lot of problems with fastas so we put in this script to deal with it.
-        """
-        
-        self.parseFasta(input_fasta)
-        with open( output_fasta, "w") as f:
-            for line in self.fastaStr():
-                f.write( line )
-        return
 
     def toPir(self, input_fasta, output_pir=None ):
         """Take a fasta file and output the corresponding PIR file"""
@@ -115,14 +120,14 @@ class Sequence(object):
                 pirout.write(line)
         return
     
-    def writeFasta(self,fastaFile):
+    def write_fasta(self,fastaFile):
         if not len(self.sequences): raise RuntimeError,"No sequences have been read!"
         with open(fastaFile,'w') as f:
             for i, seq in enumerate(self.sequences):
                 try:
                     h=self.headers[i]
                 except IndexError:
-                    h=">Sequence: {0}".format(i)
+                    h=">Sequence: {0} Length: {1}".format(i,len(seq))
                 f.write(h+'\n')
                 for chunk in range(0, len(seq), self.MAXWIDTH):
                     f.write(seq[chunk:chunk+self.MAXWIDTH]+"\n")

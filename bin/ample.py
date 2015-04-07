@@ -27,10 +27,10 @@ import time
 import add_sidechains_SCWRL
 import ample_exit
 import ample_options
+import ample_sequence
 import ample_util
 import benchmark
 import ensemble
-import fasta_parser
 import mrbump_ensemble
 import mrbump_results
 import mtz_util
@@ -390,15 +390,15 @@ def process_options(amoptd,logger):
     
     # Reformat to what we need
     logger.debug('Parsing FASTA file')
-    fp = fasta_parser.Sequence()
-    fp.parse_fasta(amoptd['fasta'])
+    fp = ample_sequence.Sequence()
+    fp.from_fasta(amoptd['fasta'])
     if fp.numSequences() != 1:
         msg = "ERROR! Fasta file {0} has > 1 sequence in it.".format(amoptd['fasta'])
         ample_exit.exit(msg)
     
     # Length checks
     amoptd['fasta_length'] = fp.length()
-    logger.info( "Fasta is {0} amino acids long".format(amoptd['fasta_length']))
+    logger.info("Fasta is {0} amino acids long".format(amoptd['fasta_length']))
     
     # Check we have a decent length
     if amoptd['fasta_length'] < 9:
@@ -411,8 +411,8 @@ def process_options(amoptd,logger):
         ample_exit.exit(msg)
     
     # Fasta is ok, so write out a canonical fasta in the work directory
-    outfasta = os.path.join( amoptd['work_dir'], amoptd['name'] + '_.fasta')
-    fp.writeFasta(outfasta)
+    outfasta = os.path.join(amoptd['work_dir'], amoptd['name'] + '_.fasta')
+    fp.write_fasta(outfasta)
     amoptd['fasta'] = outfasta
     amoptd['sequence']=fp.sequence()
     #
@@ -444,7 +444,7 @@ def process_options(amoptd,logger):
     
     # Check if importing ensembles
     if amoptd['ensembles_dir']:
-        if not pdb_edit.check_pdbs(amoptd['ensembles_dir'],single=False):
+        if not pdb_edit.check_pdb_directory(amoptd['ensembles_dir'],single=False):
             msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles_dir'])
             ample_exit.exit(msg)
         amoptd['import_ensembles'] = True
@@ -752,7 +752,7 @@ def main():
         else:
             amopt.d['models_dir'] = rosetta_modeller.doModelling() # run locally
         
-        if not pdb_edit.check_pdbs(amopt.d['models_dir'],sequence=amopt.d['sequence']):
+        if not pdb_edit.check_pdb_directory(amopt.d['models_dir'],sequence=amopt.d['sequence']):
             msg="Problem with rosetta pdb files - please check the log for more information"
             ample_exit.exit(msg)
             

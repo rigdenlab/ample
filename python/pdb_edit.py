@@ -133,7 +133,7 @@ def calpha_only(inpdb, outpdb):
 #         
 #         return
 
-def check_pdbs(directory,single=True,allsame=True,sequence=None):
+def check_pdb_directory(directory,single=True,allsame=True,sequence=None):
     logger = logging.getLogger()
     logger.info("Checking pdbs in directory: {0}".format(directory))
     if not os.path.isdir(directory):
@@ -144,9 +144,9 @@ def check_pdbs(directory,single=True,allsame=True,sequence=None):
         logger.critical("Cannot find any pdb files in directory: {0}".format(directory))
         return False
     if not (single or sequence or allsame): return True
-    return _check_pdbs(models,sequence=sequence,single=single,allsame=allsame)
+    return check_pdbs(models,sequence=sequence,single=single,allsame=allsame)
 
-def _check_pdbs(models,single=True,allsame=True,sequence=None):
+def check_pdbs(models,single=True,allsame=True,sequence=None):
     logger = logging.getLogger()
     if allsame and not sequence:
         # Get sequence from first model
@@ -175,7 +175,7 @@ def _check_pdbs(models,single=True,allsame=True,sequence=None):
             if not s == sequence: sequence_err.append((pdb,s))
     
     if not (len(errors) or len(multi) or len(sequence_err)):
-        logger.info("check_pdbs - pdb files all seem valid")
+        logger.info("check_pdb_directory - pdb files all seem valid")
         return True
     
     s="\n"
@@ -1251,24 +1251,10 @@ def select_residues(inpath=None, outpath=None, residues=None):
     
     return count
 
-def fastaSequence(pdbin,maxwidth=None):
-    """Extract the sequence of residues from a pdb file.
-    Currently prints a fasta string."""
-    
-    name=os.path.splitext(os.path.basename(pdbin))[0]
-    chain2seq = _sequence(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
-    s=""
-    for chain,seq in chain2seq:
-        s+=">{0} chain: {1} length: {2}\n".format(name,chain,len(seq))
-        if maxwidth:
-            assert maxwidth > 0
-            for i in range(0,max(len(seq),maxwidth),maxwidth):
-                s+="{0}\n".format(seq[i:i+maxwidth])
-        else:
-            s+="{0}\n".format(seq)
-    return s
+def pdb_sequence(pdbin):
+    return _sequence(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
 
-def _sequence(hierarchy,):
+def _sequence(hierarchy):
     """Extract the sequence of residues from a pdb file."""
     chain2seq=[]
     for chain in set(hierarchy.models()[0].chains()): # only the first model
@@ -1706,12 +1692,12 @@ class Test(unittest.TestCase):
         logging.getLogger().setLevel(logging.DEBUG)
         
         pdbs=glob.glob(os.path.join(self.testfiles_dir,"models","*.pdb"))
-        self.assertTrue(_check_pdbs(pdbs))
+        self.assertTrue(check_pdbs(pdbs))
         
-        self.assertFalse(_check_pdbs(pdbs, single=True,sequence="AABBCC"))
+        self.assertFalse(check_pdbs(pdbs, single=True,sequence="AABBCC"))
         
         pdbs += [ os.path.join(self.testfiles_dir,"1GU8.pdb") ]
-        self.assertFalse(_check_pdbs(pdbs,single=True,sequence="AABBCC"))
+        self.assertFalse(check_pdbs(pdbs,single=True,sequence="AABBCC"))
         
         return
     
