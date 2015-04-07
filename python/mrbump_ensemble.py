@@ -100,15 +100,12 @@ def write_jobscript(name, pdb, amoptd, directory=None):
         if not sys.platform.startswith("win"): script_header+='#!/bin/sh\n'
         if amoptd['submit_cluster']:
             # Add queue directives
-            mrBuild = clusterize.ClusterRun()
-            mrBuild.QTYPE = amoptd['submit_qtype']
             logFile=os.path.join(directory, name + ".log")
-            script_header += mrBuild.queueDirectives(nProc=amoptd['nproc'],
-                                                     logFile=logFile,
-                                                     jobName=name,
-                                                     queue=amoptd['submit_queue'],
-                                                     qtype=amoptd['submit_qtype']
-                                                     )
+            script_header += clusterize.ClusterRun().queueDirectives(nProc=amoptd['nproc'],
+                                                                     logFile=logFile,
+                                                                     jobName=name,
+                                                                     queue=amoptd['submit_queue'],
+                                                                     qtype=amoptd['submit_qtype'])
             # Make sure the CCP4 scratch directory is available
             #if amoptd['submit_qtype'] == "SGE":
             script_header += "pushd {0}\n".format(directory)
