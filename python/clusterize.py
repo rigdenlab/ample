@@ -397,7 +397,6 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         Create a string suitable for writing out as the header of the submission script
         for submitting to a particular queueing system
         """
-        
         sh = ""
         if qtype=="SGE":
             sh += '#$ -j y\n'
@@ -405,21 +404,17 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             sh += '#$ -w e\n'
             sh += '#$ -V\n'
             sh += '#$ -S /bin/bash\n'
-            if jobTime:
-                sh += '#$ -l h_rt={0}\n'.format(jobTime)
-            if queue:
-                sh += '#$ -q {0}\n'.format(queue)
+            if jobTime: sh += '#$ -l h_rt={0}\n'.format(jobTime)
+            if queue: sh += '#$ -q {0}\n'.format(queue)
             if numArrayJobs:
                 sh += '#$ -o arrayJob_$TASK_ID.log\n'
                 sh += '#$ -t 1-{0}\n'.format(numArrayJobs)
-                if maxArrayJobs:
-                    sh += '#$ -tc {0}\n'.format(maxArrayJobs)
+                if maxArrayJobs: sh += '#$ -tc {0}\n'.format(maxArrayJobs)
             else:
-                sh += '#$ -o {0}\n'.format(logFile) 
-                sh += '#$ -N {0}\n'.format(jobName)
+                if logFile: sh += '#$ -o {0}\n'.format(logFile)
+                if jobName: sh += '#$ -N {0}\n'.format(jobName)
             # jmht hack for morrigan
-            if nProc and nProc > 1:
-                sh += '#$ -pe threaded {0}\n'.format( nProc )
+            if nProc and nProc > 1: sh += '#$ -pe threaded {0}\n'.format( nProc )
             sh += '\n'
         elif qtype=="LSF":
             assert not numArrayJobs,"Array jobs not supported yet for LSF"
@@ -432,12 +427,10 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 sh += '#BSUB -W {0}\n'.format(jobTime)
             else:
                 sh += '#BSUB -W 4:00\n'
-            if nProc:
-                sh += '#BSUB -n {0}\n'.format(nProc) 
-            if queue:
-                sh += '#BSUB -q {0}\n'.format(queue) 
-            sh += '#BSUB -o {0}\n'.format(logFile) 
-            sh += '#BSUB -J {0}\n'.format(jobName)         
+            if nProc: sh += '#BSUB -n {0}\n'.format(nProc) 
+            if queue: sh += '#BSUB -q {0}\n'.format(queue)
+            if logFile: sh += '#BSUB -o {0}\n'.format(logFile)
+            if jobName: sh += '#BSUB -J {0}\n'.format(jobName)         
             sh += '\n'
         else:
             raise RuntimeError,"Unrecognised QTYPE: {0}".format(qtype)
