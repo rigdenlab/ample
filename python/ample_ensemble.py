@@ -28,7 +28,6 @@ class Ensembler(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
     
     """
-    
     def __init__(self):
         
         # For all
@@ -696,13 +695,17 @@ class Ensembler(object):
                 break
             
             self.logger.debug('Subclustering {0} files under radius {1}'.format(cluster_size,radius))
-            cluster_ensemble, data = self._subcluster_radius(cluster_files, radius, truncated_models_data)
+            try:
+                cluster_ensemble, data = self._subcluster_radius(cluster_files, radius, truncated_models_data)
+            except RuntimeError:
+                # If theseus fails, we just move
+                break
             subclusters.append(cluster_ensemble)
             subclusters_data.append(data)
             cluster_sizes.append(cluster_size)
             radii.append(radius)
             if cluster_size == ensemble_max_models or cluster_size==len_truncated_models: break
-                
+            
         return subclusters, subclusters_data
     
     def _subcluster_nmodels(self,nmodels,radius,clusterer,direction,increment):
@@ -725,6 +728,11 @@ class Ensembler(object):
         # Am sure the logic could be improved here, but it seems to  work
         try:
             if len_models > nmodels:
+                # If we have more models than we want and we are increasing the radius, we've overshot, so we need to
+                # decrease the radius but by a smaller increment
+                # If the radius is the same as the increment, we need to decrease the incrememnt before we subtract it
+                # as both of the above require decreasing the increment we have one test and just change the direction
+                # for the overshoot
                 if direction == 'up' or abs(radius-increment) < 0.0000001:
                     if direction == 'up': direction = 'down'
                     increment = lower_increment(increment)
@@ -765,9 +773,10 @@ class Ensembler(object):
         logfile=os.path.abspath(basename+"_theseus.log")
         retcode = ample_util.run_command( cmd, logfile=logfile )
         if retcode != 0:
-            msg="Error running theseus on ensemble {0} in directory: {1}\n See log: {2}".format(basename,
+            msg="Error running theseus on ensemble {0} in directory: {1}\n See log: {2}\nSkipping subcluster: {0}".format(basename,
                                                                                                 subcluster_dir,
-                                                                                                logfile)
+                                                                                                logfile,
+                                                                                                basename)
             self.logger.critical(msg)
             raise RuntimeError,msg
 
