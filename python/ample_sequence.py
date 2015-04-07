@@ -12,7 +12,7 @@ class Sequence(object):
         self._reset()
         return
     
-    def parse_fasta(self,fastaFile):
+    def from_fasta(self,fastaFile):
         with open( fastaFile, "r") as f:
             self._parse_fasta( f )
         return
@@ -64,15 +64,14 @@ class Sequence(object):
             self.sequences[i]=cs
         return
     
-    def length(self,seqNo=0):
-        return len(self.sequences[seqNo])
+    def length(self,seq_no=0):
+        return len(self.sequences[seq_no])
     
     def numSequences(self):
         return len(self.sequences)
     
-    def sequence(self):
-        assert len(self.sequences) == 1,"> 1 sequence"
-        return self.sequences[0]
+    def sequence(self,seq_no=0):
+        return self.sequences[seq_no]
     
     def pirStr(self,seqNo=0):
         """Return a canonical MAXWIDTH PIR representation of the file as a line-separated string"""
