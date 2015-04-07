@@ -97,6 +97,7 @@ class Ensembler(object):
         truncation_levels=[]
         truncation_variances=[]
         truncation_residues=[]
+        MIN_RESIDUES=2 # we need at least 3 residues for theseus to work
         for i in range(nchunks):
             if i==0:
                 residues=copy.copy(resSeq)
@@ -105,7 +106,7 @@ class Ensembler(object):
                 residues=resSeq[chunk_size*i:]
                 percent=int(round(float(length-(chunk_size*i))/float(length)*100))
             
-            if len(residues):
+            if len(residues) > MIN_RESIDUES: 
                 # For the threshold we take the threshold of the most variable residue
                 idx=chunk_size*(i+1)-1
                 if idx > length-1: # Need to make sure we have a full final chunk
