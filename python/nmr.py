@@ -9,13 +9,14 @@ import os
 import sys
 import subprocess
 import time
-import operator
 import shutil
 import stat
 
 # our imports
+import ample_sequence
 import clusterize
 import pdb_edit
+import workers
 #import split_models
 
 ########################
@@ -127,7 +128,7 @@ def standardise_lengths(models_dir):
                 removed+=1
     return removed
 
-def newNMR(amopt, rosetta_modeller, logger):
+def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     
     # Strip HETATM lines from PDB
     amopt.d['NMR_model_in'] = strip_hetatm(amopt.d['NMR_model_in'])
@@ -147,15 +148,19 @@ def newNMR(amopt, rosetta_modeller, logger):
     logger.info(' processing each model {0} times'.format(amopt.d['NMR_process']))
     
     
-    # Get the alignment for the structure - assumes all models have the same sequence
     #homolog_seq = get_sequence(homolog, 'homolog.fasta')
+    
+    seq_obj = ample_sequence.Sequence()
+    seq_obj.from_pdb(nmr_models[0])
+    homolog_fasta = os.path.join(amopt.d['work_dir'],'homolog.fasta')
+    seq_obj.write_fasta(homolog_fasta)
+    
+    # Get the alignment for the structure - assumes all models have the same sequence
     if amopt.d['alignment_file'] and os.path.exists(amopt.d['alignment_file']):
         alignment_file = amopt.d['alignment_file']
     else:
         # fasta sequence of first model
-        homolog_seq=pdb_edit.fastaSequence(nmr_models[0], maxwidth=80)
-        alignment_file =  MAFFT(homolog_seq, fasta,  name)    
-    
+        alignment_file =  MAFFT(homolog_fasta, FIX, fasta,  name)    
     
     # Loop through each model, idealise them and get an alignment
     idealise_dir = os.path.join(amopt.d['work_dir'], 'idealised_models')
@@ -178,7 +183,52 @@ def newNMR(amopt, rosetta_modeller, logger):
         id_scripts.append(script)
     
     # Run the jobs
+    run_scripts(job_scripts=id_scripts, amoptd=amopt.d, monitor=monitor, check_success=None)
+    
+    # Check all the pdbs were produced
+    if not pdb_edit.check_pdbs(id_pdbs, single=True, allsame=True, sequence=seq_obj.sequence()):
+        raise RuntimeError,"Error idealising nmr models!"
+    
+    print "GOT ",id_pdbs
         
+    return
+
+def run_scripts(job_scripts,amoptd,monitor=None,check_success=None):
+    if amoptd['submit_cluster']:
+        run_scripts_cluster(job_scripts, amoptd, monitor)
+    else:
+        run_scripts_serial(job_scripts, amoptd, monitor, check_success)
+    return
+
+def run_scripts_cluster(job_scripts,amoptd,job_time=1800,monitor=None):
+    cluster_run = clusterize.ClusterRun()
+    qtype = amoptd['submit_qtype']
+    cluster_run.QTYPE = amoptd['submit_qtype']
+    if amoptd['submit_array']:
+        cluster_run.submitArrayJob(job_scripts,
+                                   jobTime=job_time, # half an hour - should be >>>
+                                   qtype=qtype,
+                                   queue=amoptd['submit_queue'],
+                                   maxArrayJobs=amoptd['max_array_jobs']
+                                   )
+    else:
+        for script in job_scripts: cluster_run.submitJob(subScript=script)
+
+    # Monitor the cluster queue to see when all jobs have finished
+    cluster_run.monitorQueue(monitor=monitor)
+    
+    # Rename scripts for array jobs
+    if amoptd['submit_array']: cluster_run.cleanUpArrayJob()
+    return
+
+def run_scripts_serial(job_scripts,amoptd,monitor=None,early_terminate=None,check_success=None):
+    # Don't need early terminate - check_success if it exists states what's happening
+    js = workers.JobServer()
+    js.setJobs(job_scripts)
+    js.start(nproc=amoptd['nproc'],
+             early_terminate=bool(early_terminate),
+             check_success=check_success,
+             monitor=monitor)    
     return
 
 def doNMR(amopt, rosetta_modeller, logger):
