@@ -15,7 +15,8 @@ import stat
 
 # our imports
 import clusterize
-import split_models
+import pdb_edit
+#import split_models
 
 ########################
 def align(homolog_seq, fasta, hhsearch, name):
@@ -126,7 +127,61 @@ def standardise_lengths(models_dir):
                 removed+=1
     return removed
 
-def doNMR( amopt, rosetta_modeller, logger ):
+def newNMR(amopt, rosetta_modeller, logger):
+    
+    # Strip HETATM lines from PDB
+    amopt.d['NMR_model_in'] = strip_hetatm(amopt.d['NMR_model_in'])
+    logger.info('using NMR model: {0}'.format(amopt.d['NMR_model_in']))
+
+    if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
+    nmr_models_dir = os.path.join(amopt.d['work_dir'], 'nmr_models')
+    os.mkdir(nmr_models_dir)
+
+    # Split NMR PDB into separate models
+    nmr_models = pdb_edit.split_pdb(amopt.d['NMR_model_in'], nmr_models_dir)
+    modno = len(nmr_models)
+    logger.info('you have {0} models in your nmr'.format(modno))
+
+    if not amopt.d['NMR_process']:
+        amopt.d['NMR_process'] = 1000 / modno
+    logger.info(' processing each model {0} times'.format(amopt.d['NMR_process']))
+    
+    
+    # Get the alignment for the structure - assumes all models have the same sequence
+    #homolog_seq = get_sequence(homolog, 'homolog.fasta')
+    if amopt.d['alignment_file'] and os.path.exists(amopt.d['alignment_file']):
+        alignment_file = amopt.d['alignment_file']
+    else:
+        # fasta sequence of first model
+        homolog_seq=pdb_edit.fastaSequence(nmr_models[0], maxwidth=80)
+        alignment_file =  MAFFT(homolog_seq, fasta,  name)    
+    
+    
+    # Loop through each model, idealise them and get an alignment
+    idealise_dir = os.path.join(amopt.d['work_dir'], 'idealised_models')
+    id_scripts=[]
+    id_pdbs=[]
+    for nmr_model in nmr_models:
+        # run idealise on models
+        script="#!/bin/bash\n\n"
+        if amopt.d['submit_cluster']:
+            script += clusterize.ClusterRun().queueDirectives(nProc=1,
+                                                              queue=amopt.d['submit_queue'],
+                                                              qtype=amopt.d['submit_qtype'])
+        
+        script += rosetta_modeller.idealize_cmd(pdbin=nmr_model)
+        # Get the name of the pdb that will be output
+        id_pdbs.append(rosetta_modeller.idealize_pdbout(pdbin=nmr_model))
+        
+        with open(script,'w') as w: w.write(script)
+        os.chmod(script, 0o777)
+        id_scripts.append(script)
+    
+    # Run the jobs
+        
+    return
+
+def doNMR(amopt, rosetta_modeller, logger):
     """Do the NMR modelling step.
 
     Args:
@@ -351,14 +406,6 @@ def minimise(homolog, fasta, MINIMIZE,RELAX, ROSETTA_DB, ALI, a9mers, a3mers, na
      x+=1
    sys.exit()
    return  models
-
-########################
-def model_with_map():
-   print 'here'
-
-########################
-def Rosetta_refine():
-   print 'here'
 
 #####################
 def RUN_MINIMISE(homolog, NProcess):
