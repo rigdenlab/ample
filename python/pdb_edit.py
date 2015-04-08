@@ -1509,28 +1509,18 @@ def std_residues_cctbx(pdbin, pdbout):
     
     return       
 
-def strip_hetatm(inpath, outpath):
+def strip_hetatm(pdbin, pdbout):
     """Remove all hetatoms from pdbfile"""
-    o = open( outpath, 'w' )
-    
-    hremoved=-1
-    for i, line in enumerate( open(inpath) ):
-        
-        # Remove EOL
-        line = line.rstrip( "\n" )
-        
-        # Remove any HETATOM lines and following ANISOU lines
-        if line.startswith("HETATM"):
-            hremoved = i
-            continue
-        
-        if line.startswith("ANISOU") and i == hremoved+1:
-            continue
-        
-        o.write( line + "\n" )
-        
-    o.close()
-    
+    with open( pdbout, 'w' ) as w, open(pdbin) as f:
+        hremoved=-1
+        for i, line in enumerate(f):
+            # Remove any HETATOM lines and following ANISOU lines
+            if line.startswith("HETATM"):
+                hremoved = i
+                continue
+            if line.startswith("ANISOU") and i == hremoved+1:
+                continue
+            w.write(line)
     return
 
 def to_single_chain(inpath, outpath):
