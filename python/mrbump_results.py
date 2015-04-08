@@ -474,6 +474,10 @@ class ResultsSummary(object):
             elif 'REFMAC_Rfree' in r and r['REFMAC_Rfree'] and float(r['REFMAC_Rfree']) < 1.0:
                 sortf = lambda x: float('inf') if x['REFMAC_Rfree']  is None else float( x['REFMAC_Rfree'] )
                 break
+            elif 'PHASER_TFZ' in r and r['PHASER_TFZ'] and float(r['PHASER_TFZ']) > 0.0:
+                reverse=True
+                sortf = lambda x: float(0) if x['PHASER_TFZ']  is None else float( x['PHASER_TFZ'] )
+                break
         if sortf:
             # Now sort by the key
             results.sort(key=sortf, reverse=reverse)
@@ -544,25 +548,29 @@ def finalSummary(amoptd):
     """Print a final summary of the job"""
     
     
-    ensembles_data=amoptd['ensembles_data']
     mrbump_data=amoptd['mrbump_results']
     if not mrbump_data:
         return "Could not find any MRBUMP results in directory: {0}!".format(amoptd['mrbump_dir'])
     
-    # Merge dictionaries together
-    results=[]
-    for mrb in mrbump_data:
-        d=copy.copy(mrb)
-        for ed in ensembles_data:
-            if ed['name'] == d['ensemble_name']:
-                d.update(ed)
-                results.append(d)
-
+    if 'ensembles_data' in amoptd:
+        results=[]
+        # Merge dictionaries together
+        ensembles_data=amoptd['ensembles_data']
+        for mrb in mrbump_data:
+            d=copy.copy(mrb)
+            for ed in ensembles_data:
+                if ed['name'] == d['ensemble_name']:
+                    d.update(ed)
+                    results.append(d)
+        keys = ['ensemble_name','Solution_Type','MR_program',"PHASER_LLG","PHASER_TFZ", 'REFMAC_Rfact', 'REFMAC_Rfree',
+                'SHELXE_CC','SHELXE_ACL', 'SXRBUCC_final_Rfact','SXRBUCC_final_Rfree', 'SXRARP_final_Rfact','SXRARP_final_Rfree',
+                'subcluster_num_models','truncation_num_residues']
+    else:
+        results = mrbump_data
+        keys = ['name','Solution_Type','MR_program',"PHASER_LLG","PHASER_TFZ", 'REFMAC_Rfact', 'REFMAC_Rfree',
+                'SHELXE_CC','SHELXE_ACL', 'SXRBUCC_final_Rfact','SXRBUCC_final_Rfree', 'SXRARP_final_Rfact','SXRARP_final_Rfree']
+        
     resultsTable = []
-    keys = ['ensemble_name','Solution_Type','MR_program',"PHASER_LLG","PHASER_TFZ", 'REFMAC_Rfact', 'REFMAC_Rfree',
-            'SHELXE_CC','SHELXE_ACL', 'SXRBUCC_final_Rfact','SXRBUCC_final_Rfree', 'SXRARP_final_Rfact','SXRARP_final_Rfree',
-            'subcluster_num_models','truncation_num_residues']
-
     resultsTable.append(keys)
     for result in results:
         resultLine = []
@@ -619,6 +627,7 @@ class Test(unittest.TestCase):
     def testFinalSummary(self):
         """Parse a results file"""
         pkl="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_4/resultsd.pkl"
+        pkl="/opt/ample-dev1/examples/nmr.remodel/AMPLE_2/resultsd.pkl"
         with open(pkl) as f:
             d=cPickle.load(f)
         print finalSummary(d)
