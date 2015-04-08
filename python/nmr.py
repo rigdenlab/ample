@@ -17,7 +17,7 @@ import ample_sequence
 import clusterize
 import pdb_edit
 import workers
-#import split_models
+import split_models
 
 ########################
 def align(homolog_seq, fasta, hhsearch, name):
@@ -143,29 +143,20 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     modno = len(nmr_models)
     logger.info('you have {0} models in your nmr'.format(modno))
 
-    if not amopt.d['NMR_process']:
-        amopt.d['NMR_process'] = 1000 / modno
+    if not amopt.d['NMR_process']: amopt.d['NMR_process'] = 1000 / modno
     logger.info(' processing each model {0} times'.format(amopt.d['NMR_process']))
     
-    
     #homolog_seq = get_sequence(homolog, 'homolog.fasta')
-    
     seq_obj = ample_sequence.Sequence()
     seq_obj.from_pdb(nmr_models[0])
-    homolog_fasta = os.path.join(amopt.d['work_dir'],'homolog.fasta')
-    seq_obj.write_fasta(homolog_fasta)
-    
-    # Get the alignment for the structure - assumes all models have the same sequence
-    if amopt.d['alignment_file'] and os.path.exists(amopt.d['alignment_file']):
-        alignment_file = amopt.d['alignment_file']
-    else:
-        # fasta sequence of first model
-        alignment_file =  MAFFT(homolog_fasta, FIX, fasta,  name)    
     
     # Loop through each model, idealise them and get an alignment
+    owd=os.getcwd()
     idealise_dir = os.path.join(amopt.d['work_dir'], 'idealised_models')
+    os.chdir(idealise_dir)
     id_scripts=[]
     id_pdbs=[]
+    # WHAT ABOUT STDOUT?
     for nmr_model in nmr_models:
         # run idealise on models
         script="#!/bin/bash\n\n"
@@ -190,6 +181,21 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
         raise RuntimeError,"Error idealising nmr models!"
     
     print "GOT ",id_pdbs
+    
+    os.chdir(owd)
+    
+    print "DONE"
+    sys.exit(1)
+
+    homolog_fasta = os.path.join(amopt.d['work_dir'],'homolog.fasta')
+    seq_obj.write_fasta(homolog_fasta)
+    
+    # Get the alignment for the structure - assumes all models have the same sequence
+    if amopt.d['alignment_file'] and os.path.exists(amopt.d['alignment_file']):
+        alignment_file = amopt.d['alignment_file']
+    else:
+        # fasta sequence of first model
+        alignment_file =  MAFFT(homolog_fasta, FIX, fasta,  name)  
         
     return
 
