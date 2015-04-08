@@ -130,7 +130,7 @@ def standardise_lengths(models_dir):
     return removed
 
 def newNMR(amopt, rosetta_modeller, logger, monitor=None):
-    
+
     # Strip HETATM lines from PDB
     nmr_nohet=ample_util.filename_append(amopt.d['NMR_model_in'],astr='nohet',directory=amopt.d['work_dir'])
     pdb_edit.strip_hetatm(amopt.d['NMR_model_in'],nmr_nohet)
@@ -148,10 +148,6 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
 
     if not amopt.d['NMR_process']: amopt.d['NMR_process'] = 1000 / modno
     logger.info(' processing each model {0} times'.format(amopt.d['NMR_process']))
-    
-    #homolog_seq = get_sequence(homolog, 'homolog.fasta')
-    seq_obj = ample_sequence.Sequence()
-    seq_obj.from_pdb(nmr_models[0])
     
     # Loop through each model, idealise them and get an alignment
     owd=os.getcwd()
@@ -187,23 +183,48 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     if not pdb_edit.check_pdbs(id_pdbs, single=True, allsame=True):
         raise RuntimeError,"Error idealising nmr models!"
     
-    print "GOT ",id_pdbs
-    
     os.chdir(owd)
-    
-    print "DONE"
-    sys.exit(1)
 
-    homolog_fasta = os.path.join(amopt.d['work_dir'],'homolog.fasta')
-    seq_obj.write_fasta(homolog_fasta)
-    
+    # Sequence object for idealized models
+    id_seq = ample_sequence.Sequence()
+    id_seq.from_pdb(id_pdbs[0])
+
     # Get the alignment for the structure - assumes all models have the same sequence
     if amopt.d['alignment_file'] and os.path.exists(amopt.d['alignment_file']):
         alignment_file = amopt.d['alignment_file']
     else:
         # fasta sequence of first model
-        alignment_file =  MAFFT(homolog_fasta, FIX, fasta,  name)  
-        
+        alignment_file = os.path.join(amopt.d['work_dir'],'homolog.fasta')
+        align_mafft(amopt.d['seq_obj'],id_seq,alignment_file,logger)
+
+
+    return
+
+
+def align_mafft(seq1, seq2, filename,logger):
+    
+    name = "{0}_{1}".format(seq1.name,seq2.name)
+    mafft_input = "{0}.fasta".format(name)
+    seq1.concat(seq2,mafft_input)
+    cmd =  ['mafft', '--maxiterate', '1000', '--localpair', '--quiet', mafft_input]
+    logfile = 'mafft.out'
+    
+    ret = ample_util.run_command(cmd,logfile=logfile)
+    if ret != 0:
+        raise RuntimeError,"Error running mafft - check logfile: {0}".format(logfile)
+    
+    seq_align = ample_sequence.Sequence()
+    seq_align.from_fasta(logfile,canonicalise=False)
+    
+    logger.info("Got Alignment:\n{0}\n{1}".format(seq_align.sequences[0],seq_align.sequences[1]))
+    logger.info("If you want to use a different alignment, import using -alignment_file")
+    
+    with open(filename,'w') as w:
+        w.write('## TARGET '+name+'\n'+
+                '# hhsearch\n'+
+                'scores_from_program: 0 1.00\n'+
+                '0 ' + seq_align.sequences[0]+'\n'+
+                '0 ' + seq_align.sequences[1] + '\n')
     return
 
 def run_scripts(job_scripts,amoptd,monitor=None,check_success=None):
