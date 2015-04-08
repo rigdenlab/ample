@@ -26,7 +26,7 @@ class Sequence(object):
         
         self._reset()
         for chain,seq in chain2seq:
-            self.headers.append("From pdb: {0} chain {1} length {2}",format(name,chain,len(seq)))
+            self.headers.append("From pdb: {0} chain {1} length {2}".format(name,chain,len(seq)))
             self.sequences.append(seq)
         return
 
