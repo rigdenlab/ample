@@ -149,6 +149,25 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     if not amopt.d['NMR_process']: amopt.d['NMR_process'] = 1000 / modno
     logger.info(' processing each model {0} times'.format(amopt.d['NMR_process']))
     
+    # Idealize all the nmr models to have standard bond lengths, angles etc
+    id_pdbs = idealize_models(nmr_models,amopt,rosetta_modeller,monitor)
+
+    # Sequence object for idealized models
+    id_seq = ample_sequence.Sequence()
+    id_seq.from_pdb(id_pdbs[0])
+
+    # Get the alignment for the structure - assumes all models have the same sequence
+    if amopt.d['alignment_file'] and os.path.exists(amopt.d['alignment_file']):
+        alignment_file = amopt.d['alignment_file']
+    else:
+        # fasta sequence of first model
+        alignment_file = os.path.join(amopt.d['work_dir'],'homolog.fasta')
+        align_mafft(amopt.d['seq_obj'],id_seq,alignment_file,logger)
+
+
+    return
+
+def idealize_models(nmr_models,amopt,rosetta_modeller,monitor):
     # Loop through each model, idealise them and get an alignment
     owd=os.getcwd()
     idealise_dir = os.path.join(amopt.d['work_dir'], 'idealised_models')
@@ -184,22 +203,8 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
         raise RuntimeError,"Error idealising nmr models!"
     
     os.chdir(owd)
-
-    # Sequence object for idealized models
-    id_seq = ample_sequence.Sequence()
-    id_seq.from_pdb(id_pdbs[0])
-
-    # Get the alignment for the structure - assumes all models have the same sequence
-    if amopt.d['alignment_file'] and os.path.exists(amopt.d['alignment_file']):
-        alignment_file = amopt.d['alignment_file']
-    else:
-        # fasta sequence of first model
-        alignment_file = os.path.join(amopt.d['work_dir'],'homolog.fasta')
-        align_mafft(amopt.d['seq_obj'],id_seq,alignment_file,logger)
-
-
-    return
-
+    
+    return id_pdbs
 
 def align_mafft(seq1, seq2, filename,logger):
     
