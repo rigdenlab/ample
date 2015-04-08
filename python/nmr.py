@@ -14,6 +14,7 @@ import stat
 
 # our imports
 import ample_sequence
+import ample_util
 import clusterize
 import pdb_edit
 import workers
@@ -131,7 +132,9 @@ def standardise_lengths(models_dir):
 def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     
     # Strip HETATM lines from PDB
-    amopt.d['NMR_model_in'] = strip_hetatm(amopt.d['NMR_model_in'])
+    nmr_nohet=ample_util.filename_append(amopt.d['NMR_model_in'],astr='nohet',directory=amopt.d['work_dir'])
+    pdb_edit.strip_hetatm(amopt.d['NMR_model_in'],nmr_nohet)
+    amopt.d['NMR_model_in'] = nmr_nohet
     logger.info('using NMR model: {0}'.format(amopt.d['NMR_model_in']))
 
     if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
@@ -153,31 +156,35 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     # Loop through each model, idealise them and get an alignment
     owd=os.getcwd()
     idealise_dir = os.path.join(amopt.d['work_dir'], 'idealised_models')
+    os.mkdir(idealise_dir)
     os.chdir(idealise_dir)
     id_scripts=[]
     id_pdbs=[]
     # WHAT ABOUT STDOUT?
     for nmr_model in nmr_models:
         # run idealise on models
-        script="#!/bin/bash\n\n"
+        script="#!/bin/bash\n"
         if amopt.d['submit_cluster']:
             script += clusterize.ClusterRun().queueDirectives(nProc=1,
                                                               queue=amopt.d['submit_queue'],
                                                               qtype=amopt.d['submit_qtype'])
         
-        script += rosetta_modeller.idealize_cmd(pdbin=nmr_model)
+        script += " ".join(rosetta_modeller.idealize_cmd(pdbin=nmr_model)) + "\n"
+
         # Get the name of the pdb that will be output
-        id_pdbs.append(rosetta_modeller.idealize_pdbout(pdbin=nmr_model))
+        id_pdbs.append(rosetta_modeller.idealize_pdbout(pdbin=nmr_model,directory=idealise_dir))
         
-        with open(script,'w') as w: w.write(script)
-        os.chmod(script, 0o777)
-        id_scripts.append(script)
+        nmr_name=os.path.splitext(os.path.basename(nmr_model))[0]
+        sname=os.path.join(idealise_dir,"{0}_idealize.sh".format(nmr_name))
+        with open(sname,'w') as w: w.write(script)
+        os.chmod(sname, 0o777)
+        id_scripts.append(sname)
     
     # Run the jobs
     run_scripts(job_scripts=id_scripts, amoptd=amopt.d, monitor=monitor, check_success=None)
     
-    # Check all the pdbs were produced
-    if not pdb_edit.check_pdbs(id_pdbs, single=True, allsame=True, sequence=seq_obj.sequence()):
+    # Check all the pdbs were produced - don't check with the NMR sequence as idealise can remove some residues (eg. HIS - see examples/nmr.remodel)
+    if not pdb_edit.check_pdbs(id_pdbs, single=True, allsame=True):
         raise RuntimeError,"Error idealising nmr models!"
     
     print "GOT ",id_pdbs
