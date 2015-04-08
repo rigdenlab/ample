@@ -14,9 +14,10 @@ class Sequence(object):
         self._reset()
         return
     
-    def from_fasta(self,fastaFile):
-        with open( fastaFile, "r") as f:
-            self._parse_fasta( f )
+    def from_fasta(self,fasta_file,canonicalise=True):
+        name=os.path.splitext(os.path.basename(fasta_file))[0]
+        with open(fasta_file, "r") as f:
+            self._parse_fasta(f,name,canonicalise)
         return
     
     def from_pdb(self,pdbin):
@@ -26,33 +27,35 @@ class Sequence(object):
         
         self._reset()
         for chain,seq in chain2seq:
-            self.headers.append("From pdb: {0} chain {1} length {2}".format(name,chain,len(seq)))
+            self.headers.append(">From pdb: {0} chain {1} length {2}".format(name,chain,len(seq)))
             self.sequences.append(seq)
         return
 
     def _reset( self ):
         """Reset the object"""
+        self.name='unknown'
         self.headers = [] # title lines
         self.sequences = [] # The fasta sequences (just AA) as a single string
         return
 
-    def _parse_fasta(self, fasta):
+    def _parse_fasta(self, fasta, name,canonicalise=True):
         """Parse the fasta file int our data structures & check for consistency 
         Args:
         fasta -- list of strings or open filehandle to read from the fasta file
         """
 
-        self._reset() 
+        self._reset()
+        self.name = name
         sequence = None
         first=True
         for line in fasta:
             line = line.strip().rstrip(os.linesep)
-            if first and not line.startswith( ">" ):
+            if first and not line.startswith(">"):
                 raise RuntimeError,"FASTA files must start with a > character!"
             else:
                 first=False
             if not line: continue # skip blank lines
-            if line.startswith( ">" ):
+            if line.startswith(">"):
                 self.headers.append(line)
                 if sequence: self.sequences.append(sequence)
                 sequence=""
@@ -62,7 +65,7 @@ class Sequence(object):
         # add final sequence
         self.sequences.append(sequence)
         assert len(self.sequences)==len(self.headers)
-        self.canonicalise()
+        if canonicalise: self.canonicalise()
         return
     
     def canonicalise(self):
@@ -84,6 +87,12 @@ class Sequence(object):
                 cs+=char
             self.sequences[i]=cs
         return
+    
+    def concat(self,seq2,fasta_file):
+        """Concatentate two (single chain) sequences into a single fasta file"""
+        headers = [self.headers[0], seq2.headers[0]]
+        sequences = [self.sequences[0], seq2.sequences[0]]
+        return self._write_fasta(headers, sequences, fasta_file)
     
     def length(self,seq_no=0):
         return len(self.sequences[seq_no])
@@ -120,15 +129,22 @@ class Sequence(object):
                 pirout.write(line)
         return
     
-    def write_fasta(self,fastaFile):
+    def write_fasta(self,fasta_file):
         if not len(self.sequences): raise RuntimeError,"No sequences have been read!"
-        with open(fastaFile,'w') as f:
-            for i, seq in enumerate(self.sequences):
-                try:
-                    h=self.headers[i]
-                except IndexError:
-                    h=">Sequence: {0} Length: {1}".format(i,len(seq))
-                f.write(h+'\n')
+        headers=[]
+        for i, seq in enumerate(self.sequences):
+            try:
+                h=self.headers[i]
+            except IndexError:
+                h=">Sequence: {0} Length: {1}".format(i,len(seq))
+            headers.append(h)
+        self._write_fasta(headers, self.sequences, fasta_file)
+        return
+    
+    def _write_fasta(self,headers,sequences,fasta_file):
+        with open(fasta_file,'w') as f:
+            for i, seq in enumerate(sequences):
+                f.write(headers[i]+'\n')
                 for chunk in range(0, len(seq), self.MAXWIDTH):
                     f.write(seq[chunk:chunk+self.MAXWIDTH]+"\n")
             f.write("\n") # Add last newline
