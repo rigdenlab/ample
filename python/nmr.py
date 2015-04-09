@@ -129,6 +129,30 @@ def standardise_lengths(models_dir):
                 removed+=1
     return removed
 
+def get_proc_map(submit_cluster, rosetta_modeller, NMR_process, id_pdbs, nproc):
+    if submit_cluster: # For clusters we saturate the queue with single model jobs (ideally in batch mode) so that cluster
+        # can manage the usage for us FIX
+        proc_map = [(pdb, 1) for pdb in id_pdbs for _ in range(NMR_process)]
+    else:
+        len_id_pdbs = len(id_pdbs)
+        if nproc < len_id_pdbs:
+            # if we have fewer processors then pdbs to remodel, each job is an idealised pdb that will be processed
+            # on a processor NMR_process times
+            proc_map = [(pdb, NMR_process) for pdb in id_pdbs]
+        else:
+            proc_per_pdb = nproc / len(id_pdbs) # ignore remainder - we're dealing with a shed-load of cpus here
+            if proc_per_pdb == 0: # More cpus then jobs, so we just assign one to each as in parallel case
+                proc_map = [(pdb, 1) for pdb in id_pdbs for _ in range(NMR_process)]
+            else:
+                jobs_per_proc = rosetta_modeller.split_jobs(NMR_process, proc_per_pdb)
+                proc_map = []
+                for pdb in id_pdbs:
+                    for count in jobs_per_proc:
+                        proc_map.append(pdb, count) # We need to split things so that each processor does a chunk of the work
+    
+                    # number of jobs that will be created on each processor
+    return proc_map
+
 def newNMR(amopt, rosetta_modeller, logger, monitor=None):
 
     # Strip HETATM lines from PDB
@@ -143,14 +167,18 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
 
     # Split NMR PDB into separate models
     nmr_models = pdb_edit.split_pdb(amopt.d['NMR_model_in'], nmr_models_dir)
-    modno = len(nmr_models)
-    logger.info('you have {0} models in your nmr'.format(modno))
+    num_models = len(nmr_models)
+    logger.info('you have {0} models in your nmr'.format(num_models))
 
-    if not amopt.d['NMR_process']: amopt.d['NMR_process'] = 1000 / modno
-    logger.info(' processing each model {0} times'.format(amopt.d['NMR_process']))
+    if not amopt.d['NMR_process']: amopt.d['NMR_process'] = 1000 / num_models
+    NMR_process = amopt.d['NMR_process']
+    logger.info('processing each model {0} times'.format(NMR_process))
+    nmodels = NMR_process * num_models
+    logger.info('{0} models will be made'.format(nmodels))
     
     # Idealize all the nmr models to have standard bond lengths, angles etc
-    id_pdbs = idealize_models(nmr_models,amopt,rosetta_modeller,monitor)
+    #id_pdbs = idealize_models(nmr_models,amopt,rosetta_modeller,monitor)
+    id_pdbs = amopt.d['models']
 
     # Sequence object for idealized models
     id_seq = ample_sequence.Sequence()
@@ -160,11 +188,99 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     if amopt.d['alignment_file'] and os.path.exists(amopt.d['alignment_file']):
         alignment_file = amopt.d['alignment_file']
     else:
+        pass
         # fasta sequence of first model
         alignment_file = os.path.join(amopt.d['work_dir'],'homolog.fasta')
         align_mafft(amopt.d['seq_obj'],id_seq,alignment_file,logger)
+    
+    nproc = amopt.d['nproc']
+    proc_map = get_proc_map(amopt.d['submit_cluster'], rosetta_modeller, NMR_process, id_pdbs, nproc)
+                    
+    # REM each model is processed NMR_process
+    # For parallel, each model is run NMR_process times with each a separate job
+    
+    # For serial - if nproc < nmodels, each model is a separate job run NMR_process times
+    # if nproc > nmodels, we need to split each model up so that multiple jobs can be run
+    remodel_dir = os.path.join(amopt.d['work_dir'], 'remodelling')
+    os.mkdir(remodel_dir)
+    os.chdir(remodel_dir)
+    job_scripts=[]
+    
+    seeds = rosetta_modeller.generate_seeds(len(proc_map))
+    dir_list=[]
+    for i, (id_model, nstruct) in enumerate(proc_map):
+        name="job_{0}".format(i)
+        d=os.path.join(remodel_dir,name)
+        os.mkdir(d)
+        dir_list.append(d)
+        
+        # job script
+        script="#!/bin/bash\n"
+        if amopt.d['submit_cluster']:
+            script += clusterize.ClusterRun().queueDirectives(nProc=1,
+                                                              queue=amopt.d['submit_queue'],
+                                                              qtype=amopt.d['submit_qtype'])
+        
+        script += " ".join(rosetta_modeller.mr_cmd(template=id_model,
+                                                   alignment=alignment_file,
+                                                   nstruct=nstruct,
+                                                   seed=seeds[i])) + "\n"
 
+        sname=os.path.join(remodel_dir,"{0}.sh".format(name))
+        with open(sname,'w') as w: w.write(script)
+        os.chmod(sname, 0o777)
+        job_scripts.append(sname) 
+    
+    run_scripts(job_scripts=job_scripts, amoptd=amopt.d, monitor=monitor, check_success=None)
+    
+    # Copy the models into the models directory - need to rename them accordingly
+    pdbs=[]
+    for d in dir_list:
+        ps = glob.glob(os.path.join(d,"*.pdb"))
+        #amopt.d['models_dir']
+        pdbs += ps
+    
+    print "GOT ",pdbs
 
+    return
+
+def do_modelling():
+    # Split jobs onto separate processors - 1 for cluster, as many as will fit for desktop
+    njobs=amopt.d['NMR_process'] * num_models
+    if amopt.d['submit_cluster']:
+        job_count=[1] * njobs
+    else:
+        job_count=rosetta_modeller.split_jobs(njobs,amopt.d['submit_cluster'])
+    
+    # Generate enough random seeds?
+    # Make the directories and put the run scripts in them
+    remodel_dir = os.path.join(amopt.d['work_dir'], 'remodelling')
+    os.mkdir(remodel_dir)
+    os.chdir(remodel_dir)
+    job_scripts=[]
+    for i,njobs in enumerate(job_count):
+        d="job_{0}".format(i)
+        os.mkdir(d)
+        
+        # job script
+        script="#!/bin/bash\n"
+        if amopt.d['submit_cluster']:
+            script += clusterize.ClusterRun().queueDirectives(nProc=1,
+                                                              queue=amopt.d['submit_queue'],
+                                                              qtype=amopt.d['submit_qtype'])
+        
+        script += " ".join(rosetta_modeller.idealize_cmd(pdbin=nmr_model)) + "\n"
+
+        nmr_name=os.path.splitext(os.path.basename(nmr_model))[0]
+        sname=os.path.join(remodel_dir,"{0}_idealize.sh".format(nmr_name))
+        with open(sname,'w') as w: w.write(script)
+        os.chmod(sname, 0o777)
+        job_scripts.append(sname) 
+        # make executable
+        
+        # add to list
+
+    run_scripts(job_scripts=job_scripts, amoptd=amopt.d, monitor=monitor, check_success=None)
     return
 
 def idealize_models(nmr_models,amopt,rosetta_modeller,monitor):
@@ -203,7 +319,6 @@ def idealize_models(nmr_models,amopt,rosetta_modeller,monitor):
         raise RuntimeError,"Error idealising nmr models!"
     
     os.chdir(owd)
-    
     return id_pdbs
 
 def align_mafft(seq1, seq2, filename,logger):
