@@ -109,41 +109,32 @@ class RosettaModel(object):
         """
         Generate a list of nseed seeds
         """
-
-        seed_list = []
-
+        start=1000000
+        end=4000000
+        assert nseeds > 0 and nseeds < end-start,"Invalid seed count: {0}".format(nseeds)
+        seed_list = set()
         # Generate the list of random seeds
-        while len(seed_list) < nseeds:
-            seed = random.randint(1000000, 4000000)
-            if seed not in seed_list:
-                seed_list.append(seed)
-
+        while len(seed_list) < nseeds: seed_list.add(random.randint(start, end))
         # Keep a log of the seeds
-        seedlog = open( self.work_dir + os.sep +'seedlist', "w")
-        for seed in  seed_list:
-            seedlog.write(str(seed) + '\n')
-        seedlog.close()
-
+        with open(os.path.join(self.work_dir,'seedlist'), "w") as seedlog:
+            for seed in seed_list: seedlog.write(str(seed) + '\n')
         self.seeds = seed_list
-        return
-    ##End generate_seeds
+        return seed_list
 
-    def split_jobs(self):
+    def split_jobs(self,njobs,nproc):
         """
         Return a list of number of jobs to run on each processor
         """
-        split_jobs = self.nmodels / self.nproc  # split jobs between processors
-        remainder = self.nmodels % self.nproc
+        split_jobs = njobs / nproc  # split jobs between processors
+        remainder = njobs % nproc
         jobs = []
-
-	for i in range(self.nproc):
+        for i in range(nproc):
             njobs = split_jobs
             # Separate out remainder over jobs
             if remainder > 0:
                 njobs += 1
                 remainder -= 1
-            jobs.append( njobs )
-
+            jobs.append(njobs)
         return jobs
 
     def fragment_cmd(self):
@@ -440,11 +431,34 @@ class RosettaModel(object):
                     '-templates:force_native_topology',
                     'True' ]
 
-        if self.benchmark:
-            cmd += ['-in:file:native',self.nativePdbStd]
+        if self.benchmark: cmd += ['-in:file:native',self.nativePdbStd]
 
         return cmd
-    ##End make_rosetta_cmd
+    
+    def mr_cmd(self,template,alignment,nstruct,seed):
+        return [ self.rosetta_mr_protocols,
+                 '-database ', self.rosetta_db,
+                 '-MR:mode', 'cm',
+                 '-in:scriptFile:extended_pose', '1',
+                 '-in:scriptFile:fasta', self.fasta,
+                 '-in:scriptFile:alignment', alignment,
+                 '-in:scriptFile:template_pdb', template,
+                 '-loops:frag_sizes', '9 3 1',
+                 '-loops:frag_files', self.frags_9mers, self.frags_3mers,'none',
+                 '-loops:random_order',
+                 '-loops:random_grow_loops_by', '5',
+                 '-loops:extended',
+                 '-loops:remodel', 'quick_ccd',
+                 '-loops:relax', 'relax',
+                 '-relax:default_repeats','4',
+                 '-relax:jump_move', 'true',
+                 '-cm:aln_format', 'grishin',
+                 '-MR:max_gaplength_to_model', '8',
+                 '-nstruct', str(nstruct),
+                 '-ignore_unrecognized_res',
+                 '-overwrite',
+                 '-run:constant_seed',
+                 '-run:jran', str(seed) ]
 
     def doModelling(self):
         """
@@ -459,8 +473,8 @@ class RosettaModel(object):
             self.generate_tm_predict()
 
         # Now generate the seeds
-        self.generate_seeds( self.nproc )
-        jobs = self.split_jobs()
+        self.generate_seeds(self.nproc)
+        jobs = self.split_jobs(self.nmodels,self.nproc)
 
         # List of processes so we can check when they are done
         processes = []
