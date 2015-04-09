@@ -746,8 +746,11 @@ def main():
         pdb_edit.split_pdb(amopt.d['NMR_model_in'], amopt.d['models_dir'])
         nmr.standardise_lengths(amopt.d['models_dir'])
     elif amopt.d['NMR_remodel']:
-        nmr.doNMR(amopt, rosetta_modeller, logger)
-        # return from nmr with models already made
+        try:
+            nmr.doNMR(amopt, rosetta_modeller, logger)
+        except Exception,e:
+            msg="Error remodelling NMR ensemble: {0}".format(e)
+            ample_exit.exit(msg)
     elif amopt.d['make_models']:
         # Make the models
         logger.info('----- making Rosetta models--------')
@@ -758,7 +761,6 @@ def main():
             clusterize.ClusterRun().modelOnCluster(rosetta_modeller, amopt.d)
         else:
             amopt.d['models_dir'] = rosetta_modeller.doModelling() # run locally
-        
         if not pdb_edit.check_pdb_directory(amopt.d['models_dir'],sequence=amopt.d['sequence']):
             msg="Problem with rosetta pdb files - please check the log for more information"
             ample_exit.exit(msg)
