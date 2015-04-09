@@ -174,15 +174,16 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     NMR_process = int(amopt.d['NMR_process'])
     logger.info('processing each model {0} times'.format(NMR_process))
     num_models = NMR_process * num_nmr_models
-    print "GOT ",NMR_process,type(NMR_process),num_nmr_models,type(num_nmr_models)
     logger.info('{0} models will be made'.format(num_models))
     
     # Idealize all the nmr models to have standard bond lengths, angles etc
-    #id_pdbs = idealize_models(nmr_models,amopt,rosetta_modeller,monitor)
-    id_pdbs = glob.glob(os.path.join(amopt.d['models'],"*.pdb"))
-    
-    print "GOT MODELS ",id_pdbs
+    id_pdbs = idealize_models(nmr_models,amopt,rosetta_modeller,monitor)
+    #id_pdbs = glob.glob(os.path.join(amopt.d['models'],"*.pdb"))
 
+    remodel_dir = os.path.join(amopt.d['work_dir'], 'remodelling')
+    os.mkdir(remodel_dir)
+    os.chdir(remodel_dir)
+  
     # Sequence object for idealized models
     id_seq = ample_sequence.Sequence()
     id_seq.from_pdb(id_pdbs[0])
@@ -191,62 +192,53 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     if amopt.d['alignment_file'] and os.path.exists(amopt.d['alignment_file']):
         alignment_file = amopt.d['alignment_file']
     else:
-        pass
         # fasta sequence of first model
-        alignment_file = os.path.join(amopt.d['work_dir'],'homolog.fasta')
-        align_mafft(amopt.d['seq_obj'],id_seq,alignment_file,logger)
+        alignment_file = align_mafft(amopt.d['seq_obj'],id_seq,logger)
     
-    nproc = amopt.d['nproc']
-    proc_map = get_proc_map(amopt.d['submit_cluster'], rosetta_modeller, NMR_process, id_pdbs, nproc)
-    print "GOT PROC MACP ",proc_map
-
-    remodel_dir = os.path.join(amopt.d['work_dir'], 'remodelling')
-    os.mkdir(remodel_dir)
-    os.chdir(remodel_dir)
-    job_scripts=[]
-    
+    proc_map = get_proc_map(amopt.d['submit_cluster'], rosetta_modeller, NMR_process, id_pdbs, amopt.d['nproc'])
     seeds = rosetta_modeller.generate_seeds(len(proc_map))
-    print "GOT SEEDS ",seeds
+    job_scripts=[]
     dir_list=[]
     for i, (id_model, nstruct) in enumerate(proc_map):
         name="job_{0}".format(i)
         d=os.path.join(remodel_dir,name)
         os.mkdir(d)
         dir_list.append(d)
-        
         # job script
         script="#!/bin/bash\n"
         if amopt.d['submit_cluster']:
             script += clusterize.ClusterRun().queueDirectives(nProc=1,
                                                               queue=amopt.d['submit_queue'],
                                                               qtype=amopt.d['submit_qtype'])
-        
-        #script += " ".join(rosetta_modeller.mr_cmd(template=id_model,
-        #                                           alignment=alignment_file,
-        #                                           nstruct=nstruct,
-        #                                           seed=seeds[i])) + "\n"
         cmd = rosetta_modeller.mr_cmd(template=id_model,
                                                    alignment=alignment_file,
                                                    nstruct=nstruct,
                                                    seed=seeds[i])
-        print "GOT CMD ",cmd
-        script += " ".join(cmd) + "\n"
+        script += " \\\n".join(cmd) + "\n"
 
-        sname=os.path.join(remodel_dir,"{0}.sh".format(name))
+        sname=os.path.join(d,"{0}.sh".format(name))
         with open(sname,'w') as w: w.write(script)
         os.chmod(sname, 0o777)
         job_scripts.append(sname) 
     
-    run_scripts(job_scripts=job_scripts, amoptd=amopt.d, monitor=monitor, check_success=None)
+    success = run_scripts(job_scripts=job_scripts, amoptd=amopt.d, monitor=monitor, check_success=None)
+    if not success: raise RuntimeError,"Error running ROSETTA in directory: {0}".format(remodel_dir)
+    
     
     # Copy the models into the models directory - need to rename them accordingly
     pdbs=[]
     for d in dir_list:
         ps = glob.glob(os.path.join(d,"*.pdb"))
-        #amopt.d['models_dir']
         pdbs += ps
     
-    print "GOT ",pdbs
+    if not len(pdbs): raise RuntimeError,"No pdbs after remodelling!"
+    
+    # Could rename each model so that we work out which model it came from but maybe later...
+    for i,pdb in pdbs:
+        npdb=os.path.join(amopt.d['models_dir'],"model_{0}.pdb".format(i))
+        shutil.copy(pdb, npdb)
+    
+    sys.exit(1)
 
     return
 
@@ -327,11 +319,10 @@ def idealize_models(nmr_models,amopt,rosetta_modeller,monitor):
     os.chdir(owd)
     return id_pdbs
 
-def align_mafft(seq1, seq2, filename,logger):
-    
-    name = "{0}_{1}".format(seq1.name,seq2.name)
-    mafft_input = "{0}.fasta".format(name)
-    seq1.concat(seq2,mafft_input)
+def align_mafft(query_seq, template_seq, logger):
+    name = "{0}__{1}".format(query_seq.name,template_seq.name)
+    mafft_input = "{0}_concat.fasta".format(name)
+    query_seq.concat(template_seq,mafft_input)
     cmd =  ['mafft', '--maxiterate', '1000', '--localpair', '--quiet', mafft_input]
     logfile = 'mafft.out'
     
@@ -345,20 +336,21 @@ def align_mafft(seq1, seq2, filename,logger):
     logger.info("Got Alignment:\n{0}\n{1}".format(seq_align.sequences[0],seq_align.sequences[1]))
     logger.info("If you want to use a different alignment, import using -alignment_file")
     
-    with open(filename,'w') as w:
-        w.write('## TARGET '+name+'\n'+
+    alignment_file = "{0}_align.fasta".format(name)
+    with open(alignment_file,'w') as w:
+        # First line is query and template name - must match the name of the template pdb
+        w.write('## ' + query_seq.name + '  ' + template_seq.name +'\n'+
                 '# hhsearch\n'+
                 'scores_from_program: 0 1.00\n'+
                 '0 ' + seq_align.sequences[0]+'\n'+
                 '0 ' + seq_align.sequences[1] + '\n')
-    return
+    return os.path.abspath(alignment_file)
 
 def run_scripts(job_scripts,amoptd,monitor=None,check_success=None):
     if amoptd['submit_cluster']:
-        run_scripts_cluster(job_scripts, amoptd, monitor)
+        return run_scripts_cluster(job_scripts, amoptd, monitor)
     else:
-        run_scripts_serial(job_scripts, amoptd, monitor, check_success)
-    return
+        return run_scripts_serial(job_scripts, amoptd, monitor, check_success)
 
 def run_scripts_cluster(job_scripts,amoptd,job_time=1800,monitor=None):
     cluster_run = clusterize.ClusterRun()
@@ -385,11 +377,13 @@ def run_scripts_serial(job_scripts,amoptd,monitor=None,early_terminate=None,chec
     # Don't need early terminate - check_success if it exists states what's happening
     js = workers.JobServer()
     js.setJobs(job_scripts)
-    js.start(nproc=amoptd['nproc'],
-             early_terminate=bool(early_terminate),
-             check_success=check_success,
-             monitor=monitor)    
-    return
+    success = js.start(nproc=amoptd['nproc'],
+                       early_terminate=bool(early_terminate),
+                       check_success=check_success,
+                       monitor=monitor,
+                       chdir=True)
+    
+    return success
 
 def doNMR(amopt, rosetta_modeller, logger):
     """Do the NMR modelling step.
