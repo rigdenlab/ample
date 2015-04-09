@@ -11,41 +11,37 @@ class Sequence(object):
         """Initialise the object"""
         
         self.MAXWIDTH=80 # maximum width of any line 
-        self._reset()
+        self.name='unknown'
+        self.headers = [] # title lines
+        self.sequences = [] # The fasta sequences (just AA) as a single string
         return
     
     def from_fasta(self,fasta_file,canonicalise=True):
         name=os.path.splitext(os.path.basename(fasta_file))[0]
+        self.name=name
         with open(fasta_file, "r") as f:
-            self._parse_fasta(f,name,canonicalise)
+            self._parse_fasta(f,canonicalise)
         return
     
     def from_pdb(self,pdbin):
         name=os.path.splitext(os.path.basename(pdbin))[0]
+        self.name=name
         chain2seq = pdb_edit.pdb_sequence(pdbin)
         assert len(chain2seq),"Could not read sequence from pdb: {0}".format(pdbin)
-        
-        self._reset()
+        self.headers = []
+        self.sequences = []
         for chain,seq in chain2seq:
             self.headers.append(">From pdb: {0} chain {1} length {2}".format(name,chain,len(seq)))
             self.sequences.append(seq)
         return
 
-    def _reset( self ):
-        """Reset the object"""
-        self.name='unknown'
-        self.headers = [] # title lines
-        self.sequences = [] # The fasta sequences (just AA) as a single string
-        return
-
-    def _parse_fasta(self, fasta, name,canonicalise=True):
+    def _parse_fasta(self, fasta, canonicalise=True):
         """Parse the fasta file int our data structures & check for consistency 
         Args:
         fasta -- list of strings or open filehandle to read from the fasta file
         """
-
-        self._reset()
-        self.name = name
+        self.headers = []
+        self.sequences = []    
         sequence = None
         first=True
         for line in fasta:
