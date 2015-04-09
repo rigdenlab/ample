@@ -467,20 +467,27 @@ def process_options(amoptd,logger):
         if not os.path.isfile(amoptd['NMR_model_in']):
             msg = "NMR_model_in flag given, but cannot find file: {0}".format(amoptd['NMR_model_in'])
             ample_exit.exit(msg)
-        amoptd['make_frags'] = False
-        amoptd['make_models'] = False
         if amoptd['NMR_remodel_fasta']:
             if not os.path.isfile(amoptd['NMR_remodel_fasta']):
                 msg = "NMR_remodel_fasta flag given, but cannot find file: {0}".format(amoptd['NMR_remodel_fasta'])
                 ample_exit.exit(msg)
         else:
             amoptd['NMR_remodel_fasta'] =  amoptd['fasta']
-    
-    if amoptd['make_models']:
+        if amoptd['NMR_remodel']:
+            if not amoptd['frags_3mers'] and amoptd['frags_9mers']:
+                amoptd['make_frags'] = True
+                msg = "NMR_remodel - will be making our own fragment files"
+                logger.info(msg)
+            else:
+                if not os.path.isfile(amoptd['frags_3mers'] ) or not os.path.isfile(amoptd['frags_9mers']):
+                    msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(amoptd['frags_3mers'], amoptd['frags_9mers'])
+                    ample_exit.exit(msg)
+                amoptd['make_frags'] = False
+    elif amoptd['make_models']:
         if not os.path.isdir(amoptd['models_dir']): os.mkdir(amoptd['models_dir'])
         # If the user has given both fragment files we check they are ok and unset make_frags
         if amoptd['frags_3mers'] and amoptd['frags_9mers']:
-            if not os.path.isfile( amoptd['frags_3mers'] ) or not os.path.isfile( amoptd['frags_9mers'] ):
+            if not os.path.isfile(amoptd['frags_3mers'] ) or not os.path.isfile( amoptd['frags_9mers']):
                 msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(amoptd['frags_3mers'], amoptd['frags_9mers'])
                 ample_exit.exit(msg)
             amoptd['make_frags'] = False
