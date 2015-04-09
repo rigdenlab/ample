@@ -222,24 +222,20 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
         job_scripts.append(sname) 
     
     success = run_scripts(job_scripts=job_scripts, amoptd=amopt.d, monitor=monitor, check_success=None)
-    if not success: raise RuntimeError,"Error running ROSETTA in directory: {0}".format(remodel_dir)
-    
+    if not success: raise RuntimeError,"Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(remodel_dir)
     
     # Copy the models into the models directory - need to rename them accordingly
     pdbs=[]
     for d in dir_list:
         ps = glob.glob(os.path.join(d,"*.pdb"))
         pdbs += ps
-    
-    if not len(pdbs): raise RuntimeError,"No pdbs after remodelling!"
+    if not len(pdbs): raise RuntimeError,"No pdbs after remodelling in directory: {0}\nPlease check the log files for more information.".format(remodel_dir)
     
     # Could rename each model so that we work out which model it came from but maybe later...
-    for i,pdb in pdbs:
+    for i,pdb in enumerate(pdbs):
         npdb=os.path.join(amopt.d['models_dir'],"model_{0}.pdb".format(i))
         shutil.copy(pdb, npdb)
     
-    sys.exit(1)
-
     return
 
 def do_modelling():
