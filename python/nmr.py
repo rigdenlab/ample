@@ -167,18 +167,20 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
 
     # Split NMR PDB into separate models
     nmr_models = pdb_edit.split_pdb(amopt.d['NMR_model_in'], nmr_models_dir)
-    num_models = len(nmr_models)
-    logger.info('you have {0} models in your nmr'.format(num_models))
+    num_nmr_models = len(nmr_models)
+    logger.info('you have {0} models in your nmr'.format(num_nmr_models))
 
-    if not amopt.d['NMR_process']: amopt.d['NMR_process'] = 1000 / num_models
+    if not amopt.d['NMR_process']: amopt.d['NMR_process'] = 1000 / num_nmr_models
     NMR_process = amopt.d['NMR_process']
     logger.info('processing each model {0} times'.format(NMR_process))
-    nmodels = NMR_process * num_models
-    logger.info('{0} models will be made'.format(nmodels))
+    num_models = NMR_process * num_nmr_models
+    logger.info('{0} models will be made'.format(num_models))
     
     # Idealize all the nmr models to have standard bond lengths, angles etc
     #id_pdbs = idealize_models(nmr_models,amopt,rosetta_modeller,monitor)
     id_pdbs = amopt.d['models']
+    
+    print "GOT MODELS ",id_pdbs
 
     # Sequence object for idealized models
     id_seq = ample_sequence.Sequence()
@@ -199,7 +201,7 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     # REM each model is processed NMR_process
     # For parallel, each model is run NMR_process times with each a separate job
     
-    # For serial - if nproc < nmodels, each model is a separate job run NMR_process times
+    # For serial - if nproc < num_models, each model is a separate job run NMR_process times
     # if nproc > nmodels, we need to split each model up so that multiple jobs can be run
     remodel_dir = os.path.join(amopt.d['work_dir'], 'remodelling')
     os.mkdir(remodel_dir)
