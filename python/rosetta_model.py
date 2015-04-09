@@ -118,6 +118,7 @@ class RosettaModel(object):
         # Keep a log of the seeds
         with open(os.path.join(self.work_dir,'seedlist'), "w") as seedlog:
             for seed in seed_list: seedlog.write(str(seed) + '\n')
+        seed_list=list(seed_list)
         self.seeds = seed_list
         return seed_list
 

@@ -171,7 +171,7 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     logger.info('you have {0} models in your nmr'.format(num_nmr_models))
 
     if not amopt.d['NMR_process']: amopt.d['NMR_process'] = 1000 / num_nmr_models
-    NMR_process = amopt.d['NMR_process']
+    NMR_process = int(amopt.d['NMR_process'])
     logger.info('processing each model {0} times'.format(NMR_process))
     num_models = NMR_process * num_nmr_models
     print "GOT ",NMR_process,type(NMR_process),num_nmr_models,type(num_nmr_models)
@@ -198,18 +198,15 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     
     nproc = amopt.d['nproc']
     proc_map = get_proc_map(amopt.d['submit_cluster'], rosetta_modeller, NMR_process, id_pdbs, nproc)
-                    
-    # REM each model is processed NMR_process
-    # For parallel, each model is run NMR_process times with each a separate job
-    
-    # For serial - if nproc < num_models, each model is a separate job run NMR_process times
-    # if nproc > nmodels, we need to split each model up so that multiple jobs can be run
+    print "GOT PROC MACP ",proc_map
+
     remodel_dir = os.path.join(amopt.d['work_dir'], 'remodelling')
     os.mkdir(remodel_dir)
     os.chdir(remodel_dir)
     job_scripts=[]
     
     seeds = rosetta_modeller.generate_seeds(len(proc_map))
+    print "GOT SEEDS ",seeds
     dir_list=[]
     for i, (id_model, nstruct) in enumerate(proc_map):
         name="job_{0}".format(i)
@@ -224,10 +221,16 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
                                                               queue=amopt.d['submit_queue'],
                                                               qtype=amopt.d['submit_qtype'])
         
-        script += " ".join(rosetta_modeller.mr_cmd(template=id_model,
+        #script += " ".join(rosetta_modeller.mr_cmd(template=id_model,
+        #                                           alignment=alignment_file,
+        #                                           nstruct=nstruct,
+        #                                           seed=seeds[i])) + "\n"
+        cmd = rosetta_modeller.mr_cmd(template=id_model,
                                                    alignment=alignment_file,
                                                    nstruct=nstruct,
-                                                   seed=seeds[i])) + "\n"
+                                                   seed=seeds[i])
+        print "GOT CMD ",cmd
+        script += " ".join(cmd) + "\n"
 
         sname=os.path.join(remodel_dir,"{0}.sh".format(name))
         with open(sname,'w') as w: w.write(script)
