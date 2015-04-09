@@ -38,7 +38,7 @@ class JobServer(object):
         # Add jobs to the inqueue
         #logger.info("Generating MRBUMP runscripts in: {0}".format( os.getcwd() ) )
         for job in jobs:
-            queue.put( job )
+            queue.put(job)
             
         self.inqueue = queue
         #self.inqueue.close()
@@ -48,16 +48,17 @@ class JobServer(object):
         
         return
     
-    def start(self, nproc=None, early_terminate=False, check_success=None, monitor=None):
+    def start(self, nproc=None, early_terminate=False, check_success=None, monitor=None, chdir=False):
         
         assert nproc != None
 
         # Now start the jobs
         processes = []
         for i in range( nproc ):
-            process = multiprocessing.Process(target=worker.worker, args=( self.inqueue,
-                                                                           early_terminate,
-                                                                           check_success ) )
+            process = multiprocessing.Process(target=worker.worker, args=(self.inqueue,
+                                                                          early_terminate,
+                                                                          check_success,
+                                                                          chdir))
             process.start()
             processes.append(process)
         
@@ -69,12 +70,19 @@ class JobServer(object):
         
         if monitor: monitor()
         
+        success=True
         while len(processes):
             for i, process in enumerate(processes):
                 # Join process for timeout seconds and if we haven't finished by then move onto the next process
                 process.join(timeout)
                 if not process.is_alive():
                     self.logger.debug("Checking completed process {0} with exitcode {1}".format(process,process.exitcode))
+                    
+                    # Set failed if any job failed
+                    if process.exitcode != 0:
+                        self.logger.critical("Process {0} failed with exitcode {1}".format(process,process.exitcode))
+                        success=False
+                    
                     # Finished so see what happened
                     if process.exitcode == 0 and early_terminate:
                         if not self.inqueue.empty():
@@ -85,7 +93,7 @@ class JobServer(object):
                             # running processes have finished
                             while not self.inqueue.empty():
                                 job = self.inqueue.get()
-                                self.logger.debug( "Removed job [{0}] from inqueue".format(job) )
+                                self.logger.debug( "Removed job [{0}] from inqueue".format(job))
                         else:
                             print "Got empty queue - all jobs done"
                             
@@ -96,8 +104,8 @@ class JobServer(object):
                 if monitor: monitor()
                             
         # need to wait here as sometimes it takes a while for the results files to get written
-        time.sleep( 3 )
-        return
+        time.sleep(3)        
+        return success
 
 # Need this defined outside of the test or it can't be pickled on Windoze
 def _check_success_test( job ):
