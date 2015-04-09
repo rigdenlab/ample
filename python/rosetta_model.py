@@ -593,14 +593,14 @@ class RosettaModel(object):
                 blastpgp = os.path.join(optd['blast_dir'],"bin/blastpgp")
                 blastpgp = ample_util.find_exe( blastpgp )
             else:
-                blastpgp = ample_util.find_exe( 'blastpgp' )
+                blastpgp = ample_util.find_exe('blastpgp')
 
             # Found so set
             optd['blastpgp'] = blastpgp
             self.blastpgp = blastpgp
 
             # nr database
-            if not os.path.exists( str(optd['nr']) ) and not os.path.exists( str(optd['nr'])+".pal" ):
+            if not os.path.exists(str(optd['nr'])) and not os.path.exists( str(optd['nr'])+".pal"):
                 msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format( optd['nr'] )
                 self.logger.critical(msg)
                 raise RuntimeError, msg
@@ -613,29 +613,29 @@ class RosettaModel(object):
             self.octopusTopology = optd['transmembrane_octopusfile']
 
             # Check if we've been given files
-            if  self.octopusTopology and not ( os.path.isfile( self.octopusTopology ) ):
-                msg = "Cannot find provided transmembrane octopus topology prediction: {0}".format(  self.octopusTopology )
+            if  self.octopusTopology and not (os.path.isfile(self.octopusTopology)):
+                msg = "Cannot find provided transmembrane octopus topology prediction: {0}".format(self.octopusTopology)
                 self.logger.critical(msg)
                 raise RuntimeError, msg
 
-            if  self.spanfile and not ( os.path.isfile( self.spanfile ) ):
-                msg = "Cannot find provided transmembrane spanfile: {0}".format(  self.spanfile )
+            if  self.spanfile and not (os.path.isfile(self.spanfile)):
+                msg = "Cannot find provided transmembrane spanfile: {0}".format(self.spanfile)
                 self.logger.critical(msg)
                 raise RuntimeError, msg
 
-            if self.lipofile and not ( os.path.isfile( self.lipofile ) ):
-                msg = "Cannot find provided transmembrane lipofile: {0}".format( self.lipofile )
+            if self.lipofile and not (os.path.isfile(self.lipofile)):
+                msg = "Cannot find provided transmembrane lipofile: {0}".format(self.lipofile)
                 self.logger.critical(msg)
                 raise RuntimeError, msg
 
-            if (  self.spanfile and not self.lipofile ) or ( self.lipofile and not self.spanfile ):
+            if (self.spanfile and not self.lipofile) or (self.lipofile and not self.spanfile):
                 msg="You need to provide both a spanfile and a lipofile"
                 self.logger.critical(msg)
                 raise RuntimeError, msg
         # End transmembrane checks
 
         # Modelling variables
-        if optd['make_models']:
+        if optd['make_models'] or optd['NMR_remodel']:
 
             if not optd['make_frags']:
                 self.frags_3mers = optd['frags_3mers']
@@ -649,7 +649,7 @@ class RosettaModel(object):
             self.nmodels = optd['nmodels']
             # Set models directory
             if not optd['models_dir']:
-                self.models_dir = optd['work_dir'] + os.sep + "models"
+                self.models_dir = os.path.join(optd['work_dir'], "models")
             else:
                 self.models_dir = optd['models_dir']
 
