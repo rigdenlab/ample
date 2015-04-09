@@ -174,11 +174,12 @@ def newNMR(amopt, rosetta_modeller, logger, monitor=None):
     NMR_process = amopt.d['NMR_process']
     logger.info('processing each model {0} times'.format(NMR_process))
     num_models = NMR_process * num_nmr_models
+    print "GOT ",NMR_process,type(NMR_process),num_nmr_models,type(num_nmr_models)
     logger.info('{0} models will be made'.format(num_models))
     
     # Idealize all the nmr models to have standard bond lengths, angles etc
     #id_pdbs = idealize_models(nmr_models,amopt,rosetta_modeller,monitor)
-    id_pdbs = amopt.d['models']
+    id_pdbs = glob.glob(os.path.join(amopt.d['models'],"*.pdb"))
     
     print "GOT MODELS ",id_pdbs
 
