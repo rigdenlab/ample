@@ -13,24 +13,19 @@ import time
 import unittest
 
 # our imports
+import clusterize
 import worker
 
 class JobServer(object):
-    
     def __init__(self):
-        
-        
         self.inqueue = None
         self.outqueue = None
         self.logger = logging.getLogger()
         self.logger.info("Running jobs on a local machine")
-        
     
     def setJobs(self, jobs):
         """Add the list of jobs we are to run"""
-
-        if self.inqueue:
-            raise RuntimeError,"NOT THOUGHT ABOUT MULTIPLE INVOCATIONS!"
+        if self.inqueue: raise RuntimeError,"NOT THOUGHT ABOUT MULTIPLE INVOCATIONS!"
         
         # Queue to hold the jobs we want to run
         queue = multiprocessing.Queue()
@@ -38,6 +33,7 @@ class JobServer(object):
         # Add jobs to the inqueue
         #logger.info("Generating MRBUMP runscripts in: {0}".format( os.getcwd() ) )
         for job in jobs:
+            if not os.path.isfile(job): raise RuntimeError,"JobServer cannot find job: {0}".format(job)
             queue.put(job)
             
         self.inqueue = queue
@@ -54,7 +50,7 @@ class JobServer(object):
 
         # Now start the jobs
         processes = []
-        for i in range( nproc ):
+        for i in range(nproc):
             process = multiprocessing.Process(target=worker.worker, args=(self.inqueue,
                                                                           early_terminate,
                                                                           check_success,
@@ -107,12 +103,92 @@ class JobServer(object):
         time.sleep(3)        
         return success
 
+def run_scripts(job_scripts,
+                monitor=None,
+                check_success=None,
+                early_terminate=None,
+                chdir=False,
+                nproc=None,
+                job_time=None,
+                submit_cluster=None,
+                submit_qtype=None,
+                submit_queue=None,
+                submit_array=None,
+                submit_max_array=None):
+    if submit_cluster:
+        return run_scripts_cluster(job_scripts,
+                                   monitor=monitor,
+                                   job_time=None,
+                                   submit_cluster=submit_cluster,
+                                   submit_qtype=submit_qtype,
+                                   submit_queue=submit_queue,
+                                   submit_array=submit_array,
+                                   submit_max_array=submit_max_array,
+                                   
+                                   )
+    else:
+        return run_scripts_serial(job_scripts,
+                                  nproc=nproc,
+                                  monitor=monitor,
+                                  early_terminate=early_terminate,
+                                  check_success=check_success,
+                                  chdir=chdir
+                                  )
+
+def run_scripts_cluster(job_scripts,
+                        monitor=None,
+                        job_time=1800,
+                        submit_cluster=None,
+                        submit_qtype=None,
+                        submit_queue=None,
+                        submit_array=None,
+                        submit_max_array=None,
+                        ):
+    logger = logging.getLogger()
+    logger.info("Running jobs on a cluster")
+    cluster_run = clusterize.ClusterRun()
+    qtype = submit_qtype
+    cluster_run.QTYPE = submit_qtype
+    if submit_array:
+        cluster_run.submitArrayJob(job_scripts,
+                                   jobTime=job_time, # half an hour - should be >>>
+                                   qtype=qtype,
+                                   queue=submit_queue,
+                                   maxArrayJobs=submit_max_array
+                                   )
+    else:
+        for script in job_scripts: cluster_run.submitJob(subScript=script)
+
+    # Monitor the cluster queue to see when all jobs have finished
+    cluster_run.monitorQueue(monitor=monitor)
+    
+    # Rename scripts for array jobs
+    if submit_array: cluster_run.cleanUpArrayJob()
+    return
+
+def run_scripts_serial(job_scripts,
+                       nproc=None,
+                       monitor=None,
+                       early_terminate=None,
+                       check_success=None,
+                       chdir=False):
+    
+    # Don't need early terminate - check_success if it exists states what's happening
+    js = JobServer()
+    js.setJobs(job_scripts)
+    success = js.start(nproc=nproc,
+                       early_terminate=bool(early_terminate),
+                       check_success=check_success,
+                       monitor=monitor,
+                       chdir=chdir)
+    return success
+
 # Need this defined outside of the test or it can't be pickled on Windoze
 def _check_success_test( job ):
     jobname = os.path.splitext( os.path.basename( job ) )[0]
     if jobname == "job_2": return True
     return False
- 
+
 class Test(unittest.TestCase):
 
     @classmethod
@@ -170,4 +246,3 @@ def testSuite():
 if __name__ == "__main__":
     unittest.TextTestRunner(verbosity=2).run(testSuite())
  
-       
