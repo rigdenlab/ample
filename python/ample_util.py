@@ -340,7 +340,7 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
     return work_dir
 
-def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
+def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False):
     """Execute a command and return the exit code.
 
     We take care of outputting stuff to the logs and opening/closing logfiles
@@ -354,6 +354,9 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     """
 
     assert type(cmd) is list
+    
+    if check:
+        if not is_exe(cmd[0]): raise RuntimeError,"run_command cannot find executable: {0}".format(cmd[0])
 
     if not directory:
         directory = os.getcwd()
