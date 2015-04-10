@@ -13,9 +13,6 @@ import unittest
 # our imports
 import clusterize
 import mrbump_cmd
-import mrbump_results
-import workers
-
 
 def generate_jobscripts(ensemble_pdbs, amoptd):
     """Write the MRBUMP shell scripts for all the ensembles.
@@ -123,48 +120,6 @@ def write_jobscript(name, pdb, amoptd, directory=None):
     os.chmod(script_path, 0o777)
     
     return script_path
-
-def mrbump_ensemble_cluster(job_scripts, amoptd, monitor=None):
-    """
-    Process the list of ensembles using MrBump on a cluster.
-    
-    Args:
-    job_scripts -- list of scripts to run mrbump
-    amoptd -- dictionary object containing options
-    """
-    logger = logging.getLogger()
-    logger.info("Running MR and model building on a cluster\n\n")
-
-    mrBuild = clusterize.ClusterRun()
-    qtype = amoptd['submit_qtype']
-    mrBuild.QTYPE = amoptd['submit_qtype']
-    
-    if amoptd['submit_array']:
-        mrBuild.submitArrayJob(job_scripts,
-                               jobTime=172800,
-                               qtype=qtype,
-                               queue=amoptd['submit_queue'],
-                               maxArrayJobs=amoptd['max_array_jobs']
-                               )
-    else:
-        for script in job_scripts: mrBuild.submitJob(subScript=script)
-
-    # Monitor the cluster queue to see when all jobs have finished
-    mrBuild.monitorQueue(monitor=monitor)
-    
-    # Rename scripts for array jobs
-    if amoptd['submit_array']: mrBuild.cleanUpArrayJob()
-    return
-
-def mrbump_ensemble_local(job_scripts, amoptd, monitor=None):
-    """Run ensembling locally"""
-    js = workers.JobServer()
-    js.setJobs(job_scripts)
-    js.start(nproc=amoptd['nproc'],
-             early_terminate=amoptd['early_terminate'],
-             check_success=mrbump_results.checkSuccess,
-             monitor=monitor)
-    return
 
 class Test(unittest.TestCase):
 
