@@ -39,6 +39,7 @@ import pdb_edit
 import pyrvapi_results
 import rosetta_model
 import version
+import workers
 
 def process_command_line():
     # get command line options
@@ -415,6 +416,7 @@ def process_options(amoptd,logger):
     fp.write_fasta(outfasta)
     amoptd['fasta'] = outfasta
     amoptd['sequence']=fp.sequence()
+    amoptd['seq_obj']=fp
     #
     # Not sure if name actually required - see make_fragments.pl
     #
@@ -636,7 +638,11 @@ def process_options(amoptd,logger):
     rosetta_modeller=None
     if amoptd['make_models'] or amoptd['make_frags'] or amoptd['NMR_remodel']:  # only need Rosetta if making models
         logger.info('Using ROSETTA so checking options')
-        rosetta_modeller = rosetta_model.RosettaModel(optd=amoptd)
+        try:
+            rosetta_modeller = rosetta_model.RosettaModel(optd=amoptd)
+        except Exception,e:
+            msg="Error setting ROSETTA options: {0}".format(e)
+            ample_exit.exit(msg)
     
     if amoptd['make_frags']:
         if amoptd['use_homs']:
@@ -730,7 +736,14 @@ def main():
     #
     ######################################################
     time_start = time.time()
-    
+
+    # Create function for monitoring jobs - static function decorator?
+    if pyrvapi_results.pyrvapi:
+        def monitor():
+            return pyrvapi_results.display_results(amopt.d)
+    else:
+        monitor=None
+
     # Do The Modelling
     
     # Make Rosetta fragments
@@ -746,21 +759,34 @@ def main():
         pdb_edit.split_pdb(amopt.d['NMR_model_in'], amopt.d['models_dir'])
         nmr.standardise_lengths(amopt.d['models_dir'])
     elif amopt.d['NMR_remodel']:
-        try:
-            nmr.doNMR(amopt, rosetta_modeller, logger)
-        except Exception,e:
-            msg="Error remodelling NMR ensemble: {0}".format(e)
-            ample_exit.exit(msg)
+        rosetta_modeller.nmr_remodel(NMR_model_in = amopt.d['NMR_model_in'],
+                                     ntimes = amopt.d['NMR_process'],
+                                     alignment_file = amopt.d['alignment_file'],
+                                     seq_obj = amopt.d['seq_obj'],
+                                     monitor = monitor)
+#         try:
+#             rosetta_modeller.nmr_remodel(NMR_model_in = amopt.d['NMR_model_in'],
+#                                          ntimes = amopt.d['NMR_process'],
+#                                          alignment_file = amopt.d['alignment_file'],
+#                                          seq_obj = amopt.d['seq_obj'],
+#                                          monitor = monitor)
+#         except Exception,e:
+#             msg="Error remodelling NMR ensemble: {0}".format(e)
+#             ample_exit.exit(msg)
     elif amopt.d['make_models']:
         # Make the models
         logger.info('----- making Rosetta models--------')
         logger.info('making {0} models...'.format(amopt.d['nmodels']))
-    
-        # If we are running with cluster support submit all modelling jobs to the cluster queue
-        if amopt.d['submit_cluster']:
-            clusterize.ClusterRun().modelOnCluster(rosetta_modeller, amopt.d)
-        else:
-            amopt.d['models_dir'] = rosetta_modeller.doModelling() # run locally
+        try:
+            rosetta_modeller.ab_initio_model(monitor=monitor)
+        except Exception,e:
+            msg="Error running ROSETTA to create models: {0}".format(e)
+            ample_exit.exit(msg)
+#         # If we are running with cluster support submit all modelling jobs to the cluster queue
+#         if amopt.d['submit_cluster']:
+#             clusterize.ClusterRun().modelOnCluster(rosetta_modeller, amopt.d)
+#         else:
+#             amopt.d['models_dir'] = rosetta_modeller.doModelling() # run locally
         if not pdb_edit.check_pdb_directory(amopt.d['models_dir'],sequence=amopt.d['sequence']):
             msg="Problem with rosetta pdb files - please check the log for more information"
             ample_exit.exit(msg)
@@ -857,19 +883,27 @@ def main():
             r=mrbump_results.ResultsSummary()
             r.extractResults(amopt.d['mrbump_dir'],purge=amopt.d['purge'])
             amopt.d['mrbump_results']=r.results
-            pyrvapi_results.display_results(amopt.d)
-            return
+            return pyrvapi_results.display_results(amopt.d)
     else:
         monitor=None
+    
+    ok = workers.run_scripts(job_scripts=job_scripts, 
+                             monitor=monitor,
+                             check_success=mrbump_results.checkSuccess,
+                             early_terminate=amopt.d['early_terminate'],
+                             chdir=False,
+                             nproc=amopt.d['nproc'],
+                             job_time=172800,
+                             submit_cluster=amopt.d['submit_cluster'],
+                             submit_qtype=amopt.d['submit_qtype'],
+                             submit_queue=amopt.d['submit_queue'],
+                             submit_array=amopt.d['submit_array'],
+                             submit_max_array=amopt.d['submit_max_array'])
+
+    if not ok:
+        msg="Error running MRBUMP on the ensembles!\nCheck logs in directory: {0}".format(amopt.d['mrbump_dir'],)
+        ample_exit.exit(msg)
         
-    if amopt.d['submit_cluster']:
-        mrbump_ensemble.mrbump_ensemble_cluster(job_scripts, amopt.d, monitor=monitor)
-    else:
-        try: mrbump_ensemble.mrbump_ensemble_local(job_scripts, amopt.d,monitor=monitor)
-        except Exception,e:
-            msg="Error running MRBUMP on the ensembles: {0}".format(e)
-            ample_exit.exit(msg)
-            
     # Collect the MRBUMP results
     results_summary = mrbump_results.ResultsSummary()
     results_summary.extractResults(bump_dir,purge=amopt.d['purge'])

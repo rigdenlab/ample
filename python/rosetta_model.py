@@ -17,10 +17,39 @@ import unittest
 
 # Our modules
 import add_sidechains_SCWRL
+import ample_sequence
 import ample_util
 import clusterize
 import octopus_predict
+import pdb_edit
+import workers
 
+def align_mafft(query_seq, template_seq, logger):
+    name = "{0}__{1}".format(query_seq.name,template_seq.name)
+    mafft_input = "{0}_concat.fasta".format(name)
+    query_seq.concat(template_seq,mafft_input)
+    cmd =  ['mafft', '--maxiterate', '1000', '--localpair', '--quiet', mafft_input]
+    logfile = 'mafft.out'
+    
+    ret = ample_util.run_command(cmd,logfile=logfile)
+    if ret != 0:
+        raise RuntimeError,"Error running mafft - check logfile: {0}".format(logfile)
+    
+    seq_align = ample_sequence.Sequence()
+    seq_align.from_fasta(logfile,canonicalise=False)
+    
+    logger.info("Got Alignment:\n{0}\n{1}".format(seq_align.sequences[0],seq_align.sequences[1]))
+    logger.info("If you want to use a different alignment, import using -alignment_file")
+    
+    alignment_file = "{0}_align.fasta".format(name)
+    with open(alignment_file,'w') as w:
+        # First line is query and template name - must match the name of the template pdb
+        w.write('## ' + query_seq.name + '  ' + template_seq.name +'\n'+
+                '# hhsearch\n'+
+                'scores_from_program: 0 1.00\n'+
+                '0 ' + seq_align.sequences[0]+'\n'+
+                '0 ' + seq_align.sequences[1] + '\n')
+    return os.path.abspath(alignment_file)
 
 class RosettaModel(object):
     """
@@ -88,6 +117,71 @@ class RosettaModel(object):
         self.set_paths(optd=optd, rosetta_dir=rosetta_dir)
         if optd:
             self.set_from_dict(optd)
+        return
+
+    def ab_initio_model(self,monitor):
+        
+        # Add submit_cluster, submit_queue, submit_qtype
+        if not os.path.isdir(self.models_dir): os.mkdir(self.models_dir)
+        if self.transmembrane: self.generate_tm_predict()    
+    
+        # Split jobs onto separate processors - 1 for cluster, as many as will fit for desktop
+        if self.submit_cluster:
+            jobs_per_proc=[1] * self.nmodels
+        else:
+            jobs_per_proc=self.split_jobs(self.nmodels,self.nproc)
+        
+        # Generate seeds
+        seeds = self.generate_seeds(len(jobs_per_proc))
+        
+        # Make the directories and put the run scripts in them
+        run_dir = os.path.join(self.work_dir, 'modelling')
+        os.mkdir(run_dir)
+        os.chdir(run_dir)
+        job_scripts=[]
+        dir_list = []
+        job_time=7200
+        for i, njobs in enumerate(jobs_per_proc):
+            d=os.path.join(run_dir,"job_{0}".format(i))
+            os.mkdir(d)
+            dir_list.append(d)
+            
+            # job script
+            script="#!/bin/bash\n"
+            if self.submit_cluster:
+                script += clusterize.ClusterRun().queueDirectives(nProc=1,
+                                                                  jobTime=job_time,
+                                                                  queue=self.submit_queue,
+                                                                  qtype=self.submit_qtype)
+            
+            cmd = " ".join(self.modelling_cmd(d, njobs, seeds[i]))
+            script += cmd + "\n"
+    
+            sname=os.path.join(d,"model_{0}.sh".format(i))
+            with open(sname,'w') as w: w.write(script)
+            os.chmod(sname, 0o777)
+            job_scripts.append(sname)
+            
+        success = self.run_scripts(job_scripts, job_time=job_time, monitor=None, chdir=True)
+        if not success:
+            raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(run_dir)
+        # Copy the models into the models directory - need to rename them accordingly
+        pdbs = []
+        for d in dir_list:
+            ps = glob.glob(os.path.join(d, "*.pdb"))
+            pdbs += ps
+        
+        if not len(pdbs):
+            raise RuntimeError, "No pdbs after modelling in directory: {0}\nPlease check the log files for more information.".format(run_dir)
+        
+        if self.use_scwrl: scwrl = add_sidechains_SCWRL.Scwrl(scwrlExe=self.scwrl_exe)
+        for i, pdbin in enumerate(pdbs):
+            if self.use_scwrl:
+                pdbout=os.path.join(self.models_dir,"model_{0}_scwrl.pdb".format(i))
+                scwrl.addSidechains(pdbin=pdbin,pdbout=pdbout)
+            else:
+                pdbout=os.path.join(self.models_dir,"model_{0}.pdb".format(i))
+                shutil.copyfile(pdbin, pdbout)   
         return
 
     def find_binary(self, name):
@@ -338,7 +432,46 @@ class RosettaModel(object):
     def idealize_cmd(self,pdbin):
         """Return command to idealize pdbin"""
         return [self.rosetta_idealize_jd2, "-database", self.rosetta_db, "-s", pdbin]
+
+    def idealize_models(self, nmr_models, monitor):
+        # Loop through each model, idealise them and get an alignment
+        owd=os.getcwd()
+        idealise_dir = os.path.join(self.work_dir, 'idealised_models')
+        os.mkdir(idealise_dir)
+        os.chdir(idealise_dir)
+        id_scripts=[]
+        id_pdbs=[]
+        job_time=7200
+        # WHAT ABOUT STDOUT?
+        for nmr_model in nmr_models:
+            # run idealise on models
+            script="#!/bin/bash\n"
+            if self.submit_cluster:
+                script += clusterize.ClusterRun().queueDirectives(nProc=1,
+                                                                  jobTime=job_time,
+                                                                  queue=self.submit_queue,
+                                                                  qtype=self.submit_qtype)
+            script += " ".join(self.idealize_cmd(pdbin=nmr_model)) + "\n"
     
+            # Get the name of the pdb that will be output
+            id_pdbs.append(self.idealize_pdbout(pdbin=nmr_model,directory=idealise_dir))
+            
+            nmr_name=os.path.splitext(os.path.basename(nmr_model))[0]
+            sname=os.path.join(idealise_dir,"{0}_idealize.sh".format(nmr_name))
+            with open(sname,'w') as w: w.write(script)
+            os.chmod(sname, 0o777)
+            id_scripts.append(sname)
+        
+        # Run the jobs
+        success = self.run_scripts(job_scripts=id_scripts, job_time=job_time, monitor=None, chdir=False)
+        if not success:
+            raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(idealise_dir)
+        # Check all the pdbs were produced - don't check with the NMR sequence as idealise can remove some residues (eg. HIS - see examples/nmr.remodel)
+        if not pdb_edit.check_pdbs(id_pdbs, single=True, allsame=True):
+            raise RuntimeError,"Error idealising nmr models!"
+        os.chdir(owd)
+        return id_pdbs
+
     def idealize_pdbout(self,pdbin,directory=None):
         """Return the path to the pdb generated by idealize for pdbin"""
         pdir,fname = os.path.split(pdbin)
@@ -461,88 +594,142 @@ class RosettaModel(object):
                  '-run:constant_seed',
                  '-run:jran', str(seed) ]
 
-    def doModelling(self):
-        """
-        Run the modelling and return the path to the models directory
-        """
+    def nmr_remodel(self, NMR_model_in=None, ntimes=None, alignment_file=None, seq_obj=None, monitor=None):
+        assert os.path.isfile(NMR_model_in),"Cannot find NMR_model_in: {0}".format(NMR_model_in)
+        assert int(ntimes),"Bad ntimes: {0}".format(ntimes)
+        assert NMR_model_in and ntimes and seq_obj,"Missing nmr_remodel variables"
+        
+        # Strip HETATM lines from PDB
+        nmr_nohet=ample_util.filename_append(NMR_model_in,astr='nohet',directory=self.work_dir)
+        pdb_edit.strip_hetatm(NMR_model_in,nmr_nohet)
+        NMR_model_in = nmr_nohet
+        self.logger.info('using NMR model: {0}'.format(NMR_model_in))
+    
+        if not os.path.isdir(self.models_dir): os.mkdir(self.models_dir)
+        nmr_models_dir = os.path.join(self.work_dir, 'nmr_models')
+        os.mkdir(nmr_models_dir)
+    
+        # Split NMR PDB into separate models
+        nmr_models = pdb_edit.split_pdb(NMR_model_in, nmr_models_dir)
+        num_nmr_models = len(nmr_models)
+        self.logger.info('you have {0} models in your nmr'.format(num_nmr_models))
+    
+        if not ntimes: ntimes = 1000 / num_nmr_models
+        NMR_process = int(ntimes)
+        self.logger.info('processing each model {0} times'.format(NMR_process))
+        num_models = NMR_process * num_nmr_models
+        self.logger.info('{0} models will be made'.format(num_models))
+        
+        # Idealize all the nmr models to have standard bond lengths, angles etc
+        id_pdbs = self.idealize_models(nmr_models, monitor=monitor)
+        #id_pdbs = glob.glob(os.path.join(amopt.d['models'],"*.pdb"))
+    
+        owd=os.getcwd()
+        remodel_dir = os.path.join(self.work_dir, 'remodelling')
+        os.mkdir(remodel_dir)
+        os.chdir(remodel_dir)
+      
+        # Sequence object for idealized models
+        id_seq = ample_sequence.Sequence()
+        id_seq.from_pdb(id_pdbs[0])
+    
+        # Get the alignment for the structure - assumes all models have the same sequence
+        if not alignment_file:
+            # fasta sequence of first model
+            alignment_file = align_mafft(seq_obj,id_seq,self.logger)
+        
+        # Remodel each idealized model NMR_process times
+        self.remodel(id_pdbs, ntimes, alignment_file, monitor=monitor)
+        
+        os.chdir(owd)
+        return
 
-        # Should be done by main script
-        if not os.path.isdir( self.models_dir ):
-            os.mkdir(self.models_dir)
-
-        if self.transmembrane:
-            self.generate_tm_predict()
-
-        # Now generate the seeds
-        self.generate_seeds(self.nproc)
-        jobs = self.split_jobs(self.nmodels,self.nproc)
-
-        # List of processes so we can check when they are done
-        processes = []
-        # dict mapping process to directories
-        directories = {}
-        for proc in range(1,self.nproc+1):
-
-            # Get directory to run job in
-            wdir = self.models_dir + os.sep + 'models_' + str(proc)
-            directories[wdir] = proc
-            os.mkdir(wdir)
-
-            # Generate the command for this processor
-            seed = str(self.seeds[proc-1])
-            nstruct = str(jobs[proc-1])
-            cmd = self.modelling_cmd( wdir, nstruct, seed )
-            
-            self.logger.debug('Making {0} models in directory: {1}'.format(nstruct,wdir) )
-            self.logger.debug('Executing cmd: {0}'.format( " ".join(cmd) ) )
-
-            logf = open(wdir+os.sep+"rosetta_{0}.log".format(proc),"w")
-            p = subprocess.Popen( cmd, stdout=logf, stderr=subprocess.STDOUT, cwd=wdir )
-            processes.append(p)
-
-        #End spawning loop
-
-        # Check to see if they have finished
-        done=False
-        completed=0
-        retcodes = [None]*len(processes) # To hold return codes
-        while not done:
-            time.sleep(5)
-            for i, p in enumerate(processes):
-                if retcodes[i] != None:
-                    continue
-                ret = p.poll()
-                if ret != None:
-                    retcodes[i] = ret
-                    completed+=1
-
-            if completed == len(processes):
-                break
-
-        # Check the return codes
-        for i, ret in enumerate(retcodes):
-            if ret != 0:
-                #print "CHECK RET {0} : {1}".format(i,ret)
-                msg = "Error generating models with Rosetta!\nGot return code {0} for processor: {1}".format(ret,i+1)
-                logging.critical( msg )
-                raise RuntimeError, msg
-
-        if self.use_scwrl:
-            scwrl = add_sidechains_SCWRL.Scwrl( scwrlExe=self.scwrl_exe )
-            # Add sidechains using SCRWL - loop over each directory and output files into the models directory
-            for wdir,proc in directories.iteritems():
-                scwrl.processDirectory(inDirectory=wdir, outDirectory=self.models_dir, prefix="scwrl_{0}".format(proc) )
-                #add_sidechains_SCWRL.add_sidechains_SCWRL(self.scwrl_exe, wdir, self.models_dir, str(proc), False)
+    def remodel(self, id_pdbs, ntimes, alignment_file, monitor=None):
+        remodel_dir=os.getcwd()
+        proc_map = self. remodel_proc_map(id_pdbs, ntimes)
+        seeds = self.generate_seeds(len(proc_map))
+        job_scripts = []
+        dir_list = []
+        job_time=7200
+        for i, (id_model, nstruct) in enumerate(proc_map):
+            name = "job_{0}".format(i)
+            d = os.path.join(remodel_dir, name)
+            os.mkdir(d)
+            dir_list.append(d) # job script
+            script = "#!/bin/bash\n"
+            if self.submit_cluster:
+                script += clusterize.ClusterRun().queueDirectives(nProc=1,
+                                                                  jobTime=job_time,
+                                                                  queue=self.submit_queue, 
+                                                                  qtype=self.submit_qtype)
+            cmd = self.mr_cmd(template=id_model, 
+                              alignment=alignment_file, 
+                              nstruct=nstruct, 
+                              seed=seeds[i])
+            script += " \\\n".join(cmd) + "\n"
+            sname = os.path.join(d, "{0}.sh".format(name))
+            with open(sname, 'w') as w:
+                w.write(script)
+            os.chmod(sname, 0o777)
+            job_scripts.append(sname)
+        
+        success = self.run_scripts(job_scripts=job_scripts, job_time=job_time, monitor=None, chdir=False)
+        if not success:
+            raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(remodel_dir)
+    
+        # Copy the models into the models directory - need to rename them accordingly
+        pdbs = []
+        for d in dir_list:
+            ps = glob.glob(os.path.join(d, "*.pdb"))
+            pdbs += ps
+        
+        if not len(pdbs):
+            raise RuntimeError, "No pdbs after remodelling in directory: {0}\nPlease check the log files for more information.".format(remodel_dir)
+        # Could rename each model so that we work out which model it came from but maybe later...
+        for i, pdb in enumerate(pdbs):
+            npdb = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
+            shutil.copy(pdb, npdb)
+        return
+    
+    def remodel_proc_map(self, id_pdbs, ntimes):
+        if self.submit_cluster: # For clusters we saturate the queue with single model jobs (ideally in batch mode) so that cluster
+            # can manage the usage for us FIX
+            proc_map = [(pdb, 1) for pdb in id_pdbs for _ in range(ntimes)]
         else:
-            # Just copy all modelling files into models directory
-            for wd in directories.keys():
-                proc = directories[wd]
-                for pfile in glob.glob( os.path.join(wd, '*.pdb') ):
-                    pdbname = os.path.split(pfile)[1]
-                    shutil.copyfile( wd + os.sep + pdbname, self.models_dir + os.sep + str(proc) + '_' + pdbname)
+            len_id_pdbs = len(id_pdbs)
+            if self.nproc < len_id_pdbs:
+                # if we have fewer processors then pdbs to remodel, each job is an idealised pdb that will be processed
+                # on a processor NMR_process times
+                proc_map = [(pdb, ntimes) for pdb in id_pdbs]
+            else:
+                proc_per_pdb = self.nproc / len(id_pdbs) # ignore remainder - we're dealing with a shed-load of cpus here
+                if proc_per_pdb == 0: # More cpus then jobs, so we just assign one to each as in parallel case
+                    proc_map = [(pdb, 1) for pdb in id_pdbs for _ in range(ntimes)]
+                else:
+                    jobs_per_proc = self.split_jobs(ntimes, proc_per_pdb)
+                    proc_map = []
+                    for pdb in id_pdbs:
+                        for count in jobs_per_proc:
+                            proc_map.append(pdb, count) # We need to split things so that each processor does a chunk of the work
+        
+                        # number of jobs that will be created on each processor
+        return proc_map
 
-        return self.models_dir
-    ##End doModelling
+    def run_scripts(self, job_scripts, job_time=None, monitor=None, chdir=False):
+        # We need absolute paths to the scripts
+        #job_scripts=[os.path.abspath(j) for j in job_scripts]
+        return workers.run_scripts(job_scripts=job_scripts, 
+                                   monitor=monitor,
+                                   check_success=None,
+                                   early_terminate=None,
+                                   chdir=chdir,
+                                   nproc=self.nproc,
+                                   job_time=job_time,
+                                   submit_cluster=self.submit_cluster,
+                                   submit_qtype=self.submit_qtype,
+                                   submit_queue=self.submit_queue,
+                                   submit_array=self.submit_array,
+                                   submit_max_array=self.submit_max_array)
 
     def setup_domain_constraints(self):
         """
@@ -672,17 +859,24 @@ class RosettaModel(object):
                 
             self.use_scwrl = optd['use_scwrl']
             self.scwrl_exe = optd['scwrl_exe']
+            
+            # Cluster submission stuff
+            self.submit_cluster = optd['submit_cluster']
+            self.submit_qtype = optd['submit_qtype']
+            self.submit_queue = optd['submit_queue']
+            self.submit_array = optd['submit_array']
+            self.submit_max_array = optd['submit_max_array']
         return
 
-
     def set_paths(self,optd=None,rosetta_dir=None):
-
         if rosetta_dir and os.path.isdir(rosetta_dir):
             self.rosetta_dir=rosetta_dir
-        elif 'rosetta_dir' in optd and optd['rosetta_dir'] and os.path.isdir(optd['rosetta_dir']):
-            self.rosetta_dir = optd['rosetta_dir']
+        elif 'rosetta_dir' not in optd or not optd['rosetta_dir']:
+            raise RuntimeError,"rosetta_dir variable not set in amopt.d!"
+        elif not os.path.isdir(optd['rosetta_dir']):
+            raise RuntimeError,"Cannot find rosetta_dir directory: {0}\nPlease set the correct rosetta_dir variable to point at the top Rosetta directory.".format(optd['rosetta_dir'])
         else:
-            assert False
+            self.rosetta_dir = optd['rosetta_dir']
 
         # Determine version
         if optd and 'rosetta_version' in optd and optd['rosetta_version'] is not None:
