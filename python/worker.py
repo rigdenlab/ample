@@ -30,8 +30,7 @@ def worker(inqueue, early_terminate=False, check_success=None, chdir=False):
     live in a separate module?
     """
 
-    if early_terminate:
-        assert callable(check_success)
+    if early_terminate: assert callable(check_success)
 
     success=True
     while True:
@@ -50,8 +49,7 @@ def worker(inqueue, early_terminate=False, check_success=None, chdir=False):
         
         # Change directory to the script directory
         if chdir: os.chdir(directory)
-
-        retcode = ample_util.run_command([job], logfile=jobname + ".log", dolog=False)
+        retcode = ample_util.run_command([job], logfile=jobname + ".log", dolog=False, check=True)
 
         # Can we use the retcode to check?
         # REM - is retcode object
