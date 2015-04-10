@@ -344,7 +344,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                                 jobDir=amoptd['work_dir'],
                                 qtype=amoptd['submit_qtype'],
                                 queue=amoptd['submit_queue'],
-                                maxArrayJobs=amoptd['max_array_jobs']
+                                maxArrayJobs=amoptd['submit_max_array']
                                 )
             
         # Monitor the cluster queue to see when all jobs have finished
@@ -490,11 +490,14 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 
         self.logger.debug("Submitting job with command: {0}".format(command_line))
         process_args = shlex.split(command_line)
-        p = subprocess.Popen(process_args, stdin = stdin,
-                                      stdout = subprocess.PIPE)
+        try:
+            p = subprocess.Popen(process_args,
+                                 stdin = stdin,
+                                 stdout = subprocess.PIPE)
+        except Exception,e:
+            raise RuntimeError,"Error submitting job to queue with commmand: {0}\n{1}".format(command_line,e)
 
         child_stdout = p.stdout
-
         # Watch the output for successful termination
         out=child_stdout.readline()
 
@@ -519,13 +522,9 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 
             if qNumber:
                 self.logger.debug("Submission script {0} submitted to queue as job {1}".format( subScript, qNumber ) )
-
             out=child_stdout.readline()
-
         child_stdout.close()
-
         os.chdir(curDir)
-        
         return str(qNumber)
     
     def submitArrayJob(self,jobScripts,jobDir=None,jobTime=None,queue=None,qtype=None,maxArrayJobs=None):
