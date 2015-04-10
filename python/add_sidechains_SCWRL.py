@@ -47,11 +47,9 @@ class Scwrl( object ):
         return
     
     def processDirectory(self, inDirectory=None, outDirectory=None, prefix="scwrl" ):
-        
         for pdb in glob.glob( os.path.join( inDirectory, '*.pdb') ):
-            # New pdb name
             pdbout = ample_util.filename_append( pdb, prefix, directory=outDirectory )
-            self.addSidechains( pdbin=pdb, pdbout=pdbout )
+            self.addSidechains(pdbin=pdb, pdbout=pdbout)
         return 
 
 #
