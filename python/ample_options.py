@@ -44,7 +44,6 @@ class AmpleOptions(object):
                             'make_frags' : False,
                             'make_models' : True,
                             'maxcluster_exe' : None,
-                            'max_array_jobs' : None,
                             'max_ensemble_models' : 30,
                             'missing_domain' : False,
                             'models' : None,
@@ -90,6 +89,7 @@ class AmpleOptions(object):
                             'split_mr' : False,
                             'submit_array' : True,
                             'submit_cluster' : False,
+                            'submit_max_array' : None,
                             'submit_qtype' : None,
                             'submit_queue' : None,
                             'theseus_exe' : None,
@@ -138,10 +138,10 @@ class AmpleOptions(object):
                         }
         
         self.webserver_uri = {
-                               'max_array_jobs' : 10,
                                'purge': True,
                                'shelxe_rebuild_buccaneer': True,
                                'submit_cluster' : True,
+                               'submit_max_array' : 10,
                                'submit_qtype' : "SGE",
                                'submit_queue' : "all.q",
                                }
