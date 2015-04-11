@@ -7,14 +7,17 @@ import pdb_edit
 class Sequence(object):
     """A class to handle a fasta file"""
     
-    def __init__( self ):
+    def __init__(self,fasta=None,pdb=None,canonicalise=False):
         """Initialise the object"""
         
         self.MAXWIDTH=80 # maximum width of any line 
         self.name='unknown'
         self.headers = [] # title lines
         self.sequences = [] # The fasta sequences (just AA) as a single string
-        return
+        if fasta:
+            self.from_fasta(fasta,canonicalise=canonicalise)
+        elif pdb:
+            self.from_pdb(pdbin=pdb)
     
     def from_fasta(self,fasta_file,canonicalise=True):
         name=os.path.splitext(os.path.basename(fasta_file))[0]

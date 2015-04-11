@@ -153,16 +153,16 @@ def process_command_line():
     parser.add_argument('-nr', metavar='nr', type=str, nargs=1,
                        help='Path to the NR non-redundant sequence database')
     
-    parser.add_argument('-NMR_model_in', metavar='NMR_model_in', type=str, nargs=1,
+    parser.add_argument('-nmr_model_in', metavar='nmr_model_in', type=str, nargs=1,
                        help='PDB with NMR models')
     
-    parser.add_argument('-NMR_process', metavar='NMR_process', type=str, nargs=1,
+    parser.add_argument('-nmr_process', metavar='nmr_process', type=str, nargs=1,
                        help='number of times to process the NMR models')
     
-    parser.add_argument('-NMR_remodel', metavar='True/False', type=str, nargs=1,
+    parser.add_argument('-nmr_remodel', metavar='True/False', type=str, nargs=1,
                        help='Remodel the NMR structures')
     
-    parser.add_argument('-NMR_remodel_fasta', metavar='-NMR_remodel_fasta', type=str, nargs=1,
+    parser.add_argument('-nmr_remodel_fasta', metavar='-nmr_remodel_fasta', type=str, nargs=1,
                        help='fasta_for_remodeling')
     
     parser.add_argument('-nproc', metavar='Number of Processors', type=int, nargs=1,
@@ -385,7 +385,7 @@ def process_options(amoptd,logger):
         amoptd['mr_sequence']=amoptd['fasta']
     
     # Check we can find the input fasta
-    if not (os.path.exists(str(amoptd['fasta'])) or os.path.exists(str(amoptd['NMR_remodel_fasta']))):
+    if not (os.path.exists(str(amoptd['fasta'])) or os.path.exists(str(amoptd['nmr_remodel_fasta']))):
         msg = 'Cannot find fasta file: {0}'.format(amoptd['fasta'])
         ample_exit.exit(msg)
     
@@ -465,20 +465,20 @@ def process_options(amoptd,logger):
             ample_exit.exit(msg)
     
     # NMR Checks
-    if amoptd['NMR_model_in']:
-        if not os.path.isfile(amoptd['NMR_model_in']):
-            msg = "NMR_model_in flag given, but cannot find file: {0}".format(amoptd['NMR_model_in'])
+    if amoptd['nmr_model_in']:
+        if not os.path.isfile(amoptd['nmr_model_in']):
+            msg = "nmr_model_in flag given, but cannot find file: {0}".format(amoptd['nmr_model_in'])
             ample_exit.exit(msg)
-        if amoptd['NMR_remodel_fasta']:
-            if not os.path.isfile(amoptd['NMR_remodel_fasta']):
-                msg = "NMR_remodel_fasta flag given, but cannot find file: {0}".format(amoptd['NMR_remodel_fasta'])
+        if amoptd['nmr_remodel_fasta']:
+            if not os.path.isfile(amoptd['nmr_remodel_fasta']):
+                msg = "nmr_remodel_fasta flag given, but cannot find file: {0}".format(amoptd['nmr_remodel_fasta'])
                 ample_exit.exit(msg)
         else:
-            amoptd['NMR_remodel_fasta'] =  amoptd['fasta']
-        if amoptd['NMR_remodel']:
+            amoptd['nmr_remodel_fasta'] =  amoptd['fasta']
+        if amoptd['nmr_remodel']:
             if not amoptd['frags_3mers'] and amoptd['frags_9mers']:
                 amoptd['make_frags'] = True
-                msg = "NMR_remodel - will be making our own fragment files"
+                msg = "nmr_remodel - will be making our own fragment files"
                 logger.info(msg)
             else:
                 if not os.path.isfile(amoptd['frags_3mers'] ) or not os.path.isfile(amoptd['frags_9mers']):
@@ -636,7 +636,7 @@ def process_options(amoptd,logger):
     
     # Create the rosetta modeller - this runs all the checks required
     rosetta_modeller=None
-    if amoptd['make_models'] or amoptd['make_frags'] or amoptd['NMR_remodel']:  # only need Rosetta if making models
+    if amoptd['make_models'] or amoptd['make_frags'] or amoptd['nmr_remodel']:  # only need Rosetta if making models
         logger.info('Using ROSETTA so checking options')
         try:
             rosetta_modeller = rosetta_model.RosettaModel(optd=amoptd)
@@ -754,25 +754,21 @@ def main():
     
     # if NMR process models first
     # break here for NMR (frags needed but not modelling
-    if amopt.d['NMR_model_in'] and not amopt.d['NMR_remodel']:
+    if amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel']:
         if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
-        pdb_edit.split_pdb(amopt.d['NMR_model_in'], amopt.d['models_dir'])
+        pdb_edit.split_pdb(amopt.d['nmr_model_in'], amopt.d['models_dir'])
         nmr.standardise_lengths(amopt.d['models_dir'])
-    elif amopt.d['NMR_remodel']:
-        rosetta_modeller.nmr_remodel(NMR_model_in = amopt.d['NMR_model_in'],
-                                     ntimes = amopt.d['NMR_process'],
-                                     alignment_file = amopt.d['alignment_file'],
-                                     seq_obj = amopt.d['seq_obj'],
-                                     monitor = monitor)
-#         try:
-#             rosetta_modeller.nmr_remodel(NMR_model_in = amopt.d['NMR_model_in'],
-#                                          ntimes = amopt.d['NMR_process'],
-#                                          alignment_file = amopt.d['alignment_file'],
-#                                          seq_obj = amopt.d['seq_obj'],
-#                                          monitor = monitor)
-#         except Exception,e:
-#             msg="Error remodelling NMR ensemble: {0}".format(e)
-#             ample_exit.exit(msg)
+    elif amopt.d['nmr_remodel']:
+        try:
+            rosetta_modeller.nmr_remodel(nmr_model_in = amopt.d['nmr_model_in'],
+                                         ntimes = amopt.d['nmr_process'],
+                                         alignment_file = amopt.d['alignment_file'],
+                                         nmr_remodel_fasta = amopt.d['nmr_remodel_fasta'],
+                                         monitor = monitor)
+        except Exception,e:
+            msg="Error remodelling NMR ensemble: {0}".format(e)
+            ample_exit.exit(msg)
+            
     elif amopt.d['make_models']:
         # Make the models
         logger.info('----- making Rosetta models--------')

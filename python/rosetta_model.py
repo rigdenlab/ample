@@ -11,8 +11,6 @@ import os
 import random
 import re
 import shutil
-import subprocess
-import time
 import unittest
 
 # Our modules
@@ -162,7 +160,7 @@ class RosettaModel(object):
             os.chmod(sname, 0o777)
             job_scripts.append(sname)
             
-        success = self.run_scripts(job_scripts, job_time=job_time, monitor=None, chdir=True)
+        success = self.run_scripts(job_scripts, job_time=job_time, monitor=None)
         if not success:
             raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(run_dir)
         # Copy the models into the models directory - need to rename them accordingly
@@ -463,7 +461,7 @@ class RosettaModel(object):
             id_scripts.append(sname)
         
         # Run the jobs
-        success = self.run_scripts(job_scripts=id_scripts, job_time=job_time, monitor=None, chdir=False)
+        success = self.run_scripts(job_scripts=id_scripts, job_time=job_time, monitor=None)
         if not success:
             raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(idealise_dir)
         # Check all the pdbs were produced - don't check with the NMR sequence as idealise can remove some residues (eg. HIS - see examples/nmr.remodel)
@@ -594,23 +592,23 @@ class RosettaModel(object):
                  '-run:constant_seed',
                  '-run:jran', str(seed) ]
 
-    def nmr_remodel(self, NMR_model_in=None, ntimes=None, alignment_file=None, seq_obj=None, monitor=None):
-        assert os.path.isfile(NMR_model_in),"Cannot find NMR_model_in: {0}".format(NMR_model_in)
+    def nmr_remodel(self, nmr_model_in=None, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
+        assert os.path.isfile(nmr_model_in),"Cannot find nmr_model_in: {0}".format(nmr_model_in)
         assert int(ntimes),"Bad ntimes: {0}".format(ntimes)
-        assert NMR_model_in and ntimes and seq_obj,"Missing nmr_remodel variables"
+        assert nmr_model_in and ntimes and remodel_fasta,"Missing nmr_remodel variables"
         
         # Strip HETATM lines from PDB
-        nmr_nohet=ample_util.filename_append(NMR_model_in,astr='nohet',directory=self.work_dir)
-        pdb_edit.strip_hetatm(NMR_model_in,nmr_nohet)
-        NMR_model_in = nmr_nohet
-        self.logger.info('using NMR model: {0}'.format(NMR_model_in))
+        nmr_nohet=ample_util.filename_append(nmr_model_in,astr='nohet',directory=self.work_dir)
+        pdb_edit.strip_hetatm(nmr_model_in,nmr_nohet)
+        nmr_model_in = nmr_nohet
+        self.logger.info('using NMR model: {0}'.format(nmr_model_in))
     
         if not os.path.isdir(self.models_dir): os.mkdir(self.models_dir)
         nmr_models_dir = os.path.join(self.work_dir, 'nmr_models')
         os.mkdir(nmr_models_dir)
     
         # Split NMR PDB into separate models
-        nmr_models = pdb_edit.split_pdb(NMR_model_in, nmr_models_dir)
+        nmr_models = pdb_edit.split_pdb(nmr_model_in, nmr_models_dir)
         num_nmr_models = len(nmr_models)
         self.logger.info('you have {0} models in your nmr'.format(num_nmr_models))
     
@@ -630,13 +628,13 @@ class RosettaModel(object):
         os.chdir(remodel_dir)
       
         # Sequence object for idealized models
-        id_seq = ample_sequence.Sequence()
-        id_seq.from_pdb(id_pdbs[0])
-    
+        id_seq = ample_sequence.Sequence(pdb=id_pdbs[0])
+        
         # Get the alignment for the structure - assumes all models have the same sequence
         if not alignment_file:
             # fasta sequence of first model
-            alignment_file = align_mafft(seq_obj,id_seq,self.logger)
+            remodel_seq = ample_sequence.Sequence(fasta=remodel_fasta)
+            alignment_file = align_mafft(remodel_seq,id_seq,self.logger)
         
         # Remodel each idealized model NMR_process times
         self.remodel(id_pdbs, ntimes, alignment_file, monitor=monitor)
@@ -668,12 +666,11 @@ class RosettaModel(object):
                               seed=seeds[i])
             script += " \\\n".join(cmd) + "\n"
             sname = os.path.join(d, "{0}.sh".format(name))
-            with open(sname, 'w') as w:
-                w.write(script)
+            with open(sname, 'w') as w: w.write(script)
             os.chmod(sname, 0o777)
             job_scripts.append(sname)
         
-        success = self.run_scripts(job_scripts=job_scripts, job_time=job_time, monitor=None, chdir=False)
+        success = self.run_scripts(job_scripts=job_scripts, job_time=job_time, monitor=None)
         if not success:
             raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(remodel_dir)
     
@@ -715,7 +712,7 @@ class RosettaModel(object):
                         # number of jobs that will be created on each processor
         return proc_map
 
-    def run_scripts(self, job_scripts, job_time=None, monitor=None, chdir=False):
+    def run_scripts(self, job_scripts, job_time=None, monitor=None, chdir=True):
         # We need absolute paths to the scripts
         #job_scripts=[os.path.abspath(j) for j in job_scripts]
         return workers.run_scripts(job_scripts=job_scripts, 
