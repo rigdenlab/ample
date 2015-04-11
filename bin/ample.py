@@ -763,7 +763,7 @@ def main():
             rosetta_modeller.nmr_remodel(nmr_model_in = amopt.d['nmr_model_in'],
                                          ntimes = amopt.d['nmr_process'],
                                          alignment_file = amopt.d['alignment_file'],
-                                         nmr_remodel_fasta = amopt.d['nmr_remodel_fasta'],
+                                         remodel_fasta = amopt.d['nmr_remodel_fasta'],
                                          monitor = monitor)
         except Exception,e:
             msg="Error remodelling NMR ensemble: {0}".format(e)
