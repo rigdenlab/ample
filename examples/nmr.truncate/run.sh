@@ -8,6 +8,6 @@ ccp4-python -u $AMPLE \
 -mtz 102l.mtz \
 -fasta 102L.fasta \
 -name 102l \
--NMR_model_in 2LC9.pdb \
+-nmr_model_in 2LC9.pdb \
 -quick_mode True
 

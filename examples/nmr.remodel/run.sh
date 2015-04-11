@@ -21,11 +21,11 @@ ${AMPLEDIR}/bin/ample.py \
       -mtz 1t00.mtz \
       -fasta 1T00.fasta  \
       -rosetta_dir $ROSETTA_DIR \
-      -NMR_model_in 1OKD.pdb \
-      -NMR_remodel True \
-      -NMR_process 2 \
+      -nmr_model_in 1OKD.pdb \
+      -nmr_remodel True \
+      -nmr_process 2 \
       -frags_3mers 1t00.200.3mers \
       -frags_9mers 1t00.200.9mers \
       -quick_mode True \
-      -nproc 2 \
+      -nproc 8 \
 
