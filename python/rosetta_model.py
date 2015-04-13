@@ -384,6 +384,9 @@ class RosettaModel(object):
 
     def get_version(self):
         """ Return the Rosetta version as a string"""
+        
+
+            
 
         # Get version
         version = None
@@ -403,20 +406,29 @@ class RosettaModel(object):
         else:
             # Version file is absent in 3.5, so we need to use the directory name
             self.logger.debug('Version file for Rosetta not found - checking to see if its 3.5 or 3.6')
-            dirname = os.path.basename( self.rosetta_dir )
-            if dirname.endswith( os.sep ):
-                dirname = dirname[:-1]
-            if dirname.endswith("3.5"):
+            if self.rosetta_dir.endswith(os.sep): self.rosetta_dir = self.rosetta_dir[:-1]
+            if self.rosetta_dir.endswith("3.5"):
                 version=3.5
             # 3.6 bundles seem to look like: rosetta_2014.30.57114_bundle
-            elif re.search("rosetta_\d{4}\.\d{2}\.\d{5}_bundle",dirname):
+            # elif re.search("rosetta_\d{4}\.\d{2}\.\d{5}_bundle",dirname):
+            # Ignore as people change the directory names - just check for the presence of the folders:
+            elif self._chk36(self.rosetta_dir):
                 version=3.6
             else:
-                self.logger.warn("Cannot determine rosetta version in directory: {0}".format(self.rosetta_dir))
+                self.logger.debug("Cannot determine rosetta version in directory: {0}".format(self.rosetta_dir))
                 return False
         self.logger.info('Rosetta version is: {0}'.format(version))
         return version
-    #End get_version
+
+    def _chk36(self,rosetta_dir):
+        # Make sure all the expected directories are found
+        #expected=frozenset(['demos','documentation','main','tools'])
+        expected=frozenset(['demos','main','tools'])
+        found=frozenset([os.path.basename(d) for d in os.listdir(rosetta_dir) if os.path.isdir(os.path.join(rosetta_dir,d))])
+        if len(expected.intersection(found)) == len(expected):
+            return True
+        else:
+            return False
 
     def get_bin_dir(self):
         """Determine the binary directory for the version"""
