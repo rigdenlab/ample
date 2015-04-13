@@ -164,7 +164,7 @@ def run_scripts_cluster(job_scripts,
     
     # Rename scripts for array jobs
     if submit_array: cluster_run.cleanUpArrayJob()
-    return
+    return True
 
 def run_scripts_serial(job_scripts,
                        nproc=None,
