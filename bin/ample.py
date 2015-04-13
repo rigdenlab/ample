@@ -368,6 +368,19 @@ def process_command_line():
 
 def process_options(amoptd,logger):
     
+    # Make sure CCP4 is around
+    if not "CCP4" in os.environ:
+        msg="Cannot find CCP4 installation - please make sure CCP4 is installed and the setup scripts have been run!"
+        ample_exit.exit(msg)
+        
+    if not "CCP4_SCR" in os.environ:
+        msg="$CCP4_SCR environement variable not set - please make sure CCP4 is installed and the setup scripts have been run!"
+        ample_exit.exit(msg)
+        
+    if not os.path.isdir(os.environ['CCP4_SCR']):
+        msg="Cannot find the $CCP4_SCR directory: {0}\nPlease make sure CCP4 is installed and the setup scripts have been run!".format(os.environ['CCP4_SCR'])
+        ample_exit.exit(msg)
+    
     # Path for pickling results
     amoptd['results_path'] = os.path.join( amoptd['work_dir'], "resultsd.pkl" )
     
@@ -407,7 +420,7 @@ def process_options(amoptd,logger):
         ample_exit.exit(msg)
     
     # Check we will be able to truncate at this level
-    if ( float( amoptd['fasta_length'] ) / 100 ) * float( amoptd['percent'] ) < 1:
+    if (float(amoptd['fasta_length']) / 100) * float(amoptd['percent']) < 1:
         msg = "Cannot truncate a fasta sequence of length {0} with {1} percent intervals. Please select a larger interval.".format(amoptd['fasta_length'],amoptd['percent'])
         ample_exit.exit(msg)
     
@@ -416,7 +429,6 @@ def process_options(amoptd,logger):
     fp.write_fasta(outfasta)
     amoptd['fasta'] = outfasta
     amoptd['sequence']=fp.sequence()
-    amoptd['seq_obj']=fp
     #
     # Not sure if name actually required - see make_fragments.pl
     #
