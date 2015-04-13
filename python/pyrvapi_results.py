@@ -284,12 +284,14 @@ def results_tab(results_dict):
         pyrvapi.rvapi_set_tree_node("results_tree",container_id,"{0}".format(name),"auto","")
     return results_tab
         
-def log_tab(logfile):
+def log_tab(results_dict):
     log_tab="log_tab"
+    logfile=results_dict['ample_log']
+    logurl=fix_path(logfile)
     pyrvapi.rvapi_add_tab(log_tab,"Log file",True) # Last arg is "open" - i.e. show or hide
     # Add watched (updatable) content to the log tab. Note that the
     # log file does not exist yet.
-    pyrvapi.rvapi_append_content(logfile,True,log_tab)
+    pyrvapi.rvapi_append_content(logurl,True,log_tab)
     #pyrvapi.rvapi_flush()
     return log_tab
 
@@ -329,9 +331,9 @@ def display_results(results_dict,run_dir=None):
     if t: _tabs.append(t)
     t=results_tab(results_dict)
     if t: _tabs.append(t)
-    t=log_tab(results_dict['ample_log'])
+    t=log_tab()
     if t: _tabs.append(t)
-    pyrvapi.rvapi_flush()
+    pyrvapi.rvapi_flush(results_dict)
     return True
 
 if __name__=="__main__":
