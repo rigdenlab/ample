@@ -18,7 +18,7 @@ if __name__ == "__main__":
 if not "CCP4" in os.environ.keys():
     raise RuntimeError('CCP4 not found')
 mrbumpd=os.path.join(os.environ['CCP4'],"share","mrbump","include","parsers")
-#mrbumpd="/opt/mrbump-trunk/include/parsers"
+#mrbumpd="/home/jmht/mrbump-trunk/include/parsers"
 sys.path.insert(0,mrbumpd)
 import parse_buccaneer
 import parse_phaser
@@ -229,7 +229,8 @@ class ResultsSummary(object):
             jobDir = os.path.join(mrbump_dir, 'search_'+ensemble+'_mrbump')
             #jobDir = os.path.join( mrbump_dir, 'search_'+ensemble )
             if not os.path.isdir(jobDir):
-                self.logger.debug("Missing job directory: {0}".format(jobDir))
+                # As we call this every time we monitor a job running, we don't want to print this out all the time
+                #self.logger.debug("Missing job directory: {0}".format(jobDir))
                 failed[ ensemble ] = "no_job_directory"
                 continue
 
