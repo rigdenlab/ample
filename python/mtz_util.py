@@ -12,6 +12,7 @@ import unittest
 
 from iotbx import reflection_file_reader
 
+import ample_exit
 import ample_util
 import cif_parser
 
@@ -148,12 +149,15 @@ def processReflectionFile(amoptd):
 
     # We've been given a sf_cif so convert to mtz
     if amoptd['sf_cif']:
-        if not os.path.isfile( amoptd['sf_cif'] ):
-            _logger.critical("Cannot find sf_cif file: {0}".format( amoptd['sf_cif'] ) )
-            sys.exit(1)
+        if not os.path.isfile(amoptd['sf_cif']):
+            msg="Cannot find sf_cif file: {0}".format(amoptd['sf_cif'])
+            ample_exit.exit(msg)
+        if not os.path.splitext(amoptd['sf_cif'])[1].lower() == ".cif":
+            msg="Cif file extension is not .cif Please rename the file to give it a .cif extension."
+            ample_exit.exit(msg)
 
         cp = cif_parser.CifParser()
-        amoptd['mtz'] = cp.sfcif2mtz( amoptd['sf_cif'] )
+        amoptd['mtz'] = cp.sfcif2mtz(amoptd['sf_cif'])
 
     # Now have an mtz so check it's valid
     if not amoptd['mtz'] or not os.path.isfile( amoptd['mtz'] ):
