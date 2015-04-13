@@ -12,7 +12,7 @@ import traceback
 try: import pyrvapi
 except: pyrvapi=None
 
-def exit(msg):
+def exit(msg,ample_tb=None):
     logger = logging.getLogger()
     
     #header="**** AMPLE ERROR ****\n\n"
@@ -42,8 +42,12 @@ def exit(msg):
     logger.critical(msg)
     
     # Get traceback of where we failed for the log file
+    if not ample_tb:
+        ample_tb=traceback.extract_stack()
+    else:
+        ample_tb=traceback.extract_tb(ample_tb)
     logger.debug("AMPLE EXITING AT...")
-    logger.debug("".join(traceback.format_list(traceback.extract_stack())))
+    logger.debug("".join(traceback.format_list(ample_tb)))
     
     # Make sure the error widget is updated
     if pyrvapi: pyrvapi.rvapi_flush()

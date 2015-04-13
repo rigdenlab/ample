@@ -778,8 +778,9 @@ def main():
                                          remodel_fasta = amopt.d['nmr_remodel_fasta'],
                                          monitor = monitor)
         except Exception,e:
+            ex_type, ex, tb = sys.exc_info()
             msg="Error remodelling NMR ensemble: {0}".format(e)
-            ample_exit.exit(msg)
+            ample_exit.exit(msg,tb)
             
     elif amopt.d['make_models']:
         # Make the models
@@ -788,13 +789,9 @@ def main():
         try:
             rosetta_modeller.ab_initio_model(monitor=monitor)
         except Exception,e:
+            ex_type, ex, tb = sys.exc_info()
             msg="Error running ROSETTA to create models: {0}".format(e)
-            ample_exit.exit(msg)
-#         # If we are running with cluster support submit all modelling jobs to the cluster queue
-#         if amopt.d['submit_cluster']:
-#             clusterize.ClusterRun().modelOnCluster(rosetta_modeller, amopt.d)
-#         else:
-#             amopt.d['models_dir'] = rosetta_modeller.doModelling() # run locally
+            ample_exit.exit(msg,tb)
         if not pdb_edit.check_pdb_directory(amopt.d['models_dir'],sequence=amopt.d['sequence']):
             msg="Problem with rosetta pdb files - please check the log for more information"
             ample_exit.exit(msg)
