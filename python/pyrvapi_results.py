@@ -296,6 +296,7 @@ def log_tab(results_dict):
     return log_tab
 
 def display_results(results_dict,run_dir=None):
+
     global _running,_tabs,_webserver_uri,_webserver_start
     logger=logging.getLogger()
     if not pyrvapi:
@@ -333,7 +334,7 @@ def display_results(results_dict,run_dir=None):
     if t: _tabs.append(t)
     t=log_tab(results_dict)
     if t: _tabs.append(t)
-    pyrvapi.rvapi_flush(results_dict)
+    pyrvapi.rvapi_flush()
     return True
 
 if __name__=="__main__":
