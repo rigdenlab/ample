@@ -675,7 +675,6 @@ class Ensembler(object):
         clusters=[]
         radii=[]
         len_truncated_models=len(truncated_models)
-        print "CHECKING MODELS ",len_truncated_models
         for i in range(len(self.subcluster_radius_thresholds)):
             radius=None
             nmodels=None
@@ -687,7 +686,7 @@ class Ensembler(object):
                 radius = self.subcluster_radius_thresholds[i]
                 cluster_files = clusterer.cluster_by_radius(radius)
                 
-            cluster_files=sorted(cluster_files) # Need to sort so that we can check if we've had this lot before
+            cluster_files=tuple(sorted(cluster_files)) # Need to sort so that we can check if we've had this lot before
             cluster_size=len(cluster_files)
 
             if radius in radii or cluster_size==1:
@@ -738,8 +737,6 @@ class Ensembler(object):
             if subcluster not in clusters: break
             tries += 1
             if tries >= MAXTRIES: return None
-        
-        print "PICK MODELS GOT ",subcluster
         return subcluster
     
     def _subcluster_nmodels(self,nmodels,radius,clusterer,direction,increment):
@@ -1288,6 +1285,7 @@ class Test(unittest.TestCase):
         return
     
     def testSubclusterNew1(self):
+        """Divergent models"""
         
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
@@ -1325,6 +1323,7 @@ class Test(unittest.TestCase):
         return
     
     def testSubclusterNew2(self):
+        """Similar models"""
         
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
@@ -1339,7 +1338,7 @@ class Test(unittest.TestCase):
         ensembler.subcluster_exe=self.maxcluster_exe
         ensembler.subcluster_method="FIXED_ENSEMBLES"
         
-        mdir=os.path.join(self.testfiles_dir,"1mix_models")
+        mdir=os.path.join(self.testfiles_dir,"1p9g_models")
         truncated_models=glob.glob(mdir+os.sep+"*.pdb")
 
         truncated_models_data = { 'cluster_num'      : 1,
@@ -1354,12 +1353,16 @@ class Test(unittest.TestCase):
 
         self.assertEqual(data[0]['subcluster_num_models'],30)
         self.assertTrue(abs(data[0]['subcluster_radius_threshold']-1) < 0.0001)
-        self.assertEqual(len(data),1)
+        self.assertEqual(data[1]['subcluster_num_models'],30)
+        self.assertTrue(abs(data[1]['subcluster_radius_threshold']-2) < 0.0001)
+        self.assertEqual(data[2]['subcluster_num_models'],30)
+        self.assertTrue(abs(data[2]['subcluster_radius_threshold']-3) < 0.0001)
         shutil.rmtree(work_dir)
         
         return
     
     def testSubclusterNew3(self):
+        """standard models"""
         
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
