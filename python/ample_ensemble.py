@@ -47,8 +47,8 @@ class Ensembler(object):
         self.pruning_strategy="none"
         
         # subclustering
-        self.subcluster_method='FIXED_ENSEMBLES'
         self.subcluster_method='ORIGINAL'
+        self.subcluster_method='FIXED_ENSEMBLES'
         self.subcluster_program="maxcluster"
         self.subcluster_exe=None
         self.subclustering_method="radius"
@@ -661,7 +661,8 @@ class Ensembler(object):
                                          subcluster_program=None,
                                          subcluster_exe=None,
                                          ensemble_max_models=None):
-        
+        self.logger.info("subclustering with floaing radii")
+
         # Run maxcluster to generate the distance matrix
         if subcluster_program=='maxcluster':
             clusterer = subcluster.MaxClusterer(self.subcluster_exe)
@@ -731,8 +732,9 @@ class Ensembler(object):
         MAXTRIES=50
         tries = 0
         clusters=set(clusters)
+        nmodels=min(len(models),ensemble_max_models)
         while True:
-            subcluster = random.sample(models,ensemble_max_models)
+            subcluster = random.sample(models,nmodels)
             subcluster = tuple(sorted(subcluster))
             if subcluster not in clusters: break
             tries += 1
