@@ -63,7 +63,7 @@ class AmpleOptions(object):
                             'num_clusters' : 1,
                             'output_pdb' : 'ample_output.pdb',
                             'percent' : 5,
-                            'phaser_only' : False,
+                            'phaser_only' : True,
                             'phaser_kill' : 0,
                             'phenix_exe' : None,
                             'psipred_ss2' : None,
@@ -112,8 +112,6 @@ class AmpleOptions(object):
                            'max_ensemble_models' : 10,
                            'nmodels' : 200,
                            'percent' : 20,
-                           'molrep_only' : False,
-                           'phaser_only' : True,
                            'shelx_cycles' : 5,
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
@@ -124,12 +122,9 @@ class AmpleOptions(object):
         self.devel_mode = {
                            'early_terminate': False,
                            'benchmark_mode': True,
-                           'phaser_only': True,
-                           'use_shelxe' : True,
                            'shelxe_rebuild' : True,
                            'shelxe_rebuild_arpwarp' : True,
                            'shelxe_rebuild_buccaneer' : True,
-                           'use_scwrl' : False,
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
                            # This kills phaser after 6 hours
@@ -151,7 +146,7 @@ class AmpleOptions(object):
 
         return
     
-    def populate( self, parser_args ):
+    def populate(self, parser_args):
         """
         Fill ourselves with the options from the parser
         """
@@ -166,7 +161,7 @@ class AmpleOptions(object):
                 tmpv = v
 
             # Bit of a hack for true/false
-            if isinstance( tmpv, str ):
+            if isinstance(tmpv, str):
                 if tmpv.lower() == "true":
                     tmpv = True
                 elif tmpv.lower() == "false":
