@@ -443,17 +443,18 @@ class RosettaModel(object):
         """Return command to idealize pdbin"""
         return [self.rosetta_idealize_jd2, "-database", self.rosetta_db, "-s", pdbin]
 
-    def idealize_models(self, nmr_models, monitor):
+    def idealize_models(self, models, monitor):
         # Loop through each model, idealise them and get an alignment
         owd=os.getcwd()
         idealise_dir = os.path.join(self.work_dir, 'idealised_models')
         os.mkdir(idealise_dir)
         os.chdir(idealise_dir)
+        self.logger.info("Idealising {0} models in directory: {1}".format(len(models),idealise_dir))
         id_scripts=[]
         id_pdbs=[]
         job_time=7200
         # WHAT ABOUT STDOUT?
-        for nmr_model in nmr_models:
+        for model in models:
             # run idealise on models
             script="#!/bin/bash\n"
             if self.submit_cluster:
@@ -461,13 +462,13 @@ class RosettaModel(object):
                                                                   jobTime=job_time,
                                                                   queue=self.submit_queue,
                                                                   qtype=self.submit_qtype)
-            script += " ".join(self.idealize_cmd(pdbin=nmr_model)) + "\n"
+            script += " ".join(self.idealize_cmd(pdbin=model)) + "\n"
     
             # Get the name of the pdb that will be output
-            id_pdbs.append(self.idealize_pdbout(pdbin=nmr_model,directory=idealise_dir))
+            id_pdbs.append(self.idealize_pdbout(pdbin=model,directory=idealise_dir))
             
-            nmr_name=os.path.splitext(os.path.basename(nmr_model))[0]
-            sname=os.path.join(idealise_dir,"{0}_idealize.sh".format(nmr_name))
+            name=os.path.splitext(os.path.basename(model))[0]
+            sname=os.path.join(idealise_dir,"{0}_idealize.sh".format(name))
             with open(sname,'w') as w: w.write(script)
             os.chmod(sname, 0o777)
             id_scripts.append(sname)
@@ -478,7 +479,7 @@ class RosettaModel(object):
             raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(idealise_dir)
         # Check all the pdbs were produced - don't check with the NMR sequence as idealise can remove some residues (eg. HIS - see examples/nmr.remodel)
         if not pdb_edit.check_pdbs(id_pdbs, single=True, allsame=True):
-            raise RuntimeError,"Error idealising nmr models!"
+            raise RuntimeError,"Error idealising models in directory: {0}\nInvalid models were produced!".format(idealise_dir)
         os.chdir(owd)
         return id_pdbs
 
@@ -605,8 +606,8 @@ class RosettaModel(object):
 
     def nmr_remodel(self, nmr_model_in=None, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
         assert os.path.isfile(nmr_model_in),"Cannot find nmr_model_in: {0}".format(nmr_model_in)
-        assert int(ntimes),"Bad ntimes: {0}".format(ntimes)
-        assert nmr_model_in and ntimes and remodel_fasta,"Missing nmr_remodel variables"
+        if remodel_fasta: assert os.path.isfile(remodel_fasta),"Cannot find remodel_fasta: {0}".format(remodel_fasta)
+        if ntimes: assert type(ntimes) is int, "ntimes is not an int: {0}".format(ntimes)
         
         # Strip HETATM lines from PDB
         nmr_nohet=ample_util.filename_append(nmr_model_in,astr='nohet',directory=self.work_dir)
@@ -631,6 +632,7 @@ class RosettaModel(object):
         
         # Idealize all the nmr models to have standard bond lengths, angles etc
         id_pdbs = self.idealize_models(nmr_models, monitor=monitor)
+        self.logger.info('{0} models were successfully idealized'.format(len(id_pdbs)))
         #id_pdbs = glob.glob(os.path.join(amopt.d['models'],"*.pdb"))
     
         owd=os.getcwd()
