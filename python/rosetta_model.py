@@ -22,16 +22,20 @@ import octopus_predict
 import pdb_edit
 import workers
 
-def align_mafft(query_seq, template_seq, logger):
+def align_mafft(query_seq, template_seq, logger, mafft_exe=None):
+    if not mafft_exe:
+        mafft_exe = os.path.join(os.environ['CCP4'], 'libexec', 'mafft')
+        if not ample_util.is_exe(mafft_exe): raise RuntimeError,"Cannot find CCP4 mafft binary: {0}".format(mafft_exe)
+        
     name = "{0}__{1}".format(query_seq.name,template_seq.name)
     mafft_input = "{0}_concat.fasta".format(name)
     query_seq.concat(template_seq,mafft_input)
-    cmd =  ['mafft', '--maxiterate', '1000', '--localpair', '--quiet', mafft_input]
-    logfile = 'mafft.out'
+    cmd =  [mafft_exe, '--maxiterate', '1000', '--localpair', '--quiet', mafft_input]
+    logfile = os.path.abspath('mafft.out')
     
     ret = ample_util.run_command(cmd,logfile=logfile)
     if ret != 0:
-        raise RuntimeError,"Error running mafft - check logfile: {0}".format(logfile)
+        raise RuntimeError,"Error running mafft for alignnment - check logfile: {0}".format(logfile)
     
     seq_align = ample_sequence.Sequence()
     seq_align.from_fasta(logfile,canonicalise=False)
@@ -39,14 +43,53 @@ def align_mafft(query_seq, template_seq, logger):
     logger.info("Got Alignment:\n{0}\n{1}".format(seq_align.sequences[0],seq_align.sequences[1]))
     logger.info("If you want to use a different alignment, import using -alignment_file")
     
-    alignment_file = "{0}_align.fasta".format(name)
+    alignment_file = "{0}_align.grishin".format(name)
     with open(alignment_file,'w') as w:
         # First line is query and template name - must match the name of the template pdb
-        w.write('## ' + query_seq.name + '  ' + template_seq.name +'\n'+
-                '# hhsearch\n'+
-                'scores_from_program: 0 1.00\n'+
-                '0 ' + seq_align.sequences[0]+'\n'+
-                '0 ' + seq_align.sequences[1] + '\n')
+        w.write("""## {0}  {1}
+# hhsearch\n
+scores_from_program: 0 1.00\n'+
+0 {2}
+0 {3}
+""".format(query_seq.name,template_seq.name,seq_align.sequences[0], seq_align.sequences[1]))
+    return os.path.abspath(alignment_file)
+
+def align_clustalw(query_seq, template_seq, logger, clustalw_exe=None):
+    if not clustalw_exe:
+        mafft_exe = os.path.join(os.environ['CCP4'], 'libexec', 'clustalw2')
+        if not ample_util.is_exe(mafft_exe): raise RuntimeError,"Cannot find CCP4 clustalw2 binary: {0}".format(mafft_exe)
+        
+    name = "{0}__{1}".format(query_seq.name,template_seq.name)
+    clustalw_input = "{0}_concat.fasta".format(name)
+    query_seq.concat(template_seq,clustalw_input)
+    align_out="{0}_align.fasta".format(name)
+    logfile=os.path.abspath("clustalw2.log")
+    cmd =  [clustalw_exe,
+            '-align',
+            '-outorder=input',
+            '-output=fasta',
+            '-infile={0}'.format(clustalw_input),
+            '-outfile={0}'.format(align_out)]
+    
+    ret = ample_util.run_command(cmd,logfile=logfile)
+    if ret != 0:
+        raise RuntimeError,"Error running clustalw2 for alignnment - check logfile: {0}".format(logfile)
+    
+    seq_align = ample_sequence.Sequence()
+    seq_align.from_fasta(align_out,canonicalise=False)
+    
+    logger.info("Got Alignment:\n{0}\n{1}".format(seq_align.sequences[0],seq_align.sequences[1]))
+    logger.info("If you want to use a different alignment, import using -alignment_file")
+    
+    alignment_file = "{0}_align.grishin".format(name)
+    with open(alignment_file,'w') as w:
+        # First line is query and template name - must match the name of the template pdb
+        w.write("""## {0}  {1}
+# hhsearch\n
+scores_from_program: 0 1.00\n'+
+0 {2}
+0 {3}
+""".format(query_seq.name,template_seq.name,seq_align.sequences[0], seq_align.sequences[1]))
     return os.path.abspath(alignment_file)
 
 class RosettaModel(object):
@@ -625,9 +668,9 @@ class RosettaModel(object):
         self.logger.info('you have {0} models in your nmr'.format(num_nmr_models))
     
         if not ntimes: ntimes = 1000 / num_nmr_models
-        NMR_process = int(ntimes)
-        self.logger.info('processing each model {0} times'.format(NMR_process))
-        num_models = NMR_process * num_nmr_models
+        nmr_process = int(ntimes)
+        self.logger.info('processing each model {0} times'.format(nmr_process))
+        num_models = nmr_process * num_nmr_models
         self.logger.info('{0} models will be made'.format(num_models))
         
         # Idealize all the nmr models to have standard bond lengths, angles etc
@@ -649,7 +692,7 @@ class RosettaModel(object):
             remodel_seq = ample_sequence.Sequence(fasta=remodel_fasta)
             alignment_file = align_mafft(remodel_seq,id_seq,self.logger)
         
-        # Remodel each idealized model NMR_process times
+        # Remodel each idealized model nmr_process times
         self.remodel(id_pdbs, ntimes, alignment_file, monitor=monitor)
         
         os.chdir(owd)
@@ -709,7 +752,7 @@ class RosettaModel(object):
             len_id_pdbs = len(id_pdbs)
             if self.nproc < len_id_pdbs:
                 # if we have fewer processors then pdbs to remodel, each job is an idealised pdb that will be processed
-                # on a processor NMR_process times
+                # on a processor nmr_process times
                 proc_map = [(pdb, ntimes) for pdb in id_pdbs]
             else:
                 proc_per_pdb = self.nproc / len(id_pdbs) # ignore remainder - we're dealing with a shed-load of cpus here
@@ -830,7 +873,7 @@ class RosettaModel(object):
         # End transmembrane checks
 
         # Modelling variables
-        if optd['make_models'] or optd['NMR_remodel']:
+        if optd['make_models'] or optd['nmr_remodel']:
 
             if not optd['make_frags']:
                 self.frags_3mers = optd['frags_3mers']
