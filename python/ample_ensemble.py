@@ -8,6 +8,7 @@ import copy
 import glob
 import logging
 import os
+import random
 import shutil
 import sys
 import unittest
@@ -669,45 +670,77 @@ class Ensembler(object):
         clusterer.generate_distance_matrix(truncated_models)
         #clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
         
-        len_truncated_models=len(truncated_models)
         subclusters=[]
         subclusters_data=[]
-        cluster_sizes=[]
+        clusters=[]
         radii=[]
-        for radius in self.subcluster_radius_thresholds:
-            cluster_files = clusterer.cluster_by_radius(radius)
+        len_truncated_models=len(truncated_models)
+        print "CHECKING MODELS ",len_truncated_models
+        for i in range(len(self.subcluster_radius_thresholds)):
+            radius=None
+            nmodels=None
+            if i > 0 and radii[i-1] > self.subcluster_radius_thresholds[i]:
+                radius = radii[i-1]
+                nmodels = len(clusters[i-1])
+                cluster_files, radius = self._subcluster_nmodels(nmodels, radius, clusterer, direction='up',increment=1)
+            else:
+                radius = self.subcluster_radius_thresholds[i]
+                cluster_files = clusterer.cluster_by_radius(radius)
+                
+            cluster_files=sorted(cluster_files) # Need to sort so that we can check if we've had this lot before
             cluster_size=len(cluster_files)
-            if radius in radii or cluster_size in cluster_sizes or cluster_size==1:
+
+            if radius in radii or cluster_size==1:
                 # Increase radius till we have one more than the last one
-                if cluster_size==1 and len(cluster_sizes)==0:
+                if cluster_size==1:
                     nmodels=2
                 else:
-                    radius=radii[-1]
-                    nmodels=cluster_sizes[-1]+1
+                    radius=radii[i-1]
+                    nmodels=len(clusters[i-1])+1
                 cluster_files, radius = self._subcluster_nmodels(nmodels, radius, clusterer, direction='up',increment=1)
-            elif cluster_size > ensemble_max_models:
-                # Reduce radius until we have ensemble_max_models in cluster
-                cluster_files, radius = self._subcluster_nmodels(ensemble_max_models, radius, clusterer, direction='down',increment=0.1)
-                
+                cluster_files=sorted(cluster_files)
+            elif cluster_size >= ensemble_max_models or cluster_files in clusters:
+                # Randomly pick ensemble_max_models
+                cluster_files = self._pick_nmodels(cluster_files, clusters, ensemble_max_models)
+                if not cluster_files:
+                    self.logger.debug('Could not cluster files under radius: {0} - could not find different models'.format(radius))
+                    
+            
             # Need to check in case we couldn't cluster under this radius
             cluster_size=len(cluster_files)
-            if cluster_size==1 or cluster_size in cluster_sizes or radius in radii:
-                self.logger.debug('Could not cluster files under radius: {0} - got {1} files'.format(len(cluster_files),radius))
+            if cluster_size==1 or radius in radii:
+                self.logger.debug('Could not cluster files under radius: {0} - got {1} files'.format(radius,len(cluster_files)))
                 break
             
             self.logger.debug('Subclustering {0} files under radius {1}'.format(cluster_size,radius))
             try:
-                cluster_ensemble, data = self._subcluster_radius(cluster_files, radius, truncated_models_data)
+                cluster_ensemble, data = self._subcluster_radius(list(cluster_files), radius, truncated_models_data)
             except RuntimeError:
+                self.logger.debug('Could not cluster files under radius: {0} as theseus failed'.format(radius,len(cluster_files)))
                 # If theseus fails, we just move
                 break
+            
             subclusters.append(cluster_ensemble)
             subclusters_data.append(data)
-            cluster_sizes.append(cluster_size)
+            clusters.append(tuple(cluster_files)) # append as tuple so it is hashable
             radii.append(radius)
-            if cluster_size == ensemble_max_models or cluster_size==len_truncated_models: break
+            if cluster_size==len_truncated_models: break
             
         return subclusters, subclusters_data
+    
+    def _pick_nmodels(self, models, clusters, ensemble_max_models):
+        MAXTRIES=50
+        tries = 0
+        clusters=set(clusters)
+        while True:
+            subcluster = random.sample(models,ensemble_max_models)
+            subcluster = tuple(sorted(subcluster))
+            if subcluster not in clusters: break
+            tries += 1
+            if tries >= MAXTRIES: return None
+        
+        print "PICK MODELS GOT ",subcluster
+        return subcluster
     
     def _subcluster_nmodels(self,nmodels,radius,clusterer,direction,increment):
         """
