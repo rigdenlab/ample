@@ -331,7 +331,7 @@ def display_results(results_dict,run_dir=None):
     if t: _tabs.append(t)
     t=results_tab(results_dict)
     if t: _tabs.append(t)
-    t=log_tab()
+    t=log_tab(results_dict)
     if t: _tabs.append(t)
     pyrvapi.rvapi_flush(results_dict)
     return True
