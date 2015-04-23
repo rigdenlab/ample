@@ -7,7 +7,10 @@ import os
 import re
 
 # our imports
-import ample_util
+try:
+    import ample_util
+except:
+    ample_util=None
 
 class SpickerResult( object ):
     """
@@ -30,7 +33,8 @@ class Spickerer( object ):
         """Initialise from a dictionary of options"""
         
         if not spicker_exe: spicker_exe=os.path.join(os.environ['CCP4'], 'bin', 'spicker')
-        if not ample_util.is_exe(spicker_exe): raise RuntimeError,"Cannot find spicker executable: {0}".format(spicker_exe)
+        if not (os.path.exists(spicker_exe) and os.access(spicker_exe, os.X_OK)):
+            raise RuntimeError,"Cannot find spicker executable: {0}".format(spicker_exe)
         
         self.spicker_exe =  spicker_exe
         self.run_dir = run_dir
@@ -134,6 +138,8 @@ class Spickerer( object ):
         """
         Run spicker to cluster the models
         """
+        
+        self.num_clusters = num_clusters
         
         if run_dir: self.run_dir = run_dir
         if not self.run_dir: self.run_dir = os.path.join(os.getcwd(),'spicker')
@@ -263,8 +269,67 @@ class Spickerer( object ):
             rstr += "\n"
             
         return rstr
-        
+
+
+
+    
 if __name__ == "__main__":
+    
+    import subprocess,tempfile
+    
+    # For running as a stand-alone script
+    def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False):
+        """Execute a command and return the exit code.
+    
+        We take care of outputting stuff to the logs and opening/closing logfiles
+    
+        Args:
+        cmd - command to run as a list
+        stdin - a string to use as stdin for the command
+        logfile (optional) - the path to the logfile
+        directory (optional) - the directory to run the job in (cwd assumed)
+        dolog: bool - whether to output info to the system log
+        """
+    
+        assert type(cmd) is list
+    
+        if not directory:
+            directory = os.getcwd()
+    
+        if dolog:
+            logging.debug("In directory {0}\nRunning command: {1}".format( directory, " ".join(cmd)  ) )
+    
+        if logfile:
+            if dolog:
+                logging.debug("Logfile is: {0}".format( logfile ) )
+            logf = open( logfile, "w" )
+        else:
+            logf = tempfile.TemporaryFile()
+            
+        if stdin != None:
+            stdinstr = stdin
+            stdin = subprocess.PIPE
+    
+        # Windows needs some special treatment
+        kwargs = {}
+        if os.name == "nt":
+            kwargs = { 'bufsize': 0, 'shell' : "False" }
+        p = subprocess.Popen( cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs )
+    
+        if stdin != None:
+            p.stdin.write( stdinstr )
+            p.stdin.close()
+            if dolog:
+                logging.debug("stdin for cmd was: {0}".format( stdinstr ) )
+    
+        p.wait()
+        logf.close()
+        
+        return p.returncode
+    
+    class Tmp(object):pass
+    ample_util=Tmp()
+    ample_util.run_command=run_command
     
     #
     # Run Spicker on a directory of PDB files
@@ -291,6 +356,6 @@ if __name__ == "__main__":
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    spicker = Spickerer(models=models,num_clusters=10)
-    spicker.run_spicker()
+    spicker = Spickerer()
+    spicker.cluster(models,num_clusters=10)
     print spicker.results_summary()
