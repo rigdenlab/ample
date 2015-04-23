@@ -17,7 +17,7 @@ import unittest
 import ample_util
 import fast_protein_cluster
 import pdb_edit
-import run_spicker
+import spicker
 import subcluster
 
 POLYALA='polyAla'
@@ -208,12 +208,11 @@ class Ensembler(object):
             # Spicker Alternative for clustering
             self.logger.info('* Running SPICKER to cluster models *')
             spicker_rundir = os.path.join( self.work_dir, 'spicker')
-            spickerer = run_spicker.SpickerCluster(run_dir=spicker_rundir,
-                                                   spicker_exe=cluster_exe,
-                                                   models=models,
-                                                   num_clusters=num_clusters)
+            spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
             spickerer.max_cluster_size=max_cluster_size
-            spickerer.run_spicker()
+            spickerer.cluster(models,
+                              num_clusters=num_clusters,
+                              run_dir=spicker_rundir)
             self.logger.debug(spickerer.results_summary())
             
             for i in range(num_clusters):

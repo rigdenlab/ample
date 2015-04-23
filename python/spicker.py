@@ -24,15 +24,17 @@ class SpickerResult( object ):
         self.r_cen = [] # ordered list of the distance from the cluster centroid for each pdb
         return
 
-class SpickerCluster( object ):
+class Spickerer( object ):
 
-    def __init__(self, run_dir, spicker_exe, models, num_clusters ):
+    def __init__(self, spicker_exe=None,run_dir=None):
         """Initialise from a dictionary of options"""
         
-        self.rundir = run_dir
+        if not spicker_exe: spicker_exe=os.path.join(os.environ['CCP4'], 'bin', 'spicker')
+        if not ample_util.is_exe(spicker_exe): raise RuntimeError,"Cannot find spicker executable: {0}".format(spicker_exe)
+        
         self.spicker_exe =  spicker_exe
-        self.models = models
-        self.num_clusters = num_clusters
+        self.run_dir = run_dir
+        self.num_clusters = None
         self.results = None
         self.max_cluster_size = 200
         self.logger = logging.getLogger()
@@ -52,7 +54,7 @@ class SpickerCluster( object ):
         # print counter
         return str(counter)
 
-    def create_input_files(self):
+    def create_input_files(self,models):
     
         """
         jmht
@@ -61,9 +63,9 @@ class SpickerCluster( object ):
         (See notes in spicker.f FORTRAN file for a description of the required files)
     
         """
-        if not len(self.models):
-            msg = "run_spicker cannot find any pdb files in directory: {0}".format( self.models )
-            self.logger.critical( msg )
+        if not len(models):
+            msg = "no models provided!"
+            self.logger.critical(msg)
             raise RuntimeError,msg
         
         # read_out - Input file for spicker with coordinates of the CA atoms for each of the PDB structures
@@ -75,7 +77,7 @@ class SpickerCluster( object ):
         list_string = ''
         counter = 0
         with open( 'rep1.tra1', "w") as read_out, open( 'file_list', "w") as file_list:
-            for infile in self.models:
+            for infile in models:
                 pdbname = os.path.basename(infile)
                 file_list.write(infile + '\n')
                 list_string = list_string + pdbname+ '\n'
@@ -118,7 +120,7 @@ class SpickerCluster( object ):
         # Create the file with the sequence of the PDB structures
         # from spicker.f
         #*       'seq.dat'--Mandatory, sequence file, for output of PDB models.
-        with open('seq.dat', "w") as seq, open(self.models[0], 'r') as a_pdb:
+        with open('seq.dat', "w") as seq, open(models[0], 'r') as a_pdb:
             for line in a_pdb:
                 pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s*(\d*)\s')
                 result = re.match(pattern, line)
@@ -128,28 +130,26 @@ class SpickerCluster( object ):
                         seq.write('\t' +split[5] + '\t' + split[3] + '\n')
         return
     
-    def run_spicker(self):
+    def cluster(self, models, run_dir=None, num_clusters=1):
         """
         Run spicker to cluster the models
         """
         
-        if not os.path.isdir( self.rundir ):
-            os.mkdir( self.rundir )
-        os.chdir(self.rundir)
+        if run_dir: self.run_dir = run_dir
+        if not self.run_dir: self.run_dir = os.path.join(os.getcwd(),'spicker')
+        if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
+        os.chdir(self.run_dir)
         
-        self.logger.debug("Running spicker in directory: {0}".format( self.rundir ) )
-        self.create_input_files()
-        
-        if not os.path.exists(self.spicker_exe) and os.access(self.spicker_exe, os.X_OK):
-            raise RuntimeError,"Cannot find spicker_exe: {0}".format(self.spicker_exe) 
-        ample_util.run_command([ self.spicker_exe ], logfile="spicker.log" )
+        self.logger.debug("Running spicker in directory: {0}".format(self.run_dir))
+        self.create_input_files(models)
+        ample_util.run_command([self.spicker_exe], logfile="spicker.log")
     
         # Read the log and generate the results
         results = self.process_log()
 
         # Check we have enough clusters
         if len(results) < self.num_clusters:
-            msg = "Only {0} clusters returned from Spicker cannot process {1} clusters!\n".format( len(results),self.num_clusters )
+            msg = "Only {0} clusters returned from Spicker cannot process {1} clusters!\n".format(len(results),self.num_clusters)
             self.logger.critical( msg )
             raise RuntimeError,msg
         
@@ -158,10 +158,10 @@ class SpickerCluster( object ):
         for cluster in range( self.num_clusters ):
                 
             result = results[ cluster ]
-            result.pdb_file = os.path.join( self.rundir, "spicker_cluster_{0}.list".format(cluster+1)  )
+            result.pdb_file = os.path.join(self.run_dir, "spicker_cluster_{0}.list".format(cluster+1))
             
             with open( result.pdb_file, "w" ) as f:
-                for i, pdb in enumerate( result.rosetta_pdb ):
+                for i, pdb in enumerate(result.rosetta_pdb):
                     
                     if i > self.max_cluster_size:
                         result.cluster_size = self.max_cluster_size
@@ -179,7 +179,7 @@ class SpickerCluster( object ):
         """
         
         if not logfile:
-            logfile = os.path.join(self.rundir, 'str.txt')
+            logfile = os.path.join(self.run_dir, 'str.txt')
             
         clusterCounts = []
         index2rcens = []
@@ -228,7 +228,7 @@ class SpickerCluster( object ):
         # Now map the indices to their files
         
         # Get ordered list of the pdb files
-        flist = os.path.join( self.rundir, 'file_list')
+        flist = os.path.join( self.run_dir, 'file_list')
         pdb_list = [ line.strip() for  line in open( flist , 'r' ) ]
         
         results = []
@@ -274,23 +274,23 @@ if __name__ == "__main__":
         print "Usage is {0} <directory_of_pdbs>".format( sys.argv[0] )
         sys.exit(1)
         
-    models_dir = os.path.abspath( sys.argv[1] )
+    models_dir = os.path.abspath(sys.argv[1])
     if not os.path.isdir(models_dir):
-        print "Cannot find directory: {0}".format( models_dir )
+        print "Cannot find directory: {0}".format(models_dir)
         sys.exit(1)
     models=glob.glob(os.path.join(models_dir,"*.pdb"))
     if not len(models):
-        print "Cannot find any pdbs in: {0}".format( models_dir )
+        print "Cannot find any pdbs in: {0}".format(models_dir)
         sys.exit(1)
         
-    spicker_exe = ample_util.find_exe("spicker")
-    if not spicker_exe:
-        print "Cannot find spicker executable in path!"
-        sys.exit(1)
+#     spicker_exe = ample_util.find_exe("spicker")
+#     if not spicker_exe:
+#         print "Cannot find spicker executable in path!"
+#         sys.exit(1)
         
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    spicker = SpickerCluster( run_dir=os.getcwd(), spicker_exe=spicker_exe, models=models, num_clusters=3 )
+    spicker = Spickerer(models=models,num_clusters=10)
     spicker.run_spicker()
     print spicker.results_summary()
