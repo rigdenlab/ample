@@ -32,9 +32,13 @@ class Spickerer( object ):
     def __init__(self, spicker_exe=None,run_dir=None):
         """Initialise from a dictionary of options"""
         
-        if not spicker_exe: spicker_exe=os.path.join(os.environ['CCP4'], 'bin', 'spicker')
+        if not spicker_exe:
+            if 'CCP4' in os.environ:
+                spicker_exe=os.path.join(os.environ['CCP4'], 'bin', 'spicker')
+            else:
+                raise RuntimeError,"Cannot find a spicker executable!"
         if not (os.path.exists(spicker_exe) and os.access(spicker_exe, os.X_OK)):
-            raise RuntimeError,"Cannot find spicker executable: {0}".format(spicker_exe)
+            raise RuntimeError,"Cannot find a valid spicker executable: {0}".format(spicker_exe)
         
         self.spicker_exe =  spicker_exe
         self.run_dir = run_dir
@@ -335,11 +339,17 @@ if __name__ == "__main__":
     # Run Spicker on a directory of PDB files
     #
     import sys
-    if len(sys.argv) != 2:
-        print "Usage is {0} <directory_of_pdbs>".format( sys.argv[0] )
+    if not len(sys.argv) >= 2 and len(sys.argv) < 4:
+        print "Usage is {0} [spicker_executable] <directory_of_pdbs>".format( sys.argv[0] )
         sys.exit(1)
+    
+    spicker_exe=None
+    if len(sys.argv) == 3:
+        spicker_exe=os.path.abspath(sys.argv[1])
+        models_dir=os.path.abspath(sys.argv[2])
+    else:
+        models_dir = os.path.abspath(sys.argv[1])
         
-    models_dir = os.path.abspath(sys.argv[1])
     if not os.path.isdir(models_dir):
         print "Cannot find directory: {0}".format(models_dir)
         sys.exit(1)
@@ -356,6 +366,6 @@ if __name__ == "__main__":
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    spicker = Spickerer()
+    spicker = Spickerer(spicker_exe=spicker_exe)
     spicker.cluster(models,num_clusters=10)
     print spicker.results_summary()
