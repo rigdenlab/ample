@@ -5,6 +5,7 @@ Created on 21 Feb 2013
 '''
 
 # Python modules
+import copy
 import glob
 import logging
 import os
@@ -27,13 +28,18 @@ def align_mafft(query_seq, template_seq, logger, mafft_exe=None):
         mafft_exe = os.path.join(os.environ['CCP4'], 'libexec', 'mafft')
         if not ample_util.is_exe(mafft_exe): raise RuntimeError,"Cannot find CCP4 mafft binary: {0}".format(mafft_exe)
         
+    logger.info("Running mafft binary {0} to generate alignment between target fasta and the NMR model sequence.")
+        
     name = "{0}__{1}".format(query_seq.name,template_seq.name)
     mafft_input = "{0}_concat.fasta".format(name)
     query_seq.concat(template_seq,mafft_input)
     cmd =  [mafft_exe, '--maxiterate', '1000', '--localpair', '--quiet', mafft_input]
     logfile = os.path.abspath('mafft.out')
     
-    ret = ample_util.run_command(cmd,logfile=logfile)
+    # Due to a bug in the CCP4 mafft installation, we need to set MAFFT_BINARIES
+    env=copy.copy(os.environ)
+    env['MAFFT_BINARIES']=os.path.join(env['CCP4'],'libexec')
+    ret = ample_util.run_command(cmd,logfile=logfile,env=env)
     if ret != 0:
         raise RuntimeError,"Error running mafft for alignnment - check logfile: {0}".format(logfile)
     
