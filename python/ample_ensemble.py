@@ -48,7 +48,6 @@ class Ensembler(object):
         
         # subclustering
         self.subcluster_method='ORIGINAL'
-        self.subcluster_method='FIXED_ENSEMBLES'
         self.subcluster_program="maxcluster"
         self.subcluster_exe=None
         self.subclustering_method="radius"
