@@ -156,7 +156,7 @@ def process_command_line():
     parser.add_argument('-nmr_model_in', metavar='nmr_model_in', type=str, nargs=1,
                        help='PDB with NMR models')
     
-    parser.add_argument('-nmr_process', metavar='nmr_process', type=str, nargs=1,
+    parser.add_argument('-nmr_process', metavar='nmr_process', type=int, nargs=1,
                        help='number of times to process the NMR models')
     
     parser.add_argument('-nmr_remodel', metavar='True/False', type=str, nargs=1,
@@ -756,8 +756,6 @@ def main():
     else:
         monitor=None
 
-    # Do The Modelling
-    
     # Make Rosetta fragments
     if amopt.d['make_frags']:
         rosetta_modeller.generate_fragments(amopt.d)
