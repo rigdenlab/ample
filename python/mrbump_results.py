@@ -18,7 +18,7 @@ if __name__ == "__main__":
 if not "CCP4" in os.environ.keys():
     raise RuntimeError('CCP4 not found')
 mrbumpd=os.path.join(os.environ['CCP4'],"share","mrbump","include","parsers")
-#mrbumpd="/home/jmht/mrbump-trunk/include/parsers"
+#mrbumpd="/opt/mrbump-trunk/include/parsers"
 sys.path.insert(0,mrbumpd)
 import parse_buccaneer
 import parse_phaser
@@ -432,23 +432,7 @@ class ResultsSummary(object):
     def results_table(self,results):
         resultsTable = []
         keys = ['ensemble_name', 'MR_program', 'Solution_Type']
-        # Build up list of keys we want to print based on what we find in the results
-        if any([True for r in results if r['PHASER_LLG']]):
-            keys += ['PHASER_LLG']
-        if any([True for r in results if r['PHASER_TFZ']]):
-            keys += ['PHASER_TFZ']
-        if any([True for r in results if r['REFMAC_Rfree']]):
-            keys += ['REFMAC_Rfact', 'REFMAC_Rfree']
-        if any([True for r in results if r['BUCC_final_Rfact']]):
-            keys += ['BUCC_final_Rfact', 'BUCC_final_Rfree']
-        if any([True for r in results if r['ARP_final_Rfact']]):
-            keys += ['ARP_final_Rfact', 'ARP_final_Rfree']
-        if any([True for r in results if r['SHELXE_CC']]):
-            keys += ['SHELXE_CC', 'SHELXE_ACL']
-        if any([True for r in results if r['SXRBUCC_final_Rfact']]):
-            keys += ['SXRBUCC_final_Rfact', 'SXRBUCC_final_Rfree']
-        if any([True for r in results if r['SXRARP_final_Rfact']]):
-            keys += ['SXRARP_final_Rfact', 'SXRARP_final_Rfree']
+        keys += _resultsKeys(results)
         
         resultsTable.append(keys)
         for r in results: resultsTable.append([r[k] for k in keys])
@@ -516,7 +500,28 @@ class ResultsSummary(object):
         r += '\n\n'
 
         return r
-    
+
+def _resultsKeys(results):
+    keys=[]
+    # Build up list of keys we want to print based on what we find in the results
+    if any([True for r in results if r['PHASER_LLG']]):
+        keys += ['PHASER_LLG']
+    if any([True for r in results if r['PHASER_TFZ']]):
+        keys += ['PHASER_TFZ']
+    if any([True for r in results if r['REFMAC_Rfree'] and r['REFMAC_Rfree'] < 1.0]):
+        keys += ['REFMAC_Rfact', 'REFMAC_Rfree']
+    if any([True for r in results if r['BUCC_final_Rfact'] and r['BUCC_final_Rfact'] < 1.0]):
+        keys += ['BUCC_final_Rfact', 'BUCC_final_Rfree']
+    if any([True for r in results if r['ARP_final_Rfact'] and r['ARP_final_Rfact'] < 1.0]):
+        keys += ['ARP_final_Rfact', 'ARP_final_Rfree']
+    if any([True for r in results if r['SHELXE_CC']]):
+        keys += ['SHELXE_CC', 'SHELXE_ACL']
+    if any([True for r in results if r['SXRBUCC_final_Rfact']]):
+        keys += ['SXRBUCC_final_Rfact', 'SXRBUCC_final_Rfree']
+    if any([True for r in results if r['SXRARP_final_Rfact']]):
+        keys += ['SXRARP_final_Rfact', 'SXRARP_final_Rfree']
+    return keys
+
 def checkSuccess(script_path):
     """
     Check if a job ran successfully.
@@ -563,13 +568,13 @@ def finalSummary(amoptd):
                 if ed['name'] == d['ensemble_name']:
                     d.update(ed)
                     results.append(d)
-        keys = ['ensemble_name','Solution_Type','MR_program',"PHASER_LLG","PHASER_TFZ", 'REFMAC_Rfact', 'REFMAC_Rfree',
-                'SHELXE_CC','SHELXE_ACL', 'SXRBUCC_final_Rfact','SXRBUCC_final_Rfree', 'SXRARP_final_Rfact','SXRARP_final_Rfree',
-                'subcluster_num_models','truncation_num_residues']
+        keys = ['ensemble_name','Solution_Type','MR_program']
+        keys += _resultsKeys(results)
+        keys += ['subcluster_num_models','truncation_num_residues']
     else:
         results = mrbump_data
-        keys = ['name','Solution_Type','MR_program',"PHASER_LLG","PHASER_TFZ", 'REFMAC_Rfact', 'REFMAC_Rfree',
-                'SHELXE_CC','SHELXE_ACL', 'SXRBUCC_final_Rfact','SXRBUCC_final_Rfree', 'SXRARP_final_Rfact','SXRARP_final_Rfree']
+        keys = ['name','Solution_Type','MR_program']
+        keys += _resultsKeys(results)
         
     resultsTable = []
     resultsTable.append(keys)
@@ -592,18 +597,23 @@ def finalSummary(amoptd):
     return r
 
 def jobSucceeded(job_dict):
-    rFreeSuccess=0.4
-    shelxeCC=25.0
-    shelxeACL=8
+    PHASER_TFZ=8.0
+    PHASER_LLG=120
+    RFREE=0.4
+    SHELXE_CC=25.0
+    SHELXE_ACL=10
     success=False
-    if 'SHELXE_CC' in job_dict and job_dict['SHELXE_CC'] and float(job_dict['SHELXE_CC']) >= shelxeCC and \
-       'SHELXE_ACL' in job_dict and job_dict['SHELXE_ACL'] and float(job_dict['SHELXE_ACL']) >= shelxeACL:
+    if 'SHELXE_CC' in job_dict and job_dict['SHELXE_CC'] and float(job_dict['SHELXE_CC']) >= SHELXE_CC and \
+       'SHELXE_ACL' in job_dict and job_dict['SHELXE_ACL'] and float(job_dict['SHELXE_ACL']) >= SHELXE_ACL:
         success=True
-    elif 'BUCC_final_Rfact' in job_dict and job_dict['BUCC_final_Rfact'] and float(job_dict['BUCC_final_Rfact']) <= rFreeSuccess:
+    elif 'BUCC_final_Rfact' in job_dict and job_dict['BUCC_final_Rfact'] and float(job_dict['BUCC_final_Rfact']) <= RFREE:
         success=True
-    elif 'ARP_final_Rfree' in job_dict and job_dict['ARP_final_Rfree'] and float(job_dict['ARP_final_Rfree']) <= rFreeSuccess:
+    elif 'ARP_final_Rfree' in job_dict and job_dict['ARP_final_Rfree'] and float(job_dict['ARP_final_Rfree']) <= RFREE:
         success=True
-    elif 'REFMAC_Rfree' in job_dict and job_dict['REFMAC_Rfree'] and float(job_dict['REFMAC_Rfree']) <= rFreeSuccess:
+    elif 'REFMAC_Rfree' in job_dict and job_dict['REFMAC_Rfree'] and float(job_dict['REFMAC_Rfree']) <= RFREE:
+        success=True
+    elif 'PHASER_LLG' in job_dict and 'PHASER_TFZ' in job_dict and job_dict['PHASER_LLG'] and job_dict['PHASER_TFZ'] and \
+    float(job_dict['PHASER_LLG']) >= PHASER_LLG and float(job_dict['PHASER_TFZ']) >= PHASER_TFZ:
         success=True
     return success
 
