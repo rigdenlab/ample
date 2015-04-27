@@ -340,7 +340,7 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
     return work_dir
 
-def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False):
+def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False, env=None):
     """Execute a command and return the exit code.
 
     We take care of outputting stuff to the logs and opening/closing logfiles
@@ -358,16 +358,13 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
     if check:
         if not is_exe(cmd[0]): raise RuntimeError,"run_command cannot find executable: {0}".format(cmd[0])
 
-    if not directory:
-        directory = os.getcwd()
+    if not directory:  directory = os.getcwd()
 
-    if dolog:
-        logging.debug("In directory {0}\nRunning command: {1}".format( directory, " ".join(cmd)  ) )
+    if dolog: logging.debug("In directory {0}\nRunning command: {1}".format(directory, " ".join(cmd)))
 
     if logfile:
-        if dolog:
-            logging.debug("Logfile is: {0}".format( logfile ) )
-        logf = open( logfile, "w" )
+        if dolog: logging.debug("Logfile is: {0}".format(logfile))
+        logf = open(logfile, "w")
     else:
         logf = tempfile.TemporaryFile()
         
@@ -379,13 +376,12 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
     kwargs = {}
     if os.name == "nt":
         kwargs = { 'bufsize': 0, 'shell' : "False" }
-    p = subprocess.Popen( cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs )
+    p = subprocess.Popen(cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, env=env, **kwargs)
 
     if stdin != None:
         p.stdin.write( stdinstr )
         p.stdin.close()
-        if dolog:
-            logging.debug("stdin for cmd was: {0}".format( stdinstr ) )
+        if dolog: logging.debug("stdin for cmd was: {0}".format( stdinstr ) )
 
     p.wait()
     logf.close()
