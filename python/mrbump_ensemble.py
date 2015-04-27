@@ -108,7 +108,6 @@ def write_jobscript(name, pdb, amoptd, directory=None):
             script_header += "pushd {0}\n".format(directory)
         
         if not sys.platform.startswith("win"):
-            script_header += "\nexport CCP4_SCR=$TMPDIR\n"
             script_header += '[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n'
         job_script.write(script_header)
         
