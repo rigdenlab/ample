@@ -478,6 +478,8 @@ def process_options(amoptd,logger):
     
     # NMR Checks
     if amoptd['nmr_model_in']:
+        msg = "Using nmr_model_in file: {0}".format(amoptd['nmr_model_in'])
+        logger.info(msg)
         if not os.path.isfile(amoptd['nmr_model_in']):
             msg = "nmr_model_in flag given, but cannot find file: {0}".format(amoptd['nmr_model_in'])
             ample_exit.exit(msg)
@@ -488,6 +490,8 @@ def process_options(amoptd,logger):
         else:
             amoptd['nmr_remodel_fasta'] =  amoptd['fasta']
         if amoptd['nmr_remodel']:
+            msg = "nmr model will be remodelled using ROSETTA"
+            logger.info(msg)
             if not amoptd['frags_3mers'] and amoptd['frags_9mers']:
                 amoptd['make_frags'] = True
                 msg = "nmr_remodel - will be making our own fragment files"
@@ -497,6 +501,11 @@ def process_options(amoptd,logger):
                     msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(amoptd['frags_3mers'], amoptd['frags_9mers'])
                     ample_exit.exit(msg)
                 amoptd['make_frags'] = False
+        else:
+            amoptd['make_models'] = False
+            msg = "Running in nmr truncate only mode"
+            logger.info(msg)
+
     elif amoptd['make_models']:
         if not os.path.isdir(amoptd['models_dir']): os.mkdir(amoptd['models_dir'])
         # If the user has given both fragment files we check they are ok and unset make_frags
