@@ -621,11 +621,14 @@ class Ensembler(object):
             logfile=os.path.abspath(basename+"_theseus.log")
             retcode = ample_util.run_command( cmd, logfile=logfile )
             if retcode != 0:
-                msg="Error running theseus on ensemble {0} in directory: {1}\n See log: {2}".format(basename,
-                                                                                                    subcluster_dir,
-                                                                                                    logfile)
+                msg="Error running theseus on ensemble {0}. Skipping radius: {1}".format(basename,radius)
                 self.logger.critical(msg)
-                raise RuntimeError,msg
+                msg="Theseus failed on ensemble {0} in directory: {1}\n See log: {2}".format(basename,
+                                                                                      subcluster_dir,
+                                                                                      logfile)
+                self.logger.debug(msg)
+                continue
+                #raise RuntimeError,msg
 
             # jmht - the previous Align_rosetta_fine_clusters_with_theseus routine was running theseus twice and adding the averaged
             # ensemble from the first run to the ensemble. This seems to improve the results for the TOXD test case - maybe something to
