@@ -162,9 +162,6 @@ def process_command_line():
     parser.add_argument('-nmr_remodel', metavar='True/False', type=str, nargs=1,
                        help='Remodel the NMR structures')
     
-    parser.add_argument('-nmr_remodel_fasta', metavar='-nmr_remodel_fasta', type=str, nargs=1,
-                       help='fasta_for_remodeling')
-    
     parser.add_argument('-nproc', metavar='Number of Processors', type=int, nargs=1,
                        help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
                         "For cluster submission, this should be the number of processors on a node.")
@@ -398,7 +395,7 @@ def process_options(amoptd,logger):
         amoptd['mr_sequence']=amoptd['fasta']
     
     # Check we can find the input fasta
-    if not (os.path.exists(str(amoptd['fasta'])) or os.path.exists(str(amoptd['nmr_remodel_fasta']))):
+    if not os.path.exists(str(amoptd['fasta'])):
         msg = 'Cannot find fasta file: {0}'.format(amoptd['fasta'])
         ample_exit.exit(msg)
     
@@ -483,12 +480,6 @@ def process_options(amoptd,logger):
         if not os.path.isfile(amoptd['nmr_model_in']):
             msg = "nmr_model_in flag given, but cannot find file: {0}".format(amoptd['nmr_model_in'])
             ample_exit.exit(msg)
-        if amoptd['nmr_remodel_fasta']:
-            if not os.path.isfile(amoptd['nmr_remodel_fasta']):
-                msg = "nmr_remodel_fasta flag given, but cannot find file: {0}".format(amoptd['nmr_remodel_fasta'])
-                ample_exit.exit(msg)
-        else:
-            amoptd['nmr_remodel_fasta'] =  amoptd['fasta']
         if amoptd['nmr_remodel']:
             msg = "nmr model will be remodelled using ROSETTA"
             logger.info(msg)
@@ -782,7 +773,7 @@ def main():
             rosetta_modeller.nmr_remodel(nmr_model_in = amopt.d['nmr_model_in'],
                                          ntimes = amopt.d['nmr_process'],
                                          alignment_file = amopt.d['alignment_file'],
-                                         remodel_fasta = amopt.d['nmr_remodel_fasta'],
+                                         remodel_fasta = amopt.d['fasta'],
                                          monitor = monitor)
         except Exception,e:
             ex_type, ex, tb = sys.exc_info()
