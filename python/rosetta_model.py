@@ -28,7 +28,7 @@ def align_mafft(query_seq, template_seq, logger, mafft_exe=None):
         mafft_exe = os.path.join(os.environ['CCP4'], 'libexec', 'mafft')
         if not ample_util.is_exe(mafft_exe): raise RuntimeError,"Cannot find CCP4 mafft binary: {0}".format(mafft_exe)
         
-    logger.info("Running mafft binary {0} to generate alignment between target fasta and the NMR model sequence.")
+    logger.info("Running mafft binary {0} to generate alignment between target fasta and the NMR model sequence.".format(mafft_exe))
         
     name = "{0}__{1}".format(query_seq.name,template_seq.name)
     mafft_input = "{0}_concat.fasta".format(name)
