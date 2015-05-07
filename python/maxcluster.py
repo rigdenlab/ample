@@ -227,7 +227,7 @@ class Maxcluster(object):
         d = {}
         
         #INFO  : 1000. 2XOV_clean_ren.pdb vs. /media/data/shared/TM/2XOV/models/S_00000444.pdb  Pairs=  36, RMSD= 3.065, MaxSub=0.148, TM=0.192, MSI=0.148
-        for line in open( logfile, 'r' ):
+        for line in open(logfile, 'r'):
             
             line = line.strip()
             
@@ -235,10 +235,10 @@ class Maxcluster(object):
                 # RMSD= 0.132 (Pairs=   8, rRMSD=0.034 ( -3.11)), URMSD= 0.049 (rURMSD=0.049)
                 
                 # Remove spaces after = 
-                line = re.sub("= +", "=", line )
+                line = re.sub("= +", "=", line)
                 
                 # Remove trailing . after numbers
-                line = re.sub("\. +", " ", line )
+                line = re.sub("\. +", " ", line)
                 
                 # Now remove commas and brackets
                 line = line.replace(",","")
@@ -246,13 +246,13 @@ class Maxcluster(object):
                 
                 fields = line.split()
                 
-                label, value = fields[0].split( "=" )
+                label, value = fields[0].split("=")
                 assert label == "RMSD"
                 d['rmsd'] = float( value )
                 
-                label, value = fields[1].split( "=" )
+                label, value = fields[1].split("=")
                 assert label == "Pairs"
-                d['pairs'] = int( value )
+                d['pairs'] = int(value)
                 
         return d
 
@@ -272,22 +272,22 @@ class Maxcluster(object):
         print "MaxCluster rmsd failed to find model name: {0}\n{1}".format(model,self.data)
         return None
 
-    def maxsubSorted(self, reverse=True ):
-        return sorted( self.data, key=lambda data: data['maxsub'], reverse=reverse )
+    def maxsubSorted(self, reverse=True):
+        return sorted(self.data, key=lambda data: data['maxsub'], reverse=reverse)
      
-    def runCompareDirectory(self, nativePdb=None, modelsDirectory=None, logfile=None ):
+    def runCompareDirectory(self, nativePdb=None, modelsDirectory=None, logfile=None):
         
         # Generate the list of models
-        pdblist = os.path.join( self.workdir, "models.list")
-        with open( pdblist, 'w' ) as f:
-            l = glob.glob( os.path.join( modelsDirectory, '*S_*.pdb' ) )
+        pdblist = os.path.join(self.workdir, "models.list")
+        with open(pdblist, 'w') as f:
+            l = glob.glob(os.path.join(modelsDirectory, '*.pdb'))
             if not len(l) > 0:
                 raise RuntimeError,"Could not find any pdb files in directory: {0}".format(modelsDirectory)
             f.write( os.linesep.join( l ) )
             
         # Run Maxcluster
-        cmd = [ self.maxclusterExe, "-e", nativePdb, "-l", pdblist, ]
-        retcode = ample_util.run_command( cmd, logfile=logfile, dolog=True )
+        cmd = [self.maxclusterExe, "-e", nativePdb, "-l", pdblist]
+        retcode = ample_util.run_command(cmd, logfile=logfile, dolog=True)
         
         if retcode != 0:
             msg = "non-zero return code for maxcluster in runMaxcluster!"
@@ -297,5 +297,5 @@ class Maxcluster(object):
         return
      
     def tmSorted(self, reverse=True ):
-        return sorted( self.data, key=lambda data: data['tm'], reverse=reverse )
+        return sorted(self.data, key=lambda data: data['tm'], reverse=reverse)
 
