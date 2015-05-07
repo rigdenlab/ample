@@ -93,6 +93,26 @@ class Sequence(object):
         sequences = [self.sequences[0], seq2.sequences[0]]
         return self._write_fasta(headers, sequences, fasta_file)
     
+    def fasta_str(self):
+        if not len(self.sequences): raise RuntimeError,"No sequences have been read!"
+        headers=[]
+        for i, seq in enumerate(self.sequences):
+            try:
+                h=self.headers[i]
+            except IndexError:
+                h=">Sequence: {0} Length: {1}".format(i,len(seq))
+            headers.append(h)
+        return self._fasta_str(headers, self.sequences)
+    
+    def _fasta_str(self,headers,sequences):
+        s=""
+        for i, seq in enumerate(sequences):
+            s+=headers[i]+'\n'
+            for chunk in range(0, len(seq), self.MAXWIDTH):
+                s+=seq[chunk:chunk+self.MAXWIDTH]+"\n"
+        s+="\n" # Add last newline
+        return s
+
     def length(self,seq_no=0):
         return len(self.sequences[seq_no])
     
@@ -128,27 +148,13 @@ class Sequence(object):
                 pirout.write(line)
         return
     
-    def write_fasta(self,fasta_file):
-        if not len(self.sequences): raise RuntimeError,"No sequences have been read!"
-        headers=[]
-        for i, seq in enumerate(self.sequences):
-            try:
-                h=self.headers[i]
-            except IndexError:
-                h=">Sequence: {0} Length: {1}".format(i,len(seq))
-            headers.append(h)
-        self._write_fasta(headers, self.sequences, fasta_file)
-        return
-    
-    def _write_fasta(self,headers,sequences,fasta_file):
-        with open(fasta_file,'w') as f:
-            for i, seq in enumerate(sequences):
-                f.write(headers[i]+'\n')
-                for chunk in range(0, len(seq), self.MAXWIDTH):
-                    f.write(seq[chunk:chunk+self.MAXWIDTH]+"\n")
-            f.write("\n") # Add last newline
-        return
 
+    
+    def write_fasta(self,fasta_file):
+        with open(fasta_file,'w') as f:
+            for s in self.fasta_str(fasta_file):
+                f.write(s)
+    
 class Test(unittest.TestCase):
     def testOK(self):
         """Reformat a fasta"""
@@ -169,7 +175,7 @@ GDGAAATSD
 
 """
 
-        self.assertEqual( outfasta, "".join( fp.fastaStr() ) )
+        self.assertEqual( outfasta, "".join( fp.fasta_str() ) )
         self.assertEqual( fp.length(), 249)
               
     def testFailChar(self):
@@ -185,7 +191,6 @@ GDGAAATSD"""
 def testSuite():
     suite = unittest.TestSuite()
     suite.addTest(Test('testOK'))
-    suite.addTest(Test('testFailMulti'))
     suite.addTest(Test('testFailChar'))
     return suite
     
