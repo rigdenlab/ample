@@ -157,7 +157,7 @@ class Test(unittest.TestCase):
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
-    def testFpcKmeansRmsd(self):
+    def XtestFpcKmeansRmsd(self):
         """FpcKmeansRmsd"""
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         
@@ -189,7 +189,7 @@ class Test(unittest.TestCase):
         shutil.rmtree(wdir)
         return
 
-    def testFpcHierarchTm(self):
+    def XtestFpcHierarchTm(self):
         """FpcKmeansRmsd"""
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         
@@ -220,17 +220,12 @@ class Test(unittest.TestCase):
         
         shutil.rmtree(wdir)
         return
-
-def testSuite():
-    suite = unittest.TestSuite()
-    suite.addTest(Test('testFpcKmeansRmsd'))
-    suite.addTest(Test('testFpcHierarchTm'))
-    return suite
     
 #
 # Run unit tests
 if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(testSuite())
+    #unittest.TextTestRunner(verbosity=2).run(testSuite())
+    unittest.main(verbosity=2)
 
 
 
