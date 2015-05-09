@@ -64,7 +64,7 @@ class AmpleOptions(object):
                             'output_pdb' : 'ample_output.pdb',
                             'percent' : 5,
                             'phaser_only' : True,
-                            'phaser_kill' : 0,
+                            'phaser_kill' : 360, # This kills phaser after 6 hours
                             'phenix_exe' : None,
                             'psipred_ss2' : None,
                             'purge' : False,
@@ -127,8 +127,6 @@ class AmpleOptions(object):
                            'shelxe_rebuild_buccaneer' : True,
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
-                           # This kills phaser after 6 hours
-                           'phaser_kill' : 360,
                            #'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
                         }
         
