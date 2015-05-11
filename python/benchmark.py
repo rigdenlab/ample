@@ -474,23 +474,14 @@ def analyseSS(amoptd):
 
 
 class Test(unittest.TestCase):
-
     def testBenchmark(self):
         pklfile="/home/jmht/ample-dev1/examples/toxd-example/ROSETTA_MR_0/resultsd.pkl"
-        with open(pklfile) as f:
-            d=cPickle.load(f)
+        with open(pklfile) as f: d=cPickle.load(f)
         bd="/home/jmht/ample-dev1/python/foo"
         if not os.path.isdir(bd): os.mkdir(bd)
         d['benchmark_dir']=bd
         analyse(d)
-        
         return
-
-def testSuite():
-    suite = unittest.TestSuite()
-    suite.addTest(Test('testBenchmark'))
-    return suite
-
 #
 # Run unit tests
 if __name__ == "__main__":
