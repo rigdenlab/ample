@@ -152,7 +152,7 @@ class Sequence(object):
     
     def write_fasta(self,fasta_file):
         with open(fasta_file,'w') as f:
-            for s in self.fasta_str(fasta_file):
+            for s in self.fasta_str():
                 f.write(s)
     
 class Test(unittest.TestCase):
