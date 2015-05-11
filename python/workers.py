@@ -118,7 +118,7 @@ def run_scripts(job_scripts,
     if submit_cluster:
         return run_scripts_cluster(job_scripts,
                                    monitor=monitor,
-                                   job_time=None,
+                                   job_time=job_time,
                                    submit_cluster=submit_cluster,
                                    submit_qtype=submit_qtype,
                                    submit_queue=submit_queue,
@@ -137,7 +137,7 @@ def run_scripts(job_scripts,
 
 def run_scripts_cluster(job_scripts,
                         monitor=None,
-                        job_time=1800,
+                        job_time=None,
                         submit_cluster=None,
                         submit_qtype=None,
                         submit_queue=None,
@@ -151,7 +151,7 @@ def run_scripts_cluster(job_scripts,
     cluster_run.QTYPE = submit_qtype
     if submit_array:
         cluster_run.submitArrayJob(job_scripts,
-                                   jobTime=job_time, # half an hour - should be >>>
+                                   jobTime=job_time,
                                    qtype=qtype,
                                    queue=submit_queue,
                                    maxArrayJobs=submit_max_array
@@ -185,7 +185,7 @@ def run_scripts_serial(job_scripts,
 
 # Need this defined outside of the test or it can't be pickled on Windoze
 def _check_success_test( job ):
-    jobname = os.path.splitext( os.path.basename( job ) )[0]
+    jobname = os.path.splitext(os.path.basename(job))[0]
     if jobname == "job_2": return True
     return False
 
