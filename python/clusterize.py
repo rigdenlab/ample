@@ -8,7 +8,6 @@
 
 import logging
 import os
-import sys
 import subprocess
 import shlex
 import unittest
@@ -444,7 +443,7 @@ $script
 
 class Test(unittest.TestCase):
     
-    def XtestSubmit(self):    
+    def testSubmit(self):    
         # Test array jobs
         
         # Create run scripts
