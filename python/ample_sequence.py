@@ -18,6 +18,7 @@ class Sequence(object):
             self.from_fasta(fasta,canonicalise=canonicalise)
         elif pdb:
             self.from_pdb(pdbin=pdb)
+        return
     
     def from_fasta(self,fasta_file,canonicalise=True):
         name=os.path.splitext(os.path.basename(fasta_file))[0]
@@ -29,11 +30,12 @@ class Sequence(object):
     def from_pdb(self,pdbin):
         name=os.path.splitext(os.path.basename(pdbin))[0]
         self.name=name
-        chain2seq = pdb_edit.pdb_sequence(pdbin)
+        chain2seq = pdb_edit.sequence(pdbin)
         assert len(chain2seq),"Could not read sequence from pdb: {0}".format(pdbin)
         self.headers = []
         self.sequences = []
-        for chain,seq in chain2seq:
+        for chain in sorted(chain2seq.keys()):
+            seq=chain2seq[chain]
             self.headers.append(">From pdb: {0} chain {1} length {2}".format(name,chain,len(seq)))
             self.sequences.append(seq)
         return
@@ -147,9 +149,7 @@ class Sequence(object):
             for line in self.pirStr():
                 pirout.write(line)
         return
-    
 
-    
     def write_fasta(self,fasta_file):
         with open(fasta_file,'w') as f:
             for s in self.fasta_str():

@@ -401,8 +401,7 @@ def process_options(amoptd,logger):
     
     # Reformat to what we need
     logger.debug('Parsing FASTA file')
-    fp = ample_sequence.Sequence()
-    fp.from_fasta(amoptd['fasta'])
+    fp = ample_sequence.Sequence(fasta=amoptd['fasta'])
     if fp.numSequences() != 1:
         msg = "ERROR! Fasta file {0} has > 1 sequence in it.".format(amoptd['fasta'])
         ample_exit.exit(msg)

@@ -16,6 +16,7 @@ import iotbx.pdb
 #iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 
 # our imports
+import ample_sequence
 import ample_util
 import pdb_model
 import residue_map
@@ -156,7 +157,7 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
             s="*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0],e)
             logger.critical(s)
             return False
-        sequence=_sequence(h)[0][1] # only one chain/model
+        sequence = _sequence1(h) # only one model/chain
     errors=[]
     multi=[]
     sequence_err=[]
@@ -171,7 +172,7 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
             multi.append(pdb)
             continue
         if sequence:
-            _,s=_sequence(h)[0] # only one chain/model
+            s=_sequence1(h) # only one chain/model
             if not s == sequence: sequence_err.append((pdb,s))
     
     if not (len(errors) or len(multi) or len(sequence_err)):
@@ -247,6 +248,16 @@ def extract_model(inpdb, outpdb, modelID ):
     os.unlink(logfile)
         
     return
+
+def extract_header_pdb_code(pdb_input):
+    for line in pdb_input.title_section():
+        if line.startswith("HEADER ") and len(line) >= 65: return line[62:66]
+    return None
+
+def extract_header_title(pdb_input):
+    for line in pdb_input.title_section():
+        if line.startswith('TITLE') : return line[10:-1].strip()
+    return None
 
 
 #     def get_resseq_map(nativePdb, modelPdb ):
@@ -1078,66 +1089,6 @@ def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None ):
 #         
 #         return
 
-def reliable_sidechains(inpath=None, outpath=None ):
-    """Only output non-backbone atoms for residues in the res_names list.
-    """
-    
-    # Remove sidechains that are in res_names where the atom name is not in atom_names
-    res_names = [ 'MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
-    atom_names = [ 'N', 'CA', 'C', 'O', 'CB' ]
-
-    #   print 'Found ',each_file
-    pdb_in = open( inpath, "r" )
-    pdb_out = open( outpath, "w" )
-    
-    for pdbline in pdb_in:
-        pdb_pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s')
-        pdb_result = pdb_pattern.match(pdbline)
-        
-        # Check ATOM line and for residues in res_name, skip any that are not in atom names
-        if pdb_result:
-            pdb_result2 = re.split(pdb_pattern, pdbline)
-            if pdb_result2[3] in res_names and not pdb_result2[2] in atom_names:
-                continue
-        
-        # Write out everything else
-        pdb_out.write(pdbline)
-    
-    #End for
-    pdb_out.close()
-    pdb_in.close()
-    
-    return
-
-def reliable_sidechains_cctbx(pdbin=None, pdbout=None ):
-    """Only output non-backbone atoms for residues in the res_names list.
-    """
-    
-    # Remove sidechains that are in res_names where the atom name is not in atom_names
-    res_names = [ 'MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
-    atom_names = [ 'N', 'CA', 'C', 'O', 'CB' ]
-
-    pdb_input=iotbx.pdb.pdb_input(pdbin)
-    hierachy=pdb_input.construct_hierarchy()
-    # Remove HETATMS
-    for model in hierachy.models():
-        for chain in model.chains():
-            for residue_group in chain.residue_groups():
-                assert not residue_group.have_conformers(),"Fix for conformers"
-                if residue_group.unique_resnames()[0] not in res_names:
-                    # removing whilst looping through?!? - maybe...
-                    chain.remove_residue_group(residue_group)
-                    continue
-                for atom_group in residue_group.atom_groups():
-                    # Can't use below as it uses indexes which change as we remove atoms
-                    # ag.atoms().extract_hetero()]
-                    todel=[a for a in atom_group.atoms() if a.name.strip() in atom_names ]
-                    for a in todel: atom_group.remove_atom(a) 
-    
-    # Need to get crystal info and include
-    hierachy.write_pdb_file(pdbout,anisou=False)
-    return
-
 def merge(pdb1=None, pdb2=None, pdbout=None  ):
     """Merge two pdb files into one"""
     
@@ -1199,6 +1150,66 @@ def num_atoms_and_residues(pdbin,first=False):
     
     return (natoms, nresidues)
 
+def reliable_sidechains(inpath=None, outpath=None ):
+    """Only output non-backbone atoms for residues in the res_names list.
+    """
+    
+    # Remove sidechains that are in res_names where the atom name is not in atom_names
+    res_names = [ 'MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
+    atom_names = [ 'N', 'CA', 'C', 'O', 'CB' ]
+
+    #   print 'Found ',each_file
+    pdb_in = open( inpath, "r" )
+    pdb_out = open( outpath, "w" )
+    
+    for pdbline in pdb_in:
+        pdb_pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s')
+        pdb_result = pdb_pattern.match(pdbline)
+        
+        # Check ATOM line and for residues in res_name, skip any that are not in atom names
+        if pdb_result:
+            pdb_result2 = re.split(pdb_pattern, pdbline)
+            if pdb_result2[3] in res_names and not pdb_result2[2] in atom_names:
+                continue
+        
+        # Write out everything else
+        pdb_out.write(pdbline)
+    
+    #End for
+    pdb_out.close()
+    pdb_in.close()
+    
+    return
+
+def reliable_sidechains_cctbx(pdbin=None, pdbout=None ):
+    """Only output non-backbone atoms for residues in the res_names list.
+    """
+    
+    # Remove sidechains that are in res_names where the atom name is not in atom_names
+    res_names = [ 'MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
+    atom_names = [ 'N', 'CA', 'C', 'O', 'CB' ]
+
+    pdb_input=iotbx.pdb.pdb_input(pdbin)
+    hierachy=pdb_input.construct_hierarchy()
+    # Remove HETATMS
+    for model in hierachy.models():
+        for chain in model.chains():
+            for residue_group in chain.residue_groups():
+                assert not residue_group.have_conformers(),"Fix for conformers"
+                if residue_group.unique_resnames()[0] not in res_names:
+                    # removing whilst looping through?!? - maybe...
+                    chain.remove_residue_group(residue_group)
+                    continue
+                for atom_group in residue_group.atom_groups():
+                    # Can't use below as it uses indexes which change as we remove atoms
+                    # ag.atoms().extract_hetero()]
+                    todel=[a for a in atom_group.atoms() if a.name.strip() in atom_names ]
+                    for a in todel: atom_group.remove_atom(a) 
+    
+    # Need to get crystal info and include
+    hierachy.write_pdb_file(pdbout,anisou=False)
+    return
+
 def rename_chains(inpdb=None, outpdb=None, fromChain=None, toChain=None ):
     """Rename Chains
     """
@@ -1251,30 +1262,27 @@ def select_residues(inpath=None, outpath=None, residues=None):
     
     return count
 
-def pdb_sequence(pdbin):
+def sequence(pdbin):
     return _sequence(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
 
 def _sequence(hierarchy):
     """Extract the sequence of residues from a pdb file."""
-    chain2seq=[]
+    chain2seq={}
     for chain in set(hierarchy.models()[0].chains()): # only the first model
+        got=False
         seq=""
         for residue in chain.conformers()[0].residues():
             # See if any of the atoms are non-hetero - if so we add this residue
             if any([not atom.hetero for atom in residue.atoms()]):
+                got=True
                 seq += three2one[residue.resname]
-        chain2seq.append((chain.id,seq))
+        if got: chain2seq[chain.id] = seq
     return chain2seq
 
-def extract_header_pdb_code(pdb_input):
-    for line in pdb_input.title_section():
-        if line.startswith("HEADER ") and len(line) >= 65: return line[62:66]
-    return None
-
-def extract_header_title(pdb_input):
-    for line in pdb_input.title_section():
-        if line.startswith('TITLE') : return line[10:-1].strip()
-    return None
+def _sequence1(hierarchy):
+    """Return sequence of the first chain"""
+    d = _sequence(hierarchy)
+    return d[sorted(d.keys())[0]] 
 
 def split(pdbin):
     """Split a pdb into separate models"""
@@ -1691,27 +1699,20 @@ class Test(unittest.TestCase):
         
         return
     
-    def testSequence(self):
+    def testSequence1(self):
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
-        ref=""">4DZN chain: A length: 31
-GEIAALKQEIAALKKEIAALKEIAALKQGYY
->4DZN chain: C length: 31
-GEIAALKQEIAALKKEIAALKEIAALKQGYY
->4DZN chain: B length: 31
-GEIAALKQEIAALKKEIAALKEIAALKQGYY
-"""
-        self.assertEqual(ref,fastaSequence(pdbin))
+        ref={ 'A' :'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
+              'B' : 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
+              'C' : 'GEIAALKQEIAALKKEIAALKEIAALKQGYY' }
+        s=sequence(pdbin)
+        self.assertEqual(ref, s, "Bad _sequecne: {0}".format(s))
         return
     
-    def testSplit(self):
-
+    def XtestSplit(self):
         pdbin=os.path.join(self.testfiles_dir,"1GU8.pdb")
         split(pdbin)
-        
         #os.unlink(pdbout)
-        
         return
-
 
     def testStdResidues(self):
 
@@ -1845,7 +1846,7 @@ if __name__ == "__main__":
     elif args.std:
         standardise(args.input_file, args.output_file)
     elif args.seq:
-        print fastaSequence(args.input_file,maxwidth=80)
+        print ample_sequence.Sequence(pdb=args.input_file).fasta_str()
     elif args.split:
         print split(args.input_file)
         
