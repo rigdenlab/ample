@@ -187,14 +187,8 @@ GDGAAATSD"""
 
         fp = Sequence()
         self.assertRaises( RuntimeError, fp._parse_fasta, infasta.split( os.linesep ) )       
-
-def testSuite():
-    suite = unittest.TestSuite()
-    suite.addTest(Test('testOK'))
-    suite.addTest(Test('testFailChar'))
-    return suite
     
 #
 # Run unit tests
 if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(testSuite())
+    unittest.main(verbosity=2)
