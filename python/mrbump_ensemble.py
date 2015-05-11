@@ -14,7 +14,7 @@ import unittest
 import clusterize
 import mrbump_cmd
 
-def generate_jobscripts(ensemble_pdbs, amoptd):
+def generate_jobscripts(ensemble_pdbs, amoptd, job_time=86400):
     """Write the MRBUMP shell scripts for all the ensembles.
 
     Args:
@@ -45,12 +45,12 @@ def generate_jobscripts(ensemble_pdbs, amoptd):
                 # Can't do this any more as any job < 16 can't run on the 12 hour queue
                 #if program == "molrep":
                 #    amoptd['nproc'] = 1
-                script = write_jobscript(name=jname, pdb=ensemble_pdb, amoptd=amoptd)
+                script = write_jobscript(name=jname, pdb=ensemble_pdb, amoptd=amoptd, job_time=job_time)
                 #amoptd['nproc'] = nproc
                 job_scripts.append( script )
         else:
             # Just run as usual
-            script = write_jobscript(name=name, pdb=ensemble_pdb, amoptd=amoptd)
+            script = write_jobscript(name=name, pdb=ensemble_pdb, amoptd=amoptd, job_time=job_time)
             job_scripts.append(script)
             
     # Reset amoptd
@@ -63,7 +63,7 @@ def generate_jobscripts(ensemble_pdbs, amoptd):
     
     return job_scripts
         
-def write_jobscript(name, pdb, amoptd, directory=None):
+def write_jobscript(name, pdb, amoptd, directory=None, job_time=86400):
     """
     Create the script to run MrBump for this PDB.
     
@@ -101,6 +101,7 @@ def write_jobscript(name, pdb, amoptd, directory=None):
             script_header += clusterize.ClusterRun().queueDirectives(nProc=amoptd['nproc'],
                                                                      logFile=logFile,
                                                                      jobName=name,
+                                                                     jobTime=job_time,
                                                                      queue=amoptd['submit_queue'],
                                                                      qtype=amoptd['submit_qtype'])
             # Make sure the CCP4 scratch directory is available
