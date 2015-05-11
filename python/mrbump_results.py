@@ -619,15 +619,29 @@ def jobSucceeded(job_dict):
 
 class Test(unittest.TestCase):
 
-    def testResultsDict(self):
-        """Parse a results file"""
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         
-        resultsPkl="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_4/MRBUMP/MRBUMP/search_c1_tl100_r2_allatom_mrbump/results/resultsTable.pkl"
+        root = logging.getLogger()
+        root.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(message)s')
+        ch.setFormatter(formatter)
+        root.addHandler(ch)
+        return
 
-        rs=ResultsSummary()
-        print rs.processResultsPkl(resultsPkl)
-        
-    def testProcess(self):
+    def XtestProcess(self):
         """Parse a results file"""
         
         mrbdir="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_0/MRBUMP/MRBUMP"
@@ -637,10 +651,8 @@ class Test(unittest.TestCase):
     
     def testFinalSummary(self):
         """Parse a results file"""
-        pkl="/opt/ample-dev1.testset/examples/toxd-example/ROSETTA_MR_4/resultsd.pkl"
-        pkl="/opt/ample-dev1/examples/nmr.remodel/AMPLE_2/resultsd.pkl"
-        with open(pkl) as f:
-            d=cPickle.load(f)
+        pkl=os.path.join(self.testfiles_dir,"resultsd.pkl")
+        with open(pkl) as f: d=cPickle.load(f)
         print finalSummary(d)
         return
 
