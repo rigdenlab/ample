@@ -877,7 +877,8 @@ def main():
     
     # Create job scripts
     logger.info("Generating MRBUMP runscripts")
-    job_scripts = mrbump_ensemble.generate_jobscripts(ensembles, amopt.d)
+    mrbump_jobtime=86400 # allow 24 hours for each mrbump job
+    job_scripts = mrbump_ensemble.generate_jobscripts(ensembles, amopt.d, job_time=mrbump_jobtime)
     #print "EXITING ";sys.exit(1)
     
     # Create function for monitoring jobs - static function decorator?
@@ -896,7 +897,7 @@ def main():
                              early_terminate=amopt.d['early_terminate'],
                              chdir=False,
                              nproc=amopt.d['nproc'],
-                             job_time=172800,
+                             job_time=mrbump_jobtime,
                              submit_cluster=amopt.d['submit_cluster'],
                              submit_qtype=amopt.d['submit_qtype'],
                              submit_queue=amopt.d['submit_queue'],
