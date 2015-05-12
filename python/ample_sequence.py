@@ -89,11 +89,14 @@ class Sequence(object):
             self.sequences[i]=cs
         return
     
-    def concat(self,seq2,fasta_file):
+    def cat(self,seq2,fasta_file):
         """Concatentate two (single chain) sequences into a single fasta file"""
         headers = [self.headers[0], seq2.headers[0]]
         sequences = [self.sequences[0], seq2.sequences[0]]
-        return self._write_fasta(headers, sequences, fasta_file)
+        s = self._fasta_str(headers,sequences)
+        with open(fasta_file,'w') as f:
+            for line in s: f.write(line)
+        return 
     
     def fasta_str(self):
         if not len(self.sequences): raise RuntimeError,"No sequences have been read!"
