@@ -437,10 +437,6 @@ class RosettaModel(object):
 
     def get_version(self):
         """ Return the Rosetta version as a string"""
-        
-
-            
-
         # Get version
         version = None
         version_file = os.path.join(self.rosetta_dir,'README.version')
@@ -572,9 +568,11 @@ class RosettaModel(object):
 
         if self.rosetta_version >= 3.4:
             # Recommended default paramenters - see also Radius of gyration reweight
-            cmd += [ "-abinitio::rsd_wt_helix", "0.5",
-                     "-abinitio::rsd_wt_loop", "0.5",
-                     "-use_filters", "true" ]
+            # we omit the -use_filters true option as we want to continue with refinement
+            # even for 'failed' models as the failed models will be used anyway
+            cmd += [ "-abinitio::increase_cycles", "10", 
+                     "-abinitio::rsd_wt_helix", "0.5",
+                     "-abinitio::rsd_wt_loop", "0.5" ]
 
             if self.psipred_ss2: # not sure if this works < 3.4
                 cmd += [ "-psipred_ss2", self.psipred_ss2 ]
