@@ -306,6 +306,10 @@ class RosettaModel(object):
         # Whether to exclude homologs
         if not self.use_homs:
             cmd.append('-nohoms')
+            
+        # Use user-supplied psipred_ss2 file (thanks for Felix for spotting this omission)
+        if self.psipred_ss2:
+            cmd += [ '-nopsipred', '-psipredfile', self.psipred_ss2 ]
 
         # Be 'chatty'
         if self.debug:
