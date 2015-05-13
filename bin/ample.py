@@ -897,6 +897,7 @@ def main():
                              chdir=False,
                              nproc=amopt.d['nproc'],
                              job_time=mrbump_jobtime,
+                             job_name='mrbump',
                              submit_cluster=amopt.d['submit_cluster'],
                              submit_qtype=amopt.d['submit_qtype'],
                              submit_queue=amopt.d['submit_queue'],

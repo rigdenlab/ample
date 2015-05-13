@@ -265,13 +265,13 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             sh += '#$ -S /bin/bash\n'
             if jobTime: sh += '#$ -l h_rt={0}\n'.format(jobTime)
             if queue: sh += '#$ -q {0}\n'.format(queue)
+            if jobName: sh += '#$ -N {0}\n'.format(jobName)
             if numArrayJobs:
                 sh += '#$ -o arrayJob_$TASK_ID.log\n'
                 sh += '#$ -t 1-{0}\n'.format(numArrayJobs)
                 if maxArrayJobs: sh += '#$ -tc {0}\n'.format(maxArrayJobs)
             else:
                 if logFile: sh += '#$ -o {0}\n'.format(logFile)
-                if jobName: sh += '#$ -N {0}\n'.format(jobName)
             # jmht hack for morrigan
             if nProc and nProc > 1: sh += '#$ -pe threaded {0}\n'.format( nProc )
             sh += '\n'
