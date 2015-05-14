@@ -182,7 +182,7 @@ def run_scripts_cluster(job_scripts,
     cluster_run.monitorQueue(monitor=monitor)
     
     # Rename scripts for array jobs
-    if submit_array: cluster_run.cleanUpArrayJob()
+    if submit_array and len(job_scripts) > 1: cluster_run.cleanUpArrayJob()
     return True
 
 def run_scripts_serial(job_scripts,
