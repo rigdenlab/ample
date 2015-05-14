@@ -13,6 +13,7 @@ import time
 import unittest
 
 # our imports
+import ample_util
 import clusterize
 import worker
 
@@ -146,6 +147,7 @@ def run_scripts_cluster(job_scripts,
                         submit_queue=None,
                         submit_array=None,
                         submit_max_array=None,
+                        nproc=None
                         ):
     logger = logging.getLogger()
     logger.info("Running jobs on a cluster")
@@ -161,7 +163,22 @@ def run_scripts_cluster(job_scripts,
                                    maxArrayJobs=submit_max_array
                                    )
     else:
-        for script in job_scripts: cluster_run.submitJob(subScript=script)
+        for script in job_scripts:
+            name=os.path.splitext(os.path.basename(script))[0]
+            logfile="{0}.log".format(name)
+            if not job_name: job_name = name
+            if nproc is None: nproc = 1
+            with open(script) as f: lines = f.readlines()
+            slines = clusterize.ClusterRun().queueDirectives(nproc=nproc,
+                                                             job_name=job_name,
+                                                             job_time=job_time,
+                                                             log_file=logfile,
+                                                             queue=submit_queue,
+                                                             qtype=submit_qtype)
+            # We add the queue directives after the first line of the script
+            with open(script,'w') as f: f.writelines(lines[0] + slines + lines[1:])
+            os.chmod(script, 0o777)
+            cluster_run.submitJob(subScript=script)
 
     # Monitor the cluster queue to see when all jobs have finished
     cluster_run.monitorQueue(monitor=monitor)
@@ -176,15 +193,22 @@ def run_scripts_serial(job_scripts,
                        early_terminate=None,
                        check_success=None,
                        chdir=False):
-    
-    # Don't need early terminate - check_success if it exists states what's happening
-    js = JobServer()
-    js.setJobs(job_scripts)
-    success = js.start(nproc=nproc,
-                       early_terminate=bool(early_terminate),
-                       check_success=check_success,
-                       monitor=monitor,
-                       chdir=chdir)
+    success=False
+    if len(job_scripts) > 1:
+        # Don't need early terminate - check_success if it exists states what's happening
+        js = JobServer()
+        js.setJobs(job_scripts)
+        success = js.start(nproc=nproc,
+                           early_terminate=bool(early_terminate),
+                           check_success=check_success,
+                           monitor=monitor,
+                           chdir=chdir)
+    else:
+        script=job_scripts[0]
+        name=os.path.splitext(os.path.basename(script))[0]
+        logfile="{0}.log".format(name)
+        rtn = ample_util.run_command(script, logfile=logfile)
+        if rtn == 0: success = True
     return success
 
 # Need this defined outside of the test or it can't be pickled on Windoze

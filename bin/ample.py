@@ -700,13 +700,13 @@ def main():
     amopt, orig_argv = process_command_line()
     
     # Make a work directory and go there - this way all output goes into this directory
-    if not os.path.exists( amopt.d['run_dir'] ):
-        print 'Cannot find run directory: {0}'.format( amopt.d['run_dir'] )
+    if not os.path.exists(amopt.d['run_dir']):
+        print 'Cannot find run directory: {0}'.format(amopt.d['run_dir'])
         sys.exit()
     
     print 'Making a Run Directory: checking for previous runs\n'
-    amopt.d['work_dir'] = ample_util.make_workdir( amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'] )
-    os.chdir( amopt.d['work_dir'] )
+    amopt.d['work_dir'] = ample_util.make_workdir(amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'])
+    os.chdir(amopt.d['work_dir'])
     
     # Set up logging
     ample_log=os.path.join(amopt.d['work_dir'],'AMPLE.log')
@@ -828,12 +828,21 @@ def main():
         
         if amopt.d['submit_cluster']:
             # Pickle dictionary so it can be opened by the job to get the parameters
-            with open(amopt.d['results_path'], 'w' ) as f: cPickle.dump(amopt.d, f)
-            mrBuild = clusterize.ClusterRun()
-            mrBuild.ensembleOnCluster(amopt.d)
-            mrBuild.monitorQueue()
+            ample_util.saveAmoptd(amopt.d)
+            script = ensemble.cluster_script(amopt.d)
+            ok = workers.run_scripts(job_scripts = [script], 
+                                     monitor = monitor,
+                                     chdir = False,
+                                     nproc = amopt.d['nproc'],
+                                     job_time = 3600,
+                                     job_name = 'ensemble',
+                                     submit_cluster = amopt.d['submit_cluster'],
+                                     submit_qtype = amopt.d['submit_qtype'],
+                                     submit_queue = amopt.d['submit_queue'],
+                                     submit_array = amopt.d['submit_array'],
+                                     submit_max_array = amopt.d['submit_max_array'])
             # queue finished so unpickle results
-            with open( amopt.d['results_path'], "r" ) as f: amopt.d = cPickle.load(f)
+            with open(amopt.d['results_path'], "r") as f: amopt.d = cPickle.load(f)
         else:
             try: ensemble.create_ensembles(amopt.d)
             except Exception,e:
@@ -890,22 +899,22 @@ def main():
     else:
         monitor=None
     
-    ok = workers.run_scripts(job_scripts=job_scripts, 
-                             monitor=monitor,
-                             check_success=mrbump_results.checkSuccess,
-                             early_terminate=amopt.d['early_terminate'],
-                             chdir=False,
-                             nproc=amopt.d['nproc'],
-                             job_time=mrbump_jobtime,
-                             job_name='mrbump',
-                             submit_cluster=amopt.d['submit_cluster'],
-                             submit_qtype=amopt.d['submit_qtype'],
-                             submit_queue=amopt.d['submit_queue'],
-                             submit_array=amopt.d['submit_array'],
-                             submit_max_array=amopt.d['submit_max_array'])
+    ok = workers.run_scripts(job_scripts = job_scripts, 
+                             monitor = monitor,
+                             check_success = mrbump_results.checkSuccess,
+                             early_terminate = amopt.d['early_terminate'],
+                             chdir = False,
+                             nproc = amopt.d['nproc'],
+                             job_time = mrbump_jobtime,
+                             job_name = 'mrbump',
+                             submit_cluster = amopt.d['submit_cluster'],
+                             submit_qtype = amopt.d['submit_qtype'],
+                             submit_queue = amopt.d['submit_queue'],
+                             submit_array = amopt.d['submit_array'],
+                             submit_max_array = amopt.d['submit_max_array'])
 
     if not ok:
-        msg="Error running MRBUMP on the ensembles!\nCheck logs in directory: {0}".format(amopt.d['mrbump_dir'],)
+        msg="Error running MRBUMP on the ensembles!\nCheck logs in directory: {0}".format(amopt.d['mrbump_dir'])
         ample_exit.exit(msg)
         
     # Collect the MRBUMP results

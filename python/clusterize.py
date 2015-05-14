@@ -30,20 +30,7 @@ class ClusterRun:
         self.logDir=None
         self.scriptDir=None
         self._scriptFile  = None
-        self.shelxClusterScript="python " + os.path.join(os.environ["CCP4"], "share", "ample", "python", "shelxe_trace.py")
-
-        # Required when a specific python interpreter needs to be invoked in the nodes
-        # See ensembleOnCluster
-        self.pythonPath = "/home/rmk65/opt/python/python-2.7.2/bin/python"
-        self.pythonPath = "ccp4-python"
-
         self.debug=True
-
-        if os.name == "nt":
-            self.pdbsetEXE=os.path.join(os.environ["CCP4"], "bin", "pdbset.exe")
-        else:
-            self.pdbsetEXE=os.path.join(os.environ["CCP4"], "bin", "pdbset")
-
         self.logger =  logging.getLogger()
         
         return
@@ -81,40 +68,6 @@ class ClusterRun:
         
         return
 
-    def ensembleOnCluster(self, amoptd):
-        """ Run the modelling step on a cluster """
-
-        # write out script
-        work_dir = amoptd['work_dir']
-        script_path = os.path.join( work_dir, "submit_ensemble.sh" )
-        qtype=amoptd['submit_qtype']
-        self.QTYPE = qtype
-        logFile= script_path+".log"
-        with open(script_path, "w") as job_script:
-            script_header = "#!/bin/sh\n"
-            script_header += self.queueDirectives(nProc=1,
-                                                 logFile=logFile,
-                                                 jobName="ensemble",
-                                                 jobTime="3600",
-                                                 qtype=qtype,
-                                                 queue=amoptd['submit_queue']
-                                                 )
-            job_script.write(script_header)
-    
-            # Find path to this directory to get path to python ensemble.py script
-            pydir=os.path.abspath( os.path.dirname( __file__ ) )
-            ensemble_script = os.path.join(pydir, "ensemble.py")
-            job_script.write("{0} {1} {2} {3}\n".format(self.pythonPath, "-u", ensemble_script, amoptd['results_path']))
-
-        # Make executable
-        os.chmod(script_path, 0o777)
-
-        # submit
-        self.logger.info("Running ensembling on a cluster. Submitting to queue of type: {0}".format(self.QTYPE))
-        self.submitJob( subScript=script_path, jobDir=amoptd['work_dir'] )
-
-        return
-
     # Currently unused
     def XgetJobStatus(self, qNumber):
         """ Check a job status int the cluster queue """
@@ -148,23 +101,6 @@ class ClusterRun:
 
         return status
     
-    def writeFragmentsSubscript(self, cmd=None, script_path=None, nProc=None, logFile=None, queue=None, qtype=None):
-        """ Run the modelling step on a cluster """
-        with open(script_path, "w") as job_script:
-            script_header="#!/bin/sh\n"
-            script_header+=self.queueDirectives(nProc=nProc,
-                                               logFile=logFile,
-                                               jobName="genFrags",
-                                               qtype=qtype,
-                                               queue=queue
-                                               )
-            job_script.write(script_header)
-            job_script.write("\n{0}\n".format(cmd))
-
-        # Make executable
-        os.chmod(script_path, 0o777)
-        return
-
     def getRunningJobList(self, user=""):
         """ Check a job status int the cluster queue 
 
@@ -243,80 +179,59 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         return
 
     def queueDirectives(self,
-                        nProc=None,
-                        logFile=None,
-                        jobName=None,
-                        jobTime=None,
+                        nproc=None,
+                        log_file=None,
+                        job_name=None,
+                        job_time=None,
                         queue=None,
                         qtype=None,
-                        numArrayJobs=None,
-                        maxArrayJobs=None
+                        num_array_jobs=None,
+                        max_array_jobs=None
                         ):
         """
         Create a string suitable for writing out as the header of the submission script
         for submitting to a particular queueing system
         """
-        sh = ""
+        sh = []
         if qtype=="SGE":
-            sh += '#$ -j y\n'
-            sh += '#$ -cwd\n'
-            sh += '#$ -w e\n'
-            sh += '#$ -V\n'
-            sh += '#$ -S /bin/bash\n'
-            if jobTime: sh += '#$ -l h_rt={0}\n'.format(jobTime)
-            if queue: sh += '#$ -q {0}\n'.format(queue)
-            if jobName: sh += '#$ -N {0}\n'.format(jobName)
-            if numArrayJobs:
-                sh += '#$ -o arrayJob_$TASK_ID.log\n'
-                sh += '#$ -t 1-{0}\n'.format(numArrayJobs)
-                if maxArrayJobs: sh += '#$ -tc {0}\n'.format(maxArrayJobs)
+            sh += ['#$ -j y\n',
+                   '#$ -cwd\n',
+                   '#$ -w e\n',
+                   '#$ -V\n',
+                   '#$ -S /bin/bash\n']
+            if job_time: sh += ['#$ -l h_rt={0}\n'.format(job_time)]
+            if queue: sh += ['#$ -q {0}\n'.format(queue)]
+            if job_name: sh += ['#$ -N {0}\n'.format(job_name)]
+            if num_array_jobs:
+                sh += ['#$ -o arrayJob_$TASK_ID.log\n']
+                sh += ['#$ -t 1-{0}\n'.format(num_array_jobs)]
+                if max_array_jobs: sh += ['#$ -tc {0}\n'.format(max_array_jobs)]
             else:
-                if logFile: sh += '#$ -o {0}\n'.format(logFile)
+                if log_file: sh += ['#$ -o {0}\n'.format(log_file)]
             # jmht hack for morrigan
-            if nProc and nProc > 1: sh += '#$ -pe threaded {0}\n'.format( nProc )
+            if nproc and nproc > 1: sh += ['#$ -pe threaded {0}\n'.format(nproc)]
             sh += '\n'
         elif qtype=="LSF":
-            assert not numArrayJobs,"Array jobs not supported yet for LSF"
+            assert not num_array_jobs,"Array jobs not supported yet for LSF"
             # jmht - hard-wired for hartree wonder
-            if nProc and nProc < 16:
-                sh += '#BSUB -R "span[ptile={0}]"\n'.format(nProc)
+            if nproc and nproc < 16:
+                sh += ['#BSUB -R "span[ptile={0}]"\n'.format(nproc)]
             else:
-                sh += '#BSUB -R "span[ptile=16]"\n'
-            if jobTime:
-                sh += '#BSUB -W {0}\n'.format(jobTime)
+                sh += ['#BSUB -R "span[ptile=16]"\n']
+            if job_time:
+                sh += ['#BSUB -W {0}\n'.format(job_time)]
             else:
-                sh += '#BSUB -W 4:00\n'
-            if nProc: sh += '#BSUB -n {0}\n'.format(nProc) 
-            if queue: sh += '#BSUB -q {0}\n'.format(queue)
-            if logFile: sh += '#BSUB -o {0}\n'.format(logFile)
-            if jobName: sh += '#BSUB -J {0}\n'.format(jobName)         
+                sh += ['#BSUB -W 4:00\n']
+            if nproc: sh += ['#BSUB -n {0}\n'.format(nproc)]
+            if queue: sh += ['#BSUB -q {0}\n'.format(queue)]
+            if log_file: sh += ['#BSUB -o {0}\n'.format(log_file)]
+            if job_name: sh += ['#BSUB -J {0}\n'.format(job_name)]       
             sh += '\n'
         else:
             raise RuntimeError,"Unrecognised QTYPE: {0}".format(qtype)
-        sh += '\n'
+        sh += ['\n']
         
         return sh
-    
-    def setupModellingDir(self, RunDir):
-        """ A function to create the necessary directories for the modelling step """
-
-        self.runDir=RunDir
-
-        # Create the directories for the submission scripts
-        #if not os.path.isdir(os.path.join(RunDir, "models")):
-        #    os.mkdir(os.path.join(RunDir, "models"))
-        if not os.path.isdir(os.path.join(RunDir, "pre_models")):
-            os.mkdir(os.path.join(RunDir, "pre_models"))
-        
-        self.scriptDir=os.path.join(RunDir, "pre_models", "submit_scripts")
-        if not os.path.isdir(self.scriptDir):
-            os.mkdir(self.scriptDir)
-        
-        self.logDir=os.path.join(RunDir, "pre_models", "logs")
-        if not os.path.isdir(self.logDir):
-            os.mkdir(self.logDir)
-        
-        return
     
     def submitJob(self, subScript=None, jobDir=None):
         """
@@ -333,8 +248,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         """
         
         curDir=os.getcwd()
-        if jobDir:
-            os.chdir(jobDir)
+        if jobDir: os.chdir(jobDir)
         
         command_line=None
         stdin = None

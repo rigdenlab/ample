@@ -11,7 +11,6 @@ import sys
 import unittest
 
 # our imports
-import clusterize
 import mrbump_cmd
 
 def generate_jobscripts(ensemble_pdbs, amoptd, job_time=86400):
@@ -93,24 +92,10 @@ def write_jobscript(name, pdb, amoptd, directory=None, job_time=86400):
     script_path = os.path.join(directory,name+ext)
     with open(script_path, "w") as job_script:
         # Header
-        script_header=""
-        if not sys.platform.startswith("win"): script_header+='#!/bin/sh\n'
-        if amoptd['submit_cluster']:
-            # Add queue directives
-            logFile=os.path.join(directory, name + ".log")
-            script_header += clusterize.ClusterRun().queueDirectives(nProc=amoptd['nproc'],
-                                                                     logFile=logFile,
-                                                                     jobName=name,
-                                                                     jobTime=job_time,
-                                                                     queue=amoptd['submit_queue'],
-                                                                     qtype=amoptd['submit_qtype'])
-            # Make sure the CCP4 scratch directory is available
-            #if amoptd['submit_qtype'] == "SGE":
-            script_header += "pushd {0}\n".format(directory)
-        
         if not sys.platform.startswith("win"):
+            script_header = '#!/bin/sh\n'
             script_header += '[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n'
-        job_script.write(script_header)
+            job_script.write(script_header)
         
         # Get the mrbump command-line
         jobcmd = mrbump_cmd.mrbump_cmd(amoptd,name,keyword_file)

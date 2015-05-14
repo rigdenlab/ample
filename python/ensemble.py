@@ -23,7 +23,23 @@ import ample_ensemble
 import ample_util
 import printTable
 
-def create_ensembles( amoptd ):
+def cluster_script(amoptd,python_path="ccp4-python"):
+    """Create the script for ensembling on a cluster"""
+    # write out script
+    work_dir = amoptd['work_dir']
+    script_path = os.path.join(work_dir, "submit_ensemble.sh")
+    with open(script_path, "w") as job_script:
+        job_script.write("#!/bin/sh\n")
+        # Find path to this directory to get path to python ensemble.py script
+        pydir=os.path.abspath(os.path.dirname(__file__ ))
+        ensemble_script = os.path.join(pydir, "ensemble.py")
+        job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", ensemble_script, amoptd['results_path']))
+
+    # Make executable
+    os.chmod(script_path, 0o777)
+    return script_path
+
+def create_ensembles(amoptd):
     """Create the ensembles using the values in the amoptd dictionary"""
 
     ensembler = ample_ensemble.Ensembler()

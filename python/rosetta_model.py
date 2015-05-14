@@ -195,15 +195,8 @@ class RosettaModel(object):
             
             # job script
             script="#!/bin/bash\n"
-            if self.submit_cluster:
-                script += clusterize.ClusterRun().queueDirectives(nProc=1,
-                                                                  jobTime=job_time,
-                                                                  queue=self.submit_queue,
-                                                                  qtype=self.submit_qtype)
-            
             cmd = " ".join(self.modelling_cmd(d, njobs, seeds[i]))
             script += cmd + "\n"
-    
             sname=os.path.join(d,"model_{0}.sh".format(i))
             with open(sname,'w') as w: w.write(script)
             os.chmod(sname, 0o777)
@@ -238,8 +231,8 @@ class RosettaModel(object):
 
         """
         assert self.rosetta_bin and os.path.isdir(self.rosetta_bin)
-        binaries = glob.glob( self.rosetta_bin + "/{0}.*".format( name )  )
-        if not len( binaries ): return False
+        binaries = glob.glob(self.rosetta_bin + "/{0}.*".format(name))
+        if not len(binaries): return False
 
         # Could check for shortest - for now just return the first
         binary = os.path.abspath(binaries[0])
@@ -328,49 +321,38 @@ class RosettaModel(object):
         # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
         # so we need to copy the fasta file into the fragments directory
         fasta = os.path.split(self.fasta)[1]
-        shutil.copy2(self.fasta, self.fragments_directory + os.sep + fasta)
-
-        cmd = self.fragment_cmd()
-        logfile = os.path.join(self.fragments_directory, "make_fragments.log")
-
-        if amoptd['submit_cluster']:
-            submit_qtype=amoptd['submit_qtype']
-            cluster_run = clusterize.ClusterRun()
-            cluster_run.QTYPE=submit_qtype
-            self.logger.info('Submitting fragment generation jobs to a queueing system of type: {0}\n'.format(submit_qtype))
-            script_path = os.path.join(self.fragments_directory, "submit_fragments.sh" )
-            cluster_run.writeFragmentsSubscript(cmd=" ".join(cmd),
-                                                script_path=script_path,
-                                                nProc=amoptd['nproc'],
-                                                logFile=logfile,
-                                                qtype=submit_qtype,
-                                                queue=amoptd['submit_queue']
-                                                )
-            cluster_run.submitJob(subScript=script_path, jobDir=self.fragments_directory)
-            cluster_run.monitorQueue() # Monitor the cluster queue to see when all jobs have finished
-        else:
-            retcode = ample_util.run_command(cmd, logfile=logfile, directory=self.fragments_directory)
-            if retcode != 0:
-                msg = "Error generating fragments!\nPlease check the logfile {0}".format( logfile )
-                self.logger.critical( msg )
+        shutil.copy2(self.fasta, os.path.join(self.fragments_directory,fasta))
+        
+        script = os.path.join(self.fragments_directory,"gen_fragments.sh")
+        with open(script,'w') as f:
+            f.write("#!/bin/bash\n")
+            f.write(" ".join(self.fragment_cmd())+"\n")
+        os.chmod(script, 0o777)
+        
+        success = self.run_scripts([script], job_time=21600, monitor=None, chdir=True)
+        if not success:
+                logfile="{0}.log".format(os.path.splitext(os.path.basename(script))[0])
+                msg = "Error generating fragments!\nPlease check the logfile {0}".format(logfile)
+                self.logger.critical(msg)
                 raise RuntimeError, msg
 
         if self.rosetta_version >= 3.4:
             # new name format: $options{runid}.$options{n_frags}.$size" . "mers
-            self.frags_3mers = self.fragments_directory + os.sep + self.name + '.200.3mers'
-            self.frags_9mers = self.fragments_directory + os.sep + self.name + '.200.9mers'
+            self.frags_3mers = os.path.join(self.fragments_directory, self.name + '.200.3mers')
+            self.frags_9mers = os.path.join(self.fragments_directory, self.name + '.200.9mers')
         else:
             # old_name_format: aa$options{runid}$fragsize\_05.$options{n_frags}\_v1_3"
-            self.frags_3mers = self.fragments_directory + os.sep + 'aa' + self.name + '03_05.200_v1_3'
-            self.frags_9mers = self.fragments_directory + os.sep + 'aa' + self.name + '09_05.200_v1_3'
+            self.frags_3mers = os.path.join(self.fragments_directory, 'aa' + self.name + '03_05.200_v1_3')
+            self.frags_9mers = os.path.join(self.fragments_directory, 'aa' + self.name + '09_05.200_v1_3')
 
-        if not os.path.exists( self.frags_3mers ) or not os.path.exists( self.frags_9mers ):
+        if not os.path.exists(self.frags_3mers) or not os.path.exists(self.frags_9mers):
             raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\n".format(self.frags_3mers,self.frags_9mers)
 
         self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
 
-        if os.path.exists( self.fragments_directory + os.sep + self.fragments_directory + '.psipred'):
-            ample_util.get_psipred_prediction( self.fragments_directory + os.sep + self.name + '.psipred')
+        psipred_file = os.path.join(self.fragments_directory, self.name + '.psipred')
+        if os.path.exists(psipred_file):
+            ample_util.get_psipred_prediction(psipred_file)
 
         return
     ##End fragment_cmd
@@ -401,7 +383,7 @@ class RosettaModel(object):
             octo = octopus_predict.OctopusPredict()
             self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
             #fastaseq = octo.getFasta(self.fasta)
-            # Problem with 3LBW predicition when remove X
+            # Problem with 3LBW prediction when remove X
             fastaseq = octo.getFasta(self.fasta)
             octo.getPredict(self.name,fastaseq, directory=self.models_dir)
             self.octopusTopology = octo.topo
@@ -419,9 +401,19 @@ class RosettaModel(object):
 
         # Now generate lips file
         self.logger.debug('Generating lips file from span')
-        logfile = os.path.join(self.models_dir ,"run_lips.log")
+        script = os.path.join(self.fragments_directory,"run_lips.sh")
         cmd = [self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast]
-        retcode = ample_util.run_command(cmd, logfile=logfile, directory=self.models_dir)
+        with open(script,'w') as f:
+            f.write("#!/bin/bash\n")
+            f.write(" ".join(cmd)+"\n")
+        os.chmod(script, 0o777)
+        
+        success = self.run_scripts([script], job_time=21600, monitor=None, chdir=True)
+        logfile="{0}.log".format(os.path.splitext(os.path.basename(script))[0])
+        if not success:
+                msg = "Error generating lips file!\nPlease check the logfile {0}".format(logfile)
+                self.logger.critical(msg)
+                raise RuntimeError, msg
 
         # Script only uses first 4 chars to name files
         lipofile = os.path.join(self.models_dir, self.name[0:4] + ".lips4")
@@ -959,7 +951,7 @@ class RosettaModel(object):
 
         if not os.path.exists(self.rosetta_db):
             msg = 'cannot find Rosetta DB: {0}'.format(self.rosetta_db)
-            self.logger.critical( msg )
+            self.logger.critical(msg)
             raise RuntimeError,msg
 
         # relax
@@ -967,6 +959,10 @@ class RosettaModel(object):
             self.rosetta_AbinitioRelax = optd['rosetta_AbinitioRelax']
         else:
             self.rosetta_AbinitioRelax = self.find_binary('AbinitioRelax')
+        if not self.rosetta_AbinitioRelax:
+            msg = "Cannot find ROSETTA AbinitioRelax binary in: {0}".format(self.rosetta_bin)
+            self.logger.critical(msg)
+            raise RuntimeError, msg
 
         # Set path to script
         if optd and optd['rosetta_fragments_exe'] and os.path.isfile(optd['rosetta_fragments_exe']):
@@ -983,10 +979,10 @@ class RosettaModel(object):
         #if optd and optd['rosetta_membrane_abinitio2'] and os.path.isfile(optd['rosetta_membrane_abinitio2']):
         #    self.transmembrane_exe = optd['rosetta_membrane_abinitio2']
         #else:
-        self.transmembrane_exe = self.find_binary('membrane_abinitio2')
+
 
         if self.rosetta_version < 3.6:
-            tm_script_dir = os.path.join(self.rosetta_dir,"rosetta_source/src/apps/public/membrane_abinitio")
+            tm_script_dir = os.path.join(self.rosetta_dir,'rosetta_source','src','apps','public','membrane_abinitio')
         else:
             tm_script_dir = os.path.join(self.rosetta_dir,'tools','membrane_tools')
             
@@ -1000,8 +996,28 @@ class RosettaModel(object):
             self.logger.critical(msg)
             raise RuntimeError, msg
         
-        self.nr
-        self.blastpgp = blastpgp
+        if self.transmembrane:
+            b = 'membrane_abinitio2'
+            self.transmembrane_exe = self.find_binary(b)
+            if not self.transmembrane_exe:
+                msg = "Cannot find ROSETTA {0} binary in: {1}".format(b,self.rosetta_bin)
+                self.logger.critical(msg)
+                raise RuntimeError, msg
+            
+            if not (self.nr and self.blastpgp):
+                if self.rosetta_version > 3.5:
+                    blastpgp = os.path.join(self.rosetta_dir,'tools','fragment_tools','blast','bin','blastpgp')
+                    nr = os.path.join(self.rosetta_dir,'tools','fragment_tools','databases','nr')
+                    if not (os.path.exists(blastpgp) and os.path.exists(nr+'.pal')):
+                        msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
+                              "Please try running the {0} script to download these for rosetta.".format(os.path.join(self.rosetta_dir,'tools','fragment_tools','install_dependencies.pl'))
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg
+                else:
+                    msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
+                          "Please install blast and the nr database and use the -blast_dir and -nr_dir options to ample."
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg
 
         # for nmr
         self.rosetta_cluster = self.find_binary('cluster')
