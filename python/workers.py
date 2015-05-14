@@ -127,7 +127,6 @@ def run_scripts(job_scripts,
                                    submit_queue=submit_queue,
                                    submit_array=submit_array,
                                    submit_max_array=submit_max_array,
-                                   
                                    )
     else:
         return run_scripts_serial(job_scripts,
@@ -156,11 +155,11 @@ def run_scripts_cluster(job_scripts,
     cluster_run.QTYPE = submit_qtype
     if submit_array:
         cluster_run.submitArrayJob(job_scripts,
-                                   jobTime=job_time,
-                                   jobName=job_name,
+                                   job_time=job_time,
+                                   job_name=job_name,
                                    qtype=qtype,
                                    queue=submit_queue,
-                                   maxArrayJobs=submit_max_array
+                                   max_array_jobs=submit_max_array
                                    )
     else:
         for script in job_scripts:
