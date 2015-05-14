@@ -353,6 +353,10 @@ class RosettaModel(object):
         psipred_file = os.path.join(self.fragments_directory, self.name + '.psipred')
         if os.path.exists(psipred_file):
             ample_util.get_psipred_prediction(psipred_file)
+            
+        psipred_ss2 = os.path.join(self.fragments_directory, self.name + '.psipred_ss2')
+        if os.path.exists(psipred_ss2):
+            self.psipred_ss2 = psipred_ss2
 
         return
     ##End fragment_cmd
