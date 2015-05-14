@@ -174,7 +174,7 @@ def run_scripts_cluster(job_scripts,
                                                              queue=submit_queue,
                                                              qtype=submit_qtype)
             # We add the queue directives after the first line of the script
-            with open(script,'w') as f: f.writelines(lines[0] + slines + lines[1:])
+            with open(script,'w') as f: f.writelines("".join([lines[0]] + slines + lines[1:]))
             os.chmod(script, 0o777)
             cluster_run.submitJob(subScript=script)
 
