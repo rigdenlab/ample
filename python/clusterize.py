@@ -210,7 +210,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 if log_file: sh += ['#$ -o {0}\n'.format(log_file)]
             # jmht hack for morrigan
             if nproc and nproc > 1: sh += ['#$ -pe threaded {0}\n'.format(nproc)]
-            sh += '\n'
+            sh += ['\n']
         elif qtype=="LSF":
             assert not num_array_jobs,"Array jobs not supported yet for LSF"
             # jmht - hard-wired for hartree wonder
@@ -226,11 +226,10 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             if queue: sh += ['#BSUB -q {0}\n'.format(queue)]
             if log_file: sh += ['#BSUB -o {0}\n'.format(log_file)]
             if job_name: sh += ['#BSUB -J {0}\n'.format(job_name)]       
-            sh += '\n'
+            sh += ['\n']
         else:
             raise RuntimeError,"Unrecognised QTYPE: {0}".format(qtype)
         sh += ['\n']
-        
         return sh
     
     def submitJob(self, subScript=None, jobDir=None):
@@ -299,7 +298,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         os.chdir(curDir)
         return str(qNumber)
     
-    def submitArrayJob(self,job_scripts,job_dir=None,job_time=None,queue=None,qtype=None,max_array_jobs=None):
+    def submitArrayJob(self,job_scripts,job_name=None,job_dir=None,job_time=None,queue=None,qtype=None,max_array_jobs=None):
         """Submit a list of jobs as an SGE array job"""
         
         if qtype != "SGE": raise RuntimeError,"Need to add code for non-SGE array jobs"
@@ -325,15 +324,15 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
  
         # Write head of script
         s = "#!/bin/sh\n"
-        s += self.queueDirectives(nproc=None,
+        s += "".join(self.queueDirectives(nproc=None,
                                   log_file=None,
-                                  job_name=None,
+                                  job_name=job_name,
                                   job_time=job_time,
                                   queue=queue,
                                   qtype=qtype,
                                   num_array_jobs=nJobs,
                                   max_array_jobs=max_array_jobs
-                                  )
+                                  ))
         # Command to run 
         s += "scriptlist={0}\n".format(self._scriptFile)
 
@@ -352,7 +351,7 @@ cd $jobdir
 $script
 """
         with open(arrayScript,'w') as f: f.write(s)
-        self.submitJob(subScript=arrayScript, job_dir=job_dir)
+        self.submitJob(subScript=arrayScript, jobDir=job_dir)
         return
 
 class Test(unittest.TestCase):
