@@ -41,7 +41,7 @@ class AmpleOptions(object):
                             'import_ensembles' : False,
                             'improve_template' : None,
                             'LGA' : None,
-                            'make_frags' : False,
+                            'make_frags' : True,
                             'make_models' : True,
                             'maxcluster_exe' : None,
                             'max_ensemble_models' : 30,
