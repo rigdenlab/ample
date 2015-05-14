@@ -299,40 +299,40 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         os.chdir(curDir)
         return str(qNumber)
     
-    def submitArrayJob(self,jobScripts,jobDir=None,jobTime=None,queue=None,qtype=None,maxArrayJobs=None):
+    def submitArrayJob(self,job_scripts,job_dir=None,job_time=None,queue=None,qtype=None,max_array_jobs=None):
         """Submit a list of jobs as an SGE array job"""
         
         if qtype != "SGE": raise RuntimeError,"Need to add code for non-SGE array jobs"
-        if jobDir is None:
+        if job_dir is None:
             if self.scriptDir and os.path.isdir(self.scriptDir):
-                jobDir=self.scriptDir
+                job_dir=self.scriptDir
             else:
-                jobDir=os.getcwd()
-        os.chdir(jobDir)
+                job_dir=os.getcwd()
+        os.chdir(job_dir)
         
         # Create the list of scripts
-        self._scriptFile = os.path.abspath(os.path.join(jobDir,"array.jobs"))
-        nJobs=len(jobScripts)
+        self._scriptFile = os.path.abspath(os.path.join(job_dir,"array.jobs"))
+        nJobs=len(job_scripts)
         with open(self._scriptFile,'w') as f:
-            for s in jobScripts:
+            for s in job_scripts:
                 # Check the scripts are of the correct format - abspath and .sh extension
                 if not s.startswith("/") or not s.endswith(".sh"):
                     raise RuntimeError,"Scripts for array jobs must be absolute paths with a .sh extension: {0}".format(s)
                 f.write(s+"\n")
                 
         # Generate the qsub array script
-        arrayScript = os.path.abspath(os.path.join(jobDir,"array.script"))
+        arrayScript = os.path.abspath(os.path.join(job_dir,"array.script"))
  
         # Write head of script
         s = "#!/bin/sh\n"
-        s += self.queueDirectives(nProc=None,
-                                  logFile=None,
-                                  jobName=None,
-                                  jobTime=jobTime,
+        s += self.queueDirectives(nproc=None,
+                                  log_file=None,
+                                  job_name=None,
+                                  job_time=job_time,
                                   queue=queue,
                                   qtype=qtype,
-                                  numArrayJobs=nJobs,
-                                  maxArrayJobs=maxArrayJobs
+                                  num_array_jobs=nJobs,
+                                  max_array_jobs=max_array_jobs
                                   )
         # Command to run 
         s += "scriptlist={0}\n".format(self._scriptFile)
@@ -352,7 +352,7 @@ cd $jobdir
 $script
 """
         with open(arrayScript,'w') as f: f.write(s)
-        self.submitJob(subScript=arrayScript, jobDir=jobDir)
+        self.submitJob(subScript=arrayScript, job_dir=job_dir)
         return
 
 class Test(unittest.TestCase):
