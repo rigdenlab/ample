@@ -384,17 +384,17 @@ class RosettaModel(object):
         """
 
         # Files have already been created
-        if os.path.isfile( str(self.spanfile) ) and os.path.isfile( str(self.lipofile) ):
-            self.logger.debug("Using given span file: {0}\n and given lipo file: {1}".format( self.spanfile, self.lipofile ) )
+        if os.path.isfile(str(self.spanfile)) and os.path.isfile(str(self.lipofile)):
+            self.logger.debug("Using given span file: {0}\n and given lipo file: {1}".format(self.spanfile, self.lipofile))
             return
 
         # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
         # so we need to copy the fasta file into the fragments directory
-        fasta = os.path.split(  self.fasta )[1]
-        shutil.copy2( self.fasta, self.models_dir + os.sep + fasta )
+        fasta = os.path.split(self.fasta)[1]
+        shutil.copy2(self.fasta, os.path.join(self.models_dir,fasta))
 
         # See if we need to query the octopus server
-        if os.path.isfile( str(self.octopusTopology) ):
+        if os.path.isfile(str(self.octopusTopology)):
             self.logger.info("Using user-supplied topology prediction file: {0}".format(self.octopusTopology))
         else:
             # Query octopus server for prediction
@@ -403,15 +403,15 @@ class RosettaModel(object):
             #fastaseq = octo.getFasta(self.fasta)
             # Problem with 3LBW predicition when remove X
             fastaseq = octo.getFasta(self.fasta)
-            octo.getPredict(self.name,fastaseq, directory=self.models_dir )
+            octo.getPredict(self.name,fastaseq, directory=self.models_dir)
             self.octopusTopology = octo.topo
             self.logger.debug("Got topology prediction file: {0}".format(self.octopusTopology))
 
         # Generate span file from predict
         self.spanfile = os.path.join(self.models_dir, self.name + ".span")
-        self.logger.debug( 'Generating span file {0}'.format( self.spanfile ) )
-        cmd = [ self.octopus2span, self.octopusTopology ]
-        retcode = ample_util.run_command( cmd, logfile=self.spanfile, directory=self.models_dir )
+        self.logger.debug( 'Generating span file {0}'.format(self.spanfile))
+        cmd = [self.octopus2span, self.octopusTopology]
+        retcode = ample_util.run_command(cmd, logfile=self.spanfile, directory=self.models_dir)
         if retcode != 0:
             msg = "Error generating span file. Please check the log in {0}".format(self.spanfile)
             self.logger.critical(msg)
@@ -419,9 +419,9 @@ class RosettaModel(object):
 
         # Now generate lips file
         self.logger.debug('Generating lips file from span')
-        logfile = self.models_dir + os.sep + "run_lips.log"
-        cmd = [ self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast ]
-        retcode = ample_util.run_command( cmd, logfile=logfile, directory=self.models_dir )
+        logfile = os.path.join(self.models_dir ,"run_lips.log")
+        cmd = [self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast]
+        retcode = ample_util.run_command(cmd, logfile=logfile, directory=self.models_dir)
 
         # Script only uses first 4 chars to name files
         lipofile = os.path.join(self.models_dir, self.name[0:4] + ".lips4")
@@ -824,7 +824,7 @@ class RosettaModel(object):
         #self.benchmark=optd['benchmark_mode']
 
         # psipred secondary structure prediction
-        if optd['psipred_ss2'] is not None and os.path.isfile( optd['psipred_ss2'] ):
+        if optd['psipred_ss2'] is not None and os.path.isfile(optd['psipred_ss2']):
             self.psipred_ss2 = optd['psipred_ss2']
 
         # Fragment variables
@@ -832,27 +832,20 @@ class RosettaModel(object):
         self.fragments_directory = os.path.join(optd['work_dir'],"rosetta_fragments")
 
         if optd['transmembrane']:
-
             self.transmembrane = True
-
             if optd['blast_dir']:
                 blastpgp = os.path.join(optd['blast_dir'],"bin/blastpgp")
-                blastpgp = ample_util.find_exe( blastpgp )
-            else:
-                blastpgp = ample_util.find_exe('blastpgp')
-
-            # Found so set
-            optd['blastpgp'] = blastpgp
-            self.blastpgp = blastpgp
+                blastpgp = ample_util.find_exe(blastpgp)
+                self.blastpgp = blastpgp
 
             # nr database
-            if not os.path.exists(str(optd['nr'])) and not os.path.exists( str(optd['nr'])+".pal"):
-                msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format( optd['nr'] )
-                self.logger.critical(msg)
-                raise RuntimeError, msg
-
-            # Found it
-            self.nr = optd['nr']
+            if optd['nr']:
+                if not os.path.exists(optd['nr']+".pal"):
+                    msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format(optd['nr'])
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg
+                else:
+                    self.nr = optd['nr']
 
             self.spanfile = optd['transmembrane_spanfile']
             self.lipofile = optd['transmembrane_lipofile']
@@ -986,7 +979,7 @@ class RosettaModel(object):
             elif self.rosetta_version  == 3.6:
                 self.fragments_exe = os.path.join(self.rosetta_dir,'tools','fragment_tools','make_fragments.pl')
 
-        # Transmambrane stuff
+        # Transmembrane stuff
         #if optd and optd['rosetta_membrane_abinitio2'] and os.path.isfile(optd['rosetta_membrane_abinitio2']):
         #    self.transmembrane_exe = optd['rosetta_membrane_abinitio2']
         #else:
@@ -996,17 +989,21 @@ class RosettaModel(object):
             tm_script_dir = os.path.join(self.rosetta_dir,"rosetta_source/src/apps/public/membrane_abinitio")
         else:
             tm_script_dir = os.path.join(self.rosetta_dir,'tools','membrane_tools')
-        self.octopus2span = tm_script_dir + os.sep + "octopus2span.pl"
-        self.run_lips = tm_script_dir + os.sep + "run_lips.pl"
-        self.align_blast = tm_script_dir + os.sep + "alignblast.pl"
+            
+        self.octopus2span = os.path.join(tm_script_dir,"octopus2span.pl")
+        self.run_lips = os.path.join(tm_script_dir,"run_lips.pl")
+        self.align_blast = os.path.join(tm_script_dir,"alignblast.pl")
 
         if not os.path.exists(self.octopus2span) or not os.path.exists(self.run_lips) or not os.path.exists(self.align_blast):
             msg = "Cannot find the required executables: octopus2span.pl ,run_lips.pl and align_blast.pl in the directory\n" +\
-            "{0}\nPlease check these files are in place".format( tm_script_dir )
+            "{0}\nPlease check these files are in place".format(tm_script_dir)
             self.logger.critical(msg)
             raise RuntimeError, msg
+        
+        self.nr
+        self.blastpgp = blastpgp
 
-        # for nme
+        # for nmr
         self.rosetta_cluster = self.find_binary('cluster')
         self.rosetta_mr_protocols = self.find_binary('mr_protocols')
         self.rosetta_idealize_jd2 = self.find_binary('idealize_jd2')
