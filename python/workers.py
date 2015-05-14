@@ -146,14 +146,13 @@ def run_scripts_cluster(job_scripts,
                         submit_queue=None,
                         submit_array=None,
                         submit_max_array=None,
-                        nproc=None
-                        ):
+                        nproc=None):
     logger = logging.getLogger()
     logger.info("Running jobs on a cluster")
     cluster_run = clusterize.ClusterRun()
     qtype = submit_qtype
     cluster_run.QTYPE = submit_qtype
-    if submit_array:
+    if submit_array and len(job_scripts) > 1:
         cluster_run.submitArrayJob(job_scripts,
                                    job_time=job_time,
                                    job_name=job_name,
