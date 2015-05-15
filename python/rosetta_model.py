@@ -418,10 +418,10 @@ class RosettaModel(object):
             f.write(" ".join(cmd)+"\n")
         os.chmod(script, 0o777)
         
-        rtn = self.run_scripts([script], job_time=21600, monitor=None)
+        success = self.run_scripts([script], job_time=21600, monitor=None)
         # Script only uses first 4 chars to name files
         lipofile = os.path.join(tm_dir, self.name[0:4] + ".lips4")
-        if rtn != 0 or not os.path.exists(lipofile):
+        if not success or not os.path.exists(lipofile):
             logfile ="{0}.log".format(os.path.splitext((script))[0])
             msg = "Error generating lips file {0}. Please check the logfile {1}".format(lipofile,logfile)
             self.logger.critical(msg)
