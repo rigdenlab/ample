@@ -201,7 +201,7 @@ class RosettaModel(object):
             os.chmod(sname, 0o777)
             job_scripts.append(sname)
             
-        success = self.run_scripts(job_scripts, job_time=job_time, monitor=None)
+        success = self.run_scripts(job_scripts, job_time=job_time, job_name='abinitio', monitor=None)
         if not success:
             raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(run_dir)
         # Copy the models into the models directory - need to rename them accordingly
@@ -514,7 +514,7 @@ class RosettaModel(object):
             id_scripts.append(sname)
         
         # Run the jobs
-        success = self.run_scripts(job_scripts=id_scripts, job_time=job_time, monitor=None)
+        success = self.run_scripts(job_scripts=id_scripts, job_time=job_time, job_name='idealize', monitor=None)
         if not success:
             raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(idealise_dir)
         # Check all the pdbs were produced - don't check with the NMR sequence as idealise can remove some residues (eg. HIS - see examples/nmr.remodel)
@@ -724,7 +724,7 @@ class RosettaModel(object):
             os.chmod(sname, 0o777)
             job_scripts.append(sname)
         
-        success = self.run_scripts(job_scripts=job_scripts, job_time=job_time, monitor=None)
+        success = self.run_scripts(job_scripts=job_scripts, job_time=job_time, job_name='remodel', monitor=None)
         if not success:
             raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(remodel_dir)
     
@@ -766,7 +766,7 @@ class RosettaModel(object):
                         # number of jobs that will be created on each processor
         return proc_map
 
-    def run_scripts(self, job_scripts, job_time=None, monitor=None, chdir=True):
+    def run_scripts(self, job_scripts, job_time=None, job_name=None, monitor=None, chdir=True):
         # We need absolute paths to the scripts
         #job_scripts=[os.path.abspath(j) for j in job_scripts]
         return workers.run_scripts(job_scripts=job_scripts, 
@@ -776,6 +776,7 @@ class RosettaModel(object):
                                    chdir=chdir,
                                    nproc=self.nproc,
                                    job_time=job_time,
+                                   job_name=job_name,
                                    submit_cluster=self.submit_cluster,
                                    submit_qtype=self.submit_qtype,
                                    submit_queue=self.submit_queue,
