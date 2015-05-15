@@ -18,7 +18,6 @@ import unittest
 import add_sidechains_SCWRL
 import ample_sequence
 import ample_util
-import clusterize
 import octopus_predict
 import pdb_edit
 import workers
@@ -504,17 +503,10 @@ class RosettaModel(object):
         # WHAT ABOUT STDOUT?
         for model in models:
             # run idealise on models
-            script="#!/bin/bash\n"
-            if self.submit_cluster:
-                script += clusterize.ClusterRun().queueDirectives(nProc=1,
-                                                                  jobTime=job_time,
-                                                                  queue=self.submit_queue,
-                                                                  qtype=self.submit_qtype)
+            script = "#!/bin/bash\n"
             script += " ".join(self.idealize_cmd(pdbin=model)) + "\n"
-    
             # Get the name of the pdb that will be output
             id_pdbs.append(self.idealize_pdbout(pdbin=model,directory=idealise_dir))
-            
             name=os.path.splitext(os.path.basename(model))[0]
             sname=os.path.join(idealise_dir,"{0}_idealize.sh".format(name))
             with open(sname,'w') as w: w.write(script)
@@ -630,30 +622,34 @@ class RosettaModel(object):
         return cmd
     
     def mr_cmd(self,template,alignment,nstruct,seed):
-        return [ self.rosetta_mr_protocols,
-                 '-database ', self.rosetta_db,
-                 '-MR:mode', 'cm',
-                 '-in:file:extended_pose', '1',
-                 '-in:file:fasta', self.fasta,
-                 '-in:file:alignment', alignment,
-                 '-in:file:template_pdb', template,
-                 '-loops:frag_sizes', '9 3 1',
-                 '-loops:frag_files', self.frags_9mers, self.frags_3mers,'none',
-                 '-loops:random_order',
-                 '-loops:random_grow_loops_by', '5',
-                 '-loops:extended',
-                 '-loops:remodel', 'quick_ccd',
-                 '-loops:relax', 'relax',
-                 '-relax:default_repeats','4',
-                 '-relax:jump_move', 'true',
-                 '-cm:aln_format', 'grishin',
-                 '-MR:max_gaplength_to_model', '8',
-                 '-nstruct', str(nstruct),
-                 '-ignore_unrecognized_res',
-                 '-overwrite',
-                 '-run:constant_seed',
-                 '-run:jran', str(seed) ]
-
+        cmd = [ self.rosetta_mr_protocols,
+               '-database ', self.rosetta_db,
+               '-MR:mode', 'cm',
+               '-in:file:extended_pose', '1',
+               '-in:file:fasta', self.fasta,
+               '-in:file:alignment', alignment,
+               '-in:file:template_pdb', template,
+               '-loops:frag_sizes', '9 3 1',
+               '-loops:frag_files', self.frags_9mers, self.frags_3mers,'none',
+               '-loops:random_order',
+               '-loops:random_grow_loops_by', '5',
+               '-loops:extended',
+               '-loops:remodel', 'quick_ccd',
+               '-loops:relax', 'relax',
+               '-relax:default_repeats','4',
+               '-relax:jump_move', 'true',
+               '-cm:aln_format', 'grishin',
+               '-MR:max_gaplength_to_model', '8',
+               '-nstruct', str(nstruct),
+               '-ignore_unrecognized_res',
+               '-overwrite',
+               '-run:constant_seed',
+               '-run:jran', str(seed) ]
+        # Not actually sure if the constraints are used - they weren't on the test I tried but it doesn't seem to hurt to add them
+        if self.constraints_file:
+            cmd += [ '-constraints:cst_file', self.constraints_file, '-constraints:cst_fa_file', self.constraints_file ]
+        return cmd
+    
     def nmr_remodel(self, nmr_model_in=None, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
         assert os.path.isfile(nmr_model_in),"Cannot find nmr_model_in: {0}".format(nmr_model_in)
         if remodel_fasta: assert os.path.isfile(remodel_fasta),"Cannot find remodel_fasta: {0}".format(remodel_fasta)
@@ -718,11 +714,6 @@ class RosettaModel(object):
             os.mkdir(d)
             dir_list.append(d) # job script
             script = "#!/bin/bash\n"
-            if self.submit_cluster:
-                script += clusterize.ClusterRun().queueDirectives(nProc=1,
-                                                                  jobTime=job_time,
-                                                                  queue=self.submit_queue, 
-                                                                  qtype=self.submit_qtype)
             cmd = self.mr_cmd(template=id_model, 
                               alignment=alignment_file, 
                               nstruct=nstruct, 
