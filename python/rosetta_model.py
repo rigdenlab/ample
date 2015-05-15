@@ -287,7 +287,8 @@ class RosettaModel(object):
                 fasta ]
 
         if self.transmembrane:
-            cmd += [ '-noporter', '-nopsipred','-sam']
+            #cmd += [ '-noporter', '-nopsipred','-sam']
+            pass
         else:
             # version dependent flags
             if self.rosetta_version == 3.3:
@@ -330,6 +331,7 @@ class RosettaModel(object):
         os.chmod(script, 0o777)
         
         success = self.run_scripts([script], job_time=21600, monitor=None, chdir=True)
+        logfile="{0}.log".format(os.path.splitext(os.path.basename(script))[0])
         if not success:
                 logfile="{0}.log".format(os.path.splitext(os.path.basename(script))[0])
                 msg = "Error generating fragments!\nPlease check the logfile {0}".format(logfile)
@@ -346,7 +348,7 @@ class RosettaModel(object):
             self.frags_9mers = os.path.join(self.fragments_directory, 'aa' + self.name + '09_05.200_v1_3')
 
         if not os.path.exists(self.frags_3mers) or not os.path.exists(self.frags_9mers):
-            raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\n".format(self.frags_3mers,self.frags_9mers)
+            raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\nPlease check logfile {2 for details.".format(self.frags_3mers,self.frags_9mers,logfile)
 
         self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
 
@@ -373,11 +375,16 @@ class RosettaModel(object):
         if os.path.isfile(str(self.spanfile)) and os.path.isfile(str(self.lipofile)):
             self.logger.debug("Using given span file: {0}\n and given lipo file: {1}".format(self.spanfile, self.lipofile))
             return
+         
+        owd=os.getcwd() # Remember where we started
+        tm_dir = os.path.join(self.work_dir,'tm_predict')
+        os.mkdir(tm_dir)
+        os.chdir(tm_dir)
 
         # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
         # so we need to copy the fasta file into the fragments directory
         fasta = os.path.split(self.fasta)[1]
-        shutil.copy2(self.fasta, os.path.join(self.models_dir,fasta))
+        shutil.copy2(self.fasta, os.path.join(tm_dir,fasta))
 
         # See if we need to query the octopus server
         if os.path.isfile(str(self.octopusTopology)):
@@ -389,15 +396,15 @@ class RosettaModel(object):
             #fastaseq = octo.getFasta(self.fasta)
             # Problem with 3LBW prediction when remove X
             fastaseq = octo.getFasta(self.fasta)
-            octo.getPredict(self.name,fastaseq, directory=self.models_dir)
+            octo.getPredict(self.name,fastaseq, directory=tm_dir)
             self.octopusTopology = octo.topo
             self.logger.debug("Got topology prediction file: {0}".format(self.octopusTopology))
 
         # Generate span file from predict
-        self.spanfile = os.path.join(self.models_dir, self.name + ".span")
+        self.spanfile = os.path.join(tm_dir, self.name + ".span")
         self.logger.debug( 'Generating span file {0}'.format(self.spanfile))
         cmd = [self.octopus2span, self.octopusTopology]
-        retcode = ample_util.run_command(cmd, logfile=self.spanfile, directory=self.models_dir)
+        retcode = ample_util.run_command(cmd, logfile=self.spanfile, directory=tm_dir)
         if retcode != 0:
             msg = "Error generating span file. Please check the log in {0}".format(self.spanfile)
             self.logger.critical(msg)
@@ -405,30 +412,26 @@ class RosettaModel(object):
 
         # Now generate lips file
         self.logger.debug('Generating lips file from span')
-        script = os.path.join(self.fragments_directory,"run_lips.sh")
+        script = os.path.join(tm_dir,"run_lips.sh")
         cmd = [self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast]
         with open(script,'w') as f:
             f.write("#!/bin/bash\n")
             f.write(" ".join(cmd)+"\n")
         os.chmod(script, 0o777)
         
-        success = self.run_scripts([script], job_time=21600, monitor=None, chdir=True)
-        logfile="{0}.log".format(os.path.splitext(os.path.basename(script))[0])
-        if not success:
-                msg = "Error generating lips file!\nPlease check the logfile {0}".format(logfile)
-                self.logger.critical(msg)
-                raise RuntimeError, msg
-
+        rtn = self.run_scripts([script], job_time=21600, monitor=None, chdir=True)
         # Script only uses first 4 chars to name files
-        lipofile = os.path.join(self.models_dir, self.name[0:4] + ".lips4")
-        if retcode != 0 or not os.path.exists(lipofile):
-            msg = "Error generating lips file {0}. Please check the log in {1}".format(lipofile,logfile)
+        lipofile = os.path.join(tm_dir, self.name[0:4] + ".lips4")
+        if rtn != 0 or not os.path.exists(lipofile):
+            logfile ="{0}.log".format(os.path.splitext((script))[0])
+            msg = "Error generating lips file {0}. Please check the logfile {1}".format(lipofile,logfile)
             self.logger.critical(msg)
             raise RuntimeError,msg
 
         # Set the variable
         self.lipofile = lipofile
 
+        os.chdir(owd)
         return
 
     def get_version(self):
@@ -831,8 +834,9 @@ class RosettaModel(object):
             self.transmembrane = True
             if optd['blast_dir']:
                 blastpgp = os.path.join(optd['blast_dir'],"bin/blastpgp")
-                blastpgp = ample_util.find_exe(blastpgp)
-                self.blastpgp = blastpgp
+                self.blastpgp = ample_util.find_exe(blastpgp)
+                if self.blastpgp:
+                    self.logger.debug("Using user-supplied blast_dir for blastpgp executable: {0}".format(self.blastpgp))
 
             # nr database
             if optd['nr']:
@@ -842,6 +846,8 @@ class RosettaModel(object):
                     raise RuntimeError, msg
                 else:
                     self.nr = optd['nr']
+                    if self.nr:
+                        self.logger.debug("Using user-supplied nr database: {0}".format(self.nr))
 
             self.spanfile = optd['transmembrane_spanfile']
             self.lipofile = optd['transmembrane_lipofile']
@@ -916,6 +922,90 @@ class RosettaModel(object):
             self.submit_max_array = optd['submit_max_array']
         return
 
+    def set_paths_tm(self,optd):
+
+        if not os.path.exists(self.octopus2span) or not os.path.exists(self.run_lips) or not os.path.exists(self.align_blast):
+            msg = "Cannot find the required executables: octopus2span.pl ,run_lips.pl and align_blast.pl in the directory\n" +\
+            "{0}\nPlease check these files are in place".format(tm_script_dir)
+            self.logger.critical(msg)
+            raise RuntimeError, msg
+
+        if optd['blast_dir']:
+            blastpgp = os.path.join(optd['blast_dir'],"bin/blastpgp")
+            self.blastpgp = ample_util.find_exe(blastpgp)
+            if self.blastpgp:
+                self.logger.debug("Using user-supplied blast_dir for blastpgp executable: {0}".format(self.blastpgp))
+
+        # nr database
+        if optd['nr']:
+            if not os.path.exists(optd['nr']+".pal"):
+                msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format(optd['nr'])
+                self.logger.critical(msg)
+                raise RuntimeError, msg
+            else:
+                self.nr = optd['nr']
+                if self.nr:
+                    self.logger.debug("Using user-supplied nr database: {0}".format(self.nr))
+
+        self.spanfile = optd['transmembrane_spanfile']
+        self.lipofile = optd['transmembrane_lipofile']
+        self.octopusTopology = optd['transmembrane_octopusfile']
+
+        # Check if we've been given files
+        if  self.octopusTopology and not (os.path.isfile(self.octopusTopology)):
+            msg = "Cannot find provided transmembrane octopus topology prediction: {0}".format(self.octopusTopology)
+            self.logger.critical(msg)
+            raise RuntimeError, msg
+
+        if  self.spanfile and not (os.path.isfile(self.spanfile)):
+            msg = "Cannot find provided transmembrane spanfile: {0}".format(self.spanfile)
+            self.logger.critical(msg)
+            raise RuntimeError, msg
+
+        if self.lipofile and not (os.path.isfile(self.lipofile)):
+            msg = "Cannot find provided transmembrane lipofile: {0}".format(self.lipofile)
+            self.logger.critical(msg)
+            raise RuntimeError, msg
+
+        if (self.spanfile and not self.lipofile) or (self.lipofile and not self.spanfile):
+            msg="You need to provide both a spanfile and a lipofile"
+            self.logger.critical(msg)
+            raise RuntimeError, msg
+
+        if not os.path.exists(self.octopus2span) or not os.path.exists(self.run_lips) or not os.path.exists(self.align_blast):
+            msg = "Cannot find the required executables: octopus2span.pl ,run_lips.pl and align_blast.pl in the directory\n" +\
+            "{0}\nPlease check these files are in place".format(tm_script_dir)
+            self.logger.critical(msg)
+            raise RuntimeError, msg
+        
+        b = 'membrane_abinitio2'
+        self.transmembrane_exe = self.find_binary(b)
+        if not self.transmembrane_exe:
+            msg = "Cannot find ROSETTA {0} binary in: {1}".format(b,self.rosetta_bin)
+            self.logger.critical(msg)
+            raise RuntimeError, msg
+        
+        if not (self.nr and self.blastpgp):
+            if self.rosetta_version > 3.5:
+                blastpgp = os.path.join(self.rosetta_dir,'tools','fragment_tools','blast','bin','blastpgp')
+                nr = os.path.join(self.rosetta_dir,'tools','fragment_tools','databases','nr')
+                if not (os.path.exists(blastpgp) and os.path.exists(nr+'.pal')):
+                    msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
+                          "Please try running the {0} script to download these for rosetta.".format(os.path.join(self.rosetta_dir,'tools','fragment_tools','install_dependencies.pl'))
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg
+                else:
+                    self.blastpgp = blastpgp
+                    self.nr = nr
+                    if self.blastpgp: self.logger.debug("Using blastpgp executable: {0}".format(self.blastpgp))
+                    if self.nr: self.logger.debug("Using nr database: {0}".format(self.nr))
+            else:
+                msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
+                      "Please install blast and the nr database and use the -blast_dir and -nr_dir options to ample."
+                self.logger.critical(msg)
+                raise RuntimeError, msg
+        return
+
     def set_paths(self,optd=None,rosetta_dir=None):
         if rosetta_dir and os.path.isdir(rosetta_dir):
             self.rosetta_dir=rosetta_dir
@@ -980,11 +1070,6 @@ class RosettaModel(object):
                 self.fragments_exe = os.path.join(self.rosetta_dir,'tools','fragment_tools','make_fragments.pl')
 
         # Transmembrane stuff
-        #if optd and optd['rosetta_membrane_abinitio2'] and os.path.isfile(optd['rosetta_membrane_abinitio2']):
-        #    self.transmembrane_exe = optd['rosetta_membrane_abinitio2']
-        #else:
-
-
         if self.rosetta_version < 3.6:
             tm_script_dir = os.path.join(self.rosetta_dir,'rosetta_source','src','apps','public','membrane_abinitio')
         else:
@@ -993,35 +1078,7 @@ class RosettaModel(object):
         self.octopus2span = os.path.join(tm_script_dir,"octopus2span.pl")
         self.run_lips = os.path.join(tm_script_dir,"run_lips.pl")
         self.align_blast = os.path.join(tm_script_dir,"alignblast.pl")
-
-        if not os.path.exists(self.octopus2span) or not os.path.exists(self.run_lips) or not os.path.exists(self.align_blast):
-            msg = "Cannot find the required executables: octopus2span.pl ,run_lips.pl and align_blast.pl in the directory\n" +\
-            "{0}\nPlease check these files are in place".format(tm_script_dir)
-            self.logger.critical(msg)
-            raise RuntimeError, msg
-        
-        if self.transmembrane:
-            b = 'membrane_abinitio2'
-            self.transmembrane_exe = self.find_binary(b)
-            if not self.transmembrane_exe:
-                msg = "Cannot find ROSETTA {0} binary in: {1}".format(b,self.rosetta_bin)
-                self.logger.critical(msg)
-                raise RuntimeError, msg
-            
-            if not (self.nr and self.blastpgp):
-                if self.rosetta_version > 3.5:
-                    blastpgp = os.path.join(self.rosetta_dir,'tools','fragment_tools','blast','bin','blastpgp')
-                    nr = os.path.join(self.rosetta_dir,'tools','fragment_tools','databases','nr')
-                    if not (os.path.exists(blastpgp) and os.path.exists(nr+'.pal')):
-                        msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
-                              "Please try running the {0} script to download these for rosetta.".format(os.path.join(self.rosetta_dir,'tools','fragment_tools','install_dependencies.pl'))
-                    self.logger.critical(msg)
-                    raise RuntimeError, msg
-                else:
-                    msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
-                          "Please install blast and the nr database and use the -blast_dir and -nr_dir options to ample."
-                    self.logger.critical(msg)
-                    raise RuntimeError, msg
+        if optd['transmembrane']: self.set_paths_tm(optd)
 
         # for nmr
         self.rosetta_cluster = self.find_binary('cluster')
