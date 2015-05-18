@@ -29,7 +29,7 @@ class SpickerResult( object ):
 
 class Spickerer( object ):
 
-    def __init__(self, spicker_exe=None,run_dir=None):
+    def __init__(self, spicker_exe=None,run_dir=None,max_cluster_size=200):
         """Initialise from a dictionary of options"""
         
         if not spicker_exe:
@@ -44,7 +44,7 @@ class Spickerer( object ):
         self.run_dir = run_dir
         self.num_clusters = None
         self.results = None
-        self.max_cluster_size = 200
+        self.max_cluster_size = max_cluster_size
         self.logger = logging.getLogger()
         return
         
@@ -173,7 +173,7 @@ class Spickerer( object ):
             with open( result.pdb_file, "w" ) as f:
                 for i, pdb in enumerate(result.rosetta_pdb):
                     
-                    if i > self.max_cluster_size:
+                    if self.max_cluster_size > 0 and i >= self.max_cluster_size:
                         result.cluster_size = self.max_cluster_size
                         break
                     result.pdb_list.append( pdb )
@@ -366,6 +366,6 @@ if __name__ == "__main__":
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    spicker = Spickerer(spicker_exe=spicker_exe)
+    spicker = Spickerer(spicker_exe=spicker_exe,max_cluster_size=0)
     spicker.cluster(models,num_clusters=10)
     print spicker.results_summary()
