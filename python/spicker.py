@@ -29,7 +29,7 @@ class SpickerResult( object ):
 
 class Spickerer( object ):
 
-    def __init__(self, spicker_exe=None,run_dir=None,max_cluster_size=200):
+    def __init__(self, spicker_exe=None,run_dir=None):
         """Initialise from a dictionary of options"""
         
         if not spicker_exe:
@@ -44,7 +44,6 @@ class Spickerer( object ):
         self.run_dir = run_dir
         self.num_clusters = None
         self.results = None
-        self.max_cluster_size = max_cluster_size
         self.logger = logging.getLogger()
         return
         
@@ -138,7 +137,7 @@ class Spickerer( object ):
                         seq.write('\t' +split[5] + '\t' + split[3] + '\n')
         return
     
-    def cluster(self, models, run_dir=None, num_clusters=1):
+    def cluster(self, models, run_dir=None, num_clusters=1, max_cluster_size=200):
         """
         Run spicker to cluster the models
         """
@@ -160,21 +159,19 @@ class Spickerer( object ):
         # Check we have enough clusters
         if len(results) < self.num_clusters:
             msg = "Only {0} clusters returned from Spicker cannot process {1} clusters!\n".format(len(results),self.num_clusters)
-            self.logger.critical( msg )
-            raise RuntimeError,msg
+            self.logger.critical(msg)
+            #raise RuntimeError,msg
         
         # Loop through each cluster copying the files as we go
         # We only process the clusters we will be using
-        for cluster in range( self.num_clusters ):
+        for cluster in range(self.num_clusters):
                 
             result = results[ cluster ]
             result.pdb_file = os.path.join(self.run_dir, "spicker_cluster_{0}.list".format(cluster+1))
-            
             with open( result.pdb_file, "w" ) as f:
                 for i, pdb in enumerate(result.rosetta_pdb):
-                    
-                    if self.max_cluster_size > 0 and i >= self.max_cluster_size:
-                        result.cluster_size = self.max_cluster_size
+                    if max_cluster_size > 0 and i >= max_cluster_size:
+                        result.cluster_size = max_cluster_size
                         break
                     result.pdb_list.append( pdb )
                     f.write( pdb + "\n" )
@@ -202,8 +199,6 @@ class Spickerer( object ):
             line = line.strip()
             
             if line.startswith("#Cluster"):
-                ncluster = int( line.split()[1] )
-                
                 # skip 2 lines to Nstr
                 f.readline()
                 f.readline()
@@ -212,8 +207,8 @@ class Spickerer( object ):
                 if not line.startswith("Nstr="):
                     raise RuntimeError,"Problem reading file: {0}".format( logfile )
                 
-                ccount = int( line.split()[1] )
-                clusterCounts.append( ccount )
+                ccount = int(line.split()[1])
+                clusterCounts.append(ccount)
                 
                 # Loop through this cluster
                 i2rcen = []
@@ -222,10 +217,10 @@ class Spickerer( object ):
                     fields = line.split()
                     #  i_cl   i_str  R_nat   R_cen  E    #str     traj
                     # tuple of: ( index in file , distance from centroid )
-                    i2rcen.append( ( int(fields[5]), float( fields[3] ) ) )
+                    i2rcen.append((int(fields[5]), float(fields[3])))
                     line = f.readline().strip()
                     
-                index2rcens.append( i2rcen )
+                index2rcens.append(i2rcen)
             
             line = f.readline()
                 
@@ -243,24 +238,22 @@ class Spickerer( object ):
         
         results = []
         # create results
-        for c in range( len( clusterCounts ) ):
+        for c in range(len(clusterCounts)):
             r = SpickerResult()
             r.cluster_size = clusterCounts[ c ]
             for i, rcen in index2rcens[ c ]:
                 pdb = pdb_list[i-1]
-                r.rosetta_pdb.append( pdb )
-                r.r_cen.append( rcen )
+                r.rosetta_pdb.append(pdb)
+                r.r_cen.append(rcen)
             
-            results.append( r )
+            results.append(r)
             
         return results
         
     def results_summary(self):
         """Summarise the spicker results"""
         
-        if not self.results:
-            raise RuntimeError, "Could not find any results!"
-        
+        if not self.results: raise RuntimeError, "Could not find any results!"
         
         rstr = "---- Spicker Results ----\n\n"
         
@@ -273,9 +266,6 @@ class Spickerer( object ):
             rstr += "\n"
             
         return rstr
-
-
-
     
 if __name__ == "__main__":
     
@@ -366,6 +356,6 @@ if __name__ == "__main__":
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    spicker = Spickerer(spicker_exe=spicker_exe,max_cluster_size=0)
-    spicker.cluster(models,num_clusters=10)
+    spicker = Spickerer(spicker_exe=spicker_exe)
+    spicker.cluster(models,num_clusters=10,max_cluster_size=0)
     print spicker.results_summary()
