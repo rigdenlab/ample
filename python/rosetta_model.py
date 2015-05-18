@@ -305,8 +305,7 @@ class RosettaModel(object):
             cmd += [ '-nopsipred', '-psipredfile', self.psipred_ss2 ]
 
         # Be 'chatty'
-        if self.debug:
-            cmd.append('-verbose')
+        cmd.append('-verbose')
 
         return cmd
 
@@ -315,8 +314,8 @@ class RosettaModel(object):
         Run the script to generate the fragments
         """
         self.logger.info('----- making fragments--------')
-        if not os.path.exists( self.fragments_directory):
-            os.mkdir( self.fragments_directory )
+        if not os.path.exists(self.fragments_directory):
+            os.mkdir(self.fragments_directory )
 
         # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
         # so we need to copy the fasta file into the fragments directory
@@ -330,7 +329,7 @@ class RosettaModel(object):
         os.chmod(script, 0o777)
         
         success = self.run_scripts([script], job_time=21600, monitor=None, chdir=True)
-        logfile="{0}.log".format(os.path.splitext(os.path.basename(script))[0])
+        logfile="{0}.log".format(os.path.splitext(script)[0])
         if not success:
                 logfile="{0}.log".format(os.path.splitext(os.path.basename(script))[0])
                 msg = "Error generating fragments!\nPlease check the logfile {0}".format(logfile)
