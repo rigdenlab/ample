@@ -278,9 +278,9 @@ class Ensembler(object):
             self.logger.info('* Running SPICKER to cluster models *')
             spicker_rundir = os.path.join( self.work_dir, 'spicker')
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
-            spickerer.max_cluster_size=max_cluster_size
             spickerer.cluster(models,
                               num_clusters=num_clusters,
+                              max_cluster_size=max_cluster_size,
                               run_dir=spicker_rundir)
             self.logger.debug(spickerer.results_summary())
             
