@@ -37,6 +37,7 @@ class AmpleOptions(object):
                             'frags_3mers' : None,
                             'frags_9mers' : None,
                             'FREE' : None,
+                            'ideal_helices' : False,
                             'import_models' : False,
                             'import_ensembles' : False,
                             'improve_template' : None,

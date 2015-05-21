@@ -63,6 +63,16 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
+def ideal_helices():
+    ""
+    thisd =  os.path.abspath(os.path.dirname(__file__))
+    paths = thisd.split(os.sep)
+    ample_dir = os.sep.join(paths[:-1])
+    include_dir = os.path.join(ample_dir,'include')
+    names = [ 'polyala5.pdb', 'polyala10.pdb', 'polyala15.pdb', 'polyala20.pdb', 'polyala25.pdb',
+              'polyala30.pdb', 'polyala35.pdb', 'polyala40.pdb' ]
+    return [ os.path.join(include_dir,h) for h in names ]
+
 def extract_models(filename,directory=None,sequence=None):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
     

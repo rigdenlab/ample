@@ -113,7 +113,10 @@ def process_command_line():
     
     parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
                        help='Flag for FREE column in the MTZ file')
-    
+
+    parser.add_argument('-ideal_helices', metavar='True/False', type=str, nargs=1,
+                       help='Use ideal polyalanine helices to solve structure (8 helices: from 5-40 residues)')
+
     parser.add_argument('-improve_template', metavar='improve_template', type=str, nargs=1,
                        help='Path to a template to improve - NMR, homolog' )
     
@@ -467,6 +470,9 @@ def process_options(amoptd,logger):
         logger.info("Found directory with ensemble files: {0}\n".format( amoptd['ensembles_dir'] ) )
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
+    elif amoptd['ideal_helices']:
+        amoptd['make_frags'] = False
+        amoptd['make_models'] = False
     elif amoptd['models']:
         amoptd['models_dir']=ample_util.extract_models(amoptd['models'],amoptd['models_dir'])
         amoptd['import_models'] = True
@@ -805,17 +811,17 @@ def main():
         if amopt.d['use_scwrl']:
             msg = "Processing sidechains of imported models from {0} with Scwl\n".format(amopt.d['models_dir'])
             models_dir_scwrl = os.path.join(amopt.d['work_dir'],os.path.basename(amopt.d['models_dir'])+"_scwrl")
-            if os.path.isdir( models_dir_scwrl ):
+            if os.path.isdir(models_dir_scwrl):
                 msg = "Scwrl models directory {0} already exists-please move it aside".format(models_dir_scwrl)
                 ample_exit.exit(msg)
             os.mkdir( models_dir_scwrl )
-            msg += "Scwrl-processed models will be placed in directory: {0}".format( models_dir_scwrl )
+            msg += "Scwrl-processed models will be placed in directory: {0}".format( models_dir_scwrl)
             msg += "Running Scwrl..."
-            logger.info( msg )
-            scwrl = add_sidechains_SCWRL.Scwrl( scwrlExe=amopt.d['scwrl_exe'] )
-            scwrl.processDirectory( inDirectory=amopt.d['models_dir'], outDirectory=models_dir_scwrl )
+            logger.info(msg)
+            scwrl = add_sidechains_SCWRL.Scwrl(scwrlExe=amopt.d['scwrl_exe'])
+            scwrl.processDirectory(inDirectory=amopt.d['models_dir'], outDirectory=models_dir_scwrl)
             amopt.d['models_dir'] = models_dir_scwrl
-            logger.info( "Finished processing models with Scwrl" )
+            logger.info("Finished processing models with Scwrl")
     
     # Do the clustering
     ensembles = [] # List of ensembles - 1 per cluster
@@ -824,7 +830,10 @@ def main():
         # Set list of ensembles to the one we are importing
         msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
         logger.info(msg)
-        ensembles =  glob.glob( os.path.join(amopt.d['ensembles_dir'], '*.pdb') )
+        ensembles =  glob.glob(os.path.join(amopt.d['ensembles_dir'], '*.pdb'))
+    elif amopt.d['ideal_helices']:
+        ensembles = ample_util.ideal_helices()
+        logger.info("*** Using ideal helices to solve structure ***")
     else:
         # Check we have some models to work with
         if not glob.glob(os.path.join(amopt.d['models_dir'],"*.pdb")):
