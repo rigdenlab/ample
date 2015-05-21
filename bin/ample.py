@@ -1,6 +1,12 @@
 #!/usr/bin/env ccp4-python
 """
 This is AMPLE
+
+This script is named ample.py due to a problem with running the multiprocessing (which is used to parallelise
+the running of jobs on a local machine - see python/workers.py) module under windows.
+The multiprocessing module on windows requires that it can import the main module, and the import machinery
+requires that any file being imported is named <foo>.py, and any changes to this would require hacking the 
+multiprocessing module, so to avoid this, our script must be called ample.py
 """
 import os
 import sys
