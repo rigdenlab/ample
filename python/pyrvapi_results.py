@@ -242,7 +242,7 @@ def results_tab(results_dict):
         # Buccaner Rebuild
         if os.path.isfile(str(r['SXRBUCC_logfile'])) or (os.path.isfile(str(r['SXRBUCC_pdbout'])) and os.path.isfile(str(r['SXRBUCC_mtzout']))):
             sec_sxrbucc="sec_sxrbucc_{0}".format(name)
-            pyrvapi.rvapi_add_section(sec_shelxe,"BUCCANEER SHELXE Trace Rebuild Outputs",container_id,0,0,1,1,False)
+            pyrvapi.rvapi_add_section(sec_sxrbucc,"BUCCANEER SHELXE Trace Rebuild Outputs",container_id,0,0,1,1,False)
             if os.path.isfile(str(r['SXRBUCC_pdbout'])) and os.path.isfile(str(r['SXRBUCC_mtzout'])):
                 data_sxrbucc="data_sxrbucc_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_sxrbucc,
@@ -263,7 +263,7 @@ def results_tab(results_dict):
         # Arpwarp Rebuild
         if os.path.isfile(str(r['SXRARP_logfile'])) or (os.path.isfile(str(r['SXRARP_pdbout'])) and os.path.isfile(str(r['SXRARP_mtzout']))):
             sec_sxrarp="sec_sxrarp_{0}".format(name)
-            pyrvapi.rvapi_add_section(sec_shelxe,"ARPWARP SHELXE Trace Redbuild Outputs",container_id,0,0,1,1,False)
+            pyrvapi.rvapi_add_section(sec_sxrarp,"ARPWARP SHELXE Trace Redbuild Outputs",container_id,0,0,1,1,False)
             if os.path.isfile(str(r['SXRARP_pdbout'])) and os.path.isfile(str(r['SXRARP_mtzout'])):
                 data_sxrarp="data_sxrarp_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_sxrarp,
