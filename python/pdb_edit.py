@@ -957,7 +957,6 @@ def get_info(inpath):
     
     return info
 
-
 def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None ):
     """
     
@@ -1116,7 +1115,6 @@ def num_atoms_and_residues(pdbin,first=False):
     #model = pdb_obj.hierarchy.models()[0]
     #return sum(  [ len( chain.residues() ) for chain in model.chains() ]  )
 
-
     if not first:
         cmd=[ 'rwcontents', 'xyzin', pdbin ]
         
@@ -1149,6 +1147,22 @@ def num_atoms_and_residues(pdbin,first=False):
     assert natoms > 0 and nresidues > 0
     
     return (natoms, nresidues)
+
+def _pdb_data_list(hierarchy):
+    """Extract the sequence of residues and resseqs from a pdb file."""
+    chain2data={}
+    for chain in set(hierarchy.models()[0].chains()): # only the first model
+        got=False
+        seq=""
+        resseq=[]
+        for residue in chain.conformers()[0].residues():
+            # See if any of the atoms are non-hetero - if so we add this residue
+            if any([not atom.hetero for atom in residue.atoms()]):
+                got=True
+                seq += three2one[residue.resname]
+                resseq.append(int(residue.resseq.strip()))
+        if got: chain2data[chain.id] = (seq,resseq)
+    return chain2data
 
 def reliable_sidechains(inpath=None, outpath=None ):
     """Only output non-backbone atoms for residues in the res_names list.
@@ -1234,7 +1248,15 @@ def rename_chains(inpdb=None, outpdb=None, fromChain=None, toChain=None ):
         
     return
 
-def select_residues(inpath=None, outpath=None, residues=None):
+def resseq(pdbin):
+    return _resseq(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
+
+def _resseq(hierarchy):
+    """Extract the sequence of residues from a pdb file."""
+    chain2data = _pdb_data_list(hierarchy)
+    return dict((k,chain2data[k][1]) for k in chain2data.keys())
+
+def Xselect_residues(inpath=None, outpath=None, residues=None):
     """Create a new pdb by selecting only the numbered residues from the list.
     This only keeps ATOM lines - everything else gets discarded.
     
@@ -1259,25 +1281,36 @@ def select_residues(inpath=None, outpath=None, residues=None):
                 if int( atom.resSeq ) in residues: #convert to ints to compare
                     count += 1
                     pdb_out.write(line)
-    
     return count
+
+def select_residues(pdbin,pdbout,delete=None):
+    hierarchy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+    if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
+        print "pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin)
+    
+    if len(hierarchy.models()) > 1:
+        for i, m in enumerate(hierarchy.models()):
+            if i != 0: hierarchy.remove_model(m)
+    model = hierarchy.models()[0]
+    
+    if len(model.chains()) > 1:
+        for i, c in enumerate(model.chains()):
+            if i != 0: model.remove_chain(c)
+    chain = model.chains()[0]
+    
+    for residue_group in chain.residue_groups():
+        if int(residue_group.resseq.strip()) in delete: chain.remove_residue_group(residue_group)
+        
+    hierarchy.write_pdb_file(pdbout,anisou=False)
+    return
 
 def sequence(pdbin):
     return _sequence(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
 
 def _sequence(hierarchy):
     """Extract the sequence of residues from a pdb file."""
-    chain2seq={}
-    for chain in set(hierarchy.models()[0].chains()): # only the first model
-        got=False
-        seq=""
-        for residue in chain.conformers()[0].residues():
-            # See if any of the atoms are non-hetero - if so we add this residue
-            if any([not atom.hetero for atom in residue.atoms()]):
-                got=True
-                seq += three2one[residue.resname]
-        if got: chain2seq[chain.id] = seq
-    return chain2seq
+    chain2data = _pdb_data_list(hierarchy)
+    return dict((k,chain2data[k][0]) for k in chain2data.keys())
 
 def _sequence1(hierarchy):
     """Return sequence of the first chain"""
@@ -1699,6 +1732,22 @@ class Test(unittest.TestCase):
         
         return
     
+    def testSelectResidues(self):
+        pdbin = os.path.join(self.testfiles_dir,"4DZN.pdb")
+        pdbout = "testSelectResidues1.pdb"
+        to_delete = [5,10,15,20]
+        
+        b4 = set(resseq(pdbin)['A'])
+        
+        select_residues(pdbin=pdbin, pdbout=pdbout, delete=to_delete)
+        
+        after = set(resseq(pdbout)['A'])
+        self.assertEqual(after,b4.difference(set(to_delete)))
+        
+        os.unlink(pdbout)
+        
+        return
+    
     def testSequence1(self):
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
         ref={ 'A' :'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
@@ -1793,15 +1842,6 @@ class Test(unittest.TestCase):
         os.unlink(pdbout)
         
         return
-
-def testSuite():
-    suite = unittest.TestSuite()
-    suite.addTest(Test('testGetInfo1'))
-    suite.addTest(Test('testGetInfo2'))
-    suite.addTest(Test('testStdResidues'))
-    suite.addTest(Test('testStdResiduesCctbx'))
-    suite.addTest(Test('testReliableSidechains'))
-    return suite
 
 if __name__ == "__main__":
     #unittest.TextTestRunner(verbosity=2).run(testSuite())
