@@ -31,7 +31,10 @@ def align_mafft(query_seq, template_seq, logger, mafft_exe=None):
         
     name = "{0}__{1}".format(query_seq.name,template_seq.name)
     mafft_input = "{0}_concat.fasta".format(name)
-    query_seq.cat(template_seq,mafft_input)
+    # Join two sequences
+    mafft_seq = copy.copy(query_seq)
+    mafft_seq += template_seq()
+    mafft_seq.write_fasta(mafft_input)
     cmd =  [mafft_exe, '--maxiterate', '1000', '--localpair', '--quiet', mafft_input]
     logfile = os.path.abspath('mafft.out')
     
@@ -1243,7 +1246,7 @@ class Test(unittest.TestCase):
         return
 
 
-    def testNoRosetta(self):
+    def XtestNoRosetta(self):
         """
         Test without Rosetta
         """
@@ -1307,43 +1310,9 @@ for i in range(10):
         shutil.rmtree(mdir)
         
         return
-
-    def XtestTransmembraneFragments(self):
-        """
-        Test for generating transmembrane fragments
-        """
-
-        optd = {}
-        optd['work_dir'] = os.getcwd()
-        optd['rosetta_dir'] = "/opt/rosetta3.4"
-        optd['rosetta_fragments_exe'] = None
-        optd['use_homs'] = None
-        optd['make_models'] = False
-        optd['make_frags'] =  True
-        optd['fasta'] = "/home/Shared/2UUI/2uui.fasta"
-        optd['name'] = "2uui_"
-        optd['transmembrane'] = True
-        optd['blast_dir'] = "/opt/blast-2.2.26"
-        optd['nr'] = "/opt/nr/nr"
-
-        fragdir=os.getcwd()+os.sep+"fragments"
-        import shutil
-        shutil.copy2(optd['fasta'], fragdir)
-
-        rm = RosettaModel(optd=optd)
-        rm.fragments_directory = os.getcwd()+os.sep+"fragments"
-        rm.generate_tm_predict()
-        
-        return
-
-
-def testSuite():
-    suite = unittest.TestSuite()
-    suite.addTest(Test('testNoRosetta'))
-    return suite
     
 #
 # Run unit tests
 if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(testSuite())
+    unittest.main()
 

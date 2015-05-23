@@ -14,6 +14,9 @@ class Sequence(object):
         self.name='unknown'
         self.headers = [] # title lines
         self.sequences = [] # The fasta sequences (just AA) as a single string
+        self.pdbs = [] # pdb files that sequences were read from
+        self.fasta_files = [] # The fasta files the sequence were ready from
+        
         if fasta:
             self.from_fasta(fasta,canonicalise=canonicalise)
         elif pdb:
@@ -24,7 +27,7 @@ class Sequence(object):
         name=os.path.splitext(os.path.basename(fasta_file))[0]
         self.name=name
         with open(fasta_file, "r") as f:
-            self._parse_fasta(f,canonicalise)
+            self._parse_fasta(f,fasta_file=fasta_file,canonicalise=canonicalise)
         return
     
     def from_pdb(self,pdbin):
@@ -34,19 +37,25 @@ class Sequence(object):
         assert len(chain2seq),"Could not read sequence from pdb: {0}".format(pdbin)
         self.headers = []
         self.sequences = []
+        self.pdbs = []
+        self.fasta_files = []
         for chain in sorted(chain2seq.keys()):
             seq=chain2seq[chain]
             self.headers.append(">From pdb: {0} chain {1} length {2}".format(name,chain,len(seq)))
             self.sequences.append(seq)
+            self.pdbs.append(pdbin)
+            self.fasta_files.append(None) # Need to make sure pdb abd fasta arrays have same length
         return
 
-    def _parse_fasta(self, fasta, canonicalise=True):
+    def _parse_fasta(self, fasta, fasta_file=None, canonicalise=True):
         """Parse the fasta file int our data structures & check for consistency 
         Args:
         fasta -- list of strings or open filehandle to read from the fasta file
         """
         self.headers = []
-        self.sequences = []    
+        self.sequences = []
+        self.fasta_files = [] 
+        self.pdbs = [] 
         sequence = None
         first=True
         for line in fasta:
@@ -58,7 +67,11 @@ class Sequence(object):
             if not line: continue # skip blank lines
             if line.startswith(">"):
                 self.headers.append(line)
-                if sequence: self.sequences.append(sequence)
+                if sequence:
+                    self.sequences.append(sequence)
+                    if fasta_file:
+                        self.fasta_files.append(fasta_file)
+                        self.pdbs.append(None) # Need to make sure pdb abd fasta arrays have same length
                 sequence=""
                 continue
             sequence += line
@@ -112,9 +125,10 @@ class Sequence(object):
     def _fasta_str(self,headers,sequences):
         s=""
         for i, seq in enumerate(sequences):
-            s+=headers[i]+'\n'
+            s += headers[i]+'\n'
             for chunk in range(0, len(seq), self.MAXWIDTH):
-                s+=seq[chunk:chunk+self.MAXWIDTH]+"\n"
+                s += seq[chunk:chunk+self.MAXWIDTH]+"\n"
+            s += "\n"
         s+="\n" # Add last newline
         return s
 
@@ -157,8 +171,31 @@ class Sequence(object):
         with open(fasta_file,'w') as f:
             for s in self.fasta_str():
                 f.write(s)
+        return
+    
+    def __add__(self,other):
+        self.headers += other.headers
+        self.sequences += other.sequences
+        self.pdbs += other.pdbs
+        self.fasta_files += other.fasta_files
+        return self
     
 class Test(unittest.TestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        return
+
     def testOK(self):
         """Reformat a fasta"""
  
@@ -168,7 +205,7 @@ LAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKAESMRPEVASTFKVLRNVTVVLWSAYPVV
 GDGAAATSD"""
         
         fp = Sequence()
-        fp._parse_fasta( infasta.split( os.linesep ) )
+        fp._parse_fasta(infasta.split(os.linesep))
 
         outfasta=""">3HAP:A|PDBID|CHAIN|SEQUENCE
 QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVPAIAFTMYLSMLLGYGLTMVPFGGEQNPIYW
@@ -178,8 +215,9 @@ GDGAAATSD
 
 """
 
-        self.assertEqual( outfasta, "".join( fp.fasta_str() ) )
-        self.assertEqual( fp.length(), 249)
+        self.assertEqual(outfasta, "".join(fp.fasta_str()))
+        self.assertEqual(fp.length(), 249)
+        return
               
     def testFailChar(self):
         
@@ -189,7 +227,25 @@ LAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKAESMRPEVASTFKVLRNVTVVLWSAYPVV
 GDGAAATSD"""
 
         fp = Sequence()
-        self.assertRaises( RuntimeError, fp._parse_fasta, infasta.split( os.linesep ) )       
+        self.assertRaises( RuntimeError, fp._parse_fasta, infasta.split(os.linesep))    
+        return
+    
+    def testAdd(self):
+        s1 = Sequence(pdb=os.path.join(self.testfiles_dir,'1GU8.pdb'))
+        s2 = Sequence(fasta=os.path.join(self.testfiles_dir,'2uui.fasta'))
+        s1 += s2
+        
+        self.assertTrue(len(s1.sequences),2)
+        self.assertTrue(len(s1.headers),2)
+        self.assertTrue(len(s1.pdbs),2)
+        self.assertTrue(len(s1.fasta_files),2)
+        
+        # Test write for the hell of it
+        out_fasta = 'seq_add.fasta'
+        s1.write_fasta(out_fasta)
+        os.unlink(out_fasta)
+        
+        return
     
 #
 # Run unit tests
