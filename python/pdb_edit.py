@@ -1160,7 +1160,8 @@ def _pdb_data_list(hierarchy):
             if any([not atom.hetero for atom in residue.atoms()]):
                 got=True
                 seq += three2one[residue.resname]
-                resseq.append(int(residue.resseq.strip()))
+                #resseq.append(int(residue.resseq.strip()))
+                resseq.append(residue.resseq_as_int())
         if got: chain2data[chain.id] = (seq,resseq)
     return chain2data
 
@@ -1283,7 +1284,7 @@ def Xselect_residues(inpath=None, outpath=None, residues=None):
                     pdb_out.write(line)
     return count
 
-def select_residues(pdbin,pdbout,delete=None):
+def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, tokeep_idx=None):
     hierarchy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
         print "pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin)
@@ -1298,8 +1299,25 @@ def select_residues(pdbin,pdbout,delete=None):
             if i != 0: model.remove_chain(c)
     chain = model.chains()[0]
     
+    idx=-1
     for residue_group in chain.residue_groups():
-        if int(residue_group.resseq.strip()) in delete: chain.remove_residue_group(residue_group)
+        # We ignore hetatms when indexing as we are concerned with residue indexes
+        if delete_idx or tokeep_idx:
+            if any([atom.hetero for atom in residue_group.atoms()]): continue
+        idx += 1
+            
+        remove=False
+        if delete:
+            if residue_group.resseq_as_int() in delete: remove = True
+        elif delete_idx:
+            if idx in delete: remove = True
+        elif tokeep:
+            if residue_group.resseq_as_int() not in tokeep: remove = True
+        elif tokeep_idx:
+            if idx not in tokeep_idx: remove = True
+                
+        if remove:
+            chain.remove_residue_group(residue_group)
         
     hierarchy.write_pdb_file(pdbout,anisou=False)
     return
@@ -1317,7 +1335,7 @@ def _sequence1(hierarchy):
     d = _sequence(hierarchy)
     return d[sorted(d.keys())[0]] 
 
-def split(pdbin):
+def Xsplit(pdbin):
     """Split a pdb into separate models"""
     
     name=os.path.splitext(os.path.basename(pdbin))[0]
@@ -1384,7 +1402,7 @@ def split_pdb(pdbin, directory=None):
                 print >> f, "REMARK   %s" % pdbin
             f.write(new_hierarchy.as_pdb_string())
     
-        output_files.append( output_file )
+        output_files.append(output_file)
         
     return output_files
 
@@ -1743,6 +1761,21 @@ class Test(unittest.TestCase):
         
         after = set(resseq(pdbout)['A'])
         self.assertEqual(after,b4.difference(set(to_delete)))
+        
+        os.unlink(pdbout)
+        
+        return
+    
+    def testSelectResiduesKeepIdxs(self):
+        pdbin = os.path.join(self.testfiles_dir,"4DZN.pdb")
+        pdbout = "testSelectResidues2.pdb"
+        tokeep_idx = [0,5,10,15,20]
+        
+        b4 = [ r for i,r in enumerate(resseq(pdbin)['A']) if i in tokeep_idx ]
+        select_residues(pdbin=pdbin, pdbout=pdbout, tokeep_idx=tokeep_idx)
+        
+        after = resseq(pdbout)['A']
+        self.assertEqual(after,b4)
         
         os.unlink(pdbout)
         
