@@ -14,6 +14,7 @@ class Sequence(object):
         self.name='unknown'
         self.headers = [] # title lines
         self.sequences = [] # The fasta sequences (just AA) as a single string
+        self.resseqs = [] # The fasta sequences (just AA) as a single string
         self.pdbs = [] # pdb files that sequences were read from
         self.fasta_files = [] # The fasta files the sequence were ready from
         
@@ -33,16 +34,19 @@ class Sequence(object):
     def from_pdb(self,pdbin):
         name=os.path.splitext(os.path.basename(pdbin))[0]
         self.name=name
-        chain2seq = pdb_edit.sequence(pdbin)
-        assert len(chain2seq),"Could not read sequence from pdb: {0}".format(pdbin)
+        chain2data = pdb_edit.sequence_data(pdbin)
+        assert len(chain2data),"Could not read sequence from pdb: {0}".format(pdbin)
         self.headers = []
         self.sequences = []
         self.pdbs = []
+        self.resseqs = []
         self.fasta_files = []
-        for chain in sorted(chain2seq.keys()):
-            seq=chain2seq[chain]
+        for chain in sorted(chain2data.keys()):
+            seq=chain2data[chain][0]
+            resseq=chain2data[chain][1]
             self.headers.append(">From pdb: {0} chain {1} length {2}".format(name,chain,len(seq)))
             self.sequences.append(seq)
+            self.resseqs.append(resseq)
             self.pdbs.append(pdbin)
             self.fasta_files.append(None) # Need to make sure pdb abd fasta arrays have same length
         return
@@ -54,6 +58,7 @@ class Sequence(object):
         """
         self.headers = []
         self.sequences = []
+        self.resseqs = []
         self.fasta_files = [] 
         self.pdbs = [] 
         sequence = None
@@ -196,6 +201,33 @@ class Test(unittest.TestCase):
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
+    def testAdd(self):
+        s1 = Sequence(pdb=os.path.join(self.testfiles_dir,'1GU8.pdb'))
+        s2 = Sequence(fasta=os.path.join(self.testfiles_dir,'2uui.fasta'))
+        s1 += s2
+        
+        self.assertTrue(len(s1.sequences),2)
+        self.assertTrue(len(s1.headers),2)
+        self.assertTrue(len(s1.pdbs),2)
+        self.assertTrue(len(s1.fasta_files),2)
+        
+        # Test write for the hell of it
+        out_fasta = 'seq_add.fasta'
+        s1.write_fasta(out_fasta)
+        os.unlink(out_fasta)
+        return
+              
+    def testFailChar(self):
+        
+        infasta=""">3HAP:A|PDBID|CHAIN|SEQUENCE
+QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVXAIAFTMYLSMLLGYGLTMVPFGGEQNPIYWARYADWLFTTPLLLLDLALLVDADQGTI
+LAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKAESMRPEVASTFKVLRNVTVVLWSAYPVVWLIGSEGAGIVPLNIETLLFMVLDVSAKVGFGLILLRSRAIFGEAEAPEPSA
+GDGAAATSD"""
+
+        fp = Sequence()
+        self.assertRaises(RuntimeError, fp._parse_fasta, infasta.split(os.linesep))    
+        return
+    
     def testOK(self):
         """Reformat a fasta"""
  
@@ -213,40 +245,23 @@ ARYADWLFTTPLLLLDLALLVDADQGTILAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKA
 ESMRPEVASTFKVLRNVTVVLWSAYPVVWLIGSEGAGIVPLNIETLLFMVLDVSAKVGFGLILLRSRAIFGEAEAPEPSA
 GDGAAATSD
 
-"""
 
+"""
         self.assertEqual(outfasta, "".join(fp.fasta_str()))
         self.assertEqual(fp.length(), 249)
         return
-              
-    def testFailChar(self):
-        
-        infasta=""">3HAP:A|PDBID|CHAIN|SEQUENCE
-QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVXAIAFTMYLSMLLGYGLTMVPFGGEQNPIYWARYADWLFTTPLLLLDLALLVDADQGTI
-LAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKAESMRPEVASTFKVLRNVTVVLWSAYPVVWLIGSEGAGIVPLNIETLLFMVLDVSAKVGFGLILLRSRAIFGEAEAPEPSA
-GDGAAATSD"""
 
-        fp = Sequence()
-        self.assertRaises( RuntimeError, fp._parse_fasta, infasta.split(os.linesep))    
-        return
-    
-    def testAdd(self):
-        s1 = Sequence(pdb=os.path.join(self.testfiles_dir,'1GU8.pdb'))
-        s2 = Sequence(fasta=os.path.join(self.testfiles_dir,'2uui.fasta'))
-        s1 += s2
-        
+    def testResSeq(self):
+        pdbin = os.path.join(self.testfiles_dir,'1D7M.pdb')
+        s1 = Sequence(pdb=pdbin)
         self.assertTrue(len(s1.sequences),2)
         self.assertTrue(len(s1.headers),2)
         self.assertTrue(len(s1.pdbs),2)
-        self.assertTrue(len(s1.fasta_files),2)
-        
-        # Test write for the hell of it
-        out_fasta = 'seq_add.fasta'
-        s1.write_fasta(out_fasta)
-        os.unlink(out_fasta)
+        self.assertEqual(s1.pdbs[0],pdbin)
+        self.assertTrue(s1.resseqs[0][-1],343)
         
         return
-    
+
 #
 # Run unit tests
 if __name__ == "__main__":

@@ -1148,23 +1148,6 @@ def num_atoms_and_residues(pdbin,first=False):
     
     return (natoms, nresidues)
 
-def _pdb_data_list(hierarchy):
-    """Extract the sequence of residues and resseqs from a pdb file."""
-    chain2data={}
-    for chain in set(hierarchy.models()[0].chains()): # only the first model
-        got=False
-        seq=""
-        resseq=[]
-        for residue in chain.conformers()[0].residues():
-            # See if any of the atoms are non-hetero - if so we add this residue
-            if any([not atom.hetero for atom in residue.atoms()]):
-                got=True
-                seq += three2one[residue.resname]
-                #resseq.append(int(residue.resseq.strip()))
-                resseq.append(residue.resseq_as_int())
-        if got: chain2data[chain.id] = (seq,resseq)
-    return chain2data
-
 def reliable_sidechains(inpath=None, outpath=None ):
     """Only output non-backbone atoms for residues in the res_names list.
     """
@@ -1254,7 +1237,7 @@ def resseq(pdbin):
 
 def _resseq(hierarchy):
     """Extract the sequence of residues from a pdb file."""
-    chain2data = _pdb_data_list(hierarchy)
+    chain2data = _sequence_data(hierarchy)
     return dict((k,chain2data[k][1]) for k in chain2data.keys())
 
 def Xselect_residues(inpath=None, outpath=None, residues=None):
@@ -1327,13 +1310,33 @@ def sequence(pdbin):
 
 def _sequence(hierarchy):
     """Extract the sequence of residues from a pdb file."""
-    chain2data = _pdb_data_list(hierarchy)
+    chain2data = _sequence_data(hierarchy)
     return dict((k,chain2data[k][0]) for k in chain2data.keys())
 
 def _sequence1(hierarchy):
     """Return sequence of the first chain"""
     d = _sequence(hierarchy)
-    return d[sorted(d.keys())[0]] 
+    return d[sorted(d.keys())[0]]
+
+def sequence_data(pdbin):
+    return _sequence_data(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
+
+def _sequence_data(hierarchy):
+    """Extract the sequence of residues and resseqs from a pdb file."""
+    chain2data={}
+    for chain in set(hierarchy.models()[0].chains()): # only the first model
+        got=False
+        seq=""
+        resseq=[]
+        for residue in chain.conformers()[0].residues():
+            # See if any of the atoms are non-hetero - if so we add this residue
+            if any([not atom.hetero for atom in residue.atoms()]):
+                got=True
+                seq += three2one[residue.resname]
+                #resseq.append(int(residue.resseq.strip()))
+                resseq.append(residue.resseq_as_int())
+        if got: chain2data[chain.id] = (seq,resseq)
+    return chain2data
 
 def Xsplit(pdbin):
     """Split a pdb into separate models"""
