@@ -14,11 +14,13 @@ import sys
 import unittest
 
 # our imports
+import ample_sequence
 import ample_util
 import fast_protein_cluster
 import pdb_edit
 import spicker
 import subcluster
+import theseus
 
 POLYALA='polyAla'
 RELIABLE='reliable'
@@ -93,6 +95,10 @@ class Ensembler(object):
         
         return
     
+    def align_models(self, models, basename=None, work_dir=None):
+        run_theseus = theseus.Theseus(models, basename=basename, work_dir=work_dir, theseus_exe=self.theseus_exe, )
+        return run_theseus.superposed_models
+    
     def _calculate_residues_percent(self,var_by_res,percent_interval):
         """Calculate the list of residues to keep if we are keeping self.percent residues under
         each truncation bin. The threshold is just the threshold of the most variable residue"""
@@ -114,22 +120,26 @@ class Ensembler(object):
         #print "chunk_size, nchunks ",chunk_size,nchunks
          
         # Get list of residue indices sorted by variance - from most variable to least
-        var_by_res.sort(key=lambda x: x[1], reverse=True)
+        var_by_res.sort(key=lambda x: x[2], reverse=True)
          
         #print "var_by_res ",var_by_res
-        resSeq=[ x[0] for x in var_by_res ]
+        idxs_all = [ x[0] for x in var_by_res ]
+        resseq_all = [ x[1] for x in var_by_res ]
          
         # Get list of residues to keep under the different intevals
         truncation_levels=[]
         truncation_variances=[]
         truncation_residues=[]
+        truncation_residue_idxs=[]
         MIN_RESIDUES=2 # we need at least 3 residues for theseus to work
         for i in range(nchunks):
             if i==0:
-                residues=copy.copy(resSeq)
+                residues=copy.copy(resseq_all)
+                idxs=copy.copy(idxs_all)
                 percent=100
             else:
-                residues=resSeq[chunk_size*i:]
+                residues=resseq_all[chunk_size*i:]
+                idxs=idxs_all[chunk_size*i:]
                 percent=int(round(float(length-(chunk_size*i))/float(length)*100))
              
             if len(residues) > MIN_RESIDUES: 
@@ -137,15 +147,16 @@ class Ensembler(object):
                 idx=chunk_size*(i+1)-1
                 if idx > length-1: # Need to make sure we have a full final chunk
                     idx=length-1
-                thresh=var_by_res[idx][1]
+                thresh=var_by_res[idx][2]
                 truncation_variances.append(thresh)
                 truncation_levels.append(percent)
                 #print "GOT PERCENT,THRESH ",percent,thresh
                 #print "residues ",residues
                 residues.sort()
                 truncation_residues.append(residues)
+                truncation_residue_idxs.append(idxs)
                  
-        return truncation_levels, truncation_variances, truncation_residues
+        return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
     
     def _calculate_residues_percentX(self,var_by_res,percent_interval):
         """Calculate the list of residues to keep if we are keeping self.percent residues under
@@ -200,6 +211,7 @@ class Ensembler(object):
 
         # We run in reverse as that's how the original code worked
         truncation_residues=[]
+        truncation_residue_idxs=[]
         truncation_levels=[]
         lt=len(truncation_variances)
         for i, truncation_threshold in enumerate(truncation_variances):
@@ -208,14 +220,17 @@ class Ensembler(object):
             truncation_levels.append(truncation_level)
             
             # Get a list of the indexes of the residues to keep
-            to_keep=[resSeq for resSeq,variance in var_by_res if variance <= truncation_threshold]
-            truncation_residues.append( to_keep )
+            to_keep = [resSeq for idx, resSeq, variance in var_by_res if variance <= truncation_threshold]
+            to_keep_idxs = [idx for idx, resSeq, variance in var_by_res if variance <= truncation_threshold]
+            truncation_residues.append(to_keep)
+            truncation_residue_idxs.append(to_keep_idxs)
         
         # We went through in reverse so put things the right way around
         truncation_levels.reverse()
         truncation_variances.reverse()
         truncation_residues.reverse()
-        return truncation_levels, truncation_variances, truncation_residues
+        truncation_residue_idxs.reverse()
+        return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
         
     def calculate_variances(self,cluster_models):
         """Return a list of tuples: (resSeq,variance)"""
@@ -244,22 +259,26 @@ class Ensembler(object):
                 if i==0: continue
 
                 line=line.strip()
-
-                # Skip blank lines
-                if not line: continue
+                if not line: continue # Skip blank lines
 
                 #print line
                 tokens=line.split()
                 # Different versions of theseus may have a RES card first, so need to check
                 if tokens[0]=="RES":
+                    idxidx=1
                     idxResSeq=3
                     idxVariance=4
                 else:
+                    idxidx=0
                     idxResSeq=2
                     idxVariance=3
-                resSeq=int(tokens[idxResSeq])
-                variance=float(tokens[idxVariance])
-                variances.append((resSeq,variance))
+                idx = int(tokens[idxidx])
+                assert idx == i,"Index and atom lines don't match! {0} : {1}".format(idx,i) # paranoid check
+                # Theseus counts from 1, we count from 0
+                idx -= 1
+                resSeq = int(tokens[idxResSeq])
+                variance = float(tokens[idxVariance])
+                variances.append((idx,resSeq,variance))
                 
         return variances
     
@@ -276,7 +295,7 @@ class Ensembler(object):
         if cluster_method=="spicker":
             # Spicker Alternative for clustering
             self.logger.info('* Running SPICKER to cluster models *')
-            spicker_rundir = os.path.join( self.work_dir, 'spicker')
+            spicker_rundir = os.path.join(self.work_dir, 'spicker')
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
             spickerer.cluster(models,
                               num_clusters=num_clusters,
@@ -380,9 +399,9 @@ class Ensembler(object):
             ensemble_data=copy.copy(raw_ensemble_data)
             ensemble_data['side_chain_treatment']=sct
             ensemble_data['name']='c{0}_tl{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
-                                                            ensemble_data['truncation_level'],
-                                                            ensemble_data['subcluster_radius_threshold'],
-                                                            sct)
+                                                               ensemble_data['truncation_level'],
+                                                               ensemble_data['subcluster_radius_threshold'],
+                                                               sct)
             ensemble_data['ensemble_pdb']=fpath
             ensemble_data['ensemble_num_atoms']=natoms
             # check
@@ -463,6 +482,65 @@ class Ensembler(object):
         
         return self.ensembles
 
+    def generate_ensembles_homologues(self,
+                                      models,
+                                      percent_truncation=None,
+                                      truncation_method=None,
+                                      ensembles_directory=None,
+                                      work_dir=None,
+                                      nproc=None):
+        
+        # Work dir set each time
+        if not work_dir: raise RuntimeError,"Need to set work_dir!"
+        self.work_dir=work_dir
+        
+        if not percent_truncation:
+            percent_truncation=self.percent_truncation
+        if not truncation_method:
+            truncation_method=self.truncation_method
+        if not ensembles_directory:
+            self.ensembles_directory=os.path.join(work_dir,"ensembles")
+        else:
+            self.ensembles_directory=ensembles_directory
+        
+        if not len(models):
+            raise RuntimeError,"Cannot find any models for ensembling!" 
+        if not all([os.path.isfile(m) for m in models]):
+            raise RuntimeError,"Problem reading models given to Ensembler: {0}".format(models) 
+        
+        self.logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
+    
+        # Create final ensembles directory
+        if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
+        
+        self.ensembles = []
+        self.ensembles_data = []
+        for truncated_models, truncated_models_data in zip(*self.truncate_models(models,
+                                                                                 models_data={'cluster_num': 1},
+                                                                                 truncation_method=truncation_method,
+                                                                                 truncation_pruning=None,
+                                                                                 percent_truncation=percent_truncation,
+                                                                                 homologues=True
+                                                                                 )):
+            tlevel = truncated_models_data['truncation_level']
+            ensemble_dir = os.path.join(truncated_models_data['truncation_dir'],
+                                        "ensemble_{0}".format(tlevel))
+            os.mkdir(ensemble_dir)
+            os.chdir(ensemble_dir)
+             
+            # Need to create an alignment file for theseus
+            basename = "tlevel_{0}_align".format(tlevel)
+            pre_ensemble = self.align_models(truncated_models, basename=basename, work_dir=ensemble_dir)
+            pre_ensemble_data = copy.copy(truncated_models_data)
+            pre_ensemble_data['subcluster_radius_threshold'] = 0
+             
+            for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble, pre_ensemble_data, self.ensembles_directory)):
+                self.ensembles.append(ensemble)
+                self.ensembles_data.append(ensemble_data)
+        
+        return self.ensembles
+
+
     def generate_thresholds(self,var_by_res,percent_interval):
         """
         This is the original method developed by Jaclyn and used in all work until November 2014 (including the coiled-coil paper)
@@ -479,7 +557,7 @@ class Ensembler(object):
             return
 
         # List of variances ordered by residue index
-        var_list=[var for (_,var) in var_by_res]
+        var_list=[var for (_,_,var) in var_by_res]
 
         length = len(var_list)
         if length == 0:
@@ -629,6 +707,9 @@ class Ensembler(object):
                                       subcluster_exe=None,
                                       ensemble_max_models=None):
         
+        # Theseus only works with > 3 residues
+        if truncated_models_data['truncation_num_residues'] <= 2: return [],[]
+        
         radius_thresholds=self.subcluster_radius_thresholds
         ensembles=[]
         ensembles_data=[]
@@ -679,35 +760,14 @@ class Ensembler(object):
             if len(cluster_files) > ensemble_max_models:
                 self.logger.debug("{0} files in cluster so truncating list to first {1}".format(len(cluster_files), ensemble_max_models))
                 cluster_files = cluster_files[:ensemble_max_models]
-
-            # Write out the files for reference
-            file_list = "maxcluster_radius_{0}_files.list".format(radius)
-            with open(file_list, "w") as f:
-                for c in cluster_files: f.write(c+"\n")
-                f.write("\n")
-
-            # Run theseus to generate a file containing the aligned clusters
-            cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files
-            logfile=os.path.abspath(basename+"_theseus.log")
-            retcode = ample_util.run_command( cmd, logfile=logfile )
-            if retcode != 0:
-                msg="Error running theseus on ensemble {0}. Skipping radius: {1}".format(basename,radius)
+                
+            cluster_file = self.align_models(cluster_files)
+            if not cluster_file:
+                msg="Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename,
+                                                                                                               subcluster_dir)
                 self.logger.critical(msg)
-                msg="Theseus failed on ensemble {0} in directory: {1}\n See log: {2}".format(basename,
-                                                                                      subcluster_dir,
-                                                                                      logfile)
-                self.logger.debug(msg)
                 continue
-                #raise RuntimeError,msg
-
-            # jmht - the previous Align_rosetta_fine_clusters_with_theseus routine was running theseus twice and adding the averaged
-            # ensemble from the first run to the ensemble. This seems to improve the results for the TOXD test case - maybe something to
-            # look at?
-            #cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + cluster_files + [ basename+"run1_ave.pdb" ]
-            #retcode = ample_util.run_command( cmd, logfile=basename+"_theseus.log" )
-
-            # Rename the file with the aligned files and append the path to the ensembles
-            cluster_file = os.path.join(subcluster_dir, basename+'_sup.pdb')
+             
             ensemble = os.path.join(subcluster_dir, basename+'.pdb')
             shutil.move(cluster_file, ensemble)
 
@@ -864,28 +924,14 @@ class Ensembler(object):
         os.mkdir(subcluster_dir)
         os.chdir(subcluster_dir)
 
-        # Write out the files for reference
-        file_list = "subcluster_radius_{0}_files.list".format(radius)
-        with open(file_list, "w") as f:
-            for c in models: f.write(c+"\n")
-            f.write("\n")
-
         basename='c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)
-         
-        # Run theseus to generate a file containing the aligned clusters
-        cmd = [ self.theseus_exe, "-r", basename, "-a0" ] + models
-        logfile=os.path.abspath(basename+"_theseus.log")
-        retcode = ample_util.run_command( cmd, logfile=logfile )
-        if retcode != 0:
-            msg="Error running theseus on ensemble {0} in directory: {1}\n See log: {2}\nSkipping subcluster: {0}".format(basename,
-                                                                                                subcluster_dir,
-                                                                                                logfile,
-                                                                                                basename)
+        cluster_file = self.align_models(models)
+        if not cluster_file:
+            msg="Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename,
+                                                                                                subcluster_dir)
             self.logger.critical(msg)
             raise RuntimeError,msg
-
-        # Rename the file with the aligned files and append the path to the ensembles
-        cluster_file = os.path.join(subcluster_dir, basename+'_sup.pdb')
+        
         ensemble = os.path.join(subcluster_dir, basename+'.pdb')
         shutil.move(cluster_file, ensemble)
 
@@ -897,46 +943,60 @@ class Ensembler(object):
 
         # Get the centroid model name from the list of files given to theseus - we can't parse
         # the pdb file as theseus truncates the filename
-        subcluster_data['subcluster_centroid_model']=os.path.abspath(models[0])
+        subcluster_data['subcluster_centroid_model'] = os.path.abspath(models[0])
         return ensemble, subcluster_data
   
-    def truncate_models(self,models,models_data,truncation_method,percent_truncation,truncation_pruning='none'):
+    def truncate_models(self,
+                        models,
+                        models_data=None,
+                        truncation_method=None,
+                        percent_truncation=None,
+                        truncation_pruning='none',
+                        homologues=False
+                        ):
         
         assert len(models) > 1,"Cannot truncate as < 2 models!"
+        assert truncation_method and percent_truncation,"Missing arguments: {0} {1}".format(truncation_method,percent_truncation)
 
         # Create the directories we'll be working in
         truncate_dir =  os.path.join(self.work_dir, 'truncate_{0}'.format(models_data['cluster_num']))
         os.mkdir(truncate_dir)
         os.chdir(truncate_dir)
         
-        # Calculate variances between pdb
-        var_by_res=self.calculate_variances(models)
-
+        # Calculate variances between pdb - and align them if necessary
+        run_theseus = theseus.Theseus(models, 
+                                      work_dir=truncate_dir,
+                                      homologues=homologues,
+                                      theseus_exe=self.theseus_exe)
+        #if homologues: models = run_theseus.aligned_models
+        var_by_res = run_theseus.var_by_res()
+        
         # Calculate which residues to keep under the different methods
-        truncation_levels, truncation_variances, truncation_residues=None,None,None
+        truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs=None,None,None,None
         if truncation_method=='percent':
-            truncation_levels, truncation_variances, truncation_residues=self._calculate_residues_percent(var_by_res,percent_truncation)
+            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = self._calculate_residues_percent(var_by_res,percent_truncation)
         elif truncation_method=='thresh':
-            truncation_levels, truncation_variances, truncation_residues=self._calculate_residues_thresh(var_by_res,percent_truncation)
+            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = self._calculate_residues_thresh(var_by_res,percent_truncation)
         else:
             raise RuntimeError,"Unrecognised ensembling mode: {0}".format(truncation_method)
 
         truncated_models=[]
         truncated_models_data=[]
         pruned_residues=None
-        for tlevel,tvar,tresidues in zip(truncation_levels, truncation_variances, truncation_residues):
+        for tlevel,tvar,tresidues,tresidue_idxs in zip(truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs):
             # Prune singletone/doubletone etc. residues if required
-            self.logger.debug("truncation_pruning: {0}".format(truncation_pruning))
-            if truncation_pruning=='single':
-                tresidues,pruned_residues=self.prune_residues(tresidues, chunk_size=1, allowed_gap=2)
-                if pruned_residues: self.logger.debug("prune_residues removing: {0}".format(pruned_residues))
-            elif truncation_pruning=='none':
-                pass
-            else:
-                raise RuntimeError,"Unrecognised truncation_pruning: {0}".format(truncation_pruning)
+# This code is currently disabled as it relies on resseqs and we now use residue indexes to allow us to work with pdbs with different reseqs
+#             self.logger.debug("truncation_pruning: {0}".format(truncation_pruning))
+#             if truncation_pruning=='single':
+#                 tresidues,pruned_residues=self.prune_residues(tresidues, chunk_size=1, allowed_gap=2)
+#                 if pruned_residues: self.logger.debug("prune_residues removing: {0}".format(pruned_residues))
+#             elif truncation_pruning=='none':
+#                 pass
+#             else:
+#                 raise RuntimeError,"Unrecognised truncation_pruning: {0}".format(truncation_pruning)
             
             # Skip if there are no residues
-            if not tresidues:
+            if not tresidue_idxs:
                 self.logger.debug("Skipping truncation level {0} with variance {1} as no residues".format(tlevel,tvar))
                 continue
             
@@ -947,10 +1007,10 @@ class Ensembler(object):
             # list of models for this truncation level
             level_models = []
             for infile in models:
-                pdbname = os.path.basename( infile )
+                pdbname = os.path.basename(infile)
                 pdbout = os.path.join(trunc_dir, pdbname)
                 # Loop through PDB files and create new ones that only contain the residues left after truncation
-                pdb_edit.select_residues(inpath=infile, outpath=pdbout, residues=tresidues)
+                pdb_edit.select_residues(pdbin=infile, pdbout=pdbout, tokeep_idx=tresidue_idxs)
                 level_models.append(pdbout)
             
             # Add the model
@@ -1000,7 +1060,6 @@ class Test(unittest.TestCase):
         formatter = logging.Formatter('%(message)s')
         ch.setFormatter(formatter)
         root.addHandler(ch)
-
 
         return
 
@@ -1120,7 +1179,7 @@ class Test(unittest.TestCase):
         cluster_models=glob.glob(mdir+os.sep+"*.pdb")
         
         var_by_res=ensembler.calculate_variances(cluster_models)
-        truncation_levels, truncation_variances, truncation_residues=ensembler._calculate_residues_thresh(var_by_res,percent_interval)
+        truncation_levels, truncation_variances, truncation_residues,  truncation_residues_idxs = ensembler._calculate_residues_thresh(var_by_res,percent_interval)
         
         self.assertEqual(truncation_levels,
                          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
@@ -1181,7 +1240,7 @@ class Test(unittest.TestCase):
         mdir=os.path.join(self.testfiles_dir,"models")
         cluster_models=glob.glob(mdir+os.sep+"*.pdb")
         var_by_res=ensembler.calculate_variances(cluster_models)
-        truncation_levels, truncation_variances, truncation_residues=ensembler._calculate_residues_percent(var_by_res,percent_interval=5)
+        truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_percent(var_by_res,percent_interval=5)
 
 
         residues=[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
@@ -1502,17 +1561,32 @@ class Test(unittest.TestCase):
         self.assertEqual(len(models),36)
         self.assertTrue(abs(new_radius-0.005) < 0.0001)
         return
-
-def testSuite():
-    suite = unittest.TestSuite()
-    suite.addTest(Test('testThresholds'))
-    suite.addTest(Test('testResiduesThresh'))
-    suite.addTest(Test('testResiduesPercent'))
-    suite.addTest(Test('testClustering'))
-    suite.addTest(Test('testEnsemblingThresh'))
-    suite.addTest(Test('testEnsemblingPercent'))
-    return suite
     
+    def testHomologues(self):
+            
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        ensembler=Ensembler()
+        ensembler.theseus_exe=self.theseus_exe
+        
+        work_dir=os.path.join(self.tests_dir,"homologues_test")
+        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+        os.mkdir(work_dir)
+
+        pdb_list = [ '1D7M.pdb', '1GU8.pdb', '2UUI.pdb', '1K33.pdb' ,'1BYZ.pdb' ]
+        models = []
+        tokeep_idx = [ i for i in range(12) ]
+        for pdb in pdb_list:
+            pdbin = os.path.join(self.testfiles_dir,pdb)
+            name = os.path.splitext(pdb)[0]
+            pdbout = os.path.join(self.testfiles_dir,"{0}_cut.pdb".format(name))
+            pdb_edit.select_residues(pdbin, pdbout, tokeep_idx=tokeep_idx)
+            models.append(pdbout)
+        
+        ensembler.generate_ensembles_homologues(models, work_dir=work_dir)
+        
+        shutil.rmtree(work_dir)
+        return
+
 #
 # Run unit tests
 if __name__ == "__main__":
