@@ -107,24 +107,13 @@ class Sequence(object):
             self.sequences[i]=cs
         return
     
-    def cat(self,seq2,fasta_file):
-        """Concatentate two (single chain) sequences into a single fasta file"""
-        headers = [self.headers[0], seq2.headers[0]]
-        sequences = [self.sequences[0], seq2.sequences[0]]
-        s = self._fasta_str(headers,sequences)
-        with open(fasta_file,'w') as f:
-            for line in s: f.write(line)
-        return 
-    
-    def fasta_str(self):
+    def fasta_str(self,pdbname=False):
         if not len(self.sequences): raise RuntimeError,"No sequences have been read!"
         headers=[]
-        for i, seq in enumerate(self.sequences):
-            try:
-                h=self.headers[i]
-            except IndexError:
-                h=">Sequence: {0} Length: {1}".format(i,len(seq))
-            headers.append(h)
+        for i, header in enumerate(self.headers):
+            #if pdbname: header = os.path.basename(self.pdbs[i])
+            if pdbname: header = ">{0}".format(os.path.basename(self.pdbs[i]))
+            headers.append(header)
         return self._fasta_str(headers, self.sequences)
     
     def _fasta_str(self,headers,sequences):
@@ -134,7 +123,6 @@ class Sequence(object):
             for chunk in range(0, len(seq), self.MAXWIDTH):
                 s += seq[chunk:chunk+self.MAXWIDTH]+"\n"
             s += "\n"
-        s+="\n" # Add last newline
         return s
 
     def length(self,seq_no=0):
@@ -172,15 +160,16 @@ class Sequence(object):
                 pirout.write(line)
         return
 
-    def write_fasta(self,fasta_file):
+    def write_fasta(self,fasta_file,pdbname=False):
         with open(fasta_file,'w') as f:
-            for s in self.fasta_str():
+            for s in self.fasta_str(pdbname=pdbname):
                 f.write(s)
         return
     
     def __add__(self,other):
         self.headers += other.headers
         self.sequences += other.sequences
+        self.resseqs += other.resseqs
         self.pdbs += other.pdbs
         self.fasta_files += other.fasta_files
         return self
@@ -207,6 +196,7 @@ class Test(unittest.TestCase):
         s1 += s2
         
         self.assertTrue(len(s1.sequences),2)
+        self.assertTrue(len(s1.resseqs),2)
         self.assertTrue(len(s1.headers),2)
         self.assertTrue(len(s1.pdbs),2)
         self.assertTrue(len(s1.fasta_files),2)
@@ -245,7 +235,6 @@ ARYADWLFTTPLLLLDLALLVDADQGTILAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKA
 ESMRPEVASTFKVLRNVTVVLWSAYPVVWLIGSEGAGIVPLNIETLLFMVLDVSAKVGFGLILLRSRAIFGEAEAPEPSA
 GDGAAATSD
 
-
 """
         self.assertEqual(outfasta, "".join(fp.fasta_str()))
         self.assertEqual(fp.length(), 249)
@@ -259,7 +248,34 @@ GDGAAATSD
         self.assertTrue(len(s1.pdbs),2)
         self.assertEqual(s1.pdbs[0],pdbin)
         self.assertTrue(s1.resseqs[0][-1],343)
-        
+        return
+    
+    def testAlignFile(self):
+        pdbin1 = os.path.join(self.testfiles_dir,'1D7M.pdb')
+        pdbin2 = os.path.join(self.testfiles_dir,'1GU8.pdb')
+        pdbin3 = os.path.join(self.testfiles_dir,'2UUI.pdb')
+        s1 = Sequence(pdb=pdbin1)
+        s1 += Sequence(pdb=pdbin2)
+        s1 += Sequence(pdb=pdbin3)
+        ref = """1D7M.pdb
+EMANRLAGLENSLESEKVSREQLIKQKDQLNSLLASLESEGAEREKRLRELEAKLDETLKNLELEKLARMELEARLAKTE
+KDRAILELKLAEAIDEKSKLE
+
+1D7M.pdb
+EMANRLAGLENSLESEKVSREQLIKQKDQLNSLLASLESEGAEREKRLRELEAKLDETLKNLELEKLARMELEARLAKTE
+KDRAILELKLAEAIDEKSKLE
+
+1GU8.pdb
+VGLTTLFWLGAIGMLVGTLAFAWAGRDAGSGERRYYVTLVGISGIAAVAYVVMALGVGWVPVAERTVFAPRYIDWILTTP
+LIVYFLGLLAGLDSREFGIVITLNTVVMLAGFAGAMVPGIERYALFGMGAVAFLGLVYYLVGPMTESASQRSSGIKSLYV
+RLRNLTVILWAIYPFIWLLGPPGVALLTPTVDVALIVYLDLVTKVGFGFIALDAAATL
+
+2UUI.pdb
+MHHHHHHKDEVALLAAVTLLGVLLQAYFSLQVISARRAFRVSPPLTTGPPEFERVYRAQVNCSEYFPLFLATLWVAGIFF
+HEGAAALCGLVYLFARLRYFQGYARSAQLRLAPLYASARALWLLVALAALGLLAHFLPAALRAALLGRLRTLLPWA
+
+"""
+        self.assertEqual(s1.fasta_str(pdbname=True),ref)
         return
 
 #
