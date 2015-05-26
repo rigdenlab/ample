@@ -60,9 +60,6 @@ def process_command_line():
     parser.add_argument('-arpwarp_cycles', type=int, nargs=1,
                        help='The number of ArpWarp cycles to run')
     
-    parser.add_argument('-ASU', type=int, nargs=1,
-                       help='Manually specify the number of molecules in the asymmetric unit - sets the NMASu MRBUMP flag')
-    
     parser.add_argument('-blast_dir', type=str, nargs=1,
                        help='Directory where ncbi blast is installed (binaries in expected in bin subdirectory)')
     
@@ -155,6 +152,9 @@ def process_command_line():
     
     parser.add_argument('-native_pdb', metavar='native_pdb', type=str, nargs=1,
                        help='Path to the crystal structure PDB for benchmarking.')
+
+    parser.add_argument('-nmasu', type=int, nargs=1,
+                       help='Manually specify the number of molecules in the asymmetric unit - sets the NMASu MRBUMP flag')
     
     parser.add_argument('-nmodels', metavar='number of models', type=int, nargs=1,
                        help='number of models to make (default: 1000)')
@@ -825,6 +825,7 @@ def main():
     
     # Do the clustering
     ensembles = [] # List of ensembles - 1 per cluster
+    ensemble_options = {}
     if amopt.d['import_ensembles']:
         # Importing pre-made ensembles
         # Set list of ensembles to the one we are importing
@@ -832,7 +833,8 @@ def main():
         logger.info(msg)
         ensembles =  glob.glob(os.path.join(amopt.d['ensembles_dir'], '*.pdb'))
     elif amopt.d['ideal_helices']:
-        ensembles = ample_util.ideal_helices()
+        ensembles, ensemble_options, ensembles_data = ample_util.ideal_helices(amopt.d['fasta_length'])
+        amopt.d['ensembles_data'] = ensembles_data
         logger.info("*** Using ideal helices to solve structure ***")
     else:
         # Check we have some models to work with
@@ -901,7 +903,7 @@ def main():
     # Create job scripts
     logger.info("Generating MRBUMP runscripts")
     mrbump_jobtime=86400 # allow 24 hours for each mrbump job
-    job_scripts = mrbump_ensemble.generate_jobscripts(ensembles, amopt.d, job_time=mrbump_jobtime)
+    job_scripts = mrbump_ensemble.generate_jobscripts(ensembles, amopt.d, job_time=mrbump_jobtime, ensemble_options=ensemble_options)
     #print "EXITING ";sys.exit(1)
     
     # Create function for monitoring jobs - static function decorator?
