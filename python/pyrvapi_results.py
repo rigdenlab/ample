@@ -90,36 +90,38 @@ def summary_tab(results_dict):
     
     summary_tab="summary_tab"
     pyrvapi.rvapi_add_tab(summary_tab,"Summary",True) # Last arg is "open" - i.e. show or hide
-    ensemble_sec="ensembles"
-    pyrvapi.rvapi_add_section(ensemble_sec,"Ensembles",summary_tab,0,0,1,1,False)
     
-    # Get the ensembling data
-    clusters, cluster_method, truncation_method, percent_truncation = ensemble.collate_cluster_data(ensembles_data)
-    
-    rstr = ""
-    rstr += "Ensemble Results<br/>"
-    rstr += "----------------<br/><br/>"
-    rstr += "Cluster method: {0}<br/>".format(cluster_method)
-    rstr += "Truncation method: {0}<br/>".format(truncation_method)
-    rstr += "Percent truncation: {0}<br/>".format(percent_truncation)
-    rstr += "Number of clusters: {0}<br/><br/>".format(len(clusters.keys()))
-    rstr += "Generated {0} ensembles<br/><br/>".format(len(ensembles_data))
-    pyrvapi.rvapi_add_text(rstr,ensemble_sec,0,0,1,1 )
-    
-    ensemble_table="ensemble_table"
-    pyrvapi.rvapi_add_table1(ensemble_sec+"/"+ensemble_table,"Ensembling Results",1,0,1,1,True)
-    # for cluster_num in sorted(clusters.keys()):
-    #     rstr += "\n"
-    #     rstr += "Cluster {0}\n".format(cluster_num)
-    #     rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
-    #     rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
-    #     rstr += "\n"
-    #     tdata = cluster_table_data(clusters, cluster_num)
-    #     rstr += tableFormat.pprint_table(tdata)        
-    # 
-    cluster_num=1
-    tdata = ensemble.cluster_table_data(clusters, cluster_num)
-    fill_table(ensemble_table, tdata)
+    if 'cluster_method' in results_dict['ensembles_data']: # Hack to cope with ideal helices
+        ensemble_sec="ensembles"
+        pyrvapi.rvapi_add_section(ensemble_sec,"Ensembles",summary_tab,0,0,1,1,False)
+        
+        # Get the ensembling data
+        clusters, cluster_method, truncation_method, percent_truncation = ensemble.collate_cluster_data(ensembles_data)
+        
+        rstr = ""
+        rstr += "Ensemble Results<br/>"
+        rstr += "----------------<br/><br/>"
+        rstr += "Cluster method: {0}<br/>".format(cluster_method)
+        rstr += "Truncation method: {0}<br/>".format(truncation_method)
+        rstr += "Percent truncation: {0}<br/>".format(percent_truncation)
+        rstr += "Number of clusters: {0}<br/><br/>".format(len(clusters.keys()))
+        rstr += "Generated {0} ensembles<br/><br/>".format(len(ensembles_data))
+        pyrvapi.rvapi_add_text(rstr,ensemble_sec,0,0,1,1 )
+        
+        ensemble_table="ensemble_table"
+        pyrvapi.rvapi_add_table1(ensemble_sec+"/"+ensemble_table,"Ensembling Results",1,0,1,1,True)
+        # for cluster_num in sorted(clusters.keys()):
+        #     rstr += "\n"
+        #     rstr += "Cluster {0}\n".format(cluster_num)
+        #     rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
+        #     rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
+        #     rstr += "\n"
+        #     tdata = cluster_table_data(clusters, cluster_num)
+        #     rstr += tableFormat.pprint_table(tdata)        
+        # 
+        cluster_num=1
+        tdata = ensemble.cluster_table_data(clusters, cluster_num)
+        fill_table(ensemble_table, tdata)
     
     #
     # MRBUMP Results
