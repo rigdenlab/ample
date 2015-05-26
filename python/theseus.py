@@ -15,7 +15,7 @@ import unittest
 
 class Theseus(object):
     
-    def __init__(self, models, work_dir=None, theseus_exe=None, homologues=False):
+    def __init__(self, models, work_dir=None, theseus_exe=None, homologues=False, basename=None):
         
         self.theseus_exe = theseus_exe
         if not os.path.exists(self.theseus_exe) and os.access(self.theseus_exe, os.X_OK):
@@ -32,7 +32,7 @@ class Theseus(object):
         self.superposed_models = None
         self.aligned_models = None
         
-        self.align_models(models, work_dir=self.work_dir, homologues=self.homologues)
+        self.align_models(models, work_dir=self.work_dir, homologues=self.homologues, basename=basename)
         return
 
     def alignment_file(self, models, alignment_file=None):
@@ -42,7 +42,7 @@ class Theseus(object):
         all_seq.write_fasta(alignment_file,pdbname=True)
         return alignment_file
 
-    def align_models(self, models, work_dir=None, basename='theseus', homologues=False):
+    def align_models(self, models, work_dir=None, basename=None, homologues=False):
         if homologues:
             # Theseus expects all the models to be in the directory that it is run in as the string
             # given in the fasta header is used to construct the file names of the aligned pdb files
@@ -51,6 +51,8 @@ class Theseus(object):
             alignment_file = self.alignment_file(models)
             copy_models = [ os.path.join(self.work_dir,os.path.basename(m)) for m in models ]
             for orig, copy in zip(models, copy_models): shutil.copy(orig, copy)
+        
+        if not basename: basename = 'theseus'
 
         cmd = [ self.theseus_exe, '-a0', '-r', basename ]
         if homologues:
@@ -76,7 +78,7 @@ class Theseus(object):
         
         return self.superposed_models
 
-    def calculate_variances(self):
+    def var_by_res(self):
         """Return a list of tuples: (resSeq,variance)"""
         
         #--------------------------------
@@ -152,7 +154,7 @@ class Test(unittest.TestCase):
         work_dir = os.path.join(self.tests_dir,'theseus_align')
         homologues = False
         theseus = Theseus(models,work_dir=work_dir,homologues=homologues, theseus_exe=self.theseus_exe)
-        var_by_res = theseus.calculate_variances()
+        var_by_res = theseus.var_by_res()
         ref = [(0, 1, 58.093855), (1, 2, 49.037612), (2, 3, 49.9941), (3, 4, 41.759792), (4, 5, 37.227847), 
                (5, 6, 27.3795), (6, 7, 25.348492), (7, 8, 25.799824), (8, 9, 22.432552), (9, 10, 23.265923), 
                (10, 11, 23.050341), (11, 12, 20.235297), (12, 13, 18.29234), (13, 14, 16.800248), (14, 15, 16.07131), 
@@ -176,7 +178,6 @@ class Test(unittest.TestCase):
         work_dir = os.path.join(self.tests_dir,'theseus_align')
         os.mkdir(work_dir)
         pdb_list = [ '1D7M.pdb', '1GU8.pdb', '2UUI.pdb', '1K33.pdb' ,'1BYZ.pdb' ]
-        
         models = []
         tokeep_idx = [ i for i in range(12) ]
         for pdb in pdb_list:
@@ -188,7 +189,7 @@ class Test(unittest.TestCase):
 
         homologues = True
         theseus = Theseus(models,work_dir=work_dir,homologues=homologues, theseus_exe=self.theseus_exe)
-        var_by_res = theseus.calculate_variances()
+        var_by_res = theseus.var_by_res()
         ref = [(0, 243, 9.918397), (1, 244, 3.897504), (2, 245, 1.877927), (3, 246, 2.004033), (4, 247, 1.24683), 
                (5, 248, 0.753177), (6, 249, 0.005146), (7, 250, 0.02917), (8, 251, 0.04054), (9, 252, 0.027774), 
                (10, 253, 0.093861), (11, 254, 0.0)]
