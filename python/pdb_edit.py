@@ -1795,7 +1795,7 @@ class Test(unittest.TestCase):
     
     def XtestSplit(self):
         pdbin=os.path.join(self.testfiles_dir,"1GU8.pdb")
-        split(pdbin)
+        Xsplit(pdbin)
         #os.unlink(pdbout)
         return
 
@@ -1924,5 +1924,5 @@ if __name__ == "__main__":
     elif args.seq:
         print ample_sequence.Sequence(pdb=args.input_file).fasta_str()
     elif args.split:
-        print split(args.input_file)
+        print split_pdb(args.input_file)
         
