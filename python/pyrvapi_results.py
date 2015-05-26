@@ -91,7 +91,7 @@ def summary_tab(results_dict):
     summary_tab="summary_tab"
     pyrvapi.rvapi_add_tab(summary_tab,"Summary",True) # Last arg is "open" - i.e. show or hide
     
-    if 'cluster_method' in results_dict['ensembles_data']: # Hack to cope with ideal helices
+    if not results_dict['ideal_helices']: # Hack to cope with ideal helices
         ensemble_sec="ensembles"
         pyrvapi.rvapi_add_section(ensemble_sec,"Ensembles",summary_tab,0,0,1,1,False)
         
