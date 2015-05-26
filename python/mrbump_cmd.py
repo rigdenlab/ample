@@ -5,6 +5,7 @@ Created on 28 Feb 2013
 '''
 import os
 import sys
+
 def mrbump_cmd(adict,jobid,keyinFile):
     """Return the command to run mrbump
     Need to return the full path as on *!*windoze*!* the mrbump script isn't executable
@@ -21,12 +22,43 @@ def mrbump_cmd(adict,jobid,keyinFile):
                                                                                     adict['mr_sequence'],
                                                                                     jobid)
 
+def keyword_dict(amoptd, extra_options={}):
+    keywords = [
+                'arpwarp_cycles',
+                'buccaneer_cycles',
+                'debug',
+                'domain_all_chains_pdb',
+                'F',
+                'FREE',
+                'mr_keys',
+                'mrbump_programs',
+                'native_pdb',
+                'nmasu',
+                'phaser_kill',
+                'shelx_cycles',
+                'shelxe_exe',
+                'shelxe_rebuild_arpwarp',
+                'shelxe_rebuild_buccaneer',
+                'SIGF',
+                'use_arpwarp',
+                'use_buccaneer',
+                'use_shelxe',
+                ]
+    
+    # Pull out all mrbump options from the main ample dict
+    key_dict = dict( (k,v) for k,v in amoptd.iteritems() if k in keywords )
+    
+    # Change any options for this ensemble
+    for k,v in extra_options.iteritems(): key_dict[k] = v
+    
+    return key_dict
+
 def mrbump_keywords(adict=None, jobid=None, ensemble_pdb=None, fixed_iden=0.6):
     """
     Create MRBUMP keywords
     
     Args:
-    adict -- amopt dictionary
+    adict -- dictionary of options
     
     jmht - check fixed_iden - 0.6 if not specified
     """
@@ -79,8 +111,8 @@ def mrbump_keywords(adict=None, jobid=None, ensemble_pdb=None, fixed_iden=0.6):
         mrs+='SXREBUILD True\n'
         if adict['shelxe_rebuild_buccaneer']: mrs+='SXRBUCC True\n'
         if adict['shelxe_rebuild_buccaneer']: mrs+='SXRARPW True\n'
-    if adict['ASU'] > 0:
-        mrs+='NMASU  {0}\n'.format( adict['ASU'] )
+    if adict['nmasu'] > 0:
+        mrs+='NMASU  {0}\n'.format( adict['nmasu'] )
     if adict['domain_all_chains_pdb']:
         mrs+='FIXED_XYZIN {0} IDEN {1}\n'.format( adict['domain_all_chains_pdb'], fixed_iden )
     if adict['native_pdb']:
