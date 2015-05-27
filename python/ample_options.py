@@ -36,6 +36,7 @@ class AmpleOptions(object):
                             'frags_3mers' : None,
                             'frags_9mers' : None,
                             'FREE' : None,
+                            'homologs' : False,
                             'ideal_helices' : False,
                             'import_models' : False,
                             'import_ensembles' : False,

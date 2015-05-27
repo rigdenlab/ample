@@ -64,16 +64,26 @@ def create_ensembles(amoptd):
     os.chdir(work_dir)
         
     models=glob.glob(os.path.join(amoptd['models_dir'],"*.pdb"))
-    ensembles=ensembler.generate_ensembles(models,
-                                           cluster_method=amoptd['cluster_method'] ,
-                                           cluster_exe=cluster_exe,
-                                           num_clusters=amoptd['num_clusters'] ,
-                                           percent_truncation=amoptd['percent'],
-                                           truncation_method=amoptd['truncation_method'],
-                                           truncation_pruning=amoptd['truncation_pruning'],
-                                           ensembles_directory=ensembles_directory,
-                                           work_dir=work_dir,
-                                           nproc=amoptd['nproc'])
+    
+    if amoptd['homologs']:
+        ensembles=ensembler.generate_ensembles_homologs(models,
+                                                        percent_truncation=amoptd['percent'],
+                                                        truncation_method=amoptd['truncation_method'],
+                                                        ensembles_directory=ensembles_directory,
+                                                        alignment_file=amoptd['alignment_file'],
+                                                        work_dir=work_dir,
+                                                        nproc=amoptd['nproc'])
+    else:
+        ensembles=ensembler.generate_ensembles(models,
+                                               cluster_method=amoptd['cluster_method'] ,
+                                               cluster_exe=cluster_exe,
+                                               num_clusters=amoptd['num_clusters'] ,
+                                               percent_truncation=amoptd['percent'],
+                                               truncation_method=amoptd['truncation_method'],
+                                               truncation_pruning=amoptd['truncation_pruning'],
+                                               ensembles_directory=ensembles_directory,
+                                               work_dir=work_dir,
+                                               nproc=amoptd['nproc'])
     
     amoptd['ensembles'] = ensembles
     amoptd['ensembles_data'] = ensembler.ensembles_data

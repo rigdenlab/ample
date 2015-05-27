@@ -52,7 +52,7 @@ def process_command_line():
     parser = argparse.ArgumentParser( prog="AMPLE", description='Structure solution by abinitio modelling', prefix_chars="-")
     
     parser.add_argument('-alignment_file', type=str, nargs=1,
-                       help='Alignment between homolog and target fastas')
+                       help='Alignment file in fasta format. For homologues the first line of each sequence must be the pdb file name')
     
     parser.add_argument('-all_atom', metavar='True/False', type=str, nargs=1,
                        help="Do all-atom Rosetta modelling (adds \"-return_full_atom true\" to rosetta arguments")
@@ -110,7 +110,10 @@ def process_command_line():
     
     parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
                        help='Flag for FREE column in the MTZ file')
-
+    
+    parser.add_argument('-homologs', metavar='True/False', type=str, nargs=1,
+                       help='Generate ensembles from homologs models (requires -alignment_file)')
+    
     parser.add_argument('-ideal_helices', metavar='True/False', type=str, nargs=1,
                        help='Use ideal polyalanine helices to solve structure (8 helices: from 5-40 residues)')
 
@@ -284,7 +287,7 @@ def process_command_line():
                        help='Whether to remove isolated residues none|single')
     
     parser.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
-                       help='True =use nhomologs, False= dont use them ')
+                       help='Select ROSETTA fragments from homologous models')
     
     parser.add_argument('-use_arpwarp', metavar='True/False', type=str, nargs=1,
                        help='True to use arpwarp to rebuild.')
@@ -478,6 +481,23 @@ def process_options(amoptd,logger):
     elif amoptd['ideal_helices']:
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
+    elif amoptd['homologs']:
+        amoptd['make_frags'] = False
+        amoptd['make_models'] = False
+        if not os.path.isfile(str(amoptd['alignment_file'])):
+            msg = "Homologs option requires an aligment file to be supplied\n" + \
+            "Please supply an alignment file in fasta format with the -alignment_file flag"
+            ample_exit.exit(msg)
+        if not os.path.isdir(str(amoptd['models'])):
+            msg = "Homologs option requires a directory of pdb models to be supplied\n" + \
+            "Please supply the models with the -models flag"
+            ample_exit.exit(msg)
+        amoptd['import_models'] = True
+        amoptd['models_dir'] = ample_util.extract_models(amoptd['models'],
+                                                         directory = amoptd['models_dir'],
+                                                         sequence = None,
+                                                         single = False,
+                                                         allsame = False)
     elif amoptd['models']:
         amoptd['models_dir'] = ample_util.extract_models(amoptd['models'],amoptd['models_dir'])
         amoptd['import_models'] = True
@@ -701,7 +721,6 @@ def process_options(amoptd,logger):
         msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
         ample_exit.exit(msg)
     
-    
     if amoptd['purge']:
         logger.info('*** Purge mode specified - all intermediate files will be deleted ***')
     
@@ -727,7 +746,7 @@ def main():
     
     # Set up logging
     ample_log=os.path.join(amopt.d['work_dir'],'AMPLE.log')
-    amopt.d['ample_log']=ample_log
+    amopt.d['ample_log'] = ample_log
     logger = ample_util.setup_logging(ample_log)
     logger.info(ample_util.header)
     
@@ -879,9 +898,10 @@ def main():
             msg = "Could not load any ensembles after running create_ensembles!"
             ample_exit.exit(msg)
             
-        ensembles=amopt.d['ensembles']
-        ensemble_summary = ensemble.ensemble_summary(amopt.d['ensembles_data'])
-        logger.info(ensemble_summary)
+        ensembles = amopt.d['ensembles']
+        if not amopt.d['homologs']:
+            ensemble_summary = ensemble.ensemble_summary(amopt.d['ensembles_data'])
+            logger.info(ensemble_summary)
     
     # Update results
     pyrvapi_results.display_results(amopt.d)

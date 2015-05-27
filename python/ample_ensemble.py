@@ -66,7 +66,7 @@ def model_core_from_alignment(models,alignment_file,work_dir=None):
         name = os.path.basename(m)
         pdbout = ample_util.filename_append(m, astr='core', directory=work_dir)
         pdb_edit.select_residues(m, pdbout, tokeep_idx=core_dict[name])
-        core_models.append(m)
+        core_models.append(pdbout)
         
     return core_models
 
@@ -525,14 +525,14 @@ class Ensembler(object):
         
         return self.ensembles
 
-    def generate_ensembles_homologues(self,
-                                      models,
-                                      alignment_file = None,
-                                      percent_truncation = None,
-                                      truncation_method = None,
-                                      ensembles_directory = None,
-                                      work_dir = None,
-                                      nproc = None):
+    def generate_ensembles_homologs(self,
+                                    models,
+                                    alignment_file = None,
+                                    percent_truncation = None,
+                                    truncation_method = None,
+                                    ensembles_directory = None,
+                                    work_dir = None,
+                                    nproc = None):
         
         # Work dir set each time
         if not work_dir: raise RuntimeError,"Need to set work_dir!"
@@ -1612,41 +1612,70 @@ class Test(unittest.TestCase):
         self.assertTrue(abs(new_radius-0.005) < 0.0001)
         return
     
-    def testHomologues(self):
+    def testHomologs(self):
             
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
         ensembler.theseus_exe=self.theseus_exe
         
-        work_dir=os.path.join(self.tests_dir,"homologues_test")
+        work_dir=os.path.join(self.tests_dir,"homologs_test")
         if os.path.isdir(work_dir): shutil.rmtree(work_dir)
         os.mkdir(work_dir)
 
-        pdb_list = [ '1D7M.pdb', '1GU8.pdb', '2UUI.pdb', '1K33.pdb' ,'1BYZ.pdb' ]
-        models = []
-        tokeep_idx = [ i for i in range(12) ]
-        for pdb in pdb_list:
-            pdbin = os.path.join(self.testfiles_dir,pdb)
-            name = os.path.splitext(pdb)[0]
-            pdbout = os.path.join(self.testfiles_dir,"{0}_cut.pdb".format(name))
-            pdb_edit.select_residues(pdbin, pdbout, tokeep_idx=tokeep_idx)
-            models.append(pdbout)
+        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+        models = [ os.path.join(self.ample_dir,'examples','homologs',pdb) for pdb in pdb_list ]
+        alignment_file = os.path.join(self.ample_dir,'examples','homologs','testthree.afasta')
         
-        ensembler.generate_ensembles_homologues(models, work_dir=work_dir)
+        ensembles = ensembler.generate_ensembles_homologs(models, alignment_file=alignment_file, work_dir=work_dir)
+         
+        self.assertEqual(len(ensembles),57)
         
         shutil.rmtree(work_dir)
         return
     
-    def testReadHomologues(self):
+    def testCoreFromAlignment(self):
         
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
-        work_dir=os.path.join(self.tests_dir,"homologues_test")
+        work_dir=os.path.join(self.tests_dir,"homologs_core")
         if os.path.isdir(work_dir): shutil.rmtree(work_dir)
         os.mkdir(work_dir)
 
-        models = glob.glob(os.path.join("/opt/ample-dev1/examples/homologues","*.pdb"))
-        alignment_file = os.path.join("/opt/ample-dev1/examples/homologues","testthree.afasta")
-        model_core_from_alignment(models, alignment_file)
+        models = glob.glob(os.path.join("/opt/ample-dev1/examples/homologs","*.pdb"))
+        alignment_file = os.path.join("/opt/ample-dev1/examples/homologs","testthree.afasta")
+        core_models = model_core_from_alignment(models, alignment_file)
+        
+        got = {}
+        for m in core_models:
+            name = os.path.splitext(os.path.basename(m))[0]
+            resseqd = pdb_edit.resseq(m)
+            resseq = resseqd[resseqd.keys()[0]]
+            got[name] = resseq
+
+        ref = { '1ujb_core':
+               [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 
+                32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 
+                56, 57, 58, 59, 60, 61, 62, 63, 64, 67, 69, 70, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85, 
+                86, 87, 88, 89, 90, 92, 93, 94, 95, 96, 97, 98, 99, 101, 102, 103, 104, 105, 106, 107, 108, 109, 
+                110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 124, 126, 127, 128, 129, 130, 
+                131, 132, 133, 134, 135, 136, 137, 138, 139, 141, 142, 143, 144, 145, 146, 147, 149, 150, 151],
+               '3c7tA_core' :
+                [73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 
+                 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 
+                 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 172, 174, 176, 180, 181, 182, 
+                 183, 184, 185, 186, 187, 188, 189, 233, 234, 235, 236, 237, 238, 239, 241, 242, 243, 244, 245, 246, 247, 
+                 248, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 
+                 276, 277, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 
+                 309, 310, 311, 314, 315, 316],
+               '2a6pA_core' :
+                [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 
+                 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 
+                 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 122, 123, 124, 125, 126, 127, 
+                 128, 129, 130, 131, 132, 133, 134, 135, 136, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 
+                 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 167, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 
+                 179, 180, 181, 184, 185, 186, 187, 188, 189, 190, 191, 193, 194, 195] }
+        
+        self.assertEqual(got,ref)
+        shutil.rmtree(work_dir)
         return
 
 #
@@ -1663,5 +1692,5 @@ if __name__ == "__main__":
         ch.setFormatter(formatter)
         root.addHandler(ch)
 
-    unittest.TextTestRunner(verbosity=2).run(testSuite())
+    unittest.main(verbosity=2)
 
