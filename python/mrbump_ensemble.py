@@ -96,8 +96,7 @@ def write_jobscript(name, pdb, amoptd, directory=None, job_time=86400, extra_opt
         
     # First write mrbump keyword file
     keyword_file = os.path.join(directory,name+'.mrbump')
-    key_dict = mrbump_cmd.keyword_dict(amoptd,extra_options=extra_options)
-    keywords = mrbump_cmd.mrbump_keywords(key_dict, jobid=name, ensemble_pdb=pdb)
+    keywords = mrbump_cmd.mrbump_keywords(amoptd, jobid=name, ensemble_pdb=pdb, extra_options=extra_options)
     with open(keyword_file,'w') as f: f.write(keywords)
         
     # Next the script to run mrbump

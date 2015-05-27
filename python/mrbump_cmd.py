@@ -48,12 +48,16 @@ def keyword_dict(amoptd, extra_options={}):
     # Pull out all mrbump options from the main ample dict
     key_dict = dict( (k,v) for k,v in amoptd.iteritems() if k in keywords )
     
-    # Change any options for this ensemble
+    # Change any/add options for this ensemble
     for k,v in extra_options.iteritems(): key_dict[k] = v
     
     return key_dict
 
-def mrbump_keywords(adict=None, jobid=None, ensemble_pdb=None, fixed_iden=0.6):
+def mrbump_keywords(adict=None, jobid=None, ensemble_pdb=None, fixed_iden=0.6, extra_options={}):
+    key_dict = keyword_dict(adict,extra_options=extra_options)
+    return _mrbump_keywords(adict=key_dict, jobid=jobid, ensemble_pdb=ensemble_pdb, fixed_iden=fixed_iden)
+
+def _mrbump_keywords(adict=None, jobid=None, ensemble_pdb=None, fixed_iden=0.6):
     """
     Create MRBUMP keywords
     
@@ -67,7 +71,9 @@ def mrbump_keywords(adict=None, jobid=None, ensemble_pdb=None, fixed_iden=0.6):
     mrs='LABIN SIGF={0} F={1} FreeR_flag={2}\n'.format( adict['SIGF'], adict['F'], adict['FREE'] )
     mrs+='JOBID {0}_mrbump\n'.format( jobid )
     mrs+='MRPROGRAM {0}\n'.format( " ".join( adict['mrbump_programs'] ) )
-    mrs+='LOCALFILE {0} CHAIN ALL RMS 0.1\n'.format( ensemble_pdb )
+    mrs+='LOCALFILE {0} CHAIN ALL RMS 0.1'.format( ensemble_pdb )
+    if 'ncopies' in adict and adict['ncopies'] > 0: mrs += ' COPIES {0}'.format(adict['ncopies'])
+    mrs += '\n'
     #
     # Don't do any of the searches as we are providing a local file
     #

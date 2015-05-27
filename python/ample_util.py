@@ -63,32 +63,6 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
-def ideal_helices(nresidues):
-    ""
-    thisd =  os.path.abspath(os.path.dirname(__file__))
-    paths = thisd.split(os.sep)
-    ample_dir = os.sep.join(paths[:-1])
-    include_dir = os.path.join(ample_dir,'include')
-    names = [ 'polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25',
-              'polyala30', 'polyala35', 'polyala40' ]
-    polya_lengths = [5,10,15,20,25,30,35,40]
-    
-    ensemble_options = {}
-    ensembles_data = []
-    pdbs = []
-    for name, nres in zip(names, polya_lengths):
-        ncopies = nresidues / nres
-        if ncopies < 1: ncopies = 1
-        ensemble_options[ name ] = { 'nmasu' : ncopies }
-        pdb = os.path.join(include_dir,"{0}.pdb".format(name))
-        # Needed for pyrvapi results
-        ensembles_data.append( { 'name' : name,
-                                'ensemble_pdb' : pdb }
-                              )
-        pdbs.append(pdb)
-        
-    return pdbs, ensemble_options, ensembles_data
-
 def extract_models(filename, directory=None, sequence=None, single=True, allsame=True):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
     
@@ -334,8 +308,34 @@ def get_psipred_prediction(psipred):
         print  'Your protein is predicted to be all alpha, your chances of success are high'
     if  H == 0 and E == 0:
         print  'Your protein is has no predicted secondary structure, your chances of success are low'
+    
+    return
 
-########
+def ideal_helices(nresidues):
+    ""
+    thisd =  os.path.abspath(os.path.dirname(__file__))
+    paths = thisd.split(os.sep)
+    ample_dir = os.sep.join(paths[:-1])
+    include_dir = os.path.join(ample_dir,'include')
+    names = [ 'polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25',
+              'polyala30', 'polyala35', 'polyala40' ]
+    polya_lengths = [5,10,15,20,25,30,35,40]
+    
+    ensemble_options = {}
+    ensembles_data = []
+    pdbs = []
+    for name, nres in zip(names, polya_lengths):
+        ncopies = nresidues / nres
+        if ncopies < 1: ncopies = 1
+        ensemble_options[ name ] = { 'ncopies' : ncopies }
+        pdb = os.path.join(include_dir,"{0}.pdb".format(name))
+        # Needed for pyrvapi results
+        ensembles_data.append( { 'name' : name,
+                                'ensemble_pdb' : pdb } )
+        pdbs.append(pdb)
+        
+    return pdbs, ensemble_options, ensembles_data
+
 
 def is_exe(fpath):
     return os.path.exists(fpath) and os.access(fpath, os.X_OK)
