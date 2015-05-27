@@ -26,7 +26,7 @@ $CCP4/bin/ample.py \
 
 # Additional optional flags
 # Add below to run from pre-made models
-#-models_dir ../../tests/testfiles/models \
+#-models ../../tests/testfiles/models \
 
 # Add below for running in benchmark mode
 #-native_pdb  1DTX.pdb \
