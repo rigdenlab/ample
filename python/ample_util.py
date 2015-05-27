@@ -89,45 +89,41 @@ def ideal_helices(nresidues):
         
     return pdbs, ensemble_options, ensembles_data
 
-def extract_models(filename,directory=None,sequence=None):
+def extract_models(filename, directory=None, sequence=None, single=True, allsame=True):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
     
     # If it's already a directory, just check it's valid   
     if os.path.isdir(filename):
-        if not pdb_edit.check_pdb_directory(filename,sequence=sequence):
-            msg="Cannot extract pdb files from directory: {0}".format(filename)
-            ample_exit.exit(msg)
-        return filename
-
-    # Here we are extracting from a file
-    if not os.path.isfile(filename):
-        msg="Cannot find models file: {0}".format(filename)
-        ample_exit.exit(msg)
-        
-    # we need a directory to extract into
-    assert directory,"extractModels needs a directory path!"
-    if not os.path.isdir(directory):
-        os.mkdir(directory)
-    models_dir=directory
-    
-    # See what sort of file this is:
-    f,suffix=os.path.splitext(filename)
-    if suffix in ['.gz','.bz']:
-        f,s2=os.path.splitext(f)
-        if s2 == '.tar': suffix=s2+suffix
-    
-    tsuffixes=['.tar.gz','.tgz','.tar.bz','.tbz']
-    suffixes=tsuffixes + ['.zip']
-    if suffix not in suffixes:
-        msg="Do not know how to extract files from file: {0}\n Acceptable file types are: {1}".format(filename,suffixes)
-        ample_exit.exit(msg)
-    
-    if suffix in tsuffixes:
-        extract_tar(filename, directory)
+        models_dir = filename
     else:
-        extract_zip(filename, directory)
+        # Here we are extracting from a file
+        if not os.path.isfile(filename):
+            msg="Cannot find models file: {0}".format(filename)
+            ample_exit.exit(msg)
+            
+        # we need a directory to extract into
+        assert directory,"extractModels needs a directory path!"
+        if not os.path.isdir(directory):
+            os.mkdir(directory)
+        models_dir=directory
         
-    if not pdb_edit.check_pdb_directory(models_dir,sequence=sequence):
+        # See what sort of file this is:
+        f,suffix=os.path.splitext(filename)
+        if suffix in ['.gz','.bz']:
+            f,s2=os.path.splitext(f)
+            if s2 == '.tar': suffix=s2+suffix
+        
+        tsuffixes=['.tar.gz','.tgz','.tar.bz','.tbz']
+        suffixes=tsuffixes + ['.zip']
+        if suffix not in suffixes:
+            msg="Do not know how to extract files from file: {0}\n Acceptable file types are: {1}".format(filename,suffixes)
+            ample_exit.exit(msg)
+        if suffix in tsuffixes:
+            extract_tar(filename, directory)
+        else:
+            extract_zip(filename, directory)
+        
+    if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
         msg="Problem importing pdb files - please check the log for more information"
         ample_exit.exit(msg)
     return models_dir
