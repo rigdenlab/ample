@@ -27,6 +27,49 @@ RELIABLE='reliable'
 ALLATOM='allatom'
 SIDE_CHAIN_TREATMENTS=[POLYALA,RELIABLE,ALLATOM]
 
+def model_core_from_alignment(models,alignment_file,work_dir=None):
+    
+    if not work_dir: work_dir = os.path.join(os.getcwd(),'core_models')
+    if not os.path.isdir(work_dir): os.mkdir(work_dir)
+    
+    # Read in alignment to get
+    align_seq = ample_sequence.Sequence(fasta=alignment_file)
+    
+    # Check all alignments the same length
+    
+    # Get pdb names from alignment headers
+    seq_names = [ h[1:].strip() for h in align_seq.headers ]
+    
+    GAP = '-'
+    # Get array specifying which positions are core
+    core = [ all([ x != GAP for x in t ]) for t in zip(*align_seq.sequences) ]
+    
+    # For each sequence, get a list of which positions are core
+    core_positions = []
+    for seq in align_seq.sequences:
+        p = []
+        count = 0
+        for i, pos in enumerate(seq):
+            if pos != GAP:
+                if core[i]: p.append(count)
+                count += 1
+        core_positions.append(p)
+        
+    # Should check lengths of sequences match the length of the aa in the pdbs
+        
+    # Create dict mapping seq_names to core positions
+    core_dict = dict( (s,core_positions[i]) for i, s in enumerate(seq_names) )
+    
+    # Cut the models down to core
+    core_models = []
+    for m in models:
+        name = os.path.basename(m)
+        pdbout = ample_util.filename_append(m, astr='core', directory=work_dir)
+        pdb_edit.select_residues(m, pdbout, tokeep_idx=core_dict[name])
+        core_models.append(m)
+        
+    return core_models
+
 def split_sequence(length,percent_interval):
     """split a sequence of length into chunks each separated by percent_interval"""
     
@@ -484,11 +527,12 @@ class Ensembler(object):
 
     def generate_ensembles_homologues(self,
                                       models,
-                                      percent_truncation=None,
-                                      truncation_method=None,
-                                      ensembles_directory=None,
-                                      work_dir=None,
-                                      nproc=None):
+                                      alignment_file = None,
+                                      percent_truncation = None,
+                                      truncation_method = None,
+                                      ensembles_directory = None,
+                                      work_dir = None,
+                                      nproc = None):
         
         # Work dir set each time
         if not work_dir: raise RuntimeError,"Need to set work_dir!"
@@ -513,9 +557,15 @@ class Ensembler(object):
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
         
+        # If we've been given an alignment file, trim the models down to a core
+        if alignment_file:
+            core_models_dir = os.path.join(work_dir,'core_models')
+            core_models = model_core_from_alignment(models, alignment_file=alignment_file, work_dir=core_models_dir)
+        else: core_models = models
+        
         self.ensembles = []
         self.ensembles_data = []
-        for truncated_models, truncated_models_data in zip(*self.truncate_models(models,
+        for truncated_models, truncated_models_data in zip(*self.truncate_models(core_models,
                                                                                  models_data={'cluster_num': 1},
                                                                                  truncation_method=truncation_method,
                                                                                  truncation_pruning=None,
@@ -1585,6 +1635,18 @@ class Test(unittest.TestCase):
         ensembler.generate_ensembles_homologues(models, work_dir=work_dir)
         
         shutil.rmtree(work_dir)
+        return
+    
+    def testReadHomologues(self):
+        
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        work_dir=os.path.join(self.tests_dir,"homologues_test")
+        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+        os.mkdir(work_dir)
+
+        models = glob.glob(os.path.join("/opt/ample-dev1/examples/homologues","*.pdb"))
+        alignment_file = os.path.join("/opt/ample-dev1/examples/homologues","testthree.afasta")
+        model_core_from_alignment(models, alignment_file)
         return
 
 #
