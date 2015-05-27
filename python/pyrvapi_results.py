@@ -41,13 +41,15 @@ _tooltips={
            }
 
 def ensemble_pdb(mrbump_result,results_dict):
-    ed=None
-    for e in results_dict['ensembles_data']:
-        if e['name']==mrbump_result['ensemble_name']:
-            ed=e
-            break
-    assert ed,"Could not find ensemble!"
-    return ed['ensemble_pdb']
+    try:
+        ensemble_dict = None
+        for e in results_dict['ensembles_data']:
+            if e['name'] == mrbump_result['ensemble_name']:
+                ensemble_dict = e
+                break
+        return ensemble_dict['ensemble_pdb']
+    except:
+        return False
 
 def fix_path(path):
     """Ammend path so it's suitable for the webserver"""
@@ -91,7 +93,7 @@ def summary_tab(results_dict):
     summary_tab="summary_tab"
     pyrvapi.rvapi_add_tab(summary_tab,"Summary",True) # Last arg is "open" - i.e. show or hide
     
-    if not results_dict['ideal_helices']: # Hack to cope with ideal helices
+    if not (results_dict['ideal_helices'] or results_dict['import_ensembles']): # Hack to cope with ideal helices and importing ensembles
         ensemble_sec="ensembles"
         pyrvapi.rvapi_add_section(ensemble_sec,"Ensembles",summary_tab,0,0,1,1,False)
         
@@ -169,15 +171,16 @@ def results_tab(results_dict):
         
         # Ensemble
         epdb=ensemble_pdb(r,results_dict)
-        sec_ensemble="sec_ensemble_{0}".format(name)
-        pyrvapi.rvapi_add_section(sec_ensemble,"Ensemble Search Model",container_id,0,0,1,1,False )
-        data_ensemble="data_ensemble_{0}".format(name)
-        pyrvapi.rvapi_add_data(data_ensemble,
-                                "Ensemble PDB",
-                                fix_path(epdb),
-                                "XYZOUT",
-                                sec_ensemble,
-                                2,0,1,1,True)
+        if epdb:
+            sec_ensemble="sec_ensemble_{0}".format(name)
+            pyrvapi.rvapi_add_section(sec_ensemble,"Ensemble Search Model",container_id,0,0,1,1,False )
+            data_ensemble="data_ensemble_{0}".format(name)
+            pyrvapi.rvapi_add_data(data_ensemble,
+                                    "Ensemble PDB",
+                                    fix_path(epdb),
+                                    "XYZOUT",
+                                    sec_ensemble,
+                                    2,0,1,1,True)
         # PHASER
         if os.path.isfile(str(r['PHASER_logfile'])) or (os.path.isfile(str(r['PHASER_pdbout'])) and os.path.isfile(str(r['PHASER_mtzout']))):
             sec_phaser="sec_phaser_{0}".format(name)
