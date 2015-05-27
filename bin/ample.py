@@ -449,7 +449,12 @@ def process_options(amoptd,logger):
     # MTZ file processing
     #
     ###############################################################################
-    mtz_util.processReflectionFile(amoptd)
+    try:
+        mtz_util.processReflectionFile(amoptd)
+    except Exception,e:
+        ex_type, ex, tb = sys.exc_info()
+        msg="Error processing reflection file: {0}".format(e)
+        ample_exit.exit(msg,tb)
     logger.info( "Using MTZ file: {0}".format(amoptd['mtz']))
     
     ###############################################################################
@@ -474,7 +479,7 @@ def process_options(amoptd,logger):
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
     elif amoptd['models']:
-        amoptd['models_dir']=ample_util.extract_models(amoptd['models'],amoptd['models_dir'])
+        amoptd['models_dir'] = ample_util.extract_models(amoptd['models'],amoptd['models_dir'])
         amoptd['import_models'] = True
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
@@ -829,18 +834,21 @@ def main():
     if amopt.d['import_ensembles']:
         # Importing pre-made ensembles
         # Set list of ensembles to the one we are importing
-        msg = '\nImporting ensembles from directory:\n   ' + amopt.d['ensembles_dir'] + '\n\n'
+        msg = "Importing ensembles from directory: {0}".format(amopt.d['ensembles_dir'])
         logger.info(msg)
         ensembles =  glob.glob(os.path.join(amopt.d['ensembles_dir'], '*.pdb'))
+        amopt.d['ensembles'] = ensembles
+        amopt.d['ensembles_data'] = [ {'name' : os.path.splitext(os.path.basename(e))[0], 'ensemble_pdb' : e} for e in ensembles ]
     elif amopt.d['ideal_helices']:
         ensembles, ensemble_options, ensembles_data = ample_util.ideal_helices(amopt.d['fasta_length'])
         amopt.d['ensembles_data'] = ensembles_data
+        amopt.d['ensembles'] = ensembles
         logger.info("*** Using ideal helices to solve structure ***")
     else:
         # Check we have some models to work with
         if not glob.glob(os.path.join(amopt.d['models_dir'],"*.pdb")):
             ample_util.saveAmoptd(amopt.d)
-            msg="ERORR! Cannot find any pdb files in: {0}".format(amopt.d['models_dir'])
+            msg="ERROR! Cannot find any pdb files in: {0}".format(amopt.d['models_dir'])
             ample_exit.exit(msg)
         
         if amopt.d['submit_cluster']:
