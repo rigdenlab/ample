@@ -579,7 +579,7 @@ class Ensembler(object):
             os.chdir(ensemble_dir)
              
             # Need to create an alignment file for theseus
-            basename = "tlevel_{0}_align".format(tlevel)
+            basename = "e{0}".format(tlevel)
             pre_ensemble = self.align_models(truncated_models, basename=basename, work_dir=ensemble_dir)
             pre_ensemble_data = copy.copy(truncated_models_data)
             pre_ensemble_data['subcluster_radius_threshold'] = 0
@@ -589,7 +589,6 @@ class Ensembler(object):
                 self.ensembles_data.append(ensemble_data)
         
         return self.ensembles
-
 
     def generate_thresholds(self,var_by_res,percent_interval):
         """
