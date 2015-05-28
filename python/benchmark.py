@@ -52,7 +52,8 @@ def analyse(amoptd,newroot=None):
     os.chdir(fixpath(amoptd['benchmark_dir']))
 
     analysePdb(amoptd)
-    analyseModels(amoptd)
+    if not (amoptd['ideal_helices'] or amoptd['homologs']):
+        analyseModels(amoptd)
     
 #     _logger.info("Benchmark: generating naitive density map")
 #     # Generate map so that we can do origin searching
@@ -84,37 +85,38 @@ def analyse(amoptd,newroot=None):
         
         # Add in the data from the ensemble
         d.update(ensemble_results[d['ensemble_name']])
-        assert d['ensemble_name']==d['name'],d
+        assert d['ensemble_name'] == d['name'],d
         
         # General stuff
-        d['ample_version']=amoptd['ample_version']
+        d['ample_version'] = amoptd['ample_version']
         
         # Add in stuff we've cleaned from the pdb
-        d['native_pdb_code']=amoptd['native_pdb_code']
-        d['native_pdb_title']=amoptd['native_pdb_title']
-        d['native_pdb_resolution']=amoptd['native_pdb_resolution']
-        d['native_pdb_solvent_content']=amoptd['native_pdb_solvent_content']
-        d['native_pdb_space_group']=amoptd['native_pdb_space_group']
-        d['native_pdb_num_chains']=amoptd['native_pdb_num_chains']
-        d['native_pdb_num_atoms']=amoptd['native_pdb_num_atoms']
-        d['native_pdb_num_residues']=amoptd['native_pdb_num_residues']
+        d['native_pdb_code'] = amoptd['native_pdb_code']
+        d['native_pdb_title'] = amoptd['native_pdb_title']
+        d['native_pdb_resolution'] = amoptd['native_pdb_resolution']
+        d['native_pdb_solvent_content'] = amoptd['native_pdb_solvent_content']
+        d['native_pdb_space_group'] = amoptd['native_pdb_space_group']
+        d['native_pdb_num_chains'] = amoptd['native_pdb_num_chains']
+        d['native_pdb_num_atoms'] = amoptd['native_pdb_num_atoms']
+        d['native_pdb_num_residues'] = amoptd['native_pdb_num_residues']
  
         # Get the ensemble data and add to the MRBUMP data
-        d['ensemble_percent_model'] = int( ( float( d['truncation_num_residues'] ) / float( amoptd['fasta_length'] ) ) * 100 )
+        d['ensemble_percent_model'] = int((float(d['truncation_num_residues']) / float(amoptd['fasta_length'])) * 100)
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
         
         # Need to get the subcluster_centroid_model and then get the path to the original model
-        n=os.path.basename(d['subcluster_centroid_model'])
-        cm=None
-        for pdb in glob.glob(os.path.join(amoptd['models_dir'],"*.pdb")):
-            if os.path.basename(pdb)==n:
-                cm=pdb
-                break
-        if not cm:
-            raise RuntimeError,"Cannot find model for subcluster_centroid_model {0}".format(d['subcluster_centroid_model'])
-        #cm=d['cluster_centroid']
-        d['ensemble_native_TM'] = amoptd['maxComp'].tm(cm)
-        d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(cm)
+        if 'subcluster_centroid_model' in d:
+            n=os.path.basename(d['subcluster_centroid_model'])
+            cm=None
+            for pdb in glob.glob(os.path.join(amoptd['models_dir'],"*.pdb")):
+                if os.path.basename(pdb)==n:
+                    cm=pdb
+                    break
+            if not cm:
+                raise RuntimeError,"Cannot find model for subcluster_centroid_model {0}".format(d['subcluster_centroid_model'])
+            #cm=d['cluster_centroid']
+            d['ensemble_native_TM'] = amoptd['maxComp'].tm(cm)
+            d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(cm)
         analyseSolution(amoptd,d)
         data.append(d)
 
@@ -422,10 +424,10 @@ def analysePdb(amoptd):
     
     # Additional data
     amoptd['native_pdb_num_chains'] = len( nativePdbInfo.models[0].chains )
-    amoptd['native_pdb_info']=nativePdbInfo
-    amoptd['native_pdb_std']=nativePdbStd
-    amoptd['native_pdb_1chain']=nativeChain1
-    amoptd['native_pdb_origin_info']=originInfo
+    amoptd['native_pdb_info'] = nativePdbInfo
+    amoptd['native_pdb_std'] = nativePdbStd
+    amoptd['native_pdb_1chain'] = nativeChain1
+    amoptd['native_pdb_origin_info'] = originInfo
     
     return
 
