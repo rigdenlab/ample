@@ -1,5 +1,6 @@
 #!/usr/bin/env ccp4-python
 """Script to run all the AMPLE tests"""
+import glob
 import os
 import sys
 import unittest
@@ -9,72 +10,22 @@ import unittest
 # Add the python directory to the path
 #
 ###############################################################
-thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-paths = thisd.split( os.sep )
-ampleDir = os.sep.join( paths[ : -1 ] )
-sys.path.insert(0,os.path.join( ampleDir,'python'))
+thisd =  os.path.abspath(os.path.dirname(__file__))
+paths = thisd.split(os.sep)
+ample_dir = os.sep.join(paths[:-1])
+python_dir = os.path.join(ample_dir,'python')
+sys.path.insert(0,python_dir)
 
-###############################################################
-#
-# The testsuite to hold the series of tests that we will run
-#
-###############################################################
-testsuite = unittest.TestSuite()
+loader = unittest.defaultTestLoader
+# Don't use discover as we don't want to run all tests
+#tests = loader.discover(python_dir, pattern="*.py")
+skip = ['benchmark', 'clusterize', 'mrbump_results', 'rosetta_model']
+test_suite = unittest.TestSuite()
+# Get list of modules that are not in skip and add the test sets to the test suite
+for m in glob.glob(os.path.join(python_dir,"*.py")):
+    m = os.path.splitext(os.path.basename(m))[0]
+    if m not in skip:
+        m = __import__(m)
+        test_suite.addTests(loader.loadTestsFromModule(m))
 
-
-###############################################################
-#
-# Add all the tests
-#
-###############################################################
-import csymmatch
-testsuite.addTests(csymmatch.testSuite())
-
-import dssp
-testsuite.addTests(dssp.testSuite())
-
-import fasta_parser
-testsuite.addTests(fasta_parser.testSuite())
-
-import mtz_util
-testsuite.addTests(mtz_util.testSuite())
-
-import octopus_predict
-testsuite.addTests(octopus_predict.testSuite())
-
-import parse_arpwarp
-testsuite.addTests(parse_arpwarp.testSuite())
-
-import parse_buccaneer
-testsuite.addTests(parse_buccaneer.testSuite())
-
-import parse_phaser
-testsuite.addTests(parse_phaser.testSuite())
-
-import parse_refmac
-testsuite.addTests(parse_refmac.testSuite())
-
-import pdb_edit
-testsuite.addTests(pdb_edit.testSuite())
-
-import pdb_model
-testsuite.addTests(pdb_model.testSuite())
-
-import residue_map
-testsuite.addTests(residue_map.testSuite())
-
-import rio
-testsuite.addTests(rio.testSuite())
-
-import rosetta_model
-testsuite.addTests(rosetta_model.testSuite())
-
-import workers
-testsuite.addTests(workers.testSuite())
-
-###############################################################
-#
-# Now run 'em all
-#
-###############################################################
-unittest.TextTestRunner(verbosity=2).run(testsuite) 
+unittest.TextTestRunner(verbosity=2).run(test_suite) 

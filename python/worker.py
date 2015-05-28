@@ -12,8 +12,7 @@ import sys
 # our imports
 import ample_util
 
-
-def worker( inqueue, early_terminate=False, check_success=None ):
+def worker(inqueue, early_terminate=False, check_success=None, chdir=False):
     """
     Worker process to run MrBump jobs until no more left.
 
@@ -31,38 +30,43 @@ def worker( inqueue, early_terminate=False, check_success=None ):
     live in a separate module?
     """
 
-    if early_terminate:
-        assert callable( check_success )
+    if early_terminate: assert callable(check_success)
 
+    success=True
     while True:
         if inqueue.empty():
-            print "worker {0} got empty inqueue".format( multiprocessing.current_process().name )
-            break
+            print "worker {0} got empty inqueue".format(multiprocessing.current_process().name)
+            if success: sys.exit(0)
+            else: sys.exit(1)
 
         # Got a script so run
         job = inqueue.get()
 
         # Get name from script
-        print "Worker {0} running job {1}".format (multiprocessing.current_process().name, job )
-        jobname = os.path.splitext( os.path.basename( job ) )[0]
-
-        retcode = ample_util.run_command( [ job ], logfile=jobname + ".log", dolog=False )
+        print "Worker {0} running job {1}".format (multiprocessing.current_process().name, job)
+        directory, sname = os.path.split(job)
+        jobname = os.path.splitext(sname)[0]
+        
+        # Change directory to the script directory
+        if chdir: os.chdir(directory)
+        retcode = ample_util.run_command([job], logfile=jobname + ".log", dolog=False, check=True)
 
         # Can we use the retcode to check?
         # REM - is retcode object
         if retcode != 0:
-            print "WARNING! Worker {0} got retcode {1}".format( multiprocessing.current_process().name, retcode )
+            print "WARNING! Worker {0} got retcode {1}".format(multiprocessing.current_process().name, retcode)
+            success=False
 #         else:
 #             print "Worker {0} got successful retcode {1}".format( multiprocessing.current_process().name, retcode )
 
         # Now check the result if early terminate
         if early_terminate:
             if check_success( job ):
-                print "Worker {0} job succeeded".format( multiprocessing.current_process().name )
+                print "Worker {0} job succeeded".format(multiprocessing.current_process().name)
                 #return 0
                 sys.exit(0)
 
-    #print "worker {0} FAILED!".format(multiprocessing.current_process().name)
+    print "worker {0} FAILED!".format(multiprocessing.current_process().name)
     #return 1
     sys.exit(1)
 ##End worker

@@ -35,7 +35,6 @@ class ReforiginRmsd(object):
         cmd="reforigin xyzin {0} xyzref {1} xyzout {2} DMAX {3}".format( targetpdb, refpdb, outpdb, DMAX ).split()
         
         retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False)
-        
         if retcode != 0:
             raise RuntimeError, "Error running command: {0}".format( " ".join(cmd) )
         
@@ -48,6 +47,8 @@ class ReforiginRmsd(object):
         
         if not rms:
             raise RuntimeError, "Error extracting RMS from logfile: {0}".format( logfile )
+        else:
+            os.unlink(logfile)
         
         return rms
 
@@ -92,12 +93,11 @@ class ReforiginRmsd(object):
         cmd="pdbcur xyzin {0} xyzout {1}".format( placedPdb, placedChainPdb ).split()
         logfile = "{0}.log".format( placedChainPdb )
         retcode = ample_util.run_command( cmd=cmd, logfile=logfile, directory=self.workdir, dolog=False, stdin=stdin)
-        
         if retcode != 0:
             raise RuntimeError,"Error extracting chain from placed PDB {0} in directory {1}".format( placedPdb, self.workdir )
         
         # remove temporary files
-        #os.unlink(logfile)
+        os.unlink(logfile)
         return placedChainPdb
     
     def getRmsd( self, nativePdbInfo=None, placedPdbInfo=None, refModelPdbInfo=None, workdir=None, cAlphaOnly=True  ):
@@ -114,9 +114,6 @@ class ReforiginRmsd(object):
         self.cAlphaOnly = cAlphaOnly# Whether to only compare c-alpha atoms
         
         # Run a pass to find the # chains
-        pdbedit = pdb_edit.PDBEdit()
-        #refinedInfo = pdbedit.get_info( refinedPdb )
-        #nativeInfo = pdbedit.get_info( nativePdb )
         native_chains = nativePdbInfo.models[ 0 ].chains
         placed_chains = placedPdbInfo.models[ 0 ].chains
         
@@ -137,17 +134,12 @@ class ReforiginRmsd(object):
                 # Extract the chain from the pdb
                 astr = "chain{0}".format( nativeChainID )
                 nativeChainPdb = ample_util.filename_append( filename=nativePdbInfo.pdb, astr=astr, directory=self.workdir )
-                pdbedit.extract_chain( nativePdbInfo.pdb, nativeChainPdb, chainID=nativeChainID )
+                pdb_edit.extract_chain( nativePdbInfo.pdb, nativeChainPdb, chainID=nativeChainID )
                 
             # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
             # The second chain may be a different composition to the first, so we only generate a traceback if we fail
             # on the first chain. The model only has one chain, so the residueMap has to be the same for all the chains
             try:
-#                 resSeqMap = residue_map.residueSequenceMap( refPdb=nativeChainPdb,
-#                                                             refChainID=nativeChainID,
-#                                                             targetPdb=refModelPdbInfo.pdb,
-#                                                             targetChainID='A')
-                
                 resSeqMap = residue_map.residueSequenceMap()
                 resSeqMap.fromInfo( refInfo=nativePdbInfo,
                                     refChainID=nativeChainID,
@@ -169,7 +161,7 @@ class ReforiginRmsd(object):
                 
                 # Now create a PDB with the matching atoms from native that are in refined
                 nativePdbMatch = ample_util.filename_append( filename=nativeChainPdb, astr="matched", directory=self.workdir )
-                pdbedit.keep_matching( refpdb=placedChainPdb, targetpdb=nativeChainPdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
+                pdb_edit.keep_matching( refpdb=placedChainPdb, targetpdb=nativeChainPdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
                 
                 # Now get the rmsd
                 astr = "chain{0}_reforigin".format( nativeChainID )
@@ -183,6 +175,10 @@ class ReforiginRmsd(object):
                     rms = 99999
                  
                 rmsds[ rms ] = ( nativeChainID, placedChainID, reforiginOut )
+                
+                # Clean up
+                os.unlink(placedChainPdb)
+                os.unlink(nativePdbMatch)
                 
         # End loop over chains
         # Now pick the best...

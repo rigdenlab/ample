@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 
-
 """
-
-
-
 run_csymmatch
 # Gives pdb with oriented model
 create copy of csymmatch pdb with residue numbering matching native and rename chain to X
@@ -23,7 +19,6 @@ import ample_util
 import csymmatch
 import dssp
 import pdb_edit
-
 
 class RioData(object):
     def __init__(self):
@@ -233,14 +228,12 @@ class Rio(object):
         """Find the origin using the maximum number of contacts as metric"""
         
         self.workdir = workdir
-        pdbedit = pdb_edit.PDBEdit()
-
         if not resSeqMap.resSeqMatch():
             #print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
             mrPdbRes = ample_util.filename_append( filename=mrPdbInfo.pdb, astr="reseq", directory=self.workdir )
-            pdbedit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
+            pdb_edit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
             mrPdb = mrPdbRes
         else:
             mrPdb = mrPdbInfo.pdb
@@ -249,7 +242,7 @@ class Rio(object):
         ucChains = mrPdbInfo.models[0].chains
         toChains = [ c.lower() for c in ucChains ]
         placedAaPdb = ample_util.filename_append( filename=mrPdb, astr="ren", directory=self.workdir )
-        pdbedit.rename_chains( inpdb=mrPdb, outpdb=placedAaPdb, fromChain=ucChains, toChain=toChains )
+        pdb_edit.rename_chains( inpdb=mrPdb, outpdb=placedAaPdb, fromChain=ucChains, toChain=toChains )
 
         # The list of chains in the native that we will be checking contacts from
         fromChains = nativePdbInfo.models[0].chains
@@ -266,11 +259,11 @@ class Rio(object):
                 #ostr="origin{0}".format(i)
                 ostr="o{0}".format( origin ).replace(" ","" )
                 placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr=ostr, directory=self.workdir )
-                pdbedit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
+                pdb_edit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
             
             # Concatenate into one file
             joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
-            pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
+            pdb_edit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
             
             # Set up object to hold data
             data            = RioData()
@@ -478,7 +471,7 @@ class Rio(object):
         
         return
     
-    def parseNcontLog( self, contactData, logfile=None ):
+    def parseNcontLog( self, contactData, logfile=None, clean_up=True):
         """
         
         Lines are of format
@@ -587,14 +580,17 @@ class Rio(object):
             #    print "chainId1 {0} resSeq1 {1} chainId2 {2} resSeq2 {3}\n".format(  c['chainId1'], c['resSeq1'], c['chainId2'], c['resSeq2']  )
     
         contactData.contacts = contacts
+        
+        if clean_up:
+            os.unlink(logfile)
                     
         return
     
     def helixFromPdbs(self, origin, mrPdb, nativePdb, nativeChain, dsspLog, workdir=os.getcwd() ):
         """This is a wrapper to generate the info and resSeqMap objects needed by score Origin"""
         
-        mrPdbInfo = pdb_edit.PDBEdit().get_info(mrPdb)
-        nativePdbInfo = pdb_edit.PDBEdit().get_info(nativePdb)
+        mrPdbInfo = pdb_edit.get_info(mrPdb)
+        nativePdbInfo = pdb_edit.get_info(nativePdb)
         
         assert nativeChain in nativePdbInfo.models[0].chains
         
@@ -622,14 +618,12 @@ class Rio(object):
                      ):
         
         self.workdir = workdir
-        pdbedit = pdb_edit.PDBEdit()
-
         if not resSeqMap.resSeqMatch():
             #print "NUMBERING DOESN'T MATCH"
             #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
             mrPdbRes = ample_util.filename_append( filename=mrPdbInfo.pdb, astr="reseq", directory=self.workdir )
-            pdbedit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
+            pdb_edit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
             mrPdb = mrPdbRes
         else:
             mrPdb = mrPdbInfo.pdb
@@ -638,7 +632,7 @@ class Rio(object):
         ucChains = mrPdbInfo.models[0].chains
         toChains = [ c.lower() for c in ucChains ]
         mrAaPdb = ample_util.filename_append( filename=mrPdb, astr="ren", directory=self.workdir )
-        pdbedit.rename_chains( inpdb=mrPdb, outpdb=mrAaPdb, fromChain=ucChains, toChain=toChains )
+        pdb_edit.rename_chains( inpdb=mrPdb, outpdb=mrAaPdb, fromChain=ucChains, toChain=toChains )
 
         # The list of chains in the native that we will be checking contacts from
         fromChains = nativePdbInfo.models[0].chains
@@ -649,11 +643,11 @@ class Rio(object):
             #ostr="origin{0}".format(i)
             ostr="o{0}".format( origin ).replace(" ","" )
             mrOriginPdb = ample_util.filename_append( filename=mrAaPdb, astr=ostr, directory=self.workdir )
-            pdbedit.translate( inpdb=mrAaPdb, outpdb=mrOriginPdb, ftranslate=origin )
+            pdb_edit.translate( inpdb=mrAaPdb, outpdb=mrOriginPdb, ftranslate=origin )
         
         # Concatenate into one file
         joinedPdb = ample_util.filename_append( filename=mrOriginPdb, astr="joined", directory=self.workdir )
-        pdbedit.merge( pdb1=nativePdbInfo.pdb, pdb2=mrOriginPdb, pdbout=joinedPdb )
+        pdb_edit.merge( pdb1=nativePdbInfo.pdb, pdb2=mrOriginPdb, pdbout=joinedPdb )
             
         # Run ncont
         data = RioData()
@@ -669,6 +663,10 @@ class Rio(object):
         # Then score RIO
         self.calcRio( data )
         #data.numGood = data.inregister + data.ooregister
+        
+        # clean up
+        os.unlink(mrOriginPdb)
+        os.unlink(joinedPdb)
         
         return data
  
@@ -757,18 +755,23 @@ class Rio(object):
     
 class TestContacts( unittest.TestCase ):
     
-    def setUp(self):
-        
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
         thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         paths = thisd.split( os.sep )
-        self.ampleDir = os.sep.join( paths[ : -1 ] )
-        self.testfilesDir = os.sep.join( paths[ : -1 ] + [ 'tests', 'testfiles' ] )
-        
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
     def testParse1(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont1.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont1.log" )
         
         c = Rio()
         contactData = RioData()
@@ -784,7 +787,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse2(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont2.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont2.log" )
         
         c = Rio()
         contactData = RioData()
@@ -800,7 +803,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse3(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont3.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont3.log" )
         
         c = Rio()
         contactData = RioData()
@@ -816,7 +819,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse4(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont4.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont4.log" )
         
         c = Rio()
         contactData = RioData()
@@ -832,7 +835,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse5(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont5.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont5.log" )
         
         c = Rio()
         contactData = RioData()
@@ -848,7 +851,7 @@ class TestContacts( unittest.TestCase ):
 
     def testParse7(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont7.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont7.log" )
         
         c = Rio()
         contactData = RioData()
@@ -864,7 +867,7 @@ class TestContacts( unittest.TestCase ):
     
     def testParse8(self):
         
-        logfile = os.path.join( self.testfilesDir, "ncont8.log" )
+        logfile = os.path.join( self.testfiles_dir, "ncont8.log" )
         
         c = Rio()
         contactData = RioData()
@@ -881,8 +884,8 @@ class TestContacts( unittest.TestCase ):
 
     def testHelix5(self):
 
-        logfile = os.path.join( self.testfilesDir, "ncont5.log" )
-        dssplog = os.path.join( self.testfilesDir, "3RA3.dssp" )
+        logfile = os.path.join( self.testfiles_dir, "ncont5.log" )
+        dssplog = os.path.join( self.testfiles_dir, "3RA3.dssp" )
         
         c = Rio()
         contactData = RioData()

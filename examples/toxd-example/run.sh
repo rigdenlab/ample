@@ -4,17 +4,14 @@
 # Script to run toxd test case
 #
 
-# Change the below if the path to these external dependencies of AMPLE
-# cannot be found in your standard PATH
+# Set path to include where shelxe is located
 export PATH=\
-/opt/mrbump-trunk/bin:\
 /opt/shelx:\
 $PATH
 
 # Path to the rosetta directory
 rosetta_dir=/opt/rosetta-3.5
 
-#/opt/ample-dev1/bin/ample.py \
 $CCP4/bin/ample.py \
 -rosetta_dir $rosetta_dir \
 -fasta toxd_.fasta \
@@ -23,12 +20,17 @@ $CCP4/bin/ample.py \
 -frags_9mers aat000_09_05.200_v1_3 \
 -nmodels 30 \
 -percent 50 \
--quick_mode True \
 -use_shelxe True \
--nproc 6 \
--models_dir ./models \
+-nproc 5 \
 
-#-models_dir ./models \
+
+# Additional optional flags
+# Add below to run from pre-made models
+#-models ../../tests/testfiles/models \
+
+# Add below for running in benchmark mode
+#-native_pdb  1DTX.pdb \
+
+# Add below for running from pre-made ensembles
 #-ensembles_dir ./ROSETTA_MR_0/ensembles_1 \
-
 

@@ -14,6 +14,11 @@ import sys
 import tarfile
 import tempfile
 import urllib
+import zipfile
+
+# our imports
+import pdb_edit
+import ample_exit
 
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
@@ -52,24 +57,117 @@ Supplementary Materials for Theobald and Wuttke 2006b."""
 header ="""#########################################################################
 #########################################################################
 #########################################################################
-# CCP4: AMPLE -Ab Initio Modelling Molecular Replacement (Beta version) #
+# CCP4: AMPLE - Ab Initio Modelling Molecular Replacement               #
 #########################################################################
+
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
-def extractFile(tarArchive,fileName,directory=None):
-    """Extract a file from a tar.gz archive into the directory and return the name of the file"""
-    with tarfile.open(tarArchive,'r:*') as tf:
-        m = tf.getmembers()
-        if not len(m):
-            raise RuntimeError,'Empty archive: {0}'.format(tarArchive)
-        if len(m)==1 and m[0].name==fileName:
-            tf.extractall(path=directory)
-            return m[0].name
+def extract_models(filename, directory=None, sequence=None, single=True, allsame=True):
+    """Extract pdb files from a given tar/zip file or directory of pdbs"""
+    
+    # If it's already a directory, just check it's valid   
+    if os.path.isdir(filename):
+        models_dir = filename
+    else:
+        # Here we are extracting from a file
+        if not os.path.isfile(filename):
+            msg="Cannot find models file: {0}".format(filename)
+            ample_exit.exit(msg)
+            
+        # we need a directory to extract into
+        assert directory,"extractModels needs a directory path!"
+        if not os.path.isdir(directory):
+            os.mkdir(directory)
+        models_dir=directory
+        
+        # See what sort of file this is:
+        f,suffix=os.path.splitext(filename)
+        if suffix in ['.gz','.bz']:
+            f,s2=os.path.splitext(f)
+            if s2 == '.tar': suffix=s2+suffix
+        
+        tsuffixes=['.tar.gz','.tgz','.tar.bz','.tbz']
+        suffixes=tsuffixes + ['.zip']
+        if suffix not in suffixes:
+            msg="Do not know how to extract files from file: {0}\n Acceptable file types are: {1}".format(filename,suffixes)
+            ample_exit.exit(msg)
+        if suffix in tsuffixes:
+            extract_tar(filename, directory)
         else:
-            return False
+            extract_zip(filename, directory)
+        
+    if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
+        msg="Problem importing pdb files - please check the log for more information"
+        ample_exit.exit(msg)
+    return models_dir
 
-def find_exe( executable, dirs=None ):
+def _extract_quark(tarfile,member,filename,models_dir):
+    # This is only acceptable if it is the quark decoys
+    quark_name='alldecoy.pdb'
+    if not member.name==quark_name:
+        msg="Only found one member ({0}) in file: {1} and the name was not {2}\n".format(member.name,filename,quark_name)
+        msg+="If this file contains valid QUARK decoys, please email: ccp4@stfc.ac.uk"
+        ample_exit.exit(msg)
+    
+    # extract into current (work) directory
+    tarfile.extract(member)
+    
+    # Now extract the quark pdb files from the monolithic file
+    split_quark(member.name, models_dir)
+    return
+
+def extract_tar(filename,models_dir):
+    # Extracting tarfile
+    logger = logging.getLogger()
+    logger.info('Extracting models from tarfile: {0}'.format(filename) )
+    with tarfile.open(filename,'r:*') as tf:
+        memb = tf.getmembers()
+        if not len(memb):
+            msg='Empty archive: {0}'.format(filename)
+            ample_exit.exit(msg)
+        if len(memb) == 1:
+            # Assume anything with one member is quark decoys
+            logger.info('Checking if file contains quark decoys'.format(filename))
+            _extract_quark(tf,memb[0],filename,models_dir)
+        else:
+            got=False
+            for m in memb:
+                if os.path.splitext(m.name)[1] == '.pdb':
+                    # Hack to remove any paths
+                    m.name=os.path.basename(m.name)
+                    tf.extract(m,path=models_dir)
+                    got=True
+            if not got:
+                msg='Could not find any pdb files in archive: {0}'.format(filename)
+                ample_exit.exit(msg)
+    return
+
+def extract_zip(filename,models_dir,suffix='.pdb'):
+    # zip file extraction
+    logger = logging.getLogger()
+    logger.info('Extracting models from zipfile: {0}'.format(filename) )
+    if not zipfile.is_zipfile(filename):
+            msg='File is not a valid zip archive: {0}'.format(filename)
+            ample_exit.exit(msg)
+    zipf=zipfile.ZipFile(filename)
+    zif=zipf.infolist()
+    if not len(zif):
+        msg='Empty zip file: {0}'.format(filename)
+        ample_exit.exit(msg)
+    got=False
+    for f in zif:
+        if os.path.splitext(f.filename)[1] == suffix:
+            # Hack to rewrite name 
+            f.filename=os.path.basename(f.filename)
+            zipf.extract(f, path=models_dir)
+            got=True
+    if not got:
+        msg='Could not find any pdb files in zipfile: {0}'.format(filename)
+        ample_exit.exit(msg)
+    return
+
+def find_exe(executable, dirs=None):
     """Find the executable exename.
 
     Args:
@@ -77,8 +175,6 @@ def find_exe( executable, dirs=None ):
     dirs - additional directories to search for the location
     
     """
-    def is_exe(fpath):
-        return os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
     logger = logging.getLogger()
     logger.debug('Looking for executable: {0}'.format(executable) )
@@ -112,7 +208,7 @@ def find_exe( executable, dirs=None ):
     logger.debug('find_exe found executable: {0}'.format(exe_file) )
     return exe_file
 
-def filename_append( filename=None, astr=None,directory=None, separator="_",  ):
+def filename_append(filename=None, astr=None,directory=None, separator="_"):
     """Append astr to filename, before the suffix, and return the new filename."""
     dirname, fname = os.path.split( filename )
     name, suffix = os.path.splitext( fname )
@@ -121,24 +217,27 @@ def filename_append( filename=None, astr=None,directory=None, separator="_",  ):
         directory = dirname
     return os.path.join( directory, name )
 
-def find_maxcluster( amopt ):
+def find_maxcluster(amoptd):
     """Return path to maxcluster binary.
     If we can't find one in the path, we create a $HOME/.ample
     directory and downlod it to there
     """
 
-    if not amopt.d['maxcluster_exe']:
+    if amoptd['maxcluster_exe'] and is_exe(amoptd['maxcluster_exe']):
+        return amoptd['maxcluster_exe']
+
+    if not amoptd['maxcluster_exe']:
         if sys.platform.startswith("win"):
-            amopt.d['maxcluster_exe']='maxcluster.exe'
+            amoptd['maxcluster_exe']='maxcluster.exe'
         else:
-            amopt.d['maxcluster_exe']='maxcluster'
+            amoptd['maxcluster_exe']='maxcluster'
     
     try:
-        maxcluster_exe = find_exe(amopt.d['maxcluster_exe'], dirs=[ amopt.d['rcdir'] ] )
+        maxcluster_exe = find_exe(amoptd['maxcluster_exe'], dirs=[ amoptd['rcdir'] ] )
     except Exception:
         # Cannot find so we need to try and download it
         logger = logging.getLogger()
-        rcdir = amopt.d['rcdir']
+        rcdir = amoptd['rcdir']
         logger.info("Cannot find maxcluster binary in path so attempting to download it directory: {0}".format( rcdir )  )
         if not os.path.isdir( rcdir ):
             logger.info("No ample rcdir found so creating in: {0}".format( rcdir ) )
@@ -152,7 +251,8 @@ def find_maxcluster( amopt ):
             elif bit=='32bit':
                 url='http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster'
             else:
-                raise RuntimeError,"Unrecognised system type: {0} {1}".format(sys.platform,bit)
+                msg="Unrecognised system type: {0} {1}".format(sys.platform,bit)
+                ample_exit.exit(msg)
         elif sys.platform.startswith("darwin"):
             url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_i686_32bit.bin'
             #OSX PPC: http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_PPC_32bit.bin
@@ -160,14 +260,14 @@ def find_maxcluster( amopt ):
             url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster.exe'
             maxcluster_exe = os.path.join( rcdir, 'maxcluster.exe' )
         else:
-            raise RuntimeError,"Unrecognised system type: {0}".format( sys.platform )
-
+            msg="Unrecognised system type: {0}".format( sys.platform )
+            ample_exit.exit(msg)
         logger.info("Attempting to download maxcluster binary from: {0}".format( url ) )
         try:
             urllib.urlretrieve( url, maxcluster_exe )
         except Exception, e:
-            logger.critical("Error downloading maxcluster executable: {0}\n{1}".format( url, e ) )
-            raise
+            msg="Error downloading maxcluster executable: {0}\n{1}".format(url,e)
+            ample_exit.exit(msg)
 
         # make executable
         os.chmod(maxcluster_exe, 0o777)
@@ -208,10 +308,39 @@ def get_psipred_prediction(psipred):
         print  'Your protein is predicted to be all alpha, your chances of success are high'
     if  H == 0 and E == 0:
         print  'Your protein is has no predicted secondary structure, your chances of success are low'
+    
+    return
 
-########
+def ideal_helices(nresidues):
+    ""
+    thisd =  os.path.abspath(os.path.dirname(__file__))
+    paths = thisd.split(os.sep)
+    ample_dir = os.sep.join(paths[:-1])
+    include_dir = os.path.join(ample_dir,'include')
+    names = [ 'polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25',
+              'polyala30', 'polyala35', 'polyala40' ]
+    polya_lengths = [5,10,15,20,25,30,35,40]
+    
+    ensemble_options = {}
+    ensembles_data = []
+    pdbs = []
+    for name, nres in zip(names, polya_lengths):
+        ncopies = nresidues / nres
+        if ncopies < 1: ncopies = 1
+        ensemble_options[ name ] = { 'ncopies' : ncopies }
+        pdb = os.path.join(include_dir,"{0}.pdb".format(name))
+        # Needed for pyrvapi results
+        ensembles_data.append( { 'name' : name,
+                                'ensemble_pdb' : pdb } )
+        pdbs.append(pdb)
+        
+    return pdbs, ensemble_options, ensembles_data
 
-def make_workdir(work_dir, ccp4_jobid=None, rootname='ROSETTA_MR_'):
+
+def is_exe(fpath):
+    return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+
+def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     """
     Make a work directory rooted at work_dir and return its path
     """
@@ -233,7 +362,7 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='ROSETTA_MR_'):
     work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
     return work_dir
 
-def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
+def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False, env=None):
     """Execute a command and return the exit code.
 
     We take care of outputting stuff to the logs and opening/closing logfiles
@@ -247,17 +376,17 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     """
 
     assert type(cmd) is list
+    
+    if check:
+        if not is_exe(cmd[0]): raise RuntimeError,"run_command cannot find executable: {0}".format(cmd[0])
 
-    if not directory:
-        directory = os.getcwd()
+    if not directory:  directory = os.getcwd()
 
-    if dolog:
-        logging.debug("In directory {0}\nRunning command: {1}".format( directory, " ".join(cmd)  ) )
+    if dolog: logging.debug("In directory {0}\nRunning command: {1}".format(directory, " ".join(cmd)))
 
     if logfile:
-        if dolog:
-            logging.debug("Logfile is: {0}".format( logfile ) )
-        logf = open( logfile, "w" )
+        if dolog: logging.debug("Logfile is: {0}".format(logfile))
+        logf = open(logfile, "w")
     else:
         logf = tempfile.TemporaryFile()
         
@@ -269,20 +398,19 @@ def run_command( cmd, logfile=None, directory=None, dolog=True, stdin=None ):
     kwargs = {}
     if os.name == "nt":
         kwargs = { 'bufsize': 0, 'shell' : "False" }
-    p = subprocess.Popen( cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs )
+    p = subprocess.Popen(cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, env=env, **kwargs)
 
     if stdin != None:
         p.stdin.write( stdinstr )
         p.stdin.close()
-        if dolog:
-            logging.debug("stdin for cmd was: {0}".format( stdinstr ) )
+        if dolog: logging.debug("stdin for cmd was: {0}".format( stdinstr ) )
 
     p.wait()
     logf.close()
     
     return p.returncode
 
-def setup_logging():
+def setup_logging(logfile,debug_log="debug.log"):
     """
     Set up the various log files/console logging
     and return the logger
@@ -291,17 +419,11 @@ def setup_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    # create file handler and set level to debug
-    fl = logging.FileHandler("debug.log")
+    # create file handler for debug output
+    fl = logging.FileHandler(debug_log)
     fl.setLevel(logging.DEBUG)
-
-    # create formatter for fl
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    # add formatter to fl
     fl.setFormatter(formatter)
-
-    # add fl to logger
     logger.addHandler(fl)
 
     # Now create console logger for outputting stuff
@@ -311,19 +433,17 @@ def setup_logging():
         cl = logging.StreamHandler(stream=sys.stdout)
     except TypeError:
         cl = logging.StreamHandler(strm=sys.stdout)
-
     cl.setLevel(logging.INFO)
-
-    # create formatter for fl
-    # Always add a blank line after every print
-    formatter = logging.Formatter('%(message)s\n')
-
-    # add formatter to fl
+    formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
     cl.setFormatter(formatter)
-
-    # add fl to logger
     logger.addHandler(cl)
-
+    
+    # Finally create the main logger
+    fl = logging.FileHandler(logfile)
+    fl.setLevel(logging.INFO)
+    fl.setFormatter(formatter) # Same formatter as screen
+    logger.addHandler(fl)
+    
     return logger
 
 def saveAmoptd(amoptd):
@@ -333,7 +453,9 @@ def saveAmoptd(amoptd):
         logging.info("Saved results as file: {0}\n".format( amoptd['results_path'] ) )
     return
 
-def splitQuark(dfile,directory='quark_models'):
+def split_quark(dfile,directory):
+    logger = logging.getLogger()
+    logger.info("Extracting QUARK decoys from: {0} into {1}".format(dfile,directory))
     smodels=[]
     with open(dfile,'r') as f:
         m=[]
@@ -344,13 +466,7 @@ def splitQuark(dfile,directory='quark_models'):
                 m=[]
             else:
                 m.append(line)
-
-    if not len(smodels):
-        raise RuntimeError,"Could not extract any models from: {0}".format(dfile)
-
-    if not os.path.isdir(directory):
-        os.mkdir(directory)
-
+    if not len(smodels): raise RuntimeError,"Could not extract any models from: {0}".format(dfile)
     for i,m in enumerate(smodels):
         fpath=os.path.join(directory,"quark_{0}.pdb".format(i))
         with open(fpath,'w') as f:
@@ -359,8 +475,7 @@ def splitQuark(dfile,directory='quark_models'):
                 if l.startswith("ATOM"):
                     l=l[:54]+"  1.00  0.00              \n"
                 f.write(l)
-        logging.debug("Wrote: {0}".format(fpath))
-
+        logger.debug("Wrote: {0}".format(fpath))
     return
 
 def tmpFileName():
@@ -371,3 +486,4 @@ def tmpFileName():
     tmp1 = t.name
     t.close()
     return tmp1
+

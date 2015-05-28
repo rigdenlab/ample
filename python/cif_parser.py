@@ -96,7 +96,7 @@ class CifParser(object):
             if self.reflnStatus:
                 # cif2mtz will have added a useless FREE column so we remove it
                 self.logger.info( "sfcif2mtz: no valid RFREE data so removing FREE column added by mtz2cif")
-                mtzPath = mtz_util.delColumn( mtzPath, 'FREE')
+                mtzPath = mtz_util.del_column( mtzPath, 'FREE')
                 
 #             # If there are no RFREE
 #             self.logger.info( "sfcif2mtz: no RFree flags so running uniqueify")

@@ -9,7 +9,6 @@ import os
 import sys
 import subprocess
 import time
-import operator
 import shutil
 import stat
 
@@ -99,7 +98,9 @@ def comparative_model(homolog, fasta, MR_ROSETTA, ROSETTA_DB, ALI, a9mers, a3mer
     return
 
 ########################
-def doNMR( amopt, rosetta_modeller, logger ):
+
+
+def doNMR(amopt, rosetta_modeller, logger):
     """Do the NMR modelling step.
 
     Args:
@@ -107,132 +108,99 @@ def doNMR( amopt, rosetta_modeller, logger ):
     logger -- the root logger object
     """
 
-    amopt.d['make_models'] = False
-
     # Strip HETATM lines from PDB
     amopt.d['NMR_model_in'] = strip_hetatm( amopt.d['NMR_model_in'] )
     logger.info('using NMR model: {0}'.format(  amopt.d['NMR_model_in'] ) )
 
-    omodel_dir = os.path.join( amopt.d['work_dir'], 'orig_models' )
-    os.mkdir( omodel_dir )
+    if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
+    omodel_dir = os.path.join(amopt.d['work_dir'], 'orig_models')
+    os.mkdir(omodel_dir)
 
     # Split NMR PDB into separate models
     modno = split_models.split( amopt.d['NMR_model_in'], omodel_dir )
     logger.info('you have {0} models in your nmr'.format(modno) )
 
-    if amopt.d['NMR_Truncate_only'] and modno < 2:
-        logger.critical('Cannot truncate less than 2 models, use NMR_truncate_only False')
-        #amopt.d['NMR_Truncate_only'] = False
-        sys.exit(1)
-
-    #if not amopt.d['NMR_Truncate_only']: ?
     if not amopt.d['NMR_process']:
         amopt.d['NMR_process'] = 1000 / modno
     logger.info(' processing each model {0} times'.format(amopt.d['NMR_process']) )
 
-    if amopt.d['NMR_Truncate_only']:
-        amopt.d['models_dir'] = omodel_dir
-        logger.info('using models from: {0}'.format( amopt.d['models_dir'] ) )
+    if not amopt.d['submit_cluster']:
+
+        for hom in os.listdir( omodel_dir ):
+            pdbs =  re.split('\.', hom)
+            if pdbs[-1] == 'pdb':
+                RUN_FORMAT_HOMS( os.path.join( omodel_dir, hom),
+                                     int(amopt.d['NMR_process']),
+                                     amopt.d['NMR_remodel_fasta'] ,
+                                     rosetta_modeller,
+                                     amopt.d['frags_9mers'],
+                                     amopt.d['frags_3mers'],
+                                     int(amopt.d['nproc']),
+                                     hom,
+                                     amopt.d['alignment_file'],
+                                     amopt.d['models_dir'] )
     else:
-        if not amopt.d['submit_cluster']:
+        hom_index = 1
+        homindeces = []
+        for hom in os.listdir( omodel_dir ):
+            os.mkdir(amopt.d['work_dir'] + '/Run_' + str(hom_index))
 
-            for hom in os.listdir( omodel_dir ):
-                pdbs =  re.split('\.', hom)
-                if pdbs[-1] == 'pdb':
-                    RUN_FORMAT_HOMS( os.path.join( omodel_dir, hom),
-                                         int(amopt.d['NMR_process']),
-                                         amopt.d['NMR_remodel_fasta'] ,
-                                         rosetta_modeller,
-                                         amopt.d['frags_9mers'],
-                                         amopt.d['frags_3mers'],
-                                         int(amopt.d['nproc']),
-                                         hom,
-                                         amopt.d['alignment_file'],
-                                         amopt.d['models_dir'] )
-        else:
-            hom_index = 1
-            homindeces = []
-            for hom in os.listdir( omodel_dir ):
-                os.mkdir(amopt.d['work_dir'] + '/Run_' + str(hom_index))
+            pdbs = re.split('\.', hom)
+            if pdbs[-1] == 'pdb':
+                ideal_homolog, ALI = CLUSTER_RUN_FORMAT_HOMS( os.path.join( omodel_dir, hom),
+                                                                  int(amopt.d['NMR_process']),
+                                                                  amopt.d['NMR_remodel_fasta'] ,
+                                                                  rosetta_modeller,
+                                                                  amopt.d['frags_9mers'],
+                                                                  amopt.d['frags_3mers'],
+                                                                  int(amopt.d['nproc']),
+                                                                  hom,
+                                                                  amopt.d['alignment_file'],
+                                                                  amopt.d['models_dir'] )
+                homindeces.append(hom_index)
+                hom_index += 1
 
-                pdbs = re.split('\.', hom)
-                if pdbs[-1] == 'pdb':
-                    ideal_homolog, ALI = CLUSTER_RUN_FORMAT_HOMS( os.path.join( omodel_dir, hom),
-                                                                      int(amopt.d['NMR_process']),
-                                                                      amopt.d['NMR_remodel_fasta'] ,
-                                                                      rosetta_modeller,
-                                                                      amopt.d['frags_9mers'],
-                                                                      amopt.d['frags_3mers'],
-                                                                      int(amopt.d['nproc']),
-                                                                      hom,
-                                                                      amopt.d['alignment_file'],
-                                                                      amopt.d['models_dir'] )
-                    homindeces.append(hom_index)
-                    hom_index += 1
+                # Invoke the cluster run class
 
-                    # Invoke the cluster run class
+        for  hom_index in homindeces:
+            cluster_run = clusterize.ClusterRun()
+            cluster_run.QTYPE = amopt.d['submit_qtype']
+            cluster_run.ALLATOM = amopt.d['all_atom']
+            cluster_run.setupModellingDir(amopt.d['work_dir'] + '/Run_' + str(hom_index))
+            if amopt.d['use_scwrl']:
+                cluster_run.setScwrlEXE(amopt.d['scwrl_exe'])
+            cluster_run.set_USE_SCWRL(amopt.d['use_scwrl'])
+        # loop over the number of models and submit a job to the cluster
 
-            for  hom_index in homindeces:
-                cluster_run = clusterize.ClusterRun()
-                cluster_run.QTYPE = amopt.d['submit_qtype']
-                cluster_run.ALLATOM = amopt.d['all_atom']
-                cluster_run.setupModellingDir(amopt.d['work_dir'] + '/Run_' + str(hom_index))
-                if amopt.d['use_scwrl']:
-                    cluster_run.setScwrlEXE(amopt.d['scwrl_exe'])
-                cluster_run.set_USE_SCWRL(amopt.d['use_scwrl'])
-            # loop over the number of models and submit a job to the cluster
+            for i in range(int(amopt.d['NMR_process'])):
+                cluster_run.NMRmodelOnCluster( amopt.d['work_dir'] + '/Run_' + str(hom_index),
+                                               1,
+                                               i,
+                                               amopt.d['rosetta_AbinitioRelax'],
+                                               amopt.d['rosetta_db'],
+                                               amopt.d['fasta'],
+                                               amopt.d['frags_3mers'],
+                                               amopt.d['frags_9mers'],
+                                               ideal_homolog,
+                                               ALI,
+                                               i,
+                                               rosetta_modeller.rosetta_mr_protocols)
 
-                for i in range(int(amopt.d['NMR_process'])):
-                    cluster_run.NMRmodelOnCluster( amopt.d['work_dir'] + '/Run_' + str(hom_index),
-                                                   1,
-                                                   i,
-                                                   amopt.d['rosetta_AbinitioRelax'],
-                                                   amopt.d['rosetta_db'],
-                                                   amopt.d['fasta'],
-                                                   amopt.d['frags_3mers'],
-                                                   amopt.d['frags_9mers'],
-                                                   ideal_homolog,
-                                                   ALI,
-                                                   i,
-                                                   rosetta_modeller.rosetta_mr_protocols)
+        # Monitor the cluster queue to see when all jobs have finished
+            cluster_run.monitorQueue()
 
-            # Monitor the cluster queue to see when all jobs have finished
-                cluster_run.monitorQueue()
-
-            #  homindeces.append(hom_index)
-            #  hom_index+=1
-            # cluster_run.monitorQueue()
-            print homindeces
-            for homindex in homindeces:
-                for remodelled in os.listdir( amopt.d['work_dir'] + '/Run_' + str(homindex) + '/models' ):
-                    remodelled_n = remodelled.rstrip('.pdb')
-                    shutil.copyfile( amopt.d['work_dir'] + '/Run_' + str(homindex) + '/models/' + remodelled,
-                                     os.path.join( amopt.d['models_dir'], remodelled_n + '_' + str(homindex) + '.pdb' ) )
+        #  homindeces.append(hom_index)
+        #  hom_index+=1
+        # cluster_run.monitorQueue()
+        print homindeces
+        for homindex in homindeces:
+            for remodelled in os.listdir( amopt.d['work_dir'] + '/Run_' + str(homindex) + '/models' ):
+                remodelled_n = remodelled.rstrip('.pdb')
+                shutil.copyfile( amopt.d['work_dir'] + '/Run_' + str(homindex) + '/models/' + remodelled,
+                                 os.path.join( amopt.d['models_dir'], remodelled_n + '_' + str(homindex) + '.pdb' ) )
 
     #End not Truncate_only
-
-    # Truncation Step
-    # check for same length
-    l = []
-    for pdb in os.listdir( amopt.d['models_dir'] ):
-        i = split_models.check( amopt.d['models_dir'] + os.sep + pdb )
-        l.append(i)
-        if len(l) > 1:
-            mina = min(l, key=int)
-            maxa = max(l, key=int)
-    if mina != maxa:
-        print 'min length = ', mina, ' max length = ', maxa, 'models are not equal length'
-        print 'All of the models need to be the same length, All long and short models will be deleted, next time  maybe try one model at a time '
-
-        lVals = l
-        modeal_l = max(map(lambda val: (lVals.count(val), val), set(lVals)))
-        modeal_l = modeal_l[1]
-        print modeal_l
-
-        for pdb in os.listdir(amopt.d['models_dir']):
-            i = split_models.check( amopt.d['models_dir'] + os.sep + pdb)
-            if i != modeal_l:
-                os.remove(amopt.d['models_dir'] + os.sep + pdb)
+    standardise_lengths(amopt.d['models_dir'])
     return
 
 ########################
@@ -358,14 +326,6 @@ def minimise(homolog, fasta, MINIMIZE,RELAX, ROSETTA_DB, ALI, a9mers, a3mers, na
    sys.exit()
    return  models
 
-########################
-def model_with_map():
-   print 'here'
-
-########################
-def Rosetta_refine():
-   print 'here'
-
 #####################
 def RUN_MINIMISE(homolog, NProcess):
  curdir = os.getcwd()
@@ -428,8 +388,8 @@ def CLUSTER_RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, 
 ######################
 def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, NProc, homname, alignment_file, Models_dir ):
 
-    if not alignment_file:
-        raise RuntimeError,"Need alignment_file!"
+    #if not alignment_file:
+    #    raise RuntimeError,"Need alignment_file!"
 
     curdir = os.getcwd()
     os.mkdir(curdir+'/RUN_'+homname)
@@ -441,7 +401,7 @@ def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, 
     IDEALIZE          = rosetta_modeller.rosetta_idealize_jd2
     ROSETTA_DB        = rosetta_modeller.rosetta_db
 
-    if not ROSETTA_cluster or not MR_ROSETTA or not IDEALIZE:
+    if not ROSETTA_cluster or not os.path.isfile(ROSETTA_cluster) or not MR_ROSETTA or not os.path.isfile(MR_ROSETTA)or not IDEALIZE or not os.path.isfile(IDEALIZE):
         msg = "Cannot find Rosetta NMR programs in directory: {0}".format(rosetta_modeller.rosetta_dir)
         raise RuntimeError, msg
 
@@ -449,9 +409,9 @@ def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, 
     homolog, name = idealise(homolog, IDEALIZE, ROSETTA_DB )
 
     homolog_seq = get_sequence(homolog, 'homolog.fasta')
-    if os.path.exists(alignment_file):
+    if alignment_file and os.path.exists(alignment_file):
         ALI = alignment_file
-    if not os.path.exists(alignment_file):
+    else:
         ALI =  MAFFT(homolog_seq, fasta,  name)
 
     NMODELS = NProcess
@@ -481,7 +441,7 @@ def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, 
         no_models_have = 0
         proc = 1
         while proc < NProc +1:
-            list_of_files = [f for f in os.listdir(wdir) if file.lower().endswith('.pdb')]
+            list_of_files = [f for f in os.listdir(wdir) if f.lower().endswith('.pdb')]
             no_models_have  += len(list_of_files)
             proc+=1
         if no_models_have > finished_models:
@@ -500,6 +460,7 @@ def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, 
     proc = 1
     cat_string = ''
     while proc < NProc +1:
+        wdir=os.path.join( RunDir,'models_'+str(proc))
         for f in glob.glob( os.path.join(wdir,'*.pdb') ):
             name = re.split('/', f)
             pdbname = str(name.pop())
@@ -512,6 +473,59 @@ def RUN_FORMAT_HOMS(homolog, NProcess, fasta, rosetta_modeller, a9mers, a3mers, 
     os.chdir(curdir)
 
     return
+
+def align_mafft(query_seq, template_seq, logger):
+    name = "{0}__{1}".format(query_seq.name,template_seq.name)
+    mafft_input = "{0}_concat.fasta".format(name)
+    query_seq.concat(template_seq,mafft_input)
+    cmd =  ['mafft', '--maxiterate', '1000', '--localpair', '--quiet', mafft_input]
+    logfile = 'mafft.out'
+    
+    ret = ample_util.run_command(cmd,logfile=logfile)
+    if ret != 0:
+        raise RuntimeError,"Error running mafft - check logfile: {0}".format(logfile)
+    
+    seq_align = ample_sequence.Sequence()
+    seq_align.from_fasta(logfile,canonicalise=False)
+    
+    logger.info("Got Alignment:\n{0}\n{1}".format(seq_align.sequences[0],seq_align.sequences[1]))
+    logger.info("If you want to use a different alignment, import using -alignment_file")
+    
+    alignment_file = "{0}_align.fasta".format(name)
+    with open(alignment_file,'w') as w:
+        # First line is query and template name - must match the name of the template pdb
+        w.write('## ' + query_seq.name + '  ' + template_seq.name +'\n'+
+                '# hhsearch\n'+
+                'scores_from_program: 0 1.00\n'+
+                '0 ' + seq_align.sequences[0]+'\n'+
+                '0 ' + seq_align.sequences[1] + '\n')
+    return os.path.abspath(alignment_file)
+
+def standardise_lengths(models_dir):
+    # Truncation Step
+    # check for same length
+    l = []
+    for pdb in os.listdir(models_dir):
+        i = split_models.check(os.path.join(models_dir,pdb))
+        l.append(i)
+        if len(l) > 1:
+            mina = min(l, key=int)
+            maxa = max(l, key=int)
+    
+    removed=0
+    if mina != maxa:
+        print 'min length = ', mina, ' max length = ', maxa, 'models are not equal length'
+        print 'All of the models need to be the same length, All long and short models will be deleted, next time  maybe try one model at a time '
+        lVals = l
+        modeal_l = max(map(lambda val:(lVals.count(val), val), set(lVals)))
+        modeal_l = modeal_l[1]
+        print modeal_l
+        for pdb in os.listdir(models_dir):
+            i = split_models.check(os.path.join(models_dir,pdb))
+            if i != modeal_l:
+                os.remove(os.path.join(models_dir,pdb))
+                removed+=1
+    return removed
 
 def strip_hetatm( pdb_file ):
     """Strip the HETATM lines from a PDB and return path to new PDB"""

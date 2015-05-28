@@ -14,196 +14,225 @@ import cPickle
 import glob
 import logging
 import os
+import shutil
 import sys
+import unittest
 
 # our imports
 import ample_ensemble
 import ample_util
 import printTable
-import run_spicker
 
+def cluster_script(amoptd,python_path="ccp4-python"):
+    """Create the script for ensembling on a cluster"""
+    # write out script
+    work_dir = amoptd['work_dir']
+    script_path = os.path.join(work_dir, "submit_ensemble.sh")
+    with open(script_path, "w") as job_script:
+        job_script.write("#!/bin/sh\n")
+        # Find path to this directory to get path to python ensemble.py script
+        pydir=os.path.abspath(os.path.dirname(__file__ ))
+        ensemble_script = os.path.join(pydir, "ensemble.py")
+        job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", ensemble_script, amoptd['results_path']))
 
-def spicker_cluster( amoptd ):
+    # Make executable
+    os.chmod(script_path, 0o777)
+    return script_path
 
-    logger = logging.getLogger()
-    logger.info('----- Clustering models --------')
-
-    # Spicker Alternative for clustering
-    amoptd['spicker_rundir'] = os.path.join( amoptd['work_dir'], 'spicker_run')
-    spickerer = run_spicker.SpickerCluster( amoptd )
-    spickerer.run_spicker()
-    logger.info( spickerer.results_summary() )
-    amoptd['spicker_results'] = spickerer.results
-
-    return
-
-def ensemble_models( cluster_models, amoptd, ensemble_id='X' ):
-
-    logger = logging.getLogger()
-
-    logger.info('----- Truncating models for cluster {0} --------'.format( ensemble_id ) )
-
-    if len( cluster_models ) < 2:
-        msg = "Could not create ensemble for cluster {0} as less than 2 models!".format( ensemble_id )
-        logger.critical(msg)
-        #raise RuntimeError, msg
-        return None
-
-    ensembler = ample_ensemble.Ensembler()
-    ensembler.maxcluster_exe = amoptd['maxcluster_exe']
-    ensembler.theseus_exe =  amoptd['theseus_exe']
-    ensembler.max_ensemble_models = amoptd['max_ensemble_models']
-    ensembler.generate_ensembles( cluster_models=cluster_models,
-                                  root_dir=amoptd['work_dir'],
-                                  ensemble_id=ensemble_id,
-                                  percent=amoptd['percent'],
-                                  mode=amoptd['ensemble_mode']
-                                   )
-
-    return ensembler.ensembles
-
-def create_ensembles( amoptd ):
+def create_ensembles(amoptd):
     """Create the ensembles using the values in the amoptd dictionary"""
 
-    logger = logging.getLogger()
-
-    #---------------------------------------
-    # Generating  ensembles
-    #---------------------------------------
-
-    # Cluster with Spicker
-    spicker_cluster( amoptd )
-
-    # Generate list of clusters to sample
-    # Done like this so it's easy to run specific clusters
-    cluster_nums = [ i for i in range(1,amoptd[ 'num_clusters' ]+1 )]
-
-    logger.info('Clustering Done. Using the following clusters: {0}'.format( cluster_nums ) )
-
-    amoptd['ensemble_results'] = []
-    for cluster in cluster_nums:
-
-        # Get list of models from spicker results
-        ensembles = ensemble_models( amoptd['spicker_results'][ cluster-1 ].pdb_list, amoptd, ensemble_id=cluster )
-
-        # Add results to amopt
-        amoptd['ensemble_results'].append( ensembles )
-
-        # Prune down to the top model
-        if amoptd['top_model_only']:
-            raise RuntimeError, "Need to fix top_model_only"
-            #final_ensembles = truncateedit_MAX.One_model_only( final_ensembles, amoptd['work_dir'] )
-
-        logger.info("Truncating Done for cluster {0}".format( cluster ) )
-        if amoptd['ensemble_results'][-1] and len(amoptd['ensemble_results'][-1]):
-            logger.info('Created {0} ensembles'.format( len(  amoptd['ensemble_results'][-1] ) ) )
-
+    ensembler = ample_ensemble.Ensembler()
+    
+    ensembler.theseus_exe = amoptd['theseus_exe'] 
+    ensembler.maxcluster_exe = amoptd['maxcluster_exe'] 
+    ensembler.subcluster_exe = amoptd['maxcluster_exe']
+    ensembler.max_ensemble_models = amoptd['max_ensemble_models']
+    if amoptd['cluster_method'] == 'spicker':
+        cluster_exe = amoptd['spicker_exe']
+    elif amoptd['cluster_method'] == 'fast_protein_cluster':
+        cluster_exe = amoptd['fast_protein_cluster_exe']
+    else:
+        raise RuntimeError,"create_ensembles - unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
+        
+    ensembles_directory=os.path.join(amoptd['work_dir'],'ensembles')
+    if not os.path.isdir(ensembles_directory): os.mkdir(ensembles_directory)
+    amoptd['ensembles_directory']=ensembles_directory
+    
+    work_dir=os.path.join(amoptd['work_dir'],'ensemble_workdir')
+    os.mkdir(work_dir)
+    os.chdir(work_dir)
+        
+    models=glob.glob(os.path.join(amoptd['models_dir'],"*.pdb"))
+    
+    if amoptd['homologs']:
+        ensembles=ensembler.generate_ensembles_homologs(models,
+                                                        percent_truncation=amoptd['percent'],
+                                                        truncation_method=amoptd['truncation_method'],
+                                                        ensembles_directory=ensembles_directory,
+                                                        alignment_file=amoptd['alignment_file'],
+                                                        work_dir=work_dir,
+                                                        nproc=amoptd['nproc'])
+    else:
+        ensembles=ensembler.generate_ensembles(models,
+                                               cluster_method=amoptd['cluster_method'] ,
+                                               cluster_exe=cluster_exe,
+                                               num_clusters=amoptd['num_clusters'] ,
+                                               percent_truncation=amoptd['percent'],
+                                               truncation_method=amoptd['truncation_method'],
+                                               truncation_pruning=amoptd['truncation_pruning'],
+                                               ensembles_directory=ensembles_directory,
+                                               work_dir=work_dir,
+                                               nproc=amoptd['nproc'])
+    
+    amoptd['ensembles'] = ensembles
+    amoptd['ensembles_data'] = ensembler.ensembles_data
+    
+    # Delete all intermediate files if we're purging
+    if amoptd['purge']: shutil.rmtree(work_dir)
     return
 
-def import_cluster( amoptd ):
+def collate_cluster_data(ensembles_data):
+    clusters = {} # Loop through all ensemble data objects and build up a data tree
+    cluster_method = None
+    truncation_method = None
+    percent_truncation = None
+    for e in ensembles_data:
+        if not cluster_method:
+            cluster_method = e['cluster_method']
+            percent_truncation = e['percent_truncation']
+            truncation_method = e['truncation_method']
+            #num_clusters = e['num_clusters']
+        cnum = e['cluster_num']
+        if cnum not in clusters:
+            clusters[cnum] = {}
+            clusters[cnum]['cluster_centroid'] = e['cluster_centroid']
+            clusters[cnum]['cluster_num_models'] = e['cluster_num_models']
+            clusters[cnum]['tlevels'] = {}
+        tlvl = e['truncation_level']
+        if tlvl not in clusters[cnum]['tlevels']:
+            clusters[cnum]['tlevels'][tlvl] = {}
+            clusters[cnum]['tlevels'][tlvl]['truncation_variance'] = e['truncation_variance']
+            clusters[cnum]['tlevels'][tlvl]['num_residues'] = e['truncation_num_residues']
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'] = {}
+        srt = e['subcluster_radius_threshold']
+        if srt not in clusters[cnum]['tlevels'][tlvl]['radius_thresholds']:
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt] = {}
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['num_models'] = e['subcluster_num_models']
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'] = {}
+        sct = e['side_chain_treatment']
+        if sct not in clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct']:
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct] = {}
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['name'] = e['name']
+            clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['num_atoms'] = e['ensemble_num_atoms']
+    
+    return clusters, cluster_method, truncation_method, percent_truncation
 
-    logger = logging.getLogger()
+def cluster_table_data(clusters, cluster_num):
+    tdata = [("Name", "Truncation Level", u"Variance Threshold (\u212B^2)", "No. Residues", u"Radius Threshold (\u212B)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
+    #tdata = [("Name", "Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
+    for tl in sorted(clusters[cluster_num]['tlevels']):
+        tvar = clusters[cluster_num]['tlevels'][tl]['truncation_variance']
+        nresidues = clusters[cluster_num]['tlevels'][tl]['num_residues']
+        for i, rt in enumerate(sorted(clusters[cluster_num]['tlevels'][tl]['radius_thresholds'])):
+            nmodels = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['num_models']
+        # Hack so that side chains come in size order
+        #for j, sct in enumerate(sorted(clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'])):
+            for j, sct in enumerate(ample_ensemble.SIDE_CHAIN_TREATMENTS):
+                name = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['name']
+                num_atoms = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['num_atoms']
+                if i == 0 and j == 0: # change of radius
+                    tdata.append((name, tl, tvar, nresidues, rt, nmodels, num_atoms, sct))
+                elif i > 0 and j == 0: # change of side_chain
+                    tdata.append((name, "", "", "", rt, nmodels, num_atoms, sct))
+                else:
+                    tdata.append((name, "", "", "", "", "", num_atoms, sct))
+    return tdata
 
-    cluster_src = amoptd['import_cluster']
-    if not cluster_src:
-        msg = "import_cluster no cluster set!"
-        logger.critical( msg )
-        raise RuntimeError, msg
-
-    # Either read from list of files or a directory
-    clusterPdbs = []
-    if os.path.isdir( cluster_src ):
-        logger.info( "Importing existing cluster from directory: {0}".format( cluster_src ) )
-        clusterPdbs = glob.glob( cluster_src + "*.pdb" )
-    elif os.path.isfile( cluster_src ):
-        logger.info( "Importing existing cluster from PDBs specified in file: {0}".format( cluster_src ) )
-        clusterPdbs = [ line.strip() for line in open( cluster_src ) ]
-    else:
-        msg = "import_cluster cannot import cluster from: {0}".format( cluster_src )
-        logger.critical( msg )
-        raise RuntimeError, msg
-
-    if not len( clusterPdbs ):
-        msg = "import_cluster cannot find any pdb files in: {0}".format( cluster_src )
-        logger.critical( msg )
-        raise RuntimeError, msg
-
-    ensembles = ensemble_models( clusterPdbs, amoptd, ensemble_id='X' )
-
-    amoptd['ensemble_results'] = [ ensembles ]
-
-    return [ e.pdb for e in ensembles ]
-
-def ensemble_summary( amoptd ):
+def ensemble_summary(ensembles_data):
     """Print a summary of the ensembling process"""
 
+    clusters, cluster_method, truncation_method, percent_truncation = collate_cluster_data(ensembles_data)
+    num_clusters=len(clusters)
+    
     tableFormat = printTable.Table()
-    rstr=""
-
-    if amoptd.has_key('spicker_results'):
-        rstr = "---- Clustering Results ----\n\n"
-        tdata = [ ( "Cluster", "Num Models", "Centroid" ) ]
-        for i, r in enumerate( amoptd['spicker_results'] ):
-            tdata.append( ( i+1, r.cluster_size, r.cluster_centroid ) )
-        rstr += tableFormat.pprint_table( tdata )
-
-    if amoptd.has_key('ensemble_results') and len( amoptd['ensemble_results'] ):
-
-        rstr += "\n---- Truncation Results ----\n\n"
-        # Reconstruct trunction data
-        for i, clusterEnsemble in enumerate( amoptd['ensemble_results'] ):
-
-            rstr += "---- Cluster {0} ----\n".format( i+1 )
-
-            if not clusterEnsemble:
-                rstr += "\n### COULD NOT GENERATE ANY ENSEMBLES! ###\n\n"
-                continue
-
-            nensembles = 0
-            truncation_levels = {}
-
-            side_chain_treatments = []
-            for ensemble in clusterEnsemble:
-
-                nensembles += 1
-
-                if ensemble.side_chain_treatment not in side_chain_treatments:
-                    side_chain_treatments.append( ensemble.side_chain_treatment )
-
-                if ensemble.truncation_level not in truncation_levels.keys():
-                    truncation_levels[ ensemble.truncation_level ] = ( ensemble.truncation_threshold, ensemble.num_residues,
-                                                                               { ensemble.radius_threshold : ensemble.num_models } )
-                else:
-                    # Already got this truncation level so add radius
-                    if ensemble.radius_threshold not in truncation_levels[ ensemble.truncation_level ][2].keys():
-                        truncation_levels[ ensemble.truncation_level ][2][ ensemble.radius_threshold ] = ensemble.num_models
-
-
-            rstr += "\n"
-            tdata = [ ( "Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys" ) ]
-            raw_ensemble_count=0
-            for level in sorted( truncation_levels.keys() ):
-                #truncation_level=len(truncation_levels)-level
-                threshold = truncation_levels[ level ][0]
-                nresidues = truncation_levels[ level ][1]
-                for i, radius in enumerate( sorted( truncation_levels[ level ][2].keys() ) ):
-                    raw_ensemble_count+=1
-                    nmodels = truncation_levels[ level ][2][radius ]
-                    if i == 0:
-                        tdata.append( ( level, threshold, nresidues, radius, nmodels  ) )
-                    else:
-                        tdata.append( ( "", "", "", radius, nmodels  ) )
-
-            rstr += tableFormat.pprint_table( tdata )
-
-            rstr += "\nGenerated {0} raw ensembles\n\n".format( raw_ensemble_count )
-
-            rstr += "Each raw ensemble will be subject to the following {0} sidechain treatments: {1}\n\n".format( len(side_chain_treatments),  ", ".join(side_chain_treatments) )
-            rstr += "{0} ensembles in total have been generated\n\n".format( nensembles )
-
-            assert raw_ensemble_count * len(side_chain_treatments) == nensembles, "Error generating correct number of ensembles!"
-
+    rstr = "\n"
+    rstr += "Ensemble Results\n"
+    rstr += "----------------\n\n"
+    rstr += "Cluster method: {0}\n".format(cluster_method)
+    rstr += "Truncation method: {0}\n".format(truncation_method)
+    rstr += "Percent truncation: {0}\n".format(percent_truncation)
+    rstr += "Number of clusters: {0}\n".format(num_clusters)
+    
+    for cluster_num in sorted(clusters.keys()):
+        rstr += "\n"
+        rstr += "Cluster {0}\n".format(cluster_num)
+        rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
+        rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
+        rstr += "\n"
+        tdata = cluster_table_data(clusters, cluster_num)
+        rstr += tableFormat.pprint_table(tdata)        
+    
+    rstr += "\nGenerated {0} ensembles\n\n".format(len(ensembles_data))
+    
     return rstr
+
+def testSuite():
+    suite = unittest.TestSuite()
+    suite.addTest(Test('testSummary'))
+    return suite
+
+class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        cls.theseus_exe=ample_util.find_exe('theseus')
+        cls.spicker_exe=ample_util.find_exe('spicker')
+        cls.maxcluster_exe=ample_util.find_exe('maxcluster')
+
+        return
+    
+    def testSummary(self):
+
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        ensembler=ample_ensemble.Ensembler()
+
+        work_dir=os.path.join(os.getcwd(),"summary")
+        os.mkdir(work_dir)
+        
+        ensembler.theseus_exe=self.theseus_exe
+        ensembler.cluster_exe=self.spicker_exe
+        ensembler.subcluster_exe=self.maxcluster_exe
+        
+        mdir=os.path.join(self.testfiles_dir,"models")
+        models=glob.glob(mdir+os.sep+"*.pdb")
+
+        num_clusters=1
+        cluster_method='spicker'
+        percent_truncation=20
+        truncation_method="percent"
+        ensembler.generate_ensembles(models,
+                                     cluster_method=cluster_method,
+                                     cluster_exe=self.spicker_exe,
+                                     num_clusters=num_clusters,
+                                     percent_truncation=percent_truncation,
+                                     truncation_method=truncation_method,
+                                     work_dir=work_dir)
+        
+        print ensemble_summary(ensembler.ensembles_data)
+        shutil.rmtree(work_dir)
+        
+        return
 
 
 if __name__ == "__main__":
@@ -233,5 +262,5 @@ if __name__ == "__main__":
     logger.addHandler(fl)
 
     # Create the ensembles & save them
-    create_ensembles( amoptd )
+    create_ensembles(amoptd)
     ample_util.saveAmoptd(amoptd)
