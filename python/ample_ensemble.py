@@ -139,7 +139,12 @@ class Ensembler(object):
         return
     
     def align_models(self, models, basename=None, work_dir=None):
-        run_theseus = theseus.Theseus(models, basename=basename, work_dir=work_dir, theseus_exe=self.theseus_exe, )
+        run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
+        try:
+            run_theseus.align_models(models, basename=basename)
+        except Exception,e:
+            self.logger.critical("Error running theseus: {0}".format(e))
+            return False
         return run_theseus.superposed_models
     
     def _calculate_residues_percent(self,var_by_res,percent_interval):
@@ -570,7 +575,7 @@ class Ensembler(object):
                                                                                  truncation_method=truncation_method,
                                                                                  truncation_pruning=None,
                                                                                  percent_truncation=percent_truncation,
-                                                                                 homologues=True
+                                                                                 homologs=True
                                                                                  )):
             tlevel = truncated_models_data['truncation_level']
             ensemble_dir = os.path.join(truncated_models_data['truncation_dir'],
@@ -581,6 +586,9 @@ class Ensembler(object):
             # Need to create an alignment file for theseus
             basename = "e{0}".format(tlevel)
             pre_ensemble = self.align_models(truncated_models, basename=basename, work_dir=ensemble_dir)
+            if not pre_ensemble:
+                self.logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
+                continue
             pre_ensemble_data = copy.copy(truncated_models_data)
             pre_ensemble_data['subcluster_radius_threshold'] = 0
              
@@ -1001,7 +1009,7 @@ class Ensembler(object):
                         truncation_method=None,
                         percent_truncation=None,
                         truncation_pruning='none',
-                        homologues=False
+                        homologs=False
                         ):
         
         assert len(models) > 1,"Cannot truncate as < 2 models!"
@@ -1013,11 +1021,9 @@ class Ensembler(object):
         os.chdir(truncate_dir)
         
         # Calculate variances between pdb - and align them if necessary
-        run_theseus = theseus.Theseus(models, 
-                                      work_dir=truncate_dir,
-                                      homologues=homologues,
-                                      theseus_exe=self.theseus_exe)
-        #if homologues: models = run_theseus.aligned_models
+        run_theseus = theseus.Theseus(work_dir=truncate_dir, theseus_exe=self.theseus_exe)
+        run_theseus.align_models(models, homologs=homologs)
+        #if homologs: models = run_theseus.aligned_models
         var_by_res = run_theseus.var_by_res()
         
         # Calculate which residues to keep under the different methods
@@ -1533,7 +1539,7 @@ class Test(unittest.TestCase):
                                                        subcluster_exe=self.maxcluster_exe,
                                                        ensemble_max_models=30)
 
-        self.assertEqual(data[0]['subcluster_num_models'],30)
+        self.assertEqual(data[0]['subcluster_num_models'],30,)
         self.assertTrue(abs(data[0]['subcluster_radius_threshold']-1) < 0.0001)
         self.assertEqual(data[1]['subcluster_num_models'],30)
         self.assertTrue(abs(data[1]['subcluster_radius_threshold']-2) < 0.0001)
@@ -1641,7 +1647,8 @@ class Test(unittest.TestCase):
 
         models = glob.glob(os.path.join("/opt/ample-dev1/examples/homologs","*.pdb"))
         alignment_file = os.path.join("/opt/ample-dev1/examples/homologs","testthree.afasta")
-        core_models = model_core_from_alignment(models, alignment_file)
+        
+        core_models = model_core_from_alignment(models, alignment_file, work_dir=work_dir)
         
         got = {}
         for m in core_models:
