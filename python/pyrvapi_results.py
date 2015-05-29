@@ -188,7 +188,7 @@ def results_tab(results_dict):
                 data_phaser="data_phaser_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_phaser,
                                         "PHASER PDB",
-                                        fix_path(r['PHASER_pdbout']),
+                                        os.path.splitext(fix_path(r['PHASER_pdbout']))[0],
                                         "xyz:map",
                                         sec_phaser,
                                         2,0,1,1,True)
@@ -209,7 +209,7 @@ def results_tab(results_dict):
                 data_refmac="data_refmac_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_refmac,
                                         "REFMAC PDB",
-                                        fix_path(r['REFMAC_pdbout']),
+                                        os.path.splitext(fix_path(r['REFMAC_pdbout']))[0],
                                         "xyz:map",
                                         sec_refmac,
                                         2,0,1,1,True)
@@ -230,7 +230,7 @@ def results_tab(results_dict):
                 data_shelxe="data_shelxe_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_shelxe,
                                         "SHELXE PDB",
-                                        fix_path(r['SHELXE_pdbout']),
+                                        os.path.splitext(fix_path(r['SHELXE_pdbout']))[0],
                                         "xyz:map",
                                         sec_shelxe,
                                         2,0,1,1,True)
@@ -251,7 +251,7 @@ def results_tab(results_dict):
                 data_sxrbucc="data_sxrbucc_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_sxrbucc,
                                         "SXRBUCC PDB",
-                                        fix_path(r['SXRBUCC_pdbout']),
+                                        os.path.splitext(fix_path(r['SXRBUCC_pdbout']))[0],
                                         "xyz:map",
                                         sec_sxrbucc,
                                         2,0,1,1,True)
@@ -272,7 +272,7 @@ def results_tab(results_dict):
                 data_sxrarp="data_sxrarp_out_{0}".format(name)
                 pyrvapi.rvapi_add_data(data_sxrarp,
                                         "SXRARP PDB",
-                                        fix_path(r['SXRARP_pdbout']),
+                                        os.path.splitext(fix_path(r['SXRARP_pdbout']))[0],
                                         "xyz:map",
                                         sec_sxrarp,
                                         2,0,1,1,True)
