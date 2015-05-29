@@ -12,7 +12,6 @@ import subprocess
 import sys
 import urlparse
 
-sys.path.insert(0,"/opt/ample-dev1/python")
 import ensemble
 import mrbump_results
 
