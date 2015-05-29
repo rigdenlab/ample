@@ -153,19 +153,21 @@ class AmpleOptions(object):
 
         tmpv = None
         for k, v in vars(parser_args).iteritems():
-            #print "{} | {}".format( k, v )
+            #print "{} | {}".format(k, v)
             if isinstance(v,list):
                 # All values are in a list
                 tmpv  = v[0]
             else:
                 tmpv = v
 
-            # Bit of a hack for true/false
+            # Bit of a hack for true/false and ccp4i "none" strings
             if isinstance(tmpv, str):
                 if tmpv.lower() == "true":
                     tmpv = True
                 elif tmpv.lower() == "false":
                     tmpv = False
+                elif tmpv.lower() == "none":
+                    tmpv = None
 
             self.d[k] = tmpv
         # end of loop
