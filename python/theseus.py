@@ -62,7 +62,7 @@ class Theseus(object):
             cmd += [ '-A', alignment_file ]
             cmd += [ os.path.basename(m) for m in copy_models ]
         else:
-            cmd += models
+            cmd += [ os.path.relpath(m,self.work_dir) for m in models ]
         
         self.theseus_log=os.path.join(self.work_dir,"theseus.log")
         retcode = ample_util.run_command(cmd,
