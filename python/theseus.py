@@ -15,35 +15,38 @@ import unittest
 
 class Theseus(object):
     
-    def __init__(self, models, work_dir=None, theseus_exe=None, homologues=False, basename=None):
+    def __init__(self, work_dir=None, theseus_exe=None):
         
         self.theseus_exe = theseus_exe
         if not os.path.exists(self.theseus_exe) and os.access(self.theseus_exe, os.X_OK):
             raise RuntimeError,"Cannot find theseus_exe: {0}".format(self.theseus_exe)
         
-        self.homologues=homologues
         self.logger = logging.getLogger()
         
-        self.work_dir = work_dir
-        if not self.work_dir: self.work_dir = os.getcwd()
-        if not os.path.isdir(self.work_dir): os.mkdir(self.work_dir)
-        
+        self.work_dir = None
         self.variance_log = None
         self.superposed_models = None
         self.aligned_models = None
         
-        self.align_models(models, work_dir=self.work_dir, homologues=self.homologues, basename=basename)
+        self._set_work_dir(work_dir)
         return
-
+    
+    def _set_work_dir(self,work_dir):
+        if work_dir: self.work_dir = work_dir
+        if not self.work_dir: self.work_dir = os.getcwd()
+        if not os.path.isdir(self.work_dir): os.mkdir(self.work_dir)
+        return self.work_dir
+    
     def alignment_file(self, models, alignment_file=None):
-        if not alignment_file: alignment_file = os.path.join(self.work_dir,'homologues.fasta')
+        if not alignment_file: alignment_file = os.path.join(self.work_dir,'homologs.fasta')
         all_seq = ample_sequence.Sequence(pdb=models[0])
         for model in models[1:]: all_seq += ample_sequence.Sequence(pdb=model)
         all_seq.write_fasta(alignment_file,pdbname=True)
         return alignment_file
 
-    def align_models(self, models, work_dir=None, basename=None, homologues=False):
-        if homologues:
+    def align_models(self, models, work_dir=None, basename=None, homologs=False):
+        self._set_work_dir(work_dir)
+        if homologs:
             # Theseus expects all the models to be in the directory that it is run in as the string
             # given in the fasta header is used to construct the file names of the aligned pdb files
             # If a full or relative path is given (e.g. /foo/bar.pdb), it tries to create files called "basename_/foo/bar.pdb"
@@ -55,11 +58,12 @@ class Theseus(object):
         if not basename: basename = 'theseus'
 
         cmd = [ self.theseus_exe, '-a0', '-r', basename ]
-        if homologues:
+        if homologs:
             cmd += [ '-A', alignment_file ]
             cmd += [ os.path.basename(m) for m in copy_models ]
         else:
             cmd += models
+        
         self.theseus_log=os.path.join(self.work_dir,"theseus.log")
         retcode = ample_util.run_command(cmd,
                                          logfile=self.theseus_log,
@@ -71,8 +75,7 @@ class Theseus(object):
         
         self.variance_file = os.path.join(self.work_dir,'{0}_variances.txt'.format(basename))
         self.superposed_models = os.path.join(self.work_dir,'{0}_sup.pdb'.format(basename))
-        
-        if homologues:
+        if homologs:
             self.aligned_models = [ os.path.join(self.work_dir,"theseus_{0}".format(os.path.basename(m))) for m in copy_models ]
             for m in copy_models: os.unlink(m)
         
@@ -152,9 +155,10 @@ class Test(unittest.TestCase):
         
         models = glob.glob(os.path.join(self.testfiles_dir,'models','*.pdb'))
         work_dir = os.path.join(self.tests_dir,'theseus_align')
-        homologues = False
-        theseus = Theseus(models,work_dir=work_dir,homologues=homologues, theseus_exe=self.theseus_exe)
-        var_by_res = theseus.var_by_res()
+        homologs = False
+        rtheseus = Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
+        rtheseus.align_models(models,homologs=homologs)
+        var_by_res = rtheseus.var_by_res()
         ref = [(0, 1, 58.093855), (1, 2, 49.037612), (2, 3, 49.9941), (3, 4, 41.759792), (4, 5, 37.227847), 
                (5, 6, 27.3795), (6, 7, 25.348492), (7, 8, 25.799824), (8, 9, 22.432552), (9, 10, 23.265923), 
                (10, 11, 23.050341), (11, 12, 20.235297), (12, 13, 18.29234), (13, 14, 16.800248), (14, 15, 16.07131), 
@@ -175,7 +179,7 @@ class Test(unittest.TestCase):
         """Test we can reproduce the original thresholds"""
         os.chdir(self.thisd)
 
-        work_dir = os.path.join(self.tests_dir,'theseus_align')
+        work_dir = os.path.join(self.tests_dir,'theseus_align_homo')
         os.mkdir(work_dir)
         pdb_list = [ '1D7M.pdb', '1GU8.pdb', '2UUI.pdb', '1K33.pdb' ,'1BYZ.pdb' ]
         models = []
@@ -187,15 +191,16 @@ class Test(unittest.TestCase):
             pdb_edit.select_residues(pdbin, pdbout, tokeep_idx=tokeep_idx)
             models.append(pdbout)
 
-        homologues = True
-        theseus = Theseus(models,work_dir=work_dir,homologues=homologues, theseus_exe=self.theseus_exe)
-        var_by_res = theseus.var_by_res()
+        homologs = True
+        rtheseus = Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
+        rtheseus.align_models(models,homologs=homologs)
+        var_by_res = rtheseus.var_by_res()
         ref = [(0, 243, 9.918397), (1, 244, 3.897504), (2, 245, 1.877927), (3, 246, 2.004033), (4, 247, 1.24683), 
                (5, 248, 0.753177), (6, 249, 0.005146), (7, 250, 0.02917), (8, 251, 0.04054), (9, 252, 0.027774), 
                (10, 253, 0.093861), (11, 254, 0.0)]
         self.assertEqual(var_by_res,ref)
         
-        self.assertTrue(all([os.path.isfile(m) for m in theseus.aligned_models]))
+        self.assertTrue(all([os.path.isfile(m) for m in rtheseus.aligned_models]))
         # clean up
         for m in models: os.unlink(m)
         shutil.rmtree(work_dir)
