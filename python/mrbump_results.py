@@ -443,26 +443,39 @@ class ResultsSummary(object):
         Sort the results
         """
         # Check each result to see what attributes are set and use this to work out how we rate this run
-        reverse=False
-        sortf=False
+        
+        SHELXE = False
+        BUCC = False
+        ARP = False
+        REFMAC = False
+        PHASER = False
         for r in results:
             if 'SHELXE_CC' in r and r['SHELXE_CC'] and float(r['SHELXE_CC']) > 0.0:
-                reverse=True
-                sortf = lambda x: float(0) if x['SHELXE_CC']  is None else float( x['SHELXE_CC'])
-                break
+                SHELXE=True
             elif 'BUCC_final_Rfact' in r and r['BUCC_final_Rfact'] and float(r['BUCC_final_Rfact']) < 1.0:
-                sortf = lambda x: float('inf') if x['BUCC_final_Rfact']  is None else float( x['BUCC_final_Rfact'] )
-                break
+                BUCC=True
             elif 'ARP_final_Rfree' in r and r['ARP_final_Rfree'] and float(r['ARP_final_Rfree']) < 1.0:
-                sortf = lambda x: float('inf') if x['ARP_final_Rfree']  is None else float( x['ARP_final_Rfree'] )
-                break
+                ARP=True
             elif 'REFMAC_Rfree' in r and r['REFMAC_Rfree'] and float(r['REFMAC_Rfree']) < 1.0:
-                sortf = lambda x: float('inf') if x['REFMAC_Rfree']  is None else float( x['REFMAC_Rfree'] )
-                break
+                REFMAC=True
             elif 'PHASER_TFZ' in r and r['PHASER_TFZ'] and float(r['PHASER_TFZ']) > 0.0:
-                reverse=True
-                sortf = lambda x: float(0) if x['PHASER_TFZ']  is None else float( x['PHASER_TFZ'] )
-                break
+                PHASER=True
+            
+        reverse=False
+        sortf=False
+        if SHELXE:
+            reverse=True
+            sortf = lambda x: float(0) if x['SHELXE_CC']  is None else float( x['SHELXE_CC'])
+        elif BUCC:
+            sortf = lambda x: float('inf') if x['BUCC_final_Rfact']  is None else float( x['BUCC_final_Rfact'] )
+        elif ARP:
+            sortf = lambda x: float('inf') if x['ARP_final_Rfree']  is None else float( x['ARP_final_Rfree'] )
+        elif REFMAC:
+            sortf = lambda x: float('inf') if x['REFMAC_Rfree']  is None else float( x['REFMAC_Rfree'] )
+        elif PHASER:
+            reverse=True
+            sortf = lambda x: float(0) if x['PHASER_TFZ']  is None else float( x['PHASER_TFZ'] )
+            
         if sortf:
             # Now sort by the key
             results.sort(key=sortf, reverse=reverse)
