@@ -775,6 +775,10 @@ class Ensembler(object):
         cluster_num=truncated_models_data['cluster_num']
         truncation_level=truncated_models_data['truncation_level']
         truncation_dir=truncated_models_data['truncation_dir']
+        
+        # Make sure everyting happens in the truncation directory
+        owd = os.getcwd()
+        os.chdir(truncation_dir)
             
         # Run maxcluster to generate the distance matrix
         if subcluster_program=='maxcluster':
@@ -818,7 +822,7 @@ class Ensembler(object):
                 self.logger.debug("{0} files in cluster so truncating list to first {1}".format(len(cluster_files), ensemble_max_models))
                 cluster_files = cluster_files[:ensemble_max_models]
                 
-            cluster_file = self.align_models(cluster_files)
+            cluster_file = self.align_models(cluster_files,work_dir=subcluster_dir)
             if not cluster_file:
                 msg="Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename,
                                                                                                                subcluster_dir)
@@ -840,6 +844,9 @@ class Ensembler(object):
             
             ensembles.append(ensemble)
             ensembles_data.append(ensemble_data)
+        
+        # back to where we started
+        os.chdir(owd)
         
         return ensembles,ensembles_data
 
