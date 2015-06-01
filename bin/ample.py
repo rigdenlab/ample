@@ -930,7 +930,8 @@ def main():
     
     # Create job scripts
     logger.info("Generating MRBUMP runscripts")
-    mrbump_jobtime=86400 # allow 24 hours for each mrbump job
+    #mrbump_jobtime=86400 # allow 24 hours for each mrbump job
+    mrbump_jobtime=172800 # allow 48 hours for each mrbump job
     job_scripts = mrbump_ensemble.generate_jobscripts(ensembles, amopt.d, job_time=mrbump_jobtime, ensemble_options=ensemble_options)
     #print "EXITING ";sys.exit(1)
     
