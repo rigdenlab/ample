@@ -751,9 +751,10 @@ def main():
     logger.info(ample_util.header)
     
     # Print out Version and invocation
-    logger.info( "AMPLE version: {0}\n".format(version.__version__))
-    logger.info( "Invoked with command-line:\n{0}\n".format(orig_argv))
-    logger.info( "Running in directory: {0}\n".format(amopt.d['work_dir']))
+    logger.info("AMPLE version: {0}".format(version.__version__))
+    logger.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+    logger.info("Invoked with command-line:\n{0}\n".format(orig_argv))
+    logger.info("Running in directory: {0}\n".format(amopt.d['work_dir']))
     
     # Display pyrvapi results
     pyrvapi_results.display_results(amopt.d)
