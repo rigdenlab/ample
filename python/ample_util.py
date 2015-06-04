@@ -336,9 +336,8 @@ def ideal_helices(nresidues):
         
     return pdbs, ensemble_options, ensembles_data
 
-
 def is_exe(fpath):
-    return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+    return fpath and os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
 def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     """
