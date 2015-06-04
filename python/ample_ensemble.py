@@ -118,6 +118,7 @@ class Ensembler(object):
         self.pruning_strategy="none"
         
         # subclustering
+        #self.subcluster_method='FLOATING_RADII'
         self.subcluster_method='ORIGINAL'
         self.subcluster_program="maxcluster"
         self.subcluster_exe=None
@@ -747,7 +748,7 @@ class Ensembler(object):
                            ensemble_max_models=None):
         if self.subcluster_method=="ORIGINAL":
             f=self.subcluster_models_fixed_radii
-        elif self.subcluster_method=="FIXED_ENSEMBLES":
+        elif self.subcluster_method=="FLOATING_RADII":
             f=self.subcluster_models_floating_radii
         else:
             assert False
@@ -899,7 +900,7 @@ class Ensembler(object):
                 cluster_files = self._pick_nmodels(cluster_files, clusters, ensemble_max_models)
                 if not cluster_files:
                     self.logger.debug('Could not cluster files under radius: {0} - could not find different models'.format(radius))
-                    
+                    break
             
             # Need to check in case we couldn't cluster under this radius
             cluster_size=len(cluster_files)
@@ -1493,7 +1494,7 @@ class Test(unittest.TestCase):
         ensembler.theseus_exe=self.theseus_exe
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
-        ensembler.subcluster_method="FIXED_ENSEMBLES"
+        ensembler.subcluster_method="FLOATING_RADII"
         
         mdir=os.path.join(self.testfiles_dir,"2qsk_models")
         truncated_models=glob.glob(mdir+os.sep+"*.pdb")
@@ -1531,7 +1532,7 @@ class Test(unittest.TestCase):
         ensembler.theseus_exe=self.theseus_exe
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
-        ensembler.subcluster_method="FIXED_ENSEMBLES"
+        ensembler.subcluster_method="FLOATING_RADII"
         
         mdir=os.path.join(self.testfiles_dir,"1p9g_models")
         truncated_models=glob.glob(mdir+os.sep+"*.pdb")
@@ -1570,7 +1571,7 @@ class Test(unittest.TestCase):
         ensembler.theseus_exe=self.theseus_exe
         ensembler.cluster_exe=self.spicker_exe
         ensembler.subcluster_exe=self.maxcluster_exe
-        ensembler.subcluster_method="FIXED_ENSEMBLES"
+        ensembler.subcluster_method="FLOATING_RADII"
         
         mdir=os.path.join(self.testfiles_dir,"models")
         truncated_models=glob.glob(mdir+os.sep+"*.pdb")
