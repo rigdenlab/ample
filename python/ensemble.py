@@ -72,7 +72,9 @@ def create_ensembles(amoptd):
                                                         ensembles_directory=ensembles_directory,
                                                         alignment_file=amoptd['alignment_file'],
                                                         work_dir=work_dir,
-                                                        nproc=amoptd['nproc'])
+                                                        nproc=amoptd['nproc'],
+                                                        mustang_exe=amoptd['mustang_exe']
+                                                        )
     else:
         ensembles=ensembler.generate_ensembles(models,
                                                cluster_method=amoptd['cluster_method'] ,

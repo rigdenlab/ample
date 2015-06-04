@@ -27,6 +27,27 @@ RELIABLE='reliable'
 ALLATOM='allatom'
 SIDE_CHAIN_TREATMENTS=[POLYALA,RELIABLE,ALLATOM]
 
+
+def align_mustang(models,mustang_exe=None,work_dir=None):
+    if not ample_util.is_exe(mustang_exe):
+        raise RuntimeError,"Cannot find mustang executable: {0}".format(mustang_exe)
+    
+    if not work_dir: work_dir = os.getcwd()
+    work_dir = os.path.abspath(work_dir)
+    if not os.path.isdir(work_dir): os.mkdir(work_dir)
+    os.chdir(work_dir)
+
+    logfile = os.path.join(work_dir,'mustang.log')
+    basename = 'mustang'
+    cmd = [mustang_exe, '-F', 'fasta', '-o', basename, '-i' ] + models
+    rtn = ample_util.run_command(cmd, logfile=logfile, directory=work_dir)
+    if not rtn == 0:
+        raise RuntimeError,"Error running mustang. Check logfile: {0}".format(logfile)
+    
+    alignment_file = os.path.join(work_dir,basename+".afasta")
+    if not os.path.isfile(alignment_file): raise RuntimeError,"Could not find alignment file: {0} after running mustang!".format(alignment_file)
+    return alignment_file
+    
 def model_core_from_alignment(models,alignment_file,work_dir=None):
     
     if not work_dir: work_dir = os.path.join(os.getcwd(),'core_models')
@@ -538,7 +559,9 @@ class Ensembler(object):
                                     truncation_method = None,
                                     ensembles_directory = None,
                                     work_dir = None,
-                                    nproc = None):
+                                    nproc = None,
+                                    mustang_exe = None,
+                                    ):
         
         # Work dir set each time
         if not work_dir: raise RuntimeError,"Need to set work_dir!"
@@ -563,12 +586,18 @@ class Ensembler(object):
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
         
-        # If we've been given an alignment file, trim the models down to a core
-        if alignment_file:
-            core_models_dir = os.path.join(work_dir,'core_models')
-            core_models = model_core_from_alignment(models, alignment_file=alignment_file, work_dir=core_models_dir)
-        else: core_models = models
-        
+        if not alignment_file:
+            self.logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
+            alignment_file = align_mustang(models, mustang_exe=mustang_exe, work_dir=self.work_dir)
+            self.logger.info("Generated alignment file: {0}".format(alignment_file))
+        else:
+            self.logger.info("Using alignment file: {0}".format(alignment_file))
+            
+        # Use the alignment file to trim the models down to a core
+        core_models_dir = os.path.join(work_dir,'core_models')
+        core_models = model_core_from_alignment(models, alignment_file=alignment_file, work_dir=core_models_dir)
+            
+        # Now truncate and create ensembles - as standard ample, but with no subclustering
         self.ensembles = []
         self.ensembles_data = []
         for truncated_models, truncated_models_data in zip(*self.truncate_models(core_models,
@@ -1644,6 +1673,21 @@ class Test(unittest.TestCase):
         self.assertEqual(len(ensembles),57)
         
         shutil.rmtree(work_dir)
+        return
+  
+    def testMustang(self):
+        mustang_exe = "/opt/MUSTANG_v3.2.2/bin/mustang-3.2.1"
+        if not ample_util.is_exe(mustang_exe): return
+        
+        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+        models = [ os.path.join(self.ample_dir,'examples','homologs',pdb) for pdb in pdb_list ]
+        
+        work_dir = 'mustang_test.ample'
+        
+        alignment_file = align_mustang(models,mustang_exe=mustang_exe,work_dir=work_dir)
+        
+        self.assertTrue(os.path.isfile(alignment_file))
+        
         return
     
     def testCoreFromAlignment(self):

@@ -149,7 +149,10 @@ def process_command_line():
 
     parser.add_argument('-mr_sequence', type=str, nargs=1,
                        help="sequence file for crystal content (if different from what's given by -fasta)")
-    
+
+    parser.add_argument('-mustang_exe', metavar='mustang_exe', type=str, nargs=1,
+                       help='Path to the mustang executable')
+
     parser.add_argument('-name', metavar='job_name', type=str, nargs=1,
                        help='4-letter identifier for job [ampl]')
     
@@ -484,9 +487,9 @@ def process_options(amoptd,logger):
     elif amoptd['homologs']:
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
-        if not os.path.isfile(str(amoptd['alignment_file'])):
-            msg = "Homologs option requires an aligment file to be supplied\n" + \
-            "Please supply an alignment file in fasta format with the -alignment_file flag"
+        if not (os.path.isfile(str(amoptd['alignment_file'])) or os.path.isfile(str(amoptd['mustang_exe']))):
+            msg = "Homologs option requires an aligment file or path to a mustang executable to be supplied\n" + \
+            "Please supply the path to mustang executable with the -mustang_exe flag, or an alignment file in fasta format with the -alignment_file flag"
             ample_exit.exit(msg)
         if not os.path.isdir(str(amoptd['models'])):
             msg = "Homologs option requires a directory of pdb models to be supplied\n" + \
@@ -752,7 +755,7 @@ def main():
     
     # Print out Version and invocation
     logger.info("AMPLE version: {0}".format(version.__version__))
-    logger.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+    logger.info("AMPLE started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
     logger.info("Invoked with command-line:\n{0}\n".format(orig_argv))
     logger.info("Running in directory: {0}\n".format(amopt.d['work_dir']))
     
@@ -975,7 +978,7 @@ def main():
     elapsed_time = time_stop - time_start
     run_in_min = elapsed_time / 60
     run_in_hours = run_in_min / 60
-    msg = '\nMR and shelx DONE\n\n ALL DONE  (in ' + str(run_in_hours) + ' hours) \n----------------------------------------\n'
+    msg = '\nMR and shelx DONE\n\n ALL DONE  (in {0} hours) \n----------------------------------------\n'.format(run_in_hours)
     logging.info(msg)
     
     # Benchmark mode
@@ -990,6 +993,7 @@ def main():
     # Finally update pyrvapi results
     pyrvapi_results.display_results(amopt.d)
 
+    logger.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
     return
 
 if __name__=="__main__":
