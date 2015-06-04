@@ -384,6 +384,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
     if dolog: logging.debug("In directory {0}\nRunning command: {1}".format(directory, " ".join(cmd)))
 
     if logfile:
+        logfile = os.path.abspath(logfile)
         if dolog: logging.debug("Logfile is: {0}".format(logfile))
         logf = open(logfile, "w")
     else:
