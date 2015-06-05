@@ -107,15 +107,15 @@ def split_sequence(length,percent_interval):
     indices=[]
     for i in range(nchunks):
         if i==0:
-            start_stop=(0,length-1)
+            start_stop=(0,length)
             percent=100
         else:
-            start_stop=(chunk_size*i,length-1)
+            start_stop=(chunk_size*i,length)
             percent=int(round(float(length-(chunk_size*i))/float(length)*100))
         levels.append(percent)
         indices.append(start_stop)
         
-    return chunk_size,indices, percent
+    return chunk_size, indices, levels
 
 class Ensembler(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
@@ -168,27 +168,19 @@ class Ensembler(object):
             self.logger.critical("Error running theseus: {0}".format(e))
             return False
         return run_theseus.superposed_models
-    
+
     def _calculate_residues_percent(self,var_by_res,percent_interval):
         """Calculate the list of residues to keep if we are keeping self.percent residues under
         each truncation bin. The threshold is just the threshold of the most variable residue"""
-         
+        
         length = len(var_by_res)
         if not length > 0:
             msg = "Error reading residue variances!"
             self.logger.critical(msg)
             raise RuntimeError,msg
          
-        # How many residues should fit in each bin
-        chunk_size=int(round(float(length) * float(percent_interval)/100.0))
-        if chunk_size < 1:
-            msg = "Error generating thresholds, got < 1 AA in chunk_size"
-            self.logger.critical(msg)
-            raise RuntimeError,msg
-         
-        nchunks=int(round(length/chunk_size))+1
-        #print "chunk_size, nchunks ",chunk_size,nchunks
-         
+        chunk_size, indices, levels = split_sequence(length,percent_interval)
+        
         # Get list of residue indices sorted by variance - from most variable to least
         var_by_res.sort(key=lambda x: x[2], reverse=True)
          
@@ -202,16 +194,12 @@ class Ensembler(object):
         truncation_residues=[]
         truncation_residue_idxs=[]
         MIN_RESIDUES=2 # we need at least 3 residues for theseus to work
-        for i in range(nchunks):
-            if i==0:
-                residues=copy.copy(resseq_all)
-                idxs=copy.copy(idxs_all)
-                percent=100
-            else:
-                residues=resseq_all[chunk_size*i:]
-                idxs=idxs_all[chunk_size*i:]
-                percent=int(round(float(length-(chunk_size*i))/float(length)*100))
-             
+        for i, (start,stop) in enumerate(indices):
+            percent = levels[i]
+            residues = resseq_all[start:stop]
+            idxs = resseq_all[start:stop]
+            idxs = idxs_all[start:stop]
+            
             if len(residues) > MIN_RESIDUES: 
                 # For the threshold we take the threshold of the most variable residue
                 idx=chunk_size*(i+1)-1
@@ -227,50 +215,6 @@ class Ensembler(object):
                 truncation_residue_idxs.append(idxs)
                  
         return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
-    
-    def _calculate_residues_percentX(self,var_by_res,percent_interval):
-        """Calculate the list of residues to keep if we are keeping self.percent residues under
-        each truncation bin. The threshold is just the threshold of the most variable residue"""
-        
-        length = len(var_by_res)
-        if not length > 0:
-            msg = "Error reading residue variances!"
-            self.logger.critical(msg)
-            raise RuntimeError,msg
-        
-        chunk_size, indices, percents = split_sequence(length,percent_interval)
-        
-        # Get list of residue indices sorted by variance - from most variable to least
-        var_by_res.sort(key=lambda x: x[1], reverse=True)
-        
-        #print "var_by_res ",var_by_res
-        resSeq=[ x[0] for x in var_by_res ]
-        
-        # Get list of residues to keep under the different intevals
-        truncation_levels=[]
-        truncation_variances=[]
-        truncation_residues=[]
-        MIN_RESIDUES=2 # we need at least 3 residues for theseus to work
-        for i in range(len(indices)):
-            
-            start,stop = indices[i]
-            percent = percents[i]
-            residues=resSeq[start,stop]
-            
-            if len(residues) > MIN_RESIDUES: 
-                # For the threshold we take the threshold of the most variable residue
-                idx=chunk_size*(i+1)-1
-                if idx > length-1: # Need to make sure we have a full final chunk
-                    idx=length-1
-                thresh=var_by_res[idx][1]
-                truncation_variances.append(thresh)
-                truncation_levels.append(percent)
-                #print "GOT PERCENT,THRESH ",percent,thresh
-                #print "residues ",residues
-                residues.sort()
-                truncation_residues.append(residues)
-                
-        return truncation_levels, truncation_variances, truncation_residues
     
     def _calculate_residues_thresh(self,var_by_res,percent_interval):
         """Txxx
@@ -1388,6 +1332,9 @@ class Test(unittest.TestCase):
                                                              num_clusters=3,
                                                              cluster_exe=self.spicker_exe)
         
+        
+        # This with spicker from ccp4 6.5.010 on osx 10.9.5
+        # These should match with the test results from python/spicker.py
         names=sorted([os.path.basename(m) for m in cluster_models[0]])
         self.assertEqual(names,
                          sorted(['5_S_00000005.pdb', '4_S_00000005.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb',
@@ -1396,7 +1343,7 @@ class Test(unittest.TestCase):
                           '1_S_00000004.pdb']) )
         
         d = cluster_data[2]
-        self.assertEqual(os.path.basename(d['cluster_centroid']),'2_S_00000003.pdb')
+        self.assertEqual(os.path.basename(d['cluster_centroid']),'1_S_00000001.pdb')
         self.assertEqual(d['cluster_num_models'],1)
         shutil.rmtree(ensembler.work_dir)
         return
@@ -1428,29 +1375,34 @@ class Test(unittest.TestCase):
                                                  percent_truncation=percent_truncation,
                                                  truncation_method=truncation_method,
                                                  work_dir=work_dir)
+        
+        # Below tested with ccp4 6.5.010 on osx 10.9.5
+        eref =  ['c1_tl100_r2_allatom.pdb', 'c1_tl100_r2_polyAla.pdb', 'c1_tl100_r2_reliable.pdb', 'c1_tl100_r3_allatom.pdb', 
+                 'c1_tl100_r3_polyAla.pdb', 'c1_tl100_r3_reliable.pdb', 'c1_tl19_r1_allatom.pdb', 'c1_tl19_r1_polyAla.pdb', 
+                 'c1_tl19_r1_reliable.pdb', 'c1_tl24_r1_allatom.pdb', 'c1_tl24_r1_polyAla.pdb', 'c1_tl24_r1_reliable.pdb', 
+                 'c1_tl29_r1_allatom.pdb', 'c1_tl29_r1_polyAla.pdb', 'c1_tl29_r1_reliable.pdb', 'c1_tl34_r1_allatom.pdb', 
+                 'c1_tl34_r1_polyAla.pdb', 'c1_tl34_r1_reliable.pdb', 'c1_tl39_r1_allatom.pdb', 'c1_tl39_r1_polyAla.pdb', 
+                 'c1_tl39_r1_reliable.pdb', 'c1_tl44_r1_allatom.pdb', 'c1_tl44_r1_polyAla.pdb', 'c1_tl44_r1_reliable.pdb', 
+                 'c1_tl44_r2_allatom.pdb', 'c1_tl44_r2_polyAla.pdb', 'c1_tl44_r2_reliable.pdb', 'c1_tl49_r1_allatom.pdb', 
+                 'c1_tl49_r1_polyAla.pdb', 'c1_tl49_r1_reliable.pdb', 'c1_tl49_r2_allatom.pdb', 'c1_tl49_r2_polyAla.pdb', 
+                 'c1_tl49_r2_reliable.pdb', 'c1_tl54_r1_allatom.pdb', 'c1_tl54_r1_polyAla.pdb', 'c1_tl54_r1_reliable.pdb', 
+                 'c1_tl54_r2_allatom.pdb', 'c1_tl54_r2_polyAla.pdb', 'c1_tl54_r2_reliable.pdb', 'c1_tl59_r1_allatom.pdb', 
+                 'c1_tl59_r1_polyAla.pdb', 'c1_tl59_r1_reliable.pdb', 'c1_tl59_r2_allatom.pdb', 'c1_tl59_r2_polyAla.pdb', 
+                 'c1_tl59_r2_reliable.pdb', 'c1_tl64_r1_allatom.pdb', 'c1_tl64_r1_polyAla.pdb', 'c1_tl64_r1_reliable.pdb', 
+                 'c1_tl64_r2_allatom.pdb', 'c1_tl64_r2_polyAla.pdb', 'c1_tl64_r2_reliable.pdb', 'c1_tl69_r1_allatom.pdb', 
+                 'c1_tl69_r1_polyAla.pdb', 'c1_tl69_r1_reliable.pdb', 'c1_tl69_r2_allatom.pdb', 'c1_tl69_r2_polyAla.pdb', 
+                 'c1_tl69_r2_reliable.pdb', 'c1_tl75_r1_allatom.pdb', 'c1_tl75_r1_polyAla.pdb', 'c1_tl75_r1_reliable.pdb', 
+                 'c1_tl75_r2_allatom.pdb', 'c1_tl75_r2_polyAla.pdb', 'c1_tl75_r2_reliable.pdb', 'c1_tl75_r3_allatom.pdb', 
+                 'c1_tl75_r3_polyAla.pdb', 'c1_tl75_r3_reliable.pdb', 'c1_tl80_r1_allatom.pdb', 'c1_tl80_r1_polyAla.pdb', 
+                 'c1_tl80_r1_reliable.pdb', 'c1_tl80_r2_allatom.pdb', 'c1_tl80_r2_polyAla.pdb', 'c1_tl80_r2_reliable.pdb', 
+                 'c1_tl80_r3_allatom.pdb', 'c1_tl80_r3_polyAla.pdb', 'c1_tl80_r3_reliable.pdb', 'c1_tl85_r1_allatom.pdb', 
+                 'c1_tl85_r1_polyAla.pdb', 'c1_tl85_r1_reliable.pdb', 'c1_tl85_r2_allatom.pdb', 'c1_tl85_r2_polyAla.pdb', 
+                 'c1_tl85_r2_reliable.pdb', 'c1_tl85_r3_allatom.pdb', 'c1_tl85_r3_polyAla.pdb', 'c1_tl85_r3_reliable.pdb', 
+                 'c1_tl90_r1_allatom.pdb', 'c1_tl90_r1_polyAla.pdb', 'c1_tl90_r1_reliable.pdb', 'c1_tl90_r2_allatom.pdb', 
+                 'c1_tl90_r2_polyAla.pdb', 'c1_tl90_r2_reliable.pdb', 'c1_tl90_r3_allatom.pdb', 'c1_tl90_r3_polyAla.pdb', 
+                 'c1_tl90_r3_reliable.pdb', 'c1_tl95_r2_allatom.pdb', 'c1_tl95_r2_polyAla.pdb', 'c1_tl95_r2_reliable.pdb', 
+                 'c1_tl95_r3_allatom.pdb', 'c1_tl95_r3_polyAla.pdb', 'c1_tl95_r3_reliable.pdb']
 
-        eref=sorted(['c1_tl100_r2_allatom.pdb', 'c1_tl100_r2_reliable.pdb', 'c1_tl100_r2_polyAla.pdb', 'c1_tl100_r3_allatom.pdb',
-              'c1_tl100_r3_reliable.pdb', 'c1_tl100_r3_polyAla.pdb', 'c1_tl95_r2_allatom.pdb', 'c1_tl95_r2_reliable.pdb',
-              'c1_tl95_r2_polyAla.pdb', 'c1_tl95_r3_allatom.pdb', 'c1_tl95_r3_reliable.pdb', 'c1_tl95_r3_polyAla.pdb', 'c1_tl90_r1_allatom.pdb',
-              'c1_tl90_r1_reliable.pdb', 'c1_tl90_r1_polyAla.pdb', 'c1_tl90_r2_allatom.pdb', 'c1_tl90_r2_reliable.pdb', 'c1_tl90_r2_polyAla.pdb',
-              'c1_tl90_r3_allatom.pdb', 'c1_tl90_r3_reliable.pdb', 'c1_tl90_r3_polyAla.pdb', 'c1_tl85_r1_allatom.pdb', 'c1_tl85_r1_reliable.pdb',
-              'c1_tl85_r1_polyAla.pdb', 'c1_tl85_r2_allatom.pdb', 'c1_tl85_r2_reliable.pdb', 'c1_tl85_r2_polyAla.pdb', 'c1_tl85_r3_allatom.pdb',
-              'c1_tl85_r3_reliable.pdb', 'c1_tl85_r3_polyAla.pdb', 'c1_tl80_r1_allatom.pdb', 'c1_tl80_r1_reliable.pdb', 'c1_tl80_r1_polyAla.pdb',
-              'c1_tl80_r2_allatom.pdb', 'c1_tl80_r2_reliable.pdb', 'c1_tl80_r2_polyAla.pdb', 'c1_tl80_r3_allatom.pdb', 'c1_tl80_r3_reliable.pdb',
-              'c1_tl80_r3_polyAla.pdb', 'c1_tl75_r1_allatom.pdb', 'c1_tl75_r1_reliable.pdb', 'c1_tl75_r1_polyAla.pdb', 'c1_tl75_r2_allatom.pdb',
-              'c1_tl75_r2_reliable.pdb', 'c1_tl75_r2_polyAla.pdb', 'c1_tl75_r3_allatom.pdb', 'c1_tl75_r3_reliable.pdb', 'c1_tl75_r3_polyAla.pdb',
-              'c1_tl69_r1_allatom.pdb', 'c1_tl69_r1_reliable.pdb', 'c1_tl69_r1_polyAla.pdb', 'c1_tl69_r2_allatom.pdb', 'c1_tl69_r2_reliable.pdb',
-              'c1_tl69_r2_polyAla.pdb', 'c1_tl64_r1_allatom.pdb', 'c1_tl64_r1_reliable.pdb', 'c1_tl64_r1_polyAla.pdb', 'c1_tl64_r2_allatom.pdb',
-              'c1_tl64_r2_reliable.pdb', 'c1_tl64_r2_polyAla.pdb', 'c1_tl59_r1_allatom.pdb', 'c1_tl59_r1_reliable.pdb', 'c1_tl59_r1_polyAla.pdb',
-              'c1_tl59_r2_allatom.pdb', 'c1_tl59_r2_reliable.pdb', 'c1_tl59_r2_polyAla.pdb', 'c1_tl54_r1_allatom.pdb', 'c1_tl54_r1_reliable.pdb',
-              'c1_tl54_r1_polyAla.pdb', 'c1_tl54_r2_allatom.pdb', 'c1_tl54_r2_reliable.pdb', 'c1_tl54_r2_polyAla.pdb', 'c1_tl49_r1_allatom.pdb',
-              'c1_tl49_r1_reliable.pdb', 'c1_tl49_r1_polyAla.pdb', 'c1_tl49_r2_allatom.pdb', 'c1_tl49_r2_reliable.pdb', 'c1_tl49_r2_polyAla.pdb',
-              'c1_tl44_r1_allatom.pdb', 'c1_tl44_r1_reliable.pdb', 'c1_tl44_r1_polyAla.pdb', 'c1_tl44_r2_allatom.pdb', 'c1_tl44_r2_reliable.pdb',
-              'c1_tl44_r2_polyAla.pdb', 'c1_tl39_r1_allatom.pdb', 'c1_tl39_r1_reliable.pdb', 'c1_tl39_r1_polyAla.pdb', 'c1_tl34_r1_allatom.pdb',
-              'c1_tl34_r1_reliable.pdb', 'c1_tl34_r1_polyAla.pdb', 'c1_tl29_r1_allatom.pdb', 'c1_tl29_r1_reliable.pdb', 'c1_tl29_r1_polyAla.pdb', 
-              'c1_tl24_r1_allatom.pdb', 'c1_tl24_r1_reliable.pdb', 'c1_tl24_r1_polyAla.pdb', 'c1_tl19_r1_allatom.pdb', 'c1_tl19_r1_reliable.pdb',
-              'c1_tl19_r1_polyAla.pdb', 'c1_tl14_r1_allatom.pdb', 'c1_tl14_r1_reliable.pdb', 'c1_tl14_r1_polyAla.pdb', 'c1_tl8_r1_allatom.pdb',
-              'c1_tl8_r1_reliable.pdb', 'c1_tl8_r1_polyAla.pdb'])
         self.assertEqual(sorted([os.path.basename(m) for m in ensembles]),eref)
         d = ensembler.ensembles_data[5]
 
@@ -1460,7 +1412,7 @@ class Test(unittest.TestCase):
         self.assertEqual(d['num_clusters'],num_clusters)
         self.assertTrue(abs(d['truncation_variance']-13.035172) < 0001)
         self.assertEqual(d['ensemble_num_atoms'],984)
-        self.assertEqual(os.path.basename(d['subcluster_centroid_model']),'5_S_00000005.pdb')
+        self.assertEqual(os.path.basename(d['subcluster_centroid_model']),'4_S_00000002.pdb')
         
         shutil.rmtree(ensembler.work_dir)
         return
