@@ -5,6 +5,9 @@ import glob
 import logging
 import os
 import re
+import shutil
+import sys
+import unittest
 
 # our imports
 try:
@@ -267,6 +270,63 @@ class Spickerer( object ):
             
         return rstr
     
+
+class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        
+        cls.spicker_exe=ample_util.find_exe('spicker')
+
+        root = logging.getLogger()
+        root.setLevel(logging.DEBUG)
+        ch = logging.StreamHandler(sys.stdout)
+        ch.setLevel(logging.DEBUG)
+        #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        formatter = logging.Formatter('%(message)s')
+        ch.setFormatter(formatter)
+        root.addHandler(ch)
+
+        return
+    
+    def testSpicker(self):
+
+        mdir=os.path.join(self.testfiles_dir,"models")
+        models=glob.glob(mdir+os.sep+"*.pdb")
+        
+        work_dir =os.path.join(self.tests_dir,"spicker")
+        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+        os.mkdir(work_dir)
+
+        spickerer = Spickerer(spicker_exe=self.spicker_exe)
+        spickerer.cluster(models,num_clusters=10,max_cluster_size=0, run_dir=work_dir)
+
+        # This with spicker from ccp4 6.5.010 on osx 10.9.5
+        names=sorted([os.path.basename(m) for m in spickerer.results[0].pdb_list])
+        self.assertEqual(names,
+                         sorted(['5_S_00000005.pdb', '4_S_00000005.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb',
+                          '4_S_00000003.pdb', '3_S_00000006.pdb', '3_S_00000004.pdb', '2_S_00000005.pdb',
+                          '2_S_00000001.pdb', '3_S_00000003.pdb', '1_S_00000005.pdb', '1_S_00000002.pdb', 
+                          '1_S_00000004.pdb']) )
+        
+        # Centroid of third cluster
+        self.assertEqual(os.path.basename(spickerer.results[2].cluster_centroid),'1_S_00000001.pdb')
+        
+        shutil.rmtree(work_dir)
+        
+        return
+
+
 if __name__ == "__main__":
     
     import subprocess,tempfile
@@ -328,7 +388,6 @@ if __name__ == "__main__":
     #
     # Run Spicker on a directory of PDB files
     #
-    import sys
     if not len(sys.argv) >= 2 and len(sys.argv) < 4:
         print "Usage is {0} [spicker_executable] <directory_of_pdbs>".format( sys.argv[0] )
         sys.exit(1)
