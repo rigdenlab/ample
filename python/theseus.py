@@ -159,6 +159,7 @@ class Test(unittest.TestCase):
         rtheseus = Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
         rtheseus.align_models(models,homologs=homologs)
         var_by_res = rtheseus.var_by_res()
+        print " GOT ",[x[0] for x in var_by_res]
         # Below with theseus 3.1.1 on osx 10.9.5
         ref = [(0, 1, 55.757593), (1, 2, 46.981238), (2, 3, 47.734236), (3, 4, 39.857326), (4, 5, 35.477433),
                (5, 6, 26.066719), (6, 7, 24.114493), (7, 8, 24.610988), (8, 9, 21.187142), (9, 10, 21.882375),
@@ -172,7 +173,12 @@ class Test(unittest.TestCase):
                (45, 46, 35.141769), (46, 47, 40.41399), (47, 48, 52.268871), (48, 49, 54.535848), (49, 50, 49.527155),
                (50, 51, 67.9861), (51, 52, 58.661069), (52, 53, 41.802971), (53, 54, 57.085415), (54, 55, 71.944127),
                (55, 56, 57.893953), (56, 57, 54.34137), (57, 58, 77.736775), (58, 59, 83.279371)]
-        self.assertEqual(var_by_res,ref)
+        
+        self.assertEqual([x[0] for x in var_by_res],[x[0] for x in ref])
+        self.assertEqual([x[1] for x in var_by_res],[x[1] for x in ref])
+        for i,(t,r) in enumerate(zip([x[2] for x in var_by_res], [x[2] for x in ref])):
+            self.assertTrue(abs(t-r) < 0.0001,"Mismatch for: {0} {1} {2}".format(i,t,r))
+            
         shutil.rmtree(work_dir)
         return
     
@@ -200,8 +206,12 @@ class Test(unittest.TestCase):
         ref  = [(0, 243, 8.049061), (1, 244, 2.614031), (2, 245, 1.343609), (3, 246, 2.261761), (4, 247, 1.112115),
                 (5, 248, 0.574936), (6, 249, 0.03114), (7, 250, 0.002894), (8, 251, 0.002314), (9, 252, 0.002174),
                 (10, 253, 0.016252), (11, 254, 0.109965)]
-        self.assertEqual(var_by_res,ref)
-        
+
+        self.assertEqual([x[0] for x in var_by_res],[x[0] for x in ref])
+        self.assertEqual([x[1] for x in var_by_res],[x[1] for x in ref])
+        for i,(t,r) in enumerate(zip([x[2] for x in var_by_res], [x[2] for x in ref])):
+            self.assertTrue(abs(t-r) < 0.0001,"Mismatch for: {0} {1} {2}".format(i,t,r))
+
         self.assertTrue(all([os.path.isfile(m) for m in rtheseus.aligned_models]))
         # clean up
         for m in models: os.unlink(m)
