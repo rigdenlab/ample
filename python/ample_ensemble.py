@@ -91,31 +91,24 @@ def model_core_from_alignment(models,alignment_file,work_dir=None):
         
     return core_models
 
-def split_sequence(length,percent_interval):
-    """split a sequence of length into chunks each separated by percent_interval"""
+def split_sequence(length,percent_interval,min_chunk=3):
+    """split a sequence of length into chunks each separated by percent_interval each being at least min_chunk size"""
     
     # How many residues should fit in each bin
     chunk_size=int(round(float(length) * float(percent_interval)/100.0))
-    if chunk_size < 1:
+    if chunk_size < min_chunk:
         msg = "Error splitting sequence, got chunk_size < 1: {0} : {1}".format(length,percent_interval)
         raise RuntimeError,msg
     
-    nchunks=int(round(length/chunk_size))+1
-    
-    # Get list of residues to keep under the different intevals
-    levels=[]
-    indices=[]
-    for i in range(nchunks):
-        if i==0:
-            start_stop=(0,length)
-            percent=100
+    idxs = [length-1]
+    while True:
+        start = idxs[-1] - chunk_size
+        remainder = start + 1
+        if remainder >= min_chunk:
+            idxs.append(start)
         else:
-            start_stop=(chunk_size*i,length)
-            percent=int(round(float(length-(chunk_size*i))/float(length)*100))
-        levels.append(percent)
-        indices.append(start_stop)
-        
-    return chunk_size, indices, levels
+            break
+    return idxs
 
 class Ensembler(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
@@ -168,51 +161,92 @@ class Ensembler(object):
             self.logger.critical("Error running theseus: {0}".format(e))
             return False
         return run_theseus.superposed_models
+    
+    def _calculate_residues_focussed(self,var_by_res):
+        """
+        The sweet spot for success seems to occur in the interval 5-40 residues.
+        Up till now we have always worked in 5% intervals, so 20 truncation levels
+        The new strategy is to ensure that always have at least half of the truncations in
+        the interval < 40 residues => 10 truncations in 40, so at least 4 residue chunks in this interval.
+        
+        The strategy is therefore for < 80 residues, just split evenly into 20 chunks.
+        
+        For > 80 residues, split < 40 into 10 4-residue chunks, and split the interval 40 -> end into
+        10 even chunks.
+        """
+        
+        length=len(var_by_res)
+        if length <= 80:
+            # Just split evenly into 20 chunks
+            return self._calculate_residues_percent(var_by_res,5)
+    
+        # Get list of residue indices sorted by variance - from least variable to most
+        var_by_res.sort(key=lambda x: x[2], reverse=False)
+         
+        # Split a 40 - length interval into 10 even chunks.
+        llen = 40
+        lower_start = split_sequence(llen,10)
+        
+        # Split remaining interval into 10 even chunks. We need to add the start sequence as we have
+        # removed llen residues
+        ulen = length - llen
+        upper_start = [ i + llen for i in split_sequence(ulen,10) ]
+        start_indexes = upper_start + lower_start 
+        
+        # Calculate the percentages for each of these start points
+        percentages = [ int(round(float(start+1)/float(length)*100)) for start in start_indexes ]
+        #print "percentages ", percentages
+        truncation_levels = percentages
+
+        #print "var_by_res ",var_by_res
+        idxs_all = [ x[0] for x in var_by_res ]
+        resseq_all = [ x[1] for x in var_by_res ]
+        variances = [ x[2] for x in var_by_res ]
+
+        truncation_residue_idxs = [ sorted(idxs_all[:i+1]) for i in start_indexes ]
+        #print "truncation_residue_idxs ",truncation_residue_idxs
+        truncation_residues = [ sorted(resseq_all[:i+1]) for i in start_indexes ]
+        #print "truncation_residues ",truncation_residues
+        
+        # We take the variance of the most variable residue
+        truncation_variances = [ variances[i] for i in start_indexes ] 
+        #print "truncation_variances ",truncation_variances
+        
+        return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
 
     def _calculate_residues_percent(self,var_by_res,percent_interval):
         """Calculate the list of residues to keep if we are keeping self.percent residues under
         each truncation bin. The threshold is just the threshold of the most variable residue"""
         
+        MIN_CHUNK=3 # We need at least 3 residues for theseus to work
         length = len(var_by_res)
-        if not length > 0:
-            msg = "Error reading residue variances!"
-            self.logger.critical(msg)
-            raise RuntimeError,msg
-         
-        chunk_size, indices, levels = split_sequence(length,percent_interval)
+        start_idxs = split_sequence(length,percent_interval,min_chunk=MIN_CHUNK)
         
-        # Get list of residue indices sorted by variance - from most variable to least
-        var_by_res.sort(key=lambda x: x[2], reverse=True)
+        # Get list of residue indices sorted by variance - from least to most
+        var_by_res.sort(key=lambda x: x[2], reverse=False)
          
         #print "var_by_res ",var_by_res
         idxs_all = [ x[0] for x in var_by_res ]
         resseq_all = [ x[1] for x in var_by_res ]
+        variances = [ x[2] for x in var_by_res ]
          
         # Get list of residues to keep under the different intevals
         truncation_levels=[]
         truncation_variances=[]
         truncation_residues=[]
         truncation_residue_idxs=[]
-        MIN_RESIDUES=2 # we need at least 3 residues for theseus to work
-        for i, (start,stop) in enumerate(indices):
-            percent = levels[i]
-            residues = resseq_all[start:stop]
-            idxs = resseq_all[start:stop]
-            idxs = idxs_all[start:stop]
-            
-            if len(residues) > MIN_RESIDUES: 
-                # For the threshold we take the threshold of the most variable residue
-                idx=chunk_size*(i+1)-1
-                if idx > length-1: # Need to make sure we have a full final chunk
-                    idx=length-1
-                thresh=var_by_res[idx][2]
-                truncation_variances.append(thresh)
-                truncation_levels.append(percent)
-                #print "GOT PERCENT,THRESH ",percent,thresh
-                #print "residues ",residues
-                residues.sort()
-                truncation_residues.append(residues)
-                truncation_residue_idxs.append(idxs)
+        for start in start_idxs:
+            percent = int(round(float(start+1)/float(length)*100))
+            residues = resseq_all[:start+1]
+            idxs = resseq_all[:start+1]
+            idxs = idxs_all[:start+1]
+            thresh=variances[start] # For the threshold we take the threshold of the most variable residue
+            truncation_variances.append(thresh)
+            truncation_levels.append(percent)
+            #print "GOT PERCENT,THRESH ",percent,thresh
+            #print "residues ",residues
+            truncation_residues.append(sorted(residues))
+            truncation_residue_idxs.append(sorted(idxs))
                  
         return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
     
@@ -719,6 +753,7 @@ class Ensembler(object):
                            subcluster_program=None,
                            subcluster_exe=None,
                            ensemble_max_models=None):
+        
         if self.subcluster_method=="ORIGINAL":
             f=self.subcluster_models_fixed_radii
         elif self.subcluster_method=="FLOATING_RADII":
@@ -766,7 +801,7 @@ class Ensembler(object):
         num_previous_models=-1 # set to -1 so comparison always false on first pass
         for radius in radius_thresholds:
 
-            self.logger.debug("subclustering files under radius: {0}".format(radius))
+            self.logger.debug("subclustering models under radius: {0}".format(radius))
 
             # Get list of pdbs clustered according to radius threshold
             cluster_files = clusterer.cluster_by_radius(radius)
@@ -994,7 +1029,7 @@ class Ensembler(object):
                         ):
         
         assert len(models) > 1,"Cannot truncate as < 2 models!"
-        assert truncation_method and percent_truncation,"Missing arguments: {0} {1}".format(truncation_method,percent_truncation)
+        assert truncation_method and percent_truncation,"Missing arguments: {0}".format(truncation_method)
 
         # Create the directories we'll be working in
         truncate_dir =  os.path.join(self.work_dir, 'truncate_{0}'.format(models_data['cluster_num']))
@@ -1004,15 +1039,23 @@ class Ensembler(object):
         # Calculate variances between pdb - and align them if necessary
         run_theseus = theseus.Theseus(work_dir=truncate_dir, theseus_exe=self.theseus_exe)
         run_theseus.align_models(models, homologs=homologs)
+        
         #if homologs: models = run_theseus.aligned_models
         var_by_res = run_theseus.var_by_res()
+        if not len(var_by_res) > 0:
+            msg = "Error reading residue variances!"
+            self.logger.critical(msg)
+            raise RuntimeError,msg
         
+        self.logger.info('Using truncation method: {0}'.format(truncation_method))
         # Calculate which residues to keep under the different methods
         truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs=None,None,None,None
         if truncation_method=='percent':
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = self._calculate_residues_percent(var_by_res,percent_truncation)
         elif truncation_method=='thresh':
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = self._calculate_residues_thresh(var_by_res,percent_truncation)
+        elif truncation_method=='focussed':
+            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = self._calculate_residues_focussed(var_by_res)
         else:
             raise RuntimeError,"Unrecognised ensembling mode: {0}".format(truncation_method)
 
@@ -1038,7 +1081,7 @@ class Ensembler(object):
             
             trunc_dir = os.path.join(truncate_dir, 'tlevel_{0}'.format(tlevel))
             os.mkdir(trunc_dir)
-            self.logger.info( 'truncating at: {0} in directory {1}'.format(tvar,trunc_dir))
+            self.logger.info('truncating at: {0} in directory {1}'.format(tlevel,trunc_dir))
 
             # list of models for this truncation level
             level_models = []
@@ -1262,6 +1305,24 @@ class Test(unittest.TestCase):
         shutil.rmtree(ensembler.work_dir)
         return
     
+    def testResiduesFocussed(self):
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        ensembler=Ensembler()
+        
+        l=160
+        indexes = [ i for i in range(l) ]
+        resseq = indexes[:]
+        variances = [ float(i+1) for i in indexes ]
+        var_by_res = zip(indexes,resseq,variances)
+        truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_focussed(var_by_res)
+         
+        self.assertEqual(truncation_levels,[100, 93, 85, 78, 70, 63, 55, 48, 40, 33, 25, 23, 20, 18, 15, 13, 10, 8, 5, 3])
+        self.assertEqual(truncation_variances,[160.0, 148.0, 136.0, 124.0, 112.0, 100.0, 88.0, 76.0, 64.0, 52.0, 40.0, 36.0, 32.0, 28.0, 24.0, 20.0, 16.0, 12.0, 8.0, 4.0])
+        self.assertEqual(truncation_residues,truncation_residues_idxs)
+        self.assertEqual(truncation_residues_idxs[-1],[0, 1, 2, 3])
+       
+        return
+    
     def testResiduesPercent(self):
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
@@ -1278,38 +1339,37 @@ class Test(unittest.TestCase):
         var_by_res=ensembler.calculate_variances(cluster_models)
         truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_percent(var_by_res,percent_interval=5)
 
-
-        residues=[[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
-            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 57],
-            [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53],
-            [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
-            [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
-            [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
-            [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-            [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-            [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-            [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-            [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
-            [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
-            [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
-            [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
-            [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
-            [24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
-            [26, 27, 28, 30, 31, 32, 33, 34],
-            [26, 27, 30, 31, 32]]
-        
-        for i in range(len(residues)):
-            self.assertEqual(residues[i],truncation_residues[i],"Mismatching residues for level {0}\n{1}\n{2}".format(i,residues[i],truncation_residues[i]))
-
         self.assertEqual(truncation_levels,
                          [100, 95, 90, 85, 80, 75, 69, 64, 59, 54, 49, 44, 39, 34, 29, 24, 19, 14, 8])
         
-        refv=[74.272253, 59.917999, 56.260987, 50.992344, 43.268754, 37.227859, 30.767268, 25.348501,
-              23.050357, 18.292366, 15.287348, 10.250043, 5.66545, 3.152793, 0.874899, 0.185265, 0.090917,
-              0.08155, 0.039639]
+        refv=[83.279358, 67.986091, 57.085407, 54.341361, 47.73422, 40.413985, 35.141765, 26.06671, 22.81897, 
+              21.187131, 14.889563, 9.55953, 6.484837, 4.263945, 1.41278, 0.504414, 0.204918, 0.135812, 0.081846]
         self.assertTrue(all([ abs(r-c) < 0.0001 for r,c in zip(refv,truncation_variances)]),
                          "Wrong truncation variances: {0}".format(truncation_variances))
+        
+        residues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
+                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
+                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 57],
+                    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 50, 53, 57],
+                    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
+                    [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
+                    [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
+                    [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+                    [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+                    [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+                    [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+                    [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
+                    [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
+                    [19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
+                    [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+                    [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36],
+                    [23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+                    [26, 27, 28, 30, 31, 32, 33, 34],
+                    [26, 27, 30, 31, 32]]
+
+        for i in range(len(residues)):
+            self.assertEqual(residues[i],truncation_residues[i],"Mismatching residues for level {0}\n{1}\n{2}".format(i,residues[i],truncation_residues[i]))
+
         shutil.rmtree(ensembler.work_dir)
         return
 
