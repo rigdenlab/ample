@@ -419,7 +419,7 @@ class Ensembler(object):
         
         return d
     
-    def edit_side_chains(self,raw_ensemble,raw_ensemble_data,ensembles_directory):
+    def edit_side_chains(self,raw_ensemble,raw_ensemble_data,ensembles_directory,homologs=False):
         
         assert os.path.isdir(ensembles_directory),"Cannot find ensembles directory: {0}".format(ensembles_directory)
         ensembles=[]
@@ -446,10 +446,13 @@ class Ensembler(object):
             # Process ensemble data
             ensemble_data=copy.copy(raw_ensemble_data)
             ensemble_data['side_chain_treatment']=sct
-            ensemble_data['name']='c{0}_tl{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
-                                                               ensemble_data['truncation_level'],
-                                                               ensemble_data['subcluster_radius_threshold'],
-                                                               sct)
+            if homologs:
+                ensemble_data['name']='e{1}_{3}'.format(ensemble_data['truncation_level'], sct)
+            else:
+                ensemble_data['name']='c{0}_tl{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
+                                                                   ensemble_data['truncation_level'],
+                                                                   ensemble_data['subcluster_radius_threshold'],
+                                                                   sct)
             ensemble_data['ensemble_pdb']=fpath
             ensemble_data['ensemble_num_atoms']=natoms
             # check
@@ -579,7 +582,6 @@ class Ensembler(object):
         self.ensembles = []
         self.ensembles_data = []
         for truncated_models, truncated_models_data in zip(*self.truncate_models(core_models,
-                                                                                 models_data={'cluster_num': 1},
                                                                                  truncation_method=truncation_method,
                                                                                  truncation_pruning=None,
                                                                                  percent_truncation=percent_truncation,
@@ -598,9 +600,8 @@ class Ensembler(object):
                 self.logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
                 continue
             pre_ensemble_data = copy.copy(truncated_models_data)
-            pre_ensemble_data['subcluster_radius_threshold'] = 0
              
-            for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble, pre_ensemble_data, self.ensembles_directory)):
+            for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble, pre_ensemble_data, self.ensembles_directory, homologs=True)):
                 self.ensembles.append(ensemble)
                 self.ensembles_data.append(ensemble_data)
         
@@ -1021,7 +1022,7 @@ class Ensembler(object):
   
     def truncate_models(self,
                         models,
-                        models_data=None,
+                        models_data={},
                         truncation_method=None,
                         percent_truncation=None,
                         truncation_pruning='none',
@@ -1032,7 +1033,10 @@ class Ensembler(object):
         assert truncation_method and percent_truncation,"Missing arguments: {0}".format(truncation_method)
 
         # Create the directories we'll be working in
-        truncate_dir =  os.path.join(self.work_dir, 'truncate_{0}'.format(models_data['cluster_num']))
+        if homologs:
+            truncate_dir =  os.path.join(self.work_dir, 'truncate')
+        else:
+            truncate_dir =  os.path.join(self.work_dir, 'truncate_{0}'.format(models_data['cluster_num']))
         os.mkdir(truncate_dir)
         os.chdir(truncate_dir)
         
