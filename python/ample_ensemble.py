@@ -447,7 +447,7 @@ class Ensembler(object):
             ensemble_data=copy.copy(raw_ensemble_data)
             ensemble_data['side_chain_treatment']=sct
             if homologs:
-                ensemble_data['name']='e{1}_{3}'.format(ensemble_data['truncation_level'], sct)
+                ensemble_data['name']='e{0}_{1}'.format(ensemble_data['truncation_level'], sct)
             else:
                 ensemble_data['name']='c{0}_tl{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
                                                                    ensemble_data['truncation_level'],
