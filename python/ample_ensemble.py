@@ -767,6 +767,26 @@ class Ensembler(object):
                  subcluster_exe,
                  ensemble_max_models)
         
+    def _subcluster_by_radius(self, cluster_files, previous_clusters, ensemble_max_models):
+        len_cluster = len(cluster_files)
+        if len_cluster <= ensemble_max_models:
+            if cluster_files not in previous_clusters: return cluster_files
+            else: return None
+        
+        if len_cluster > ensemble_max_models:
+            # See if any previous clusters had >= ensemble_max_models
+            nprev_max = sum([ 1 for x in previous_clusters if len(x) >= ensemble_max_models ])
+            if len_cluster <= ensemble_max_models + nprev_max:
+                # There aren't enough models to create another ensemble different to the previous ones
+                return None
+            
+            maxtries=50
+            for _ in range(maxtries): # bit brain-dead - just keep looping till we get one that's different
+                sub_cluster = sorted(random.sample(cluster_files, ensemble_max_models))
+                if sub_cluster not in previous_clusters: return sub_cluster
+        
+        return None
+            
     def subcluster_models_fixed_radii(self,
                                       truncated_models,
                                       truncated_models_data,
@@ -777,21 +797,21 @@ class Ensembler(object):
         # Theseus only works with > 3 residues
         if truncated_models_data['truncation_num_residues'] <= 2: return [],[]
         
-        radius_thresholds=self.subcluster_radius_thresholds
+        radius_thresholds = self.subcluster_radius_thresholds
         ensembles=[]
         ensembles_data=[]
         
         # Use first model to get data on level
-        cluster_num=truncated_models_data['cluster_num']
-        truncation_level=truncated_models_data['truncation_level']
-        truncation_dir=truncated_models_data['truncation_dir']
+        cluster_num = truncated_models_data['cluster_num']
+        truncation_level = truncated_models_data['truncation_level']
+        truncation_dir = truncated_models_data['truncation_dir']
         
         # Make sure everyting happens in the truncation directory
         owd = os.getcwd()
         os.chdir(truncation_dir)
             
         # Run maxcluster to generate the distance matrix
-        if subcluster_program=='maxcluster':
+        if subcluster_program == 'maxcluster':
             clusterer = subcluster.MaxClusterer(self.subcluster_exe)
         else:
             assert False
@@ -799,43 +819,34 @@ class Ensembler(object):
         #clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
 
         # Loop through the radius thresholds
-        num_previous_models=-1 # set to -1 so comparison always false on first pass
+        previous_clusters = []
         for radius in radius_thresholds:
-
             self.logger.debug("subclustering models under radius: {0}".format(radius))
 
             # Get list of pdbs clustered according to radius threshold
             cluster_files = clusterer.cluster_by_radius(radius)
+            if not cluster_files:
+                self.logger.debug("Skipping radius {0} as no files clustered in directory {1}".format(radius,truncation_dir))
+                continue
+                
             self.logger.debug("Clustered {0} files".format(len(cluster_files)))
-            if len(cluster_files) < 2:
-                self.logger.debug('Clustered fewer than 2 files using radius {0} -  in truncation dir {1} SKIPPING'.format(radius,truncation_dir))
+            cluster_files = self._subcluster_by_radius(cluster_files, previous_clusters, ensemble_max_models)
+            if not cluster_files:
+                self.logger.debug('Could not create different cluster to previous radii under radius {0} in directory: {1}'.format(radius,truncation_dir))
                 continue
-
-            # For naming all files
-            basename='c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)
-
-            # Check if there are the same number of models in this ensemble as the previous one - if so
-            # the ensembles will be identical and we can skip this one
-            if num_previous_models == len(cluster_files):
-                self.logger.debug( 'Number of decoys in cluster ({0}) is the same as under previous threshold so excluding cluster {1}'.format( len( cluster_files ), basename ) )
-                continue
-            else:
-                num_previous_models = len(cluster_files)
+            
+            # Remember this cluster so we don't create duplicate clusters
+            previous_clusters.append(cluster_files)
 
             # Got files so create the directories
             subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
             os.mkdir(subcluster_dir)
             os.chdir(subcluster_dir)
-
-            # Restrict cluster to max_ensemble_models
-            if len(cluster_files) > ensemble_max_models:
-                self.logger.debug("{0} files in cluster so truncating list to first {1}".format(len(cluster_files), ensemble_max_models))
-                cluster_files = cluster_files[:ensemble_max_models]
-                
+            basename='c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)  
+            
             cluster_file = self.align_models(cluster_files,work_dir=subcluster_dir)
             if not cluster_file:
-                msg="Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename,
-                                                                                                               subcluster_dir)
+                msg="Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename, subcluster_dir)
                 self.logger.critical(msg)
                 continue
              
