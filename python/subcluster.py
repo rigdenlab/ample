@@ -31,7 +31,11 @@ class SubClusterer(object):
         """Return a list of pdbs clustered by the given radius"""
         if self.distance_matrix is None:
             raise RuntimeError,"Need to call generate_distance_matrix before cluster_by_radius!"
-        return [ self.index2pdb[i] for i in self._cluster_indices(radius)]
+        cluster_indices = self._cluster_indices(radius)
+        if cluster_indices:
+            return [ self.index2pdb[i] for i in cluster_indices ]
+        else:
+            return None
 
     def _cluster_indices(self,thresh):
         """Return the indices of the largest cluster that have distances < thresh.
@@ -50,7 +54,10 @@ class SubClusterer(object):
                     cluster.append(j)
             if len(cluster) > len(max_cluster):
                 max_cluster=copy.copy(cluster)
-        return sorted(max_cluster)
+        if len(max_cluster) == 1:
+            return None
+        else:
+            return sorted(max_cluster)
     
     def dump_matrix(self,file_name):
         with open(file_name,'w') as f:
