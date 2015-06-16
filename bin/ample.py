@@ -177,6 +177,9 @@ def process_command_line():
     parser.add_argument('-nmr_remodel', metavar='True/False', type=str, nargs=1,
                        help='Remodel the NMR structures')
     
+    parser.add_argument('-nmr_remodel_fasta', metavar='nmr_remodel_fasta', type=str, nargs=1,
+                       help='The FASTA sequence to be used for remodelling the NMR ensemble if different from the default FASTA sequence')
+    
     parser.add_argument('-nproc', metavar='Number of Processors', type=int, nargs=1,
                        help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
                         "For cluster submission, this should be the number of processors on a node.")
@@ -284,7 +287,7 @@ def process_command_line():
                        help='Lips4 file for modelling transmembrane proteins')
 
     parser.add_argument('-truncation_method', type=str, nargs=1,
-                       help='How to truncate the models for ensembling percent|thresh')
+                       help='How to truncate the models for ensembling percent|thresh|focussed')
     
     parser.add_argument('-truncation_pruning', type=str, nargs=1,
                        help='Whether to remove isolated residues none|single')
@@ -520,7 +523,13 @@ def process_options(amoptd,logger):
             msg = "nmr_model_in flag given, but cannot find file: {0}".format(amoptd['nmr_model_in'])
             ample_exit.exit(msg)
         if amoptd['nmr_remodel']:
-            msg = "nmr model will be remodelled using ROSETTA"
+            if amoptd['nmr_remodel_fasta']:
+                if not os.path.isfile(amoptd['nmr_remodel_fasta']):
+                    msg = "Cannot find nmr_remodel_fasta file: {0}".format(amoptd['nmr_remodel_fasta'])
+                    ample_exit.exit(msg)
+            else:
+                amoptd['nmr_remodel_fasta'] = amoptd['fasta']
+            msg = "NMR model will be remodelled with ROSETTA using the sequence from: {0}".format(amoptd['nmr_remodel_fasta'])
             logger.info(msg)
             if not amoptd['frags_3mers'] and amoptd['frags_9mers']:
                 amoptd['make_frags'] = True
@@ -531,9 +540,10 @@ def process_options(amoptd,logger):
                     msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(amoptd['frags_3mers'], amoptd['frags_9mers'])
                     ample_exit.exit(msg)
                 amoptd['make_frags'] = False
+
         else:
             amoptd['make_models'] = False
-            msg = "Running in nmr truncate only mode"
+            msg = "Running in NMR truncate only mode"
             logger.info(msg)
 
     elif amoptd['make_models']:
@@ -803,22 +813,22 @@ def main():
     
     # if NMR process models first
     # break here for NMR (frags needed but not modelling
-    if amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel']:
-        if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
-        pdb_edit.split_pdb(amopt.d['nmr_model_in'], amopt.d['models_dir'])
-        nmr.standardise_lengths(amopt.d['models_dir'])
-    elif amopt.d['nmr_remodel']:
-        try:
-            rosetta_modeller.nmr_remodel(nmr_model_in = amopt.d['nmr_model_in'],
-                                         ntimes = amopt.d['nmr_process'],
-                                         alignment_file = amopt.d['alignment_file'],
-                                         remodel_fasta = amopt.d['fasta'],
-                                         monitor = monitor)
-        except Exception,e:
-            ex_type, ex, tb = sys.exc_info()
-            msg="Error remodelling NMR ensemble: {0}".format(e)
-            ample_exit.exit(msg,tb)
-            
+    if amopt.d['nmr_model_in']:
+        if not amopt.d['nmr_remodel']:
+            if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
+            pdb_edit.split_pdb(amopt.d['nmr_model_in'], amopt.d['models_dir'])
+            nmr.standardise_lengths(amopt.d['models_dir'])
+        elif amopt.d['nmr_remodel']:
+            try:
+                rosetta_modeller.nmr_remodel(nmr_model_in = amopt.d['nmr_model_in'],
+                                             ntimes = amopt.d['nmr_process'],
+                                             alignment_file = amopt.d['alignment_file'],
+                                             remodel_fasta = amopt.d['nmr_remodel_fasta'],
+                                             monitor = monitor)
+            except Exception,e:
+                ex_type, ex, tb = sys.exc_info()
+                msg="Error remodelling NMR ensemble: {0}".format(e)
+                ample_exit.exit(msg,tb)
     elif amopt.d['make_models']:
         # Make the models
         logger.info('----- making Rosetta models--------')
