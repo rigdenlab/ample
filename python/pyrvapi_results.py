@@ -23,20 +23,35 @@ _tabs=None
 _webserver_uri=None
 _wbeserver_start=None
 
-_tooltips={
+_ensemble_tooltips={
+           "Name" : "Ensemble name - used to name the pdb file and the directory where mrbump carries out molecular replacement.",
+           "Truncation Level" : "Percentage of the model remaining after the varying residues were pruned away",
+           "Variance Threshold (A^2)" : "THESEUS variance score for the most variable residue that remains in this ensemble",
+           "No. Residues" : "Number of residues for each model in the ensemble",
+           "Radius Threshold (A)" : "Radius threshold (1,2 or 3 A) used for subclustering the models in a truncation level",
+           "No. Decoys" : "Number of models within this ensemble",
+           "Number of Atoms" : "Number of atoms for each model in the ensemble",
+           "Sidechain Treatment" : "allatom - all sidechains were retained, reliable - MET, ASP, PRO, GLN, LYS, ARG, GLU, SER were retained, polyAla - all sidechains were stripped back to polyalanine",
+           }
+
+_mrbump_tooltips={
            "ensemble_name" : "The identifier of the AMPLE ensemble search model",
            "MR_program" : "Molecular replacement program",
            "Solution_Type" : "MRBUMP categorisation of the solution",
-           "PHASER_LLG" : "PHASER Log-likelihood gain for the Molecular Replacment solution",
-           "PHASER_TFZ" : "PHASER Translation Function Z-score for the Molecular Replacment solution",
+           "PHASER_LLG" : "PHASER Log-likelihood gain for the Molecular Replacement solution",
+           "PHASER_TFZ" : "PHASER Translation Function Z-score for the Molecular Replacement solution",
            "REFMAC_Rfact" : "Rfact score for REFMAC refinement of the Molecular Replacement solution",
            "REFMAC_Rfree" : "Rfree score for REFMAC refinement of the Molecular Replacement solution",
+           "BUCC_final_Rfact" : "Rfact score for BUCCANEER rebuild of the Molecular Replacement solution",
+           "BUCC_final_Rfree" : "Rfree score for BUCCANEER rebuild of the Molecular Replacement solution",
+           "ARP_final_Rfact" : "Rfact score for ARPWARP rebuild of the Molecular Replacement solution",
+           "ARP_final_Rfree" : "Rfree score for ARPWARP rebuild of the Molecular Replacement solution",
            "SHELXE_CC" : "SHELXE Correlation Coefficient score after C-alpha trace",
            "SHELXE_ACL" : "Average Chain Length of the fragments of the SHELXE C-alpha trace",
            "SXRBUCC_final_Rfact" : "Rfact score for BUCCANEER rebuild of the SHELXE C-alpha trace",
-           "SXRBUCC_final_Rfree" : "Rfact score for BUCCANEER rebuild of the SHELXE C-alpha trace",
+           "SXRBUCC_final_Rfree" : "Rfree score for BUCCANEER rebuild of the SHELXE C-alpha trace",
            "SXRARP_final_Rfact" : "Rfact score for ARPWARP rebuild of the SHELXE C-alpha trace",
-           "SXRAP_final_Rfree" : "Rfact score for ARPWARP rebuild of the SHELXE C-alpha trace",
+           "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
            }
 
 def ensemble_pdb(mrbump_result,results_dict):
@@ -57,12 +72,11 @@ def fix_path(path):
         return urlparse.urljoin(_webserver_uri,path[_webserver_start:])
     else: return path
     
-def fill_table(table_id, tdata):
-    global _tooltips
+def fill_table(table_id, tdata, tooltips={}):
     # Make column headers
     for i in range(len(tdata[0])): # Skip name as it's the row header
         h=tdata[0][i]
-        tt=_tooltips[h] if h in _tooltips else ""
+        tt=tooltips[h] if h in tooltips else ""
         pyrvapi.rvapi_put_horz_theader(table_id, h.encode('utf-8'), tt, i) # Add table data
     
     ir=len(tdata)-1 if len(tdata) > 2 else 2
@@ -122,7 +136,7 @@ def summary_tab(results_dict):
         # 
         cluster_num=1
         tdata = ensemble.cluster_table_data(clusters, cluster_num)
-        fill_table(ensemble_table, tdata)
+        fill_table(ensemble_table, tdata, tooltips=_ensemble_tooltips)
     
     #
     # MRBUMP Results
@@ -134,7 +148,7 @@ def summary_tab(results_dict):
     mrbump_table="mrbump_table"
     pyrvapi.rvapi_add_table1(mrbump_sec+"/"+mrbump_table,"MRBUMP Results",1,0,1,1,True)
     mrb_data = mrbump_results.ResultsSummary().results_table(mrb_results)
-    fill_table(mrbump_table, mrb_data)
+    fill_table(mrbump_table, mrb_data, tooltips=_mrbump_tooltips)
     return summary_tab
 
 def results_tab(results_dict):
@@ -166,7 +180,7 @@ def results_tab(results_dict):
         table_id="table_{0}".format(name)
         pyrvapi.rvapi_add_table(table_id,"",sec_table,1,0,1,1,False)
         tdata=mrbump_results.ResultsSummary().results_table([r])
-        fill_table(table_id,tdata)
+        fill_table(table_id,tdata,tooltips=_mrbump_tooltips)
         
         # Ensemble
         epdb=ensemble_pdb(r,results_dict)
@@ -342,6 +356,12 @@ def display_results(results_dict,run_dir=None):
     return True
 
 if __name__=="__main__":
+    
+    pklfile="/opt/ample-dev1/examples/toxd-example/AMPLE_0/resultsd.pkl"
+    with open(pklfile) as f: results_dict=cPickle.load(f)
+    display_results(results_dict)
+    sys.exit()
+    
     import time
     pklfile="/opt/ample-dev1/examples/toxd-example/resultsd1.pkl"
     with open(pklfile) as f: results_dict=cPickle.load(f)
