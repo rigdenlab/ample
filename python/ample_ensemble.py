@@ -153,10 +153,10 @@ class Ensembler(object):
         
         return
     
-    def align_models(self, models, basename=None, work_dir=None):
+    def align_models(self, models, basename=None, work_dir=None, homologs=False):
         run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
         try:
-            run_theseus.align_models(models, basename=basename)
+            run_theseus.align_models(models, basename=basename, homologs=homologs)
         except Exception,e:
             self.logger.critical("Error running theseus: {0}".format(e))
             return False
@@ -595,7 +595,7 @@ class Ensembler(object):
              
             # Need to create an alignment file for theseus
             basename = "e{0}".format(tlevel)
-            pre_ensemble = self.align_models(truncated_models, basename=basename, work_dir=ensemble_dir)
+            pre_ensemble = self.align_models(truncated_models, basename=basename, work_dir=ensemble_dir, homologs=True)
             if not pre_ensemble:
                 self.logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
                 continue
@@ -767,37 +767,21 @@ class Ensembler(object):
                  subcluster_exe,
                  ensemble_max_models)
         
-    def _subcluster_by_radius(self, cluster_files, previous_clusters, ensemble_max_models):
-        len_cluster = len(cluster_files)
-        if len_cluster <= ensemble_max_models:
-            if cluster_files not in previous_clusters: return cluster_files
-            else: return None
-        
-        if len_cluster > ensemble_max_models:
-            # See if any previous clusters had >= ensemble_max_models
-            nprev_max = sum([ 1 for x in previous_clusters if len(x) >= ensemble_max_models ])
-            if len_cluster <= ensemble_max_models + nprev_max:
-                # There aren't enough models to create another ensemble different to the previous ones
-                return None
-            
-            maxtries=50
-            for _ in range(maxtries): # bit brain-dead - just keep looping till we get one that's different
-                sub_cluster = sorted(random.sample(cluster_files, ensemble_max_models))
-                if sub_cluster not in previous_clusters: return sub_cluster
-        
-        return None
+
             
     def subcluster_models_fixed_radii(self,
                                       truncated_models,
                                       truncated_models_data,
                                       subcluster_program=None,
                                       subcluster_exe=None,
-                                      ensemble_max_models=None):
+                                      ensemble_max_models=None,
+                                      radius_thresholds=None
+                                      ):
         
         # Theseus only works with > 3 residues
         if truncated_models_data['truncation_num_residues'] <= 2: return [],[]
         
-        radius_thresholds = self.subcluster_radius_thresholds
+        if not radius_thresholds: radius_thresholds = self.subcluster_radius_thresholds
         ensembles=[]
         ensembles_data=[]
         
@@ -830,9 +814,9 @@ class Ensembler(object):
                 continue
                 
             self.logger.debug("Clustered {0} files".format(len(cluster_files)))
-            cluster_files = self._subcluster_by_radius(cluster_files, previous_clusters, ensemble_max_models)
+            cluster_files = self._subcluster_by_radius(cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds)
             if not cluster_files:
-                self.logger.debug('Could not create different cluster to previous radii under radius {0} in directory: {1}'.format(radius,truncation_dir))
+                self.logger.debug('Could not create different cluster for radius {0} in directory: {1}'.format(radius,truncation_dir))
                 continue
             
             # Remember this cluster so we don't create duplicate clusters
@@ -871,6 +855,50 @@ class Ensembler(object):
         
         return ensembles,ensembles_data
 
+    def _subcluster_by_radius(self, cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds):
+        """
+        1st, just save previous_clusters
+        2nd if selected == previous and cluster > selection_size:
+               start selection half-way through the cluster list
+        3rd if selected == previous and cluster > selection_size:
+             take selection slice from end
+        
+        """
+        len_cluster = len(cluster_files)
+        if not len_cluster: return None
+        len_radius_thresholds = len(radius_thresholds)
+        if len_cluster <= ensemble_max_models:
+            if cluster_files not in previous_clusters: return cluster_files
+            else: return None
+        
+        if len_cluster > ensemble_max_models:
+            idx = radius_thresholds.index(radius)
+            selected = cluster_files[:ensemble_max_models]
+            if idx == 0 or selected not in previous_clusters: return selected
+            
+            # Here we have more models then we need, but the first slice has already been selected
+            # we therefore need to select another slice
+            
+            # If last radius threshold, just take the slice to the end
+            if idx + 1 == len_radius_thresholds:
+                start = len_cluster - ensemble_max_models
+                selected = cluster_files[start:]
+                if selected not in previous_clusters:
+                    return selected
+                else:
+                    return None
+                
+            # Use the position of the radius in the list of radii to work out where to start this slice
+            prop = float(idx) / float(len(radius_thresholds)-1) # -1 as the first is always at the start
+            start = int(round(float(len_cluster) * prop))
+            selected = cluster_files[start :  start + ensemble_max_models]
+            if selected and selected not in previous_clusters:
+                    return selected
+            else:
+                return None
+        
+        return None
+
     def subcluster_models_floating_radii(self,
                                          truncated_models,
                                          truncated_models_data,
@@ -902,13 +930,17 @@ class Ensembler(object):
             else:
                 radius = self.subcluster_radius_thresholds[i]
                 cluster_files = clusterer.cluster_by_radius(radius)
-                
-            cluster_files=tuple(sorted(cluster_files)) # Need to sort so that we can check if we've had this lot before
-            cluster_size=len(cluster_files)
+            
+            if cluster_files:
+                cluster_files=tuple(sorted(cluster_files)) # Need to sort so that we can check if we've had this lot before
+                cluster_size=len(cluster_files)
+            else:
+                cluster_files = []
+                cluster_size = 0
 
-            if radius in radii or cluster_size==1:
+            if radius in radii or cluster_size == 0:
                 # Increase radius till we have one more than the last one
-                if cluster_size==1:
+                if cluster_size == 0:
                     nmodels=2
                 else:
                     radius=radii[i-1]
@@ -943,7 +975,7 @@ class Ensembler(object):
             if cluster_size==len_truncated_models: break
             
         return subclusters, subclusters_data
-    
+
     def _pick_nmodels(self, models, clusters, ensemble_max_models):
         MAXTRIES=50
         tries = 0
@@ -962,8 +994,11 @@ class Ensembler(object):
         """
         MINRADIUS=0.0001
         MAXRADIUS=100
-        subcluster_models=clusterer.cluster_by_radius(radius)
-        len_models=len(subcluster_models)
+        subcluster_models = clusterer.cluster_by_radius(radius)
+        if subcluster_models:
+            len_models = len(subcluster_models)
+        else:
+            len_models = 0
         self.logger.debug("_subcluster_nmodels: {0} {1} {2} {3} {4}".format(len_models,nmodels,radius,direction,increment))
         if len_models == nmodels or radius < MINRADIUS or radius > MAXRADIUS:
             self.logger.debug("_subcluster_nmodels returning: nmodels: {0} radius: {1}".format(len_models,radius ))
@@ -1535,7 +1570,45 @@ class Test(unittest.TestCase):
         
         shutil.rmtree(ensembler.work_dir)
         return
-    
+
+    def testSubcluster(self):
+        """Many models"""
+        
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        ensembler=Ensembler()
+
+        work_dir=os.path.join(self.tests_dir,"test_subcluster")
+        if os.path.isdir(work_dir):
+            shutil.rmtree(work_dir)
+        os.mkdir(work_dir)
+        
+        ensembler.theseus_exe=self.theseus_exe
+        ensembler.subcluster_exe=self.maxcluster_exe
+        
+        mdir=os.path.join(self.testfiles_dir,"1p9g_models")
+        truncated_models=glob.glob(mdir+os.sep+"*.pdb")
+
+        truncated_models_data = { 'cluster_num'      : 1,
+                                  'truncation_level' : 1,
+                                  'truncation_num_residues' : 5,
+                                  'truncation_dir'   : work_dir } 
+        
+        subcluster, data = ensembler.subcluster_models_fixed_radii(truncated_models,
+                                                       truncated_models_data,
+                                                       subcluster_program='maxcluster',
+                                                       subcluster_exe=self.maxcluster_exe,
+                                                       ensemble_max_models=30)
+        
+        # Bug with theseus means cluster 1 fails
+        cluster2 = [ d for d in data if d['subcluster_radius_threshold'] == 2 ][0]
+        cluster3 = [ d for d in data if d['subcluster_radius_threshold'] == 3 ][0]
+        
+        self.assertEqual(cluster2['subcluster_num_models'],30)
+        self.assertEqual(cluster3['subcluster_num_models'],30)
+        shutil.rmtree(work_dir)
+        return
+
+
     def testSubclusterNew1(self):
         """Divergent models"""
         
@@ -1709,12 +1782,13 @@ class Test(unittest.TestCase):
         pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
         models = [ os.path.join(self.ample_dir,'examples','homologs',pdb) for pdb in pdb_list ]
         
-        work_dir = 'mustang_test.ample'
+        work_dir = os.path.join(self.tests_dir,"mustang_test")
         
         alignment_file = align_mustang(models,mustang_exe=mustang_exe,work_dir=work_dir)
         
         self.assertTrue(os.path.isfile(alignment_file))
         
+        shutil.rmtree(work_dir)
         return
     
     def testCoreFromAlignment(self):
