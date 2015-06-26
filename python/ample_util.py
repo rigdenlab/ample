@@ -25,13 +25,12 @@ references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. R
 AMPLE: a cluster-and-truncate approach to solve the crystal structures of small proteins using
 rapidly computed ab initio models. (2012). Acta Cryst. D68, 1622-1631 [ doi:10.1107/S0907444912039194 ]
 
+Routine phasing of coiled-coil protein crystal structures with AMPLE (2015). Thomas, J. M. H.,
+Keegan, R. M., Bibby, J., Winn, M. D., Mayans, O. and Rigden, D. J. IUCrJ 2, 198-206.
+[doi:10.1107/S2052252515002080] 
+
 CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs
 for Protein Crystallography. Acta Cryst. D50, 760-763
-
-SHELX: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122
-
-SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein
-side-chain conformations with SCWRL4. Proteins (2009).
 
 MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/
 
@@ -45,6 +44,11 @@ Phaser crystallographic software J. Appl. Cryst. 40, 658-674
 
 REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromolecular
 Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255
+
+SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein
+side-chain conformations with SCWRL4. Proteins (2009).
+
+SHELX: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122
 
 SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for
 near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871
