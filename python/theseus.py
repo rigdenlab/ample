@@ -38,6 +38,8 @@ class Theseus(object):
         return self.work_dir
     
     def alignment_file(self, models, alignment_file=None):
+        """Create an alignment file for the models - this is based on the assumption they are all the same length
+        but may have different residues"""
         if not alignment_file: alignment_file = os.path.join(self.work_dir,'homologs.fasta')
         all_seq = ample_sequence.Sequence(pdb=models[0])
         for model in models[1:]: all_seq += ample_sequence.Sequence(pdb=model)
