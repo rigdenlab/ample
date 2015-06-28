@@ -423,7 +423,7 @@ class ResultsSummary(object):
         """Remove any jobs that didn't succeed and archive their job dictionaries"""
         for r in results:
             if r['Solution_Type']=="unfinished" or r['Solution_Type']=="no_job_directory": continue
-            if not jobSucceeded(r):
+            if not (jobSucceeded(r) or r['Solution_Type'] is "MARGINAL") :
                 pkl=os.path.join(self.pdir,"{0}.pkl".format(r['ensemble_name']))
                 with open(pkl,'w') as f: cPickle.dump(r,f)
                 shutil.rmtree(r['Search_directory'])
