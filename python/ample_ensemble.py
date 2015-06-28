@@ -814,7 +814,7 @@ class Ensembler(object):
                 continue
                 
             self.logger.debug("Clustered {0} files".format(len(cluster_files)))
-            cluster_files = self._subcluster_by_radius(cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds)
+            cluster_files = self._slice_subcluster(cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds)
             if not cluster_files:
                 self.logger.debug('Could not create different cluster for radius {0} in directory: {1}'.format(radius,truncation_dir))
                 continue
@@ -855,14 +855,8 @@ class Ensembler(object):
         
         return ensembles,ensembles_data
 
-    def _subcluster_by_radius(self, cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds):
-        """
-        1st, just save previous_clusters
-        2nd if selected == previous and cluster > selection_size:
-               start selection half-way through the cluster list
-        3rd if selected == previous and cluster > selection_size:
-             take selection slice from end
-        
+    def _slice_subcluster(self, cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds):
+        """Select a unique set of models from a subcluster of models.
         """
         len_cluster = len(cluster_files)
         if not len_cluster: return None
@@ -887,10 +881,15 @@ class Ensembler(object):
                     return selected
                 else:
                     return None
-                
+            
+            # Work out how many residues are extra
+            remainder = len_cluster - ensemble_max_models
+            
             # Use the position of the radius in the list of radii to work out where to start this slice
             prop = float(idx) / float(len(radius_thresholds)-1) # -1 as the first is always at the start
-            start = int(round(float(len_cluster) * prop))
+            
+            # Work out how many residues in to the remainder to start
+            start = int(round(float(remainder) * prop))
             selected = cluster_files[start :  start + ensemble_max_models]
             if selected and selected not in previous_clusters:
                     return selected
@@ -1570,9 +1569,9 @@ class Test(unittest.TestCase):
         
         shutil.rmtree(ensembler.work_dir)
         return
-
-    def testSubcluster(self):
-        """Many models"""
+    
+    def testSubcluster1(self):
+        """Many more then ensemble_max_models"""
         
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
@@ -1584,6 +1583,7 @@ class Test(unittest.TestCase):
         
         ensembler.theseus_exe=self.theseus_exe
         ensembler.subcluster_exe=self.maxcluster_exe
+        ensemble_max_models=30
         
         mdir=os.path.join(self.testfiles_dir,"1p9g_models")
         truncated_models=glob.glob(mdir+os.sep+"*.pdb")
@@ -1597,17 +1597,54 @@ class Test(unittest.TestCase):
                                                        truncated_models_data,
                                                        subcluster_program='maxcluster',
                                                        subcluster_exe=self.maxcluster_exe,
-                                                       ensemble_max_models=30)
+                                                       ensemble_max_models=ensemble_max_models)
         
         # Bug with theseus means cluster 1 fails
         cluster2 = [ d for d in data if d['subcluster_radius_threshold'] == 2 ][0]
         cluster3 = [ d for d in data if d['subcluster_radius_threshold'] == 3 ][0]
         
-        self.assertEqual(cluster2['subcluster_num_models'],30)
-        self.assertEqual(cluster3['subcluster_num_models'],30)
+        self.assertEqual(cluster2['subcluster_num_models'],ensemble_max_models)
+        self.assertEqual(cluster3['subcluster_num_models'],ensemble_max_models)
         shutil.rmtree(work_dir)
         return
+    
+    def testSubcluster2(self):
+        """Just more then ensemble_max_models"""
+        
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
+        ensembler=Ensembler()
 
+        work_dir=os.path.join(self.tests_dir,"test_subcluster")
+        if os.path.isdir(work_dir):
+            shutil.rmtree(work_dir)
+        os.mkdir(work_dir)
+        
+        ensembler.theseus_exe=self.theseus_exe
+        ensembler.subcluster_exe=self.maxcluster_exe
+        ensemble_max_models=30
+        
+        mdir=os.path.join(self.testfiles_dir,"1p9g_models")
+        truncated_models=glob.glob(mdir+os.sep+"*.pdb")[:ensemble_max_models+2]
+
+        truncated_models_data = { 'cluster_num'      : 1,
+                                  'truncation_level' : 1,
+                                  'truncation_num_residues' : 5,
+                                  'truncation_dir'   : work_dir } 
+        
+        subcluster, data = ensembler.subcluster_models_fixed_radii(truncated_models,
+                                                       truncated_models_data,
+                                                       subcluster_program='maxcluster',
+                                                       subcluster_exe=self.maxcluster_exe,
+                                                       ensemble_max_models=ensemble_max_models)
+        
+        # Bug with theseus means cluster 1 fails
+        cluster2 = [ d for d in data if d['subcluster_radius_threshold'] == 2 ][0]
+        cluster3 = [ d for d in data if d['subcluster_radius_threshold'] == 3 ][0]
+        
+        self.assertEqual(cluster2['subcluster_num_models'],ensemble_max_models)
+        self.assertEqual(cluster3['subcluster_num_models'],ensemble_max_models)
+        shutil.rmtree(work_dir)
+        return
 
     def testSubclusterNew1(self):
         """Divergent models"""
