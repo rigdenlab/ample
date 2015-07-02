@@ -349,7 +349,7 @@ class RosettaModel(object):
             self.frags_9mers = os.path.join(self.fragments_directory, 'aa' + self.name + '09_05.200_v1_3')
 
         if not os.path.exists(self.frags_3mers) or not os.path.exists(self.frags_9mers):
-            raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\nPlease check logfile {2 for details.".format(self.frags_3mers,self.frags_9mers,logfile)
+            raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\nPlease check logfile {2} for details.".format(self.frags_3mers,self.frags_9mers,logfile)
 
         self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
 
