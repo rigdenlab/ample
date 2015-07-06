@@ -425,9 +425,20 @@ class Ensembler(object):
         ensembles=[]
         ensembles_data=[]
         for sct in self.side_chain_treatments:
+
+            ensemble_data=copy.copy(raw_ensemble_data)
+            ensemble_data['side_chain_treatment']=sct
+            if homologs:
+                ensemble_data['name']='e{0}_{1}'.format(ensemble_data['truncation_level'], sct)
+            else:
+                ensemble_data['name']='c{0}_tl{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
+                                                                   ensemble_data['truncation_level'],
+                                                                   ensemble_data['subcluster_radius_threshold'],
+                                                                   sct)
             
-            # create filename based on side chain treatment
-            fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=ensembles_directory)
+            # create filename based on name and side chain treatment
+            #fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=ensembles_directory)
+            fpath = os.path.join(ensembles_directory,"{0}_{1}.pdb".format(ensemble_data['name'],sct))
             
             # Create the files
             if sct == ALLATOM:
@@ -444,15 +455,7 @@ class Ensembler(object):
             natoms,nresidues=pdb_edit.num_atoms_and_residues(fpath,first=True)
             
             # Process ensemble data
-            ensemble_data=copy.copy(raw_ensemble_data)
-            ensemble_data['side_chain_treatment']=sct
-            if homologs:
-                ensemble_data['name']='e{0}_{1}'.format(ensemble_data['truncation_level'], sct)
-            else:
-                ensemble_data['name']='c{0}_tl{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
-                                                                   ensemble_data['truncation_level'],
-                                                                   ensemble_data['subcluster_radius_threshold'],
-                                                                   sct)
+
             ensemble_data['ensemble_pdb']=fpath
             ensemble_data['ensemble_num_atoms']=natoms
             # check
