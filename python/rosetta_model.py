@@ -325,7 +325,7 @@ class RosettaModel(object):
         fasta = os.path.split(self.fasta)[1]
         shutil.copy2(self.fasta, os.path.join(self.fragments_directory,fasta))
         
-        script = os.path.join(self.fragments_directory,"gen_fragments.sh")
+        script = os.path.join(self.fragments_directory,"mkfrags.sh")
         with open(script,'w') as f:
             f.write("#!/bin/bash\n")
             f.write(" ".join(self.fragment_cmd())+"\n")
