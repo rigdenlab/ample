@@ -920,7 +920,7 @@ class RosettaModel(object):
         if rosetta_dir and os.path.isdir(rosetta_dir):
             self.rosetta_dir=rosetta_dir
         elif 'rosetta_dir' not in optd or not optd['rosetta_dir']:
-            raise RuntimeError,"rosetta_dir variable not set in amopt.d!"
+            raise RuntimeError,"rosetta_dir not set - please use the -rosetta_dir flag to point at the directory where ROSETTA is installed"
         elif not os.path.isdir(optd['rosetta_dir']):
             raise RuntimeError,"Cannot find rosetta_dir directory: {0}\nPlease set the correct rosetta_dir variable to point at the top Rosetta directory.".format(optd['rosetta_dir'])
         else:
