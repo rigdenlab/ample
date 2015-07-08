@@ -1430,7 +1430,7 @@ mostprob
     else: raise RuntimeError,"Error standardising pdb!"
     
     # Standardise AA names and then remove any remaining HETATMs
-    strip_hetatm_cctbx(tmp1, pdbout, del_hetatm=del_hetatm)
+    std_residues_cctbx(tmp1, pdbout, del_hetatm=del_hetatm)
     os.unlink(tmp1)
     
     return retcode
@@ -1534,7 +1534,7 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
                 resseq=residue_group.resseq_as_int()
                 for atom_group in residue_group.atom_groups():
                     resname=atom_group.resname
-                    if resseq in modres[chain.id]:
+                    if chain.id in modres and resseq in modres[chain.id]:
                         # Change modified name to std name
                         assert modres[chain.id][resseq][0]==resname,\
                         "Unmatched names: {0} : {1}".format(modres[chain.id][resseq][0],resname)
