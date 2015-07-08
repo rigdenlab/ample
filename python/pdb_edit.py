@@ -1409,7 +1409,7 @@ def split_pdb(pdbin, directory=None):
         
     return output_files
 
-def standardise(inpdb, outpdb, chain=None):
+def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
     """Rename any non-standard AA, remove solvent and only keep most probably conformation.
     """
 
@@ -1417,35 +1417,25 @@ def standardise(inpdb, outpdb, chain=None):
     
     # Now clean up with pdbcur
     logfile = tmp1+".log"
-    cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, tmp1 ).split()
+    cmd="pdbcur xyzin {0} xyzout {1}".format(pdbin, tmp1).split()
     stdin="""delsolvent
 noanisou
 mostprob
 """
     # We are extracting one  of the chains
-    if chain:
-        stdin += "lvchain {0}\n".format( chain )
+    if chain: stdin += "lvchain {0}\n".format( chain )
 
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    if retcode == 0:
-        # remove temporary files
-        os.unlink(logfile)
-    else:
-        raise RuntimeError,"Error standardising pdb!"
+    if retcode == 0: os.unlink(logfile) # remove temporary files
+    else: raise RuntimeError,"Error standardising pdb!"
     
-    # Standardise AA names
-    tmp2 = ample_util.tmpFileName() + ".pdb" # pdbcur insists names have a .pdb suffix
-    std_residues( tmp1, tmp2 )
-    
-    # Strip out any remaining HETATM
-    strip_hetatm( tmp2, outpdb )
-    
+    # Standardise AA names and then remove any remaining HETATMs
+    strip_hetatm_cctbx(tmp1, pdbout, del_hetatm=del_hetatm)
     os.unlink(tmp1)
-    os.unlink(tmp2) 
     
     return retcode
 
-def std_residues(pdbin, pdbout ):
+def Xstd_residues(pdbin, pdbout ):
     """Switch any non-standard AA's to their standard names.
     We also remove any ANISOU lines.
     """
@@ -1524,7 +1514,7 @@ def std_residues(pdbin, pdbout ):
         
     return
 
-def std_residues_cctbx(pdbin, pdbout):
+def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
     
     pdb_input=iotbx.pdb.pdb_input(pdbin)
     
@@ -1553,25 +1543,12 @@ def std_residues_cctbx(pdbin, pdbout):
                         for atom in atom_group.atoms():
                             if atom.hetero:
                                 atom.hetero=False
-                            
-    
-    if False:
-        # Remove HETATMS
-        for model in hierachy.models():
-            for chain in model.chains():
-                for residue_group in chain.residue_groups():
-                    for atom_group in residue_group.atom_groups():
-                        # Can't use below as it uses indexes which change as we remove atoms
-                        # ag.atoms().extract_hetero()]
-                        todel=[a for a in atom_group.atoms() if a.hetero ]
-                        for a in todel:
-                            atom_group.remove_atom(a)       
-    
+                                
+    if del_hetatm: _strip_hetatm_cctbx(hierachy)
     hierachy.write_pdb_file(pdbout,anisou=False)
-    
     return       
 
-def strip_hetatm(pdbin, pdbout):
+def Xstrip_hetatm(pdbin, pdbout):
     """Remove all hetatoms from pdbfile"""
     with open( pdbout, 'w' ) as w, open(pdbin) as f:
         hremoved=-1
@@ -1583,6 +1560,25 @@ def strip_hetatm(pdbin, pdbout):
             if line.startswith("ANISOU") and i == hremoved+1:
                 continue
             w.write(line)
+    return
+
+def strip_hetatm_cctbx(pdbin, pdbout):
+    """Remove all hetatoms from pdbfile"""
+    hierachy=iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+    _strip_hetatm_cctbx(hierachy)
+    hierachy.write_pdb_file(pdbout,anisou=False)
+    return
+
+def _strip_hetatm_cctbx(hierachy):
+    """Remove all hetatoms from pdbfile"""
+    for model in hierachy.models():
+        for chain in model.chains():
+            for residue_group in chain.residue_groups():
+                for atom_group in residue_group.atom_groups():
+                    # Can't use below as it uses indexes which change as we remove atoms
+                    # ag.atoms().extract_hetero()]
+                    todel=[a for a in atom_group.atoms() if a.hetero ]
+                    for a in todel: atom_group.remove_atom(a)       
     return
 
 def to_single_chain(inpath, outpath):
@@ -1605,7 +1601,6 @@ def to_single_chain(inpath, outpath):
             continue
         
         if line.startswith("ATOM"):
-            
             changed=False
             
             atom = pdb_model.PdbAtom( line )
@@ -1804,7 +1799,7 @@ class Test(unittest.TestCase):
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
         pdbout="std.pdb"
         
-        std_residues(pdbin, pdbout)
+        std_residues_cctbx(pdbin, pdbout)
         
         # Check it's valid
         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
