@@ -552,13 +552,13 @@ class Ensembler(object):
         self.work_dir=work_dir
         
         if not percent_truncation:
-            percent_truncation=self.percent_truncation
+            percent_truncation = self.percent_truncation
         if not truncation_method:
-            truncation_method=self.truncation_method
+            truncation_method = self.truncation_method
         if not ensembles_directory:
-            self.ensembles_directory=os.path.join(work_dir,"ensembles")
+            self.ensembles_directory = os.path.join(work_dir,"ensembles")
         else:
-            self.ensembles_directory=ensembles_directory
+            self.ensembles_directory = ensembles_directory
         
         if not len(models):
             raise RuntimeError,"Cannot find any models for ensembling!" 
@@ -570,16 +570,25 @@ class Ensembler(object):
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
         
+        # standardise all the models and extract chain A (for now - needs more thinking about)
+        std_models_dir = os.path.join(work_dir,"std_models")
+        os.mkdir(std_models_dir)
+        std_models = []
+        for m in models:
+            std_model = ample_util.filename_append(m, astr="std", directory=std_models_dir)
+            pdb_edit.standardise(pdbin=m, pdbout=std_model, chain='A', del_hetatm=True)
+            std_models.append(std_model)
+        
         if not alignment_file:
             self.logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
-            alignment_file = align_mustang(models, mustang_exe=mustang_exe, work_dir=self.work_dir)
+            alignment_file = align_mustang(std_models, mustang_exe=mustang_exe, work_dir=self.work_dir)
             self.logger.info("Generated alignment file: {0}".format(alignment_file))
         else:
             self.logger.info("Using alignment file: {0}".format(alignment_file))
             
         # Use the alignment file to trim the models down to a core
         core_models_dir = os.path.join(work_dir,'core_models')
-        core_models = model_core_from_alignment(models, alignment_file=alignment_file, work_dir=core_models_dir)
+        core_models = model_core_from_alignment(std_models, alignment_file=alignment_file, work_dir=core_models_dir)
             
         # Now truncate and create ensembles - as standard ample, but with no subclustering
         self.ensembles = []
