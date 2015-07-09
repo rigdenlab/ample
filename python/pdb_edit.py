@@ -1886,8 +1886,6 @@ if __name__ == "__main__":
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-std', action='store_true',
                        help='Standardise the PDB')
-    group.add_argument('-std1', action='store_true',
-                       help='Take pdb to one model/chain that contains only standard amino acids')
     group.add_argument('-seq', action='store_true',
                        help='Write a fasta of the found AA to stdout')
     group.add_argument('-split', action='store_true',
@@ -1911,11 +1909,8 @@ if __name__ == "__main__":
         n = os.path.splitext( os.path.basename(args.input_file))[0]
         args.output_file = n+"_std.pdb"
 
-    if args.std1:
-        #to_1_std_chain( args.input_file, args.output_file )
-        pass
-    elif args.std:
-        standardise(args.input_file, args.output_file)
+    if args.std:
+        standardise(args.input_file, args.output_file, del_hetatm=True, chain=None)
     elif args.seq:
         print ample_sequence.Sequence(pdb=args.input_file).fasta_str()
     elif args.split:
