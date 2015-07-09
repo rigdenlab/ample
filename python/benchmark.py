@@ -406,7 +406,7 @@ def analysePdb(amoptd):
         
     # Standardise the PDB to rename any non-standard AA, remove solvent etc
     nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std", directory=fixpath(amoptd['benchmark_dir']))
-    pdb_edit.standardise( nativePdb, nativePdbStd )
+    pdb_edit.standardise(nativePdb, nativePdbStd, del_hetatm=True)
     nativePdb = nativePdbStd
     
     # Get the new Info about the native
