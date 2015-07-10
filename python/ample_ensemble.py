@@ -438,7 +438,7 @@ class Ensembler(object):
             
             # create filename based on name and side chain treatment
             #fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=ensembles_directory)
-            fpath = os.path.join(ensembles_directory,"{0}_{1}.pdb".format(ensemble_data['name'],sct))
+            fpath = os.path.join(ensembles_directory,"{0}.pdb".format(ensemble_data['name']))
             
             # Create the files
             if sct == ALLATOM:
