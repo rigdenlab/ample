@@ -1409,6 +1409,48 @@ def split_pdb(pdbin, directory=None):
         
     return output_files
 
+def split_into_chains(pdbin, directory=None):
+    """Split a pdb file into its separate chains"""
+
+    if directory is None: directory = os.path.dirname(pdbin)
+    
+    # Largely stolen from pdb_split_models.py in phenix
+    #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
+    import iotbx.file_reader
+    
+    pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
+    pdbf.check_file_type("pdb")
+    hierarchy = pdbf.file_object.construct_hierarchy()
+    
+    # Nothing to do
+    n_models = hierarchy.models_size()
+    if n_models != 1: raise RuntimeError,"split_into_chains only works with single-mdoel pdbs!"
+    
+    crystal_symmetry = pdbf.file_object.crystal_symmetry()
+    
+    output_files = []
+    n_chains = len(hierarchy.models()[0].chains())
+    for i, chain in enumerate(hierarchy.models()[0].chains()):
+        new_hierarchy = iotbx.pdb.hierarchy.root()
+        new_model = iotbx.pdb.hierarchy.model()
+        new_hierarchy.append_model((new_model))
+        new_model.append_chain(chain.detached_copy())
+        output_file = ample_util.filename_append(pdbin, chain.id, directory)
+        with open(output_file, "w") as f:
+            if (crystal_symmetry is not None) :
+                print >> f, iotbx.pdb.format_cryst1_and_scale_records(
+                                                                      crystal_symmetry=crystal_symmetry,
+                                                                      write_scale_records=True)
+            print >> f, "REMARK Chain %d of %d" % (i, n_chains)
+            if (pdbin is not None) :
+                print >> f, "REMARK Original file:"
+                print >> f, "REMARK   %s" % pdbin
+            f.write(new_hierarchy.as_pdb_string())
+    
+        output_files.append(output_file)
+        
+    return output_files
+
 def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
     """Rename any non-standard AA, remove solvent and only keep most probably conformation.
     """
@@ -1890,6 +1932,8 @@ if __name__ == "__main__":
                        help='Write a fasta of the found AA to stdout')
     group.add_argument('-split', action='store_true',
                        help='Split a pdb into constituent models')
+    group.add_argument('-split_chains', action='store_true',
+                       help='Split a pdb into constituent chains')
     parser.add_argument('input_file',
                        help='The input file - will not be altered')
     
@@ -1915,4 +1959,6 @@ if __name__ == "__main__":
         print ample_sequence.Sequence(pdb=args.input_file).fasta_str()
     elif args.split:
         print split_pdb(args.input_file)
+    elif args.split_chains:
+        print split_into_chains(args.input_file)
         
