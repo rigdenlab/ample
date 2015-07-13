@@ -12,6 +12,7 @@ import re
 import unittest
 
 # External imports
+import iotbx.file_reader
 import iotbx.pdb
 #iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 
@@ -1268,7 +1269,13 @@ def Xselect_residues(inpath=None, outpath=None, residues=None):
     return count
 
 def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, tokeep_idx=None):
-    hierarchy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+    
+    pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
+    pdbf.check_file_type("pdb")
+    hierarchy = pdbf.file_object.construct_hierarchy()
+    
+    crystal_symmetry=pdbf.file_object.crystal_symmetry()
+    
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
         print "pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin)
     
@@ -1301,8 +1308,15 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
                 
         if remove:
             chain.remove_residue_group(residue_group)
-        
-    hierarchy.write_pdb_file(pdbout,anisou=False)
+
+    #hierarchy.write_pdb_file(pdbout,anisou=False)
+    with open(pdbout,'w') as f:
+        if (crystal_symmetry is not None) :
+            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
+                                                              write_scale_records=True))
+        f.write("REMARK Original file:\n")
+        f.write("REMARK   {0}\n".format(pdbin))
+        f.write(hierarchy.as_pdb_string(anisou=False))
     return
 
 def sequence(pdbin):
@@ -1371,7 +1385,6 @@ def split_pdb(pdbin, directory=None):
     
     # Largely stolen from pdb_split_models.py in phenix
     #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
-    import iotbx.file_reader
     
     pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
     pdbf.check_file_type("pdb")
