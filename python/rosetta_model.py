@@ -189,7 +189,7 @@ class RosettaModel(object):
         os.chdir(run_dir)
         job_scripts=[]
         dir_list = []
-        job_time=7200
+        job_time=43200
         for i, njobs in enumerate(jobs_per_proc):
             d=os.path.join(run_dir,"job_{0}".format(i))
             os.mkdir(d)
@@ -213,9 +213,10 @@ class RosettaModel(object):
             ps = glob.glob(os.path.join(d, "*.pdb"))
             pdbs += ps
         
-        if not len(pdbs):
-            raise RuntimeError, "No pdbs after modelling in directory: {0}\nPlease check the log files for more information.".format(run_dir)
-        
+        if len(pdbs) != self.nmodels:
+            raise RuntimeError, "Expected to create {0} models but found {1}\nPlease check the log files in the directory {2} for more information.".format(self.nmodels,
+                                                                                                                                                            len(pdbs),
+                                                                                                                                                            run_dir)
         if self.use_scwrl: scwrl = add_sidechains_SCWRL.Scwrl(scwrlExe=self.scwrl_exe)
         for i, pdbin in enumerate(pdbs):
             if self.use_scwrl:
