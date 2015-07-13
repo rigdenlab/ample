@@ -95,11 +95,7 @@ def split_sequence(length,percent_interval,min_chunk=3):
     """split a sequence of length into chunks each separated by percent_interval each being at least min_chunk size"""
     
     # How many residues should fit in each bin
-    chunk_size=int(round(float(length) * float(percent_interval)/100.0))
-    if chunk_size < min_chunk:
-        msg = "Error splitting sequence, got chunk_size < 1: {0} : {1}".format(length,percent_interval)
-        raise RuntimeError,msg
-    
+    chunk_size = int(round(float(length) * float(percent_interval)/100.0))
     idxs = [length-1]
     while True:
         start = idxs[-1] - chunk_size
