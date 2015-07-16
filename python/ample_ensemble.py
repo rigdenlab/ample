@@ -834,7 +834,12 @@ class Ensembler(object):
             subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
             os.mkdir(subcluster_dir)
             os.chdir(subcluster_dir)
-            basename='c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)  
+            basename = 'c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)
+            
+            # List of files for reference
+            with open(os.path.join(subcluster_dir,"{0}.list".format(basename),'w')) as f:
+                for m in cluster_files: f.write(m+"\n")
+                f.write("\n")
             
             cluster_file = self.align_models(cluster_files,work_dir=subcluster_dir)
             if not cluster_file:
