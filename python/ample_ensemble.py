@@ -837,7 +837,7 @@ class Ensembler(object):
             basename = 'c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)
             
             # List of files for reference
-            with open(os.path.join(subcluster_dir,"{0}.list".format(basename),'w')) as f:
+            with open(os.path.join(subcluster_dir,"{0}.list".format(basename)),'w') as f:
                 for m in cluster_files: f.write(m+"\n")
                 f.write("\n")
             
