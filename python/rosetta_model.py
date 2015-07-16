@@ -213,10 +213,9 @@ class RosettaModel(object):
             ps = glob.glob(os.path.join(d, "*.pdb"))
             pdbs += ps
         
-        if len(pdbs) != self.nmodels:
-            raise RuntimeError, "Expected to create {0} models but found {1}\nPlease check the log files in the directory {2} for more information.".format(self.nmodels,
-                                                                                                                                                            len(pdbs),
-                                                                                                                                                            run_dir)
+        if not pdbs:
+            raise RuntimeError, "No models created after modelling!\nPlease check the log files in the directory {0} for more information.".format(run_dir)
+        
         if self.use_scwrl: scwrl = add_sidechains_SCWRL.Scwrl(scwrlExe=self.scwrl_exe)
         for i, pdbin in enumerate(pdbs):
             if self.use_scwrl:
@@ -224,7 +223,12 @@ class RosettaModel(object):
                 scwrl.addSidechains(pdbin=pdbin,pdbout=pdbout)
             else:
                 pdbout=os.path.join(self.models_dir,"model_{0}.pdb".format(i))
-                shutil.copyfile(pdbin, pdbout)   
+                shutil.copyfile(pdbin, pdbout)
+                
+        if len(pdbs) != self.nmodels:
+            raise RuntimeError, "Expected to create {0} models but found {1}\nPlease check the log files in the directory {2} for more information.".format(self.nmodels,
+                                                                                                                                                            len(pdbs),
+                                                                                                                                                            run_dir)
         return
 
     def find_binary(self, name):
