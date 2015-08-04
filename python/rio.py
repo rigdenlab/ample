@@ -464,7 +464,7 @@ class Rio(object):
         stdin += "cells 2\n"
         stdin += "sort target inc\n"
         
-        retcode = ample_util.run_command( cmd=cmd, logfile=self.ncontLog, directory=os.getcwd(), dolog=False, stdin=stdin )
+        retcode = ample_util.run_command( cmd=cmd, logfile=self.ncontLog, directory=os.getcwd(), dolog=True, stdin=stdin )
         
         if retcode != 0:
             raise RuntimeError,"Error running ncont"
