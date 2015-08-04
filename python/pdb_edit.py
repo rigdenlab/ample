@@ -1603,34 +1603,34 @@ def Xstd_residues(pdbin, pdbout ):
     return
 
 def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
+    """NEED TO FIX TO INCLUDE CRYST1 SECTION"""
     
-    pdb_input=iotbx.pdb.pdb_input(pdbin)
+    pdb_input = iotbx.pdb.pdb_input(pdbin)
     
     # Get MODRES Section & build up dict mapping the changes
     modres_text = [ l.strip() for l in pdb_input.primary_structure_section() \
                     if l.startswith("MODRES")]
     modres={}
-    for id,resname,chain,resseq,stdres,comment in _parse_modres(modres_text):
+    for id,resname,chain,resseq,icode,stdres,comment in _parse_modres(modres_text):
         if not chain in modres:
-            modres[chain]={}
-        modres[chain][int(resseq)]=(resname,stdres)
-    
-    hierachy=pdb_input.construct_hierarchy()
+            modres[chain] = {}
+        modres[chain][int(resseq)] = (resname,stdres)
+   
+    hierachy = pdb_input.construct_hierarchy()
     for model in hierachy.models():
         for chain in model.chains():
             for residue_group in chain.residue_groups():
-                resseq=residue_group.resseq_as_int()
+                resseq = residue_group.resseq_as_int()
                 for atom_group in residue_group.atom_groups():
-                    resname=atom_group.resname
-                    if chain.id in modres and resseq in modres[chain.id]:
+                    resname = atom_group.resname
+                    if chain.id in modres and resseq in modres[chain.id] and modres[chain.id][resseq][0] == resname:
                         # Change modified name to std name
-                        assert modres[chain.id][resseq][0]==resname,\
-                        "Unmatched names: {0} : {1}".format(modres[chain.id][resseq][0],resname)
-                        atom_group.resname=modres[chain.id][resseq][1]
+                        #assert modres[chain.id][resseq][0]==resname,\
+                        #"Unmatched names: {0} : {1}".format(modres[chain.id][resseq][0],resname)
+                        atom_group.resname = modres[chain.id][resseq][1]
                         # If any of the atoms are hetatms, set them to be atoms
                         for atom in atom_group.atoms():
-                            if atom.hetero:
-                                atom.hetero=False
+                            if atom.hetero: atom.hetero=False
                                 
     if del_hetatm: _strip_hetatm_cctbx(hierachy)
     hierachy.write_pdb_file(pdbout,anisou=False)
@@ -1882,27 +1882,6 @@ class Test(unittest.TestCase):
         #os.unlink(pdbout)
         return
 
-    def testStandardise(self):
-
-        pdbin=os.path.join("/opt/ample-dev1/python","test.pdb")
-        pdbout="std.pdb"
-        
-        std_residues_cctbx(pdbin, pdbout)
-        
-        # Check it's valid
-        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
-        
-        #Get list of all the residue names in chain 1
-        resnames=[g.unique_resnames()[0]  for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
-        ref=['ACE', 'GLY', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
-             'LYS', 'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
-             'LYS', 'GLN', 'GLY', 'TYR', 'TYR']
-        self.assertEqual(resnames,ref)
-        
-        os.unlink(pdbout)
-        
-        return
-    
     def testStdResidues(self):
 
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
