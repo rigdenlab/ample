@@ -1346,7 +1346,7 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
     with open(pdbout,'w') as f:
         if (crystal_symmetry is not None) :
             f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True))
+                                                              write_scale_records=True)+"\n")
         f.write("REMARK Original file:\n")
         f.write("REMARK   {0}\n".format(pdbin))
         f.write(hierarchy.as_pdb_string(anisou=False))
@@ -1603,9 +1603,11 @@ def Xstd_residues(pdbin, pdbout ):
     return
 
 def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
-    """NEED TO FIX TO INCLUDE CRYST1 SECTION"""
+    """Map all residues in MODRES section to their standard counterparts
+    optionally delete all other HETATMS"""
     
     pdb_input = iotbx.pdb.pdb_input(pdbin)
+    crystal_symmetry = pdb_input.crystal_symmetry()
     
     # Get MODRES Section & build up dict mapping the changes
     modres_text = [ l.strip() for l in pdb_input.primary_structure_section() \
@@ -1633,7 +1635,15 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
                             if atom.hetero: atom.hetero=False
                                 
     if del_hetatm: _strip_hetatm_cctbx(hierachy)
-    hierachy.write_pdb_file(pdbout,anisou=False)
+
+    with open(pdbout,'w') as f:
+        f.write("REMARK Original file:\n")
+        f.write("REMARK   {0}\n".format(pdbin))
+        if (crystal_symmetry is not None) :
+            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
+                                                              write_scale_records=True)+"\n")
+        f.write(hierachy.as_pdb_string(anisou=False))
+
     return       
 
 def Xstrip_hetatm(pdbin, pdbout):
