@@ -1149,6 +1149,39 @@ def num_atoms_and_residues(pdbin,first=False):
     
     return (natoms, nresidues)
 
+def _parse_modres(modres_text):
+    """
+COLUMNS        DATA TYPE     FIELD       DEFINITION
+--------------------------------------------------------------------------------
+ 1 -  6        Record name   "MODRES"
+ 8 - 11        IDcode        idCode      ID code of this entry.
+13 - 15        Residue name  resName     Residue name used in this entry.
+17             Character     chainID     Chain identifier.
+19 - 22        Integer       seqNum      Sequence number.
+23             AChar         iCode       Insertion code.
+25 - 27        Residue name  stdRes      Standard residue name.
+30 - 70        String        comment     Description of the residue modification.
+"""
+
+    modres = []
+    for line in modres_text:
+        assert line[0:6] == "MODRES","Line did not begin with an MODRES record!: {0}".format(line)
+    
+        idCode = line[7:11]
+        resName = line[12:15].strip()
+        # Use for all so None means an empty field
+        if line[16].strip(): chainID = line[16]
+        seqNum = int(line[18:22])
+        iCode = ""
+        if line[22].strip(): iCode = line[22]
+        stdRes = line[24:27].strip()
+        comment = ""
+        if line[29:70].strip(): comment = line[29:70].strip()
+        
+        modres.append([idCode, resName, chainID, seqNum, iCode, stdRes,comment])
+        
+    return modres
+
 def reliable_sidechains(inpath=None, outpath=None ):
     """Only output non-backbone atoms for residues in the res_names list.
     """
@@ -1574,10 +1607,10 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
     pdb_input=iotbx.pdb.pdb_input(pdbin)
     
     # Get MODRES Section & build up dict mapping the changes
+    modres_text = [ l.strip() for l in pdb_input.primary_structure_section() \
+                    if l.startswith("MODRES")]
     modres={}
-    for _,id,resname,chain,resseq,stdres,comment in [ l.strip().split() \
-                                                     for l in pdb_input.primary_structure_section() \
-                                                     if l.startswith("MODRES")]:
+    for id,resname,chain,resseq,stdres,comment in _parse_modres(modres_text):
         if not chain in modres:
             modres[chain]={}
         modres[chain][int(resseq)]=(resname,stdres)
@@ -1849,6 +1882,27 @@ class Test(unittest.TestCase):
         #os.unlink(pdbout)
         return
 
+    def testStandardise(self):
+
+        pdbin=os.path.join("/opt/ample-dev1/python","test.pdb")
+        pdbout="std.pdb"
+        
+        std_residues_cctbx(pdbin, pdbout)
+        
+        # Check it's valid
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+        
+        #Get list of all the residue names in chain 1
+        resnames=[g.unique_resnames()[0]  for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
+        ref=['ACE', 'GLY', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
+             'LYS', 'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
+             'LYS', 'GLN', 'GLY', 'TYR', 'TYR']
+        self.assertEqual(resnames,ref)
+        
+        os.unlink(pdbout)
+        
+        return
+    
     def testStdResidues(self):
 
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
