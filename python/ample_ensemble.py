@@ -572,7 +572,7 @@ class Ensembler(object):
         std_models = []
         for m in models:
             std_model = ample_util.filename_append(m, astr="std", directory=std_models_dir)
-            pdb_edit.standardise(pdbin=m, pdbout=std_model, chain='A', del_hetatm=True)
+            pdb_edit.standardise(pdbin=m, pdbout=std_model, del_hetatm=True)
             std_models.append(std_model)
         
         if not alignment_file:
