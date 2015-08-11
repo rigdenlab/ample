@@ -22,7 +22,6 @@ sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
 
 # python imports
 import argparse
-import clusterize
 import cPickle
 import glob
 import logging
@@ -111,8 +110,14 @@ def process_command_line():
     parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
                        help='Flag for FREE column in the MTZ file')
     
+    parser.add_argument('-gesamt_exe', metavar='gesamt_exe', type=str, nargs=1,
+                       help='Path to the gesamt executable')
+    
     parser.add_argument('-homologs', metavar='True/False', type=str, nargs=1,
                        help='Generate ensembles from homologs models (requires -alignment_file)')
+    
+    parser.add_argument('-homolog_aligner', metavar='homolog_aligner', type=str, nargs=1,
+                       help='Program to use for structural alignment of homologs (gesamt|mustang)')
     
     parser.add_argument('-ideal_helices', metavar='True/False', type=str, nargs=1,
                        help='Use ideal polyalanine helices to solve structure (8 helices: from 5-40 residues)')

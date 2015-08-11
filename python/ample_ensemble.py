@@ -47,6 +47,39 @@ def align_mustang(models,mustang_exe=None,work_dir=None):
     alignment_file = os.path.join(work_dir,basename+".afasta")
     if not os.path.isfile(alignment_file): raise RuntimeError,"Could not find alignment file: {0} after running mustang!".format(alignment_file)
     return alignment_file
+
+def align_gesamt(models,gesamt_exe=None,work_dir=None):
+    if not ample_util.is_exe(gesamt_exe):
+        raise RuntimeError,"Cannot find gesamt executable: {0}".format(gesamt_exe)
+    
+    if not work_dir: work_dir = os.getcwd()
+    work_dir = os.path.abspath(work_dir)
+    if not os.path.isdir(work_dir): os.mkdir(work_dir)
+    os.chdir(work_dir)
+    
+    # Need to map chain name to pdb
+    model2chain = {}
+    for m in models:
+        seqd = pdb_edit.sequence(m)
+        if len(seqd) != 1: raise RuntimeError,"Model {0} does not contain a single chain, got: {1}".format(seqd.keys())
+        model2chain[m] = seqd.keys()[0]
+
+    basename = 'gesamt'
+    logfile = os.path.join(work_dir,'gesamt.log')
+    alignment_file = os.path.join(work_dir,basename+".afasta")
+    # Build up command-line
+    cmd = [gesamt_exe]
+    for model, chain in model2chain.iteritems():
+        cmd += [model, '-s', chain]
+    
+    cmd += ['-o', '{0}.pdb'.format(basename), '-a', alignment_file]
+    
+    rtn = ample_util.run_command(cmd, logfile=logfile, directory=work_dir)
+    if not rtn == 0:
+        raise RuntimeError,"Error running gesamt. Check logfile: {0}".format(logfile)
+    
+    if not os.path.isfile(alignment_file): raise RuntimeError,"Could not find alignment file: {0} after running gesamt!".format(alignment_file)
+    return alignment_file
     
 def model_core_from_alignment(models,alignment_file,work_dir=None):
     
@@ -542,7 +575,9 @@ class Ensembler(object):
                                     ensembles_directory = None,
                                     work_dir = None,
                                     nproc = None,
+                                    homolog_aligner = None,
                                     mustang_exe = None,
+                                    gesamt_exe = None,
                                     ):
         
         # Work dir set each time
@@ -578,8 +613,14 @@ class Ensembler(object):
             std_models.append(std_model)
         
         if not alignment_file:
-            self.logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
-            alignment_file = align_mustang(std_models, mustang_exe=mustang_exe, work_dir=self.work_dir)
+            if homolog_aligner == 'mustang':
+                self.logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
+                alignment_file = align_mustang(std_models, mustang_exe=mustang_exe, work_dir=self.work_dir)
+            elif homolog_aligner == 'gesamt':
+                self.logger.info("Generating alignment file with gesamt_exe: {0}".format(gesamt_exe))
+                alignment_file = align_gesamt(std_models, gesamt_exe=gesamt_exe, work_dir=self.work_dir)
+            else:
+                raise RuntimeError,"Unknown homolog_aligner: {0}".format(homolog_aligner)
             self.logger.info("Generated alignment file: {0}".format(alignment_file))
         else:
             self.logger.info("Using alignment file: {0}".format(alignment_file))
@@ -1807,7 +1848,6 @@ class Test(unittest.TestCase):
         return
     
     def testHomologs(self):
-            
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler=Ensembler()
         ensembler.theseus_exe=self.theseus_exe
@@ -1819,27 +1859,32 @@ class Test(unittest.TestCase):
         pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
         models = [ os.path.join(self.ample_dir,'examples','homologs',pdb) for pdb in pdb_list ]
         alignment_file = os.path.join(self.ample_dir,'examples','homologs','testthree.afasta')
-        
         ensembles = ensembler.generate_ensembles_homologs(models, alignment_file=alignment_file, work_dir=work_dir)
-         
         self.assertEqual(len(ensembles),57)
-        
         shutil.rmtree(work_dir)
         return
   
+    def testGesamt(self):
+        gesamt_exe = "/opt/ccp4-devtools/install/bin/gesamt"
+        if not ample_util.is_exe(gesamt_exe): return
+        
+        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+        models = [ os.path.join(self.ample_dir,'examples','homologs',pdb) for pdb in pdb_list ]
+        work_dir = os.path.join(self.tests_dir,"gesamt_test")
+        alignment_file = align_gesamt(models,gesamt_exe=gesamt_exe,work_dir=work_dir)
+        self.assertTrue(os.path.isfile(alignment_file))
+        shutil.rmtree(work_dir)
+        return
+    
     def testMustang(self):
         mustang_exe = "/opt/MUSTANG_v3.2.2/bin/mustang-3.2.1"
         if not ample_util.is_exe(mustang_exe): return
         
         pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
         models = [ os.path.join(self.ample_dir,'examples','homologs',pdb) for pdb in pdb_list ]
-        
         work_dir = os.path.join(self.tests_dir,"mustang_test")
-        
         alignment_file = align_mustang(models,mustang_exe=mustang_exe,work_dir=work_dir)
-        
         self.assertTrue(os.path.isfile(alignment_file))
-        
         shutil.rmtree(work_dir)
         return
     

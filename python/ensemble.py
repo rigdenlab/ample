@@ -73,7 +73,9 @@ def create_ensembles(amoptd):
                                                         alignment_file=amoptd['alignment_file'],
                                                         work_dir=work_dir,
                                                         nproc=amoptd['nproc'],
-                                                        mustang_exe=amoptd['mustang_exe']
+                                                        homolog_aligner=amoptd['homolog_aligner'],
+                                                        mustang_exe=amoptd['mustang_exe'],
+                                                        gesamt_exe=amoptd['gesamt_exe']
                                                         )
     else:
         ensembles=ensembler.generate_ensembles(models,
