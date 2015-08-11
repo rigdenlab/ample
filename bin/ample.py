@@ -495,9 +495,9 @@ def process_options(amoptd,logger):
     elif amoptd['homologs']:
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
-        if not (os.path.isfile(str(amoptd['alignment_file'])) or os.path.isfile(str(amoptd['mustang_exe']))):
-            msg = "Homologs option requires an aligment file or path to a mustang executable to be supplied\n" + \
-            "Please supply the path to mustang executable with the -mustang_exe flag, or an alignment file in fasta format with the -alignment_file flag"
+        if not (os.path.isfile(str(amoptd['alignment_file'])) and (os.path.isfile(str(amoptd['mustang_exe'])) or os.path.isfile(str(amoptd['gesamt_exe'])))):
+            msg = "Homologs option requires an aligment file or path to a mustang or gesamt executable to be supplied\n" + \
+            "Please supply the path to mustang or gesamt executable with the -mustang_exe or -gesamt_exe flag, or an alignment file in fasta format with the -alignment_file flag"
             ample_exit.exit(msg)
         if not os.path.isdir(str(amoptd['models'])):
             msg = "Homologs option requires a directory of pdb models to be supplied\n" + \
