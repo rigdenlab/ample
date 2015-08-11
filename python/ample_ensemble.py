@@ -61,12 +61,14 @@ def model_core_from_alignment(models,alignment_file,work_dir=None):
     # Get pdb names from alignment headers
     seq_names = [ h[1:].strip() for h in align_seq.headers ]
     
-    GAP = '-'
-    # Get array specifying which positions are core
-    core = [ all([ x != GAP for x in t ]) for t in zip(*align_seq.sequences) ]
+    # Get array specifying which positions are core. If the positions all align, then there
+    # will be a capital letter for the residue. Gaps are signified by "-" and non-structurally-
+    # aligned residues by lower-case letters
+    core = [ all([ x in pdb_edit.one2three.keys() for x in t ]) for t in zip(*align_seq.sequences) ]
     
     # For each sequence, get a list of which positions are core
     core_positions = []
+    GAP = '-'
     for seq in align_seq.sequences:
         p = []
         count = 0
@@ -1848,8 +1850,8 @@ class Test(unittest.TestCase):
         if os.path.isdir(work_dir): shutil.rmtree(work_dir)
         os.mkdir(work_dir)
 
-        models = glob.glob(os.path.join("/opt/ample-dev1/examples/homologs","*.pdb"))
-        alignment_file = os.path.join("/opt/ample-dev1/examples/homologs","testthree.afasta")
+        models = glob.glob(os.path.join(self.ample_dir, "examples","homologs","*.pdb"))
+        alignment_file = os.path.join(self.ample_dir, "examples","homologs","testthree.afasta")
         
         core_models = model_core_from_alignment(models, alignment_file, work_dir=work_dir)
         
