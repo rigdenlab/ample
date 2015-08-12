@@ -100,7 +100,7 @@ def model_core_from_alignment(models,alignment_file,work_dir=None):
     for i, s in enumerate(seq_names):
         x = re.search("\([a-zA-Z]*\)$",s)
         if x:
-            s = s.replace(x.group(0))
+            s = s.replace(x.group(0),"")
             seq_names[i] = s
     
     # Get array specifying which positions are core. If the positions all align, then there
