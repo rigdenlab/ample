@@ -9,6 +9,7 @@ import glob
 import logging
 import os
 import random
+import re
 import shutil
 import sys
 import unittest
@@ -93,6 +94,14 @@ def model_core_from_alignment(models,alignment_file,work_dir=None):
     
     # Get pdb names from alignment headers
     seq_names = [ h[1:].strip() for h in align_seq.headers ]
+    
+    # Need to check if the alignment file is from gesamt, in which case, the names have the
+    # chain names in brackets appended
+    for i, s in enumerate(seq_names):
+        x = re.search("\([a-zA-Z]*\)$",s)
+        if x:
+            s = s.replace(x.group(0))
+            seq_names[i] = s
     
     # Get array specifying which positions are core. If the positions all align, then there
     # will be a capital letter for the residue. Gaps are signified by "-" and non-structurally-
