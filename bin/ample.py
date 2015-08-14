@@ -17,8 +17,8 @@ if not "CCP4" in sorted(os.environ.keys()):
 
 # Add the ample python folder to the PYTHONPATH
 sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
-# root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
-# sys.path.append( os.path.join( root, "python" ) )
+#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+#sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
 import argparse
@@ -65,8 +65,11 @@ def process_command_line():
     parser.add_argument('-buccaneer_cycles', type=int, nargs=1,
                        help='The number of Bucanner rebuilding cycles to run')
     
+    parser.add_argument('-cluster_dir', type=str, nargs=1,
+                       help='Path to directory of pre-clustered models to import')
+    
     parser.add_argument('-cluster_method', type=str, nargs=1,
-                       help='How to cluster the models for ensembling spicker/???')
+                       help='How to cluster the models for ensembling (spicker|fast_protein_cluster')
     
     parser.add_argument('-ccp4_jobid', type=int, nargs=1,
                        help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
@@ -489,6 +492,17 @@ def process_options(amoptd, logger):
         logger.info("Found directory with ensemble files: {0}\n".format(amoptd['ensembles_dir']))
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
+    elif amoptd['cluster_dir']:
+        if not os.path.isdir(amoptd['cluster_dir']):
+            msg = "Import cluster cannot find directory: {0}".format(amoptd['cluster_dir'])
+            ample_exit.exit(msg)
+        if not glob.glob(os.path.join(amoptd['cluster_dir'],"*.pdb")):
+            msg = "Import cluster cannot find pdbs in directory: {0}".format(amoptd['cluster_dir'])
+            ample_exit.exit(msg)
+        logger.info("Importing pre-clustered models from directory: {0}\n".format(amoptd['cluster_dir']))   
+        amoptd['import_cluster'] = True
+        amoptd['make_frags'] = False
+        amoptd['make_models'] = False
     elif amoptd['ideal_helices']:
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
@@ -884,7 +898,7 @@ def main():
         logger.info("*** Using ideal helices to solve structure ***")
     else:
         # Check we have some models to work with
-        if not glob.glob(os.path.join(amopt.d['models_dir'], "*.pdb")):
+        if not amopt.d['import_cluster'] and not glob.glob(os.path.join(amopt.d['models_dir'], "*.pdb")):
             ample_util.saveAmoptd(amopt.d)
             msg = "ERROR! Cannot find any pdb files in: {0}".format(amopt.d['models_dir'])
             ample_exit.exit(msg)

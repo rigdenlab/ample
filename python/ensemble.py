@@ -67,27 +67,29 @@ def create_ensembles(amoptd):
     
     if amoptd['homologs']:
         ensembles=ensembler.generate_ensembles_homologs(models,
-                                                        percent_truncation=amoptd['percent'],
-                                                        truncation_method=amoptd['truncation_method'],
-                                                        ensembles_directory=ensembles_directory,
-                                                        alignment_file=amoptd['alignment_file'],
-                                                        work_dir=work_dir,
-                                                        nproc=amoptd['nproc'],
-                                                        homolog_aligner=amoptd['homolog_aligner'],
-                                                        mustang_exe=amoptd['mustang_exe'],
-                                                        gesamt_exe=amoptd['gesamt_exe']
+                                                        percent_truncation = amoptd['percent'],
+                                                        truncation_method = amoptd['truncation_method'],
+                                                        ensembles_directory = ensembles_directory,
+                                                        alignment_file = amoptd['alignment_file'],
+                                                        work_dir = work_dir,
+                                                        nproc = amoptd['nproc'],
+                                                        homolog_aligner = amoptd['homolog_aligner'],
+                                                        mustang_exe = amoptd['mustang_exe'],
+                                                        gesamt_exe = amoptd['gesamt_exe']
                                                         )
     else:
         ensembles=ensembler.generate_ensembles(models,
-                                               cluster_method=amoptd['cluster_method'] ,
-                                               cluster_exe=cluster_exe,
-                                               num_clusters=amoptd['num_clusters'] ,
-                                               percent_truncation=amoptd['percent'],
-                                               truncation_method=amoptd['truncation_method'],
-                                               truncation_pruning=amoptd['truncation_pruning'],
-                                               ensembles_directory=ensembles_directory,
-                                               work_dir=work_dir,
-                                               nproc=amoptd['nproc'])
+                                               cluster_method = amoptd['cluster_method'],
+                                               cluster_exe = cluster_exe,
+                                               num_clusters = amoptd['num_clusters'],
+                                               import_cluster = amoptd['import_cluster'],
+                                               cluster_dir = amoptd['cluster_dir'],
+                                               percent_truncation = amoptd['percent'],
+                                               truncation_method = amoptd['truncation_method'],
+                                               truncation_pruning = amoptd['truncation_pruning'],
+                                               ensembles_directory = ensembles_directory,
+                                               work_dir = work_dir,
+                                               nproc = amoptd['nproc'])
     
     amoptd['ensembles'] = ensembles
     amoptd['ensembles_data'] = ensembler.ensembles_data

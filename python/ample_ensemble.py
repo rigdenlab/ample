@@ -369,24 +369,40 @@ class Ensembler(object):
         return variances
     
     def cluster_models(self,
-                       models=None,
-                       cluster_method=None,
-                       num_clusters=None,
-                       cluster_exe=None,
-                       nproc=1,
-                       max_cluster_size=200
+                       models = None,
+                       cluster_method = None,
+                       num_clusters = None,
+                       cluster_exe = None,
+                       import_cluster = False,
+                       cluster_dir = None,
+                       nproc = 1,
+                       max_cluster_size = 200
                        ):
         clusters = []
         clusters_data = []
-        if cluster_method == "spicker":
+        if import_cluster:
+            if not os.path.isdir(cluster_dir): raise RuntimeError,"Import cluster cannot find directory: {0}".format(cluster_dir)
+            cluster_models = glob.glob(os.path.join(cluster_dir,"*.pdb"))
+            if not cluster_models: raise RuntimeError,"Import cluster cannot find pdbs in directory: {0}".format(cluster_dir)
+            # Data on the cluster
+            cluster_data = self.create_dict()
+            cluster_data['cluster_num'] = 1
+            cluster_data['cluster_centroid'] = cluster_models[0]
+            cluster_data['cluster_num_models'] = len(cluster_models)
+            cluster_data['cluster_method'] = "import"
+            cluster_data['num_clusters'] = 1
+            clusters_data.append(cluster_data)
+            clusters.append(cluster_models)          
+               
+        elif cluster_method == "spicker":
             # Spicker Alternative for clustering
             self.logger.info('* Running SPICKER to cluster models *')
             spicker_rundir = os.path.join(self.work_dir, 'spicker')
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
             spickerer.cluster(models,
-                              num_clusters=num_clusters,
-                              max_cluster_size=max_cluster_size,
-                              run_dir=spicker_rundir)
+                              num_clusters = num_clusters,
+                              max_cluster_size = max_cluster_size,
+                              run_dir = spicker_rundir)
             self.logger.debug(spickerer.results_summary())
             
             for i in range(num_clusters):
@@ -505,15 +521,17 @@ class Ensembler(object):
         return ensembles, ensembles_data
   
     def generate_ensembles(self, models,
-                           cluster_method=None,
-                           cluster_exe=None,
-                           num_clusters=None,
-                           percent_truncation=None,
-                           truncation_method=None,
-                           truncation_pruning=None,
-                           ensembles_directory=None,
-                           work_dir=None,
-                           nproc=None):
+                           cluster_method = None,
+                           cluster_exe = None,
+                           num_clusters = None,
+                           import_cluster = False,
+                           cluster_dir = None,
+                           percent_truncation = None,
+                           truncation_method = None,
+                           truncation_pruning = None,
+                           ensembles_directory = None,
+                           work_dir = None,
+                           nproc = None):
         
         # Work dir set each time
         if not work_dir:
@@ -537,7 +555,7 @@ class Ensembler(object):
         else:
             self.ensembles_directory = ensembles_directory
         
-        if not len(models):
+        if not import_cluster and not len(models):
             raise RuntimeError, "Cannot find any models for ensembling!" 
         if not all([os.path.isfile(m) for m in models]):
             raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
@@ -550,24 +568,26 @@ class Ensembler(object):
 
         self.ensembles = []
         self.ensembles_data = []
-        for cluster, cluster_data in zip(*self.cluster_models(models=models,
-                                                              cluster_method=cluster_method,
-                                                              num_clusters=num_clusters,
-                                                              cluster_exe=cluster_exe,
-                                                              nproc=nproc)):
+        for cluster, cluster_data in zip(*self.cluster_models(models = models,
+                                                              cluster_method = cluster_method,
+                                                              num_clusters = num_clusters,
+                                                              cluster_exe = cluster_exe,
+                                                              import_cluster = import_cluster,
+                                                              cluster_dir = cluster_dir,
+                                                              nproc = nproc)):
             if len(cluster) < 2:
                 self.logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data['cluster_num']))
                 continue
             for truncated_models, truncated_models_data in zip(*self.truncate_models(cluster,
                                                                                      cluster_data,
-                                                                                     truncation_method=truncation_method,
-                                                                                     truncation_pruning=truncation_pruning,
-                                                                                     percent_truncation=percent_truncation)):
+                                                                                     truncation_method = truncation_method,
+                                                                                     truncation_pruning = truncation_pruning,
+                                                                                     percent_truncation = percent_truncation)):
                 for subcluster, subcluster_data in zip(*self.subcluster_models(truncated_models,
                                                                                truncated_models_data,
-                                                                               subcluster_program=self.subcluster_program,
-                                                                               subcluster_exe=self.subcluster_program,
-                                                                               ensemble_max_models=self.ensemble_max_models)):
+                                                                               subcluster_program = self.subcluster_program,
+                                                                               subcluster_exe = self.subcluster_program,
+                                                                               ensemble_max_models = self.ensemble_max_models)):
                     for ensemble, ensemble_data in zip(*self.edit_side_chains(subcluster, subcluster_data, self.ensembles_directory)):
                         self.ensembles.append(ensemble)
                         self.ensembles_data.append(ensemble_data)

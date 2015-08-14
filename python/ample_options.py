@@ -22,6 +22,7 @@ class AmpleOptions(object):
                             'blast_dir' : None,
                             'buccaneer_cycles' : 5,
                             'ccp4_jobid' : None,
+                            'cluster_dir' : None,
                             'cluster_method' : 'spicker',
                             'constraints_file' : None,
                             'debug' : False,
@@ -40,6 +41,7 @@ class AmpleOptions(object):
                             'homologs' : False,
                             'homolog_aligner' : 'gesamt',
                             'ideal_helices' : False,
+                            'import_cluster' : False,
                             'import_models' : False,
                             'import_ensembles' : False,
                             'improve_template' : None,
@@ -214,6 +216,7 @@ class AmpleOptions(object):
         paths = [
                  'alignment_file',
                 'blast_dir',
+                'cluster_dir',
                 'constraints_file',
                 'domain_all_chains_pdb',
                 'ensembles_dir',
@@ -246,8 +249,8 @@ class AmpleOptions(object):
                 'transmembrane_spanfile'
             ]
         for k, v in self.d.iteritems():
-            if k in paths and isinstance( v, str ):
-                self.d[ k ] = os.path.abspath( v )
+            if k in paths and isinstance(v, str):
+                self.d[k] = os.path.abspath(v)
 
         # Check if using any preset options
         if self.d['devel_mode']: self.preset_options('devel_mode')
