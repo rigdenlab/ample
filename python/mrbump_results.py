@@ -426,17 +426,18 @@ class ResultsSummary(object):
         # Skip any that are unfinished
         completed = [r for r in results if not(r['Solution_Type'] == "unfinished" or \
                                              r['Solution_Type'] == "no_job_directory")]
-        # Keep the top TOP_KEEP SHELXE_CC and PHASER_TFZ - these could be the same jobs and we may not even
-        # have TOP_KEEP completed
-        to_keep = set()
-        to_keep.update(self.sortResults(completed, prioritise='SHELXE_CC')[min(len(completed),TOP_KEEP)])
-        to_keep.update(self.sortResults(completed, prioritise='PHASER_TFZ')[min(len(completed),TOP_KEEP)])
+        if completed:
+            # Keep the top TOP_KEEP SHELXE_CC and PHASER_TFZ - these could be the same jobs and we may not even
+            # have TOP_KEEP completed
+            to_keep = set()
+            to_keep.update(self.sortResults(completed, prioritise='SHELXE_CC')[min(len(completed),TOP_KEEP)])
+            to_keep.update(self.sortResults(completed, prioritise='PHASER_TFZ')[min(len(completed),TOP_KEEP)])
 
-        # Remove the directories and archive the dictionaries
-        for r in to_keep:
-            pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
-            with open(pkl, 'w') as f: cPickle.dump(r, f)
-            shutil.rmtree(r['Search_directory'])
+            # Remove the directories and archive the dictionaries
+            for r in to_keep:
+                pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
+                with open(pkl, 'w') as f: cPickle.dump(r, f)
+                shutil.rmtree(r['Search_directory'])
         
 #         for r in results:
 #             if r['Solution_Type'] == "unfinished" or r['Solution_Type'] == "no_job_directory": continue
