@@ -163,19 +163,19 @@ def results_tab(results_dict):
     if not ('mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
     mrb_results = results_dict['mrbump_results']
     
-    results_tab = "results_tab"
-    pyrvapi.rvapi_add_tab(results_tab, "Results", True)  # Last arg is "open" - i.e. show or hide
+    results_tab_id = "results_tab"
+    pyrvapi.rvapi_add_tab(results_tab_id, "Results", True)  # Last arg is "open" - i.e. show or hide
     results_section(results_tab,
                     mrbump_results.ResultsSummary().sortResults(mrb_results,
                                                                 prioritise="SHELXE_CC")[min(len(mrb_results),mrbump_results.TOP_KEEP)],
                     "SHELXE Results")
-    results_section(results_tab,
+    results_section(results_tab_id,
                     mrbump_results.ResultsSummary().sortResults(mrb_results,
                                                                 prioritise="PHASER_TFZ")[min(len(mrb_results),mrbump_results.TOP_KEEP)],
                     "PHASER Results")
     return results_tab
 
-def results_section(results_tab, mrb_results, section_title):
+def results_section(results_tab_id, mrb_results, section_title):
     #
     # Results Tab
     #
@@ -186,7 +186,7 @@ def results_section(results_tab, mrb_results, section_title):
     uid = str(id(section_title))
     
     section_id = section_title.replace(" ","_") + uid
-    pyrvapi.rvapi_add_panel(section_id, results_tab, 0, 0, 1, 1)
+    pyrvapi.rvapi_add_panel(section_id, results_tab_id, 0, 0, 1, 1)
     pyrvapi.rvapi_add_text("<h3>{0}</h3>".format(section_title), section_id, 0, 0, 1, 1)
 
     results_tree = "results_tree" + section_id
@@ -329,7 +329,7 @@ def results_section(results_tab, mrb_results, section_title):
                                         2, 0, 1, 1, True)
         
         pyrvapi.rvapi_set_tree_node(results_tree, container_id, "{0}".format(name), "auto", "")
-    return results_tab
+    return
         
 def log_tab(results_dict):
     log_tab = "log_tab"
