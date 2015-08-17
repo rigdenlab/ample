@@ -936,14 +936,16 @@ def main():
             ensemble_summary = ensemble.ensemble_summary(amopt.d['ensembles_data'])
             logger.info(ensemble_summary)
     
-    # Update results
+    # Update results view
     pyrvapi_results.display_results(amopt.d)
+    
+    # Save the results
+    ample_util.saveAmoptd(amopt.d)
     
     #
     # Bail here if we didn't create anything
     #
     if not len(ensembles):
-        ample_util.saveAmoptd(amopt.d)
         msg = "### AMPLE FAILED TO GENERATE ANY ENSEMBLES! ###\nExiting..."
         ample_exit.exit(msg)
     
