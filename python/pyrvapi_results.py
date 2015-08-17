@@ -165,8 +165,14 @@ def results_tab(results_dict):
     
     results_tab = "results_tab"
     pyrvapi.rvapi_add_tab(results_tab, "Results", True)  # Last arg is "open" - i.e. show or hide
-    results_section(results_tab, mrbump_results.ResultsSummary().sortResults(mrb_results, prioritise="SHELXE_CC")[0:3], "SHELXE Results")
-    results_section(results_tab, mrbump_results.ResultsSummary().sortResults(mrb_results, prioritise="PHASER_TFZ")[0:3], "PHASER Results")
+    results_section(results_tab,
+                    mrbump_results.ResultsSummary().sortResults(mrb_results,
+                                                                prioritise="SHELXE_CC")[min(len(mrb_results),mrbump_results.TOP_KEEP)],
+                    "SHELXE Results")
+    results_section(results_tab,
+                    mrbump_results.ResultsSummary().sortResults(mrb_results,
+                                                                prioritise="PHASER_TFZ")[min(len(mrb_results),mrbump_results.TOP_KEEP)],
+                    "PHASER Results")
     return results_tab
 
 def results_section(results_tab, mrb_results, section_title):

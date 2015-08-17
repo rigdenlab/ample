@@ -24,6 +24,8 @@ import parse_buccaneer
 import parse_phaser
 import printTable
 
+TOP_KEEP = 3
+
 # We need a null logger so that we can be used without requiring a logger
 class NullHandler(logging.Handler):
     def emit(self, record):
@@ -420,13 +422,29 @@ class ResultsSummary(object):
         return results
     
     def _purgeFailed(self, results):
-        """Remove any jobs that didn't succeed and archive their job dictionaries"""
-        for r in results:
-            if r['Solution_Type'] == "unfinished" or r['Solution_Type'] == "no_job_directory": continue
-            if not (jobSucceeded(r) or r['Solution_Type'] is "MARGINAL") :
-                pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
-                with open(pkl, 'w') as f: cPickle.dump(r, f)
-                shutil.rmtree(r['Search_directory'])
+        """Remove any jobs that don't pass the keep criteria and archive their job dictionaries"""
+        # Skip any that are unfinished
+        completed = [r for r in results if not(r['Solution_Type'] == "unfinished" or \
+                                             r['Solution_Type'] == "no_job_directory")]
+        # Keep the top TOP_KEEP SHELXE_CC and PHASER_TFZ - these could be the same jobs and we may not even
+        # have TOP_KEEP completed
+        to_keep = set()
+        to_keep.update(self.sortResults(completed, prioritise='SHELXE_CC')[min(len(completed),TOP_KEEP)])
+        to_keep.update(self.sortResults(completed, prioritise='PHASER_TFZ')[min(len(completed),TOP_KEEP)])
+
+        # Remove the directories and archive the dictionaries
+        for r in to_keep:
+            pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
+            with open(pkl, 'w') as f: cPickle.dump(r, f)
+            shutil.rmtree(r['Search_directory'])
+        
+#         for r in results:
+#             if r['Solution_Type'] == "unfinished" or r['Solution_Type'] == "no_job_directory": continue
+#             to_keep.append(r)
+#             if not (jobSucceeded(r) or r['Solution_Type'] is "MARGINAL") :
+#                 pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
+#                 with open(pkl, 'w') as f: cPickle.dump(r, f)
+#                 shutil.rmtree(r['Search_directory'])
         return
 
     def results_table(self, results):
