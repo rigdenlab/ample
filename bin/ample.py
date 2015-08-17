@@ -496,7 +496,7 @@ def process_options(amoptd, logger):
         if not os.path.isdir(amoptd['cluster_dir']):
             msg = "Import cluster cannot find directory: {0}".format(amoptd['cluster_dir'])
             ample_exit.exit(msg)
-        if not glob.glob(os.path.join(amoptd['cluster_dir'],"*.pdb")):
+        if not glob.glob(os.path.join(amoptd['cluster_dir'], "*.pdb")):
             msg = "Import cluster cannot find pdbs in directory: {0}".format(amoptd['cluster_dir'])
             ample_exit.exit(msg)
         logger.info("Importing pre-clustered models from directory: {0}\n".format(amoptd['cluster_dir']))   
@@ -909,7 +909,7 @@ def main():
             script = ensemble.cluster_script(amopt.d)
             ok = workers.run_scripts(job_scripts=[script],
                                      monitor=monitor,
-                                     chdir=False,
+                                     chdir=True,
                                      nproc=amopt.d['nproc'],
                                      job_time=3600,
                                      job_name='ensemble',
