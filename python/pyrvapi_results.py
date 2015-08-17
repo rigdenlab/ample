@@ -55,10 +55,10 @@ _mrbump_tooltips = {
            "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
            }
 
-def ensemble_pdb(mrbump_result, results_dict):
+def ensemble_pdb(mrbump_result, ensembles_data):
     try:
         ensemble_dict = None
-        for e in results_dict['ensembles_data']:
+        for e in ensembles_data:
             if e['name'] == mrbump_result['ensemble_name']:
                 ensemble_dict = e
                 break
