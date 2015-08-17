@@ -169,12 +169,12 @@ def results_tab(results_dict):
                     mrbump_results.ResultsSummary().sortResults(mrb_results,
                                                                 prioritise="SHELXE_CC")[0:min(len(mrb_results),mrbump_results.TOP_KEEP)],
                     ensemble_results,
-                    "SHELXE Results")
+                    "Top {0} SHELXE Results".format(mrbump_results.TOP_KEEP))
     results_section(results_tab_id,
                     mrbump_results.ResultsSummary().sortResults(mrb_results,
                                                                 prioritise="PHASER_TFZ")[0:min(len(mrb_results),mrbump_results.TOP_KEEP)],
                     ensemble_results,
-                    "PHASER Results")
+                    "Top {0} PHASER Results".format(mrbump_results.TOP_KEEP))
     return results_tab_id
 
 def results_section(results_tab_id, mrb_results, ensemble_results, section_title):
