@@ -62,7 +62,6 @@ def ensemble_pdb(mrbump_result, results_dict):
             if e['name'] == mrbump_result['ensemble_name']:
                 ensemble_dict = e
                 break
-        print "GOT PATH ",ensemble_dict['ensemble_pdb']
         if os.path.isfile(ensemble_dict['ensemble_pdb']):
             return ensemble_dict['ensemble_pdb']
         else:
@@ -162,20 +161,23 @@ def results_tab(results_dict):
     #
     if not ('mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
     mrb_results = results_dict['mrbump_results']
+    ensemble_results = results_dict['ensembles_data']
     
     results_tab_id = "results_tab"
     pyrvapi.rvapi_add_tab(results_tab_id, "Results", True)  # Last arg is "open" - i.e. show or hide
-    results_section(results_tab,
+    results_section(results_tab_id,
                     mrbump_results.ResultsSummary().sortResults(mrb_results,
-                                                                prioritise="SHELXE_CC")[min(len(mrb_results),mrbump_results.TOP_KEEP)],
+                                                                prioritise="SHELXE_CC")[0:min(len(mrb_results),mrbump_results.TOP_KEEP)],
+                    ensemble_results,
                     "SHELXE Results")
     results_section(results_tab_id,
                     mrbump_results.ResultsSummary().sortResults(mrb_results,
-                                                                prioritise="PHASER_TFZ")[min(len(mrb_results),mrbump_results.TOP_KEEP)],
+                                                                prioritise="PHASER_TFZ")[0:min(len(mrb_results),mrbump_results.TOP_KEEP)],
+                    ensemble_results,
                     "PHASER Results")
-    return results_tab
+    return results_tab_id
 
-def results_section(results_tab_id, mrb_results, section_title):
+def results_section(results_tab_id, mrb_results, ensemble_results, section_title):
     #
     # Results Tab
     #
@@ -212,7 +214,7 @@ def results_section(results_tab_id, mrb_results, section_title):
         fill_table(table_id, tdata, tooltips=_mrbump_tooltips)
         
         # Ensemble
-        epdb = ensemble_pdb(r, results_dict)
+        epdb = ensemble_pdb(r, ensemble_results)
         if epdb:
             sec_ensemble = "sec_ensemble_{0}".format(name) + uid
             pyrvapi.rvapi_add_section(sec_ensemble, "Ensemble Search Model", container_id, 0, 0, 1, 1, False)
@@ -388,7 +390,7 @@ if __name__ == "__main__":
     
     pklfile = "/opt/ample-dev1/examples/ideal-helices/AMPLE_0/resultsd.pkl"
     with open(pklfile) as f: results_dict = cPickle.load(f)
-    display_results(results_dict,run_dir=os.getcwd())
+    display_results(results_dict,run_dir="/opt/ample-dev1/python/foo")
     sys.exit()
     
     import time
