@@ -429,9 +429,11 @@ class ResultsSummary(object):
         if completed:
             # Keep the top TOP_KEEP SHELXE_CC and PHASER_TFZ - these could be the same jobs and we may not even
             # have TOP_KEEP completed
-            to_keep = set()
-            to_keep.update(self.sortResults(completed, prioritise='SHELXE_CC')[min(len(completed),TOP_KEEP)])
-            to_keep.update(self.sortResults(completed, prioritise='PHASER_TFZ')[min(len(completed),TOP_KEEP)])
+            to_keep = []
+            for r in self.sortResults(completed, prioritise='SHELXE_CC')[0:min(len(completed),TOP_KEEP)]:
+                if r not in to_keep: to_keep.append(r)
+            for r in self.sortResults(completed, prioritise='PHASER_TFZ')[0:min(len(completed),TOP_KEEP)]:
+                if r not in to_keep: to_keep.append(r)
 
             # Remove the directories and archive the dictionaries
             for r in to_keep:
