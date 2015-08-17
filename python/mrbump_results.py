@@ -436,10 +436,11 @@ class ResultsSummary(object):
                 if r not in to_keep: to_keep.append(r)
 
             # Remove the directories and archive the dictionaries
-            for r in to_keep:
-                pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
-                with open(pkl, 'w') as f: cPickle.dump(r, f)
-                shutil.rmtree(r['Search_directory'])
+            for r in completed:
+                if r not in to_keep:
+                    pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
+                    with open(pkl, 'w') as f: cPickle.dump(r, f)
+                    shutil.rmtree(r['Search_directory'])
         
 #         for r in results:
 #             if r['Solution_Type'] == "unfinished" or r['Solution_Type'] == "no_job_directory": continue
