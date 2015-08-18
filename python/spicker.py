@@ -220,9 +220,8 @@ class Spickerer(object):
         for i, r in enumerate(self.results):
             rstr += "Cluster: {0}\n".format(i + 1)
             rstr += "* number of models: {0}\n".format(r.cluster_size)
-            if i <= self.num_clusters - 1:
-                rstr += "* files are listed in file: {0}\n".format(r.pdb_file)
-                rstr += "* centroid model is: {0}\n".format(r.cluster_centroid)
+            rstr += "* files are listed in file: {0}\n".format(r.pdb_file)
+            rstr += "* centroid model is: {0}\n".format(r.cluster_centroid)
             rstr += "\n"
             
         return rstr
