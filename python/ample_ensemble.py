@@ -399,22 +399,18 @@ class Ensembler(object):
             self.logger.info('* Running SPICKER to cluster models *')
             spicker_rundir = os.path.join(self.work_dir, 'spicker')
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
-            spickerer.cluster(models,
-                              num_clusters = num_clusters,
-                              max_cluster_size = max_cluster_size,
-                              run_dir = spicker_rundir)
+            spickerer.cluster(models, run_dir=spicker_rundir)
             self.logger.debug(spickerer.results_summary())
-            
             for i in range(num_clusters):
                 # The models
-                cluster = spickerer.results[i].pdb_list
+                cluster = spickerer.results[i].pdbs[0:max_cluster_size]
                 clusters.append(cluster)
                 # Data on the models
                 cluster_data = self.create_dict()
                 d = spickerer.results[i]
                 cluster_data['cluster_num'] = i + 1
                 cluster_data['cluster_centroid'] = d.cluster_centroid
-                cluster_data['cluster_num_models'] = d.cluster_size
+                cluster_data['cluster_num_models'] = len(cluster)
                 cluster_data['cluster_method'] = cluster_method
                 cluster_data['num_clusters'] = num_clusters
                 clusters_data.append(cluster_data)
