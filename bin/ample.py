@@ -597,9 +597,10 @@ def process_options(amoptd, logger):
             msg = 'Cannot find file domain_all_chains_pdb: {0}'.format(amoptd['domain_all_chains_pdb'])
             ample_exit.exit(msg)
     # MR programs
-    if amoptd['molrep_only'] and amoptd['phaser_only']:
-            msg = 'you say you want molrep only AND phaser only, choose one or both'
-            ample_exit.exit(msg)
+    if amoptd['molrep_only']:
+            amoptd['phaser_only'] = False
+            #msg = 'you say you want molrep only AND phaser only, choose one or both'
+            #ample_exit.exit(msg)
     
     if amoptd['molrep_only']:
         amoptd['mrbump_programs'] = [ 'molrep' ]
