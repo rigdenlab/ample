@@ -98,8 +98,6 @@ class Theseus(object):
         if not os.path.isfile(self.variance_file):
             raise RuntimeError,"Cannot find theseus variance file: {0} Please check the log: {1}".format(self.variance_file,
                                                                                                          self.theseus_log)
-        
-        print "CHECKING ",self.variance_file
         variances=[]
         core_count = 0
         with open(self.variance_file) as f:
