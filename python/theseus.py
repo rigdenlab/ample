@@ -20,14 +20,11 @@ class Theseus(object):
         self.theseus_exe = theseus_exe
         if not os.path.exists(self.theseus_exe) and os.access(self.theseus_exe, os.X_OK):
             raise RuntimeError,"Cannot find theseus_exe: {0}".format(self.theseus_exe)
-        
         self.logger = logging.getLogger()
-        
         self.work_dir = None
         self.variance_log = None
         self.superposed_models = None
         self.aligned_models = None
-        
         self._set_work_dir(work_dir)
         return
     
@@ -46,20 +43,21 @@ class Theseus(object):
         all_seq.write_fasta(alignment_file,pdbname=True)
         return alignment_file
 
-    def align_models(self, models, work_dir=None, basename=None, homologs=False):
+    def align_models(self, models, work_dir=None, basename=None, homologs=False, alignment_file=None):
         self._set_work_dir(work_dir)
+        if not basename: basename = 'theseus'
         if homologs:
             # Theseus expects all the models to be in the directory that it is run in as the string
             # given in the fasta header is used to construct the file names of the aligned pdb files
             # If a full or relative path is given (e.g. /foo/bar.pdb), it tries to create files called "basename_/foo/bar.pdb"
             # We therefore copy the models in and then delete them afterwards
-            alignment_file = self.alignment_file(models)
+            if not alignment_file: alignment_file = self.alignment_file(models)
             copy_models = [ os.path.join(self.work_dir,os.path.basename(m)) for m in models ]
             for orig, copy in zip(models, copy_models): shutil.copy(orig, copy)
         
-        if not basename: basename = 'theseus'
-
+        # -Z included so we don't line the models up to the principle axis and can compare the ensembles
         cmd = [ self.theseus_exe, '-a0', '-r', basename ]
+        #cmd = [ self.theseus_exe, '-a0', '-r', basename, '-Z', '-o', os.path.basename(copy_models[0]) ]
         if homologs:
             cmd += [ '-A', alignment_file ]
             cmd += [ os.path.basename(m) for m in copy_models ]
@@ -78,12 +76,20 @@ class Theseus(object):
         self.variance_file = os.path.join(self.work_dir,'{0}_variances.txt'.format(basename))
         self.superposed_models = os.path.join(self.work_dir,'{0}_sup.pdb'.format(basename))
         if homologs:
-            self.aligned_models = [ os.path.join(self.work_dir,"theseus_{0}".format(os.path.basename(m))) for m in copy_models ]
-            for m in copy_models: os.unlink(m)
+            # Horrible - need to rename the models so that they match the names in the alignment file
+            #self.aligned_models = [ os.path.join(self.work_dir,"theseus_{0}".format(os.path.basename(m))) for m in copy_models ]
+            #for m in copy_models: os.unlink(m)
+            self.aligned_models = []
+            for m in copy_models:
+                mb = os.path.basename(m)
+                aligned_model = os.path.join(self.work_dir,"{0}_{1}".format(basename,mb))
+                os.unlink(m)
+                os.rename(aligned_model, os.path.join(self.work_dir,mb))
+                self.aligned_models.append(mb)
         
         return self.superposed_models
 
-    def var_by_res(self):
+    def var_by_res(self, homologs=False):
         """Return a list of tuples: (resSeq,variance)"""
         
         #--------------------------------
@@ -92,7 +98,10 @@ class Theseus(object):
         if not os.path.isfile(self.variance_file):
             raise RuntimeError,"Cannot find theseus variance file: {0} Please check the log: {1}".format(self.variance_file,
                                                                                                          self.theseus_log)
+        
+        print "CHECKING ",self.variance_file
         variances=[]
+        core_count = 0
         with open(self.variance_file) as f:
             for i, line in enumerate(f):
                 # Skip header
@@ -108,20 +117,26 @@ class Theseus(object):
                     idxidx=1
                     idxResSeq=3
                     idxVariance=4
+                    idxCore = 7
                 else:
                     idxidx=0
                     idxResSeq=2
                     idxVariance=3
-                idx = int(tokens[idxidx])
-                assert idx == i,"Index and atom lines don't match! {0} : {1}".format(idx,i) # paranoid check
-                # Theseus counts from 1, we count from 0
-                idx -= 1
+                    idxCore = 6
+                    
+                if homologs and (len(tokens) < idxCore + 1 or tokens[idxCore] != 'CORE'): continue
+                if homologs:
+                    idx = core_count
+                    core_count += 1
+                else:
+                    idx = int(tokens[idxidx]) - 1 # Theseus counts from 1, we count from 0
+                
+                #assert idx == i,"Index and atom lines don't match! {0} : {1}".format(idx,i) # paranoid check
                 resSeq = int(tokens[idxResSeq])
                 variance = float(tokens[idxVariance])
                 variances.append((idx,resSeq,variance))
-                
+        
         return variances
-
 
 class Test(unittest.TestCase):
 

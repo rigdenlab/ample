@@ -104,11 +104,13 @@ def model_core_from_alignment(models, alignment_file, work_dir=None):
     # Get array specifying which positions are core. If the positions all align, then there
     # will be a capital letter for the residue. Gaps are signified by "-" and non-structurally-
     # aligned residues by lower-case letters
-    core = [ all([ x in pdb_edit.one2three.keys() for x in t ]) for t in zip(*align_seq.sequences) ]
+    GAP = '-'
+    # Can't use below as Theseus ignores lower-case letters in the alignment
+    #core = [ all([ x in pdb_edit.one2three.keys() for x in t ]) for t in zip(*align_seq.sequences) ]
+    core = [ all([ x != GAP for x in t ]) for t in zip(*align_seq.sequences) ]
     
     # For each sequence, get a list of which positions are core
     core_positions = []
-    GAP = '-'
     for seq in align_seq.sequences:
         p = []
         count = 0
@@ -285,6 +287,7 @@ class Ensembler(object):
             # print "residues ",residues
             truncation_residues.append(sorted(residues))
             truncation_residue_idxs.append(sorted(idxs))
+            print "GOT ",percent,thresh,len(residues),len(idxs)
                  
         return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
     
@@ -509,7 +512,9 @@ class Ensembler(object):
             ensemble_data['ensemble_pdb'] = fpath
             ensemble_data['ensemble_num_atoms'] = natoms
             # check
-            assert ensemble_data['truncation_num_residues'] == nresidues, "Unmatching number of residues!"
+            assert ensemble_data['truncation_num_residues'] == nresidues, "Unmatching number of residues: {0} : {1} \n{2}".format(ensemble_data['truncation_num_residues'],
+                                                                                                                                  nresidues,
+                                                                                                                                  raw_ensemble_data)
             
             ensembles.append(fpath)
             ensembles_data.append(ensemble_data)
@@ -626,7 +631,7 @@ class Ensembler(object):
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
         
-        # standardise all the models and extract chain A (for now - needs more thinking about)
+        # standardise all the models
         std_models_dir = os.path.join(work_dir, "std_models")
         os.mkdir(std_models_dir)
         std_models = []
@@ -648,18 +653,15 @@ class Ensembler(object):
         else:
             self.logger.info("Using alignment file: {0}".format(alignment_file))
             
-        # Use the alignment file to trim the models down to a core
-        core_models_dir = os.path.join(work_dir, 'core_models')
-        core_models = model_core_from_alignment(std_models, alignment_file=alignment_file, work_dir=core_models_dir)
-            
         # Now truncate and create ensembles - as standard ample, but with no subclustering
         self.ensembles = []
         self.ensembles_data = []
-        for truncated_models, truncated_models_data in zip(*self.truncate_models(core_models,
+        for truncated_models, truncated_models_data in zip(*self.truncate_models(std_models,
                                                                                  truncation_method=truncation_method,
                                                                                  truncation_pruning=None,
                                                                                  percent_truncation=percent_truncation,
-                                                                                 homologs=True
+                                                                                 homologs=True,
+                                                                                 alignment_file=alignment_file
                                                                                  )):
             tlevel = truncated_models_data['truncation_level']
             ensemble_dir = os.path.join(truncated_models_data['truncation_dir'],
@@ -1150,31 +1152,31 @@ class Ensembler(object):
                         truncation_method=None,
                         percent_truncation=None,
                         truncation_pruning='none',
-                        homologs=False
+                        homologs=False,
+                        alignment_file=None
                         ):
         
         assert len(models) > 1, "Cannot truncate as < 2 models!"
         assert truncation_method and percent_truncation, "Missing arguments: {0}".format(truncation_method)
 
         # Create the directories we'll be working in
-        if homologs:
-            truncate_dir = os.path.join(self.work_dir, 'truncate')
-        else:
-            truncate_dir = os.path.join(self.work_dir, 'truncate_{0}'.format(models_data['cluster_num']))
+        if homologs: truncate_dir = os.path.join(self.work_dir, 'truncate')
+        else: truncate_dir = os.path.join(self.work_dir, 'truncate_{0}'.format(models_data['cluster_num']))
         os.mkdir(truncate_dir)
         os.chdir(truncate_dir)
         
         # Calculate variances between pdb - and align them if necessary
         run_theseus = theseus.Theseus(work_dir=truncate_dir, theseus_exe=self.theseus_exe)
-        run_theseus.align_models(models, homologs=homologs)
-        
-        # if homologs: models = run_theseus.aligned_models
-        var_by_res = run_theseus.var_by_res()
+        run_theseus.align_models(models, homologs=homologs, alignment_file=alignment_file)
+        var_by_res = run_theseus.var_by_res(homologs=homologs)
         if not len(var_by_res) > 0:
             msg = "Error reading residue variances!"
             self.logger.critical(msg)
             raise RuntimeError, msg
         
+        # Need to trim the aligned models down to core
+        if homologs: models = model_core_from_alignment(run_theseus.aligned_models, alignment_file)
+            
         self.logger.info('Using truncation method: {0}'.format(truncation_method))
         # Calculate which residues to keep under the different methods
         truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = None, None, None, None
