@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import urlparse
+import uuid
 
 # Our imports
 import ensemble
@@ -185,7 +186,7 @@ def results_section(results_tab_id, mrb_results, ensemble_results, section_title
 
     # Create unique identifier for this section by using the id
     # All ids will have this appended to avoid clashes
-    uid = str(id(section_title))
+    uid = str(uuid.uuid4())
     
     section_id = section_title.replace(" ","_") + uid
     pyrvapi.rvapi_add_panel(section_id, results_tab_id, 0, 0, 1, 1)
@@ -388,7 +389,7 @@ def display_results(results_dict, run_dir=None):
 
 if __name__ == "__main__":
     
-    pklfile = "/opt/ample-dev1/examples/ideal-helices/AMPLE_0/resultsd.pkl"
+    pklfile = "/opt/ample-dev1/examples/toxd-example/AMPLE_1/resultsd.pkl"
     with open(pklfile) as f: results_dict = cPickle.load(f)
     display_results(results_dict,run_dir="/opt/ample-dev1/python/foo")
     sys.exit()
