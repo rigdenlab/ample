@@ -1,3 +1,4 @@
+#!/usr/bin/env ccp4-python
 '''
 Created on 3 Mar 2015
 
@@ -388,31 +389,25 @@ def display_results(results_dict, run_dir=None):
     return True
 
 if __name__ == "__main__":
-    
-    pklfile = "/opt/ample-dev1/examples/toxd-example/AMPLE_1/resultsd.pkl"
+    import copy, time
+    pklfile = "/opt/ample-dev1/examples/toxd-example/AMPLE_0/resultsd.pkl"
     with open(pklfile) as f: results_dict = cPickle.load(f)
-    display_results(results_dict,run_dir="/opt/ample-dev1/python/foo")
+    
+    view1_dict = copy.copy(results_dict)
+    del view1_dict['ensembles_data']
+    del view1_dict['mrbump_results']
+    
+    display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
+    time.sleep(30)
+    
+    view1_dict['ensembles_data'] = results_dict['ensembles_data']
+    display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
+    time.sleep(90)
+    
+    view1_dict['mrbump_results'] = results_dict['mrbump_results']
+    display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
     sys.exit()
     
-    import time
-    pklfile = "/opt/ample-dev1/examples/toxd-example/resultsd1.pkl"
-    with open(pklfile) as f: results_dict = cPickle.load(f)
-    results_dict['webserver_uri'] = "http:www.jensrules.co.uk/ample/stuff"
-    results_dict['webserver_uri'] = None
-    display_results(results_dict)
-    print "TAB 1"
-    time.sleep(10)
-    pklfile = "/opt/ample-dev1/examples/toxd-example/resultsd2.pkl"
-    with open(pklfile) as f: results_dict = cPickle.load(f)
-    results_dict['webserver_uri'] = "http:www.jensrules.co.uk/ample/stuff"
-    results_dict['webserver_uri'] = None
-    display_results(results_dict)
-    print "TAB 2"
-    time.sleep(10)
-    pklfile = "/opt/ample-dev1/examples/toxd-example/resultsd3.pkl"
-    with open(pklfile) as f: results_dict = cPickle.load(f)
-    results_dict['webserver_uri'] = "http:www.jensrules.co.uk/ample/stuff"
-    results_dict['webserver_uri'] = None
-    display_results(results_dict)
-    print "TAB 3"
+    #results_dict['webserver_uri'] = "http:www.jensrules.co.uk/ample/stuff"
+    #results_dict['webserver_uri'] = None
 
