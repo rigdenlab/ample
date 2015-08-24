@@ -72,6 +72,7 @@ class AmpleOptions(object):
                             'percent' : 5,
                             'phaser_only' : True,
                             'phaser_kill' : 360, # This kills phaser after 6 hours
+                            'phaser_rms' : 0.1,
                             'phenix_exe' : None,
                             'psipred_ss2' : None,
                             'purge' : False,
