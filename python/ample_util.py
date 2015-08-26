@@ -48,7 +48,8 @@ Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255
 SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein
 side-chain conformations with SCWRL4. Proteins (2009).
 
-SHELX: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122
+SHELXE: "Extending molecular-replacement solutions with SHELXE". Thorn, A. and Sheldrick, G. M. (2013),
+Acta Crystallographica D, 69: 2251–2256. doi: 10.1107/S0907444913027534
 
 SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for
 near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871
@@ -173,13 +174,10 @@ def extract_zip(filename,models_dir,suffix='.pdb'):
 
 def find_exe(executable, dirs=None):
     """Find the executable exename.
-
     Args:
     executable: the name of the program or the path to an existing executable
     dirs - additional directories to search for the location
-    
     """
-
     logger = logging.getLogger()
     logger.debug('Looking for executable: {0}'.format(executable) )
     
