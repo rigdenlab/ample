@@ -287,7 +287,6 @@ class Ensembler(object):
             # print "residues ",residues
             truncation_residues.append(sorted(residues))
             truncation_residue_idxs.append(sorted(idxs))
-            print "GOT ",percent,thresh,len(residues),len(idxs)
                  
         return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
     
