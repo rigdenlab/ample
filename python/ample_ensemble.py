@@ -483,7 +483,7 @@ class Ensembler(object):
             if homologs:
                 ensemble_data['name'] = 'e{0}_{1}'.format(ensemble_data['truncation_level'], sct)
             else:
-                ensemble_data['name'] = 'c{0}_tl{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
+                ensemble_data['name'] = 'c{0}_t{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
                                                                    ensemble_data['truncation_level'],
                                                                    ensemble_data['subcluster_radius_threshold'],
                                                                    sct)
@@ -901,7 +901,7 @@ class Ensembler(object):
             subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
             os.mkdir(subcluster_dir)
             os.chdir(subcluster_dir)
-            basename = 'c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)
+            basename = 'c{0}_t{1}_r{2}'.format(cluster_num, truncation_level, radius)
             
             # List of files for reference
             with open(os.path.join(subcluster_dir, "{0}.list".format(basename)), 'w') as f:
@@ -1123,7 +1123,7 @@ class Ensembler(object):
         os.mkdir(subcluster_dir)
         os.chdir(subcluster_dir)
 
-        basename = 'c{0}_tl{1}_r{2}'.format(cluster_num, truncation_level, radius)
+        basename = 'c{0}_t{1}_r{2}'.format(cluster_num, truncation_level, radius)
         cluster_file = self.align_models(models)
         if not cluster_file:
             msg = "Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename,
@@ -1566,31 +1566,31 @@ class Test(unittest.TestCase):
                                                  work_dir=work_dir)
         
         # Below tested with ccp4 6.5.010 on osx 10.9.5
-        eref = ['c1_tl100_r2_allatom.pdb', 'c1_tl100_r2_polyAla.pdb', 'c1_tl100_r2_reliable.pdb', 'c1_tl100_r3_allatom.pdb',
-                 'c1_tl100_r3_polyAla.pdb', 'c1_tl100_r3_reliable.pdb', 'c1_tl19_r1_allatom.pdb', 'c1_tl19_r1_polyAla.pdb',
-                 'c1_tl19_r1_reliable.pdb', 'c1_tl24_r1_allatom.pdb', 'c1_tl24_r1_polyAla.pdb', 'c1_tl24_r1_reliable.pdb',
-                 'c1_tl29_r1_allatom.pdb', 'c1_tl29_r1_polyAla.pdb', 'c1_tl29_r1_reliable.pdb', 'c1_tl34_r1_allatom.pdb',
-                 'c1_tl34_r1_polyAla.pdb', 'c1_tl34_r1_reliable.pdb', 'c1_tl39_r1_allatom.pdb', 'c1_tl39_r1_polyAla.pdb',
-                 'c1_tl39_r1_reliable.pdb', 'c1_tl44_r1_allatom.pdb', 'c1_tl44_r1_polyAla.pdb', 'c1_tl44_r1_reliable.pdb',
-                 'c1_tl44_r2_allatom.pdb', 'c1_tl44_r2_polyAla.pdb', 'c1_tl44_r2_reliable.pdb', 'c1_tl49_r1_allatom.pdb',
-                 'c1_tl49_r1_polyAla.pdb', 'c1_tl49_r1_reliable.pdb', 'c1_tl49_r2_allatom.pdb', 'c1_tl49_r2_polyAla.pdb',
-                 'c1_tl49_r2_reliable.pdb', 'c1_tl54_r1_allatom.pdb', 'c1_tl54_r1_polyAla.pdb', 'c1_tl54_r1_reliable.pdb',
-                 'c1_tl54_r2_allatom.pdb', 'c1_tl54_r2_polyAla.pdb', 'c1_tl54_r2_reliable.pdb', 'c1_tl59_r1_allatom.pdb',
-                 'c1_tl59_r1_polyAla.pdb', 'c1_tl59_r1_reliable.pdb', 'c1_tl59_r2_allatom.pdb', 'c1_tl59_r2_polyAla.pdb',
-                 'c1_tl59_r2_reliable.pdb', 'c1_tl64_r1_allatom.pdb', 'c1_tl64_r1_polyAla.pdb', 'c1_tl64_r1_reliable.pdb',
-                 'c1_tl64_r2_allatom.pdb', 'c1_tl64_r2_polyAla.pdb', 'c1_tl64_r2_reliable.pdb', 'c1_tl69_r1_allatom.pdb',
-                 'c1_tl69_r1_polyAla.pdb', 'c1_tl69_r1_reliable.pdb', 'c1_tl69_r2_allatom.pdb', 'c1_tl69_r2_polyAla.pdb',
-                 'c1_tl69_r2_reliable.pdb', 'c1_tl75_r1_allatom.pdb', 'c1_tl75_r1_polyAla.pdb', 'c1_tl75_r1_reliable.pdb',
-                 'c1_tl75_r2_allatom.pdb', 'c1_tl75_r2_polyAla.pdb', 'c1_tl75_r2_reliable.pdb', 'c1_tl75_r3_allatom.pdb',
-                 'c1_tl75_r3_polyAla.pdb', 'c1_tl75_r3_reliable.pdb', 'c1_tl80_r1_allatom.pdb', 'c1_tl80_r1_polyAla.pdb',
-                 'c1_tl80_r1_reliable.pdb', 'c1_tl80_r2_allatom.pdb', 'c1_tl80_r2_polyAla.pdb', 'c1_tl80_r2_reliable.pdb',
-                 'c1_tl80_r3_allatom.pdb', 'c1_tl80_r3_polyAla.pdb', 'c1_tl80_r3_reliable.pdb', 'c1_tl85_r1_allatom.pdb',
-                 'c1_tl85_r1_polyAla.pdb', 'c1_tl85_r1_reliable.pdb', 'c1_tl85_r2_allatom.pdb', 'c1_tl85_r2_polyAla.pdb',
-                 'c1_tl85_r2_reliable.pdb', 'c1_tl85_r3_allatom.pdb', 'c1_tl85_r3_polyAla.pdb', 'c1_tl85_r3_reliable.pdb',
-                 'c1_tl90_r1_allatom.pdb', 'c1_tl90_r1_polyAla.pdb', 'c1_tl90_r1_reliable.pdb', 'c1_tl90_r2_allatom.pdb',
-                 'c1_tl90_r2_polyAla.pdb', 'c1_tl90_r2_reliable.pdb', 'c1_tl90_r3_allatom.pdb', 'c1_tl90_r3_polyAla.pdb',
-                 'c1_tl90_r3_reliable.pdb', 'c1_tl95_r2_allatom.pdb', 'c1_tl95_r2_polyAla.pdb', 'c1_tl95_r2_reliable.pdb',
-                 'c1_tl95_r3_allatom.pdb', 'c1_tl95_r3_polyAla.pdb', 'c1_tl95_r3_reliable.pdb']
+        eref = ['c1_t100_r2_allatom.pdb', 'c1_t100_r2_polyAla.pdb', 'c1_t100_r2_reliable.pdb', 'c1_t100_r3_allatom.pdb',
+                 'c1_t100_r3_polyAla.pdb', 'c1_t100_r3_reliable.pdb', 'c1_t19_r1_allatom.pdb', 'c1_t19_r1_polyAla.pdb',
+                 'c1_t19_r1_reliable.pdb', 'c1_t24_r1_allatom.pdb', 'c1_t24_r1_polyAla.pdb', 'c1_t24_r1_reliable.pdb',
+                 'c1_t29_r1_allatom.pdb', 'c1_t29_r1_polyAla.pdb', 'c1_t29_r1_reliable.pdb', 'c1_t34_r1_allatom.pdb',
+                 'c1_t34_r1_polyAla.pdb', 'c1_t34_r1_reliable.pdb', 'c1_t39_r1_allatom.pdb', 'c1_t39_r1_polyAla.pdb',
+                 'c1_t39_r1_reliable.pdb', 'c1_t44_r1_allatom.pdb', 'c1_t44_r1_polyAla.pdb', 'c1_t44_r1_reliable.pdb',
+                 'c1_t44_r2_allatom.pdb', 'c1_t44_r2_polyAla.pdb', 'c1_t44_r2_reliable.pdb', 'c1_t49_r1_allatom.pdb',
+                 'c1_t49_r1_polyAla.pdb', 'c1_t49_r1_reliable.pdb', 'c1_t49_r2_allatom.pdb', 'c1_t49_r2_polyAla.pdb',
+                 'c1_t49_r2_reliable.pdb', 'c1_t54_r1_allatom.pdb', 'c1_t54_r1_polyAla.pdb', 'c1_t54_r1_reliable.pdb',
+                 'c1_t54_r2_allatom.pdb', 'c1_t54_r2_polyAla.pdb', 'c1_t54_r2_reliable.pdb', 'c1_t59_r1_allatom.pdb',
+                 'c1_t59_r1_polyAla.pdb', 'c1_t59_r1_reliable.pdb', 'c1_t59_r2_allatom.pdb', 'c1_t59_r2_polyAla.pdb',
+                 'c1_t59_r2_reliable.pdb', 'c1_t64_r1_allatom.pdb', 'c1_t64_r1_polyAla.pdb', 'c1_t64_r1_reliable.pdb',
+                 'c1_t64_r2_allatom.pdb', 'c1_t64_r2_polyAla.pdb', 'c1_t64_r2_reliable.pdb', 'c1_t69_r1_allatom.pdb',
+                 'c1_t69_r1_polyAla.pdb', 'c1_t69_r1_reliable.pdb', 'c1_t69_r2_allatom.pdb', 'c1_t69_r2_polyAla.pdb',
+                 'c1_t69_r2_reliable.pdb', 'c1_t75_r1_allatom.pdb', 'c1_t75_r1_polyAla.pdb', 'c1_t75_r1_reliable.pdb',
+                 'c1_t75_r2_allatom.pdb', 'c1_t75_r2_polyAla.pdb', 'c1_t75_r2_reliable.pdb', 'c1_t75_r3_allatom.pdb',
+                 'c1_t75_r3_polyAla.pdb', 'c1_t75_r3_reliable.pdb', 'c1_t80_r1_allatom.pdb', 'c1_t80_r1_polyAla.pdb',
+                 'c1_t80_r1_reliable.pdb', 'c1_t80_r2_allatom.pdb', 'c1_t80_r2_polyAla.pdb', 'c1_t80_r2_reliable.pdb',
+                 'c1_t80_r3_allatom.pdb', 'c1_t80_r3_polyAla.pdb', 'c1_t80_r3_reliable.pdb', 'c1_t85_r1_allatom.pdb',
+                 'c1_t85_r1_polyAla.pdb', 'c1_t85_r1_reliable.pdb', 'c1_t85_r2_allatom.pdb', 'c1_t85_r2_polyAla.pdb',
+                 'c1_t85_r2_reliable.pdb', 'c1_t85_r3_allatom.pdb', 'c1_t85_r3_polyAla.pdb', 'c1_t85_r3_reliable.pdb',
+                 'c1_t90_r1_allatom.pdb', 'c1_t90_r1_polyAla.pdb', 'c1_t90_r1_reliable.pdb', 'c1_t90_r2_allatom.pdb',
+                 'c1_t90_r2_polyAla.pdb', 'c1_t90_r2_reliable.pdb', 'c1_t90_r3_allatom.pdb', 'c1_t90_r3_polyAla.pdb',
+                 'c1_t90_r3_reliable.pdb', 'c1_t95_r2_allatom.pdb', 'c1_t95_r2_polyAla.pdb', 'c1_t95_r2_reliable.pdb',
+                 'c1_t95_r3_allatom.pdb', 'c1_t95_r3_polyAla.pdb', 'c1_t95_r3_reliable.pdb']
 
         self.assertEqual(sorted([os.path.basename(m) for m in ensembles]), eref)
         d = ensembler.ensembles_data[5]
