@@ -94,7 +94,6 @@ class AmpleOptions(object):
                             'shelxe_rebuild_buccaneer' : False,
                             'SIGF' : None,
                             'spicker_exe' : None,
-                            'split_mr' : False,
                             'submit_array' : True,
                             'submit_cluster' : False,
                             'submit_max_array' : None,
