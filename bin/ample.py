@@ -264,9 +264,6 @@ def process_command_line():
     parser.add_argument('-spicker_exe', type=str, nargs=1,
                        help='Path to spicker executable')
     
-    parser.add_argument('-split_mr', metavar='True/False', type=str, nargs=1,
-                       help='Split MRBUMP Molecular Replacement jobs (phaser, molrep etc) into separate jobs')
-
     parser.add_argument('-submit_array', metavar='True/False', type=str, nargs=1,
                        help='Submit SGE jobs as array jobs')
     
@@ -960,8 +957,7 @@ def main():
         ample_exit.exit(msg)
     
     bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
-    if not os.path.exists(bump_dir):
-        os.mkdir(bump_dir)
+    if not os.path.exists(bump_dir): os.mkdir(bump_dir)
     os.chdir(bump_dir)
     amopt.d['mrbump_dir'] = bump_dir
     amopt.d['mrbump_results'] = []
@@ -969,10 +965,12 @@ def main():
     
     # Create job scripts
     logger.info("Generating MRBUMP runscripts")
-    # mrbump_jobtime=86400 # allow 24 hours for each mrbump job
     mrbump_jobtime = 172800  # allow 48 hours for each mrbump job
-    job_scripts = mrbump_ensemble.generate_jobscripts(ensembles, amopt.d, job_time=mrbump_jobtime, ensemble_options=ensemble_options)
-    # print "EXITING ";sys.exit(1)
+    job_scripts = mrbump_ensemble.write_mrbump_files(ensembles,
+                                                     amopt.d,
+                                                     job_time=mrbump_jobtime,
+                                                     ensemble_options=ensemble_options)
+    #print "EXITING ";sys.exit(1)
     
     # Create function for monitoring jobs - static function decorator?
     if pyrvapi_results.pyrvapi:

@@ -13,59 +13,43 @@ import unittest
 # our imports
 import mrbump_cmd
 
-def generate_jobscripts(ensemble_pdbs, amoptd, job_time=86400, ensemble_options=None):
-    """Write the MRBUMP shell scripts for all the ensembles.
+
+"""
+for ensemble in ensemble_pdbs:
+    create dictionary with all options
+    write_keyword_file
+    write_script_file
+"""
+
+def write_mrbump_files(ensemble_pdbs, amoptd, job_time=86400, ensemble_options=None, directory=None):
+    """Write the MRBUMP job files for all the ensembles.
 
     Args:
     ensemble_pdbs -- list of the ensembles, each a single pdb file
     amoptd -- dictionary with job options
-    
-    The split_mr option used here was added for running on the hartree
-    wonder machine where job times were limited to 12 hours, but is left
-    in in case it's of use elsewhere.
     """
-    
-    # Remember programs = also used for looping
-    if amoptd['split_mr']: mrbump_programs = amoptd['mrbump_programs']
+    if not directory: directory = os.getcwd()
     
     job_scripts = []
-    extra_options = {}
+    keyword_options = {}
     for ensemble_pdb in ensemble_pdbs:
+        name = os.path.splitext(os.path.basename(ensemble_pdb))[0] # Get name from pdb path
         
-        # Get name from pdb path
-        name = os.path.splitext(os.path.basename(ensemble_pdb))[0]
-        if ensemble_options and name in ensemble_options: extra_options = ensemble_options[name]
+        # Get any options specific to this ensemble
+        if ensemble_options and name in ensemble_options: keyword_options = ensemble_options[name]
         
-        # May need to run MR separately
-        if amoptd['split_mr']:
-            # create multiple jobs
-            for program in mrbump_programs:
-                jname = "{0}_{1}".format(name, program)
-                amoptd['mrbump_programs'] = [ program ]
-                # HACK - molrep only runs on a single processor
-                # Can't do this any more as any job < 16 can't run on the 12 hour queue
-                #if program == "molrep":
-                #    amoptd['nproc'] = 1
-                script = write_jobscript(name = jname,
-                                         pdb = ensemble_pdb,
-                                         amoptd = amoptd,
-                                         job_time = job_time,
-                                         extra_options = extra_options
-                                         )
-                #amoptd['nproc'] = nproc
-                job_scripts.append( script )
-        else:
-            # Just run as usual
-            script = write_jobscript(name = name,
-                                     pdb = ensemble_pdb,
-                                     amoptd = amoptd,
-                                     job_time = job_time,
-                                     extra_options = extra_options
-                                     )
-            job_scripts.append(script)
-            
-    # Reset amoptd
-    if amoptd['split_mr']: amoptd['mrbump_programs'] = mrbump_programs
+        # Generate dictionary with all the options for this job and write to keyword file
+        keyword_dict = mrbump_cmd.keyword_dict(ensemble_pdb, name, amoptd, keyword_options)
+        keyword_file = os.path.join(directory,name+'.mrbump')
+        keyword_str = mrbump_cmd.mrbump_keyword_file(keyword_dict)
+        with open(keyword_file,'w') as f: f.write(keyword_str)
+        
+        script = write_jobscript(name,
+                                 keyword_file,
+                                 amoptd,
+                                 job_time = job_time
+                                 )
+        job_scripts.append(script)
             
     if not len(job_scripts):
         msg = "No job scripts created!"
@@ -73,31 +57,12 @@ def generate_jobscripts(ensemble_pdbs, amoptd, job_time=86400, ensemble_options=
         raise RuntimeError, msg
     
     return job_scripts
-        
-def write_jobscript(name, pdb, amoptd, directory=None, job_time=86400, extra_options={}):
+
+def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, extra_options={}):
     """
     Create the script to run MrBump for this PDB.
-    
-    Args:
-    name -- used to identify job and name the run script
-    pdb -- the path to the pdb file for this job
-    amoptd -- dictionary with job options
-    directory -- directory to write script to - defaults to cwd
-    
-    Returns:
-    path to the script
-    
-    There is an issue here as the code to add the parallel job submission
-    script header is required here, so we create a ClusterRun object.
-    Should think about a neater way to do this rather then split the parallel stuff
-    across two modules.
     """
     if not directory: directory = os.getcwd()
-        
-    # First write mrbump keyword file
-    keyword_file = os.path.join(directory,name+'.mrbump')
-    keywords = mrbump_cmd.mrbump_keywords(amoptd, jobid=name, ensemble_pdb=pdb, extra_options=extra_options)
-    with open(keyword_file,'w') as f: f.write(keywords)
         
     # Next the script to run mrbump
     ext='.bat' if sys.platform.startswith("win") else '.sh'
@@ -110,7 +75,7 @@ def write_jobscript(name, pdb, amoptd, directory=None, job_time=86400, extra_opt
             job_script.write(script_header)
         
         # Get the mrbump command-line
-        jobcmd = mrbump_cmd.mrbump_cmd(amoptd,name,keyword_file)
+        jobcmd = mrbump_cmd.mrbump_cmd(name, amoptd['mtz'], amoptd['mr_sequence'], keyword_file)
         job_script.write(jobcmd)
         
     # Make executable
