@@ -49,7 +49,7 @@ SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved predicti
 side-chain conformations with SCWRL4. Proteins (2009).
 
 SHELXE: "Extending molecular-replacement solutions with SHELXE". Thorn, A. and Sheldrick, G. M. (2013),
-Acta Crystallographica D, 69: 2251–2256. doi: 10.1107/S0907444913027534
+Acta Crystallographica D, 69: 2251-2256. doi: 10.1107/S0907444913027534
 
 SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for
 near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871
