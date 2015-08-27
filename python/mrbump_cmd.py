@@ -15,7 +15,7 @@ def mrbump_cmd(name, mtz, mr_sequence, keyword_file):
         mrbump = os.path.join(os.environ["CCP4"], "bin", "mrbump")
         mrbump = "{0} {1}".format(ccp4python, mrbump)
     else:
-        mrbump = '/opt/mrbump-trunk/bin/mrbump'
+        mrbump = 'mrbump'
     return'{0} KEYIN {1} HKLIN {2} SEQIN {3} HKLOUT {4}.mtz  XYZOUT {4}.pdb'.format(mrbump,
                                                                                     keyword_file,
                                                                                     mtz,
