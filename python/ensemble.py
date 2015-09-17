@@ -94,6 +94,10 @@ def create_ensembles(amoptd):
     amoptd['ensembles'] = ensembles
     amoptd['ensembles_data'] = ensembler.ensembles_data
     
+    # We need to let the main process know that we have succeeded as this module could be run on a cluster node with no link
+    # to the parent process, so we create a file here indicating that we got this far and didn't die from an exception
+    with open(amoptd['ensemble_ok'],'w') as f: f.write('ok\n')
+    
     # Delete all intermediate files if we're purging
     if amoptd['purge']: shutil.rmtree(work_dir)
     return

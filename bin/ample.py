@@ -904,6 +904,7 @@ def main():
             msg = "ERROR! Cannot find any pdb files in: {0}".format(amopt.d['models_dir'])
             ample_exit.exit(msg)
         
+        amopt.d['ensemble_ok'] = os.path.join(amopt.d['work_dir'],'ensemble.ok')
         if amopt.d['submit_cluster']:
             # Pickle dictionary so it can be opened by the job to get the parameters
             ample_util.saveAmoptd(amopt.d)
@@ -926,10 +927,10 @@ def main():
             except Exception, e:
                 msg = "Error creating ensembles: {0}".format(e)
                 ample_exit.exit(msg)
-    
+                
         # Check we have something to work with
-        if not amopt.d.has_key('ensembles') or not len(amopt.d['ensembles']):
-            msg = "Could not load any ensembles after running create_ensembles!"
+        if not os.path.isfile(amopt.d['ensemble_ok']) or not amopt.d.has_key('ensembles') or not len(amopt.d['ensembles']):
+            msg = "Problem generating ensembles!"
             ample_exit.exit(msg)
             
         ensembles = amopt.d['ensembles']
