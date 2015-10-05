@@ -15,6 +15,7 @@ import urlparse
 import uuid
 
 # Our imports
+import ample_util
 import ensemble
 import mrbump_results
 
@@ -366,11 +367,13 @@ def display_results(results_dict, run_dir=None):
         share_jsrview = os.path.join(ccp4, "share", "jsrview")
         if not run_dir: run_dir = os.path.join(results_dict['work_dir'], "jsrview")
         if not os.path.isdir(run_dir): os.mkdir(run_dir)
-        try:
+        
+        major,_,_=ample_util.ccp4_version()
+        if major <= 6:
             pyrvapi.rvapi_init_document ("AMPLE_results", run_dir, "AMPLE Results", 1, 7, share_jsrview, None, None, None)
-        except TypeError:
+        else:
             # Later versions of the api require an additional xmli2FName argument
-            # Sadly this doesn't work as the python TypeEror doesn't seem to get propogated back
+            # Tried a try/except with the TypeError bit this doesn't work as the TypeEror doesn't seem to get propogated back, so need to work out CCP4 version
             pyrvapi.rvapi_init_document ("AMPLE_results", run_dir, "AMPLE Results", 1, 7, share_jsrview, None, None, None, None)
         if 'webserver_uri' in results_dict and results_dict['webserver_uri']:
             # don't start browser and setup variables for the path on the webserver
