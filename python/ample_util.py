@@ -353,7 +353,9 @@ def ideal_helices(nresidues):
         pdb = os.path.join(include_dir,"{0}.pdb".format(name))
         # Needed for pyrvapi results
         ensembles_data.append( { 'name' : name,
-                                'ensemble_pdb' : pdb } )
+                                'ensemble_pdb' : pdb,
+                                'num_residues' : nres,
+                                 } )
         pdbs.append(pdb)
         
     return pdbs, ensemble_options, ensembles_data

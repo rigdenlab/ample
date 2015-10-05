@@ -123,7 +123,7 @@ def collate_cluster_data(ensembles_data):
         if tlvl not in clusters[cnum]['tlevels']:
             clusters[cnum]['tlevels'][tlvl] = {}
             clusters[cnum]['tlevels'][tlvl]['truncation_variance'] = e['truncation_variance']
-            clusters[cnum]['tlevels'][tlvl]['num_residues'] = e['truncation_num_residues']
+            clusters[cnum]['tlevels'][tlvl]['num_residues'] = e['num_residues']
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'] = {}
         srt = e['subcluster_radius_threshold']
         if srt not in clusters[cnum]['tlevels'][tlvl]['radius_thresholds']:

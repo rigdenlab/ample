@@ -605,7 +605,7 @@ def finalSummary(amoptd):
                     results.append(d)
         keys = ['ensemble_name', 'Solution_Type', 'MR_program']
         keys += _resultsKeys(results)
-        keys += ['subcluster_num_models', 'truncation_num_residues']
+        keys += ['subcluster_num_models', 'num_residues']
     else:
         results = mrbump_data
         keys = ['name', 'Solution_Type', 'MR_program']

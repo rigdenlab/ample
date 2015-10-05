@@ -456,7 +456,7 @@ class Ensembler(object):
         d['truncation_residues'] = None
         d['truncation_dir'] = None
         d['truncation_variance'] = None
-        d['truncation_num_residues'] = None
+        d['num_residues'] = None
 
         # subclustering info
         d['subcluster_num_models'] = None
@@ -511,7 +511,7 @@ class Ensembler(object):
             ensemble_data['ensemble_pdb'] = fpath
             ensemble_data['ensemble_num_atoms'] = natoms
             # check
-            assert ensemble_data['truncation_num_residues'] == nresidues, "Unmatching number of residues: {0} : {1} \n{2}".format(ensemble_data['truncation_num_residues'],
+            assert ensemble_data['num_residues'] == nresidues, "Unmatching number of residues: {0} : {1} \n{2}".format(ensemble_data['num_residues'],
                                                                                                                                   nresidues,
                                                                                                                                   raw_ensemble_data)
             
@@ -854,7 +854,7 @@ class Ensembler(object):
                                       ):
         
         # Theseus only works with > 3 residues
-        if truncated_models_data['truncation_num_residues'] <= 2: return [], []
+        if truncated_models_data['num_residues'] <= 2: return [], []
         
         if not radius_thresholds: radius_thresholds = self.subcluster_radius_thresholds
         ensembles = []
@@ -989,8 +989,7 @@ class Ensembler(object):
         # Run maxcluster to generate the distance matrix
         if subcluster_program == 'maxcluster':
             clusterer = subcluster.MaxClusterer(self.subcluster_exe)
-        else:
-            assert False
+        else: assert False
         clusterer.generate_distance_matrix(truncated_models)
         # clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
         
@@ -1034,8 +1033,7 @@ class Ensembler(object):
                     break
             
             # Need to check in case we couldn't cluster under this radius
-            cluster_size = len(cluster_files)
-            if cluster_size == 1 or radius in radii:
+            if cluster_size == 0 or radius in radii:
                 self.logger.debug('Could not cluster files under radius: {0} - got {1} files'.format(radius, len(cluster_files)))
                 break
             
@@ -1229,7 +1227,7 @@ class Ensembler(object):
             model_data['truncation_level'] = tlevel
             model_data['truncation_variance'] = tvar
             model_data['truncation_residues'] = tresidues
-            model_data['truncation_num_residues'] = len(tresidues)
+            model_data['num_residues'] = len(tresidues)
             model_data['truncation_dir'] = trunc_dir
             model_data['percent_truncation'] = percent_truncation
             model_data['truncation_method'] = truncation_method
@@ -1670,7 +1668,7 @@ class Test(unittest.TestCase):
 
         truncated_models_data = { 'cluster_num'      : 1,
                                   'truncation_level' : 1,
-                                  'truncation_num_residues' : 5,
+                                  'num_residues' : 5,
                                   'truncation_dir'   : work_dir } 
         
         subcluster, data = ensembler.subcluster_models_fixed_radii(truncated_models,
@@ -1708,7 +1706,7 @@ class Test(unittest.TestCase):
 
         truncated_models_data = { 'cluster_num'      : 1,
                                   'truncation_level' : 1,
-                                  'truncation_num_residues' : 5,
+                                  'num_residues' : 5,
                                   'truncation_dir'   : work_dir } 
         
         subcluster, data = ensembler.subcluster_models_fixed_radii(truncated_models,

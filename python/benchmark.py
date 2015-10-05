@@ -101,7 +101,7 @@ def analyse(amoptd,newroot=None):
         d['native_pdb_num_residues'] = amoptd['native_pdb_num_residues']
  
         # Get the ensemble data and add to the MRBUMP data
-        d['ensemble_percent_model'] = int((float(d['truncation_num_residues']) / float(amoptd['fasta_length'])) * 100)
+        d['ensemble_percent_model'] = int((float(d['num_residues']) / float(amoptd['fasta_length'])) * 100)
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
         
         # Need to get the subcluster_centroid_model and then get the path to the original model
@@ -160,7 +160,7 @@ def writeCsv(fileName,resultList):
                 'truncation_method',
                 'truncation_pruning',
                 'truncation_variance',
-                'truncation_num_residues',
+                'num_residues',
                 'pruned_residues',
                 
                 # subclustering info
