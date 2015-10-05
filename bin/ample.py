@@ -188,7 +188,7 @@ def process_command_line():
     parser.add_argument('-nmr_remodel_fasta', metavar='nmr_remodel_fasta', type=str, nargs=1,
                        help='The FASTA sequence to be used for remodelling the NMR ensemble if different from the default FASTA sequence')
     
-    parser.add_argument('-no_gui', metavar='True/False', type=int, nargs=1,
+    parser.add_argument('-no_gui', metavar='True/False', type=str, nargs=1,
                        help='Do not display the AMPLE gui.')
     
     parser.add_argument('-nproc', metavar='Number of Processors', type=int, nargs=1,
