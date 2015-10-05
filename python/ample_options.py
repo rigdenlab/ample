@@ -65,6 +65,7 @@ class AmpleOptions(object):
                             'nmr_process' : None,
                             'nmr_remodel' : False,
                             'nmr_remodel_fasta' : None,
+                            'no_gui' : False,
                             'nproc' : 1,
                             'nr' : None,
                             'num_clusters' : 1,

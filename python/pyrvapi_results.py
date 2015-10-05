@@ -347,7 +347,8 @@ def log_tab(results_dict):
     return log_tab
 
 def display_results(results_dict, run_dir=None):
-
+    if 'no_gui' in results_dict and results_dict['no_gui']: return
+    
     global _running, _tabs, _webserver_uri, _webserver_start
     logger = logging.getLogger()
     if not pyrvapi:
@@ -365,7 +366,12 @@ def display_results(results_dict, run_dir=None):
         share_jsrview = os.path.join(ccp4, "share", "jsrview")
         if not run_dir: run_dir = os.path.join(results_dict['work_dir'], "jsrview")
         if not os.path.isdir(run_dir): os.mkdir(run_dir)
-        pyrvapi.rvapi_init_document ("AMPLE_results", run_dir, "AMPLE Results", 1, 7, share_jsrview, None, None, None)
+        try:
+            pyrvapi.rvapi_init_document ("AMPLE_results", run_dir, "AMPLE Results", 1, 7, share_jsrview, None, None, None)
+        except TypeError:
+            # Later versions of the api require an additional xmli2FName argument
+            # Sadly this doesn't work as the python TypeEror doesn't seem to get propogated back
+            pyrvapi.rvapi_init_document ("AMPLE_results", run_dir, "AMPLE Results", 1, 7, share_jsrview, None, None, None, None)
         if 'webserver_uri' in results_dict and results_dict['webserver_uri']:
             # don't start browser and setup variables for the path on the webserver
             _webserver_start = len(results_dict['run_dir']) + 1

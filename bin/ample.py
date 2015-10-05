@@ -188,6 +188,9 @@ def process_command_line():
     parser.add_argument('-nmr_remodel_fasta', metavar='nmr_remodel_fasta', type=str, nargs=1,
                        help='The FASTA sequence to be used for remodelling the NMR ensemble if different from the default FASTA sequence')
     
+    parser.add_argument('-no_gui', metavar='True/False', type=int, nargs=1,
+                       help='Do not display the AMPLE gui.')
+    
     parser.add_argument('-nproc', metavar='Number of Processors', type=int, nargs=1,
                        help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
                         "For cluster submission, this should be the number of processors on a node.")
