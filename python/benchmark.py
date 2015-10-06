@@ -288,12 +288,16 @@ def analyseSolution(amoptd,d):
 
     # Get reforigin info
     rmsder = reforigin.ReforiginRmsd()
-    rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
-                   placedPdbInfo=mrPdbInfo,
-                   refModelPdbInfo=amoptd['ref_model_pdb_info'],
-                   cAlphaOnly=True,
-                   workdir=fixpath(amoptd['benchmark_dir']))
-    d['reforigin_RMSD']=rmsder.rmsd
+    try:
+        rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
+                       placedPdbInfo=mrPdbInfo,
+                       refModelPdbInfo=amoptd['ref_model_pdb_info'],
+                       cAlphaOnly=True,
+                       workdir=fixpath(amoptd['benchmark_dir']))
+        d['reforigin_RMSD']=rmsder.rmsd
+    except Exception,e:
+        _logger.critical("Error calculating RMSD: {0}".format(e))
+        d['reforigin_RMSD']=999
 
     # Find the MR origin wrt to the native
     #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
