@@ -314,23 +314,33 @@ def analyseSolution(amoptd,d):
                                             "phaser_{0}_csymmatch.pdb".format(d['ensemble_name']))
                                             )
 
-    # Score the origin with all-atom and rio
-    rioData=rio.Rio().scoreOrigin(mrOrigin,
-                                  mrPdbInfo=mrPdbInfo,
-                                  nativePdbInfo=amoptd['native_pdb_info'],
-                                  resSeqMap=amoptd['res_seq_map'],
-                                  workdir=fixpath(amoptd['benchmark_dir'])
-                                  )
-
-    # Set attributes
-    d['AA_num_contacts']  = rioData.aaNumContacts
-    d['RIO_num_contacts'] = rioData.rioNumContacts
-    d['RIO_in_register']  = rioData.rioInRegister
-    d['RIO_oo_register'] = rioData.rioOoRegister
-    d['RIO_backwards']   = rioData.rioBackwards
-    d['RIO']            = rioData.rioInRegister + rioData.rioOoRegister
-    d['RIO_no_cat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
-    d['RIO_norm']       = float(d['RIO']) / float(d['native_pdb_num_residues'])
+    if not amoptd['ideal_helices']:
+        # Score the origin with all-atom and rio
+        rioData=rio.Rio().scoreOrigin(mrOrigin,
+                                      mrPdbInfo=mrPdbInfo,
+                                      nativePdbInfo=amoptd['native_pdb_info'],
+                                      resSeqMap=amoptd['res_seq_map'],
+                                      workdir=fixpath(amoptd['benchmark_dir'])
+                                      )
+    
+        # Set attributes
+        d['AA_num_contacts']  = rioData.aaNumContacts
+        d['RIO_num_contacts'] = rioData.rioNumContacts
+        d['RIO_in_register']  = rioData.rioInRegister
+        d['RIO_oo_register']  = rioData.rioOoRegister
+        d['RIO_backwards']    = rioData.rioBackwards
+        d['RIO']              = rioData.rioInRegister + rioData.rioOoRegister
+        d['RIO_no_cat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
+        d['RIO_norm']         = float(d['RIO']) / float(d['native_pdb_num_residues'])
+    else:
+        d['AA_num_contacts']  = None
+        d['RIO_num_contacts'] = None
+        d['RIO_in_register']  = None
+        d['RIO_oo_register']  = None
+        d['RIO_backwards']    = None
+        d['RIO']              = None
+        d['RIO_no_cat']       = None
+        d['RIO_norm']         = None
 
 #     # Now get the helix
 #     helixSequence = contacts.Rio().helixFromContacts( contacts=rioData.contacts,
