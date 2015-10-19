@@ -20,6 +20,7 @@ if not "CCP4" in os.environ.keys():
 mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
 #mrbumpd = "/opt/mrbump-trunk/include/parsers"
 sys.path.insert(0, mrbumpd)
+import parse_arpwarp
 import parse_buccaneer
 import parse_phaser
 import printTable
@@ -229,7 +230,7 @@ class ResultsSummary(object):
             
             # Check job directory
             jobDir = os.path.join(mrbump_dir, 'search_' + ensemble + '_mrbump')
-            # jobDir = os.path.join( mrbump_dir, 'search_'+ensemble )
+            if not os.path.isdir(jobDir): jobDir = os.path.join( mrbump_dir, 'search_'+ensemble )
             if not os.path.isdir(jobDir):
                 # As we call this every time we monitor a job running, we don't want to print this out all the time
                 # self.logger.debug("Missing job directory: {0}".format(jobDir))
@@ -267,8 +268,8 @@ class ResultsSummary(object):
         tfile = os.path.abspath(tfile)
         paths = tfile.split(os.sep)
         jobDir = os.path.abspath(os.sep.join(paths[:-2]))
-        ensemble = paths[-3][7:-7]  #  remove search_..._mrbump: 'search_All_atom_trunc_0.005734_rad_1_mrbump'
-
+        if paths[-3].endswith('_mrbump'): ensemble = paths[-3][7:-7]  #  remove search_..._mrbump: 'search_All_atom_trunc_0.005734_rad_1_mrbump'
+        else: ensemble = paths[-3][7:]
 
         # List of all the possible column titles and their result object attributes
         title2key = {
@@ -337,13 +338,13 @@ class ResultsSummary(object):
                                        "refine",
                                        "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(), result['ensemble_name']))
                 if os.path.isfile(phaserPdb):
-                    result.phaserPdb = phaserPdb
+                    result['PHASER_pdbout'] = phaserPdb
             elif result.program == 'molrep':
                 molrepPdb = os.path.join(result["Job_directory"],
                                        "refine",
                                        "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(), result['ensemble_name']))
                 if os.path.isfile(molrepPdb):
-                    result.molrepPdb = molrepPdb
+                    result['MOLREP_pdbout'] = molrepPdb
 
             refmacPdb = os.path.join(result["Job_directory"],
                                    'refine',
