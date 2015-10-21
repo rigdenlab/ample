@@ -9,6 +9,7 @@ requires that any file being imported is named <foo>.py, and any changes to this
 multiprocessing module, so to avoid this, our script must be called ample.py
 """
 import os
+import platform
 import sys
 
 # Test for environment variables
@@ -788,7 +789,8 @@ def main():
     
     # Print out Version and invocation
     logger.info("AMPLE version: {0}".format(version.__version__))
-    logger.info("AMPLE started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+    logger.info("Jon started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+    logger.info("Running on host: {0}".format(platform.node()))
     logger.info("Invoked with command-line:\n{0}\n".format(orig_argv))
     logger.info("Running in directory: {0}\n".format(amopt.d['work_dir']))
     
