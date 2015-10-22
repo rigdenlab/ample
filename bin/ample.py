@@ -789,7 +789,7 @@ def main():
     
     # Print out Version and invocation
     logger.info("AMPLE version: {0}".format(version.__version__))
-    logger.info("Jon started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+    logger.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
     logger.info("Running on host: {0}".format(platform.node()))
     logger.info("Invoked with command-line:\n{0}\n".format(orig_argv))
     logger.info("Running in directory: {0}\n".format(amopt.d['work_dir']))
