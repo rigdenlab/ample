@@ -28,7 +28,6 @@ RELIABLE = 'reliable'
 ALLATOM = 'allatom'
 SIDE_CHAIN_TREATMENTS = [POLYALA, RELIABLE, ALLATOM]
 
-
 def align_mustang(models, mustang_exe=None, work_dir=None):
     if not ample_util.is_exe(mustang_exe):
         raise RuntimeError, "Cannot find mustang executable: {0}".format(mustang_exe)
@@ -106,7 +105,7 @@ def model_core_from_alignment(models, alignment_file, work_dir=None):
     # aligned residues by lower-case letters
     GAP = '-'
     # Can't use below as Theseus ignores lower-case letters in the alignment
-    #core = [ all([ x in pdb_edit.one2three.keys() for x in t ]) for t in zip(*align_seq.sequences) ]
+    # core = [ all([ x in pdb_edit.one2three.keys() for x in t ]) for t in zip(*align_seq.sequences) ]
     core = [ all([ x != GAP for x in t ]) for t in zip(*align_seq.sequences) ]
     
     # For each sequence, get a list of which positions are core
@@ -371,21 +370,21 @@ class Ensembler(object):
         return variances
     
     def cluster_models(self,
-                       models = None,
-                       cluster_method = None,
-                       num_clusters = None,
-                       cluster_exe = None,
-                       import_cluster = False,
-                       cluster_dir = None,
-                       nproc = 1,
-                       max_cluster_size = 200
+                       models=None,
+                       cluster_method=None,
+                       num_clusters=None,
+                       cluster_exe=None,
+                       import_cluster=False,
+                       cluster_dir=None,
+                       nproc=1,
+                       max_cluster_size=200
                        ):
         clusters = []
         clusters_data = []
         if import_cluster:
-            if not os.path.isdir(cluster_dir): raise RuntimeError,"Import cluster cannot find directory: {0}".format(cluster_dir)
-            cluster_models = glob.glob(os.path.join(cluster_dir,"*.pdb"))
-            if not cluster_models: raise RuntimeError,"Import cluster cannot find pdbs in directory: {0}".format(cluster_dir)
+            if not os.path.isdir(cluster_dir): raise RuntimeError, "Import cluster cannot find directory: {0}".format(cluster_dir)
+            cluster_models = glob.glob(os.path.join(cluster_dir, "*.pdb"))
+            if not cluster_models: raise RuntimeError, "Import cluster cannot find pdbs in directory: {0}".format(cluster_dir)
             # Data on the cluster
             cluster_data = self.create_dict()
             cluster_data['cluster_num'] = 1
@@ -403,8 +402,18 @@ class Ensembler(object):
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
             spickerer.cluster(models, run_dir=spicker_rundir)
             self.logger.debug(spickerer.results_summary())
+            
+            ns_clusters=len(spickerer.results)
+            if ns_clusters == 0: raise RuntimeError,"No clusters returned by SPICKER"
+            if ns_clusters < num_clusters:
+                self.logger.critical('Requested {0} clusters but SPICKER only found {0} so using {1} clusters'.format(num_clusters,ns_clusters))
+                num_clusters=ns_clusters
+            
             for i in range(num_clusters):
-                # The models
+                # We truncate the list of models to max_cluster_size. This probably needs to be redone, because as the models are ordered by their similarity
+                # to the cluster centroid, we automatically select the 200 most similar to the centroid. However if the cluster is large and the models similar
+                # then when theseus calculates the variances, the variances will be representative of the 200, but might not show how the models vary throughout
+                # the whole cluster, which could provide better information for truncating the models.
                 cluster = spickerer.results[i].pdbs[0:max_cluster_size]
                 clusters.append(cluster)
                 # Data on the models
@@ -521,17 +530,17 @@ class Ensembler(object):
         return ensembles, ensembles_data
   
     def generate_ensembles(self, models,
-                           cluster_method = None,
-                           cluster_exe = None,
-                           num_clusters = None,
-                           import_cluster = False,
-                           cluster_dir = None,
-                           percent_truncation = None,
-                           truncation_method = None,
-                           truncation_pruning = None,
-                           ensembles_directory = None,
-                           work_dir = None,
-                           nproc = None):
+                           cluster_method=None,
+                           cluster_exe=None,
+                           num_clusters=None,
+                           import_cluster=False,
+                           cluster_dir=None,
+                           percent_truncation=None,
+                           truncation_method=None,
+                           truncation_pruning=None,
+                           ensembles_directory=None,
+                           work_dir=None,
+                           nproc=None):
         
         # Work dir set each time
         if not work_dir:
@@ -568,26 +577,27 @@ class Ensembler(object):
 
         self.ensembles = []
         self.ensembles_data = []
-        for cluster, cluster_data in zip(*self.cluster_models(models = models,
-                                                              cluster_method = cluster_method,
-                                                              num_clusters = num_clusters,
-                                                              cluster_exe = cluster_exe,
-                                                              import_cluster = import_cluster,
-                                                              cluster_dir = cluster_dir,
-                                                              nproc = nproc)):
+        for cluster, cluster_data in zip(*self.cluster_models(models=models,
+                                                              cluster_method=cluster_method,
+                                                              num_clusters=num_clusters,
+                                                              cluster_exe=cluster_exe,
+                                                              import_cluster=import_cluster,
+                                                              cluster_dir=cluster_dir,
+                                                              nproc=nproc)):
             if len(cluster) < 2:
                 self.logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data['cluster_num']))
                 continue
+            self.logger.info('Processing cluster: {0}'.format(cluster_data['cluster_num']))
             for truncated_models, truncated_models_data in zip(*self.truncate_models(cluster,
                                                                                      cluster_data,
-                                                                                     truncation_method = truncation_method,
-                                                                                     truncation_pruning = truncation_pruning,
-                                                                                     percent_truncation = percent_truncation)):
+                                                                                     truncation_method=truncation_method,
+                                                                                     truncation_pruning=truncation_pruning,
+                                                                                     percent_truncation=percent_truncation)):
                 for subcluster, subcluster_data in zip(*self.subcluster_models(truncated_models,
                                                                                truncated_models_data,
-                                                                               subcluster_program = self.subcluster_program,
-                                                                               subcluster_exe = self.subcluster_program,
-                                                                               ensemble_max_models = self.ensemble_max_models)):
+                                                                               subcluster_program=self.subcluster_program,
+                                                                               subcluster_exe=self.subcluster_program,
+                                                                               ensemble_max_models=self.ensemble_max_models)):
                     for ensemble, ensemble_data in zip(*self.edit_side_chains(subcluster, subcluster_data, self.ensembles_directory)):
                         self.ensembles.append(ensemble)
                         self.ensembles_data.append(ensemble_data)
@@ -635,7 +645,7 @@ class Ensembler(object):
         os.mkdir(std_models_dir)
         std_models = []
         for m in models:
-            std_model = os.path.join(std_models_dir,m)
+            std_model = os.path.join(std_models_dir, m)
             pdb_edit.standardise(pdbin=m, pdbout=std_model, del_hetatm=True)
             std_models.append(std_model)
         
@@ -1208,7 +1218,7 @@ class Ensembler(object):
             
             trunc_dir = os.path.join(truncate_dir, 'tlevel_{0}'.format(tlevel))
             os.mkdir(trunc_dir)
-            self.logger.info('truncating at: {0} in directory {1}'.format(tlevel, trunc_dir))
+            self.logger.info('Truncating at: {0} in directory {1}'.format(tlevel, trunc_dir))
 
             # list of models for this truncation level
             level_models = []
