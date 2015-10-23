@@ -26,6 +26,7 @@ import theseus
 POLYALA = 'polyAla'
 RELIABLE = 'reliable'
 ALLATOM = 'allatom'
+UNMODIFIED = 'unmod'
 SIDE_CHAIN_TREATMENTS = [POLYALA, RELIABLE, ALLATOM]
 
 def align_mustang(models, mustang_exe=None, work_dir=None):
@@ -178,9 +179,6 @@ class Ensembler(object):
         self.subclustering_method = "radius"
         self.subcluster_radius_thresholds = [1, 2, 3]
         self.ensemble_max_models = 30
-        
-        # Side chains
-        self.side_chain_treatments = SIDE_CHAIN_TREATMENTS
         
         # ensembles
         self.ensembles_directory = None
@@ -480,13 +478,12 @@ class Ensembler(object):
         
         return d
     
-    def edit_side_chains(self, raw_ensemble, raw_ensemble_data, ensembles_directory, homologs=False):
-        
+    def edit_side_chains(self, raw_ensemble, raw_ensemble_data, ensembles_directory, homologs=False, side_chain_treatments=SIDE_CHAIN_TREATMENTS):
         assert os.path.isdir(ensembles_directory), "Cannot find ensembles directory: {0}".format(ensembles_directory)
         ensembles = []
         ensembles_data = []
-        for sct in self.side_chain_treatments:
-
+        if side_chain_treatments is None: side_chain_treatments=[UNMODIFIED]
+        for sct in side_chain_treatments:
             ensemble_data = copy.copy(raw_ensemble_data)
             ensemble_data['side_chain_treatment'] = sct
             if homologs:
@@ -496,13 +493,12 @@ class Ensembler(object):
                                                                    ensemble_data['truncation_level'],
                                                                    ensemble_data['subcluster_radius_threshold'],
                                                                    sct)
-            
             # create filename based on name and side chain treatment
             # fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=ensembles_directory)
             fpath = os.path.join(ensembles_directory, "{0}.pdb".format(ensemble_data['name']))
             
             # Create the files
-            if sct == ALLATOM:
+            if sct == ALLATOM or sct == UNMODIFIED:
                 # For all atom just copy the file
                 shutil.copy2(raw_ensemble, fpath)
             elif sct == RELIABLE:
@@ -516,14 +512,12 @@ class Ensembler(object):
             natoms, nresidues = pdb_edit.num_atoms_and_residues(fpath, first=True)
             
             # Process ensemble data
-
             ensemble_data['ensemble_pdb'] = fpath
             ensemble_data['ensemble_num_atoms'] = natoms
             # check
             assert ensemble_data['num_residues'] == nresidues, "Unmatching number of residues: {0} : {1} \n{2}".format(ensemble_data['num_residues'],
-                                                                                                                                  nresidues,
-                                                                                                                                  raw_ensemble_data)
-            
+                                                                                                                       nresidues,
+                                                                                                                       raw_ensemble_data)
             ensembles.append(fpath)
             ensembles_data.append(ensemble_data)
                 
@@ -540,7 +534,8 @@ class Ensembler(object):
                            truncation_pruning=None,
                            ensembles_directory=None,
                            work_dir=None,
-                           nproc=None):
+                           nproc=None,
+                           side_chain_treatments=SIDE_CHAIN_TREATMENTS):
         
         # Work dir set each time
         if not work_dir:
@@ -615,7 +610,7 @@ class Ensembler(object):
                                     homolog_aligner=None,
                                     mustang_exe=None,
                                     gesamt_exe=None,
-                                    ):
+                                    side_chain_treatments=SIDE_CHAIN_TREATMENTS):
         
         # Work dir set each time
         if not work_dir: raise RuntimeError, "Need to set work_dir!"
@@ -686,7 +681,11 @@ class Ensembler(object):
                 continue
             pre_ensemble_data = copy.copy(truncated_models_data)
              
-            for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble, pre_ensemble_data, self.ensembles_directory, homologs=True)):
+            for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble,
+                                                                      pre_ensemble_data,
+                                                                      self.ensembles_directory,
+                                                                      homologs=True,
+                                                                      side_chain_treatments=side_chain_treatments)):
                 self.ensembles.append(ensemble)
                 self.ensembles_data.append(ensemble_data)
         

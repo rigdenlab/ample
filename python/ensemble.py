@@ -107,6 +107,7 @@ def collate_cluster_data(ensembles_data):
     cluster_method = None
     truncation_method = None
     percent_truncation = None
+    side_chain_treatments = []
     for e in ensembles_data:
         if not cluster_method:
             cluster_method = e['cluster_method']
@@ -131,14 +132,15 @@ def collate_cluster_data(ensembles_data):
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['num_models'] = e['subcluster_num_models']
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'] = {}
         sct = e['side_chain_treatment']
+        if sct not in side_chain_treatments: side_chain_treatments.append(sct)
         if sct not in clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct']:
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct] = {}
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['name'] = e['name']
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['num_atoms'] = e['ensemble_num_atoms']
     
-    return clusters, cluster_method, truncation_method, percent_truncation
+    return clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments
 
-def cluster_table_data(clusters, cluster_num):
+def cluster_table_data(clusters, cluster_num, side_chain_treatments):
     # tdata = [("Name", "Truncation Level", u"Variance Threshold (\u212B^2)", "No. Residues", u"Radius Threshold (\u212B)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
     tdata = [("Name", "Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
     for tl in sorted(clusters[cluster_num]['tlevels']):
@@ -148,7 +150,7 @@ def cluster_table_data(clusters, cluster_num):
             nmodels = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['num_models']
         # Hack so that side chains come in size order
         # for j, sct in enumerate(sorted(clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'])):
-            for j, sct in enumerate(ample_ensemble.SIDE_CHAIN_TREATMENTS):
+            for j, sct in enumerate(side_chain_treatments):
                 name = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['name']
                 num_atoms = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['num_atoms']
                 if i == 0 and j == 0:  # change of radius
@@ -162,7 +164,7 @@ def cluster_table_data(clusters, cluster_num):
 def ensemble_summary(ensembles_data):
     """Print a summary of the ensembling process"""
 
-    clusters, cluster_method, truncation_method, percent_truncation = collate_cluster_data(ensembles_data)
+    clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments = collate_cluster_data(ensembles_data)
     num_clusters = len(clusters)
     
     tableFormat = printTable.Table()
@@ -180,7 +182,7 @@ def ensemble_summary(ensembles_data):
         rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
         rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
         rstr += "\n"
-        tdata = cluster_table_data(clusters, cluster_num)
+        tdata = cluster_table_data(clusters, cluster_num, side_chain_treatments)
         rstr += tableFormat.pprint_table(tdata)        
     
     rstr += "\nGenerated {0} ensembles\n\n".format(len(ensembles_data))
