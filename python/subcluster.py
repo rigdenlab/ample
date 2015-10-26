@@ -78,44 +78,38 @@ class CctbxClusterer(SubClusterer):
             msg = "generate_distance_matrix got empty pdb_list!"
             logging.critical(msg)
             raise RuntimeError, msg
-        self.index2pdb=[0]*no_models
+
+        # Index is just the order of the pdb in the file
+        self.index2pdb=pdb_list
     
         # Create a square distance_matrix no_models in size filled with None
         self.distance_matrix = [[None for col in range(no_models)] for row in range(no_models)]
         # Set zeros diagonal
         
         for i, m1 in enumerate(pdb_list):
+            fixed = mmtbx.superpose.SuperposePDB(
+              m1,
+              preset='ca',
+              log=None,
+              quiet=True,
+              desc=m1)
+                
             for j, m2 in enumerate(pdb_list):
                 print i,j
                 if j <= i: continue
-                print "DOING ",i,j
-                fixed = mmtbx.superpose.SuperposePDB(
-                  m1,
-                  preset='ca',
-                  log=None,
-                  quiet=True,
-                  desc=m1
-                )
-                
                 moving = mmtbx.superpose.SuperposePDB(
                   m2,
                   preset='ca',
                   log=None,
                   quiet=True,
-                  desc=m2
-                )
-
+                  desc=m2)
                 rmsd, lsq = moving.superpose(fixed)
                 self.distance_matrix[i][j]=float(rmsd)
-                
-        
-        print "GOT ",self.distance_matrix
         
         # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
         for x in range(len(self.distance_matrix)):
             for y in range(len(self.distance_matrix)):
                 self.distance_matrix[y][x] = self.distance_matrix[x][y]
-
         return
 
 class MaxClusterer(SubClusterer):
@@ -273,7 +267,7 @@ class Test(unittest.TestCase):
 
         radius = 4
         clusterer = CctbxClusterer()
-        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))[:5]
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix(pdb_list)
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius(radius)]
         
