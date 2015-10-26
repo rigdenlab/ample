@@ -12,11 +12,8 @@ import unittest
 import ample_util
 import mtz_util
 
-# mrbump import
-if not "CCP4" in os.environ.keys():
-    raise RuntimeError('CCP4 not found')
-mrbumpd=os.path.join(os.environ['CCP4'],"include","mrbump","include","parsers")
-mrbumpd="/opt/mrbump-trunk/include/parsers"
+if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
+mrbumpd=os.path.join(os.environ['CCP4'],"share","mrbump","include","parsers")
 sys.path.insert(0,mrbumpd)
 import parse_shelxe
 
