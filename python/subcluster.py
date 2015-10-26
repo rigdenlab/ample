@@ -71,41 +71,30 @@ class CctbxClusterer(SubClusterer):
     """Class to cluster files with maxcluster"""
 
     def generate_distance_matrix(self, pdb_list):
-        """Run maxcluster to generate the distance distance_matrix"""
-        
+        """Run cctbx to generate the distance distance_matrix"""
+         
         no_models = len(pdb_list)
         if not no_models:
             msg = "generate_distance_matrix got empty pdb_list!"
             logging.critical(msg)
             raise RuntimeError, msg
-
+ 
         # Index is just the order of the pdb in the file
         self.index2pdb=pdb_list
-    
+     
         # Create a square distance_matrix no_models in size filled with None
         self.distance_matrix = [[None for col in range(no_models)] for row in range(no_models)]
         # Set zeros diagonal
-        
+         
         for i, m1 in enumerate(pdb_list):
-            fixed = mmtbx.superpose.SuperposePDB(
-              m1,
-              preset='ca',
-              log=None,
-              quiet=True,
-              desc=m1)
-                
+            fixed = mmtbx.superpose.SuperposePDB(m1, preset='ca', log=None, quiet=True)
             for j, m2 in enumerate(pdb_list):
                 print i,j
                 if j <= i: continue
-                moving = mmtbx.superpose.SuperposePDB(
-                  m2,
-                  preset='ca',
-                  log=None,
-                  quiet=True,
-                  desc=m2)
+                moving = mmtbx.superpose.SuperposePDB(m2, preset='ca', log=None, quiet=True)
                 rmsd, lsq = moving.superpose(fixed)
                 self.distance_matrix[i][j]=float(rmsd)
-        
+         
         # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
         for x in range(len(self.distance_matrix)):
             for y in range(len(self.distance_matrix)):
