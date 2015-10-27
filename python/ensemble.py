@@ -93,6 +93,9 @@ def create_ensembles(amoptd):
     
     amoptd['ensembles'] = ensembles
     amoptd['ensembles_data'] = ensembler.ensembles_data
+    amoptd['truncation_levels'] = ensembler.truncation_levels
+    amoptd['truncation_variances'] = ensembler.truncation_variances
+    amoptd['truncation_nresidues'] = ensembler.truncation_nresidues
     
     # We need to let the main process know that we have succeeded as this module could be run on a cluster node with no link
     # to the parent process, so we create a file here indicating that we got this far and didn't die from an exception

@@ -170,6 +170,10 @@ class Ensembler(object):
         self.truncation_pruning = "none"
         self.percent_truncation = 5
         self.pruning_strategy = "none"
+        # For Felix so we know what truncation levels we used
+        self.truncation_levels = None
+        self.truncation_variances = None
+        self.truncation_nresidues = None
         
         # subclustering
         # self.subcluster_method='FLOATING_RADII'
@@ -1194,6 +1198,10 @@ class Ensembler(object):
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = self._calculate_residues_focussed(var_by_res)
         else:
             raise RuntimeError, "Unrecognised ensembling mode: {0}".format(truncation_method)
+        
+        self.truncation_levels = truncation_levels # save so we can put in results dict
+        self.truncation_variances = truncation_variances # save so we can put in results dict
+        self.truncation_nresidues = [len(r) for r in truncation_residues] # save so we can put in results dict
 
         truncated_models = []
         truncated_models_data = []
