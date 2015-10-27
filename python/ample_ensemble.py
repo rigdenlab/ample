@@ -1177,7 +1177,12 @@ class Ensembler(object):
         
         # Calculate variances between pdb - and align them if necessary
         run_theseus = theseus.Theseus(work_dir=truncate_dir, theseus_exe=self.theseus_exe)
-        run_theseus.align_models(models, homologs=homologs, alignment_file=alignment_file)
+        try:
+            run_theseus.align_models(models, homologs=homologs, alignment_file=alignment_file)
+        except RuntimeError,e:
+            self.logger.critical(e)
+            return [],[]
+            
         var_by_res = run_theseus.var_by_res(homologs=homologs)
         if not len(var_by_res) > 0:
             msg = "Error reading residue variances!"
