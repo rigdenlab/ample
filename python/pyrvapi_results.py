@@ -118,7 +118,7 @@ def summary_tab(results_dict):
         pyrvapi.rvapi_add_section(ensemble_sec, "Ensembles", summary_tab, 0, 0, 1, 1, False)
         
         # Get the ensembling data
-        clusters, cluster_method, truncation_method, percent_truncation = ensemble.collate_cluster_data(ensembles_data)
+        clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments = ensemble.collate_cluster_data(ensembles_data)
         
         rstr = ""
         rstr += "Ensemble Results<br/>"
@@ -126,6 +126,7 @@ def summary_tab(results_dict):
         rstr += "Cluster method: {0}<br/>".format(cluster_method)
         rstr += "Truncation method: {0}<br/>".format(truncation_method)
         rstr += "Percent truncation: {0}<br/>".format(percent_truncation)
+        rstr += "Side-chain treatments: {0}<br/>".format(side_chain_treatments)
         rstr += "Number of clusters: {0}<br/><br/>".format(len(clusters.keys()))
         rstr += "Generated {0} ensembles<br/><br/>".format(len(ensembles_data))
         pyrvapi.rvapi_add_text(rstr, ensemble_sec, 0, 0, 1, 1)
