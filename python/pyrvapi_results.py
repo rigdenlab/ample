@@ -143,7 +143,7 @@ def summary_tab(results_dict):
         #     rstr += tableFormat.pprint_table(tdata)        
         # 
         cluster_num = 1
-        tdata = ensemble.cluster_table_data(clusters, cluster_num)
+        tdata = ensemble.cluster_table_data(clusters, cluster_num, side_chain_treatments)
         fill_table(ensemble_table, tdata, tooltips=_ensemble_tooltips)
     
     #
