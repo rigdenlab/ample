@@ -22,6 +22,7 @@ class AmpleOptions(object):
                             'blast_dir' : None,
                             'buccaneer_cycles' : 5,
                             'ccp4_jobid' : None,
+                            'cluster_dir' : None,
                             'cluster_method' : 'spicker',
                             'constraints_file' : None,
                             'debug' : False,
@@ -36,8 +37,11 @@ class AmpleOptions(object):
                             'frags_3mers' : None,
                             'frags_9mers' : None,
                             'FREE' : None,
+                            'gesamt_exe' : None,
                             'homologs' : False,
+                            'homolog_aligner' : 'gesamt',
                             'ideal_helices' : False,
+                            'import_cluster' : False,
                             'import_models' : False,
                             'import_ensembles' : False,
                             'improve_template' : None,
@@ -52,6 +56,7 @@ class AmpleOptions(object):
                             'mr_keys' : None,
                             'mr_sequence' : None,
                             'mtz' : None,
+                            'mustang_exe' : None,
                             'name' : 'ampl',
                             'native_pdb' : None,
                             'nmasu' : 0,
@@ -60,6 +65,7 @@ class AmpleOptions(object):
                             'nmr_process' : None,
                             'nmr_remodel' : False,
                             'nmr_remodel_fasta' : None,
+                            'no_gui' : False,
                             'nproc' : 1,
                             'nr' : None,
                             'num_clusters' : 1,
@@ -67,6 +73,7 @@ class AmpleOptions(object):
                             'percent' : 5,
                             'phaser_only' : True,
                             'phaser_kill' : 360, # This kills phaser after 6 hours
+                            'phaser_rms' : 0.1,
                             'phenix_exe' : None,
                             'psipred_ss2' : None,
                             'purge' : False,
@@ -88,7 +95,6 @@ class AmpleOptions(object):
                             'shelxe_rebuild_buccaneer' : False,
                             'SIGF' : None,
                             'spicker_exe' : None,
-                            'split_mr' : False,
                             'submit_array' : True,
                             'submit_cluster' : False,
                             'submit_max_array' : None,
@@ -211,6 +217,7 @@ class AmpleOptions(object):
         paths = [
                  'alignment_file',
                 'blast_dir',
+                'cluster_dir',
                 'constraints_file',
                 'domain_all_chains_pdb',
                 'ensembles_dir',
@@ -218,11 +225,13 @@ class AmpleOptions(object):
                 'fast_protein_cluster_exe',
                 'frags_3mers',
                 'frags_9mers',
+                'gesamt_exe',
                 'import_cluster',
                 'maxcluster_exe',
                 'models',
                 'mr_sequence',
                 'mtz',
+                'mustang_exe',
                 'native_pdb',
                 'nmr_model_in',
                 'nmr_remodel_fasta',
@@ -241,8 +250,8 @@ class AmpleOptions(object):
                 'transmembrane_spanfile'
             ]
         for k, v in self.d.iteritems():
-            if k in paths and isinstance( v, str ):
-                self.d[ k ] = os.path.abspath( v )
+            if k in paths and isinstance(v, str):
+                self.d[k] = os.path.abspath(v)
 
         # Check if using any preset options
         if self.d['devel_mode']: self.preset_options('devel_mode')

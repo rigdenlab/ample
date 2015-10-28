@@ -1,7 +1,8 @@
 #!/bin/bash
 
-dlist=/data2/jmht/testset/testset_data/misc/files.list
-root=/data2/jmht/testset/subcluster_floating
+
+dlist=/home/jmht/testset/testset_data/misc/files.list
+root=.
 
 i=0
 sum=allresults.csv

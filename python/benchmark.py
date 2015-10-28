@@ -101,7 +101,7 @@ def analyse(amoptd,newroot=None):
         d['native_pdb_num_residues'] = amoptd['native_pdb_num_residues']
  
         # Get the ensemble data and add to the MRBUMP data
-        d['ensemble_percent_model'] = int((float(d['truncation_num_residues']) / float(amoptd['fasta_length'])) * 100)
+        d['ensemble_percent_model'] = int((float(d['num_residues']) / float(amoptd['fasta_length'])) * 100)
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
         
         # Need to get the subcluster_centroid_model and then get the path to the original model
@@ -160,7 +160,7 @@ def writeCsv(fileName,resultList):
                 'truncation_method',
                 'truncation_pruning',
                 'truncation_variance',
-                'truncation_num_residues',
+                'num_residues',
                 'pruned_residues',
                 
                 # subclustering info
@@ -288,12 +288,16 @@ def analyseSolution(amoptd,d):
 
     # Get reforigin info
     rmsder = reforigin.ReforiginRmsd()
-    rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
-                   placedPdbInfo=mrPdbInfo,
-                   refModelPdbInfo=amoptd['ref_model_pdb_info'],
-                   cAlphaOnly=True,
-                   workdir=fixpath(amoptd['benchmark_dir']))
-    d['reforigin_RMSD']=rmsder.rmsd
+    try:
+        rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
+                       placedPdbInfo=mrPdbInfo,
+                       refModelPdbInfo=amoptd['ref_model_pdb_info'],
+                       cAlphaOnly=True,
+                       workdir=fixpath(amoptd['benchmark_dir']))
+        d['reforigin_RMSD']=rmsder.rmsd
+    except Exception,e:
+        _logger.critical("Error calculating RMSD: {0}".format(e))
+        d['reforigin_RMSD']=999
 
     # Find the MR origin wrt to the native
     #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
@@ -314,23 +318,33 @@ def analyseSolution(amoptd,d):
                                             "phaser_{0}_csymmatch.pdb".format(d['ensemble_name']))
                                             )
 
-    # Score the origin with all-atom and rio
-    rioData=rio.Rio().scoreOrigin(mrOrigin,
-                                  mrPdbInfo=mrPdbInfo,
-                                  nativePdbInfo=amoptd['native_pdb_info'],
-                                  resSeqMap=amoptd['res_seq_map'],
-                                  workdir=fixpath(amoptd['benchmark_dir'])
-                                  )
-
-    # Set attributes
-    d['AA_num_contacts']  = rioData.aaNumContacts
-    d['RIO_num_contacts'] = rioData.rioNumContacts
-    d['RIO_in_register']  = rioData.rioInRegister
-    d['RIO_oo_register'] = rioData.rioOoRegister
-    d['RIO_backwards']   = rioData.rioBackwards
-    d['RIO']            = rioData.rioInRegister + rioData.rioOoRegister
-    d['RIO_no_cat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
-    d['RIO_norm']       = float(d['RIO']) / float(d['native_pdb_num_residues'])
+    if not amoptd['ideal_helices']:
+        # Score the origin with all-atom and rio
+        rioData=rio.Rio().scoreOrigin(mrOrigin,
+                                      mrPdbInfo=mrPdbInfo,
+                                      nativePdbInfo=amoptd['native_pdb_info'],
+                                      resSeqMap=amoptd['res_seq_map'],
+                                      workdir=fixpath(amoptd['benchmark_dir'])
+                                      )
+    
+        # Set attributes
+        d['AA_num_contacts']  = rioData.aaNumContacts
+        d['RIO_num_contacts'] = rioData.rioNumContacts
+        d['RIO_in_register']  = rioData.rioInRegister
+        d['RIO_oo_register']  = rioData.rioOoRegister
+        d['RIO_backwards']    = rioData.rioBackwards
+        d['RIO']              = rioData.rioInRegister + rioData.rioOoRegister
+        d['RIO_no_cat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
+        d['RIO_norm']         = float(d['RIO']) / float(d['native_pdb_num_residues'])
+    else:
+        d['AA_num_contacts']  = None
+        d['RIO_num_contacts'] = None
+        d['RIO_in_register']  = None
+        d['RIO_oo_register']  = None
+        d['RIO_backwards']    = None
+        d['RIO']              = None
+        d['RIO_no_cat']       = None
+        d['RIO_norm']         = None
 
 #     # Now get the helix
 #     helixSequence = contacts.Rio().helixFromContacts( contacts=rioData.contacts,
@@ -406,7 +420,7 @@ def analysePdb(amoptd):
         
     # Standardise the PDB to rename any non-standard AA, remove solvent etc
     nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std", directory=fixpath(amoptd['benchmark_dir']))
-    pdb_edit.standardise( nativePdb, nativePdbStd )
+    pdb_edit.standardise(nativePdb, nativePdbStd, del_hetatm=True)
     nativePdb = nativePdbStd
     
     # Get the new Info about the native

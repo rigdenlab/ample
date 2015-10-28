@@ -10,14 +10,15 @@ import re
 import os
 import unittest
 
+import mmtbx.superpose
 
 class SubClusterer(object):
     """Base class for clustering pdbs by distance
     Sub-classes just need to provide a generate_distance_matrix class
     """
     
-    def __init__(self,executable):
-        if not os.path.exists(executable) and os.access(executable, os.X_OK):
+    def __init__(self,executable=None):
+        if executable and not os.path.exists(executable) and os.access(executable, os.X_OK):
             raise RuntimeError,"Cannot find subclusterer executable: {0}".format(executable) 
         self.executable = executable
         self.distance_matrix = None
@@ -31,7 +32,11 @@ class SubClusterer(object):
         """Return a list of pdbs clustered by the given radius"""
         if self.distance_matrix is None:
             raise RuntimeError,"Need to call generate_distance_matrix before cluster_by_radius!"
-        return [ self.index2pdb[i] for i in self._cluster_indices(radius)]
+        cluster_indices = self._cluster_indices(radius)
+        if cluster_indices:
+            return [ self.index2pdb[i] for i in cluster_indices ]
+        else:
+            return None
 
     def _cluster_indices(self,thresh):
         """Return the indices of the largest cluster that have distances < thresh.
@@ -50,14 +55,52 @@ class SubClusterer(object):
                     cluster.append(j)
             if len(cluster) > len(max_cluster):
                 max_cluster=copy.copy(cluster)
-        return sorted(max_cluster)
+        if len(max_cluster) == 1:
+            return None
+        else:
+            return sorted(max_cluster)
     
     def dump_matrix(self,file_name):
         with open(file_name,'w') as f:
             for row in self.distance_matrix:
                 f.write(",".join(map(str,row))+"\n")
             f.write("\n")
-        
+
+
+class CctbxClusterer(SubClusterer):
+    """Class to cluster files with maxcluster"""
+
+    def generate_distance_matrix(self, pdb_list):
+        """Run cctbx to generate the distance distance_matrix"""
+         
+        no_models = len(pdb_list)
+        if not no_models:
+            msg = "generate_distance_matrix got empty pdb_list!"
+            logging.critical(msg)
+            raise RuntimeError, msg
+ 
+        # Index is just the order of the pdb in the file
+        self.index2pdb=pdb_list
+     
+        # Create a square distance_matrix no_models in size filled with None
+        self.distance_matrix = [[None for col in range(no_models)] for row in range(no_models)]
+        # Set zeros diagonal
+         
+        for i, m1 in enumerate(pdb_list):
+            fixed = mmtbx.superpose.SuperposePDB(m1, preset='ca', log=None, quiet=True)
+            for j, m2 in enumerate(pdb_list):
+                print i,j
+                if j <= i: continue
+                moving = mmtbx.superpose.SuperposePDB(m2, preset='ca', log=None, quiet=True)
+                rmsd, lsq = moving.superpose(fixed)
+                self.distance_matrix[i][j]=float(rmsd)
+         
+        # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
+        for x in range(len(self.distance_matrix)):
+            for y in range(len(self.distance_matrix)):
+                self.distance_matrix[y][x] = self.distance_matrix[x][y]
+        return
+
 class MaxClusterer(SubClusterer):
     """Class to cluster files with maxcluster"""
     
@@ -188,7 +231,6 @@ class FpcClusterer(SubClusterer):
                 m[y][x] = m[x][y]
                 
         self.distance_matrix=m
-        
         return
 
 class Test(unittest.TestCase):
@@ -209,6 +251,22 @@ class Test(unittest.TestCase):
         cls.fpc_exe="/opt/fast_protein_cluster.1.1.2/fast_protein_cluster"
         return
 
+    def testRadiusCctbx(self):
+        """Test we can reproduce the original thresholds"""
+
+        radius = 4
+        clusterer = CctbxClusterer()
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
+        clusterer.generate_distance_matrix(pdb_list)
+        cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius(radius)]
+        
+        ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', '3_S_00000006.pdb',
+             '5_S_00000005.pdb', '3_S_00000003.pdb', '1_S_00000004.pdb', '4_S_00000005.pdb',
+             '3_S_00000004.pdb', '1_S_00000002.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb', '1_S_00000005.pdb']
+        
+        self.assertEqual(ref,cluster_files1)
+        return
+
     def testRadiusMaxcluster(self):
         """Test we can reproduce the original thresholds"""
 
@@ -223,9 +281,7 @@ class Test(unittest.TestCase):
              '3_S_00000004.pdb', '1_S_00000002.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb', '1_S_00000005.pdb']
         
         self.assertEqual(ref,cluster_files1)
-        
         os.unlink('maxcluster.log')
-
         return
     
     def testIndicesFpc(self):
@@ -279,11 +335,7 @@ def testSuite():
     suite.addTest(Test('testRadiusFpc'))
     return suite
     
-#
 # Run unit tests
 if __name__ == "__main__":
  
     unittest.TextTestRunner(verbosity=2).run(testSuite())
-
-
-

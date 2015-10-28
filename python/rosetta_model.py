@@ -189,7 +189,7 @@ class RosettaModel(object):
         os.chdir(run_dir)
         job_scripts=[]
         dir_list = []
-        job_time=7200
+        job_time=43200
         for i, njobs in enumerate(jobs_per_proc):
             d=os.path.join(run_dir,"job_{0}".format(i))
             os.mkdir(d)
@@ -213,8 +213,8 @@ class RosettaModel(object):
             ps = glob.glob(os.path.join(d, "*.pdb"))
             pdbs += ps
         
-        if not len(pdbs):
-            raise RuntimeError, "No pdbs after modelling in directory: {0}\nPlease check the log files for more information.".format(run_dir)
+        if not pdbs:
+            raise RuntimeError, "No models created after modelling!\nPlease check the log files in the directory {0} for more information.".format(run_dir)
         
         if self.use_scwrl: scwrl = add_sidechains_SCWRL.Scwrl(scwrlExe=self.scwrl_exe)
         for i, pdbin in enumerate(pdbs):
@@ -223,7 +223,12 @@ class RosettaModel(object):
                 scwrl.addSidechains(pdbin=pdbin,pdbout=pdbout)
             else:
                 pdbout=os.path.join(self.models_dir,"model_{0}.pdb".format(i))
-                shutil.copyfile(pdbin, pdbout)   
+                shutil.copyfile(pdbin, pdbout)
+                
+        if len(pdbs) != self.nmodels:
+            raise RuntimeError, "Expected to create {0} models but found {1}\nPlease check the log files in the directory {2} for more information.".format(self.nmodels,
+                                                                                                                                                            len(pdbs),
+                                                                                                                                                            run_dir)
         return
 
     def find_binary(self, name):
@@ -325,7 +330,7 @@ class RosettaModel(object):
         fasta = os.path.split(self.fasta)[1]
         shutil.copy2(self.fasta, os.path.join(self.fragments_directory,fasta))
         
-        script = os.path.join(self.fragments_directory,"gen_fragments.sh")
+        script = os.path.join(self.fragments_directory,"mkfrags.sh")
         with open(script,'w') as f:
             f.write("#!/bin/bash\n")
             f.write(" ".join(self.fragment_cmd())+"\n")
@@ -349,7 +354,7 @@ class RosettaModel(object):
             self.frags_9mers = os.path.join(self.fragments_directory, 'aa' + self.name + '09_05.200_v1_3')
 
         if not os.path.exists(self.frags_3mers) or not os.path.exists(self.frags_9mers):
-            raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\nPlease check logfile {2 for details.".format(self.frags_3mers,self.frags_9mers,logfile)
+            raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\nPlease check logfile {2} for details.".format(self.frags_3mers,self.frags_9mers,logfile)
 
         self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
 
@@ -920,7 +925,7 @@ class RosettaModel(object):
         if rosetta_dir and os.path.isdir(rosetta_dir):
             self.rosetta_dir=rosetta_dir
         elif 'rosetta_dir' not in optd or not optd['rosetta_dir']:
-            raise RuntimeError,"rosetta_dir variable not set in amopt.d!"
+            raise RuntimeError,"rosetta_dir not set - please use the -rosetta_dir flag to point at the directory where ROSETTA is installed"
         elif not os.path.isdir(optd['rosetta_dir']):
             raise RuntimeError,"Cannot find rosetta_dir directory: {0}\nPlease set the correct rosetta_dir variable to point at the top Rosetta directory.".format(optd['rosetta_dir'])
         else:

@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import unittest
 import urllib
 import zipfile
 
@@ -25,13 +26,12 @@ references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. R
 AMPLE: a cluster-and-truncate approach to solve the crystal structures of small proteins using
 rapidly computed ab initio models. (2012). Acta Cryst. D68, 1622-1631 [ doi:10.1107/S0907444912039194 ]
 
+Routine phasing of coiled-coil protein crystal structures with AMPLE (2015). Thomas, J. M. H.,
+Keegan, R. M., Bibby, J., Winn, M. D., Mayans, O. and Rigden, D. J. IUCrJ 2, 198-206.
+[doi:10.1107/S2052252515002080] 
+
 CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs
 for Protein Crystallography. Acta Cryst. D50, 760-763
-
-SHELX: "A short history of SHELX". Sheldrick, G.M. (2008). Acta Cryst. A64, 112-122
-
-SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein
-side-chain conformations with SCWRL4. Proteins (2009).
 
 MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/
 
@@ -45,6 +45,12 @@ Phaser crystallographic software J. Appl. Cryst. 40, 658-674
 
 REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromolecular
 Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255
+
+SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein
+side-chain conformations with SCWRL4. Proteins (2009).
+
+SHELXE: "Extending molecular-replacement solutions with SHELXE". Thorn, A. and Sheldrick, G. M. (2013),
+Acta Crystallographica D, 69: 2251-2256. doi: 10.1107/S0907444913027534
 
 SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for
 near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871
@@ -63,6 +69,25 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
+def ccp4_version():
+    """Return the CCP4 version as a tuple"""
+    # Currently there seems no sensible way of doing this other then running a program and grepping the output
+    cmd=['mtzdmp',os.path.abspath(__file__)]
+    logf = tempfile.TemporaryFile()
+    run_command(cmd,logfile=logf)
+    logf.seek(0) # rewind logfile
+    tversion=None
+    for i, line in enumerate(logf):
+        if i > 20:break
+        if line.startswith(' ### CCP4'):
+            tversion=line.split()[2]
+            break
+    
+    logf.close()
+    if not tversion: return None
+    major,minor,rev=tversion.rstrip(':').split('.')
+    return (int(major),int(minor),int(rev.lstrip('0')))
+    
 def extract_models(filename, directory=None, sequence=None, single=True, allsame=True):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
     
@@ -169,13 +194,10 @@ def extract_zip(filename,models_dir,suffix='.pdb'):
 
 def find_exe(executable, dirs=None):
     """Find the executable exename.
-
     Args:
     executable: the name of the program or the path to an existing executable
     dirs - additional directories to search for the location
-    
     """
-
     logger = logging.getLogger()
     logger.debug('Looking for executable: {0}'.format(executable) )
     
@@ -331,14 +353,15 @@ def ideal_helices(nresidues):
         pdb = os.path.join(include_dir,"{0}.pdb".format(name))
         # Needed for pyrvapi results
         ensembles_data.append( { 'name' : name,
-                                'ensemble_pdb' : pdb } )
+                                'ensemble_pdb' : pdb,
+                                'num_residues' : nres,
+                                 } )
         pdbs.append(pdb)
         
     return pdbs, ensemble_options, ensembles_data
 
-
 def is_exe(fpath):
-    return os.path.exists(fpath) and os.access(fpath, os.X_OK)
+    return fpath and os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
 def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     """
@@ -374,19 +397,22 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
     directory (optional) - the directory to run the job in (cwd assumed)
     dolog: bool - whether to output info to the system log
     """
-
-    assert type(cmd) is list
-    
+    assert type(cmd) is list, "run_command needs a list!"
     if check:
         if not is_exe(cmd[0]): raise RuntimeError,"run_command cannot find executable: {0}".format(cmd[0])
 
     if not directory:  directory = os.getcwd()
-
     if dolog: logging.debug("In directory {0}\nRunning command: {1}".format(directory, " ".join(cmd)))
-
+    file_handle=False
     if logfile:
+        if type(logfile)==file:
+            file_handle=True
+            logf=logfile
+            logfile=os.path.abspath(logf.name)
+        else:
+            logfile = os.path.abspath(logfile)
+            logf = open(logfile, "w")
         if dolog: logging.debug("Logfile is: {0}".format(logfile))
-        logf = open(logfile, "w")
     else:
         logf = tempfile.TemporaryFile()
         
@@ -406,8 +432,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         if dolog: logging.debug("stdin for cmd was: {0}".format( stdinstr ) )
 
     p.wait()
-    logf.close()
-    
+    if not file_handle: logf.close()
     return p.returncode
 
 def setup_logging(logfile,debug_log="debug.log"):
@@ -486,4 +511,29 @@ def tmpFileName():
     tmp1 = t.name
     t.close()
     return tmp1
+
+class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = cls.thisd.split( os.sep )
+        cls.ample_dir = os.sep.join( paths[ : -1 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        return
+
+    def testCcp4Version(self):
+        print ccp4_version()
+        self.assertEqual(ccp4_version(),(6,5,15))
+        return
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
+        
 

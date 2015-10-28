@@ -12,6 +12,7 @@ import re
 import unittest
 
 # External imports
+import iotbx.file_reader
 import iotbx.pdb
 #iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 
@@ -1148,6 +1149,39 @@ def num_atoms_and_residues(pdbin,first=False):
     
     return (natoms, nresidues)
 
+def _parse_modres(modres_text):
+    """
+COLUMNS        DATA TYPE     FIELD       DEFINITION
+--------------------------------------------------------------------------------
+ 1 -  6        Record name   "MODRES"
+ 8 - 11        IDcode        idCode      ID code of this entry.
+13 - 15        Residue name  resName     Residue name used in this entry.
+17             Character     chainID     Chain identifier.
+19 - 22        Integer       seqNum      Sequence number.
+23             AChar         iCode       Insertion code.
+25 - 27        Residue name  stdRes      Standard residue name.
+30 - 70        String        comment     Description of the residue modification.
+"""
+
+    modres = []
+    for line in modres_text:
+        assert line[0:6] == "MODRES","Line did not begin with an MODRES record!: {0}".format(line)
+    
+        idCode = line[7:11]
+        resName = line[12:15].strip()
+        # Use for all so None means an empty field
+        if line[16].strip(): chainID = line[16]
+        seqNum = int(line[18:22])
+        iCode = ""
+        if line[22].strip(): iCode = line[22]
+        stdRes = line[24:27].strip()
+        comment = ""
+        if line[29:70].strip(): comment = line[29:70].strip()
+        
+        modres.append([idCode, resName, chainID, seqNum, iCode, stdRes,comment])
+        
+    return modres
+
 def reliable_sidechains(inpath=None, outpath=None ):
     """Only output non-backbone atoms for residues in the res_names list.
     """
@@ -1268,7 +1302,13 @@ def Xselect_residues(inpath=None, outpath=None, residues=None):
     return count
 
 def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, tokeep_idx=None):
-    hierarchy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+    
+    pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
+    pdbf.check_file_type("pdb")
+    hierarchy = pdbf.file_object.construct_hierarchy()
+    
+    crystal_symmetry=pdbf.file_object.crystal_symmetry()
+    
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
         print "pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin)
     
@@ -1301,8 +1341,15 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
                 
         if remove:
             chain.remove_residue_group(residue_group)
-        
-    hierarchy.write_pdb_file(pdbout,anisou=False)
+
+    #hierarchy.write_pdb_file(pdbout,anisou=False)
+    with open(pdbout,'w') as f:
+        if (crystal_symmetry is not None) :
+            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
+                                                              write_scale_records=True)+"\n")
+        f.write("REMARK Original file:\n")
+        f.write("REMARK   {0}\n".format(pdbin))
+        f.write(hierarchy.as_pdb_string(anisou=False))
     return
 
 def sequence(pdbin):
@@ -1371,7 +1418,6 @@ def split_pdb(pdbin, directory=None):
     
     # Largely stolen from pdb_split_models.py in phenix
     #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
-    import iotbx.file_reader
     
     pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
     pdbf.check_file_type("pdb")
@@ -1409,7 +1455,49 @@ def split_pdb(pdbin, directory=None):
         
     return output_files
 
-def standardise(inpdb, outpdb, chain=None):
+def split_into_chains(pdbin, directory=None):
+    """Split a pdb file into its separate chains"""
+
+    if directory is None: directory = os.path.dirname(pdbin)
+    
+    # Largely stolen from pdb_split_models.py in phenix
+    #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
+    import iotbx.file_reader
+    
+    pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
+    pdbf.check_file_type("pdb")
+    hierarchy = pdbf.file_object.construct_hierarchy()
+    
+    # Nothing to do
+    n_models = hierarchy.models_size()
+    if n_models != 1: raise RuntimeError,"split_into_chains only works with single-mdoel pdbs!"
+    
+    crystal_symmetry = pdbf.file_object.crystal_symmetry()
+    
+    output_files = []
+    n_chains = len(hierarchy.models()[0].chains())
+    for i, chain in enumerate(hierarchy.models()[0].chains()):
+        new_hierarchy = iotbx.pdb.hierarchy.root()
+        new_model = iotbx.pdb.hierarchy.model()
+        new_hierarchy.append_model((new_model))
+        new_model.append_chain(chain.detached_copy())
+        output_file = ample_util.filename_append(pdbin, chain.id, directory)
+        with open(output_file, "w") as f:
+            if (crystal_symmetry is not None) :
+                print >> f, iotbx.pdb.format_cryst1_and_scale_records(
+                                                                      crystal_symmetry=crystal_symmetry,
+                                                                      write_scale_records=True)
+            print >> f, "REMARK Chain %d of %d" % (i, n_chains)
+            if (pdbin is not None) :
+                print >> f, "REMARK Original file:"
+                print >> f, "REMARK   %s" % pdbin
+            f.write(new_hierarchy.as_pdb_string())
+    
+        output_files.append(output_file)
+        
+    return output_files
+
+def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
     """Rename any non-standard AA, remove solvent and only keep most probably conformation.
     """
 
@@ -1417,35 +1505,25 @@ def standardise(inpdb, outpdb, chain=None):
     
     # Now clean up with pdbcur
     logfile = tmp1+".log"
-    cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, tmp1 ).split()
+    cmd="pdbcur xyzin {0} xyzout {1}".format(pdbin, tmp1).split()
     stdin="""delsolvent
 noanisou
 mostprob
 """
     # We are extracting one  of the chains
-    if chain:
-        stdin += "lvchain {0}\n".format( chain )
+    if chain: stdin += "lvchain {0}\n".format( chain )
 
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    if retcode == 0:
-        # remove temporary files
-        os.unlink(logfile)
-    else:
-        raise RuntimeError,"Error standardising pdb!"
+    if retcode == 0: os.unlink(logfile) # remove temporary files
+    else: raise RuntimeError,"Error standardising pdb!"
     
-    # Standardise AA names
-    tmp2 = ample_util.tmpFileName() + ".pdb" # pdbcur insists names have a .pdb suffix
-    std_residues( tmp1, tmp2 )
-    
-    # Strip out any remaining HETATM
-    strip_hetatm( tmp2, outpdb )
-    
+    # Standardise AA names and then remove any remaining HETATMs
+    std_residues_cctbx(tmp1, pdbout, del_hetatm=del_hetatm)
     os.unlink(tmp1)
-    os.unlink(tmp2) 
     
     return retcode
 
-def std_residues(pdbin, pdbout ):
+def Xstd_residues(pdbin, pdbout ):
     """Switch any non-standard AA's to their standard names.
     We also remove any ANISOU lines.
     """
@@ -1524,54 +1602,51 @@ def std_residues(pdbin, pdbout ):
         
     return
 
-def std_residues_cctbx(pdbin, pdbout):
+def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
+    """Map all residues in MODRES section to their standard counterparts
+    optionally delete all other HETATMS"""
     
-    pdb_input=iotbx.pdb.pdb_input(pdbin)
+    pdb_input = iotbx.pdb.pdb_input(pdbin)
+    crystal_symmetry = pdb_input.crystal_symmetry()
     
     # Get MODRES Section & build up dict mapping the changes
+    modres_text = [ l.strip() for l in pdb_input.primary_structure_section() \
+                    if l.startswith("MODRES")]
     modres={}
-    for _,id,resname,chain,resseq,stdres,comment in [ l.strip().split() \
-                                                     for l in pdb_input.primary_structure_section() \
-                                                     if l.startswith("MODRES")]:
+    for id,resname,chain,resseq,icode,stdres,comment in _parse_modres(modres_text):
         if not chain in modres:
-            modres[chain]={}
-        modres[chain][int(resseq)]=(resname,stdres)
-    
-    hierachy=pdb_input.construct_hierarchy()
+            modres[chain] = {}
+        modres[chain][int(resseq)] = (resname,stdres)
+   
+    hierachy = pdb_input.construct_hierarchy()
     for model in hierachy.models():
         for chain in model.chains():
             for residue_group in chain.residue_groups():
-                resseq=residue_group.resseq_as_int()
+                resseq = residue_group.resseq_as_int()
                 for atom_group in residue_group.atom_groups():
-                    resname=atom_group.resname
-                    if resseq in modres[chain.id]:
+                    resname = atom_group.resname
+                    if chain.id in modres and resseq in modres[chain.id] and modres[chain.id][resseq][0] == resname:
                         # Change modified name to std name
-                        assert modres[chain.id][resseq][0]==resname,\
-                        "Unmatched names: {0} : {1}".format(modres[chain.id][resseq][0],resname)
-                        atom_group.resname=modres[chain.id][resseq][1]
+                        #assert modres[chain.id][resseq][0]==resname,\
+                        #"Unmatched names: {0} : {1}".format(modres[chain.id][resseq][0],resname)
+                        atom_group.resname = modres[chain.id][resseq][1]
                         # If any of the atoms are hetatms, set them to be atoms
                         for atom in atom_group.atoms():
-                            if atom.hetero:
-                                atom.hetero=False
-                            
-    
-    if False:
-        # Remove HETATMS
-        for model in hierachy.models():
-            for chain in model.chains():
-                for residue_group in chain.residue_groups():
-                    for atom_group in residue_group.atom_groups():
-                        # Can't use below as it uses indexes which change as we remove atoms
-                        # ag.atoms().extract_hetero()]
-                        todel=[a for a in atom_group.atoms() if a.hetero ]
-                        for a in todel:
-                            atom_group.remove_atom(a)       
-    
-    hierachy.write_pdb_file(pdbout,anisou=False)
-    
+                            if atom.hetero: atom.hetero=False
+                                
+    if del_hetatm: _strip_hetatm_cctbx(hierachy)
+
+    with open(pdbout,'w') as f:
+        f.write("REMARK Original file:\n")
+        f.write("REMARK   {0}\n".format(pdbin))
+        if (crystal_symmetry is not None) :
+            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
+                                                              write_scale_records=True)+"\n")
+        f.write(hierachy.as_pdb_string(anisou=False))
+
     return       
 
-def strip_hetatm(pdbin, pdbout):
+def Xstrip_hetatm(pdbin, pdbout):
     """Remove all hetatoms from pdbfile"""
     with open( pdbout, 'w' ) as w, open(pdbin) as f:
         hremoved=-1
@@ -1583,6 +1658,25 @@ def strip_hetatm(pdbin, pdbout):
             if line.startswith("ANISOU") and i == hremoved+1:
                 continue
             w.write(line)
+    return
+
+def strip_hetatm_cctbx(pdbin, pdbout):
+    """Remove all hetatoms from pdbfile"""
+    hierachy=iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+    _strip_hetatm_cctbx(hierachy)
+    hierachy.write_pdb_file(pdbout,anisou=False)
+    return
+
+def _strip_hetatm_cctbx(hierachy):
+    """Remove all hetatoms from pdbfile"""
+    for model in hierachy.models():
+        for chain in model.chains():
+            for residue_group in chain.residue_groups():
+                for atom_group in residue_group.atom_groups():
+                    # Can't use below as it uses indexes which change as we remove atoms
+                    # ag.atoms().extract_hetero()]
+                    todel=[a for a in atom_group.atoms() if a.hetero ]
+                    for a in todel: atom_group.remove_atom(a)       
     return
 
 def to_single_chain(inpath, outpath):
@@ -1605,7 +1699,6 @@ def to_single_chain(inpath, outpath):
             continue
         
         if line.startswith("ATOM"):
-            
             changed=False
             
             atom = pdb_model.PdbAtom( line )
@@ -1804,7 +1897,7 @@ class Test(unittest.TestCase):
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
         pdbout="std.pdb"
         
-        std_residues(pdbin, pdbout)
+        std_residues_cctbx(pdbin, pdbout)
         
         # Check it's valid
         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
@@ -1891,12 +1984,12 @@ if __name__ == "__main__":
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-std', action='store_true',
                        help='Standardise the PDB')
-    group.add_argument('-std1', action='store_true',
-                       help='Take pdb to one model/chain that contains only standard amino acids')
     group.add_argument('-seq', action='store_true',
                        help='Write a fasta of the found AA to stdout')
     group.add_argument('-split', action='store_true',
                        help='Split a pdb into constituent models')
+    group.add_argument('-split_chains', action='store_true',
+                       help='Split a pdb into constituent chains')
     parser.add_argument('input_file',
                        help='The input file - will not be altered')
     
@@ -1916,13 +2009,12 @@ if __name__ == "__main__":
         n = os.path.splitext( os.path.basename(args.input_file))[0]
         args.output_file = n+"_std.pdb"
 
-    if args.std1:
-        #to_1_std_chain( args.input_file, args.output_file )
-        pass
-    elif args.std:
-        standardise(args.input_file, args.output_file)
+    if args.std:
+        standardise(args.input_file, args.output_file, del_hetatm=True, chain=None)
     elif args.seq:
         print ample_sequence.Sequence(pdb=args.input_file).fasta_str()
     elif args.split:
         print split_pdb(args.input_file)
+    elif args.split_chains:
+        print split_into_chains(args.input_file)
         

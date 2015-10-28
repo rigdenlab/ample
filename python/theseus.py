@@ -20,14 +20,11 @@ class Theseus(object):
         self.theseus_exe = theseus_exe
         if not os.path.exists(self.theseus_exe) and os.access(self.theseus_exe, os.X_OK):
             raise RuntimeError,"Cannot find theseus_exe: {0}".format(self.theseus_exe)
-        
         self.logger = logging.getLogger()
-        
         self.work_dir = None
         self.variance_log = None
         self.superposed_models = None
         self.aligned_models = None
-        
         self._set_work_dir(work_dir)
         return
     
@@ -38,26 +35,29 @@ class Theseus(object):
         return self.work_dir
     
     def alignment_file(self, models, alignment_file=None):
+        """Create an alignment file for the models - this is based on the assumption they are all the same length
+        but may have different residues"""
         if not alignment_file: alignment_file = os.path.join(self.work_dir,'homologs.fasta')
         all_seq = ample_sequence.Sequence(pdb=models[0])
         for model in models[1:]: all_seq += ample_sequence.Sequence(pdb=model)
         all_seq.write_fasta(alignment_file,pdbname=True)
         return alignment_file
 
-    def align_models(self, models, work_dir=None, basename=None, homologs=False):
+    def align_models(self, models, work_dir=None, basename=None, homologs=False, alignment_file=None):
         self._set_work_dir(work_dir)
+        if not basename: basename = 'theseus'
         if homologs:
             # Theseus expects all the models to be in the directory that it is run in as the string
             # given in the fasta header is used to construct the file names of the aligned pdb files
             # If a full or relative path is given (e.g. /foo/bar.pdb), it tries to create files called "basename_/foo/bar.pdb"
             # We therefore copy the models in and then delete them afterwards
-            alignment_file = self.alignment_file(models)
+            if not alignment_file: alignment_file = self.alignment_file(models)
             copy_models = [ os.path.join(self.work_dir,os.path.basename(m)) for m in models ]
             for orig, copy in zip(models, copy_models): shutil.copy(orig, copy)
         
-        if not basename: basename = 'theseus'
-
+        # -Z included so we don't line the models up to the principle axis and can compare the ensembles
         cmd = [ self.theseus_exe, '-a0', '-r', basename ]
+        #cmd = [ self.theseus_exe, '-a0', '-r', basename, '-Z', '-o', os.path.basename(copy_models[0]) ]
         if homologs:
             cmd += [ '-A', alignment_file ]
             cmd += [ os.path.basename(m) for m in copy_models ]
@@ -76,12 +76,20 @@ class Theseus(object):
         self.variance_file = os.path.join(self.work_dir,'{0}_variances.txt'.format(basename))
         self.superposed_models = os.path.join(self.work_dir,'{0}_sup.pdb'.format(basename))
         if homologs:
-            self.aligned_models = [ os.path.join(self.work_dir,"theseus_{0}".format(os.path.basename(m))) for m in copy_models ]
-            for m in copy_models: os.unlink(m)
+            # Horrible - need to rename the models so that they match the names in the alignment file
+            #self.aligned_models = [ os.path.join(self.work_dir,"theseus_{0}".format(os.path.basename(m))) for m in copy_models ]
+            #for m in copy_models: os.unlink(m)
+            self.aligned_models = []
+            for m in copy_models:
+                mb = os.path.basename(m)
+                aligned_model = os.path.join(self.work_dir,"{0}_{1}".format(basename,mb))
+                os.unlink(m)
+                os.rename(aligned_model, os.path.join(self.work_dir,mb))
+                self.aligned_models.append(mb)
         
         return self.superposed_models
 
-    def var_by_res(self):
+    def var_by_res(self, homologs=False):
         """Return a list of tuples: (resSeq,variance)"""
         
         #--------------------------------
@@ -91,6 +99,7 @@ class Theseus(object):
             raise RuntimeError,"Cannot find theseus variance file: {0} Please check the log: {1}".format(self.variance_file,
                                                                                                          self.theseus_log)
         variances=[]
+        core_count = 0
         with open(self.variance_file) as f:
             for i, line in enumerate(f):
                 # Skip header
@@ -106,20 +115,26 @@ class Theseus(object):
                     idxidx=1
                     idxResSeq=3
                     idxVariance=4
+                    idxCore = 7
                 else:
                     idxidx=0
                     idxResSeq=2
                     idxVariance=3
-                idx = int(tokens[idxidx])
-                assert idx == i,"Index and atom lines don't match! {0} : {1}".format(idx,i) # paranoid check
-                # Theseus counts from 1, we count from 0
-                idx -= 1
+                    idxCore = 6
+                    
+                if homologs and (len(tokens) < idxCore + 1 or tokens[idxCore] != 'CORE'): continue
+                if homologs:
+                    idx = core_count
+                    core_count += 1
+                else:
+                    idx = int(tokens[idxidx]) - 1 # Theseus counts from 1, we count from 0
+                
+                #assert idx == i,"Index and atom lines don't match! {0} : {1}".format(idx,i) # paranoid check
                 resSeq = int(tokens[idxResSeq])
                 variance = float(tokens[idxVariance])
                 variances.append((idx,resSeq,variance))
-                
+        
         return variances
-
 
 class Test(unittest.TestCase):
 
@@ -159,19 +174,26 @@ class Test(unittest.TestCase):
         rtheseus = Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
         rtheseus.align_models(models,homologs=homologs)
         var_by_res = rtheseus.var_by_res()
-        ref = [(0, 1, 58.093855), (1, 2, 49.037612), (2, 3, 49.9941), (3, 4, 41.759792), (4, 5, 37.227847), 
-               (5, 6, 27.3795), (6, 7, 25.348492), (7, 8, 25.799824), (8, 9, 22.432552), (9, 10, 23.265923), 
-               (10, 11, 23.050341), (11, 12, 20.235297), (12, 13, 18.29234), (13, 14, 16.800248), (14, 15, 16.07131), 
-               (15, 16, 10.678152), (16, 17, 10.77214), (17, 18, 6.206533), (18, 19, 5.665422), (19, 20, 3.152776), 
-               (20, 21, 1.860673), (21, 22, 0.705796), (22, 23, 0.185265), (23, 24, 0.116864), (24, 25, 0.10304), 
-               (25, 26, 0.041897), (26, 27, 0.039639), (27, 28, 0.084557), (28, 29, 0.090918), (29, 30, 0.044023), 
-               (30, 31, 0.022351), (31, 32, 0.018216), (32, 33, 0.081551), (33, 34, 0.085867), (34, 35, 0.65924), 
-               (35, 36, 0.874891), (36, 37, 1.772875), (37, 38, 3.509799), (38, 39, 4.900248), (39, 40, 7.269827), 
-               (40, 41, 10.250037), (41, 42, 15.287341), (42, 43, 23.696658), (43, 44, 30.767263), (44, 45, 35.877388), 
-               (45, 46, 36.17383), (46, 47, 41.678763), (47, 48, 53.733142), (48, 49, 56.091737), (49, 50, 50.992341), 
-               (50, 51, 70.052003), (51, 52, 60.586176), (52, 53, 43.26875), (53, 54, 58.925292), (54, 55, 74.272249), 
-               (55, 56, 59.917994), (56, 57, 56.26098), (57, 58, 80.235351), (58, 59, 86.028986)]
-        self.assertEqual(var_by_res,ref)
+        print " GOT ",[x[0] for x in var_by_res]
+        # Below with theseus 3.1.1 on osx 10.9.5
+        ref = [(0, 1, 55.757593), (1, 2, 46.981238), (2, 3, 47.734236), (3, 4, 39.857326), (4, 5, 35.477433),
+               (5, 6, 26.066719), (6, 7, 24.114493), (7, 8, 24.610988), (8, 9, 21.187142), (9, 10, 21.882375),
+               (10, 11, 21.622263), (11, 12, 18.680601), (12, 13, 16.568074), (13, 14, 14.889583), (14, 15, 13.889769),
+               (15, 16, 8.722903), (16, 17, 8.719501), (17, 18, 4.648107), (18, 19, 4.263961), (19, 20, 2.338545),
+               (20, 21, 1.412784), (21, 22, 0.57754), (22, 23, 0.204917), (23, 24, 0.226518), (24, 25, 0.162323),
+               (25, 26, 0.068066), (26, 27, 0.057023), (27, 28, 0.135811), (28, 29, 0.145613), (29, 30, 0.081845),
+               (30, 31, 0.051059), (31, 32, 0.045182), (32, 33, 0.112322), (33, 34, 0.102072), (34, 35, 0.446003),
+               (35, 36, 0.504418), (36, 37, 1.276947), (37, 38, 2.641781), (38, 39, 4.336794), (39, 40, 6.484846),
+               (40, 41, 9.559536), (41, 42, 14.467942), (42, 43, 22.818975), (43, 44, 29.55385), (44, 45, 34.692256),
+               (45, 46, 35.141769), (46, 47, 40.41399), (47, 48, 52.268871), (48, 49, 54.535848), (49, 50, 49.527155),
+               (50, 51, 67.9861), (51, 52, 58.661069), (52, 53, 41.802971), (53, 54, 57.085415), (54, 55, 71.944127),
+               (55, 56, 57.893953), (56, 57, 54.34137), (57, 58, 77.736775), (58, 59, 83.279371)]
+        
+        self.assertEqual([x[0] for x in var_by_res],[x[0] for x in ref])
+        self.assertEqual([x[1] for x in var_by_res],[x[1] for x in ref])
+        for i,(t,r) in enumerate(zip([x[2] for x in var_by_res], [x[2] for x in ref])):
+            self.assertTrue(abs(t-r) < 0.0001,"Mismatch for: {0} {1} {2}".format(i,t,r))
+            
         shutil.rmtree(work_dir)
         return
     
@@ -195,11 +217,16 @@ class Test(unittest.TestCase):
         rtheseus = Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
         rtheseus.align_models(models,homologs=homologs)
         var_by_res = rtheseus.var_by_res()
-        ref = [(0, 243, 9.918397), (1, 244, 3.897504), (2, 245, 1.877927), (3, 246, 2.004033), (4, 247, 1.24683), 
-               (5, 248, 0.753177), (6, 249, 0.005146), (7, 250, 0.02917), (8, 251, 0.04054), (9, 252, 0.027774), 
-               (10, 253, 0.093861), (11, 254, 0.0)]
-        self.assertEqual(var_by_res,ref)
-        
+        # Below with theseus 3.1.1 on osx 10.9.5
+        ref  = [(0, 243, 8.049061), (1, 244, 2.614031), (2, 245, 1.343609), (3, 246, 2.261761), (4, 247, 1.112115),
+                (5, 248, 0.574936), (6, 249, 0.03114), (7, 250, 0.002894), (8, 251, 0.002314), (9, 252, 0.002174),
+                (10, 253, 0.016252), (11, 254, 0.109965)]
+
+        self.assertEqual([x[0] for x in var_by_res],[x[0] for x in ref])
+        self.assertEqual([x[1] for x in var_by_res],[x[1] for x in ref])
+        for i,(t,r) in enumerate(zip([x[2] for x in var_by_res], [x[2] for x in ref])):
+            self.assertTrue(abs(t-r) < 0.0001,"Mismatch for: {0} {1} {2}".format(i,t,r))
+
         self.assertTrue(all([os.path.isfile(m) for m in rtheseus.aligned_models]))
         # clean up
         for m in models: os.unlink(m)
