@@ -395,19 +395,6 @@ def process_command_line():
 
 def process_options(amoptd, logger):
     
-    # Make sure CCP4 is around
-    if not "CCP4" in os.environ:
-        msg = "Cannot find CCP4 installation - please make sure CCP4 is installed and the setup scripts have been run!"
-        ample_exit.exit(msg)
-        
-    if not "CCP4_SCR" in os.environ:
-        msg = "$CCP4_SCR environement variable not set - please make sure CCP4 is installed and the setup scripts have been run!"
-        ample_exit.exit(msg)
-        
-    if not os.path.isdir(os.environ['CCP4_SCR']):
-        msg = "Cannot find the $CCP4_SCR directory: {0}\nPlease make sure CCP4 is installed and the setup scripts have been run!".format(os.environ['CCP4_SCR'])
-        ample_exit.exit(msg)
-    
     # Path for pickling results
     amoptd['results_path'] = os.path.join(amoptd['work_dir'], "resultsd.pkl")
     
@@ -763,6 +750,24 @@ def process_options(amoptd, logger):
     
     return rosetta_modeller
 
+def setup_ccp4(amoptd):
+     # Make sure CCP4 is around
+    if not "CCP4" in os.environ:
+        msg = "Cannot find CCP4 installation - please make sure CCP4 is installed and the setup scripts have been run!"
+        ample_exit.exit(msg)
+        
+    if not "CCP4_SCR" in os.environ:
+        msg = "$CCP4_SCR environement variable not set - please make sure CCP4 is installed and the setup scripts have been run!"
+        ample_exit.exit(msg)
+        
+    if not os.path.isdir(os.environ['CCP4_SCR']):
+        msg = "Cannot find the $CCP4_SCR directory: {0}\nPlease make sure CCP4 is installed and the setup scripts have been run!".format(os.environ['CCP4_SCR'])
+        ample_exit.exit(msg)
+
+    # Record the CCP4 version we're running with  - also required in pyrvapi_results
+    amoptd['ccp4_version'] = ample_util.ccp4_version()
+    return
+
 def main():
     """Main AMPLE routine.
     
@@ -785,10 +790,13 @@ def main():
     ample_log = os.path.join(amopt.d['work_dir'], 'AMPLE.log')
     amopt.d['ample_log'] = ample_log
     logger = ample_util.setup_logging(ample_log)
-    logger.info(ample_util.header)
+    
+    setup_ccp4(amopt.d)
     
     # Print out Version and invocation
+    logger.info(ample_util.header)
     logger.info("AMPLE version: {0}".format(version.__version__))
+    logger.info("Running with CCP4 version: {0}".format(".".join([str(x) for x in amopt.d['ccp4_version']])))
     logger.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
     logger.info("Running on host: {0}".format(platform.node()))
     logger.info("Invoked with command-line:\n{0}\n".format(orig_argv))
@@ -942,6 +950,9 @@ def main():
         if not amopt.d['homologs']:
             ensemble_summary = ensemble.ensemble_summary(amopt.d['ensembles_data'])
             logger.info(ensemble_summary)
+        
+        # Save truncation levels for analysis
+        
     
     # Update results view
     pyrvapi_results.display_results(amopt.d)
@@ -976,7 +987,7 @@ def main():
                                                      amopt.d,
                                                      job_time=mrbump_jobtime,
                                                      ensemble_options=ensemble_options)
-    #print "EXITING ";sys.exit(1)
+    #ample_exit.exit("NOOOOOOO!!!!")
     
     # Create function for monitoring jobs - static function decorator?
     if pyrvapi_results.pyrvapi:

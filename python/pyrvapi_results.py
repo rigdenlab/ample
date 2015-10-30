@@ -369,7 +369,7 @@ def display_results(results_dict, run_dir=None):
         if not run_dir: run_dir = os.path.join(results_dict['work_dir'], "jsrview")
         if not os.path.isdir(run_dir): os.mkdir(run_dir)
         
-        major,_,_=ample_util.ccp4_version()
+        major,_,_ = results_dict['ccp4_version']
         if major <= 6:
             pyrvapi.rvapi_init_document ("AMPLE_results", run_dir, "AMPLE Results", 1, 7, share_jsrview, None, None, None)
         else:
