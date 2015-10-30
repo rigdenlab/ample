@@ -20,6 +20,7 @@ import zipfile
 # our imports
 import pdb_edit
 import ample_exit
+CCP4_VERSION=None
 
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
@@ -71,22 +72,25 @@ The authors of specific programs should be referenced where applicable:""" + \
 
 def ccp4_version():
     """Return the CCP4 version as a tuple"""
-    # Currently there seems no sensible way of doing this other then running a program and grepping the output
-    cmd=['mtzdmp',os.path.abspath(__file__)]
-    logf = tempfile.TemporaryFile()
-    run_command(cmd,logfile=logf)
-    logf.seek(0) # rewind logfile
-    tversion=None
-    for i, line in enumerate(logf):
-        if i > 20:break
-        if line.startswith(' ### CCP4'):
-            tversion=line.split()[2]
-            break
-    
-    logf.close()
-    if not tversion: return None
-    major,minor,rev=tversion.rstrip(':').split('.')
-    return (int(major),int(minor),int(rev.lstrip('0')))
+    global CCP4_VERSION
+    if CCP4_VERSION is None:
+        # Currently there seems no sensible way of doing this other then running a program and grepping the output
+        cmd=['mtzdmp',os.path.abspath(__file__)]
+        logf = tempfile.TemporaryFile()
+        run_command(cmd,logfile=logf)
+        logf.seek(0) # rewind logfile
+        tversion=None
+        for i, line in enumerate(logf):
+            if i > 20:break
+            if line.startswith(' ### CCP4'):
+                tversion=line.split()[2]
+                break
+        
+        logf.close()
+        if not tversion: return None
+        major,minor,rev=tversion.rstrip(':').split('.')
+        CCP4_VERSION = (int(major),int(minor),int(rev.lstrip('0')))
+    return CCP4_VERSION
     
 def extract_models(filename, directory=None, sequence=None, single=True, allsame=True):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
