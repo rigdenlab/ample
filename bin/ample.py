@@ -220,6 +220,9 @@ def process_command_line():
     parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
                        help='Path to Phenix executable')
     
+    parser.add_argument('-restart_pkl', type=float, nargs=1,
+                       help='Rerun a job using the pickled ample dictionary')
+    
     parser.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, nargs=1,
                        help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
     
@@ -802,6 +805,9 @@ def main():
     logger.info("Invoked with command-line:\n{0}\n".format(orig_argv))
     logger.info("Running in directory: {0}\n".format(amopt.d['work_dir']))
     
+    # restart will exit itself
+    if amopt.d['restart_pkl']: benchmark.restartPkl(amopt.d)
+    
     # Display pyrvapi results
     pyrvapi_results.display_results(amopt.d)
     
@@ -973,10 +979,14 @@ def main():
         msg = "ERROR! Cannot run MRBUMP as there are no ensembles!"
         ample_exit.exit(msg)
     
-    bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
+    if amopt.d['mrbump_dir'] is None:
+        bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
+        amopt.d['mrbump_dir'] = bump_dir
+    else:
+        bump_dir = amopt.d['mrbump_dir']
     if not os.path.exists(bump_dir): os.mkdir(bump_dir)
     os.chdir(bump_dir)
-    amopt.d['mrbump_dir'] = bump_dir
+    
     amopt.d['mrbump_results'] = []
     logger.info("Running MRBUMP jobs in directory: {0}".format(bump_dir))
     
