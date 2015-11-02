@@ -231,6 +231,7 @@ class AmpleOptions(object):
                 'import_cluster',
                 'maxcluster_exe',
                 'models',
+                'mrbump_dir',
                 'mr_sequence',
                 'mtz',
                 'mustang_exe',

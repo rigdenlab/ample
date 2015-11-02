@@ -153,6 +153,9 @@ def process_command_line():
     parser.add_argument('-models', metavar='models', type=str, nargs=1,
                        help='Path to a folder of PDB decoys, or a tarred and gzipped/bziped, or zipped collection of decoys')
     
+    parser.add_argument('-mrbump_dir', type=str, nargs=1,
+                       help='Path to a directory of MRBUMP jobs (see restart_pkl)')
+    
     parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
                        help='Additional keywords for MRBUMP - are passed through without editing')
 
@@ -220,7 +223,7 @@ def process_command_line():
     parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
                        help='Path to Phenix executable')
     
-    parser.add_argument('-restart_pkl', type=float, nargs=1,
+    parser.add_argument('-restart_pkl', type=str, nargs=1,
                        help='Rerun a job using the pickled ample dictionary')
     
     parser.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, nargs=1,

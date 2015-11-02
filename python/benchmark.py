@@ -505,8 +505,9 @@ def restartPkl(amoptd):
     
     # Update any variables that have changed - everything else uses the old paths
     amoptd_old['ample_log'] = amoptd['ample_log']
+    if os.path.isfile(amoptd['native_pdb']): amoptd_old['native_pdb'] = amoptd['native_pdb']
     amoptd_old['run_dir'] = amoptd['run_dir']
-    amoptd_old['results_path'] = amoptd['results_path']
+    amoptd_old['results_path'] = os.path.join(amoptd['work_dir'],'resultsd.pkl')
     amoptd_old['work_dir'] = amoptd['work_dir']
     if amoptd['mrbump_dir']:
         if not os.path.isdir(amoptd['mrbump_dir']):
@@ -523,16 +524,10 @@ def restartPkl(amoptd):
     amoptd['mrbump_results'] = res_sum.results
     
     # Analse the full results
-    bd = os.path.join(amoptd['work_dir'],"benchmark")
-    os.mkdir(bd)
+    amoptd['benchmark_dir'] = os.path.join(amoptd['work_dir'],"benchmark")
+    os.mkdir(amoptd['benchmark_dir'])
     analyse(amoptd, newroot=None)
     ample_util.saveAmoptd(amoptd)
-    
-    
-        
-    
-    
-    
     return
 
 
