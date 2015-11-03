@@ -528,6 +528,8 @@ def restartPkl(amoptd):
     os.mkdir(amoptd['benchmark_dir'])
     analyse(amoptd, newroot=None)
     ample_util.saveAmoptd(amoptd)
+    
+    ample_exit.exit("restart_pkl exiting")
     return
 
 
