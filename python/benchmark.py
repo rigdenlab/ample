@@ -24,6 +24,7 @@ import pdb_model
 import reforigin
 import residue_map
 import rio
+import shelxe
 
 _logger=logging.getLogger()
 
@@ -310,9 +311,10 @@ def analyseSolution(amoptd,d):
     #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
     #mrOrigin=shelxe.shelxe_origin(amoptd['shelxe_exe'],amoptd['native_pdb'],amoptd['mtz'],mrPdb=mrPdb)
     if not d['SHELXE_os']:
-        _logger.critical("mrPdb {0} has no SHELXE_os origin shift.\n{1}".format(mrPdb,d))
-        return
-    mrOrigin=[c*-1 for c in d['SHELXE_os']]
+        _logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
+        mrOrigin=shelxe.shelxe_origin(amoptd['shelxe_exe'], amoptd['native_pdb_info'].pdb, amoptd['mtz'], mrPdb)
+    else:
+        mrOrigin=[c*-1 for c in d['SHELXE_os']]
     
     # Move pdb onto new origin
     originPdb=ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
