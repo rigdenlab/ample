@@ -11,6 +11,7 @@ import glob
 import logging
 import os
 import shutil
+import sys
 import unittest
 
 # Our imports
@@ -536,7 +537,8 @@ def restartPkl(amoptd):
     analyse(amoptd, newroot=None)
     ample_util.saveAmoptd(amoptd)
     
-    ample_exit.exit("restart_pkl exiting")
+    _logger.info('End of benchmarking')
+    sys.exit()
     return
 
 
