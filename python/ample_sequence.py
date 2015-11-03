@@ -24,11 +24,20 @@ class Sequence(object):
             self.from_pdb(pdbin=pdb)
         return
     
-    def from_fasta(self,fasta_file,canonicalise=True):
+    def from_fasta(self, fasta_file, canonicalise=True, resseq=True):
         name=os.path.splitext(os.path.basename(fasta_file))[0]
         self.name=name
         with open(fasta_file, "r") as f:
             self._parse_fasta(f,fasta_file=fasta_file,canonicalise=canonicalise)
+        
+        if resseq:
+            # Add automatically calculated ressegs starting from 1
+            assert len(self.resseqs) == 0,"Altering existing resseqs!"
+            for seq in self.sequences:
+                self.resseqs.append([])
+                for i in range(len(seq)):
+                    self.resseqs[-1].append(i+1)
+                    
         return
     
     def from_pdb(self,pdbin):
