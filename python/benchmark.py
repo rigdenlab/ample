@@ -89,6 +89,11 @@ def analyse(amoptd, newroot=None):
         d.update(ensemble_results[d['ensemble_name']])
         assert d['ensemble_name'] == d['name'],d
         
+        # Hack for old results
+        if 'truncation_num_residues' in d:
+            d['num_residues'] = d['truncation_num_residues']
+            del d['truncation_num_residues']
+            
         # General stuff
         d['ample_version'] = amoptd['ample_version']
         
