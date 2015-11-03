@@ -1009,13 +1009,6 @@ class RosettaModel(object):
         self.octopus2span = os.path.join(tm_script_dir,"octopus2span.pl")
         self.run_lips = os.path.join(tm_script_dir,"run_lips.pl")
         self.align_blast = os.path.join(tm_script_dir,"alignblast.pl")
-        
-        if not os.path.exists(self.octopus2span) or not os.path.exists(self.run_lips) or not os.path.exists(self.align_blast):
-            msg = "Cannot find the required executables: octopus2span.pl ,run_lips.pl and align_blast.pl in the directory\n" +\
-            "{0}\nPlease check these files are in place".format(tm_script_dir)
-            self.logger.critical(msg)
-            raise RuntimeError, msg
-
 
         self.octopusTopology = optd['transmembrane_octopusfile']
         self.lipofile = optd['transmembrane_lipofile']
@@ -1042,43 +1035,51 @@ class RosettaModel(object):
             self.logger.critical(msg)
             raise RuntimeError, msg
         
-        if optd['blast_dir']:
-            blastpgp = os.path.join(optd['blast_dir'],"bin/blastpgp")
-            self.blastpgp = ample_util.find_exe(blastpgp)
-            if self.blastpgp:
-                self.logger.debug("Using user-supplied blast_dir for blastpgp executable: {0}".format(self.blastpgp))
+        if not (self.spanfile and self.lipofile):
+            # We only need to check these if we haven't been given a spanfile and lipofile
 
-        # nr database
-        if optd['nr']:
-            if not os.path.exists(optd['nr']+".pal"):
-                msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format(optd['nr'])
+            if not os.path.exists(self.octopus2span) or not os.path.exists(self.run_lips) or not os.path.exists(self.align_blast):
+                msg = "Cannot find the required executables: octopus2span.pl ,run_lips.pl and align_blast.pl in the directory\n" +\
+                "{0}\nPlease check these files are in place".format(tm_script_dir)
                 self.logger.critical(msg)
                 raise RuntimeError, msg
-            else:
-                self.nr = optd['nr']
-                if self.nr:
-                    self.logger.debug("Using user-supplied nr database: {0}".format(self.nr))
 
-        
-        if not (self.nr and self.blastpgp):
-            if self.rosetta_version > 3.5:
-                blastpgp = os.path.join(self.rosetta_dir,'tools','fragment_tools','blast','bin','blastpgp')
-                nr = os.path.join(self.rosetta_dir,'tools','fragment_tools','databases','nr')
-                if not (os.path.exists(blastpgp) and os.path.exists(nr+'.pal')):
-                    msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
-                          "Please try running the {0} script to download these for rosetta.".format(os.path.join(self.rosetta_dir,'tools','fragment_tools','install_dependencies.pl'))
+            if optd['blast_dir']:
+                blastpgp = os.path.join(optd['blast_dir'],"bin/blastpgp")
+                self.blastpgp = ample_util.find_exe(blastpgp)
+                if self.blastpgp:
+                    self.logger.debug("Using user-supplied blast_dir for blastpgp executable: {0}".format(self.blastpgp))
+    
+            # nr database
+            if optd['nr']:
+                if not os.path.exists(optd['nr']+".pal"):
+                    msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format(optd['nr'])
                     self.logger.critical(msg)
                     raise RuntimeError, msg
                 else:
-                    self.blastpgp = blastpgp
-                    self.nr = nr
-                    if self.blastpgp: self.logger.debug("Using blastpgp executable: {0}".format(self.blastpgp))
-                    if self.nr: self.logger.debug("Using nr database: {0}".format(self.nr))
-            else:
-                msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
-                      "Please install blast and the nr database and use the -blast_dir and -nr_dir options to ample."
-                self.logger.critical(msg)
-                raise RuntimeError, msg
+                    self.nr = optd['nr']
+                    if self.nr:
+                        self.logger.debug("Using user-supplied nr database: {0}".format(self.nr))
+    
+            if not (self.nr and self.blastpgp):
+                if self.rosetta_version > 3.5:
+                    blastpgp = os.path.join(self.rosetta_dir,'tools','fragment_tools','blast','bin','blastpgp')
+                    nr = os.path.join(self.rosetta_dir,'tools','fragment_tools','databases','nr')
+                    if not (os.path.exists(blastpgp) and os.path.exists(nr+'.pal')):
+                        msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
+                              "Please try running the {0} script to download these for rosetta.".format(os.path.join(self.rosetta_dir,'tools','fragment_tools','install_dependencies.pl'))
+                        self.logger.critical(msg)
+                        raise RuntimeError, msg
+                    else:
+                        self.blastpgp = blastpgp
+                        self.nr = nr
+                        if self.blastpgp: self.logger.debug("Using blastpgp executable: {0}".format(self.blastpgp))
+                        if self.nr: self.logger.debug("Using nr database: {0}".format(self.nr))
+                else:
+                    msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
+                          "Please install blast and the nr database and use the -blast_dir and -nr_dir options to ample."
+                    self.logger.critical(msg)
+                    raise RuntimeError, msg
         return
 
 class RosettaScoreData(object):
