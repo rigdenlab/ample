@@ -965,7 +965,7 @@ def main():
                                                      amopt.d,
                                                      job_time=mrbump_jobtime,
                                                      ensemble_options=ensemble_options)
-    ample_exit.exit("NOOOOOOO!!!!")
+    #ample_exit.exit("NOOOOOOO!!!!")
     
     # Create function for monitoring jobs - static function decorator?
     if pyrvapi_results.pyrvapi:
