@@ -13,8 +13,7 @@ import platform
 import sys
 
 # Test for environment variables
-if not "CCP4" in sorted(os.environ.keys()):
-    raise RuntimeError('CCP4 not found')
+if not "CCP4" in sorted(os.environ.keys()): raise RuntimeError('CCP4 not found')
 
 # Add the ample python folder to the PYTHONPATH
 sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
@@ -53,9 +52,6 @@ def process_command_line():
     
     parser.add_argument('-alignment_file', type=str, nargs=1,
                        help='Alignment file in fasta format. For homologues the first line of each sequence must be the pdb file name')
-    
-    parser.add_argument('-all_atom', metavar='True/False', type=str, nargs=1,
-                       help="Do all-atom Rosetta modelling (adds \"-return_full_atom true\" to rosetta arguments")
     
     parser.add_argument('-arpwarp_cycles', type=int, nargs=1,
                        help='The number of ArpWarp cycles to run')
@@ -105,12 +101,6 @@ def process_command_line():
     parser.add_argument('-F', metavar='flag for F', type=str, nargs=1,
                        help='Flag for F column in the MTZ file')
     
-    parser.add_argument('-frags_3mers', metavar='frags_3mers', type=str, nargs=1,
-                       help='Path to file with pre-existing Rosetta 3mer fragments')
-    
-    parser.add_argument('-frags_9mers', metavar='frags_9mers', type=str, nargs=1,
-                       help='Path to file with pre-existing Rosetta 3mer fragments')
-    
     parser.add_argument('-FREE', metavar='flag for FREE', type=str, nargs=1,
                        help='Flag for FREE column in the MTZ file')
     
@@ -131,9 +121,6 @@ def process_command_line():
     
     parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
                        help='pathway to LGA folder (not the exe) will use the \'lga\' executable. UNUSED')
-    
-    parser.add_argument('-make_frags', metavar='True/False', type=str, nargs=1,
-                       help='set True to generate Rosetta 3mers and 9mers locally, False to import fragments')
     
     parser.add_argument('-make_models', metavar='True/False', type=str, nargs=1,
                        help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
@@ -156,7 +143,7 @@ def process_command_line():
     parser.add_argument('-mrbump_dir', type=str, nargs=1,
                        help='Path to a directory of MRBUMP jobs (see restart_pkl)')
     
-    parser.add_argument('-mr_keys', metavar='-mr_keys', type=str, nargs=1,
+    parser.add_argument('-mr_keys', type=str, nargs='+', action='append',
                        help='Additional keywords for MRBUMP - are passed through without editing')
 
     parser.add_argument('-mr_sequence', type=str, nargs=1,
@@ -226,27 +213,6 @@ def process_command_line():
     parser.add_argument('-restart_pkl', type=str, nargs=1,
                        help='Rerun a job using the pickled ample dictionary')
     
-    parser.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, nargs=1,
-                       help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
-    
-    parser.add_argument('-rosetta_AbinitioRelax', metavar='rosetta_AbinitioRelax', type=str, nargs=1,
-                       help='Path to Rosetta AbinitioRelax executable')
-    
-    parser.add_argument('-ROSETTA_cluster', metavar='path to Rosettas cluster', type=str, nargs=1,
-                       help='location of rosetta cluster')
-    
-    parser.add_argument('-rosetta_db', metavar='rosetta_db', type=str, nargs=1,
-                       help='Path to the Rosetta database directory')
-    
-    parser.add_argument('-rosetta_dir', metavar='rosetta_dir', type=str, nargs=1,
-                       help='The Rosetta install directory')
-    
-    parser.add_argument('-rosetta_fragments_exe', metavar='rosetta_fragments_exe', type=str, nargs=1,
-                       help='Location of the Rosetta make_fragments.pl script')
-    
-    parser.add_argument('-rosetta_version', metavar='rosetta_version', type=float, nargs=1,
-                       help='The version number of Rosetta')
-    
     parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
                        help='Directory where the AMPLE run directory will be created [current dir]')
     
@@ -292,26 +258,11 @@ def process_command_line():
     parser.add_argument('-top_model_only', metavar='True/False', type=str, nargs=1,
                        help='Only process the top model in each ensemble')
     
-    parser.add_argument('-transmembrane', metavar='transmembrane', type=str, nargs=1,
-                       help='Do Rosetta modelling for transmembrane proteins')
-    
-    parser.add_argument('-transmembrane_octopusfile', metavar='transmembrane_octopusfile', type=str, nargs=1,
-                       help='Octopus transmembrane topology predicition file')
-    
-    parser.add_argument('-transmembrane_spanfile', metavar='transmembrane_spanfile', type=str, nargs=1,
-                       help='Span file for modelling transmembrane proteins')
-    
-    parser.add_argument('-transmembrane_lipofile', metavar='transmembrane_lipofile', type=str, nargs=1,
-                       help='Lips4 file for modelling transmembrane proteins')
-
     parser.add_argument('-truncation_method', type=str, nargs=1,
                        help='How to truncate the models for ensembling percent|thresh|focussed')
     
     parser.add_argument('-truncation_pruning', type=str, nargs=1,
                        help='Whether to remove isolated residues none|single')
-    
-    parser.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
-                       help='Select ROSETTA fragments from homologous models')
     
     parser.add_argument('-use_arpwarp', metavar='True/False', type=str, nargs=1,
                        help='True to use arpwarp to rebuild.')
@@ -330,6 +281,59 @@ def process_command_line():
     parser.add_argument('-webserver_uri', type=str, nargs=1,
                        help='URI of the webserver directory - also indicates we are running as a webserver')
     
+    #
+    # Rosetta options
+    #
+    rosetta_group = parser.add_argument_group('ROSETTA Modelling Options')
+
+    parser.add_argument('-all_atom', metavar='True/False', type=str, nargs=1,
+                       help="Do all-atom Rosetta modelling (adds \"-return_full_atom true\" to rosetta arguments")
+    
+    rosetta_group.add_argument('-frags_3mers', type=str, nargs=1,
+                       help='Path to file with pre-existing Rosetta 3mer fragments')
+    
+    rosetta_group.add_argument('-frags_9mers', type=str, nargs=1,
+                       help='Path to file with pre-existing Rosetta 3mer fragments')
+    
+    rosetta_group.add_argument('-make_frags', metavar='True/False', type=str, nargs=1,
+                       help='set True to generate Rosetta 3mers and 9mers locally, False to import fragments')        
+    
+    rosetta_group.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, nargs=1,
+                       help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
+    
+    rosetta_group.add_argument('-rosetta_AbinitioRelax', type=str, nargs=1,
+                       help='Path to Rosetta AbinitioRelax executable')
+    
+    rosetta_group.add_argument('-ROSETTA_cluster', type=str, nargs=1,
+                       help='location of rosetta cluster')
+    
+    rosetta_group.add_argument('-rosetta_db', type=str, nargs=1,
+                       help='Path to the Rosetta database directory')
+    
+    rosetta_group.add_argument('-rosetta_dir', type=str, nargs=1,
+                       help='The Rosetta install directory')
+
+    rosetta_group.add_argument('-rosetta_fragments_exe', type=str, nargs=1,
+                       help='Location of the Rosetta make_fragments.pl script')
+    
+    rosetta_group.add_argument('-rosetta_version', type=float, nargs=1,
+                       help='The version number of Rosetta')
+
+    rosetta_group.add_argument('-transmembrane', type=str, nargs=1,
+                       help='Do Rosetta modelling for transmembrane proteins')
+    
+    rosetta_group.add_argument('-transmembrane_octopusfile', type=str, nargs=1,
+                       help='Octopus transmembrane topology predicition file')
+    
+    rosetta_group.add_argument('-transmembrane_spanfile', type=str, nargs=1,
+                       help='Span file for modelling transmembrane proteins')
+    
+    rosetta_group.add_argument('-transmembrane_lipofile', type=str, nargs=1,
+                       help='Lips4 file for modelling transmembrane proteins')
+
+    parser.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
+                       help='Select ROSETTA fragments from homologous models')
+
     # Mutually exclusive options
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
@@ -349,55 +353,16 @@ def process_command_line():
     group.add_argument('-phaser_only', metavar='phaser_only', type=str, nargs=1,
                        help='Only use Phaser for Molecular Replacement step in MRBUMP')
     
-    # Create amopt object to hold options
-    amopt = ample_options.AmpleOptions()
-    
-    # Remember the original arguments
-    orig_argv = " ".join(sys.argv)
-    
-    # MRkeys hack - get MRBUMP keywords direct as there can be multiple arguments
-    # to each one
-    MRkeys = []
-    # print sys.argv
-    keycount = 0
-    toRemove = []  # We remove all the mrkeywords
-    while keycount < len(sys.argv):
-        # print sys.argv[keycount] ,  keycount
-        if sys.argv[keycount] == "-mr_keys":
-            toRemove.append(keycount)
-            keycount += 1
-            tmp = []
-            while not sys.argv[keycount].startswith("-"):
-                # MRkeys.append( sys.argv[keycount] )
-                tmp.append(sys.argv[keycount])
-                toRemove.append(keycount)
-                keycount += 1
-                if keycount == len(sys.argv):
-                    break
-            # Got last of list so add to MRkeys
-            MRkeys.append(tmp)
-            continue
-        keycount += 1
-    
-    # Need to decrement the index of the items to remove
-    # as we remove them
-    for count, i in enumerate(toRemove):
-        del sys.argv[i - count]
-    # # End MRKeys hack..
-    
     # convert args to dictionary
     args = parser.parse_args()
     
+    # Create amopt object to hold options
+    amopt = ample_options.AmpleOptions()
+    
     # Now put them in the amopt object - this also sets/checks any defaults
     amopt.populate(args)
-
-    # Now set MRKeys - might already have pre-set values so check if None or a list
-    if isinstance(amopt.d['mr_keys'], list):
-        amopt.d['mr_keys'] += MRkeys
-    else:
-        amopt.d['mr_keys'] = MRkeys
     
-    return amopt, orig_argv
+    return amopt
 
 def process_options(amoptd, logger):
     
@@ -424,7 +389,10 @@ def process_options(amoptd, logger):
     
     # Reformat to what we need
     logger.debug('Parsing FASTA file')
-    fp = ample_sequence.Sequence(fasta=amoptd['fasta'])
+    try: fp = ample_sequence.Sequence(fasta=amoptd['fasta'])
+    except Exception as e:
+        msg = "Error parsing FASTA file: {0}\n\n{1}".format(amoptd['fasta'],e.message)
+        ample_exit.exit(msg)
     if fp.numSequences() != 1:
         msg = "ERROR! Fasta file {0} has > 1 sequence in it.".format(amoptd['fasta'])
         ample_exit.exit(msg)
@@ -781,7 +749,7 @@ def main():
     can be imported. We there need ample to be a python script that can be imported, hence the main routine with
     its calling protected by the if __name__=="__main__":...
     """ 
-    amopt, orig_argv = process_command_line()
+    amopt = process_command_line()
     
     # Make a work directory and go there - this way all output goes into this directory
     if not os.path.exists(amopt.d['run_dir']):
@@ -805,7 +773,7 @@ def main():
     logger.info("Running with CCP4 version: {0}".format(".".join([str(x) for x in amopt.d['ccp4_version']])))
     logger.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
     logger.info("Running on host: {0}".format(platform.node()))
-    logger.info("Invoked with command-line:\n{0}\n".format(orig_argv))
+    logger.info("Invoked with command-line:\n{0}\n".format(" ".join(sys.argv)))
     logger.info("Running in directory: {0}\n".format(amopt.d['work_dir']))
     
     # restart will exit itself
@@ -962,16 +930,13 @@ def main():
         
         # Save truncation levels for analysis
         
+    # Save the results
+    ample_util.saveAmoptd(amopt.d)
     
     # Update results view
     pyrvapi_results.display_results(amopt.d)
     
-    # Save the results
-    ample_util.saveAmoptd(amopt.d)
-    
-    #
     # Bail here if we didn't create anything
-    #
     if not len(ensembles):
         msg = "### AMPLE FAILED TO GENERATE ANY ENSEMBLES! ###\nExiting..."
         ample_exit.exit(msg)
@@ -1000,7 +965,7 @@ def main():
                                                      amopt.d,
                                                      job_time=mrbump_jobtime,
                                                      ensemble_options=ensemble_options)
-    #ample_exit.exit("NOOOOOOO!!!!")
+    ample_exit.exit("NOOOOOOO!!!!")
     
     # Create function for monitoring jobs - static function decorator?
     if pyrvapi_results.pyrvapi:
