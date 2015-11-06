@@ -12,9 +12,6 @@ import os
 import platform
 import sys
 
-# Test for environment variables
-if not "CCP4" in sorted(os.environ.keys()): raise RuntimeError('CCP4 not found')
-
 # Add the ample python folder to the PYTHONPATH
 sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
 #root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
@@ -46,21 +43,36 @@ import rosetta_model
 import version
 import workers
 
+def check_mandatory_options(amoptd):
+    """We check there here rather then with argparse as there doesn't seem to be an easy way to get the logic to work
+    of having overlapping required and mutually exclusive options"""
+    
+    if not (amoptd['fasta'] or amoptd['restart_pkl']):
+        msg = "One of -fasta  or -restart_pkl option is required."
+        ample_exit.exit(msg)
+    
+    if not amoptd['restart_pkl'] and not (amoptd['mtz'] or amoptd['sf_cif']):
+        msg = "A crystallographic data file must be supplied with the -mtz or -sc_cif options."
+        ample_exit.exit(msg)
+        
+    if amoptd['devel_mode'] and amoptd['quick_mode']:
+        msg = "Only one of quick_mode or devel_mode is permitted"
+        ample_exit.exit(msg)
+        
+    if amoptd['molrep_only'] and amoptd['phaser_only']:
+        msg = "Only one of molrep_only or phaser_only is permitted"
+        ample_exit.exit(msg)
+    return
+        
 def process_command_line():
     # get command line options
-    parser = argparse.ArgumentParser(prog="AMPLE", description='Structure solution by abinitio modelling', prefix_chars="-")
+    parser = argparse.ArgumentParser(description='AMPLE: Ab initio Modelling of Proteins for moLEcular replacement', prefix_chars="-")
     
     parser.add_argument('-alignment_file', type=str, nargs=1,
                        help='Alignment file in fasta format. For homologues the first line of each sequence must be the pdb file name')
     
-    parser.add_argument('-arpwarp_cycles', type=int, nargs=1,
-                       help='The number of ArpWarp cycles to run')
-    
     parser.add_argument('-blast_dir', type=str, nargs=1,
                        help='Directory where ncbi blast is installed (binaries in expected in bin subdirectory)')
-    
-    parser.add_argument('-buccaneer_cycles', type=int, nargs=1,
-                       help='The number of Bucanner rebuilding cycles to run')
     
     parser.add_argument('-cluster_dir', type=str, nargs=1,
                        help='Path to directory of pre-clustered models to import')
@@ -76,6 +88,9 @@ def process_command_line():
     
     parser.add_argument('-debug', metavar='True/False', type=str, nargs=1,
                        help='Run in debug mode (CURRENTLY UNUSED)')
+
+    parser.add_argument('-devel_mode', metavar='devel_mode', type=str, nargs=1,
+                       help='Preset options to run in development mode - takes longer')
     
     parser.add_argument('-domain_all_chains_pdb', type=str, nargs=1,
                        help='Fixed input to mr bump')
@@ -92,7 +107,7 @@ def process_command_line():
     parser.add_argument('-ensembles_dir', type=str, nargs=1,
                        help='Path to directory containing existing ensembles')
     
-    parser.add_argument('-fasta', type=str, nargs=1, required=True,
+    parser.add_argument('-fasta', type=str, nargs=1,
                        help='protein fasta file. (required)')
     
     parser.add_argument('-fast_protein_cluster_exe', type=str, nargs=1,
@@ -139,15 +154,12 @@ def process_command_line():
     
     parser.add_argument('-models', metavar='models', type=str, nargs=1,
                        help='Path to a folder of PDB decoys, or a tarred and gzipped/bziped, or zipped collection of decoys')
-    
-    parser.add_argument('-mrbump_dir', type=str, nargs=1,
-                       help='Path to a directory of MRBUMP jobs (see restart_pkl)')
-    
-    parser.add_argument('-mr_keys', type=str, nargs='+', action='append',
-                       help='Additional keywords for MRBUMP - are passed through without editing')
 
     parser.add_argument('-mr_sequence', type=str, nargs=1,
                        help="sequence file for crystal content (if different from what's given by -fasta)")
+
+    parser.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
+                       help='The MTZ file with the reflection data.')
 
     parser.add_argument('-mustang_exe', metavar='mustang_exe', type=str, nargs=1,
                        help='Path to the mustang executable')
@@ -157,9 +169,6 @@ def process_command_line():
     
     parser.add_argument('-native_pdb', metavar='native_pdb', type=str, nargs=1,
                        help='Path to the crystal structure PDB for benchmarking.')
-
-    parser.add_argument('-nmasu', type=int, nargs=1,
-                       help='Manually specify the number of molecules in the asymmetric unit - sets the NMASu MRBUMP flag')
     
     parser.add_argument('-nmodels', metavar='number of models', type=int, nargs=1,
                        help='number of models to make (default: 1000)')
@@ -197,18 +206,15 @@ def process_command_line():
     
     parser.add_argument('-percent', metavar='percent_truncation', type=str, nargs=1,
                        help='percent interval for truncation')
-    
+
     parser.add_argument('-psipred_ss2', metavar='psipred file', type=str, nargs=1,
                        help='Psipred secondary structure prediction file')
     
-    parser.add_argument('-phaser_kill', metavar='phaser_kill', type=int, nargs=1,
-                       help='Time in minutes after which phaser will be killed (0 to leave running)')
-    
-    parser.add_argument('-phaser_rms', metavar='phaser_rms', type=float, nargs=1,
-                       help='rms value for phaser (default=0.1)')
-    
     parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
                        help='Path to Phenix executable')
+
+    parser.add_argument('-quick_mode', metavar='quick_mode', type=str, nargs=1,
+                       help='Preset options to run quickly, but less thoroughly')
     
     parser.add_argument('-restart_pkl', type=str, nargs=1,
                        help='Rerun a job using the pickled ample dictionary')
@@ -218,22 +224,10 @@ def process_command_line():
     
     parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
                        help='Path to Scwrl4 executable')
-    
-    parser.add_argument('-shelx_cycles', type=str, nargs=1,
-                         help='The number of shelx cycles to run when rebuilding.')
-    
-    parser.add_argument('-shelxe_exe', metavar='path to shelxe executable', type=str, nargs=1,
-                       help='Path to the shelxe executable')
-    
-    parser.add_argument('-shelxe_rebuild', metavar='True/False', type=str, nargs=1,
-                       help='Rebuild shelxe traced pdb with buccaneer and arpwarp')
-    
-    parser.add_argument('-shelxe_rebuild_arpwarp', metavar='True/False', type=str, nargs=1,
-                       help='Rebuild shelxe traced pdb with arpwarp')
-    
-    parser.add_argument('-shelxe_rebuild_buccaneer', metavar='True/False', type=str, nargs=1,
-                       help='Rebuild shelxe traced pdb with buccaneer')
-    
+
+    parser.add_argument('-sf_cif', metavar='sf_cif', type=str, nargs=1,
+                       help='Path to a structure factor CIF file (instead of MTZ file)')
+
     parser.add_argument('-SIGF', metavar='SIGF', type=str, nargs=1,
                        help='Flag for SIGF column in the MTZ file')
     
@@ -263,27 +257,70 @@ def process_command_line():
     
     parser.add_argument('-truncation_pruning', type=str, nargs=1,
                        help='Whether to remove isolated residues none|single')
-    
-    parser.add_argument('-use_arpwarp', metavar='True/False', type=str, nargs=1,
-                       help='True to use arpwarp to rebuild.')
-    
-    parser.add_argument('-use_buccaneer', metavar='True/False', type=str, nargs=1,
-                       help='True to use Buccaneer')
-    
-    parser.add_argument('-use_scwrl', metavar='True/False', type=str, nargs=1,
-                       help='Remodel sidechains of the decoy models using Scwrl4')
-    
-    parser.add_argument('-use_shelxe', metavar='True/False', type=str, nargs=1,
-                       help='True to use shelxe')
-    
+
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(version.__version__))
     
     parser.add_argument('-webserver_uri', type=str, nargs=1,
                        help='URI of the webserver directory - also indicates we are running as a webserver')
     
-    #
+    # MR options
+    mr_group = parser.add_argument_group('MRBUMP/Molecular Replacement Options')
+    
+    mr_group.add_argument('-arpwarp_cycles', type=int, nargs=1,
+                       help='The number of ArpWarp cycles to run') 
+    
+    mr_group.add_argument('-buccaneer_cycles', type=int, nargs=1,
+                       help='The number of Bucanner rebuilding cycles to run')
+
+    mr_group.add_argument('-molrep_only', metavar='molrep_only', type=str, nargs=1,
+                       help='Only use Molrep for Molecular Replacement step in MRBUMP')
+    
+    mr_group.add_argument('-mrbump_dir', type=str, nargs=1,
+                       help='Path to a directory of MRBUMP jobs (see restart_pkl)')
+    
+    mr_group.add_argument('-mr_keys', type=str, nargs='+', action='append',
+                       help='Additional keywords for MRBUMP - are passed through without editing')
+
+    mr_group.add_argument('-nmasu', type=int, nargs=1,
+                       help='Manually specify the number of molecules in the asymmetric unit - sets the NMASu MRBUMP flag')
+    
+    parser.add_argument('-phaser_kill', metavar='phaser_kill', type=int, nargs=1,
+                       help='Time in minutes after which phaser will be killed (0 to leave running)')
+
+    mr_group.add_argument('-phaser_only', metavar='phaser_only', type=str, nargs=1,
+                       help='Only use Phaser for Molecular Replacement step in MRBUMP')
+
+    mr_group.add_argument('-phaser_rms', metavar='phaser_rms', type=float, nargs=1,
+                       help='rms value for phaser (default=0.1)')
+
+    mr_group.add_argument('-shelx_cycles', type=str, nargs=1,
+                         help='The number of shelx cycles to run when rebuilding.')
+    
+    mr_group.add_argument('-shelxe_exe', metavar='path to shelxe executable', type=str, nargs=1,
+                       help='Path to the shelxe executable')
+    
+    mr_group.add_argument('-shelxe_rebuild', metavar='True/False', type=str, nargs=1,
+                       help='Rebuild shelxe traced pdb with buccaneer and arpwarp')
+    
+    mr_group.add_argument('-shelxe_rebuild_arpwarp', metavar='True/False', type=str, nargs=1,
+                       help='Rebuild shelxe traced pdb with arpwarp')
+    
+    mr_group.add_argument('-shelxe_rebuild_buccaneer', metavar='True/False', type=str, nargs=1,
+                       help='Rebuild shelxe traced pdb with buccaneer')
+
+    mr_group.add_argument('-use_arpwarp', metavar='True/False', type=str, nargs=1,
+                       help='True to use arpwarp to rebuild.')
+    
+    mr_group.add_argument('-use_buccaneer', metavar='True/False', type=str, nargs=1,
+                       help='True to use Buccaneer')
+    
+    mr_group.add_argument('-use_scwrl', metavar='True/False', type=str, nargs=1,
+                       help='Remodel sidechains of the decoy models using Scwrl4')
+    
+    mr_group.add_argument('-use_shelxe', metavar='True/False', type=str, nargs=1,
+                       help='True to use shelxe')
+
     # Rosetta options
-    #
     rosetta_group = parser.add_argument_group('ROSETTA Modelling Options')
 
     parser.add_argument('-all_atom', metavar='True/False', type=str, nargs=1,
@@ -334,25 +371,6 @@ def process_command_line():
     parser.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
                        help='Select ROSETTA fragments from homologous models')
 
-    # Mutually exclusive options
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-mtz', metavar='MTZ in', type=str, nargs=1,
-                       help='The MTZ file with the reflection data.')
-    group.add_argument('-sf_cif', metavar='sf_cif', type=str, nargs=1,
-                       help='Path to a structure factor CIF file (instead of MTZ file)')
-    
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('-devel_mode', metavar='devel_mode', type=str, nargs=1,
-                       help='Preset options to run in development mode - takes longer')
-    group.add_argument('-quick_mode', metavar='quick_mode', type=str, nargs=1,
-                       help='Preset options to run quickly, but less thoroughly')
-    
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument('-molrep_only', metavar='molrep_only', type=str, nargs=1,
-                       help='Only use Molrep for Molecular Replacement step in MRBUMP')
-    group.add_argument('-phaser_only', metavar='phaser_only', type=str, nargs=1,
-                       help='Only use Phaser for Molecular Replacement step in MRBUMP')
-    
     # convert args to dictionary
     args = parser.parse_args()
     
@@ -365,6 +383,9 @@ def process_command_line():
     return amopt
 
 def process_options(amoptd, logger):
+    
+    # Check mandatory/exclusive options
+    check_mandatory_options(amoptd)
     
     # Path for pickling results
     amoptd['results_path'] = os.path.join(amoptd['work_dir'], "resultsd.pkl")
@@ -561,6 +582,7 @@ def process_options(amoptd, logger):
         if not os.path.exists(amoptd['domain_all_chains_pdb']):
             msg = 'Cannot find file domain_all_chains_pdb: {0}'.format(amoptd['domain_all_chains_pdb'])
             ample_exit.exit(msg)
+
     # MR programs
     if amoptd['molrep_only']:
             amoptd['phaser_only'] = False
@@ -653,7 +675,6 @@ def process_options(amoptd, logger):
         except Exception:
             msg = "Cannot find Scwrl executable: {0}".format(amoptd['scwrl_exe'])
             ample_exit.exit(msg)
-    
     #
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     #
@@ -679,16 +700,6 @@ def process_options(amoptd, logger):
     if amoptd['shelxe_rebuild'] and not amoptd['use_shelxe']:
         msg = 'shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.'
         ample_exit.exit(msg)
-    
-    # Create the rosetta modeller - this runs all the checks required
-    rosetta_modeller = None
-    if amoptd['make_models'] or amoptd['make_frags'] or amoptd['nmr_remodel']:  # only need Rosetta if making models
-        logger.info('Using ROSETTA so checking options')
-        try:
-            rosetta_modeller = rosetta_model.RosettaModel(optd=amoptd)
-        except Exception, e:
-            msg = "Error setting ROSETTA options: {0}".format(e)
-            ample_exit.exit(msg)
     
     if amoptd['make_frags']:
         if amoptd['use_homs']:
@@ -722,10 +733,22 @@ def process_options(amoptd, logger):
     if amoptd['purge']:
         logger.info('*** Purge mode specified - all intermediate files will be deleted ***')
     
+    return
+
+def process_rosetta_options(amoptd, logger):
+    # Create the rosetta modeller - this runs all the checks required
+    rosetta_modeller = None
+    if amoptd['make_models'] or amoptd['make_frags'] or amoptd['nmr_remodel']:  # only need Rosetta if making models
+        logger.info('Using ROSETTA so checking options')
+        try:
+            rosetta_modeller = rosetta_model.RosettaModel(optd=amoptd)
+        except Exception, e:
+            msg = "Error setting ROSETTA options: {0}".format(e)
+            ample_exit.exit(msg)
     return rosetta_modeller
 
 def setup_ccp4(amoptd):
-     # Make sure CCP4 is around
+    # Make sure CCP4 is around
     if not "CCP4" in os.environ:
         msg = "Cannot find CCP4 installation - please make sure CCP4 is installed and the setup scripts have been run!"
         ample_exit.exit(msg)
@@ -765,6 +788,7 @@ def main():
     amopt.d['ample_log'] = ample_log
     logger = ample_util.setup_logging(ample_log)
     
+    # Make sure the CCP4 environment is set up properly
     setup_ccp4(amopt.d)
     
     # Print out Version and invocation
@@ -782,8 +806,9 @@ def main():
     # Display pyrvapi results
     pyrvapi_results.display_results(amopt.d)
     
-    # Bit clunky but the rosetta_modeller object checks the rosetta options so we create it and return it if needed
-    rosetta_modeller = process_options(amopt.d, logger)
+    # Check all the options
+    process_options(amopt.d, logger)
+    rosetta_modeller = process_rosetta_options(amopt.d, logger)
     
     # Bail and clean up if we were only checking the options
     if amopt.d['dry_run']:
