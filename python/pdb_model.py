@@ -591,8 +591,25 @@ class PdbAtom(object):
         self.segID = None
         self.element = None
         self.charge = None
-        
         return
+
+    def _readCharge(self, line):
+        s = line[78:80]
+        minus = '-'
+        signs = ['+', minus]
+        mult = +1
+        if s[0] in signs:
+            sign = s[0]
+            val = s[1]
+        elif s[1] in signs:
+            sign = s[1]
+            val = s[0]
+        else: raise RuntimeError, "Error getting charge sign ({0}) from line: {1}".format(line[78:80], line)
+        if sign == minus: mult = -1
+        try:
+            return int(val) * mult
+        except:
+            raise RuntimeError, "Error getting charge ({0}) from line: {1}".format(line[78:80], line)
     
     def _sanityCheck( self, line ):
         assert line[0:6] == self._atomType,"Line did not begin with an {0} record!: {1}".format( self._atomType, line )
@@ -631,11 +648,9 @@ class PdbAtom(object):
         if len(line) >= 77 and line[76:78].strip():
             self.element = line[76:78].strip()
         if len(line) >= 80 and line[78:80].strip():
-            try:
-                self.charge = int(line[78:80])
-            except:
-                raise RuntimeError, "Error getting charge ({0}) from line: {1}".format( line[78:80], line )
-    
+            self.charge = self._readCharge(line)
+        return
+        
     def toLine(self):
         """Create a line suitable for printing to a PDB file"""
         
@@ -685,7 +700,6 @@ class PdbAtom(object):
             s += "  "
         else:
             s += "{0:2d}".format( self.charge )
-            
         return s
     
     def fromHetatm( self, hetatm ):
@@ -706,7 +720,6 @@ class PdbAtom(object):
         self.segID = hetatm.segID
         self.element = hetatm.element
         self.charge = hetatm.charge
-        
         return self
         
     def __str__(self):
@@ -717,7 +730,6 @@ class PdbAtom(object):
             if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
               isinstance(attr, types.FunctionType) ):
                 me[slot] = attr
-            
         return "{0} : {1}".format(self.__repr__(),str(me))
 
 class PdbHetatm( PdbAtom ):
@@ -842,7 +854,6 @@ class Test(unittest.TestCase):
     
     def testReadAtom2(self):
         """Round-trip an atom line"""
-        
         line = "ATOM     28  C   ALA A  12     -27.804  -2.987  10.849  1.00 11.75      AA-- C "
         a = PdbAtom( line )
         self.assertEqual(a.serial,28)
@@ -859,7 +870,46 @@ class Test(unittest.TestCase):
         self.assertEqual(a.tempFactor,11.75)       
         self.assertEqual(a.segID,'AA--')
         self.assertEqual(a.element,'C')
-        
+        return
+    
+    def testReadAtom3(self):
+        """Round-trip an atom line"""
+        line = "ATOM    160  NH1 ARG A  21      57.124  31.377  40.357  1.00 35.50           N1+"
+        a = PdbAtom( line )
+        self.assertEqual(a.serial,160)
+        self.assertEqual(a.name,' NH1')
+        self.assertEqual(a.altLoc,None)
+        self.assertEqual(a.resName,'ARG')
+        self.assertEqual(a.chainID,'A')
+        self.assertEqual(a.resSeq,21)
+        self.assertEqual(a.iCode,None)
+        self.assertEqual(a.x,57.124)
+        self.assertEqual(a.y,31.377)
+        self.assertEqual(a.z,40.357)
+        self.assertEqual(a.occupancy,1.00)
+        self.assertEqual(a.tempFactor,35.50)       
+        self.assertEqual(a.element,'N')
+        self.assertEqual(a.charge,1)
+        return
+    
+    def testReadAtom4(self):
+        """Round-trip an atom line"""
+        line = "ATOM    183  OD2 ASP A  24      70.534  30.495  41.026  1.00 35.00           O1-"
+        a = PdbAtom( line )
+        self.assertEqual(a.serial,183)
+        self.assertEqual(a.name,' OD2')
+        self.assertEqual(a.altLoc,None)
+        self.assertEqual(a.resName,'ASP')
+        self.assertEqual(a.chainID,'A')
+        self.assertEqual(a.resSeq,24)
+        self.assertEqual(a.iCode,None)
+        self.assertEqual(a.x,70.534)
+        self.assertEqual(a.y,30.495)
+        self.assertEqual(a.z,41.026)
+        self.assertEqual(a.occupancy,1.00)
+        self.assertEqual(a.tempFactor,35.00)       
+        self.assertEqual(a.element,'O')
+        self.assertEqual(a.charge,-1)
         return
            
     def testWriteAtom1(self):
