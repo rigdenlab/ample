@@ -1986,15 +1986,15 @@ if __name__ == "__main__":
                        help='Standardise the PDB')
     group.add_argument('-seq', action='store_true',
                        help='Write a fasta of the found AA to stdout')
-    group.add_argument('-split', action='store_true',
+    group.add_argument('-split_models', action='store_true',
                        help='Split a pdb into constituent models')
     group.add_argument('-split_chains', action='store_true',
                        help='Split a pdb into constituent chains')
     parser.add_argument('input_file',
                        help='The input file - will not be altered')
-    
     parser.add_argument('-o', dest='output_file',
                        help='The output file - will be created')
+    parser.add_argument('-chain', help='The chain to use')
     
     args = parser.parse_args()
     
@@ -2010,10 +2010,10 @@ if __name__ == "__main__":
         args.output_file = n+"_std.pdb"
 
     if args.std:
-        standardise(args.input_file, args.output_file, del_hetatm=True, chain=None)
+        standardise(args.input_file, args.output_file, del_hetatm=True, chain=args.chain)
     elif args.seq:
         print ample_sequence.Sequence(pdb=args.input_file).fasta_str()
-    elif args.split:
+    elif args.split_models:
         print split_pdb(args.input_file)
     elif args.split_chains:
         print split_into_chains(args.input_file)
