@@ -108,6 +108,7 @@ def summary_tab(results_dict):
     # Summary Tab
     #
     if not('ensembles_data' in results_dict and len(results_dict['ensembles_data'])): return
+    if results_dict['homologs'] and not('mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
     ensembles_data = results_dict['ensembles_data']
     
     summary_tab = "summary_tab"
