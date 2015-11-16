@@ -12,7 +12,12 @@ import traceback
 try: import pyrvapi
 except: pyrvapi=None
 
-def exit(msg,ample_tb=None):
+def exit_error(msg, ample_tb=None):
+    """Exit on error collecting as much information as we can.
+    
+    args:
+    ample_tb - this can be got from sys.exc_info()[2]
+    """
     logger = logging.getLogger()
     
     #header="**** AMPLE ERROR ****\n\n"
@@ -21,7 +26,6 @@ def exit(msg,ample_tb=None):
     header+="*"*70+"\n\n"
     
     footer="\n\n" + "*"*70+"\n\n"
-    
     # Bit dirty - get the name of the debug log file
     debug_log=None
     for d in logger.handlers:
@@ -37,15 +41,15 @@ def exit(msg,ample_tb=None):
         footer += "\nPlease include the debug logfile with your email: {0}\n".format(debug_log)   
     
     # String it all together
-    msg=header + msg + footer
+    msg = header + msg + footer
     
     logger.critical(msg)
     
     # Get traceback of where we failed for the log file
     if not ample_tb:
-        ample_tb=traceback.extract_stack()
+        ample_tb = traceback.extract_stack()
     else:
-        ample_tb=traceback.extract_tb(ample_tb)
+        ample_tb = traceback.extract_tb(ample_tb)
     logger.debug("AMPLE EXITING AT...")
     logger.debug("".join(traceback.format_list(ample_tb)))
     

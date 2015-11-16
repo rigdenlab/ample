@@ -151,10 +151,10 @@ def processReflectionFile(amoptd):
     if amoptd['sf_cif']:
         if not os.path.isfile(amoptd['sf_cif']):
             msg="Cannot find sf_cif file: {0}".format(amoptd['sf_cif'])
-            ample_exit.exit(msg)
+            ample_exit.exit_error(msg)
         if not os.path.splitext(amoptd['sf_cif'])[1].lower() == ".cif":
             msg="Cif file extension is not .cif Please rename the file to give it a .cif extension."
-            ample_exit.exit(msg)
+            ample_exit.exit_error(msg)
 
         cp = cif_parser.CifParser()
         amoptd['mtz'] = cp.sfcif2mtz(amoptd['sf_cif'])

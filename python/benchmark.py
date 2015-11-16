@@ -507,7 +507,7 @@ def restartPkl(amoptd):
     """
     if not os.path.isfile(amoptd['restart_pkl']):
         msg = 'Cannot find pkl file: {0}'.format(amoptd['restart_pkl'])
-        ample_exit.exit(msg)
+        ample_exit.exit_error(msg)
     
     with open(amoptd['restart_pkl']) as f: amoptd_old = cPickle.load(f)
     
@@ -520,7 +520,7 @@ def restartPkl(amoptd):
     if amoptd['mrbump_dir']:
         if not os.path.isdir(amoptd['mrbump_dir']):
             msg = "Cannot find MRBUMP directory: {0}".format(amoptd['mrbump_dir'])
-            ample_exit.exit(msg)
+            ample_exit.exit_error(msg)
         amoptd_old['mrbump_dir'] = amoptd['mrbump_dir']
     
     # We can now replace the old dictionary with this new one
@@ -538,7 +538,7 @@ def restartPkl(amoptd):
     ample_util.saveAmoptd(amoptd)
     
     _logger.info('End of benchmarking')
-    sys.exit()
+    sys.exit_error()
     return
 
 
