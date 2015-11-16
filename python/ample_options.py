@@ -105,6 +105,7 @@ class AmpleOptions(object):
                             'theseus_exe' : None,
                             'top_model_only' : False,
                             'transmembrane' : False,
+                            'transmembrane2' : False,
                             'transmembrane_octopusfile' : None,
                             'transmembrane_lipofile' : None,
                             'transmembrane_spanfile' : None,

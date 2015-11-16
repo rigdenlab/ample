@@ -55,6 +55,10 @@ def check_mandatory_options(amoptd):
         msg = "A crystallographic data file must be supplied with the -mtz or -sc_cif options."
         ample_exit.exit(msg)
         
+    if amoptd['mtz'] or amoptd['sf_cif']:
+        msg = "Please supply a single crystallographic data file."
+        ample_exit.exit(msg)
+        
     if amoptd['devel_mode'] and amoptd['quick_mode']:
         msg = "Only one of quick_mode or devel_mode is permitted"
         ample_exit.exit(msg)
@@ -179,19 +183,19 @@ def process_command_line():
     parser.add_argument('-nmr_model_in', metavar='nmr_model_in', type=str, nargs=1,
                        help='PDB with NMR models')
     
-    parser.add_argument('-nmr_process', metavar='nmr_process', type=int, nargs=1,
+    parser.add_argument('-nmr_process', type=int, nargs=1,
                        help='number of times to process the NMR models')
     
     parser.add_argument('-nmr_remodel', metavar='True/False', type=str, nargs=1,
                        help='Remodel the NMR structures')
     
-    parser.add_argument('-nmr_remodel_fasta', metavar='nmr_remodel_fasta', type=str, nargs=1,
+    parser.add_argument('-nmr_remodel_fasta', type=str, nargs=1,
                        help='The FASTA sequence to be used for remodelling the NMR ensemble if different from the default FASTA sequence')
     
     parser.add_argument('-no_gui', metavar='True/False', type=str, nargs=1,
                        help='Do not display the AMPLE gui.')
     
-    parser.add_argument('-nproc', metavar='Number of Processors', type=int, nargs=1,
+    parser.add_argument('-nproc', type=int, nargs=1,
                        help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
                         "For cluster submission, this should be the number of processors on a node.")
     
@@ -207,13 +211,13 @@ def process_command_line():
     parser.add_argument('-percent', metavar='percent_truncation', type=str, nargs=1,
                        help='percent interval for truncation')
 
-    parser.add_argument('-psipred_ss2', metavar='psipred file', type=str, nargs=1,
+    parser.add_argument('-psipred_ss2', metavar='PSIPRED_FILE', type=str, nargs=1,
                        help='Psipred secondary structure prediction file')
     
-    parser.add_argument('-phenix_exe', metavar='phenix_exe', type=str, nargs=1,
+    parser.add_argument('-phenix_exe', type=str, nargs=1,
                        help='Path to Phenix executable')
 
-    parser.add_argument('-quick_mode', metavar='quick_mode', type=str, nargs=1,
+    parser.add_argument('-quick_mode', metavar='True/False', type=str, nargs=1,
                        help='Preset options to run quickly, but less thoroughly')
     
     parser.add_argument('-restart_pkl', type=str, nargs=1,
@@ -225,10 +229,10 @@ def process_command_line():
     parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
                        help='Path to Scwrl4 executable')
 
-    parser.add_argument('-sf_cif', metavar='sf_cif', type=str, nargs=1,
+    parser.add_argument('-sf_cif', type=str, nargs=1,
                        help='Path to a structure factor CIF file (instead of MTZ file)')
 
-    parser.add_argument('-SIGF', metavar='SIGF', type=str, nargs=1,
+    parser.add_argument('-SIGF', type=str, nargs=1,
                        help='Flag for SIGF column in the MTZ file')
     
     parser.add_argument('-spicker_exe', type=str, nargs=1,
@@ -240,7 +244,7 @@ def process_command_line():
     parser.add_argument('-submit_cluster', metavar='True/False', type=str, nargs=1,
                        help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
     
-    parser.add_argument('-submit_qtype', type=str, nargs=1,
+    parser.add_argument('-submit_qtype', type=str, nargs=1, choices=['SGE','LSF'],
                        help='cluster submission queue type - currently support SGE and LSF')
     
     parser.add_argument('-submit_queue', type=str, nargs=1,
@@ -358,6 +362,9 @@ def process_command_line():
 
     rosetta_group.add_argument('-transmembrane', type=str, nargs=1,
                        help='Do Rosetta modelling for transmembrane proteins')
+    
+    rosetta_group.add_argument('-transmembrane2', type=str, nargs=1,
+                       help='Do Rosetta modelling for transmembrane proteins (NEW PROTOCOL)')
     
     rosetta_group.add_argument('-transmembrane_octopusfile', type=str, nargs=1,
                        help='Octopus transmembrane topology predicition file')

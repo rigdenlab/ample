@@ -111,7 +111,8 @@ class RosettaModel(object):
 
         self.nproc = None
         self.nmodels = None
-        self.work_dir = None
+        self.run_dir = None # Where the modelling happens
+        self.work_dir = None # Main AMPLE directory
         self.models_dir = None
         self.rosetta_dir = None
         self.rosetta_bin = None
@@ -141,6 +142,8 @@ class RosettaModel(object):
 
         # Transmembrane variables
         self.transmembrane = None
+        self.transmembrane2 = None
+        self.tm_patch_file = None
         self.octopus2span = None
         self.run_lips = None
         self.align_blast = None
@@ -168,11 +171,110 @@ class RosettaModel(object):
             self.set_from_dict(optd)
         return
 
+    def ab_initio_cmd(self, wdir, nstruct, seed):
+        """
+        Return the command to run rosetta as a list suitable for subprocess
+        wdir: directory to run in
+        nstruct: number of structures to process
+        seed: seed for this processor"""
+
+        # Set executable
+        if self.transmembrane:
+            cmd = [ self.transmembrane_exe ]
+        else:
+            cmd = [ self.rosetta_AbinitioRelax ]
+
+        cmd += ['-database', self.rosetta_db,
+                '-in::file::fasta', self.fasta,
+                '-in:file:frag3', self.frags_3mers,
+                '-in:file:frag9', self.frags_9mers,
+                '-out:path', wdir,
+                '-out:pdb',
+                '-out:nstruct', str(nstruct),
+                '-out:file:silent', os.path.join( wdir, 'silent.out'),
+                '-run:constant_seed',
+                '-run:jran', str(seed),
+                '-abinitio:relax',
+                '-relax::fast'
+                ]
+
+        if self.rosetta_version >= 3.4:
+            # Recommended default paramenters - see also Radius of gyration reweight
+            # we omit the -use_filters true option as we want to continue with refinement
+            # even for 'failed' models as the failed models will be used anyway
+            cmd += [ "-abinitio::increase_cycles", "10", 
+                     "-abinitio::rsd_wt_helix", "0.5",
+                     "-abinitio::rsd_wt_loop", "0.5" ]
+
+            if self.psipred_ss2: # not sure if this works < 3.4
+                cmd += [ "-psipred_ss2", self.psipred_ss2 ]
+
+        if self.all_atom:
+            cmd += [ '-return_full_atom true', ]
+        else:
+            cmd += [ '-return_full_atom false' ]
+
+        if self.transmembrane:
+            cmd += [ '-in:file:spanfile', self.spanfile,
+                     '-in:file:lipofile', self.lipofile,
+                     '-abinitio:membrane',
+                     '-membrane:no_interpolate_Mpair',
+                     '-membrane:Menv_penalties',
+                     '-score:find_neighbors_3dgrid',
+                     '-membrane:normal_cycles', '40',
+                     '-membrane:normal_mag', '15',
+                     '-membrane:center_mag', '2',
+                     '-mute core.io.database',
+                     '-mute core.scoring.MembranePotential'
+                    ]
+        elif self.transmembrane2:
+            cmd += [ '-score:patch', self.tm_patch_file ]
+    
+        # Radius of gyration reweight
+        if self.rad_gyr_reweight is not None:
+            cmd+= [ '-rg_reweight', str(self.rad_gyr_reweight) ]
+        else:
+            cmd+= [ '-rg_reweight', "0.5" ]
+
+        # Constraints file or domain constraints
+        if self.constraints_file or self.domain_termini_distance  > 0:
+            if self.domain_termini_distance  > 0:
+                constraints_file = self.setup_domain_constraints()
+            else:
+                constraints_file = self.constraints_file
+            if not os.path.isfile(constraints_file):
+                msg="Cannot find constraints file: {0}".format(constraints_file)
+                self.logger.critical(msg)
+                raise RuntimeError,msg
+            cmd+=[ '-constraints:cst_file', constraints_file,
+                   '-constraints:cst_fa_file', constraints_file ]
+
+        # Improve Template
+        if self.improve_template:
+            cmd += ['-in:file:native',
+                    self.improve_template,
+                    '-abinitio:steal_3mers',
+                    'True',
+                    '-abinitio:steal9mers',
+                    'True',
+                    '-abinitio:start_native',
+                    'True',
+                    '-templates:force_native_topology',
+                    'True' ]
+            
+        #if self.benchmark: cmd += ['-in:file:native', self.native_pdb]
+        return cmd
+
     def ab_initio_model(self,monitor):
+        # Make the directories and put the run scripts in them
+        self.run_dir = os.path.join(self.work_dir, 'modelling')
+        os.mkdir(self.run_dir)
+        os.chdir(self.run_dir)
         
         # Add submit_cluster, submit_queue, submit_qtype
         if not os.path.isdir(self.models_dir): os.mkdir(self.models_dir)
-        if self.transmembrane: self.generate_tm_predict()    
+        if self.transmembrane: self.tm_make_files()
+        elif self.transmembrane2: self.tm2_make_patch(self.run_dir) 
     
         # Split jobs onto separate processors - 1 for cluster, as many as will fit for desktop
         if self.submit_cluster:
@@ -183,21 +285,17 @@ class RosettaModel(object):
         # Generate seeds
         seeds = self.generate_seeds(len(jobs_per_proc))
         
-        # Make the directories and put the run scripts in them
-        run_dir = os.path.join(self.work_dir, 'modelling')
-        os.mkdir(run_dir)
-        os.chdir(run_dir)
         job_scripts=[]
         dir_list = []
         job_time=43200
         for i, njobs in enumerate(jobs_per_proc):
-            d=os.path.join(run_dir,"job_{0}".format(i))
+            d=os.path.join(self.run_dir,"job_{0}".format(i))
             os.mkdir(d)
             dir_list.append(d)
             
             # job script
             script="#!/bin/bash\n"
-            cmd = " ".join(self.modelling_cmd(d, njobs, seeds[i]))
+            cmd = " ".join(self.ab_initio_cmd(d, njobs, seeds[i]))
             script += cmd + "\n"
             sname=os.path.join(d,"model_{0}.sh".format(i))
             with open(sname,'w') as w: w.write(script)
@@ -206,7 +304,7 @@ class RosettaModel(object):
             
         success = self.run_scripts(job_scripts, job_time=job_time, job_name='abinitio', monitor=None)
         if not success:
-            raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(run_dir)
+            raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(self.run_dir)
         # Copy the models into the models directory - need to rename them accordingly
         pdbs = []
         for d in dir_list:
@@ -214,7 +312,8 @@ class RosettaModel(object):
             pdbs += ps
         
         if not pdbs:
-            raise RuntimeError, "No models created after modelling!\nPlease check the log files in the directory {0} for more information.".format(run_dir)
+            raise RuntimeError, \
+                "No models created after modelling!\nPlease check the log files in the directory {0} for more information.".format(self.run_dir)
         
         if self.use_scwrl: scwrl = add_sidechains_SCWRL.Scwrl(scwrlExe=self.scwrl_exe)
         for i, pdbin in enumerate(pdbs):
@@ -226,9 +325,10 @@ class RosettaModel(object):
                 shutil.copyfile(pdbin, pdbout)
                 
         if len(pdbs) != self.nmodels:
-            raise RuntimeError, "Expected to create {0} models but found {1}\nPlease check the log files in the directory {2} for more information.".format(self.nmodels,
-                                                                                                                                                            len(pdbs),
-                                                                                                                                                            run_dir)
+            raise RuntimeError, \
+                "Expected to create {0} models but found {1}\nPlease check the log files in the directory {2} for more information.".format(self.nmodels,
+                                                                                                                                            len(pdbs),
+                                                                                                                                            self.run_dir)
         return
 
     def find_binary(self, name):
@@ -262,22 +362,6 @@ class RosettaModel(object):
         seed_list=list(seed_list)
         self.seeds = seed_list
         return seed_list
-
-    def split_jobs(self,njobs,nproc):
-        """
-        Return a list of number of jobs to run on each processor
-        """
-        split_jobs = njobs / nproc  # split jobs between processors
-        remainder = njobs % nproc
-        jobs = []
-        for i in range(nproc):
-            njobs = split_jobs
-            # Separate out remainder over jobs
-            if remainder > 0:
-                njobs += 1
-                remainder -= 1
-            jobs.append(njobs)
-        return jobs
 
     def fragment_cmd(self):
         """
@@ -366,78 +450,6 @@ class RosettaModel(object):
         if os.path.exists(psipred_ss2):
             self.psipred_ss2 = psipred_ss2
 
-        return
-    ##End fragment_cmd
-
-    def generate_tm_predict(self):
-        """
-        Generate the various files needed for modelling transmembrane proteins
-
-        REM the fasta as it needs to reside in this directory or the script may fail
-        due to problems with parsing directory names with 'funny' characters
-        """
-
-        # Files have already been created
-        if os.path.isfile(str(self.spanfile)) and os.path.isfile(str(self.lipofile)):
-            self.logger.debug("Using given span file: {0}\n and given lipo file: {1}".format(self.spanfile, self.lipofile))
-            return
-         
-        owd=os.getcwd() # Remember where we started
-        tm_dir = os.path.join(self.work_dir,'tm_predict')
-        os.mkdir(tm_dir)
-        os.chdir(tm_dir)
-
-        # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
-        # so we need to copy the fasta file into the fragments directory
-        fasta = os.path.split(self.fasta)[1]
-        shutil.copy2(self.fasta, os.path.join(tm_dir,fasta))
-
-        # See if we need to query the octopus server
-        if os.path.isfile(str(self.octopusTopology)):
-            self.logger.info("Using user-supplied topology prediction file: {0}".format(self.octopusTopology))
-        else:
-            # Query octopus server for prediction
-            octo = octopus_predict.OctopusPredict()
-            self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
-            #fastaseq = octo.getFasta(self.fasta)
-            # Problem with 3LBW prediction when remove X
-            fastaseq = octo.getFasta(self.fasta)
-            octo.getPredict(self.name,fastaseq, directory=tm_dir)
-            self.octopusTopology = octo.topo
-            self.logger.debug("Got topology prediction file: {0}".format(self.octopusTopology))
-
-        # Generate span file from predict
-        self.spanfile = os.path.join(tm_dir, self.name + ".span")
-        self.logger.debug( 'Generating span file {0}'.format(self.spanfile))
-        cmd = [self.octopus2span, self.octopusTopology]
-        retcode = ample_util.run_command(cmd, logfile=self.spanfile, directory=tm_dir)
-        if retcode != 0:
-            msg = "Error generating span file. Please check the log in {0}".format(self.spanfile)
-            self.logger.critical(msg)
-            raise RuntimeError,msg
-
-        # Now generate lips file
-        self.logger.debug('Generating lips file from span')
-        script = os.path.join(tm_dir,"run_lips.sh")
-        cmd = [self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast]
-        with open(script,'w') as f:
-            f.write("#!/bin/bash\n")
-            f.write(" ".join(cmd)+"\n")
-        os.chmod(script, 0o777)
-        
-        success = self.run_scripts([script], job_time=21600, monitor=None)
-        # Script only uses first 4 chars to name files
-        lipofile = os.path.join(tm_dir, self.name[0:4] + ".lips4")
-        if not success or not os.path.exists(lipofile):
-            logfile ="{0}.log".format(os.path.splitext((script))[0])
-            msg = "Error generating lips file {0}. Please check the logfile {1}".format(lipofile,logfile)
-            self.logger.critical(msg)
-            raise RuntimeError,msg
-
-        # Set the variable
-        self.lipofile = lipofile
-
-        os.chdir(owd)
         return
 
     def get_version(self):
@@ -537,96 +549,7 @@ class RosettaModel(object):
         name,ext=os.path.splitext(fname)
         return os.path.join(directory,"{0}_0001{1}".format(name,ext))
 
-    def modelling_cmd(self, wdir, nstruct, seed):
-        """
-        Return the command to run rosetta as a list suitable for subprocess
-        wdir: directory to run in
-        nstruct: number of structures to process
-        seed: seed for this processor"""
 
-        # Set executable
-        if self.transmembrane:
-            cmd = [ self.transmembrane_exe ]
-        else:
-            cmd = [ self.rosetta_AbinitioRelax ]
-
-        cmd += ['-database', self.rosetta_db,
-                '-in::file::fasta', self.fasta,
-                '-in:file:frag3', self.frags_3mers,
-                '-in:file:frag9', self.frags_9mers,
-                '-out:path', wdir,
-                '-out:pdb',
-                '-out:nstruct', str(nstruct),
-                '-out:file:silent', os.path.join( wdir, 'silent.out'),
-                '-run:constant_seed',
-                '-run:jran', str(seed),
-                '-abinitio:relax',
-                '-relax::fast'
-                ]
-
-        if self.rosetta_version >= 3.4:
-            # Recommended default paramenters - see also Radius of gyration reweight
-            # we omit the -use_filters true option as we want to continue with refinement
-            # even for 'failed' models as the failed models will be used anyway
-            cmd += [ "-abinitio::increase_cycles", "10", 
-                     "-abinitio::rsd_wt_helix", "0.5",
-                     "-abinitio::rsd_wt_loop", "0.5" ]
-
-            if self.psipred_ss2: # not sure if this works < 3.4
-                cmd += [ "-psipred_ss2", self.psipred_ss2 ]
-
-        if self.all_atom:
-            cmd += [ '-return_full_atom true', ]
-        else:
-            cmd += [ '-return_full_atom false' ]
-
-        if self.transmembrane:
-            cmd += [ '-in:file:spanfile', self.spanfile,
-                     '-in:file:lipofile', self.lipofile,
-                     '-abinitio:membrane',
-                     '-membrane:no_interpolate_Mpair',
-                     '-membrane:Menv_penalties',
-                     '-score:find_neighbors_3dgrid',
-                     '-membrane:normal_cycles', '40',
-                     '-membrane:normal_mag', '15',
-                     '-membrane:center_mag', '2',
-                     '-mute core.io.database',
-                     '-mute core.scoring.MembranePotential'
-                    ]
-
-        # Constraints file or domain constraints
-        if self.constraints_file or self.domain_termini_distance  > 0:
-            if self.domain_termini_distance  > 0:
-                constraints_file=self.setup_domain_constraints()
-            else:
-                constraints_file=self.constraints_file
-            if not os.path.isfile(constraints_file):
-                msg="Cannot find constraints file: {0}".format(constraints_file)
-                self.logger.critical(msg)
-                raise RuntimeError,msg
-            cmd+=['-constraints:cst_file',constraints_file,'-constraints:cst_fa_file',constraints_file]
-
-        # Radius of gyration reweight
-        if self.rad_gyr_reweight is not None:
-            cmd+= ['-rg_reweight', str(self.rad_gyr_reweight) ]
-        else:
-            cmd+= ['-rg_reweight', "0.5" ]
-
-        # Improve Template
-        if self.improve_template:
-            cmd += ['-in:file:native',
-                    self.improve_template,
-                    '-abinitio:steal_3mers',
-                    'True',
-                    '-abinitio:steal9mers',
-                    'True',
-                    '-abinitio:start_native',
-                    'True',
-                    '-templates:force_native_topology',
-                    'True' ]
-        #elif self.benchmark: cmd += ['-in:file:native', self.native_pdb]
-
-        return cmd
     
     def mr_cmd(self,template,alignment,nstruct,seed):
         cmd = [ self.rosetta_mr_protocols,
@@ -876,7 +799,6 @@ class RosettaModel(object):
 
         # Modelling variables
         if optd['make_models'] or optd['nmr_remodel']:
-
             if not optd['make_frags']:
                 self.frags_3mers = optd['frags_3mers']
                 self.frags_9mers = optd['frags_9mers']
@@ -989,10 +911,106 @@ class RosettaModel(object):
         self.rosetta_mr_protocols = self.find_binary('mr_protocols')
         self.rosetta_idealize_jd2 = self.find_binary('idealize_jd2')
         
-        if optd['transmembrane']: self.set_paths_tm(optd)
+        if optd['transmembrane']: self.tm_set_paths(optd)
         return
 
-    def set_paths_tm(self,optd):
+    def split_jobs(self,njobs,nproc):
+        """
+        Return a list of number of jobs to run on each processor
+        """
+        split_jobs = njobs / nproc  # split jobs between processors
+        remainder = njobs % nproc
+        jobs = []
+        for i in range(nproc):
+            njobs = split_jobs
+            # Separate out remainder over jobs
+            if remainder > 0:
+                njobs += 1
+                remainder -= 1
+            jobs.append(njobs)
+        return jobs
+
+    def tm_make_files(self):
+        """
+        Generate the various files needed for modelling transmembrane proteins
+
+        REM the fasta as it needs to reside in this directory or the script may fail
+        due to problems with parsing directory names with 'funny' characters
+        """
+
+        # Files have already been created
+        if os.path.isfile(str(self.spanfile)) and os.path.isfile(str(self.lipofile)):
+            self.logger.debug("Using given span file: {0}\n and given lipo file: {1}".format(self.spanfile, self.lipofile))
+            return
+         
+        owd=os.getcwd() # Remember where we started
+        tm_dir = os.path.join(self.work_dir,'tm_predict')
+        os.mkdir(tm_dir)
+        os.chdir(tm_dir)
+
+        # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
+        # so we need to copy the fasta file into the fragments directory
+        fasta = os.path.split(self.fasta)[1]
+        shutil.copy2(self.fasta, os.path.join(tm_dir,fasta))
+
+        # See if we need to query the octopus server
+        if os.path.isfile(str(self.octopusTopology)):
+            self.logger.info("Using user-supplied topology prediction file: {0}".format(self.octopusTopology))
+        else:
+            # Query octopus server for prediction
+            octo = octopus_predict.OctopusPredict()
+            self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
+            #fastaseq = octo.getFasta(self.fasta)
+            # Problem with 3LBW prediction when remove X
+            fastaseq = octo.getFasta(self.fasta)
+            octo.getPredict(self.name,fastaseq, directory=tm_dir)
+            self.octopusTopology = octo.topo
+            self.logger.debug("Got topology prediction file: {0}".format(self.octopusTopology))
+
+        # Generate span file from predict
+        self.spanfile = os.path.join(tm_dir, self.name + ".span")
+        self.logger.debug( 'Generating span file {0}'.format(self.spanfile))
+        cmd = [self.octopus2span, self.octopusTopology]
+        retcode = ample_util.run_command(cmd, logfile=self.spanfile, directory=tm_dir)
+        if retcode != 0:
+            msg = "Error generating span file. Please check the log in {0}".format(self.spanfile)
+            self.logger.critical(msg)
+            raise RuntimeError,msg
+
+        # Now generate lips file
+        self.logger.debug('Generating lips file from span')
+        script = os.path.join(tm_dir,"run_lips.sh")
+        cmd = [self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast]
+        with open(script,'w') as f:
+            f.write("#!/bin/bash\n")
+            f.write(" ".join(cmd)+"\n")
+        os.chmod(script, 0o777)
+        
+        success = self.run_scripts([script], job_time=21600, monitor=None)
+        # Script only uses first 4 chars to name files
+        lipofile = os.path.join(tm_dir, self.name[0:4] + ".lips4")
+        if not success or not os.path.exists(lipofile):
+            logfile ="{0}.log".format(os.path.splitext((script))[0])
+            msg = "Error generating lips file {0}. Please check the logfile {1}".format(lipofile,logfile)
+            self.logger.critical(msg)
+            raise RuntimeError,msg
+
+        # Set the variable
+        self.lipofile = lipofile
+
+        os.chdir(owd)
+        return
+    
+    def tm2_make_patch(self, run_dir):
+        wts_str = """fa_atr = 0.8
+fa_rep = 0.8
+fa_sol = 0.0
+"""
+        self.tm_patch_file = os.path.abspath(os.path.join(run_dir,'membrane.wts'))
+        with open(self.tm_patch_file,'w') as w: w.write(wts_str)
+        return
+
+    def tm_set_paths(self,optd):
         # Transmembrane stuff
         mem_bin = 'membrane_abinitio2'
         self.transmembrane_exe = self.find_binary(mem_bin)
