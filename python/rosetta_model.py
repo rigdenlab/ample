@@ -795,6 +795,8 @@ class RosettaModel(object):
                 msg="You need to provide both a spanfile and a lipofile"
                 self.logger.critical(msg)
                 raise RuntimeError, msg
+        elif optd['transmembrane2']:
+            self.transmembrane2 = True
         # End transmembrane checks
 
         # Modelling variables
