@@ -55,7 +55,7 @@ def check_mandatory_options(amoptd):
         msg = "A crystallographic data file must be supplied with the -mtz or -sc_cif options."
         ample_exit.exit(msg)
         
-    if amoptd['mtz'] or amoptd['sf_cif']:
+    if amoptd['mtz'] and amoptd['sf_cif']:
         msg = "Please supply a single crystallographic data file."
         ample_exit.exit(msg)
         
