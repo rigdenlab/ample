@@ -644,7 +644,7 @@ class Ensembler(object):
         os.mkdir(std_models_dir)
         std_models = []
         for m in models:
-            std_model = os.path.join(std_models_dir, m)
+            std_model = ample_util.filename_append(m, 'std', std_models_dir)
             pdb_edit.standardise(pdbin=m, pdbout=std_model, del_hetatm=True)
             std_models.append(std_model)
         
