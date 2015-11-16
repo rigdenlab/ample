@@ -244,7 +244,7 @@ def process_command_line():
     parser.add_argument('-submit_cluster', metavar='True/False', type=str, nargs=1,
                        help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
     
-    parser.add_argument('-submit_qtype', type=str, nargs=1, choices=['SGE','LSF'],
+    parser.add_argument('-submit_qtype', type=str, nargs=1,
                        help='cluster submission queue type - currently support SGE and LSF')
     
     parser.add_argument('-submit_queue', type=str, nargs=1,
