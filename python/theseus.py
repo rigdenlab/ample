@@ -16,6 +16,9 @@ import ample_sequence
 import ample_util
 import pdb_edit
 
+# We create this here otherwise it causes problems with pickling
+TheseusVariances = collections.namedtuple('TheseusVariances', ['idx', 'resName', 'resSeq', 'variance', 'stdDev', 'rmsd', 'core'])
+
 class Theseus(object):
     
     def __init__(self, work_dir=None, theseus_exe=None):
@@ -95,8 +98,8 @@ class Theseus(object):
     def parse_variances(self, variance_file):
         if not os.path.isfile(variance_file): raise RuntimeError,"Cannot find theseus variance file: {0}".format(variance_file)
         data = []
-        TheseusVariances = collections.namedtuple('TheseusVariances', ['idx', 'resName', 'resSeq', 'variance', 'stdDev', 'rmsd', 'core'])
-        with open(self.variance_file) as f:
+        
+        with open(variance_file) as f:
             for i, line in enumerate(f):
                 # Skip header
                 if i==0: continue
