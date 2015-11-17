@@ -65,15 +65,15 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
         seqd = pdb_edit.sequence(m)
         if len(seqd) != 1: raise RuntimeError, "Model {0} does not contain a single chain, got: {1}".format(seqd.keys())
         model2chain[m] = seqd.keys()[0]
-
+    
     basename = 'gesamt'
     logfile = os.path.join(work_dir, 'gesamt.log')
     alignment_file = os.path.join(work_dir, basename + ".afasta")
+    
     # Build up command-line
     cmd = [gesamt_exe]
-    for model, chain in model2chain.iteritems():
-        cmd += [model, '-s', chain]
-    
+    # We iterate through the models to make sure the order stays the same
+    for m in models: cmd += [ m, '-s', model2chain[m] ]
     cmd += ['-o', '{0}.pdb'.format(basename), '-a', alignment_file]
     
     rtn = ample_util.run_command(cmd, logfile=logfile, directory=work_dir)
@@ -132,6 +132,58 @@ def model_core_from_alignment(models, alignment_file, work_dir=None):
         name = os.path.basename(m)
         pdbout = ample_util.filename_append(m, astr='core', directory=work_dir)
         pdb_edit.select_residues(m, pdbout, tokeep_idx=core_dict[name])
+        core_models.append(pdbout)
+        
+    return core_models
+
+def model_core_from_theseus(models, alignment_file, var_by_res, work_dir=None):
+    """Only residues from the first protein are listed in the theseus output, but then not even all of them
+    
+    We assume the output is based on the original alignment so that where each residue in the first protein lines up with either another residue in one of the other proteins or a gap
+    
+    SO - we need to go through the theseus data and for each residue that is core find the corresponding residues in the other proteins
+    
+    We use the resSeq numbers to match the residues across the alignment
+    """
+    if not work_dir: work_dir = os.path.join(os.getcwd(), 'core_models')
+    if not os.path.isdir(work_dir): os.mkdir(work_dir)
+
+    seqalign = ample_sequence.Sequence(fasta=alignment_file)
+
+    # Get the names of the pdb files from the fasta header
+    # Format is expected to be: '>1ujb.pdb(A)'
+    names = [ h[1:].split('(')[0] for h in seqalign.headers ]
+    first = names[0]
+    
+    # Dictionary mapping model pdb to resSeqs that are core
+    model2core = {}
+    for n in names: model2core[n] = [] # initialise
+    
+    # We now need to add the list of resSeqs of the other models to the Sequence object
+    for m in models: seqalign.add_pdb_data(m)
+    
+    # Get list of core resSeqs in the first sequence
+    model2core[first] = [ x.resSeq for x in var_by_res if x.core ]
+    
+    # Now go through the first sequence and get the resSeqs of the corresponding core for the other models
+    needle = 0
+    for i, resSeq in enumerate(seqalign.resseqs[0]):
+        if model2core[first][needle] == resSeq:
+            #print i,resSeq, needle, model2core[first][needle]
+            # Core residue in first sequence so append the corresponding resSequs for the other proteins
+            for j, n in enumerate(names[1:]):
+                model2core[n].append(seqalign.resseqs[j+1][i])
+            needle += 1
+            if needle >= len(model2core[first]): break
+    
+    work_dir = os.getcwd()
+    
+    core_models = []
+    for m in models:
+        name = os.path.basename(m)
+        pdbout = ample_util.filename_append(m, astr='core', directory=work_dir)
+        print "MKAING ",pdbout
+        pdb_edit.select_residues(m, pdbout, tokeep_idx=model2core[name])
         core_models.append(pdbout)
         
     return core_models
@@ -1895,6 +1947,59 @@ class Test(unittest.TestCase):
         alignment_file = os.path.join(self.ample_dir, "examples", "homologs", "testthree.afasta")
         
         core_models = model_core_from_alignment(models, alignment_file, work_dir=work_dir)
+        
+        got = {}
+        for m in core_models:
+            name = os.path.splitext(os.path.basename(m))[0]
+            resseqd = pdb_edit.resseq(m)
+            resseq = resseqd[resseqd.keys()[0]]
+            got[name] = resseq
+
+        ref = { '1ujb_core':
+               [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+                56, 57, 58, 59, 60, 61, 62, 63, 64, 67, 69, 70, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85,
+                86, 87, 88, 89, 90, 92, 93, 94, 95, 96, 97, 98, 99, 101, 102, 103, 104, 105, 106, 107, 108, 109,
+                110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 124, 126, 127, 128, 129, 130,
+                131, 132, 133, 134, 135, 136, 137, 138, 139, 141, 142, 143, 144, 145, 146, 147, 149, 150, 151],
+               '3c7tA_core' :
+                [73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133,
+                 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154,
+                 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 172, 174, 176, 180, 181, 182,
+                 183, 184, 185, 186, 187, 188, 189, 233, 234, 235, 236, 237, 238, 239, 241, 242, 243, 244, 245, 246, 247,
+                 248, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272,
+                 276, 277, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308,
+                 309, 310, 311, 314, 315, 316],
+               '2a6pA_core' :
+                [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
+                 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
+                 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 122, 123, 124, 125, 126, 127,
+                 128, 129, 130, 131, 132, 133, 134, 135, 136, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151,
+                 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 167, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178,
+                 179, 180, 181, 184, 185, 186, 187, 188, 189, 190, 191, 193, 194, 195] }
+        
+        self.assertEqual(got, ref)
+        shutil.rmtree(work_dir)
+        return
+    
+    
+    def testCoreFromTheseus(self):
+        
+        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+        work_dir = os.path.join(self.tests_dir, "theseus_core")
+        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+        os.mkdir(work_dir)
+        os.chdir(work_dir)
+
+        pdbs = ['1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+        models = [ os.path.join(self.ample_dir, "examples", "homologs", p) for p in pdbs ] 
+        alignment_file = os.path.join(self.testfiles_dir, "1ujb_2a6pA_3c7tA.afasta")
+        variance_file = os.path.join(self.testfiles_dir, "1ujb_2a6pA_3c7tA.variances")
+        
+        rt = theseus.Theseus(theseus_exe=self.theseus_exe)
+        var_by_res = rt.parse_variances(variance_file)
+        
+        core_models = model_core_from_theseus(models, alignment_file, var_by_res, work_dir=work_dir)
         
         got = {}
         for m in core_models:
