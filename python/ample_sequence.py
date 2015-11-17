@@ -7,7 +7,7 @@ import pdb_edit
 class Sequence(object):
     """A class to handle a fasta file"""
     
-    def __init__(self,fasta=None,pdb=None,canonicalise=False):
+    def __init__(self, fasta=None, pdb=None, canonicalise=False):
         """Initialise the object"""
         
         self.MAXWIDTH=80 # maximum width of any line 
@@ -19,7 +19,7 @@ class Sequence(object):
         self.fasta_files = [] # The fasta files the sequence were ready from
         
         if fasta:
-            self.from_fasta(fasta,canonicalise=canonicalise)
+            self.from_fasta(fasta, canonicalise=canonicalise)
         elif pdb:
             self.from_pdb(pdbin=pdb)
         return
@@ -29,7 +29,6 @@ class Sequence(object):
         self.name=name
         with open(fasta_file, "r") as f:
             self._parse_fasta(f,fasta_file=fasta_file,canonicalise=canonicalise)
-        
         if resseq:
             # Add automatically calculated ressegs starting from 1
             assert len(self.resseqs) == 0,"Altering existing resseqs!"
@@ -37,10 +36,9 @@ class Sequence(object):
                 self.resseqs.append([])
                 for i in range(len(seq)):
                     self.resseqs[-1].append(i+1)
-                    
         return
     
-    def from_pdb(self,pdbin):
+    def from_pdb(self, pdbin):
         name=os.path.splitext(os.path.basename(pdbin))[0]
         self.name=name
         chain2data = pdb_edit.sequence_data(pdbin)
@@ -183,6 +181,9 @@ class Sequence(object):
         self.fasta_files += other.fasta_files
         return self
     
+    def __str__(self):
+        return self.__repr__() + "\n" + self.fasta_str()
+        
 class Test(unittest.TestCase):
     
     @classmethod
