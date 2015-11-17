@@ -4,6 +4,7 @@ Created on Apr 18, 2013
 @author: jmht
 '''
 
+import collections
 import copy
 import glob
 import logging
@@ -222,7 +223,7 @@ class Ensembler(object):
             return self._calculate_residues_percent(var_by_res, 5)
     
         # Get list of residue indices sorted by variance - from least variable to most
-        var_by_res.sort(key=lambda x: x[2], reverse=False)
+        var_by_res.sort(key=lambda x: x.variance, reverse=False)
          
         # Split a 40 - length interval into 10 even chunks.
         llen = 40
@@ -240,9 +241,9 @@ class Ensembler(object):
         truncation_levels = percentages
 
         # print "var_by_res ",var_by_res
-        idxs_all = [ x[0] for x in var_by_res ]
-        resseq_all = [ x[1] for x in var_by_res ]
-        variances = [ x[2] for x in var_by_res ]
+        idxs_all = [ x.idx for x in var_by_res ]
+        resseq_all = [ x.resSeq for x in var_by_res ]
+        variances = [ x.variance for x in var_by_res ]
 
         truncation_residue_idxs = [ sorted(idxs_all[:i + 1]) for i in start_indexes ]
         # print "truncation_residue_idxs ",truncation_residue_idxs
@@ -264,12 +265,14 @@ class Ensembler(object):
         start_idxs = split_sequence(length, percent_interval, min_chunk=MIN_CHUNK)
         
         # Get list of residue indices sorted by variance - from least to most
-        var_by_res.sort(key=lambda x: x[2], reverse=False)
+        print "GOT ",var_by_res
+        print "GOT ",var_by_res[0]
+        var_by_res.sort(key=lambda x: x.variance, reverse=False)
          
         # print "var_by_res ",var_by_res
-        idxs_all = [ x[0] for x in var_by_res ]
-        resseq_all = [ x[1] for x in var_by_res ]
-        variances = [ x[2] for x in var_by_res ]
+        idxs_all = [ x.idx for x in var_by_res ]
+        resseq_all = [ x.resSeq for x in var_by_res ]
+        variances = [ x.variance for x in var_by_res ]
          
         # Get list of residues to keep under the different intevals
         truncation_levels = []
@@ -309,8 +312,8 @@ class Ensembler(object):
             truncation_levels.append(truncation_level)
             
             # Get a list of the indexes of the residues to keep
-            to_keep = [resSeq for idx, resSeq, variance in var_by_res if variance <= truncation_threshold]
-            to_keep_idxs = [idx for idx, resSeq, variance in var_by_res if variance <= truncation_threshold]
+            to_keep = [ x.resSeq for x in var_by_res if x.variance <= truncation_threshold ]
+            to_keep_idxs = [ x.idx for x in var_by_res if x.variance <= truncation_threshold ]
             truncation_residues.append(to_keep)
             truncation_residue_idxs.append(to_keep_idxs)
         
@@ -321,56 +324,6 @@ class Ensembler(object):
         truncation_residue_idxs.reverse()
         return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
         
-    def calculate_variances(self, cluster_models):
-        """Return a list of tuples: (resSeq,variance)"""
-        
-        #--------------------------------
-        # get variations between pdbs
-        #--------------------------------
-        if not os.path.exists(self.theseus_exe) and os.access(self.theseus_exe, os.X_OK):
-            raise RuntimeError, "Cannot find theseus_exe: {0}".format(self.theseus_exe) 
-        
-        cmd = [ self.theseus_exe, "-a0" ] + cluster_models
-        logfile = os.path.join(self.work_dir, "theseus.log")
-        retcode = ample_util.run_command(cmd,
-                                         logfile=logfile,
-                                         directory=self.work_dir)
-        if retcode != 0:
-            msg = "non-zero return code for theseus in generate_thresholds!\n See log: {0}".format(logfile)
-            self.logger.critical(msg)
-            raise RuntimeError, msg
-
-        variances = []
-        variance_log = os.path.join(self.work_dir, 'theseus_variances.txt')
-        with open(variance_log) as f:
-            for i, line in enumerate(f):
-                # Skip header
-                if i == 0: continue
-
-                line = line.strip()
-                if not line: continue  # Skip blank lines
-
-                # print line
-                tokens = line.split()
-                # Different versions of theseus may have a RES card first, so need to check
-                if tokens[0] == "RES":
-                    idxidx = 1
-                    idxResSeq = 3
-                    idxVariance = 4
-                else:
-                    idxidx = 0
-                    idxResSeq = 2
-                    idxVariance = 3
-                idx = int(tokens[idxidx])
-                assert idx == i, "Index and atom lines don't match! {0} : {1}".format(idx, i)  # paranoid check
-                # Theseus counts from 1, we count from 0
-                idx -= 1
-                resSeq = int(tokens[idxResSeq])
-                variance = float(tokens[idxVariance])
-                variances.append((idx, resSeq, variance))
-                
-        return variances
-    
     def cluster_models(self,
                        models=None,
                        cluster_method=None,
@@ -711,8 +664,7 @@ class Ensembler(object):
             return
 
         # List of variances ordered by residue index
-        var_list = [var for (_, _, var) in var_by_res]
-
+        var_list = [ x.variance for x in var_by_res]
         length = len(var_list)
         if length == 0:
             msg = "Error generating thresholds, got len: {0}".format(length)
@@ -1183,7 +1135,7 @@ class Ensembler(object):
             self.logger.critical(e)
             return [],[]
             
-        var_by_res = run_theseus.var_by_res(homologs=homologs)
+        var_by_res = run_theseus.var_by_res()
         if not len(var_by_res) > 0:
             msg = "Error reading residue variances!"
             self.logger.critical(msg)
@@ -1370,11 +1322,12 @@ class Test(unittest.TestCase):
             shutil.rmtree(ensembler.work_dir)
         os.mkdir(ensembler.work_dir)
         
-        ensembler.theseus_exe = self.theseus_exe
         percent_interval = 5
         mdir = os.path.join(self.testfiles_dir, "models")
         cluster_models = glob.glob(mdir + os.sep + "*.pdb")
-        var_by_res = ensembler.calculate_variances(cluster_models)
+        run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
+        run_theseus.align_models(cluster_models)
+        var_by_res = run_theseus.var_by_res()
         thresholds = ensembler.generate_thresholds(var_by_res, percent_interval)
         
         self.assertEqual(30, len(thresholds), thresholds)
@@ -1401,12 +1354,12 @@ class Test(unittest.TestCase):
         os.mkdir(ensembler.work_dir)
         os.chdir(ensembler.work_dir)
         
-        ensembler.theseus_exe = self.theseus_exe
         percent_interval = 5
         mdir = os.path.join(self.testfiles_dir, "models")
         cluster_models = glob.glob(mdir + os.sep + "*.pdb")
-        
-        var_by_res = ensembler.calculate_variances(cluster_models)
+        run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
+        run_theseus.align_models(cluster_models)
+        var_by_res = run_theseus.var_by_res()
         truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_thresh(var_by_res, percent_interval)
         
         self.assertEqual(truncation_levels,
@@ -1458,11 +1411,9 @@ class Test(unittest.TestCase):
         os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
         ensembler = Ensembler()
         
+        TheseusVariances = collections.namedtuple('TheseusVariances', ['idx', 'resName', 'resSeq', 'variance', 'stdDev', 'rmsd', 'core'])
         l = 160
-        indexes = [ i for i in range(l) ]
-        resseq = indexes[:]
-        variances = [ float(i + 1) for i in indexes ]
-        var_by_res = zip(indexes, resseq, variances)
+        var_by_res = [ TheseusVariances(idx=i, resName='', resSeq=i, variance=float(i+1), stdDev=None, rmsd=None, core=None) for i in range(l) ]
         truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_focussed(var_by_res)
          
         self.assertEqual(truncation_levels, [100, 93, 85, 78, 70, 63, 55, 48, 40, 33, 25, 23, 20, 18, 15, 13, 10, 8, 5, 3])
@@ -1481,11 +1432,12 @@ class Test(unittest.TestCase):
             shutil.rmtree(ensembler.work_dir)
         os.mkdir(ensembler.work_dir)
         os.chdir(ensembler.work_dir)
-        ensembler.theseus_exe = self.theseus_exe
         ensembler.percent_interval = 5
         mdir = os.path.join(self.testfiles_dir, "models")
         cluster_models = glob.glob(mdir + os.sep + "*.pdb")
-        var_by_res = ensembler.calculate_variances(cluster_models)
+        run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
+        run_theseus.align_models(cluster_models)
+        var_by_res = run_theseus.var_by_res()
         truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_percent(var_by_res, percent_interval=5)
 
         self.assertEqual(truncation_levels,
