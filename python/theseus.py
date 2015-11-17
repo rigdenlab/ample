@@ -40,6 +40,8 @@ class Theseus(object):
         if not alignment_file: alignment_file = os.path.join(self.work_dir,'homologs.fasta')
         all_seq = ample_sequence.Sequence(pdb=models[0])
         for model in models[1:]: all_seq += ample_sequence.Sequence(pdb=model)
+        if not all(map(lambda x: x == len(all_seq.sequences[0]), [ len(s) for s in all_seq.sequences ])):
+            raise RuntimeError,'PDB files are not all of the same length!\n{0}'.format(models)
         all_seq.write_fasta(alignment_file,pdbname=True)
         return alignment_file
 
@@ -47,17 +49,17 @@ class Theseus(object):
         self._set_work_dir(work_dir)
         if not basename: basename = 'theseus'
         if homologs:
-            # Theseus expects all the models to be in the directory that it is run in as the string
-            # given in the fasta header is used to construct the file names of the aligned pdb files
-            # If a full or relative path is given (e.g. /foo/bar.pdb), it tries to create files called "basename_/foo/bar.pdb"
+            # Theseus expects all the models to be in the directory that it is run in as the string given in 
+            # the fasta header is used to construct the file names of the aligned pdb files. If a full or 
+            # relative path is given (e.g. /foo/bar.pdb), it tries to create files called "basename_/foo/bar.pdb"
             # We therefore copy the models in and then delete them afterwards
             if not alignment_file: alignment_file = self.alignment_file(models)
             copy_models = [ os.path.join(self.work_dir,os.path.basename(m)) for m in models ]
             for orig, copy in zip(models, copy_models): shutil.copy(orig, copy)
         
         # -Z included so we don't line the models up to the principle axis and can compare the ensembles
-        cmd = [ self.theseus_exe, '-a0', '-r', basename ]
         #cmd = [ self.theseus_exe, '-a0', '-r', basename, '-Z', '-o', os.path.basename(copy_models[0]) ]
+        cmd = [ self.theseus_exe, '-a0', '-r', basename ]
         if homologs:
             cmd += [ '-A', alignment_file ]
             cmd += [ os.path.basename(m) for m in copy_models ]
@@ -66,8 +68,8 @@ class Theseus(object):
         
         self.theseus_log=os.path.join(self.work_dir,"theseus.log")
         retcode = ample_util.run_command(cmd,
-                                         logfile=self.theseus_log,
-                                         directory=self.work_dir)
+                                         logfile = self.theseus_log,
+                                         directory = self.work_dir)
         if retcode != 0:
             msg = "non-zero return code for theseus in align_models!\n See log: {0}".format(self.theseus_log)
             self.logger.critical(msg)
@@ -77,8 +79,6 @@ class Theseus(object):
         self.superposed_models = os.path.join(self.work_dir,'{0}_sup.pdb'.format(basename))
         if homologs:
             # Horrible - need to rename the models so that they match the names in the alignment file
-            #self.aligned_models = [ os.path.join(self.work_dir,"theseus_{0}".format(os.path.basename(m))) for m in copy_models ]
-            #for m in copy_models: os.unlink(m)
             self.aligned_models = []
             for m in copy_models:
                 mb = os.path.basename(m)
@@ -174,7 +174,6 @@ class Test(unittest.TestCase):
         rtheseus = Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
         rtheseus.align_models(models,homologs=homologs)
         var_by_res = rtheseus.var_by_res()
-        print " GOT ",[x[0] for x in var_by_res]
         # Below with theseus 3.1.1 on osx 10.9.5
         ref = [(0, 1, 55.757593), (1, 2, 46.981238), (2, 3, 47.734236), (3, 4, 39.857326), (4, 5, 35.477433),
                (5, 6, 26.066719), (6, 7, 24.114493), (7, 8, 24.610988), (8, 9, 21.187142), (9, 10, 21.882375),
@@ -212,10 +211,12 @@ class Test(unittest.TestCase):
             pdbout = os.path.join(self.testfiles_dir,"{0}_cut.pdb".format(name))
             pdb_edit.select_residues(pdbin, pdbout, tokeep_idx=tokeep_idx)
             models.append(pdbout)
+        
+        #models = [ os.path.join(self.testfiles_dir,pdb) for pdb in pdb_list]
 
         homologs = True
-        rtheseus = Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
-        rtheseus.align_models(models,homologs=homologs)
+        rtheseus = Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
+        rtheseus.align_models(models, homologs=homologs)
         var_by_res = rtheseus.var_by_res()
         # Below with theseus 3.1.1 on osx 10.9.5
         ref  = [(0, 243, 8.049061), (1, 244, 2.614031), (2, 245, 1.343609), (3, 246, 2.261761), (4, 247, 1.112115),
@@ -227,7 +228,7 @@ class Test(unittest.TestCase):
         for i,(t,r) in enumerate(zip([x[2] for x in var_by_res], [x[2] for x in ref])):
             self.assertTrue(abs(t-r) < 0.0001,"Mismatch for: {0} {1} {2}".format(i,t,r))
 
-        self.assertTrue(all([os.path.isfile(m) for m in rtheseus.aligned_models]))
+        self.assertTrue(all([os.path.isfile(os.path.join(work_dir,m)) for m in rtheseus.aligned_models]))
         # clean up
         for m in models: os.unlink(m)
         shutil.rmtree(work_dir)
