@@ -31,6 +31,8 @@ class Sequence(object):
         """
         assert len(self.headers) and len(self.sequences)
         
+        assert os.path.isfile(pdbin),"Cannot find pdb file: {0}".format(pdbin)
+        
         # Assume the name of the pdb is the first part of the header
         fname = os.path.basename(pdbin)
         name, ext = os.path.splitext(fname)
