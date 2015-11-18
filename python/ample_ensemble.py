@@ -1194,7 +1194,7 @@ class Ensembler(object):
                                              var_by_res=run_theseus.var_by_res())
             # Because of the awful Theseus output format (it doesn't print all residues) we need to rerun Theseus
             # to generate var_by_res for _all_ the residues.
-            try: run_theseus.align_models(models, homologs=True)
+            try: run_theseus.align_models(models, homologs=True, basename='homologs')
             except RuntimeError as e:
                 self.logger.critical(e)
                 return [],[]
