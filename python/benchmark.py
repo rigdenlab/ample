@@ -328,7 +328,7 @@ def analyseSolution(amoptd,d):
                                             "phaser_{0}_csymmatch.pdb".format(d['ensemble_name']))
                                             )
 
-    if not amoptd['ideal_helices']:
+    if not (amoptd['ideal_helices'] or amoptd['homologs']):
         # Score the origin with all-atom and rio
         rioData=rio.Rio().scoreOrigin(mrOrigin,
                                       mrPdbInfo=mrPdbInfo,
