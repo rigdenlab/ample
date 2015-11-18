@@ -1195,9 +1195,12 @@ class Ensembler(object):
             raise RuntimeError, msg
         
         # Need to trim the aligned models down to core
-        if homologs: models = model_core_from_theseus(run_theseus.aligned_models,
-                                                       alignment_file=alignment_file,
-                                                       var_by_res=var_by_res)
+        if homologs:
+            models = model_core_from_theseus(run_theseus.aligned_models,
+                                             alignment_file=alignment_file,
+                                             var_by_res=var_by_res)
+            # We need to remove any residues that are not core from var_by_res
+            var_by_res = [ v for v in var_by_res if v.core ]
             
         self.logger.info('Using truncation method: {0}'.format(truncation_method))
         # Calculate which residues to keep under the different methods
