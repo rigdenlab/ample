@@ -1182,25 +1182,28 @@ class Ensembler(object):
         
         # Calculate variances between pdb - and align them if necessary
         run_theseus = theseus.Theseus(work_dir=truncate_dir, theseus_exe=self.theseus_exe)
-        try:
-            run_theseus.align_models(models, homologs=homologs, alignment_file=alignment_file)
+        try: run_theseus.align_models(models, homologs=homologs, alignment_file=alignment_file)
         except RuntimeError as e:
             self.logger.critical(e)
             return [],[]
+            
+        if homologs:
+            # Need to trim the aligned models down to core
+            models = model_core_from_theseus(run_theseus.aligned_models,
+                                             alignment_file=alignment_file,
+                                             var_by_res=run_theseus.var_by_res())
+            # Because of the awful Theseus output format (it doesn't print all residues) we need to rerun Theseus
+            # to generate var_by_res for _all_ the residues.
+            try: run_theseus.align_models(models, homologs=True)
+            except RuntimeError as e:
+                self.logger.critical(e)
+                return [],[]
             
         var_by_res = run_theseus.var_by_res()
         if not len(var_by_res) > 0:
             msg = "Error reading residue variances!"
             self.logger.critical(msg)
             raise RuntimeError, msg
-        
-        # Need to trim the aligned models down to core
-        if homologs:
-            models = model_core_from_theseus(run_theseus.aligned_models,
-                                             alignment_file=alignment_file,
-                                             var_by_res=var_by_res)
-            # We need to remove any residues that are not core from var_by_res
-            var_by_res = [ v for v in var_by_res if v.core ]
             
         self.logger.info('Using truncation method: {0}'.format(truncation_method))
         # Calculate which residues to keep under the different methods
