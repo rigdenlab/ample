@@ -83,7 +83,7 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
     if not os.path.isfile(alignment_file): raise RuntimeError, "Could not find alignment file: {0} after running gesamt!".format(alignment_file)
     return alignment_file
     
-def core_from_fasta_alignment(models, alignment_file, work_dir=None):
+def model_core_from_fasta(models, alignment_file, work_dir=None):
     
     if not work_dir: work_dir = os.path.join(os.getcwd(), 'core_models')
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
@@ -1195,7 +1195,9 @@ class Ensembler(object):
             raise RuntimeError, msg
         
         # Need to trim the aligned models down to core
-        if homologs: models = core_from_fasta_alignment(run_theseus.aligned_models, alignment_file)
+        if homologs: models = model_core_from_theseus(run_theseus.aligned_models,
+                                                       alignment_file=alignment_file,
+                                                       var_by_res=var_by_res)
             
         self.logger.info('Using truncation method: {0}'.format(truncation_method))
         # Calculate which residues to keep under the different methods
@@ -1947,7 +1949,7 @@ class Test(unittest.TestCase):
         models = glob.glob(os.path.join(self.ample_dir, "examples", "homologs", "*.pdb"))
         alignment_file = os.path.join(self.ample_dir, "examples", "homologs", "testthree.afasta")
         
-        core_models = core_from_fasta_alignment(models, alignment_file, work_dir=work_dir)
+        core_models = model_core_from_fasta(models, alignment_file, work_dir=work_dir)
         
         got = {}
         for m in core_models:
