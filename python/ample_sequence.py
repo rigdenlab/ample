@@ -11,12 +11,12 @@ class Sequence(object):
         """Initialise the object"""
         
         self.MAXWIDTH=80 # maximum width of any line 
-        self.name='unknown'
         self.headers = [] # title lines
         self.sequences = [] # The fasta sequences (just AA) as a single string
         self.resseqs = [] # The fasta sequences (just AA) as a single string
-        self.pdbs = [] # pdb files that sequences were read from
-        self.fasta_files = [] # The fasta files the sequence were ready from
+        self.pdbs = [] # pdb files that sequences were derived from
+        self.chains = [] # The chain that the sequence belongs too (if applicable)
+        self.fasta_files = [] # The fasta files the sequence were read from
         
         if fasta:
             self.from_fasta(fasta, canonicalise=canonicalise)
@@ -30,10 +30,13 @@ class Sequence(object):
         Currently this only supports adding data for single-chain pdbs
         """
         assert len(self.headers) and len(self.sequences)
+        
         # Assume the name of the pdb is the first part of the header
         fname = os.path.basename(pdbin)
         name, ext = os.path.splitext(fname)
         assert ext == '.pdb', "PDB files must have extension .pdb"
+        
+        # Find where in the list of data this sequence is
         got=False
         for idx, h in enumerate(self.headers):
             n = h[1:].split('.')[0]
@@ -45,12 +48,15 @@ class Sequence(object):
         seqd = pdb_edit.sequence_data(pdbin)
         assert len(seqd) == 1,'Currently only support adding data for single chain pdbs'
         
-        # Clear out any existing resseqs
-        self.resseqs[idx] = []
+        chain = seqd.keys()[0]
         
-        k1 = seqd.keys()[0]
-        sequence = seqd[k1][0]
-        resseqs = seqd[k1][1]
+        # Add the pdb and chain data
+        self.pdbs[idx] = fname
+        self.chains[idx] = chain
+        
+        self.resseqs[idx] = [] # Clear out any existing resseqs
+        sequence = seqd[chain][0]
+        resseqs = seqd[chain][1]
         # Loop through both sequences
         needle = 0
         GAP='-'
@@ -61,17 +67,32 @@ class Sequence(object):
                 assert res1.upper() == sequence[needle]
                 self.resseqs[idx].append( resseqs[needle] )
                 needle += 1
-        
         return True
+
+    def fasta_str(self,pdbname=False):
+        if not len(self.sequences): raise RuntimeError,"No sequences have been read!"
+        headers=[]
+        for i, header in enumerate(self.headers):
+            #if pdbname: header = os.path.basename(self.pdbs[i])
+            if pdbname: header = ">{0}".format(os.path.basename(self.pdbs[i]))
+            headers.append(header)
+        return self._fasta_str(headers, self.sequences)
     
+    def _fasta_str(self,headers,sequences):
+        s=""
+        for i, seq in enumerate(sequences):
+            s += headers[i]+'\n'
+            for chunk in range(0, len(seq), self.MAXWIDTH):
+                s += seq[chunk:chunk+self.MAXWIDTH]+"\n"
+            s += "\n"
+        return s
+   
     def from_fasta(self, fasta_file, canonicalise=True, resseq=True):
-        name=os.path.splitext(os.path.basename(fasta_file))[0]
-        self.name=name
         with open(fasta_file, "r") as f:
-            self._parse_fasta(f,fasta_file=fasta_file,canonicalise=canonicalise)
+            self._parse_fasta(f, fasta_file=fasta_file, canonicalise=canonicalise)
         if resseq:
             # Add automatically calculated ressegs starting from 1
-            assert len(self.resseqs) == 0,"Altering existing resseqs!"
+            #assert len(self.resseqs) == 0,"Altering existing resseqs!"
             for seq in self.sequences:
                 self.resseqs.append([])
                 for i in range(len(seq)):
@@ -79,8 +100,7 @@ class Sequence(object):
         return
     
     def from_pdb(self, pdbin):
-        name=os.path.splitext(os.path.basename(pdbin))[0]
-        self.name=name
+        pdbin_name = os.path.basename(pdbin)
         chain2data = pdb_edit.sequence_data(pdbin)
         assert len(chain2data),"Could not read sequence from pdb: {0}".format(pdbin)
         self.headers = []
@@ -89,51 +109,16 @@ class Sequence(object):
         self.resseqs = []
         self.fasta_files = []
         for chain in sorted(chain2data.keys()):
-            seq=chain2data[chain][0]
-            resseq=chain2data[chain][1]
-            self.headers.append(">From pdb: {0} chain {1} length {2}".format(name,chain,len(seq)))
+            seq = chain2data[chain][0]
+            resseq = chain2data[chain][1]
+            self.headers.append(">From pdb: {0} chain={1} length={2}".format(pdbin_name,chain,len(seq)))
             self.sequences.append(seq)
             self.resseqs.append(resseq)
-            self.pdbs.append(pdbin)
+            self.pdbs.append(pdbin_name)
+            self.chains.append(chain)
             self.fasta_files.append(None) # Need to make sure pdb abd fasta arrays have same length
         return
 
-    def _parse_fasta(self, fasta, fasta_file=None, canonicalise=True):
-        """Parse the fasta file int our data structures & check for consistency 
-        Args:
-        fasta -- list of strings or open filehandle to read from the fasta file
-        """
-        self.headers = []
-        self.sequences = []
-        self.resseqs = []
-        self.fasta_files = [] 
-        self.pdbs = [] 
-        sequence = None
-        first=True
-        for line in fasta:
-            line = line.strip().rstrip(os.linesep)
-            if first and not line.startswith(">"):
-                raise RuntimeError,"FASTA files must start with a > character!"
-            else:
-                first=False
-            if not line: continue # skip blank lines
-            if line.startswith(">"):
-                self.headers.append(line)
-                if sequence:
-                    self.sequences.append(sequence)
-                    if fasta_file:
-                        self.fasta_files.append(fasta_file)
-                        self.pdbs.append(None) # Need to make sure pdb abd fasta arrays have same length
-                sequence=""
-                continue
-            sequence += line
-        
-        # add final sequence
-        self.sequences.append(sequence)
-        assert len(self.sequences)==len(self.headers)
-        if canonicalise: self.canonicalise()
-        return
-    
     def canonicalise(self):
         """
         Reformat the fasta file
@@ -154,23 +139,7 @@ class Sequence(object):
             self.sequences[i]=cs
         return
     
-    def fasta_str(self,pdbname=False):
-        if not len(self.sequences): raise RuntimeError,"No sequences have been read!"
-        headers=[]
-        for i, header in enumerate(self.headers):
-            #if pdbname: header = os.path.basename(self.pdbs[i])
-            if pdbname: header = ">{0}".format(os.path.basename(self.pdbs[i]))
-            headers.append(header)
-        return self._fasta_str(headers, self.sequences)
-    
-    def _fasta_str(self,headers,sequences):
-        s=""
-        for i, seq in enumerate(sequences):
-            s += headers[i]+'\n'
-            for chunk in range(0, len(seq), self.MAXWIDTH):
-                s += seq[chunk:chunk+self.MAXWIDTH]+"\n"
-            s += "\n"
-        return s
+
 
     def length(self,seq_no=0):
         return len(self.sequences[seq_no])
@@ -178,9 +147,55 @@ class Sequence(object):
     def numSequences(self):
         return len(self.sequences)
     
-    def sequence(self,seq_no=0):
-        return self.sequences[seq_no]
-    
+    def _parse_fasta(self, fasta, fasta_file=None, canonicalise=True):
+        """Parse the fasta file int our data structures & check for consistency 
+        Args:
+        fasta -- list of strings or open filehandle to read from the fasta file
+        """
+        headers = []
+        sequences = []
+        sequence = ""
+        header = None
+        for line in fasta:
+            line = line.strip().rstrip(os.linesep)
+            if not line: continue # skip blank lines
+            
+            if not header:
+                if not line.startswith(">"):
+                    raise RuntimeError,"FASTA sequencs must be prefixed with a > character: {0}".format(line)
+                header = line
+                continue
+            
+            if header and line.startswith(">"):
+                headers.append(header)
+                sequences.append(sequence)
+                header = line
+                sequence = ""
+            else:
+                sequence += line
+        
+        # Add the last header and sequence
+        headers.append(header)
+        sequences.append(sequence)
+        
+        # Now add all the collected data        
+        self.headers = []
+        self.sequences = []
+        self.resseqs = []
+        self.fasta_files = []
+        self.pdbs = []
+        self.chains = []
+        for h, s in zip(headers,sequences):
+            self.headers.append(h)
+            self.sequences.append(s)
+            self.fasta_files.append(fasta_file)
+            self.resseqs.append(None)
+            self.pdbs.append(None)
+            self.chains.append(None)
+            
+        if canonicalise: self.canonicalise()
+        return
+
     def pirStr(self,seqNo=0):
         """Return a canonical MAXWIDTH PIR representation of the file as a line-separated string"""
     
@@ -194,6 +209,9 @@ class Sequence(object):
         pirStr.append("\n")
         
         return pirStr
+
+    def sequence(self,seq_no=0):
+        return self.sequences[seq_no]
 
     def toPir(self, input_fasta, output_pir=None ):
         """Take a fasta file and output the corresponding PIR file"""
@@ -218,6 +236,7 @@ class Sequence(object):
         self.sequences += other.sequences
         self.resseqs += other.resseqs
         self.pdbs += other.pdbs
+        self.chains += other.chains
         self.fasta_files += other.fasta_files
         return self
     
@@ -249,6 +268,7 @@ class Test(unittest.TestCase):
         self.assertTrue(len(s1.resseqs),2)
         self.assertTrue(len(s1.headers),2)
         self.assertTrue(len(s1.pdbs),2)
+        self.assertTrue(len(s1.chains),2)
         self.assertTrue(len(s1.fasta_files),2)
         
         # Test write for the hell of it
@@ -267,6 +287,12 @@ class Test(unittest.TestCase):
         s1.add_pdb_data(pdbin2)
         s1.add_pdb_data(pdbin3)
         
+        self.assertEqual(s1.pdbs[0], os.path.basename(pdbin1))
+        self.assertEqual(s1.chains[0],'A')
+        self.assertEqual(s1.pdbs[1], os.path.basename(pdbin2))
+        self.assertEqual(s1.chains[1],'A')
+        self.assertEqual(s1.pdbs[2], os.path.basename(pdbin3))
+        self.assertEqual(s1.chains[2],'A')
         
         p1r = [None, None, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, 
                None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 
@@ -335,13 +361,32 @@ GDGAAATSD
         self.assertEqual(fp.length(), 249)
         return
 
+    def testFromPdb(self):
+        s1 = Sequence(pdb=os.path.join(self.testfiles_dir,'4DZN.pdb'))
+        self.assertEqual(s1.pdbs, ['4DZN.pdb', '4DZN.pdb', '4DZN.pdb'])
+        self.assertEqual(s1.chains, ['A', 'B', 'C'])
+    
+        outfasta=""">From pdb: 4DZN.pdb chain=A length=31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+
+>From pdb: 4DZN.pdb chain=B length=31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+
+>From pdb: 4DZN.pdb chain=C length=31
+GEIAALKQEIAALKKEIAALKEIAALKQGYY
+
+"""
+        self.assertEqual(outfasta, "".join(s1.fasta_str()))
+        
+        return
+
     def testResSeq(self):
         pdbin = os.path.join(self.testfiles_dir,'1D7M.pdb')
         s1 = Sequence(pdb=pdbin)
         self.assertTrue(len(s1.sequences),2)
         self.assertTrue(len(s1.headers),2)
         self.assertTrue(len(s1.pdbs),2)
-        self.assertEqual(s1.pdbs[0],pdbin)
+        self.assertEqual(s1.pdbs[0],os.path.basename(pdbin))
         self.assertTrue(s1.resseqs[0][-1],343)
         return
     
