@@ -110,7 +110,7 @@ class AmpleOptions(object):
                             'transmembrane_lipofile' : None,
                             'transmembrane_spanfile' : None,
                             'truncation_method' : 'percent',
-                            'truncation_pruning' : 'none',
+                            'truncation_pruning' : None,
                             'webserver_uri' : None,
                             'use_arpwarp' : True,
                             'use_buccaneer' : True,

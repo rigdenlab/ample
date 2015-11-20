@@ -220,9 +220,8 @@ class Ensembler(object):
         
         # truncation
         self.truncation_method = "percent"
-        self.truncation_pruning = "none"
+        self.truncation_pruning = None
         self.percent_truncation = 5
-        self.pruning_strategy = "none"
         # For Felix so we know what truncation levels we used
         self.truncation_levels = None
         self.truncation_variances = None
@@ -1163,7 +1162,7 @@ class Ensembler(object):
                         models_data={},
                         truncation_method=None,
                         percent_truncation=None,
-                        truncation_pruning='none',
+                        truncation_pruning=None,
                         homologs=False,
                         alignment_file=None):
         
@@ -1219,13 +1218,13 @@ class Ensembler(object):
         for tlevel, tvar, tresidues, tresidue_idxs in zip(truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs):
             # Prune singletone/doubletone etc. residues if required
             self.logger.debug("truncation_pruning: {0}".format(truncation_pruning))
-            if truncation_pruning=='single':
+            if truncation_pruning == 'single':
                 tresidue_idxs, pruned_residues=self.prune_residues(tresidue_idxs, chunk_size=1, allowed_gap=2)
                 if pruned_residues: self.logger.debug("prune_residues removing: {0}".format(pruned_residues))
-            elif truncation_pruning=='none':
+            elif truncation_pruning is None:
                 pass
             else:
-                raise RuntimeError,"Unrecognised truncation_pruning: {0}".format(truncation_pruning)
+                raise RuntimeError("Unrecognised truncation_pruning: {0}".format(truncation_pruning))
             
             # Skip if there are no residues
             if not tresidue_idxs:
