@@ -84,8 +84,6 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
     return alignment_file
     
 def model_core_from_fasta(models, alignment_file, work_dir=None):
-    
-    if not work_dir: work_dir = os.path.join(os.getcwd(), 'core_models')
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
     
     # Read in alignment to get
@@ -148,7 +146,6 @@ def model_core_from_theseus(models, alignment_file, var_by_res, work_dir=None):
     
     We use the resSeq numbers to match the residues across the alignment
     """
-    if not work_dir: work_dir = os.path.join(os.getcwd(), 'core_models')
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
 
     seqalign = ample_sequence.Sequence(fasta=alignment_file)
@@ -654,6 +651,7 @@ class Ensembler(object):
             pdb_edit.standardise(pdbin=m, pdbout=std_model, del_hetatm=True)
             std_models.append(std_model)
         
+        # Get a structural alignment between the different models
         if not alignment_file:
             if homolog_aligner == 'mustang':
                 self.logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
@@ -675,8 +673,7 @@ class Ensembler(object):
                                                                                  truncation_pruning=None,
                                                                                  percent_truncation=percent_truncation,
                                                                                  homologs=True,
-                                                                                 alignment_file=alignment_file
-                                                                                 )):
+                                                                                 alignment_file=alignment_file)):
             tlevel = truncated_models_data['truncation_level']
             ensemble_dir = os.path.join(truncated_models_data['truncation_dir'],
                                         "ensemble_{0}".format(tlevel))
@@ -1168,8 +1165,7 @@ class Ensembler(object):
                         percent_truncation=None,
                         truncation_pruning='none',
                         homologs=False,
-                        alignment_file=None
-                        ):
+                        alignment_file=None):
         
         assert len(models) > 1, "Cannot truncate as < 2 models!"
         assert truncation_method and percent_truncation, "Missing arguments: {0}".format(truncation_method)
@@ -1180,30 +1176,26 @@ class Ensembler(object):
         os.mkdir(truncate_dir)
         os.chdir(truncate_dir)
         
-        # Calculate variances between pdb - and align them if necessary
+        # Calculate variances between pdb and align them (we currently only require the aligned models for homologs)
         run_theseus = theseus.Theseus(work_dir=truncate_dir, theseus_exe=self.theseus_exe)
         try: run_theseus.align_models(models, homologs=homologs, alignment_file=alignment_file)
         except RuntimeError as e:
             self.logger.critical(e)
             return [],[]
-            
-        if homologs:
-            # Need to trim the aligned models down to core
-            models = model_core_from_theseus(run_theseus.aligned_models,
-                                             alignment_file=alignment_file,
-                                             var_by_res=run_theseus.var_by_res())
-            # Because of the awful Theseus output format (it doesn't print all residues) we need to rerun Theseus
-            # to generate var_by_res for _all_ the residues.
-            try: run_theseus.align_models(models, homologs=True, basename='homologs')
-            except RuntimeError as e:
-                self.logger.critical(e)
-                return [],[]
-            
-        var_by_res = run_theseus.var_by_res()
+        
+        # For homologs, we only want the core residues as we will trim the models down to core
+        if homologs: var_by_res = run_theseus.var_by_res(core=True)
+        else: var_by_res = run_theseus.var_by_res()
         if not len(var_by_res) > 0:
             msg = "Error reading residue variances!"
             self.logger.critical(msg)
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
+        
+        # If using homologs, now trim down to the core. We only do this here so that we are using the aligned models from
+        # theseus, which makes it easier to see what the truncation is doing.
+        if homologs: models = model_core_from_fasta(models,
+                                                    alignment_file=alignment_file,
+                                                    work_dir=os.path.join(self.work_dir,'core_models'))
             
         self.logger.info('Using truncation method: {0}'.format(truncation_method))
         # Calculate which residues to keep under the different methods
@@ -1226,15 +1218,14 @@ class Ensembler(object):
         pruned_residues = None
         for tlevel, tvar, tresidues, tresidue_idxs in zip(truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs):
             # Prune singletone/doubletone etc. residues if required
-# This code is currently disabled as it relies on resseqs and we now use residue indexes to allow us to work with pdbs with different reseqs
-#             self.logger.debug("truncation_pruning: {0}".format(truncation_pruning))
-#             if truncation_pruning=='single':
-#                 tresidues,pruned_residues=self.prune_residues(tresidues, chunk_size=1, allowed_gap=2)
-#                 if pruned_residues: self.logger.debug("prune_residues removing: {0}".format(pruned_residues))
-#             elif truncation_pruning=='none':
-#                 pass
-#             else:
-#                 raise RuntimeError,"Unrecognised truncation_pruning: {0}".format(truncation_pruning)
+            self.logger.debug("truncation_pruning: {0}".format(truncation_pruning))
+            if truncation_pruning=='single':
+                tresidue_idxs, pruned_residues=self.prune_residues(tresidue_idxs, chunk_size=1, allowed_gap=2)
+                if pruned_residues: self.logger.debug("prune_residues removing: {0}".format(pruned_residues))
+            elif truncation_pruning=='none':
+                pass
+            else:
+                raise RuntimeError,"Unrecognised truncation_pruning: {0}".format(truncation_pruning)
             
             # Skip if there are no residues
             if not tresidue_idxs:
