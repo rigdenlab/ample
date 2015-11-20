@@ -139,11 +139,15 @@ class Theseus(object):
                                                core = core ) )
         return data
 
-    def var_by_res(self):
+    def var_by_res(self, core=False):
         """Return a namedtuple with variance data"""
         if not os.path.isfile(self.variance_file):
             raise RuntimeError,"Cannot find theseus variance file: {0} Please check the log: {1}".format(self.variance_file, self.theseus_log)
-        return self.parse_variances(self.variance_file)
+        var_by_res = self.parse_variances(self.variance_file)
+        if core:
+            return [v for v in var_by_res if v.core]
+        else:
+            return var_by_res
 
 class Test(unittest.TestCase):
 
