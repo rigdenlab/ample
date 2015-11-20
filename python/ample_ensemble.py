@@ -1192,7 +1192,7 @@ class Ensembler(object):
         
         # If using homologs, now trim down to the core. We only do this here so that we are using the aligned models from
         # theseus, which makes it easier to see what the truncation is doing.
-        if homologs: models = model_core_from_fasta(models,
+        if homologs: models = model_core_from_fasta(run_theseus.aligned_models,
                                                     alignment_file=alignment_file,
                                                     work_dir=os.path.join(self.work_dir,'core_models'))
             
