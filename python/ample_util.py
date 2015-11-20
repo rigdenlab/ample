@@ -88,8 +88,8 @@ def ccp4_version():
         
         logf.close()
         if not tversion: return None
-        major,minor,rev=tversion.rstrip(':').split('.')
-        CCP4_VERSION = (int(major),int(minor),int(rev.lstrip('0')))
+        major,minor,rev = tversion.rstrip(':').split('.')
+        CCP4_VERSION = (int(major),int(minor),int(rev))
     return CCP4_VERSION
     
 def extract_models(filename, directory=None, sequence=None, single=True, allsame=True):
