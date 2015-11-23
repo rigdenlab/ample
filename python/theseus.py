@@ -51,7 +51,7 @@ class Theseus(object):
         all_seq.write_fasta(alignment_file,pdbname=True)
         return alignment_file
 
-    def align_models(self, models, work_dir=None, basename=None, homologs=False, alignment_file=None):
+    def superpose_models(self, models, work_dir=None, basename=None, homologs=False, alignment_file=None):
         self._set_work_dir(work_dir)
         if not basename: basename = 'theseus'
         if homologs:
@@ -77,7 +77,7 @@ class Theseus(object):
                                          logfile = self.theseus_log,
                                          directory = self.work_dir)
         if retcode != 0:
-            msg = "non-zero return code for theseus in align_models!\n See log: {0}".format(self.theseus_log)
+            msg = "non-zero return code for theseus in superpose_models!\n See log: {0}".format(self.theseus_log)
             self.logger.critical(msg)
             raise RuntimeError, msg
         
@@ -185,7 +185,7 @@ class Test(unittest.TestCase):
         work_dir = os.path.join(self.tests_dir,'theseus_align')
         homologs = False
         rtheseus = Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
-        rtheseus.align_models(models,homologs=homologs)
+        rtheseus.superpose_models(models,homologs=homologs)
         var_by_res = rtheseus.var_by_res()
         # Below with theseus 3.1.1 on osx 10.9.5
         ref = [(0, 1, 55.757593), (1, 2, 46.981238), (2, 3, 47.734236), (3, 4, 39.857326), (4, 5, 35.477433),
@@ -229,7 +229,7 @@ class Test(unittest.TestCase):
 
         homologs = True
         rtheseus = Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
-        rtheseus.align_models(models, homologs=homologs)
+        rtheseus.superpose_models(models, homologs=homologs)
         var_by_res = rtheseus.var_by_res()
         # Below with theseus 3.1.1 on osx 10.9.5
         ref  = [(0, 243, 8.049061), (1, 244, 2.614031), (2, 245, 1.343609), (3, 246, 2.261761), (4, 247, 1.112115),
