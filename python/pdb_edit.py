@@ -1274,6 +1274,28 @@ def _resseq(hierarchy):
     chain2data = _sequence_data(hierarchy)
     return dict((k,chain2data[k][1]) for k in chain2data.keys())
 
+def renumber_residues( pdbin, pdbout, start=1, chain=None ):
+    """ Renumber the residues in the chain """
+    pdb_input = iotbx.pdb.pdb_input( file_name=pdbin )
+    hierarchy = pdb_input.construct_hierarchy()
+    
+    if chain: _chain( hierarchy, chain )
+    
+    _renumber( hierarchy, start )
+
+    with open(pdbout,'w') as f:
+        f.write("REMARK Original file:\n")
+        f.write("REMARK   {0}\n".format(pdbin))
+        f.write(hierarchy.as_pdb_string(anisou=False))
+    return
+
+def _renumber( hierarchy, start ):
+    for model in hierarchy.models():
+        for chain in model.chains():
+            for idx, residue_group in enumerate(chain.residue_groups()):
+                residue_group.resseq = idx + start
+    return
+
 def Xselect_residues(inpath=None, outpath=None, residues=None):
     """Create a new pdb by selecting only the numbered residues from the list.
     This only keeps ATOM lines - everything else gets discarded.
@@ -1764,6 +1786,64 @@ def translate(inpdb=None, outpdb=None, ftranslate=None):
         
     return
 
+def xyz_coordinates(pdbin):
+    ''' Extract xyz for all atoms '''
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    hierarchy = pdb_input.construct_hierarchy()
+    return _xyz_coordinates(hierarchy)
+
+def _xyz_coordinates(hierarchy):
+    res_lst,tmp = [],[]
+
+    for residue_group in hierarchy.models()[0].chains()[0].residue_groups():
+        for atom_group in residue_group.atom_groups():
+            for atom in atom_group.atoms():
+                tmp.append( atom.xyz )
+            res_lst.append([residue_group.resseq_as_int(), tmp])
+            tmp=[]
+
+    return res_lst
+
+def xyz_cb_coordinates(pdbin):
+    ''' Extract xyz for CA/CB atoms '''
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    hierarchy = pdb_input.construct_hierarchy()
+
+    res_dict = _xyz_cb_coordinates(hierarchy)
+
+    cb_lst = []
+    for i in xrange(len(res_dict)):
+        if len(res_dict[i]) > 1:
+            cb_lst.append(res_dict[i][1])
+        elif len(res_dict[i]) == 1:
+            cb_lst.append(res_dict[i][0])
+
+    return cb_lst
+
+def _xyz_cb_coordinates(hierarchy):
+    res_lst = []
+
+    for residue_group in hierarchy.models()[0].chains()[0].residue_groups():        
+        for atom_group in residue_group.atom_groups():
+            xyz_lst = _xyz_atom_coords(atom_group)
+            res_lst.append([residue_group.resseq_as_int(), xyz_lst])
+
+    return res_lst
+
+def _xyz_atom_coords(atom_group):
+    ''' Use this method if you need to identify if CB is present
+        in atom_group and if not return CA
+    '''
+
+    tmp_dict = {}
+    for atom in atom_group.atoms():
+        if atom.name.strip() in set(["CA", "CB"]):
+            tmp_dict[atom.name.strip()] = atom.xyz
+        
+    if 'CB' in tmp_dict: return tmp_dict['CB']
+    elif 'CA' in tmp_dict: return tmp_dict['CA']
+    else: return (float('inf'), float('inf'), float('inf'))
+
 
 class Test(unittest.TestCase):
 
@@ -1971,6 +2051,51 @@ class Test(unittest.TestCase):
         os.unlink(pdbout)
         
         return
+    
+    def testXyzCoordinates(self):
+        pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
+        test_hierarchy = iotbx.pdb.pdb_input( file_name=pdbin ).construct_hierarchy()
+        xyz_lst = _xyz_coordinates( test_hierarchy )
+
+        ref_data_start = [(0, [( 25.199, 11.913, -9.25),
+                               ( 25.201, 10.666, -9.372),
+                               ( 26.454, 12.702, -9.001)]),
+                          (1, [( 24.076, 12.643, -9.179),
+                               ( 22.806, 12.124, -9.698),
+                               ( 22.170, 11.067, -8.799),
+                               ( 22.404, 11.024, -7.580)]),
+                          (2, [( 21.377, 10.190, -9.397),
+                               ( 20.675,  9.156, -8.637),
+                               ( 21.614,  8.106, -7.996),
+                               ( 21.337,  7.619, -6.898),
+                               ( 19.625,  8.485, -9.531),
+                               ( 18.637,  7.595, -8.790),
+                               ( 17.652,  8.361, -7.951),
+                               ( 17.724,  9.603, -7.887),
+                               ( 16.786,  7.706, -7.365)])]
+
+        for idx in xrange(len( ref_data_start )): # Stuff that needs to be true
+            self.assertEqual( ref_data_start[idx][0], xyz_lst[idx][0] )
+            self.assertSequenceEqual(ref_data_start[idx][1], xyz_lst[idx][1]  )
+        nr_atoms = sum(len(i[1]) for i in xyz_lst)
+        self.assertEqual(252, nr_atoms)
+        self.assertEqual(35, len(xyz_lst))
+
+    def testXyzCbCoordinates(self):
+        pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
+        test_hierarchy = iotbx.pdb.pdb_input(file_name=pdbin).construct_hierarchy()
+        xyz_cb_lst = _xyz_cb_coordinates(test_hierarchy)
+
+        ref_data_start = [(0,(float('inf'), float('inf'), float('inf'))),
+                          (1,(22.806, 12.124, -9.698)),
+                          (2,(19.625,  8.485, -9.531)),
+                          (3,(24.783,  6.398, -9.051)),
+                          (4,(25.599, 10.846, -6.036)),
+                          (5,(20.430, 10.143, -4.644))]
+
+        self.assertSequenceEqual(ref_data_start[1], xyz_cb_lst[1][:6])
+        self.assertEqual(35, len(xyz_cb_lst))
+
 
 if __name__ == "__main__":
     #unittest.TextTestRunner(verbosity=2).run(testSuite())
