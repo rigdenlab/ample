@@ -260,7 +260,7 @@ def process_command_line():
                        help='How to truncate the models for ensembling percent|thresh|focussed')
     
     parser.add_argument('-truncation_pruning', type=str, nargs=1,
-                       help='Whether to remove isolated residues none|single')
+                       help='Whether to remove isolated residues (single)')
 
     parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(version.__version__))
     
