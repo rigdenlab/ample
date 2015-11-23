@@ -43,14 +43,14 @@ class Contacter(object):
     def init(self, optd):
         self.optd = optd
         self.sequence = self._readFasta(self.optd['fasta'])                     
-        raw_contacts = self._readContacts(self.optd['contactfile'], 
+        raw_contacts = self._readContacts(self.optd['contact_file'], 
                                           self.sequence) 
         self.contacts = self._prepare(raw_contacts, 
-                                      self.optd['constraint_factor'], 
+                                      self.optd['constraints_factor'], 
                                       self.optd['distance_to_neighbour'])
         
-        if optd['bbcontactsfile']:
-            self._readAdditionalBBcontacts(optd['bbcontactsfile'])
+        if optd['bbcontacts_file']:
+            self._readAdditionalBBcontacts(optd['bbcontacts_file'])
             
         return
     
