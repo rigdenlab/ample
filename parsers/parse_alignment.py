@@ -1,57 +1,86 @@
 #!/usr/bin/env ccp4-python
 
+# system
+import unitest
+
+#3rd party
+import Bio.AlignIO
 import Bio.Alphabet
 import Bio.Seq
 import Bio.SeqIO
-import unittest
+
+
 
 class AlignmentParser(object):
     """ Parser for manipulation of MSAs """
-
-    def remove_gaps(self, infile, outfile):
-        """ Method to remove gaps in an alignment """
-        # SeqIO instead of AlignIO to avoid error with diff seq lengths
-        # Especially a problem when removing gaps
-        records = list(Bio.SeqIO.parse(open(infile, 'r'), 'fasta'))
+    
+    def a3mToTrimmed(self, alnFile, outFile):
+        """Convert an .a3m HH-suite file to a FASTA format
         
-        records_formatted = self._remove_gaps(records)
+        :alnFile: A3M format alignment file
+        :outFile: MSA output file
+        """
+        # A3m is similar to FASTA except indels and lower case letters
+        records = list(Bio.SeqIO.parse(open(alnFile, 'r'), 'fasta'))
+        records_formatted = self._a3mToTrimmed(records)
         
-        Bio.SeqIO.write(records_formatted, open(outfile, 'w'), "fasta")
+        Bio.SeqIO.write(records_formatted, open(outFile, 'w'), "fasta")
+        return
+        
+    def _a3mToTrimmed(self, records):
+        """Takes two file handlers"""
+        for record in records:
+            record.seq = Bio.Seq.Seq("".join([c for c in str(record.seq) if not c.islower()]),
+                                     Bio.Alphabet.single_letter_alphabet)
+        return records
+    
+    def resetA3M(self, alnFile, outFile):
+        """ Reset a A3M alignment to FASTA sequences
+        
+        Wrapper function for a3mToTrimmed() and removeGaps()
+        
+        :alnFile: A3M format alignment file
+        :outFile: FASTA sequence file
+        """
+        records = list(Bio.SeqIO.parse(open(alnFile, 'r'), 'fasta'))
+        
+        records_trimmed = self._a3mToTrimmed(records)
+        records_trimmed_gapped = self._removeGaps(records)
+        
+        Bio.SeqIO.write(records_trimmed_gapped, open(outFile, 'w'), "fasta")
+        return
+        
+    def read(self, alnFile, alnFormat):
+        """Read a multiple sequence alignment
+        
+        :alnFile: MSA file
+        :alnFormat: MSA format
+        
+        :returns: Biopython MSA generator
+        """
+        return Bio.SeqIO.parse(open(alnFile, 'r'), alnFormat)
+        
+    def removeGaps(self, alnFile, outFile):
+        """ Remove all gaps in a MSA
+        
+        :alnFile: FASTA alignment file
+        :outFile: FASTA sequence file
+        """
+        # Instead of reading an AlignIO object read as SeqIO object to treat them
+        # straight away as individual sequences
+        
+        records = list(Bio.SeqIO.parse(open(alnFile, 'r'), 'fasta'))
+        records_formatted = self._removeGaps(records)
+        
+        Bio.SeqIO.write(records_formatted, open(outFile, 'w'), "fasta")
         return
 
-    def _remove_gaps(self, records):
+    def _removeGaps(self, records):
         """ Format the string to remove the gaps
-                and make every residue uppercase
         """
-        for record in records:
-            seq = self.format_seq(str(record.seq))
-            record.seq = Bio.Seq.Seq(seq, Bio.Alphabet.single_letter_alphabet)
+        for record in records:  
+            record.seq = Bio.Seq.Seq(str(record.seq).replace("-", ""), 
+                                     Bio.Alphabet.single_letter_alphabet)
         return records
-
-    def format_seq(self, seq):
-        return str(seq).replace("-", "").upper()
-##End AlignmentParser
-
-
-class Test(unittest.TestCase):
-    def setUp(self):
-        self.ap = AlignmentParser()
-
-    def testFormat(self):
-        seq1 = "aaaaaa"
-        seq2 = "A-A--A"
-        seq3 = "a---a"
-
-        ref_seq1 = "AAAAAA"
-        ref_seq2 = "AAA"
-        ref_seq3 = "AA"
-
-        out_seq1 = self.ap.format_seq(seq1)
-        out_seq2 = self.ap.format_seq(seq2)
-        out_seq3 = self.ap.format_seq(seq3)
-        
-        self.assertEqual(ref_seq1, out_seq1)
-        self.assertEqual(ref_seq2, out_seq2)
-        self.assertEqual(ref_seq3, out_seq3)
-##End Test
+    
 
