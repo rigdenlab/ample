@@ -1,7 +1,7 @@
 #!/usr/bin/env ccp4-python
 
 # system
-import unitest
+import unittest
 
 #3rd party
 import Bio.AlignIO
