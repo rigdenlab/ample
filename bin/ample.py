@@ -13,9 +13,9 @@ import platform
 import sys
 
 # Add the ample python folder to the PYTHONPATH
-#sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
-root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
-sys.path.append( os.path.join( root, "python" ) )
+sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+#sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
 import argparse
