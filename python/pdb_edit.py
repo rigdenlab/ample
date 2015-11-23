@@ -1274,14 +1274,12 @@ def _resseq(hierarchy):
     chain2data = _sequence_data(hierarchy)
     return dict((k,chain2data[k][1]) for k in chain2data.keys())
 
-def renumber_residues( pdbin, pdbout, start=1, chain=None ):
+def renumber_residues(pdbin, pdbout, start=1):
     """ Renumber the residues in the chain """
-    pdb_input = iotbx.pdb.pdb_input( file_name=pdbin )
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     hierarchy = pdb_input.construct_hierarchy()
     
-    if chain: _chain( hierarchy, chain )
-    
-    _renumber( hierarchy, start )
+    _renumber(hierarchy, start)
 
     with open(pdbout,'w') as f:
         f.write("REMARK Original file:\n")
@@ -1289,7 +1287,7 @@ def renumber_residues( pdbin, pdbout, start=1, chain=None ):
         f.write(hierarchy.as_pdb_string(anisou=False))
     return
 
-def _renumber( hierarchy, start ):
+def _renumber(hierarchy, start):
     for model in hierarchy.models():
         for chain in model.chains():
             for idx, residue_group in enumerate(chain.residue_groups()):
