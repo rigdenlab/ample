@@ -1188,9 +1188,9 @@ class Ensembler(object):
             models = model_core_from_fasta(run_theseus.aligned_models,
                                            alignment_file=alignment_file,
                                            work_dir=os.path.join(truncate_dir,'core_models'))
-            # Ufortunately Theseus doesn't print all residues in its output format, so we can't use the variances we calculated beore and
+            # Ufortunately Theseus doesn't print all residues in its output format, so we can't use the variances we calculated before and
             # need to calculate the variances of the core models 
-            try: run_theseus.superpose_models(models, homologs=homologs, alignment_file=alignment_file, basename='homologs_core')
+            try: run_theseus.superpose_models(models, homologs=homologs, basename='homologs_core')
             except RuntimeError as e:
                 self.logger.critical(e)
                 return [],[]
@@ -1243,8 +1243,7 @@ class Ensembler(object):
             # list of models for this truncation level
             level_models = []
             for infile in models:
-                pdbname = os.path.basename(infile)
-                pdbout = os.path.join(trunc_dir, pdbname)
+                pdbout = ample_util.filename_append(infile, tlevel, directory=trunc_dir)
                 # Loop through PDB files and create new ones that only contain the residues left after truncation
                 pdb_edit.select_residues(pdbin=infile, pdbout=pdbout, tokeep_idx=tresidue_idxs)
                 level_models.append(pdbout)
