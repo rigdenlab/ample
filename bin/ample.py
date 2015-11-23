@@ -13,9 +13,9 @@ import platform
 import sys
 
 # Add the ample python folder to the PYTHONPATH
-sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
-#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
-#sys.path.append( os.path.join( root, "python" ) )
+#sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
 import argparse
@@ -27,6 +27,7 @@ import time
 
 # Our imports
 import add_sidechains_SCWRL
+import ample_contacts
 import ample_exit
 import ample_options
 import ample_sequence
@@ -86,9 +87,6 @@ def process_command_line():
     
     parser.add_argument('-ccp4_jobid', type=int, nargs=1,
                        help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
-    
-    parser.add_argument('-constraints_file', type=str, nargs=1,
-                       help='Residue constraints for ab initio modelling')
     
     parser.add_argument('-debug', metavar='True/False', type=str, nargs=1,
                        help='Run in debug mode (CURRENTLY UNUSED)')
@@ -266,6 +264,27 @@ def process_command_line():
     
     parser.add_argument('-webserver_uri', type=str, nargs=1,
                        help='URI of the webserver directory - also indicates we are running as a webserver')
+    
+    # Contact options
+    contact_group = parser.add_argument_group("Contact Restraint Options")
+    
+    contact_group.add_argument('-bbcontacts_file', type=str, nargs=1,
+                       help='Additional bbcontacts file. ***Requires normal contactfile***')
+    
+    contact_group.add_argument('-constraints_factor', type=float, nargs=1,
+                       help='Factor (* Sequence length) determining number of contact restraints to use (default=1.0)')
+    
+    contact_group.add_argument('-constraints_file', type=str, nargs=1,
+                       help='Residue restraints for ab initio modelling')
+    
+    contact_group.add_argument('-contact_file', type=str, nargs=1,
+                       help='Residue contacts file in CASP RR format')
+    
+    contact_group.add_argument('-distance_to_neighbour', type=int, nargs=1,
+                       help="Min. distance between residue pairs for contact (default=5)")
+    
+    contact_group.add_argument('-energy_function', type=str, nargs=1,
+                       help='Rosetta energy function for contact restraint conversion (default=FADE)')
     
     # MR options
     mr_group = parser.add_argument_group('MRBUMP/Molecular Replacement Options')
