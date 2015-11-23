@@ -12,11 +12,8 @@ import subprocess
 import sys
 
 if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
-#sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "python"))
-#sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "parsers"))
-
-sys.path.insert(0, os.path.join(os.environ['HOME'], 'opt', "ample-dev1", "python"))
-sys.path.insert(0, os.path.join(os.environ['HOME'], 'opt', "ample-dev1", "parsers"))
+sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "python"))
+sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "parsers"))
 
 # Custom
 import ample_util
