@@ -246,10 +246,10 @@ class Ensembler(object):
         
         return
     
-    def align_models(self, models, basename=None, work_dir=None, homologs=False):
+    def superpose_models(self, models, basename=None, work_dir=None, homologs=False):
         run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
         try:
-            run_theseus.align_models(models, basename=basename, homologs=homologs)
+            run_theseus.superpose_models(models, basename=basename, homologs=homologs)
         except Exception, e:
             self.logger.critical("Error running theseus: {0}".format(e))
             return False
@@ -681,7 +681,7 @@ class Ensembler(object):
              
             # Need to create an alignment file for theseus
             basename = "e{0}".format(tlevel)
-            pre_ensemble = self.align_models(truncated_models, basename=basename, work_dir=ensemble_dir, homologs=True)
+            pre_ensemble = self.superpose_models(truncated_models, basename=basename, work_dir=ensemble_dir, homologs=True)
             if not pre_ensemble:
                 self.logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
                 continue
@@ -922,7 +922,7 @@ class Ensembler(object):
                 for m in cluster_files: f.write(m + "\n")
                 f.write("\n")
             
-            cluster_file = self.align_models(cluster_files, work_dir=subcluster_dir)
+            cluster_file = self.superpose_models(cluster_files, work_dir=subcluster_dir)
             if not cluster_file:
                 msg = "Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename, subcluster_dir)
                 self.logger.critical(msg)
@@ -1136,7 +1136,7 @@ class Ensembler(object):
         os.chdir(subcluster_dir)
 
         basename = 'c{0}_t{1}_r{2}'.format(cluster_num, truncation_level, radius)
-        cluster_file = self.align_models(models)
+        cluster_file = self.superpose_models(models)
         if not cluster_file:
             msg = "Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename,
                                                                                                 subcluster_dir)
@@ -1177,25 +1177,30 @@ class Ensembler(object):
         
         # Calculate variances between pdb and align them (we currently only require the aligned models for homologs)
         run_theseus = theseus.Theseus(work_dir=truncate_dir, theseus_exe=self.theseus_exe)
-        try: run_theseus.align_models(models, homologs=homologs, alignment_file=alignment_file)
+        try: run_theseus.superpose_models(models, homologs=homologs, alignment_file=alignment_file)
         except RuntimeError as e:
             self.logger.critical(e)
             return [],[]
         
-        # For homologs, we only want the core residues as we will trim the models down to core
-        if homologs: var_by_res = run_theseus.var_by_res(core=True)
-        else: var_by_res = run_theseus.var_by_res()
+        if homologs:
+            # If using homologs, now trim down to the core. We only do this here so that we are using the aligned models from
+            # theseus, which makes it easier to see what the truncation is doing.
+            models = model_core_from_fasta(run_theseus.aligned_models,
+                                           alignment_file=alignment_file,
+                                           work_dir=os.path.join(truncate_dir,'core_models'))
+            # Ufortunately Theseus doesn't print all residues in its output format, so we can't use the variances we calculated beore and
+            # need to calculate the variances of the core models 
+            try: run_theseus.superpose_models(models, homologs=homologs, alignment_file=alignment_file, basename='homologs_core')
+            except RuntimeError as e:
+                self.logger.critical(e)
+                return [],[]
+        
+        var_by_res = run_theseus.var_by_res()
         if not len(var_by_res) > 0:
             msg = "Error reading residue variances!"
             self.logger.critical(msg)
             raise RuntimeError(msg)
         
-        # If using homologs, now trim down to the core. We only do this here so that we are using the aligned models from
-        # theseus, which makes it easier to see what the truncation is doing.
-        if homologs: models = model_core_from_fasta(run_theseus.aligned_models,
-                                                    alignment_file=alignment_file,
-                                                    work_dir=os.path.join(self.work_dir,'core_models'))
-            
         self.logger.info('Using truncation method: {0}'.format(truncation_method))
         # Calculate which residues to keep under the different methods
         truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = None, None, None, None
@@ -1377,7 +1382,7 @@ class Test(unittest.TestCase):
         mdir = os.path.join(self.testfiles_dir, "models")
         cluster_models = glob.glob(mdir + os.sep + "*.pdb")
         run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
-        run_theseus.align_models(cluster_models)
+        run_theseus.superpose_models(cluster_models)
         var_by_res = run_theseus.var_by_res()
         thresholds = ensembler.generate_thresholds(var_by_res, percent_interval)
         
@@ -1409,7 +1414,7 @@ class Test(unittest.TestCase):
         mdir = os.path.join(self.testfiles_dir, "models")
         cluster_models = glob.glob(mdir + os.sep + "*.pdb")
         run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
-        run_theseus.align_models(cluster_models)
+        run_theseus.superpose_models(cluster_models)
         var_by_res = run_theseus.var_by_res()
         truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_thresh(var_by_res, percent_interval)
         
@@ -1487,7 +1492,7 @@ class Test(unittest.TestCase):
         mdir = os.path.join(self.testfiles_dir, "models")
         cluster_models = glob.glob(mdir + os.sep + "*.pdb")
         run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
-        run_theseus.align_models(cluster_models)
+        run_theseus.superpose_models(cluster_models)
         var_by_res = run_theseus.var_by_res()
         truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_percent(var_by_res, percent_interval=5)
 
@@ -2055,7 +2060,7 @@ class Test(unittest.TestCase):
         
         # We test twice to trap any changes in gesamt or theseus that might scupper us.
         rt = theseus.Theseus(theseus_exe=self.theseus_exe)
-        rt.align_models(models, work_dir=work_dir, alignment_file=alignment_file, homologs=True)
+        rt.superpose_models(models, work_dir=work_dir, alignment_file=alignment_file, homologs=True)
         core_models = model_core_from_theseus(rt.aligned_models, alignment_file, rt.var_by_res(), work_dir=work_dir)
         self._coreFromTheseusTest(core_models)
         
