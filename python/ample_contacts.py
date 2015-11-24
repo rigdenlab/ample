@@ -56,7 +56,9 @@ class Contacter(object):
     
     def format(self, constraintfile):
         """ Format contacts to Rosetta constraints """
-
+        
+        self.logger.info("Re-formatting contacts to constraints using Rosetta's {0} function".format(self.optd['energy_function']))
+        
         # Format the contacts to constraints
         contact_formatted_lines = self._formatToConstraints(self.contacts, self.optd['energy_function'])
         
@@ -205,7 +207,8 @@ class Contacter(object):
     def _formatToConstraints(self, contacts, user_function):
         """ Return a list of Rosetta string lines """
     
-        try: energyFunction = getattr(energy_functions, user_function)
+        try: 
+            energyFunction = getattr(energy_functions, user_function)
         except AttributeError:
             ample_exit.exit_error("Rosetta energy function `%s` unavailable" % user_function)
         
