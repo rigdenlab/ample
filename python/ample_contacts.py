@@ -116,16 +116,18 @@ class Contacter(object):
     def _ppv_score(self, contacts, RCm, RCm_sequence, offset=0):
         '''Calculate the Positive Predicted Value (PPV) for the predicted contacts'''
         
-        FP, TP = 0.0, 0.0
+        GP, FP, TP = 0.0, 0.0, 0.0
+        
         for idx in range(len(contacts)):
             c_x = contacts[idx]['res1_index']-offset-1
             c_y = contacts[idx]['res2_index']-offset-1
-            if RCm_sequence[c_x] == '-' or RCm_sequence[c_y] == '-': continue
-            if RCm[c_x, c_y] > 0: TP += 1.0
+            if RCm_sequence[c_x] == '-' or RCm_sequence[c_y] == '-': GP += 1.0
+            elif RCm[c_x, c_y] > 0: TP += 1.0
             else: FP += 1.0
+        
         ppv = TP/(TP+FP)
         
-        assert (TP+FP)==len(contacts), "Differing number of contacts used for PPV calculation"
+        assert (TP+FP+GP)==len(contacts), "Differing number of contacts used for PPV calculation"
         
         return ppv
     
@@ -550,11 +552,11 @@ if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('-b', type=str, dest='bbcontactsfile',
+    parser.add_argument('-b', type=str, dest='bbcontacts_file',
                         help="Additional bbcontacts CASPRR contactfile")
-    parser.add_argument('-c', type=float, default=1.0, dest="constraint_factor",
+    parser.add_argument('-c', type=float, default=1.0, dest="constraints_factor",
                         help="Defines number of contacts to use (L/*x*)")
-    parser.add_argument('contactfile')
+    parser.add_argument('contact_file')
     parser.add_argument('-d', type=int, default=5, dest="distance_to_neighbour",
                         help="Defines distance cutoff")
     parser.add_argument('-e', type=str, default="FADE", dest='energy_function',
