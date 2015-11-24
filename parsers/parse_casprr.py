@@ -12,6 +12,13 @@ class CaspContactParser(parse_contactfile.ContactfileParser):
         parse_contactfile.ContactfileParser.__init__(self)
         self.method = "CASP RR"
 
+    def checkFormat(self, contactfile):
+        """Check for correctness of CASP RR contact file
+        :returns: True or False
+        """
+        with open(contactfile, 'r') as fh: line = fh.readline().strip().split()
+        return True if line[0]=="PFRMAT" and line[1]=="RR" else False
+        
     def read(self, contactfile):
         self.infile = os.path.abspath(contactfile)
         with open(self.infile, 'r') as fh: self._read(fh)
@@ -76,4 +83,3 @@ class CaspContactParser(parse_contactfile.ContactfileParser):
                                                        contact['confidence_score'])) \
                                     for contact in contacts]
         return formatted_contacts
-##End CaspContactParser
