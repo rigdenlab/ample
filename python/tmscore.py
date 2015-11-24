@@ -17,12 +17,11 @@ import tempfile
 import unittest
 
 # 3rd party
-import Bio.pairwise2
 import numpy
 
 if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
 sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "parsers"))
-#sys.path.insert(0, os.path.join(os.environ["HOME"], "Documents", "ample-dev1", "parsers"))
+#sys.path.insert(0, os.path.join(os.environ["HOME"], "opt", "ample-dev1", "parsers"))
 
 # Custom
 import ample_util
@@ -37,7 +36,7 @@ class TMscorer(object):
         self.structure = structure
         self.tmscore_exe = tmscore_exe
         self.workingDIR = wdir
-    ##End __init__()
+        return
 
     def main(self, pdb_list_file):
         # Read all pdb files from list
@@ -49,7 +48,7 @@ class TMscorer(object):
         # Dumpe all data in a pickle file
         self.pickle_file = os.path.join(self.workingDIR, "tmresults.pkl")
         pickle.dump(self.entries, open(self.pickle_file, 'w'))
-    ##End main()
+        return
 
     def compare_to_structure(self, pdb_list):
         self.logger.info('-------Evaluating decoys/models-------')
@@ -86,7 +85,6 @@ class TMscorer(object):
             entries.append(entry)
 
         return entries
-    ##End compare_to_structure()
 
     def mod_structures(self, pdbin, pdbin_mod, structure, structure_mod):
         ''' Make sure the decoy and the xtal pdb align to get an accurate Tm score '''
@@ -99,7 +97,7 @@ class TMscorer(object):
         structure_seq = pdb_edit.sequence(structure).values()[0]
 
         # Align the sequences to see how much of the predicted decoys are in the xtal
-        aligned_seq_list = self.align_sequences(pdbin_seq, structure_seq)
+        aligned_seq_list = ample_util.align_sequences(pdbin_seq, structure_seq)
         pdbin_seq_ali     = aligned_seq_list[0]
         structure_seq_ali = aligned_seq_list[1]
         
@@ -133,39 +131,27 @@ class TMscorer(object):
         os.unlink(structure_stage1.name)
 
         return
-    ##End _fix_numbering()
-
 
     def residue_one(self, pdb):
         for line in open(pdb, 'r'):
             if line.startswith("ATOM"):
                 line = line.split()
                 return int(line[5])
-    ##End residue_one()
-
-
-    def align_sequences(self, seq1, seq2):
-        alignment  = Bio.pairwise2.align.globalms(seq1, seq2, 2, -1, -0.5, -0.1)
-        return (alignment[-1][0], alignment[-1][1])
-    ##End align_sequences()
 
     def find_gaps(self, seq):
         gaps = [i+1 for i, c in enumerate(seq) if c=="-"]
         return gaps
-    ##End find_gaps()
-
+    
     def read_sequence(self, seq):
         offset = 0
         for char in seq:
             if char=="-": offset += 1
             if char!="-": break
         return offset
-    ##End read_sequence()
-
+    
     def _read_list(self, list_file):
         return [l.strip() for l in open(list_file, 'r')]
-    ##End _read_list()
-
+    
     def _store(self, name, pdbin, logfile, structure, pt):
         entry = {"name": name,
                  "pdbin": pdbin,
@@ -178,9 +164,8 @@ class TMscorer(object):
                  "rmsd": pt.rmsd,
                  "nrResiduesCommon": pt.nrResiduesCommon}
         return entry
-    ##End _store()
-##End TMscorer
-
+    
+    
 class Statistics(object):
     def __init__(self, pickle_file, pdb_list_file):
         self.pdb_list_file = pdb_list_file
@@ -203,18 +188,16 @@ class Statistics(object):
 
         self.mean   = numpy.mean(score_list_sorted)
         self.median = numpy.median(score_list_sorted)
-    ##End main()
+        return
 
     def extract(self, data, pdb_names, score):
         return [entry[score] for entry in data \
                         if entry['name'] in pdb_names]
-    ##End _extract()
 
     def _read_list(self, list_file):
         return [os.path.basename(l.strip()).rsplit('.', 1)[0] \
                     for l in open(list_file, 'r')]
-    ##End _read_list()
-##End Statistics()
+        
 
 class TestTMScore(unittest.TestCase):
     def setUp(self):
@@ -238,20 +221,6 @@ class TestTMScore(unittest.TestCase):
         self.assertEqual(ref3_offset, offset2)
         self.assertEqual(ref3_offset, offset3)
 
-    def testAlign(self):
-        seq1 = "AAAMMAMMAAA"
-        seq2 = "MMAMMAAA"
-
-        ref_seq1 = "AAAMMAMMAAA"
-        ref_seq2 = "---MMAMMAAA"
-
-        aligned_sequence_list = self.TM.align_sequences(seq1, seq2)
-        seq1_ali = aligned_sequence_list[0]
-        seq2_ali = aligned_sequence_list[1]
-
-        self.assertEqual(ref_seq1, seq1_ali)
-        self.assertEqual(ref_seq2, seq2_ali)
-
     def testGaps(self):
         seq1 = "AAAA---AA--AA"
         ref_gaps1 = [5, 6, 7, 10, 11]
@@ -269,7 +238,7 @@ class TestTMScore(unittest.TestCase):
         self.assertEqual(ref_gaps1, gaps1)
         self.assertEqual(ref_gaps2, gaps2)
         self.assertEqual(ref_gaps3, gaps3)
-##End TestTMscore
+
 
 class TestStatistics(unittest.TestCase):
     def testExtract(self):
@@ -320,12 +289,11 @@ class TestStatistics(unittest.TestCase):
         ref_data_maxsub_2 = [0.222, 0.8]
         out_data_maxsub_2 = s.extract(data, pdb_list_2, "maxsub")
         self.assertItemsEqual(ref_data_maxsub_2, out_data_maxsub_2)
-##End TestStatistics
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    #parser.add_argument('-pkl_file', type=str)
+    
     parser.add_argument('-score', metavar='[ tm | maxsub | gdtts | gdtha ]',
                         type=str, default='tm', help='The score to extract [default: tm]')
     parser.add_argument("structure")

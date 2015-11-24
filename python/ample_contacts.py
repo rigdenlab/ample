@@ -23,11 +23,11 @@ sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "parsers")
 # Custom
 import ample_exit
 import ample_plot
+import ample_util
 import energy_functions
 import parse_casprr
 import parse_psipred
 import pdb_edit
-import tmscore
 
 
 class Contacter(object):
@@ -154,8 +154,7 @@ class Contacter(object):
         
         # Adjust the residue list to that of the input sequence
         if alignmentSequence:
-            t = tmscore.TMscorer("dummy", "dummy")
-            aligned_seq_list = t.align_sequences(alignmentSequence, self.structure_seq)
+            aligned_seq_list = ample_util.align_sequences(alignmentSequence, self.structure_seq)
             
             j = 0
             gapped_cb_lst=[]
