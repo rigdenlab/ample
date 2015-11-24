@@ -12,13 +12,19 @@ import os
 import random
 import re
 import shutil
+import sys
 import unittest
+
+if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
+sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "parsers"))
+#sys.path.insert(0, os.path.join(os.environ["HOME"], "opt", "ample-dev1", "parsers"))
 
 # Our modules
 import add_sidechains_SCWRL
 import ample_sequence
 import ample_util
 import octopus_predict
+import parse_psipred
 import pdb_edit
 import workers
 
@@ -442,12 +448,14 @@ class RosettaModel(object):
 
         self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
 
-        psipred_file = os.path.join(self.fragments_directory, self.name + '.psipred')
-        if os.path.exists(psipred_file):
-            ample_util.get_psipred_prediction(psipred_file)
+        # removed by HLFSIMKO. Can be done with psipred_ss2 prediction. See below
+        #psipred_file = os.path.join(self.fragments_directory, self.name + '.psipred')
+        #if os.path.exists(psipred_file):
+        #    ample_util.get_psipred_prediction(psipred_file)
             
         psipred_ss2 = os.path.join(self.fragments_directory, self.name + '.psipred_ss2')
         if os.path.exists(psipred_ss2):
+            parse_psipred.PsipredSs2Parser(psipred_ss2).checkContent()
             self.psipred_ss2 = psipred_ss2
 
         return
