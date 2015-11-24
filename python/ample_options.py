@@ -223,12 +223,12 @@ class AmpleOptions(object):
 
         # Convert all paths to absolute paths
         paths = [
-                 'alignment_file',
+                'alignment_file',
                 'blast_dir',
                 'bbcontacts_file',
                 'cluster_dir',
                 'constraints_file',
-                'contact_file'
+                'contact_file',
                 'domain_all_chains_pdb',
                 'ensembles_dir',
                 'fasta',
