@@ -1243,7 +1243,7 @@ class Ensembler(object):
             # list of models for this truncation level
             level_models = []
             for infile in models:
-                pdbout = ample_util.filename_append(infile, tlevel, directory=trunc_dir)
+                pdbout = ample_util.filename_append(infile, str(tlevel), directory=trunc_dir)
                 # Loop through PDB files and create new ones that only contain the residues left after truncation
                 pdb_edit.select_residues(pdbin=infile, pdbout=pdbout, tokeep_idx=tresidue_idxs)
                 level_models.append(pdbout)
