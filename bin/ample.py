@@ -14,8 +14,10 @@ import sys
 
 # Add the ample python folder to the PYTHONPATH
 sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
+sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "parsers"))
 #root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
 #sys.path.append( os.path.join( root, "python" ) )
+#sys.path.append( os.path.join( root, "parsers" ) )
 
 # python imports
 import argparse
@@ -33,11 +35,13 @@ import ample_options
 import ample_sequence
 import ample_util
 import benchmark
+import energy_functions
 import ensemble
 import mrbump_ensemble
 import mrbump_results
 import mtz_util
 import nmr
+import parse_casprr
 import pdb_edit
 import pyrvapi_results
 import rosetta_model
@@ -475,6 +479,51 @@ def process_options(amoptd, logger):
     
     ###############################################################################
     #
+    # Contact file processing
+    #
+    ###############################################################################
+    
+    # Check the existence of the contact file and whether it is CASP RR format
+    # based on the required header `PFRMAT RR`
+    if amoptd['contact_file']:
+        if not os.path.exists(str(amoptd['contact_file'])):
+            msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
+            ample_exit.exit_error(msg)
+           
+        if not parse_casprr.CaspContactParser().checkFormat(amoptd['contact_file']):
+            msg = "Wrong format in contact file:\n{0}".format(amoptd['contact_file'])
+            ample_exit.exit_error(msg)
+    
+    # Check the existence of the contact file and whether it is CASP RR format
+    # based on the required header `PFRMAT RR`   
+    if amoptd['bbcontacts_file']:
+        if not os.path.exists(amoptd['bbcontacts_file']):
+            msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
+            ample_exit.exit_error(msg)
+            
+        if not parse_casprr.CaspContactParser().checkFormat(amoptd['bbcontacts_file']):
+            msg = "Wrong format in contact file:\n{0}".format(amoptd['bbcontacts_file'])
+            ample_exit.exit_error(msg)
+    
+    # Make sure user selected energy function is pre-defined
+    if amoptd['energy_function']:
+        try: 
+            energyFunction = getattr(energy_functions, amoptd['energy_function'])
+        except AttributeError:
+            msg = "Rosetta energy function {0} unavailable".format(amoptd['energy_function'])
+            ample_exit.exit_error(msg)
+    
+    # Avoid overwriting constraints file by resetting the contact files
+    if amoptd['contact_file'] and amoptd['constraints_file']:
+        # Reset the contact_file option to make it clear it hasn't been used
+        msg = "Ignoring contact files: {0} {1}".format(amoptd['contact_file'], amoptd['bbcontacts_file']) \
+                    if amoptd['bbcontacts_file'] else "Ignoring contact file: {0}".format(amoptd['contact_file'])
+        logger.warning(msg)
+        amoptd['contact_file'] = None
+        amoptd['bbcontacts_file'] = None
+    
+    ###############################################################################
+    #
     # MTZ file processing
     #
     ###############################################################################
@@ -870,7 +919,34 @@ def main():
         rosetta_modeller.generate_fragments(amopt.d)
         amopt.d['frags_3mers'] = rosetta_modeller.frags_3mers
         amopt.d['frags_9mers'] = rosetta_modeller.frags_9mers
+        amopt.d['psipred_ss2'] = rosetta_modeller.psipred_ss2
+
+    # If no constaints file but contact file 
+    # Reformat the contacts to constraints
+    # Needs to be post-fragment picking to be able to use/plot psipred_ss2
+    if amopt.d['contact_file'] and not amopt.d['constraints_file']:
+        cm = ample_contacts.Contacter(amopt.d)
+        
+        # Format contacts
+        cst_file = os.path.join(amopt.d['work_dir'], amopt.d['name'] + ".cst")
+        cm.format(cst_file)
+        amopt.d['constraints_file'] = cst_file
+        
+        # Contact map plotting. We can parse ss2file and structurefile blindly, checks in place
+        cm_figure = os.path.join(amopt.d['work_dir'], amopt.d['name'] + ".cm.pdf")
+        cm.plot(cm_figure, ss2file=amopt.d['psipred_ss2'], structurefile=amopt.d['native_pdb'])
+        amopt.d['contact_map'] = cm_figure     
+        
+        # Benchmark mode allows us to calculate ppv
+        if amopt.d['benchmark_mode']:
+            amopt.d['contact_ppv'] = cm.ppv(amopt.d['native_pdb'])
+            logger.info("Accuracy of contact prediction (PPV): {0} %".format(amopt.d['contact_ppv']*100))
     
+    # In case file created above we need to tell the rosetta_modeller where it is
+    # otherwise not used as not created before object initialised
+    if amopt.d['constraints_file']:
+        rosetta_modeller.constraints_file = amopt.d['constraints_file']    
+                
     # if NMR process models first
     # break here for NMR (frags needed but not modelling
     if amopt.d['nmr_model_in']:
