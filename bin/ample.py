@@ -944,9 +944,9 @@ def main():
     
     # In case file created above we need to tell the rosetta_modeller where it is
     # otherwise not used as not created before object initialised
-    if amopt.d['constraints_file']:
+    if amopt.d['constraints_file'] and amopt.d['make_models']:
         rosetta_modeller.constraints_file = amopt.d['constraints_file']    
-                
+              
     # if NMR process models first
     # break here for NMR (frags needed but not modelling
     if amopt.d['nmr_model_in']:
