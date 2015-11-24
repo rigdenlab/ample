@@ -17,6 +17,9 @@ import unittest
 import urllib
 import zipfile
 
+# 3rd party
+import Bio.pairwise2
+
 # our imports
 import pdb_edit
 import ample_exit
@@ -69,6 +72,14 @@ header ="""#####################################################################
 
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
+
+def align_sequences(seq1, seq2):
+    """Global pairwise alignment of two sequences
+    
+    :returns: aligned sequences as tuple
+    """
+    alignment = Bio.pairwise2.align.globalms(seq1, seq2, 2, -1, -0.5, -0.1)
+    return (alignment[-1][0], alignment[-1][1])
 
 def ccp4_version():
     """Return the CCP4 version as a tuple"""
@@ -301,6 +312,7 @@ def find_maxcluster(amoptd):
     return maxcluster_exe
 
 def get_psipred_prediction(psipred):
+    """Deprecated ... user parsers.parse_psipred instead"""
     string = ''
     for line in open(psipred):
         get_stat1 = re.compile('^Pred\:\s*(\w*)')
