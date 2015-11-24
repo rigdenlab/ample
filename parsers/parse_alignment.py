@@ -58,7 +58,7 @@ class AlignmentParser(object):
         
         :returns: Biopython MSA generator
         """
-        return Bio.SeqIO.parse(open(alnFile, 'r'), alnFormat)
+        return Bio.AlignIO.parse(open(alnFile, 'r'), alnFormat)
         
     def removeGaps(self, alnFile, outFile):
         """ Remove all gaps in a MSA
