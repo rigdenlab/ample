@@ -13,11 +13,10 @@ import platform
 import sys
 
 # Add the ample python folder to the PYTHONPATH
-sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "python"))
-sys.path.append(os.path.join(os.environ["CCP4"], "share", "ample", "parsers"))
+root = os.path.join(os.environ["CCP4"], "share", "ample")
 #root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
-#sys.path.append( os.path.join( root, "python" ) )
-#sys.path.append( os.path.join( root, "parsers" ) )
+sys.path.append( os.path.join( root, "python" ) )
+sys.path.append( os.path.join( root, "parsers" ) )
 
 # python imports
 import argparse
@@ -822,6 +821,7 @@ def process_rosetta_options(amoptd, logger):
     return rosetta_modeller
 
 def setup_ccp4(amoptd):
+    """Check CCP4 is available and return the top CCP4 directory"""
     # Make sure CCP4 is around
     if not "CCP4" in os.environ:
         msg = "Cannot find CCP4 installation - please make sure CCP4 is installed and the setup scripts have been run!"
@@ -837,7 +837,8 @@ def setup_ccp4(amoptd):
 
     # Record the CCP4 version we're running with  - also required in pyrvapi_results
     amoptd['ccp4_version'] = ample_util.ccp4_version()
-    return
+    
+    return os.environ['CCP4']
 
 def main():
     """Main AMPLE routine.
@@ -863,12 +864,12 @@ def main():
     logger = ample_util.setup_logging(ample_log)
     
     # Make sure the CCP4 environment is set up properly
-    setup_ccp4(amopt.d)
+    ccp4_home = setup_ccp4(amopt.d)
     
     # Print out Version and invocation
     logger.info(ample_util.header)
     logger.info("AMPLE version: {0}".format(version.__version__))
-    logger.info("Running with CCP4 version: {0}".format(".".join([str(x) for x in amopt.d['ccp4_version']])))
+    logger.info("Running with CCP4 version: {0} from directory: {1}".format(".".join([str(x) for x in amopt.d['ccp4_version']]), ccp4_home))
     logger.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
     logger.info("Running on host: {0}".format(platform.node()))
     logger.info("Invoked with command-line:\n{0}\n".format(" ".join(sys.argv)))
