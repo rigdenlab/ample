@@ -13,7 +13,6 @@ import sys
 import unittest
 
 # 3rd Party
-import Bio.SeqIO
 import numpy
 
 if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
@@ -21,13 +20,18 @@ sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "parsers")
 #sys.path.insert(0, os.path.join(os.environ["HOME"], "opt", "ample-dev1", "parsers"))
 
 # Custom
-import ample_exit
 import ample_plot
-import ample_util
+import ample_sequence
 import energy_functions
 import parse_casprr
 import parse_psipred
 import pdb_edit
+
+try:
+    import parse_alignment
+    _BIOPYTHON = True
+except ImportError:
+    _BIOPYTHON = False
 
 
 class Contacter(object):
@@ -36,28 +40,92 @@ class Contacter(object):
     def __init__(self, optd=None):
         self.logger = logging.getLogger()
         
+        self.bbcontacts_file = None
+        self.constraints_file = None
+        self.contact_file = None
+        self.contact_map = None
+        self.contact_ppv = None
+        self.psipred_ss2 = None
+        self.structure_pdb = None
+        
+        self.contacts = None
+        self.raw_contacts = None
+        self.sequence = None
+        
         if optd: self.init(optd)
         
         return
     
     def init(self, optd):
         self.optd = optd
-        self.sequence = self._readFasta(self.optd['fasta'])                     
-        raw_contacts = self._readContacts(self.optd['contact_file'], 
-                                          self.sequence) 
-        self.contacts = self._prepare(raw_contacts, 
-                                      self.optd['constraints_factor'], 
-                                      self.optd['distance_to_neighbour'])
+
+        self.contact_file = optd['contact_file']
+        self.contact_map = os.path.join(optd['work_dir'], optd['name'] + ".cm.pdf")
+        self.constraints_file = os.path.join(optd['work_dir'], optd['name'] + ".cst")
+        self.sequence = optd['sequence']
         
-        if optd['bbcontacts_file']:
+        # Optional files
+        if optd['native_pdb']: self.structure_pdb=optd['native_pdb']
+        
+        if optd['psipred_ss2']: self.psipred_ss2=optd['psipred_ss2']
+        
+        # Extract the raw sequence
+        self.raw_contacts = self._readContacts(self.contact_file, self.sequence)
+        
+        # Prepare the contacts depending on all the user/default options
+        self.contacts = self._prepare(self.raw_contacts, optd['constraints_factor'], optd['distance_to_neighbour'])
+        
+        # Map bbcontacts on top of the previously provided contacts
+        if optd['bbcontacts_file']: 
+            self.bbcontacts_file = optd['bbcontacts_file']
             self._readAdditionalBBcontacts(optd['bbcontacts_file'])
-            
+        
         return
     
+    def checkOptions(self, amoptd):
+        """Function to check that all contact files are available"""
+        
+        # Make sure contact file is provided with bbcontacts_file
+        if not amoptd['contact_file'] and amoptd['bbcontacts_file']:
+            msg = "Must provide -contact_file when using -bbcontacts_file or use as -contact_file"
+            raise RuntimeError(msg)
+        
+        # Check the existence of the contact file and whether it is CASP RR format
+        # based on the required header `PFRMAT RR`
+        if amoptd['contact_file']:
+            if not os.path.exists(str(amoptd['contact_file'])):
+                msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
+                raise RuntimeError(msg)
+               
+            if not parse_casprr.CaspContactParser().checkFormat(amoptd['contact_file']):
+                msg = "Wrong format in contact file:\n{0}".format(amoptd['contact_file'])
+                raise RuntimeError(msg)
+        
+        # Check the existence of the contact file and whether it is CASP RR format
+        # based on the required header `PFRMAT RR`   
+        if amoptd['bbcontacts_file']:
+            if not os.path.exists(amoptd['bbcontacts_file']):
+                msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
+                raise RuntimeError(msg)
+                
+            if not parse_casprr.CaspContactParser().checkFormat(amoptd['bbcontacts_file']):
+                msg = "Wrong format in contact file:\n{0}".format(amoptd['bbcontacts_file'])
+                raise RuntimeError(msg)
+        
+        # Make sure user selected energy function is pre-defined
+        if amoptd['energy_function']:
+            try: 
+                energyFunction = getattr(energy_functions, amoptd['energy_function'])
+            except AttributeError:
+                msg = "Rosetta energy function {0} unavailable".format(amoptd['energy_function'])
+                raise RuntimeError(msg)
+        
+        return
+            
     def format(self, constraintfile):
         """ Format contacts to Rosetta constraints """
         
-        self.logger.info("Re-formatting contacts to constraints using Rosetta's {0} function".format(self.optd['energy_function']))
+        self.logger.info("Re-formatting contacts to constraints using the {0} function".format(self.optd['energy_function']))
         
         # Format the contacts to constraints
         contact_formatted_lines = self._formatToConstraints(self.contacts, self.optd['energy_function'])
@@ -66,15 +134,54 @@ class Contacter(object):
         with open(constraintfile, 'w') as oh: oh.write("\n".join(contact_formatted_lines))
         
         return
+       
+    def _formatToConstraints(self, contacts, user_function):
+        """ Return a list of Rosetta string lines """
+    
+        try: 
+            energyFunction = getattr(energy_functions, user_function)
+        except AttributeError:
+            msg = "Rosetta energy function `{0}` unavailable".format(user_function)
+            raise RuntimeError(msg)
+        
+        # Format each contact according to the line provided above 
+        contact_formatted_lines = [ energyFunction(contact) \
+                                        for contact in contacts ]
+        
+        return contact_formatted_lines
+       
+    def main(self):
+        """Wrapper function for
+            1) contact formatting
+            2) contact map plotting
+            3) calculation of contact accuracy (PPV)  
+        """
+        
+        assert self.contacts, "No contacts provided"
+
+        # Format contacts
+        self.format(self.constraints_file)
+           
+        # Contact map plotting. We can parse ss2file and structure file blindly, checks in place
+        self.plot(self.contact_map,
+                  ss2file=self.psipred_ss2,
+                  structurefile=self.structure_pdb)
+        
+        if self.structure_pdb: self.ppv(self.structure_pdb)
+        
+        return
                 
     def plot(self, figurefile, ss2file=None, structurefile=None, offset=0):
         """ Plot a contact map """
         
+        # Just to make sure we have a structurefile and we can import Biopython
+        availableStructure = True if structurefile and _BIOPYTHON else False
+            
         ap = ample_plot.Plotter()
         ap.initialise(figsize=(5,5), dpi=600)
         
         # Get the coordinates from the reference structure and plot in gray
-        if structurefile:
+        if availableStructure:
             RCs, RCm = self.structureContacts(structurefile, self.sequence)
             RCs = list([i+offset for i in R] for R in RCs)
             ap.addScatter(RCs[0], RCs[1], marker='.', c='#DDDDDD', s=10, \
@@ -88,7 +195,9 @@ class Contacter(object):
                                                       edgecolor="black", linewidths=0.1)
         
         # Get the TP and FP colours
-        tp_colors = self._tp_codes(self.contacts, RCm, self.structure_seq, offset=offset) if structurefile else ['#004F9D']
+        tp_colors = self._tp_codes(self.contacts, RCm, self.structure_seq, offset=offset) \
+                        if availableStructure \
+                            else ['#004F9D']
 
         # Bit cleaner code if we extract X and Y coordinates and then parse them two the plotter
         # Reduce residue index by one to account for counting from 0
@@ -106,11 +215,38 @@ class Contacter(object):
         ap.saveFig(figurefile)
         
         return
+    
+    def _tp_codes(self, contacts, RCm, RCm_sequence, offset=0):
+        '''Get the color codes for each contact depending on match and weight'''
         
+        tp_colors = []
+        
+        for idx in range(len(contacts)):
+            c_x = contacts[idx]['res1_index']-offset-1
+            c_y = contacts[idx]['res2_index']-offset-1
+
+            if RCm[c_x, c_y] > 0    and contacts[idx]['weight']==2: tp_colors.append('#2D9D00')
+            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight']==2: tp_colors.append('#AB0000')
+            elif RCm[c_x, c_y] > 0  and contacts[idx]['weight']==1: tp_colors.append("#38C700")
+            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight']==1: tp_colors.append("#D70909")
+            else: tp_colors.append('#004F9D')
+            
+        return tp_colors
+    
     def ppv(self, structurefile):
-        assert structurefile, "You need to provide a PDB structure as reference"
+        """Calculate the True Positive Rate of contact prediction"""
+         
+        # Check that we were able to import Biopython
+        if not _BIOPYTHON: return 0.0
+        
+        assert structurefile, "You need to provide PDB to calculate the PPV"
+        
         RCs, RCm = self.structureContacts(structurefile, self.sequence)
+        
         ppv = self._ppv_score(self.contacts, RCm, self.structure_seq)
+        
+        self.logger.info("Accuracy of contact prediction (PPV): {0} %".format(ppv*100))
+        
         return ppv
     
     def _ppv_score(self, contacts, RCm, RCm_sequence, offset=0):
@@ -155,9 +291,9 @@ class Contacter(object):
         cb_lst = [numpy.array(x) for x in pdb_edit.xyz_cb_coordinates(structure)]
         
         # Adjust the residue list to that of the input sequence
-        if alignmentSequence:
-            aligned_seq_list = ample_util.align_sequences(alignmentSequence, self.structure_seq)
-            
+        if alignmentSequence and _BIOPYTHON:
+            aligned_seq_list = parse_alignment.AlignmentParser().align_sequences(alignmentSequence, self.structure_seq)
+   
             j = 0
             gapped_cb_lst=[]
             for i in xrange(len(aligned_seq_list[1])):
@@ -203,22 +339,8 @@ class Contacter(object):
         
         numpy.seterr(invalid='print')    # Reset the warning message board
 
-        return ref_contacts, ref_map
+        return ref_contacts, ref_map        
     
-    def _formatToConstraints(self, contacts, user_function):
-        """ Return a list of Rosetta string lines """
-    
-        try: 
-            energyFunction = getattr(energy_functions, user_function)
-        except AttributeError:
-            ample_exit.exit_error("Rosetta energy function `%s` unavailable" % user_function)
-        
-        # Format each contact according to the line provided above 
-        contact_formatted_lines = [ energyFunction(contact) \
-                                        for contact in contacts ]
-        
-        return contact_formatted_lines
-        
     def _prepare(self, contacts, constraint_factor, distance_to_neighbour):
         # No processing so far, but we will need to do it to match atom to contact
         nrConstraints = int(len(self.sequence) * constraint_factor)
@@ -248,6 +370,7 @@ class Contacter(object):
         """
         assert self.contacts, "Need normal contacts first"
         
+        self.logger.info("Mapping bbcontacts file to previously read contacts")
         # Read the contacts from the CASP RR formatted file. Unlike with other
         # contacts, bbcontacts contact pairs are also predicted around the turn
         # of a B-strand, so do not filter neighbours.
@@ -290,30 +413,7 @@ class Contacter(object):
         cp.sortContacts("confidence_score", descending=True)
         cp.assignAminoAcids(sequence)
         return cp.contacts
-    
-    def _readFasta(self, fastafile):
-        seq_records = list(Bio.SeqIO.parse(open(fastafile, "r"), 'fasta'))
-        return str(seq_records[0].seq)
-
-    def _tp_codes(self, contacts, RCm, RCm_sequence, offset=0):
-        '''Get the color codes for each contact depending on match and weight'''
-        
-        tp_colors = []
-        
-        for idx in range(len(contacts)):
-            c_x = contacts[idx]['res1_index']-offset-1
-            c_y = contacts[idx]['res2_index']-offset-1
-
-            if RCm[c_x, c_y] > 0    and contacts[idx]['weight']==2: tp_colors.append('#2D9D00')
-            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight']==2: tp_colors.append('#AB0000')
-            elif RCm[c_x, c_y] > 0  and contacts[idx]['weight']==1: tp_colors.append("#38C700")
-            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight']==1: tp_colors.append("#D70909")
-            else: tp_colors.append('#004F9D')
-            
-        return tp_colors
-##End Contacter
-
-
+   
 
 class Test(unittest.TestCase):
     def setUp(self):
@@ -543,16 +643,14 @@ class Test(unittest.TestCase):
         self.assertEqual(ref_c2, out_c2)
         self.assertEqual(ref_c3, out_c3)
         self.assertEqual(ref_c4, out_c4)
-##End Test
+
     
-    
-        
 
 if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('-b', type=str, dest='bbcontacts_file',
+    parser.add_argument('-b', type=str, default=None, dest='bbcontacts_file',
                         help="Additional bbcontacts CASPRR contactfile")
     parser.add_argument('-c', type=float, default=1.0, dest="constraints_factor",
                         help="Defines number of contacts to use (L/*x*)")
@@ -562,11 +660,11 @@ if __name__ == "__main__":
     parser.add_argument('-e', type=str, default="FADE", dest='energy_function',
                         help="Rosetta function to use")
     parser.add_argument('fasta')
-    parser.add_argument('-o', type=str, default="ample.cst", dest="outfile",
-                        help="Constraint output file")
-    parser.add_argument('-s', type=str, dest="structure",
+    parser.add_argument('-n', type=str, default="ampl_", dest="name",
+                        help="Job name")
+    parser.add_argument('-s', type=str, default=None, dest="native_pdb",
                         help="Reference structure")
-    parser.add_argument('-ss2', type=str, dest="ss2file",
+    parser.add_argument('-ss2', type=str, default=None, dest="psipred_ss2",
                         help="Secondary structure prediction")
     
     option = parser.add_mutually_exclusive_group(required=True)
@@ -579,8 +677,21 @@ if __name__ == "__main__":
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
+    # Set working directory
+    optd['work_dir'] = os.getcwd()
+
+    # Reformat to what we need
+    logging.debug('Parsing FASTA file')
+    try: fp = ample_sequence.Sequence(fasta=optd['fasta'])
+    except Exception as e:
+        print "Error parsing FASTA file: {0}\n\n{1}".format(optd['fasta'],e.message)
+    if fp.numSequences() != 1:
+        print "ERROR! Fasta file {0} has > 1 sequence in it.".format(optd['fasta'])
+    optd['sequence'] = fp.sequence()
+    
+
     c = Contacter(optd)
-    if optd['format']: c.format(optd['outfile'])
-    elif optd['plot']: c.plot("ample_contacts.cm.pdf", ss2file=optd['ss2file'], structurefile=optd['structure'])
-    elif optd['ppv']: print c.ppv(optd['structure'])
+    if optd['format']: c.format(optd['name']+".cst")
+    elif optd['plot']: c.plot("ampl_.cm.pdf", ss2file=optd['psipred_ss2'], structurefile=optd['native_pdb'])
+    elif optd['ppv']: c.ppv(optd['native_pdb'])
     else: logging.critical("No option selected")
