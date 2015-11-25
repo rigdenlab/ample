@@ -94,14 +94,23 @@ def ccp4_version():
         for i, line in enumerate(logf):
             if i > 20:break
             if line.startswith(' ### CCP4'):
-                tversion=line.split()[2]
+                tversion=line.split()[2].rstrip(':')
                 break
         
         logf.close()
-        if not tversion: return None
-        major,minor,rev = tversion.rstrip(':').split('.')
-        CCP4_VERSION = (int(major),int(minor),int(rev))
-    return CCP4_VERSION
+        if not tversion: raise RuntimeError,"Cannot determine CCP4 version"
+        vsplit = tversion.split('.')
+        if len(vsplit) == 2:
+            major = int(vsplit[0])
+            minor =  int(vsplit[1])
+            rev = '-1'
+        elif len(vsplit) == 3:
+            major = int(vsplit[0])
+            minor = int(vsplit[1])
+            rev = int(vsplit[2])
+        else: raise RuntimeError,"Cannot split CCP4 version: {0}".format(tversion)
+    
+    return (major,minor,rev)
     
 def extract_models(filename, directory=None, sequence=None, single=True, allsame=True):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
@@ -310,44 +319,6 @@ def find_maxcluster(amoptd):
         os.chmod(maxcluster_exe, 0o777)
 
     return maxcluster_exe
-
-def get_psipred_prediction(psipred):
-    """Deprecated ... user parsers.parse_psipred instead"""
-    string = ''
-    for line in open(psipred):
-        get_stat1 = re.compile('^Pred\:\s*(\w*)')
-        result_stat1 = get_stat1.match(line)
-        if result_stat1:
-            stat1_get = re.split(get_stat1, line)
-            # print stat1_get[1]
-            string = string + stat1_get[1]
-
-    C = 0
-    H = 0
-    E = 0
-    length = len(string)
-
-    for c in string:
-        if c == 'C':
-            C = C + 1
-        if c == 'H':
-            H = H + 1
-        if c == 'E':
-            E = E + 1
-
-    H_percent = float(H) / length * 100
-    E_percent = float(E) / length * 100
-
-    if H > 0 and E > 0:
-        print  'Your protein is predicted to be mixed alpha beta, your chances of success are intermediate'
-    if H == 0 and E > 0:
-        print  'Your protein is predicted to be all beta, your chances of success are low'
-    if H > 0 and E == 0:
-        print  'Your protein is predicted to be all alpha, your chances of success are high'
-    if  H == 0 and E == 0:
-        print  'Your protein is has no predicted secondary structure, your chances of success are low'
-    
-    return
 
 def ideal_helices(nresidues):
     ""
