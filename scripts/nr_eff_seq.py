@@ -14,11 +14,17 @@ import sys
 if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
 sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "python"))
 sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "parsers"))
+#sys.path.insert(0, os.path.join(os.environ['HOME'], "opt", "ample-dev1", "python"))
+#sys.path.insert(0, os.path.join(os.environ['HOME'], "opt", "ample-dev1", "parsers"))
 
 # Custom
 import ample_util
-import parse_alignment
 import parse_cdhit
+
+try:
+    import parse_alignment
+except:
+    sys.exit("ERROR: Cannot import alignment parser. Upgrade to CCP4i2")
 
 
 def cluster(cd_hit, alnfile, wdir):
