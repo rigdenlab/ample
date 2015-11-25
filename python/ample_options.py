@@ -116,12 +116,13 @@ class AmpleOptions(object):
                             'transmembrane_spanfile' : None,
                             'truncation_method' : 'percent',
                             'truncation_pruning' : None,
-                            'webserver_uri' : None,
                             'use_arpwarp' : True,
                             'use_buccaneer' : True,
+                            'use_contacts': False,
                             'use_homs' : True,
                             'use_scwrl' : False,
                             'use_shelxe' : True,
+                            'webserver_uri' : None
                          }
 
         self.quick_mode = {
