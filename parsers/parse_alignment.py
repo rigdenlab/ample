@@ -6,9 +6,9 @@ import unittest
 #3rd party
 import Bio.AlignIO
 import Bio.Alphabet
+import Bio.pairwise2
 import Bio.Seq
 import Bio.SeqIO
-
 
 
 class AlignmentParser(object):
@@ -33,6 +33,14 @@ class AlignmentParser(object):
             record.seq = Bio.Seq.Seq("".join([c for c in str(record.seq) if not c.islower()]),
                                      Bio.Alphabet.single_letter_alphabet)
         return records
+        
+    def align_sequences(self, seq1, seq2):
+        """Global pairwise alignment of two sequences
+        
+        :returns: aligned sequences as tuple
+        """
+        alignment = Bio.pairwise2.align.globalms(seq1, seq2, 2, -1, -0.5, -0.1)
+        return (alignment[-1][0], alignment[-1][1])
     
     def resetA3M(self, alnFile, outFile):
         """ Reset a A3M alignment to FASTA sequences
@@ -82,5 +90,10 @@ class AlignmentParser(object):
             record.seq = Bio.Seq.Seq(str(record.seq).replace("-", ""), 
                                      Bio.Alphabet.single_letter_alphabet)
         return records
+
+    def write(self, alignment, file, format):
+        """Write a MSA object to a file"""
+        Bio.AlignIO.write(alignment, open(file, 'w'), format)
+        return
     
 
