@@ -34,6 +34,47 @@ except ImportError:
     _BIOPYTHON = False
 
 
+def checkOptions(amoptd):
+    """Function to check that all contact files are available"""
+    
+    # Make sure contact file is provided with bbcontacts_file
+    if not amoptd['contact_file'] and amoptd['bbcontacts_file']:
+        msg = "Must provide -contact_file when using -bbcontacts_file or use as -contact_file"
+        raise RuntimeError(msg)
+    
+    # Check the existence of the contact file and whether it is CASP RR format
+    # based on the required header `PFRMAT RR`
+    if amoptd['contact_file']:
+        if not os.path.exists(str(amoptd['contact_file'])):
+            msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
+            raise RuntimeError(msg)
+           
+        if not parse_casprr.CaspContactParser().checkFormat(amoptd['contact_file']):
+            msg = "Wrong format in contact file:\n{0}".format(amoptd['contact_file'])
+            raise RuntimeError(msg)
+    
+    # Check the existence of the contact file and whether it is CASP RR format
+    # based on the required header `PFRMAT RR`   
+    if amoptd['bbcontacts_file']:
+        if not os.path.exists(amoptd['bbcontacts_file']):
+            msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
+            raise RuntimeError(msg)
+            
+        if not parse_casprr.CaspContactParser().checkFormat(amoptd['bbcontacts_file']):
+            msg = "Wrong format in contact file:\n{0}".format(amoptd['bbcontacts_file'])
+            raise RuntimeError(msg)
+    
+    # Make sure user selected energy function is pre-defined
+    if amoptd['energy_function']:
+        try: 
+            energyFunction = getattr(energy_functions, amoptd['energy_function'])
+        except AttributeError:
+            msg = "Rosetta energy function {0} unavailable".format(amoptd['energy_function'])
+            raise RuntimeError(msg)
+    
+    return
+
+
 class Contacter(object):
     """ Class to handle contact predictions """
     
@@ -81,47 +122,7 @@ class Contacter(object):
             self._readAdditionalBBcontacts(optd['bbcontacts_file'])
         
         return
-    
-    def checkOptions(self, amoptd):
-        """Function to check that all contact files are available"""
-        
-        # Make sure contact file is provided with bbcontacts_file
-        if not amoptd['contact_file'] and amoptd['bbcontacts_file']:
-            msg = "Must provide -contact_file when using -bbcontacts_file or use as -contact_file"
-            raise RuntimeError(msg)
-        
-        # Check the existence of the contact file and whether it is CASP RR format
-        # based on the required header `PFRMAT RR`
-        if amoptd['contact_file']:
-            if not os.path.exists(str(amoptd['contact_file'])):
-                msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
-                raise RuntimeError(msg)
-               
-            if not parse_casprr.CaspContactParser().checkFormat(amoptd['contact_file']):
-                msg = "Wrong format in contact file:\n{0}".format(amoptd['contact_file'])
-                raise RuntimeError(msg)
-        
-        # Check the existence of the contact file and whether it is CASP RR format
-        # based on the required header `PFRMAT RR`   
-        if amoptd['bbcontacts_file']:
-            if not os.path.exists(amoptd['bbcontacts_file']):
-                msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
-                raise RuntimeError(msg)
                 
-            if not parse_casprr.CaspContactParser().checkFormat(amoptd['bbcontacts_file']):
-                msg = "Wrong format in contact file:\n{0}".format(amoptd['bbcontacts_file'])
-                raise RuntimeError(msg)
-        
-        # Make sure user selected energy function is pre-defined
-        if amoptd['energy_function']:
-            try: 
-                energyFunction = getattr(energy_functions, amoptd['energy_function'])
-            except AttributeError:
-                msg = "Rosetta energy function {0} unavailable".format(amoptd['energy_function'])
-                raise RuntimeError(msg)
-        
-        return
-            
     def format(self, constraintfile):
         """ Format contacts to Rosetta constraints """
         
