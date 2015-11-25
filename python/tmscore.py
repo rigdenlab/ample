@@ -28,6 +28,12 @@ import ample_util
 import parse_tmscore
 import pdb_edit
 
+try:
+    import parse_alignment
+    _BIOPYTHON = True
+except ImportError:
+    _BIOPYTHON = False
+
 
 class TMscorer(object):
     def __init__(self, structure, tmscore_exe, wdir=None):
@@ -68,26 +74,41 @@ class TMscorer(object):
             structure_mod.close()
             pdbin_mod = tempfile.NamedTemporaryFile(delete=False)
             pdbin_mod.close()
-
-            self.mod_structures(pdbin, pdbin_mod.name, self.structure, structure_mod.name)
-
-            # Create a command list and execute TMscore
-            log = os.path.join(self.workingDIR, name+".tmscore.log")
-            cmd = [ self.tmscore_exe, pdbin_mod.name, structure_mod.name ]
-            p = ample_util.run_command(cmd, logfile=log, directory=self.workingDIR)
-
-            os.unlink(structure_mod.name)
-            os.unlink(pdbin_mod.name)
-
+            
+            # Initialise the logparser that stores all the scores
             pt = parse_tmscore.TMscoreLogParser()
-            pt.parse(log)
+            
+            # Do the try clause here to allow anything that is required from here to throw
+            # exceptions. In that case we revert to the TMscoreLogParser default values of
+            # 0.0 for every score. 
+            try:
+                self.mod_structures(pdbin, pdbin_mod.name, self.structure, structure_mod.name)
+            
+                # Create a command list and execute TMscore
+                log = os.path.join(self.workingDIR, name+".tmscore.log")
+                cmd = [ self.tmscore_exe, pdbin_mod.name, structure_mod.name ]
+                p = ample_util.run_command(cmd, logfile=log, directory=self.workingDIR)
+    
+                os.unlink(structure_mod.name)
+                os.unlink(pdbin_mod.name)
+                
+                # Parse the log file to the parser
+                pt.parse(log)
+                
+            except Exception:
+                log = "None"
+                
             entry = self._store(name, pdbin, log, self.structure, pt)
             entries.append(entry)
-
+                
         return entries
 
     def mod_structures(self, pdbin, pdbin_mod, structure, structure_mod):
         ''' Make sure the decoy and the xtal pdb align to get an accurate Tm score '''
+        
+        if not _BIOPYTHON:
+            raise ImportError
+        
         # Disable the info logger to not spam the user with which chain of native extracted.
         # Happens for every model + native below
         # http://stackoverflow.com/questions/2266646/how-to-i-disable-and-re-enable-console-logging-in-python
@@ -97,7 +118,7 @@ class TMscorer(object):
         structure_seq = pdb_edit.sequence(structure).values()[0]
 
         # Align the sequences to see how much of the predicted decoys are in the xtal
-        aligned_seq_list = ample_util.align_sequences(pdbin_seq, structure_seq)
+        aligned_seq_list = parse_alignment.AlignmentParser().align_sequences(pdbin_seq, structure_seq)
         pdbin_seq_ali     = aligned_seq_list[0]
         structure_seq_ali = aligned_seq_list[1]
         
@@ -178,10 +199,13 @@ class Statistics(object):
         # Load the required data
         pdb_names = self._read_list(self.pdb_list_file)
         data = pickle.load(open(self.pickle_file, 'r'))
-
+        
         # Obtain a list of all defined scores for defined pdbs
         score_list = self.extract(data, pdb_names, score)
         score_list_sorted = sorted(score_list)
+        
+        assert len(score_list_sorted) > 0, \
+                "No scores in score list file"
         
         assert len(score_list_sorted)==len(pdb_names), \
                 "Divergent counts between scores and pdb names"
@@ -292,6 +316,9 @@ class TestStatistics(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    # Check whether we can import Biopythin
+    if not _BIOPYTHON: sys.exit("Upgrade to a CCP4 version with the new interface to use this script")
+
     parser = argparse.ArgumentParser()
     
     parser.add_argument('-score', metavar='[ tm | maxsub | gdtts | gdtha ]',
