@@ -23,7 +23,6 @@ $CCP4/bin/ample.py \
 -use_shelxe True \
 -nproc 5 \
 
-
 # Additional optional flags
 # Add below to run from pre-made models
 #-models ../../tests/testfiles/models \
@@ -34,3 +33,8 @@ $CCP4/bin/ample.py \
 # Add below for running from pre-made ensembles
 #-ensembles_dir ./ROSETTA_MR_0/ensembles_1 \
 
+# Add below for running with contact predictions
+#-contact_file toxd_.pconsc2.CASPRR \
+#-bbcontacts_file toxd_.bbcontacts.CASPRR \
+#-constraints_file toxd_.cst \
+#-native_pdb 1DTX_std.pdb \
