@@ -39,9 +39,13 @@
 #
 # # #
 
+# Constraint types
+_ATOMPAIR = "AtomPair %(atom1)s %(res1_index)d %(atom2)s %(res2_index)d "
 
+
+# Function types
 def FADE(contact):
-    template="AtomPair %(atom1)s %(res1_index)d %(atom2)s %(res2_index)d FADE -10 19 10 %(weight).2f 0" 
+    template= _ATOMPAIR + "FADE -10 19 10 %(weight).2f 0" 
     
     return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
                        'atom2': contact['atom2'], 'res2_index': contact['res2_index'],
@@ -49,7 +53,7 @@ def FADE(contact):
 
 
 def FADE_default(contact):  
-    template = "AtomPair %(atom1)s %(res1_index)s %(atom2)s %(res2_index)s FADE -10 19 10 -15.00 0"
+    template = _ATOMPAIR + "FADE -10 19 10 -15.00 0"
     
     return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
                        'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
