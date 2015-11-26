@@ -13,7 +13,7 @@ import sys
 
 
 if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
-sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "python"))
+sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "parsers"))
 #sys.path.append(os.path.join(os.environ["HOME"], "opt", "ample-dev1", "parsers"))
 
 
@@ -22,6 +22,7 @@ import parse_casprr
 import parse_ccmpred
 import parse_epcmap
 import parse_evfold
+import parse_gremlin
 import parse_pconsc
 
 
@@ -45,9 +46,13 @@ def main(args):
     elif args['evfold']:
         cp = parse_evfold.EVfoldContactParser()
         cp.read(contactfile)
+    elif args['gremlin']:
+        cp = parse_gremlin.GremlinContactParser()
+        cp.read(contactfile)
     elif args['pconsc']:
         cp = parse_pconsc.PconscContactParser()
         cp.read(contactfile)
+        
     contacts = cp.getContacts()
 
     op = parse_casprr.CaspContactParser()
@@ -73,6 +78,8 @@ if __name__ == "__main__":
                           help="EPC-Map contact file")
     contacts.add_argument("-evf", action="store_true", dest="evfold",
                           help="EVFold contact file")
+    contacts.add_argument("-gre", action="store_true", dest="gremlin",
+                          help="GREMLIN contact file")
     contacts.add_argument("-pco", action="store_true", dest="pconsc",
                           help="PconsC1/2/3 contact file")
 
