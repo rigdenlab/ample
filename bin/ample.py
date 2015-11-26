@@ -398,7 +398,7 @@ def process_command_line():
     rosetta_group.add_argument('-transmembrane_lipofile', type=str, nargs=1,
                        help='Lips4 file for modelling transmembrane proteins')
 
-    rosetta.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
+    rosetta_group.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
                        help='Select ROSETTA fragments from homologous models')
 
     # convert args to dictionary
