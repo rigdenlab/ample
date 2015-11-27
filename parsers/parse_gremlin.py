@@ -9,7 +9,10 @@ class GremlinContactParser(parse_contactfile.ContactfileParser):
 
     _RES1       = 0
     _RES2       = 1
-    _CONF_SCORE = 6
+    _R_SCORE    = 4
+    _S_SCORE    = 5
+    _PROB       = 6
+    
     _METHOD     = "gremlin"
     
     def __init__(self):
@@ -26,11 +29,10 @@ class GremlinContactParser(parse_contactfile.ContactfileParser):
                     contact = self.defineContact(line,
                                                  res1_idx=self._RES1,
                                                  res2_idx=self._RES2,
-                                                 confidence_score_idx=self._CONF_SCORE,
+                                                 confidence_score_idx=self._R_SCORE,
                                                  method=self._METHOD,
                                                  file=contactfile)
                     
                     self.contacts.append(contact)
                 
         return
-                
