@@ -412,7 +412,7 @@ class Contacter(object):
         ''' Read the contactfile using the CASP RR Parser '''
         cp = parse_casprr.CaspContactParser()
         cp.read(contactfile)
-        cp.sortContacts("confidence_score", descending=True)
+        cp.sortContacts("raw_score", descending=True)
         cp.assignAminoAcids(sequence)
         return cp.contacts
    
