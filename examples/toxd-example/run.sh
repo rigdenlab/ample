@@ -35,6 +35,8 @@ $CCP4/bin/ample.py \
 
 # Add below for running with contact predictions
 #-contact_file toxd_.pconsc2.CASPRR \
+#-contact_file toxd_.gremlin.CASPRR \
 #-bbcontacts_file toxd_.bbcontacts.CASPRR \
 #-constraints_file toxd_.cst \
 #-native_pdb 1DTX_std.pdb \
+#-energy_function FADE_default \
