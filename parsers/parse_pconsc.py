@@ -8,7 +8,7 @@ class PconscContactParser(parse_contactfile.ContactfileParser):
 
     _RES1 = 0
     _RES2 = 1
-    _CONF_SCORE = 2
+    _RAW_SCORE = 2
 
     _METHOD = "pconsc"
 
@@ -24,7 +24,7 @@ class PconscContactParser(parse_contactfile.ContactfileParser):
                 contact = self.defineContact(line,
                                              res1_idx=self._RES1,
                                              res2_idx=self._RES2,
-                                             confidence_score_idx=self._CONF_SCORE,
+                                             raw_score_idx=self._raw_SCORE,
                                              method=self._METHOD,
                                              file=contactfile)
 

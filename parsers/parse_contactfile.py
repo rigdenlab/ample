@@ -32,7 +32,7 @@ class ContactfileParser(object):
         
         contact['res1_index'] = int(line[kwargs['res1_idx']])
         contact['res2_index'] = int(line[kwargs['res2_idx']])
-        contact['confidence_score'] = float(line[kwargs['confidence_score_idx']])
+        contact['raw_score'] = float(line[kwargs['raw_score_idx']])
         contact['method'] = kwargs['method']
         contact['file'] = kwargs['file']
         
@@ -59,7 +59,7 @@ class ContactfileParser(object):
         
         d = {"atom1": None,
              "atom2": None,
-             "confidence_score": 0.0,
+             "raw_score": 0.0,
              "diversity_factor": 0.0,
              "file": None,
              "internal_strand_position": None,
@@ -85,21 +85,21 @@ class Test(unittest.TestCase):
         self.cp = ContactfileParser()
 
     def testSorting(self):
-        contacts = [{'res1': 5, 'res2': 37, 'confidence_score': -4.767827},
-                    {'res1': 1, 'res2': 100, 'confidence_score': -100},
-                    {'res1': 6, 'res2': 10, 'confidence_score': 1}]
+        contacts = [{'res1': 5, 'res2': 37, 'raw_score': -4.767827},
+                    {'res1': 1, 'res2': 100, 'raw_score': -100},
+                    {'res1': 6, 'res2': 10, 'raw_score': 1}]
 
-        ref_contacts1 = [{'res1': 1, 'res2': 100, 'confidence_score': -100},
-                         {'res1': 5, 'res2': 37, 'confidence_score': -4.767827},
-                         {'res1': 6, 'res2': 10, 'confidence_score': 1}]
+        ref_contacts1 = [{'res1': 1, 'res2': 100, 'raw_score': -100},
+                         {'res1': 5, 'res2': 37, 'raw_score': -4.767827},
+                         {'res1': 6, 'res2': 10, 'raw_score': 1}]
 
-        ref_contacts2 = [{'res1': 6, 'res2': 10, 'confidence_score': 1},
-                         {'res1': 5, 'res2': 37, 'confidence_score': -4.767827},
-                         {'res1': 1, 'res2': 100, 'confidence_score': -100}]
+        ref_contacts2 = [{'res1': 6, 'res2': 10, 'raw_score': 1},
+                         {'res1': 5, 'res2': 37, 'raw_score': -4.767827},
+                         {'res1': 1, 'res2': 100, 'raw_score': -100}]
 
-        ref_contacts3 = [{'res1': 6, 'res2': 10, 'confidence_score': 1},
-                         {'res1': 5, 'res2': 37, 'confidence_score': -4.767827},
-                         {'res1': 1, 'res2': 100, 'confidence_score': -100}]
+        ref_contacts3 = [{'res1': 6, 'res2': 10, 'raw_score': 1},
+                         {'res1': 5, 'res2': 37, 'raw_score': -4.767827},
+                         {'res1': 1, 'res2': 100, 'raw_score': -100}]
 
         self.cp.setContacts(contacts)
 
@@ -111,7 +111,7 @@ class Test(unittest.TestCase):
         sorted_contacts2 = self.cp.getContacts()
         self.assertEqual(ref_contacts2, sorted_contacts2)
 
-        self.cp.sortContacts('confidence_score', True)
+        self.cp.sortContacts('raw_score', True)
         sorted_contacts3 = self.cp.getContacts()
         self.assertEqual(ref_contacts3, sorted_contacts3)
 ##End Test

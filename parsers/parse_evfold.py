@@ -8,7 +8,7 @@ class EVfoldContactParser(parse_contactfile.ContactfileParser):
 
     _RES1 = 0
     _RES2 = 2
-    _CONF_SCORE = 5
+    _RAW_SCORE = 5
 
     _METHOD = "evfold"
 
@@ -25,7 +25,7 @@ class EVfoldContactParser(parse_contactfile.ContactfileParser):
                     contact = self.defineContact(line,
                                                  res1_idx=self._RES1,
                                                  res2_idx=self._RES2,
-                                                 confidence_score_idx=self._CONF_SCORE,
+                                                 raw_score_idx=self._RAW_SCORE,
                                                  method=self._METHOD,
                                                  file=contactfile)
                     

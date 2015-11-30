@@ -40,7 +40,7 @@ class CaspContactParser(parse_contactfile.ContactfileParser):
                 contact = self.defineContact(line,
                                              res1_idx=0,
                                              res2_idx=1,
-                                             confidence_score_idx=4,
+                                             raw_score_idx=4,
                                              method=self.method,
                                              file=self.infile)
                 
@@ -80,6 +80,6 @@ class CaspContactParser(parse_contactfile.ContactfileParser):
                                                        contact['res2_index'],
                                                        contact['lb'], 
                                                        contact['ub'],
-                                                       contact['confidence_score'])) \
+                                                       contact['raw_score'])) \
                                     for contact in contacts]
         return formatted_contacts

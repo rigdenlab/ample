@@ -11,7 +11,7 @@ class BBcontactsContactParser(parse_contactfile.ContactfileParser):
     _ID         = 0
     _DIV_FACTOR = 1
     _STRAND_ORI = 2
-    _CONF_SCORE = 3
+    _RAW_SCORE = 3
     _STRAND_IDX = 4
     _STRAND_POS = 5
     _RES1       = 7     # Annoyingly are the other way around in file
@@ -39,7 +39,7 @@ class BBcontactsContactParser(parse_contactfile.ContactfileParser):
                 contact = self.defineContact(line, 
                                              res1_idx=self._RES1, 
                                              res2_idx=self._RES2, 
-                                             confidence_score_idx=self._CONF_SCORE,
+                                             raw_score_idx=self._RAW_SCORE,
                                              method=self._METHOD, 
                                              file=contactfile)
                 
@@ -67,7 +67,7 @@ class Test(unittest.TestCase):
     def testFirstLast(self):
         self.bp.contacts = [{'res2': 43, 
                              'res1': 37, 
-                             'confidence_score': -4.767827, 
+                             'raw_score': -4.767827, 
                              'strand_index': 7, 
                              'file': 'test', 
                              'strand_orientation': 'Antiparallel', 
