@@ -414,6 +414,7 @@ class Contacter(object):
         cp.read(contactfile)
         cp.sortContacts("raw_score", descending=True)
         cp.assignAminoAcids(sequence)
+        cp.calculateScalarScores()
         return cp.contacts
    
 
