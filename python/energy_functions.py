@@ -20,7 +20,7 @@
 # `res2`             -> Stores the AMINO ACID of residue 2
 # `res1_index`       -> Stores the RESIDUE INDEX of residue1
 # `res2_index`       -> Stores the RESIDUE INDEX of residue2
-# `confidence_score` -> Stores the CONTACT PREDICTOR confidence value
+# `raw_score`        -> Stores the CONTACT PREDICTOR confidence value
 # `weight`           -> Stores a WEIGHT factor, i.e number of times a contact was predicted
 # `lb`               -> Stores the LB value of a contact, CASP RR 3rd column
 # `ub`               -> Stores the UB value of a contact, CASP RR 4th column
