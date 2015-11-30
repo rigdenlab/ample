@@ -27,6 +27,20 @@ class ContactfileParser(object):
             
         return
 
+    def calculateScalarScores(self):
+        """Calculate the scale score for each contact
+    
+        Each scale score is defined by (raw_score/average(raw_scores))
+        """
+        raw_scores = [i['raw_score'] for i in self.contacts]
+        avgRawScore = sum(raw_scores) / len(raw_scores)
+        
+        for contact in self.contacts:
+            raw_score = float(contact['raw_score'])
+            contact['scalar_score'] = raw_score / avgRawScore
+        
+        return
+    
     def defineContact(self, line, **kwargs):
         contact = self.contact.copy()
         
@@ -60,6 +74,7 @@ class ContactfileParser(object):
         d = {"atom1": None,
              "atom2": None,
              "raw_score": 0.0,
+             "scalar_score": 0.0,
              "diversity_factor": 0.0,
              "file": None,
              "internal_strand_position": None,
@@ -114,5 +129,18 @@ class Test(unittest.TestCase):
         self.cp.sortContacts('raw_score', True)
         sorted_contacts3 = self.cp.getContacts()
         self.assertEqual(ref_contacts3, sorted_contacts3)
-##End Test
+        
+    def testScalarScoring(self):
+        contacts = [{'res1': 5, 'res2': 37, 'raw_score': 0.4},
+                    {'res1': 1, 'res2': 100, 'raw_score': 0.6},
+                    {'res1': 6, 'res2': 10, 'raw_score': 0.5}]
+        
+        ref_contacts = [{'res1': 5, 'res2': 37, 'raw_score': 0.4, 'scalar_score': 0.8},
+                        {'res1': 1, 'res2': 100, 'raw_score': 0.6 ,'scalar_score': 1.2},
+                        {'res1': 6, 'res2': 10, 'raw_score': 0.5, 'scalar_score': 1.0}]
+        
+        self.cp.setContacts(contacts)
+        self.cp.calculateScalarScores()
+        scaled_contacts = self.cp.getContacts()
+        self.assertEqual(ref_contacts, scaled_contacts)
 
