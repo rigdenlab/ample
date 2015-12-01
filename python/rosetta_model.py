@@ -256,7 +256,7 @@ class RosettaModel(object):
                 raise RuntimeError,msg
             cmd+=[ '-constraints:cst_file', constraints_file,
                    '-constraints:cst_fa_file', constraints_file ]
-            if self.constraints_weight:
+            if self.constraints_weight is not None:
                 cmd+=[ '-constraints:cst_weight', str(self.constraints_weight),
                        '-constraints:cst_fa_weight', str(self.constraints_weight) ]
 
@@ -591,7 +591,7 @@ class RosettaModel(object):
         # Not actually sure if the constraints are used - they weren't on the test I tried but it doesn't seem to hurt to add them
         if self.constraints_file:
             cmd += [ '-constraints:cst_file', self.constraints_file, '-constraints:cst_fa_file', self.constraints_file ]
-            if self.constraints_weight:
+            if self.constraints_weight is not None:
                 cmd+=[ '-constraints:cst_weight', str(self.constraints_weight), '-constraints:cst_fa_weight', str(self.constraints_weight) ]
                 
         return cmd
