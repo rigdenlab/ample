@@ -169,6 +169,7 @@ class RosettaModel(object):
         self.improve_template = None
         self.nativePdbStd = None
         self.constraints_file = None
+        self.constraints_weight = None
 
         self.logger = logging.getLogger()
 
@@ -254,6 +255,9 @@ class RosettaModel(object):
                 raise RuntimeError,msg
             cmd+=[ '-constraints:cst_file', constraints_file,
                    '-constraints:cst_fa_file', constraints_file ]
+            if self.constraints_weight:
+                cmd+=[ '-constraints:cst_weight', str(self.constraints_weight),
+                       '-constraints:cst_fa_weight', str(self.constraints_weight) ]
 
         # Improve Template
         if self.improve_template:
@@ -586,6 +590,9 @@ class RosettaModel(object):
         # Not actually sure if the constraints are used - they weren't on the test I tried but it doesn't seem to hurt to add them
         if self.constraints_file:
             cmd += [ '-constraints:cst_file', self.constraints_file, '-constraints:cst_fa_file', self.constraints_file ]
+            if self.constraints_weight:
+                cmd+=[ '-constraints:cst_weight', str(self.constraints_weight), '-constraints:cst_fa_weight', str(self.constraints_weight) ]
+                
         return cmd
     
     def nmr_remodel(self, nmr_model_in=None, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
@@ -841,7 +848,8 @@ class RosettaModel(object):
                     self.logger.critical(msg)
                     raise RuntimeError, msg
                 self.constraints_file=optd['constraints_file']
-                
+            self.constraints_weight = optd['constraints_weight']
+            
             self.use_scwrl = optd['use_scwrl']
             self.scwrl_exe = optd['scwrl_exe']
             
