@@ -347,7 +347,7 @@ if __name__ == "__main__":
     #
     if not len(sys.argv) >= 2 and len(sys.argv) < 4:
         print "Usage is {0} [spicker_executable] <directory_of_pdbs>".format(sys.argv[0])
-        sys.exit_error(1)
+        sys.exit(1)
     
     spicker_exe = None
     if len(sys.argv) == 3:
@@ -358,16 +358,16 @@ if __name__ == "__main__":
         
     if not os.path.isdir(models_dir):
         print "Cannot find directory: {0}".format(models_dir)
-        sys.exit_error(1)
+        sys.exit(1)
     models = glob.glob(os.path.join(models_dir, "*.pdb"))
     if not len(models):
         print "Cannot find any pdbs in: {0}".format(models_dir)
-        sys.exit_error(1)
+        sys.exit(1)
         
 #     spicker_exe = ample_util.find_exe("spicker")
 #     if not spicker_exe:
 #         print "Cannot find spicker executable in path!"
-#         sys.exit_error(1)
+#         sys.exit(1)
         
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
