@@ -281,6 +281,9 @@ def process_command_line():
     contact_group.add_argument('-constraints_file', type=str, nargs=1,
                        help='Residue restraints for ab initio modelling')
     
+    contact_group.add_argument('-constraints_weight', type=float, nargs=1,
+                       help="Additional energy weighting of constraints in Rosetta")
+    
     contact_group.add_argument('-contact_file', type=str, nargs=1,
                        help='Residue contacts file in CASP RR format')
     

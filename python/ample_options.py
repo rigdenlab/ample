@@ -27,6 +27,7 @@ class AmpleOptions(object):
                             'cluster_method' : 'spicker',
                             'constraints_factor': 1.0,
                             'constraints_file' : None,
+                            'constraints_weight': None,
                             'contact_file': None,
                             'debug' : False,
                             'distance_to_neighbour': 5,
