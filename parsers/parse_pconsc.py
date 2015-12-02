@@ -24,7 +24,7 @@ class PconscContactParser(parse_contactfile.ContactfileParser):
                 contact = self.defineContact(line,
                                              res1_idx=self._RES1,
                                              res2_idx=self._RES2,
-                                             raw_score_idx=self._raw_SCORE,
+                                             raw_score_idx=self._RAW_SCORE,
                                              method=self._METHOD,
                                              file=contactfile)
 
