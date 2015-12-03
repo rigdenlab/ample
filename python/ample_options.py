@@ -74,6 +74,7 @@ class AmpleOptions(object):
                             'nmr_remodel_fasta' : None,
                             'no_gui' : False,
                             'nproc' : 1,
+                            'no_mr' : False,
                             'nr' : None,
                             'num_clusters' : 1,
                             'output_pdb' : 'ample_output.pdb',
