@@ -270,10 +270,10 @@ def process_command_line():
                        help='URI of the webserver directory - also indicates we are running as a webserver')
     
     # Contact options
-    contact_group = parser.add_argument_group("Contact Restraint Options")
+    contact_group = parser.add_argument_group("Contact Constraints Options")
     
     contact_group.add_argument('-bbcontacts_file', type=str, nargs=1,
-                       help='Additional bbcontacts file. ***Requires normal contactfile***')
+                       help='Additional bbcontacts file. >>> Requires normal contactfile <<<')
     
     contact_group.add_argument('-constraints_factor', type=float, nargs=1,
                        help='Factor (* Sequence length) determining number of contact restraints to use (default=1.0)')
