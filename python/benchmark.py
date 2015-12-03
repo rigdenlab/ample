@@ -115,11 +115,11 @@ def analyse(amoptd, newroot=None):
         
         # Need to get the subcluster_centroid_model and then get the path to the original model
         if 'subcluster_centroid_model' in d:
-            n=os.path.basename(d['subcluster_centroid_model'])
-            cm=None
+            n = os.path.splitext(os.path.basename(d['subcluster_centroid_model']))[0]
+            cm = None
             for pdb in glob.glob(os.path.join(amoptd['models_dir'],"*.pdb")):
-                if os.path.basename(pdb)==n:
-                    cm=pdb
+                if n.startswith(os.path.splitext(os.path.basename(pdb))[0]):
+                    cm = pdb
                     break
             if not cm:
                 raise RuntimeError,"Cannot find model for subcluster_centroid_model {0}".format(d['subcluster_centroid_model'])
