@@ -4,12 +4,14 @@ cls <- c(SHELXE_CC="numeric",
 		SHELXE_ACL="numeric",
 		SXRARP_final_Rfree="numeric",
 		SXRBUCC_final_Rfree="numeric",
-		final_Rfree="numeric",
+		REFMAC_Rfree="numeric",
 		PHASER_TFZ="numeric",
 		PHASER_LLG="numeric"
 )
 
-f=allresults.csv
+#final_Rfree="numeric",
+
+f='clusters10_full_allresults.csv'
 data <- read.csv(file=f,sep=',', header=T, stringsAsFactors=FALSE, na.strings="N/A", colClasses=cls)
 
 # Convert to numeric
@@ -26,7 +28,8 @@ updateData <- function(data){
 	data$REBUILD_OK <- replace( data$REBUILD_OK, is.na(data$REBUILD_OK), 0 )
 	
 	# Data where MR seemingly worked according to refmac rfree
-	data$REFMAC_OK <- as.numeric( data$final_Rfree <= 0.45 )
+	#data$REFMAC_OK <- as.numeric( data$final_Rfree <= 0.45 )
+	data$REFMAC_OK <- as.numeric( data$REFMAC_Rfree <= 0.45 )
 	data$REFMAC_OK <- replace( data$REFMAC_OK, is.na(data$REFMAC_OK), 0 )
 	
 	# Data where MR seemingly worked according to phaser
@@ -46,6 +49,9 @@ updateData <- function(data){
 
 data <- updateData(data)
 
+# only keep cluster 1
+#data <- data[ data$cluster_num == 1, ]
+
 
 # For each case need to get the best success - i.e. success with max CC
 # Order by native_pdb_code and CC
@@ -53,7 +59,7 @@ summaryData <- data[ order( data$native_pdb_code, data$success, data$SHELXE_CC, 
 
 # Select top by selecting not duplicates on native_pdb_code
 summaryData <- summaryData[ !duplicated(summaryData$native_pdb_code),
-		c("native_pdb_code","native_pdb_resolution","native_pdb_num_residues","ensemble_name","truncation_num_residues","subcluster_num_models",
+		c("native_pdb_code","native_pdb_resolution","native_pdb_num_residues","ensemble_name","num_residues","subcluster_num_models",
 				"PHASER_LLG","PHASER_TFZ", "PHASER_RFZ", "SHELXE_CC", "SHELXE_ACL","SXRBUCC_final_Rfree","SXRARP_final_Rfree")  ]
 
 # Now put in alphabetical order
@@ -76,8 +82,8 @@ summaryData["REBUILD_OK"] <- aggregate( data$REBUILD_OK, by=list(data$native_pdb
 
 # side-chain treatment
 summaryData["successPolyAla"]  <- aggregate( 
-		data[ data$side_chain_treatment == "polya", ]$success,
-		by=list( data[ data$side_chain_treatment == "polya", ]$native_pdb_code ),
+		data[ data$side_chain_treatment == "polyAla", ]$success,
+		by=list( data[ data$side_chain_treatment == "polyAla", ]$native_pdb_code ),
 		FUN=function(x){ sum( x == 1 ) } )[2]
 summaryData["successScwrl"]  <- aggregate(
 		data[ data$side_chain_treatment == "reliable", ]$success,
