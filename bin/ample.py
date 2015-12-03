@@ -180,7 +180,7 @@ def process_command_line():
                        help='number of models to make (default: 1000)')
     
     parser.add_argument('-no_mr', type=str, metavar='True/False', nargs=1,
-                       help='Do not run Molecular Replacment step')
+                       help='Do not run Molecular Replacement step')
     
     parser.add_argument('-nr', metavar='nr', type=str, nargs=1,
                        help='Path to the NR non-redundant sequence database')
