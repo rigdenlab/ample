@@ -314,7 +314,7 @@ def process_command_line():
     mr_group.add_argument('-nmasu', type=int, nargs=1,
                        help='Manually specify the number of molecules in the asymmetric unit - sets the NMASu MRBUMP flag')
     
-    parser.add_argument('-phaser_kill', metavar='phaser_kill', type=int, nargs=1,
+    mr_group.add_argument('-phaser_kill', metavar='phaser_kill', type=int, nargs=1,
                        help='Time in minutes after which phaser will be killed (0 to leave running)')
 
     mr_group.add_argument('-phaser_only', metavar='phaser_only', type=str, nargs=1,
@@ -353,7 +353,7 @@ def process_command_line():
     # Rosetta options
     rosetta_group = parser.add_argument_group('ROSETTA Modelling Options')
 
-    parser.add_argument('-all_atom', metavar='True/False', type=str, nargs=1,
+    rosetta_group.add_argument('-all_atom', metavar='True/False', type=str, nargs=1,
                        help="Do all-atom Rosetta modelling (adds \"-return_full_atom true\" to rosetta arguments")
     
     rosetta_group.add_argument('-frags_3mers', type=str, nargs=1,
