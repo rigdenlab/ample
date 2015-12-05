@@ -539,10 +539,22 @@ def process_options(amoptd, logger):
     elif amoptd['homologs']:
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
-        if not (os.path.isfile(str(amoptd['alignment_file'])) or os.path.isfile(str(amoptd['mustang_exe'])) or os.path.isfile(str(amoptd['gesamt_exe']))):
-            msg = "Homologs option requires an aligment file or path to a mustang or gesamt executable to be supplied\n" + \
-            "Please supply the path to mustang or gesamt executable with the -mustang_exe or -gesamt_exe flag, or an alignment file in fasta format with the -alignment_file flag"
-            ample_exit.exit_error(msg)
+        if not  os.path.isfile(str(amoptd['alignment_file'])):
+            # We need to use gesamt or mustang to do the alignment
+            if amoptd['homolog_aligner'] == 'gesamt' and not ample_util.is_exe(str(amoptd['gesamt_exe'])):
+                if sys.platform.startswith("win"):
+                    amoptd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt.exe')
+                else:
+                    amoptd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt')
+                if not ample_util.is_exe(str(amoptd['gesamt_exe'])):
+                    msg = 'Using homologs without an alignment file and cannot find gesamt_exe: {0}'.format(amoptd['gesamt_exe'])
+                    ample_exit.exit_error(msg)
+            elif amoptd['homolog_aligner'] == 'mustang' and not ample_util.is_exe(str(amoptd['gesamt_exe'])):
+                msg = 'Using homologs without an alignment file and cannot find mustang_exe: {0}'.format(amoptd['mustang_exe'])
+                ample_exit.exit_error(msg)
+            else:
+                msg = 'Unknown homolog_aligner: {0}'.format(amoptd['homolog_aligner'])
+                ample_exit.exit_error(msg)
         if not os.path.isdir(str(amoptd['models'])):
             msg = "Homologs option requires a directory of pdb models to be supplied\n" + \
             "Please supply the models with the -models flag"
