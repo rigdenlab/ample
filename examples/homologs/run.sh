@@ -13,7 +13,6 @@ $CCP4/bin/ample.py \
 -fasta 3DCY.fasta \
 -mtz 3dcy-sf.mtz \
 -homologs True \
--gesamt_exe /opt/ccp4-devtools/install/bin/gesamt \
 -models .  \
 -nproc 8 \
 
