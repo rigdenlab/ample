@@ -591,6 +591,7 @@ def process_options(amoptd, logger):
                 amoptd['make_frags'] = False
 
         else:
+            amoptd['make_frags'] = False
             amoptd['make_models'] = False
             msg = "Running in NMR truncate only mode"
             logger.info(msg)
