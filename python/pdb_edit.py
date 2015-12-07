@@ -49,6 +49,8 @@ three2one = {
 #aaDict.update( dict((v, k) for (k, v) in aaDict.items()) )
 one2three =  dict((v, k) for (k, v) in three2one.items())
 
+_logger = logging.getLogger()
+
 def backbone(inpath=None, outpath=None):
     """Only output backbone atoms.
     """        
@@ -136,27 +138,25 @@ def calpha_only(inpdb, outpdb):
 #         return
 
 def check_pdb_directory(directory,single=True,allsame=True,sequence=None):
-    logger = logging.getLogger()
-    logger.info("Checking pdbs in directory: {0}".format(directory))
+    _logger.info("Checking pdbs in directory: {0}".format(directory))
     if not os.path.isdir(directory):
-        logger.critical("Cannot find directory: {0}".format(directory))
+        _logger.critical("Cannot find directory: {0}".format(directory))
         return False
     models=glob.glob(os.path.join(directory,"*.pdb"))
     if not len(models):
-        logger.critical("Cannot find any pdb files in directory: {0}".format(directory))
+        _logger.critical("Cannot find any pdb files in directory: {0}".format(directory))
         return False
     if not (single or sequence or allsame): return True
     return check_pdbs(models,sequence=sequence,single=single,allsame=allsame)
 
 def check_pdbs(models,single=True,allsame=True,sequence=None):
-    logger = logging.getLogger()
     if allsame and not sequence:
         # Get sequence from first model
         try:
             h=iotbx.pdb.pdb_input(models[0]).construct_hierarchy()
         except Exception,e:
             s="*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0],e)
-            logger.critical(s)
+            _logger.critical(s)
             return False
         sequence = _sequence1(h) # only one model/chain
     errors=[]
@@ -177,7 +177,7 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
             if not s == sequence: sequence_err.append((pdb,s))
     
     if not (len(errors) or len(multi) or len(sequence_err)):
-        logger.info("check_pdb_directory - pdb files all seem valid")
+        _logger.info("check_pdb_directory - pdb files all seem valid")
         return True
     
     s="\n"
@@ -199,7 +199,7 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
         for pdb,seq in sequence_err:
             s+="PDB: {0}\n{1}\n".format(pdb,seq)
 
-    logger.critical(s)
+    _logger.critical(s)
     return False
 
 def extract_chain(inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False, renumber=True ):
@@ -1181,6 +1181,33 @@ COLUMNS        DATA TYPE     FIELD       DEFINITION
         modres.append([idCode, resName, chainID, seqNum, iCode, stdRes,comment])
         
     return modres
+
+def prepare_nmr_model(nmr_model_in,models_dir):
+    """Split an nmr pdb into its constituent parts and standardise the lengths"""
+    if not os.path.isdir(models_dir): os.mkdir(models_dir)
+    split_pdbs = split_pdb(nmr_model_in, models_dir)
+    
+    # We can only work with equally sized PDBS so we pick the most numerous if there are different sizes
+    lengths = {}
+    lmax = 0
+    for pdb in split_pdbs:
+        h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
+        l = h.models()[0].chains()[0].residue_groups_size()
+        if l not in lengths:
+            lengths[l] = [pdb]
+        else:
+            lengths[l].append(pdb)
+        lmax = max(lmax,l)
+    
+    if len(lengths) > 1:
+        # The pdbs were of different lengths
+        to_keep = lengths[lmax]
+        _logger.info('All NMR models were not of the same length, only {0} will be kept.'.format(len(to_keep)))
+        # Delete any that are not of most numerous length
+        for p in [p for p in split_pdbs if p not in to_keep]: os.unlink(p)
+        split_pdbs = to_keep
+
+    return split_pdbs
 
 def reliable_sidechains(inpath=None, outpath=None ):
     """Only output non-backbone atoms for residues in the res_names list.
