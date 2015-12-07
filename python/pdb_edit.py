@@ -1654,7 +1654,7 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
                         for atom in atom_group.atoms():
                             if atom.hetero: atom.hetero=False
                                 
-    if del_hetatm: _strip_hetatm_cctbx(hierachy)
+    if del_hetatm: _strip_hetatm(hierachy)
 
     with open(pdbout,'w') as f:
         f.write("REMARK Original file:\n")
@@ -1663,31 +1663,16 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
             f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
                                                               write_scale_records=True)+"\n")
         f.write(hierachy.as_pdb_string(anisou=False))
-
-    return       
-
-def Xstrip_hetatm(pdbin, pdbout):
-    """Remove all hetatoms from pdbfile"""
-    with open( pdbout, 'w' ) as w, open(pdbin) as f:
-        hremoved=-1
-        for i, line in enumerate(f):
-            # Remove any HETATOM lines and following ANISOU lines
-            if line.startswith("HETATM"):
-                hremoved = i
-                continue
-            if line.startswith("ANISOU") and i == hremoved+1:
-                continue
-            w.write(line)
     return
 
-def strip_hetatm_cctbx(pdbin, pdbout):
+def strip_hetatm(pdbin, pdbout):
     """Remove all hetatoms from pdbfile"""
     hierachy=iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
-    _strip_hetatm_cctbx(hierachy)
+    _strip_hetatm(hierachy)
     hierachy.write_pdb_file(pdbout,anisou=False)
     return
 
-def _strip_hetatm_cctbx(hierachy):
+def _strip_hetatm(hierachy):
     """Remove all hetatoms from pdbfile"""
     for model in hierachy.models():
         for chain in model.chains():
