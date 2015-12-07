@@ -169,7 +169,8 @@ class Contacter(object):
                   ss2file=self.psipred_ss2,
                   structurefile=self.structure_pdb)
         
-        if self.structure_pdb: self.ppv(self.structure_pdb)
+        if self.structure_pdb: 
+            self.contact_ppv=self.ppv(self.structure_pdb)
         
         return
                 
@@ -312,8 +313,10 @@ class Contacter(object):
 
         return contacts, contact_map
     
-    def _cb_contacts(self, cb1_lst, cb2_lst, length, cutoff=8):
+    def _cb_contacts(self, cb1_lst, cb2_lst, length, cutoff=9):
         '''Get the contacts between the two lists of contacts'''
+
+        self.logger.info("Distance cutoff of participating atoms is: %dA" % cutoff)
 
         dist_mat = numpy.zeros((length, length), numpy.float)
         dist_mat.fill(float('inf'))
