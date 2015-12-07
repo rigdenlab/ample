@@ -44,11 +44,15 @@ class ContactfileParser(object):
     def defineContact(self, line, **kwargs):
         contact = self.contact.copy()
         
-        contact['res1_index'] = int(line[kwargs['res1_idx']])
-        contact['res2_index'] = int(line[kwargs['res2_idx']])
-        contact['raw_score'] = float(line[kwargs['raw_score_idx']])
-        contact['method'] = kwargs['method']
-        contact['file'] = kwargs['file']
+        try:
+            contact['res1_index'] = int(line[kwargs['res1_idx']])
+            contact['res2_index'] = int(line[kwargs['res2_idx']])
+            contact['raw_score'] = float(line[kwargs['raw_score_idx']])
+            contact['method'] = kwargs['method']
+            contact['file'] = kwargs['file']
+        except ValueError:
+            msg = "Cannot process contact, please check file format"
+            raise RuntimeError(msg)
         
         return contact
 
