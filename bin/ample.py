@@ -37,7 +37,6 @@ import ensemble
 import mrbump_ensemble
 import mrbump_results
 import mtz_util
-import nmr
 import pdb_edit
 import pyrvapi_results
 import rosetta_model
@@ -922,9 +921,7 @@ def main():
     # break here for NMR (frags needed but not modelling
     if amopt.d['nmr_model_in']:
         if not amopt.d['nmr_remodel']:
-            if not os.path.isdir(amopt.d['models_dir']): os.mkdir(amopt.d['models_dir'])
-            pdb_edit.split_pdb(amopt.d['nmr_model_in'], amopt.d['models_dir'])
-            nmr.standardise_lengths(amopt.d['models_dir'])
+            pdb_edit.prepare_nmr_model(amopt.d['nmr_model_in'], amopt.d['models_dir'])
         elif amopt.d['nmr_remodel']:
             try:
                 rosetta_modeller.nmr_remodel(nmr_model_in=amopt.d['nmr_model_in'],
