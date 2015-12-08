@@ -83,7 +83,7 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
     if not os.path.isfile(alignment_file): raise RuntimeError, "Gesamt did not generate an alignment file.\nPlease check the logfile: {0}".format(logfile)
     return alignment_file
     
-def model_core_from_fasta(models, alignment_file, work_dir=None):
+def model_core_from_fasta(models, alignment_file, work_dir=None, case_sensitive=False):
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
     
     # Read in alignment to get
@@ -105,8 +105,10 @@ def model_core_from_fasta(models, alignment_file, work_dir=None):
     # aligned residues by lower-case letters
     GAP = '-'
     # Can't use below as Theseus ignores lower-case letters in the alignment
-    # core = [ all([ x in pdb_edit.one2three.keys() for x in t ]) for t in zip(*align_seq.sequences) ]
-    core = [ all([ x != GAP for x in t ]) for t in zip(*align_seq.sequences) ]
+    if case_sensitive:
+        core = [ all([ x in pdb_edit.one2three.keys() for x in t ]) for t in zip(*align_seq.sequences) ]
+    else:
+        core = [ all([ x != GAP for x in t ]) for t in zip(*align_seq.sequences) ]
     
     # For each sequence, get a list of which positions are core
     core_positions = []
