@@ -540,17 +540,19 @@ def process_options(amoptd, logger):
         amoptd['make_models'] = False
         if not  os.path.isfile(str(amoptd['alignment_file'])):
             # We need to use gesamt or mustang to do the alignment
-            if amoptd['homolog_aligner'] == 'gesamt' and not ample_util.is_exe(str(amoptd['gesamt_exe'])):
-                if sys.platform.startswith("win"):
-                    amoptd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt.exe')
-                else:
-                    amoptd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt')
+            if amoptd['homolog_aligner'] == 'gesamt':
+                if not ample_util.is_exe(str(amoptd['gesamt_exe'])):
+                    if sys.platform.startswith("win"):
+                        amoptd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt.exe')
+                    else:
+                        amoptd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt')
                 if not ample_util.is_exe(str(amoptd['gesamt_exe'])):
                     msg = 'Using homologs without an alignment file and cannot find gesamt_exe: {0}'.format(amoptd['gesamt_exe'])
                     ample_exit.exit_error(msg)
-            elif amoptd['homolog_aligner'] == 'mustang' and not ample_util.is_exe(str(amoptd['gesamt_exe'])):
-                msg = 'Using homologs without an alignment file and cannot find mustang_exe: {0}'.format(amoptd['mustang_exe'])
-                ample_exit.exit_error(msg)
+            elif amoptd['homolog_aligner'] == 'mustang':
+                if not ample_util.is_exe(str(amoptd['mustang_exe'])):
+                    msg = 'Using homologs without an alignment file and cannot find mustang_exe: {0}'.format(amoptd['mustang_exe'])
+                    ample_exit.exit_error(msg)
             else:
                 msg = 'Unknown homolog_aligner: {0}'.format(amoptd['homolog_aligner'])
                 ample_exit.exit_error(msg)
