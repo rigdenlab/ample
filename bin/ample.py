@@ -562,7 +562,7 @@ def process_options(amoptd, logger):
         amoptd['models_dir'] = ample_util.extract_models(amoptd['models'],
                                                          directory=amoptd['models_dir'],
                                                          sequence=None,
-                                                         single=False,
+                                                         single=True,
                                                          allsame=False)
     elif amoptd['models']:
         amoptd['models_dir'] = ample_util.extract_models(amoptd['models'], amoptd['models_dir'])
@@ -991,24 +991,24 @@ def main():
             # Pickle dictionary so it can be opened by the job to get the parameters
             ample_util.saveAmoptd(amopt.d)
             script = ensemble.cluster_script(amopt.d)
-            ok = workers.run_scripts(job_scripts=[script],
-                                     monitor=monitor,
-                                     chdir=True,
-                                     nproc=amopt.d['nproc'],
-                                     job_time=3600,
-                                     job_name='ensemble',
-                                     submit_cluster=amopt.d['submit_cluster'],
-                                     submit_qtype=amopt.d['submit_qtype'],
-                                     submit_queue=amopt.d['submit_queue'],
-                                     submit_array=amopt.d['submit_array'],
-                                     submit_max_array=amopt.d['submit_max_array'])
+            workers.run_scripts(job_scripts=[script],
+                                monitor=monitor,
+                                chdir=True,
+                                nproc=amopt.d['nproc'],
+                                job_time=3600,
+                                job_name='ensemble',
+                                submit_cluster=amopt.d['submit_cluster'],
+                                submit_qtype=amopt.d['submit_qtype'],
+                                submit_queue=amopt.d['submit_queue'],
+                                submit_array=amopt.d['submit_array'],
+                                submit_max_array=amopt.d['submit_max_array'])
             # queue finished so unpickle results
             with open(amopt.d['results_path'], "r") as f: amopt.d = cPickle.load(f)
         else:
             try: ensemble.create_ensembles(amopt.d)
             except Exception, e:
                 msg = "Error creating ensembles: {0}".format(e)
-                ample_exit.exit_error(msg)
+                ample_exit.exit_error(msg, sys.exc_info()[2])
                 
         # Check we have something to work with
         if not os.path.isfile(amopt.d['ensemble_ok']) or not amopt.d.has_key('ensembles') or not len(amopt.d['ensembles']):
@@ -1019,8 +1019,6 @@ def main():
         if not amopt.d['homologs']:
             ensemble_summary = ensemble.ensemble_summary(amopt.d['ensembles_data'])
             logger.info(ensemble_summary)
-        
-        # Save truncation levels for analysis
         
     # Save the results
     ample_util.saveAmoptd(amopt.d)
