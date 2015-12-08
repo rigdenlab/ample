@@ -80,7 +80,7 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
     if not rtn == 0:
         raise RuntimeError, "Error running gesamt. Check logfile: {0}".format(logfile)
     
-    if not os.path.isfile(alignment_file): raise RuntimeError, "Could not find alignment file: {0} after running gesamt!".format(alignment_file)
+    if not os.path.isfile(alignment_file): raise RuntimeError, "Gesamt did not generate an alignment file.\nPlease check the logfile: {0}".format(logfile)
     return alignment_file
     
 def model_core_from_fasta(models, alignment_file, work_dir=None):
