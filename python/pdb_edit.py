@@ -159,8 +159,9 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
             _logger.critical(s)
             return False
         sequence = _sequence1(h) # only one model/chain
-    errors=[]
-    multi=[]
+    errors = []
+    multi = []
+    no_protein = []
     sequence_err=[]
     for pdb in models:
         try:
@@ -172,11 +173,15 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
         if not (h.models_size()==1 and h.models()[0].chains_size()==1):
             multi.append(pdb)
             continue
+        # single chain from one model so check is protein
+        if not h.models()[0].chains()[0].is_protein():
+            no_protein.append(pdb)
+            continue
         if sequence:
             s=_sequence1(h) # only one chain/model
             if not s == sequence: sequence_err.append((pdb,s))
     
-    if not (len(errors) or len(multi) or len(sequence_err)):
+    if not (len(errors) or len(multi) or len(sequence_err) or len(no_protein)):
         _logger.info("check_pdb_directory - pdb files all seem valid")
         return True
     
@@ -191,6 +196,12 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
         s+="\n"
         s+="The following pdb files have more than one chain:\n\n"
         for pdb in multi:
+            s+="{0}\n".format(pdb)
+            
+    if len(no_protein):
+        s+="\n"
+        s+="The following pdb files do not appear to contain any protein:\n\n"
+        for pdb in no_protein:
             s+="{0}\n".format(pdb)
             
     if len(sequence_err):
@@ -1502,15 +1513,13 @@ def split_pdb(pdbin, directory=None):
         
     return output_files
 
-def split_into_chains(pdbin, directory=None):
+def split_into_chains(pdbin, chain=None, directory=None):
     """Split a pdb file into its separate chains"""
 
     if directory is None: directory = os.path.dirname(pdbin)
     
     # Largely stolen from pdb_split_models.py in phenix
     #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
-    import iotbx.file_reader
-    
     pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
     pdbf.check_file_type("pdb")
     hierarchy = pdbf.file_object.construct_hierarchy()
@@ -1523,12 +1532,14 @@ def split_into_chains(pdbin, directory=None):
     
     output_files = []
     n_chains = len(hierarchy.models()[0].chains())
-    for i, chain in enumerate(hierarchy.models()[0].chains()):
+    for i, hchain in enumerate(hierarchy.models()[0].chains()):
+        if not hchain.is_protein(): continue
+        if chain and not hchain.id == chain: continue
         new_hierarchy = iotbx.pdb.hierarchy.root()
         new_model = iotbx.pdb.hierarchy.model()
         new_hierarchy.append_model((new_model))
-        new_model.append_chain(chain.detached_copy())
-        output_file = ample_util.filename_append(pdbin, chain.id, directory)
+        new_model.append_chain(hchain.detached_copy())
+        output_file = ample_util.filename_append(pdbin, hchain.id, directory)
         with open(output_file, "w") as f:
             if (crystal_symmetry is not None) :
                 print >> f, iotbx.pdb.format_cryst1_and_scale_records(
@@ -1541,6 +1552,8 @@ def split_into_chains(pdbin, directory=None):
             f.write(new_hierarchy.as_pdb_string())
     
         output_files.append(output_file)
+    
+    if not len(output_files): raise RuntimeError,"split_into_chains could not find any chains to split"
         
     return output_files
 
@@ -2151,5 +2164,5 @@ if __name__ == "__main__":
     elif args.split_models:
         print split_pdb(args.input_file)
     elif args.split_chains:
-        print split_into_chains(args.input_file)
+        print split_into_chains(args.input_file, chain=args.chain)
         
