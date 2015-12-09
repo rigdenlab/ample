@@ -62,6 +62,7 @@ class AmpleOptions(object):
                             'mrbump_dir' : None,
                             'mr_keys' : None,
                             'mr_sequence' : None,
+                            'mr_sg_all' : None,
                             'mtz' : None,
                             'mustang_exe' : None,
                             'name' : 'ampl',

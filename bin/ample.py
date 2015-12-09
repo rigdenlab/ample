@@ -304,7 +304,7 @@ def process_command_line():
     mr_group.add_argument('-buccaneer_cycles', type=int, nargs=1,
                        help='The number of Bucanner rebuilding cycles to run')
 
-    mr_group.add_argument('-molrep_only', metavar='molrep_only', type=str, nargs=1,
+    mr_group.add_argument('-molrep_only', metavar='True/False', type=str, nargs=1,
                        help='Only use Molrep for Molecular Replacement step in MRBUMP')
     
     mr_group.add_argument('-mrbump_dir', type=str, nargs=1,
@@ -312,6 +312,9 @@ def process_command_line():
     
     mr_group.add_argument('-mr_keys', type=str, nargs='+', action='append',
                        help='Additional keywords for MRBUMP - are passed through without editing')
+    
+    mr_group.add_argument('-mr_sg_all', metavar='True/False', type=str, nargs=1,
+                       help='Try all possible space groups in PHASER Molecular Replacement step in MRBUMP')
 
     mr_group.add_argument('-nmasu', type=int, nargs=1,
                        help='Manually specify the number of molecules in the asymmetric unit - sets the NMASu MRBUMP flag')
@@ -319,7 +322,7 @@ def process_command_line():
     mr_group.add_argument('-phaser_kill', metavar='phaser_kill', type=int, nargs=1,
                        help='Time in minutes after which phaser will be killed (0 to leave running)')
 
-    mr_group.add_argument('-phaser_only', metavar='phaser_only', type=str, nargs=1,
+    mr_group.add_argument('-phaser_only', metavar='True/False', type=str, nargs=1,
                        help='Only use Phaser for Molecular Replacement step in MRBUMP')
 
     mr_group.add_argument('-phaser_rms', metavar='phaser_rms', type=float, nargs=1,

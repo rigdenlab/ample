@@ -33,6 +33,7 @@ def keyword_dict(ensemble_pdb, name, amoptd, extra_options={}):
                 'F',
                 'FREE',
                 'mr_keys',
+                'mr_sg_all',
                 'mrbump_programs',
                 'native_pdb',
                 'nmasu',
@@ -126,6 +127,8 @@ def mrbump_keyword_file(odict, fixed_iden=0.6):
         mrs += 'PDBNATIVE {0}\n'.format(odict['native_pdb'])
     if odict['phaser_kill'] > 0:
         mrs += 'PKEY KILL TIME {0}\n'.format(odict['phaser_kill'])
+    if odict['mr_sg_all']:
+        mrs += 'PKEY SGALTERNATIVE SELECT ALL\n'
     
     # Extra keywords
     # This assumes everything in mr_keys is a list of [ KEYWORD, VALUE0, VALUE1, ...]
