@@ -42,7 +42,8 @@ three2one = {
     'THR' : 'T',    
     'TRP' : 'W',    
     'TYR' : 'Y',   
-    'VAL' : 'V'
+    'VAL' : 'V',
+    'UNK' : 'X'
 }
 
 # http://stackoverflow.com/questions/3318625/efficient-bidirectional-hash-table-in-python
@@ -1430,10 +1431,11 @@ def _sequence_data(hierarchy):
     """Extract the sequence of residues and resseqs from a pdb file."""
     chain2data={}
     for chain in set(hierarchy.models()[0].chains()): # only the first model
+        if not chain.is_protein(): continue
         got=False
         seq=""
         resseq=[]
-        for residue in chain.conformers()[0].residues():
+        for residue in chain.conformers()[0].residues(): # Just look at the first conformer
             # See if any of the atoms are non-hetero - if so we add this residue
             if any([not atom.hetero for atom in residue.atoms()]):
                 got=True
