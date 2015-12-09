@@ -8,7 +8,6 @@ import cPickle
 import logging
 import os
 import platform
-import re
 import subprocess
 import sys
 import tarfile
