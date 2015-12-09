@@ -538,7 +538,7 @@ def restartPkl(amoptd):
     ample_util.saveAmoptd(amoptd)
     
     _logger.info('End of benchmarking')
-    sys.exit_error()
+    ample_exit.exit_error()
     return
 
 
