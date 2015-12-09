@@ -492,7 +492,7 @@ class Ensembler(object):
         
         return d
     
-    def edit_side_chains(self, raw_ensemble, raw_ensemble_data, ensembles_directory, homologs=False, side_chain_treatments=SIDE_CHAIN_TREATMENTS):
+    def edit_side_chains(self, raw_ensemble, raw_ensemble_data, side_chain_treatments, ensembles_directory, homologs=False):
         assert os.path.isdir(ensembles_directory), "Cannot find ensembles directory: {0}".format(ensembles_directory)
         ensembles = []
         ensembles_data = []
@@ -537,7 +537,8 @@ class Ensembler(object):
                 
         return ensembles, ensembles_data
   
-    def generate_ensembles(self, models,
+    def generate_ensembles(self,
+                           models,
                            cluster_method=None,
                            cluster_exe=None,
                            num_clusters=None,
@@ -550,6 +551,8 @@ class Ensembler(object):
                            work_dir=None,
                            nproc=None,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS):
+        
+        
         
         # Work dir set each time
         if not work_dir:
@@ -607,7 +610,10 @@ class Ensembler(object):
                                                                                subcluster_program=self.subcluster_program,
                                                                                subcluster_exe=self.subcluster_program,
                                                                                ensemble_max_models=self.ensemble_max_models)):
-                    for ensemble, ensemble_data in zip(*self.edit_side_chains(subcluster, subcluster_data, self.ensembles_directory)):
+                    for ensemble, ensemble_data in zip(*self.edit_side_chains(subcluster,
+                                                                              subcluster_data,
+                                                                              side_chain_treatments,
+                                                                              self.ensembles_directory)):
                         self.ensembles.append(ensemble)
                         self.ensembles_data.append(ensemble_data)
         
@@ -698,8 +704,8 @@ class Ensembler(object):
             for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble,
                                                                       pre_ensemble_data,
                                                                       self.ensembles_directory,
-                                                                      homologs=True,
-                                                                      side_chain_treatments=side_chain_treatments)):
+                                                                      side_chain_treatments,
+                                                                      homologs=True)):
                 self.ensembles.append(ensemble)
                 self.ensembles_data.append(ensemble_data)
         

@@ -28,6 +28,7 @@ import time
 # Our imports
 import add_sidechains_SCWRL
 import ample_contacts
+import ample_ensemble
 import ample_exit
 import ample_options
 import ample_sequence
@@ -236,6 +237,9 @@ def process_command_line():
     parser.add_argument('-sf_cif', type=str, nargs=1,
                        help='Path to a structure factor CIF file (instead of MTZ file)')
 
+    parser.add_argument('-side_chain_treatments', type=str, nargs='+', action='append',
+                       help='The side chain treatments to use. Default: {0}'.format(ample_ensemble.SIDE_CHAIN_TREATMENTS))
+    
     parser.add_argument('-SIGF', type=str, nargs=1,
                        help='Flag for SIGF column in the MTZ file')
     
@@ -564,13 +568,12 @@ def process_options(amoptd, logger):
             "Please supply the models with the -models flag"
             ample_exit.exit_error(msg)
         amoptd['import_models'] = True
-        amoptd['models_dir'] = ample_util.extract_models(amoptd['models'],
-                                                         directory=amoptd['models_dir'],
+        amoptd['models_dir'] = ample_util.extract_models(amoptd,
                                                          sequence=None,
                                                          single=True,
                                                          allsame=False)
     elif amoptd['models']:
-        amoptd['models_dir'] = ample_util.extract_models(amoptd['models'], amoptd['models_dir'])
+        amoptd['models_dir'] = ample_util.extract_models(amoptd )
         amoptd['import_models'] = True
         amoptd['make_frags'] = False
         amoptd['make_models'] = False

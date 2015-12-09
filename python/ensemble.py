@@ -70,6 +70,7 @@ def create_ensembles(amoptd):
                                                           percent_truncation=amoptd['percent'],
                                                           truncation_method=amoptd['truncation_method'],
                                                           ensembles_directory=ensembles_directory,
+                                                          side_chain_treatments=amoptd['side_chain_treatments'],
                                                           alignment_file=amoptd['alignment_file'],
                                                           work_dir=work_dir,
                                                           nproc=amoptd['nproc'],
@@ -88,6 +89,7 @@ def create_ensembles(amoptd):
                                                  truncation_method=amoptd['truncation_method'],
                                                  truncation_pruning=amoptd['truncation_pruning'],
                                                  ensembles_directory=ensembles_directory,
+                                                 side_chain_treatments=amoptd['side_chain_treatments'],
                                                  work_dir=work_dir,
                                                  nproc=amoptd['nproc'])
     

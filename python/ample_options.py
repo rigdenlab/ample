@@ -5,6 +5,7 @@ Class to hold the options for ample
 import os
 
 # our imports
+from ample_ensemble import SIDE_CHAIN_TREATMENTS
 import version
 
 class AmpleOptions(object):
@@ -103,6 +104,7 @@ class AmpleOptions(object):
                             'shelxe_rebuild' : False,
                             'shelxe_rebuild_arpwarp' : False,
                             'shelxe_rebuild_buccaneer' : False,
+                            'side_chain_treatments' : SIDE_CHAIN_TREATMENTS,
                             'SIGF' : None,
                             'spicker_exe' : None,
                             'submit_array' : True,
