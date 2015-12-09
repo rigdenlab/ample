@@ -109,6 +109,8 @@ def model_core_from_fasta(models, alignment_file, work_dir=None, case_sensitive=
         core = [ all([ x in pdb_edit.one2three.keys() for x in t ]) for t in zip(*align_seq.sequences) ]
     else:
         core = [ all([ x != GAP for x in t ]) for t in zip(*align_seq.sequences) ]
+
+    if not any(core): raise RuntimeError("Cannot generate core for models: {0}".format(models))
     
     # For each sequence, get a list of which positions are core
     core_positions = []
@@ -193,11 +195,15 @@ def model_core_from_theseus(models, alignment_file, var_by_res, work_dir=None):
 def split_sequence(length, percent_interval, min_chunk=3):
     """split a sequence of length into chunks each separated by percent_interval each being at least min_chunk size"""
     
+    if length <= min_chunk: return [length - 1]
+
     # How many residues should fit in each bin
     chunk_size = int(round(float(length) * float(percent_interval) / 100.0))
+    if chunk_size <= 0: return [length - 1]
     idxs = [length - 1]
     while True:
         start = idxs[-1] - chunk_size
+        if start <= 0: break
         remainder = start + 1
         if remainder >= min_chunk:
             idxs.append(start)
