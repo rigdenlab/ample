@@ -4,6 +4,7 @@ Created on Apr 18, 2013
 @author: jmht
 '''
 
+# system imports
 import collections
 import copy
 import glob
@@ -15,6 +16,14 @@ import shutil
 import sys
 import unittest
 
+# Module-level definitions. These need to come here because they are used in ample_util, which we also import
+# If they are defined after ample_util is imported then they aren't seen by ample_util and we get an import error
+POLYALA = 'polyAla'
+RELIABLE = 'reliable'
+ALLATOM = 'allatom'
+UNMODIFIED = 'unmod'
+SIDE_CHAIN_TREATMENTS = [POLYALA, RELIABLE, ALLATOM]
+
 # our imports
 import ample_sequence
 import ample_util
@@ -23,12 +32,6 @@ import pdb_edit
 import spicker
 import subcluster
 import theseus
-
-POLYALA = 'polyAla'
-RELIABLE = 'reliable'
-ALLATOM = 'allatom'
-UNMODIFIED = 'unmod'
-SIDE_CHAIN_TREATMENTS = [POLYALA, RELIABLE, ALLATOM]
 
 def align_mustang(models, mustang_exe=None, work_dir=None):
     if not ample_util.is_exe(mustang_exe):
