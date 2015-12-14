@@ -17,16 +17,20 @@ class Scwrl( object ):
         self.scwrl_exe = scwrl_exe
         return
     
-    def add_sidechains(self, pdbin=None, pdbout=None, sequence=None ):
+    def add_sidechains(self, pdbin=None, pdbout=None, sequence=None, hydrogens=False):
         """Add the specified sidechains to the pdb"""
         
         cmd = [ self.scwrl_exe, "-i", pdbin, "-o", pdbout ]
         
+        # Not needed by default
         if sequence is not None:
             sequenceFile = os.path.join( self.workdir, "sequence.file")
             with open( sequenceFile, 'w' ) as w:
                 w.write( sequence + os.linesep )
             cmd += [ "-s",  sequenceFile ]
+        
+        # Don't output hydrogens
+        if not hydrogens: cmd += ['-h']
             
         logfile = os.path.abspath("scwrl.log")
         retcode = ample_util.run_command(cmd, logfile=logfile)
