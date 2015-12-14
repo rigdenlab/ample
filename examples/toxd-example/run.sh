@@ -27,11 +27,14 @@ $CCP4/bin/ample.py \
 # Add below to run from pre-made models
 #-models ../../tests/testfiles/models \
 
+# Thes are QUARK models
+#-models  ../../tests/testfiles/decoys_200.tar.gz \
+
 # Add below for running in benchmark mode
 #-native_pdb  1DTX.pdb \
 
 # Add below for running from pre-made ensembles
-#-ensembles_dir ./ROSETTA_MR_0/ensembles_1 \
+#-ensembles ./ROSETTA_MR_0/ensembles_1 \
 
 # Add below for running with contact predictions
 #-contact_file toxd_.pconsc2.CASPRR \
