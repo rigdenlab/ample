@@ -156,8 +156,8 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
             os.unlink(files[0])
             # If we've got quark models we don't want to modify the side chains as we only have polyalanine so we
             # set this here - horribly untidy as we should have one place to decide on side chains
-            logging.debug('Found QUARK models so setting side_chain_treatments to UNMODIFIED')
-            amoptd['side_chain_treatments'] = [ UNMODIFIED ]
+            logging.info('Found QUARK models in file: {0}'.format(filename))
+            amoptd['quark_models'] = True
     
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
         msg="Problem importing pdb files - please check the log for more information"
