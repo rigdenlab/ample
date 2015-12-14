@@ -19,7 +19,6 @@ import zipfile
 # our imports
 import ample_exit
 import pdb_edit
-from ample_ensemble import UNMODIFIED
 
 CCP4_VERSION=None
 
