@@ -18,6 +18,7 @@ class AmpleOptions(object):
         self.defaults = {
                             'alignment_file' : None,
                             'all_atom' : True,
+                            'allow_his_tag' : False,
                             'arpwarp_cycles' : 10,
                             'bbcontacts_file': None,
                             'benchmark_mode' : False,
