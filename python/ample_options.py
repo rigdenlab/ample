@@ -87,6 +87,7 @@ class AmpleOptions(object):
                             'phenix_exe' : None,
                             'psipred_ss2' : None,
                             'purge' : False,
+                            'quark_models' : False,
                             'restart_pkl' : None,
                             'rg_reweight' : None,
                             'ROSETTA_cluster' : None,
