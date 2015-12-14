@@ -50,7 +50,7 @@ class ContactfileParser(object):
             contact['raw_score'] = float(line[kwargs['raw_score_idx']])
             contact['method'] = kwargs['method']
             contact['file'] = kwargs['file']
-        except ValueError:
+        except (ValueError, IndexError):
             msg = "Cannot process contact, please check file format"
             raise RuntimeError(msg)
         
