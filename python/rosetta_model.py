@@ -21,7 +21,6 @@ root = os.path.join(os.environ["CCP4"], "share", "ample")
 sys.path.append( os.path.join( root, "python" ) )
 
 # Our modules
-import add_sidechains_SCWRL
 import ample_sequence
 import ample_util
 import octopus_predict
@@ -136,8 +135,6 @@ class RosettaModel(object):
 
         self.fasta = None
         self.all_atom = None
-        self.use_scwrl = None
-        self.scwrl_exe = None
 
         # Fragment variables
         self.name = None
@@ -325,15 +322,6 @@ class RosettaModel(object):
         if not pdbs:
             raise RuntimeError, \
                 "No models created after modelling!\nPlease check the log files in the directory {0} for more information.".format(self.run_dir)
-        
-        if self.use_scwrl: scwrl = add_sidechains_SCWRL.Scwrl(scwrlExe=self.scwrl_exe)
-        for i, pdbin in enumerate(pdbs):
-            if self.use_scwrl:
-                pdbout=os.path.join(self.models_dir,"model_{0}_scwrl.pdb".format(i))
-                scwrl.addSidechains(pdbin=pdbin,pdbout=pdbout)
-            else:
-                pdbout=os.path.join(self.models_dir,"model_{0}.pdb".format(i))
-                shutil.copyfile(pdbin, pdbout)
                 
         if len(pdbs) != self.nmodels:
             raise RuntimeError, \
@@ -851,9 +839,6 @@ class RosettaModel(object):
                 self.constraints_file=optd['constraints_file']
             self.constraints_weight = optd['constraints_weight']
             
-            self.use_scwrl = optd['use_scwrl']
-            self.scwrl_exe = optd['scwrl_exe']
-            
             # Cluster submission stuff
             self.submit_cluster = optd['submit_cluster']
             self.submit_qtype = optd['submit_qtype']
@@ -1332,8 +1317,6 @@ for i in range(10):
         optd['name'] = "TOXD_"
         optd['improve_template'] = None
         optd['all_atom'] = True
-        optd['use_scwrl'] = False
-        optd['scwrl_exe'] = ""
         optd['benchmark_mode'] = False
         optd['transmembrane'] = False
         optd['psipred_ss2'] = None
