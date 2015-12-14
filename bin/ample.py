@@ -26,11 +26,11 @@ import shutil
 import time
 
 # Our imports
-import add_sidechains_SCWRL
 import ample_contacts
 import ample_ensemble
 import ample_exit
 import ample_options
+import ample_scwrl
 import ample_sequence
 import ample_util
 import benchmark
@@ -564,12 +564,7 @@ def process_options(amoptd, logger):
             "Please supply the models with the -models flag"
             ample_exit.exit_error(msg)
         amoptd['import_models'] = True
-        amoptd['models_dir'] = ample_util.extract_models(amoptd,
-                                                         sequence=None,
-                                                         single=True,
-                                                         allsame=False)
     elif amoptd['models']:
-        amoptd['models_dir'] = ample_util.extract_models(amoptd )
         amoptd['import_models'] = True
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
@@ -722,19 +717,19 @@ def process_options(amoptd, logger):
         msg = "Cannot find theseus executable: {0}".format(amoptd['theseus_exe'])
         ample_exit.exit_error(msg)
     #
-    # Scwrl
+    # SCRWL - we always check for SCRWL as if we are processing QUARK models we want to add sidechains to them
     #
-    if amoptd['use_scwrl']:
-        if not amoptd['scwrl_exe']:
-            if sys.platform.startswith("win"):
-                amoptd['scwrl_exe'] = 'Scwrl4.exe'
-            else:
-                amoptd['scwrl_exe'] = 'Scwrl4'
-        try:
-            amoptd['scwrl_exe'] = ample_util.find_exe(amoptd['scwrl_exe'])
-        except Exception:
-            msg = "Cannot find Scwrl executable: {0}".format(amoptd['scwrl_exe'])
-            ample_exit.exit_error(msg)
+    #if amoptd['use_scwrl']:
+    if not amoptd['scwrl_exe']:
+        if sys.platform.startswith("win"):
+            amoptd['scwrl_exe'] = 'Scwrl4.exe'
+        else:
+            amoptd['scwrl_exe'] = 'Scwrl4'
+    try:
+        amoptd['scwrl_exe'] = ample_util.find_exe(amoptd['scwrl_exe'])
+    except Exception as e:
+        logger.info("Cannot find Scwrl executable: {0}".format(amoptd['scwrl_exe']))
+        if amoptd['use_scwrl']: Raise(e)
     #
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     #
@@ -952,20 +947,32 @@ def main():
         msg = 'Modelling complete - models stored in: {0}\n'.format(amopt.d['models_dir'])
     elif amopt.d['import_models']:
         logger.info('Importing models from directory: {0}\n'.format(amopt.d['models_dir']))
-        if amopt.d['use_scwrl']:
-            msg = "Processing sidechains of imported models from {0} with Scwl\n".format(amopt.d['models_dir'])
-            models_dir_scwrl = os.path.join(amopt.d['work_dir'], os.path.basename(amopt.d['models_dir']) + "_scwrl")
-            if os.path.isdir(models_dir_scwrl):
-                msg = "Scwrl models directory {0} already exists-please move it aside".format(models_dir_scwrl)
-                ample_exit.exit_error(msg)
-            os.mkdir(models_dir_scwrl)
-            msg += "Scwrl-processed models will be placed in directory: {0}".format(models_dir_scwrl)
-            msg += "Running Scwrl..."
-            logger.info(msg)
-            scwrl = add_sidechains_SCWRL.Scwrl(scwrlExe=amopt.d['scwrl_exe'])
-            scwrl.processDirectory(inDirectory=amopt.d['models_dir'], outDirectory=models_dir_scwrl)
-            amopt.d['models_dir'] = models_dir_scwrl
-            logger.info("Finished processing models with Scwrl")
+        if amopt.d['homologs']:
+            amopt.d['models_dir'] = ample_util.extract_models(amopt.d, sequence=None, single=True, allsame=False)
+        else:
+            amopt.d['models_dir'] = ample_util.extract_models(amopt.d)
+            # Need to check if Quark and handle things accordingly
+            if amopt.d['quark_models']:
+                # We always add sidechains to QUARK models if SCWRL is installed
+                if ample_util.is_exe(amopt.d['scwrl_exe']):
+                    amopt.d['use_scwrl'] = True
+                else:
+                    # No SCWRL so don't do owt with the side chains
+                    logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(ample_ensemble.UNMODIFIED))
+                    amopt.d['side_chain_treatments'] = [ ample_ensemble.UNMODIFIED ]
+
+    #
+    # Add sidechains to the models using SCWRL
+    #
+    if amopt.d['use_scwrl']:
+        models_dir_scwrl = ample_util.filename_append(amopt.d['models_dir'], "scwrl")
+        if os.path.isdir(models_dir_scwrl):
+            msg = "Scwrl models directory {0} already exists-please move it aside".format(models_dir_scwrl)
+            ample_exit.exit_error(msg)
+        os.mkdir(models_dir_scwrl)
+        SCWRL = ample_scwrl.Scwrl(amopt.d['scwrl_exe'])
+        SCWRL.process_directory(amopt.d['models_dir'], models_dir_scwrl)
+        amopt.d['models_dir'] = models_dir_scwrl
     
     # Do the clustering
     ensembles = []  # List of ensembles - 1 per cluster
