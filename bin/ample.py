@@ -110,7 +110,7 @@ def process_command_line():
     parser.add_argument('-early_terminate', metavar='True/False', type=str, nargs=1,
                          help='Stop the run as soon as a success has been found.')
     
-    parser.add_argument('-ensembles_dir', type=str, nargs=1,
+    parser.add_argument('-ensembles', type=str, nargs=1,
                        help='Path to directory containing existing ensembles')
     
     parser.add_argument('-fasta', type=str, nargs=1,
@@ -520,12 +520,8 @@ def process_options(amoptd, logger):
     amoptd['models_dir'] = os.path.join(amoptd['work_dir'], "models")
     
     # Check if importing ensembles
-    if amoptd['ensembles_dir']:
-        if not pdb_edit.check_pdb_directory(amoptd['ensembles_dir'], single=False):
-            msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles_dir'])
-            ample_exit.exit_error(msg)
-        amoptd['import_ensembles'] = True
-        logger.info("Found directory with ensemble files: {0}\n".format(amoptd['ensembles_dir']))
+    if amoptd['ensembles']:
+        amoptd['import_ensembles'] = True # checks are made in ensembles.import_ensembles
         amoptd['make_frags'] = False
         amoptd['make_models'] = False
     elif amoptd['cluster_dir']:
@@ -975,13 +971,7 @@ def main():
     ensembles = []  # List of ensembles - 1 per cluster
     ensemble_options = {}
     if amopt.d['import_ensembles']:
-        # Importing pre-made ensembles
-        # Set list of ensembles to the one we are importing
-        msg = "Importing ensembles from directory: {0}".format(amopt.d['ensembles_dir'])
-        logger.info(msg)
-        ensembles = glob.glob(os.path.join(amopt.d['ensembles_dir'], '*.pdb'))
-        amopt.d['ensembles'] = ensembles
-        amopt.d['ensembles_data'] = [ {'name' : os.path.splitext(os.path.basename(e))[0], 'ensemble_pdb' : e} for e in ensembles ]
+        ensembles = ensemble.import_ensembles(amopt.d)
     elif amopt.d['ideal_helices']:
         ensembles, ensemble_options, ensembles_data = ample_util.ideal_helices(amopt.d['fasta_length'])
         amopt.d['ensembles_data'] = ensembles_data
@@ -1044,7 +1034,7 @@ def main():
     if len(ensembles) < 1:
         msg = "ERROR! Cannot run MRBUMP as there are no ensembles!"
         ample_exit.exit_error(msg)
-    
+     
     if amopt.d['mrbump_dir'] is None:
         bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
         amopt.d['mrbump_dir'] = bump_dir
@@ -1052,10 +1042,10 @@ def main():
         bump_dir = amopt.d['mrbump_dir']
     if not os.path.exists(bump_dir): os.mkdir(bump_dir)
     os.chdir(bump_dir)
-    
+     
     amopt.d['mrbump_results'] = []
     logger.info("Running MRBUMP jobs in directory: {0}".format(bump_dir))
-    
+     
     # Create job scripts
     logger.info("Generating MRBUMP runscripts")
     mrbump_jobtime = 172800  # allow 48 hours for each mrbump job
@@ -1063,9 +1053,9 @@ def main():
                                                      amopt.d,
                                                      job_time=mrbump_jobtime,
                                                      ensemble_options=ensemble_options)
-    
+     
     if amopt.d['no_mr']: ample_exit.exit_error("Exiting before running MRBUMP")
-    
+     
     # Create function for monitoring jobs - static function decorator?
     if pyrvapi_results.pyrvapi:
         def monitor():
@@ -1075,7 +1065,7 @@ def main():
             return pyrvapi_results.display_results(amopt.d)
     else:
         monitor = None
-    
+     
     ok = workers.run_scripts(job_scripts=job_scripts,
                              monitor=monitor,
                              check_success=mrbump_results.checkSuccess,
@@ -1089,11 +1079,12 @@ def main():
                              submit_queue=amopt.d['submit_queue'],
                              submit_array=amopt.d['submit_array'],
                              submit_max_array=amopt.d['submit_max_array'])
-
+ 
     if not ok:
         msg = "Error running MRBUMP on the ensembles!\nCheck logs in directory: {0}".format(amopt.d['mrbump_dir'])
         ample_exit.exit_error(msg)
-        
+    
+    
     # Collect the MRBUMP results
     results_summary = mrbump_results.ResultsSummary()
     results_summary.extractResults(bump_dir, purge=amopt.d['purge'])

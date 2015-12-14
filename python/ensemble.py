@@ -20,7 +20,10 @@ import unittest
 
 # our imports
 import ample_ensemble
+import ample_exit
 import ample_util
+import iotbx.pdb
+import pdb_edit
 import printTable
 
 def cluster_script(amoptd, python_path="ccp4-python"):
@@ -194,6 +197,35 @@ def ensemble_summary(ensembles_data):
     
     return rstr
 
+def import_ensembles(amoptd):
+    if not pdb_edit.check_pdb_directory(amoptd['ensembles'], single=False):
+        msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles'])
+        ample_exit.exit_error(msg)
+
+    msg = "Importing ensembles from directory: {0}".format(amoptd['ensembles'])
+    logging.info(msg)
+    ensembles = glob.glob(os.path.join(amoptd['ensembles'], '*.pdb'))
+    amoptd['ensembles'] = ensembles
+    
+    # get the data on the ensemble
+    ensembles_data = []
+    for e in ensembles:
+        d = {}
+        d['name'] = os.path.splitext(os.path.basename(e))[0]
+        d['ensemble_pdb'] = e
+        
+        # Get data on the models
+        hierarchy = iotbx.pdb.pdb_input(file_name=e).construct_hierarchy()
+        d['subcluster_num_models'] = len(hierarchy.models())
+        d['num_residues'] = len(hierarchy.models()[0].chains()[0].residue_groups())
+        d['ensemble_num_atoms'] = len(hierarchy.models()[0].atoms())
+        
+        ensembles_data.append(d)
+        
+    amoptd['ensembles_data'] = ensembles_data
+        
+    return ensembles
+
 def testSuite():
     suite = unittest.TestSuite()
     suite.addTest(Test('testSummary'))
@@ -250,7 +282,7 @@ class Test(unittest.TestCase):
         shutil.rmtree(work_dir)
         
         return
-
+    
 
 if __name__ == "__main__":
 
