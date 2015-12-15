@@ -274,6 +274,9 @@ class RosettaModel(object):
         return cmd
 
     def ab_initio_model(self,monitor):
+        # Remember starting directory
+        owd = os.getcwd()
+        
         # Make the directories and put the run scripts in them
         self.run_dir = os.path.join(self.work_dir, 'modelling')
         os.mkdir(self.run_dir)
@@ -328,6 +331,7 @@ class RosettaModel(object):
                 "Expected to create {0} models but found {1}\nPlease check the log files in the directory {2} for more information.".format(self.nmodels,
                                                                                                                                             len(pdbs),
                                                                                                                                             self.run_dir)
+        os.chdir(owd) # Go back to where we came from
         return
 
     def find_binary(self, name):
