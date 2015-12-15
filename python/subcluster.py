@@ -2,15 +2,20 @@
 
 #edit the sidechains to make polyala, all and reliable
 
-import ample_util
 import copy
+from collections import namedtuple
 import glob
 import logging
 import re
 import os
+import shutil
 import unittest
 
+# External imports
 import mmtbx.superpose
+
+# Internal imports
+import ample_util
 
 class SubClusterer(object):
     """Base class for clustering pdbs by distance
@@ -232,6 +237,91 @@ class FpcClusterer(SubClusterer):
                 
         self.distance_matrix=m
         return
+    
+class GesamtClusterer(SubClusterer):
+    """Class to cluster files with Gesamt"""
+    
+    def generate_distance_matrix(self,models):
+        
+        # Make sure all the files are in the same direcory otherwise we wont' work
+        mdir = os.path.dirname(models[0])
+        if not all([ os.path.dirname(p) == mdir for p in models ]):
+            raise RuntimeError("All pdb files are not in the same directory!")
+        
+        # Create list of pdb files
+        fname = os.path.join(os.getcwd(), "files.list" )
+        with open( fname, 'w' ) as f: f.write( "\n".join( models )+"\n" )
+            
+        # Index is just the order of the pdb in the file
+        self.index2pdb=models
+        nmodels = len(models)
+        
+        # Make the archive
+        garchive = 'gesamt.archive'
+        if not os.path.isdir(garchive): os.mkdir(garchive)
+        logfile = os.path.abspath('gesamt_archive.log')
+        cmd = [ self.executable, '--make-archive', garchive, '-pdb', mdir ]
+        # HACK FOR DYLD!!!!
+        rtn = ample_util.run_command(cmd, logfile,env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4/devtools/install/lib'})
+        if rtn != 0: raise RuntimeError("Error running gesamt - check logfile: {0}".format(logfile))
+        
+        # Now loop through each file creating the matrix
+        m = [[None for _ in range(nmodels)] for _ in range(nmodels)]
+        
+        for i, model in enumerate(models):
+            mname = os.path.basename(model)
+            gesamt_out = '{0}_gesamt.out'.format(mname)
+            logfile = '{0}_gesamt.log'.format(mname)
+            cmd = [ self.executable, model, '-archive', garchive, '-o', gesamt_out ]
+            rtn = ample_util.run_command(cmd, logfile)
+            if rtn != 0: raise RuntimeError("Error running gesamt!")
+            else: os.unlink(logfile)
+            gdata = self.parse_gesamt_out(gesamt_out)
+            assert gdata[0].file_name == mname, gdata[0].file_name + " " + mname
+            for j, data in enumerate(gdata):
+                if j > i:
+                    m[i][j] = data.rmsd
+            # delete outfile
+            os.unlink(gesamt_out)
+                    
+        # Remove the gesamt archive
+        shutil.rmtree(garchive)
+                    
+        # Copy to lower
+        for x in range(nmodels):
+            for y in range(nmodels):
+                if x==y: continue
+                m[y][x] = m[x][y]
+                
+        self.distance_matrix=m
+        return
+
+    def parse_gesamt_out(self, out_file):
+        # Assumption is there are no pdb_codes
+        GesamtData = namedtuple('GesamtData', ['count', 'chain_id', 'q_score', 'rmsd', 'seq_id', 'nalign', 'nres', 'file_name'])
+        data = []
+        with open(out_file) as f:
+            for i, line in enumerate(f):
+                if i < 2: continue # First 2 lines are headers
+                if not line.strip(): continue # ignore blanks
+                try:
+                    tmp = GesamtData(*line.split())
+                    # Convert from strings to correct types
+                    data.append(GesamtData(int(tmp.count),
+                                           tmp.chain_id,
+                                           float(tmp.q_score),
+                                           float(tmp.rmsd),
+                                           tmp.seq_id,
+                                           int(tmp.nalign),
+                                           int(tmp.nres),
+                                           tmp.file_name))
+                except Exception as e:
+                    msg = 'Error parsing line {0}: {1}\n{2}'.format(i, line, e.message)
+                    logging.critical(msg)
+                    raise e  
+                
+        assert len(data),"Failed to read any data!"
+        return data
 
 class Test(unittest.TestCase):
 
@@ -266,6 +356,22 @@ class Test(unittest.TestCase):
         
         self.assertEqual(ref,cluster_files1)
         return
+    
+    def testRadiusGesamt(self):
+        """Test we can reproduce the original thresholds"""
+
+        radius = 4
+        clusterer = GesamtClusterer(executable = '/opt/ccp4/devtools/install/bin/gesamt')
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
+        clusterer.generate_distance_matrix(pdb_list)
+        cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius(radius)]
+        
+        ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', '3_S_00000006.pdb',
+             '5_S_00000005.pdb', '3_S_00000003.pdb', '1_S_00000004.pdb', '4_S_00000005.pdb',
+             '3_S_00000004.pdb', '1_S_00000002.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb', '1_S_00000005.pdb']
+        
+        self.assertEqual(ref,cluster_files1)
+        return
 
     def testRadiusMaxcluster(self):
         """Test we can reproduce the original thresholds"""
@@ -275,6 +381,7 @@ class Test(unittest.TestCase):
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius( radius )]
+        
         
         ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', '3_S_00000006.pdb',
              '5_S_00000005.pdb', '3_S_00000003.pdb', '1_S_00000004.pdb', '4_S_00000005.pdb',
@@ -327,15 +434,7 @@ class Test(unittest.TestCase):
         os.unlink('fast_protein_cluster.log')
         return
 
-def testSuite():
-    suite = unittest.TestSuite()
-    suite.addTest(Test('testRadiusMaxcluster'))
-    suite.addTest(Test('testIndicesMaxcluster'))
-    suite.addTest(Test('testIndicesFpc'))
-    suite.addTest(Test('testRadiusFpc'))
-    return suite
-    
 # Run unit tests
 if __name__ == "__main__":
+    unittest.main(verbosity=2)
  
-    unittest.TextTestRunner(verbosity=2).run(testSuite())
