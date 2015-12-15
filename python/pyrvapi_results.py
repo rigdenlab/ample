@@ -271,7 +271,50 @@ def results_section(results_tab_id, mrb_results, ensemble_results, section_title
                                         "text",
                                         sec_refmac,
                                         2, 0, 1, 1, True)
+
+        # Buccaner
+        if os.path.isfile(str(r['BUCC_logfile'])) or (os.path.isfile(str(r['BUCC_pdbout'])) and os.path.isfile(str(r['BUCC_mtzout']))):
+            sec_bucc = "sec_bucc_{0}".format(name) + uid
+            pyrvapi.rvapi_add_section(sec_bucc, "BUCCANEER Outputs", container_id, 0, 0, 1, 1, False)
+            if os.path.isfile(str(r['BUCC_pdbout'])) and os.path.isfile(str(r['BUCC_mtzout'])):
+                data_bucc = "data_bucc_out_{0}".format(name) + uid
+                pyrvapi.rvapi_add_data(data_bucc,
+                                        "BUCC PDB",
+                                        os.path.splitext(fix_path(r['BUCC_pdbout']))[0],
+                                        "xyz:map",
+                                        sec_bucc,
+                                        2, 0, 1, 1, True)
+                pyrvapi.rvapi_append_to_data(data_bucc, fix_path(r['BUCC_mtzout']), "xyz:map")
+            if os.path.isfile(str(r['BUCC_logfile'])):
+                pyrvapi.rvapi_add_data("data_bucc_logfile_{0}".format(name),
+                                        "BUCC Logfile",
+                                        fix_path(r['BUCC_logfile']),
+                                        "text",
+                                        sec_bucc,
+                                        2, 0, 1, 1, True)
                 
+        # Arpwarp
+        if os.path.isfile(str(r['ARP_logfile'])) or (os.path.isfile(str(r['ARP_pdbout'])) and os.path.isfile(str(r['ARP_mtzout']))):
+            sec_arp = "sec_arp_{0}".format(name) + uid
+            pyrvapi.rvapi_add_section(sec_arp, "ARPWARP Outputs", container_id, 0, 0, 1, 1, False)
+            if os.path.isfile(str(r['ARP_pdbout'])) and os.path.isfile(str(r['ARP_mtzout'])):
+                data_arp = "data_arp_out_{0}".format(name) + uid
+                pyrvapi.rvapi_add_data(data_arp,
+                                        "ARP PDB",
+                                        os.path.splitext(fix_path(r['ARP_pdbout']))[0],
+                                        "xyz:map",
+                                        sec_arp,
+                                        2, 0, 1, 1, True)
+                pyrvapi.rvapi_append_to_data(data_arp, fix_path(r['ARP_mtzout']), "xyz:map")
+            if os.path.isfile(str(r['ARP_logfile'])):
+                pyrvapi.rvapi_add_data("data_arp_logfile_{0}".format(name),
+                                        "ARP Logfile",
+                                        fix_path(r['ARP_logfile']),
+                                        "text",
+                                        sec_arp,
+                                        2, 0, 1, 1, True)
+
+      
         # SHELXE
         if os.path.isfile(str(r['SHELXE_logfile'])) or (os.path.isfile(str(r['SHELXE_pdbout'])) and os.path.isfile(str(r['SHELXE_mtzout']))):
             sec_shelxe = "sec_shelxe_{0}".format(name) + uid
@@ -307,7 +350,7 @@ def results_section(results_tab_id, mrb_results, ensemble_results, section_title
                                         2, 0, 1, 1, True)
                 pyrvapi.rvapi_append_to_data(data_sxrbucc, fix_path(r['SXRBUCC_mtzout']), "xyz:map")
             if os.path.isfile(str(r['SXRBUCC_logfile'])):
-                pyrvapi.rvapi_add_data("data_shelxe_logfile_{0}".format(name),
+                pyrvapi.rvapi_add_data("data_sxrbucc_logfile_{0}".format(name),
                                         "SXRBUCC Logfile",
                                         fix_path(r['SXRBUCC_logfile']),
                                         "text",
