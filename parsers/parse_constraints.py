@@ -1,12 +1,7 @@
 #!/usr/bin/env ccp4-python
 
 import parse_contactfile
-
-
-class FormatValueError(ValueError):
-    def __init__(self, *args, **kwargs):
-        ValueError.__init__(self, *args, **kwargs)
-        
+      
 
 class ConstraintfileParser(parse_contactfile.ContactfileParser):
     """Parser class for Rosetta constraints files"""
@@ -27,7 +22,7 @@ class ConstraintfileParser(parse_contactfile.ContactfileParser):
                     self._atompair(contact, line)   # AtomPair specific function
                 else: 
                     msg = "Unrecognised format: {0}".format(line.strip())
-                    raise FormatValueError(msg)
+                    raise ValueError(msg)
                 
                 # Fulfill with remaining metadata information
                 contact['method'] = "ample"
@@ -36,7 +31,7 @@ class ConstraintfileParser(parse_contactfile.ContactfileParser):
                 
         if not self.contacts:
             msg = "No converted constraints"
-            raise FormatValueError(msg)
+            raise ValueError(msg)
         
         return
     
