@@ -234,6 +234,9 @@ class RosettaModel(object):
                     ]
         elif self.transmembrane2:
             cmd += [ '-score:patch', self.tm_patch_file ]
+            self.constraints_weight = 3
+            if not self.constraints_file and os.path.isfile(self.constraints_file):
+                raise RuntimeError,"transmembrane2 requires a constraints file"
     
         # Radius of gyration reweight
         if self.rad_gyr_reweight is not None:
