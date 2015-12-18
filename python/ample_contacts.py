@@ -186,7 +186,7 @@ class Contacter(object):
             1) contact map plotting
             2) calculation of contact accuracy (PPV)
         """
-        assert self.contacts, "No contacts provided"
+        if not self.contacts: return
         
         # Contact map plotting. We can parse ss2file and structure file blindly, checks in place
         self.plot(self.contact_map,
@@ -447,7 +447,11 @@ class Contacter(object):
     def _readConstraints(self, constraintsfile):
         '''Read the constraintsfile using parser'''
         cp = parse_constraints.ConstraintfileParser()
-        cp.read(constraintsfile)
+        try: 
+            cp.read(constraintsfile)
+        except ValueError, e: 
+            self.logger.warning("Skipping reading of constraints:\n{0}".format(e))
+            cp.contacts = []
         return cp.contacts
         
 
