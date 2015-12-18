@@ -885,7 +885,7 @@ def main():
             cm.process_constraintsfile() if not amopt.d['use_contacts'] and amopt.d['constraints_file'] \
                 else cm.process_contactfile()
         except ValueError, e:
-            logger.info("Unrecognized constraints format for PPV calculation and CM plotting")
+            logger.warning(e)
            
         amopt.d['constraints_file'] = cm.constraints_file
         amopt.d['contact_map'] = cm.contact_map
