@@ -877,10 +877,16 @@ def main():
         amopt.d['psipred_ss2'] = rosetta_modeller.psipred_ss2
 
     # In case file created above we need to tell the rosetta_modeller where it is
-    # otherwise not used as not created before object initialised
-    if amopt.d['use_contacts'] and amopt.d['make_models']:
+    # otherwise not used as not created before object initialised    
+    if (amopt.d['use_contacts'] or amopt.d['constraints_file']) and amopt.d['make_models']:
         cm = ample_contacts.Contacter(optd=amopt.d)
-        cm.main()
+        
+        try:
+            cm.process_constraintsfile() if not amopt.d['use_contacts'] and amopt.d['constraints_file'] \
+                else cm.process_contactfile()
+        except ValueError, e:
+            logger.info("Unrecognized constraints format for PPV calculation and CM plotting")
+           
         amopt.d['constraints_file'] = cm.constraints_file
         amopt.d['contact_map'] = cm.contact_map
         amopt.d['contact_ppv'] = cm.contact_ppv
