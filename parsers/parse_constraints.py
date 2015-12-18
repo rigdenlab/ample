@@ -2,7 +2,14 @@
 
 import parse_contactfile
 
+
+class FormatValueError(ValueError):
+    def __init__(self, *args, **kwargs):
+        ValueError.__init__(self, *args, **kwargs)
+        
+
 class ConstraintfileParser(parse_contactfile.ContactfileParser):
+    """Parser class for Rosetta constraints files"""
     
     def __init__(self):
         parse_contactfile.ContactfileParser.__init__(self)
@@ -13,28 +20,34 @@ class ConstraintfileParser(parse_contactfile.ContactfileParser):
 
         with open(constraintfile, 'r') as fh:
             for line in iter(fh.readline, ''):
+                contact = self.contact.copy()       # Universal contact template
 
-                if line.startswith("AtomPair"):
-                    contact = self._atompair(line)
-                    contact['method'] = "ample"
-                    contact['file'] = constraintfile
-                    self.contacts.append(contact)
+                # Read in the contact data 
+                if line.startswith("AtomPair"): 
+                    self._atompair(contact, line)   # AtomPair specific function
+                else: 
+                    msg = "Unrecognised format: {0}".format(line.strip())
+                    raise FormatValueError(msg)
+                
+                # Fulfill with remaining metadata information
+                contact['method'] = "ample"
+                contact['file'] = constraintfile
+                self.contacts.append(contact)       # Store contact
                 
         if not self.contacts:
-            msg = "Could not convert constraints to contacts. Unrecognised format."
-            raise RuntimeError(msg)
+            msg = "No converted constraints"
+            raise FormatValueError(msg)
         
         return
     
-    def _atompair(self, line):
+    def _atompair(self, contact, line):
         """AtomPair specific line extractor"""
 
         atm1, res1_index, atm2, res2_index = line.strip().split()[1:5]
         
-        contact = self.contact.copy()
         contact['atom1'] = atm1
         contact['atom2'] = atm2
         contact['res1_index'] = int(res1_index)
         contact['res2_index'] = int(res2_index)
 
-        return contact
+        return
