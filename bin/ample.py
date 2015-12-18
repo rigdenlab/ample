@@ -881,15 +881,13 @@ def main():
     if (amopt.d['use_contacts'] or amopt.d['constraints_file']) and amopt.d['make_models']:
         cm = ample_contacts.Contacter(optd=amopt.d)
         
-        try:
-            cm.process_constraintsfile() if not amopt.d['use_contacts'] and amopt.d['constraints_file'] \
-                else cm.process_contactfile()
-        except ValueError, e:
-            logger.warning(e)
-           
+        cm.process_constraintsfile() if not amopt.d['use_contacts'] and amopt.d['constraints_file'] \
+            else cm.process_contactfile()
+
         amopt.d['constraints_file'] = cm.constraints_file
         amopt.d['contact_map'] = cm.contact_map
         amopt.d['contact_ppv'] = cm.contact_ppv
+            
     
     if amopt.d['constraints_file'] and amopt.d['make_models']:
         rosetta_modeller.constraints_file = amopt.d['constraints_file']
