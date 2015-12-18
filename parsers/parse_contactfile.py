@@ -96,7 +96,6 @@ class ContactfileParser(object):
             }
         
         return d
-##End ContactfileParser
 
 
 class Test(unittest.TestCase):
