@@ -25,6 +25,7 @@ import ample_plot
 import ample_sequence
 import energy_functions
 import parse_casprr
+import parse_constraints
 import parse_psipred
 import pdb_edit
 
@@ -103,7 +104,8 @@ class Contacter(object):
 
         self.contact_file = optd['contact_file']
         self.contact_map = os.path.join(optd['work_dir'], optd['name'] + ".cm.pdf")
-        self.constraints_file = os.path.join(optd['work_dir'], optd['name'] + ".cst")
+        self.constraints_file = os.path.join(optd['work_dir'], optd['name'] + ".cst") \
+            if not optd['constraints_file'] else optd['constraints_file']
         self.sequence = optd['sequence']
         
         # Optional files
@@ -112,16 +114,21 @@ class Contacter(object):
         if optd['psipred_ss2']: self.psipred_ss2=optd['psipred_ss2']
         
         # Extract the raw sequence
-        self.raw_contacts = self._readContacts(self.contact_file, self.sequence)
-        
-        # Prepare the contacts depending on all the user/default options
-        self.contacts = self._prepare(self.raw_contacts, optd['constraints_factor'], optd['distance_to_neighbour'])
-        
-        # Map bbcontacts on top of the previously provided contacts
-        if optd['bbcontacts_file']: 
-            self.bbcontacts_file = optd['bbcontacts_file']
-            self._readAdditionalBBcontacts(optd['bbcontacts_file'])
-        
+        if self.contact_file:
+            self.raw_contacts = self._readContacts(self.contact_file, self.sequence)
+            # Prepare the contacts depending on all the user/default options
+            self.contacts = self._prepare(self.raw_contacts, 
+                                          optd['constraints_factor'], 
+                                          optd['distance_to_neighbour'])
+            
+            # Map bbcontacts on top of the previously provided contacts
+            if optd['bbcontacts_file']: 
+                self.bbcontacts_file = optd['bbcontacts_file']
+                self._readAdditionalBBcontacts(optd['bbcontacts_file'])
+                
+        else:
+            self.contacts = self._readConstraints(self.constraints_file)
+   
         return
                 
     def format(self, constraintfile):
@@ -152,7 +159,7 @@ class Contacter(object):
         
         return contact_formatted_lines
        
-    def main(self):
+    def process_contactfile(self):
         """Wrapper function for
             1) contact formatting
             2) contact map plotting
@@ -173,7 +180,24 @@ class Contacter(object):
             self.contact_ppv=self.ppv(self.structure_pdb)
         
         return
-                
+    
+    def process_constraintsfile(self):
+        """Wrapper function for
+            1) contact map plotting
+            2) calculation of contact accuracy (PPV)
+        """
+        assert self.contacts, "No contacts provided"
+        
+        # Contact map plotting. We can parse ss2file and structure file blindly, checks in place
+        self.plot(self.contact_map,
+                  ss2file=self.psipred_ss2,
+                  structurefile=self.structure_pdb)
+        
+        if self.structure_pdb:
+            self.contact_ppv=self.ppv(self.structure_pdb)
+        
+        return
+          
     def plot(self, figurefile, ss2file=None, structurefile=None, offset=0):
         """ Plot a contact map """
         
@@ -412,14 +436,20 @@ class Contacter(object):
         return
     
     def _readContacts(self, contactfile, sequence):
-        ''' Read the contactfile using the CASP RR Parser '''
+        '''Read the contactfile using the CASP RR Parser'''
         cp = parse_casprr.CaspContactParser()
         cp.read(contactfile)
         cp.sortContacts("raw_score", descending=True)
         cp.assignAminoAcids(sequence)
         cp.calculateScalarScores()
         return cp.contacts
-   
+    
+    def _readConstraints(self, constraintsfile):
+        '''Read the constraintsfile using parser'''
+        cp = parse_constraints.ConstraintfileParser()
+        cp.read(constraintsfile)
+        return cp.contacts
+        
 
 class Test(unittest.TestCase):
     def setUp(self):
@@ -660,7 +690,6 @@ if __name__ == "__main__":
                         help="Additional bbcontacts CASPRR contactfile")
     parser.add_argument('-c', type=float, default=1.0, dest="constraints_factor",
                         help="Defines number of contacts to use (L/*x*)")
-    parser.add_argument('contact_file')
     parser.add_argument('-d', type=int, default=5, dest="distance_to_neighbour",
                         help="Defines distance cutoff")
     parser.add_argument('-e', type=str, default="FADE", dest='energy_function',
@@ -672,6 +701,10 @@ if __name__ == "__main__":
                         help="Reference structure")
     parser.add_argument('-ss2', type=str, default=None, dest="psipred_ss2",
                         help="Secondary structure prediction")
+    
+    contacts = parser.add_mutually_exclusive_group(required=True)
+    contacts.add_argument('-contact_file', default=None)
+    contacts.add_argument('-constraints_file', default=None)
     
     option = parser.add_mutually_exclusive_group(required=True)
     option.add_argument('-format', action="store_true")
@@ -694,7 +727,6 @@ if __name__ == "__main__":
     if fp.numSequences() != 1:
         print "ERROR! Fasta file {0} has > 1 sequence in it.".format(optd['fasta'])
     optd['sequence'] = fp.sequence()
-    
 
     c = Contacter(optd)
     if optd['format']: c.format(optd['name']+".cst")
