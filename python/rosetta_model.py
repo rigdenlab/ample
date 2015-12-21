@@ -334,6 +334,11 @@ class RosettaModel(object):
                 "Expected to create {0} models but found {1}\nPlease check the log files in the directory {2} for more information.".format(self.nmodels,
                                                                                                                                             len(pdbs),
                                                                                                                                             self.run_dir)
+        # Copy files into the models directory
+        for i, pdbin in enumerate(pdbs):
+            pdbout=os.path.join(self.models_dir,"model_{0}.pdb".format(i))
+            shutil.copyfile(pdbin, pdbout)
+
         os.chdir(owd) # Go back to where we came from
         return
 
