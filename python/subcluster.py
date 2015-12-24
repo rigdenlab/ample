@@ -70,6 +70,16 @@ class SubClusterer(object):
             for row in self.distance_matrix:
                 f.write(",".join(map(str,row))+"\n")
             f.write("\n")
+        return
+            
+    def dump_pdb_matrix(self, file_name):
+        with open(file_name,'w') as f:
+            l = len(self.distance_matrix) + 1
+            for i in range(1, l):
+                for j in range(i, l):
+                    f.write("{0} {1} {2}\n".format(i,j, self.distance_matrix[i-1][j-1]))
+            f.write("\n")
+        return
 
 
 class CctbxClusterer(SubClusterer):
@@ -241,9 +251,8 @@ class FpcClusterer(SubClusterer):
 class GesamtClusterer(SubClusterer):
     """Class to cluster files with Gesamt"""
     
-    def generate_distance_matrix(self,models):
-        
-        # Make sure all the files are in the same direcory otherwise we wont' work
+    def generate_distance_matrix(self,models, purge=True, metric='q_score'):
+        # Make sure all the files are in the same directory otherwise we wont' work
         mdir = os.path.dirname(models[0])
         if not all([ os.path.dirname(p) == mdir for p in models ]):
             raise RuntimeError("All pdb files are not in the same directory!")
@@ -253,7 +262,7 @@ class GesamtClusterer(SubClusterer):
         with open( fname, 'w' ) as f: f.write( "\n".join( models )+"\n" )
             
         # Index is just the order of the pdb in the file
-        self.index2pdb=models
+        self.index2pdb = models
         nmodels = len(models)
         
         # Make the archive
@@ -266,7 +275,12 @@ class GesamtClusterer(SubClusterer):
         if rtn != 0: raise RuntimeError("Error running gesamt - check logfile: {0}".format(logfile))
         
         # Now loop through each file creating the matrix
-        m = [[None for _ in range(nmodels)] for _ in range(nmodels)]
+        if metric == 'rmsd':
+            parity = None
+        elif metric == 'q_score':
+            parity = 1
+        else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
+        m = [[parity for _ in range(nmodels)] for _ in range(nmodels)]
         
         for i, model in enumerate(models):
             mname = os.path.basename(model)
@@ -275,25 +289,31 @@ class GesamtClusterer(SubClusterer):
             cmd = [ self.executable, model, '-archive', garchive, '-o', gesamt_out ]
             rtn = ample_util.run_command(cmd, logfile)
             if rtn != 0: raise RuntimeError("Error running gesamt!")
-            else: os.unlink(logfile)
+            else:
+                if purge: os.unlink(logfile)
             gdata = self.parse_gesamt_out(gesamt_out)
             assert gdata[0].file_name == mname, gdata[0].file_name + " " + mname
             for j, data in enumerate(gdata):
                 if j > i:
-                    m[i][j] = data.rmsd
-            # delete outfile
-            os.unlink(gesamt_out)
+                    if metric == 'rmsd':
+                        score = data.rmsd
+                    elif metric == 'q_score':
+                        score = data.q_score
+                    else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
                     
-        # Remove the gesamt archive
-        shutil.rmtree(garchive)
+                    m[i][j] = score
+            if purge: os.unlink(gesamt_out) # delete outfile
                     
-        # Copy to lower
+        # Copy upper half of matrix to lower
         for x in range(nmodels):
             for y in range(nmodels):
                 if x==y: continue
                 m[y][x] = m[x][y]
                 
-        self.distance_matrix=m
+        # Remove the gesamt archive
+        if purge: shutil.rmtree(garchive)
+        
+        self.distance_matrix = m
         return
 
     def parse_gesamt_out(self, out_file):
@@ -364,6 +384,8 @@ class Test(unittest.TestCase):
         clusterer = GesamtClusterer(executable = '/opt/ccp4/devtools/install/bin/gesamt')
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix(pdb_list)
+        clusterer.dump_pdb_matrix('gesamt.matix2')
+        return
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius(radius)]
         
         ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', '3_S_00000006.pdb',
