@@ -15,9 +15,8 @@ import urlparse
 import uuid
 
 # Our imports
-import ample_util
+import ample_mrbump
 import ensemble
-import mrbump_results
 
 try: import pyrvapi
 except: pyrvapi = None
@@ -156,7 +155,7 @@ def summary_tab(results_dict):
     pyrvapi.rvapi_add_section(mrbump_sec, "MRBUMP", summary_tab, 0, 0, 1, 1, True)
     mrbump_table = "mrbump_table"
     pyrvapi.rvapi_add_table1(mrbump_sec + "/" + mrbump_table, "MRBUMP Results", 1, 0, 1, 1, True)
-    mrb_data = mrbump_results.ResultsSummary().results_table(mrb_results)
+    mrb_data = ample_mrbump.ResultsSummary().results_table(mrb_results)
     fill_table(mrbump_table, mrb_data, tooltips=_mrbump_tooltips)
     return summary_tab
 
@@ -171,15 +170,15 @@ def results_tab(results_dict):
     results_tab_id = "results_tab"
     pyrvapi.rvapi_add_tab(results_tab_id, "Results", True)  # Last arg is "open" - i.e. show or hide
     results_section(results_tab_id,
-                    mrbump_results.ResultsSummary().sortResults(mrb_results,
-                                                                prioritise="SHELXE_CC")[0:min(len(mrb_results),mrbump_results.TOP_KEEP)],
+                    ample_mrbump.ResultsSummary().sortResults(mrb_results,
+                                                                prioritise="SHELXE_CC")[0:min(len(mrb_results),ample_mrbump.TOP_KEEP)],
                     ensemble_results,
-                    "Top {0} SHELXE Results".format(mrbump_results.TOP_KEEP))
+                    "Top {0} SHELXE Results".format(ample_mrbump.TOP_KEEP))
     results_section(results_tab_id,
-                    mrbump_results.ResultsSummary().sortResults(mrb_results,
-                                                                prioritise="PHASER_TFZ")[0:min(len(mrb_results),mrbump_results.TOP_KEEP)],
+                    ample_mrbump.ResultsSummary().sortResults(mrb_results,
+                                                                prioritise="PHASER_TFZ")[0:min(len(mrb_results),ample_mrbump.TOP_KEEP)],
                     ensemble_results,
-                    "Top {0} PHASER Results".format(mrbump_results.TOP_KEEP))
+                    "Top {0} PHASER Results".format(ample_mrbump.TOP_KEEP))
     return results_tab_id
 
 def results_section(results_tab_id, mrb_results, ensemble_results, section_title):
@@ -215,7 +214,7 @@ def results_section(results_tab_id, mrb_results, ensemble_results, section_title
         pyrvapi.rvapi_add_section(sec_table, title, container_id, 0, 0, 1, 1, True)
         table_id = "table_{0}".format(name) + uid
         pyrvapi.rvapi_add_table(table_id, "", sec_table, 1, 0, 1, 1, False)
-        tdata = mrbump_results.ResultsSummary().results_table([r])
+        tdata = ample_mrbump.ResultsSummary().results_table([r])
         fill_table(table_id, tdata, tooltips=_mrbump_tooltips)
         
         # Ensemble

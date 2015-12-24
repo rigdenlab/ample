@@ -27,17 +27,20 @@ class AmpleOptions(object):
                             'ccp4_jobid' : None,
                             'cluster_dir' : None,
                             'cluster_method' : 'spicker',
+                            'cmdline_flags': None,
                             'constraints_factor': 1.0,
                             'constraints_file' : None,
                             'constraints_weight': None,
                             'contact_file': None,
                             'debug' : False,
                             'distance_to_neighbour': 5,
+                            'do_mr' : True,
                             'domain_all_chains_pdb' : None,
                             'domain_termini_distance' : 0,
                             'dry_run' : False,
                             'early_terminate' : True,
                             'energy_function': "FADE",
+                            'ensemble_options' : None,
                             'ensembles' : None,
                             'F' : None,
                             'fasta' : None,
@@ -54,14 +57,17 @@ class AmpleOptions(object):
                             'import_ensembles' : False,
                             'improve_template' : None,
                             'LGA' : None,
+                            'make_ensembles' : True,
                             'make_frags' : True,
                             'make_models' : True,
+                            'make_mr' : True,
                             'maxcluster_exe' : None,
                             'max_ensemble_models' : 30,
                             'missing_domain' : False,
                             'models' : None,
                             'molrep_only' : False,
                             'mrbump_dir' : None,
+                            'mrbump_scripts' : None,
                             'mr_keys' : None,
                             'mr_sequence' : None,
                             'mr_sg_all' : None,
@@ -77,7 +83,6 @@ class AmpleOptions(object):
                             'nmr_remodel_fasta' : None,
                             'no_gui' : False,
                             'nproc' : 1,
-                            'no_mr' : False,
                             'nr' : None,
                             'num_clusters' : 1,
                             'output_pdb' : 'ample_output.pdb',
@@ -174,7 +179,10 @@ class AmpleOptions(object):
         """
 
         tmpv = None
+        cmdline_flags = []
         for k, v in vars(parser_args).iteritems():
+            # All values that are not None were supplied on the command-line, so we need to remember these
+            if v is not None: cmdline_flags.append(k)
             #print "{} | {}".format(k, v)
             if isinstance(v,list):
                 # All values are in a list
@@ -193,21 +201,22 @@ class AmpleOptions(object):
 
             self.d[k] = tmpv
         # end of loop
+        
+        self.d['cmdline_flags'] = cmdline_flags
 
-#        print "After populate"
-#        for k, v in self.d.iteritems():
-#            print "{} | {}".format( k, v )
+#         print "After populate"
+#         for k, v in self.d.iteritems():
+#             print "{} | {}".format( k, v )
 
         # Handle any defaults and any preset options
         self.process_options()
-
         return
 
     def process_options(self):
         """Check the options and process any preset defaults"""
         
         # Add the version
-        self.d['ample_version']=version.__version__
+        self.d['ample_version'] = version.__version__
 
         # First set anything that hasn't been set to its default option
         for k, v in self.defaults.iteritems():
@@ -275,12 +284,12 @@ class AmpleOptions(object):
 
         # Check if using any preset options
         if self.d['devel_mode']: self.preset_options('devel_mode')
-        if self.d['quick_mode']:self.preset_options('quick_mode')
-        if self.d['webserver_uri']:self.preset_options('webserver_uri')
+        if self.d['quick_mode']: self.preset_options('quick_mode')
+        if self.d['webserver_uri']: self.preset_options('webserver_uri')
         return
     
-    def preset_options(self,mode):
-        assert hasattr(self,mode),"Unknown mode: {0}".format(mode)
+    def preset_options(self ,mode):
+        assert hasattr(self, mode),"Unknown mode: {0}".format(mode)
         for k, v in getattr(self, mode).iteritems():
             # Set any that haven't been set
             if self.d[k] == None:

@@ -15,6 +15,7 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.join(root, "scripts"))
 
 # Our imports
+import mrbump_cmd
 if not "CCP4" in os.environ.keys():
     raise RuntimeError('CCP4 not found')
 mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
@@ -25,7 +26,8 @@ import parse_buccaneer
 import parse_phaser
 import printTable
 
-TOP_KEEP = 3
+TOP_KEEP = 3 # How many of the top shelxe/phaser results to keep for the gui
+MRBUMP_RUNTIME = 172800 # allow 48 hours for each mrbump job
 
 # We need a null logger so that we can be used without requiring a logger
 class NullHandler(logging.Handler):
@@ -427,8 +429,7 @@ class ResultsSummary(object):
     def _purgeFailed(self, results):
         """Remove any jobs that don't pass the keep criteria and archive their job dictionaries"""
         # Skip any that are unfinished
-        completed = [r for r in results if not(r['Solution_Type'] == "unfinished" or \
-                                             r['Solution_Type'] == "no_job_directory")]
+        completed = [ r for r in results if not(jobUnfinished(r)) ]
         if completed:
             # Keep the top TOP_KEEP SHELXE_CC and PHASER_TFZ - these could be the same jobs and we may not even
             # have TOP_KEEP completed
@@ -655,6 +656,83 @@ def jobSucceeded(job_dict):
         success = True
     return success
 
+def job_unfinished(job_dict):
+    if not 'Solution_Type' in job_dict: return True
+    return job_dict['Solution_Type'] == "unfinished" or job_dict['Solution_Type'] == "no_job_directory"
+
+def unfinished_scripts(amoptd):
+    if not 'mrbump_dir' in amoptd or not os.path.isdir(amoptd['mrbump_dir']): return []
+    if not 'mrbump_results' in amoptd: return []
+    scripts = []
+    ext = '.bat' if sys.platform.startswith("win") else '.sh'
+    for r in [ r for r in amoptd['mrbump_results'] if job_unfinished(r) ]:
+        #print "DIR ", r['Job_directory']
+        #print "DIR2 ", r['Search_directory']
+        scripts.append( os.path.join(amoptd['mrbump_dir'],r['ensemble_name']+ext) )
+    return scripts
+
+def write_mrbump_files(ensemble_pdbs, amoptd, job_time=MRBUMP_RUNTIME, ensemble_options=None, directory=None):
+    """Write the MRBUMP job files for all the ensembles.
+
+    Args:
+    ensemble_pdbs -- list of the ensembles, each a single pdb file
+    amoptd -- dictionary with job options
+    """
+    if not directory: directory = os.getcwd()
+    
+    job_scripts = []
+    keyword_options = {}
+    for ensemble_pdb in ensemble_pdbs:
+        name = os.path.splitext(os.path.basename(ensemble_pdb))[0] # Get name from pdb path
+        
+        # Get any options specific to this ensemble
+        if ensemble_options and name in ensemble_options: keyword_options = ensemble_options[name]
+        
+        # Generate dictionary with all the options for this job and write to keyword file
+        keyword_dict = mrbump_cmd.keyword_dict(ensemble_pdb, name, amoptd, keyword_options)
+        keyword_file = os.path.join(directory,name+'.mrbump')
+        keyword_str = mrbump_cmd.mrbump_keyword_file(keyword_dict)
+        with open(keyword_file,'w') as f: f.write(keyword_str)
+        
+        script = write_jobscript(name,
+                                 keyword_file,
+                                 amoptd,
+                                 directory = directory,
+                                 job_time = job_time)
+        job_scripts.append(script)
+            
+    if not len(job_scripts):
+        msg = "No job scripts created!"
+        logging.critical(msg)
+        raise RuntimeError, msg
+    
+    return job_scripts
+
+def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, extra_options={}):
+    """
+    Create the script to run MrBump for this PDB.
+    """
+    if not directory: directory = os.getcwd()
+        
+    # Next the script to run mrbump
+    ext='.bat' if sys.platform.startswith("win") else '.sh'
+    script_path = os.path.join(directory,name+ext)
+    with open(script_path, "w") as job_script:
+        # Header
+        if not sys.platform.startswith("win"):
+            script_header = '#!/bin/sh\n'
+            script_header += '[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n'
+            job_script.write(script_header)
+        
+        # Get the mrbump command-line
+        jobcmd = mrbump_cmd.mrbump_cmd(name, amoptd['mtz'], amoptd['mr_sequence'], keyword_file)
+        job_script.write(jobcmd)
+        
+    # Make executable
+    os.chmod(script_path, 0o777)
+    
+    return script_path
+
 class Test(unittest.TestCase):
 
     @classmethod
@@ -695,10 +773,11 @@ class Test(unittest.TestCase):
         return
 
 if __name__ == "__main__":
-    if not len(sys.argv) == 2:
-        print "Usage: {0} <MRBUMP_directory>".format(sys.argv[0])
+    if not len(sys.argv) == 2: 
+        mrbump_dir = os.getcwd()
+    else:
+        mrbump_dir = os.path.join(os.getcwd(), sys.argv[1])
         
-    mrbump_dir = os.path.join(os.getcwd(), sys.argv[1])
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 

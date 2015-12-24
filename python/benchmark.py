@@ -11,15 +11,12 @@ import glob
 import logging
 import os
 import shutil
-import sys
 import unittest
 
 # Our imports
-import ample_exit
 import ample_util
 import csymmatch
 import maxcluster
-import mrbump_results
 import pdb_edit
 import pdb_model
 import reforigin
@@ -497,50 +494,6 @@ def analyseSS(amoptd):
     dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode ) )
     dsspP = dssp.DsspParser( dsspLog )
     return
-
-def restartPkl(amoptd):
-    """Currently a bit of a hack to restart from an existing pkl file.
-    
-    Assumption is that the pkl file we are given is for an AMPLE directory that
-    hasn't been moved.
-    We create a new AMPLE_X directory and work in there.
-    """
-    if not os.path.isfile(amoptd['restart_pkl']):
-        msg = 'Cannot find pkl file: {0}'.format(amoptd['restart_pkl'])
-        ample_exit.exit_error(msg)
-    
-    with open(amoptd['restart_pkl']) as f: amoptd_old = cPickle.load(f)
-    
-    # Update any variables that have changed - everything else uses the old paths
-    amoptd_old['ample_log'] = amoptd['ample_log']
-    if os.path.isfile(amoptd['native_pdb']): amoptd_old['native_pdb'] = amoptd['native_pdb']
-    amoptd_old['run_dir'] = amoptd['run_dir']
-    amoptd_old['results_path'] = os.path.join(amoptd['work_dir'],'resultsd.pkl')
-    amoptd_old['work_dir'] = amoptd['work_dir']
-    if amoptd['mrbump_dir']:
-        if not os.path.isdir(amoptd['mrbump_dir']):
-            msg = "Cannot find MRBUMP directory: {0}".format(amoptd['mrbump_dir'])
-            ample_exit.exit_error(msg)
-        amoptd_old['mrbump_dir'] = amoptd['mrbump_dir']
-    
-    # We can now replace the old dictionary with this new one
-    amoptd = amoptd_old
-
-    # Process the MRBUMP results and save to dictionary
-    res_sum = mrbump_results.ResultsSummary()
-    res_sum.extractResults(amoptd['mrbump_dir'])
-    amoptd['mrbump_results'] = res_sum.results
-    
-    # Analse the full results
-    amoptd['benchmark_dir'] = os.path.join(amoptd['work_dir'],"benchmark")
-    os.mkdir(amoptd['benchmark_dir'])
-    analyse(amoptd, newroot=None)
-    ample_util.saveAmoptd(amoptd)
-    
-    _logger.info('End of benchmarking')
-    ample_exit.exit_error()
-    return
-
 
 class Test(unittest.TestCase):
     def testBenchmark(self):
