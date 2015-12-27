@@ -19,7 +19,6 @@ class Scwrl( object ):
     
     def add_sidechains(self, pdbin=None, pdbout=None, sequence=None, hydrogens=False):
         """Add the specified sidechains to the pdb"""
-        
         cmd = [ self.scwrl_exe, "-i", pdbin, "-o", pdbout ]
         
         # Not needed by default
@@ -39,16 +38,20 @@ class Scwrl( object ):
             raise RuntimeError,"Error running Scwrl - please check the logfile: {0}".format(logfile)
         else:
             os.unlink(logfile)
-        
-        return
+        return os.path.abspath(pdbout)
     
     def process_directory(self, in_dir, out_dir, prefix="scwrl" ):
         logging.info('Adding sidechains with SCWRL to models in directory: {0}'.format(in_dir))
-        count = 0
-        for pdb in glob.glob( os.path.join( in_dir, '*.pdb') ):
-            pdbout = ample_util.filename_append( pdb, prefix, directory=out_dir )
-            self.add_sidechains(pdbin=pdb, pdbout=pdbout)
-            count += 1
-        
-        logging.info('Processed {0} models with SCWRL into directory: {1}'.format(count, out_dir))
-        return 
+        self.process_models(glob.glob( os.path.join( in_dir, '*.pdb') ), out_dir, prefix=prefix)
+        return
+    
+    def process_models(self, models, out_dir, prefix="scwrl" ):
+        logging.info('Adding sidechains with SCWRL to models')
+        out_pdbs = []
+        for i, pdb in enumerate(models):
+            out_pdbs.append(self.add_sidechains(pdbin=pdb,
+                                                pdbout=ample_util.filename_append(pdb,
+                                                                                  prefix,
+                                                                                  directory=out_dir)))
+        logging.info('Processed {0} models with SCWRL into directory: {1}'.format(i+1, out_dir))
+        return out_pdbs
