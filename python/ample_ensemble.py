@@ -25,6 +25,7 @@ UNMODIFIED = 'unmod'
 SIDE_CHAIN_TREATMENTS = [POLYALA, RELIABLE, ALLATOM]
 
 # our imports
+import ample_scwrl
 import ample_sequence
 import ample_util
 import fast_protein_cluster
@@ -223,6 +224,7 @@ class Ensembler(object):
         # For all
         self.work_dir = None  # top directory where everything gets done
         self.theseus_exe = None
+        self.scwrl_exe = None
         
         # clustering
         self.cluster_method = "spicker"  # the method for initial clustering
@@ -254,6 +256,8 @@ class Ensembler(object):
         
         # misc
         self.logger = logging.getLogger()
+        
+        self.score_matrix = None
         
         return
     
@@ -414,6 +418,11 @@ class Ensembler(object):
             # Spicker Alternative for clustering
             self.logger.info('* Running SPICKER to cluster models *')
             spicker_rundir = os.path.join(self.work_dir, 'spicker')
+            # TM score hack
+            if self.score_matrix:
+                os.mkdir(spicker_rundir)
+                shutil.copy(self.score_matrix, os.path.join(spicker_rundir,'score.matrix'))
+                
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
             spickerer.cluster(models, run_dir=spicker_rundir)
             self.logger.debug(spickerer.results_summary())
@@ -459,7 +468,7 @@ class Ensembler(object):
                                                 max_cluster_size=max_cluster_size)
         else:
             raise RuntimeError, 'Unrecognised clustering method: {0}'.format(cluster_method)
-
+        
         return clusters, clusters_data
     
     def create_dict(self):
@@ -553,13 +562,11 @@ class Ensembler(object):
                            ensembles_directory=None,
                            work_dir=None,
                            nproc=None,
+                           use_scwrl=False,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS):
         
-        
-        
         # Work dir set each time
-        if not work_dir:
-            raise RuntimeError, "Need to set work_dir!"
+        if not work_dir: raise RuntimeError, "Need to set work_dir!"
         self.work_dir = work_dir
         
         if not cluster_method:
@@ -587,32 +594,53 @@ class Ensembler(object):
         self.logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
     
         # Create final ensembles directory
-        if not os.path.isdir(self.ensembles_directory):
-            os.mkdir(self.ensembles_directory)
+        if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
 
         self.ensembles = []
         self.ensembles_data = []
-        for cluster, cluster_data in zip(*self.cluster_models(models=models,
+        for cluster_idx, (cluster_models, cluster_data) in enumerate(zip(*self.cluster_models(models=models,
                                                               cluster_method=cluster_method,
                                                               num_clusters=num_clusters,
                                                               cluster_exe=cluster_exe,
                                                               import_cluster=import_cluster,
                                                               cluster_dir=cluster_dir,
-                                                              nproc=nproc)):
-            if len(cluster) < 2:
+                                                              nproc=nproc))):
+            if len(cluster_models) < 2:
                 self.logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data['cluster_num']))
                 continue
-            self.logger.info('Processing cluster: {0}'.format(cluster_data['cluster_num']))
-            for truncated_models, truncated_models_data in zip(*self.truncate_models(cluster,
+            self.logger.info('Processing cluster: {0}'.format(cluster_idx+1))
+            
+            # New multi-cluster strategy
+            if cluster_idx > 0:
+                radius_thresholds = [1, 2]
+                side_chain_treatments = [POLYALA]
+            else:
+                radius_thresholds = self.subcluster_radius_thresholds
+                side_chain_treatments = side_chain_treatments
+                
+            truncate_dir=os.path.join(self.work_dir,"cluster_{0}".format(cluster_idx+1))
+            if not os.path.isdir(truncate_dir): os.mkdir(truncate_dir)
+            os.chdir(truncate_dir)
+            
+            # Add sidechains using SCWRL here so we only add them to the models we actually use
+            if use_scwrl:
+                scwrl_directory = os.path.join(truncate_dir,"scrwl")
+                if not os.path.isdir(scwrl_directory): os.mkdir(scwrl_directory)
+                cluster_models = ample_scwrl.Scwrl(scwrl_exe=self.scwrl_exe).process_models(cluster_models, scwrl_directory)
+                
+            for truncated_models, truncated_models_data, truncated_models_dir in zip(*self.truncate_models(cluster_models,
                                                                                      cluster_data,
                                                                                      truncation_method=truncation_method,
                                                                                      truncation_pruning=truncation_pruning,
-                                                                                     percent_truncation=percent_truncation)):
+                                                                                     percent_truncation=percent_truncation,
+                                                                                     work_dir=truncate_dir)):
                 for subcluster, subcluster_data in zip(*self.subcluster_models(truncated_models,
                                                                                truncated_models_data,
                                                                                subcluster_program=self.subcluster_program,
                                                                                subcluster_exe=self.subcluster_program,
-                                                                               ensemble_max_models=self.ensemble_max_models)):
+                                                                               ensemble_max_models=self.ensemble_max_models,
+                                                                               radius_thresholds=radius_thresholds,
+                                                                               work_dir=truncated_models_dir)):
                     for ensemble, ensemble_data in zip(*self.edit_side_chains(subcluster,
                                                                               subcluster_data,
                                                                               side_chain_treatments,
@@ -633,7 +661,8 @@ class Ensembler(object):
                                     homolog_aligner=None,
                                     mustang_exe=None,
                                     gesamt_exe=None,
-                                    side_chain_treatments=SIDE_CHAIN_TREATMENTS):
+                                    side_chain_treatments=SIDE_CHAIN_TREATMENTS,
+                                    use_scwrl=False):
         
         # Work dir set each time
         if not work_dir: raise RuntimeError, "Need to set work_dir!"
@@ -689,7 +718,8 @@ class Ensembler(object):
                                                                                  truncation_pruning=None,
                                                                                  percent_truncation=percent_truncation,
                                                                                  homologs=True,
-                                                                                 alignment_file=alignment_file)):
+                                                                                 alignment_file=alignment_file,
+                                                                                 work_dir=os.path.join(self.work_dir,"homolog_truncate"))):
             tlevel = truncated_models_data['truncation_level']
             ensemble_dir = os.path.join(truncated_models_data['truncation_dir'],
                                         "ensemble_{0}".format(tlevel))
@@ -855,11 +885,13 @@ class Ensembler(object):
             return residues, None
 
     def subcluster_models(self,
-                           truncated_models,
+                          truncated_models,
                            truncated_models_data,
                            subcluster_program=None,
                            subcluster_exe=None,
-                           ensemble_max_models=None):
+                           radius_thresholds=None,
+                           ensemble_max_models=None,
+                           work_dir=None):
         
         if self.subcluster_method == "ORIGINAL":
             f = self.subcluster_models_fixed_radii
@@ -871,18 +903,18 @@ class Ensembler(object):
                  truncated_models_data,
                  subcluster_program,
                  subcluster_exe,
-                 ensemble_max_models)
+                 ensemble_max_models,
+                 radius_thresholds=radius_thresholds,
+                 work_dir=work_dir)
         
-
-            
     def subcluster_models_fixed_radii(self,
                                       truncated_models,
                                       truncated_models_data,
                                       subcluster_program=None,
                                       subcluster_exe=None,
                                       ensemble_max_models=None,
-                                      radius_thresholds=None
-                                      ):
+                                      radius_thresholds=None,
+                                      work_dir=None):
         
         # Theseus only works with > 3 residues
         if truncated_models_data['num_residues'] <= 2: return [], []
@@ -894,11 +926,10 @@ class Ensembler(object):
         # Use first model to get data on level
         cluster_num = truncated_models_data['cluster_num']
         truncation_level = truncated_models_data['truncation_level']
-        truncation_dir = truncated_models_data['truncation_dir']
         
         # Make sure everyting happens in the truncation directory
         owd = os.getcwd()
-        os.chdir(truncation_dir)
+        os.chdir(work_dir)
             
         # Run maxcluster to generate the distance matrix
         if subcluster_program == 'maxcluster':
@@ -916,20 +947,20 @@ class Ensembler(object):
             # Get list of pdbs clustered according to radius threshold
             cluster_files = clusterer.cluster_by_radius(radius)
             if not cluster_files:
-                self.logger.debug("Skipping radius {0} as no files clustered in directory {1}".format(radius, truncation_dir))
+                self.logger.debug("Skipping radius {0} as no files clustered in directory {1}".format(radius, work_dir))
                 continue
                 
             self.logger.debug("Clustered {0} files".format(len(cluster_files)))
             cluster_files = self._slice_subcluster(cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds)
             if not cluster_files:
-                self.logger.debug('Could not create different cluster for radius {0} in directory: {1}'.format(radius, truncation_dir))
+                self.logger.debug('Could not create different cluster for radius {0} in directory: {1}'.format(radius, work_dir))
                 continue
             
             # Remember this cluster so we don't create duplicate clusters
             previous_clusters.append(cluster_files)
 
             # Got files so create the directories
-            subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
+            subcluster_dir = os.path.join(work_dir, 'subcluster_{0}'.format(radius))
             os.mkdir(subcluster_dir)
             os.chdir(subcluster_dir)
             basename = 'c{0}_t{1}_r{2}'.format(cluster_num, truncation_level, radius)
@@ -1014,7 +1045,8 @@ class Ensembler(object):
                                          truncated_models_data,
                                          subcluster_program=None,
                                          subcluster_exe=None,
-                                         ensemble_max_models=None):
+                                         ensemble_max_models=None,
+                                         work_dir=None):
         self.logger.info("subclustering with floaing radii")
 
         # Run maxcluster to generate the distance matrix
@@ -1181,19 +1213,18 @@ class Ensembler(object):
                         percent_truncation=None,
                         truncation_pruning=None,
                         homologs=False,
-                        alignment_file=None):
+                        alignment_file=None,
+                        work_dir=None):
         
         assert len(models) > 1, "Cannot truncate as < 2 models!"
         assert truncation_method and percent_truncation, "Missing arguments: {0}".format(truncation_method)
 
         # Create the directories we'll be working in
-        if homologs: truncate_dir = os.path.join(self.work_dir, 'truncate')
-        else: truncate_dir = os.path.join(self.work_dir, 'truncate_{0}'.format(models_data['cluster_num']))
-        os.mkdir(truncate_dir)
-        os.chdir(truncate_dir)
+        assert work_dir and os.path.isdir(work_dir), "truncate_models needs a work_dir"
+        os.chdir(work_dir)
         
         # Calculate variances between pdb and align them (we currently only require the aligned models for homologs)
-        run_theseus = theseus.Theseus(work_dir=truncate_dir, theseus_exe=self.theseus_exe)
+        run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
         try: run_theseus.superpose_models(models, homologs=homologs, alignment_file=alignment_file)
         except RuntimeError as e:
             self.logger.critical(e)
@@ -1204,7 +1235,7 @@ class Ensembler(object):
             # theseus, which makes it easier to see what the truncation is doing.
             models = model_core_from_fasta(run_theseus.aligned_models,
                                            alignment_file=alignment_file,
-                                           work_dir=os.path.join(truncate_dir,'core_models'))
+                                           work_dir=os.path.join(work_dir,'core_models'))
             # Ufortunately Theseus doesn't print all residues in its output format, so we can't use the variances we calculated before and
             # need to calculate the variances of the core models 
             try: run_theseus.superpose_models(models, homologs=homologs, basename='homologs_core')
@@ -1236,6 +1267,7 @@ class Ensembler(object):
 
         truncated_models = []
         truncated_models_data = []
+        truncated_models_dirs = []
         pruned_residues = None
         for tlevel, tvar, tresidues, tresidue_idxs in zip(truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs):
             # Prune singletone/doubletone etc. residues if required
@@ -1253,7 +1285,7 @@ class Ensembler(object):
                 self.logger.debug("Skipping truncation level {0} with variance {1} as no residues".format(tlevel, tvar))
                 continue
             
-            trunc_dir = os.path.join(truncate_dir, 'tlevel_{0}'.format(tlevel))
+            trunc_dir = os.path.join(work_dir, 'tlevel_{0}'.format(tlevel))
             os.mkdir(trunc_dir)
             self.logger.info('Truncating at: {0} in directory {1}'.format(tlevel, trunc_dir))
 
@@ -1267,6 +1299,7 @@ class Ensembler(object):
             
             # Add the model
             truncated_models.append(level_models)
+            truncated_models_dirs.append(trunc_dir)
 
             # Add the data
             model_data = copy.copy(models_data)
@@ -1282,7 +1315,7 @@ class Ensembler(object):
             
             truncated_models_data.append(model_data)
             
-        return truncated_models, truncated_models_data
+        return truncated_models, truncated_models_data, truncated_models_dirs
 
 class Test(unittest.TestCase):
 

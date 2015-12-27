@@ -1030,19 +1030,6 @@ def main():
                     logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(ample_ensemble.UNMODIFIED))
                     amopt.d['side_chain_treatments'] = [ ample_ensemble.UNMODIFIED ]
 
-    #
-    # Add sidechains to the models using SCWRL
-    #
-    if amopt.d['use_scwrl']:
-        models_dir_scwrl = ample_util.filename_append(amopt.d['models_dir'], "scwrl")
-        if os.path.isdir(models_dir_scwrl):
-            msg = "Scwrl models directory {0} already exists-please move it aside".format(models_dir_scwrl)
-            ample_exit.exit_error(msg)
-        os.mkdir(models_dir_scwrl)
-        SCWRL = ample_scwrl.Scwrl(amopt.d['scwrl_exe'])
-        SCWRL.process_directory(amopt.d['models_dir'], models_dir_scwrl)
-        amopt.d['models_dir'] = models_dir_scwrl
-
     # Save the results
     ample_util.saveAmoptd(amopt.d)
     

@@ -57,6 +57,7 @@ def create_ensembles(amoptd):
         cluster_exe = amoptd['fast_protein_cluster_exe']
     else:
         raise RuntimeError, "create_ensembles - unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
+    ensembler.scwrl_exe = amoptd['scwrl_exe']
         
     ensembles_directory = os.path.join(amoptd['work_dir'], 'ensembles')
     if not os.path.isdir(ensembles_directory): os.mkdir(ensembles_directory)
@@ -65,7 +66,7 @@ def create_ensembles(amoptd):
     work_dir = os.path.join(amoptd['work_dir'], 'ensemble_workdir')
     os.mkdir(work_dir)
     os.chdir(work_dir)
-        
+
     models = glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))
     
     if amoptd['homologs']:
@@ -79,8 +80,8 @@ def create_ensembles(amoptd):
                                                           nproc=amoptd['nproc'],
                                                           homolog_aligner=amoptd['homolog_aligner'],
                                                           mustang_exe=amoptd['mustang_exe'],
-                                                          gesamt_exe=amoptd['gesamt_exe']
-                                                          )
+                                                          gesamt_exe=amoptd['gesamt_exe'],
+                                                          use_scwrl=amoptd['use_scwrl'])
     else:
         ensembles = ensembler.generate_ensembles(models,
                                                  cluster_method=amoptd['cluster_method'],
@@ -93,6 +94,7 @@ def create_ensembles(amoptd):
                                                  truncation_pruning=amoptd['truncation_pruning'],
                                                  ensembles_directory=ensembles_directory,
                                                  side_chain_treatments=amoptd['side_chain_treatments'],
+                                                 use_scwrl=amoptd['use_scwrl'],
                                                  work_dir=work_dir,
                                                  nproc=amoptd['nproc'])
     
@@ -149,24 +151,24 @@ def collate_cluster_data(ensembles_data):
     return clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments
 
 def cluster_table_data(clusters, cluster_num, side_chain_treatments):
+    # FIX TO IGNORE side_chain_treatments
     # tdata = [("Name", "Truncation Level", u"Variance Threshold (\u212B^2)", "No. Residues", u"Radius Threshold (\u212B)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
-    tdata = [("Name", "Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
+    tdata = [("Name", "Cluster", "Truncation Level", "Variance Threshold (A^2)", "No. Residues", "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
     for tl in sorted(clusters[cluster_num]['tlevels']):
         tvar = clusters[cluster_num]['tlevels'][tl]['truncation_variance']
         nresidues = clusters[cluster_num]['tlevels'][tl]['num_residues']
         for i, rt in enumerate(sorted(clusters[cluster_num]['tlevels'][tl]['radius_thresholds'])):
             nmodels = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['num_models']
-        # Hack so that side chains come in size order
-        # for j, sct in enumerate(sorted(clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'])):
+            side_chain_treatments = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'].keys()
             for j, sct in enumerate(side_chain_treatments):
                 name = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['name']
                 num_atoms = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['num_atoms']
                 if i == 0 and j == 0:  # change of radius
-                    tdata.append((name, tl, tvar, nresidues, rt, nmodels, num_atoms, sct))
+                    tdata.append((name, cluster_num, tl, tvar, nresidues, rt, nmodels, num_atoms, sct))
                 elif i > 0 and j == 0:  # change of side_chain
-                    tdata.append((name, "", "", "", rt, nmodels, num_atoms, sct))
+                    tdata.append((name, "", "", "", "", rt, nmodels, num_atoms, sct))
                 else:
-                    tdata.append((name, "", "", "", "", "", num_atoms, sct))
+                    tdata.append((name, "", "", "", "", "", "", num_atoms, sct))
     return tdata
 
 def ensemble_summary(ensembles_data):
@@ -282,7 +284,6 @@ class Test(unittest.TestCase):
         shutil.rmtree(work_dir)
         
         return
-    
 
 if __name__ == "__main__":
 
