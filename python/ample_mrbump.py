@@ -46,6 +46,7 @@ class ResultsSummary(object):
         self.logger.addHandler(NullHandler())
         self.pname = "archive"
         self.pdir = None
+        self.succeeded = False
         return
 
     def analyseResult(self, result):
@@ -200,6 +201,8 @@ class ResultsSummary(object):
             results += old_results.values()
             
         results = self.sortResults(results)
+        
+        self.succeeded = any([jobSucceeded(r) for r in results])
         self.results = results
         return True if len(results) else False
 
