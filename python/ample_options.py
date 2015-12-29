@@ -14,7 +14,8 @@ class AmpleOptions(object):
         # The dictionary with all the options
         self.d = {}
 
-        # dictionary with the default arguments - if any are paths add to paths in populate
+        # dictionary with the default arguments
+        #REM: if any are paths they also need to be added to self.paths below
         self.defaults = {
                             'alignment_file' : None,
                             'all_atom' : True,
@@ -119,6 +120,7 @@ class AmpleOptions(object):
                             'submit_max_array' : None,
                             'submit_qtype' : None,
                             'submit_queue' : None,
+                            'success' : False,
                             'theseus_exe' : None,
                             'top_model_only' : False,
                             'transmembrane' : False,
@@ -136,6 +138,48 @@ class AmpleOptions(object):
                             'use_shelxe' : True,
                             'webserver_uri' : None
                          }
+
+        # We need to track which variables are paths as all paths need to be converted to absolute paths
+        self.paths = [
+                    'alignment_file',
+                    'blast_dir',
+                    'bbcontacts_file',
+                    'cluster_dir',
+                    'constraints_file',
+                    'contact_file',
+                    'domain_all_chains_pdb',
+                    'ensembles',
+                    'fasta',
+                    'fast_protein_cluster_exe',
+                    'frags_3mers',
+                    'frags_9mers',
+                    'gesamt_exe',
+                    'import_cluster',
+                    'maxcluster_exe',
+                    'models',
+                    'mrbump_dir',
+                    'mr_sequence',
+                    'mtz',
+                    'mustang_exe',
+                    'native_pdb',
+                    'nmr_model_in',
+                    'nmr_remodel_fasta',
+                    'psipred_ss2',
+                    'restart_pkl',
+                    'rosetta_db',
+                    'rosetta_dir',
+                    'rosetta_fragments_exe',
+                    'rosetta_AbinitioRelax',
+                    'scwrl_exe',
+                    'sf_cif',
+                    'shelxe_exe',
+                    'spicker_exe',
+                    'theseus_exe',
+                    'transmembrane_octopusfile',
+                    'transmembrane_lipofile',
+                    'transmembrane_spanfile'
+            ]    
+
 
         self.quick_mode = {
                            'max_ensemble_models' : 10,
@@ -238,48 +282,8 @@ class AmpleOptions(object):
             self.d['shelxe_rebuild_arpwap']=True
             self.d['shelxe_rebuild_buccaneer']=True
 
-        # Convert all paths to absolute paths
-        paths = [
-                'alignment_file',
-                'blast_dir',
-                'bbcontacts_file',
-                'cluster_dir',
-                'constraints_file',
-                'contact_file',
-                'domain_all_chains_pdb',
-                'ensembles',
-                'fasta',
-                'fast_protein_cluster_exe',
-                'frags_3mers',
-                'frags_9mers',
-                'gesamt_exe',
-                'import_cluster',
-                'maxcluster_exe',
-                'models',
-                'mrbump_dir',
-                'mr_sequence',
-                'mtz',
-                'mustang_exe',
-                'native_pdb',
-                'nmr_model_in',
-                'nmr_remodel_fasta',
-                'psipred_ss2',
-                'restart_pkl',
-                'rosetta_db',
-                'rosetta_dir',
-                'rosetta_fragments_exe',
-                'rosetta_AbinitioRelax',
-                'scwrl_exe',
-                'sf_cif',
-                'shelxe_exe',
-                'spicker_exe',
-                'theseus_exe',
-                'transmembrane_octopusfile',
-                'transmembrane_lipofile',
-                'transmembrane_spanfile'
-            ]
         for k, v in self.d.iteritems():
-            if k in paths and isinstance(v, str):
+            if k in self.paths and isinstance(v, str):
                 self.d[k] = os.path.abspath(v)
 
         # Check if using any preset options
