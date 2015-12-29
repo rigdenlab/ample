@@ -225,6 +225,7 @@ class Ensembler(object):
         self.work_dir = None  # top directory where everything gets done
         self.theseus_exe = None
         self.scwrl_exe = None
+        self.gesamt_exe = None
         
         # clustering
         self.cluster_method = "spicker"  # the method for initial clustering
@@ -414,14 +415,17 @@ class Ensembler(object):
             clusters_data.append(cluster_data)
             clusters.append(cluster_models)          
                
-        elif cluster_method == "spicker":
+        elif cluster_method == "spicker" or cluster_method == "spicker_qscore":
             # Spicker Alternative for clustering
             self.logger.info('* Running SPICKER to cluster models *')
             spicker_rundir = os.path.join(self.work_dir, 'spicker')
-            # TM score hack
-            if self.score_matrix:
+            if cluster_method == "spicker_qscore":
                 os.mkdir(spicker_rundir)
-                shutil.copy(self.score_matrix, os.path.join(spicker_rundir,'score.matrix'))
+                os.chdir(spicker_rundir)
+                #shutil.copy(self.score_matrix, os.path.join(spicker_rundir,'score.matrix'))
+                clusterer = subcluster.GesamtClusterer(executable = self.gesamt_exe)
+                clusterer.generate_distance_matrix(models)
+                clusterer.dump_pdb_matrix(os.path.join(spicker_rundir,'score.matrix'))
                 
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
             spickerer.cluster(models, run_dir=spicker_rundir)
