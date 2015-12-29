@@ -73,13 +73,12 @@ def analyse(amoptd, newroot=None):
     ensemble_results = { e['name'] : e for e in amoptd['ensembles_data'] }
                     
     # Get mrbump_results for cluster
-    mrbump_results = amoptd['mrbump_results']
-    if not len(mrbump_results):
+    if 'mrbump_results' not in amoptd or not len(amoptd['mrbump_results']):
         _logger.critical("Benchmark cannot find any mrbump results!")
         return
     
     data=[]
-    for result in mrbump_results:
+    for result in amoptd['mrbump_results']:
         
         # use mrbump dict as basis for result object
         d = copy.copy(result)
