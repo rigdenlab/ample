@@ -917,7 +917,7 @@ class Ample(object):
             print 'Cannot find run directory: {0}'.format(amopt.d['run_dir'])
             sys.exit()
         
-        print 'Making a Run Directory: checking for previous runs\n' # Last ever print statement. Amen.
+        print 'Making a Run Directory: checking for previous runs\n' # Last ever print statement. Amen
         amopt.d['work_dir'] = ample_util.make_workdir(amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'])
         os.chdir(amopt.d['work_dir'])
         
