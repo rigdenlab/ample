@@ -140,7 +140,10 @@ class Spickerer(object):
         self.logger.debug("Running spicker in directory: {0}".format(self.run_dir))
         self.logger.debug("Using executable: {0}".format(self.spicker_exe))
         self.create_input_files(models)
-        ample_util.run_command([self.spicker_exe], logfile="spicker.log")
+        logfile = os.path.abspath("spicker.log")
+        rtn = ample_util.run_command([self.spicker_exe], logfile=logfile)
+        if not rtn == 0:
+            raise RuntimeError,"Error running spicker, check logfile: {0}".format(logfile)
     
         # Read the log and generate the results
         self.results = self.process_log()
