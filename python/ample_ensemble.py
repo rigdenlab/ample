@@ -616,7 +616,7 @@ class Ensembler(object):
             
             # New multi-cluster strategy
             if cluster_idx > 0:
-                radius_thresholds = [1, 2]
+                radius_thresholds = [1, 3]
                 side_chain_treatments = [POLYALA]
             else:
                 radius_thresholds = self.subcluster_radius_thresholds
