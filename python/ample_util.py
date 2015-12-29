@@ -142,7 +142,6 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
         
         # Assume anything with one member is quark decoys
         if len(files) == 1:
-            logging.info('Checking if file contains quark decoys')
             quark_filename='alldecoy.pdb'
             f = os.path.basename(files[0])
             if not f == quark_filename:
@@ -453,7 +452,7 @@ def saveAmoptd(amoptd):
     # Save results
     with open( amoptd['results_path'], 'w' ) as f:
         cPickle.dump( amoptd, f )
-        logging.info("Saved results as file: {0}\n".format( amoptd['results_path'] ) )
+        logging.info("Saved state as file: {0}\n".format( amoptd['results_path'] ) )
     return
 
 def split_quark(dfile,directory):
