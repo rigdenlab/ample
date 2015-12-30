@@ -95,9 +95,8 @@ class ReforiginRmsd(object):
         retcode = ample_util.run_command( cmd=cmd, logfile=logfile, directory=self.workdir, dolog=False, stdin=stdin)
         if retcode != 0:
             raise RuntimeError,"Error extracting chain from placed PDB {0} in directory {1}".format( placedPdb, self.workdir )
-        
-        # remove temporary files
-        os.unlink(logfile)
+        else:
+            os.unlink(logfile)
         return placedChainPdb
     
     def getRmsd( self, nativePdbInfo=None, placedPdbInfo=None, refModelPdbInfo=None, workdir=None, cAlphaOnly=True  ):
@@ -179,8 +178,10 @@ class ReforiginRmsd(object):
                 # Clean up
                 os.unlink(placedChainPdb)
                 os.unlink(nativePdbMatch)
-                
         # End loop over chains
+        
+        # Clean up
+        
         # Now pick the best...
         rmsd = sorted( rmsds.keys() )[ 0 ]
         #print "Got rmsds over chains: {0}".format( rmsds )
@@ -189,6 +190,12 @@ class ReforiginRmsd(object):
         self.bestNativeChain = rmsds[ rmsd ][0]
         self.bestPlacedChain = rmsds[ rmsd ][1]
         self.bestReforiginPdb = rmsds[ rmsd ][2]
+        
+        # Clean up
+        for k in rmsds.keys():
+            if k != rmsd:
+                try: os.unlink(rmsds[k][2])
+                except: pass
         #print "best chain rmsd is {0} for nativeChain {1} vs refinedChain {2}".format( self.rmsd, self.bestChains[0], self.bestChains[1] )
             
         return

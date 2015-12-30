@@ -49,7 +49,7 @@ def analyse(amoptd, newroot=None):
         amoptd['models_dir']=os.path.join("/media/data/shared/testset/models",amoptd['native_pdb_code'],"models")
     
     if not os.path.isdir(fixpath(amoptd['benchmark_dir'])):
-        raise RuntimeError,"Cannot find benchmark dir: {0}".format(amoptd['benchmark_dir'])
+        os.mkdir(fixpath(amoptd['benchmark_dir']))
     os.chdir(fixpath(amoptd['benchmark_dir']))
 
     analysePdb(amoptd)
@@ -314,15 +314,16 @@ def analyseSolution(amoptd,d):
         mrOrigin=[c*-1 for c in d['SHELXE_os']]
     
     # Move pdb onto new origin
-    originPdb=ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
+    originPdb = ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
     pdb_edit.translate(mrPdb, originPdb, mrOrigin)
     
     # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
     csymmatch.Csymmatch().wrapModelToNative(originPdb,
                                             amoptd['native_pdb'],
                                             csymmatchPdb=os.path.join(fixpath(amoptd['benchmark_dir']),
-                                            "phaser_{0}_csymmatch.pdb".format(d['ensemble_name']))
-                                            )
+                                            "phaser_{0}_csymmatch.pdb".format(d['ensemble_name'])))
+    # can now delete origin pdb
+    os.unlink(originPdb)
 
     if not (amoptd['ideal_helices'] or amoptd['homologs']):
         # Score the origin with all-atom and rio

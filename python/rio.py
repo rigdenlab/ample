@@ -478,11 +478,7 @@ class Rio(object):
  
         """
         
-        if not logfile:
-            logfile = self.ncontLog
-        
-        #print "LOG ",logfile
-        
+        if not logfile: logfile = self.ncontLog
         
         contactData.contacts = None
         contactData.numContacts = 0
@@ -580,8 +576,7 @@ class Rio(object):
     
         contactData.contacts = contacts
         
-        if clean_up:
-            os.unlink(logfile)
+        if clean_up: os.unlink(logfile)
                     
         return
     
@@ -599,14 +594,12 @@ class Rio(object):
                             refChainID=nativeChain,
                             targetInfo=mrPdbInfo,
                             targetChainID=mrPdbInfo.models[0].chains[0]# Only 1 chain in model
-                          )
+                            )
         
         data = self.scoreOrigin(origin, mrPdbInfo, nativePdbInfo, resSeqMap, workdir)
-        
         contacts = data.contacts
         
         return self.helixFromContacts(contacts, dsspLog )
-        
     
     def scoreOrigin(self,
                     origin=None,
@@ -666,6 +659,7 @@ class Rio(object):
         # clean up
         os.unlink(mrOriginPdb)
         os.unlink(joinedPdb)
+        if os.path.isfile(mrAaPdb): os.unlink(mrAaPdb)
         
         return data
  
