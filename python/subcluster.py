@@ -202,6 +202,7 @@ class GesamtClusterer(SubClusterer):
         if not os.path.isdir(garchive): os.mkdir(garchive)
         logfile = os.path.abspath('gesamt_archive.log')
         cmd = [ self.executable, '--make-archive', garchive, '-pdb', mdir ]
+        cmd += [ '-nthreads', 'auto' ]
         # HACK FOR DYLD!!!!
         env = None
         #env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4/devtools/install/lib'}
@@ -221,6 +222,7 @@ class GesamtClusterer(SubClusterer):
             gesamt_out = '{0}_gesamt.out'.format(mname)
             logfile = '{0}_gesamt.log'.format(mname)
             cmd = [ self.executable, model, '-archive', garchive, '-o', gesamt_out ]
+            cmd += [ '-nthreads', 'auto' ]
             rtn = ample_util.run_command(cmd, logfile)
             if rtn != 0: raise RuntimeError("Error running gesamt!")
             else:
