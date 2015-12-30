@@ -642,7 +642,6 @@ class Ample(object):
             amoptd['benchmark_mode'] = True
             logger.info("*** AMPLE running in benchmark mode ***")
             amoptd['benchmark_dir'] = os.path.join(amoptd['work_dir'], "benchmark")
-            os.mkdir(amoptd['benchmark_dir'])
     
         ###############################################################################
         #
@@ -820,6 +819,7 @@ class Ample(object):
         amoptd_old['ample_log'] = amoptd['ample_log']
         amoptd_old['run_dir'] = amoptd['run_dir']
         amoptd_old['work_dir'] = amoptd['work_dir']
+        amoptd_old['benchmark_dir'] = os.path.join(amoptd['work_dir'], "benchmark")
         amoptd_old['results_path'] = os.path.join(amoptd['work_dir'],'resultsd.pkl')
         
         # Now update any variables that were given on the command-line
