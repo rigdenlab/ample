@@ -245,13 +245,13 @@ class GesamtClusterer(SubClusterer):
                 if x==y: continue
                 m[y][x] = m[x][y]
                 
+        self.distance_matrix = m
+
         # Remove the gesamt archive
         if purge: shutil.rmtree(garchive)
         
         # Write out the matrix in a form spicker can use
         self.dump_pdb_matrix('score.matrix')
-        
-        self.distance_matrix = m
         return
 
     def parse_gesamt_out(self, out_file):
