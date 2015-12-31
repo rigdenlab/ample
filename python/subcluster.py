@@ -124,8 +124,7 @@ class FpcClusterer(SubClusterer):
         
         # Create list of pdb files
         fname = os.path.join(os.getcwd(), "files.list" )
-        with open( fname, 'w' ) as f:
-            f.write( "\n".join( pdb_list )+"\n" )
+        with open( fname, 'w' ) as f: f.write( "\n".join( pdb_list )+"\n" )
             
         # Index is just the order of the pdb in the file
         self.index2pdb=pdb_list
@@ -190,7 +189,7 @@ class GesamtClusterer(SubClusterer):
         
         # Create list of pdb files
         fname = os.path.join(os.getcwd(), "files.list" )
-        with open( fname, 'w' ) as f: f.write( "\n".join( models )+"\n" )
+        with open(fname, 'w') as f: f.write("\n".join(models)+"\n")
             
         # Index is just the order of the pdb in the file
         self.index2pdb = models
@@ -248,6 +247,9 @@ class GesamtClusterer(SubClusterer):
                 
         # Remove the gesamt archive
         if purge: shutil.rmtree(garchive)
+        
+        # Write out the matrix in a form spicker can use
+        self.dump_pdb_matrix('score.matrix')
         
         self.distance_matrix = m
         return
