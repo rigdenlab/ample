@@ -11,7 +11,12 @@ import shutil
 import unittest
 
 # Our imports
-sys.path.append('/opt/ample-dev1/python')
+AMPLE_DIR = os.path.join(os.environ['CCP4'],'share', 'ample')
+AMPLE_DIR = '/home/jmht42/ample-dev1'
+AMPLE_DIR = '/opt/ample-dev1'
+ROSETTA_DIR = '/opt/rosetta-3.5'
+#ROSETTA_DIR = '/volatile/jmht42/rosetta_bin_linux_2015.22.57859_bundle'
+sys.path.append(os.path.join(AMPLE_DIR,'python'))
 import workers
 
 class AmpleException(Exception): pass
@@ -19,8 +24,7 @@ class AmpleException(Exception): pass
 TESTD = {}
 
 def write_script(name, args):
-    ample = os.path.join(os.environ['CCP4'],'bin', 'ample.py')
-    ample = os.path.join('/opt', 'ample-dev1', 'bin', 'ample.py')
+    ample = os.path.join(AMPLE_DIR,'bin', 'ample.py')
     
     windoze = True if sys.platform.startswith('win') else False
     header = '' if windoze else '#!/bin/bash'
@@ -44,6 +48,7 @@ def run(nproc=1,
         submit_cluster=False,
         dry_run=False,
         clean_up=True):
+
     # Create scripts and path to resultsd
     scripts = []
     for name in TESTD.keys():
@@ -112,7 +117,7 @@ args_vanilla = [
 ###############################################################################
 #/opt/rosetta_2014.35.57232_bundle
 args_rosetta_modelling = args_vanilla + [
-    '-rosetta_dir', '/opt/rosetta-3.5',
+    '-rosetta_dir', ROSETTA_DIR,
     '-frags_3mers', 'aat000_03_05.200_v1_3',
     '-frags_9mers', 'aat000_09_05.200_v1_3',
     '-nmodels', '30',
