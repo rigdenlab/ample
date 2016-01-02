@@ -5,6 +5,7 @@ Created on 29 Dec 2015
 @author: jmht
 '''
 import cPickle
+import glob
 import os, sys
 import unittest
 
@@ -37,6 +38,8 @@ for
 
 sys.path.append('/opt/ample-dev1/python')
 import workers
+
+class AmpleException(Exception): pass
 
 def write_script(name, args):
     ample = os.path.join(os.environ['CCP4'],'bin', 'ample.py')
@@ -81,12 +84,17 @@ args_vanilla = [
     #'-do_mr', 'False',
 ]
 
-class AmpleException(Exception):
-    pass
 
 
+testd = {}
 
-args_rosetta = args_vanilla + [
+###############################################################################
+#
+# Making models
+#
+###############################################################################
+#/opt/rosetta_2014.35.57232_bundle
+args_rosetta_modelling = args_vanilla + [
     '-rosetta_dir', '/opt/rosetta-3.5',
     '-frags_3mers', 'aat000_03_05.200_v1_3',
     '-frags_9mers', 'aat000_09_05.200_v1_3',
@@ -94,43 +102,42 @@ args_rosetta = args_vanilla + [
 ]
 
 
+def test_rosetta_modelling(resultsd_pkl):
+    with open(resultsd_pkl) as f: ad = cPickle.load(f)
+    if not ad['models_dir'] or not len(glob.glob(ad['models_dir']+"/*.pdb'")) == 30: raise AmpleException("Incorrect number of models")
+    if not ('ensembles' in ad or len(ad['ensembles'])): raise AmpleException("Incorrect number of ensembles")
+    if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
+    if not ad['success']: raise AmpleException("Job did no succeed")
+    return
+        
+testd['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
+                              'test' :  test_rosetta_modelling }
 
-# Test from quark models (also used as an opportunity to test the benchmark mode
-args_quark = args_vanilla + [
-    '-models', '../../tests/testfiles/decoys_200.tar.gz',
-    '-num_clusters', '10',
-    '-native_pdb', '1DTX.pdb',
-]
 
-
-
-testd = {}
-
+###############################################################################
 #
 # test from pre-existing models
 #
+###############################################################################
 args_from_existing_models = args_vanilla + [
     '-models', '../../tests/testfiles/models',
 ]
 
 def test_from_existing_models(resultsd_pkl):
     with open(resultsd_pkl) as f: ad = cPickle.load(f)
-    
     if not ad['ensembles'] or not len(ad['ensembles']) == 12: raise AmpleException("Incorrect number of ensembles")
-    
     if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
-    
     if not ad['success']: raise AmpleException("Job did no succeed")
-    
     return
         
-
 testd['from_existing_models'] = { 'args' : args_from_existing_models,
                                   'test' :  test_from_existing_models }
 
+###############################################################################
 #
 # test from quark models (also used as an opportunity to test the benchmark mode)
 #
+###############################################################################
 args_from_quark_models = args_vanilla + [
     '-models', '../../tests/testfiles/decoys_200.tar.gz',
     '-native_pdb', '1DTX.pdb'                                         
@@ -138,18 +145,20 @@ args_from_quark_models = args_vanilla + [
 
 def test_from_quark_models(resultsd_pkl):
     with open(resultsd_pkl) as f: ad = cPickle.load(f)
-    
     if not ad['ensembles'] or not len(ad['ensembles']) == 18: raise AmpleException("Incorrect number of ensembles")
-    
     if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
-    
     if not ad['success']: raise AmpleException("Job did no succeed")
-    
     return
         
-
 testd['from_quark_models'] = { 'args' : args_from_quark_models,
                                'test' : test_from_quark_models }
+
+###############################################################################
+#
+# End Test Setup
+#
+###############################################################################
+
 
 # Create scripts and path to resultsd
 scripts = []
@@ -163,7 +172,7 @@ nproc = 5
 submit_cluster = False
 submit_qtype = 'sge'
 submit_array = True
-if False:
+if True:
     workers.run_scripts(job_scripts=scripts,
                         monitor=None,
                         chdir=True,
