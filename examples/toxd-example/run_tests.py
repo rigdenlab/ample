@@ -76,12 +76,12 @@ args_vanilla = [
     '-fasta', 'toxd_.fasta',
     '-mtz', '1dtx.mtz',
     '-percent', '50',
-    '-nproc', '2',
+    '-nproc', '1',
     '-no_gui', 'True',
     #'-do_mr', 'False',
 ]
 
-class AmpleExcept(Exception):
+class AmpleException(Exception):
     pass
 
 
@@ -98,9 +98,13 @@ args_rosetta = args_vanilla + [
 # Test from quark models (also used as an opportunity to test the benchmark mode
 args_quark = args_vanilla + [
     '-models', '../../tests/testfiles/decoys_200.tar.gz',
-    '-native_pdb', '1DTX.pdb'
+    '-num_clusters', '10',
+    '-native_pdb', '1DTX.pdb',
 ]
 
+
+
+testd = {}
 
 #
 # test from pre-existing models
@@ -114,16 +118,15 @@ def test_from_existing_models(resultsd_pkl):
     
     if not ad['ensembles'] or not len(ad['ensembles']) == 12: raise AmpleException("Incorrect number of ensembles")
     
-    if not ad['mrbump_results'] or len(ad['mrbump_results']): raise AmpleException("No MRBUMP results")
+    if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
     
     if not ad['success']: raise AmpleException("Job did no succeed")
     
     return
         
 
-testd = { 'from_existing_models' : { 'args' : args_from_existing_models,
-                                    'test' :  test_from_existing_models }
-         }
+testd['from_existing_models'] = { 'args' : args_from_existing_models,
+                                  'test' :  test_from_existing_models }
 
 #
 # test from quark models (also used as an opportunity to test the benchmark mode)
@@ -136,18 +139,17 @@ args_from_quark_models = args_vanilla + [
 def test_from_quark_models(resultsd_pkl):
     with open(resultsd_pkl) as f: ad = cPickle.load(f)
     
-    #if not ad['ensembles'] or not len(ad['ensembles']) == 12: raise AmpleException("Incorrect number of ensembles")
+    if not ad['ensembles'] or not len(ad['ensembles']) == 18: raise AmpleException("Incorrect number of ensembles")
     
-    if not ad['mrbump_results'] or len(ad['mrbump_results']): raise AmpleException("No MRBUMP results")
+    if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
     
     if not ad['success']: raise AmpleException("Job did no succeed")
     
     return
         
 
-testd = { 'from_quark_models' : { 'args' : args_from_quark_models,
-                                  'test' :  test_from_quark_models }
-         }
+testd['from_quark_models'] = { 'args' : args_from_quark_models,
+                               'test' : test_from_quark_models }
 
 # Create scripts and path to resultsd
 scripts = []
@@ -157,31 +159,33 @@ for name in testd.keys():
     testd[name]['resultsd'] = os.path.join(name,'resultsd.pkl')
 
 # Run all the jobs
-nproc = 1
+nproc = 5
 submit_cluster = False
 submit_qtype = 'sge'
 submit_array = True
-workers.run_scripts(job_scripts=scripts,
-                    monitor=None,
-                    chdir=True,
-                    nproc=nproc,
-                    job_time=3600,
-                    job_name='test',
-                    submit_cluster=submit_cluster,
-                    submit_qtype=submit_qtype,
-                    submit_queue=None,
-                    submit_array=submit_array,
-                    submit_max_array=None)
+if False:
+    workers.run_scripts(job_scripts=scripts,
+                        monitor=None,
+                        chdir=True,
+                        nproc=nproc,
+                        job_time=3600,
+                        job_name='test',
+                        submit_cluster=submit_cluster,
+                        submit_qtype=submit_qtype,
+                        submit_queue=None,
+                        submit_array=submit_array,
+                        submit_max_array=None)
 
 
 # Now run the tests
 for name in testd.keys():
     try:
         testd[name]['test'](testd[name]['resultsd'])
-    except AmpleExcept as ae:
-        print "* Job {0} failed a test: {1}".format(name, ae)
+        print "Job \'{0}\' succeeded".format(name)
+    except AmpleException as ae:
+        print "* Job \'{0}\' failed a test: {1}".format(name, ae)
     except Exception as e:
-        print "*** Job {0} generated an exeption: {1}".format(name, e)
+        print "*** Job \'{0}\' generated an exeption: {1}".format(name, e)
 
 sys.exit()
 
