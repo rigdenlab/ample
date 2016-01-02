@@ -125,7 +125,7 @@ args_rosetta_modelling = args_vanilla + [
 
 def test_rosetta_modelling(resultsd_pkl):
     with open(resultsd_pkl) as f: ad = cPickle.load(f)
-    if not ad['models_dir'] or not len(glob.glob(ad['models_dir']+"/*.pdb'")) == 30: raise AmpleException("Incorrect number of models")
+    if not ad['models_dir'] or not len(glob.glob(ad['models_dir']+"/*.pdb")) == 30: raise AmpleException("Incorrect number of models")
     if not ('ensembles' in ad or len(ad['ensembles'])): raise AmpleException("Incorrect number of ensembles")
     if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
     if not ad['success']: raise AmpleException("Job did no succeed")
