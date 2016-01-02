@@ -136,7 +136,8 @@ class AmpleOptions(object):
                             'use_homs' : True,
                             'use_scwrl' : False,
                             'use_shelxe' : True,
-                            'webserver_uri' : None
+                            'webserver_uri' : None,
+                            'work_dir' : None
                          }
 
         # We need to track which variables are paths as all paths need to be converted to absolute paths
@@ -177,7 +178,8 @@ class AmpleOptions(object):
                     'theseus_exe',
                     'transmembrane_octopusfile',
                     'transmembrane_lipofile',
-                    'transmembrane_spanfile'
+                    'transmembrane_spanfile',
+                    'work_dir'
             ]    
 
 

@@ -240,7 +240,7 @@ class Ample(object):
                            help='Rerun a job using the pickled ample dictionary')
         
         parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
-                           help='Directory where the AMPLE run directory will be created [current dir]')
+                           help='Directory where the AMPLE work directory will be created [current dir]')
         
         parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
                            help='Path to Scwrl4 executable')
@@ -285,6 +285,9 @@ class Ample(object):
         
         parser.add_argument('-webserver_uri', type=str, nargs=1,
                            help='URI of the webserver directory - also indicates we are running as a webserver')
+        
+        parser.add_argument('-work_dir', type=str, nargs=1,
+                           help='Path to the directory where AMPLE will run (will be created if it doesn\'t exist)')
         
         # Contact options
         contact_group = parser.add_argument_group("Contact Constraints Options")
@@ -912,13 +915,16 @@ class Ample(object):
         amopt = self.process_command_line(args=args)
         self.amopt = amopt
         
-        # Make a work directory and go there - this way all output goes into this directory
-        if not os.path.exists(amopt.d['run_dir']):
-            print 'Cannot find run directory: {0}'.format(amopt.d['run_dir'])
-            sys.exit()
-        
-        print 'Making a Run Directory: checking for previous runs\n' # Last ever print statement. Amen
-        amopt.d['work_dir'] = ample_util.make_workdir(amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'])
+        # Make a work directory - this way all output goes into this directory
+        if amopt.d['work_dir']:
+            os.mkdir(amopt.d['work_dir'])
+        else:
+            if not os.path.exists(amopt.d['run_dir']):
+                print 'Cannot find run directory: {0}'.format(amopt.d['run_dir'])
+                sys.exit()
+            print 'Making a Run Directory: checking for previous runs\n' # Last ever print statement. Amen
+            amopt.d['work_dir'] = ample_util.make_workdir(amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'])
+        # Go to the work directory
         os.chdir(amopt.d['work_dir'])
         
         # Set up logging
