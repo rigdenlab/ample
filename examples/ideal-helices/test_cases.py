@@ -24,7 +24,6 @@ args_ideal_helices =  [
                        '-fasta', '2OVC.fasta',
                        '-mtz', '2OVC-cad.mtz',
                        '-ideal_helices', 'True',
-                       '-no_gui', 'True',
 ]
 
 def test_ideal_helices(resultsd_pkl):
