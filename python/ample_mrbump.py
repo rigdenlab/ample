@@ -15,9 +15,11 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.join(root, "scripts"))
 
 # Our imports
+from ample_util import SCRIPT_EXT
 import mrbump_cmd
-if not "CCP4" in os.environ.keys():
-    raise RuntimeError('CCP4 not found')
+
+# MRBUMP imports
+if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
 mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
 #mrbumpd = "/opt/mrbump-trunk/include/parsers"
 sys.path.insert(0, mrbumpd)
@@ -718,8 +720,7 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
     if not directory: directory = os.getcwd()
         
     # Next the script to run mrbump
-    ext='.bat' if sys.platform.startswith("win") else '.sh'
-    script_path = os.path.join(directory,name+ext)
+    script_path = os.path.join(directory,name+SCRIPT_EXT)
     with open(script_path, "w") as job_script:
         # Header
         if not sys.platform.startswith("win"):
