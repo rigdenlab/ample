@@ -54,8 +54,9 @@ def run(test_dict,
     for name in test_dict.keys():
         args = test_dict[name]['args']
         # Rosetta is the only think likely to change between platforms so we update the entry
-        if rosetta_dir:
-            args = args['rosetta_dir'] = rosetta_dir
+        if rosetta_dir and '-rosetta_dir' in args:
+            i = args.index('-rosetta_dir')
+            args[i+1] = rosetta_dir
         if extra_args:
             args += extra_args
         script = write_script(name,  args + ['-work_dir', name])
