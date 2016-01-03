@@ -11,7 +11,7 @@ import sys
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-2 ])
 sys.path.append(os.path.join(AMPLE_DIR,'python'))
-import test_funcs
+from test_funcs import AmpleException, parse_args
 
 test_dict = {}
 
@@ -44,4 +44,4 @@ test_dict['nmr_truncate'] = { 'args' : args,
 ###############################################################################
 
 if __name__ == '__main__':
-    test_funcs.parse_args(test_dict)
+    parse_args(test_dict)
