@@ -46,6 +46,7 @@ def run(test_dict,
         dry_run=False,
         clean_up=True,
         rosetta_dir=None,
+        extra_args=None,
         **kw):
 
     # Create scripts and path to resultsd
@@ -55,6 +56,8 @@ def run(test_dict,
         # Rosetta is the only think likely to change between platforms so we update the entry
         if rosetta_dir:
             args = args['rosetta_dir'] = rosetta_dir
+        if extra_args:
+            args += extra_args
         script = write_script(name,  args + ['-work_dir', name])
         scripts.append(script)
         test_dict[name]['resultsd'] = os.path.join(name,'resultsd.pkl')
@@ -92,7 +95,7 @@ def run(test_dict,
             print "*** Job \'{0}\' generated an exeption: {1}".format(name, e)
 
 
-def parse_args(test_dict=None):
+def parse_args(test_dict=None, extra_args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('-clean', action='store_true', default=False,
                         help="Clean up all test files/directories")
@@ -115,7 +118,7 @@ def parse_args(test_dict=None):
         if args.clean:
             clean(test_dict)
         else:
-            run(test_dict, **argd)
+            run(test_dict, extra_args=extra_args, **argd)
     else:
         return argd
 
