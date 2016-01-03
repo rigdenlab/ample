@@ -13,18 +13,19 @@ import test_funcs
 
 dirs = [
     'homologs',
-    'ideal-helices',
     'missing-domain.1k04',
-    'nmr.remodel',
-    'nmr.truncate',
     'toxd-example',
     'transmembrane.3LBW'
     ]
 
 dirs = [
+    'ideal-helices',
+    'nmr.remodel',
+    'nmr.truncate',
     'toxd-example',
 ]
 
+EXTRA_ARGS = ['-no_gui','True']
 
 argd = test_funcs.parse_args()
 
@@ -39,7 +40,7 @@ for d in dirs:
         test_funcs.clean(test_dict)
     else:
         print "RUNNING TESTS IN DIRECTORY: {0}".format(os.path.abspath(d))
-        test_funcs.run(test_dict,**argd)
+        test_funcs.run(test_dict, extra_args=EXTRA_ARGS, **argd)
     os.chdir(owd)
     sys.path.pop()
     
