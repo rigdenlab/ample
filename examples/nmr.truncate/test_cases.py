@@ -42,6 +42,9 @@ test_dict['nmr_truncate'] = { 'args' : args,
 # End Test Setup
 #
 ###############################################################################
+# Specify which directory these tests reside in
+for name in test_dict.keys():
+    test_dict[name]['directory'] = os.path.abspath(os.path.dirname(__file__))
 
 if __name__ == '__main__':
     parse_args(test_dict)

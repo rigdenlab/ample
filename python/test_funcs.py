@@ -16,9 +16,9 @@ AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)
 
 class AmpleException(Exception): pass
 
-def write_script(name, args):
+def write_script(path, args):
     ample = os.path.join(AMPLE_DIR,'bin', 'ample.py')
-    script = name + SCRIPT_EXT
+    script = path + SCRIPT_EXT
     with open(script, 'w') as f:
         f.write(SCRIPT_HEADER + os.linesep)
         f.write(os.linesep)
@@ -34,11 +34,14 @@ def write_script(name, args):
 
 def clean(test_dict):
     for name in test_dict.keys():
-        name = os.path.abspath(name)
-        if os.path.isdir(name): shutil.rmtree(name)
-        logfile = name+'.log'
+        run_dir = test_dict[name]['directory']
+        os.chdir(run_dir)
+        print "Cleaning {0} in directory {1}".format(name, run_dir)
+        work_dir = os.path.join(run_dir, name)
+        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+        logfile = work_dir + '.log'
         if os.path.isfile(logfile): os.unlink(logfile)  
-        script = name+SCRIPT_EXT
+        script = work_dir + SCRIPT_EXT
         if os.path.isfile(script): os.unlink(script)  
 
 def run(test_dict,
@@ -52,7 +55,11 @@ def run(test_dict,
 
     # Create scripts and path to resultsd
     scripts = []
+    owd = os.getcwd()
     for name in test_dict.keys():
+        run_dir = test_dict[name]['directory']
+        os.chdir(run_dir)
+        work_dir = os.path.join(run_dir, name)
         args = test_dict[name]['args']
         # Rosetta is the only think likely to change between platforms so we update the entry
         if rosetta_dir and '-rosetta_dir' in args:
@@ -60,13 +67,17 @@ def run(test_dict,
             args[i+1] = rosetta_dir
         if extra_args:
             args += extra_args
-        script = write_script(name,  args + ['-work_dir', name])
+        script = write_script(work_dir,  args + ['-work_dir', work_dir])
         scripts.append(script)
-        test_dict[name]['resultsd'] = os.path.join(name,'resultsd.pkl')
+        # Set path to the results pkl file we will use to run the tests
+        test_dict[name]['resultsd'] = os.path.join(work_dir,'resultsd.pkl')
         if clean_up:
-            if os.path.isdir(name): shutil.rmtree(name)
-            logfile = name+'.log'
+            if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+            logfile = work_dir + '.log'
             if os.path.isdir(logfile): os.unlink(logfile)
+        
+        # Back to where we started
+        os.chdir(owd)
     
     # Run all the jobs
     nproc = nproc
@@ -89,12 +100,13 @@ def run(test_dict,
     # Now run the tests
     for name in test_dict.keys():
         try:
+            # Get path to pickled results file and pass it to the test function
             test_dict[name]['test'](test_dict[name]['resultsd'])
             print "Job \'{0}\' succeeded".format(name)
         except AmpleException as ae:
             print "* Job \'{0}\' failed a test: {1}".format(name, ae)
         except Exception as e:
-            print "*** Job \'{0}\' generated an exeption: {1}".format(name, e)
+            print "*** Job \'{0}\' generated an exception: {1}".format(name, e)
 
 
 def parse_args(test_dict=None, extra_args=None):

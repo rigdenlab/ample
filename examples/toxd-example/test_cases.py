@@ -45,7 +45,7 @@ def test_rosetta_modelling(resultsd_pkl):
     return
         
 test_dict['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
-                              'test' :  test_rosetta_modelling }
+                                   'test' :  test_rosetta_modelling }
 
 ###############################################################################
 #
@@ -65,7 +65,7 @@ def test_from_existing_models(resultsd_pkl):
     return
         
 test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
-                                  'test' :  test_from_existing_models }
+                                     'test' :  test_from_existing_models }
 
 ###############################################################################
 #
@@ -92,6 +92,10 @@ test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
 # End Test Setup
 #
 ###############################################################################
+
+# Specify which directory these tests reside in
+for name in test_dict.keys():
+    test_dict[name]['directory'] = os.path.abspath(os.path.dirname(__file__))
 
 if __name__ == '__main__':
     test_funcs.parse_args(test_dict)
