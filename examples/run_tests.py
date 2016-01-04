@@ -22,7 +22,7 @@ dirs = [
     'ideal-helices',
     'nmr.remodel',
     'nmr.truncate',
-    'toxd-example',
+    'toxd-example'
 ]
 
 EXTRA_ARGS = ['-no_gui','True']
@@ -31,17 +31,21 @@ argd = test_funcs.parse_args()
 
 owd = os.getcwd()
 for d in dirs:
+    d = os.path.abspath(d)
     # possibly a bit clunky - we add the test directory to the path so we can import the
-    # test dict and them remove it from the sys.path
+    # test dict and them remove it from the sys.path so we get the next module next time
     sys.path.append(d)
-    from test_cases import test_dict
+    import test_cases
     os.chdir(d)
     if argd['clean']:
-        test_funcs.clean(test_dict)
+        print "Cleaning directory: {0}".format(d)
+        test_funcs.clean(test_cases.test_dict)
     else:
-        print "RUNNING TESTS IN DIRECTORY: {0}".format(os.path.abspath(d))
-        test_funcs.run(test_dict, extra_args=EXTRA_ARGS, **argd)
+        print "RUNNING TESTS IN DIRECTORY: {0}".format(d)
+        test_funcs.run(test_cases.test_dict, extra_args=EXTRA_ARGS, **argd)
+
+    # clean path and unload module
     os.chdir(owd)
-    sys.path.pop()
-    
+    sys.path.remove(d)
+    del sys.modules['test_cases']
 
