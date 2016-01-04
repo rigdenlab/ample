@@ -13,6 +13,7 @@ class Sequence(object):
         """Initialise the object"""
         
         self.MAXWIDTH=80 # maximum width of any line 
+        self.name = None # identifier for this sequence object
         self.headers = [] # title lines
         self.sequences = [] # The fasta sequences (just AA) as a single string
         self.resseqs = [] # The fasta sequences (just AA) as a single string
@@ -92,6 +93,7 @@ class Sequence(object):
         return s
    
     def from_fasta(self, fasta_file, canonicalise=True, resseq=True):
+        self.name = os.path.splitext(os.path.basename(fasta_file))[0]
         with open(fasta_file, "r") as f:
             self._parse_fasta(f, fasta_file=fasta_file, canonicalise=canonicalise)
         if resseq:
@@ -105,6 +107,7 @@ class Sequence(object):
     
     def from_pdb(self, pdbin):
         pdbin_name = os.path.basename(pdbin)
+        self.name = os.path.splitext(pdbin_name)[0]
         chain2data = pdb_edit.sequence_data(pdbin)
         assert len(chain2data),"Could not read sequence from pdb: {0}".format(pdbin)
         self.headers = []
@@ -412,6 +415,7 @@ GDGAAATSD
 
     def testFromPdb(self):
         s1 = Sequence(pdb=os.path.join(self.testfiles_dir,'4DZN.pdb'))
+        self.assertEqual(s1.name, '4DZN')
         self.assertEqual(s1.pdbs, ['4DZN.pdb', '4DZN.pdb', '4DZN.pdb'])
         self.assertEqual(s1.chains, ['A', 'B', 'C'])
     
