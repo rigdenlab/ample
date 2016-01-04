@@ -32,16 +32,19 @@ def shelxe_origin(shelxe_exe, native_pdb, native_mtz, mr_pdb):
     shutil.copyfile(native_pdb, stem+".ent")
     trace_cycles=0
     frac_solvent=0.5
-    cmd=[shelxe_exe,'shelxe-input.pda','-a{0}'.format(trace_cycles),'-q', '-s{0}'.format(frac_solvent),'-o','-n','-t0','-m0','-x']
-    logfile='shelxe.log'
+    cmd = [shelxe_exe,'shelxe-input.pda','-a{0}'.format(trace_cycles),'-q', '-s{0}'.format(frac_solvent),'-o','-n','-t0','-m0','-x']
+    logfile = os.path.abspath('shelxe.log')
     ret = ample_util.run_command(cmd=cmd, logfile=logfile, directory=None, dolog=True, stdin=None)
-    if not ret==0:
+    if ret != 0:
         raise RuntimeError,"Error running shelxe - see log: {0}".format(logfile)
     else:
         for ext in ['.pda','.hkl','.ent','.pdo','.phs','.lst','_trace.ps']:
-            os.unlink(stem+ext)
+            try: os.unlink(stem+ext)
+            except: pass
     
-    sp=parse_shelxe.ShelxeLogParser(logfile)
+    sp = parse_shelxe.ShelxeLogParser(logfile)
+    if not sp.originShift:
+        raise RuntimeError,"SHELXE failed to find an origin. Please check the logfile: {0}".format(logfile)
     os.unlink(logfile)
     originShift=[ o*-1 for o in sp.originShift ]
     return originShift
@@ -84,3 +87,4 @@ class Test(unittest.TestCase):
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
     unittest.main()
+
