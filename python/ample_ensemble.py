@@ -226,6 +226,8 @@ class Ensembler(object):
         self.theseus_exe = None
         self.scwrl_exe = None
         self.gesamt_exe = None
+        self.lsqkab_exe = os.path.join(os.environ['CCP4'],'bin','lsqkab' + ample_util.EXE_EXT)
+        assert ample_util.is_exe(self.lsqkab_exe),"Cannot find lsqkab: {0}".format(self.lsqkab_exe)
         
         # clustering
         self.cluster_method = "spicker"  # the method for initial clustering
@@ -890,12 +892,12 @@ class Ensembler(object):
 
     def subcluster_models(self,
                           truncated_models,
-                           truncated_models_data,
-                           subcluster_program=None,
-                           subcluster_exe=None,
-                           radius_thresholds=None,
-                           ensemble_max_models=None,
-                           work_dir=None):
+                          truncated_models_data,
+                          subcluster_program=None,
+                          subcluster_exe=None,
+                          radius_thresholds=None,
+                          ensemble_max_models=None,
+                          work_dir=None):
         
         if self.subcluster_method == "ORIGINAL":
             f = self.subcluster_models_fixed_radii
@@ -938,8 +940,10 @@ class Ensembler(object):
         # Run maxcluster to generate the distance matrix
         if subcluster_program == 'maxcluster':
             clusterer = subcluster.MaxClusterer(self.subcluster_exe)
+        elif subcluster_program == 'lsqkab':
+            clusterer = subcluster.LsqkabClusterer(self.subcluster_exe)
         else:
-            assert False
+            assert False,subcluster_program
         clusterer.generate_distance_matrix(truncated_models)
         # clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
 

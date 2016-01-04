@@ -156,7 +156,7 @@ class Ample(object):
         
         parser.add_argument('-LGA', metavar='path_to_LGA dir', type=str, nargs=1,
                            help='pathway to LGA folder (not the exe) will use the \'lga\' executable. UNUSED')
-        
+
         parser.add_argument('-make_models', metavar='True/False', type=str, nargs=1,
                            help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
         
@@ -253,6 +253,9 @@ class Ample(object):
         
         parser.add_argument('-SIGF', type=str, nargs=1,
                            help='Flag for SIGF column in the MTZ file')
+        
+        parser.add_argument('-subcluster_program', type=str, nargs=1,
+                           help='Program for subclustering models [maxcluster]')
         
         parser.add_argument('-spicker_exe', type=str, nargs=1,
                            help='Path to spicker executable')
@@ -528,10 +531,7 @@ class Ample(object):
                 # We need to use gesamt or mustang to do the alignment
                 if amoptd['homolog_aligner'] == 'gesamt':
                     if not ample_util.is_exe(str(amoptd['gesamt_exe'])):
-                        if sys.platform.startswith("win"):
-                            amoptd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt.exe')
-                        else:
-                            amoptd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt')
+                        amoptd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt' + ample_util.EXE_EXT)
                     if not ample_util.is_exe(str(amoptd['gesamt_exe'])):
                         msg = 'Using homologs without an alignment file and cannot find gesamt_exe: {0}'.format(amoptd['gesamt_exe'])
                         ample_exit.exit_error(msg)
@@ -671,10 +671,7 @@ class Ample(object):
         #
         if amoptd['cluster_method'] == 'spicker' or amoptd['cluster_method'] == 'spicker_qscore':
             if not amoptd['spicker_exe']:
-                if sys.platform.startswith("win"):
-                    amoptd['spicker_exe'] = 'spicker.exe'
-                else:
-                    amoptd['spicker_exe'] = 'spicker'
+                amoptd['spicker_exe'] = 'spicker'  + ample_util.EXE_EXT
             try:
                 amoptd['spicker_exe'] = ample_util.find_exe(amoptd['spicker_exe'])
             except Exception:
@@ -691,10 +688,7 @@ class Ample(object):
             msg = "Unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
             ample_exit.exit_error(msg)
         if not amoptd['theseus_exe']:
-            if sys.platform.startswith("win"):
-                amoptd['theseus_exe'] = 'theseus.exe'
-            else:
-                amoptd['theseus_exe'] = 'theseus'
+            amoptd['theseus_exe'] = 'theseus' + ample_util.EXE_EXT
         try:
             amoptd['theseus_exe'] = ample_util.find_exe(amoptd['theseus_exe'])
         except Exception:
@@ -705,10 +699,7 @@ class Ample(object):
         #
         #if amoptd['use_scwrl']:
         if not amoptd['scwrl_exe']:
-            if sys.platform.startswith("win"):
-                amoptd['scwrl_exe'] = 'Scwrl4.exe'
-            else:
-                amoptd['scwrl_exe'] = 'Scwrl4'
+            amoptd['scwrl_exe'] = 'Scwrl4' + ample_util.EXE_EXT
         try:
             amoptd['scwrl_exe'] = ample_util.find_exe(amoptd['scwrl_exe'])
         except Exception as e:
@@ -719,10 +710,7 @@ class Ample(object):
         #
         if amoptd['use_shelxe']:
             if not amoptd['shelxe_exe']:
-                if sys.platform.startswith("win"):
-                    amoptd['shelxe_exe'] = 'shelxe.exe'
-                else:
-                    amoptd['shelxe_exe'] = 'shelxe'
+                amoptd['shelxe_exe'] = 'shelxe' + ample_util.EXE_EXT
             try:
                 amoptd['shelxe_exe'] = ample_util.find_exe(amoptd['shelxe_exe'])
             except Exception:

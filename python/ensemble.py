@@ -47,9 +47,14 @@ def create_ensembles(amoptd):
 
     ensembler = ample_ensemble.Ensembler()
     
-    ensembler.theseus_exe = amoptd['theseus_exe'] 
-    ensembler.maxcluster_exe = amoptd['maxcluster_exe'] 
-    ensembler.subcluster_exe = amoptd['maxcluster_exe']
+    ensembler.theseus_exe = amoptd['theseus_exe']
+    if amoptd['subcluster_program']:
+        ensembler.subcluster_program = amoptd['subcluster_program']
+        if amoptd['subcluster_program'] == 'maxcluster':
+            ensembler.subcluster_exe = amoptd['maxcluster_exe']
+        elif amoptd['subcluster_program'] == 'lsqkab':
+            ensembler.subcluster_exe = ensembler.lsqkab_exe
+        
     ensembler.max_ensemble_models = amoptd['max_ensemble_models']
     if amoptd['cluster_method'] == 'spicker' or amoptd['cluster_method'] == 'spicker_qscore':
         cluster_exe = amoptd['spicker_exe']

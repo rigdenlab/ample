@@ -115,6 +115,7 @@ class AmpleOptions(object):
                             'side_chain_treatments' : SIDE_CHAIN_TREATMENTS,
                             'SIGF' : None,
                             'spicker_exe' : None,
+                            'subcluster_program' : 'maxcluster',
                             'submit_array' : True,
                             'submit_cluster' : False,
                             'submit_max_array' : None,
