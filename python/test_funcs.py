@@ -34,6 +34,7 @@ def write_script(name, args):
 
 def clean(test_dict):
     for name in test_dict.keys():
+        name = os.path.abspath(name)
         if os.path.isdir(name): shutil.rmtree(name)
         logfile = name+'.log'
         if os.path.isfile(logfile): os.unlink(logfile)  
