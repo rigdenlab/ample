@@ -9,6 +9,7 @@ import glob
 import logging
 import os
 import re
+import sys
 import unittest
 
 # External imports
@@ -1403,11 +1404,11 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
 
     #hierarchy.write_pdb_file(pdbout,anisou=False)
     with open(pdbout,'w') as f:
+        f.write("REMARK Original file:\n")
+        f.write("REMARK   {0}\n".format(pdbin))
         if (crystal_symmetry is not None) :
             f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
                                                               write_scale_records=True)+"\n")
-        f.write("REMARK Original file:\n")
-        f.write("REMARK   {0}\n".format(pdbin))
         f.write(hierarchy.as_pdb_string(anisou=False))
     return
 
@@ -1696,7 +1697,7 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
                         for atom in atom_group.atoms():
                             if atom.hetero: atom.hetero=False
                                 
-    if del_hetatm: _strip_hetatm(hierachy)
+    if del_hetatm: _strip(hierachy, hetatm=True)
 
     with open(pdbout,'w') as f:
         f.write("REMARK Original file:\n")
@@ -1707,14 +1708,15 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
         f.write(hierachy.as_pdb_string(anisou=False))
     return
 
-def strip_hetatm(pdbin, pdbout):
+def strip(pdbin, pdbout, hetatm=False, hydrogen=False):
+    assert hetatm or hydrogen,"Need to set what to strip!"
     """Remove all hetatoms from pdbfile"""
     hierachy=iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
-    _strip_hetatm(hierachy)
+    _strip(hierachy, hetatm=hetatm, hydrogen=hydrogen)
     hierachy.write_pdb_file(pdbout,anisou=False)
     return
 
-def _strip_hetatm(hierachy):
+def _strip(hierachy, hetatm=False, hydrogen=False):
     """Remove all hetatoms from pdbfile"""
     for model in hierachy.models():
         for chain in model.chains():
@@ -1722,8 +1724,12 @@ def _strip_hetatm(hierachy):
                 for atom_group in residue_group.atom_groups():
                     # Can't use below as it uses indexes which change as we remove atoms
                     # ag.atoms().extract_hetero()]
-                    todel=[a for a in atom_group.atoms() if a.hetero ]
-                    for a in todel: atom_group.remove_atom(a)       
+                    if hetatm:
+                        todel=[a for a in atom_group.atoms() if a.hetero ]
+                        for a in todel: atom_group.remove_atom(a)     
+                    if hydrogen:
+                        todel=[a for a in atom_group.atoms() if a.element_is_hydrogen() ]
+                        for a in todel: atom_group.remove_atom(a)     
     return
 
 def to_single_chain(inpath, outpath):
@@ -1975,6 +1981,9 @@ class Test(unittest.TestCase):
         b4 = [ r for i,r in enumerate(resseq(pdbin)['A']) if i in tokeep_idx ]
         select_residues(pdbin=pdbin, pdbout=pdbout, tokeep_idx=tokeep_idx)
         
+        #hierachy=iotbx.pdb.pdb_input(pdbout).construct_hierarchy()
+        #print [a.name for a in hierachy.models()[0].chains()[0].atoms() ]
+        #print "GOT ",resseq(pdbout)
         after = resseq(pdbout)['A']
         self.assertEqual(after,b4)
         
@@ -2037,6 +2046,30 @@ class Test(unittest.TestCase):
         
         os.unlink(pdbout)
         
+        return
+    
+    def testStripHetatm(self):
+        pdbin = os.path.join(self.testfiles_dir,"1BYZ.pdb")
+        pdbout='strip_test1.pdb'
+        hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+        _strip(hierachy, hetatm=True, hydrogen=False)
+        hierachy.write_pdb_file(pdbout,anisou=False)
+        with open(pdbout) as f:
+            got = any([ True for l in f.readlines() if l.startswith('HETATM') ])
+        self.assertFalse(got, "Found HETATMS")
+        os.unlink(pdbout)
+        return
+
+    def testStripHydrogen(self):
+        pdbin = os.path.join(self.testfiles_dir,"1BYZ.pdb")
+        pdbout='strip_test2.pdb'
+        hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+        _strip(hierachy, hetatm=False, hydrogen=True)
+        hierachy.write_pdb_file(pdbout,anisou=False)
+        with open(pdbout) as f:
+            got = any([ True for l in f.readlines() if l.startswith('ATOM')  and l[13] == 'H' ])
+        self.assertFalse(got, "Found Hydrogens")
+        os.unlink(pdbout)
         return
     
     def testReliableSidechains(self):
@@ -2140,13 +2173,19 @@ if __name__ == "__main__":
                        help='Split a pdb into constituent models')
     group.add_argument('-split_chains', action='store_true',
                        help='Split a pdb into constituent chains')
-    parser.add_argument('input_file',
+    parser.add_argument('input_file', nargs='?',
                        help='The input file - will not be altered')
     parser.add_argument('-o', dest='output_file',
                        help='The output file - will be created')
     parser.add_argument('-chain', help='The chain to use')
+    parser.add_argument('-test', action='store_true',
+                       help='Run unittests')
     
     args = parser.parse_args()
+    
+    if args.test:
+        print unittest.TestLoader().loadTestsFromModule(sys.modules[__name__])
+        sys.exit(unittest.TextTestRunner().run(unittest.TestLoader().loadTestsFromModule(sys.modules[__name__])))
     
     # Get full paths to all files
     args.input_file = os.path.abspath(args.input_file)
