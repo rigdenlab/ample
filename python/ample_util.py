@@ -22,6 +22,7 @@ import pdb_edit
 
 CCP4_VERSION=None
 SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
+EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
 SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
 
 _logger = logging.getLogger()
