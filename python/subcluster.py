@@ -306,7 +306,9 @@ end""".format(nresidues, 'A')
         return rmsd
                 
     def generate_distance_matrix(self, models, purge=True, metric='qscore'):
-        
+
+        # Index is just the order of the pdb in the file
+        self.index2pdb = models
         num_models = len(models)
         
         # Assume all models are the same size and only have a single chain
