@@ -917,11 +917,15 @@ class Ample(object):
         
         # Make a work directory - this way all output goes into this directory
         if amopt.d['work_dir']:
-            os.mkdir(amopt.d['work_dir'])
+            try:
+                os.mkdir(amopt.d['work_dir'])
+            except:
+                msg = "Cannot create work_dir {0}".format(amopt.d['work_dir'])
+                ample_exit.exit_error(msg, sys.exc_info()[2])
         else:
             if not os.path.exists(amopt.d['run_dir']):
-                print 'Cannot find run directory: {0}'.format(amopt.d['run_dir'])
-                sys.exit()
+                msg = 'Cannot find run directory: {0}'.format(amopt.d['run_dir'])
+                ample_exit.exit_error(msg, sys.exc_info()[2])
             print 'Making a Run Directory: checking for previous runs\n' # Last ever print statement. Amen
             amopt.d['work_dir'] = ample_util.make_workdir(amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'])
         # Go to the work directory
