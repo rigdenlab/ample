@@ -601,9 +601,10 @@ class RosettaModel(object):
         if remodel_fasta: assert os.path.isfile(remodel_fasta),"Cannot find remodel_fasta: {0}".format(remodel_fasta)
         if ntimes: assert type(ntimes) is int, "ntimes is not an int: {0}".format(ntimes)
         
-        # Strip HETATM lines from PDB
-        nmr_nohet=ample_util.filename_append(nmr_model_in,astr='nohet',directory=self.work_dir)
-        pdb_edit.strip_hetatm(nmr_model_in,nmr_nohet)
+        # Strip HETATM and H atoms from PDB - we need to strip the H atoms as the remodelling occasionally fails to
+        # model a H atom, which leads to pdbs with differing numbers of atoms, which causes theseus
+        nmr_nohet = ample_util.filename_append(nmr_model_in,astr='nohet',directory=self.work_dir)
+        pdb_edit.strip(nmr_model_in, nmr_nohet, hetatm=True, hydrogen=True)
         nmr_model_in = nmr_nohet
         self.logger.info('using NMR model: {0}'.format(nmr_model_in))
     
