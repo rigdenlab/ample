@@ -53,6 +53,8 @@ def run(test_dict,
         extra_args=None,
         **kw):
 
+    if dry_run: clean_up=False
+
     # Create scripts and path to resultsd
     scripts = []
     owd = os.getcwd()
@@ -99,9 +101,13 @@ def run(test_dict,
     
     # Now run the tests
     for name in test_dict.keys():
+        resultsd = test_dict[name]['resultsd']
+        if not os.path.isfile(resultsd):
+            print "**** Job \'{0}\' did not generate a pkl file: {1}".format(name, resultsd)
+            continue
         try:
             # Get path to pickled results file and pass it to the test function
-            test_dict[name]['test'](test_dict[name]['resultsd'])
+            test_dict[name]['test'](resultsd)
             print "Job \'{0}\' succeeded".format(name)
         except AmpleException as ae:
             print "* Job \'{0}\' failed a test: {1}".format(name, ae)
