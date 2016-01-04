@@ -39,7 +39,7 @@ def align_mafft(query_seq, template_seq, logger, mafft_exe=None):
     mafft_input = "{0}_concat.fasta".format(name)
     # Join two sequences
     mafft_seq = copy.copy(query_seq)
-    mafft_seq += template_seq()
+    mafft_seq += template_seq
     mafft_seq.write_fasta(mafft_input)
     cmd =  [mafft_exe, '--maxiterate', '1000', '--localpair', '--quiet', mafft_input]
     logfile = os.path.abspath('mafft.out')
