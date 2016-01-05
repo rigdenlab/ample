@@ -29,7 +29,7 @@ args =  [
 
 def testf(resultsd_pkl):
     with open(resultsd_pkl) as f: ad = cPickle.load(f)
-    if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
+    if not 'mrbump_results' in ad or not len(ad['mrbump_results']): raise AmpleException("No MRBUMP results")
     if not ad['success']: raise AmpleException("Job did no succeed")
     if not ad['mrbump_results'][0]['SHELXE_CC'] > 25: raise AmpleException("SHELXE_CC criteria not met")
     return
