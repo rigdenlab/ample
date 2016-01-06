@@ -29,16 +29,12 @@ args_ideal_helices =  [
                        '-ideal_helices', 'True',
 ]
 
-# Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-class AMPLETest(unittest.TestCase):
-    RESULTS_PKL = None
+class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_ideal_helices(self):
-        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
-        with open(self.RESULTS_PKL) as f: ad = cPickle.load(f)
-        self.assertIn('mrbump_results', ad)
-        self.assertGreater(len(ad['mrbump_results']), 0, "No MRBUMP results")
-        self.assertTrue(ad['success'])
-        self.assertGreater(ad['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        self.assertIn('mrbump_results', self.AMPLE_DICT)
+        self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
+        self.assertTrue(self.AMPLE_DICT['success'])
+        self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory

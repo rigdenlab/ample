@@ -38,20 +38,17 @@ args_rosetta_modelling = args_vanilla + [
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-class AMPLETest(unittest.TestCase):
-    RESULTS_PKL = None
+class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_rosetta_modelling(self):
-        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
-        with open(self.RESULTS_PKL) as f: ad = cPickle.load(f)
-        self.assertIn('models_dir', ad)
-        nmodels = len(glob.glob(ad['models_dir']+"/*.pdb"))
+        self.assertIn('models_dir', self.AMPLE_DICT)
+        nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
         self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
-        self.assertIn('ensembles', ad)
-        self.assertGreater(len(ad['ensembles']), 0, "No ensembles produced")
-        self.assertIn('mrbump_results', ad)
-        self.assertGreater(len(ad['mrbump_results']), 0, "No MRBUMP results")
-        self.assertTrue(ad['success'])
-        self.assertGreater(ad['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        self.assertIn('ensembles', self.AMPLE_DICT)
+        self.assertGreater(len(self.AMPLE_DICT['ensembles']), 0, "No ensembles produced")
+        self.assertIn('mrbump_results', self.AMPLE_DICT)
+        self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
+        self.assertTrue(self.AMPLE_DICT['success'])
+        self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
         return
         
 test_dict['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
@@ -70,18 +67,15 @@ args_from_existing_models = args_vanilla + [
 
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-class AMPLETest(unittest.TestCase):
-    RESULTS_PKL = None
+class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_from_existing_models(self):
-        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
-        with open(self.RESULTS_PKL) as f: ad = cPickle.load(f)
-        self.assertIn('ensembles', ad)
-        nensembles = len(ad['ensembles'])
+        self.assertIn('ensembles', self.AMPLE_DICT)
+        nensembles = len(self.AMPLE_DICT['ensembles'])
         self.assertEqual(nensembles, 12, "Incorrect number of ensembles produced: {0}".format(nensembles))
-        self.assertIn('mrbump_results', ad)
-        self.assertGreater(len(ad['mrbump_results']), 0, "No MRBUMP results")
-        self.assertTrue(ad['success'])
-        self.assertGreater(ad['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        self.assertIn('mrbump_results', self.AMPLE_DICT)
+        self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
+        self.assertTrue(self.AMPLE_DICT['success'])
+        self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
         return
         
 test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
@@ -100,18 +94,15 @@ args_from_quark_models = args_vanilla + [
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-class AMPLETest(unittest.TestCase):
-    RESULTS_PKL = None
+class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_from_quark_models(self):
-        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
-        with open(self.RESULTS_PKL) as f: ad = cPickle.load(f)
-        self.assertIn('ensembles', ad)
-        nensembles = len(ad['ensembles'])
+        self.assertIn('ensembles', self.AMPLE_DICT)
+        nensembles = len(self.AMPLE_DICT['ensembles'])
         self.assertEqual(nensembles, 18, "Incorrect number of ensembles produced: {0}".format(nensembles))
-        self.assertIn('mrbump_results', ad)
-        self.assertGreater(len(ad['mrbump_results']), 0, "No MRBUMP results")
-        self.assertTrue(ad['success'])
-        self.assertGreater(ad['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        self.assertIn('mrbump_results', self.AMPLE_DICT)
+        self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
+        self.assertTrue(self.AMPLE_DICT['success'])
+        self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
         return
          
 test_dict['from_quark_models'] = { 'args' : args_from_quark_models,

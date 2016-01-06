@@ -4,6 +4,7 @@ Created on 29 Dec 2015
 @author: jmht
 '''
 import argparse
+import cPickle
 import imp
 import os
 import shutil
@@ -15,6 +16,14 @@ from ample_util import SCRIPT_EXT, SCRIPT_HEADER
 import workers
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
+
+class AMPLEBaseTest(unittest.TestCase):
+    RESULTS_PKL = None
+    AMPLE_DICT = None
+    def setUp(self):
+        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
+        with open(self.RESULTS_PKL) as f: self.AMPLE_DICT = cPickle.load(f)
+        return
 
 def clean(test_dict):
     for name in test_dict.keys():
