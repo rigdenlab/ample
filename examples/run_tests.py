@@ -7,9 +7,9 @@ Created on 29 Dec 2015
 import os
 import sys
 
-sys.path.append('/opt/ample-dev1/python')
+AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
+sys.path.append(os.path.join(AMPLE_DIR,'python'))
 import test_funcs
-
 
 dirs = [
     'homologs',
@@ -18,6 +18,7 @@ dirs = [
     'transmembrane.3LBW'
     ]
 
+# List of which test directories to process
 dirs = [
     'ideal-helices',
     'nmr.remodel',
@@ -25,6 +26,8 @@ dirs = [
     'toxd-example'
 ]
 
+# Any args that are to be added/updated
+# They *MUST* be paired - i.e. nothing with more then one option
 EXTRA_ARGS = [ '-no_gui','True',
               # '-do_mr','False',
                ]
@@ -32,23 +35,14 @@ EXTRA_ARGS = [ '-no_gui','True',
 # Get the command-line arguments
 argd = test_funcs.parse_args()
 
-owd = os.getcwd()
 all_test_cases = {}
-for d in dirs:
-    d = os.path.abspath(d)
-    # possibly a bit clunky - we add the test directory to the path so we can import the
-    # test dict and them remove it from the sys.path so we get the next module next time
-    sys.path.append(d)
-    import test_cases
-    for k, v in test_cases.test_dict.iteritems():
+TEST_MODULE_NAME = 'test_cases'
+for directory in dirs:
+    test_module = test_funcs.load_module(TEST_MODULE_NAME, [os.path.abspath(directory)])
+    for k, v in test_module.test_dict.iteritems():
         if k in all_test_cases:
             raise RuntimeError,"Duplicate key: {0}".format(k)
         all_test_cases[k] = v
-        
-    # clean path and unload module
-    sys.path.remove(d)
-    del sys.modules['test_cases']
-
 
 if argd['clean']:
     print "Cleaning test cases: {0}".format(all_test_cases.keys())
