@@ -601,10 +601,9 @@ class RosettaModel(object):
         if remodel_fasta: assert os.path.isfile(remodel_fasta),"Cannot find remodel_fasta: {0}".format(remodel_fasta)
         if ntimes: assert type(ntimes) is int, "ntimes is not an int: {0}".format(ntimes)
         
-        # Strip HETATM and H atoms from PDB - we need to strip the H atoms as the remodelling occasionally fails to
-        # model a H atom, which leads to pdbs with differing numbers of atoms, which causes theseus
+        # Strip HETATM and H atoms from PDB
         nmr_nohet = ample_util.filename_append(nmr_model_in,astr='nohet',directory=self.work_dir)
-        pdb_edit.strip(nmr_model_in, nmr_nohet, hetatm=True, hydrogen=True)
+        pdb_edit.strip(nmr_model_in, nmr_nohet, hetatm=True)
         nmr_model_in = nmr_nohet
         self.logger.info('using NMR model: {0}'.format(nmr_model_in))
     
@@ -683,10 +682,12 @@ class RosettaModel(object):
         
         if not len(pdbs):
             raise RuntimeError, "No pdbs after remodelling in directory: {0}\nPlease check the log files for more information.".format(remodel_dir)
-        # Could rename each model so that we work out which model it came from but maybe later...
-        for i, pdb in enumerate(pdbs):
-            npdb = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
-            shutil.copy(pdb, npdb)
+        # We also need to strip the H atoms as the remodelling occasionally fails to model an H atom, 
+        # which leads to pdbs with differing numbers of atoms, which causes theseus to fail. However
+        # H-atoms are unlikely to be useful for our purposes.
+        for i, remodelled_pdb in enumerate(pdbs):
+            final_pdb = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
+            pdb_edit.strip(remodelled_pdb, final_pdb, hydrogen=True)
         return
     
     def remodel_proc_map(self, id_pdbs, ntimes):
