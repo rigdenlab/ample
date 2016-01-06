@@ -28,7 +28,7 @@ args_vanilla = [
 # Making models
 #
 ###############################################################################
-#/opt/rosetta_2014.35.57232_bundle
+
 args_rosetta_modelling = args_vanilla + [
     '-rosetta_dir', '/opt/rosetta-3.5',
     '-frags_3mers', 'aat000_03_05.200_v1_3',
@@ -73,20 +73,20 @@ test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
 # test from quark models (also used as an opportunity to test the benchmark mode)
 #
 ###############################################################################
-# args_from_quark_models = args_vanilla + [
-#     '-models', '../../tests/testfiles/decoys_200.tar.gz',
-#     '-native_pdb', '1DTX.pdb'                                         
-# ]
-# 
-# def test_from_quark_models(resultsd_pkl):
-#     with open(resultsd_pkl) as f: ad = cPickle.load(f)
-#     if not ad['ensembles'] or not len(ad['ensembles']) == 18: raise AmpleException("Incorrect number of ensembles")
-#     if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
-#     if not ad['success']: raise AmpleException("Job did no succeed")
-#     return
-#         
-# test_dict['from_quark_models'] = { 'args' : args_from_quark_models,
-#                                'test' : test_from_quark_models }
+args_from_quark_models = args_vanilla + [
+    '-models', '../../tests/testfiles/decoys_200.tar.gz',
+    '-native_pdb', '1DTX.pdb'                                         
+]
+ 
+def test_from_quark_models(resultsd_pkl):
+    with open(resultsd_pkl) as f: ad = cPickle.load(f)
+    if not ad['ensembles'] or not len(ad['ensembles']) == 18: raise AmpleException("Incorrect number of ensembles")
+    if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
+    if not ad['success']: raise AmpleException("Job did no succeed")
+    return
+         
+test_dict['from_quark_models'] = { 'args' : args_from_quark_models,
+                                   'test' : test_from_quark_models }
 
 ###############################################################################
 #
