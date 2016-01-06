@@ -8,14 +8,13 @@ import imp
 import os
 import shutil
 import sys
+import unittest
 
 # Our imports
 from ample_util import SCRIPT_EXT, SCRIPT_HEADER
 import workers
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
-
-class AmpleException(Exception): pass
 
 def clean(test_dict):
     for name in test_dict.keys():
@@ -128,20 +127,13 @@ def run(test_dict,
                             submit_max_array=None)
     
     # Now run the tests
+    all_suites = []
     for name in test_dict.keys():
-        resultsd = test_dict[name]['resultsd']
-        if not os.path.isfile(resultsd):
-            print "**** Job \'{0}\' did not generate a pkl file: {1}".format(name, resultsd)
-            continue
-        try:
-            # Get path to pickled results file and pass it to the test function
-            test_dict[name]['test'](resultsd)
-            print "Job \'{0}\' succeeded".format(name)
-        except AmpleException as ae:
-            print "* Job \'{0}\' failed a test: {1}".format(name, ae)
-        except Exception as e:
-            print "*** Job \'{0}\' generated an exception: {1}".format(name, e)
-
+        testClass = test_dict[name]['test']
+        testClass.RESULTS_PKL = test_dict[name]['resultsd']
+        all_suites.append(unittest.TestLoader().loadTestsFromTestCase(testClass)) 
+    
+    return unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(all_suites))
 
 def write_script(path, args):
     """Write script - ARGS MUST BE IN PAIRS"""

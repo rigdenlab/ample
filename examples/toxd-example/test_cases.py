@@ -9,10 +9,11 @@ import cPickle
 import glob
 import os
 import sys
+import unittest
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-2 ])
 sys.path.append(os.path.join(AMPLE_DIR,'python'))
-from test_funcs import AmpleException, parse_args
+import test_funcs
 
 test_dict = {}
 
@@ -36,17 +37,27 @@ args_rosetta_modelling = args_vanilla + [
     '-nmodels', '30',
 ]
 
-def test_rosetta_modelling(resultsd_pkl):
-    with open(resultsd_pkl) as f: ad = cPickle.load(f)
-    if not ad['models_dir'] or not len(glob.glob(ad['models_dir']+"/*.pdb")) == 30: raise AmpleException("Incorrect number of models")
-    if not ('ensembles' in ad or len(ad['ensembles'])): raise AmpleException("Incorrect number of ensembles")
-    if not 'mrbump_results' in ad or not len(ad['mrbump_results']): raise AmpleException("No MRBUMP results")
-    if not ad['success']: raise AmpleException("Job did no succeed")
-    if not ad['mrbump_results'][0]['SHELXE_CC'] > 25: raise AmpleException("SHELXE_CC criteria not met")
-    return
+# Test class that holds the functions to test the RESULTS_PKL file that will be passed in
+class AMPLETest(unittest.TestCase):
+    RESULTS_PKL = None
+    def test_rosetta_modelling(self):
+        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
+        with open(self.RESULTS_PKL) as f: ad = cPickle.load(f)
+        self.assertIn('models_dir', ad)
+        nmodels = len(glob.glob(ad['models_dir']+"/*.pdb"))
+        self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
+        self.assertIn('ensembles', ad)
+        self.assertGreater(len(ad['ensembles']), 0, "No ensembles produced")
+        self.assertIn('mrbump_results', ad)
+        self.assertGreater(len(ad['mrbump_results']), 0, "No MRBUMP results")
+        self.assertTrue(ad['success'])
+        self.assertGreater(ad['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        return
         
 test_dict['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
-                                   'test' :  test_rosetta_modelling }
+                                   'test' :  AMPLETest,
+                                   'directory' : os.path.abspath(os.path.dirname(__file__))
+                                    }
 
 ###############################################################################
 #
@@ -57,16 +68,26 @@ args_from_existing_models = args_vanilla + [
     '-models', '../../tests/testfiles/models',
 ]
 
-def test_from_existing_models(resultsd_pkl):
-    with open(resultsd_pkl) as f: ad = cPickle.load(f)
-    if not ad['ensembles'] or not len(ad['ensembles']) == 12: raise AmpleException("Incorrect number of ensembles")
-    if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
-    if not ad['success']: raise AmpleException("Job did no succeed")
-    if not ad['mrbump_results'][0]['SHELXE_CC'] > 25: raise AmpleException("SHELXE_CC criteria not met")
-    return
+
+# Test class that holds the functions to test the RESULTS_PKL file that will be passed in
+class AMPLETest(unittest.TestCase):
+    RESULTS_PKL = None
+    def test_from_existing_models(self):
+        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
+        with open(self.RESULTS_PKL) as f: ad = cPickle.load(f)
+        self.assertIn('ensembles', ad)
+        nensembles = len(ad['ensembles'])
+        self.assertEqual(nensembles, 12, "Incorrect number of ensembles produced: {0}".format(nensembles))
+        self.assertIn('mrbump_results', ad)
+        self.assertGreater(len(ad['mrbump_results']), 0, "No MRBUMP results")
+        self.assertTrue(ad['success'])
+        self.assertGreater(ad['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        return
         
 test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
-                                     'test' :  test_from_existing_models }
+                                     'test' :  AMPLETest,
+                                     'directory' : os.path.abspath(os.path.dirname(__file__))
+                                      }
 
 ###############################################################################
 #
@@ -77,16 +98,26 @@ args_from_quark_models = args_vanilla + [
     '-models', '../../tests/testfiles/decoys_200.tar.gz',
     '-native_pdb', '1DTX.pdb'                                         
 ]
- 
-def test_from_quark_models(resultsd_pkl):
-    with open(resultsd_pkl) as f: ad = cPickle.load(f)
-    if not ad['ensembles'] or not len(ad['ensembles']) == 18: raise AmpleException("Incorrect number of ensembles")
-    if not ('mrbump_results' in ad or len(ad['mrbump_results'])): raise AmpleException("No MRBUMP results")
-    if not ad['success']: raise AmpleException("Job did no succeed")
-    return
+
+# Test class that holds the functions to test the RESULTS_PKL file that will be passed in
+class AMPLETest(unittest.TestCase):
+    RESULTS_PKL = None
+    def test_from_quark_models(self):
+        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
+        with open(self.RESULTS_PKL) as f: ad = cPickle.load(f)
+        self.assertIn('ensembles', ad)
+        nensembles = len(ad['ensembles'])
+        self.assertEqual(nensembles, 18, "Incorrect number of ensembles produced: {0}".format(nensembles))
+        self.assertIn('mrbump_results', ad)
+        self.assertGreater(len(ad['mrbump_results']), 0, "No MRBUMP results")
+        self.assertTrue(ad['success'])
+        self.assertGreater(ad['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        return
          
 test_dict['from_quark_models'] = { 'args' : args_from_quark_models,
-                                   'test' : test_from_quark_models }
+                                   'test' :  AMPLETest,
+                                   'directory' : os.path.abspath(os.path.dirname(__file__))
+                                 }
 
 ###############################################################################
 #
@@ -94,9 +125,5 @@ test_dict['from_quark_models'] = { 'args' : args_from_quark_models,
 #
 ###############################################################################
 
-# Specify which directory these tests reside in
-for name in test_dict.keys():
-    test_dict[name]['directory'] = os.path.abspath(os.path.dirname(__file__))
-
 if __name__ == '__main__':
-    parse_args(test_dict)
+    test_funcs.parse_args(test_dict)

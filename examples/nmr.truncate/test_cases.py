@@ -8,10 +8,11 @@ Created on 29 Dec 2015
 import cPickle
 import os
 import sys
+import unittest
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-2 ])
 sys.path.append(os.path.join(AMPLE_DIR,'python'))
-from test_funcs import AmpleException, parse_args
+import test_funcs
 
 test_dict = {}
 
@@ -27,24 +28,28 @@ args =  [
     '-nmr_model_in', '2LC9.pdb',
 ]
 
-def testf(resultsd_pkl):
-    with open(resultsd_pkl) as f: ad = cPickle.load(f)
-    if not 'mrbump_results' in ad or not len(ad['mrbump_results']): raise AmpleException("No MRBUMP results")
-    if not ad['success']: raise AmpleException("Job did no succeed")
-    if not ad['mrbump_results'][0]['SHELXE_CC'] > 25: raise AmpleException("SHELXE_CC criteria not met")
-    return
+# Test class that holds the functions to test the RESULTS_PKL file that will be passed in
+class AMPLETest(unittest.TestCase):
+    RESULTS_PKL = None
+    def test_nmr_truncate(self):
+        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
+        with open(self.RESULTS_PKL) as f: ad = cPickle.load(f)
+        self.assertIn('mrbump_results', ad)
+        self.assertGreater(len(ad['mrbump_results']), 0, "No MRBUMP results")
+        self.assertTrue(ad['success'])
+        self.assertGreater(ad['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        return
         
 test_dict['nmr_truncate'] = { 'args' : args,
-                              'test' :  testf }
+                              'test' :  AMPLETest,
+                              'directory' : os.path.abspath(os.path.dirname(__file__))
+                               }
 
 ###############################################################################
 #
 # End Test Setup
 #
 ###############################################################################
-# Specify which directory these tests reside in
-for name in test_dict.keys():
-    test_dict[name]['directory'] = os.path.abspath(os.path.dirname(__file__))
 
 if __name__ == '__main__':
-    parse_args(test_dict)
+    test_funcs.parse_args(test_dict)
