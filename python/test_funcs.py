@@ -4,6 +4,7 @@ Created on 29 Dec 2015
 @author: jmht
 '''
 import argparse
+import imp
 import os
 import shutil
 import sys
@@ -16,22 +17,6 @@ AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)
 
 class AmpleException(Exception): pass
 
-def write_script(path, args):
-    ample = os.path.join(AMPLE_DIR,'bin', 'ample.py')
-    script = path + SCRIPT_EXT
-    with open(script, 'w') as f:
-        f.write(SCRIPT_HEADER + os.linesep)
-        f.write(os.linesep)
-        f.write(ample + " \\" + os.linesep)
-        # Assumption is all arguments are in pairs
-        arg_list = [ " ".join(args[i:i+2]) for i in range(0, len(args), 2) ]
-        f.write(" \\\n".join(arg_list))
-        f.write(os.linesep)
-        f.write(os.linesep)
-    
-    os.chmod(script, 0o777)
-    return os.path.abspath(script)
-
 def clean(test_dict):
     for name in test_dict.keys():
         run_dir = test_dict[name]['directory']
@@ -42,7 +27,51 @@ def clean(test_dict):
         logfile = work_dir + '.log'
         if os.path.isfile(logfile): os.unlink(logfile)  
         script = work_dir + SCRIPT_EXT
-        if os.path.isfile(script): os.unlink(script)  
+        if os.path.isfile(script): os.unlink(script)
+        
+def load_module(mod_name, paths):
+    try:
+        mfile, pathname, desc = imp.find_module(mod_name, paths)
+    except ImportError as e:
+        print "Cannot find module: {0} - {1}".format(mod_name,e)
+        return None
+    
+    try:
+        test_module = imp.load_module(mod_name, mfile, pathname, desc)
+    except Exception as e:
+        print "Cannot load module: {0} - {1}".format(mod_name,e)
+        return None
+    finally:
+        mfile.close()
+ 
+    return test_module
+
+def parse_args(test_dict=None, extra_args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-clean', action='store_true', default=False,
+                        help="Clean up all test files/directories")
+    parser.add_argument('-nproc', type=int, default=1,
+                        help="Number of processors to run on (1 per job)")
+    parser.add_argument('-dry_run', action='store_true', default=False,
+                        help="Don\'t actually run the jobs")
+    parser.add_argument('-rosetta_dir',
+                        help="Location of rosetta installation directory")
+    parser.add_argument('-submit_cluster', action='store_true', default=False,
+                        help="Submit to a cluster queueing system")
+    
+    args = parser.parse_args()
+    if args.rosetta_dir and not os.path.isdir(args.rosetta_dir):
+        print "Cannot find rosetta_dir: {0}".format(args.rosetta_dir)
+        sys.exit(1)
+    
+    argd = vars(args)
+    if test_dict:
+        if args.clean:
+            clean(test_dict)
+        else:
+            run(test_dict, extra_args=extra_args, **argd)
+    else:
+        return argd
 
 def run(test_dict,
         nproc=1,
@@ -65,10 +94,9 @@ def run(test_dict,
         args = test_dict[name]['args']
         # Rosetta is the only think likely to change between platforms so we update the entry
         if rosetta_dir and '-rosetta_dir' in args:
-            i = args.index('-rosetta_dir')
-            args[i+1] = rosetta_dir
+            args = update_args(args, ['-rosetta_dir', rosetta_dir])
         if extra_args:
-            args += extra_args
+            args = update_args(args, extra_args)
         script = write_script(work_dir,  args + ['-work_dir', work_dir])
         scripts.append(script)
         # Set path to the results pkl file we will use to run the tests
@@ -115,30 +143,30 @@ def run(test_dict,
             print "*** Job \'{0}\' generated an exception: {1}".format(name, e)
 
 
-def parse_args(test_dict=None, extra_args=None):
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-clean', action='store_true', default=False,
-                        help="Clean up all test files/directories")
-    parser.add_argument('-nproc', type=int, default=1,
-                        help="Number of processors to run on (1 per job)")
-    parser.add_argument('-dry_run', action='store_true', default=False,
-                        help="Don\'t actually run the jobs")
-    parser.add_argument('-rosetta_dir',
-                        help="Location of rosetta installation directory")
-    parser.add_argument('-submit_cluster', action='store_true', default=False,
-                        help="Submit to a cluster queueing system")
+def write_script(path, args):
+    """Write script - ARGS MUST BE IN PAIRS"""
+    ample = os.path.join(AMPLE_DIR,'bin', 'ample.py')
+    script = path + SCRIPT_EXT
+    with open(script, 'w') as f:
+        f.write(SCRIPT_HEADER + os.linesep)
+        f.write(os.linesep)
+        f.write(ample + " \\" + os.linesep)
+        # Assumption is all arguments are in pairs
+        arg_list = [ " ".join(args[i:i+2]) for i in range(0, len(args), 2) ]
+        f.write(" \\\n".join(arg_list))
+        f.write(os.linesep)
+        f.write(os.linesep)
     
-    args = parser.parse_args()
-    if args.rosetta_dir and not os.path.isdir(args.rosetta_dir):
-        print "Cannot find rosetta_dir: {0}".format(args.rosetta_dir)
-        sys.exit(1)
-    
-    argd = vars(args)
-    if test_dict:
-        if args.clean:
-            clean(test_dict)
-        else:
-            run(test_dict, extra_args=extra_args, **argd)
-    else:
-        return argd
+    os.chmod(script, 0o777)
+    return os.path.abspath(script)
 
+def update_args(args, new_args):
+    """Add/update any args - MUST BE IN PAIRS!"""
+    for i in range(0, len(new_args), 2):
+        if new_args[i] not in args:
+            args += new_args[i:i+2]
+        else:
+            j = args.index(new_args[i])
+            args[j+1] = new_args[i+1]
+    return args   
+    
