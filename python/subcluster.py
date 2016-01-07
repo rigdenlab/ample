@@ -20,6 +20,9 @@ import pdb_edit
 
 _logger = logging.getLogger()
 
+SCORE_MATRIX_NAME = 'score.matrix'
+FILE_LIST_NAME = 'files.list'
+
 class SubClusterer(object):
     """Base class for clustering pdbs by distance
     Sub-classes just need to provide a generate_distance_matrix class
@@ -68,7 +71,7 @@ class SubClusterer(object):
         else:
             return sorted(max_cluster)
     
-    def dump_matrix(self,file_name):
+    def dump_raw_matrix(self,file_name):
         with open(file_name,'w') as f:
             for row in self.distance_matrix:
                 f.write(",".join(map(str,row))+"\n")
@@ -181,14 +184,14 @@ class FpcClusterer(SubClusterer):
 class GesamtClusterer(SubClusterer):
     """Class to cluster files with Gesamt"""
     
-    def generate_distance_matrix(self, models, purge=True, metric='qscore'):
+    def generate_distance_matrix(self, models, purge=True, purge_all=False, metric='qscore'):
         # Make sure all the files are in the same directory otherwise we wont' work
         mdir = os.path.dirname(models[0])
         if not all([ os.path.dirname(p) == mdir for p in models ]):
             raise RuntimeError("All pdb files are not in the same directory!")
         
         # Create list of pdb files
-        fname = os.path.join(os.getcwd(), "files.list" )
+        fname = os.path.join(os.getcwd(), FILE_LIST_NAME)
         with open(fname, 'w') as f: f.write("\n".join(models)+"\n")
             
         # Index is just the order of the pdb in the file
@@ -204,9 +207,11 @@ class GesamtClusterer(SubClusterer):
         cmd += [ '-nthreads=auto' ]
         # HACK FOR DYLD!!!!
         env = None
-        #env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4/devtools/install/lib'}
+        #env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4-devtools/install/lib'}
         rtn = ample_util.run_command(cmd, logfile,env = env )
         if rtn != 0: raise RuntimeError("Error running gesamt - check logfile: {0}".format(logfile))
+        
+        if purge_all: os.unlink(logfile)
         
         # Now loop through each file creating the matrix
         if metric == 'rmsd':
@@ -226,23 +231,27 @@ class GesamtClusterer(SubClusterer):
             if rtn != 0: raise RuntimeError("Error running gesamt!")
             else:
                 if purge: os.unlink(logfile)
+                
             gdata = self.parse_gesamt_out(gesamt_out)
             assert gdata[0].file_name == mname, gdata[0].file_name + " " + mname
-            for j, data in enumerate(gdata):
-                if j > i:
-                    if metric == 'rmsd':
-                        score = data.rmsd
-                    elif metric == 'qscore':
-                        score = data.q_score
-                    else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
-                    
-                    m[i][j] = score
-            #if purge: os.unlink(gesamt_out) # delete outfile
+            score_dict = { g.file_name: (g.rmsd, g.q_score) for g in gdata  }
+            
+            for j in range(i + 1, nmodels):
+                model2 = os.path.basename(models[j])
+                if metric == 'rmsd':
+                    score = score_dict[model2][0]
+                elif metric == 'qscore':
+                    score = score_dict[model2][1]
+                else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
+                
+                m[i][j] = score
+                
+            if purge_all: os.unlink(gesamt_out)
                     
         # Copy upper half of matrix to lower
         for x in range(nmodels):
             for y in range(nmodels):
-                if x==y: continue
+                if x == y: continue
                 m[y][x] = m[x][y]
                 
         self.distance_matrix = m
@@ -251,7 +260,7 @@ class GesamtClusterer(SubClusterer):
         if purge: shutil.rmtree(garchive)
         
         # Write out the matrix in a form spicker can use
-        self.dump_pdb_matrix('score.matrix')
+        self.dump_pdb_matrix(SCORE_MATRIX_NAME)
         return
 
     def parse_gesamt_out(self, out_file):
@@ -367,7 +376,7 @@ class MaxClusterer(SubClusterer):
         #print 'MAX Done'
         
         # Create the list of files for maxcluster
-        fname = os.path.join(os.getcwd(), "files.list" )
+        fname = os.path.join(os.getcwd(), FILE_LIST_NAME )
         with open( fname, 'w' ) as f:
             f.write( "\n".join( pdb_list )+"\n" )
             
@@ -446,22 +455,49 @@ class Test(unittest.TestCase):
         self.assertEqual(ref,cluster_files1)
         return
     
-    def testRadiusGesamt(self):
+    def testGesamtMatrix(self):
         """Test we can reproduce the original thresholds"""
 
-        radius = 4
-        clusterer = GesamtClusterer(executable = '/opt/ccp4/devtools/install/bin/gesamt')
+        gesamt_exe = '/opt/ccp4-devtools/install/bin/gesamt'
+        clusterer = GesamtClusterer(executable = gesamt_exe)
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
-        clusterer.generate_distance_matrix(pdb_list)
-        clusterer.dump_pdb_matrix('gesamt.matix2')
-        return
-        cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius(radius)]
+        #pdb_list = glob.glob("/media/data/shared/testset/testset_data/1MIX/models/*.pdb")
+        clusterer.generate_distance_matrix(pdb_list, purge_all=True)
         
-        ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', '3_S_00000006.pdb',
-             '5_S_00000005.pdb', '3_S_00000003.pdb', '1_S_00000004.pdb', '4_S_00000005.pdb',
-             '3_S_00000004.pdb', '1_S_00000002.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb', '1_S_00000005.pdb']
+        # Test two files manually
+        index1=2
+        index2=25
+        f1 = pdb_list[index1]
+        f2 = pdb_list[index2]
         
-        self.assertEqual(ref,cluster_files1)
+        # Run gesamt to get the score between the two
+        logfile = 'gesamt.log' 
+        ample_util.run_command([gesamt_exe, f1, f2], logfile=logfile)
+        qscore=None
+        with open(logfile) as f:
+            for l in f.readlines():
+                if l.startswith(' Q-score'):
+                    qscore = float(l.split()[2])
+        
+        self.assertIsNotNone(qscore, "No q-score found")
+        
+        # read score matrix
+        matrix = []
+        with open(SCORE_MATRIX_NAME) as f:
+            for l in f.readlines():
+                if not l.strip(): continue
+                fields = l.split()
+                matrix.append((int(fields[0]),int(fields[1]),float(fields[2])))
+
+        # Make sure the score matches
+        for l in matrix:
+            if l[0] == index1 and l[1] == index2:
+                # Gesamt log and out file formats have different precisions
+                self.assertAlmostEqual(l[2], qscore, 3, "Q-scores differ: {0} - {1}".format(l[2], qscore))
+        
+        os.unlink(logfile)
+        os.unlink(SCORE_MATRIX_NAME)
+        os.unlink(FILE_LIST_NAME)
         return
     
     def testRadiusLsqkab(self):
