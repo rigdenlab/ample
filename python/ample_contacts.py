@@ -701,6 +701,8 @@ if __name__ == "__main__":
     parser.add_argument('fasta')
     parser.add_argument('-n', type=str, default="ampl_", dest="name",
                         help="Job name")
+    parser.add_argument('-o', type=str, default="ampl_.cst", dest="output",
+                        help="Output file")
     parser.add_argument('-s', type=str, default=None, dest="native_pdb",
                         help="Reference structure")
     parser.add_argument('-ss2', type=str, default=None, dest="psipred_ss2",
@@ -733,7 +735,7 @@ if __name__ == "__main__":
     optd['sequence'] = fp.sequence()
 
     c = Contacter(optd)
-    if optd['format']: c.format(optd['name']+".cst")
+    if optd['format']: c.format(optd['output'])
     elif optd['plot']: c.plot("ampl_.cm.pdf", ss2file=optd['psipred_ss2'], structurefile=optd['native_pdb'])
     elif optd['ppv']: c.ppv(optd['native_pdb'])
     else: logging.critical("No option selected")
