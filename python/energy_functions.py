@@ -141,8 +141,43 @@ cbcbpercent = {'A': {'A': 0.262, 'C': 0.394, 'E': 0.34, 'D': 0.289, 'G': 0.269, 
 _ATOMPAIR = "AtomPair %(atom1)s %(res1_index)d %(atom2)s %(res2_index)d "
 _SCALARWEIGHTED = "SCALARWEIGHTEDFUNC %(scalar_score).3f "
 
-# Function types
+
+###############################################################
+#
+# Default energy functions
+#
+###############################################################
+
+def BOUNDED_default(contact):
+    # Values as defined by GREMLIN and boundaries to define a distance of 8 Angstrom
+    template = _ATOMPAIR + "BOUNDED 0.00 8.00 1 0.5"
+    
+    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
+                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
+
+def FADE_default(contact):
+    # Values as defined by PCONSFOLD and boundaries to define a distance of 9 Angstrom
+    template = _ATOMPAIR + "FADE -10 19 10 -15.00 0"
+    
+    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
+                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
+
+def SIGMOID_default(contact):
+    # Values as defined by RASREC and boundaries to define a distance of 8 Angstrom
+    template = _ATOMPAIR + "SIGMOID 8.00 1.00"
+    
+    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
+                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
+
+###############################################################
+#
+# Published energy functions
+#
+###############################################################
+
 def BOUNDED_gremlin(contact):
+    """Published in GREMLIN v2"""
+    
     template = _ATOMPAIR + _SCALARWEIGHTED + "BOUNDED 0 %(lower_bound).3f 1 0.5"
     
     # Calculate some values required by the functions
@@ -156,19 +191,17 @@ def BOUNDED_gremlin(contact):
                        'lower_bound': value}
 
 def FADE(contact):
+    """Hopefully with AMPLE/CONTACT paper"""
+    
     template= _ATOMPAIR + "FADE -10 19 10 %(weight).2f 0" 
     
     return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
                        'atom2': contact['atom2'], 'res2_index': contact['res2_index'],
                        'weight': (contact['weight'] * -15.00)}
 
-def FADE_default(contact):  
-    template = _ATOMPAIR + "FADE -10 19 10 -15.00 0"
-    
-    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
-                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
-
 def SIGMOID_gremlin(contact):
+    """Published in GREMLIN v2"""
+    
     template = _ATOMPAIR + _SCALARWEIGHTED + \
                "SUMFUNC 2 SIGMOID %(sigmoid_cutoff).3f %(sigmoid_slope).3f CONSTANTFUNC -0.5"
     
@@ -180,6 +213,5 @@ def SIGMOID_gremlin(contact):
                        'atom2': contact['atom2'], 'res2_index': contact['res2_index'],
                        'scalar_score': contact['scalar_score'], 'sigmoid_cutoff': cutoff,
                        'sigmoid_slope': 1/slope}
-
 
 
