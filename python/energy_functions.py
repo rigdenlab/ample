@@ -141,34 +141,6 @@ cbcbpercent = {'A': {'A': 0.262, 'C': 0.394, 'E': 0.34, 'D': 0.289, 'G': 0.269, 
 _ATOMPAIR = "AtomPair %(atom1)s %(res1_index)d %(atom2)s %(res2_index)d "
 _SCALARWEIGHTED = "SCALARWEIGHTEDFUNC %(scalar_score).3f "
 
-
-###############################################################
-#
-# Default energy functions
-#
-###############################################################
-
-def BOUNDED_default(contact):
-    # Values as defined by GREMLIN and boundaries to define a distance of 8 Angstrom
-    template = _ATOMPAIR + "BOUNDED 0.00 8.00 1 0.5"
-    
-    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
-                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
-
-def FADE_default(contact):
-    # Values as defined by PCONSFOLD and boundaries to define a distance of 9 Angstrom
-    template = _ATOMPAIR + "FADE -10 19 10 -15.00 0"
-    
-    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
-                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
-
-def SIGMOID_default(contact):
-    # Values as defined by RASREC and boundaries to define a distance of 8 Angstrom
-    template = _ATOMPAIR + "SIGMOID 8.00 1.00"
-    
-    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
-                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
-
 ###############################################################
 #
 # Published energy functions
@@ -213,5 +185,65 @@ def SIGMOID_gremlin(contact):
                        'atom2': contact['atom2'], 'res2_index': contact['res2_index'],
                        'scalar_score': contact['scalar_score'], 'sigmoid_cutoff': cutoff,
                        'sigmoid_slope': 1/slope}
+
+###############################################################
+#
+# Default energy functions
+#
+###############################################################
+
+def BOUNDED_default(contact):
+    # Values as defined by GREMLIN and boundaries to define a distance of 8 Angstrom
+    template = _ATOMPAIR + "BOUNDED 0.00 8.00 1 0.5"
+    
+    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
+                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
+
+def FADE_default(contact):
+    # Values as defined by PCONSFOLD and boundaries to define a distance of 9 Angstrom
+    template = _ATOMPAIR + "FADE -10 19 10 -15.00 0"
+    
+    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
+                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
+
+def SIGMOID_default(contact):
+    # Values as defined by RASREC and boundaries to define a distance of 8 Angstrom
+    template = _ATOMPAIR + "SIGMOID 8.00 1.00"
+    
+    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
+                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
+
+###############################################################
+#
+# Scalar-weighted energy functions
+#
+###############################################################
+
+## Not a good idea as the scores are lower than for SIGMOID as
+## suggested in GREMLIN v2 paper
+
+#def BOUNDED_scalarweighted(contact):
+#    # Values as defined by GREMLIN and boundaries to define a distance of 8 Angstrom
+#    template = _ATOMPAIR + _SCALARWEIGHTED + "BOUNDED 0.00 8.00 1 0.5"
+#    
+#    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
+#                       'atom2': contact['atom2'], 'res2_index': contact['res2_index'],
+#                       'scalar_score': contact['scalar_score']}
+#
+#def FADE_scalarweighted(contact):
+#    # Values as defined by PCONSFOLD and boundaries to define a distance of 9 Angstrom
+#    template = _ATOMPAIR + _SCALARWEIGHTED + "FADE -10 19 10 -15.00 0"
+#    
+#    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
+#                       'atom2': contact['atom2'], 'res2_index': contact['res2_index'],
+#                       'scalar_score': contact['scalar_score']}
+
+def SIGMOID_scalarweighted(contact):
+    # Values as defined by RASREC and boundaries to define a distance of 8 Angstrom
+    template = _ATOMPAIR + _SCALARWEIGHTED + "SIGMOID 8.00 1.00"
+    
+    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
+                       'atom2': contact['atom2'], 'res2_index': contact['res2_index'],
+                       'scalar_score': contact['scalar_score']}
 
 
