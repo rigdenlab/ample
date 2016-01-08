@@ -78,12 +78,12 @@ class SubClusterer(object):
             f.write("\n")
         return
             
-    def dump_pdb_matrix(self, file_name, offset=0):
+    def dump_pdb_matrix(self, file_name=SCORE_MATRIX_NAME, offset=0):
         with open(file_name,'w') as f:
             l = len(self.distance_matrix) + offset
             for i in range(offset, l):
                 for j in range(i, l):
-                    f.write("{0} {1} {2}\n".format(i,j, self.distance_matrix[i-offset][j-offset]))
+                    f.write("{0: > 4d} {1: > 4d} {2: > 8.3F}\n".format(i,j, self.distance_matrix[i-offset][j-offset]))
             f.write("\n")
         return
 
@@ -215,7 +215,7 @@ class GesamtClusterer(SubClusterer):
         
         # Now loop through each file creating the matrix
         if metric == 'rmsd':
-            parity = None
+            parity = 0.0
         elif metric == 'qscore':
             parity = 1
         else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
@@ -391,7 +391,8 @@ class MaxClusterer(SubClusterer):
             raise RuntimeError, msg
         
         # Create a square distance_matrix no_models in size filled with None
-        self.distance_matrix = [[None for col in range(no_models)] for row in range(no_models)]
+        parity = 0
+        self.distance_matrix = [[parity for col in range(no_models)] for row in range(no_models)]
     
         #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
         #max_log = open(cur_dir+'/MAX_LOG')
@@ -407,7 +408,7 @@ class MaxClusterer(SubClusterer):
                 # 3: path to model 2 without .pdb suffix
                 # 4: distance metric
                 split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
-                self.distance_matrix[  int(split[1]) -1 ][  int(split[3]) -1]  = split[5]
+                self.distance_matrix[  int(split[1]) -1 ][  int(split[3]) -1]  = float(split[5])
     
                 if split[2]+'.pdb' not  in self.index2pdb:
                     self.index2pdb[int(split[1]) -1]  =  split[2]+'.pdb'
