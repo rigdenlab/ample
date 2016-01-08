@@ -28,6 +28,7 @@ _wbeserver_start = None
 
 _ensemble_tooltips = {
            "Name" : "Ensemble name - used to name the pdb file and the directory where mrbump carries out molecular replacement.",
+           "Cluster" : "The SPICKER cluster that this ensemble was derived from.",
            "Truncation Level" : "Percentage of the model remaining after the varying residues were pruned away",
            "Variance Threshold (A^2)" : "THESEUS variance score for the most variable residue that remains in this ensemble",
            "No. Residues" : "Number of residues for each model in the ensemble",
@@ -439,12 +440,15 @@ def display_results(results_dict, run_dir=None):
     t = log_tab(results_dict)
     if t: _tabs.append(t)
     pyrvapi.rvapi_flush()
-    return True
+    return True 
 
 if __name__ == "__main__":
     import copy, time
     pklfile = "/opt/ample-dev1/examples/toxd-example/AMPLE_0/resultsd.pkl"
+    pklfile = "/opt/ample-dev1/examples/toxd-example/from_existing_models/resultsd.pkl"
     with open(pklfile) as f: results_dict = cPickle.load(f)
+    
+    results_dict['no_gui'] = False
     
     view1_dict = copy.copy(results_dict)
     del view1_dict['ensembles_data']
@@ -455,7 +459,7 @@ if __name__ == "__main__":
     
     view1_dict['ensembles_data'] = results_dict['ensembles_data']
     display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
-    time.sleep(90)
+    time.sleep(60)
     
     view1_dict['mrbump_results'] = results_dict['mrbump_results']
     display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
