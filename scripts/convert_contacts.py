@@ -11,12 +11,14 @@ import logging
 import os
 import sys
 
+if 'CCP4_AMPLE_ROOT' in os.environ.keys() and "CCP4" in os.environ.keys():
+    root = os.environ["CCP4_AMPLE_ROOT"]
+elif "CCP4" in os.environ.keys():
+    root = os.path.join(os.environ["CCP4"], "share", "ample")
+else:
+    raise RuntimeError('CCP4 not found')
 
-if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
-root = os.path.join(os.environ['CCP4'], "share", "ample")
-#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
 sys.path.insert(0, os.path.join(root, "parsers"))
-
 
 import parse_bbcontacts
 import parse_casprr

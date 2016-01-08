@@ -11,9 +11,13 @@ import os
 import subprocess
 import sys
 
-if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
-root = os.path.join(os.environ['CCP4'], "share", "ample")
-#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+if 'CCP4_AMPLE_ROOT' in os.environ.keys() and "CCP4" in os.environ.keys():
+    root = os.environ["CCP4_AMPLE_ROOT"]
+elif "CCP4" in os.environ.keys():
+    root = os.path.join(os.environ["CCP4"], "share", "ample")
+else:
+    raise RuntimeError('CCP4 not found')
+
 sys.path.insert(0, os.path.join(root, "parsers"))
 sys.path.insert(0, os.path.join(root, "python"))
 

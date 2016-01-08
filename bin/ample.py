@@ -13,8 +13,13 @@ import platform
 import sys
 
 # Add the ample python folder to the PYTHONPATH
-root = os.path.join(os.environ["CCP4"], "share", "ample")
-#root = os.sep.join( os.path.abspath(__file__).split( os.sep )[:-2] )
+if "CCP4_AMPLE_ROOT" in os.environ.keys() and "CCP4" in os.environ.keys():
+    root = os.environ["CCP4_AMPLE_ROOT"]
+elif "CCP4" in os.environ.keys():
+    root = os.path.join(os.environ["CCP4"], "share", "ample")
+else:
+    raise RuntimeError('CCP4 not found')
+
 sys.path.append( os.path.join( root, "python" ) )
 
 # python imports
