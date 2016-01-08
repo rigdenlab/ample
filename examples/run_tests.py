@@ -28,7 +28,7 @@ dirs = [
 
 # Any args that are to be added/updated
 # They *MUST* be paired - i.e. nothing with more then one option
-EXTRA_ARGS = [ '-no_gui','True',
+EXTRA_ARGS = [ ['-no_gui','True' ],
               # '-do_mr','False',
                ]
 

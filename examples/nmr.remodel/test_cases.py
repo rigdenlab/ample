@@ -22,15 +22,15 @@ test_dict = {}
 #
 ###############################################################################
 args =  [
-    '-name', '1t00',
-    '-fasta', '1T00.fasta',
-    '-mtz', '1t00.mtz',
-    '-rosetta_dir', '/opt/rosetta-3.5',
-    '-nmr_model_in', '2DIZ.pdb',
-    '-nmr_remodel', 'True',
-    '-frags_3mers', '1t00.200.3mers',
-    '-frags_9mers', '1t00.200.9mers',
-    '-nmr_process', '1',
+    [ '-name', '1t00' ],
+    [ '-fasta', '1T00.fasta' ],
+    [ '-mtz', '1t00.mtz' ],
+    [ '-rosetta_dir', '/opt/rosetta-3.5' ],
+    [ '-nmr_model_in', '2DIZ.pdb' ],
+    [ '-nmr_remodel', 'True' ],
+    [ '-frags_3mers', '1t00.200.3mers' ],
+    [ '-frags_9mers', '1t00.200.9mers' ],
+    [ '-nmr_process', '1' ]
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in

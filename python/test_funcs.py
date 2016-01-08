@@ -36,6 +36,13 @@ def clean(test_dict):
         if os.path.isfile(logfile): os.unlink(logfile)  
         script = work_dir + SCRIPT_EXT
         if os.path.isfile(script): os.unlink(script)
+
+def is_in_args(argt, args):
+    if type(argt) is str:
+        key = argt
+    else:
+        key = argt[0]
+    return key in [ a[0] for a in args ]
         
 def load_module(mod_name, paths):
     try:
@@ -80,6 +87,14 @@ def parse_args(test_dict=None, extra_args=None):
             run(test_dict, extra_args=extra_args, **argd)
     else:
         return argd
+    
+def replace_arg(new_arg, args):
+    for i, a in enumerate(args):
+        if a[0] == new_arg[0]:
+            args[i] = new_arg
+            return args
+    assert False
+    return
 
 def run(test_dict,
         nproc=1,
@@ -101,11 +116,11 @@ def run(test_dict,
         work_dir = os.path.join(run_dir, name)
         args = test_dict[name]['args']
         # Rosetta is the only think likely to change between platforms so we update the entry
-        if rosetta_dir and '-rosetta_dir' in args:
-            args = update_args(args, ['-rosetta_dir', rosetta_dir])
+        if rosetta_dir and is_in_args('-rosetta_dir', args):
+            args = update_args(args, [['-rosetta_dir', rosetta_dir]])
         if extra_args:
             args = update_args(args, extra_args)
-        script = write_script(work_dir,  args + ['-work_dir', work_dir])
+        script = write_script(work_dir,  args + [['-work_dir', work_dir]])
         scripts.append(script)
         # Set path to the results pkl file we will use to run the tests
         test_dict[name]['resultsd'] = os.path.join(work_dir,'resultsd.pkl')
@@ -153,8 +168,10 @@ def write_script(path, args):
         f.write(os.linesep)
         f.write(ample + " \\" + os.linesep)
         # Assumption is all arguments are in pairs
-        arg_list = [ " ".join(args[i:i+2]) for i in range(0, len(args), 2) ]
-        f.write(" \\\n".join(arg_list))
+        #arg_list = [ " ".join(args[i:i+2]) for i in range(0, len(args), 2) ]
+        #f.write(" \\\n".join(arg_list))
+        for argt in args:
+            f.write(" ".join(argt) + " \\\n")
         f.write(os.linesep)
         f.write(os.linesep)
     
@@ -162,12 +179,10 @@ def write_script(path, args):
     return os.path.abspath(script)
 
 def update_args(args, new_args):
-    """Add/update any args - MUST BE IN PAIRS!"""
-    for i in range(0, len(new_args), 2):
-        if new_args[i] not in args:
-            args += new_args[i:i+2]
+    """Add/update any args"""
+    for argt in new_args:
+        if not is_in_args(argt, args):
+            args.append(argt)
         else:
-            j = args.index(new_args[i])
-            args[j+1] = new_args[i+1]
-    return args   
-    
+            replace_arg(argt, args)
+    return args

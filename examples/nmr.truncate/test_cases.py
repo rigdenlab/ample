@@ -20,10 +20,10 @@ test_dict = {}
 #
 ###############################################################################
 args =  [
-    '-name', '102l',
-    '-fasta', '102L.fasta',
-    '-mtz', '102l.mtz',
-    '-nmr_model_in', '2LC9.pdb',
+    [ '-name', '102l' ],
+    [ '-fasta', '102L.fasta' ],
+    [ '-mtz', '102l.mtz' ],
+    [ '-nmr_model_in', '2LC9.pdb' ],
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in

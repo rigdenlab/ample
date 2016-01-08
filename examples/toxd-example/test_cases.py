@@ -17,9 +17,9 @@ test_dict = {}
 
 # vanilla test
 args_vanilla = [
-    '-fasta', 'toxd_.fasta',
-    '-mtz', '1dtx.mtz',
-    '-percent', '50',
+    [ '-fasta', 'toxd_.fasta' ],
+    [ '-mtz', '1dtx.mtz' ],
+    [ '-percent', '50' ]
 ]
 
 ###############################################################################
@@ -29,10 +29,10 @@ args_vanilla = [
 ###############################################################################
 
 args_rosetta_modelling = args_vanilla + [
-    '-rosetta_dir', '/opt/rosetta-3.5',
-    '-frags_3mers', 'aat000_03_05.200_v1_3',
-    '-frags_9mers', 'aat000_09_05.200_v1_3',
-    '-nmodels', '30',
+    [ '-rosetta_dir', '/opt/rosetta-3.5' ],
+    [ '-frags_3mers', 'aat000_03_05.200_v1_3' ],
+    [ '-frags_9mers', 'aat000_09_05.200_v1_3' ],
+    [ '-nmodels', '30']
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
@@ -60,7 +60,7 @@ test_dict['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
 #
 ###############################################################################
 args_from_existing_models = args_vanilla + [
-    '-models', '../../tests/testfiles/models',
+    [ '-models', '../../tests/testfiles/models' ]
 ]
 
 
@@ -87,8 +87,8 @@ test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
 #
 ###############################################################################
 args_from_quark_models = args_vanilla + [
-    '-models', '../../tests/testfiles/decoys_200.tar.gz',
-    '-native_pdb', '1DTX.pdb'                                         
+    [ '-models', '../../tests/testfiles/decoys_200.tar.gz'],
+    [ '-native_pdb', '1DTX.pdb' ]                                         
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in

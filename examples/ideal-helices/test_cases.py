@@ -22,9 +22,9 @@ test_dict = {}
 
 # Specify the arguments to AMPLE to run this test case
 args_ideal_helices =  [
-                       '-fasta', '2OVC.fasta',
-                       '-mtz', '2OVC-cad.mtz',
-                       '-ideal_helices', 'True',
+                       [ '-fasta', '2OVC.fasta' ],
+                       [ '-mtz', '2OVC-cad.mtz' ],
+                       [ '-ideal_helices', 'True' ],
 ]
 
 class AMPLETest(test_funcs.AMPLEBaseTest):
