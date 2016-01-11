@@ -40,7 +40,7 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory
-test_dict['missing_domain'] = { 'args' : args_ideal_helices,
+test_dict['missing_domain'] = { 'args' : args_missing_domain,
                                'test' :  AMPLETest,
                                'directory' : os.path.abspath(os.path.dirname(__file__))
                                 }
