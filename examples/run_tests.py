@@ -11,23 +11,18 @@ AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)
 sys.path.append(os.path.join(AMPLE_DIR,'python'))
 import test_funcs
 
+# List of which test directories to process
+# TODO: 'transmembrane.3LBW'
 dirs = [
     'homologs',
-    'missing-domain.1k04',
-    'toxd-example',
-    'transmembrane.3LBW'
-    ]
-
-# List of which test directories to process
-dirs = [
     'ideal-helices',
+    'missing-domain.1k04',
     'nmr.remodel',
     'nmr.truncate',
     'toxd-example'
 ]
 
 # Any args that are to be added/updated
-# They *MUST* be paired - i.e. nothing with more then one option
 EXTRA_ARGS = [ ['-no_gui','True' ],
               # '-do_mr','False',
                ]
