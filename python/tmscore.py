@@ -16,9 +16,6 @@ import sys
 import tempfile
 import unittest
 
-# 3rd party
-import numpy
-
 if "CCP4_AMPLE_ROOT" in os.environ.keys() and "CCP4" in os.environ.keys():
     root = os.environ["CCP4_AMPLE_ROOT"]
 elif "CCP4" in os.environ.keys():
@@ -41,6 +38,12 @@ except ImportError:
 
 
 class TMscorer(object):
+    
+    _TMSCORE_DATA_FACTORY = collections.namedtuple("tmscore_data_factory", 
+                                                   ["name", "pdbin", "TMSCORE_log", "structure", 
+                                                    "tm", "maxsub", "gdtts", "gdtha", "rmsd", 
+                                                    "nrResiduesCommon"])
+    
     def __init__(self, structure, tmscore_exe, wdir=None):
         self.logger = logging.getLogger()
         self.pickle_file = None
@@ -56,51 +59,67 @@ class TMscorer(object):
         # Compare each pdb in list against structure defined
         self.entries = self.compare_to_structure(pdbs)
 
-        # Dumpe all data in a pickle file
-        self.pickle_file = os.path.join(self.workingDIR, "tmresults.pkl")
-        pickle.dump(self.entries, open(self.pickle_file, 'w'))
+#        # Dump all data in a pickle file
+#        self.pickle_file = os.path.join(self.workingDIR, "tmresults.pkl")
+#        pickle.dump(self.entries, open(self.pickle_file, 'w'))
         return
 
-    def compare_to_structure(self, pdb_list):
+    def compare_to_structure(self, pdb_list, keep_modified_structures=False, sequence_identical=False):
+        """Compare a list of structures to a reference structure
+        
+        :pdb_list:                 list containing paths to model files
+        :keep_modified_structures: do not delete any intermediate, modified structure files
+        :sequence_identical:       avoid any modification of files due to sequence identity
+        
+        :returns:                  list of TMscore data per model
+        """
+        
+        entries = []                                                    # For data storage
+        
         self.logger.info('-------Evaluating decoys/models-------')
 
-        entries = []
+        structure = os.path.abspath(self.structure)                     # Path to reference structure
+        structure_name = os.path.basename(structure).rsplit(".", 1)[0]  # Filename
+        pdb_list_abs = [ os.path.abspath(model) for model in pdb_list ] # Full paths to models
 
-        for pdb in pdb_list:
-            if not os.path.exists(pdb): continue
-
-            name = os.path.basename(pdb).rsplit(".", 1)[0]
-            pdbin = os.path.abspath(pdb)
-
-            self.logger.info("Working on %s" % name)
-
-            # Write a temporary file with the aligned residues from the native structure
-            structure_mod = tempfile.NamedTemporaryFile(delete=False)
-            structure_mod.close()
-            pdbin_mod = tempfile.NamedTemporaryFile(delete=False)
-            pdbin_mod.close()
+        for pdbin in pdb_list_abs:
             
-            # Initialise the logparser that stores all the scores
-            pt = parse_tmscore.TMscoreLogParser()
+            pdbin_name     = os.path.basename(pdb).rsplit(".", 1)[0]    # Filename
+            
+            self.logger.debug("Working on %s" % pdbin)
+            
+            if not os.path.exists(pdbin): 
+                self.logger.warning("Cannot find {0}".format(pdbin))
+                continue
+            
+            # Modify structures to be identical as required by TMscore binary
+            if not sequence_identical:
+                pdbin_mod     = os.path.abspath(pdbin_name + "_mod.pdb")
+                structure_mod = os.path.abspath(pdbin_name + "_" + structure_name + "_mod.pdb")
+                self.mod_structures(pdbin, pdbin_mod, structure, structure_mod)
+                
+            model     = pdbin_mod     if not sequence_identical else pdbin
+            reference = structure_mod if not sequence_identical else structure
+    
+            # Create a command list and execute TMscore
+            log = os.path.join(self.workingDIR, name+".tmscore.log")
+            cmd = [ self.tmscore_exe, model, reference ]
+            p = ample_util.run_command(cmd, logfile=log, directory=self.workingDIR)
+
+            # Delete the modified structures if not wanted       
+            if not keep_modified_structures and not sequence_identical:
+                os.remove(pdbin_mod)
+                os.remove(structure_mod)
             
             # Do the try clause here to allow anything that is required from here to throw
             # exceptions. In that case we revert to the TMscoreLogParser default values of
-            # 0.0 for every score. 
-            try:
-                self.mod_structures(pdbin, pdbin_mod.name, self.structure, structure_mod.name)
+            # 0.0 for every score.
+            pt = parse_tmscore.TMscoreLogParser()
             
-                # Create a command list and execute TMscore
-                log = os.path.join(self.workingDIR, name+".tmscore.log")
-                cmd = [ self.tmscore_exe, pdbin_mod.name, structure_mod.name ]
-                p = ample_util.run_command(cmd, logfile=log, directory=self.workingDIR)
-    
-                os.unlink(structure_mod.name)
-                os.unlink(pdbin_mod.name)
-                
-                # Parse the log file to the parser
+            try:
                 pt.parse(log)
-                
-            except Exception:
+            except Exception as e:
+                self.logger.critical(e.msg)
                 log = "None"
                 
             entry = self._store(name, pdbin, log, self.structure, pt)
@@ -142,8 +161,8 @@ class TMscorer(object):
         structure_res1 = self.residue_one(structure)
         
         # Match the residue lists to fit the residue 1 number
-        pdbin_gaps     = [i + structure_res1-1 for i in pdbin_gaps]
-        structure_gaps = [i + pdbin_res1-1     for i in structure_gaps]
+        pdbin_gaps     = [ i + structure_res1-1 for i in pdbin_gaps ]
+        structure_gaps = [ i + pdbin_res1-1     for i in structure_gaps ]
 
         # Use gaps of other sequence to even out
         pdb_edit.select_residues(pdbin, pdbin_stage1.name, delete=structure_gaps)
@@ -165,8 +184,7 @@ class TMscorer(object):
                 return int(line[5])
 
     def find_gaps(self, seq):
-        gaps = [i+1 for i, c in enumerate(seq) if c=="-"]
-        return gaps
+        return [ i+1 for i, c in enumerate(seq) if c=="-" ]
     
     def read_sequence(self, seq):
         offset = 0
@@ -176,56 +194,50 @@ class TMscorer(object):
         return offset
     
     def _read_list(self, list_file):
-        return [l.strip() for l in open(list_file, 'r')]
+        return [ l.strip() for l in open(list_file, 'r') ]
     
     def _store(self, name, pdbin, logfile, structure, pt):
-        entry = {"name": name,
-                 "pdbin": pdbin,
-                 "TMSCORE_log": logfile,
-                 "structure": structure,
-                 "tm": pt.tm,
-                 "maxsub": pt.maxsub,
-                 "gdtts": pt.gdtts,
-                 "gdtha": pt.gdtha,
-                 "rmsd": pt.rmsd,
-                 "nrResiduesCommon": pt.nrResiduesCommon}
-        return entry
-    
-    
-class Statistics(object):
-    def __init__(self, pickle_file, pdb_list_file):
-        self.pdb_list_file = pdb_list_file
-        self.pickle_file = pickle_file
-        self.mean = 0.0
-        self.median = 0.0
-        return
+        return self._TMSCORE_DATA_FACTORY(name=name, pdbin=pdbin, 
+                                          TMSCORE_log=logfile, structure=structure, 
+                                          tm=pt.tm, maxsub=pt.maxsub, gdtts=pt.gdtts,
+                                          gdtha=pt.gdtha, rmsd=pt.rmsd,
+                                          nrResiduesCommon=pt.nrResiduesCommon)
 
-    def main(self, score):
-        # Load the required data
-        pdb_names = self._read_list(self.pdb_list_file)
-        data = pickle.load(open(self.pickle_file, 'r'))
-        
-        # Obtain a list of all defined scores for defined pdbs
-        score_list = self.extract(data, pdb_names, score)
-        score_list_sorted = sorted(score_list)
-        
-        assert len(score_list_sorted) > 0, \
-                "No scores in score list file"
-        
-        assert len(score_list_sorted)==len(pdb_names), \
-                "Divergent counts between scores and pdb names"
 
-        self.mean   = numpy.mean(score_list_sorted)
-        self.median = numpy.median(score_list_sorted)
-        return
-
-    def extract(self, data, pdb_names, score):
-        return [entry[score] for entry in data \
-                        if entry['name'] in pdb_names]
-
-    def _read_list(self, list_file):
-        return [os.path.basename(l.strip()).rsplit('.', 1)[0] \
-                    for l in open(list_file, 'r')]
+#class Statistics(object):
+#    def __init__(self, pickle_file, pdb_list_file):
+#       self.pdb_list_file = pdb_list_file
+#        self.pickle_file = pickle_file
+#        self.mean = 0.0
+#        self.median = 0.0
+#        return
+#
+#    def main(self, score):
+#        # Load the required data
+#        pdb_names = self._read_list(self.pdb_list_file)
+#        data = pickle.load(open(self.pickle_file, 'r'))
+#        
+#        # Obtain a list of all defined scores for defined pdbs
+#        score_list = self.extract(data, pdb_names, score)
+#        score_list_sorted = sorted(score_list)
+#        
+#        assert len(score_list_sorted) > 0, \
+#                "No scores in score list file"
+#        
+#        assert len(score_list_sorted)==len(pdb_names), \
+#                "Divergent counts between scores and pdb names"
+#
+#        self.mean   = numpy.mean(score_list_sorted)
+#        self.median = numpy.median(score_list_sorted)
+#        return
+#
+#    def extract(self, data, pdb_names, score):
+#        return [entry[score] for entry in data \
+#                        if entry['name'] in pdb_names]
+#
+#    def _read_list(self, list_file):
+#        return [os.path.basename(l.strip()).rsplit('.', 1)[0] \
+#                    for l in open(list_file, 'r')]
         
 
 class TestTMScore(unittest.TestCase):
@@ -269,80 +281,84 @@ class TestTMScore(unittest.TestCase):
         self.assertEqual(ref_gaps3, gaps3)
 
 
-class TestStatistics(unittest.TestCase):
-    def testExtract(self):
-        data = [{"name": "test1", "pdbin": "test1",
-                 "TMSCORE_log": "test1", "structure": "test1",
-                 "tm": 0.523, "maxsub": 0.333, "gdtts": 0.355,
-                 "gdtha": 0.424, "rmsd": 1.345, "nrResiduesCommon": 10},
-                {"name": "test2", "pdbin": "test2",
-                 "TMSCORE_log": "test2", "structure": "test2",
-                 "tm": 0.140, "maxsub": 0.222, "gdtts": 0.234,
-                 "gdtha": 0.100, "rmsd": 10.444, "nrResiduesCommon": 10},
-                {"name": "test3", "pdbin": "test3",
-                 "TMSCORE_log": "test3", "structure": "test3",
-                 "tm": 0.3, "maxsub": 0.5, "gdtts": 0.1,
-                 "gdtha": 0.6, "rmsd": 1.0, "nrResiduesCommon": 10},
-                {"name": "test4", "pdbin": "test4",
-                 "TMSCORE_log": "test4", "structure": "test4",
-                 "tm": 0.6, "maxsub": 0.8, "gdtts": 0.9,
-                 "gdtha": 0.4, "rmsd": 9.345, "nrResiduesCommon": 10}]
-
-        s = Statistics("foo", "bar")
-
-
-        pdb_list = ["test1", "test3", "test4"]
-
-        ref_data_tm = [0.523, 0.3, 0.6]
-        out_data_tm = s.extract(data, pdb_list, "tm")
-        self.assertItemsEqual(ref_data_tm, out_data_tm)
-
-        ref_data_rmsd = [1.345, 1.0, 9.345]
-        out_data_rmsd = s.extract(data, pdb_list, "rmsd")
-        self.assertItemsEqual(ref_data_rmsd, out_data_rmsd)
-
-        ref_data_gdtts = [0.355, 0.1, 0.9]
-        out_data_gdtts = s.extract(data, pdb_list, "gdtts")
-        self.assertItemsEqual(ref_data_gdtts, out_data_gdtts)
-
-        ref_data_gdtha = [0.424, 0.6, 0.4]
-        out_data_gdtha = s.extract(data, pdb_list, "gdtha")
-        self.assertItemsEqual(ref_data_gdtha, out_data_gdtha)
-
-        ref_data_maxsub = [0.333, 0.5, 0.8]
-        out_data_maxsub = s.extract(data, pdb_list, "maxsub")
-        self.assertItemsEqual(ref_data_maxsub, out_data_maxsub)
-
-
-        pdb_list_2 = ["test2", "test4"]
-        ref_data_maxsub_2 = [0.222, 0.8]
-        out_data_maxsub_2 = s.extract(data, pdb_list_2, "maxsub")
-        self.assertItemsEqual(ref_data_maxsub_2, out_data_maxsub_2)
+#class TestStatistics(unittest.TestCase):
+#    def testExtract(self):
+#        data = [{"name": "test1", "pdbin": "test1",
+#                 "TMSCORE_log": "test1", "structure": "test1",
+#                 "tm": 0.523, "maxsub": 0.333, "gdtts": 0.355,
+#                 "gdtha": 0.424, "rmsd": 1.345, "nrResiduesCommon": 10},
+#                {"name": "test2", "pdbin": "test2",
+#                 "TMSCORE_log": "test2", "structure": "test2",
+#                 "tm": 0.140, "maxsub": 0.222, "gdtts": 0.234,
+#                 "gdtha": 0.100, "rmsd": 10.444, "nrResiduesCommon": 10},
+#                {"name": "test3", "pdbin": "test3",
+#                 "TMSCORE_log": "test3", "structure": "test3",
+#                 "tm": 0.3, "maxsub": 0.5, "gdtts": 0.1,
+#                 "gdtha": 0.6, "rmsd": 1.0, "nrResiduesCommon": 10},
+#                {"name": "test4", "pdbin": "test4",
+#                 "TMSCORE_log": "test4", "structure": "test4",
+#                 "tm": 0.6, "maxsub": 0.8, "gdtts": 0.9,
+#                 "gdtha": 0.4, "rmsd": 9.345, "nrResiduesCommon": 10}]
+#
+#        s = Statistics("foo", "bar")
+#
+#
+#        pdb_list = ["test1", "test3", "test4"]
+#
+#       ref_data_tm = [0.523, 0.3, 0.6]
+#        out_data_tm = s.extract(data, pdb_list, "tm")
+#        self.assertItemsEqual(ref_data_tm, out_data_tm)
+#
+#        ref_data_rmsd = [1.345, 1.0, 9.345]
+#        out_data_rmsd = s.extract(data, pdb_list, "rmsd")
+#        self.assertItemsEqual(ref_data_rmsd, out_data_rmsd)
+#
+#        ref_data_gdtts = [0.355, 0.1, 0.9]
+#        out_data_gdtts = s.extract(data, pdb_list, "gdtts")
+#        self.assertItemsEqual(ref_data_gdtts, out_data_gdtts)
+#
+#        ref_data_gdtha = [0.424, 0.6, 0.4]
+#        out_data_gdtha = s.extract(data, pdb_list, "gdtha")
+#        self.assertItemsEqual(ref_data_gdtha, out_data_gdtha)
+#
+#        ref_data_maxsub = [0.333, 0.5, 0.8]
+#        out_data_maxsub = s.extract(data, pdb_list, "maxsub")
+#        self.assertItemsEqual(ref_data_maxsub, out_data_maxsub)
+#
+#        pdb_list_2 = ["test2", "test4"]
+#        ref_data_maxsub_2 = [0.222, 0.8]
+#        out_data_maxsub_2 = s.extract(data, pdb_list_2, "maxsub")
+#        self.assertItemsEqual(ref_data_maxsub_2, out_data_maxsub_2)
 
 
 if __name__ == "__main__":
-    # Check whether we can import Biopythin
+    # Check whether we can import BioPython
     if not _BIOPYTHON: sys.exit("Upgrade to a CCP4 version with the new interface to use this script")
 
+    import ample_statistics     # Only need this here
+
     parser = argparse.ArgumentParser()
-    
-    parser.add_argument('-score', metavar='[ tm | maxsub | gdtts | gdtha ]',
-                        type=str, default='tm', help='The score to extract [default: tm]')
+    #parser.add_argument('-score', metavar='[ tm | maxsub | gdtts | gdtha ]',
+    #                    type=str, default='tm', help='The score to extract [default: tm]')
     parser.add_argument("structure")
     parser.add_argument("pdb_list_file")
     parser.add_argument("tmscore")
     parser.add_argument("-wdir", type=str, default=os.getcwd())
     args = parser.parse_args()
 
-    assert args.score in ["tm", "maxsub", "gdtts", "gdtha", "rmsd"], "Unknown score %s" % args.score
+    #assert args.score in ["tm", "maxsub", "gdtts", "gdtha", "rmsd"], "Unknown score %s" % args.score
 
     t = TMscorer(os.path.abspath(args.structure), os.path.abspath(args.tmscore),
                 os.path.abspath(args.wdir))
     t.main(args.pdb_list_file)
+    
+    tmscores = [ i.tm for i in t.entries ] 
+    print "Median TMscores: {0}".format(ample_statistics.median(tmscores))
+    print "Mean TMscores:   {0}".format(ample_statistics.mean(tmscores))
+    
+    #pkl_file = t.pickle_file
 
-    pkl_file = t.pickle_file
-
-    s = Statistics(pkl_file, os.path.abspath(args.pdb_list_file))
-    s.main(args.score)
-    print "Mean", s.mean
-    print "Median", s.median
+    #s = Statistics(pkl_file, os.path.abspath(args.pdb_list_file))
+    #s.main(args.score)
+    #print "Mean", s.mean
+    #print "Median", s.median
