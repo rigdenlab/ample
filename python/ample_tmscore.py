@@ -55,7 +55,7 @@ class TMscorer(object):
     def main(self, pdb_list_file, keep_modified_structures=False, identical_sequences=False):
         """Wrapper function for compare_to_structure
         
-        :pdb_list_file: file containing a list of models
+        :pdb_list_file:            file containing a list of models
         :keep_modified_structures: do not delete any intermediate, modified structure files
         :sequence_identical:       avoid any modification of files due to sequence identity
         """
