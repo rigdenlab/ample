@@ -13,10 +13,10 @@ import test_funcs
 
 # List of which test directories to process
 # TODO: 'transmembrane.3LBW'
+#    'missing-domain.1k04',
 dirs = [
     'homologs',
     'ideal-helices',
-    'missing-domain.1k04',
     'nmr.remodel',
     'nmr.truncate',
     'toxd-example'
