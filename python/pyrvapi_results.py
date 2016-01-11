@@ -10,7 +10,6 @@ import cPickle
 import logging
 import os
 import subprocess
-import sys
 import urlparse
 import uuid
 
@@ -136,7 +135,7 @@ class AmpleOutput(object):
             
         if not self.summary_tab_ensemble_sec_id and do_ensemble_sec(results_dict): 
             self.summary_tab_ensemble_sec_id = "ensembles"
-            pyrvapi.rvapi_add_section(self.summary_tab_ensemble_sec_id, "Ensembles", self.summary_tab_id, 0, 0, 1, 1, False)
+            pyrvapi.rvapi_add_section(self.summary_tab_ensemble_sec_id, "Ensembles", self.summary_tab_id, 0, 0, 1, 1, True)
             
             # Get the ensembling data
             clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments = ensemble.collate_cluster_data(ensembles_data)
@@ -478,8 +477,8 @@ class AmpleOutput(object):
             
 if __name__ == "__main__":
     import copy, time
-    pklfile = "/opt/ample-dev1/examples/txoxd-example/AMPLE_0/resultsd.pkl"
-    pklfile = "/opt/ample-dev1/examples/toxd-example/from_existing_models/resultsd.pkl"
+    pklfile = "/opt/ample-dev1/examples/toxd-example/AMPLE_1/resultsd.pkl"
+    #pklfile = "/opt/ample-dev1/examples/toxd-example/from_existing_models/resultsd.pkl"
     with open(pklfile) as f: results_dict = cPickle.load(f)
     
     results_dict['no_gui'] = False
