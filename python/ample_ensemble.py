@@ -716,19 +716,22 @@ class Ensembler(object):
         else:
             self.logger.info("Using alignment file: {0}".format(alignment_file))
             
+        
+        truncate_dir = os.path.join(self.work_dir,"homolog_truncate")
+        if not os.path.isdir(truncate_dir): os.mkdir(truncate_dir)
+            
         # Now truncate and create ensembles - as standard ample, but with no subclustering
         self.ensembles = []
         self.ensembles_data = []
-        for truncated_models, truncated_models_data in zip(*self.truncate_models(std_models,
-                                                                                 truncation_method=truncation_method,
-                                                                                 truncation_pruning=None,
-                                                                                 percent_truncation=percent_truncation,
-                                                                                 homologs=True,
-                                                                                 alignment_file=alignment_file,
-                                                                                 work_dir=os.path.join(self.work_dir,"homolog_truncate"))):
+        for truncated_models, truncated_models_data, truncated_model_dir in zip(*self.truncate_models(std_models,
+                                                                                                      truncation_method=truncation_method,
+                                                                                                      truncation_pruning=None,
+                                                                                                      percent_truncation=percent_truncation,
+                                                                                                      homologs=True,
+                                                                                                      alignment_file=alignment_file,
+                                                                                                      work_dir=truncate_dir)):
             tlevel = truncated_models_data['truncation_level']
-            ensemble_dir = os.path.join(truncated_models_data['truncation_dir'],
-                                        "ensemble_{0}".format(tlevel))
+            ensemble_dir = os.path.join(truncated_model_dir, "ensemble_{0}".format(tlevel))
             os.mkdir(ensemble_dir)
             os.chdir(ensemble_dir)
              
@@ -742,8 +745,8 @@ class Ensembler(object):
              
             for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble,
                                                                       pre_ensemble_data,
-                                                                      self.ensembles_directory,
                                                                       side_chain_treatments,
+                                                                      self.ensembles_directory,
                                                                       homologs=True)):
                 self.ensembles.append(ensemble)
                 self.ensembles_data.append(ensemble_data)
