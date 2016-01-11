@@ -805,6 +805,7 @@ class Ample(object):
         amoptd_old['ample_log'] = amoptd['ample_log']
         amoptd_old['run_dir'] = amoptd['run_dir']
         amoptd_old['work_dir'] = amoptd['work_dir']
+        amoptd_old['benchmark_mode'] = amoptd['benchmark_mode']
         amoptd_old['benchmark_dir'] = os.path.join(amoptd['work_dir'], "benchmark")
         amoptd_old['results_path'] = os.path.join(amoptd['work_dir'],'resultsd.pkl')
         
@@ -851,6 +852,8 @@ class Ample(object):
         elif amoptd['frags_3mers'] and amoptd['frags_9mers']:
             logger.info('Restarting from existing fragments: {0}, {1}'.format(amoptd['frags_3mers'], amoptd['frags_9mers']))
             amoptd['make_models'] = True
+        
+        if amoptd['benchmark_mode']:  logger.info('Restart using benchmark mode')
             
         return amoptd
     
