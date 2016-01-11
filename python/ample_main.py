@@ -830,6 +830,14 @@ class Ample(object):
     #         res_sum = mrbump_results.ResultsSummary()
     #         res_sum.extractResults(amoptd['mrbump_dir'])
     #         amoptd['mrbump_results'] = res_sum.results
+        if amoptd['native_pdb']:
+            if not os.path.isfile(amoptd['native_pdb']):
+                msg = "Cannot find native_pdb: {0}".format(amoptd['native_pdb'])
+                logger.critical(msg)
+                raise RuntimeError(msg)
+            amoptd['benchmark_mode'] = True
+            logger.info('Restart using benchmark mode')
+    
         if 'mrbump_results' in amoptd and len(amoptd['mrbump_results']):
             # Check if any jobs are unfinished -we run in the old mrbump directory
             scripts = ample_mrbump.unfinished_scripts(amoptd)
@@ -853,8 +861,6 @@ class Ample(object):
             logger.info('Restarting from existing fragments: {0}, {1}'.format(amoptd['frags_3mers'], amoptd['frags_9mers']))
             amoptd['make_models'] = True
         
-        if amoptd['benchmark_mode']:  logger.info('Restart using benchmark mode')
-            
         return amoptd
     
     def process_rosetta_options(self, amoptd, logger):
