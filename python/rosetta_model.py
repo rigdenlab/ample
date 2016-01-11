@@ -691,6 +691,7 @@ class RosettaModel(object):
         # H-atoms are unlikely to be useful for our purposes.
         for i, remodelled_pdb in enumerate(pdbs):
             final_pdb = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
+            self.logger.debug("Stripping H atoms from remodelled pdb {0} to create final model: {1}".format(remodelled_pdb, final_pdb))
             pdb_edit.strip(remodelled_pdb, final_pdb, hydrogen=True)
         return
     
