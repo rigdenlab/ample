@@ -3,12 +3,12 @@
 import numpy
 
     
-def mean(self, data): 
+def mean(data): 
     return numpy.mean(data)
     
-def median(self, data): 
+def median(data): 
     return numpy.median(data)
 
-def variance(self, data): 
+def variance(data): 
     return numpy.var(data)
 
