@@ -43,6 +43,7 @@ class Ample(object):
     """
     def __init__(self):
         self.amopt = None
+        self.output_gui = None
         return
 
     def check_mandatory_options(self, amoptd):
@@ -931,7 +932,9 @@ class Ample(object):
         logger.info("Running in directory: {0}\n".format(amopt.d['work_dir']))
         
         # Display pyrvapi results
-        pyrvapi_results.display_results(amopt.d)
+        if pyrvapi_results.pyrvapi:
+            self.output_gui = pyrvapi_results.AmpleOutput()
+            self.output_gui.display_results(amopt.d)
         
         # Check mandatory/exclusive options
         self.check_mandatory_options(amopt.d)
@@ -963,9 +966,9 @@ class Ample(object):
         time_start = time.time()
     
         # Create function for monitoring jobs - static function decorator?
-        if pyrvapi_results.pyrvapi:
+        if self.output_gui:
             def monitor():
-                return pyrvapi_results.display_results(amopt.d)
+                return self.output_gui.display_results(amopt.d)
         else:
             monitor = None
     
@@ -1094,7 +1097,7 @@ class Ample(object):
                 ample_exit.exit_error(msg)
         
         # Update results view
-        pyrvapi_results.display_results(amopt.d)
+        if self.output_gui: self.output_gui.display_results(amopt.d)
          
         if amopt.d['do_mr']:
             if not amopt.d['mrbump_scripts']:
@@ -1122,12 +1125,12 @@ class Ample(object):
                                                                             ensemble_options=amopt.d['ensemble_options'],
                                                                             directory=bump_dir )
             # Create function for monitoring jobs - static function decorator?
-            if pyrvapi_results.pyrvapi:
+            if self.output_gui:
                 def monitor():
                     r = ample_mrbump.ResultsSummary()
                     r.extractResults(amopt.d['mrbump_dir'], purge=amopt.d['purge'])
                     amopt.d['mrbump_results'] = r.results
-                    return pyrvapi_results.display_results(amopt.d)
+                    return self.output_gui.display_results(amopt.d)
             else:
                 monitor = None
                 
@@ -1180,7 +1183,7 @@ class Ample(object):
         logger.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
         
         # Finally update pyrvapi results
-        pyrvapi_results.display_results(amopt.d)
+        if self.output_gui: self.output_gui.display_results(amopt.d)
         return
 
 if __name__ == "__main__":
