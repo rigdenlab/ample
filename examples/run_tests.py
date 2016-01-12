@@ -19,7 +19,8 @@ dirs = [
     'ideal-helices',
     'nmr.remodel',
     'nmr.truncate',
-    'toxd-example'
+    'toxd-example',
+    'toxd.contacts'
 ]
 
 # Any args that are to be added/updated
