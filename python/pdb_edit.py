@@ -1708,28 +1708,37 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
         f.write(hierachy.as_pdb_string(anisou=False))
     return
 
-def strip(pdbin, pdbout, hetatm=False, hydrogen=False):
-    assert hetatm or hydrogen,"Need to set what to strip!"
-    """Remove all hetatoms from pdbfile"""
-    hierachy=iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
-    _strip(hierachy, hetatm=hetatm, hydrogen=hydrogen)
-    hierachy.write_pdb_file(pdbout,anisou=False)
+def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
+    assert hetatm or hydrogen or atom_types,"Need to set what to strip!"
+    
+    pdb_input = iotbx.pdb.pdb_input(pdbin)
+    crystal_symmetry = pdb_input.crystal_symmetry()
+    
+    hierachy = pdb_input.construct_hierarchy()
+    _strip(hierachy, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)
+    
+    with open(pdbout,'w') as f:
+        f.write("REMARK Original file:\n")
+        f.write("REMARK   {0}\n".format(pdbin))
+        if (crystal_symmetry is not None) :
+            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
+                                                              write_scale_records=True)+"\n")
+        f.write(hierachy.as_pdb_string(anisou=False))
     return
 
-def _strip(hierachy, hetatm=False, hydrogen=False):
+def _strip(hierachy, hetatm=False, hydrogen=False, atom_types=[]):
     """Remove all hetatoms from pdbfile"""
+    
+    def remove_atom(atom, hetatm=False, hydrogen=False, atom_types=[]):
+        return (hetatm and atom.hetero) or (hydrogen and atom.element_is_hydrogen()) or atom.name.strip() in atom_types
+    
     for model in hierachy.models():
         for chain in model.chains():
             for residue_group in chain.residue_groups():
                 for atom_group in residue_group.atom_groups():
-                    # Can't use below as it uses indexes which change as we remove atoms
-                    # ag.atoms().extract_hetero()]
-                    if hetatm:
-                        todel=[a for a in atom_group.atoms() if a.hetero ]
-                        for a in todel: atom_group.remove_atom(a)     
-                    if hydrogen:
-                        todel=[a for a in atom_group.atoms() if a.element_is_hydrogen() ]
-                        for a in todel: atom_group.remove_atom(a)     
+                    to_del = [ a for a in atom_group.atoms() if remove_atom(a, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)]
+                    for atom in to_del:
+                        atom_group.remove_atom(atom)
     return
 
 def to_single_chain(inpath, outpath):
@@ -2050,7 +2059,7 @@ class Test(unittest.TestCase):
     
     def testStripHetatm(self):
         pdbin = os.path.join(self.testfiles_dir,"1BYZ.pdb")
-        pdbout='strip_test1.pdb'
+        pdbout='strip_het.pdb'
         hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
         _strip(hierachy, hetatm=True, hydrogen=False)
         hierachy.write_pdb_file(pdbout,anisou=False)
@@ -2062,13 +2071,25 @@ class Test(unittest.TestCase):
 
     def testStripHydrogen(self):
         pdbin = os.path.join(self.testfiles_dir,"1BYZ.pdb")
-        pdbout='strip_test2.pdb'
+        pdbout='strip_H.pdb'
         hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
         _strip(hierachy, hetatm=False, hydrogen=True)
         hierachy.write_pdb_file(pdbout,anisou=False)
         with open(pdbout) as f:
             got = any([ True for l in f.readlines() if l.startswith('ATOM')  and l[13] == 'H' ])
         self.assertFalse(got, "Found Hydrogens")
+        os.unlink(pdbout)
+        return
+    
+    def testStripAtomTypes(self):
+        pdbin = os.path.join(self.testfiles_dir,"1BYZ.pdb")
+        pdbout='strip_types.pdb'
+        hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+        _strip(hierachy, hetatm=False, hydrogen=False, atom_types=['CB'])
+        hierachy.write_pdb_file(pdbout,anisou=False)
+        with open(pdbout) as f:
+            got = any([ True for l in f.readlines() if l.startswith('ATOM')  and l[12:15].strip() == 'CB' ])
+        self.assertFalse(got, "Found Atom Types")
         os.unlink(pdbout)
         return
     
