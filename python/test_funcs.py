@@ -53,9 +53,6 @@ def load_module(mod_name, paths):
     
     try:
         test_module = imp.load_module(mod_name, mfile, pathname, desc)
-    except Exception as e:
-        print "Cannot load module: {0} - {1}".format(mod_name,e)
-        return None
     finally:
         mfile.close()
  
