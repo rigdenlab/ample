@@ -54,6 +54,8 @@ def create_ensembles(amoptd):
             ensembler.subcluster_exe = amoptd['maxcluster_exe']
         elif amoptd['subcluster_program'] == 'lsqkab':
             ensembler.subcluster_exe = ensembler.lsqkab_exe
+        else:
+            raise RuntimeError('Unrecognised subcluster_program: {0}'.format(amoptd['subcluster_program']))
         
     ensembler.max_ensemble_models = amoptd['max_ensemble_models']
     if amoptd['cluster_method'] == 'spicker' or amoptd['cluster_method'] == 'spicker_qscore':

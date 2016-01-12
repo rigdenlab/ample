@@ -427,7 +427,7 @@ class Ensembler(object):
                 #shutil.copy(self.score_matrix, os.path.join(spicker_rundir,'score.matrix'))
                 clusterer = subcluster.GesamtClusterer(executable = self.gesamt_exe)
                 clusterer.generate_distance_matrix(models)
-                clusterer.dump_pdb_matrix(os.path.join(spicker_rundir,'score.matrix'))
+                clusterer.dump_pdb_matrix()
                 
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
             spickerer.cluster(models, run_dir=spicker_rundir)
