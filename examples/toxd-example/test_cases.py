@@ -56,11 +56,12 @@ test_dict['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
 
 ###############################################################################
 #
-# test from pre-existing models
+# test from pre-existing models (also used as an opportunity to test the benchmark mode)
 #
 ###############################################################################
 args_from_existing_models = args_vanilla + [
-    [ '-models', '../../tests/testfiles/models' ]
+    [ '-models', '../../tests/testfiles/models' ],
+    [ '-native_pdb', '1DTX.pdb' ],                                         
 ]
 
 
@@ -72,8 +73,9 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         self.assertEqual(nensembles, 12, "Incorrect number of ensembles produced: {0}".format(nensembles))
         self.assertIn('mrbump_results', self.AMPLE_DICT)
         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
-        self.assertTrue(self.AMPLE_DICT['success'])
+        self.assertTrue(self.AMPLE_DICT['success'],"Job did not succeed")
         self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        self.assertTrue(os.path.isfile(os.path.join(self.AMPLE_DICT['benchmark'],'results.csv')),"Missing benchmark results.csv")
         return
         
 test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
@@ -83,24 +85,22 @@ test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
 
 ###############################################################################
 #
-# test from quark models (also used as an opportunity to test the benchmark mode)
+# test from quark models 
 #
 ###############################################################################
 args_from_quark_models = args_vanilla + [
     [ '-models', '../../tests/testfiles/decoys_200.tar.gz'],
-    [ '-native_pdb', '1DTX.pdb' ]                                         
+    [ '-do_mr', 'False' ]                                         
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
 class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_from_quark_models(self):
+        nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
+        self.assertEqual(nmodels, 200, "Only {0} models produced".format(nmodels))
         self.assertIn('ensembles', self.AMPLE_DICT)
         nensembles = len(self.AMPLE_DICT['ensembles'])
         self.assertEqual(nensembles, 18, "Incorrect number of ensembles produced: {0}".format(nensembles))
-        self.assertIn('mrbump_results', self.AMPLE_DICT)
-        self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
-        self.assertTrue(self.AMPLE_DICT['success'])
-        self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
         return
          
 test_dict['from_quark_models'] = { 'args' : args_from_quark_models,
