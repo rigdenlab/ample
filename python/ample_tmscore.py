@@ -250,31 +250,27 @@ class TestTMScore(unittest.TestCase):
 if __name__ == "__main__":
     # Check whether we can import BioPython
     if not _BIOPYTHON: sys.exit("Upgrade to CCP4 version 7.0 or greater to use this script")
-
     import ample_statistics     # Only need this here
 
     parser = argparse.ArgumentParser()
-    #parser.add_argument('-score', metavar='[ tm | maxsub | gdtts | gdtha ]',
-    #                    type=str, default='tm', help='The score to extract [default: tm]')
-    parser.add_argument("structure")
-    parser.add_argument("pdb_list_file")
-    parser.add_argument("tmscore")
-    parser.add_argument("-wdir", type=str, default=os.getcwd())
+    parser.add_argument("--identical", dest="identical", action="store_true", default=False,
+                        help="reference structure and models have identical sequences (default: False)")
+    parser.add_argument("--keep", dest="keep", action="store_true", default=False,
+                        help="keep intermediate structures (default: False)")
+    parser.add_argument("structure",
+                        help="reference structure")
+    parser.add_argument("pdb_list_file",
+                        help="list containing model structures")
+    parser.add_argument("tmscore",
+                        help="TMscore binary")
+    parser.add_argument("-d", dest="wdir", type=str, default=os.getcwd(),
+                        help="working directory")
     args = parser.parse_args()
-
-    #assert args.score in ["tm", "maxsub", "gdtts", "gdtha", "rmsd"], "Unknown score %s" % args.score
 
     t = TMscorer(os.path.abspath(args.structure), os.path.abspath(args.tmscore),
                 os.path.abspath(args.wdir))
-    t.main(args.pdb_list_file, keep_modified_structures=False, identical_sequences=True)
+    t.main(args.pdb_list_file, keep_modified_structures=args.keep, identical_sequences=args.identical)
     
     tmscores = [ i.tm for i in t.entries ] 
-    print "Median TMscores: {0}".format(ample_statistics.median(tmscores))
-    print "Mean TMscores:   {0}".format(ample_statistics.mean(tmscores))
-    
-    #pkl_file = t.pickle_file
-
-    #s = Statistics(pkl_file, os.path.abspath(args.pdb_list_file))
-    #s.main(args.score)
-    #print "Mean", s.mean
-    #print "Median", s.median
+    print "Median TM-score: {0}".format(round(ample_statistics.median(tmscores), 3))
+    print "Mean   TM-score: {0}".format(round(ample_statistics.mean(tmscores), 3))
