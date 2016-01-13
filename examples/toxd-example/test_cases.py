@@ -22,37 +22,38 @@ args_vanilla = [
     [ '-percent', '50' ]
 ]
 
-###############################################################################
-#
-# Making models
-#
-###############################################################################
+if not sys.platform.startswith('win'):
+    ###############################################################################
+    #
+    # Making models
+    #
+    ###############################################################################
 
-args_rosetta_modelling = args_vanilla + [
-    [ '-rosetta_dir', '/opt/rosetta-3.5' ],
-    [ '-frags_3mers', 'aat000_03_05.200_v1_3' ],
-    [ '-frags_9mers', 'aat000_09_05.200_v1_3' ],
-    [ '-nmodels', '40']
-]
-
-# Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-class AMPLETest(test_funcs.AMPLEBaseTest):
-    def test_rosetta_modelling(self):
-        self.assertIn('models_dir', self.AMPLE_DICT)
-        nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
-        self.assertEqual(nmodels, 40, "Only {0} models produced".format(nmodels))
-        self.assertIn('ensembles', self.AMPLE_DICT)
-        self.assertGreater(len(self.AMPLE_DICT['ensembles']), 0, "No ensembles produced")
-        self.assertIn('mrbump_results', self.AMPLE_DICT)
-        self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
-        self.assertTrue(self.AMPLE_DICT['success'])
-        self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
-        return
-        
-test_dict['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
-                                   'test' :  AMPLETest,
-                                   'directory' : os.path.abspath(os.path.dirname(__file__))
-                                    }
+    args_rosetta_modelling = args_vanilla + [
+        [ '-rosetta_dir', '/opt/rosetta-3.5' ],
+        [ '-frags_3mers', 'aat000_03_05.200_v1_3' ],
+        [ '-frags_9mers', 'aat000_09_05.200_v1_3' ],
+        [ '-nmodels', '40']
+    ]
+    
+    # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
+    class AMPLETest(test_funcs.AMPLEBaseTest):
+        def test_rosetta_modelling(self):
+            self.assertIn('models_dir', self.AMPLE_DICT)
+            nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
+            self.assertEqual(nmodels, 40, "Only {0} models produced".format(nmodels))
+            self.assertIn('ensembles', self.AMPLE_DICT)
+            self.assertGreater(len(self.AMPLE_DICT['ensembles']), 0, "No ensembles produced")
+            self.assertIn('mrbump_results', self.AMPLE_DICT)
+            self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
+            self.assertTrue(self.AMPLE_DICT['success'])
+            self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+            return
+            
+    test_dict['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
+                                       'test' :  AMPLETest,
+                                       'directory' : os.path.abspath(os.path.dirname(__file__))
+                                        }
 
 ###############################################################################
 #
