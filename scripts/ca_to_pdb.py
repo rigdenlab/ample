@@ -1,6 +1,7 @@
 #!/usr/bin/env ccp4-python
 
 import glob
+import logging
 import os
 import sys
 sys.path.append('/opt/ample-dev1/python')
@@ -16,7 +17,8 @@ def add_sidechains_pulchra(pdbin, pdbout):
     pulchra_exe = '/media/data/shared/TM/quark_models/pulchra_3.06/pulchra.pl'
     
     # The pdb file that pulchra will produce
-    pulchra_pdb = 'center_' + os.path.splitext(os.path.basename(pdbout))[0] + '.rebuilt.pdb'
+    #pulchra_pdb = 'center_' + os.path.splitext(os.path.basename(pdbout))[0] + '.rebuilt.pdb'
+    pulchra_pdb = 'pul_' + pdbin
     cmd = [ pulchra_exe, pdbin ]
     logfile = 'pulchra.log'
     rtn = ample_util.run_command(cmd, logfile=logfile)
@@ -90,15 +92,20 @@ def read_tra(tra_file):
                 coords.append([])
     return coords
 
+#logging.basicConfig(level=logging.DEBUG)
 scwrl_exe = '/opt/scwrl4/Scwrl4'
 SCWRL = ample_scwrl.Scwrl(scwrl_exe)
 
+start_dir = os.path.abspath(os.getcwd())
 root = '/media/data/shared/TM/quark_models/QUARK_orig'
 for pdb_code in  ['1GU8', '2BHW' ,'2BL2', '2EVU', '2O9G', '2UUI', '2WIE', '2X2V',
                   '2XOV', '3GD8', '3HAP', '3LDC', '3OUF', '3PCV', '3RLB', '3U2F', '4DVE']:
+#for pdb_code in  ['1GU8']:
     
-    if not os.path.isdir(pdb_code): os.mkdir(pdb_code)
-    os.chdir(pdb_code)
+    print("Processing pdb {0}".format(pdb_code))
+    directory = os.path.join(start_dir,pdb_code)
+    if not os.path.isdir(directory): os.mkdir(directory)
+    os.chdir(directory)
     
     if pdb_code == ' 3U2F': chain = 'K'
     else: chain = 'A'
@@ -108,27 +115,29 @@ for pdb_code in  ['1GU8', '2BHW' ,'2BL2', '2EVU', '2O9G', '2UUI', '2WIE', '2X2V'
     AS = ample_sequence.Sequence(fasta=fasta_file)
     sequence = AS.sequences[0]
     for idx_tra, tra_file in enumerate(glob.glob(os.path.join(root,"{0}{1}".format(pdb_code,chain),'rep*.tra*'))):
+        print("Processing tra_file {0}".format(tra_file))
         coord_list = read_tra(tra_file)
         for idx_coord, coords in enumerate(coord_list):
+            print("Processing coords {0}".format(idx_coord))
             assert len(sequence) == len(coords)
             count += 1
             pdbca = "{0}{1}_{2}.pdb".format(pdb_code, chain, count)
             if not pdb_from_ca(coords, sequence, pdbca):
                 raise RuntimeError("Error processing tra_file {0} count {1}".format(tra_file, count))
+            #print("Wrote file {0}".format(pdbca))
         
             pdb_side = ample_util.filename_append(pdbca,"pulchra")
             if not add_sidechains_pulchra(pdbca, pdb_side):
                 print "Failed to add pulchra sidechains for tra_file {0} count {1}".format(tra_file, count)
                 pdb_side = ample_util.filename_append(pdbca,"maxsprout")
                 if not add_sidechains_maxsprout(pdbca, pdb_side):
-                    print "Failed to add maxsprout sidechains for tra_file {0} count {1}".format(tra_file, count)
+                    print "*** Failed to add maxsprout sidechains for tra_file {0} count {1}".format(tra_file, count)
                     continue
             
             # Now add sidechains with SCWRL
             pdbout = ample_util.filename_append(pdb_side,"scwrl")
             SCWRL.add_sidechains(pdbin=pdb_side, pdbout=pdbout, hydrogens=False, strip_oxt=False)
-            
-            
+            #print("Wrote scwrl file {0}".format(pdbout))
             
 
 
