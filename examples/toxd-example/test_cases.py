@@ -75,7 +75,7 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
         self.assertTrue(self.AMPLE_DICT['success'],"Job did not succeed")
         self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
-        self.assertTrue(os.path.isfile(os.path.join(self.AMPLE_DICT['benchmark'],'results.csv')),"Missing benchmark results.csv")
+        self.assertTrue(os.path.isfile(os.path.join(self.AMPLE_DICT['benchmark_dir'],'results.csv')),"Missing benchmark results.csv")
         return
         
 test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
