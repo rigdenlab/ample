@@ -2186,6 +2186,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Manipulate PDB files', prefix_chars="-")
     
     group = parser.add_mutually_exclusive_group()
+    group.add_argument('-ren', action='store_true',
+                       help="Renumber the PDB")
     group.add_argument('-std', action='store_true',
                        help='Standardise the PDB')
     group.add_argument('-seq', action='store_true',
@@ -2194,7 +2196,7 @@ if __name__ == "__main__":
                        help='Split a pdb into constituent models')
     group.add_argument('-split_chains', action='store_true',
                        help='Split a pdb into constituent chains')
-    parser.add_argument('input_file', nargs='?',
+    parser.add_argument('input_file', #nargs='?',
                        help='The input file - will not be altered')
     parser.add_argument('-o', dest='output_file',
                        help='The output file - will be created')
@@ -2219,7 +2221,9 @@ if __name__ == "__main__":
         n = os.path.splitext( os.path.basename(args.input_file))[0]
         args.output_file = n+"_std.pdb"
 
-    if args.std:
+    if args.ren:
+        renumber_residues(args.input_file, args.output_file, start=1)
+    elif args.std:
         standardise(args.input_file, args.output_file, del_hetatm=True, chain=args.chain)
     elif args.seq:
         print ample_sequence.Sequence(pdb=args.input_file).fasta_str()
