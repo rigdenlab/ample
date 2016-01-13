@@ -138,7 +138,19 @@ ccc
       dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
 
       logical read_score
-      read_score = .TRUE.
+      read_score = .FALSE.
+
+**********************************************************************
+****  check if we are reading a score matrix or processing rmsds
+**********************************************************************
+      inquire(file='score.matrix',exist=read_score)
+      if (read_score) then
+          write(*,*)"Scores will be read from file: score.matrix"
+      else
+          write(*,*)"Calculating RMSD scores"
+      endif
+
+**********************************************************************
 
 **********************************************************************
 ****  input:
