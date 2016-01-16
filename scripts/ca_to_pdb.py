@@ -50,6 +50,29 @@ def add_sidechains_maxsprout(pdbin, pdbout):
     
     return pdbout
 
+def coord_to_pdb(coords, sequence, coord_id, clean=True):
+    assert len(sequence) == len(coords)
+    pdbca = "{0}.pdb".format(coord_id)
+    if not pdb_from_ca(coords, sequence, pdbca):
+        raise RuntimeError("Error processing coords {0}".format(coord_id))
+    #print("Wrote file {0}".format(pdbca))
+    
+    pdb_side = ample_util.filename_append(pdbca,"pulchra")
+    if not add_sidechains_pulchra(pdbca, pdb_side):
+        print "Failed to add pulchra sidechains for coord {0}".format(coord_id)
+        pdb_side = ample_util.filename_append(pdbca,"maxsprout")
+        if not add_sidechains_maxsprout(pdbca, pdb_side):
+            print "*** Failed to add maxsprout sidechains for coord {0}".format(coord_id)
+            return None
+    
+    # Now add sidechains with SCWRL
+    pdbout = ample_util.filename_append(pdb_side,"scwrl")
+    SCWRL.add_sidechains(pdbin=pdb_side, pdbout=pdbout, hydrogens=False, strip_oxt=False)
+    
+    if clean: map(os.unlink,[pdbca, pdb_side])
+    
+    return pdbout
+
 def pdb_from_ca(coords, sequence, pdbout):
     root = iotbx.pdb.hierarchy.root()
     model = iotbx.pdb.hierarchy.model()
@@ -98,9 +121,11 @@ SCWRL = ample_scwrl.Scwrl(scwrl_exe)
 
 start_dir = os.path.abspath(os.getcwd())
 root = '/media/data/shared/TM/quark_models/QUARK_orig'
-for pdb_code in  ['1GU8', '2BHW' ,'2BL2', '2EVU', '2O9G', '2UUI', '2WIE', '2X2V',
-                  '2XOV', '3GD8', '3HAP', '3LDC', '3OUF', '3PCV', '3RLB', '3U2F', '4DVE']:
-#for pdb_code in  ['1GU8']:
+#for pdb_code in  ['1GU8', '2BHW' ,'2BL2', '2EVU', '2O9G', '2UUI', '2WIE', '2X2V',
+#                  '2XOV', '3GD8', '3HAP', '3LDC', '3OUF', '3PCV', '3RLB', '3U2F', '4DVE']:
+
+NUM_MODELS = 5000
+for pdb_code in  ['1GU8']:
     
     print("Processing pdb {0}".format(pdb_code))
     directory = os.path.join(start_dir,pdb_code)
@@ -114,31 +139,30 @@ for pdb_code in  ['1GU8', '2BHW' ,'2BL2', '2EVU', '2O9G', '2UUI', '2WIE', '2X2V'
     fasta_file = os.path.join('/media/data/shared/TM/tm_data',pdb_code,"{0}.fasta".format(pdb_code))
     AS = ample_sequence.Sequence(fasta=fasta_file)
     sequence = AS.sequences[0]
+    
+    # Loop through all trajectory files and get a list of all coordinates
+    coords = []
     for idx_tra, tra_file in enumerate(glob.glob(os.path.join(root,"{0}{1}".format(pdb_code,chain),'rep*.tra*'))):
         print("Processing tra_file {0}".format(tra_file))
-        coord_list = read_tra(tra_file)
-        for idx_coord, coords in enumerate(coord_list):
-            print("Processing coords {0}".format(idx_coord))
-            assert len(sequence) == len(coords)
-            count += 1
-            pdbca = "{0}{1}_{2}.pdb".format(pdb_code, chain, count)
-            if not pdb_from_ca(coords, sequence, pdbca):
-                raise RuntimeError("Error processing tra_file {0} count {1}".format(tra_file, count))
-            #print("Wrote file {0}".format(pdbca))
-        
-            pdb_side = ample_util.filename_append(pdbca,"pulchra")
-            if not add_sidechains_pulchra(pdbca, pdb_side):
-                print "Failed to add pulchra sidechains for tra_file {0} count {1}".format(tra_file, count)
-                pdb_side = ample_util.filename_append(pdbca,"maxsprout")
-                if not add_sidechains_maxsprout(pdbca, pdb_side):
-                    print "*** Failed to add maxsprout sidechains for tra_file {0} count {1}".format(tra_file, count)
-                    continue
+        coords += read_tra(tra_file)
+    
+    # Work out stride so that we end up with 5000 models
+    ncoords = len(coords)
+    #stride = int(round( float(ncoords) / float(5000) ))
+    stride = ncoords / NUM_MODELS
+    
+    count = 0
+    for i in range(0, ncoords, stride):
+        coord_id = "{0}{1}_{2}".format(pdb_code, chain, i)
+        print "Making pdb ",coord_id
+        coord_to_pdb(coords[i], sequence, coord_id, clean=True)
+        count += 1
+        if count >= NUM_MODELS: break
+
+    
             
-            # Now add sidechains with SCWRL
-            pdbout = ample_util.filename_append(pdb_side,"scwrl")
-            SCWRL.add_sidechains(pdbin=pdb_side, pdbout=pdbout, hydrogens=False, strip_oxt=False)
-            #print("Wrote scwrl file {0}".format(pdbout))
-            
+
+
 
 """
 Old code from unpack_quark.py
