@@ -11,7 +11,6 @@ import argparse
 import collections
 import logging
 import os
-import pickle
 import sys
 import tempfile
 import unittest
@@ -37,12 +36,12 @@ except ImportError:
     _BIOPYTHON = False
 
 
+TMScoreModel = collections.namedtuple("TMScoreModel", 
+                                      ["name", "pdbin", "TMSCORE_log", "structure", 
+                                      "tm", "maxsub", "gdtts", "gdtha", "rmsd", 
+                                      "nrResiduesCommon"])
+
 class TMscorer(object):
-    
-    _TMSCORE_DATA_FACTORY = collections.namedtuple("Model", 
-                                                   ["name", "pdbin", "TMSCORE_log", "structure", 
-                                                    "tm", "maxsub", "gdtts", "gdtha", "rmsd", 
-                                                    "nrResiduesCommon"])
     
     def __init__(self, structure, tmscore_exe, wdir=None):
         self.logger = logging.getLogger()
@@ -199,11 +198,11 @@ class TMscorer(object):
         return [ l.strip() for l in open(list_file, 'r') ]
     
     def _store(self, name, pdbin, logfile, structure, pt):
-        return self._TMSCORE_DATA_FACTORY(name=name, pdbin=pdbin, 
-                                          TMSCORE_log=logfile, structure=structure, 
-                                          tm=pt.tm, maxsub=pt.maxsub, gdtts=pt.gdtts,
-                                          gdtha=pt.gdtha, rmsd=pt.rmsd,
-                                          nrResiduesCommon=pt.nrResiduesCommon)
+        return TMScoreModel(name=name, pdbin=pdbin, 
+                           TMSCORE_log=logfile, structure=structure, 
+                           tm=pt.tm, maxsub=pt.maxsub, gdtts=pt.gdtts,
+                           gdtha=pt.gdtha, rmsd=pt.rmsd,
+                           nrResiduesCommon=pt.nrResiduesCommon)
 
 
 class TestTMScore(unittest.TestCase):
