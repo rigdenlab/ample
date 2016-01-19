@@ -632,7 +632,7 @@ class Ensembler(object):
             if use_scwrl:
                 scwrl_directory = os.path.join(truncate_dir,"scrwl")
                 if not os.path.isdir(scwrl_directory): os.mkdir(scwrl_directory)
-                cluster_models = ample_scwrl.Scwrl(scwrl_exe=self.scwrl_exe).process_models(cluster_models, scwrl_directory)
+                cluster_models = ample_scwrl.Scwrl(scwrl_exe=self.scwrl_exe).process_models(cluster_models, scwrl_directory, strip_oxt=True)
                 
             for truncated_models, truncated_models_data, truncated_models_dir in zip(*self.truncate_models(cluster_models,
                                                                                      cluster_data,

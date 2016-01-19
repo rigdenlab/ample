@@ -18,7 +18,7 @@ class Scwrl( object ):
         self.scwrl_exe = scwrl_exe
         return
     
-    def add_sidechains(self, pdbin=None, pdbout=None, sequence=None, hydrogens=False, strip_oxt=True):
+    def add_sidechains(self, pdbin=None, pdbout=None, sequence=None, hydrogens=False, strip_oxt=False):
         """Add the specified sidechains to the pdb"""
         
         _pdbout = pdbout
@@ -52,12 +52,12 @@ class Scwrl( object ):
             
         return os.path.abspath(pdbout)
     
-    def process_directory(self, in_dir, out_dir, strip_oxt=True, prefix="scwrl" ):
+    def process_directory(self, in_dir, out_dir, strip_oxt=False, prefix="scwrl" ):
         logging.info('Adding sidechains with SCWRL to models in directory: {0}'.format(in_dir))
         self.process_models(glob.glob( os.path.join( in_dir, '*.pdb') ), out_dir, strip_oxt=strip_oxt, prefix=prefix)
         return
     
-    def process_models(self, models, out_dir, strip_oxt=True, prefix="scwrl"):
+    def process_models(self, models, out_dir, strip_oxt=False, prefix="scwrl"):
         logging.info('Adding sidechains with SCWRL to models')
         out_pdbs = []
         for i, pdb in enumerate(models):
