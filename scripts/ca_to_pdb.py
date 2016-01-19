@@ -119,21 +119,19 @@ def read_tra(tra_file):
 scwrl_exe = '/opt/scwrl4/Scwrl4'
 SCWRL = ample_scwrl.Scwrl(scwrl_exe)
 
+NUM_MODELS = 5000
 start_dir = os.path.abspath(os.getcwd())
 root = '/media/data/shared/TM/quark_models/QUARK_orig'
-#for pdb_code in  ['1GU8', '2BHW' ,'2BL2', '2EVU', '2O9G', '2UUI', '2WIE', '2X2V',
-#                  '2XOV', '3GD8', '3HAP', '3LDC', '3OUF', '3PCV', '3RLB', '3U2F', '4DVE']:
-
-NUM_MODELS = 5000
-for pdb_code in  ['1GU8']:
+for pdb_code in  ['1GU8', '2BHW' ,'2BL2', '2EVU', '2O9G', '2UUI', '2WIE', '2X2V',
+                  '2XOV', '3GD8', '3HAP', '3LDC', '3OUF', '3PCV', '3RLB', '3U2F', '4DVE']:
     
     print("Processing pdb {0}".format(pdb_code))
     directory = os.path.join(start_dir,pdb_code)
     if not os.path.isdir(directory): os.mkdir(directory)
     os.chdir(directory)
     
-    if pdb_code == ' 3U2F': chain = 'K'
-    else: chain = 'A'
+    chain = 'A'
+    if pdb_code == '3U2F': chain = 'K'
     
     count = 0
     fasta_file = os.path.join('/media/data/shared/TM/tm_data',pdb_code,"{0}.fasta".format(pdb_code))
