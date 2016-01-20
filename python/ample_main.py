@@ -28,7 +28,7 @@ import ample_exit
 import ample_options
 import ample_sequence
 import ample_util
-import benchmark
+import ample_benchmark
 import ensemble
 import mtz_util
 import pdb_edit
@@ -1186,8 +1186,26 @@ class Ample(object):
         
         # Benchmark mode
         if amopt.d['benchmark_mode']:
-            benchmark.analyse(amopt.d)
-            ample_util.saveAmoptd(amopt.d)
+            if amopt.d['submit_cluster']:
+                # Pickle dictionary so it can be opened by the job to get the parameters
+                ample_util.saveAmoptd(amopt.d)
+                script = ample_benchmark.cluster_script(amopt.d)
+                workers.run_scripts(job_scripts=[script],
+                                    monitor=monitor,
+                                    chdir=True,
+                                    nproc=amopt.d['nproc'],
+                                    job_time=7200,
+                                    job_name='benchmark',
+                                    submit_cluster=amopt.d['submit_cluster'],
+                                    submit_qtype=amopt.d['submit_qtype'],
+                                    submit_queue=amopt.d['submit_queue'],
+                                    submit_array=amopt.d['submit_array'],
+                                    submit_max_array=amopt.d['submit_max_array'])
+                # queue finished so unpickle results
+                with open(amopt.d['results_path'], "r") as f: amopt.d = cPickle.load(f)
+            else:
+                ample_benchmark.analyse(amopt.d)
+                ample_util.saveAmoptd(amopt.d)
         
         logger.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
         
