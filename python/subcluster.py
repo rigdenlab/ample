@@ -22,6 +22,8 @@ _logger = logging.getLogger()
 
 SCORE_MATRIX_NAME = 'score.matrix'
 FILE_LIST_NAME = 'files.list'
+RMSD_MAX = 50
+QSCORE_MIN = 0.01
 
 class SubClusterer(object):
     """Base class for clustering pdbs by distance
@@ -184,7 +186,7 @@ class FpcClusterer(SubClusterer):
 class GesamtClusterer(SubClusterer):
     """Class to cluster files with Gesamt"""
     
-    def generate_distance_matrix(self, models, purge=True, purge_all=False, metric='qscore'):
+    def generate_distance_matrix(self, models, purge=True, purge_all=False, metric='qscore', nproc=1):
         # Make sure all the files are in the same directory otherwise we wont' work
         mdir = os.path.dirname(models[0])
         if not all([ os.path.dirname(p) == mdir for p in models ]):
@@ -204,7 +206,8 @@ class GesamtClusterer(SubClusterer):
         if not os.path.isdir(garchive): os.mkdir(garchive)
         logfile = os.path.abspath('gesamt_archive.log')
         cmd = [ self.executable, '--make-archive', garchive, '-pdb', mdir ]
-        cmd += [ '-nthreads=auto' ]
+        #cmd += [ '-nthreads=auto' ]
+        cmd += [ '-nthreads={0}'.format(nproc) ]
         # HACK FOR DYLD!!!!
         env = None
         #env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4-devtools/install/lib'}
@@ -226,7 +229,7 @@ class GesamtClusterer(SubClusterer):
             gesamt_out = '{0}_gesamt.out'.format(mname)
             logfile = '{0}_gesamt.log'.format(mname)
             cmd = [ self.executable, model, '-archive', garchive, '-o', gesamt_out ]
-            cmd += [ '-nthreads=auto' ]
+            cmd += [ '-nthreads={0}'.format(nproc) ]
             rtn = ample_util.run_command(cmd, logfile)
             if rtn != 0: raise RuntimeError("Error running gesamt!")
             else:
@@ -237,11 +240,19 @@ class GesamtClusterer(SubClusterer):
             score_dict = { g.file_name: (g.rmsd, g.q_score) for g in gdata  }
             
             for j in range(i + 1, nmodels):
+                # Try and get the rmsd and qscore for this model. If it's missing we assume the model was 
+                # too divergent for gesamt to find it and we set the rmsd and qscore to fixed values
                 model2 = os.path.basename(models[j])
+                try:
+                    rmsd, qscore = score_dict[model2]
+                except KeyError:
+                    rmsd = RMSD_MAX
+                    qscore = QSCORE_MIN
+                
                 if metric == 'rmsd':
-                    score = score_dict[model2][0]
+                    score = rmsd
                 elif metric == 'qscore':
-                    score = score_dict[model2][1]
+                    score = qscore
                 else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
                 
                 m[i][j] = score
