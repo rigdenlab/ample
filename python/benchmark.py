@@ -11,6 +11,7 @@ import glob
 import logging
 import os
 import shutil
+import sys
 import unittest
 
 # Our imports
@@ -29,12 +30,7 @@ _logger=logging.getLogger()
 _oldroot=None
 _newroot=None
 
-def fixpath(path):
-    # fix for analysing on a different machine
-    if _oldroot and _newroot:
-        return os.path.join(_newroot,path[len(_oldroot)+1:])
-    else:
-        return path
+
 
 def analyse(amoptd, newroot=None):
     if newroot:
@@ -130,142 +126,21 @@ def analyse(amoptd, newroot=None):
     amoptd['benchmark_results']=data
     return
 
-def writeCsv(fileName,resultList):
-    
-    # List of all the keys we want to write out in order
-    keylist= [
-                'ample_version',
-                
-                # Native info
-                'native_pdb_code',
-                'native_pdb_title',
-                'native_pdb_resolution',
-                'native_pdb_solvent_content',
-                'native_pdb_space_group',
-                'native_pdb_num_atoms',
-                'native_pdb_num_residues',
-                'native_pdb_num_chains',
-                
-                # Get the ensemble data and add to the MRBUMP data
-                'ensemble_name',
-                'ensemble_percent_model',
-                'ensemble_native_TM',
-                'ensemble_native_RMSD',
-                
-                # cluster info
-                'cluster_method',
-                'num_clusters',
-                'cluster_num',
-                'cluster_centroid',
-                'cluster_num_models',
-                
-                # truncation info
-                'truncation_level',
-                'percent_truncation',
-                'truncation_method',
-                'truncation_pruning',
-                'truncation_variance',
-                'num_residues',
-                'pruned_residues',
-                
-                # subclustering info
-                'subcluster_num_models',
-                'subcluster_radius_threshold',
-                'subcluster_centroid_model',
-                
-                # ensemble info
-                #'name',
-                'side_chain_treatment',
-                'ensemble_num_atoms',
-                
-                # MR result info
-                #'name',
-                'MR_program',
-                'Solution_Type',
-                
-                'PHASER_LLG',
-                'PHASER_TFZ',
-                'PHASER_RFZ',
-                'PHASER_time',
-                'PHASER_killed',
-                'PHASER_version',
-                'PHASER_errors',
-                
-                'MOLREP_score',
-                'MOLREP_time',
-                'MOLREP_version',
-                
-                'REFMAC_Rfact',
-                'REFMAC_Rfree',
-                'REFMAC_version',
-                
-                'BUCC_final_Rfact',
-                'BUCC_final_Rfree',
-                'BUCC_version',
-                
-                'ARP_final_Rfact',
-                'ARP_final_Rfree',
-                'ARP_version',
-                
-                'SHELXE_CC',
-                'SHELXE_ACL',
-                'SHELXE_MCL',
-                'SHELXE_NC',
-                'SHELXE_wMPE',
-                'SHELXE_os',
-                'SHELXE_time',
-                'SHELXE_version',
-                
-                'SXRBUCC_version',
-                'SXRBUCC_final_Rfact',
-                'SXRBUCC_final_Rfree',
-                
-                'SXRARP_version',
-                'SXRARP_final_Rfact',
-                'SXRARP_final_Rfree',
-                
-                'num_placed_atoms',
-                'reforigin_RMSD',
-                
-                'AA_num_contacts',
-                'RIO_num_contacts',
-                'RIO_in_register',
-                'RIO_oo_register',
-                'RIO_backwards',
-                'RIO',
-                'RIO_no_cat',
-                'RIO_norm'
-    
-    ]
-    
-    #for d in resultList:
-    #    for k in sorted(d.keys()):
-    #        print "GOT ",k,d[k]
-    
-    with open(fileName,'wb') as csvfile:
-        csvfile.write(",".join(keylist)+"\n")
-        for d in resultList:
-            #csvfile.write(",".join([d[k] for k in keylist]+"\n"))
-            values=[]
-            for k in keylist:
-                if k in d and d[k] is not None:
-                    values.append(str(d[k]).replace(",","^"))
-                else:
-                    values.append("N/A")
-            csvfile.write(",".join(values)+"\n")
-        csvfile.write("\n")
+def cluster_script(amoptd, python_path="ccp4-python"):
+    """Create the script for benchmarking on a cluster"""
+    # write out script
+    work_dir = amoptd['work_dir']
+    script_path = os.path.join(work_dir, "submit_benchmark.sh")
+    with open(script_path, "w") as job_script:
+        job_script.write("#!/bin/sh\n")
+        # Find path to this directory to get path to python ensemble.py script
+        pydir = os.path.abspath(os.path.dirname(__file__))
+        benchmark_script = os.path.join(pydir, "ample_benchmark.py")
+        job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", benchmark_script, amoptd['results_path']))
 
-# Doesnt' seem to work       
-#         csvwriter=csv.DictWriter(csvfile,
-#                                  fieldnames=keylist,
-#                                  extrasaction='ignore',
-#                                  restval='N/A',
-#                                  delimiter=',',
-#                                  quotechar='"',
-#                                  quoting=csv.QUOTE_MINIMAL)
-#         csvwriter.writeheader()
-#         csvwriter.writerows(resultList)
-    return
+    # Make executable
+    os.chmod(script_path, 0o777)
+    return script_path
     
 def analyseSolution(amoptd,d):
 
@@ -495,6 +370,150 @@ def analyseSS(amoptd):
     dsspP = dssp.DsspParser( dsspLog )
     return
 
+def fixpath(path):
+    # fix for analysing on a different machine
+    if _oldroot and _newroot:
+        return os.path.join(_newroot,path[len(_oldroot)+1:])
+    else:
+        return path
+
+def writeCsv(fileName,resultList):
+    
+    # List of all the keys we want to write out in order
+    keylist= [
+                'ample_version',
+                
+                # Native info
+                'native_pdb_code',
+                'native_pdb_title',
+                'native_pdb_resolution',
+                'native_pdb_solvent_content',
+                'native_pdb_space_group',
+                'native_pdb_num_atoms',
+                'native_pdb_num_residues',
+                'native_pdb_num_chains',
+                
+                # Get the ensemble data and add to the MRBUMP data
+                'ensemble_name',
+                'ensemble_percent_model',
+                'ensemble_native_TM',
+                'ensemble_native_RMSD',
+                
+                # cluster info
+                'cluster_method',
+                'num_clusters',
+                'cluster_num',
+                'cluster_centroid',
+                'cluster_num_models',
+                
+                # truncation info
+                'truncation_level',
+                'percent_truncation',
+                'truncation_method',
+                'truncation_pruning',
+                'truncation_variance',
+                'num_residues',
+                'pruned_residues',
+                
+                # subclustering info
+                'subcluster_num_models',
+                'subcluster_radius_threshold',
+                'subcluster_centroid_model',
+                
+                # ensemble info
+                #'name',
+                'side_chain_treatment',
+                'ensemble_num_atoms',
+                
+                # MR result info
+                #'name',
+                'MR_program',
+                'Solution_Type',
+                
+                'PHASER_LLG',
+                'PHASER_TFZ',
+                'PHASER_RFZ',
+                'PHASER_time',
+                'PHASER_killed',
+                'PHASER_version',
+                'PHASER_errors',
+                
+                'MOLREP_score',
+                'MOLREP_time',
+                'MOLREP_version',
+                
+                'REFMAC_Rfact',
+                'REFMAC_Rfree',
+                'REFMAC_version',
+                
+                'BUCC_final_Rfact',
+                'BUCC_final_Rfree',
+                'BUCC_version',
+                
+                'ARP_final_Rfact',
+                'ARP_final_Rfree',
+                'ARP_version',
+                
+                'SHELXE_CC',
+                'SHELXE_ACL',
+                'SHELXE_MCL',
+                'SHELXE_NC',
+                'SHELXE_wMPE',
+                'SHELXE_os',
+                'SHELXE_time',
+                'SHELXE_version',
+                
+                'SXRBUCC_version',
+                'SXRBUCC_final_Rfact',
+                'SXRBUCC_final_Rfree',
+                
+                'SXRARP_version',
+                'SXRARP_final_Rfact',
+                'SXRARP_final_Rfree',
+                
+                'num_placed_atoms',
+                'reforigin_RMSD',
+                
+                'AA_num_contacts',
+                'RIO_num_contacts',
+                'RIO_in_register',
+                'RIO_oo_register',
+                'RIO_backwards',
+                'RIO',
+                'RIO_no_cat',
+                'RIO_norm'
+    
+    ]
+    
+    #for d in resultList:
+    #    for k in sorted(d.keys()):
+    #        print "GOT ",k,d[k]
+    
+    with open(fileName,'wb') as csvfile:
+        csvfile.write(",".join(keylist)+"\n")
+        for d in resultList:
+            #csvfile.write(",".join([d[k] for k in keylist]+"\n"))
+            values=[]
+            for k in keylist:
+                if k in d and d[k] is not None:
+                    values.append(str(d[k]).replace(",","^"))
+                else:
+                    values.append("N/A")
+            csvfile.write(",".join(values)+"\n")
+        csvfile.write("\n")
+
+# Doesnt' seem to work       
+#         csvwriter=csv.DictWriter(csvfile,
+#                                  fieldnames=keylist,
+#                                  extrasaction='ignore',
+#                                  restval='N/A',
+#                                  delimiter=',',
+#                                  quotechar='"',
+#                                  quoting=csv.QUOTE_MINIMAL)
+#         csvwriter.writeheader()
+#         csvwriter.writerows(resultList)
+    return
+
 class Test(unittest.TestCase):
     def testBenchmark(self):
         pklfile="/home/jmht/ample-dev1/examples/toxd-example/ROSETTA_MR_0/resultsd.pkl"
@@ -507,5 +526,26 @@ class Test(unittest.TestCase):
 #
 # Run unit tests
 if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(testSuite())
+
+    # This runs the benchmarking starting from a pickled file containing an amopt dictionary.
+    # - used when submitting the modelling jobs to a cluster
+    if len(sys.argv) != 2 or not os.path.isfile(sys.argv[1]):
+        print "benchmark script requires the path to a pickled amopt dictionary!"
+        sys.exit(1)
+
+    # Get the amopt dictionary
+    with open(sys.argv[1], "r") as f: amoptd = cPickle.load(f)
+
+    # Set up logging - could append to an existing log?
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    fl = logging.FileHandler(os.path.join(amoptd['work_dir'],"benchmark.log"))
+    fl.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fl.setFormatter(formatter)
+    logger.addHandler(fl)
+
+    # Create the ensembles & save them
+    analyse(amoptd)
+    ample_util.saveAmoptd(amoptd)
 
