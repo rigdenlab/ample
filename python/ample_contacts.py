@@ -8,12 +8,10 @@
 
 # System
 import logging
+import numpy
 import os
 import sys
 import unittest
-
-# 3rd Party
-import numpy
 
 if "CCP4_AMPLE_ROOT" in os.environ.keys() and "CCP4" in os.environ.keys(): 
     root = os.environ["CCP4_AMPLE_ROOT"]
@@ -25,7 +23,6 @@ else:
 sys.path.insert(0, os.path.join(root, "parsers"))
 
 # Custom
-import ample_plot
 import ample_sequence
 import energy_functions
 import parse_casprr
@@ -33,6 +30,14 @@ import parse_constraints
 import parse_psipred
 import pdb_edit
 
+# Check matplotlib is available - problems with Windows
+try:
+    import ample_plot
+    _MATPLOTLIB = True
+except ImportError:
+    _MATPLOTLIB = False
+
+# Check biopython is availbale - compatibility with older ccp4-python 
 try:
     import parse_alignment
     _BIOPYTHON = True
@@ -204,6 +209,11 @@ class Contacter(object):
           
     def plot(self, figurefile, ss2file=None, structurefile=None, offset=0):
         """ Plot a contact map """
+        
+        # make sure we can import matplotlib
+        if not _MATPLOTLIB: 
+            self.logger.warning("Cannot plot contact map due to missing python dependencies")
+            return
         
         # Just to make sure we have a structurefile and we can import Biopython
         availableStructure = True if structurefile and _BIOPYTHON else False
