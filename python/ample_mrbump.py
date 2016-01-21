@@ -434,7 +434,7 @@ class ResultsSummary(object):
     def _purgeFailed(self, results):
         """Remove any jobs that don't pass the keep criteria and archive their job dictionaries"""
         # Skip any that are unfinished
-        completed = [ r for r in results if not(jobUnfinished(r)) ]
+        completed = [ r for r in results if not(job_unfinished(r)) ]
         if completed:
             # Keep the top TOP_KEEP SHELXE_CC and PHASER_TFZ - these could be the same jobs and we may not even
             # have TOP_KEEP completed
