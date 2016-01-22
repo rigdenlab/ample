@@ -351,7 +351,7 @@ class Contacter(object):
 
         return contacts, contact_map
     
-    def _cb_contacts(self, cb1_lst, cb2_lst, length, cutoff=9):
+    def _cb_contacts(self, cb1_lst, cb2_lst, length, cutoff=8):
         '''Get the contacts between the two lists of contacts'''
 
         self.logger.info("Distance cutoff of participating atoms is: %dA" % cutoff)
@@ -709,7 +709,7 @@ if __name__ == "__main__":
     parser.add_argument('-c', type=float, default=1.0, dest="constraints_factor",
                         help="Defines number of contacts to use (L/*x*)")
     parser.add_argument('-d', type=int, default=5, dest="distance_to_neighbour",
-                        help="Defines distance cutoff")
+                        help="Defines sequence cutoff to neighbouring residues")
     parser.add_argument('-e', type=str, default="FADE", dest='energy_function',
                         help="Rosetta function to use")
     parser.add_argument('fasta')
