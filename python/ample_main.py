@@ -984,6 +984,10 @@ class Ample(object):
                 return self.output_gui.display_results(amopt.d)
         else:
             monitor = None
+            
+        if amopt.d['benchmark_mode']:
+            # Process the native before we do anything else
+            ample_benchmark.analysePdb(amopt.d)       
     
         # Make Rosetta fragments
         if amopt.d['make_frags']:

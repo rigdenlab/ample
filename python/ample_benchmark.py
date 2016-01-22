@@ -30,8 +30,6 @@ _logger=logging.getLogger()
 _oldroot=None
 _newroot=None
 
-
-
 def analyse(amoptd, newroot=None):
     if newroot:
         #if newroot.endswith("/"): newroot=newroot[:-1]
@@ -48,7 +46,10 @@ def analyse(amoptd, newroot=None):
         os.mkdir(fixpath(amoptd['benchmark_dir']))
     os.chdir(fixpath(amoptd['benchmark_dir']))
 
-    analysePdb(amoptd)
+    # AnalysePdb may have already been called from the main script
+    if not amoptd['native_pdb']:
+        analysePdb(amoptd)
+        
     if not (amoptd['ideal_helices'] or amoptd['homologs']):
         analyseModels(amoptd)
     
@@ -273,15 +274,16 @@ def analyseSolution(amoptd,d):
     return
 
 def analysePdb(amoptd):
+    """Collect data on the native pdb structure"""
     
-    nativePdb=amoptd['native_pdb']
-    nativePdbInfo = pdb_edit.get_info( nativePdb )
+    nativePdb = amoptd['native_pdb']
+    nativePdbInfo = pdb_edit.get_info(nativePdb)
     
     # number atoms/residues
     natoms, nresidues = pdb_edit.num_atoms_and_residues(nativePdb)
 
     # Get information on the origins for this spaceGroup
-    originInfo = pdb_model.OriginInfo( spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup )
+    originInfo = pdb_model.OriginInfo(spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup)
 
     # Do this here as a bug in pdbcur can knacker the CRYST1 data
     amoptd['native_pdb_code'] = nativePdbInfo.pdbCode
@@ -296,12 +298,12 @@ def analysePdb(amoptd):
     # First check if the native has > 1 model and extract the first if so
     if len( nativePdbInfo.models ) > 1:
         _logger.info("nativePdb has > 1 model - using first")
-        nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=fixpath(amoptd['benchmark_dir']))
+        nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=fixpath(amoptd['work_dir']))
         pdb_edit.extract_model( nativePdb, nativePdb1, modelID=nativePdbInfo.models[0].serial )
         nativePdb = nativePdb1
         
     # Standardise the PDB to rename any non-standard AA, remove solvent etc
-    nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std", directory=fixpath(amoptd['benchmark_dir']))
+    nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std", directory=fixpath(amoptd['work_dir']))
     pdb_edit.standardise(nativePdb, nativePdbStd, del_hetatm=True)
     nativePdb = nativePdbStd
     
@@ -313,7 +315,7 @@ def analysePdb(amoptd):
         chainID = nativePdbInfo.models[0].chains[0]
         nativeChain1  = ample_util.filename_append( filename=nativePdbInfo.pdb,
                                                        astr="chain1".format( chainID ), 
-                                                       directory=fixpath(amoptd['benchmark_dir']))
+                                                       directory=fixpath(amoptd['work_dir']))
         pdb_edit.to_single_chain( nativePdbInfo.pdb, nativeChain1 )
     else:
         nativeChain1 = nativePdbInfo.pdb
