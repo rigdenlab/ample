@@ -118,8 +118,7 @@ class Contacter(object):
         self.sequence = optd['sequence']
         
         # Optional files
-        if optd['native_pdb_std']: self.structure_pdb=optd['native_pdb_std']
-        
+        if optd['native_pdb'] and optd['native_pdb_std']: self.structure_pdb=optd['native_pdb_std']
         
         if optd['psipred_ss2']: self.psipred_ss2=optd['psipred_ss2']
         
