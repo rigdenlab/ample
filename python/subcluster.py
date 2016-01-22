@@ -2,15 +2,28 @@
 
 #edit the sidechains to make polyala, all and reliable
 
-import ample_util
 import copy
+from collections import namedtuple
 import glob
 import logging
 import re
 import os
+import shutil
 import unittest
 
+# External imports
 import mmtbx.superpose
+
+# Internal imports
+import ample_util
+import pdb_edit
+
+_logger = logging.getLogger()
+
+SCORE_MATRIX_NAME = 'score.matrix'
+FILE_LIST_NAME = 'files.list'
+RMSD_MAX = 50
+QSCORE_MIN = 0.01
 
 class SubClusterer(object):
     """Base class for clustering pdbs by distance
@@ -60,12 +73,21 @@ class SubClusterer(object):
         else:
             return sorted(max_cluster)
     
-    def dump_matrix(self,file_name):
+    def dump_raw_matrix(self,file_name):
         with open(file_name,'w') as f:
             for row in self.distance_matrix:
                 f.write(",".join(map(str,row))+"\n")
             f.write("\n")
-
+        return
+            
+    def dump_pdb_matrix(self, file_name=SCORE_MATRIX_NAME, offset=0):
+        with open(file_name,'w') as f:
+            l = len(self.distance_matrix) + offset
+            for i in range(offset, l):
+                for j in range(i, l):
+                    f.write("{0: > 4d} {1: > 4d} {2: > 8.3F}\n".format(i,j, self.distance_matrix[i-offset][j-offset]))
+            f.write("\n")
+        return
 
 class CctbxClusterer(SubClusterer):
     """Class to cluster files with maxcluster"""
@@ -73,8 +95,8 @@ class CctbxClusterer(SubClusterer):
     def generate_distance_matrix(self, pdb_list):
         """Run cctbx to generate the distance distance_matrix"""
          
-        no_models = len(pdb_list)
-        if not no_models:
+        num_models = len(pdb_list)
+        if not num_models:
             msg = "generate_distance_matrix got empty pdb_list!"
             logging.critical(msg)
             raise RuntimeError, msg
@@ -82,89 +104,18 @@ class CctbxClusterer(SubClusterer):
         # Index is just the order of the pdb in the file
         self.index2pdb=pdb_list
      
-        # Create a square distance_matrix no_models in size filled with None
-        self.distance_matrix = [[None for col in range(no_models)] for row in range(no_models)]
+        # Create a square distance_matrix num_models in size filled with None
+        self.distance_matrix = [[None for col in range(num_models)] for row in range(num_models)]
         # Set zeros diagonal
          
         for i, m1 in enumerate(pdb_list):
             fixed = mmtbx.superpose.SuperposePDB(m1, preset='ca', log=None, quiet=True)
             for j, m2 in enumerate(pdb_list):
-                print i,j
                 if j <= i: continue
                 moving = mmtbx.superpose.SuperposePDB(m2, preset='ca', log=None, quiet=True)
                 rmsd, lsq = moving.superpose(fixed)
                 self.distance_matrix[i][j]=float(rmsd)
          
-        # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
-        for x in range(len(self.distance_matrix)):
-            for y in range(len(self.distance_matrix)):
-                self.distance_matrix[y][x] = self.distance_matrix[x][y]
-        return
-
-class MaxClusterer(SubClusterer):
-    """Class to cluster files with maxcluster"""
-    
-    def generate_distance_matrix(self, pdb_list):
-        """Run maxcluster to generate the distance distance_matrix"""
-        
-        no_models = len( pdb_list )
-        if not no_models:
-            msg = "generate_distance_matrix got empty pdb_list!"
-            logging.critical( msg )
-            raise RuntimeError, msg
-        
-        self.index2pdb=[0]*no_models
-    
-        # Maxcluster arguments
-        # -l [file]   File containing a list of PDB model fragments
-        # -L [n]      Log level (default is 4 for single MaxSub, 1 for lists)
-        # -d [f]      The distance cut-off for search (default auto-calibrate)
-        # -bb         Perform RMSD fit using backbone atoms
-        #     -C [n]      Cluster method: 0 - No clustering
-        # -rmsd ???
-        #os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
-        #print 'MAX Done'
-        
-        # Create the list of files for maxcluster
-        fname = os.path.join(os.getcwd(), "files.list" )
-        with open( fname, 'w' ) as f:
-            f.write( "\n".join( pdb_list )+"\n" )
-            
-        #log_name = "maxcluster_radius_{0}.log".format(radius)
-        log_name = os.path.abspath("maxcluster.log")
-        cmd = [ self.executable, "-l", fname, "-L", "4", "-rmsd", "-d", "1000", "-bb", "-C0" ]
-        retcode = ample_util.run_command( cmd, logfile=log_name )
-        
-        if retcode != 0:
-            msg = "non-zero return code for maxcluster in generate_distance_matrix!\nSee logfile: {0}".format(log_name)
-            logging.critical( msg )
-            raise RuntimeError, msg
-        
-        # Create a square distance_matrix no_models in size filled with None
-        self.distance_matrix = [[None for col in range(no_models)] for row in range(no_models)]
-    
-        #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
-        #max_log = open(cur_dir+'/MAX_LOG')
-        max_log = open( log_name, 'r')
-        pattern = re.compile('INFO  \: Model')
-        for line in max_log:
-            if re.match(pattern, line):
-    
-                # Split so that we get a list with
-                # 0: model 1 index
-                # 1: path to model 1 without .pdb suffix
-                # 2: model 2 index
-                # 3: path to model 2 without .pdb suffix
-                # 4: distance metric
-                split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
-                self.distance_matrix[  int(split[1]) -1 ][  int(split[3]) -1]  = split[5]
-    
-                if split[2]+'.pdb' not  in self.index2pdb:
-                    self.index2pdb[int(split[1]) -1]  =  split[2]+'.pdb'
-    
-                if split[4]+'.pdb' not  in self.index2pdb:
-                    self.index2pdb[int(split[3]) -1]  =  split[4]+'.pdb'
-    
         # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
         for x in range(len(self.distance_matrix)):
             for y in range(len(self.distance_matrix)):
@@ -178,8 +129,7 @@ class FpcClusterer(SubClusterer):
         
         # Create list of pdb files
         fname = os.path.join(os.getcwd(), "files.list" )
-        with open( fname, 'w' ) as f:
-            f.write( "\n".join( pdb_list )+"\n" )
+        with open( fname, 'w' ) as f: f.write( "\n".join( pdb_list )+"\n" )
             
         # Index is just the order of the pdb in the file
         self.index2pdb=pdb_list
@@ -232,6 +182,256 @@ class FpcClusterer(SubClusterer):
                 
         self.distance_matrix=m
         return
+    
+class GesamtClusterer(SubClusterer):
+    """Class to cluster files with Gesamt"""
+    
+    def generate_distance_matrix(self, models, purge=True, purge_all=False, metric='qscore', nproc=1):
+        # Make sure all the files are in the same directory otherwise we wont' work
+        mdir = os.path.dirname(models[0])
+        if not all([ os.path.dirname(p) == mdir for p in models ]):
+            raise RuntimeError("All pdb files are not in the same directory!")
+        
+        # Create list of pdb files
+        fname = os.path.join(os.getcwd(), FILE_LIST_NAME)
+        with open(fname, 'w') as f: f.write("\n".join(models)+"\n")
+            
+        # Index is just the order of the pdb in the file
+        self.index2pdb = models
+        nmodels = len(models)
+        
+        # Make the archive
+        _logger.debug("Generating gesamt archive from models in directory {0}".format(mdir))
+        garchive = 'gesamt.archive'
+        if not os.path.isdir(garchive): os.mkdir(garchive)
+        logfile = os.path.abspath('gesamt_archive.log')
+        cmd = [ self.executable, '--make-archive', garchive, '-pdb', mdir ]
+        #cmd += [ '-nthreads=auto' ]
+        cmd += [ '-nthreads={0}'.format(nproc) ]
+        # HACK FOR DYLD!!!!
+        env = None
+        #env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4-devtools/install/lib'}
+        rtn = ample_util.run_command(cmd, logfile,env = env )
+        if rtn != 0: raise RuntimeError("Error running gesamt - check logfile: {0}".format(logfile))
+        
+        if purge_all: os.unlink(logfile)
+        
+        # Now loop through each file creating the matrix
+        if metric == 'rmsd':
+            parity = 0.0
+        elif metric == 'qscore':
+            parity = 1
+        else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
+        m = [[parity for _ in range(nmodels)] for _ in range(nmodels)]
+        
+        for i, model in enumerate(models):
+            mname = os.path.basename(model)
+            gesamt_out = '{0}_gesamt.out'.format(mname)
+            logfile = '{0}_gesamt.log'.format(mname)
+            cmd = [ self.executable, model, '-archive', garchive, '-o', gesamt_out ]
+            cmd += [ '-nthreads={0}'.format(nproc) ]
+            rtn = ample_util.run_command(cmd, logfile)
+            if rtn != 0: raise RuntimeError("Error running gesamt!")
+            else:
+                if purge: os.unlink(logfile)
+                
+            gdata = self.parse_gesamt_out(gesamt_out)
+            assert gdata[0].file_name == mname, gdata[0].file_name + " " + mname
+            score_dict = { g.file_name: (g.rmsd, g.q_score) for g in gdata  }
+            
+            for j in range(i + 1, nmodels):
+                # Try and get the rmsd and qscore for this model. If it's missing we assume the model was 
+                # too divergent for gesamt to find it and we set the rmsd and qscore to fixed values
+                model2 = os.path.basename(models[j])
+                try:
+                    rmsd, qscore = score_dict[model2]
+                except KeyError:
+                    rmsd = RMSD_MAX
+                    qscore = QSCORE_MIN
+                
+                if metric == 'rmsd':
+                    score = rmsd
+                elif metric == 'qscore':
+                    score = qscore
+                else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
+                
+                m[i][j] = score
+                
+            if purge_all: os.unlink(gesamt_out)
+                    
+        # Copy upper half of matrix to lower
+        for x in range(nmodels):
+            for y in range(nmodels):
+                if x == y: continue
+                m[y][x] = m[x][y]
+                
+        self.distance_matrix = m
+
+        # Remove the gesamt archive
+        if purge: shutil.rmtree(garchive)
+        
+        # Write out the matrix in a form spicker can use
+        self.dump_pdb_matrix(SCORE_MATRIX_NAME)
+        return
+
+    def parse_gesamt_out(self, out_file):
+        # Assumption is there are no pdb_codes
+        GesamtData = namedtuple('GesamtData', ['count', 'chain_id', 'q_score', 'rmsd', 'seq_id', 'nalign', 'nres', 'file_name'])
+        data = []
+        with open(out_file) as f:
+            for i, line in enumerate(f):
+                if i < 2: continue # First 2 lines are headers
+                if not line.strip(): continue # ignore blanks
+                try:
+                    tmp = GesamtData(*line.split())
+                    # Convert from strings to correct types
+                    data.append(GesamtData(int(tmp.count),
+                                           tmp.chain_id,
+                                           float(tmp.q_score),
+                                           float(tmp.rmsd),
+                                           tmp.seq_id,
+                                           int(tmp.nalign),
+                                           int(tmp.nres),
+                                           tmp.file_name))
+                except Exception as e:
+                    msg = 'Error parsing line {0}: {1}\n{2}'.format(i, line, e.message)
+                    logging.critical(msg)
+                    raise e  
+                
+        assert len(data),"Failed to read any data!"
+        return data
+    
+class LsqkabClusterer(SubClusterer):
+    """Class to cluster files with Lsqkab"""
+    
+    def calc_rmsd(self, model1, model2, nresidues=None, logfile='lsqkab.out', purge=False):
+        
+        if not nresidues:  _, nresidues = pdb_edit.num_atoms_and_residues(model1, first=True)
+        
+        stdin = """FIT RESIDUE CA 1 TO {0} CHAIN {1}
+MATCH 1 to  {0} CHAIN {1}
+output  RMS    
+end""".format(nresidues, 'A')
+
+        cmd = [ 'lsqkab', 'XYZINM', model1, 'XYZINF', model2 ]
+        
+        ample_util.run_command(cmd, logfile=logfile, stdin=stdin)
+        rmsd =  self.parse_lsqkab_output(logfile)
+        
+        # cleanup 
+        if purge:
+            os.unlink(logfile)
+            os.unlink('RMSTAB')
+        
+        return rmsd
+                
+    def generate_distance_matrix(self, models, purge=True, metric='qscore'):
+
+        # Index is just the order of the pdb in the file
+        self.index2pdb = models
+        num_models = len(models)
+        
+        # Assume all models are the same size and only have a single chain
+        # We also assume that the chain is called 'A' (not relevant here)
+        _, nresidues = pdb_edit.num_atoms_and_residues(models[0], first=True)
+        
+        # Create a square distance_matrix no_models in size filled with None
+        self.distance_matrix = [[None for col in range(num_models)] for row in range(num_models)]
+        # Set zeros diagonal
+        
+        logfile='lsqkab.out'
+        for i, fixed in enumerate(models):
+            for j, model2 in enumerate(models):
+                if j <= i: continue
+                self.distance_matrix[i][j] = self.calc_rmsd(fixed, model2, nresidues=nresidues, logfile=logfile)
+        
+        # Clean up output files from lsqkab
+        os.unlink(logfile)
+        os.unlink('RMSTAB')
+         
+        # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
+        for x in range(len(self.distance_matrix)):
+            for y in range(len(self.distance_matrix)):
+                self.distance_matrix[y][x] = self.distance_matrix[x][y]
+        return
+    
+    def parse_lsqkab_output(self, output_file):
+        with open(output_file) as f:
+            for  l in f.readlines():
+                if l.startswith("          RMS     XYZ DISPLACEMENT ="):
+                    return float(l.split()[4])
+        assert False
+
+class MaxClusterer(SubClusterer):
+    """Class to cluster files with maxcluster"""
+    
+    def generate_distance_matrix(self, pdb_list):
+        """Run maxcluster to generate the distance distance_matrix"""
+        
+        no_models = len( pdb_list )
+        if not no_models:
+            msg = "generate_distance_matrix got empty pdb_list!"
+            logging.critical( msg )
+            raise RuntimeError, msg
+        
+        self.index2pdb=[0]*no_models
+    
+        # Maxcluster arguments
+        # -l [file]   File containing a list of PDB model fragments
+        # -L [n]      Log level (default is 4 for single MaxSub, 1 for lists)
+        # -d [f]      The distance cut-off for search (default auto-calibrate)
+        # -bb         Perform RMSD fit using backbone atoms
+        #     -C [n]      Cluster method: 0 - No clustering
+        # -rmsd ???
+        #os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
+        #print 'MAX Done'
+        
+        # Create the list of files for maxcluster
+        fname = os.path.join(os.getcwd(), FILE_LIST_NAME )
+        with open( fname, 'w' ) as f:
+            f.write( "\n".join( pdb_list )+"\n" )
+            
+        #log_name = "maxcluster_radius_{0}.log".format(radius)
+        log_name = os.path.abspath("maxcluster.log")
+        cmd = [ self.executable, "-l", fname, "-L", "4", "-rmsd", "-d", "1000", "-bb", "-C0" ]
+        retcode = ample_util.run_command( cmd, logfile=log_name )
+        
+        if retcode != 0:
+            msg = "non-zero return code for maxcluster in generate_distance_matrix!\nSee logfile: {0}".format(log_name)
+            logging.critical( msg )
+            raise RuntimeError, msg
+        
+        # Create a square distance_matrix no_models in size filled with None
+        parity = 0
+        self.distance_matrix = [[parity for col in range(no_models)] for row in range(no_models)]
+    
+        #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
+        #max_log = open(cur_dir+'/MAX_LOG')
+        max_log = open( log_name, 'r')
+        pattern = re.compile('INFO  \: Model')
+        for line in max_log:
+            if re.match(pattern, line):
+    
+                # Split so that we get a list with
+                # 0: model 1 index
+                # 1: path to model 1 without .pdb suffix
+                # 2: model 2 index
+                # 3: path to model 2 without .pdb suffix
+                # 4: distance metric
+                split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
+                self.distance_matrix[  int(split[1]) -1 ][  int(split[3]) -1]  = float(split[5])
+    
+                if split[2]+'.pdb' not  in self.index2pdb:
+                    self.index2pdb[int(split[1]) -1]  =  split[2]+'.pdb'
+    
+                if split[4]+'.pdb' not  in self.index2pdb:
+                    self.index2pdb[int(split[3]) -1]  =  split[4]+'.pdb'
+    
+        # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
+        for x in range(len(self.distance_matrix)):
+            for y in range(len(self.distance_matrix)):
+                self.distance_matrix[y][x] = self.distance_matrix[x][y]
+        return
 
 class Test(unittest.TestCase):
 
@@ -266,6 +466,61 @@ class Test(unittest.TestCase):
         
         self.assertEqual(ref,cluster_files1)
         return
+    
+    def testGesamtMatrix(self):
+        """Test we can reproduce the original thresholds"""
+
+        gesamt_exe = '/opt/ccp4-devtools/install/bin/gesamt'
+        clusterer = GesamtClusterer(executable = gesamt_exe)
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
+        #pdb_list = glob.glob("/media/data/shared/testset/testset_data/1MIX/models/*.pdb")
+        clusterer.generate_distance_matrix(pdb_list, purge_all=True)
+        
+        # Test two files manually
+        index1=2
+        index2=25
+        f1 = pdb_list[index1]
+        f2 = pdb_list[index2]
+        
+        # Run gesamt to get the score between the two
+        logfile = 'gesamt.log' 
+        ample_util.run_command([gesamt_exe, f1, f2], logfile=logfile)
+        qscore=None
+        with open(logfile) as f:
+            for l in f.readlines():
+                if l.startswith(' Q-score'):
+                    qscore = float(l.split()[2])
+        
+        self.assertIsNotNone(qscore, "No q-score found")
+        
+        # read score matrix
+        matrix = []
+        with open(SCORE_MATRIX_NAME) as f:
+            for l in f.readlines():
+                if not l.strip(): continue
+                fields = l.split()
+                matrix.append((int(fields[0]),int(fields[1]),float(fields[2])))
+
+        # Make sure the score matches
+        for l in matrix:
+            if l[0] == index1 and l[1] == index2:
+                # Gesamt log and out file formats have different precisions
+                self.assertAlmostEqual(l[2], qscore, 3, "Q-scores differ: {0} - {1}".format(l[2], qscore))
+        
+        os.unlink(logfile)
+        os.unlink(SCORE_MATRIX_NAME)
+        os.unlink(FILE_LIST_NAME)
+        return
+    
+    def testRadiusLsqkab(self):
+        """Test we can reproduce the original thresholds"""
+
+        radius = 4
+        clusterer = LsqkabClusterer()
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
+        clusterer.generate_distance_matrix(pdb_list)
+        clusterer.dump_pdb_matrix('lsqkab.matix')
+        return
 
     def testRadiusMaxcluster(self):
         """Test we can reproduce the original thresholds"""
@@ -274,7 +529,9 @@ class Test(unittest.TestCase):
         clusterer = MaxClusterer( self.maxcluster_exe )
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
+        #clusterer.dump_pdb_matrix('maxcluster.matix')
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius( radius )]
+        
         
         ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', '3_S_00000006.pdb',
              '5_S_00000005.pdb', '3_S_00000003.pdb', '1_S_00000004.pdb', '4_S_00000005.pdb',
@@ -327,15 +584,7 @@ class Test(unittest.TestCase):
         os.unlink('fast_protein_cluster.log')
         return
 
-def testSuite():
-    suite = unittest.TestSuite()
-    suite.addTest(Test('testRadiusMaxcluster'))
-    suite.addTest(Test('testIndicesMaxcluster'))
-    suite.addTest(Test('testIndicesFpc'))
-    suite.addTest(Test('testRadiusFpc'))
-    return suite
-    
 # Run unit tests
 if __name__ == "__main__":
+    unittest.main(verbosity=2)
  
-    unittest.TextTestRunner(verbosity=2).run(testSuite())

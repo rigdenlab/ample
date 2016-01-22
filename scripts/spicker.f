@@ -138,7 +138,19 @@ ccc
       dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
 
       logical read_score
-      read_score = .TRUE.
+      read_score = .FALSE.
+
+**********************************************************************
+****  check if we are reading a score matrix or processing rmsds
+**********************************************************************
+      inquire(file='score.matrix',exist=read_score)
+      if (read_score) then
+          write(*,*)"Scores will be read from file: score.matrix"
+      else
+          write(*,*)"Calculating RMSD scores"
+      endif
+
+**********************************************************************
 
 **********************************************************************
 ****  input:
@@ -327,7 +339,7 @@ c     Fill mark array
       enddo
       
       if (read_score) then
-          call read_score_matrix(nst,n_str_all,Lch,amat,rmsd_delta,
+          call read_score_matrix(nst,n_str,Lch,amat,rmsd_delta,
      &     rmsd_a)
       else
           call rmsd_score(ndim,nst,w,n_str,Lch,x,y,z,amat,rmsd_delta,
@@ -839,11 +851,13 @@ c      write(*,*)"MINA MAXA ",mina,maxa
       return
       end
 
-      subroutine read_score_matrix(nst,n_str_all,Lch,amat,rmsd_delta,
+      subroutine read_score_matrix(nst,n_str,Lch,amat,rmsd_delta,
      & rmsd_a)
+*     This routine reads in a matrix of score in a scale 0-1 and
+*     uses the reciprocal to convert them into an rmsd-like score
       implicit none
 !     Intent In
-      integer nst,n_str_all,Lch
+      integer nst,n_str,Lch
 !     Intent Out
       real amat
       dimension amat(nst,nst)
@@ -859,26 +873,35 @@ c      write(*,*)"MINA MAXA ",mina,maxa
       rmsd_a=0
       rmsd2_a=0
       n_rmsd=0
+      WRITE(*,*)'* SPICKER READING SCORE MATRIX *'
       open(1,file='score.matrix',status='old')
-      do i=1,n_str_all*n_str_all
-          read(1,*,end=3,err=2)j,k,scored
+      do i=1,n_str*n_str
+          read(1,'(i4,1x,i4,1x,1x,f8.3)',end=3,err=2) j, k, scored
+          if (scored .gt. 1.0 .or. j .gt. n_str .or. k .gt. n_str) then
+              write(*,*)"Invalid score line: ", j ,k ,scored
+              stop
+          endif
 c     matrix indexing starts from 1
           j=j+1
           k=k+1
-          scored=1.0/scored
-c          if (scored .gt. RMSD_max) then
-c              scored=RMSD_max
-c          elseif (scored .lt. RMSD_min) then
-c              scored=RMSD_min
-c          endif
-          armsd=scored
-          amat(j,k)=armsd
-          amat(k,j)=armsd
+          if (scored .eq. 0.0) then
+              scored = RMSD_max
+          else
+              scored = 1.0/scored
+          endif
+          if (scored .gt. RMSD_max) then
+              scored = RMSD_max
+          elseif (scored .lt. RMSD_min) then
+              scored=RMSD_min
+          endif
+          armsd = scored
+          amat(j,k) = armsd
+          amat(k,j) = armsd
 c         Lch is # of CA atoms?
 c          armsd=dsqrt(scored/Lch) !RMSD12
-          n_rmsd=n_rmsd+1
-          rmsd_a=rmsd_a+armsd
-          rmsd2_a=rmsd2_a+armsd*armsd
+          n_rmsd = n_rmsd+1
+          rmsd_a = rmsd_a+armsd
+          rmsd2_a = rmsd2_a+armsd*armsd
       enddo
 2     stop
 3     continue

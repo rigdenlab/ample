@@ -57,7 +57,7 @@ class Spickerer(object):
                     counter += 1
         return str(counter)
 
-    def create_input_files(self, models):
+    def create_input_files(self, models, score_matrix=None):
         """
         jmht
         Create the input files required to run spicker
@@ -67,6 +67,14 @@ class Spickerer(object):
             msg = "no models provided!"
             self.logger.critical(msg)
             raise RuntimeError, msg
+
+        if score_matrix:
+            self.logger.debug("Using score_matrix: {0}".format(score_matrix))
+            if not os.path.isfile(score_matrix):
+                msg = 'Cannot find score_matrix: {0}'.format(score_matrix)
+                self.logger.critical(msg)
+                raise RuntimeError, msg
+            shutil.copy(score_matrix,os.path.join(self.run_dir,os.path.basename(score_matrix)))
         
         # read_out - Input file for spicker with coordinates of the CA atoms for each of the PDB structures
         #
@@ -128,22 +136,31 @@ class Spickerer(object):
                         seq.write('\t' + split[5] + '\t' + split[3] + '\n')
         return
     
-    def cluster(self, models, run_dir=None):
+    def cluster(self, models, run_dir=None, score_matrix=None):
         """
         Run spicker to cluster the models
         """
-        if run_dir: self.run_dir = run_dir
-        if not self.run_dir: self.run_dir = os.path.join(os.getcwd(), 'spicker')
+        owd = os.getcwd()
+        if run_dir: self.run_dir = os.path.abspath(run_dir)
+        if not self.run_dir: self.run_dir = os.path.join(owd, 'spicker')
         if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
         os.chdir(self.run_dir)
         
         self.logger.debug("Running spicker in directory: {0}".format(self.run_dir))
         self.logger.debug("Using executable: {0}".format(self.spicker_exe))
-        self.create_input_files(models)
-        ample_util.run_command([self.spicker_exe], logfile="spicker.log")
+        
+        self.create_input_files(models, score_matrix=score_matrix)
+        
+        logfile = os.path.abspath("spicker.log")
+        rtn = ample_util.run_command([self.spicker_exe], logfile=logfile)
+        if not rtn == 0:
+            raise RuntimeError,"Error running spicker, check logfile: {0}".format(logfile)
     
         # Read the log and generate the results
         self.results = self.process_log()
+        
+        # Always go back to where we started
+        os.chdir(owd)
         return
                 
     def process_log(self, logfile=None):
@@ -290,7 +307,7 @@ if __name__ == "__main__":
     
     # For running as a stand-alone script
     def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False):
-        """Execute a command and return the exit code.
+        """Execute a command and return the exit_error code.
     
         We take care of outputting stuff to the logs and opening/closing logfiles
     

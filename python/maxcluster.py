@@ -3,7 +3,6 @@
 import glob
 import os
 import re
-import traceback
 
 import ample_util
 import pdb_edit

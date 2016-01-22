@@ -5,6 +5,7 @@ Class to hold the options for ample
 import os
 
 # our imports
+from ample_ensemble import SIDE_CHAIN_TREATMENTS
 import version
 
 class AmpleOptions(object):
@@ -13,24 +14,35 @@ class AmpleOptions(object):
         # The dictionary with all the options
         self.d = {}
 
-        # dictionary with the default arguments - if any are paths add to paths in populate
+        # dictionary with the default arguments
+        #REM: if any are paths they also need to be added to self.paths below
         self.defaults = {
                             'alignment_file' : None,
                             'all_atom' : True,
+                            'allow_his_tag' : False,
                             'arpwarp_cycles' : 10,
+                            'bbcontacts_file': None,
                             'benchmark_mode' : False,
                             'blast_dir' : None,
                             'buccaneer_cycles' : 5,
                             'ccp4_jobid' : None,
                             'cluster_dir' : None,
                             'cluster_method' : 'spicker',
+                            'cmdline_flags': None,
+                            'constraints_factor': 1.0,
                             'constraints_file' : None,
+                            'constraints_weight': None,
+                            'contact_file': None,
                             'debug' : False,
+                            'distance_to_neighbour': 5,
+                            'do_mr' : True,
                             'domain_all_chains_pdb' : None,
                             'domain_termini_distance' : 0,
                             'dry_run' : False,
                             'early_terminate' : True,
-                            'ensembles_dir' : None,
+                            'energy_function': "FADE",
+                            'ensemble_options' : None,
+                            'ensembles' : None,
                             'F' : None,
                             'fasta' : None,
                             'fast_protein_cluster_exe' : None,
@@ -46,15 +58,20 @@ class AmpleOptions(object):
                             'import_ensembles' : False,
                             'improve_template' : None,
                             'LGA' : None,
+                            'make_ensembles' : True,
                             'make_frags' : True,
                             'make_models' : True,
+                            'make_mr' : True,
                             'maxcluster_exe' : None,
                             'max_ensemble_models' : 30,
                             'missing_domain' : False,
                             'models' : None,
                             'molrep_only' : False,
+                            'mrbump_dir' : None,
+                            'mrbump_scripts' : None,
                             'mr_keys' : None,
                             'mr_sequence' : None,
+                            'mr_sg_all' : None,
                             'mtz' : None,
                             'mustang_exe' : None,
                             'name' : 'ampl',
@@ -77,6 +94,8 @@ class AmpleOptions(object):
                             'phenix_exe' : None,
                             'psipred_ss2' : None,
                             'purge' : False,
+                            'quark_models' : False,
+                            'restart_pkl' : None,
                             'rg_reweight' : None,
                             'ROSETTA_cluster' : None,
                             'rosetta_db' : None,
@@ -93,28 +112,77 @@ class AmpleOptions(object):
                             'shelxe_rebuild' : False,
                             'shelxe_rebuild_arpwarp' : False,
                             'shelxe_rebuild_buccaneer' : False,
+                            'side_chain_treatments' : SIDE_CHAIN_TREATMENTS,
                             'SIGF' : None,
                             'spicker_exe' : None,
+                            'subcluster_program' : 'maxcluster',
                             'submit_array' : True,
                             'submit_cluster' : False,
                             'submit_max_array' : None,
                             'submit_qtype' : None,
                             'submit_queue' : None,
+                            'success' : False,
                             'theseus_exe' : None,
                             'top_model_only' : False,
                             'transmembrane' : False,
+                            'transmembrane2' : False,
                             'transmembrane_octopusfile' : None,
                             'transmembrane_lipofile' : None,
                             'transmembrane_spanfile' : None,
                             'truncation_method' : 'percent',
-                            'truncation_pruning' : 'none',
-                            'webserver_uri' : None,
+                            'truncation_pruning' : None,
                             'use_arpwarp' : True,
                             'use_buccaneer' : True,
+                            'use_contacts': False,
                             'use_homs' : True,
                             'use_scwrl' : False,
                             'use_shelxe' : True,
+                            'webserver_uri' : None,
+                            'work_dir' : None
                          }
+
+        # We need to track which variables are paths as all paths need to be converted to absolute paths
+        self.paths = [
+                    'alignment_file',
+                    'blast_dir',
+                    'bbcontacts_file',
+                    'cluster_dir',
+                    'constraints_file',
+                    'contact_file',
+                    'domain_all_chains_pdb',
+                    'ensembles',
+                    'fasta',
+                    'fast_protein_cluster_exe',
+                    'frags_3mers',
+                    'frags_9mers',
+                    'gesamt_exe',
+                    'import_cluster',
+                    'maxcluster_exe',
+                    'models',
+                    'mrbump_dir',
+                    'mr_sequence',
+                    'mtz',
+                    'mustang_exe',
+                    'native_pdb',
+                    'nmr_model_in',
+                    'nmr_remodel_fasta',
+                    'psipred_ss2',
+                    'restart_pkl',
+                    'rosetta_db',
+                    'rosetta_dir',
+                    'rosetta_fragments_exe',
+                    'rosetta_AbinitioRelax',
+                    'scwrl_exe',
+                    'sf_cif',
+                    'shelxe_exe',
+                    'spicker_exe',
+                    'theseus_exe',
+                    'transmembrane_octopusfile',
+                    'transmembrane_lipofile',
+                    'transmembrane_spanfile',
+                    'work_dir'
+            ]    
+
 
         self.quick_mode = {
                            'max_ensemble_models' : 10,
@@ -158,7 +226,10 @@ class AmpleOptions(object):
         """
 
         tmpv = None
+        cmdline_flags = []
         for k, v in vars(parser_args).iteritems():
+            # All values that are not None were supplied on the command-line, so we need to remember these
+            if v is not None: cmdline_flags.append(k)
             #print "{} | {}".format(k, v)
             if isinstance(v,list):
                 # All values are in a list
@@ -177,21 +248,22 @@ class AmpleOptions(object):
 
             self.d[k] = tmpv
         # end of loop
+        
+        self.d['cmdline_flags'] = cmdline_flags
 
-#        print "After populate"
-#        for k, v in self.d.iteritems():
-#            print "{} | {}".format( k, v )
+#         print "After populate"
+#         for k, v in self.d.iteritems():
+#             print "{} | {}".format( k, v )
 
         # Handle any defaults and any preset options
         self.process_options()
-
         return
 
     def process_options(self):
         """Check the options and process any preset defaults"""
         
         # Add the version
-        self.d['ample_version']=version.__version__
+        self.d['ample_version'] = version.__version__
 
         # First set anything that hasn't been set to its default option
         for k, v in self.defaults.iteritems():
@@ -213,54 +285,18 @@ class AmpleOptions(object):
             self.d['shelxe_rebuild_arpwap']=True
             self.d['shelxe_rebuild_buccaneer']=True
 
-        # Convert all paths to absolute paths
-        paths = [
-                 'alignment_file',
-                'blast_dir',
-                'cluster_dir',
-                'constraints_file',
-                'domain_all_chains_pdb',
-                'ensembles_dir',
-                'fasta',
-                'fast_protein_cluster_exe',
-                'frags_3mers',
-                'frags_9mers',
-                'gesamt_exe',
-                'import_cluster',
-                'maxcluster_exe',
-                'models',
-                'mr_sequence',
-                'mtz',
-                'mustang_exe',
-                'native_pdb',
-                'nmr_model_in',
-                'nmr_remodel_fasta',
-                'psipred_ss2',
-                'rosetta_db',
-                'rosetta_dir',
-                'rosetta_fragments_exe',
-                'rosetta_AbinitioRelax',
-                'scwrl_exe',
-                'sf_cif',
-                'shelxe_exe',
-                'spicker_exe',
-                'theseus_exe',
-                'transmembrane_octopusfile',
-                'transmembrane_lipofile',
-                'transmembrane_spanfile'
-            ]
         for k, v in self.d.iteritems():
-            if k in paths and isinstance(v, str):
+            if k in self.paths and isinstance(v, str):
                 self.d[k] = os.path.abspath(v)
 
         # Check if using any preset options
         if self.d['devel_mode']: self.preset_options('devel_mode')
-        if self.d['quick_mode']:self.preset_options('quick_mode')
-        if self.d['webserver_uri']:self.preset_options('webserver_uri')
+        if self.d['quick_mode']: self.preset_options('quick_mode')
+        if self.d['webserver_uri']: self.preset_options('webserver_uri')
         return
     
-    def preset_options(self,mode):
-        assert hasattr(self,mode),"Unknown mode: {0}".format(mode)
+    def preset_options(self ,mode):
+        assert hasattr(self, mode),"Unknown mode: {0}".format(mode)
         for k, v in getattr(self, mode).iteritems():
             # Set any that haven't been set
             if self.d[k] == None:

@@ -8,7 +8,6 @@ import cPickle
 import logging
 import os
 import platform
-import re
 import subprocess
 import sys
 import tarfile
@@ -18,8 +17,15 @@ import urllib
 import zipfile
 
 # our imports
-import pdb_edit
 import ample_exit
+import pdb_edit
+
+CCP4_VERSION=None
+SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
+EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
+SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
+
+_logger = logging.getLogger()
 
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
@@ -71,25 +77,40 @@ The authors of specific programs should be referenced where applicable:""" + \
 
 def ccp4_version():
     """Return the CCP4 version as a tuple"""
-    # Currently there seems no sensible way of doing this other then running a program and grepping the output
-    cmd=['mtzdmp',os.path.abspath(__file__)]
-    logf = tempfile.TemporaryFile()
-    run_command(cmd,logfile=logf)
-    logf.seek(0) # rewind logfile
-    tversion=None
-    for i, line in enumerate(logf):
-        if i > 20:break
-        if line.startswith(' ### CCP4'):
-            tversion=line.split()[2]
-            break
+    global CCP4_VERSION
+    if CCP4_VERSION is None:
+        # Currently there seems no sensible way of doing this other then running a program and grepping the output
+        cmd=['mtzdmp',os.path.abspath(__file__)]
+        logf = tempfile.TemporaryFile()
+        run_command(cmd,logfile=logf)
+        logf.seek(0) # rewind logfile
+        tversion=None
+        for i, line in enumerate(logf):
+            if i > 20:break
+            if line.startswith(' ### CCP4'):
+                tversion=line.split()[2].rstrip(':')
+                break
+        
+        logf.close()
+        if not tversion: raise RuntimeError,"Cannot determine CCP4 version"
+        vsplit = tversion.split('.')
+        if len(vsplit) == 2:
+            major = int(vsplit[0])
+            minor =  int(vsplit[1])
+            rev = '-1'
+        elif len(vsplit) == 3:
+            major = int(vsplit[0])
+            minor = int(vsplit[1])
+            rev = int(vsplit[2])
+        else: raise RuntimeError,"Cannot split CCP4 version: {0}".format(tversion)
     
-    logf.close()
-    if not tversion: return None
-    major,minor,rev=tversion.rstrip(':').split('.')
-    return (int(major),int(minor),int(rev.lstrip('0')))
+    return (major,minor,rev)
     
-def extract_models(filename, directory=None, sequence=None, single=True, allsame=True):
+def extract_models(amoptd, sequence=None, single=True, allsame=True):
     """Extract pdb files from a given tar/zip file or directory of pdbs"""
+    
+    filename = amoptd['models']
+    directory = amoptd['models_dir']
     
     # If it's already a directory, just check it's valid   
     if os.path.isdir(filename):
@@ -98,13 +119,13 @@ def extract_models(filename, directory=None, sequence=None, single=True, allsame
         # Here we are extracting from a file
         if not os.path.isfile(filename):
             msg="Cannot find models file: {0}".format(filename)
-            ample_exit.exit(msg)
+            ample_exit.exit_error(msg)
             
         # we need a directory to extract into
         assert directory,"extractModels needs a directory path!"
         if not os.path.isdir(directory):
             os.mkdir(directory)
-        models_dir=directory
+        models_dir = directory
         
         # See what sort of file this is:
         f,suffix=os.path.splitext(filename)
@@ -116,81 +137,77 @@ def extract_models(filename, directory=None, sequence=None, single=True, allsame
         suffixes=tsuffixes + ['.zip']
         if suffix not in suffixes:
             msg="Do not know how to extract files from file: {0}\n Acceptable file types are: {1}".format(filename,suffixes)
-            ample_exit.exit(msg)
+            ample_exit.exit_error(msg)
         if suffix in tsuffixes:
-            extract_tar(filename, directory)
+            files = extract_tar(filename, directory)
         else:
-            extract_zip(filename, directory)
+            files = extract_zip(filename, directory)
         
+        # Assume anything with one member is quark decoys
+        if len(files) == 1:
+            quark_filename='alldecoy.pdb'
+            f = os.path.basename(files[0])
+            if not f == quark_filename:
+                msg="Only found one member ({0}) in file: {1} and the name was not {2}\n".format(f, filename, quark_filename)
+                msg+="If this file contains valid QUARK decoys, please email: ccp4@stfc.ac.uk"
+                ample_exit.exit_error(msg)
+            # Now extract the quark pdb files from the monolithic file
+            split_quark(files[0], models_dir)
+            # We delete the quark_name file as otherwise we'll try and model it
+            os.unlink(files[0])
+            # If we've got quark models we don't want to modify the side chains as we only have polyalanine so we
+            # set this here - horribly untidy as we should have one place to decide on side chains
+            logging.info('Found QUARK models in file: {0}'.format(filename))
+            amoptd['quark_models'] = True
+    
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
         msg="Problem importing pdb files - please check the log for more information"
-        ample_exit.exit(msg)
+        ample_exit.exit_error(msg)
     return models_dir
 
-def _extract_quark(tarfile,member,filename,models_dir):
-    # This is only acceptable if it is the quark decoys
-    quark_name='alldecoy.pdb'
-    if not member.name==quark_name:
-        msg="Only found one member ({0}) in file: {1} and the name was not {2}\n".format(member.name,filename,quark_name)
-        msg+="If this file contains valid QUARK decoys, please email: ccp4@stfc.ac.uk"
-        ample_exit.exit(msg)
-    
-    # extract into current (work) directory
-    tarfile.extract(member)
-    
-    # Now extract the quark pdb files from the monolithic file
-    split_quark(member.name, models_dir)
-    return
-
-def extract_tar(filename,models_dir):
+def extract_tar(filename, directory, suffixes=['.pdb']):
     # Extracting tarfile
-    logger = logging.getLogger()
-    logger.info('Extracting models from tarfile: {0}'.format(filename) )
+    logging.info('Extracting files from tarfile: {0}'.format(filename) )
+    files = []
     with tarfile.open(filename,'r:*') as tf:
         memb = tf.getmembers()
         if not len(memb):
             msg='Empty archive: {0}'.format(filename)
-            ample_exit.exit(msg)
-        if len(memb) == 1:
-            # Assume anything with one member is quark decoys
-            logger.info('Checking if file contains quark decoys'.format(filename))
-            _extract_quark(tf,memb[0],filename,models_dir)
-        else:
-            got=False
-            for m in memb:
-                if os.path.splitext(m.name)[1] == '.pdb':
-                    # Hack to remove any paths
-                    m.name=os.path.basename(m.name)
-                    tf.extract(m,path=models_dir)
-                    got=True
-            if not got:
-                msg='Could not find any pdb files in archive: {0}'.format(filename)
-                ample_exit.exit(msg)
-    return
+            ample_exit.exit_error(msg)
+        for m in memb:
+            if os.path.splitext(m.name)[1] in suffixes:
+                # Hack to remove any paths
+                m.name = os.path.basename(m.name)
+                tf.extract(m, path=directory)
+                files.append(os.path.join(directory, m.name))
+    if not len(files):
+        msg='Could not find any files with suffixes {0} in archive: {1}'.format(suffixes, filename)
+        ample_exit.exit_error(msg)
+    return files
 
-def extract_zip(filename,models_dir,suffix='.pdb'):
+def extract_zip(filename, directory, suffixes=['.pdb']):
     # zip file extraction
     logger = logging.getLogger()
-    logger.info('Extracting models from zipfile: {0}'.format(filename) )
+    logger.info('Extracting files from zipfile: {0}'.format(filename) )
     if not zipfile.is_zipfile(filename):
             msg='File is not a valid zip archive: {0}'.format(filename)
-            ample_exit.exit(msg)
-    zipf=zipfile.ZipFile(filename)
-    zif=zipf.infolist()
+            ample_exit.exit_error(msg)
+    zipf = zipfile.ZipFile(filename)
+    zif = zipf.infolist()
     if not len(zif):
-        msg='Empty zip file: {0}'.format(filename)
-        ample_exit.exit(msg)
-    got=False
+        msg = 'Empty zip file: {0}'.format(filename)
+        ample_exit.exit_error(msg)
+    files = []
     for f in zif:
-        if os.path.splitext(f.filename)[1] == suffix:
+        if os.path.splitext(f.filename)[1] in suffixes:
             # Hack to rewrite name 
-            f.filename=os.path.basename(f.filename)
-            zipf.extract(f, path=models_dir)
-            got=True
-    if not got:
-        msg='Could not find any pdb files in zipfile: {0}'.format(filename)
-        ample_exit.exit(msg)
-    return
+            f.filename = os.path.basename(f.filename)
+            zipf.extract(f, path=directory)
+            files.append(os.path.join(directory, f.filename))
+    if not len(files):
+        msg = 'Could not find any files with suffixes {0} in zipfile: {1}'.format(suffixes,filename)
+        ample_exit.exit_error(msg)
+    return files
 
 def find_exe(executable, dirs=None):
     """Find the executable exename.
@@ -274,7 +291,7 @@ def find_maxcluster(amoptd):
                 url='http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster'
             else:
                 msg="Unrecognised system type: {0} {1}".format(sys.platform,bit)
-                ample_exit.exit(msg)
+                ample_exit.exit_error(msg)
         elif sys.platform.startswith("darwin"):
             url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_i686_32bit.bin'
             #OSX PPC: http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_PPC_32bit.bin
@@ -283,55 +300,18 @@ def find_maxcluster(amoptd):
             maxcluster_exe = os.path.join( rcdir, 'maxcluster.exe' )
         else:
             msg="Unrecognised system type: {0}".format( sys.platform )
-            ample_exit.exit(msg)
+            ample_exit.exit_error(msg)
         logger.info("Attempting to download maxcluster binary from: {0}".format( url ) )
         try:
             urllib.urlretrieve( url, maxcluster_exe )
         except Exception, e:
             msg="Error downloading maxcluster executable: {0}\n{1}".format(url,e)
-            ample_exit.exit(msg)
+            ample_exit.exit_error(msg)
 
         # make executable
         os.chmod(maxcluster_exe, 0o777)
 
     return maxcluster_exe
-
-def get_psipred_prediction(psipred):
-    string = ''
-    for line in open(psipred):
-        get_stat1 = re.compile('^Pred\:\s*(\w*)')
-        result_stat1 = get_stat1.match(line)
-        if result_stat1:
-            stat1_get = re.split(get_stat1, line)
-            # print stat1_get[1]
-            string = string + stat1_get[1]
-
-    C = 0
-    H = 0
-    E = 0
-    length = len(string)
-
-    for c in string:
-        if c == 'C':
-            C = C + 1
-        if c == 'H':
-            H = H + 1
-        if c == 'E':
-            E = E + 1
-
-    H_percent = float(H) / length * 100
-    E_percent = float(E) / length * 100
-
-    if H > 0 and E > 0:
-        print  'Your protein is predicted to be mixed alpha beta, your chances of success are intermediate'
-    if H == 0 and E > 0:
-        print  'Your protein is predicted to be all beta, your chances of success are low'
-    if H > 0 and E == 0:
-        print  'Your protein is predicted to be all alpha, your chances of success are high'
-    if  H == 0 and E == 0:
-        print  'Your protein is has no predicted secondary structure, your chances of success are low'
-    
-    return
 
 def ideal_helices(nresidues):
     ""
@@ -475,33 +455,36 @@ def saveAmoptd(amoptd):
     # Save results
     with open( amoptd['results_path'], 'w' ) as f:
         cPickle.dump( amoptd, f )
-        logging.info("Saved results as file: {0}\n".format( amoptd['results_path'] ) )
+        logging.info("Saved state as file: {0}\n".format( amoptd['results_path'] ) )
     return
 
 def split_quark(dfile,directory):
     logger = logging.getLogger()
     logger.info("Extracting QUARK decoys from: {0} into {1}".format(dfile,directory))
-    smodels=[]
+    smodels = []
     with open(dfile,'r') as f:
         m=[]
         for line in f:
             if line.startswith("ENDMDL"):
                 m.append(line)
                 smodels.append(m)
-                m=[]
+                m = []
             else:
                 m.append(line)
     if not len(smodels): raise RuntimeError,"Could not extract any models from: {0}".format(dfile)
+    quark_models = []
     for i,m in enumerate(smodels):
-        fpath=os.path.join(directory,"quark_{0}.pdb".format(i))
+        fpath = os.path.join(directory,"quark_{0}.pdb".format(i))
         with open(fpath,'w') as f:
             for l in m:
                 # Need to reconstruct something sensible as from the coordinates on it's all quark-specific
                 if l.startswith("ATOM"):
-                    l=l[:54]+"  1.00  0.00              \n"
+                    l = l[:54]+"  1.00  0.00              \n"
                 f.write(l)
+            quark_models.append(fpath)
         logger.debug("Wrote: {0}".format(fpath))
-    return
+        
+    return quark_models
 
 def tmpFileName():
     """Return a filename for a temporary file"""

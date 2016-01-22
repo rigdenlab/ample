@@ -3,22 +3,28 @@ Created on 26 May 2015
 
 @author: jmht
 '''
-import ample_sequence
-import ample_util
+import collections
 import glob
 import logging
 import os
-import pdb_edit
 import shutil
 import sys
 import unittest
+
+# local imports
+import ample_sequence
+import ample_util
+import pdb_edit
+
+# We create this here otherwise it causes problems with pickling
+TheseusVariances = collections.namedtuple('TheseusVariances', ['idx', 'resName', 'resSeq', 'variance', 'stdDev', 'rmsd', 'core'])
 
 class Theseus(object):
     
     def __init__(self, work_dir=None, theseus_exe=None):
         
         self.theseus_exe = theseus_exe
-        if not os.path.exists(self.theseus_exe) and os.access(self.theseus_exe, os.X_OK):
+        if theseus_exe is None or not os.path.exists(self.theseus_exe) and os.access(self.theseus_exe, os.X_OK):
             raise RuntimeError,"Cannot find theseus_exe: {0}".format(self.theseus_exe)
         self.logger = logging.getLogger()
         self.work_dir = None
@@ -40,36 +46,38 @@ class Theseus(object):
         if not alignment_file: alignment_file = os.path.join(self.work_dir,'homologs.fasta')
         all_seq = ample_sequence.Sequence(pdb=models[0])
         for model in models[1:]: all_seq += ample_sequence.Sequence(pdb=model)
+        if not all(map(lambda x: x == len(all_seq.sequences[0]), [ len(s) for s in all_seq.sequences ])):
+            raise RuntimeError,'PDB files are not all of the same length!\n{0}'.format(models)
         all_seq.write_fasta(alignment_file,pdbname=True)
         return alignment_file
 
-    def align_models(self, models, work_dir=None, basename=None, homologs=False, alignment_file=None):
+    def superpose_models(self, models, work_dir=None, basename=None, homologs=False, alignment_file=None):
         self._set_work_dir(work_dir)
         if not basename: basename = 'theseus'
         if homologs:
-            # Theseus expects all the models to be in the directory that it is run in as the string
-            # given in the fasta header is used to construct the file names of the aligned pdb files
-            # If a full or relative path is given (e.g. /foo/bar.pdb), it tries to create files called "basename_/foo/bar.pdb"
+            # Theseus expects all the models to be in the directory that it is run in as the string given in 
+            # the fasta header is used to construct the file names of the aligned pdb files. If a full or 
+            # relative path is given (e.g. /foo/bar.pdb), it tries to create files called "basename_/foo/bar.pdb"
             # We therefore copy the models in and then delete them afterwards
             if not alignment_file: alignment_file = self.alignment_file(models)
             copy_models = [ os.path.join(self.work_dir,os.path.basename(m)) for m in models ]
             for orig, copy in zip(models, copy_models): shutil.copy(orig, copy)
         
         # -Z included so we don't line the models up to the principle axis and can compare the ensembles
-        cmd = [ self.theseus_exe, '-a0', '-r', basename ]
         #cmd = [ self.theseus_exe, '-a0', '-r', basename, '-Z', '-o', os.path.basename(copy_models[0]) ]
+        cmd = [ self.theseus_exe, '-a0', '-r', basename ]
         if homologs:
             cmd += [ '-A', alignment_file ]
             cmd += [ os.path.basename(m) for m in copy_models ]
         else:
             cmd += [ os.path.relpath(m,self.work_dir) for m in models ]
         
-        self.theseus_log=os.path.join(self.work_dir,"theseus.log")
+        self.theseus_log = os.path.join(self.work_dir,"tlog_{0}.log".format(basename))
         retcode = ample_util.run_command(cmd,
-                                         logfile=self.theseus_log,
-                                         directory=self.work_dir)
+                                         logfile = self.theseus_log,
+                                         directory = self.work_dir)
         if retcode != 0:
-            msg = "non-zero return code for theseus in align_models!\n See log: {0}".format(self.theseus_log)
+            msg = "non-zero return code for theseus in superpose_models!\n See log: {0}".format(self.theseus_log)
             self.logger.critical(msg)
             raise RuntimeError, msg
         
@@ -77,8 +85,6 @@ class Theseus(object):
         self.superposed_models = os.path.join(self.work_dir,'{0}_sup.pdb'.format(basename))
         if homologs:
             # Horrible - need to rename the models so that they match the names in the alignment file
-            #self.aligned_models = [ os.path.join(self.work_dir,"theseus_{0}".format(os.path.basename(m))) for m in copy_models ]
-            #for m in copy_models: os.unlink(m)
             self.aligned_models = []
             for m in copy_models:
                 mb = os.path.basename(m)
@@ -88,19 +94,12 @@ class Theseus(object):
                 self.aligned_models.append(mb)
         
         return self.superposed_models
-
-    def var_by_res(self, homologs=False):
-        """Return a list of tuples: (resSeq,variance)"""
+    
+    def parse_variances(self, variance_file):
+        if not os.path.isfile(variance_file): raise RuntimeError,"Cannot find theseus variance file: {0}".format(variance_file)
+        data = []
         
-        #--------------------------------
-        # get variations between pdbs
-        #--------------------------------
-        if not os.path.isfile(self.variance_file):
-            raise RuntimeError,"Cannot find theseus variance file: {0} Please check the log: {1}".format(self.variance_file,
-                                                                                                         self.theseus_log)
-        variances=[]
-        core_count = 0
-        with open(self.variance_file) as f:
+        with open(variance_file) as f:
             for i, line in enumerate(f):
                 # Skip header
                 if i==0: continue
@@ -109,32 +108,46 @@ class Theseus(object):
                 if not line: continue # Skip blank lines
 
                 #print line
-                tokens=line.split()
+                tokens = line.split()
                 # Different versions of theseus may have a RES card first, so need to check
                 if tokens[0]=="RES":
-                    idxidx=1
-                    idxResSeq=3
-                    idxVariance=4
+                    idxidx = 1
+                    idxResName = 2
+                    idxResSeq = 3
+                    idxVariance = 4
+                    idxStdDev = 5
+                    idxRmsd = 6
                     idxCore = 7
                 else:
-                    idxidx=0
-                    idxResSeq=2
-                    idxVariance=3
+                    idxidx = 0
+                    idxResName = 1
+                    idxResSeq = 2
+                    idxVariance = 3
+                    idxStdDev = 4
+                    idxRmsd = 5
                     idxCore = 6
-                    
-                if homologs and (len(tokens) < idxCore + 1 or tokens[idxCore] != 'CORE'): continue
-                if homologs:
-                    idx = core_count
-                    core_count += 1
-                else:
-                    idx = int(tokens[idxidx]) - 1 # Theseus counts from 1, we count from 0
                 
-                #assert idx == i,"Index and atom lines don't match! {0} : {1}".format(idx,i) # paranoid check
-                resSeq = int(tokens[idxResSeq])
-                variance = float(tokens[idxVariance])
-                variances.append((idx,resSeq,variance))
-        
-        return variances
+                # Core may or may not be there
+                core = False
+                if len(tokens) > idxCore and tokens[idxCore] == 'CORE': core = True
+                data.append( TheseusVariances( idx = int(tokens[idxidx]) - 1, # Theseus counts from 1, we count from 0,
+                                               resName = tokens[idxResName],
+                                               resSeq = int(tokens[idxResSeq]),
+                                               variance = float(tokens[idxVariance]),
+                                               stdDev = float(tokens[idxStdDev]),
+                                               rmsd = float(tokens[idxRmsd]),
+                                               core = core ) )
+        return data
+
+    def var_by_res(self, core=False):
+        """Return a namedtuple with variance data"""
+        if not os.path.isfile(self.variance_file):
+            raise RuntimeError,"Cannot find theseus variance file: {0} Please check the log: {1}".format(self.variance_file, self.theseus_log)
+        var_by_res = self.parse_variances(self.variance_file)
+        if core:
+            return [v for v in var_by_res if v.core]
+        else:
+            return var_by_res
 
 class Test(unittest.TestCase):
 
@@ -172,9 +185,8 @@ class Test(unittest.TestCase):
         work_dir = os.path.join(self.tests_dir,'theseus_align')
         homologs = False
         rtheseus = Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
-        rtheseus.align_models(models,homologs=homologs)
+        rtheseus.superpose_models(models,homologs=homologs)
         var_by_res = rtheseus.var_by_res()
-        print " GOT ",[x[0] for x in var_by_res]
         # Below with theseus 3.1.1 on osx 10.9.5
         ref = [(0, 1, 55.757593), (1, 2, 46.981238), (2, 3, 47.734236), (3, 4, 39.857326), (4, 5, 35.477433),
                (5, 6, 26.066719), (6, 7, 24.114493), (7, 8, 24.610988), (8, 9, 21.187142), (9, 10, 21.882375),
@@ -189,9 +201,9 @@ class Test(unittest.TestCase):
                (50, 51, 67.9861), (51, 52, 58.661069), (52, 53, 41.802971), (53, 54, 57.085415), (54, 55, 71.944127),
                (55, 56, 57.893953), (56, 57, 54.34137), (57, 58, 77.736775), (58, 59, 83.279371)]
         
-        self.assertEqual([x[0] for x in var_by_res],[x[0] for x in ref])
-        self.assertEqual([x[1] for x in var_by_res],[x[1] for x in ref])
-        for i,(t,r) in enumerate(zip([x[2] for x in var_by_res], [x[2] for x in ref])):
+        self.assertEqual([x.idx for x in var_by_res],[x[0] for x in ref])
+        self.assertEqual([x.resSeq for x in var_by_res],[x[1] for x in ref])
+        for i,(t,r) in enumerate(zip([x.variance for x in var_by_res], [x[2] for x in ref])):
             self.assertTrue(abs(t-r) < 0.0001,"Mismatch for: {0} {1} {2}".format(i,t,r))
             
         shutil.rmtree(work_dir)
@@ -212,22 +224,24 @@ class Test(unittest.TestCase):
             pdbout = os.path.join(self.testfiles_dir,"{0}_cut.pdb".format(name))
             pdb_edit.select_residues(pdbin, pdbout, tokeep_idx=tokeep_idx)
             models.append(pdbout)
+        
+        #models = [ os.path.join(self.testfiles_dir,pdb) for pdb in pdb_list]
 
         homologs = True
-        rtheseus = Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
-        rtheseus.align_models(models,homologs=homologs)
+        rtheseus = Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
+        rtheseus.superpose_models(models, homologs=homologs)
         var_by_res = rtheseus.var_by_res()
         # Below with theseus 3.1.1 on osx 10.9.5
         ref  = [(0, 243, 8.049061), (1, 244, 2.614031), (2, 245, 1.343609), (3, 246, 2.261761), (4, 247, 1.112115),
                 (5, 248, 0.574936), (6, 249, 0.03114), (7, 250, 0.002894), (8, 251, 0.002314), (9, 252, 0.002174),
                 (10, 253, 0.016252), (11, 254, 0.109965)]
 
-        self.assertEqual([x[0] for x in var_by_res],[x[0] for x in ref])
-        self.assertEqual([x[1] for x in var_by_res],[x[1] for x in ref])
-        for i,(t,r) in enumerate(zip([x[2] for x in var_by_res], [x[2] for x in ref])):
+        self.assertEqual([x.idx for x in var_by_res],[x[0] for x in ref])
+        self.assertEqual([x.resSeq for x in var_by_res],[x[1] for x in ref])
+        for i,(t,r) in enumerate(zip([x.variance for x in var_by_res], [x[2] for x in ref])):
             self.assertTrue(abs(t-r) < 0.0001,"Mismatch for: {0} {1} {2}".format(i,t,r))
 
-        self.assertTrue(all([os.path.isfile(m) for m in rtheseus.aligned_models]))
+        self.assertTrue(all([os.path.isfile(os.path.join(work_dir,m)) for m in rtheseus.aligned_models]))
         # clean up
         for m in models: os.unlink(m)
         shutil.rmtree(work_dir)
