@@ -892,6 +892,7 @@ class Ample(object):
             msg += "The directory will be created, but it should have already been created by the CCP4 startup scripts\n"
             msg += "Please make sure CCP4 is installed and the setup scripts have been run."
             logger.critical(msg)
+            os.mkdir(os.environ['CCP4_SCR'])
             #ample_exit.exit_error(msg)
     
         # Record the CCP4 version we're running with  - also required in pyrvapi_results
