@@ -875,7 +875,7 @@ class Ample(object):
                 ample_exit.exit_error(msg)
         return rosetta_modeller
     
-    def setup_ccp4(self, amoptd):
+    def setup_ccp4(self, amoptd, logger):
         """Check CCP4 is available and return the top CCP4 directory"""
         # Make sure CCP4 is around
         if not "CCP4" in os.environ:
@@ -887,8 +887,12 @@ class Ample(object):
             ample_exit.exit_error(msg)
             
         if not os.path.isdir(os.environ['CCP4_SCR']):
-            msg = "Cannot find the $CCP4_SCR directory: {0}\nPlease make sure CCP4 is installed and the setup scripts have been run!".format(os.environ['CCP4_SCR'])
-            ample_exit.exit_error(msg)
+            msg = "*** WARNING ***\n"
+            msg += "Cannot find the $CCP4_SCR directory: {0}\n".format(os.environ['CCP4_SCR'])
+            msg += "The directory will be created, but it should have already been created by the CCP4 startup scripts\n"
+            msg += "Please make sure CCP4 is installed and the setup scripts have been run."
+            logger.critical(msg)
+            #ample_exit.exit_error(msg)
     
         # Record the CCP4 version we're running with  - also required in pyrvapi_results
         amoptd['ccp4_version'] = ample_util.ccp4_version()
@@ -929,7 +933,7 @@ class Ample(object):
         logger = ample_util.setup_logging(ample_log)
         
         # Make sure the CCP4 environment is set up properly
-        ccp4_home = self.setup_ccp4(amopt.d)
+        ccp4_home = self.setup_ccp4(amopt.d, logger)
         
         # Print out Version and invocation
         logger.info(ample_util.header)
