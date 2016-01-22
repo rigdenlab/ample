@@ -18,7 +18,9 @@ class ConstraintfileParser(parse_contactfile.ContactfileParser):
                 contact = self.contact.copy()       # Universal contact template
 
                 # Read in the contact data 
-                if line.startswith("AtomPair"): 
+                if not line.strip() or line.startswith("#"):
+                    continue
+                elif line.startswith("AtomPair"): 
                     self._atompair(contact, line)   # AtomPair specific function
                 else: 
                     msg = "Unrecognised format: {0}".format(line.strip())
