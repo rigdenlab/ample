@@ -102,10 +102,8 @@ class TMscorer(object):
             model     = pdbin_mod     if not identical_sequences else pdbin
             reference = structure_mod if not identical_sequences else structure
     
-            # Create a command list and execute TMscore
             log = os.path.join(self.workingDIR, pdbin_name + "_tmscore.log")
-            cmd = [ self.tmscore_exe, model, reference ]
-            p = ample_util.run_command(cmd, logfile=log, directory=self.workingDIR)
+            self.execute_comparison(model, reference, log)
 
             # Delete the modified structures if not wanted       
             if not keep_modified_structures and not identical_sequences:
@@ -127,6 +125,12 @@ class TMscorer(object):
             entries.append(entry)
                 
         return entries
+
+    def execute_comparison(self, model, reference, log=None):
+        # Create a command list and execute TMscore
+        cmd = [ self.tmscore_exe, model, reference ]
+        p = ample_util.run_command(cmd, logfile=log, directory=self.workingDIR)
+        return p
 
     def mod_structures(self, pdbin, pdbin_mod, structure, structure_mod):
         """Make sure the decoy and the xtal pdb align to get an accurate TM-score"""
