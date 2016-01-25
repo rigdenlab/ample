@@ -1148,6 +1148,9 @@ class Ample(object):
             else:
                 monitor = None
                 
+            # Save results here so that we have the list of scripts and mrbump directory set
+            ample_util.saveAmoptd(amopt.d)
+                
             # Change to mrbump directory before running
             os.chdir(amopt.d['mrbump_dir'])  
             ok = workers.run_scripts(job_scripts=amopt.d['mrbump_scripts'],
