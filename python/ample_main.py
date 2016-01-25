@@ -817,19 +817,15 @@ class Ample(object):
         
         # Go through and see what we need to do
         
-        # Reset all variables for doing stuff
-        amoptd['do_mr'] = False
+        # Reset all variables for doing stuff - otherwise we will always restart from the earliest point
         amoptd['make_ensembles'] = False
         amoptd['import_ensembles'] = False # Needs thinking about - have to set so we don't just reimport models/ensembles
         amoptd['import_models'] = False # Needs thinking about
         amoptd['make_models'] = False
         amoptd['make_frags'] = False
         
-        # Could check for results ourselves
-    #         # Process the MRBUMP results and save to dictionary
-    #         res_sum = mrbump_results.ResultsSummary()
-    #         res_sum.extractResults(amoptd['mrbump_dir'])
-    #         amoptd['mrbump_results'] = res_sum.results
+        # First see if we should benchmark this job. The user may not have supplied a native_pdb with the original
+        # job and we only set benchmark mode on seeing the native_pdb
         if amoptd['native_pdb']:
             if not os.path.isfile(amoptd['native_pdb']):
                 msg = "Cannot find native_pdb: {0}".format(amoptd['native_pdb'])
@@ -837,29 +833,29 @@ class Ample(object):
                 raise RuntimeError(msg)
             amoptd['benchmark_mode'] = True
             logger.info('Restart using benchmark mode')
+            
+        # We always check first to see if there are any mrbump jobs
+        amoptd['mrbump_scripts'] = []
+        if 'mrbump_dir' in amoptd:
+            amoptd['mrbump_scripts'] = ample_mrbump.unfinished_scripts(amoptd)
     
-        if 'mrbump_results' in amoptd and len(amoptd['mrbump_results']):
-            # Check if any jobs are unfinished -we run in the old mrbump directory
-            scripts = ample_mrbump.unfinished_scripts(amoptd)
-            if len(scripts):
-                amoptd['mrbump_scripts'] = scripts
-                amoptd['do_mr'] = True
-                logger.info('Restarting unfinished mrbump scripts: {0}'.format(scripts))
-        elif amoptd['ensembles']:
-            amoptd['do_mr'] = True
-            # Rerun from ensembles - check for data/ensembles are ok?
-            logger.info('Restarting from existing ensembles: {0}'.format(amoptd['ensembles']))
-        elif amoptd['models_dir'] and os.path.isdir(amoptd['models_dir']):
-            logger.info('Restarting from existing models: {0}'.format(amoptd['models_dir']))
-            # Check the models
-            allsame = False if amoptd['homologs'] else True 
-            if not pdb_edit.check_pdb_directory(amoptd['models_dir'], sequence=None, single=True, allsame=allsame):
-                msg = "Error importing restart models: {0}".format(amoptd['models_dir'])
-                ample_exit.exit_error(msg)
-            amoptd['make_ensembles'] = True
-        elif amoptd['frags_3mers'] and amoptd['frags_9mers']:
-            logger.info('Restarting from existing fragments: {0}, {1}'.format(amoptd['frags_3mers'], amoptd['frags_9mers']))
-            amoptd['make_models'] = True
+        if amoptd['do_mr']:
+            if len(amoptd['mrbump_scripts']):
+                logger.info('Restarting from unfinished mrbump scripts: {0}'.format(amoptd['mrbump_scripts']))
+            elif 'ensembles' in amoptd and len(amoptd['ensembles']):
+                # Rerun from ensembles - check for data/ensembles are ok?
+                logger.info('Restarting from existing ensembles: {0}'.format(amoptd['ensembles']))
+            elif amoptd['models_dir'] and os.path.isdir(amoptd['models_dir']):
+                logger.info('Restarting from existing models: {0}'.format(amoptd['models_dir']))
+                # Check the models
+                allsame = False if amoptd['homologs'] else True 
+                if not pdb_edit.check_pdb_directory(amoptd['models_dir'], sequence=None, single=True, allsame=allsame):
+                    msg = "Error importing restart models: {0}".format(amoptd['models_dir'])
+                    ample_exit.exit_error(msg)
+                amoptd['make_ensembles'] = True
+            elif amoptd['frags_3mers'] and amoptd['frags_9mers']:
+                logger.info('Restarting from existing fragments: {0}, {1}'.format(amoptd['frags_3mers'], amoptd['frags_9mers']))
+                amoptd['make_models'] = True
         
         return amoptd
     
@@ -1174,8 +1170,7 @@ class Ample(object):
         
             # Collect the MRBUMP results
             results_summary = ample_mrbump.ResultsSummary()
-            results_summary.extractResults(amopt.d['mrbump_dir'], purge=amopt.d['purge'])
-            amopt.d['mrbump_results'] = results_summary.results
+            amopt.d['mrbump_results'] = results_summary.extractResults(amopt.d['mrbump_dir'], purge=amopt.d['purge'])
             amopt.d['success'] = results_summary.success
             
             ample_util.saveAmoptd(amopt.d)
