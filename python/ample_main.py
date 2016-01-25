@@ -810,7 +810,9 @@ class Ample(object):
         amoptd_old['results_path'] = os.path.join(amoptd['work_dir'],'resultsd.pkl')
         
         # Now update any variables that were given on the command-line
-        for k in amoptd['cmdline_flags']: amoptd_old[k] = amoptd[k]
+        for k in amoptd['cmdline_flags']:
+            logger.debug("Restart updating amopt variable: {0} : {1}".format(k, amoptd[k]))
+            amoptd_old[k] = amoptd[k]
         
         # We can now replace the old dictionary with this new one
         amoptd = amoptd_old
