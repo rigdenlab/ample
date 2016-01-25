@@ -206,7 +206,7 @@ class ResultsSummary(object):
         
         self.success = any([jobSucceeded(r) for r in results])
         self.results = results
-        return True if len(results) else False
+        return self.results
 
     def _extractResults(self, mrbump_dir, archived_ensembles=None):
         """
@@ -515,8 +515,8 @@ class ResultsSummary(object):
     def summariseResults(self, mrbump_dir):
         """Return a string summarising the results"""
 
-        got = self.extractResults(mrbump_dir)
-        if got:
+        results = self.extractResults(mrbump_dir)
+        if len(results):
             return self.summaryString()
         else:
             return "\n!!! No results found in directory: {0}\n".format(mrbump_dir)
@@ -666,14 +666,18 @@ def job_unfinished(job_dict):
     return job_dict['Solution_Type'] == "unfinished" or job_dict['Solution_Type'] == "no_job_directory"
 
 def unfinished_scripts(amoptd):
+    """See if there are any unfinished mrbump jobs in a mrbump directory and return a list of the scripts"""
+    
     if not 'mrbump_dir' in amoptd or not os.path.isdir(amoptd['mrbump_dir']): return []
-    if not 'mrbump_results' in amoptd: return []
+
+    amoptd['mrbump_results'] = ResultsSummary().extractResults(amoptd['mrbump_dir'])
+    if not len(amoptd['mrbump_results']): return []
+    
     scripts = []
-    ext = '.bat' if sys.platform.startswith("win") else '.sh'
     for r in [ r for r in amoptd['mrbump_results'] if job_unfinished(r) ]:
         #print "DIR ", r['Job_directory']
         #print "DIR2 ", r['Search_directory']
-        scripts.append( os.path.join(amoptd['mrbump_dir'],r['ensemble_name']+ext) )
+        scripts.append( os.path.join(amoptd['mrbump_dir'],r['ensemble_name'] + SCRIPT_EXT) )
     return scripts
 
 def write_mrbump_files(ensemble_pdbs, amoptd, job_time=MRBUMP_RUNTIME, ensemble_options=None, directory=None):
