@@ -668,7 +668,7 @@ def job_unfinished(job_dict):
 def unfinished_scripts(amoptd):
     """See if there are any unfinished mrbump jobs in a mrbump directory and return a list of the scripts"""
     
-    if not 'mrbump_dir' in amoptd or not os.path.isdir(amoptd['mrbump_dir']): return []
+    if not 'mrbump_dir' in amoptd or amoptd['mrbump_dir'] is None or not os.path.isdir(amoptd['mrbump_dir']): return []
 
     amoptd['mrbump_results'] = ResultsSummary().extractResults(amoptd['mrbump_dir'])
     if not len(amoptd['mrbump_results']): return []
