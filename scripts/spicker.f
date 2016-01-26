@@ -876,7 +876,8 @@ c      write(*,*)"MINA MAXA ",mina,maxa
       WRITE(*,*)'* SPICKER READING SCORE MATRIX *'
       open(1,file='score.matrix',status='old')
       do i=1,n_str*n_str
-          read(1,'(i4,1x,i4,1x,1x,f8.3)',end=3,err=2) j, k, scored
+c          read(1,'(i4,1x,i4,1x,1x,f8.3)',end=3,err=2) j, k, scored
+          read(1,*,end=3,err=2) j, k, scored
           if (scored .gt. 1.0 .or. j .gt. n_str .or. k .gt. n_str) then
               write(*,*)"Invalid score line: ", j ,k ,scored
               stop
@@ -903,7 +904,6 @@ c          armsd=dsqrt(scored/Lch) !RMSD12
           rmsd_a = rmsd_a+armsd
           rmsd2_a = rmsd2_a+armsd*armsd
       enddo
-2     stop
 3     continue
       close(1)
 
@@ -913,6 +913,8 @@ c          armsd=dsqrt(scored/Lch) !RMSD12
 c      write(*,*)"RETURNING rmsd_a ",rmsd_a
 c      write(*,*)"RETURNING rmsd_delta ",rmsd_delta
       return
+2     write(*,*),"SPICKER ERROR READING SCORE MATRIX LINE ",i
+      stop 1
       end
 
       subroutine u3b(w, x, y, n, mode, rms, u, t, ier)
