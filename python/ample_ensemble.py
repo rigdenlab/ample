@@ -417,17 +417,19 @@ class Ensembler(object):
             clusters_data.append(cluster_data)
             clusters.append(cluster_models)          
                
-        elif cluster_method == "spicker" or cluster_method == "spicker_qscore":
+        elif cluster_method == "spicker" or cluster_method == "spicker_qscore" or cluster_method == "spicker_tmscore":
             # Spicker Alternative for clustering
             self.logger.info('* Running SPICKER to cluster models *')
             spicker_rundir = os.path.join(self.work_dir, 'spicker')
-            if cluster_method == "spicker_qscore":
+            if cluster_method == "spicker_qscore" or cluster_method == "spicker_tmscore":
                 os.mkdir(spicker_rundir)
                 os.chdir(spicker_rundir)
-                #shutil.copy(self.score_matrix, os.path.join(spicker_rundir,'score.matrix'))
-                clusterer = subcluster.GesamtClusterer(executable=self.gesamt_exe)
-                clusterer.generate_distance_matrix(models, nproc=nproc)
-                clusterer.dump_pdb_matrix()
+                if cluster_method == "spicker_qscore":
+                    clusterer = subcluster.GesamtClusterer(executable=self.gesamt_exe)
+                    clusterer.generate_distance_matrix(models, nproc=nproc)
+                    clusterer.dump_pdb_matrix()
+                elif cluster_method == "spicker_tmscore":
+                    shutil.copy(self.score_matrix, os.path.join(spicker_rundir,'score.matrix'))
                 
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
             spickerer.cluster(models, run_dir=spicker_rundir)

@@ -239,6 +239,12 @@ class Ample(object):
         
         parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
                            help='Path to Scwrl4 executable')
+        
+        parser.add_argument('-score_matrix', type=str, nargs=1,
+                           help='Path to score matrix for spicker')
+        
+        parser.add_argument('-score_matrix_file_list', type=str, nargs=1,
+                           help='File with list of ordered model names for the score_matrix')
     
         parser.add_argument('-sf_cif', type=str, nargs=1,
                            help='Path to a structure factor CIF file (instead of MTZ file)')
@@ -664,7 +670,8 @@ class Ample(object):
         #
         # Ensemble options
         #
-        if amoptd['cluster_method'] == 'spicker' or amoptd['cluster_method'] == 'spicker_qscore':
+        if amoptd['cluster_method'] == 'spicker' or amoptd['cluster_method'] == 'spicker_qscore' or \
+            amoptd['cluster_method'] == 'spicker_tmscore':
             if not amoptd['spicker_exe']:
                 amoptd['spicker_exe'] = 'spicker'  + ample_util.EXE_EXT
             try:
