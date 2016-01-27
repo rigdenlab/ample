@@ -355,8 +355,8 @@ class Contacter(object):
     
     def _cb_contacts(self, cb1_lst, cb2_lst, length, cutoff=8):
         '''Get the contacts between the two lists of contacts'''
-
-        self.logger.info("Distance cutoff of participating atoms is: %dA" % cutoff)
+        
+        self.logger.info("Distance cutoff of participating atoms is: %.1fA" % cutoff)
 
         dist_mat = numpy.zeros((length, length), numpy.float)
         dist_mat.fill(float('inf'))
