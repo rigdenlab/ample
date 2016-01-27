@@ -162,23 +162,10 @@ def analyseSolution(amoptd,d):
     # debug - copy into work directory as reforigin struggles with long pathnames
     shutil.copy(mrPdb, os.path.join(fixpath(amoptd['benchmark_dir']), os.path.basename(mrPdb)))
     
-    mrPdbInfo=pdb_edit.get_info( mrPdb )
+    mrPdbInfo = pdb_edit.get_info( mrPdb )
     
-    d['num_placed_atoms']=mrPdbInfo.numAtoms()
-    d['num_placed_CA']=mrPdbInfo.numCalpha()
-
-    # Get reforigin info
-    rmsder = reforigin.ReforiginRmsd()
-    try:
-        rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
-                       placedPdbInfo=mrPdbInfo,
-                       refModelPdbInfo=amoptd['ref_model_pdb_info'],
-                       cAlphaOnly=True,
-                       workdir=fixpath(amoptd['benchmark_dir']))
-        d['reforigin_RMSD']=rmsder.rmsd
-    except Exception,e:
-        _logger.critical("Error calculating RMSD: {0}".format(e))
-        d['reforigin_RMSD']=999
+    d['num_placed_atoms'] = mrPdbInfo.numAtoms()
+    d['num_placed_CA'] = mrPdbInfo.numCalpha()
 
     # Find the MR origin wrt to the native
     #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
@@ -202,6 +189,21 @@ def analyseSolution(amoptd,d):
     os.unlink(originPdb)
 
     if not (amoptd['ideal_helices'] or amoptd['homologs']):
+
+        # Get reforigin info
+        rmsder = reforigin.ReforiginRmsd()
+        try:
+            rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
+                           placedPdbInfo=mrPdbInfo,
+                           refModelPdbInfo=amoptd['ref_model_pdb_info'],
+                           cAlphaOnly=True,
+                           workdir=fixpath(amoptd['benchmark_dir']))
+            d['reforigin_RMSD']=rmsder.rmsd
+        except Exception,e:
+            _logger.critical("Error calculating RMSD: {0}".format(e))
+            d['reforigin_RMSD']=999
+
+
         # Score the origin with all-atom and rio
         rioData=rio.Rio().scoreOrigin(mrOrigin,
                                       mrPdbInfo=mrPdbInfo,
