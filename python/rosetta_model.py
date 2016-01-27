@@ -172,6 +172,7 @@ class RosettaModel(object):
         self.nativePdbStd = None
         self.constraints_file = None
         self.constraints_weight = None
+        self.disulfide_constraints_file = None
 
         self.logger = logging.getLogger()
 
@@ -263,7 +264,15 @@ class RosettaModel(object):
             if self.constraints_weight is not None:
                 cmd+=[ '-constraints:cst_weight', str(self.constraints_weight),
                        '-constraints:cst_fa_weight', str(self.constraints_weight) ]
-
+        
+        # Add compatibility for extra disulfide restraints
+        if self.disulfide_constraints_file and os.path.isfile(self.disulfide_constraints_file):
+            cmd+=[ '-in::fix_disulf', str(self.disulfide_constraints_file) ]    
+        elif self.disulfide_constraints_file:
+            msg="Cannot find disulfide restraints file: {0}".format(self.disulfide_constraints_file)
+            self.logger.critical(msg)
+            raise RuntimeError,msg
+                
         # Improve Template
         if self.improve_template:
             cmd += ['-in:file:native',
@@ -857,6 +866,12 @@ class RosettaModel(object):
                     raise RuntimeError, msg
                 self.constraints_file=optd['constraints_file']
             self.constraints_weight = optd['constraints_weight']
+            if optd['disulfide_constraints_file']:
+                if not os.path.exists(optd['disulfide_constraints_file']):
+                    msg="Cannot find disulfide restraints file: {0}".format(optd['disulfide_constraints_file'])
+                    self.logger.critical(msg)
+                    raise RuntimeError(msg)
+                self.disulfide_constraints_file = optd["disulfide_constraints_file"]
             
             # Cluster submission stuff
             self.submit_cluster = optd['submit_cluster']
