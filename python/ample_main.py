@@ -311,6 +311,9 @@ class Ample(object):
         contact_group.add_argument('-contact_file', type=str, nargs=1,
                            help='Residue contacts file in CASP RR format')
         
+        contact_group.add_argument('-disulfide_constraints_file', type=str, nargs=1,
+                           help='DISULFIDE residue restraints for ab initio modelling')
+        
         contact_group.add_argument('-distance_to_neighbour', type=int, nargs=1,
                            help="Min. distance between residue pairs for contact (default=5)")
         
