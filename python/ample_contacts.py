@@ -97,6 +97,7 @@ class Contacter(object):
         self.contact_file = None
         self.contact_map = None
         self.contact_ppv = None
+        self.native_cutoff = 8
         self.psipred_ss2 = None
         self.structure_pdb = None
         
@@ -119,6 +120,7 @@ class Contacter(object):
         
         # Optional files
         if optd['native_pdb'] and optd['native_pdb_std']: self.structure_pdb=optd['native_pdb_std']
+        if optd['native_cutoff']: self.native_cutoff=optd['native_cutoff']
         
         if optd['psipred_ss2']: self.psipred_ss2=optd['psipred_ss2']
         
@@ -347,7 +349,7 @@ class Contacter(object):
             
             self.structure_seq = aligned_seq_list[1]
         
-        contacts, contact_map = self._cb_contacts(cb_lst, cb_lst, len(self.structure_seq))
+        contacts, contact_map = self._cb_contacts(cb_lst, cb_lst, len(self.structure_seq), self.native_cutoff)
 
         return contacts, contact_map
     
@@ -702,6 +704,8 @@ class Test(unittest.TestCase):
 
 if __name__ == "__main__":
     import argparse
+    import ample_benchmark
+    import tempfile
     
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', type=str, default=None, dest='bbcontacts_file',
@@ -717,6 +721,8 @@ if __name__ == "__main__":
                         help="Job name")
     parser.add_argument('-o', type=str, default="ampl_.cst", dest="output",
                         help="Output file")
+    parser.add_argument('-p', type=float, default=8, dest='native_cutoff',
+                        help="Distance cutoff in native")
     parser.add_argument('-s', type=str, default=None, dest="native_pdb",
                         help="Reference structure")
     parser.add_argument('-ss2', type=str, default=None, dest="psipred_ss2",
@@ -748,8 +754,11 @@ if __name__ == "__main__":
         print "ERROR! Fasta file {0} has > 1 sequence in it.".format(optd['fasta'])
     optd['sequence'] = fp.sequence()
 
+    # Process the native before we do anything else
+    ample_benchmark.analysePdb(optd)
+
     c = Contacter(optd)
     if optd['format']: c.format(optd['output'])
-    elif optd['plot']: c.plot("ampl_.cm.pdf", ss2file=optd['psipred_ss2'], structurefile=optd['native_pdb'])
-    elif optd['ppv']: c.ppv(optd['native_pdb'])
+    elif optd['plot']: c.plot("ampl_.cm.pdf", ss2file=optd['psipred_ss2'], structurefile=optd['native_pdb_std'])
+    elif optd['ppv']: c.ppv(optd['native_pdb_std'])
     else: logging.critical("No option selected")
