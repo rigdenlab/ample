@@ -25,12 +25,10 @@ $CCP4/bin/ample.py \
 -psipred_ss2 toxd_.psipred_ss2 \
 -contact_file toxd_.pconsc2.CASPRR \
 
-# Add below for running in benchmark mode
-#-native_pdb  1DTX_std.pdb \
-
 # Add below for running with contact predictions
 #-contact_file toxd_.gremlin.CASPRR \
 #-bbcontacts_file toxd_.bbcontacts.CASPRR \
 #-constraints_file toxd_.cst \
-#-native_pdb 1DTX_std.pdb \
+#-native_pdb 1DTX.pdb \
+#-native_cutoff 9 \
 #-energy_function FADE_default \
