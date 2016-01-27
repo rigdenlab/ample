@@ -606,7 +606,10 @@ class RosettaModel(object):
             cmd += [ '-constraints:cst_file', self.constraints_file, '-constraints:cst_fa_file', self.constraints_file ]
             if self.constraints_weight is not None:
                 cmd+=[ '-constraints:cst_weight', str(self.constraints_weight), '-constraints:cst_fa_weight', str(self.constraints_weight) ]
-                
+
+        if self.disulfide_constraints_file:
+            cmd+=[ '-in::fix_disulf', str(self.disulfide_constraints_file) ]    
+    
         return cmd
     
     def nmr_remodel(self, nmr_model_in=None, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
