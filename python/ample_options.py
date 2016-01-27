@@ -77,6 +77,7 @@ class AmpleOptions(object):
                             'mustang_exe' : None,
                             'name' : 'ampl',
                             'native_pdb' : None,
+                            'native_cutoff': 8,
                             'nmasu' : 0,
                             'nmodels' : 1000,
                             'nmr_model_in' : None,

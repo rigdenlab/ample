@@ -320,6 +320,9 @@ class Ample(object):
         contact_group.add_argument('-energy_function', type=str, nargs=1,
                            help='Rosetta energy function for contact restraint conversion (default=FADE)')
         
+        contact_group.add_argument('-native_cutoff', type=float, nargs=1,
+                           help='Distance cutoff for reference contacts in native structure (default=8A)')
+        
         # MR options
         mr_group = parser.add_argument_group('MRBUMP/Molecular Replacement Options')
         
