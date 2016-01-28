@@ -37,6 +37,47 @@ import rosetta_model
 import version
 import workers
 
+def setup_console_logging():
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    
+    # First create console logger for outputting stuff
+    # create file handler and set level to debug
+    # Seems they changed the api in python 2.6->2.7
+    try:
+        cl = logging.StreamHandler(stream=sys.stdout)
+    except TypeError:
+        cl = logging.StreamHandler(strm=sys.stdout)
+    cl.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
+    cl.setFormatter(formatter)
+    logger.addHandler(cl)
+    return logger
+
+def setup_file_logging(main_logfile, debug_logfile):
+    """
+    Set up the various log files/console logging
+    and return the logger
+    """
+    logger = logging.getLogger()
+
+    # create file handler for debug output
+    fl = logging.FileHandler(debug_logfile)
+    fl.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fl.setFormatter(formatter)
+    logger.addHandler(fl)
+
+    # Finally create the main logger
+    fl = logging.FileHandler(main_logfile)
+    fl.setLevel(logging.INFO)
+    fl.setFormatter(formatter) # Same formatter as screen
+    logger.addHandler(fl)
+    
+    return logger
+
+logger = setup_console_logging()
+
 class Ample(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
     
@@ -451,7 +492,7 @@ class Ample(object):
         
         return amopt
     
-    def process_options(self, amoptd, logger):
+    def process_options(self, amoptd):
         
         # Path for pickling results
         amoptd['results_path'] = os.path.join(amoptd['work_dir'], "resultsd.pkl")
@@ -770,7 +811,7 @@ class Ample(object):
         
         return
     
-    def process_restart_options(self, amoptd, logger):
+    def process_restart_options(self, amoptd):
         """
         For any new command-line options, we update the old dictionary with the new values
         We then go through the new dictionary and set ant of the flags corresponding to the data we find:
@@ -874,7 +915,7 @@ class Ample(object):
         
         return amoptd
     
-    def process_rosetta_options(self, amoptd, logger):
+    def process_rosetta_options(self, amoptd):
         # Create the rosetta modeller - this runs all the checks required
         rosetta_modeller = None
         if amoptd['make_models'] or amoptd['make_frags']:  # only need Rosetta if making models
@@ -886,7 +927,7 @@ class Ample(object):
                 ample_exit.exit_error(msg)
         return rosetta_modeller
     
-    def setup_ccp4(self, amoptd, logger):
+    def setup_ccp4(self, amoptd):
         """Check CCP4 is available and return the top CCP4 directory"""
         # Make sure CCP4 is around
         if not "CCP4" in os.environ:
@@ -910,7 +951,7 @@ class Ample(object):
         amoptd['ccp4_version'] = ample_util.ccp4_version()
         
         return os.environ['CCP4']
-    
+
     def run(self, args=None):
         """Main AMPLE routine.
         
@@ -925,6 +966,7 @@ class Ample(object):
         
         # Make a work directory - this way all output goes into this directory
         if amopt.d['work_dir']:
+            logger.info('Making a named work directory: {0}'.format(amopt.d['work_dir']))
             try:
                 os.mkdir(amopt.d['work_dir'])
             except:
@@ -934,18 +976,20 @@ class Ample(object):
             if not os.path.exists(amopt.d['run_dir']):
                 msg = 'Cannot find run directory: {0}'.format(amopt.d['run_dir'])
                 ample_exit.exit_error(msg, sys.exc_info()[2])
-            print 'Making a Run Directory: checking for previous runs\n' # Last ever print statement. Amen
+            logger.info('Making a run directory: checking for previous runs...')
             amopt.d['work_dir'] = ample_util.make_workdir(amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'])
         # Go to the work directory
         os.chdir(amopt.d['work_dir'])
         
         # Set up logging
         ample_log = os.path.join(amopt.d['work_dir'], 'AMPLE.log')
+        debug_log = os.path.join(amopt.d['work_dir'], 'debug.log')
         amopt.d['ample_log'] = ample_log
-        logger = ample_util.setup_logging(ample_log)
+        
+        setup_file_logging(ample_log, debug_log)
         
         # Make sure the CCP4 environment is set up properly
-        ccp4_home = self.setup_ccp4(amopt.d, logger)
+        ccp4_home = self.setup_ccp4(amopt.d)
         
         # Print out Version and invocation
         logger.info(ample_util.header)
@@ -966,10 +1010,10 @@ class Ample(object):
         
         # Check if we are restarting from an existing pkl file - we don't process the options from this
         # run if so
-        amopt.d = self.process_restart_options(amopt.d, logger)
+        amopt.d = self.process_restart_options(amopt.d)
         if not amopt.d['restart_pkl']:
-            self.process_options(amopt.d, logger) # Only process the remaining options if we aren't in restart mode
-        rosetta_modeller = self.process_rosetta_options(amopt.d, logger)
+            self.process_options(amopt.d) # Only process the remaining options if we aren't in restart mode
+        rosetta_modeller = self.process_rosetta_options(amopt.d)
         
         # Bail and clean up if we were only checking the options
         if amopt.d['dry_run']:
