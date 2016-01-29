@@ -95,8 +95,8 @@ class Ample(object):
             msg = "One of -fasta  or -restart_pkl option is required."
             ample_exit.exit_error(msg)
             
-        if (amoptd['contact_file'] or amoptd['bbcontacts_file']) and amoptd['constraints_file']:
-            msg = "Only one option of -contact_file or -constraints_file allowed."
+        if (amoptd['contact_file'] or amoptd['bbcontacts_file']) and amoptd['restraints_file']:
+            msg = "Only one option of -contact_file or -restraints_file allowed."
             ample_exit.exit_error(msg)
         
         if not amoptd['restart_pkl'] and not (amoptd['mtz'] or amoptd['sf_cif']):
@@ -335,25 +335,16 @@ class Ample(object):
                            help='Path to the directory where AMPLE will run (will be created if it doesn\'t exist)')
         
         # Contact options
-        contact_group = parser.add_argument_group("Contact Constraints Options")
+        contact_group = parser.add_argument_group("Contact Restraints Options")
         
         contact_group.add_argument('-bbcontacts_file', type=str, nargs=1,
-                           help='Additional bbcontacts file. >>> Requires normal contactfile <<<')
-        
-        contact_group.add_argument('-constraints_factor', type=float, nargs=1,
-                           help='Factor (* Sequence length) determining number of contact restraints to use (default=1.0)')
-        
-        contact_group.add_argument('-constraints_file', type=str, nargs=1,
-                           help='Residue restraints for ab initio modelling')
-        
-        contact_group.add_argument('-constraints_weight', type=float, nargs=1,
-                           help="Additional energy weighting of constraints in Rosetta")
+                           help='Additional bbcontacts file. Requires normal contactfile')
         
         contact_group.add_argument('-contact_file', type=str, nargs=1,
-                           help='Residue contacts file in CASP RR format')
+                           help='Residue contact file in CASP RR format')
         
         contact_group.add_argument('-disulfide_constraints_file', type=str, nargs=1,
-                           help='DISULFIDE residue restraints for ab initio modelling')
+                           help='Disulfide residue constraints for ab initio modelling')
         
         contact_group.add_argument('-distance_to_neighbour', type=int, nargs=1,
                            help="Min. distance between residue pairs for contact (default=5)")
@@ -363,6 +354,16 @@ class Ample(object):
         
         contact_group.add_argument('-native_cutoff', type=float, nargs=1,
                            help='Distance cutoff for reference contacts in native structure (default=8A)')
+        
+        contact_group.add_argument('-restraints_factor', type=float, nargs=1,
+                           help='Factor (* Sequence length) determining number of contact restraints to use (default=1.0)')
+        
+        contact_group.add_argument('-restraints_file', type=str, nargs=1,
+                           help='Residue restraints for ab initio modelling')
+        
+        contact_group.add_argument('-restraints_weight', type=float, nargs=1,
+                           help="Additional energy weighting of restraints in Rosetta")
+        
         
         # MR options
         mr_group = parser.add_argument_group('MRBUMP/Molecular Replacement Options')
@@ -1054,19 +1055,19 @@ class Ample(object):
     
         # In case file created above we need to tell the rosetta_modeller where it is
         # otherwise not used as not created before object initialised    
-        if amopt.d['make_models'] and (amopt.d['use_contacts'] or amopt.d['constraints_file']):
+        if amopt.d['make_models'] and (amopt.d['use_contacts'] or amopt.d['restraints_file']):
             cm = ample_contacts.Contacter(optd=amopt.d)
             
-            cm.process_constraintsfile() if not amopt.d['use_contacts'] and amopt.d['constraints_file'] \
+            cm.process_restraintsfile() if not amopt.d['use_contacts'] and amopt.d['restraints_file'] \
                 else cm.process_contactfile()
     
-            amopt.d['constraints_file'] = cm.constraints_file
+            amopt.d['restraints_file'] = cm.restraints_file
             amopt.d['contact_map'] = cm.contact_map
             amopt.d['contact_ppv'] = cm.contact_ppv
                 
         
-        if amopt.d['make_models'] and amopt.d['constraints_file']: 
-            rosetta_modeller.constraints_file = amopt.d['constraints_file']
+        if amopt.d['make_models'] and amopt.d['restraints_file']: 
+            rosetta_modeller.restraints_file = amopt.d['restraints_file']
         
         # if NMR process models first
         # break here for NMR (frags needed but not modelling
