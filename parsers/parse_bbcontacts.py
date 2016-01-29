@@ -25,11 +25,12 @@ class BBcontactsContactParser(parse_contactfile.ContactfileParser):
     def read(self, contactfile, removeFirstLast=True):
         with open(contactfile, 'r') as fh:
             for line in iter(fh.readline, ''):
-                if line.startswith("#"): continue
+                if line.startswith("#") or any(i.upper()=="NA" for i in line.split()): 
+                    continue
                 line = line.strip().split()
-                
+               
                 ## Remove two-residue strands. High FP rate
-                if line[self._STRAND_POS].upper() != "FIRST"\
+                if line[self._STRAND_POS].upper() != "FIRST" \
                     and removeFirstLast \
                     and self.isFirstLast(line):
                         self.contacts.pop()
