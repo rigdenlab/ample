@@ -3,17 +3,17 @@
 import parse_contactfile
       
 
-class ConstraintfileParser(parse_contactfile.ContactfileParser):
-    """Parser class for Rosetta constraints files"""
+class RestraintfileParser(parse_contactfile.ContactfileParser):
+    """Parser class for Rosetta restraints files"""
     
     def __init__(self):
         parse_contactfile.ContactfileParser.__init__(self)
         
-    def read(self, constraintfile):
-        """Read a constraints file to convert it to an array of
+    def read(self, restraintfile):
+        """Read a restraints file to convert it to an array of
         contact dictionaries"""
 
-        with open(constraintfile, 'r') as fh:
+        with open(restraintfile, 'r') as fh:
             for line in iter(fh.readline, ''):
                 contact = self.contact.copy()       # Universal contact template
 
@@ -28,11 +28,11 @@ class ConstraintfileParser(parse_contactfile.ContactfileParser):
                 
                 # Fulfill with remaining metadata information
                 contact['method'] = "ample"
-                contact['file'] = constraintfile
+                contact['file'] = restraintfile
                 self.contacts.append(contact)       # Store contact
                 
         if not self.contacts:
-            msg = "No converted constraints"
+            msg = "No converted restraints"
             raise ValueError(msg)
         
         return
