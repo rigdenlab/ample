@@ -243,4 +243,25 @@ def SIGMOID_scalarweighted(contact):
                        'atom2': contact['atom2'], 'res2_index': contact['res2_index'],
                        'scalar_score': contact['scalar_score']}
 
+###############################################################
+#
+# 
+#
+###############################################################
+
+def SIGMOID_bbcontacts(contact):
+    """GREMLIN Sigmoid with bbcontacts overlay"""
+    
+    template = _ATOMPAIR + _SCALARWEIGHTED + \
+               "SUMFUNC 2 SIGMOID %(sigmoid_cutoff).3f %(sigmoid_slope).3f CONSTANTFUNC -0.5"
+    
+    # Calculate some values required by the functions
+    cutoff = cbcbcutoff[contact['res1']][contact['res2']]
+    slope = cbcbpercent[contact['res1']][contact['res2']]
+    
+    return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
+                       'atom2': contact['atom2'], 'res2_index': contact['res2_index'],
+                       'scalar_score': (contact['scalar_score'] * contact['weight']), 
+                       'sigmoid_cutoff': cutoff, 'sigmoid_slope': 1/slope
+                       }
 
