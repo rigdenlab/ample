@@ -898,10 +898,10 @@ class Ample(object):
         if amoptd['do_mr']:
             if len(amoptd['mrbump_scripts']):
                 logger.info('Restarting from unfinished mrbump scripts: {0}'.format(amoptd['mrbump_scripts']))
-            elif 'ensembles' in amoptd and len(amoptd['ensembles']):
+            elif 'ensembles' in amoptd and amoptd['ensembles'] and len(amoptd['ensembles']):
                 # Rerun from ensembles - check for data/ensembles are ok?
                 logger.info('Restarting from existing ensembles: {0}'.format(amoptd['ensembles']))
-            elif amoptd['models_dir'] and os.path.isdir(amoptd['models_dir']):
+            elif amoptd['models_dir'] and amoptd['models_dir'] and os.path.isdir(amoptd['models_dir']):
                 logger.info('Restarting from existing models: {0}'.format(amoptd['models_dir']))
                 # Check the models
                 allsame = False if amoptd['homologs'] else True 
