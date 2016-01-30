@@ -33,7 +33,8 @@ import version
 # Only default non-dynamic part are the files as they
 # should never be stored in the config file to avoid errors
 
-_SECTIONS_REFERENCE = {"Databases" : ['nr',
+_SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version"],
+                       "Databases" : ['nr',
                                       'rosetta_db'],
                        "Executables" : ['blast_dir',
                                         'fast_protein_cluster_exe',
@@ -59,7 +60,6 @@ _SECTIONS_REFERENCE = {"Databases" : ['nr',
                                   'fasta',
                                   'frags_3mers',
                                   'frags_9mers',
-                                  'import_cluster',
                                   'models',
                                   'mrbump_dir',
                                   'mr_sequence',
@@ -70,7 +70,6 @@ _SECTIONS_REFERENCE = {"Databases" : ['nr',
                                   'psipred_ss2',
                                   'restart_pkl',
                                   'restraints_file',
-                                  'rosetta_db',
                                   'score_matrix',
                                   'score_matrix_file_list',
                                   'sf_cif',
@@ -91,7 +90,7 @@ class AMPLEConfigOptions(object):
         # Identify which config file to use
         config_file = os.path.abspath(config_opts["config_file"]) \
             if config_opts["config_file"] else \
-                os.path.join(root, "include", "ample.config")
+                os.path.join(root, "include", "ample.ini")
         
         self._read_config_file(config_file) # Read the configuration file
         self._read_config_opts(config_opts) # Read the command line arguments
@@ -121,7 +120,7 @@ class AMPLEConfigOptions(object):
     
     def write_config_file(self, filename):
         config = ConfigParser.SafeConfigParser()
-    
+        
         # Add all sections to the configparser
         for section in sorted(_SECTIONS_REFERENCE.keys()):
             config.add_section(section)
@@ -129,19 +128,21 @@ class AMPLEConfigOptions(object):
         # Place all entries in our dictionary in the corresponding section in
         # the configparser
         for option, value in self.d.iteritems():
-            value = str(value)
-            
             # Extract the section in which the entry needs to go
-            for k, v in _SECTIONS_REFERENCE.iteritems():
-                if option in v:
-                    section = k
+            sections = [k for (k, v) in _SECTIONS_REFERENCE.items() if option in v]
+            
+            # Make sure we only have each option assigned to a single section
+            section = None if len(sections) > 1 else sections[0]    
+            assert section, "Uncertainty about option: {0}".format(option)
             
             # We do not want to re-use files or at least not by default.
             # Comment those specifically out to avoid any errors
-            if section.lower() == "files":
-                config.set(section, "#"+option, value)
+            if section.lower() == "ample_info":
+                config.set(section, "#"+option, str(value))
+            elif section.lower() == "files":
+                config.set(section, "#"+option, str(value))
             else:
-                config.set(section, option, value)
+                config.set(section, option, str(value))
         
         with open(filename, "w") as out: config.write(out)
         return
@@ -164,6 +165,8 @@ class AMPLEConfigOptions(object):
                     raise RuntimeError('%s exists but is empty' % file)
                 else:
                     raise RuntimeError('%s does not exist' % file)
+            elif f not in self.d:
+                self.d[f] = None
             else:
                 continue
         return
@@ -187,7 +190,10 @@ class AMPLEConfigOptions(object):
                     
                 elif v == "False":
                     self.d[k] = False
-                    
+                
+                elif section.lower() == "databases":
+                    self.d[k] = os.path.abspath(v)    
+                
                 elif section.lower() == "executables": 
                     self.d[k] = os.path.abspath(v)
                     
