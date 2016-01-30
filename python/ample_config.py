@@ -1,7 +1,7 @@
 #!/usr/bin/env ccp4-python
 
 '''
-22.03.2015
+30.01.2016
 
 @author: hlfsimko
 '''
@@ -10,12 +10,12 @@ import logging
 import os
 import sys
 
-# Renamed in python 3
 try:
     import configparser as ConfigParser
 except:
     import ConfigParser
 
+# Need the root directory to find config file if no other is provided
 if "CCP4_AMPLE_ROOT" in os.environ and "CCP4" in os.environ:
     root = os.environ["CCP4_AMPLE_ROOT"]
 elif "CCP4" in os.environ:
