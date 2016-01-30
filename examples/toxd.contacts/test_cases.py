@@ -58,7 +58,7 @@ if not sys.platform.startswith('win'):
             self.assertGreaterEqual(nr_restraints, 0, "Restraints not read")
             self.assertEqual(nr_restraints, 59, "Different number read")
             nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
-            self.assertEqual(nmodels, 5, "Only {0} models produced".format(nmodels))
+            self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
             return
      
     test_dict['rosetta_contacts'] = { 'args' : args_rosetta_contacts,
@@ -92,7 +92,7 @@ if not sys.platform.startswith('win'):
             self.assertGreaterEqual(nr_restraints, 0, "Restraints not read")
             self.assertEqual(nr_restraints, 49, "Different number read")
             nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
-            self.assertEqual(nmodels, 5, "Only {0} models produced".format(nmodels))
+            self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
             return
     
     test_dict['rosetta_restraints'] = { 'args' : args_rosetta_restraints,
