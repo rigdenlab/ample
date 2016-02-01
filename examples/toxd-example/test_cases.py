@@ -101,7 +101,8 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         self.assertEqual(nmodels, 200, "Only {0} models produced".format(nmodels))
         self.assertIn('ensembles', self.AMPLE_DICT)
         nensembles = len(self.AMPLE_DICT['ensembles'])
-        self.assertEqual(nensembles, 18, "Incorrect number of ensembles produced: {0}".format(nensembles))
+        ref_nensembles = 18 if self.AMPLE_DICT["use_scwrl"] else 6 # unmod ensembles without side-chains - Scwrl4 required
+        self.assertEqual(nensembles, ref_nensembles, "Incorrect number of ensembles produced: {0}".format(nensembles))
         return
          
 test_dict['from_quark_models'] = { 'args' : args_from_quark_models,
