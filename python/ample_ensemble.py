@@ -23,6 +23,7 @@ RELIABLE = 'reliable'
 ALLATOM = 'allatom'
 UNMODIFIED = 'unmod'
 SIDE_CHAIN_TREATMENTS = [POLYALA, RELIABLE, ALLATOM]
+THIN_CLUSTERS = False
 
 # our imports
 import ample_scwrl
@@ -618,12 +619,11 @@ class Ensembler(object):
             _logger.info('Processing cluster: {0}'.format(cluster_idx+1))
             
             # New multi-cluster strategy
-            if cluster_idx > 0:
+            radius_thresholds = self.subcluster_radius_thresholds
+            side_chain_treatments = side_chain_treatments
+            if THIN_CLUSTERS and cluster_idx > 0:
                 radius_thresholds = [1, 3]
-                side_chain_treatments = [POLYALA]
-            else:
-                radius_thresholds = self.subcluster_radius_thresholds
-                side_chain_treatments = side_chain_treatments
+                side_chain_treatments = [ POLYALA ]
                 
             truncate_dir=os.path.join(self.work_dir,"cluster_{0}".format(cluster_idx+1))
             if not os.path.isdir(truncate_dir): os.mkdir(truncate_dir)
