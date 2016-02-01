@@ -78,6 +78,8 @@ def parse_args(test_dict=None, extra_args=None):
                         help="Location of rosetta installation directory")
     parser.add_argument('-submit_cluster', action='store_true', default=False,
                         help="Submit to a cluster queueing system")
+    parser.add_argument('-test_cases', nargs='+',
+                        help="A list of test cases to run")
     
     args = parser.parse_args()
     if args.rosetta_dir and not os.path.isdir(args.rosetta_dir):
@@ -108,14 +110,23 @@ def run(test_dict,
         clean_up=True,
         rosetta_dir=None,
         extra_args=None,
+        test_cases=None,
         **kw):
 
     if dry_run: clean_up = False
+    
+    if test_cases:
+        # Check that we can find the given cases in the complete list
+        missing = set(test_cases).difference(set(test_dict.keys()))
+        if missing:
+            raise RuntimeError,"Cannot find test cases: {0}".format(", ".join(missing))
+    else:
+        test_cases = test_dict.keys()
 
     # Create scripts and path to resultsd
     scripts = []
     owd = os.getcwd()
-    for name in test_dict.keys():
+    for name in test_cases:
         run_dir = test_dict[name]['directory']
         os.chdir(run_dir)
         work_dir = os.path.join(run_dir, name)
@@ -154,7 +165,7 @@ def run(test_dict,
     
     # Now run the tests
     all_suites = []
-    for name in test_dict.keys():
+    for name in test_cases:
         testClass = test_dict[name]['test']
         testClass.RESULTS_PKL = test_dict[name]['resultsd']
         all_suites.append(unittest.TestLoader().loadTestsFromTestCase(testClass)) 
