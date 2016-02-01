@@ -41,6 +41,16 @@ TMScoreModel = collections.namedtuple("TMScoreModel",
                                       "tm", "maxsub", "gdtts", "gdtha", "rmsd", 
                                       "nrResiduesCommon"])
 
+
+def tmscoreAvail():
+    """Check if TMscore binary is available"""
+    try:
+        ample_util.find_exe("TMscore")
+    except:
+        return False
+    return True
+
+
 class TMscorer(object):
     
     def __init__(self, structure, tmscore_exe, wdir=None):
