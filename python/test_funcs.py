@@ -17,6 +17,14 @@ import workers
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
 
+CLUSTER_ARGS = [ [ '-submit_cluster', 'True' ],
+                 [ '-submit_qtype', 'SGE' ],
+                 [ '-submit_array', 'True' ],
+                 [ '-no_gui', 'True' ],
+                 #[ '-submit_max_array', None ],
+                 #[ '-submit_queue', None ],
+                ]
+
 class AMPLEBaseTest(unittest.TestCase):
     RESULTS_PKL = None
     AMPLE_DICT = None
@@ -102,7 +110,7 @@ def run(test_dict,
         extra_args=None,
         **kw):
 
-    if dry_run: clean_up=False
+    if dry_run: clean_up = False
 
     # Create scripts and path to resultsd
     scripts = []
@@ -117,6 +125,8 @@ def run(test_dict,
             args = update_args(args, [['-rosetta_dir', rosetta_dir]])
         if extra_args:
             args = update_args(args, extra_args)
+        if submit_cluster:
+            args = update_args(args, CLUSTER_ARGS)
         script = write_script(work_dir,  args + [['-work_dir', work_dir]])
         scripts.append(script)
         # Set path to the results pkl file we will use to run the tests
@@ -130,22 +140,17 @@ def run(test_dict,
         os.chdir(owd)
     
     # Run all the jobs
-    nproc = nproc
-    submit_cluster = submit_cluster
-    submit_qtype = 'SGE'
-    submit_array = True
+    # If we're running on a cluster, we run on as many processors as there are jobs, as the jobs are just
+    # sitting and monitoring the queue
+    if submit_cluster:
+        nproc = len(scripts)
+        
     if not dry_run:
         workers.run_scripts(job_scripts=scripts,
                             monitor=None,
                             chdir=True,
                             nproc=nproc,
-                            job_time=3600,
-                            job_name='test',
-                            submit_cluster=submit_cluster,
-                            submit_qtype=submit_qtype,
-                            submit_queue=None,
-                            submit_array=submit_array,
-                            submit_max_array=None)
+                            job_name='test')
     
     # Now run the tests
     all_suites = []
