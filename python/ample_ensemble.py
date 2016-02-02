@@ -396,14 +396,13 @@ class Ensembler(object):
                        cluster_method=None,
                        num_clusters=None,
                        cluster_exe=None,
-                       import_cluster=False,
                        cluster_dir=None,
                        nproc=1,
                        max_cluster_size=200
                        ):
         clusters = []
         clusters_data = []
-        if import_cluster:
+        if cluster_method == 'import':
             if not os.path.isdir(cluster_dir): raise RuntimeError, "Import cluster cannot find directory: {0}".format(cluster_dir)
             cluster_models = glob.glob(os.path.join(cluster_dir, "*.pdb"))
             if not cluster_models: raise RuntimeError, "Import cluster cannot find pdbs in directory: {0}".format(cluster_dir)
@@ -562,7 +561,6 @@ class Ensembler(object):
                            cluster_method=None,
                            cluster_exe=None,
                            num_clusters=None,
-                           import_cluster=False,
                            cluster_dir=None,
                            percent_truncation=None,
                            truncation_method=None,
@@ -594,7 +592,7 @@ class Ensembler(object):
         else:
             self.ensembles_directory = ensembles_directory
         
-        if not import_cluster and not len(models):
+        if not cluster_method is 'import' and not len(models):
             raise RuntimeError, "Cannot find any models for ensembling!" 
         if not all([os.path.isfile(m) for m in models]):
             raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
@@ -610,7 +608,6 @@ class Ensembler(object):
                                                               cluster_method=cluster_method,
                                                               num_clusters=num_clusters,
                                                               cluster_exe=cluster_exe,
-                                                              import_cluster=import_cluster,
                                                               cluster_dir=cluster_dir,
                                                               nproc=nproc))):
             if len(cluster_models) < 2:

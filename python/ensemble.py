@@ -104,7 +104,6 @@ def create_ensembles(amoptd):
                                                  cluster_method=amoptd['cluster_method'],
                                                  cluster_exe=cluster_exe,
                                                  num_clusters=amoptd['num_clusters'],
-                                                 import_cluster=amoptd['import_cluster'],
                                                  cluster_dir=amoptd['cluster_dir'],
                                                  percent_truncation=amoptd['percent'],
                                                  truncation_method=amoptd['truncation_method'],

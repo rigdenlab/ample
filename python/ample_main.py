@@ -567,7 +567,7 @@ class Ample(object):
                 msg = "Import cluster cannot find pdbs in directory: {0}".format(amoptd['cluster_dir'])
                 ample_exit.exit_error(msg)
             logger.info("Importing pre-clustered models from directory: {0}\n".format(amoptd['cluster_dir']))   
-            amoptd['import_cluster'] = True
+            amoptd['cluster_method'] = 'import'
             amoptd['make_frags'] = False
             amoptd['make_models'] = False
         elif amoptd['ideal_helices']:
@@ -1125,7 +1125,7 @@ class Ample(object):
                 logger.info("*** Using ideal helices to solve structure ***")
             else:
                 # Check we have some models to work with
-                if not amopt.d['import_cluster'] and not glob.glob(os.path.join(amopt.d['models_dir'], "*.pdb")):
+                if not amopt.d['cluster_method'] is 'import' and not glob.glob(os.path.join(amopt.d['models_dir'], "*.pdb")):
                     ample_util.saveAmoptd(amopt.d)
                     msg = "ERROR! Cannot find any pdb files in: {0}".format(amopt.d['models_dir'])
                     ample_exit.exit_error(msg)
