@@ -26,8 +26,6 @@ else:
 from ample_ensemble import SIDE_CHAIN_TREATMENTS
 import version
 
-_logger=logging.getLogger(__name__)
-
 ##############################################################
 # The sections and options within need to be stored
 # otherwise we cannot manage interplay between 
@@ -35,7 +33,8 @@ _logger=logging.getLogger(__name__)
 # Only default non-dynamic part are the files as they
 # should never be stored in the config file to avoid errors
 
-_SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version"],
+_SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
+                                       "ccp4_version"],
                        "Databases" : ['nr',
                                       'rosetta_db'],
                        "Executables" : ['blast_dir',
@@ -52,6 +51,7 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version"],
                                         'theseus_exe'],
                        
                        "Files" : ['alignment_file',
+                                  'ample_log',
                                   'bbcontacts_file',
                                   'cluster_dir',
                                   'config_file',
@@ -59,10 +59,13 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version"],
                                   'disulfide_constraints_file',
                                   'domain_all_chains_pdb',
                                   'ensembles',
+                                  'ensembles_directory',
+                                  'ensemble_ok',
                                   'fasta',
                                   'frags_3mers',
                                   'frags_9mers',
                                   'models',
+                                  'models_dir',
                                   'mrbump_dir',
                                   'mr_sequence',
                                   'mtz',
@@ -73,6 +76,7 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version"],
                                   'psipred_ss2',
                                   'restart_pkl',
                                   'restraints_file',
+                                  'results_path',
                                   'score_matrix',
                                   'score_matrix_file_list',
                                   'sf_cif',
@@ -90,6 +94,7 @@ class AMPLEConfigOptions(object):
         
         self.d = {} # store all options here
         self.debug = False
+        self.logger = logging.getLogger(__name__)
         
         self.quick_mode = {
                            'max_ensemble_models' : 10,
@@ -131,7 +136,7 @@ class AMPLEConfigOptions(object):
         config_file = os.path.abspath(config_opts["config_file"]) \
             if config_opts["config_file"] else \
                 os.path.join(root, "include", "ample.ini")
-        _logger.debug("Using configuration file: {0}".format(config_file))
+        self.logger.debug("Using configuration file: {0}".format(config_file))
 
          # Read the configuration file
         self._read_config_file(config_file)
@@ -172,9 +177,6 @@ class AMPLEConfigOptions(object):
         if self.d['devel_mode']: self._preset_options('devel_mode')
         if self.d['quick_mode']: self._preset_options('quick_mode')
         if self.d['webserver_uri']: self._preset_options('webserver_uri')
-        
-        # Write config to job specific directory
-        self.d['out_config_file'] = os.path.join(self.d['work_dir'], self.d['name']+".ini")
         
         return
     
@@ -256,13 +258,11 @@ class AMPLEConfigOptions(object):
 
             if k not in self.d:
                 self.d[k] = tmpv
-                _SECTIONS_REFERENCE["Unspecified"].append(k)
             elif tmpv != None: 
-                _logger.debug("Changing {0}: {1} => {2}".format(k, 
+                print("Changing {0}: {1} => {2}".format(k, 
                                                                 self.d[k], 
                                                                 tmpv))
                 self.d[k] = tmpv
-            
             
         self.d['cmdline_flags'] = cmdline_flags
         return
@@ -285,16 +285,18 @@ class AMPLEConfigOptions(object):
     def write_config_file(self):
         config = ConfigParser.SafeConfigParser()
         self._write_config_file(config)
-        _logger.info("AMPLE configuration written to: {0}".format(self.d['out_config_file']))
-        with open(self.d['out_config_file'], "w") as out: 
-            config.write(out)
+        # Write config to job specific directory
+        self.d["out_config_file"] = f = os.path.join(self.d['work_dir'], 
+                                                     self.d['name']+".ini")
+        self.logger.info("AMPLE configuration written to: {0}".format(f))
+        with open(f, "w") as out: config.write(out)
         return
     
     def _write_config_file(self, config_parser):
         # Add all sections to the configparser
         for section in sorted(_SECTIONS_REFERENCE.keys()):
             config_parser.add_section(section)
-            
+        
         # Place all entries in our dictionary in the corresponding section in
         # the configparser
         for option, value in self.d.iteritems():
@@ -302,14 +304,13 @@ class AMPLEConfigOptions(object):
             sections = [k for (k, v) in _SECTIONS_REFERENCE.items() if option in v]
             
             # Make sure we only have each option assigned to a single section
-            section = None if len(sections) > 1 else sections[0]    
-            assert section, "Uncertainty about option: {0}".format(option)
+            section = "Unspecified" if len(sections) != 1 else sections[0]
             
             # We do not want to re-use files or at least not by default.
             # Comment those specifically out to avoid any errors
             if section.lower() == "ample_info":
                 config_parser.set(section, "#"+option, str(value))
-            elif section.lower() == "files":
+            elif section.lower() == "files" or section.lower() == "unspecified":
                 config_parser.set(section, "#"+option, str(value))
             else:
                 config_parser.set(section, option, str(value))
