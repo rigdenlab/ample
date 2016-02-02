@@ -30,13 +30,15 @@ import version
 # The sections and options within need to be stored
 # otherwise we cannot manage interplay between 
 # ConfigParser and AMPLE settings dictionary.
-# Only default non-dynamic part are the files as they
-# should never be stored in the config file to avoid errors
+# Some default non-dynamic parts are stored below to avoid errors
 
 _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
-                                       "ccp4_version"],
+                                       "ccp4_version",
+                                       "cmdline_flags"],
+                       
                        "Databases" : ['nr',
                                       'rosetta_db'],
+                       
                        "Executables" : ['blast_dir',
                                         'fast_protein_cluster_exe',
                                         'gesamt_exe',
@@ -84,7 +86,15 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
                                   'transmembrane_lipofile',
                                   'transmembrane_spanfile',
                                   'work_dir'],
-                        "Unspecified" : []
+                        # Data stored in amopt.d but not really part of AMPLE's configuation
+                        "No_config" : ["ensembles_data",
+                                       "fasta_length",
+                                       "sequence",
+                                       "truncation_variances",
+                                       "truncation_levels",
+                                       "truncation_nresidues"],
+                       # In case we haven't specified anything or it is new
+                        "Unspecified" : [],
 }
 
 
@@ -259,9 +269,7 @@ class AMPLEConfigOptions(object):
             if k not in self.d:
                 self.d[k] = tmpv
             elif tmpv != None: 
-                print("Changing {0}: {1} => {2}".format(k, 
-                                                                self.d[k], 
-                                                                tmpv))
+                print("Changing {0}: {1} => {2}".format(k, self.d[k], tmpv))
                 self.d[k] = tmpv
             
         self.d['cmdline_flags'] = cmdline_flags
@@ -295,20 +303,24 @@ class AMPLEConfigOptions(object):
     def _write_config_file(self, config_parser):
         # Add all sections to the configparser
         for section in sorted(_SECTIONS_REFERENCE.keys()):
+            if section.lower() == "no_config": continue
             config_parser.add_section(section)
         
         # Place all entries in our dictionary in the corresponding section in
         # the configparser
         for option, value in self.d.iteritems():
             # Extract the section in which the entry needs to go
-            sections = [k for (k, v) in _SECTIONS_REFERENCE.items() if option in v]
+            sections = [k for (k, v) in _SECTIONS_REFERENCE.items() \
+                            if any(entry.lower() == option.lower() for entry in v)]
             
             # Make sure we only have each option assigned to a single section
             section = "Unspecified" if len(sections) != 1 else sections[0]
             
             # We do not want to re-use files or at least not by default.
             # Comment those specifically out to avoid any errors
-            if section.lower() == "ample_info":
+            if section.lower() == "no_config":
+                continue
+            elif section.lower() == "ample_info":
                 config_parser.set(section, "#"+option, str(value))
             elif section.lower() == "files" or section.lower() == "unspecified":
                 config_parser.set(section, "#"+option, str(value))
