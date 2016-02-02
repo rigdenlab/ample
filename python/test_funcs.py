@@ -68,17 +68,17 @@ def load_module(mod_name, paths):
 
 def parse_args(test_dict=None, extra_args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-clean', action='store_true', default=False,
+    parser.add_argument('-c', '--clean', action='store_true', default=False,
                         help="Clean up all test files/directories")
-    parser.add_argument('-nproc', type=int, default=1,
+    parser.add_argument('-n', '--nproc', type=int, default=1,
                         help="Number of processors to run on (1 per job)")
-    parser.add_argument('-dry_run', action='store_true', default=False,
+    parser.add_argument('-d', '--dry_run', action='store_true', default=False,
                         help="Don\'t actually run the jobs")
-    parser.add_argument('-rosetta_dir',
+    parser.add_argument('-r', '--rosetta_dir',
                         help="Location of rosetta installation directory")
-    parser.add_argument('-submit_cluster', action='store_true', default=False,
+    parser.add_argument('-s', '--submit_cluster', action='store_true', default=False,
                         help="Submit to a cluster queueing system")
-    parser.add_argument('-test_cases', nargs='+',
+    parser.add_argument('test_cases', nargs='*',
                         help="A list of test cases to run")
     
     args = parser.parse_args()
@@ -149,6 +149,10 @@ def run(test_dict,
         
         # Back to where we started
         os.chdir(owd)
+    
+    print "The following test cases will be run:"
+    for name in test_cases:
+        print "{0}: {1}".format(name, test_dict[name]['directory'] )
     
     # Run all the jobs
     # If we're running on a cluster, we run on as many processors as there are jobs, as the jobs are just
