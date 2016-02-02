@@ -26,6 +26,8 @@ else:
 from ample_ensemble import SIDE_CHAIN_TREATMENTS
 import version
 
+_logger=logging.getLogger(__name__)
+
 ##############################################################
 # The sections and options within need to be stored
 # otherwise we cannot manage interplay between 
@@ -82,30 +84,58 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version"],
 
 class AMPLEConfigOptions(object):
     
-    def __init__(self, config_opts=None):
-        # Define some options
-        self.d = {}
-        self.logger = logging.getLogger()
-    
+    def __init__(self):
+        
+        self.d = {} # store all options here
+        self.debug = False
+        
+        self.quick_mode = {
+                           'max_ensemble_models' : 10,
+                           'nmodels' : 200,
+                           'percent' : 20,
+                           'shelx_cycles' : 5,
+                           'use_arpwarp' : False,
+                           'use_buccaneer' : False,
+                           'phaser_kill' : 15
+        }
+
+        # Test use scrwl
+        self.devel_mode = {
+                           'early_terminate': False,
+                           'benchmark_mode': True,
+                           'shelxe_rebuild' : True,
+                           'shelxe_rebuild_arpwarp' : True,
+                           'shelxe_rebuild_buccaneer' : True,
+                           'use_arpwarp' : False,
+                           'use_buccaneer' : False,
+                           #'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
+        }
+        
+        self.webserver_uri = {
+                               'purge': True,
+                               'shelxe_rebuild_buccaneer': True,
+                               'submit_cluster' : True,
+                               'submit_max_array' : 10,
+                               'submit_qtype' : "SGE",
+                               'submit_queue' : "all.q",
+        }
+        
+    def populate(self, config_opts):
+        
+        # Convert Namespace to Dictionary
+        config_opts = vars(config_opts)
+
         # Identify which config file to use
         config_file = os.path.abspath(config_opts["config_file"]) \
             if config_opts["config_file"] else \
                 os.path.join(root, "include", "ample.ini")
-        
-        self._read_config_file(config_file) # Read the configuration file
-        self._read_config_opts(config_opts) # Read the command line arguments
-        
-        self.d['ample_version'] = version.__version__
-        
-        if not self.d["rcdir"]:
-            self.d["rcdir"] = os.path.join(os.path.expanduser("~"), ".ample")
-        
-        if not self.d["run_dir"]:
-            self.d["run_dir"] = os.getcwd()
-            
-        if not self.d["side_chain_treatments"]:
-            self.d["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
-        
+        _logger.debug("Using configuration file: {0}".format(config_file))
+
+         # Read the configuration file
+        self._read_config_file(config_file)
+        # Read the command line arguments
+        self._read_config_opts(config_opts) 
+
         # Set further options
         self._process_options()
         return
@@ -148,27 +178,60 @@ class AMPLEConfigOptions(object):
         return
      
     def _process_options(self):
+        
+        self.d['ample_version'] = version.__version__
+        
+        if "rcdir" in self.d and not self.d["rcdir"]:
+            self.d["rcdir"] = os.path.join(os.path.expanduser("~"), ".ample")
+        
+        if "run_dir" in self.d and not self.d["run_dir"]:
+            self.d["run_dir"] = os.getcwd()
+            
+        if "side_chain_treatments" in self.d and not self.d["side_chain_treatments"]:
+            self.d["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
+            
         self._full_file_paths()
-        self._exec_extensions()
+        #self._exec_extensions()
+        
+        # Any changes here
+        if self.d['submit_qtype']:
+            self.d['submit_qtype'] = self.d['submit_qtype'].upper()
+        
+        if self.d['shelxe_rebuild']:
+            self.d['shelxe_rebuild_arpwap']=True
+            self.d['shelxe_rebuild_buccaneer']=True
+        
+        # Check if using any preset options
+        if self.d['devel_mode']: self._preset_options('devel_mode')
+        if self.d['quick_mode']: self._preset_options('quick_mode')
+        if self.d['webserver_uri']: self._preset_options('webserver_uri')
+        return
+    
+    def _preset_options(self ,mode):
+        assert hasattr(self, mode),"Unknown mode: {0}".format(mode)
+        for k, v in getattr(self, mode).iteritems():
+            # Set any that haven't been set
+            if self.d[k] == None:
+                self.d[k] = v
+            else:
+                # Already set - only overwrite if it's set to a default value, otherwise we
+                # let the user go with what they've chosen but warn
+                if self.d[k] != self.defaults[k] and self.d[k] != v  :
+                    print "WARNING! Overriding {0} setting: {1} : {2} with user setting {3}".format(mode, k, v, self.d[k])
+                else:
+                    # We overwrite the default with our value
+                    if self.debug:
+                        print "Overriding default setting: {0} : {1} with {2} setting {3}".format(k, mode, self.defaults[k], v)
+                    self.d[k] = v
         return
         
     def _exec_extensions(self):
         return
         
     def _full_file_paths(self):
-        for f in _SECTIONS_REFERENCE["Files"]:
-            if f in self.d and self.d[f]:
-                file = os.path.abspath(self.d[f])
-                if os.path.isfile(file) and os.path.getsize(file) > 0:
-                    self.d[f] = file
-                elif os.path.isfile(file):
-                    raise RuntimeError('%s exists but is empty' % file)
-                else:
-                    raise RuntimeError('%s does not exist' % file)
-            elif f not in self.d:
-                self.d[f] = None
-            else:
-                continue
+        for k, v in self.d.iteritems():
+            if k in _SECTIONS_REFERENCE["Files"] and v:
+                self.d[k] = os.path.abspath(v)
         return
         
     def _read_config_file(self, config_file):
@@ -182,13 +245,13 @@ class AMPLEConfigOptions(object):
             
             # Basic switch statement to determine the type of the variable
             for k, v in config.items(section):
-                if v == "None":
+                if v.lower() == "none":
                     self.d[k] = None
                     
-                elif v == "True":
+                elif v.lower() == "true":
                     self.d[k] = True
                     
-                elif v == "False":
+                elif v.lower() == "false":
                     self.d[k] = False
                 
                 elif section.lower() == "databases":
@@ -210,12 +273,35 @@ class AMPLEConfigOptions(object):
                     self.d[k] = v
                     
                 _SECTIONS_REFERENCE[section].append(k)
-                
         return
     
     def _read_config_opts(self, config_opts):
-        for k, v in config_opts.items():            
-            self.d[k]=v if config_opts[k] else None
+        tmpv = None
+        cmdline_flags = []
+        
+        for k, v in config_opts.iteritems():
+            if v is not None: cmdline_flags.append(k)
+            
+            tmpv = v[0] if isinstance(v, list) else v
+                        
+            if isinstance(tmpv, str):
+                if tmpv.lower() == "true":
+                    tmpv = True
+                elif tmpv.lower() == "false":
+                    tmpv = False
+                elif tmpv.lower() == "none":
+                    tmpv = None
+
+            if k not in self.d:
+                self.d[k] = tmpv
+            elif tmpv != None: 
+                _logger.debug("Changing {0}: {1} => {2}".format(k, 
+                                                                self.d[k], 
+                                                                tmpv))
+                self.d[k] = tmpv
+            
+            
+        self.d['cmdline_flags'] = cmdline_flags
         return
     
     def _isfloat(self, value):
