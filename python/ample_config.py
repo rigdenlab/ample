@@ -78,7 +78,8 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version"],
                                   'transmembrane_octopusfile',
                                   'transmembrane_lipofile',
                                   'transmembrane_spanfile',
-                                  'work_dir']
+                                  'work_dir'],
+                        "Unspecified" : []
 }
 
 
@@ -287,6 +288,7 @@ class AMPLEConfigOptions(object):
 
             if k not in self.d:
                 self.d[k] = tmpv
+                _SECTIONS_REFERENCE["Unspecified"].append(k)
             elif tmpv != None: 
                 _logger.debug("Changing {0}: {1} => {2}".format(k, 
                                                                 self.d[k], 
