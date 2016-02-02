@@ -90,7 +90,7 @@ class Contacter(object):
     """ Class to handle contact predictions """
     
     def __init__(self, optd=None):
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger(__name__)
         
         self.bbcontacts_file = None
         self.contact_file = None
