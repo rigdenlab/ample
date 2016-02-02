@@ -189,9 +189,11 @@ class AMPLEConfigOptions(object):
             
         if "side_chain_treatments" in self.d and not self.d["side_chain_treatments"]:
             self.d["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
-            
-        self._full_file_paths()
-        #self._exec_extensions()
+        
+        # Set full file paths
+        for k, v in self.d.iteritems():
+            if k in _SECTIONS_REFERENCE["Files"] and v:
+                self.d[k] = os.path.abspath(v)
         
         # Any changes here
         if self.d['submit_qtype']:
@@ -223,15 +225,6 @@ class AMPLEConfigOptions(object):
                     if self.debug:
                         print "Overriding default setting: {0} : {1} with {2} setting {3}".format(k, mode, self.defaults[k], v)
                     self.d[k] = v
-        return
-        
-    def _exec_extensions(self):
-        return
-        
-    def _full_file_paths(self):
-        for k, v in self.d.iteritems():
-            if k in _SECTIONS_REFERENCE["Files"] and v:
-                self.d[k] = os.path.abspath(v)
         return
         
     def _read_config_file(self, config_file):
