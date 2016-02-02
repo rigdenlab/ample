@@ -473,6 +473,18 @@ class Ensembler(object):
                                                 fpc_exe=cluster_exe,
                                                 nproc=nproc,
                                                 max_cluster_size=max_cluster_size)
+        elif cluster_method == 'random':
+            for i in range(num_clusters):
+                cluster = random.sample(models, max_cluster_size)
+                clusters.append(cluster)
+                # Data on the models
+                cluster_data = self.create_dict()
+                cluster_data['cluster_num'] = i + 1
+                #cluster_data['cluster_centroid'] = None
+                cluster_data['cluster_num_models'] = len(cluster)
+                cluster_data['cluster_method'] = cluster_method
+                cluster_data['num_clusters'] = num_clusters
+                clusters_data.append(cluster_data)
         else:
             raise RuntimeError, 'Unrecognised clustering method: {0}'.format(cluster_method)
         
