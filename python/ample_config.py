@@ -69,6 +69,7 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version"],
                                   'native_pdb',
                                   'nmr_model_in',
                                   'nmr_remodel_fasta',
+                                  'out_config_file',
                                   'psipred_ss2',
                                   'restart_pkl',
                                   'restraints_file',
@@ -140,43 +141,6 @@ class AMPLEConfigOptions(object):
         # Set further options
         self._process_options()
         return
-        
-    def prettify_parameters(self):
-        """Return the parameters nicely formated as a list of strings suitable 
-        for writing out to a file"""
-        pstr ='Parameters Used in this Run\n\n'
-        for k, v in sorted(self.d.items()):
-            pstr += "{0} : {1}\n".format(k, v)
-        return pstr
-    
-    def write_config_file(self, filename):
-        config = ConfigParser.SafeConfigParser()
-        
-        # Add all sections to the configparser
-        for section in sorted(_SECTIONS_REFERENCE.keys()):
-            config.add_section(section)
-            
-        # Place all entries in our dictionary in the corresponding section in
-        # the configparser
-        for option, value in self.d.iteritems():
-            # Extract the section in which the entry needs to go
-            sections = [k for (k, v) in _SECTIONS_REFERENCE.items() if option in v]
-            
-            # Make sure we only have each option assigned to a single section
-            section = None if len(sections) > 1 else sections[0]    
-            assert section, "Uncertainty about option: {0}".format(option)
-            
-            # We do not want to re-use files or at least not by default.
-            # Comment those specifically out to avoid any errors
-            if section.lower() == "ample_info":
-                config.set(section, "#"+option, str(value))
-            elif section.lower() == "files":
-                config.set(section, "#"+option, str(value))
-            else:
-                config.set(section, option, str(value))
-        
-        with open(filename, "w") as out: config.write(out)
-        return
      
     def _process_options(self):
         
@@ -208,6 +172,10 @@ class AMPLEConfigOptions(object):
         if self.d['devel_mode']: self._preset_options('devel_mode')
         if self.d['quick_mode']: self._preset_options('quick_mode')
         if self.d['webserver_uri']: self._preset_options('webserver_uri')
+        
+        # Write config to job specific directory
+        self.d['out_config_file'] = os.path.join(self.d['work_dir'], self.d['name']+".ini")
+        
         return
     
     def _preset_options(self ,mode):
@@ -305,7 +273,48 @@ class AMPLEConfigOptions(object):
             return True
         except:
             return False
+            
+    def prettify_parameters(self):
+        """Return the parameters nicely formated as a list of strings suitable 
+        for writing out to a file"""
+        pstr ='Parameters Used in this Run\n\n'
+        for k, v in sorted(self.d.items()):
+            pstr += "{0} : {1}\n".format(k, v)
+        return pstr
+    
+    def write_config_file(self):
+        config = ConfigParser.SafeConfigParser()
+        self._write_config_file(config)
+        _logger.info("AMPLE configuration written to: {0}".format(self.d['out_config_file']))
+        with open(self.d['out_config_file'], "w") as out: 
+            config.write(out)
+        return
+    
+    def _write_config_file(self, config_parser):
+        # Add all sections to the configparser
+        for section in sorted(_SECTIONS_REFERENCE.keys()):
+            config_parser.add_section(section)
+            
+        # Place all entries in our dictionary in the corresponding section in
+        # the configparser
+        for option, value in self.d.iteritems():
+            # Extract the section in which the entry needs to go
+            sections = [k for (k, v) in _SECTIONS_REFERENCE.items() if option in v]
+            
+            # Make sure we only have each option assigned to a single section
+            section = None if len(sections) > 1 else sections[0]    
+            assert section, "Uncertainty about option: {0}".format(option)
+            
+            # We do not want to re-use files or at least not by default.
+            # Comment those specifically out to avoid any errors
+            if section.lower() == "ample_info":
+                config_parser.set(section, "#"+option, str(value))
+            elif section.lower() == "files":
+                config_parser.set(section, "#"+option, str(value))
+            else:
+                config_parser.set(section, option, str(value))
 
+        return
 
 if __name__ == "__main__":
     import argparse
