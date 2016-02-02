@@ -402,6 +402,7 @@ class Ensembler(object):
                        ):
         clusters = []
         clusters_data = []
+        _logger.info('Clustering models using method: {0}'.format(cluster_method))
         if cluster_method == 'import':
             if not os.path.isdir(cluster_dir): raise RuntimeError, "Import cluster cannot find directory: {0}".format(cluster_dir)
             cluster_models = glob.glob(os.path.join(cluster_dir, "*.pdb"))
@@ -474,8 +475,16 @@ class Ensembler(object):
                                                 nproc=nproc,
                                                 max_cluster_size=max_cluster_size)
         elif cluster_method == 'random':
-            for i in range(num_clusters):
-                cluster = random.sample(models, max_cluster_size)
+            if len(models) <= max_cluster_size + 50: # completely arbitary number
+                raise RuntimeError,"Cannot randomly cluster so few models!"
+            i = 0
+            while len(clusters) < num_clusters:
+                if i > num_clusters * 3:
+                    raise RuntimeError,"Cannot find random clusters!"
+                cluster = set(random.sample(models, max_cluster_size))
+                if cluster in clusters:
+                    _logger.debug('Found duplicate cluster')
+                    continue
                 clusters.append(cluster)
                 # Data on the models
                 cluster_data = self.create_dict()
@@ -485,6 +494,9 @@ class Ensembler(object):
                 cluster_data['cluster_method'] = cluster_method
                 cluster_data['num_clusters'] = num_clusters
                 clusters_data.append(cluster_data)
+                i += 1
+            # Convert all sets back to lists
+            clusters = [ list(s) for s in clusters ]
         else:
             raise RuntimeError, 'Unrecognised clustering method: {0}'.format(cluster_method)
         
