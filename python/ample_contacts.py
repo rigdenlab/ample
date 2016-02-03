@@ -1,5 +1,4 @@
-#!/usr/bin/env ccp4-python
-
+self
 '''
 14.11.2015
 
@@ -105,18 +104,21 @@ class Contacter(object):
         self.raw_contacts = None
         self.sequence = None
         
+        self.energy_function = None
+        
         if optd: self.init(optd)
         
         return
     
     def init(self, optd):
-        self.optd = optd
 
         self.contact_file = optd['contact_file']
         self.contact_map = os.path.join(optd['work_dir'], optd['name'] + ".cm.pdf")
         self.restraints_file = os.path.join(optd['work_dir'], optd['name'] + ".cst") \
             if not optd['restraints_file'] else optd['restraints_file']
         self.sequence = optd['sequence']
+        
+        self.energy_function = optd['energy_function']
         
         # Optional files
         if optd['native_pdb'] and optd['native_pdb_std']: self.structure_pdb=optd['native_pdb_std']
@@ -145,13 +147,16 @@ class Contacter(object):
     def format(self, restraintfile):
         """ Format contacts to Rosetta restraints """
         
-        self.logger.info("Re-formatting contacts to restraints using the {0} function".format(self.optd['energy_function']))
+        self.logger.info("Re-formatting contacts to restraints " +
+                         "using the {0} function".format(self.energy_function))
         
         # Format the contacts to restraints
-        contact_formatted_lines = self._formatToRestraints(self.contacts, self.optd['energy_function'])
+        contact_formatted_lines = self._formatToRestraints(self.contacts, 
+                                                           self.energy_function)
         
         # Write contacts to restraint file
-        with open(restraintfile, 'w') as oh: oh.write("\n".join(contact_formatted_lines))
+        with open(restraintfile, 'w') as oh: 
+            oh.write("\n".join(contact_formatted_lines))
         
         return
        
@@ -268,10 +273,14 @@ class Contacter(object):
             c_x = contacts[idx]['res1_index']-offset-1
             c_y = contacts[idx]['res2_index']-offset-1
 
-            if RCm[c_x, c_y] > 0    and contacts[idx]['weight']==2: tp_colors.append('#2D9D00')
-            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight']==2: tp_colors.append('#AB0000')
-            elif RCm[c_x, c_y] > 0  and contacts[idx]['weight']==1: tp_colors.append("#38C700")
-            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight']==1: tp_colors.append("#D70909")
+            if RCm[c_x, c_y] > 0 and contacts[idx]['weight'] == 2: 
+                tp_colors.append('#2D9D00')
+            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight'] == 2: 
+                tp_colors.append('#AB0000')
+            elif RCm[c_x, c_y] > 0 and contacts[idx]['weight'] == 1: 
+                tp_colors.append("#38C700")
+            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight'] == 1: 
+                tp_colors.append("#D70909")
             else: tp_colors.append('#004F9D')
             
         return tp_colors
