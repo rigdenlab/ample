@@ -206,7 +206,7 @@ class AMPLEConfigOptions(object):
                     if self.debug:
                         print "Overriding default setting: {0} : {1} with {2} setting {3}".format(k, mode, self.defaults[k], v)
                     self.d[k] = v
-            """
+
         return
         
     def _read_config_file(self, config_file):
@@ -284,7 +284,7 @@ class AMPLEConfigOptions(object):
             return False
             
     def prettify_parameters(self):
-        """Return the parameters nicely formated as a list of strings suitable 
+        """Return the parameters nicely formated as a list of strings suitable
         for writing out to a file"""
         pstr ='Parameters Used in this Run\n\n'
         for k, v in sorted(self.d.items()):
