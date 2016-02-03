@@ -140,7 +140,7 @@ class AMPLEConfigOptions(object):
     def populate(self, config_opts):
         
         # Convert Namespace to Dictionary
-        config_opts = vars(config_opts)
+        self.config_opts = config_opts = vars(config_opts)
 
         # Identify which config file to use
         config_file = os.path.abspath(config_opts["config_file"]) \
@@ -190,7 +190,7 @@ class AMPLEConfigOptions(object):
         
         return
     
-    def _preset_options(self ,mode):
+    def _preset_options(self, mode):
         assert hasattr(self, mode),"Unknown mode: {0}".format(mode)
         for k, v in getattr(self, mode).iteritems():
             # Set any that haven't been set
@@ -199,13 +199,14 @@ class AMPLEConfigOptions(object):
             else:
                 # Already set - only overwrite if it's set to a default value, otherwise we
                 # let the user go with what they've chosen but warn
-                if self.d[k] != self.defaults[k] and self.d[k] != v  :
+                if self.d[k] != self.config_opts[k] and self.d[k] != v:
                     print "WARNING! Overriding {0} setting: {1} : {2} with user setting {3}".format(mode, k, v, self.d[k])
                 else:
                     # We overwrite the default with our value
                     if self.debug:
                         print "Overriding default setting: {0} : {1} with {2} setting {3}".format(k, mode, self.defaults[k], v)
                     self.d[k] = v
+            """
         return
         
     def _read_config_file(self, config_file):
@@ -315,7 +316,7 @@ class AMPLEConfigOptions(object):
             
             # Make sure we only have each option assigned to a single section
             section = "Unspecified" if len(sections) != 1 else sections[0]
-            
+
             # We do not want to re-use files or at least not by default.
             # Comment those specifically out to avoid any errors
             if section.lower() == "no_config":
