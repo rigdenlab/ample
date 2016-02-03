@@ -475,7 +475,7 @@ class Contacter(object):
         try: 
             cp.read(restraintsfile)
         except ValueError, e: 
-            self.logger.warning("Skipping reading of restraints:\n{0}".format(e))
+            self.logger.warning("Skipping reading of restraints for processing:\n{0}".format(e))
             cp.contacts = []
         return cp.contacts
         
