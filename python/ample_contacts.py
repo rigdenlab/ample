@@ -1,4 +1,5 @@
-self
+#!/usr/bin/env ccp4-python
+
 '''
 14.11.2015
 
