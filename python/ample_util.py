@@ -81,8 +81,8 @@ def ccp4_version():
     if CCP4_VERSION is None:
         # Currently there seems no sensible way of doing this other then running a program and grepping the output
         cmd=['mtzdmp',os.path.abspath(__file__)]
-        logf = tempfile.TemporaryFile()
-        run_command(cmd,logfile=logf)
+        logf = tempfile.NamedTemporaryFile(delete=False)
+        run_command(cmd,logfile=logf.name)
         logf.seek(0) # rewind logfile
         tversion=None
         for i, line in enumerate(logf):
@@ -103,7 +103,7 @@ def ccp4_version():
             minor = int(vsplit[1])
             rev = int(vsplit[2])
         else: raise RuntimeError,"Cannot split CCP4 version: {0}".format(tversion)
-    
+    os.unlink(logf.name)
     return (major,minor,rev)
     
 def extract_models(amoptd, sequence=None, single=True, allsame=True):
