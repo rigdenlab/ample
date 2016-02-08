@@ -141,6 +141,18 @@ class TMscorer(object):
         cmd = [ self.tmscore_exe, model, reference ]
         p = ample_util.run_command(cmd, logfile=log, directory=self.workingDIR)
         return p
+    
+    def dump_csv(self, csv_file):
+        if not len(self.entries): return
+        import csv
+        with open(csv_file, 'w') as f:
+            fieldnames = self.entries[0]._asdict().keys()
+            dw = csv.DictWriter(f, fieldnames=fieldnames)
+            dw.writeheader()
+            for e in self.entries:
+                dw.writerow(e._asdict())
+        print "Wrote csvfile: {0}".format(os.path.abspath(csv_file))
+        return
 
     def mod_structures(self, pdbin, pdbin_mod, structure, structure_mod):
         """Make sure the decoy and the xtal pdb align to get an accurate TM-score"""
@@ -284,6 +296,7 @@ if __name__ == "__main__":
                 os.path.abspath(args.wdir))
     t.main(args.pdb_list_file, keep_modified_structures=args.keep, identical_sequences=args.identical)
     
-    tmscores = [ i.tm for i in t.entries ] 
+    tmscores = [ i.tm for i in t.entries ]
     print "Median TM-score: {0}".format(round(ample_statistics.median(tmscores), 3))
     print "Mean   TM-score: {0}".format(round(ample_statistics.mean(tmscores), 3))
+    t.dump_csv('tm_scores.csv')
