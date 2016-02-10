@@ -208,10 +208,11 @@ def FADE_default(contact):
 
 def SIGMOID_default(contact):
     # Values as defined by RASREC and boundaries to define a distance of 8 Angstrom
-    template = _ATOMPAIR + "SIGMOID 8.00 1.00"
+    template = _ATOMPAIR + "SIGMOID 8.00 1.00 #ContactMap: %(raw_score).2f"
     
     return template % {'atom1': contact['atom1'], 'res1_index': contact['res1_index'],
-                       'atom2': contact['atom2'], 'res2_index': contact['res2_index']}
+                       'atom2': contact['atom2'], 'res2_index': contact['res2_index'],
+                       'raw_score': contact['raw_score']}
 
 ###############################################################
 #
