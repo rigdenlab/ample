@@ -93,13 +93,13 @@ class TMscorer(object):
         
         self.logger.info('-------Evaluating decoys/models-------')
 
-        structure = os.path.abspath(self.structure)                     # Path to reference structure
-        structure_name = os.path.basename(structure).rsplit(".", 1)[0]  # Filename
-        pdb_list_abs = [ os.path.abspath(model) for model in pdb_list ] # Full paths to models
+        structure = os.path.abspath(self.structure)                        # Path to reference structure
+        structure_name = os.path.splitext(os.path.basename(structure))[0]  # Filename
+        pdb_list_abs = [ os.path.abspath(model) for model in pdb_list ]    # Full paths to models
 
         for pdbin in pdb_list_abs:
             self.logger.debug("Working on %s" % pdbin)
-            pdbin_name     = os.path.basename(pdbin).rsplit(".", 1)[0]  # Filename        
+            pdbin_name = os.path.splitext(os.path.basename(pdbin))[0]  # Filename        
             if not os.path.exists(pdbin): 
                 self.logger.warning("Cannot find {0}".format(pdbin))
                 continue
@@ -107,7 +107,8 @@ class TMscorer(object):
             # Modify structures to be identical as required by TMscore binary
             if not identical_sequences:
                 pdbin_mod     = os.path.join(self.workingDIR, pdbin_name + "_mod.pdb")
-                structure_mod = os.path.join(self.workingDIR, pdbin_name + "_" + structure_name + "_mod.pdb")
+                structure_mod = os.path.join(self.workingDIR, pdbin_name + "_" + 
+                                             structure_name + "_mod.pdb")
                 self.mod_structures(pdbin, pdbin_mod, structure, structure_mod)    
             model     = pdbin_mod     if not identical_sequences else pdbin
             reference = structure_mod if not identical_sequences else structure
@@ -169,7 +170,8 @@ class TMscorer(object):
         structure_seq = pdb_edit.sequence(structure).values()[0]
 
         # Align the sequences to see how much of the predicted decoys are in the xtal
-        aligned_seq_list = parse_alignment.AlignmentParser().align_sequences(pdbin_seq, structure_seq)
+        aligned_seq_list = parse_alignment.AlignmentParser().align_sequences(pdbin_seq, 
+                                                                             structure_seq)
         pdbin_seq_ali     = aligned_seq_list[0]
         structure_seq_ali = aligned_seq_list[1]
         
