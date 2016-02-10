@@ -140,7 +140,7 @@ class Contacter(object):
                 self.bbcontacts_file = optd['bbcontacts_file']
                 self._readAdditionalBBcontacts(optd['bbcontacts_file'])
                 
-        else:
+        elif self.restraints_file:
             self.contacts = self._readRestraints(self.restraints_file)
    
         return
