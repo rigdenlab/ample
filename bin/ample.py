@@ -22,8 +22,8 @@ else:
 sys.path.append( os.path.join( root, "python" ) )
 
 # our imports
+import ample_main # Order is important as ample_main sets up the root console logger
 import ample_exit
-import ample_main
 
 # Run ample
 try:

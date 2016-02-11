@@ -73,11 +73,11 @@ def coord_to_pdb(coords, sequence, coord_id, clean=True):
     
     return pdbout
 
-def pdb_from_ca(coords, sequence, pdbout):
+def pdb_from_ca(coords, sequence, pdbout, chain):
     root = iotbx.pdb.hierarchy.root()
     model = iotbx.pdb.hierarchy.model()
     root.append_model(model)
-    chain = iotbx.pdb.hierarchy.chain(id="A")
+    chain = iotbx.pdb.hierarchy.chain(id=chain)
     model.append_chain(chain)
     
     for i, aa1 in enumerate(sequence):

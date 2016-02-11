@@ -58,10 +58,19 @@ def create_ensembles(amoptd):
             raise RuntimeError('Unrecognised subcluster_program: {0}'.format(amoptd['subcluster_program']))
         
     ensembler.max_ensemble_models = amoptd['max_ensemble_models']
-    if amoptd['cluster_method'] == 'spicker' or amoptd['cluster_method'] == 'spicker_qscore':
+    
+    if amoptd['cluster_method'] == 'spicker' or \
+       amoptd['cluster_method'] == 'spicker_qscore' or \
+       amoptd['cluster_method'] == 'spicker_tmscore':
         cluster_exe = amoptd['spicker_exe']
+        if amoptd['cluster_method'] == 'spicker_tmscore':
+            if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
+                    raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
+            ensembler.score_matrix = amoptd['score_matrix']
     elif amoptd['cluster_method'] == 'fast_protein_cluster':
         cluster_exe = amoptd['fast_protein_cluster_exe']
+    elif amoptd['cluster_method'] == 'random':
+        cluster_exe = None
     else:
         raise RuntimeError, "create_ensembles - unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
     ensembler.scwrl_exe = amoptd['scwrl_exe']
@@ -76,6 +85,8 @@ def create_ensembles(amoptd):
     os.chdir(work_dir)
 
     models = glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))
+    if amoptd['cluster_method'] == 'spicker_tmscore':   
+        models = reorder_models(models, amoptd['score_matrix_file_list'])
     
     if amoptd['homologs']:
         ensembles = ensembler.generate_ensembles_homologs(models,
@@ -95,7 +106,6 @@ def create_ensembles(amoptd):
                                                  cluster_method=amoptd['cluster_method'],
                                                  cluster_exe=cluster_exe,
                                                  num_clusters=amoptd['num_clusters'],
-                                                 import_cluster=amoptd['import_cluster'],
                                                  cluster_dir=amoptd['cluster_dir'],
                                                  percent_truncation=amoptd['percent'],
                                                  truncation_method=amoptd['truncation_method'],
@@ -235,6 +245,19 @@ def import_ensembles(amoptd):
     amoptd['ensembles_data'] = ensembles_data
         
     return ensembles
+
+def reorder_models(models, ordered_list_file):
+    """Reorder the list of models from a list of models (possibly in a different directory"""
+    with open(ordered_list_file) as f:
+        ordered_list = [ line.strip() for line in f if line.strip() ]
+    mdir = os.path.dirname(models[0])
+    model_names = set([ os.path.basename(m) for m in models ])
+    reordered_models = []
+    for tm_model in ordered_list:
+        name = os.path.basename(tm_model)
+        assert name in model_names,"TM model {0} is not in models!".format(name)
+        reordered_models.append(os.path.join(mdir, name))
+    return reordered_models
 
 def testSuite():
     suite = unittest.TestSuite()

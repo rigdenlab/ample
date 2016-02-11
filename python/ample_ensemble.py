@@ -23,6 +23,7 @@ RELIABLE = 'reliable'
 ALLATOM = 'allatom'
 UNMODIFIED = 'unmod'
 SIDE_CHAIN_TREATMENTS = [POLYALA, RELIABLE, ALLATOM]
+THIN_CLUSTERS = False
 
 # our imports
 import ample_scwrl
@@ -33,6 +34,8 @@ import pdb_edit
 import spicker
 import subcluster
 import theseus
+
+_logger = logging.getLogger(__name__)
 
 def align_mustang(models, mustang_exe=None, work_dir=None):
     if not ample_util.is_exe(mustang_exe):
@@ -257,9 +260,6 @@ class Ensembler(object):
         self.ensembles = None
         self.ensembles_data = None
         
-        # misc
-        self.logger = logging.getLogger()
-        
         self.score_matrix = None
         
         return
@@ -269,7 +269,7 @@ class Ensembler(object):
         try:
             run_theseus.superpose_models(models, basename=basename, homologs=homologs)
         except Exception, e:
-            self.logger.critical("Error running theseus: {0}".format(e))
+            _logger.critical("Error running theseus: {0}".format(e))
             return False
         return run_theseus.superposed_models
     
@@ -396,14 +396,14 @@ class Ensembler(object):
                        cluster_method=None,
                        num_clusters=None,
                        cluster_exe=None,
-                       import_cluster=False,
                        cluster_dir=None,
                        nproc=1,
                        max_cluster_size=200
                        ):
         clusters = []
         clusters_data = []
-        if import_cluster:
+        _logger.info('Clustering models using method: {0}'.format(cluster_method))
+        if cluster_method == 'import':
             if not os.path.isdir(cluster_dir): raise RuntimeError, "Import cluster cannot find directory: {0}".format(cluster_dir)
             cluster_models = glob.glob(os.path.join(cluster_dir, "*.pdb"))
             if not cluster_models: raise RuntimeError, "Import cluster cannot find pdbs in directory: {0}".format(cluster_dir)
@@ -417,26 +417,28 @@ class Ensembler(object):
             clusters_data.append(cluster_data)
             clusters.append(cluster_models)          
                
-        elif cluster_method == "spicker" or cluster_method == "spicker_qscore":
+        elif cluster_method == "spicker" or cluster_method == "spicker_qscore" or cluster_method == "spicker_tmscore":
             # Spicker Alternative for clustering
-            self.logger.info('* Running SPICKER to cluster models *')
+            _logger.info('* Running SPICKER to cluster models *')
             spicker_rundir = os.path.join(self.work_dir, 'spicker')
-            if cluster_method == "spicker_qscore":
+            if cluster_method == "spicker_qscore" or cluster_method == "spicker_tmscore":
                 os.mkdir(spicker_rundir)
                 os.chdir(spicker_rundir)
-                #shutil.copy(self.score_matrix, os.path.join(spicker_rundir,'score.matrix'))
-                clusterer = subcluster.GesamtClusterer(executable=self.gesamt_exe)
-                clusterer.generate_distance_matrix(models, nproc=nproc)
-                clusterer.dump_pdb_matrix()
+                if cluster_method == "spicker_qscore":
+                    clusterer = subcluster.GesamtClusterer(executable=self.gesamt_exe)
+                    clusterer.generate_distance_matrix(models, nproc=nproc)
+                    clusterer.dump_pdb_matrix()
+                elif cluster_method == "spicker_tmscore":
+                    shutil.copy(self.score_matrix, os.path.join(spicker_rundir,'score.matrix'))
                 
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
             spickerer.cluster(models, run_dir=spicker_rundir)
-            self.logger.debug(spickerer.results_summary())
+            _logger.debug(spickerer.results_summary())
             
             ns_clusters=len(spickerer.results)
             if ns_clusters == 0: raise RuntimeError,"No clusters returned by SPICKER"
             if ns_clusters < num_clusters:
-                self.logger.critical('Requested {0} clusters but SPICKER only found {0} so using {1} clusters'.format(num_clusters,ns_clusters))
+                _logger.critical('Requested {0} clusters but SPICKER only found {0} so using {1} clusters'.format(num_clusters,ns_clusters))
                 num_clusters=ns_clusters
             
             for i in range(num_clusters):
@@ -460,10 +462,10 @@ class Ensembler(object):
             fpc = fast_protein_cluster.FPC()
             SCORE_TYPE = 'rmsd'
             CLUSTER_METHOD = 'kmeans'
-            self.logger.info('Running fast_protein_cluster with: score_type: {0} cluster_method: {1}'.format(SCORE_TYPE,
+            _logger.info('Running fast_protein_cluster with: score_type: {0} cluster_method: {1}'.format(SCORE_TYPE,
                                                                                                              CLUSTER_METHOD))
             fpc_rundir = os.path.join(self.work_dir, 'fast_protein_cluster')
-            self.logger.info('fast_protein_cluster running in directory: {0}'.format(fpc_rundir))
+            _logger.info('fast_protein_cluster running in directory: {0}'.format(fpc_rundir))
             clusters, clusters_data = fpc.cluster(models=models,
                                                 num_clusters=num_clusters,
                                                 score_type=SCORE_TYPE,
@@ -472,6 +474,29 @@ class Ensembler(object):
                                                 fpc_exe=cluster_exe,
                                                 nproc=nproc,
                                                 max_cluster_size=max_cluster_size)
+        elif cluster_method == 'random':
+            if len(models) <= max_cluster_size + 50: # completely arbitary number
+                raise RuntimeError,"Cannot randomly cluster so few models!"
+            i = 0
+            while len(clusters) < num_clusters:
+                if i > num_clusters * 3:
+                    raise RuntimeError,"Cannot find random clusters!"
+                cluster = set(random.sample(models, max_cluster_size))
+                if cluster in clusters:
+                    _logger.debug('Found duplicate cluster')
+                    continue
+                clusters.append(cluster)
+                # Data on the models
+                cluster_data = self.create_dict()
+                cluster_data['cluster_num'] = i + 1
+                #cluster_data['cluster_centroid'] = None
+                cluster_data['cluster_num_models'] = len(cluster)
+                cluster_data['cluster_method'] = cluster_method
+                cluster_data['num_clusters'] = num_clusters
+                clusters_data.append(cluster_data)
+                i += 1
+            # Convert all sets back to lists
+            clusters = [ list(s) for s in clusters ]
         else:
             raise RuntimeError, 'Unrecognised clustering method: {0}'.format(cluster_method)
         
@@ -560,7 +585,6 @@ class Ensembler(object):
                            cluster_method=None,
                            cluster_exe=None,
                            num_clusters=None,
-                           import_cluster=False,
                            cluster_dir=None,
                            percent_truncation=None,
                            truncation_method=None,
@@ -592,12 +616,12 @@ class Ensembler(object):
         else:
             self.ensembles_directory = ensembles_directory
         
-        if not import_cluster and not len(models):
+        if not cluster_method is 'import' and not len(models):
             raise RuntimeError, "Cannot find any models for ensembling!" 
         if not all([os.path.isfile(m) for m in models]):
             raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
         
-        self.logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
+        _logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
     
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
@@ -608,21 +632,19 @@ class Ensembler(object):
                                                               cluster_method=cluster_method,
                                                               num_clusters=num_clusters,
                                                               cluster_exe=cluster_exe,
-                                                              import_cluster=import_cluster,
                                                               cluster_dir=cluster_dir,
                                                               nproc=nproc))):
             if len(cluster_models) < 2:
-                self.logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data['cluster_num']))
+                _logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data['cluster_num']))
                 continue
-            self.logger.info('Processing cluster: {0}'.format(cluster_idx+1))
+            _logger.info('Processing cluster: {0}'.format(cluster_idx+1))
             
             # New multi-cluster strategy
-            if cluster_idx > 0:
+            radius_thresholds = self.subcluster_radius_thresholds
+            side_chain_treatments = side_chain_treatments
+            if THIN_CLUSTERS and cluster_idx > 0:
                 radius_thresholds = [1, 3]
-                side_chain_treatments = [POLYALA]
-            else:
-                radius_thresholds = self.subcluster_radius_thresholds
-                side_chain_treatments = side_chain_treatments
+                side_chain_treatments = [ POLYALA ]
                 
             truncate_dir=os.path.join(self.work_dir,"cluster_{0}".format(cluster_idx+1))
             if not os.path.isdir(truncate_dir): os.mkdir(truncate_dir)
@@ -688,7 +710,7 @@ class Ensembler(object):
         if not all([os.path.isfile(m) for m in models]):
             raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
         
-        self.logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
+        _logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
     
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
@@ -705,16 +727,16 @@ class Ensembler(object):
         # Get a structural alignment between the different models
         if not alignment_file:
             if homolog_aligner == 'mustang':
-                self.logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
+                _logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
                 alignment_file = align_mustang(std_models, mustang_exe=mustang_exe, work_dir=self.work_dir)
             elif homolog_aligner == 'gesamt':
-                self.logger.info("Generating alignment file with gesamt_exe: {0}".format(gesamt_exe))
+                _logger.info("Generating alignment file with gesamt_exe: {0}".format(gesamt_exe))
                 alignment_file = align_gesamt(std_models, gesamt_exe=gesamt_exe, work_dir=self.work_dir)
             else:
                 raise RuntimeError, "Unknown homolog_aligner: {0}".format(homolog_aligner)
-            self.logger.info("Generated alignment file: {0}".format(alignment_file))
+            _logger.info("Generated alignment file: {0}".format(alignment_file))
         else:
-            self.logger.info("Using alignment file: {0}".format(alignment_file))
+            _logger.info("Using alignment file: {0}".format(alignment_file))
             
         
         truncate_dir = os.path.join(self.work_dir,"homolog_truncate")
@@ -739,7 +761,7 @@ class Ensembler(object):
             basename = "e{0}".format(tlevel)
             pre_ensemble = self.superpose_models(truncated_models, basename=basename, work_dir=ensemble_dir, homologs=True)
             if not pre_ensemble:
-                self.logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
+                _logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
                 continue
             pre_ensemble_data = copy.copy(truncated_models_data)
              
@@ -765,7 +787,7 @@ class Ensembler(object):
         FIXED_INTERVALS = False
         if FIXED_INTERVALS:
             self.thresholds = [ 1, 1.5, 2 , 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8 ]
-            self.logger.debug("Got {0} thresholds: {1}".format(len(self.thresholds), self.thresholds))
+            _logger.debug("Got {0} thresholds: {1}".format(len(self.thresholds), self.thresholds))
             return
 
         # List of variances ordered by residue index
@@ -773,7 +795,7 @@ class Ensembler(object):
         length = len(var_list)
         if length == 0:
             msg = "Error generating thresholds, got len: {0}".format(length)
-            self.logger.critical(msg)
+            _logger.critical(msg)
             raise RuntimeError, msg
 
         # How many residues should fit in each bin
@@ -781,7 +803,7 @@ class Ensembler(object):
         chunk_size = int((float(length) / 100) * float(percent_interval))
         if chunk_size < 1:
             msg = "Error generating thresholds, got < 1 AA in chunk_size"
-            self.logger.critical(msg)
+            _logger.critical(msg)
             raise RuntimeError, msg
 
         # # try to find intervals for truncation
@@ -790,7 +812,7 @@ class Ensembler(object):
         # Jens' new untested method
         # truncation_thresholds=self._generate_thresholds2(var_list, chunk_size)
         
-        self.logger.debug("Got {0} thresholds: {1}".format(len(truncation_thresholds), truncation_thresholds))
+        _logger.debug("Got {0} thresholds: {1}".format(len(truncation_thresholds), truncation_thresholds))
 
         return truncation_thresholds
 
@@ -953,18 +975,18 @@ class Ensembler(object):
         # Loop through the radius thresholds
         previous_clusters = []
         for radius in radius_thresholds:
-            self.logger.debug("subclustering models under radius: {0}".format(radius))
+            _logger.debug("subclustering models under radius: {0}".format(radius))
 
             # Get list of pdbs clustered according to radius threshold
             cluster_files = clusterer.cluster_by_radius(radius)
             if not cluster_files:
-                self.logger.debug("Skipping radius {0} as no files clustered in directory {1}".format(radius, work_dir))
+                _logger.debug("Skipping radius {0} as no files clustered in directory {1}".format(radius, work_dir))
                 continue
                 
-            self.logger.debug("Clustered {0} files".format(len(cluster_files)))
+            _logger.debug("Clustered {0} files".format(len(cluster_files)))
             cluster_files = self._slice_subcluster(cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds)
             if not cluster_files:
-                self.logger.debug('Could not create different cluster for radius {0} in directory: {1}'.format(radius, work_dir))
+                _logger.debug('Could not create different cluster for radius {0} in directory: {1}'.format(radius, work_dir))
                 continue
             
             # Remember this cluster so we don't create duplicate clusters
@@ -984,7 +1006,7 @@ class Ensembler(object):
             cluster_file = self.superpose_models(cluster_files, work_dir=subcluster_dir)
             if not cluster_file:
                 msg = "Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename, subcluster_dir)
-                self.logger.critical(msg)
+                _logger.critical(msg)
                 continue
              
             ensemble = os.path.join(subcluster_dir, basename + '.pdb')
@@ -1058,7 +1080,7 @@ class Ensembler(object):
                                          subcluster_exe=None,
                                          ensemble_max_models=None,
                                          work_dir=None):
-        self.logger.info("subclustering with floaing radii")
+        _logger.info("subclustering with floaing radii")
 
         # Run maxcluster to generate the distance matrix
         if subcluster_program == 'maxcluster':
@@ -1103,19 +1125,19 @@ class Ensembler(object):
                 # Randomly pick ensemble_max_models
                 cluster_files = self._pick_nmodels(cluster_files, clusters, ensemble_max_models)
                 if not cluster_files:
-                    self.logger.debug('Could not cluster files under radius: {0} - could not find different models'.format(radius))
+                    _logger.debug('Could not cluster files under radius: {0} - could not find different models'.format(radius))
                     break
             
             # Need to check in case we couldn't cluster under this radius
             if cluster_size == 0 or radius in radii:
-                self.logger.debug('Could not cluster files under radius: {0} - got {1} files'.format(radius, len(cluster_files)))
+                _logger.debug('Could not cluster files under radius: {0} - got {1} files'.format(radius, len(cluster_files)))
                 break
             
-            self.logger.debug('Subclustering {0} files under radius {1}'.format(cluster_size, radius))
+            _logger.debug('Subclustering {0} files under radius {1}'.format(cluster_size, radius))
             try:
                 cluster_ensemble, data = self._subcluster_radius(list(cluster_files), radius, truncated_models_data)
             except RuntimeError:
-                self.logger.debug('Could not cluster files under radius: {0} as theseus failed'.format(radius, len(cluster_files)))
+                _logger.debug('Could not cluster files under radius: {0} as theseus failed'.format(radius, len(cluster_files)))
                 # If theseus fails, we just move
                 break
             
@@ -1150,9 +1172,9 @@ class Ensembler(object):
             len_models = len(subcluster_models)
         else:
             len_models = 0
-        self.logger.debug("_subcluster_nmodels: {0} {1} {2} {3} {4}".format(len_models, nmodels, radius, direction, increment))
+        _logger.debug("_subcluster_nmodels: {0} {1} {2} {3} {4}".format(len_models, nmodels, radius, direction, increment))
         if len_models == nmodels or radius < MINRADIUS or radius > MAXRADIUS:
-            self.logger.debug("_subcluster_nmodels returning: nmodels: {0} radius: {1}".format(len_models, radius))
+            _logger.debug("_subcluster_nmodels returning: nmodels: {0} radius: {1}".format(len_models, radius))
             return subcluster_models, radius
         
         def lower_increment(increment):
@@ -1179,7 +1201,7 @@ class Ensembler(object):
                 radius += increment
         except RuntimeError:
             # Can't get a match so just return what we have
-            self.logger.debug("_subcluster_nmodels exceeded increment. Returning: nmodels: {0} radius: {1}".format(len(subcluster_models), radius))
+            _logger.debug("_subcluster_nmodels exceeded increment. Returning: nmodels: {0} radius: {1}".format(len(subcluster_models), radius))
             return subcluster_models, radius
             
         return self._subcluster_nmodels(nmodels, radius, clusterer, direction, increment)
@@ -1200,7 +1222,7 @@ class Ensembler(object):
         if not cluster_file:
             msg = "Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename,
                                                                                                 subcluster_dir)
-            self.logger.critical(msg)
+            _logger.critical(msg)
             raise RuntimeError, msg
         
         ensemble = os.path.join(subcluster_dir, basename + '.pdb')
@@ -1238,7 +1260,7 @@ class Ensembler(object):
         run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
         try: run_theseus.superpose_models(models, homologs=homologs, alignment_file=alignment_file)
         except RuntimeError as e:
-            self.logger.critical(e)
+            _logger.critical(e)
             return [],[]
         
         if homologs:
@@ -1251,16 +1273,16 @@ class Ensembler(object):
             # need to calculate the variances of the core models 
             try: run_theseus.superpose_models(models, homologs=homologs, basename='homologs_core')
             except RuntimeError as e:
-                self.logger.critical(e)
+                _logger.critical(e)
                 return [],[]
         
         var_by_res = run_theseus.var_by_res()
         if not len(var_by_res) > 0:
             msg = "Error reading residue variances!"
-            self.logger.critical(msg)
+            _logger.critical(msg)
             raise RuntimeError(msg)
         
-        self.logger.info('Using truncation method: {0}'.format(truncation_method))
+        _logger.info('Using truncation method: {0}'.format(truncation_method))
         # Calculate which residues to keep under the different methods
         truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = None, None, None, None
         if truncation_method == 'percent':
@@ -1282,10 +1304,10 @@ class Ensembler(object):
         pruned_residues = None
         for tlevel, tvar, tresidues, tresidue_idxs in zip(truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs):
             # Prune singletone/doubletone etc. residues if required
-            self.logger.debug("truncation_pruning: {0}".format(truncation_pruning))
+            _logger.debug("truncation_pruning: {0}".format(truncation_pruning))
             if truncation_pruning == 'single':
                 tresidue_idxs, pruned_residues=self.prune_residues(tresidue_idxs, chunk_size=1, allowed_gap=2)
-                if pruned_residues: self.logger.debug("prune_residues removing: {0}".format(pruned_residues))
+                if pruned_residues: _logger.debug("prune_residues removing: {0}".format(pruned_residues))
             elif truncation_pruning is None:
                 pass
             else:
@@ -1293,12 +1315,12 @@ class Ensembler(object):
             
             # Skip if there are no residues
             if not tresidue_idxs:
-                self.logger.debug("Skipping truncation level {0} with variance {1} as no residues".format(tlevel, tvar))
+                _logger.debug("Skipping truncation level {0} with variance {1} as no residues".format(tlevel, tvar))
                 continue
             
             trunc_dir = os.path.join(work_dir, 'tlevel_{0}'.format(tlevel))
             os.mkdir(trunc_dir)
-            self.logger.info('Truncating at: {0} in directory {1}'.format(tlevel, trunc_dir))
+            _logger.info('Truncating at: {0} in directory {1}'.format(tlevel, trunc_dir))
 
             # list of models for this truncation level
             level_models = []

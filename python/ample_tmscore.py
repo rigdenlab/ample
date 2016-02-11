@@ -41,6 +41,16 @@ TMScoreModel = collections.namedtuple("TMScoreModel",
                                       "tm", "maxsub", "gdtts", "gdtha", "rmsd", 
                                       "nrResiduesCommon"])
 
+
+def tmscoreAvail():
+    """Check if TMscore binary is available"""
+    try:
+        ample_util.find_exe("TMscore")
+    except:
+        return False
+    return True
+
+
 class TMscorer(object):
     
     def __init__(self, structure, tmscore_exe, wdir=None):
@@ -83,13 +93,13 @@ class TMscorer(object):
         
         self.logger.info('-------Evaluating decoys/models-------')
 
-        structure = os.path.abspath(self.structure)                     # Path to reference structure
-        structure_name = os.path.basename(structure).rsplit(".", 1)[0]  # Filename
-        pdb_list_abs = [ os.path.abspath(model) for model in pdb_list ] # Full paths to models
+        structure = os.path.abspath(self.structure)                        # Path to reference structure
+        structure_name = os.path.splitext(os.path.basename(structure))[0]  # Filename
+        pdb_list_abs = [ os.path.abspath(model) for model in pdb_list ]    # Full paths to models
 
         for pdbin in pdb_list_abs:
             self.logger.debug("Working on %s" % pdbin)
-            pdbin_name     = os.path.basename(pdbin).rsplit(".", 1)[0]  # Filename        
+            pdbin_name = os.path.splitext(os.path.basename(pdbin))[0]  # Filename        
             if not os.path.exists(pdbin): 
                 self.logger.warning("Cannot find {0}".format(pdbin))
                 continue
@@ -97,15 +107,14 @@ class TMscorer(object):
             # Modify structures to be identical as required by TMscore binary
             if not identical_sequences:
                 pdbin_mod     = os.path.join(self.workingDIR, pdbin_name + "_mod.pdb")
-                structure_mod = os.path.join(self.workingDIR, pdbin_name + "_" + structure_name + "_mod.pdb")
+                structure_mod = os.path.join(self.workingDIR, pdbin_name + "_" + 
+                                             structure_name + "_mod.pdb")
                 self.mod_structures(pdbin, pdbin_mod, structure, structure_mod)    
             model     = pdbin_mod     if not identical_sequences else pdbin
             reference = structure_mod if not identical_sequences else structure
     
-            # Create a command list and execute TMscore
             log = os.path.join(self.workingDIR, pdbin_name + "_tmscore.log")
-            cmd = [ self.tmscore_exe, model, reference ]
-            p = ample_util.run_command(cmd, logfile=log, directory=self.workingDIR)
+            self.execute_comparison(model, reference, log)
 
             # Delete the modified structures if not wanted       
             if not keep_modified_structures and not identical_sequences:
@@ -128,6 +137,24 @@ class TMscorer(object):
                 
         return entries
 
+    def execute_comparison(self, model, reference, log=None):
+        # Create a command list and execute TMscore
+        cmd = [ self.tmscore_exe, model, reference ]
+        p = ample_util.run_command(cmd, logfile=log, directory=self.workingDIR)
+        return p
+    
+    def dump_csv(self, csv_file):
+        if not len(self.entries): return
+        import csv
+        with open(csv_file, 'w') as f:
+            fieldnames = self.entries[0]._asdict().keys()
+            dw = csv.DictWriter(f, fieldnames=fieldnames)
+            dw.writeheader()
+            for e in self.entries:
+                dw.writerow(e._asdict())
+        print "Wrote csvfile: {0}".format(os.path.abspath(csv_file))
+        return
+
     def mod_structures(self, pdbin, pdbin_mod, structure, structure_mod):
         """Make sure the decoy and the xtal pdb align to get an accurate TM-score"""
         
@@ -143,7 +170,8 @@ class TMscorer(object):
         structure_seq = pdb_edit.sequence(structure).values()[0]
 
         # Align the sequences to see how much of the predicted decoys are in the xtal
-        aligned_seq_list = parse_alignment.AlignmentParser().align_sequences(pdbin_seq, structure_seq)
+        aligned_seq_list = parse_alignment.AlignmentParser().align_sequences(pdbin_seq, 
+                                                                             structure_seq)
         pdbin_seq_ali     = aligned_seq_list[0]
         structure_seq_ali = aligned_seq_list[1]
         
@@ -270,6 +298,7 @@ if __name__ == "__main__":
                 os.path.abspath(args.wdir))
     t.main(args.pdb_list_file, keep_modified_structures=args.keep, identical_sequences=args.identical)
     
-    tmscores = [ i.tm for i in t.entries ] 
+    tmscores = [ i.tm for i in t.entries ]
     print "Median TM-score: {0}".format(round(ample_statistics.median(tmscores), 3))
     print "Mean   TM-score: {0}".format(round(ample_statistics.mean(tmscores), 3))
+    t.dump_csv('tm_scores.csv')

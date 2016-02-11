@@ -27,13 +27,13 @@ def exit_error(msg, ample_tb=None):
     args:
     ample_tb - this can be got from sys.exc_info()[2]
     """
-    # Get the logger 
+    # Get the root logger 
     logger = logging.getLogger()
     
-    # An error may have occured before we started logging so we need to create one here
-    if not logger.handlers:
-        logging.basicConfig(format='%(message)s\n')
-        logger = logging.getLogger()
+#     # An error may have occured before we started logging so we need to create one here
+#     if not logger.handlers:
+#         logging.basicConfig(format='%(message)s\n')
+#         logger = logging.getLogger()
     
     #header="**** AMPLE ERROR ****\n\n"
     header="*"*70 + "\n"

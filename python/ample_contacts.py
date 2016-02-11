@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.join(root, "parsers"))
 import ample_sequence
 import energy_functions
 import parse_casprr
-import parse_constraints
+import parse_restraints
 import parse_psipred
 import pdb_edit
 
@@ -90,35 +90,40 @@ class Contacter(object):
     """ Class to handle contact predictions """
     
     def __init__(self, optd=None):
-        self.logger = logging.getLogger()
+        self.logger = logging.getLogger(__name__)
         
         self.bbcontacts_file = None
-        self.constraints_file = None
         self.contact_file = None
         self.contact_map = None
         self.contact_ppv = None
+        self.native_cutoff = 8
         self.psipred_ss2 = None
+        self.restraints_file = None
         self.structure_pdb = None
         
         self.contacts = None
         self.raw_contacts = None
         self.sequence = None
         
+        self.energy_function = None
+        
         if optd: self.init(optd)
         
         return
     
     def init(self, optd):
-        self.optd = optd
 
         self.contact_file = optd['contact_file']
         self.contact_map = os.path.join(optd['work_dir'], optd['name'] + ".cm.pdf")
-        self.constraints_file = os.path.join(optd['work_dir'], optd['name'] + ".cst") \
-            if not optd['constraints_file'] else optd['constraints_file']
+        self.restraints_file = os.path.join(optd['work_dir'], optd['name'] + ".cst") \
+            if not optd['restraints_file'] else optd['restraints_file']
         self.sequence = optd['sequence']
+        
+        self.energy_function = optd['energy_function']
         
         # Optional files
         if optd['native_pdb'] and optd['native_pdb_std']: self.structure_pdb=optd['native_pdb_std']
+        if optd['native_cutoff']: self.native_cutoff=optd['native_cutoff']
         
         if optd['psipred_ss2']: self.psipred_ss2=optd['psipred_ss2']
         
@@ -127,7 +132,7 @@ class Contacter(object):
             self.raw_contacts = self._readContacts(self.contact_file, self.sequence)
             # Prepare the contacts depending on all the user/default options
             self.contacts = self._prepare(self.raw_contacts, 
-                                          optd['constraints_factor'], 
+                                          optd['restraints_factor'], 
                                           optd['distance_to_neighbour'])
             
             # Map bbcontacts on top of the previously provided contacts
@@ -135,25 +140,28 @@ class Contacter(object):
                 self.bbcontacts_file = optd['bbcontacts_file']
                 self._readAdditionalBBcontacts(optd['bbcontacts_file'])
                 
-        else:
-            self.contacts = self._readConstraints(self.constraints_file)
+        elif self.restraints_file:
+            self.contacts = self._readRestraints(self.restraints_file)
    
         return
                 
-    def format(self, constraintfile):
-        """ Format contacts to Rosetta constraints """
+    def format(self, restraintfile):
+        """ Format contacts to Rosetta restraints """
         
-        self.logger.info("Re-formatting contacts to constraints using the {0} function".format(self.optd['energy_function']))
+        self.logger.info("Re-formatting contacts to restraints " +
+                         "using the {0} function".format(self.energy_function))
         
-        # Format the contacts to constraints
-        contact_formatted_lines = self._formatToConstraints(self.contacts, self.optd['energy_function'])
+        # Format the contacts to restraints
+        contact_formatted_lines = self._formatToRestraints(self.contacts, 
+                                                           self.energy_function)
         
-        # Write contacts to constraint file
-        with open(constraintfile, 'w') as oh: oh.write("\n".join(contact_formatted_lines))
+        # Write contacts to restraint file
+        with open(restraintfile, 'w') as oh: 
+            oh.write("\n".join(contact_formatted_lines))
         
         return
        
-    def _formatToConstraints(self, contacts, user_function):
+    def _formatToRestraints(self, contacts, user_function):
         """ Return a list of Rosetta string lines """
     
         try: 
@@ -178,7 +186,7 @@ class Contacter(object):
         assert self.contacts, "No contacts provided"
 
         # Format contacts
-        self.format(self.constraints_file)
+        self.format(self.restraints_file)
            
         # Contact map plotting. We can parse ss2file and structure file blindly, checks in place
         self.plot(self.contact_map,
@@ -190,7 +198,7 @@ class Contacter(object):
         
         return
     
-    def process_constraintsfile(self):
+    def process_restraintsfile(self):
         """Wrapper function for
             1) contact map plotting
             2) calculation of contact accuracy (PPV)
@@ -266,10 +274,14 @@ class Contacter(object):
             c_x = contacts[idx]['res1_index']-offset-1
             c_y = contacts[idx]['res2_index']-offset-1
 
-            if RCm[c_x, c_y] > 0    and contacts[idx]['weight']==2: tp_colors.append('#2D9D00')
-            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight']==2: tp_colors.append('#AB0000')
-            elif RCm[c_x, c_y] > 0  and contacts[idx]['weight']==1: tp_colors.append("#38C700")
-            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight']==1: tp_colors.append("#D70909")
+            if RCm[c_x, c_y] > 0 and contacts[idx]['weight'] == 2: 
+                tp_colors.append('#2D9D00')
+            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight'] == 2: 
+                tp_colors.append('#AB0000')
+            elif RCm[c_x, c_y] > 0 and contacts[idx]['weight'] == 1: 
+                tp_colors.append("#38C700")
+            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight'] == 1: 
+                tp_colors.append("#D70909")
             else: tp_colors.append('#004F9D')
             
         return tp_colors
@@ -347,14 +359,14 @@ class Contacter(object):
             
             self.structure_seq = aligned_seq_list[1]
         
-        contacts, contact_map = self._cb_contacts(cb_lst, cb_lst, len(self.structure_seq))
+        contacts, contact_map = self._cb_contacts(cb_lst, cb_lst, len(self.structure_seq), self.native_cutoff)
 
         return contacts, contact_map
     
     def _cb_contacts(self, cb1_lst, cb2_lst, length, cutoff=8):
         '''Get the contacts between the two lists of contacts'''
-
-        self.logger.info("Distance cutoff of participating atoms is: %dA" % cutoff)
+        
+        self.logger.info("Distance cutoff of participating atoms is: %.1fA" % cutoff)
 
         dist_mat = numpy.zeros((length, length), numpy.float)
         dist_mat.fill(float('inf'))
@@ -384,15 +396,15 @@ class Contacter(object):
 
         return ref_contacts, ref_map        
     
-    def _prepare(self, contacts, constraint_factor, distance_to_neighbour):
+    def _prepare(self, contacts, restraint_factor, distance_to_neighbour):
         # No processing so far, but we will need to do it to match atom to contact
-        nrConstraints = int(len(self.sequence) * constraint_factor)
+        nrRestraints = int(len(self.sequence) * restraint_factor)
         
         # Filter out any contact pairs that are within `distance residues` of each other
         contacts_filtered = self._filterNeighbours(contacts, distance_to_neighbour)
         
-        # Truncate to the number of constraints defined by the user
-        contacts_filtered_truncated = self._truncateContactList(contacts_filtered, nrConstraints)
+        # Truncate to the number of restraints defined by the user
+        contacts_filtered_truncated = self._truncateContactList(contacts_filtered, nrRestraints)
         
         return contacts_filtered_truncated
    
@@ -402,8 +414,8 @@ class Contacter(object):
                                 if abs(contact['res2_index'] - contact['res1_index']) >= distance]
         return contacts_filtered  
     
-    def _truncateContactList(self, contacts, nrConstraints):
-        return contacts[:nrConstraints]
+    def _truncateContactList(self, contacts, nrRestraints):
+        return contacts[:nrRestraints]
     
     def _readAdditionalBBcontacts(self, secondContactfile):
         """ Method designated solely for reading bbcontacts to overlay/match
@@ -458,13 +470,13 @@ class Contacter(object):
         cp.calculateScalarScores()
         return cp.contacts
     
-    def _readConstraints(self, constraintsfile):
-        '''Read the constraintsfile using parser'''
-        cp = parse_constraints.ConstraintfileParser()
+    def _readRestraints(self, restraintsfile):
+        '''Read the restraintsfile using parser'''
+        cp = parse_restraints.RestraintfileParser()
         try: 
-            cp.read(constraintsfile)
+            cp.read(restraintsfile)
         except ValueError, e: 
-            self.logger.warning("Skipping reading of constraints:\n{0}".format(e))
+            self.logger.warning("Skipping reading of restraints for processing:\n{0}".format(e))
             cp.contacts = []
         return cp.contacts
         
@@ -702,11 +714,13 @@ class Test(unittest.TestCase):
 
 if __name__ == "__main__":
     import argparse
+    import ample_benchmark
+    import tempfile
     
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', type=str, default=None, dest='bbcontacts_file',
                         help="Additional bbcontacts CASPRR contactfile")
-    parser.add_argument('-c', type=float, default=1.0, dest="constraints_factor",
+    parser.add_argument('-c', type=float, default=1.0, dest="restraints_factor",
                         help="Defines number of contacts to use (L/*x*)")
     parser.add_argument('-d', type=int, default=5, dest="distance_to_neighbour",
                         help="Defines sequence cutoff to neighbouring residues")
@@ -717,6 +731,8 @@ if __name__ == "__main__":
                         help="Job name")
     parser.add_argument('-o', type=str, default="ampl_.cst", dest="output",
                         help="Output file")
+    parser.add_argument('-p', type=float, default=8, dest='native_cutoff',
+                        help="Distance cutoff in native")
     parser.add_argument('-s', type=str, default=None, dest="native_pdb",
                         help="Reference structure")
     parser.add_argument('-ss2', type=str, default=None, dest="psipred_ss2",
@@ -724,7 +740,7 @@ if __name__ == "__main__":
     
     contacts = parser.add_mutually_exclusive_group(required=True)
     contacts.add_argument('-contact_file', default=None)
-    contacts.add_argument('-constraints_file', default=None)
+    contacts.add_argument('-restraints_file', default=None)
     
     option = parser.add_mutually_exclusive_group(required=True)
     option.add_argument('-format', action="store_true")
@@ -748,8 +764,11 @@ if __name__ == "__main__":
         print "ERROR! Fasta file {0} has > 1 sequence in it.".format(optd['fasta'])
     optd['sequence'] = fp.sequence()
 
+    # Process the native before we do anything else
+    ample_benchmark.analysePdb(optd)
+
     c = Contacter(optd)
     if optd['format']: c.format(optd['output'])
-    elif optd['plot']: c.plot("ampl_.cm.pdf", ss2file=optd['psipred_ss2'], structurefile=optd['native_pdb'])
-    elif optd['ppv']: c.ppv(optd['native_pdb'])
+    elif optd['plot']: c.plot("ampl_.cm.pdf", ss2file=optd['psipred_ss2'], structurefile=optd['native_pdb_std'])
+    elif optd['ppv']: c.ppv(optd['native_pdb_std'])
     else: logging.critical("No option selected")

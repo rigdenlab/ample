@@ -137,16 +137,30 @@ ccc
       dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
       dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
 
-      logical read_score
-      read_score = .FALSE.
+cjmht
+      integer score_type
+      logical fcheck
+      score_type=0
+      fcheck = .FALSE.
 
 **********************************************************************
 ****  check if we are reading a score matrix or processing rmsds
 **********************************************************************
-      inquire(file='score.matrix',exist=read_score)
-      if (read_score) then
+      inquire(file='score.matrix',exist=fcheck)
+      if (fcheck) then
           write(*,*)"Scores will be read from file: score.matrix"
-      else
+          score_type=1
+      endif
+      inquire(file='TM.score',exist=fcheck)
+      if (fcheck) then
+          write(*,*)"TM scores will be used"
+          if (score_type .ne. 0) then
+              write(*,*)'Cannot use score.matrix and TM.score!'
+              STOP 1
+          endif
+          score_type=2
+      endif
+      if (score_type .eq. 0) then
           write(*,*)"Calculating RMSD scores"
       endif
 
@@ -338,13 +352,26 @@ c     Fill mark array
          mark(i)=1
       enddo
       
-      if (read_score) then
-          call read_score_matrix(nst,n_str,Lch,amat,rmsd_delta,
-     &     rmsd_a)
+cjmht Calculate the amat with the all-by-all scores
+      if (score_type .eq. 1) then
+          call read_score_matrix(nst,n_str,amat,rmsd_delta, rmsd_a)
+      elseif (score_type .eq. 2) then
+          call tm_score_all(ndim,nst,n_str,Lch,x,y,z,amat,rmsd_delta,
+     &                      rmsd_a)
       else
-          call rmsd_score(ndim,nst,w,n_str,Lch,x,y,z,amat,rmsd_delta,
-     &     rmsd_a)
+          call rmsd_score_all(ndim,nst,w,n_str,Lch,x,y,z,amat,
+     &                        rmsd_delta,rmsd_a)
       endif
+
+cjmht write out the score matrix
+      open(30,file='spicker.matrix',status='unknown') !scores
+      do i=1,n_str
+         do j=i,n_str
+         write(30,2000)i-1,j-1,amat(i,j)
+         enddo
+      enddo
+      close(30)
+2000  format(i4,2x,i4,2x,f9.4)
 
 ******** reset RMSD_cutoff parameters:
       if(n_para.eq.-1)then      !parameters for ab inito modeling
@@ -791,8 +818,8 @@ c       -1: superposition is not unique but optimal
 c       -2: no result obtained because of negative weights w
 c           or all weights equal to zero.
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      subroutine rmsd_score(ndim,nst,w,n_str,Lch,x,y,z,amat,rmsd_delta,
-     & rmsd_a)
+      subroutine rmsd_score_all(ndim,nst,w,n_str,Lch,x,y,z,amat,
+     & rmsd_delta,rmsd_a)
 !     REM: I, J, K, L, M, or N are int
       implicit none
 !     Intent In
@@ -851,7 +878,85 @@ c      write(*,*)"MINA MAXA ",mina,maxa
       return
       end
 
-      subroutine read_score_matrix(nst,n_str,Lch,amat,rmsd_delta,
+      subroutine tm_score_all(ndim,nst,n_str,Lch,x,y,z,amat,rmsd_delta,
+     &                        rmsd_a)
+      implicit none
+!     Intent In
+      integer ndim ! Longest dimensions of a coordinate array
+      integer nst ! Maximum number of structures
+      integer n_str ! Number of structures in use
+      integer Lch ! Chain length of the structures (all same)
+      real x(ndim,nst),y(ndim,nst),z(ndim,nst)
+!     Intent Out
+      real amat(nst,nst)
+      real rmsd_delta
+      double precision rmsd_a
+
+!     Local variables
+      real RMSD_min, RMSD_max
+      parameter(RMSD_min=0)
+      parameter(RMSD_max=50)
+      real rmsd,rmsd2_a,armsd,TM,Rcomm
+      integer i,j,k,n_rmsd,ier,Lcomm
+
+!     Arrays to pass data into TMscore routine
+      integer nn1, nn2 ! resseq of structures - assume all same
+      real x1,y1,z1,x2,y2,z2 ! coordinates
+      dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
+      dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
+
+      WRITE(*,*)'* SPICKER CALCULATING TM SCORE MATRIX *'
+
+cccccccccccccc calculate TM matrices ccccccccccccccccccccccccccc
+c     write(*,*)'number of used structures=',n_str
+      rmsd_a=0
+      rmsd2_a=0
+      n_rmsd=0
+      do i=1,n_str
+         do j=i,n_str
+            do k=1,Lch
+               x1(k)=x(k,i)
+               y1(k)=y(k,i)
+               z1(k)=z(k,i)
+               nn1(k)=k
+               x2(k)=x(k,j)
+               y2(k)=y(k,j)
+               z2(k)=z(k,j)
+               nn2(k)=k
+            enddo
+            call TMscore(Lch,x1,y1,z1,nn1,Lch,x2,y2,z2,nn2,TM,Rcomm,
+     &                    Lcomm)
+!            armsd=dsqrt(rms/Lch) !RMSD12
+            if (TM .eq. 0.0) then
+                rmsd = RMSD_max
+            else
+                rmsd = 1.0/TM
+            endif
+!           Make sure rmsd fits in bounds
+            rmsd=min(rmsd,RMSD_max)
+            rmsd=max(rmsd,RMSD_min)
+
+            amat(i,j)=rmsd
+            amat(j,i)=rmsd
+            n_rmsd=n_rmsd+1
+            rmsd_a=rmsd_a+armsd
+            rmsd2_a=rmsd2_a+armsd*armsd
+         enddo
+      enddo
+      rmsd_a=rmsd_a/n_rmsd
+      rmsd2_a=rmsd2_a/n_rmsd
+      rmsd_delta=sqrt(rmsd2_a-rmsd_a**2) ! 68.2% is in [-d,+d]
+
+
+c^^^^^^^^^^^^RMSD matrics finished ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+c      write(*,*)"RETURNING rmsd_a ",rmsd_a
+c      write(*,*)"RETURNING rmsd_delta ",rmsd_delta
+c      write(*,*)"MINA MAXA ",mina,maxa
+      return
+      end
+
+
+      subroutine read_score_matrix(nst,n_str,amat,rmsd_delta,
      & rmsd_a)
 *     This routine reads in a matrix of score in a scale 0-1 and
 *     uses the reciprocal to convert them into an rmsd-like score
@@ -864,19 +969,20 @@ c      write(*,*)"MINA MAXA ",mina,maxa
       real rmsd_delta
       double precision rmsd_a
 !     local variables
-      double precision scored,RMSD_min,RMSD_max
+      real scored,RMSD_min,RMSD_max
+      parameter(RMSD_min=0)
+      parameter(RMSD_max=50.0)
       real armsd,rmsd2_a
       integer i,j,k,n_rmsd
 
-      RMSD_min=0.0
-      RMSD_max=50.0
       rmsd_a=0
       rmsd2_a=0
       n_rmsd=0
       WRITE(*,*)'* SPICKER READING SCORE MATRIX *'
       open(1,file='score.matrix',status='old')
       do i=1,n_str*n_str
-          read(1,'(i4,1x,i4,1x,1x,f8.3)',end=3,err=2) j, k, scored
+c          read(1,'(i4,1x,i4,1x,1x,f8.3)',end=3,err=2) j, k, scored
+          read(1,*,end=3,err=2) j, k, scored
           if (scored .gt. 1.0 .or. j .gt. n_str .or. k .gt. n_str) then
               write(*,*)"Invalid score line: ", j ,k ,scored
               stop
@@ -889,23 +995,23 @@ c     matrix indexing starts from 1
           else
               scored = 1.0/scored
           endif
-          if (scored .gt. RMSD_max) then
-              scored = RMSD_max
-          elseif (scored .lt. RMSD_min) then
-              scored=RMSD_min
-          endif
+          scored=min(scored,RMSD_max)
+          scored=max(scored,RMSD_min)
+
           armsd = scored
           amat(j,k) = armsd
           amat(k,j) = armsd
-c         Lch is # of CA atoms?
-c          armsd=dsqrt(scored/Lch) !RMSD12
           n_rmsd = n_rmsd+1
           rmsd_a = rmsd_a+armsd
           rmsd2_a = rmsd2_a+armsd*armsd
       enddo
-2     stop
 3     continue
       close(1)
+
+      if (i .ne. n_str*n_str) then
+         write(*,*),"NOT ENOUGH SCORE MATRIX VALUES!"
+        stop 1
+      endif
 
       rmsd_a=rmsd_a/n_rmsd
       rmsd2_a=rmsd2_a/n_rmsd
@@ -913,6 +1019,8 @@ c          armsd=dsqrt(scored/Lch) !RMSD12
 c      write(*,*)"RETURNING rmsd_a ",rmsd_a
 c      write(*,*)"RETURNING rmsd_delta ",rmsd_delta
       return
+2     write(*,*),"SPICKER ERROR READING SCORE MATRIX LINE ",i
+      stop 1
       end
 
       subroutine u3b(w, x, y, n, mode, rms, u, t, ier)

@@ -25,7 +25,7 @@ SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
 EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
 SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
 
-_logger = logging.getLogger()
+_logger = logging.getLogger(__name__)
 
 # Reference string
 references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
@@ -81,8 +81,8 @@ def ccp4_version():
     if CCP4_VERSION is None:
         # Currently there seems no sensible way of doing this other then running a program and grepping the output
         cmd=['mtzdmp',os.path.abspath(__file__)]
-        logf = tempfile.TemporaryFile()
-        run_command(cmd,logfile=logf)
+        logf = tempfile.NamedTemporaryFile(delete=False)
+        run_command(cmd,logfile=logf.name)
         logf.seek(0) # rewind logfile
         tversion=None
         for i, line in enumerate(logf):
@@ -103,7 +103,7 @@ def ccp4_version():
             minor = int(vsplit[1])
             rev = int(vsplit[2])
         else: raise RuntimeError,"Cannot split CCP4 version: {0}".format(tversion)
-    
+    os.unlink(logf.name)
     return (major,minor,rev)
     
 def extract_models(amoptd, sequence=None, single=True, allsame=True):
@@ -157,7 +157,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
             os.unlink(files[0])
             # If we've got quark models we don't want to modify the side chains as we only have polyalanine so we
             # set this here - horribly untidy as we should have one place to decide on side chains
-            logging.info('Found QUARK models in file: {0}'.format(filename))
+            _logger.info('Found QUARK models in file: {0}'.format(filename))
             amoptd['quark_models'] = True
     
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
@@ -167,7 +167,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
 
 def extract_tar(filename, directory, suffixes=['.pdb']):
     # Extracting tarfile
-    logging.info('Extracting files from tarfile: {0}'.format(filename) )
+    _logger.info('Extracting files from tarfile: {0}'.format(filename) )
     files = []
     with tarfile.open(filename,'r:*') as tf:
         memb = tf.getmembers()
@@ -187,8 +187,7 @@ def extract_tar(filename, directory, suffixes=['.pdb']):
 
 def extract_zip(filename, directory, suffixes=['.pdb']):
     # zip file extraction
-    logger = logging.getLogger()
-    logger.info('Extracting files from zipfile: {0}'.format(filename) )
+    _logger.info('Extracting files from zipfile: {0}'.format(filename) )
     if not zipfile.is_zipfile(filename):
             msg='File is not a valid zip archive: {0}'.format(filename)
             ample_exit.exit_error(msg)
@@ -215,8 +214,7 @@ def find_exe(executable, dirs=None):
     executable: the name of the program or the path to an existing executable
     dirs - additional directories to search for the location
     """
-    logger = logging.getLogger()
-    logger.debug('Looking for executable: {0}'.format(executable) )
+    _logger.debug('Looking for executable: {0}'.format(executable) )
     
     exe_file=None
     found=False
@@ -233,18 +231,18 @@ def find_exe(executable, dirs=None):
         paths = os.environ["PATH"].split(os.pathsep)
         if dirs:
             paths += dirs
-        logger.debug('Checking paths: {0}'.format(paths))
+        _logger.debug('Checking paths: {0}'.format(paths))
         for path in paths:
             exe_file = os.path.abspath(os.path.join(path, executable))
             if is_exe(exe_file):
-                logger.debug( 'Found executable {0} in directory {1}'.format(executable,path) )
+                _logger.debug( 'Found executable {0} in directory {1}'.format(executable,path) )
                 found=True
                 break
     
     if not found:
         raise Exception("Cannot find executable: {0}".format(executable))
     
-    logger.debug('find_exe found executable: {0}'.format(exe_file) )
+    _logger.debug('find_exe found executable: {0}'.format(exe_file) )
     return exe_file
 
 def filename_append(filename=None, astr=None,directory=None, separator="_"):
@@ -275,11 +273,10 @@ def find_maxcluster(amoptd):
         maxcluster_exe = find_exe(amoptd['maxcluster_exe'], dirs=[ amoptd['rcdir'] ] )
     except Exception:
         # Cannot find so we need to try and download it
-        logger = logging.getLogger()
         rcdir = amoptd['rcdir']
-        logger.info("Cannot find maxcluster binary in path so attempting to download it directory: {0}".format( rcdir )  )
+        _logger.info("Cannot find maxcluster binary in path so attempting to download it directory: {0}".format( rcdir )  )
         if not os.path.isdir( rcdir ):
-            logger.info("No ample rcdir found so creating in: {0}".format( rcdir ) )
+            _logger.info("No ample rcdir found so creating in: {0}".format( rcdir ) )
             os.mkdir( rcdir )
         url = None
         maxcluster_exe = os.path.join( rcdir, 'maxcluster' )
@@ -301,7 +298,7 @@ def find_maxcluster(amoptd):
         else:
             msg="Unrecognised system type: {0}".format( sys.platform )
             ample_exit.exit_error(msg)
-        logger.info("Attempting to download maxcluster binary from: {0}".format( url ) )
+        _logger.info("Attempting to download maxcluster binary from: {0}".format( url ) )
         try:
             urllib.urlretrieve( url, maxcluster_exe )
         except Exception, e:
@@ -382,7 +379,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         if not is_exe(cmd[0]): raise RuntimeError,"run_command cannot find executable: {0}".format(cmd[0])
 
     if not directory:  directory = os.getcwd()
-    if dolog: logging.debug("In directory {0}\nRunning command: {1}".format(directory, " ".join(cmd)))
+    if dolog: _logger.debug("In directory {0}\nRunning command: {1}".format(directory, " ".join(cmd)))
     file_handle=False
     if logfile:
         if type(logfile)==file:
@@ -392,7 +389,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         else:
             logfile = os.path.abspath(logfile)
             logf = open(logfile, "w")
-        if dolog: logging.debug("Logfile is: {0}".format(logfile))
+        if dolog: _logger.debug("Logfile is: {0}".format(logfile))
     else:
         logf = tempfile.TemporaryFile()
         
@@ -409,58 +406,21 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
     if stdin != None:
         p.stdin.write( stdinstr )
         p.stdin.close()
-        if dolog: logging.debug("stdin for cmd was: {0}".format( stdinstr ) )
+        if dolog: _logger.debug("stdin for cmd was: {0}".format( stdinstr ) )
 
     p.wait()
     if not file_handle: logf.close()
     return p.returncode
 
-def setup_logging(logfile,debug_log="debug.log"):
-    """
-    Set up the various log files/console logging
-    and return the logger
-    """
-
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-
-    # create file handler for debug output
-    fl = logging.FileHandler(debug_log)
-    fl.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fl.setFormatter(formatter)
-    logger.addHandler(fl)
-
-    # Now create console logger for outputting stuff
-    # create file handler and set level to debug
-    # Seems they changed the api in python 2.6->2.7
-    try:
-        cl = logging.StreamHandler(stream=sys.stdout)
-    except TypeError:
-        cl = logging.StreamHandler(strm=sys.stdout)
-    cl.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
-    cl.setFormatter(formatter)
-    logger.addHandler(cl)
-    
-    # Finally create the main logger
-    fl = logging.FileHandler(logfile)
-    fl.setLevel(logging.INFO)
-    fl.setFormatter(formatter) # Same formatter as screen
-    logger.addHandler(fl)
-    
-    return logger
-
 def saveAmoptd(amoptd):
     # Save results
     with open( amoptd['results_path'], 'w' ) as f:
         cPickle.dump( amoptd, f )
-        logging.info("Saved state as file: {0}\n".format( amoptd['results_path'] ) )
+        _logger.info("Saved state as file: {0}\n".format( amoptd['results_path'] ) )
     return
 
 def split_quark(dfile,directory):
-    logger = logging.getLogger()
-    logger.info("Extracting QUARK decoys from: {0} into {1}".format(dfile,directory))
+    _logger.info("Extracting QUARK decoys from: {0} into {1}".format(dfile,directory))
     smodels = []
     with open(dfile,'r') as f:
         m=[]
@@ -482,7 +442,7 @@ def split_quark(dfile,directory):
                     l = l[:54]+"  1.00  0.00              \n"
                 f.write(l)
             quark_models.append(fpath)
-        logger.debug("Wrote: {0}".format(fpath))
+            _logger.debug("Wrote: {0}".format(fpath))
         
     return quark_models
 

@@ -170,8 +170,9 @@ class RosettaModel(object):
         self.rad_gyr_reweight = None
         self.improve_template = None
         self.nativePdbStd = None
-        self.constraints_file = None
-        self.constraints_weight = None
+        self.restraints_file = None
+        self.restraints_weight = None
+        self.disulfide_constraints_file = None
 
         self.logger = logging.getLogger()
 
@@ -203,7 +204,7 @@ class RosettaModel(object):
                 '-out:file:silent', os.path.join( wdir, 'silent.out'),
                 '-run:constant_seed',
                 '-run:jran', str(seed),
-                '-abinitio:relax',
+                '-abinitio:relax', 
                 '-relax::fast'
                 ]
 
@@ -238,9 +239,9 @@ class RosettaModel(object):
                     ]
         elif self.transmembrane2:
             cmd += [ '-score:patch', self.tm_patch_file ]
-            self.constraints_weight = 3
-            if not self.constraints_file and os.path.isfile(self.constraints_file):
-                raise RuntimeError,"transmembrane2 requires a constraints file"
+            self.restraints_weight = 3
+            if not self.restraints_file and os.path.isfile(self.restraints_file):
+                raise RuntimeError,"transmembrane2 requires a restraints file"
     
         # Radius of gyration reweight
         if self.rad_gyr_reweight is not None:
@@ -248,22 +249,30 @@ class RosettaModel(object):
         else:
             cmd+= [ '-rg_reweight', "0.5" ]
 
-        # Constraints file or domain constraints
-        if self.constraints_file or self.domain_termini_distance  > 0:
+        # Restraints file or domain restraints
+        if self.restraints_file or self.domain_termini_distance  > 0:
             if self.domain_termini_distance  > 0:
-                constraints_file = self.setup_domain_constraints()
+                restraints_file = self.setup_domain_restraints()
             else:
-                constraints_file = self.constraints_file
-            if not os.path.isfile(constraints_file):
-                msg="Cannot find constraints file: {0}".format(constraints_file)
+                restraints_file = self.restraints_file
+            if not os.path.isfile(restraints_file):
+                msg="Cannot find restraints file: {0}".format(restraints_file)
                 self.logger.critical(msg)
                 raise RuntimeError,msg
-            cmd+=[ '-constraints:cst_file', constraints_file,
-                   '-constraints:cst_fa_file', constraints_file ]
-            if self.constraints_weight is not None:
-                cmd+=[ '-constraints:cst_weight', str(self.constraints_weight),
-                       '-constraints:cst_fa_weight', str(self.constraints_weight) ]
-
+            cmd+=[ '-constraints:cst_file', restraints_file,
+                   '-constraints:cst_fa_file', restraints_file ]
+            if self.restraints_weight is not None:
+                cmd+=[ '-constraints:cst_weight', str(self.restraints_weight),
+                       '-constraints:cst_fa_weight', str(self.restraints_weight) ]
+        
+        # Add compatibility for extra disulfide restraints
+        if self.disulfide_constraints_file and os.path.isfile(self.disulfide_constraints_file):
+            cmd+=[ '-in::fix_disulf', str(self.disulfide_constraints_file) ]    
+        elif self.disulfide_constraints_file:
+            msg="Cannot find disulfide constraints file: {0}".format(self.disulfide_constraints_file)
+            self.logger.critical(msg)
+            raise RuntimeError,msg
+                
         # Improve Template
         if self.improve_template:
             cmd += ['-in:file:native',
@@ -592,12 +601,15 @@ class RosettaModel(object):
                '-overwrite',
                '-run:constant_seed',
                '-run:jran', str(seed) ]
-        # Not actually sure if the constraints are used - they weren't on the test I tried but it doesn't seem to hurt to add them
-        if self.constraints_file:
-            cmd += [ '-constraints:cst_file', self.constraints_file, '-constraints:cst_fa_file', self.constraints_file ]
-            if self.constraints_weight is not None:
-                cmd+=[ '-constraints:cst_weight', str(self.constraints_weight), '-constraints:cst_fa_weight', str(self.constraints_weight) ]
-                
+        # Not actually sure if the restraints are used - they weren't on the test I tried but it doesn't seem to hurt to add them
+        if self.restraints_file:
+            cmd += [ '-constraints:cst_file', self.restraints_file, '-constraints:cst_fa_file', self.restraints_file ]
+            if self.restraints_weight is not None:
+                cmd+=[ '-constraints:cst_weight', str(self.restraints_weight), '-constraints:cst_fa_weight', str(self.restraints_weight) ]
+
+        if self.disulfide_constraints_file:
+            cmd+=[ '-in::fix_disulf', str(self.disulfide_constraints_file) ]    
+    
         return cmd
     
     def nmr_remodel(self, nmr_model_in=None, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
@@ -736,7 +748,7 @@ class RosettaModel(object):
                                    submit_array=self.submit_array,
                                    submit_max_array=self.submit_max_array)
 
-    def setup_domain_constraints(self):
+    def setup_domain_restraints(self):
         """
         Create the file for restricting the domain termini and return the path to the file
         """
@@ -751,10 +763,10 @@ class RosettaModel(object):
             if re.search('\w', x):
                 length += 1
                 
-        constraints_file = os.path.join(self.work_dir, 'constraints')
-        with open(constraints_file, "w") as conin:
+        restraints_file = os.path.join(self.work_dir, 'constraints')
+        with open(restraints_file, "w") as conin:
             conin.write('AtomPair CA 1 CA {0} GAUSSIANFUNC {1} 5.0 TAG\n'.format(length,self.domain_termini_distance))
-        return constraints_file
+        return restraints_file
 
     def set_from_dict(self, optd ):
         """
@@ -850,13 +862,19 @@ class RosettaModel(object):
                 self.logger.critical( msg)
                 raise RuntimeError(msg)
             self.improve_template = optd['improve_template']
-            if optd['constraints_file']:
-                if not os.path.exists(optd['constraints_file']):
-                    msg = "Cannot find constraints file: {0}".format(optd['constraints_file'])
+            if optd['restraints_file']:
+                if not os.path.exists(optd['restraints_file']):
+                    msg = "Cannot find restraints file: {0}".format(optd['restraints_file'])
                     self.logger.critical(msg)
                     raise RuntimeError, msg
-                self.constraints_file=optd['constraints_file']
-            self.constraints_weight = optd['constraints_weight']
+                self.restraints_file=optd['restraints_file']
+            self.restraints_weight = optd['restraints_weight']
+            if optd['disulfide_constraints_file']:
+                if not os.path.exists(optd['disulfide_constraints_file']):
+                    msg="Cannot find disulfide constraints file: {0}".format(optd['disulfide_constraints_file'])
+                    self.logger.critical(msg)
+                    raise RuntimeError(msg)
+                self.disulfide_constraints_file = optd["disulfide_constraints_file"]
             
             # Cluster submission stuff
             self.submit_cluster = optd['submit_cluster']

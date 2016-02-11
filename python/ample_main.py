@@ -37,6 +37,47 @@ import rosetta_model
 import version
 import workers
 
+def setup_console_logging():
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    
+    # First create console logger for outputting stuff
+    # create file handler and set level to debug
+    # Seems they changed the api in python 2.6->2.7
+    try:
+        cl = logging.StreamHandler(stream=sys.stdout)
+    except TypeError:
+        cl = logging.StreamHandler(strm=sys.stdout)
+    cl.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
+    cl.setFormatter(formatter)
+    logger.addHandler(cl)
+    return logger
+
+def setup_file_logging(main_logfile, debug_logfile):
+    """
+    Set up the various log files/console logging
+    and return the logger
+    """
+    logger = logging.getLogger()
+
+    # create file handler for debug output
+    fl = logging.FileHandler(debug_logfile)
+    fl.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fl.setFormatter(formatter)
+    logger.addHandler(fl)
+
+    # Finally create the main logger
+    fl = logging.FileHandler(main_logfile)
+    fl.setLevel(logging.INFO)
+    fl.setFormatter(formatter) # Same formatter as screen
+    logger.addHandler(fl)
+    
+    return logger
+
+logger = setup_console_logging()
+
 class Ample(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
     
@@ -54,8 +95,8 @@ class Ample(object):
             msg = "One of -fasta  or -restart_pkl option is required."
             ample_exit.exit_error(msg)
             
-        if (amoptd['contact_file'] or amoptd['bbcontacts_file']) and amoptd['constraints_file']:
-            msg = "Only one option of -contact_file or -constraints_file allowed."
+        if (amoptd['contact_file'] or amoptd['bbcontacts_file']) and amoptd['restraints_file']:
+            msg = "Only one option of -contact_file or -restraints_file allowed."
             ample_exit.exit_error(msg)
         
         if not amoptd['restart_pkl'] and not (amoptd['mtz'] or amoptd['sf_cif']):
@@ -239,6 +280,12 @@ class Ample(object):
         
         parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
                            help='Path to Scwrl4 executable')
+        
+        parser.add_argument('-score_matrix', type=str, nargs=1,
+                           help='Path to score matrix for spicker')
+        
+        parser.add_argument('-score_matrix_file_list', type=str, nargs=1,
+                           help='File with list of ordered model names for the score_matrix')
     
         parser.add_argument('-sf_cif', type=str, nargs=1,
                            help='Path to a structure factor CIF file (instead of MTZ file)')
@@ -288,28 +335,35 @@ class Ample(object):
                            help='Path to the directory where AMPLE will run (will be created if it doesn\'t exist)')
         
         # Contact options
-        contact_group = parser.add_argument_group("Contact Constraints Options")
+        contact_group = parser.add_argument_group("Contact Restraints Options")
         
         contact_group.add_argument('-bbcontacts_file', type=str, nargs=1,
-                           help='Additional bbcontacts file. >>> Requires normal contactfile <<<')
-        
-        contact_group.add_argument('-constraints_factor', type=float, nargs=1,
-                           help='Factor (* Sequence length) determining number of contact restraints to use (default=1.0)')
-        
-        contact_group.add_argument('-constraints_file', type=str, nargs=1,
-                           help='Residue restraints for ab initio modelling')
-        
-        contact_group.add_argument('-constraints_weight', type=float, nargs=1,
-                           help="Additional energy weighting of constraints in Rosetta")
+                           help='Additional bbcontacts file. Requires normal contactfile')
         
         contact_group.add_argument('-contact_file', type=str, nargs=1,
-                           help='Residue contacts file in CASP RR format')
+                           help='Residue contact file in CASP RR format')
+        
+        contact_group.add_argument('-disulfide_constraints_file', type=str, nargs=1,
+                           help='Disulfide residue constraints for ab initio modelling')
         
         contact_group.add_argument('-distance_to_neighbour', type=int, nargs=1,
                            help="Min. distance between residue pairs for contact (default=5)")
         
         contact_group.add_argument('-energy_function', type=str, nargs=1,
                            help='Rosetta energy function for contact restraint conversion (default=FADE)')
+        
+        contact_group.add_argument('-native_cutoff', type=float, nargs=1,
+                           help='Distance cutoff for reference contacts in native structure (default=8A)')
+        
+        contact_group.add_argument('-restraints_factor', type=float, nargs=1,
+                           help='Factor (* Sequence length) determining number of contact restraints to use (default=1.0)')
+        
+        contact_group.add_argument('-restraints_file', type=str, nargs=1,
+                           help='Residue restraints for ab initio modelling')
+        
+        contact_group.add_argument('-restraints_weight', type=float, nargs=1,
+                           help="Additional energy weighting of restraints in Rosetta")
+        
         
         # MR options
         mr_group = parser.add_argument_group('MRBUMP/Molecular Replacement Options')
@@ -439,7 +493,7 @@ class Ample(object):
         
         return amopt
     
-    def process_options(self, amoptd, logger):
+    def process_options(self, amoptd):
         
         # Path for pickling results
         amoptd['results_path'] = os.path.join(amoptd['work_dir'], "resultsd.pkl")
@@ -513,7 +567,7 @@ class Ample(object):
                 msg = "Import cluster cannot find pdbs in directory: {0}".format(amoptd['cluster_dir'])
                 ample_exit.exit_error(msg)
             logger.info("Importing pre-clustered models from directory: {0}\n".format(amoptd['cluster_dir']))   
-            amoptd['import_cluster'] = True
+            amoptd['cluster_method'] = 'import'
             amoptd['make_frags'] = False
             amoptd['make_models'] = False
         elif amoptd['ideal_helices']:
@@ -664,7 +718,8 @@ class Ample(object):
         #
         # Ensemble options
         #
-        if amoptd['cluster_method'] == 'spicker' or amoptd['cluster_method'] == 'spicker_qscore':
+        if amoptd['cluster_method'] == 'spicker' or amoptd['cluster_method'] == 'spicker_qscore' or \
+            amoptd['cluster_method'] == 'spicker_tmscore':
             if not amoptd['spicker_exe']:
                 amoptd['spicker_exe'] = 'spicker'  + ample_util.EXE_EXT
             try:
@@ -679,6 +734,8 @@ class Ample(object):
             except Exception:
                 msg = "Cannot find fast_protein_cluster executable: {0}".format(amoptd['fast_protein_cluster_exe'])
                 ample_exit.exit_error(msg)
+        elif amoptd['cluster_method'] == 'random':
+            pass
         else:
             msg = "Unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
             ample_exit.exit_error(msg)
@@ -757,7 +814,7 @@ class Ample(object):
         
         return
     
-    def process_restart_options(self, amoptd, logger):
+    def process_restart_options(self, amoptd):
         """
         For any new command-line options, we update the old dictionary with the new values
         We then go through the new dictionary and set ant of the flags corresponding to the data we find:
@@ -810,26 +867,24 @@ class Ample(object):
         amoptd_old['results_path'] = os.path.join(amoptd['work_dir'],'resultsd.pkl')
         
         # Now update any variables that were given on the command-line
-        for k in amoptd['cmdline_flags']: amoptd_old[k] = amoptd[k]
+        for k in amoptd['cmdline_flags']:
+            logger.debug("Restart updating amopt variable: {0} : {1}".format(k, amoptd[k]))
+            amoptd_old[k] = amoptd[k]
         
         # We can now replace the old dictionary with this new one
         amoptd = amoptd_old
         
         # Go through and see what we need to do
         
-        # Reset all variables for doing stuff
-        amoptd['do_mr'] = False
+        # Reset all variables for doing stuff - otherwise we will always restart from the earliest point
         amoptd['make_ensembles'] = False
         amoptd['import_ensembles'] = False # Needs thinking about - have to set so we don't just reimport models/ensembles
         amoptd['import_models'] = False # Needs thinking about
         amoptd['make_models'] = False
         amoptd['make_frags'] = False
         
-        # Could check for results ourselves
-    #         # Process the MRBUMP results and save to dictionary
-    #         res_sum = mrbump_results.ResultsSummary()
-    #         res_sum.extractResults(amoptd['mrbump_dir'])
-    #         amoptd['mrbump_results'] = res_sum.results
+        # First see if we should benchmark this job. The user may not have supplied a native_pdb with the original
+        # job and we only set benchmark mode on seeing the native_pdb
         if amoptd['native_pdb']:
             if not os.path.isfile(amoptd['native_pdb']):
                 msg = "Cannot find native_pdb: {0}".format(amoptd['native_pdb'])
@@ -837,33 +892,33 @@ class Ample(object):
                 raise RuntimeError(msg)
             amoptd['benchmark_mode'] = True
             logger.info('Restart using benchmark mode')
+            
+        # We always check first to see if there are any mrbump jobs
+        amoptd['mrbump_scripts'] = []
+        if 'mrbump_dir' in amoptd:
+            amoptd['mrbump_scripts'] = ample_mrbump.unfinished_scripts(amoptd)
     
-        if 'mrbump_results' in amoptd and len(amoptd['mrbump_results']):
-            # Check if any jobs are unfinished -we run in the old mrbump directory
-            scripts = ample_mrbump.unfinished_scripts(amoptd)
-            if len(scripts):
-                amoptd['mrbump_scripts'] = scripts
-                amoptd['do_mr'] = True
-                logger.info('Restarting unfinished mrbump scripts: {0}'.format(scripts))
-        elif amoptd['ensembles']:
-            amoptd['do_mr'] = True
-            # Rerun from ensembles - check for data/ensembles are ok?
-            logger.info('Restarting from existing ensembles: {0}'.format(amoptd['ensembles']))
-        elif amoptd['models_dir'] and os.path.isdir(amoptd['models_dir']):
-            logger.info('Restarting from existing models: {0}'.format(amoptd['models_dir']))
-            # Check the models
-            allsame = False if amoptd['homologs'] else True 
-            if not pdb_edit.check_pdb_directory(amoptd['models_dir'], sequence=None, single=True, allsame=allsame):
-                msg = "Error importing restart models: {0}".format(amoptd['models_dir'])
-                ample_exit.exit_error(msg)
-            amoptd['make_ensembles'] = True
-        elif amoptd['frags_3mers'] and amoptd['frags_9mers']:
-            logger.info('Restarting from existing fragments: {0}, {1}'.format(amoptd['frags_3mers'], amoptd['frags_9mers']))
-            amoptd['make_models'] = True
+        if amoptd['do_mr']:
+            if len(amoptd['mrbump_scripts']):
+                logger.info('Restarting from unfinished mrbump scripts: {0}'.format(amoptd['mrbump_scripts']))
+            elif 'ensembles' in amoptd and amoptd['ensembles'] and len(amoptd['ensembles']):
+                # Rerun from ensembles - check for data/ensembles are ok?
+                logger.info('Restarting from existing ensembles: {0}'.format(amoptd['ensembles']))
+            elif amoptd['models_dir'] and amoptd['models_dir'] and os.path.isdir(amoptd['models_dir']):
+                logger.info('Restarting from existing models: {0}'.format(amoptd['models_dir']))
+                # Check the models
+                allsame = False if amoptd['homologs'] else True 
+                if not pdb_edit.check_pdb_directory(amoptd['models_dir'], sequence=None, single=True, allsame=allsame):
+                    msg = "Error importing restart models: {0}".format(amoptd['models_dir'])
+                    ample_exit.exit_error(msg)
+                amoptd['make_ensembles'] = True
+            elif amoptd['frags_3mers'] and amoptd['frags_9mers']:
+                logger.info('Restarting from existing fragments: {0}, {1}'.format(amoptd['frags_3mers'], amoptd['frags_9mers']))
+                amoptd['make_models'] = True
         
         return amoptd
     
-    def process_rosetta_options(self, amoptd, logger):
+    def process_rosetta_options(self, amoptd):
         # Create the rosetta modeller - this runs all the checks required
         rosetta_modeller = None
         if amoptd['make_models'] or amoptd['make_frags']:  # only need Rosetta if making models
@@ -875,7 +930,7 @@ class Ample(object):
                 ample_exit.exit_error(msg)
         return rosetta_modeller
     
-    def setup_ccp4(self, amoptd, logger):
+    def setup_ccp4(self, amoptd):
         """Check CCP4 is available and return the top CCP4 directory"""
         # Make sure CCP4 is around
         if not "CCP4" in os.environ:
@@ -899,7 +954,7 @@ class Ample(object):
         amoptd['ccp4_version'] = ample_util.ccp4_version()
         
         return os.environ['CCP4']
-    
+
     def run(self, args=None):
         """Main AMPLE routine.
         
@@ -914,6 +969,7 @@ class Ample(object):
         
         # Make a work directory - this way all output goes into this directory
         if amopt.d['work_dir']:
+            logger.info('Making a named work directory: {0}'.format(amopt.d['work_dir']))
             try:
                 os.mkdir(amopt.d['work_dir'])
             except:
@@ -923,18 +979,20 @@ class Ample(object):
             if not os.path.exists(amopt.d['run_dir']):
                 msg = 'Cannot find run directory: {0}'.format(amopt.d['run_dir'])
                 ample_exit.exit_error(msg, sys.exc_info()[2])
-            print 'Making a Run Directory: checking for previous runs\n' # Last ever print statement. Amen
+            logger.info('Making a run directory: checking for previous runs...')
             amopt.d['work_dir'] = ample_util.make_workdir(amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'])
         # Go to the work directory
         os.chdir(amopt.d['work_dir'])
         
         # Set up logging
         ample_log = os.path.join(amopt.d['work_dir'], 'AMPLE.log')
+        debug_log = os.path.join(amopt.d['work_dir'], 'debug.log')
         amopt.d['ample_log'] = ample_log
-        logger = ample_util.setup_logging(ample_log)
+        
+        setup_file_logging(ample_log, debug_log)
         
         # Make sure the CCP4 environment is set up properly
-        ccp4_home = self.setup_ccp4(amopt.d, logger)
+        ccp4_home = self.setup_ccp4(amopt.d)
         
         # Print out Version and invocation
         logger.info(ample_util.header)
@@ -955,10 +1013,10 @@ class Ample(object):
         
         # Check if we are restarting from an existing pkl file - we don't process the options from this
         # run if so
-        amopt.d = self.process_restart_options(amopt.d, logger)
+        amopt.d = self.process_restart_options(amopt.d)
         if not amopt.d['restart_pkl']:
-            self.process_options(amopt.d, logger) # Only process the remaining options if we aren't in restart mode
-        rosetta_modeller = self.process_rosetta_options(amopt.d, logger)
+            self.process_options(amopt.d) # Only process the remaining options if we aren't in restart mode
+        rosetta_modeller = self.process_rosetta_options(amopt.d)
         
         # Bail and clean up if we were only checking the options
         if amopt.d['dry_run']:
@@ -999,19 +1057,19 @@ class Ample(object):
     
         # In case file created above we need to tell the rosetta_modeller where it is
         # otherwise not used as not created before object initialised    
-        if amopt.d['make_models'] and (amopt.d['use_contacts'] or amopt.d['constraints_file']):
+        if amopt.d['make_models'] and (amopt.d['use_contacts'] or amopt.d['restraints_file']):
             cm = ample_contacts.Contacter(optd=amopt.d)
             
-            cm.process_constraintsfile() if not amopt.d['use_contacts'] and amopt.d['constraints_file'] \
+            cm.process_restraintsfile() if not amopt.d['use_contacts'] and amopt.d['restraints_file'] \
                 else cm.process_contactfile()
     
-            amopt.d['constraints_file'] = cm.constraints_file
+            amopt.d['restraints_file'] = cm.restraints_file
             amopt.d['contact_map'] = cm.contact_map
             amopt.d['contact_ppv'] = cm.contact_ppv
                 
         
-        if amopt.d['make_models'] and amopt.d['constraints_file']: 
-            rosetta_modeller.constraints_file = amopt.d['constraints_file']
+        if amopt.d['make_models'] and amopt.d['restraints_file']: 
+            rosetta_modeller.restraints_file = amopt.d['restraints_file']
         
         # if NMR process models first
         # break here for NMR (frags needed but not modelling
@@ -1069,7 +1127,7 @@ class Ample(object):
                 logger.info("*** Using ideal helices to solve structure ***")
             else:
                 # Check we have some models to work with
-                if not amopt.d['import_cluster'] and not glob.glob(os.path.join(amopt.d['models_dir'], "*.pdb")):
+                if not amopt.d['cluster_method'] is 'import' and not glob.glob(os.path.join(amopt.d['models_dir'], "*.pdb")):
                     ample_util.saveAmoptd(amopt.d)
                     msg = "ERROR! Cannot find any pdb files in: {0}".format(amopt.d['models_dir'])
                     ample_exit.exit_error(msg)
@@ -1152,6 +1210,9 @@ class Ample(object):
             else:
                 monitor = None
                 
+            # Save results here so that we have the list of scripts and mrbump directory set
+            ample_util.saveAmoptd(amopt.d)
+                
             # Change to mrbump directory before running
             os.chdir(amopt.d['mrbump_dir'])  
             ok = workers.run_scripts(job_scripts=amopt.d['mrbump_scripts'],
@@ -1174,8 +1235,7 @@ class Ample(object):
         
             # Collect the MRBUMP results
             results_summary = ample_mrbump.ResultsSummary()
-            results_summary.extractResults(amopt.d['mrbump_dir'], purge=amopt.d['purge'])
-            amopt.d['mrbump_results'] = results_summary.results
+            amopt.d['mrbump_results'] = results_summary.extractResults(amopt.d['mrbump_dir'], purge=amopt.d['purge'])
             amopt.d['success'] = results_summary.success
             
             ample_util.saveAmoptd(amopt.d)
