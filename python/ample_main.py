@@ -21,6 +21,7 @@ import sys
 import time
 
 # Our imports
+import ample_config
 import ample_contacts
 import ample_ensemble
 import ample_mrbump
@@ -1192,10 +1193,15 @@ class Ample(object):
                  
                 amopt.d['mrbump_results'] = []
                 logger.info("Running MRBUMP jobs in directory: {0}".format(bump_dir))
-                 
+                
+                # Sort the ensembles in a favourable way
+                logger.info("Sorting ensembles")
+                ensembles_sorted = ensemble.sort_ensembles_data(amopt.d['ensembles'],
+                                                                amopt.d['ensembles_data'])
+                
                 # Create job scripts
                 logger.info("Generating MRBUMP runscripts")
-                amopt.d['mrbump_scripts'] = ample_mrbump.write_mrbump_files(amopt.d['ensembles'],
+                amopt.d['mrbump_scripts'] = ample_mrbump.write_mrbump_files(ensembles_sorted,
                                                                             amopt.d,
                                                                             job_time=ample_mrbump.MRBUMP_RUNTIME,
                                                                             ensemble_options=amopt.d['ensemble_options'],
