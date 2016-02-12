@@ -14,6 +14,8 @@ try:
     import ample_util
 except:
     ample_util = None
+    
+logger = logging.getLogger(__name__)
 
 class SpickerResult(object):
     """
@@ -42,7 +44,6 @@ class Spickerer(object):
         self.spicker_exe = spicker_exe
         self.run_dir = run_dir
         self.results = None
-        self.logger = logging.getLogger()
         return
         
     def get_length(self, pdb):
@@ -57,7 +58,7 @@ class Spickerer(object):
                     counter += 1
         return str(counter)
 
-    def create_input_files(self, models, score_matrix=None):
+    def create_input_files(self, models, score_matrix=None, score_type='rmsd'):
         """
         jmht
         Create the input files required to run spicker
@@ -65,16 +66,25 @@ class Spickerer(object):
         """
         if not len(models):
             msg = "no models provided!"
-            self.logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError, msg
-
+        
+        if score_type: score_type = score_type.lower()
+        logger.debug("Using score_type: {0}".format(score_type))
         if score_matrix:
-            self.logger.debug("Using score_matrix: {0}".format(score_matrix))
+            logger.debug("Using score_matrix: {0}".format(score_matrix))
             if not os.path.isfile(score_matrix):
                 msg = 'Cannot find score_matrix: {0}'.format(score_matrix)
-                self.logger.critical(msg)
+                logger.critical(msg)
                 raise RuntimeError, msg
             shutil.copy(score_matrix,os.path.join(self.run_dir,os.path.basename(score_matrix)))
+        else:
+            if score_type == 'tm':
+                with open('TM.score','w') as f: f.write('\n')
+            elif score_type == 'rmsd':
+                pass
+            else:
+                raise RuntimeError,"Unknown score_type: {0}".format(score_type)
         
         # read_out - Input file for spicker with coordinates of the CA atoms for each of the PDB structures
         #
@@ -136,7 +146,7 @@ class Spickerer(object):
                         seq.write('\t' + split[5] + '\t' + split[3] + '\n')
         return
     
-    def cluster(self, models, run_dir=None, score_matrix=None):
+    def cluster(self, models, run_dir=None, score_matrix=None, score_type='rmsd'):
         """
         Run spicker to cluster the models
         """
@@ -146,10 +156,10 @@ class Spickerer(object):
         if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
         os.chdir(self.run_dir)
         
-        self.logger.debug("Running spicker in directory: {0}".format(self.run_dir))
-        self.logger.debug("Using executable: {0}".format(self.spicker_exe))
+        logger.debug("Running spicker in directory: {0}".format(self.run_dir))
+        logger.debug("Using executable: {0}".format(self.spicker_exe))
         
-        self.create_input_files(models, score_matrix=score_matrix)
+        self.create_input_files(models, score_matrix=score_matrix, score_type=score_type)
         
         logfile = os.path.abspath("spicker.log")
         rtn = ample_util.run_command([self.spicker_exe], logfile=logfile)
@@ -173,7 +183,7 @@ class Spickerer(object):
         index2rcens = []
         
         # File with the spicker results for each cluster
-        self.logger.debug("Processing spicker output file: {0}".format(logfile))
+        logger.debug("Processing spicker output file: {0}".format(logfile))
         f = open(logfile, 'r')
         line = f.readline()
         while line:
@@ -303,7 +313,7 @@ class Test(unittest.TestCase):
         return
 
 if __name__ == "__main__":
-    import subprocess, tempfile
+    import argparse, subprocess, tempfile
     
     # For running as a stand-alone script
     def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False):
@@ -355,6 +365,7 @@ if __name__ == "__main__":
         
         return p.returncode
     
+    # Mock up ample_util for when we don't have CCP4 installed
     class Tmp(object):pass
     ample_util = Tmp()
     ample_util.run_command = run_command
@@ -362,33 +373,31 @@ if __name__ == "__main__":
     #
     # Run Spicker on a directory of PDB files
     #
-    if not len(sys.argv) >= 2 and len(sys.argv) < 4:
-        print "Usage is {0} [spicker_executable] <directory_of_pdbs>".format(sys.argv[0])
-        sys.exit(1)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-e', '--executable',
+                        help="spicker executable to use")
+    parser.add_argument('-m', '--models',
+                        help="Models to cluster")
+    parser.add_argument('-s', '--score_type', default='rmsd',
+                        help="Use TM score")
+    args = parser.parse_args()
     
-    spicker_exe = None
-    if len(sys.argv) == 3:
-        spicker_exe = os.path.abspath(sys.argv[1])
-        models_dir = os.path.abspath(sys.argv[2])
-    else:
-        models_dir = os.path.abspath(sys.argv[1])
+    models = args.models
+    if not os.path.exists(models): raise RuntimeError("Cannot find models: {0}".format(models))
+    
+    if os.path.isdir(models):
+        models = glob.glob(os.path.join(models, "*.pdb"))
+    elif os.path.isfile(models):
+        with open(models) as f:
+            models = [ l.strip() for l in f.readlines() if l.strip() ]
         
-    if not os.path.isdir(models_dir):
-        print "Cannot find directory: {0}".format(models_dir)
-        sys.exit(1)
-    models = glob.glob(os.path.join(models_dir, "*.pdb"))
     if not len(models):
-        print "Cannot find any pdbs in: {0}".format(models_dir)
+        print "Cannot find any pdbs in: {0}".format(models)
         sys.exit(1)
-        
-#     spicker_exe = ample_util.find_exe("spicker")
-#     if not spicker_exe:
-#         print "Cannot find spicker executable in path!"
-#         sys.exit(1)
         
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    spicker = Spickerer(spicker_exe=spicker_exe)
-    spicker.cluster(models)
+    spicker = Spickerer(spicker_exe=args.executable)
+    spicker.cluster(models, score_type=args.score_type)
     print spicker.results_summary()
