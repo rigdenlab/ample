@@ -15,6 +15,7 @@ import uuid
 
 # Our imports
 import ample_mrbump
+import ample_util
 import ensemble
 
 try: import pyrvapi
@@ -67,6 +68,7 @@ class AmpleOutput(object):
         self.summary_tab_id = None
         self.summary_tab_ensemble_sec_id = None
         self.summary_tab_results_sec_id = None
+        self.summary_tab_survey_sec_id = None
         
         self.old_mrbump_results = None
         return
@@ -183,6 +185,17 @@ class AmpleOutput(object):
             self.fill_table(self.summary_tab_results_sec_table_id,
                              ample_mrbump.ResultsSummary().results_table(mrb_results),
                              tooltips=self._mrbump_tooltips)
+            
+        #
+        # Survey section
+        #
+        if not self.summary_tab_survey_sec_id:
+            # Only create the table once
+            self.summary_tab_survey_sec_id = "survey"
+            pyrvapi.rvapi_add_section(self.summary_tab_survey_sec_id, "Feedback", self.summary_tab_id, 0, 0, 1, 1, True)
+            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3> <span style='{{color:blue}}'><a href='{0}'>{0}</a></span>".format(ample_util.survey_url)
+            pyrvapi.rvapi_add_text(rstr, self.summary_tab_survey_sec_id, 0, 0, 1, 1)
+            
         return self.summary_tab_id
 
     def display_results(self, results_dict, run_dir=None):
@@ -477,7 +490,7 @@ class AmpleOutput(object):
             
 if __name__ == "__main__":
     import copy, time
-    pklfile = "/opt/ample-dev1/examples/toxd-example/AMPLE_1/resultsd.pkl"
+    pklfile = "/opt/ample-dev1/examples/toxd-example/from_existing_models/resultsd.pkl"
     #pklfile = "/opt/ample-dev1/examples/toxd-example/from_existing_models/resultsd.pkl"
     with open(pklfile) as f: results_dict = cPickle.load(f)
     
@@ -487,14 +500,16 @@ if __name__ == "__main__":
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
     
+    SLEEP=1
+    
     AR = AmpleOutput()
     AR.display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
-    time.sleep(3)
+    time.sleep(SLEEP)
     
     #for i in range(10):
     view1_dict['ensembles_data'] = results_dict['ensembles_data']
     AR.display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
-    time.sleep(3)
+    time.sleep(SLEEP)
     
     mrbump_results = []
     for r in results_dict['mrbump_results'][0:3]:
@@ -503,15 +518,14 @@ if __name__ == "__main__":
         mrbump_results.append(r)
     view1_dict['mrbump_results'] = mrbump_results
     AR.display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
-    time.sleep(3)
+    time.sleep(SLEEP)
     
     view1_dict['mrbump_results'] = results_dict['mrbump_results'][0:5]
     AR.display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")  
-    time.sleep(3)
+    time.sleep(SLEEP)
     
     view1_dict['mrbump_results'] = results_dict['mrbump_results']
     AR.display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")  
-    time.sleep(3)
     
     #results_dict['webserver_uri'] = "http:www.jensrules.co.uk/ample/stuff"
     #results_dict['webserver_uri'] = None
