@@ -1283,6 +1283,7 @@ class Ample(object):
                 ample_util.saveAmoptd(amopt.d)
         
         logger.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+        logger.info(ample_util.footer)
         
         # Finally update pyrvapi results
         if self.output_gui: self.output_gui.display_results(amopt.d)
