@@ -1196,12 +1196,12 @@ class Ample(object):
                 
                 # Sort the ensembles in a favourable way
                 logger.info("Sorting ensembles")
-                ensembles_sorted = ensemble.sort_ensembles_data(amopt.d['ensembles'],
-                                                                amopt.d['ensembles_data'])
+                ensemble_pdbs_sorted = ensemble.sort_ensembles(amopt.d['ensembles'],
+                                                               amopt.d['ensembles_data'])
                 
                 # Create job scripts
                 logger.info("Generating MRBUMP runscripts")
-                amopt.d['mrbump_scripts'] = ample_mrbump.write_mrbump_files(ensembles_sorted,
+                amopt.d['mrbump_scripts'] = ample_mrbump.write_mrbump_files(ensemble_pdbs_sorted,
                                                                             amopt.d,
                                                                             job_time=ample_mrbump.MRBUMP_RUNTIME,
                                                                             ensemble_options=amopt.d['ensemble_options'],
