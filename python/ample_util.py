@@ -75,6 +75,18 @@ header ="""#####################################################################
 The authors of specific programs should be referenced where applicable:""" + \
 "\n\n" + references + "\n\n"
 
+footer = "\n" + """
+#########################################################################
+#***********************************************************************#
+#*                          How did we do?                             *#
+#*                                                                     *#
+#*           Please follow this link and leave some feedback!          *#
+#*                                                                     *#
+#*                 http://goo.gl/forms/7xP9M4P81O                      *#
+#***********************************************************************#
+#########################################################################"""
+
+
 def ccp4_version():
     """Return the CCP4 version as a tuple"""
     global CCP4_VERSION
