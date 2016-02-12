@@ -13,7 +13,9 @@ script.
 import cPickle
 import glob
 import logging
+import operator
 import os
+import random
 import shutil
 import sys
 import unittest
@@ -259,6 +261,74 @@ def reorder_models(models, ordered_list_file):
         reordered_models.append(os.path.join(mdir, name))
     return reordered_models
 
+def sort_ensembles_data(ensemble_pdbs, ensembles_data=None, prioritise=True):
+    """Sort AMPLE ensemble data.
+    
+    :ensemble_pdbs: list of ensembles
+    :ensembles_data: data found in amoptd['ensembles_data'] entry
+    :prioritise: default True; favour ensembles in truncation level 20-50%
+    
+    :returns: list of sorted ensembles data
+    """
+
+    # Determine whether we have our own ensembles. Otherwise use ensemble_pdbs provided
+    if len(ensemble_pdbs) > 0 and ensembles_data and prioritise:
+        ensembles_data_sorted = _sort_ensembles_data(ensembles_data)
+        
+    elif len(ensemble_pdbs) > 0 and ensembles_data:
+        ensembles_data_sorted = _sorted_ensembles(ensembles_data)
+    
+    elif len(ensemble_pdbs) > 0:
+        # Create a ensembles_data like structure
+        ensembles_data_sorted = [{'ensemble_pdb': pdb,
+                                  'name': os.path.splitext(os.path.basename(pdb))[0]
+                                 } for pdb in ensemble_pdbs
+        ]
+    
+    else:
+        msg = "No ensemble data to produce MrBUMP scripts"
+        logger.critical(msg)
+        raise RuntimeError(msg)
+    
+    ensemble_pdbs_return = [ens['ensemble_pdb'] for ens in ensembles_data_sorted]
+    return ensemble_pdbs_return
+
+def _sort_ensembles_data(ensembles_data):
+    """Sort ensembles based on
+        1) Cluster
+        2) Truncation level - favoured region of 20-50% first
+        3) Subcluster radius threshold
+        4) Side chain treatment
+    """    
+    # Group based on cluster
+    tmp_data = {ens['cluster_num']: [] for ens in ensembles_data}
+    for ensemble in sorted(ensembles_data, key=operator.itemgetter('cluster_num')):
+        tmp_data[ensemble['cluster_num']].append(ensemble)
+    
+    ensembles_ordered = []
+    # Iterate through clusters and group based on truncation level
+    for cluster in sorted(tmp_data.keys(), key=int):
+        low, mid, high = [], [], []
+    
+        for ensemble in _sorted_ensembles(tmp_data[cluster]):
+            if ensemble['truncation_level'] > 50: 
+                high.append(ensemble)
+            elif ensemble['truncation_level'] < 20: 
+                low.append(ensemble)
+            else: 
+                mid.append(ensemble)
+        ensembles_ordered += mid + low + high
+    
+    return ensembles_ordered
+ 
+def _sorted_ensembles(data):
+    """Tiny wrapper function to sort ensembles data based on cluster number, 
+       truncation level, subclustering radius and side chain treatment"""
+    return sorted(data, key=operator.itemgetter('cluster_num', 
+                                                'truncation_level', 
+                                                'subcluster_radius_threshold', 
+                                                'side_chain_treatment'))
+
 def testSuite():
     suite = unittest.TestSuite()
     suite.addTest(Test('testSummary'))
@@ -315,6 +385,55 @@ class Test(unittest.TestCase):
         shutil.rmtree(work_dir)
         
         return
+
+    def test_sortEnsembles(self):
+        
+        ensemble_data = []
+        ensemble_pdbs = []
+        
+        for cluster in [1, 2 ,3]:
+            for tlevel in [19, 20, 50, 80, 100]:
+                for radius in [1, 2, 3]:
+                    for sidechain in ["allatom", "polyAla", "reliable"]:
+                        name = "c{cluster}_tl{truncation}_r{radius}_{schain}".format(cluster=cluster, 
+                                                                                     truncation=tlevel, 
+                                                                                     radius=radius, 
+                                                                                     schain=sidechain)
+                        pdb = os.path.join("/foo", "bar", name+".pdb")
+                        ensemble = {'name' : name,
+                                    'ensemble_pdb' : pdb,
+                                    'cluster_num' : cluster,
+                                    'truncation_level' : tlevel,
+                                    'subcluster_radius_threshold' : radius,
+                                    'side_chain_treatment' : sidechain,
+                        }
+                        ensemble_data.append(ensemble)
+                        ensemble_pdbs.append(pdb)
+        
+        random.shuffle(ensemble_data)
+        random.shuffle(ensemble_pdbs)
+        
+        ensemble_pdb_sorted_1 = sort_ensembles_data(ensemble_pdbs, ensemble_data, prioritise=True)
+        ensemble_pdb_sorted_2 = sort_ensembles_data(ensemble_pdbs, ensemble_data, prioritise=False)
+        ensemble_pdb_sorted_3 = sort_ensembles_data(ensemble_pdbs, None)
+        
+        self.assertEqual("/foo/bar/c1_tl20_r1_allatom.pdb", ensemble_pdb_sorted_1[0])
+        self.assertEqual("/foo/bar/c1_tl19_r1_allatom.pdb", ensemble_pdb_sorted_1[18])
+        self.assertEqual("/foo/bar/c1_tl100_r3_reliable.pdb", ensemble_pdb_sorted_1[44])
+        self.assertEqual("/foo/bar/c2_tl20_r1_allatom.pdb", ensemble_pdb_sorted_1[45])
+        self.assertEqual("/foo/bar/c2_tl19_r1_allatom.pdb", ensemble_pdb_sorted_1[63])
+        self.assertEqual("/foo/bar/c2_tl100_r3_reliable.pdb", ensemble_pdb_sorted_1[89])
+        self.assertEqual("/foo/bar/c3_tl20_r1_allatom.pdb", ensemble_pdb_sorted_1[90])    
+        self.assertEqual("/foo/bar/c3_tl19_r1_allatom.pdb", ensemble_pdb_sorted_1[108])
+        self.assertEqual("/foo/bar/c3_tl100_r3_reliable.pdb", ensemble_pdb_sorted_1[-1])
+        self.assertEqual("/foo/bar/c1_tl19_r1_allatom.pdb", ensemble_pdb_sorted_2[0])
+        self.assertEqual("/foo/bar/c3_tl100_r3_reliable.pdb", ensemble_pdb_sorted_2[-1])    
+        self.assertEqual("/foo/bar/c2_tl50_r2_polyAla.pdb", ensemble_pdb_sorted_2[67])
+            
+        self.assertEqual(ensemble_pdbs, ensemble_pdb_sorted_3)
+        
+        return
+        
 
 if __name__ == "__main__":
 
