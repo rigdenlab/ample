@@ -25,7 +25,7 @@ dirs = [
 
 # Any args that are to be added/updated
 EXTRA_ARGS = [ ['-no_gui','True' ],
-              # '-do_mr','False',
+              #[ '-do_mr','False'],
                ]
 
 # Get the command-line arguments
