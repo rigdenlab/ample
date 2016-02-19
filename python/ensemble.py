@@ -270,12 +270,17 @@ def sort_ensembles(ensemble_pdbs, ensembles_data=None, prioritise=True):
     """
 
     if len(ensemble_pdbs) < 1: raise RuntimeError("Not enough ensembles")
-
-    if not ensembles_data:
-        ensemble_pdbs_sorted = sorted(ensemble_pdbs)
-    else:
+    
+    # Keys we want to sort
+    _essential_keys = ["cluster_num", "truncation_level", 
+                       "subcluster_radius_threshold", "side_chain_treatment"]
+    
+    # Sort with out method only if we have data which contains our generated data
+    if ensembles_data and all(x in _essential_keys for x in ensembles_data[0].keys()):
         ensemble_pdbs_sorted = _sort_ensembles(ensemble_pdbs, ensembles_data, 
-                                               prioritise)
+                                               prioritise) 
+    else:
+        ensemble_pdbs_sorted = sorted(ensemble_pdbs)
     
     return ensemble_pdbs_sorted
 
