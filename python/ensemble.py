@@ -12,8 +12,10 @@ script.
 
 import cPickle
 import glob
+import itertools
 import logging
 import os
+import random
 import shutil
 import sys
 import unittest
@@ -268,17 +270,12 @@ def sort_ensembles(ensemble_pdbs, ensembles_data=None, prioritise=True):
     
     :returns: list of sorted ensembles pdbs
     """
-
     if len(ensemble_pdbs) < 1: raise RuntimeError("Not enough ensembles")
-    
-    # Keys we want to sort
-    _essential_keys = ["cluster_num", "truncation_level", 
-                       "subcluster_radius_threshold", "side_chain_treatment"]
-    
+
     # Sort with out method only if we have data which contains our generated data
-    if ensembles_data and all(x in _essential_keys for x in ensembles_data[0].keys()):
-        ensemble_pdbs_sorted = _sort_ensembles(ensemble_pdbs, ensembles_data, 
-                                               prioritise) 
+    if ensembles_data:
+        ensemble_pdbs_sorted = _sort_ensembles(ensemble_pdbs, ensembles_data,
+                                               prioritise)    
     else:
         ensemble_pdbs_sorted = sorted(ensemble_pdbs)
     
@@ -293,32 +290,75 @@ def _sort_ensembles(ensemble_pdbs, ensembles_data, prioritise):
     """
     assert len(ensemble_pdbs) == len(ensembles_data), "Unequal ensembles data for sorting"
     
-    # Zip the data so order remains identical between pdbs and data
-    ensembles_zipped = zip(ensemble_pdbs, ensembles_data)
+    # Determine which keys we can sort our data with
+    def _get_keys(ensemble):
+        _criteria = ['cluster_num', 
+                     'truncation_score_key', 
+                     'truncation_level', 
+                     'subcluster_radius_threshold',
+                     'side_chain_treatment']
+        
+        for crit in _criteria:
+            if ensemble.has_key(crit) and ensemble[crit]:
+                yield crit
     
-    if prioritise:
-        ensembles_zipped_ordered = _sort_ensembles_prioritise(ensembles_zipped)
+    # Keys we want to sort data by - differs for different source of ensembles
+    keys_to_sort = list(_get_keys(ensembles_data[0])) 
+    
+    if keys_to_sort:
+        # Zip the data so order remains identical between pdbs and data
+        ensembles_zipped = zip(ensemble_pdbs, ensembles_data)
+    
+        if "truncation_level" in keys_to_sort and prioritise:
+            ensembles_zipped_ordered = _sort_ensembles_prioritise(ensembles_zipped, keys_to_sort)
+        else:
+            ensembles_zipped_ordered = _sort_ensembles_parameters(ensembles_zipped, keys_to_sort)
+    
+        # We need to `unzip` the data to get a list of ordered pdbs
+        ensemble_pdbs_sorted, _ = zip(*ensembles_zipped_ordered)
+    
     else:
-        ensembles_zipped_ordered = _sort_ensembles_parameters(ensembles_zipped)
-    
-    # We need to `unzip` the data to get a list of ordered pdbs
-    ensemble_pdbs_sorted, ensembles_data_sorted = zip(*ensembles_zipped_ordered)
+        ensemble_pdbs_sorted = sorted(ensemble_pdbs)
     
     return ensemble_pdbs_sorted
+        
+def _sort_ensembles_prioritise(ensembles_zipped, keys_to_sort):
+    """Sort our ensembles based on the data in order of the keys provided"""
     
+    ############################################################################
+    #
+    # Group the ensembles either by cluster ... or by truncation score ...
+    # ... otherwise throw them all in one pot
+    #
+    ############################################################################
+    if "cluster_num" in keys_to_sort:
+        tmp_data = {ens[1]['cluster_num']: [] for ens in ensembles_zipped}
+        for ensemble in ensembles_zipped:
+            tmp_data[ensemble[1]['cluster_num']].append(ensemble)
+        iterator_keys = sorted(tmp_data.keys(), key=int)
+        
+    elif "truncation_score_key" in keys_to_sort:
+        tmp_data = {ens[1]['truncation_score_key']: [] for ens in ensembles_zipped}
+        for ensemble in ensembles_zipped:
+            tmp_data[ensemble[1]['truncation_score_key']].append(ensemble)
+        iterator_keys = sorted(tmp_data.keys())
+        
+    else:
+        tmp_data = {"all": []}
+        for ensemble in ensembles_zipped:
+            tmp_data["all"].append(ensemble)
+        iterator_keys = sorted(tmp_data.keys())
     
-def _sort_ensembles_prioritise(ensembles_zipped):
-    # Group based on cluster
-    tmp_data = {ens[1]['cluster_num']: [] for ens in ensembles_zipped}
-    for ensemble in ensembles_zipped:
-        tmp_data[ensemble[1]['cluster_num']].append(ensemble)    
-    
-    ensembles_zipped_ordered = []
+    ############################################################################
+    #
     # Iterate through clusters and group based on truncation level
-    for cluster in sorted(tmp_data.keys(), key=int):
-        low, mid, high = [], [], []
+    #
+    ############################################################################
+    ensembles_zipped_ordered = []
     
-        for ensemble in _sort_ensembles_parameters(tmp_data[cluster]):
+    for bin in iterator_keys:
+        low, mid, high = [], [], []
+        for ensemble in _sort_ensembles_parameters(tmp_data[bin], keys_to_sort):
             if ensemble[1]['truncation_level'] > 50: 
                 high.append(ensemble)
             elif ensemble[1]['truncation_level'] < 20: 
@@ -329,14 +369,13 @@ def _sort_ensembles_prioritise(ensembles_zipped):
     
     return ensembles_zipped_ordered
  
-def _sort_ensembles_parameters(ensembles_zipped):
-    """Tiny wrapper function to sort ensembles data based on cluster number, 
-       truncation level, subclustering radius and side chain treatment
+def _sort_ensembles_parameters(ensembles_zipped, keys_to_sort):
+    """Tiny wrapper function to sort ensembles data based on keys provided
     """
     def _extract(ens):
-        return ens[1]['cluster_num'], ens[1]['truncation_level'], \
-               ens[1]['subcluster_radius_threshold'], ens[1]['side_chain_treatment']
+        return [ens[1][crit] for crit in keys_to_sort]
     return sorted(ensembles_zipped, key=_extract)
+
 
 def testSuite():
     suite = unittest.TestSuite()
@@ -344,7 +383,7 @@ def testSuite():
     return suite
 
 class Test(unittest.TestCase):
-
+        
     @classmethod
     def setUpClass(cls):
         """
@@ -395,9 +434,8 @@ class Test(unittest.TestCase):
         
         return
 
-    def test_sortEnsembles(self):
-        
-        import itertools, random
+    def test_sortEnsembles1(self):
+        """Test sorting for ab initio data"""
         
         clusters = [1, 2, 3]
         tlevels = [19, 20, 50, 80, 100]
@@ -456,7 +494,112 @@ class Test(unittest.TestCase):
         self.assertEqual("/foo/bar/c3_tl80_r3_reliable.pdb", ensemble_pdb_sorted_3[-1])
         
         return
-
+    
+    def test_sortEnsembles2(self):
+        """Test sorting for homolog data"""
+        
+        tlevels = [19, 20, 50, 80, 100]
+        sidechains = ["allatom", "polyAla", "reliable"]
+        
+        # Shuffle the data so the order of the combinations is random
+        # Although undesirable in a test, exactly what we need as sorted outcome
+        # should ALWAYS be the same
+        random.shuffle(tlevels)
+        random.shuffle(sidechains)
+        
+        ensemble_data = []
+        ensemble_pdbs = []
+        
+        # Generate ensembles to sort 
+        for comb in list(itertools.product(tlevels, sidechains)):
+            
+            name = "e{truncation}_{schain}".format(truncation=comb[0], 
+                                                   schain=comb[1])
+            
+            pdb = os.path.join("/foo", "bar", name+".pdb")
+            ensemble = {'name' : name,
+                        'ensemble_pdb': pdb,
+                        'truncation_level': comb[0],
+                        'side_chain_treatment': comb[1],
+            }
+            
+            ensemble_data.append(ensemble)
+            ensemble_pdbs.append(pdb)
+        
+        ensemble_pdb_sorted_1 = sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
+        ensemble_pdb_sorted_2 = sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
+        ensemble_pdb_sorted_3 = sort_ensembles(ensemble_pdbs)
+        
+        self.assertEqual("/foo/bar/e20_allatom.pdb", ensemble_pdb_sorted_1[0])
+        self.assertEqual("/foo/bar/e19_polyAla.pdb", ensemble_pdb_sorted_1[len(ensemble_pdb_sorted_1)/2])
+        self.assertEqual("/foo/bar/e100_reliable.pdb", ensemble_pdb_sorted_1[-1])
+        
+        self.assertEqual("/foo/bar/e19_allatom.pdb", ensemble_pdb_sorted_2[0])
+        self.assertEqual("/foo/bar/e100_reliable.pdb", ensemble_pdb_sorted_2[-1])    
+        self.assertEqual("/foo/bar/e50_polyAla.pdb", ensemble_pdb_sorted_2[len(ensemble_pdb_sorted_1)/2])
+        
+        self.assertEqual("/foo/bar/e100_allatom.pdb", ensemble_pdb_sorted_3[0])
+        self.assertEqual("/foo/bar/e80_reliable.pdb", ensemble_pdb_sorted_3[-1])
+        
+        return
+    
+    def test_sortEnsembles3(self):
+        '''Test sorting for single model data'''
+        
+        score_keys = ["ntv", "bbc", "kicker"]
+        tlevels = [19, 20, 50, 80, 100]
+        sidechains = ["allatom", "polyAla", "reliable"]
+        
+        # Shuffle the data so the order of the combinations is random
+        # Although undesirable in a test, exactly what we need as sorted outcome
+        # should ALWAYS be the same
+        random.shuffle(score_keys)
+        random.shuffle(tlevels)
+        random.shuffle(sidechains)
+        
+        ensemble_data = []
+        ensemble_pdbs = []
+        
+        # Generate ensembles to sort 
+        for comb in list(itertools.product(score_keys, tlevels, sidechains)):
+            
+            name = "{score_key}_tl{truncation}_{schain}".format(score_key=comb[0], 
+                                                                truncation=comb[1], 
+                                                                schain=comb[2])
+            pdb = os.path.join("/foo", "bar", name+".pdb")
+            ensemble = {'name' : name,
+                        'ensemble_pdb': pdb,
+                        'truncation_score_key': comb[0],
+                        'truncation_level': comb[1],
+                        'side_chain_treatment': comb[2],
+            }
+            
+            ensemble_data.append(ensemble)
+            ensemble_pdbs.append(pdb)
+        
+        ensemble_pdb_sorted_1 = sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
+        ensemble_pdb_sorted_2 = sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
+        ensemble_pdb_sorted_3 = sort_ensembles(ensemble_pdbs)
+        
+        self.assertEqual("/foo/bar/bbc_tl20_allatom.pdb", ensemble_pdb_sorted_1[0])
+        self.assertEqual("/foo/bar/bbc_tl19_allatom.pdb", ensemble_pdb_sorted_1[6])
+        self.assertEqual("/foo/bar/bbc_tl100_reliable.pdb", ensemble_pdb_sorted_1[14])
+        self.assertEqual("/foo/bar/kicker_tl20_allatom.pdb", ensemble_pdb_sorted_1[15])
+        self.assertEqual("/foo/bar/kicker_tl19_allatom.pdb", ensemble_pdb_sorted_1[21])
+        self.assertEqual("/foo/bar/kicker_tl100_reliable.pdb", ensemble_pdb_sorted_1[29])
+        self.assertEqual("/foo/bar/ntv_tl20_allatom.pdb", ensemble_pdb_sorted_1[30])    
+        self.assertEqual("/foo/bar/ntv_tl19_allatom.pdb", ensemble_pdb_sorted_1[36])
+        self.assertEqual("/foo/bar/ntv_tl100_reliable.pdb", ensemble_pdb_sorted_1[-1])
+        
+        self.assertEqual("/foo/bar/bbc_tl19_allatom.pdb", ensemble_pdb_sorted_2[0])
+        self.assertEqual("/foo/bar/ntv_tl100_reliable.pdb", ensemble_pdb_sorted_2[-1])    
+        self.assertEqual("/foo/bar/kicker_tl50_polyAla.pdb", ensemble_pdb_sorted_2[len(ensemble_pdb_sorted_2)/2])
+        
+        self.assertEqual("/foo/bar/bbc_tl100_allatom.pdb", ensemble_pdb_sorted_3[0])
+        self.assertEqual("/foo/bar/ntv_tl80_reliable.pdb", ensemble_pdb_sorted_3[-1])
+        
+        return
+    
 if __name__ == "__main__":
 
     # This runs the ensembling starting from a pickled file containing an amopt dictionary.
