@@ -71,7 +71,8 @@ def create_ensembles(amoptd):
             ensembler.score_matrix = amoptd['score_matrix']
     elif amoptd['cluster_method'] == 'fast_protein_cluster':
         cluster_exe = amoptd['fast_protein_cluster_exe']
-    elif amoptd['cluster_method'] == 'random':
+    elif amoptd['cluster_method'] == 'import' or \
+         amoptd['cluster_method'] == 'random':
         cluster_exe = None
     else:
         raise RuntimeError, "create_ensembles - unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
