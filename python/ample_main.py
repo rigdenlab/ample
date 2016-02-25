@@ -735,7 +735,8 @@ class Ample(object):
             except Exception:
                 msg = "Cannot find fast_protein_cluster executable: {0}".format(amoptd['fast_protein_cluster_exe'])
                 ample_exit.exit_error(msg)
-        elif amoptd['cluster_method'] == 'random':
+        elif amoptd['cluster_method'] == 'import' or \
+             amoptd['cluster_method'] == 'random':
             pass
         else:
             msg = "Unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
