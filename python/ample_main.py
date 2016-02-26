@@ -1283,6 +1283,10 @@ class Ample(object):
                 ample_benchmark.analyse(amopt.d)
                 ample_util.saveAmoptd(amopt.d)
         
+        # Flag to show that we reached the end without error - useful for integration testing
+        amopt.d['ample_ok'] = True
+        ample_util.saveAmoptd(amopt.d)
+        
         logger.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
         logger.info(ample_util.footer)
         
