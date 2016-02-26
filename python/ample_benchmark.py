@@ -50,8 +50,10 @@ def analyse(amoptd, newroot=None):
     # AnalysePdb may have already been called from the main script
     if not amoptd['native_pdb']:
         analysePdb(amoptd)
-        
-    if not (amoptd['ideal_helices'] or amoptd['homologs']):
+
+    if not (amoptd['homologs'] or \
+            amoptd['ideal_helices'] or \
+            amoptd['import_ensembles']):
         analyseModels(amoptd)
     
 #     _logger.info("Benchmark: generating naitive density map")
@@ -189,7 +191,9 @@ def analyseSolution(amoptd,d):
     # can now delete origin pdb
     os.unlink(originPdb)
 
-    if not (amoptd['ideal_helices'] or amoptd['homologs']):
+    if not (amoptd['homologs'] or \
+            amoptd['ideal_helices'] or \
+            amoptd['import_ensembles']):
 
         # Get reforigin info
         rmsder = reforigin.ReforiginRmsd()
