@@ -17,6 +17,7 @@ import test_funcs
 dirs = [
     'homologs',
     'ideal-helices',
+    'import-data',
     'nmr.remodel',
     'nmr.truncate',
     'toxd-example',
