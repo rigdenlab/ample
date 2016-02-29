@@ -118,6 +118,7 @@ class AmpleOptions(object):
                             'shelxe_rebuild_buccaneer' : False,
                             'side_chain_treatments' : SIDE_CHAIN_TREATMENTS,
                             'SIGF' : None,
+                            'single_model_mode' : False,
                             'spicker_exe' : None,
                             'subcluster_program' : 'maxcluster',
                             'submit_array' : True,
