@@ -1284,7 +1284,7 @@ class Ample(object):
                 ample_util.saveAmoptd(amopt.d)
         
         # Flag to show that we reached the end without error - useful for integration testing
-        amopt.d['AMPLE_ok'] = True
+        amopt.d['AMPLE_finished'] = True
         ample_util.saveAmoptd(amopt.d)
         
         logger.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
