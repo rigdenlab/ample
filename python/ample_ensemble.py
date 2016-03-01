@@ -338,7 +338,7 @@ class Ensembler(object):
         
         # Get list of residue indices sorted by variance - from least to most
         var_by_res.sort(key=lambda x: x.variance, reverse=False)
-         
+
         # print "var_by_res ",var_by_res
         idxs_all = [ x.idx for x in var_by_res ]
         resseq_all = [ x.resSeq for x in var_by_res ]
@@ -441,7 +441,9 @@ class Ensembler(object):
         
         return clusters, clusters_data
     
-    def edit_side_chains(self, raw_ensemble, raw_ensemble_data, side_chain_treatments, ensembles_directory, homologs=False):
+    def edit_side_chains(self, raw_ensemble, raw_ensemble_data, side_chain_treatments, 
+                         ensembles_directory, homologs=False, single_structure=False):
+        
         assert os.path.isdir(ensembles_directory), "Cannot find ensembles directory: {0}".format(ensembles_directory)
         ensembles = []
         ensembles_data = []
@@ -451,6 +453,10 @@ class Ensembler(object):
             ensemble_data['side_chain_treatment'] = sct
             if homologs:
                 ensemble_data['name'] = 'e{0}_{1}'.format(ensemble_data['truncation_level'], sct)
+            elif single_structure:
+                ensemble_data['name'] = '{0}_t{1}_{2}'.format(ensemble_data['truncation_score_key'], 
+                                                              ensemble_data['truncation_level'], 
+                                                              sct)
             else:
                 ensemble_data['name'] = 'c{0}_t{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
                                                                    ensemble_data['truncation_level'],
