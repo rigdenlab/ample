@@ -241,13 +241,13 @@ class Ensembler(object):
         self.num_clusters = 1
         
         # truncation
-        self.truncation_method = "percent"
-        self.truncation_pruning = None
         self.percent_truncation = 5
-        # For Felix so we know what truncation levels we used
         self.truncation_levels = None
-        self.truncation_variances = None
+        self.truncation_method = "percent"
         self.truncation_nresidues = None
+        self.truncation_pruning = None
+        self.truncation_scorefile = None
+        self.truncation_variances = None
         
         # subclustering
         # self.subcluster_method='FLOATING_RADII'
