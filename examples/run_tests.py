@@ -15,13 +15,13 @@ import test_funcs
 # TODO: 'transmembrane.3LBW'
 #    'missing-domain.1k04',
 dirs = [
+    'contact-example',
     'homologs',
     'ideal-helices',
     'import-data',
     'nmr.remodel',
     'nmr.truncate',
     'toxd-example',
-    'toxd.contacts'
 ]
 
 # Any args that are to be added/updated
