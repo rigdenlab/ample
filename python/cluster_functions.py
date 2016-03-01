@@ -105,9 +105,11 @@ def spicker_default(cluster_exe, cluster_method, max_cluster_size, models,
     """Cluster models using default Spicker"""
     spicker_rundir = os.path.join(work_dir, 'spicker')
     
-    return _spicker_master(cluster_exe, cluster_method, models, num_clusters, spicker_rundir)
+    return _spicker_master(cluster_exe, cluster_method, max_cluster_size, models, 
+                           num_clusters, spicker_rundir)
 
-def spicker_qscore(cluster_exe, cluster_method, gesamt_exe, models, nproc, num_clusters, work_dir):
+def spicker_qscore(cluster_exe, cluster_method, gesamt_exe, max_cluster_size, 
+                   models, nproc, num_clusters, work_dir):
     """Cluster models using Spicker's qscore"""
     spicker_rundir = os.path.join(work_dir, 'spicker')
     
@@ -118,9 +120,11 @@ def spicker_qscore(cluster_exe, cluster_method, gesamt_exe, models, nproc, num_c
     clusterer.generate_distance_matrix(models, nproc=nproc)
     clusterer.dump_pdb_matrix()
     
-    return _spicker_master(cluster_exe, cluster_method, models, num_clusters, spicker_rundir)
+    return _spicker_master(cluster_exe, cluster_method, max_cluster_size, models, 
+                           num_clusters, spicker_rundir)
     
-def spicker_tmscore(cluster_exe, cluster_method, models, num_clusters, score_matrix, work_dir):
+def spicker_tmscore(cluster_exe, cluster_method, max_cluster_size, models, 
+                    num_clusters, score_matrix, work_dir):
     """Cluster models using Spicker's TMscore"""
     
     assert score_matrix, "Scoring matrix required"
@@ -132,9 +136,11 @@ def spicker_tmscore(cluster_exe, cluster_method, models, num_clusters, score_mat
     
     shutil.copy(score_matrix, os.path.join(spicker_rundir,'score.matrix'))
     
-    return _spicker_master(cluster_exe, cluster_method, models, num_clusters, spicker_rundir)
+    return _spicker_master(cluster_exe, cluster_method, max_cluster_size, models, 
+                           num_clusters, spicker_rundir)
 
-def _spicker_master(cluster_exe, cluster_method, models, num_clusters, spicker_rundir):
+def _spicker_master(cluster_exe, cluster_method, max_cluster_size, models, 
+                    num_clusters, spicker_rundir):
     """Cluster models using spicker - master function"""
             
     # Spicker Alternative for clustering
@@ -163,8 +169,8 @@ def _spicker_master(cluster_exe, cluster_method, models, num_clusters, spicker_r
         #
         # Note - hlfsimko - 24.02.16: Maybe we can keep the full length clusters 
         #                             and slice the list after truncation?
-        #cluster = spickerer.results[i].pdbs[0:max_cluster_size]
-        cluster = spickerer.results[i].pdbs
+        cluster = spickerer.results[i].pdbs[0:max_cluster_size]
+        #cluster = spickerer.results[i].pdbs
         
         # Data on the models
         cluster_data = _create_dict()
