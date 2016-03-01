@@ -29,6 +29,7 @@ args =  [
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
 class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_nmr_truncate(self):
+        self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('mrbump_results', self.AMPLE_DICT)
         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
         self.assertTrue(self.AMPLE_DICT['success'])

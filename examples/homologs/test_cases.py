@@ -30,6 +30,7 @@ args_homologs =  [
 
 class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_homologs(self):
+        self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('mrbump_results', self.AMPLE_DICT)
         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
         self.assertTrue(self.AMPLE_DICT['success'])

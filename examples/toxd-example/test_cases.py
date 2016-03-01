@@ -39,6 +39,7 @@ if not sys.platform.startswith('win'):
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
     class AMPLETest(test_funcs.AMPLEBaseTest):
         def test_rosetta_modelling(self):
+            self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
             self.assertIn('models_dir', self.AMPLE_DICT)
             nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
             self.assertEqual(nmodels, 40, "Only {0} models produced".format(nmodels))
@@ -69,6 +70,7 @@ args_from_existing_models = args_vanilla + [
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
 class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_from_existing_models(self):
+        self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('ensembles', self.AMPLE_DICT)
         nensembles = len(self.AMPLE_DICT['ensembles'])
         self.assertEqual(nensembles, 12, "Incorrect number of ensembles produced: {0}".format(nensembles))
@@ -97,6 +99,7 @@ args_from_quark_models = args_vanilla + [
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
 class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_from_quark_models(self):
+        self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
         self.assertEqual(nmodels, 200, "Only {0} models produced".format(nmodels))
         self.assertIn('ensembles', self.AMPLE_DICT)
