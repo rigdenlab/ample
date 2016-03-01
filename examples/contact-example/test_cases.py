@@ -43,7 +43,7 @@ if not sys.platform.startswith('win'):
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
     class AMPLETest(test_funcs.AMPLEBaseTest):
         def test_rosetta_contacts(self):
-            self.assertTrue(self.AMPLE_DICT['AMPLE_ok'])
+            self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
             self.assertEqual(self.AMPLE_DICT['energy_function'], "FADE_default")
             self.assertIn('restraints_file', self.AMPLE_DICT)
             self.assertTrue(os.path.exists(self.AMPLE_DICT['restraints_file']))
@@ -81,7 +81,7 @@ if not sys.platform.startswith('win'):
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
     class AMPLETest(test_funcs.AMPLEBaseTest):
         def test_rosetta_contacts(self):
-            self.assertTrue(self.AMPLE_DICT['AMPLE_ok'])
+            self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
             self.assertIn('contact_map', self.AMPLE_DICT)
             self.assertTrue(os.path.isfile(self.AMPLE_DICT['contact_map']))
             self.assertIn('models_dir', self.AMPLE_DICT)

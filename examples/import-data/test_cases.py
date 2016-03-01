@@ -35,7 +35,7 @@ args_import_models = args_universal + [
 
 class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_import_models(self):
-        self.assertTrue(self.AMPLE_DICT['AMPLE_ok'])
+        self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertEqual(3, self.AMPLE_DICT['num_clusters'])
         self.assertIn('ensembles', self.AMPLE_DICT)
         self.assertEqual(243, len(self.AMPLE_DICT['ensembles_data']))
@@ -61,7 +61,7 @@ args_import_cluster = args_universal + [
 
 class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_import_cluster(self):
-        self.assertTrue(self.AMPLE_DICT['AMPLE_ok'])
+        self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('ensembles', self.AMPLE_DICT)
         self.assertEqual(150, len(self.AMPLE_DICT['ensembles_data']))
         return
@@ -89,7 +89,7 @@ args_import_ensembles = args_universal + [
 
 class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_import_ensembles(self):
-        self.assertTrue(self.AMPLE_DICT['AMPLE_ok'])
+        self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('ensembles', self.AMPLE_DICT)
         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
         self.assertTrue(self.AMPLE_DICT['success'])
