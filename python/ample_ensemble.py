@@ -1380,10 +1380,322 @@ class Test(unittest.TestCase):
         root.addHandler(ch)
 
         return
+    
+    def testResiduesFocussed(self):
 
+        TheseusVariances = collections.namedtuple('TheseusVariances', 
+                                                  ['idx', 'resName', 'resSeq', 
+                                                   'variance', 'stdDev', 'rmsd', 'core'])
+        l = 160
+        var_by_res = [ TheseusVariances(idx=i, 
+                                        resName='', 
+                                        resSeq=i, 
+                                        variance=float(i+1), 
+                                        stdDev=None, rmsd=None, core=None) for i in range(l) ]
+
+        ensembler = Ensembler()
+
+        ref_tlevels = [100, 93, 85, 78, 70, 63, 55, 48, 40, 33, 25, 23, 20, 18, 
+                       15, 13, 10, 8, 5, 3]
+        ref_tvariances = [160.0, 148.0, 136.0, 124.0, 112.0, 100.0, 88.0, 76.0, 
+                          64.0, 52.0, 40.0, 36.0, 32.0, 28.0, 24.0, 20.0, 16.0, 
+                          12.0, 8.0, 4.0]
+        ref_tresidues = [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 
+                         [0, 1, 2, 3, 4, 5, 6, 7], 
+                         [0, 1, 2, 3]]
+        ref_tresidue_idxs = [[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                             [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 
+                             [0, 1, 2, 3, 4, 5, 6, 7], 
+                             [0, 1, 2, 3]]
+
+        tlevels, tvariances, tresidues, tresidue_idxs = ensembler._calculate_residues_focussed(var_by_res)
+         
+        self.assertEqual(ref_tlevels, tlevels)
+        self.assertEqual(ref_tvariances, tvariances)
+        for ref_tresidue, tresidue in zip(ref_tresidues, tresidues):
+            self.assertEqual(ref_tresidue, tresidue)
+        for ref_tresidue_idx, tresidue_idx in zip(ref_tresidue_idxs, tresidue_idxs):
+            self.assertEqual(ref_tresidue_idx, tresidue_idx)
+            
+        return
+    
+    def testResiduesPercent(self):
+
+        TheseusVariances = collections.namedtuple("TheseusVariances", 
+                                                  ["idx", "resName", "resSeq", 
+                                                   "variance", "stdDev", "rmsd", "core"])
+        
+        var_by_res = [TheseusVariances(idx=0, resName='GLN', resSeq=1, variance=55.757579, stdDev=7.4671, rmsd=18.603266, core=True), 
+                      TheseusVariances(idx=1, resName='PRO', resSeq=2, variance=46.981224, stdDev=6.854285, rmsd=17.076522, core=True), 
+                      TheseusVariances(idx=2, resName='ARG', resSeq=3, variance=47.734219, stdDev=6.908996, rmsd=17.212826, core=True), 
+                      TheseusVariances(idx=3, resName='ARG', resSeq=4, variance=39.857312, stdDev=6.313265, rmsd=15.728643, core=True), 
+                      TheseusVariances(idx=4, resName='LYS', resSeq=5, variance=35.477419, stdDev=5.956292, rmsd=14.839295, core=True), 
+                      TheseusVariances(idx=5, resName='LEU', resSeq=6, variance=26.066709, stdDev=5.105557, rmsd=12.719802, core=True), 
+                      TheseusVariances(idx=6, resName='CYS', resSeq=7, variance=24.114483, stdDev=4.91065, rmsd=12.234218, core=True), 
+                      TheseusVariances(idx=7, resName='ILE', resSeq=8, variance=24.610979, stdDev=4.960945, rmsd=12.359523, core=True), 
+                      TheseusVariances(idx=8, resName='LEU', resSeq=9, variance=21.187131, stdDev=4.602948, rmsd=11.467621, core=True), 
+                      TheseusVariances(idx=9, resName='HIS', resSeq=10, variance=21.882362, stdDev=4.677859, rmsd=11.654251, core=True), 
+                      TheseusVariances(idx=10, resName='ARG', resSeq=11, variance=21.62225, stdDev=4.649973, rmsd=11.584778, core=True), 
+                      TheseusVariances(idx=11, resName='ASN', resSeq=12, variance=18.680585, stdDev=4.322104, rmsd=10.767937, core=True), 
+                      TheseusVariances(idx=12, resName='PRO', resSeq=13, variance=16.568056, stdDev=4.070388, rmsd=10.140819, core=True), 
+                      TheseusVariances(idx=13, resName='GLY', resSeq=14, variance=14.889562, stdDev=3.858699, rmsd=9.613426, core=True),
+                      TheseusVariances(idx=14, resName='ARG', resSeq=15, variance=13.889743, stdDev=3.726895, rmsd=9.285052, core=True), 
+                      TheseusVariances(idx=15, resName='CYS', resSeq=16, variance=8.722879, stdDev=2.953452, rmsd=7.358125, core=True), 
+                      TheseusVariances(idx=16, resName='TYR', resSeq=17, variance=8.719477, stdDev=2.952876, rmsd=7.35669, core=True), 
+                      TheseusVariances(idx=17, resName='ASP', resSeq=18, variance=4.648089, stdDev=2.155943, rmsd=5.371239, core=True), 
+                      TheseusVariances(idx=18, resName='LYS', resSeq=19, variance=4.263944, stdDev=2.064932, rmsd=5.144498, core=True), 
+                      TheseusVariances(idx=19, resName='ILE', resSeq=20, variance=2.338536, stdDev=1.529227, rmsd=3.809862, core=True)]
+
+     
+        ensembler = Ensembler()
+     
+        # Test Case 1
+        ref_tlevels = [100, 95, 90, 85, 80, 75, 70, 65, 60, 
+                       55, 50, 45, 40, 35, 30, 25, 20, 15]
+        ref_tvariances = [55.757579, 47.734219, 46.981224, 39.857312, 
+                          35.477419, 26.066709, 24.610979, 24.114483, 
+                          21.882362, 21.62225, 21.187131, 18.680585, 
+                          16.568056, 14.889562, 13.889743, 8.722879, 
+                          8.719477, 4.648089]
+        ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [9, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [13, 14, 15, 16, 17, 18, 19, 20], 
+                         [14, 15, 16, 17, 18, 19, 20], 
+                         [15, 16, 17, 18, 19, 20], 
+                         [16, 17, 18, 19, 20], 
+                         [17, 18, 19, 20], 
+                         [18, 19, 20]]
+        tlevels, tvariances, tresidues, _ = ensembler._calculate_residues_percent(var_by_res, percent_interval=5)
+        self.assertEqual(ref_tlevels, tlevels)
+        self.assertEqual(ref_tresidues, tresidues)
+        self.assertEqual(ref_tvariances, tvariances)
+        
+        ########################################################################       
+        # Test Case 2
+        ref_tlevels = [100, 85, 70, 55, 40, 25]
+        ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [13, 14, 15, 16, 17, 18, 19, 20], 
+                         [16, 17, 18, 19, 20]]
+        ref_tvariances = [55.757579, 39.857312, 24.610979, 21.62225, 
+                          16.568056, 8.722879]
+        tlevels, tvariances, tresidues, _ = ensembler._calculate_residues_percent(var_by_res, percent_interval=15)
+        self.assertEqual(ref_tlevels, tlevels)
+        self.assertEqual(ref_tresidues, tresidues)
+        self.assertEqual(ref_tvariances, tvariances)
+        
+        ########################################################################       
+        # Test Case 3
+        ref_tlevels = [100, 50]
+        ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
+                         [9, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+        ref_tvariances = [55.757579, 21.187131]
+        tlevels, tvariances, tresidues, _ = ensembler._calculate_residues_percent(var_by_res, percent_interval=50)
+        self.assertEqual(ref_tlevels, tlevels)
+        self.assertEqual(ref_tresidues, tresidues)
+        self.assertEqual(ref_tvariances, tvariances)
+        
+        
+        
+        return
+    
+    def testResiduesThresh(self):
+        '''Test we can calculate the original list of residues'''
+        
+        TheseusVariances = collections.namedtuple("TheseusVariances", 
+                                                  ["idx", "resName", "resSeq", 
+                                                   "variance", "stdDev", "rmsd", "core"])
+        
+        var_by_res = [TheseusVariances(idx=0, resName='GLN', resSeq=1, variance=55.757579, stdDev=7.4671, rmsd=18.603266, core=True), 
+                      TheseusVariances(idx=1, resName='PRO', resSeq=2, variance=46.981224, stdDev=6.854285, rmsd=17.076522, core=True), 
+                      TheseusVariances(idx=2, resName='ARG', resSeq=3, variance=47.734219, stdDev=6.908996, rmsd=17.212826, core=True), 
+                      TheseusVariances(idx=3, resName='ARG', resSeq=4, variance=39.857312, stdDev=6.313265, rmsd=15.728643, core=True), 
+                      TheseusVariances(idx=4, resName='LYS', resSeq=5, variance=35.477419, stdDev=5.956292, rmsd=14.839295, core=True), 
+                      TheseusVariances(idx=5, resName='LEU', resSeq=6, variance=26.066709, stdDev=5.105557, rmsd=12.719802, core=True), 
+                      TheseusVariances(idx=6, resName='CYS', resSeq=7, variance=24.114483, stdDev=4.91065, rmsd=12.234218, core=True), 
+                      TheseusVariances(idx=7, resName='ILE', resSeq=8, variance=24.610979, stdDev=4.960945, rmsd=12.359523, core=True), 
+                      TheseusVariances(idx=8, resName='LEU', resSeq=9, variance=21.187131, stdDev=4.602948, rmsd=11.467621, core=True), 
+                      TheseusVariances(idx=9, resName='HIS', resSeq=10, variance=21.882362, stdDev=4.677859, rmsd=11.654251, core=True), 
+                      TheseusVariances(idx=10, resName='ARG', resSeq=11, variance=21.62225, stdDev=4.649973, rmsd=11.584778, core=True), 
+                      TheseusVariances(idx=11, resName='ASN', resSeq=12, variance=18.680585, stdDev=4.322104, rmsd=10.767937, core=True), 
+                      TheseusVariances(idx=12, resName='PRO', resSeq=13, variance=16.568056, stdDev=4.070388, rmsd=10.140819, core=True), 
+                      TheseusVariances(idx=13, resName='GLY', resSeq=14, variance=14.889562, stdDev=3.858699, rmsd=9.613426, core=True),
+                      TheseusVariances(idx=14, resName='ARG', resSeq=15, variance=13.889743, stdDev=3.726895, rmsd=9.285052, core=True)]
+
+
+        ensembler = Ensembler()
+        
+        ########################################################################       
+        # Test Case 1
+        ref_tlevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+        ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [7, 9, 10, 11, 12, 13, 14, 15], 
+                         [9, 10, 11, 12, 13, 14, 15], 
+                         [9, 11, 12, 13, 14, 15], 
+                         [9, 12, 13, 14, 15], 
+                         [12, 13, 14, 15], 
+                         [13, 14, 15], 
+                         [14, 15], 
+                         [15]]
+        tlevels, _, tresidues, _ = ensembler._calculate_residues_thresh(var_by_res, percent_interval=10)
+        self.assertEqual(ref_tlevels, tlevels)
+        self.assertEqual(ref_tresidues, tresidues)
+        
+        ########################################################################       
+        # Test Case 2
+        ref_tlevels = [1, 2, 3, 4, 5]
+        ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [9, 11, 12, 13, 14, 15], 
+                         [13, 14, 15]]
+        
+        tlevels, _, tresidues, _ = ensembler._calculate_residues_thresh(var_by_res, percent_interval=20)
+        self.assertEqual(ref_tlevels, tlevels)
+        self.assertEqual(ref_tresidues, tresidues)
+        
+        ########################################################################       
+        # Test Case 3
+        ref_tlevels = [1, 2, 3]
+        ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
+                         [9, 10, 11, 12, 13, 14, 15]]
+        tlevels, _, tresidues, _ = ensembler._calculate_residues_thresh(var_by_res, percent_interval=50)
+        self.assertEqual(ref_tlevels, tlevels)
+        self.assertEqual(ref_tresidues, tresidues)
+        
+        return
+   
+    def testGenerateThresholds(self):
+        '''Test for Jaclyn's threshold method'''
+
+        var_list = [31.186, 24.104, 16.448, 40.365, 52.0, 11.549999999999999, 
+                    18.252000000000002, 9.324000000000002, 19.551, 46.53, 
+                    21.609, 1.0090000000000001, 14.504, 13.39, 7.259, 33.231, 
+                    29.54, 20.64, 25.325000000000003, 34.947, 7.147, 50.85, 
+                    44.290000000000006, 8.312, 58.254000000000005, 
+                    53.907000000000004, 50.1, 2.028, 31.65, 50.666000000000004]
+
+        ensembler = Ensembler()
+
+        # Test Case 1
+        ref_thresholds = [1.0090000000000001, 2.028, 7.147, 7.259, 8.312, 
+                          9.324000000000002, 11.549999999999999, 13.39, 
+                          14.504, 16.448, 18.252000000000002, 19.551, 20.64, 
+                          21.609, 24.104, 25.325000000000003, 29.54, 31.186, 
+                          31.65, 33.231, 34.947, 40.365, 44.290000000000006, 
+                          46.53, 50.1, 50.666000000000004, 50.85, 52.0,
+                          53.907000000000004, 58.254000000000005]
+        chunk_size = int((float(len(var_list)) / 100) * float(5))
+        thresholds = ensembler._generate_thresholds(var_list, chunk_size)
+        self.assertEqual(ref_thresholds, thresholds)
+        
+        # Test Case 2
+        ref_thresholds = [9.324000000000002, 19.551, 31.186, 46.53, 58.254000000000005]
+        chunk_size = int((float(len(var_list)) / 100) * float(20))
+        thresholds = ensembler._generate_thresholds(var_list, chunk_size)
+        self.assertEqual(ref_thresholds, thresholds)
+        
+        # Test Case 3
+        ref_thresholds = [24.104, 58.254000000000005]
+        chunk_size = int((float(len(var_list)) / 100) * float(50))
+        thresholds = ensembler._generate_thresholds(var_list, chunk_size)
+        self.assertEqual(ref_thresholds, thresholds)
+
+        
+        return
+    
+    def testGenerateThresholds2(self):
+        '''Test for Jens' threshold method'''
+
+        var_list = [31.186, 24.104, 16.448, 40.365, 52.0, 11.549999999999999, 
+                    18.252000000000002, 9.324000000000002, 19.551, 46.53, 
+                    21.609, 1.0090000000000001, 14.504, 13.39, 7.259, 33.231, 
+                    29.54, 20.64, 25.325000000000003, 34.947, 7.147, 50.85, 
+                    44.290000000000006, 8.312, 58.254000000000005, 
+                    53.907000000000004, 50.1, 2.028, 31.65, 50.666000000000004]
+
+        ensembler = Ensembler()
+        
+        # Test Case 1
+        ref_thresholds = [1.0090000000000001, 2.028, 7.147, 7.259, 8.312, 
+                          9.324000000000002, 11.549999999999999, 13.39, 
+                          14.504, 16.448, 18.252000000000002, 19.551, 20.64, 
+                          21.609, 24.104, 25.325000000000003, 29.54, 31.186, 
+                          31.65, 33.231, 34.947, 40.365, 44.290000000000006, 
+                          46.53, 50.1, 50.666000000000004, 50.85, 52.0, 
+                          53.907000000000004, 58.254000000000005]
+        chunk_size = int((float(len(var_list)) / 100) * float(5))
+        thresholds = ensembler._generate_thresholds2(var_list, chunk_size)
+        self.assertEqual(ref_thresholds, thresholds)
+
+        # Test Case 2
+        ref_thresholds = [9.324000000000002, 19.551, 31.186, 46.53, 58.254000000000005]
+        chunk_size = int((float(len(var_list)) / 100) * float(20))
+        thresholds = ensembler._generate_thresholds2(var_list, chunk_size)
+        self.assertEqual(ref_thresholds, thresholds)
+
+        # Test Case 3
+        ref_thresholds = [24.104, 58.254000000000005]
+        chunk_size = int((float(len(var_list)) / 100) * float(50))
+        thresholds = ensembler._generate_thresholds2(var_list, chunk_size)
+        self.assertEqual(ref_thresholds, thresholds)
+        
+        return    
+              
     def testPruneResidues(self):
-        """Test we can reproduce the original thresholds"""
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+        '''Test we can reproduce the original thresholds'''
 
         ensembler = Ensembler()
         
@@ -1448,706 +1760,924 @@ class Test(unittest.TestCase):
         self.assertEqual(pruned, [7, 19])
 
         return
-
-    def testThresholds(self):
-        """Test we can reproduce the original thresholds"""
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+    
+    def testSliceSubcluster(self):
+        '''Written by hlasimpk'''
+        
+        cluster_files = ["model_1.pdb", "model_2.pdb", "model_3.pdb",
+                         "model_4.pdb", "model_5.pdb", "model_6.pdb",
+                         "model_7.pdb", "model_8.pdb", "model_9.pdb",
+                         "model_10.pdb", "model_11.pdb", "model_12.pdb",
+                         "model_13.pdb", "model_14.pdb", "model_15.pdb",
+                         "model_16.pdb", "model_17.pdb", "model_18.pdb",
+                         "model_19.pdb", "model_20.pdb"]
+        
+        ensembler = Ensembler()
+        
+        ########################################################################
+        # Test Case 1
+        pdbs = ensembler._slice_subcluster(cluster_files, [], 30, 1, [1, 2, 3])        
+        ref_pdbs = ["model_1.pdb", "model_2.pdb", "model_3.pdb", "model_4.pdb", 
+                    "model_5.pdb", "model_6.pdb", "model_7.pdb", "model_8.pdb", 
+                    "model_9.pdb", "model_10.pdb", "model_11.pdb", "model_12.pdb", 
+                    "model_13.pdb", "model_14.pdb", "model_15.pdb", "model_16.pdb", 
+                    "model_17.pdb", "model_18.pdb", "model_19.pdb", "model_20.pdb"]
+        self.assertEqual(ref_pdbs, pdbs)
+        
+        ########################################################################
+        # Test Case 2
+        pdbs = ensembler._slice_subcluster(cluster_files, [], 15, 1, [1, 2, 3])
+        ref_pdbs = ["model_1.pdb", "model_2.pdb", "model_3.pdb", "model_4.pdb", 
+                    "model_5.pdb", "model_6.pdb", "model_7.pdb", "model_8.pdb", 
+                    "model_9.pdb", "model_10.pdb", "model_11.pdb", "model_12.pdb", 
+                    "model_13.pdb", "model_14.pdb", "model_15.pdb"]
+        self.assertEqual(ref_pdbs, pdbs)
+        
+        ########################################################################
+        # Test Case 3
+        previous_clusters = [["model_1.pdb", "model_2.pdb", "model_3.pdb",
+                              "model_4.pdb", "model_5.pdb", "model_6.pdb",
+                              "model_7.pdb", "model_8.pdb", "model_9.pdb",
+                              "model_10.pdb", "model_11.pdb", "model_12.pdb",
+                              "model_13.pdb", "model_14.pdb", "model_15.pdb"]]
+        pdbs = ensembler._slice_subcluster(cluster_files, previous_clusters, 
+                                           15, 3, [1, 2, 3])
+        ref_pdbs = ["model_6.pdb", "model_7.pdb", "model_8.pdb", "model_9.pdb", 
+                    "model_10.pdb", "model_11.pdb", "model_12.pdb", "model_13.pdb", 
+                    "model_14.pdb", "model_15.pdb", "model_16.pdb", "model_17.pdb", 
+                    "model_18.pdb", "model_19.pdb", "model_20.pdb"]
+        self.assertEqual(ref_pdbs, pdbs)
+        
+        ########################################################################
+        # Test Case 4
+        previous_clusters = [["model_1.pdb", "model_2.pdb", "model_3.pdb",
+                              "model_4.pdb", "model_5.pdb", "model_6.pdb",
+                              "model_7.pdb", "model_8.pdb", "model_9.pdb",
+                              "model_10.pdb", "model_11.pdb", "model_12.pdb",
+                              "model_13.pdb", "model_14.pdb", "model_15.pdb",]]
+        pdbs = ensembler._slice_subcluster(cluster_files, previous_clusters,
+                                           15, 2, [1, 2, 3, 4, 5])
+        ref_pdbs = ["model_2.pdb", "model_3.pdb", "model_4.pdb", "model_5.pdb", 
+                    "model_6.pdb", "model_7.pdb", "model_8.pdb", "model_9.pdb", 
+                    "model_10.pdb", "model_11.pdb", "model_12.pdb", "model_13.pdb",
+                    "model_14.pdb", "model_15.pdb", "model_16.pdb"]
+        self.assertEqual(ref_pdbs, pdbs)
+        
+        return
+    
+    def testPickNmodels(self):
+        '''Written by hlasimpk'''
+        
+        models = ['model_3.pdb', 'model_16.pdb', 'model_15.pdb',
+                  'model_11.pdb', 'model_5.pdb', 'model_4.pdb',
+                  'model_18.pdb', 'model_2.pdb', 'model_10.pdb',
+                  'model_19.pdb', 'model_7.pdb', 'model_8.pdb',
+                  'model_14.pdb', 'model_12.pdb', 'model_9.pdb',
+                  'model_13.pdb', 'model_20.pdb', 'model_1.pdb',
+                  'model_17.pdb', 'model_6.pdb']
 
         ensembler = Ensembler()
         
-        ensembler.work_dir = os.path.join(self.tests_dir, "genthresh1")
-        if os.path.isdir(ensembler.work_dir):
-            shutil.rmtree(ensembler.work_dir)
-        os.mkdir(ensembler.work_dir)
+        ########################################################################
+        # Test Case 1   
+        pdbs = ensembler._pick_nmodels(models, [], 30)
+        ref_pdbs = ('model_1.pdb', 'model_10.pdb', 'model_11.pdb', 'model_12.pdb', 
+                    'model_13.pdb', 'model_14.pdb', 'model_15.pdb', 'model_16.pdb', 
+                    'model_17.pdb', 'model_18.pdb', 'model_19.pdb', 'model_2.pdb',
+                    'model_20.pdb', 'model_3.pdb', 'model_4.pdb', 'model_5.pdb', 
+                    'model_6.pdb', 'model_7.pdb', 'model_8.pdb', 'model_9.pdb')
+        self.assertEqual(ref_pdbs, pdbs)
         
-        percent_interval = 5
-        mdir = os.path.join(self.testfiles_dir, "models")
-        cluster_models = glob.glob(mdir + os.sep + "*.pdb")
-        run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
-        run_theseus.superpose_models(cluster_models)
-        var_by_res = run_theseus.var_by_res()
-        thresholds = ensembler.generate_thresholds(var_by_res, percent_interval)
+        ########################################################################
+        # Test Case 2
+        clusters = [('model_1.pdb', 'model_10.pdb', 'model_11.pdb', 'model_12.pdb', 
+                     'model_13.pdb', 'model_14.pdb', 'model_15.pdb', 'model_16.pdb', 
+                     'model_17.pdb', 'model_18.pdb', 'model_19.pdb', 'model_2.pdb',
+                     'model_20.pdb', 'model_3.pdb', 'model_4.pdb', 'model_5.pdb', 
+                     'model_6.pdb', 'model_7.pdb', 'model_8.pdb', 'model_9.pdb')]
+        pdbs = ensembler._pick_nmodels(models, clusters, 30)
+        ref_pdbs = None
+        self.assertEqual(ref_pdbs, pdbs)
         
-        self.assertEqual(30, len(thresholds), thresholds)
-        reft = [0.02235, 0.041896, 0.08155, 0.085867, 0.103039, 0.185265, 0.7058, 1.772884, 3.152793,
-              4.900255, 6.206563, 10.250043, 10.772177, 16.071345, 18.292366, 22.432564, 23.265938,
-              25.348501, 27.37951, 35.877391, 37.227859, 41.759805, 49.037625, 50.992344, 56.091738,
-              58.09387, 59.917999, 70.052007, 80.235358, 86.028994]
+        return
         
-        self.assertTrue(all([ abs(r - c) < 0.0001 for r, c in zip(reft, thresholds)]),
-                         "Wrong truncation thresholds: {0}".format(thresholds))
-        
-        shutil.rmtree(ensembler.work_dir)
+    def testSubclusterRadius(self):
+        '''hlfsimko: probably nothing new really happens in function'''
         return
     
-    def testResiduesThresh(self):
-        """Test we can calculate the original list of residues"""
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
+    def testSplitSequence(self):
         
-        # This test for percent
-        ensembler.work_dir = os.path.join(self.tests_dir, "genthresh2")
-        if os.path.isdir(ensembler.work_dir):
-            shutil.rmtree(ensembler.work_dir)
-        os.mkdir(ensembler.work_dir)
-        os.chdir(ensembler.work_dir)
+        ########################################################################       
+        # Test Case 1
+        ref_idxs = [99, 94, 89, 84, 79, 74, 69, 64, 59, 54, 49, 44, 39, 34, 29, 24, 19, 14, 9, 4]
+        idxs = split_sequence(100, 5, 3)
+        self.assertEqual(ref_idxs, idxs)
         
-        percent_interval = 5
-        mdir = os.path.join(self.testfiles_dir, "models")
-        cluster_models = glob.glob(mdir + os.sep + "*.pdb")
-        run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
-        run_theseus.superpose_models(cluster_models)
-        var_by_res = run_theseus.var_by_res()
-        truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_thresh(var_by_res, percent_interval)
+        ########################################################################       
+        # Test Case 2        
+        ref_idxs = [99, 79, 59, 39, 19]
+        idxs = split_sequence(100, 20, 3)
+        self.assertEqual(ref_idxs, idxs)
         
-        self.assertEqual(truncation_levels,
-                         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
+        ########################################################################       
+        # Test Case 3        
+        ref_idxs = [99, 49]
+        idxs = split_sequence(100, 50, 3)
+        self.assertEqual(ref_idxs, idxs)
         
+        ########################################################################       
+        # Test Case 4        
+        ref_idxs = [99, 94, 89, 84, 79, 74, 69, 64, 59, 54, 49, 44, 39, 34, 29, 24]
+        idxs = split_sequence(100, 5, 21)
+        self.assertEqual(ref_idxs, idxs)
         
-        refv = [86.028994, 80.235358, 70.052007, 59.917999, 58.09387, 56.091738, 50.992344, 49.037625, 41.759805, 37.227859, 35.877391,
-                27.37951, 25.348501, 23.265938, 22.432564, 18.292366, 16.071345, 10.772177, 10.250043, 6.206563, 4.900255, 3.152793,
-                1.772884, 0.7058, 0.185265, 0.103039, 0.085867, 0.08155, 0.041896, 0.02235]
-        self.assertTrue(all([ abs(r - c) < 0.0001 for r, c in zip(refv, truncation_variances)]),
-                         "Wrong truncation variances: {0}".format(truncation_variances))
-
-        residues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
-                  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58],
-                  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
-                  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 56, 57],
-                  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 57],
-                  [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53],
-                  [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 50, 53],
-                  [2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
-                  [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
-                  [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
-                  [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45],
-                  [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-                  [7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-                  [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-                  [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-                  [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-                  [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-                  [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
-                  [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
-                  [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
-                  [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
-                  [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
-                  [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
-                  [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
-                  [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
-                  [25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
-                  [26, 27, 28, 30, 31, 32, 33, 34],
-                  [26, 27, 30, 31, 32, 33],
-                  [26, 27, 31, 32],
-                  [31, 32]]
-        self.assertEqual(residues, truncation_residues)
-
-        shutil.rmtree(ensembler.work_dir)
+        ########################################################################       
+        # Test Case 5        
+        ref_idxs = [99, 79, 59, 39]
+        idxs = split_sequence(100, 20, 21)
+        self.assertEqual(ref_idxs, idxs)
+        
+        ########################################################################       
+        # Test Case 6        
+        ref_idxs = [99, 49]
+        idxs = split_sequence(100, 50, 21)
+        self.assertEqual(ref_idxs, idxs)
+        
+        ########################################################################       
+        # Test Case 7
+        ref_idxs = [99]
+        idxs = split_sequence(100, 50, 99)
+        self.assertEqual(ref_idxs, idxs)
+                
         return
     
-    def testResiduesFocussed(self):
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-        
-        TheseusVariances = collections.namedtuple('TheseusVariances', ['idx', 'resName', 'resSeq', 'variance', 'stdDev', 'rmsd', 'core'])
-        l = 160
-        var_by_res = [ TheseusVariances(idx=i, resName='', resSeq=i, variance=float(i+1), stdDev=None, rmsd=None, core=None) for i in range(l) ]
-        truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_focussed(var_by_res)
-         
-        self.assertEqual(truncation_levels, [100, 93, 85, 78, 70, 63, 55, 48, 40, 33, 25, 23, 20, 18, 15, 13, 10, 8, 5, 3])
-        self.assertEqual(truncation_variances, [160.0, 148.0, 136.0, 124.0, 112.0, 100.0, 88.0, 76.0, 64.0, 52.0, 40.0, 36.0, 32.0, 28.0, 24.0, 20.0, 16.0, 12.0, 8.0, 4.0])
-        self.assertEqual(truncation_residues, truncation_residues_idxs)
-        self.assertEqual(truncation_residues_idxs[-1], [0, 1, 2, 3])
-       
-        return
-    
-    def testResiduesPercent(self):
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-
-        ensembler.work_dir = os.path.join(self.tests_dir, "genthresh3")
-        if os.path.isdir(ensembler.work_dir):
-            shutil.rmtree(ensembler.work_dir)
-        os.mkdir(ensembler.work_dir)
-        os.chdir(ensembler.work_dir)
-        ensembler.percent_interval = 5
-        mdir = os.path.join(self.testfiles_dir, "models")
-        cluster_models = glob.glob(mdir + os.sep + "*.pdb")
-        run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
-        run_theseus.superpose_models(cluster_models)
-        var_by_res = run_theseus.var_by_res()
-        truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_percent(var_by_res, percent_interval=5)
-
-        self.assertEqual(truncation_levels,
-                         [100, 95, 90, 85, 80, 75, 69, 64, 59, 54, 49, 44, 39, 34, 29, 24, 19, 14, 8])
-        
-        refv = [83.279358, 67.986091, 57.085407, 54.341361, 47.73422, 40.413985, 35.141765, 26.06671, 22.81897,
-              21.187131, 14.889563, 9.55953, 6.484837, 4.263945, 1.41278, 0.504414, 0.204918, 0.135812, 0.081846]
-        self.assertTrue(all([ abs(r - c) < 0.0001 for r, c in zip(refv, truncation_variances)]),
-                         "Wrong truncation variances: {0}".format(truncation_variances))
-        
-        residues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
-                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
-                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 57],
-                    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 50, 53, 57],
-                    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
-                    [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
-                    [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
-                    [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-                    [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-                    [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-                    [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
-                    [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
-                    [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
-                    [19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
-                    [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
-                    [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36],
-                    [23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
-                    [26, 27, 28, 30, 31, 32, 33, 34],
-                    [26, 27, 30, 31, 32]]
-
-        for i in range(len(residues)):
-            self.assertEqual(residues[i], truncation_residues[i], "Mismatching residues for level {0}\n{1}\n{2}".format(i, residues[i], truncation_residues[i]))
-
-        shutil.rmtree(ensembler.work_dir)
-        return
-
-    def testClustering(self):
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-
-        ensembler.work_dir = os.path.join(self.tests_dir, "genthresh4")
-        if os.path.isdir(ensembler.work_dir):
-            shutil.rmtree(ensembler.work_dir)
-        os.mkdir(ensembler.work_dir)
-        
-        ensembler.theseus_exe = self.theseus_exe
-        
-        mdir = os.path.join(self.testfiles_dir, "models")
-        models = glob.glob(mdir + os.sep + "*.pdb")
-        
-        cluster_models, cluster_data = ensembler.cluster_models(models=models,
-                                                             cluster_method='spicker',
-                                                             num_clusters=3,
-                                                             cluster_exe=self.spicker_exe)
-        
-        
-        # This with spicker from ccp4 6.5.010 on osx 10.9.5
-        # These should match with the test results from python/spicker.py
-        names = sorted([os.path.basename(m) for m in cluster_models[0]])
-        self.assertEqual(names,
-                         sorted(['5_S_00000005.pdb', '4_S_00000005.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb',
-                          '4_S_00000003.pdb', '3_S_00000006.pdb', '3_S_00000004.pdb', '2_S_00000005.pdb',
-                          '2_S_00000001.pdb', '3_S_00000003.pdb', '1_S_00000005.pdb', '1_S_00000002.pdb',
-                          '1_S_00000004.pdb']))
-        
-        d = cluster_data[2]
-        self.assertEqual(os.path.basename(d['cluster_centroid']), '1_S_00000001.pdb')
-        self.assertEqual(d['cluster_num_models'], 1)
-        shutil.rmtree(ensembler.work_dir)
-        return
-    
-    def testEnsemblingPercent(self):
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-
-        work_dir = os.path.join(self.tests_dir, "genthresh5")
-        if os.path.isdir(work_dir):
-            shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-        
-        ensembler.theseus_exe = self.theseus_exe
-        ensembler.cluster_exe = self.spicker_exe
-        ensembler.subcluster_exe = self.maxcluster_exe
-        
-        mdir = os.path.join(self.testfiles_dir, "models")
-        models = glob.glob(mdir + os.sep + "*.pdb")
-
-        num_clusters = 1
-        cluster_method = 'spicker'
-        percent_truncation = 5
-        truncation_method = "percent"
-        ensembles = ensembler.generate_ensembles(models,
-                                                 cluster_method=cluster_method,
-                                                 cluster_exe=self.spicker_exe,
-                                                 num_clusters=num_clusters,
-                                                 percent_truncation=percent_truncation,
-                                                 truncation_method=truncation_method,
-                                                 work_dir=work_dir)
-        
-        # Below tested with ccp4 6.5.010 on osx 10.9.5
-        eref = ['c1_t100_r2_allatom.pdb', 'c1_t100_r2_polyAla.pdb', 'c1_t100_r2_reliable.pdb', 'c1_t100_r3_allatom.pdb',
-                 'c1_t100_r3_polyAla.pdb', 'c1_t100_r3_reliable.pdb', 'c1_t19_r1_allatom.pdb', 'c1_t19_r1_polyAla.pdb',
-                 'c1_t19_r1_reliable.pdb', 'c1_t24_r1_allatom.pdb', 'c1_t24_r1_polyAla.pdb', 'c1_t24_r1_reliable.pdb',
-                 'c1_t29_r1_allatom.pdb', 'c1_t29_r1_polyAla.pdb', 'c1_t29_r1_reliable.pdb', 'c1_t34_r1_allatom.pdb',
-                 'c1_t34_r1_polyAla.pdb', 'c1_t34_r1_reliable.pdb', 'c1_t39_r1_allatom.pdb', 'c1_t39_r1_polyAla.pdb',
-                 'c1_t39_r1_reliable.pdb', 'c1_t44_r1_allatom.pdb', 'c1_t44_r1_polyAla.pdb', 'c1_t44_r1_reliable.pdb',
-                 'c1_t44_r2_allatom.pdb', 'c1_t44_r2_polyAla.pdb', 'c1_t44_r2_reliable.pdb', 'c1_t49_r1_allatom.pdb',
-                 'c1_t49_r1_polyAla.pdb', 'c1_t49_r1_reliable.pdb', 'c1_t49_r2_allatom.pdb', 'c1_t49_r2_polyAla.pdb',
-                 'c1_t49_r2_reliable.pdb', 'c1_t54_r1_allatom.pdb', 'c1_t54_r1_polyAla.pdb', 'c1_t54_r1_reliable.pdb',
-                 'c1_t54_r2_allatom.pdb', 'c1_t54_r2_polyAla.pdb', 'c1_t54_r2_reliable.pdb', 'c1_t59_r1_allatom.pdb',
-                 'c1_t59_r1_polyAla.pdb', 'c1_t59_r1_reliable.pdb', 'c1_t59_r2_allatom.pdb', 'c1_t59_r2_polyAla.pdb',
-                 'c1_t59_r2_reliable.pdb', 'c1_t64_r1_allatom.pdb', 'c1_t64_r1_polyAla.pdb', 'c1_t64_r1_reliable.pdb',
-                 'c1_t64_r2_allatom.pdb', 'c1_t64_r2_polyAla.pdb', 'c1_t64_r2_reliable.pdb', 'c1_t69_r1_allatom.pdb',
-                 'c1_t69_r1_polyAla.pdb', 'c1_t69_r1_reliable.pdb', 'c1_t69_r2_allatom.pdb', 'c1_t69_r2_polyAla.pdb',
-                 'c1_t69_r2_reliable.pdb', 'c1_t75_r1_allatom.pdb', 'c1_t75_r1_polyAla.pdb', 'c1_t75_r1_reliable.pdb',
-                 'c1_t75_r2_allatom.pdb', 'c1_t75_r2_polyAla.pdb', 'c1_t75_r2_reliable.pdb', 'c1_t75_r3_allatom.pdb',
-                 'c1_t75_r3_polyAla.pdb', 'c1_t75_r3_reliable.pdb', 'c1_t80_r1_allatom.pdb', 'c1_t80_r1_polyAla.pdb',
-                 'c1_t80_r1_reliable.pdb', 'c1_t80_r2_allatom.pdb', 'c1_t80_r2_polyAla.pdb', 'c1_t80_r2_reliable.pdb',
-                 'c1_t80_r3_allatom.pdb', 'c1_t80_r3_polyAla.pdb', 'c1_t80_r3_reliable.pdb', 'c1_t85_r1_allatom.pdb',
-                 'c1_t85_r1_polyAla.pdb', 'c1_t85_r1_reliable.pdb', 'c1_t85_r2_allatom.pdb', 'c1_t85_r2_polyAla.pdb',
-                 'c1_t85_r2_reliable.pdb', 'c1_t85_r3_allatom.pdb', 'c1_t85_r3_polyAla.pdb', 'c1_t85_r3_reliable.pdb',
-                 'c1_t90_r1_allatom.pdb', 'c1_t90_r1_polyAla.pdb', 'c1_t90_r1_reliable.pdb', 'c1_t90_r2_allatom.pdb',
-                 'c1_t90_r2_polyAla.pdb', 'c1_t90_r2_reliable.pdb', 'c1_t90_r3_allatom.pdb', 'c1_t90_r3_polyAla.pdb',
-                 'c1_t90_r3_reliable.pdb', 'c1_t95_r2_allatom.pdb', 'c1_t95_r2_polyAla.pdb', 'c1_t95_r2_reliable.pdb',
-                 'c1_t95_r3_allatom.pdb', 'c1_t95_r3_polyAla.pdb', 'c1_t95_r3_reliable.pdb']
-
-        self.assertEqual(sorted([os.path.basename(m) for m in ensembles]), eref)
-        d = ensembler.ensembles_data[5]
-
-        self.assertEqual(d['percent_truncation'], percent_truncation)
-        self.assertEqual(d['truncation_method'], truncation_method)
-        self.assertEqual(d['cluster_method'], cluster_method)
-        self.assertEqual(d['num_clusters'], num_clusters)
-        self.assertTrue(abs(d['truncation_variance'] - 13.035172) < 0001)
-        self.assertEqual(d['ensemble_num_atoms'], 984)
-        self.assertEqual(os.path.basename(d['subcluster_centroid_model']), '4_S_00000002.pdb')
-        
-        shutil.rmtree(ensembler.work_dir)
-        return
-    
-    def testEnsemblingThresh(self):
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-
-        work_dir = os.path.join(self.tests_dir, "genthresh6")
-        if os.path.isdir(work_dir):
-            shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-        
-        ensembler.theseus_exe = self.theseus_exe
-        ensembler.cluster_exe = self.spicker_exe
-        ensembler.subcluster_exe = self.maxcluster_exe
-        
-        mdir = os.path.join(self.testfiles_dir, "models")
-        models = glob.glob(mdir + os.sep + "*.pdb")
-        
-        num_clusters = 1
-        cluster_method = 'spicker'
-        percent_truncation = 5
-        truncation_method = "thresh"
-        ensembles = ensembler.generate_ensembles(models,
-                                               cluster_method=cluster_method,
-                                               cluster_exe=self.spicker_exe,
-                                               num_clusters=num_clusters,
-                                               percent_truncation=percent_truncation,
-                                               truncation_method=truncation_method,
-                                               work_dir=work_dir)
-        
-        self.assertEqual(len(ensembles), 162, len(ensembles))
-        d = ensembler.ensembles_data[5]
-        
-        self.assertTrue(abs(d['truncation_variance'] - 27.389253) < 0001)
-        self.assertEqual(d['percent_truncation'], percent_truncation)
-        self.assertEqual(d['truncation_method'], truncation_method)
-        self.assertEqual(d['cluster_method'], cluster_method)
-        self.assertEqual(d['num_clusters'], num_clusters)
-        self.assertEqual(d['subcluster_radius_threshold'], 3)
-        self.assertEqual(d['side_chain_treatment'], ALLATOM)
-        self.assertEqual(d['ensemble_num_atoms'], 984)
-        self.assertEqual(os.path.basename(d['subcluster_centroid_model']), '5_S_00000005.pdb')
-        
-        shutil.rmtree(ensembler.work_dir)
-        return
-    
-    def testSubcluster1(self):
-        """Many more then ensemble_max_models"""
-        
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-
-        work_dir = os.path.join(self.tests_dir, "test_subcluster")
-        if os.path.isdir(work_dir):
-            shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-        
-        ensembler.theseus_exe = self.theseus_exe
-        ensembler.subcluster_exe = self.maxcluster_exe
-        ensemble_max_models = 30
-        
-        mdir = os.path.join(self.testfiles_dir, "1p9g_models")
-        truncated_models = glob.glob(mdir + os.sep + "*.pdb")
-
-        truncated_models_data = { 'cluster_num'      : 1,
-                                  'truncation_level' : 1,
-                                  'num_residues' : 5,
-                                  'truncation_dir'   : work_dir } 
-        
-        subcluster, data = ensembler.subcluster_models_fixed_radii(truncated_models,
-                                                       truncated_models_data,
-                                                       subcluster_program='maxcluster',
-                                                       subcluster_exe=self.maxcluster_exe,
-                                                       ensemble_max_models=ensemble_max_models)
-        
-        # Bug with theseus means cluster 1 fails
-        cluster2 = [ d for d in data if d['subcluster_radius_threshold'] == 2 ][0]
-        cluster3 = [ d for d in data if d['subcluster_radius_threshold'] == 3 ][0]
-        
-        self.assertEqual(cluster2['subcluster_num_models'], ensemble_max_models)
-        self.assertEqual(cluster3['subcluster_num_models'], ensemble_max_models)
-        shutil.rmtree(work_dir)
-        return
-    
-    def testSubcluster2(self):
-        """Just more then ensemble_max_models"""
-        
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-
-        work_dir = os.path.join(self.tests_dir, "test_subcluster")
-        if os.path.isdir(work_dir):
-            shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-        
-        ensembler.theseus_exe = self.theseus_exe
-        ensembler.subcluster_exe = self.maxcluster_exe
-        ensemble_max_models = 30
-        
-        mdir = os.path.join(self.testfiles_dir, "1p9g_models")
-        truncated_models = glob.glob(mdir + os.sep + "*.pdb")[:ensemble_max_models + 2]
-
-        truncated_models_data = { 'cluster_num'      : 1,
-                                  'truncation_level' : 1,
-                                  'num_residues' : 5,
-                                  'truncation_dir'   : work_dir } 
-        
-        subcluster, data = ensembler.subcluster_models_fixed_radii(truncated_models,
-                                                       truncated_models_data,
-                                                       subcluster_program='maxcluster',
-                                                       subcluster_exe=self.maxcluster_exe,
-                                                       ensemble_max_models=ensemble_max_models)
-        
-        # Bug with theseus means cluster 1 fails
-        cluster2 = [ d for d in data if d['subcluster_radius_threshold'] == 2 ][0]
-        cluster3 = [ d for d in data if d['subcluster_radius_threshold'] == 3 ][0]
-        
-        self.assertEqual(cluster2['subcluster_num_models'], ensemble_max_models)
-        self.assertEqual(cluster3['subcluster_num_models'], ensemble_max_models)
-        shutil.rmtree(work_dir)
-        return
-
-    def testSubclusterNew1(self):
-        """Divergent models"""
-        
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-
-        work_dir = os.path.join(self.tests_dir, "genthresh7")
-        if os.path.isdir(work_dir):
-            shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-        
-        ensembler.theseus_exe = self.theseus_exe
-        ensembler.cluster_exe = self.spicker_exe
-        ensembler.subcluster_exe = self.maxcluster_exe
-        ensembler.subcluster_method = "FLOATING_RADII"
-        
-        mdir = os.path.join(self.testfiles_dir, "2qsk_models")
-        truncated_models = glob.glob(mdir + os.sep + "*.pdb")
-
-        truncated_models_data = { 'cluster_num'      : 1,
-                                  'truncation_level' : 1,
-                                  'truncation_dir'   : work_dir } 
-        
-        subcluster, data = ensembler.subcluster_models(truncated_models,
-                                                       truncated_models_data,
-                                                       subcluster_program='maxcluster',
-                                                       subcluster_exe=self.maxcluster_exe,
-                                                       ensemble_max_models=30)
-        
-        self.assertEqual(data[0]['subcluster_num_models'], 2)
-        self.assertTrue(abs(data[0]['subcluster_radius_threshold'] - 5.82) < 0.0001)
-        self.assertEqual(data[1]['subcluster_num_models'], 3)
-        self.assertTrue(abs(data[1]['subcluster_radius_threshold'] - 6.82) < 0.0001)
-        self.assertEqual(data[2]['subcluster_num_models'], 4)
-        self.assertTrue(abs(data[2]['subcluster_radius_threshold'] - 6.92) < 0.0001)
-        shutil.rmtree(work_dir)
-        return
-    
-    def testSubclusterNew2(self):
-        """Similar models"""
-        
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-
-        work_dir = os.path.join(self.tests_dir, "genthresh8")
-        if os.path.isdir(work_dir):
-            shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-        
-        ensembler.theseus_exe = self.theseus_exe
-        ensembler.cluster_exe = self.spicker_exe
-        ensembler.subcluster_exe = self.maxcluster_exe
-        ensembler.subcluster_method = "FLOATING_RADII"
-        
-        mdir = os.path.join(self.testfiles_dir, "1p9g_models")
-        truncated_models = glob.glob(mdir + os.sep + "*.pdb")
-
-        truncated_models_data = { 'cluster_num'      : 1,
-                                  'truncation_level' : 1,
-                                  'truncation_dir'   : work_dir } 
-        
-        subcluster, data = ensembler.subcluster_models(truncated_models,
-                                                       truncated_models_data,
-                                                       subcluster_program='maxcluster',
-                                                       subcluster_exe=self.maxcluster_exe,
-                                                       ensemble_max_models=30)
-
-        self.assertEqual(data[0]['subcluster_num_models'], 30,)
-        self.assertTrue(abs(data[0]['subcluster_radius_threshold'] - 1) < 0.0001)
-        self.assertEqual(data[1]['subcluster_num_models'], 30)
-        self.assertTrue(abs(data[1]['subcluster_radius_threshold'] - 2) < 0.0001)
-        self.assertEqual(data[2]['subcluster_num_models'], 30)
-        self.assertTrue(abs(data[2]['subcluster_radius_threshold'] - 3) < 0.0001)
-        shutil.rmtree(work_dir)
-        
-        return
-    
-    def testSubclusterNew3(self):
-        """standard models"""
-        
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-
-        work_dir = os.path.join(self.tests_dir, "genthresh9")
-        if os.path.isdir(work_dir):
-            shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-        
-        ensembler.theseus_exe = self.theseus_exe
-        ensembler.cluster_exe = self.spicker_exe
-        ensembler.subcluster_exe = self.maxcluster_exe
-        ensembler.subcluster_method = "FLOATING_RADII"
-        
-        mdir = os.path.join(self.testfiles_dir, "models")
-        truncated_models = glob.glob(mdir + os.sep + "*.pdb")
-
-        truncated_models_data = { 'cluster_num'      : 1,
-                                  'truncation_level' : 1,
-                                  'truncation_dir'   : work_dir } 
-        
-        subcluster, data = ensembler.subcluster_models(truncated_models,
-                                                       truncated_models_data,
-                                                       subcluster_program='maxcluster',
-                                                       subcluster_exe=self.maxcluster_exe,
-                                                       ensemble_max_models=30)
-        self.assertEqual(data[0]['subcluster_num_models'], 2)
-        self.assertTrue(abs(data[0]['subcluster_radius_threshold'] - 1.9) < 0.0001, "GOT {0}".format(data[0]['subcluster_radius_threshold']))
-        self.assertEqual(data[1]['subcluster_num_models'], 3)
-        self.assertTrue(abs(data[1]['subcluster_radius_threshold'] - 2) < 0.0001, "GOT {0}".format(data[1]['subcluster_radius_threshold']))
-        self.assertEqual(data[2]['subcluster_num_models'], 8)
-        self.assertTrue(abs(data[2]['subcluster_radius_threshold'] - 3) < 0.0001, "GOT {0}".format(data[2]['subcluster_radius_threshold']))
-        shutil.rmtree(work_dir)
-        return
-    
-    
-    def XtestSubclusterNew(self):
-        
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-
-        work_dir = os.path.join(self.tests_dir, "genthresh9")
-        if os.path.isdir(work_dir):
-            shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-        
-        mdir = "1P9G"
-        truncated_models = glob.glob(mdir + os.sep + "*.pdb")
-
-        subcluster_exe = self.maxcluster_exe
-        clusterer = subcluster.MaxClusterer(subcluster_exe)
-        clusterer.generate_distance_matrix(truncated_models)
-
-        max_models = 30
-        radius = 1
-        direction = "down"
-        increment = 0.1
-        models, new_radius = ensembler._subcluster_nmodels(max_models,
-                                                           radius,
-                                                           clusterer,
-                                                           direction,
-                                                           increment)
-        self.assertEqual(len(models), 36)
-        self.assertTrue(abs(new_radius - 0.005) < 0.0001)
-        return
-    
-    def testHomologs(self):
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = Ensembler()
-        ensembler.theseus_exe = self.theseus_exe
-        
-        work_dir = os.path.join(self.tests_dir, "homologs_test")
-        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-
-        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
-        models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
-        alignment_file = os.path.join(self.ample_dir, 'examples', 'homologs', 'testthree.afasta')
-        ensembles = ensembler.generate_ensembles_homologs(models, alignment_file=alignment_file, work_dir=work_dir)
-        self.assertEqual(len(ensembles), 57)
-        shutil.rmtree(work_dir)
-        return
-  
-    def testGesamt(self):
-        gesamt_exe = "/opt/ccp4-devtools/install/bin/gesamt"
-        if not ample_util.is_exe(gesamt_exe): return
-        
-        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
-        models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
-        work_dir = os.path.join(self.tests_dir, "gesamt_test")
-        alignment_file = align_gesamt(models, gesamt_exe=gesamt_exe, work_dir=work_dir)
-        self.assertTrue(os.path.isfile(alignment_file))
-        shutil.rmtree(work_dir)
-        return
-    
-    def testMustang(self):
-        mustang_exe = "/opt/MUSTANG_v3.2.2/bin/mustang-3.2.1"
-        if not ample_util.is_exe(mustang_exe): return
-        
-        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
-        models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
-        work_dir = os.path.join(self.tests_dir, "mustang_test")
-        alignment_file = align_mustang(models, mustang_exe=mustang_exe, work_dir=work_dir)
-        self.assertTrue(os.path.isfile(alignment_file))
-        shutil.rmtree(work_dir)
-        return
-    
-    def testCoreFromAlignment(self):
-        
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        work_dir = os.path.join(self.tests_dir, "homologs_core")
-        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-
-        models = glob.glob(os.path.join(self.ample_dir, "examples", "homologs", "*.pdb"))
-        alignment_file = os.path.join(self.ample_dir, "examples", "homologs", "testthree.afasta")
-        
-        core_models = model_core_from_fasta(models, alignment_file, work_dir=work_dir)
-        
-        got = {}
-        for m in core_models:
-            name = os.path.splitext(os.path.basename(m))[0]
-            resseqd = pdb_edit.resseq(m)
-            resseq = resseqd[resseqd.keys()[0]]
-            got[name] = resseq
-
-        ref = { '1ujb_core':
-               [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-                32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
-                56, 57, 58, 59, 60, 61, 62, 63, 64, 67, 69, 70, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85,
-                86, 87, 88, 89, 90, 92, 93, 94, 95, 96, 97, 98, 99, 101, 102, 103, 104, 105, 106, 107, 108, 109,
-                110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 124, 126, 127, 128, 129, 130,
-                131, 132, 133, 134, 135, 136, 137, 138, 139, 141, 142, 143, 144, 145, 146, 147, 149, 150, 151],
-               '3c7tA_core' :
-                [73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133,
-                 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154,
-                 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 172, 174, 176, 180, 181, 182,
-                 183, 184, 185, 186, 187, 188, 189, 233, 234, 235, 236, 237, 238, 239, 241, 242, 243, 244, 245, 246, 247,
-                 248, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272,
-                 276, 277, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308,
-                 309, 310, 311, 314, 315, 316],
-               '2a6pA_core' :
-                [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
-                 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
-                 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 122, 123, 124, 125, 126, 127,
-                 128, 129, 130, 131, 132, 133, 134, 135, 136, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151,
-                 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 167, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178,
-                 179, 180, 181, 184, 185, 186, 187, 188, 189, 190, 191, 193, 194, 195] }
-        
-        self.assertEqual(got, ref)
-        shutil.rmtree(work_dir)
-        return
-
-    def _coreFromTheseusTest(self,core_models):
-        got = {}
-        for m in core_models:
-            name = os.path.splitext(os.path.basename(m))[0]
-            resseqd = pdb_edit.resseq(m)
-            resseq = resseqd[resseqd.keys()[0]]
-            got[name] = resseq
-            
-        ref = { '1ujb_core':
-               [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 
-                31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 
-                59, 60, 61, 62, 63, 64, 69, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
-                91, 92, 93, 94, 95, 96, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 
-                116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 
-                138, 139, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152],
-                '2a6pA_core' :
-                [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 
-                 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 
-                 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 122, 125, 126, 127, 128, 129, 
-                 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 
-                 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 165, 166, 169, 170, 171, 172, 173, 174, 175, 176, 177, 
-                 178, 179, 180, 181, 184, 185, 186, 187, 188, 189, 190, 191, 193, 194, 196],
-               '3c7tA_core' :
-                [73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131,
-                 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 148, 149, 150, 151, 152, 153, 154,
-                 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 174, 177, 179, 180, 181, 182, 183,
-                 184, 185, 186, 187, 188, 189, 233, 236, 237, 238, 239, 240, 241, 242, 243, 245, 246, 247, 248, 249, 251, 252,
-                 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 281, 282,
-                 283, 287, 288, 289, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309,
-                 310, 311, 314, 315, 316]
-               }
-        
-        self.assertEqual(got, ref)
-        return
-    
-    def testCoreFromTheseus1(self):
-        """Test with know alignment file and theseus_variances.txt file"""
-        
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        work_dir = os.path.join(self.tests_dir, "theseus_core1")
-        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-        os.chdir(work_dir)
-
-        pdbs = ['1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
-        models = [ os.path.join(self.ample_dir, "examples", "homologs", p) for p in pdbs ] 
-        alignment_file = os.path.join(self.testfiles_dir, "1ujb_2a6pA_3c7tA.afasta")
-        variance_file = os.path.join(self.testfiles_dir, "1ujb_2a6pA_3c7tA.variances")
-        
-        rt = theseus.Theseus(theseus_exe=self.theseus_exe)
-        var_by_res = rt.parse_variances(variance_file)
-        core_models = model_core_from_theseus(models, alignment_file, var_by_res, work_dir=work_dir)
-        
-        # First we test with a known alignment file and theseus variance file
-        self._coreFromTheseusTest(core_models)
-        
-        shutil.rmtree(work_dir)
-        return
-    
-    def testCoreFromTheseus2(self):
-        """Test running theseus ourselves to get the varianes"""
-        
-        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        work_dir = os.path.join(self.tests_dir, "theseus_core2")
-        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
-        os.mkdir(work_dir)
-        os.chdir(work_dir)
-
-        pdbs = ['1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
-        models = [ os.path.join(self.ample_dir, "examples", "homologs", p) for p in pdbs ] 
-        alignment_file = os.path.join(self.testfiles_dir, "1ujb_2a6pA_3c7tA.afasta")
-        
-        # We test twice to trap any changes in gesamt or theseus that might scupper us.
-        rt = theseus.Theseus(theseus_exe=self.theseus_exe)
-        rt.superpose_models(models, work_dir=work_dir, alignment_file=alignment_file, homologs=True)
-        core_models = model_core_from_theseus(rt.aligned_models, alignment_file, rt.var_by_res(), work_dir=work_dir)
-        self._coreFromTheseusTest(core_models)
-        
-        shutil.rmtree(work_dir)
-        return
+#    def testPruneResidues(self):
+#        """Test we can reproduce the original thresholds"""
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#
+#        ensembler = Ensembler()
+#        
+#        residues = []
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+#        self.assertEqual(pres, [])
+#        self.assertEqual(pruned, None)
+#          
+#        residues = [1]
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+#        self.assertEqual(pres, [])
+#        self.assertEqual(pruned, [1])
+#         
+#        residues = [1, 2]
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+#        self.assertEqual(pres, [])
+#        self.assertEqual(pruned, [1, 2])
+#         
+#        residues = [1, 2, 4]
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+#        self.assertEqual(pres, [1, 2, 4])
+#        self.assertEqual(pruned, None)
+#         
+#        # Big enough gap 
+#        residues = [1, 2, 3, 4, 8, 13, 14, 15]
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+#        self.assertEqual(pres, [1, 2, 3, 4, 13, 14, 15])
+#        self.assertEqual(pruned, [8])
+#           
+#        residues = [1, 2, 3, 4, 8, 9, 13, 14, 15]
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+#        self.assertEqual(pres, [1, 2, 3, 4, 13, 14, 15])
+#        self.assertEqual(pruned, [8, 9])
+#           
+#        residues = [1, 2, 3, 4, 8, 9, 10, 13, 14, 15]
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+#        self.assertEqual(pres, residues)
+#        self.assertEqual(pruned, None)
+#           
+#        # end gap not big enough
+#        residues = [1, 2, 3, 4, 8, 9, 11, 12, 13]
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+#        self.assertEqual(pres, residues)
+#        self.assertEqual(pruned, None)
+#           
+#        # Lone residue at start
+#        residues = [1, 11, 12, 13]
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+#        self.assertEqual(pres, [11, 12, 13])
+#        self.assertEqual(pruned, [1])
+#        
+#        # Lone residue at end
+#        residues = [11, 12, 13, 19]
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=2, allowed_gap=2)
+#        self.assertEqual(pres, [11, 12, 13])
+#        self.assertEqual(pruned, [19])
+#          
+#        # Mixed
+#        residues = [1, 3, 4, 7, 10, 11, 13, 15, 16, 19]
+#        pres, pruned = ensembler.prune_residues(residues, chunk_size=1, allowed_gap=2)
+#        self.assertEqual(pres, [1, 3, 4, 10, 11, 13, 15, 16])
+#        self.assertEqual(pruned, [7, 19])
+#
+#        return
+#
+#    def testThresholds(self):
+#        """Test we can reproduce the original thresholds"""
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#
+#        ensembler = Ensembler()
+#        
+#        ensembler.work_dir = os.path.join(self.tests_dir, "genthresh1")
+#        if os.path.isdir(ensembler.work_dir):
+#            shutil.rmtree(ensembler.work_dir)
+#        os.mkdir(ensembler.work_dir)
+#        
+#        percent_interval = 5
+#        mdir = os.path.join(self.testfiles_dir, "models")
+#        cluster_models = glob.glob(mdir + os.sep + "*.pdb")
+#        run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
+#        run_theseus.superpose_models(cluster_models)
+#        var_by_res = run_theseus.var_by_res()
+#        thresholds = ensembler.generate_thresholds(var_by_res, percent_interval)
+#        
+#        self.assertEqual(30, len(thresholds), thresholds)
+#        reft = [0.02235, 0.041896, 0.08155, 0.085867, 0.103039, 0.185265, 0.7058, 1.772884, 3.152793,
+#              4.900255, 6.206563, 10.250043, 10.772177, 16.071345, 18.292366, 22.432564, 23.265938,
+#              25.348501, 27.37951, 35.877391, 37.227859, 41.759805, 49.037625, 50.992344, 56.091738,
+#              58.09387, 59.917999, 70.052007, 80.235358, 86.028994]
+#        
+#        self.assertTrue(all([ abs(r - c) < 0.0001 for r, c in zip(reft, thresholds)]),
+#                         "Wrong truncation thresholds: {0}".format(thresholds))
+#        
+#        shutil.rmtree(ensembler.work_dir)
+#        return
+#    
+#    def testResiduesThresh(self):
+#        """Test we can calculate the original list of residues"""
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#        
+#        # This test for percent
+#        ensembler.work_dir = os.path.join(self.tests_dir, "genthresh2")
+#        if os.path.isdir(ensembler.work_dir):
+#            shutil.rmtree(ensembler.work_dir)
+#        os.mkdir(ensembler.work_dir)
+#        os.chdir(ensembler.work_dir)
+#        
+#        percent_interval = 5
+#        mdir = os.path.join(self.testfiles_dir, "models")
+#        cluster_models = glob.glob(mdir + os.sep + "*.pdb")
+#        run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
+#        run_theseus.superpose_models(cluster_models)
+#        var_by_res = run_theseus.var_by_res()
+#        truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_thresh(var_by_res, percent_interval)
+#        
+#        self.assertEqual(truncation_levels,
+#                         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
+#        
+#        
+#        refv = [86.028994, 80.235358, 70.052007, 59.917999, 58.09387, 56.091738, 50.992344, 49.037625, 41.759805, 37.227859, 35.877391,
+#                27.37951, 25.348501, 23.265938, 22.432564, 18.292366, 16.071345, 10.772177, 10.250043, 6.206563, 4.900255, 3.152793,
+#                1.772884, 0.7058, 0.185265, 0.103039, 0.085867, 0.08155, 0.041896, 0.02235]
+#        self.assertTrue(all([ abs(r - c) < 0.0001 for r, c in zip(refv, truncation_variances)]),
+#                         "Wrong truncation variances: {0}".format(truncation_variances))
+#
+#        residues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
+#                  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58],
+#                  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
+#                  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 56, 57],
+#                  [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 57],
+#                  [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53],
+#                  [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 50, 53],
+#                  [2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
+#                  [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
+#                  [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
+#                  [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45],
+#                  [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+#                  [7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+#                  [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#                  [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#                  [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#                  [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#                  [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
+#                  [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
+#                  [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+#                  [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+#                  [20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+#                  [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+#                  [22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35],
+#                  [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+#                  [25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+#                  [26, 27, 28, 30, 31, 32, 33, 34],
+#                  [26, 27, 30, 31, 32, 33],
+#                  [26, 27, 31, 32],
+#                  [31, 32]]
+#        self.assertEqual(residues, truncation_residues)
+#
+#        shutil.rmtree(ensembler.work_dir)
+#        return
+#    
+#    def testResiduesFocussed(self):
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#        
+#        TheseusVariances = collections.namedtuple('TheseusVariances', ['idx', 'resName', 'resSeq', 'variance', 'stdDev', 'rmsd', 'core'])
+#        l = 160
+#        var_by_res = [ TheseusVariances(idx=i, resName='', resSeq=i, variance=float(i+1), stdDev=None, rmsd=None, core=None) for i in range(l) ]
+#        truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_focussed(var_by_res)
+#         
+#        self.assertEqual(truncation_levels, [100, 93, 85, 78, 70, 63, 55, 48, 40, 33, 25, 23, 20, 18, 15, 13, 10, 8, 5, 3])
+#        self.assertEqual(truncation_variances, [160.0, 148.0, 136.0, 124.0, 112.0, 100.0, 88.0, 76.0, 64.0, 52.0, 40.0, 36.0, 32.0, 28.0, 24.0, 20.0, 16.0, 12.0, 8.0, 4.0])
+#        self.assertEqual(truncation_residues, truncation_residues_idxs)
+#        self.assertEqual(truncation_residues_idxs[-1], [0, 1, 2, 3])
+#       
+#        return
+#    
+#    def testResiduesPercent(self):
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#
+#        ensembler.work_dir = os.path.join(self.tests_dir, "genthresh3")
+#        if os.path.isdir(ensembler.work_dir):
+#            shutil.rmtree(ensembler.work_dir)
+#        os.mkdir(ensembler.work_dir)
+#        os.chdir(ensembler.work_dir)
+#        ensembler.percent_interval = 5
+#        mdir = os.path.join(self.testfiles_dir, "models")
+#        cluster_models = glob.glob(mdir + os.sep + "*.pdb")
+#        run_theseus = theseus.Theseus(theseus_exe=self.theseus_exe)
+#        run_theseus.superpose_models(cluster_models)
+#        var_by_res = run_theseus.var_by_res()
+#        truncation_levels, truncation_variances, truncation_residues, truncation_residues_idxs = ensembler._calculate_residues_percent(var_by_res, percent_interval=5)
+#
+#        self.assertEqual(truncation_levels,
+#                         [100, 95, 90, 85, 80, 75, 69, 64, 59, 54, 49, 44, 39, 34, 29, 24, 19, 14, 8])
+#        
+#        refv = [83.279358, 67.986091, 57.085407, 54.341361, 47.73422, 40.413985, 35.141765, 26.06671, 22.81897,
+#              21.187131, 14.889563, 9.55953, 6.484837, 4.263945, 1.41278, 0.504414, 0.204918, 0.135812, 0.081846]
+#        self.assertTrue(all([ abs(r - c) < 0.0001 for r, c in zip(refv, truncation_variances)]),
+#                         "Wrong truncation variances: {0}".format(truncation_variances))
+#        
+#        residues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
+#                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 56, 57],
+#                    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 53, 54, 57],
+#                    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 50, 53, 57],
+#                    [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 53],
+#                    [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47],
+#                    [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46],
+#                    [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+#                    [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+#                    [9, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#                    [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42],
+#                    [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41],
+#                    [18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
+#                    [19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38],
+#                    [21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37],
+#                    [23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36],
+#                    [23, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34],
+#                    [26, 27, 28, 30, 31, 32, 33, 34],
+#                    [26, 27, 30, 31, 32]]
+#
+#        for i in range(len(residues)):
+#            self.assertEqual(residues[i], truncation_residues[i], "Mismatching residues for level {0}\n{1}\n{2}".format(i, residues[i], truncation_residues[i]))
+#
+#        shutil.rmtree(ensembler.work_dir)
+#        return
+#
+#    def testClustering(self):
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#
+#        ensembler.work_dir = os.path.join(self.tests_dir, "genthresh4")
+#        if os.path.isdir(ensembler.work_dir):
+#            shutil.rmtree(ensembler.work_dir)
+#        os.mkdir(ensembler.work_dir)
+#        
+#        ensembler.theseus_exe = self.theseus_exe
+#        
+#        mdir = os.path.join(self.testfiles_dir, "models")
+#        models = glob.glob(mdir + os.sep + "*.pdb")
+#        
+#        cluster_models, cluster_data = ensembler.cluster_models(models=models,
+#                                                             cluster_method='spicker',
+#                                                             num_clusters=3,
+#                                                             cluster_exe=self.spicker_exe)
+#        
+#        
+#        # This with spicker from ccp4 6.5.010 on osx 10.9.5
+#        # These should match with the test results from python/spicker.py
+#        names = sorted([os.path.basename(m) for m in cluster_models[0]])
+#        self.assertEqual(names,
+#                         sorted(['5_S_00000005.pdb', '4_S_00000005.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb',
+#                          '4_S_00000003.pdb', '3_S_00000006.pdb', '3_S_00000004.pdb', '2_S_00000005.pdb',
+#                          '2_S_00000001.pdb', '3_S_00000003.pdb', '1_S_00000005.pdb', '1_S_00000002.pdb',
+#                          '1_S_00000004.pdb']))
+#        
+#        d = cluster_data[2]
+#        self.assertEqual(os.path.basename(d['cluster_centroid']), '1_S_00000001.pdb')
+#        self.assertEqual(d['cluster_num_models'], 1)
+#        shutil.rmtree(ensembler.work_dir)
+#        return
+#    
+#    def testEnsemblingPercent(self):
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#
+#        work_dir = os.path.join(self.tests_dir, "genthresh5")
+#        if os.path.isdir(work_dir):
+#            shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#        
+#        ensembler.theseus_exe = self.theseus_exe
+#        ensembler.cluster_exe = self.spicker_exe
+#        ensembler.subcluster_exe = self.maxcluster_exe
+#        
+#        mdir = os.path.join(self.testfiles_dir, "models")
+#        models = glob.glob(mdir + os.sep + "*.pdb")
+#
+#        num_clusters = 1
+#        cluster_method = 'spicker'
+#        percent_truncation = 5
+#        truncation_method = "percent"
+#        ensembles = ensembler.generate_ensembles(models,
+#                                                 cluster_method=cluster_method,
+#                                                 cluster_exe=self.spicker_exe,
+#                                                 num_clusters=num_clusters,
+#                                                 percent_truncation=percent_truncation,
+#                                                 truncation_method=truncation_method,
+#                                                 work_dir=work_dir)
+#        
+#        # Below tested with ccp4 6.5.010 on osx 10.9.5
+#        eref = ['c1_t100_r2_allatom.pdb', 'c1_t100_r2_polyAla.pdb', 'c1_t100_r2_reliable.pdb', 'c1_t100_r3_allatom.pdb',
+#                 'c1_t100_r3_polyAla.pdb', 'c1_t100_r3_reliable.pdb', 'c1_t19_r1_allatom.pdb', 'c1_t19_r1_polyAla.pdb',
+#                 'c1_t19_r1_reliable.pdb', 'c1_t24_r1_allatom.pdb', 'c1_t24_r1_polyAla.pdb', 'c1_t24_r1_reliable.pdb',
+#                 'c1_t29_r1_allatom.pdb', 'c1_t29_r1_polyAla.pdb', 'c1_t29_r1_reliable.pdb', 'c1_t34_r1_allatom.pdb',
+#                 'c1_t34_r1_polyAla.pdb', 'c1_t34_r1_reliable.pdb', 'c1_t39_r1_allatom.pdb', 'c1_t39_r1_polyAla.pdb',
+#                 'c1_t39_r1_reliable.pdb', 'c1_t44_r1_allatom.pdb', 'c1_t44_r1_polyAla.pdb', 'c1_t44_r1_reliable.pdb',
+#                 'c1_t44_r2_allatom.pdb', 'c1_t44_r2_polyAla.pdb', 'c1_t44_r2_reliable.pdb', 'c1_t49_r1_allatom.pdb',
+#                 'c1_t49_r1_polyAla.pdb', 'c1_t49_r1_reliable.pdb', 'c1_t49_r2_allatom.pdb', 'c1_t49_r2_polyAla.pdb',
+#                 'c1_t49_r2_reliable.pdb', 'c1_t54_r1_allatom.pdb', 'c1_t54_r1_polyAla.pdb', 'c1_t54_r1_reliable.pdb',
+#                 'c1_t54_r2_allatom.pdb', 'c1_t54_r2_polyAla.pdb', 'c1_t54_r2_reliable.pdb', 'c1_t59_r1_allatom.pdb',
+#                 'c1_t59_r1_polyAla.pdb', 'c1_t59_r1_reliable.pdb', 'c1_t59_r2_allatom.pdb', 'c1_t59_r2_polyAla.pdb',
+#                 'c1_t59_r2_reliable.pdb', 'c1_t64_r1_allatom.pdb', 'c1_t64_r1_polyAla.pdb', 'c1_t64_r1_reliable.pdb',
+#                 'c1_t64_r2_allatom.pdb', 'c1_t64_r2_polyAla.pdb', 'c1_t64_r2_reliable.pdb', 'c1_t69_r1_allatom.pdb',
+#                 'c1_t69_r1_polyAla.pdb', 'c1_t69_r1_reliable.pdb', 'c1_t69_r2_allatom.pdb', 'c1_t69_r2_polyAla.pdb',
+#                 'c1_t69_r2_reliable.pdb', 'c1_t75_r1_allatom.pdb', 'c1_t75_r1_polyAla.pdb', 'c1_t75_r1_reliable.pdb',
+#                 'c1_t75_r2_allatom.pdb', 'c1_t75_r2_polyAla.pdb', 'c1_t75_r2_reliable.pdb', 'c1_t75_r3_allatom.pdb',
+#                 'c1_t75_r3_polyAla.pdb', 'c1_t75_r3_reliable.pdb', 'c1_t80_r1_allatom.pdb', 'c1_t80_r1_polyAla.pdb',
+#                 'c1_t80_r1_reliable.pdb', 'c1_t80_r2_allatom.pdb', 'c1_t80_r2_polyAla.pdb', 'c1_t80_r2_reliable.pdb',
+#                 'c1_t80_r3_allatom.pdb', 'c1_t80_r3_polyAla.pdb', 'c1_t80_r3_reliable.pdb', 'c1_t85_r1_allatom.pdb',
+#                 'c1_t85_r1_polyAla.pdb', 'c1_t85_r1_reliable.pdb', 'c1_t85_r2_allatom.pdb', 'c1_t85_r2_polyAla.pdb',
+#                 'c1_t85_r2_reliable.pdb', 'c1_t85_r3_allatom.pdb', 'c1_t85_r3_polyAla.pdb', 'c1_t85_r3_reliable.pdb',
+#                 'c1_t90_r1_allatom.pdb', 'c1_t90_r1_polyAla.pdb', 'c1_t90_r1_reliable.pdb', 'c1_t90_r2_allatom.pdb',
+#                 'c1_t90_r2_polyAla.pdb', 'c1_t90_r2_reliable.pdb', 'c1_t90_r3_allatom.pdb', 'c1_t90_r3_polyAla.pdb',
+#                 'c1_t90_r3_reliable.pdb', 'c1_t95_r2_allatom.pdb', 'c1_t95_r2_polyAla.pdb', 'c1_t95_r2_reliable.pdb',
+#                 'c1_t95_r3_allatom.pdb', 'c1_t95_r3_polyAla.pdb', 'c1_t95_r3_reliable.pdb']
+#
+#        self.assertEqual(sorted([os.path.basename(m) for m in ensembles]), eref)
+#        d = ensembler.ensembles_data[5]
+#
+#        self.assertEqual(d['percent_truncation'], percent_truncation)
+#        self.assertEqual(d['truncation_method'], truncation_method)
+#        self.assertEqual(d['cluster_method'], cluster_method)
+#        self.assertEqual(d['num_clusters'], num_clusters)
+#        self.assertTrue(abs(d['truncation_variance'] - 13.035172) < 0001)
+#        self.assertEqual(d['ensemble_num_atoms'], 984)
+#        self.assertEqual(os.path.basename(d['subcluster_centroid_model']), '4_S_00000002.pdb')
+#        
+#        shutil.rmtree(ensembler.work_dir)
+#        return
+#    
+#    def testEnsemblingThresh(self):
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#
+#        work_dir = os.path.join(self.tests_dir, "genthresh6")
+#        if os.path.isdir(work_dir):
+#            shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#        
+#        ensembler.theseus_exe = self.theseus_exe
+#        ensembler.cluster_exe = self.spicker_exe
+#        ensembler.subcluster_exe = self.maxcluster_exe
+#        
+#        mdir = os.path.join(self.testfiles_dir, "models")
+#        models = glob.glob(mdir + os.sep + "*.pdb")
+#        
+#        num_clusters = 1
+#        cluster_method = 'spicker'
+#        percent_truncation = 5
+#        truncation_method = "thresh"
+#        ensembles = ensembler.generate_ensembles(models,
+#                                               cluster_method=cluster_method,
+#                                               cluster_exe=self.spicker_exe,
+#                                               num_clusters=num_clusters,
+#                                               percent_truncation=percent_truncation,
+#                                               truncation_method=truncation_method,
+#                                               work_dir=work_dir)
+#        
+#        self.assertEqual(len(ensembles), 162, len(ensembles))
+#        d = ensembler.ensembles_data[5]
+#        
+#        self.assertTrue(abs(d['truncation_variance'] - 27.389253) < 0001)
+#        self.assertEqual(d['percent_truncation'], percent_truncation)
+#        self.assertEqual(d['truncation_method'], truncation_method)
+#        self.assertEqual(d['cluster_method'], cluster_method)
+#        self.assertEqual(d['num_clusters'], num_clusters)
+#        self.assertEqual(d['subcluster_radius_threshold'], 3)
+#        self.assertEqual(d['side_chain_treatment'], ALLATOM)
+#        self.assertEqual(d['ensemble_num_atoms'], 984)
+#        self.assertEqual(os.path.basename(d['subcluster_centroid_model']), '5_S_00000005.pdb')
+#        
+#        shutil.rmtree(ensembler.work_dir)
+#        return
+#    
+#    def testSubcluster1(self):
+#        """Many more then ensemble_max_models"""
+#        
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#
+#        work_dir = os.path.join(self.tests_dir, "test_subcluster")
+#        if os.path.isdir(work_dir):
+#            shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#        
+#        ensembler.theseus_exe = self.theseus_exe
+#        ensembler.subcluster_exe = self.maxcluster_exe
+#        ensemble_max_models = 30
+#        
+#        mdir = os.path.join(self.testfiles_dir, "1p9g_models")
+#        truncated_models = glob.glob(mdir + os.sep + "*.pdb")
+#
+#        truncated_models_data = { 'cluster_num'      : 1,
+#                                  'truncation_level' : 1,
+#                                  'num_residues' : 5,
+#                                  'truncation_dir'   : work_dir } 
+#        
+#        subcluster, data = ensembler.subcluster_models_fixed_radii(truncated_models,
+#                                                       truncated_models_data,
+#                                                       subcluster_program='maxcluster',
+#                                                       subcluster_exe=self.maxcluster_exe,
+#                                                       ensemble_max_models=ensemble_max_models)
+#        
+#        # Bug with theseus means cluster 1 fails
+#        cluster2 = [ d for d in data if d['subcluster_radius_threshold'] == 2 ][0]
+#        cluster3 = [ d for d in data if d['subcluster_radius_threshold'] == 3 ][0]
+#        
+#        self.assertEqual(cluster2['subcluster_num_models'], ensemble_max_models)
+#        self.assertEqual(cluster3['subcluster_num_models'], ensemble_max_models)
+#        shutil.rmtree(work_dir)
+#        return
+#    
+#    def testSubcluster2(self):
+#        """Just more then ensemble_max_models"""
+#        
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#
+#        work_dir = os.path.join(self.tests_dir, "test_subcluster")
+#        if os.path.isdir(work_dir):
+#            shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#        
+#        ensembler.theseus_exe = self.theseus_exe
+#        ensembler.subcluster_exe = self.maxcluster_exe
+#        ensemble_max_models = 30
+#        
+#        mdir = os.path.join(self.testfiles_dir, "1p9g_models")
+#        truncated_models = glob.glob(mdir + os.sep + "*.pdb")[:ensemble_max_models + 2]
+#
+#        truncated_models_data = { 'cluster_num'      : 1,
+#                                  'truncation_level' : 1,
+#                                  'num_residues' : 5,
+#                                  'truncation_dir'   : work_dir } 
+#        
+#        subcluster, data = ensembler.subcluster_models_fixed_radii(truncated_models,
+#                                                       truncated_models_data,
+#                                                       subcluster_program='maxcluster',
+#                                                       subcluster_exe=self.maxcluster_exe,
+#                                                       ensemble_max_models=ensemble_max_models)
+#        
+#        # Bug with theseus means cluster 1 fails
+#        cluster2 = [ d for d in data if d['subcluster_radius_threshold'] == 2 ][0]
+#        cluster3 = [ d for d in data if d['subcluster_radius_threshold'] == 3 ][0]
+#        
+#        self.assertEqual(cluster2['subcluster_num_models'], ensemble_max_models)
+#        self.assertEqual(cluster3['subcluster_num_models'], ensemble_max_models)
+#        shutil.rmtree(work_dir)
+#        return
+#
+#    def testSubclusterNew1(self):
+#        """Divergent models"""
+#        
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#
+#        work_dir = os.path.join(self.tests_dir, "genthresh7")
+#        if os.path.isdir(work_dir):
+#            shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#        
+#        ensembler.theseus_exe = self.theseus_exe
+#        ensembler.cluster_exe = self.spicker_exe
+#        ensembler.subcluster_exe = self.maxcluster_exe
+#        ensembler.subcluster_method = "FLOATING_RADII"
+#        
+#        mdir = os.path.join(self.testfiles_dir, "2qsk_models")
+#        truncated_models = glob.glob(mdir + os.sep + "*.pdb")
+#
+#        truncated_models_data = { 'cluster_num'      : 1,
+#                                  'truncation_level' : 1,
+#                                  'truncation_dir'   : work_dir } 
+#        
+#        subcluster, data = ensembler.subcluster_models(truncated_models,
+#                                                       truncated_models_data,
+#                                                       subcluster_program='maxcluster',
+#                                                       subcluster_exe=self.maxcluster_exe,
+#                                                       ensemble_max_models=30)
+#        
+#        self.assertEqual(data[0]['subcluster_num_models'], 2)
+#        self.assertTrue(abs(data[0]['subcluster_radius_threshold'] - 5.82) < 0.0001)
+#        self.assertEqual(data[1]['subcluster_num_models'], 3)
+#        self.assertTrue(abs(data[1]['subcluster_radius_threshold'] - 6.82) < 0.0001)
+#        self.assertEqual(data[2]['subcluster_num_models'], 4)
+#        self.assertTrue(abs(data[2]['subcluster_radius_threshold'] - 6.92) < 0.0001)
+#        shutil.rmtree(work_dir)
+#        return
+#    
+#    def testSubclusterNew2(self):
+#        """Similar models"""
+#        
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#
+#        work_dir = os.path.join(self.tests_dir, "genthresh8")
+#        if os.path.isdir(work_dir):
+#            shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#        
+#        ensembler.theseus_exe = self.theseus_exe
+#        ensembler.cluster_exe = self.spicker_exe
+#        ensembler.subcluster_exe = self.maxcluster_exe
+#        ensembler.subcluster_method = "FLOATING_RADII"
+#        
+#        mdir = os.path.join(self.testfiles_dir, "1p9g_models")
+#        truncated_models = glob.glob(mdir + os.sep + "*.pdb")
+#
+#        truncated_models_data = { 'cluster_num'      : 1,
+#                                  'truncation_level' : 1,
+#                                  'truncation_dir'   : work_dir } 
+#        
+#        subcluster, data = ensembler.subcluster_models(truncated_models,
+#                                                       truncated_models_data,
+#                                                       subcluster_program='maxcluster',
+#                                                       subcluster_exe=self.maxcluster_exe,
+#                                                       ensemble_max_models=30)
+#
+#        self.assertEqual(data[0]['subcluster_num_models'], 30,)
+#        self.assertTrue(abs(data[0]['subcluster_radius_threshold'] - 1) < 0.0001)
+#        self.assertEqual(data[1]['subcluster_num_models'], 30)
+#        self.assertTrue(abs(data[1]['subcluster_radius_threshold'] - 2) < 0.0001)
+#        self.assertEqual(data[2]['subcluster_num_models'], 30)
+#        self.assertTrue(abs(data[2]['subcluster_radius_threshold'] - 3) < 0.0001)
+#        shutil.rmtree(work_dir)
+#        
+#        return
+#    
+#    def testSubclusterNew3(self):
+#        """standard models"""
+#        
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#
+#        work_dir = os.path.join(self.tests_dir, "genthresh9")
+#        if os.path.isdir(work_dir):
+#            shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#        
+#        ensembler.theseus_exe = self.theseus_exe
+#        ensembler.cluster_exe = self.spicker_exe
+#        ensembler.subcluster_exe = self.maxcluster_exe
+#        ensembler.subcluster_method = "FLOATING_RADII"
+#        
+#        mdir = os.path.join(self.testfiles_dir, "models")
+#        truncated_models = glob.glob(mdir + os.sep + "*.pdb")
+#
+#        truncated_models_data = { 'cluster_num'      : 1,
+#                                  'truncation_level' : 1,
+#                                  'truncation_dir'   : work_dir } 
+#        
+#        subcluster, data = ensembler.subcluster_models(truncated_models,
+#                                                       truncated_models_data,
+#                                                       subcluster_program='maxcluster',
+#                                                       subcluster_exe=self.maxcluster_exe,
+#                                                       ensemble_max_models=30)
+#        self.assertEqual(data[0]['subcluster_num_models'], 2)
+#        self.assertTrue(abs(data[0]['subcluster_radius_threshold'] - 1.9) < 0.0001, "GOT {0}".format(data[0]['subcluster_radius_threshold']))
+#        self.assertEqual(data[1]['subcluster_num_models'], 3)
+#        self.assertTrue(abs(data[1]['subcluster_radius_threshold'] - 2) < 0.0001, "GOT {0}".format(data[1]['subcluster_radius_threshold']))
+#        self.assertEqual(data[2]['subcluster_num_models'], 8)
+#        self.assertTrue(abs(data[2]['subcluster_radius_threshold'] - 3) < 0.0001, "GOT {0}".format(data[2]['subcluster_radius_threshold']))
+#        shutil.rmtree(work_dir)
+#        return
+#    
+#    
+#    def XtestSubclusterNew(self):
+#        
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#
+#        work_dir = os.path.join(self.tests_dir, "genthresh9")
+#        if os.path.isdir(work_dir):
+#            shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#        
+#        mdir = "1P9G"
+#        truncated_models = glob.glob(mdir + os.sep + "*.pdb")
+#
+#        subcluster_exe = self.maxcluster_exe
+#        clusterer = subcluster.MaxClusterer(subcluster_exe)
+#        clusterer.generate_distance_matrix(truncated_models)
+#
+#        max_models = 30
+#        radius = 1
+#        direction = "down"
+#        increment = 0.1
+#        models, new_radius = ensembler._subcluster_nmodels(max_models,
+#                                                           radius,
+#                                                           clusterer,
+#                                                           direction,
+#                                                           increment)
+#        self.assertEqual(len(models), 36)
+#        self.assertTrue(abs(new_radius - 0.005) < 0.0001)
+#        return
+#    
+#    def testHomologs(self):
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        ensembler = Ensembler()
+#        ensembler.theseus_exe = self.theseus_exe
+#        
+#        work_dir = os.path.join(self.tests_dir, "homologs_test")
+#        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#
+#        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+#        models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
+#        alignment_file = os.path.join(self.ample_dir, 'examples', 'homologs', 'testthree.afasta')
+#        ensembles = ensembler.generate_ensembles_homologs(models, alignment_file=alignment_file, work_dir=work_dir)
+#        self.assertEqual(len(ensembles), 57)
+#        shutil.rmtree(work_dir)
+#        return
+#  
+#    def testGesamt(self):
+#        gesamt_exe = "/opt/ccp4-devtools/install/bin/gesamt"
+#        if not ample_util.is_exe(gesamt_exe): return
+#        
+#        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+#        models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
+#        work_dir = os.path.join(self.tests_dir, "gesamt_test")
+#        alignment_file = align_gesamt(models, gesamt_exe=gesamt_exe, work_dir=work_dir)
+#        self.assertTrue(os.path.isfile(alignment_file))
+#        shutil.rmtree(work_dir)
+#        return
+#    
+#    def testMustang(self):
+#        mustang_exe = "/opt/MUSTANG_v3.2.2/bin/mustang-3.2.1"
+#        if not ample_util.is_exe(mustang_exe): return
+#        
+#        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+#        models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
+#        work_dir = os.path.join(self.tests_dir, "mustang_test")
+#        alignment_file = align_mustang(models, mustang_exe=mustang_exe, work_dir=work_dir)
+#        self.assertTrue(os.path.isfile(alignment_file))
+#        shutil.rmtree(work_dir)
+#        return
+#    
+#    def testCoreFromAlignment(self):
+#        
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        work_dir = os.path.join(self.tests_dir, "homologs_core")
+#        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#
+#        models = glob.glob(os.path.join(self.ample_dir, "examples", "homologs", "*.pdb"))
+#        alignment_file = os.path.join(self.ample_dir, "examples", "homologs", "testthree.afasta")
+#        
+#        core_models = model_core_from_fasta(models, alignment_file, work_dir=work_dir)
+#        
+#        got = {}
+#        for m in core_models:
+#            name = os.path.splitext(os.path.basename(m))[0]
+#            resseqd = pdb_edit.resseq(m)
+#            resseq = resseqd[resseqd.keys()[0]]
+#            got[name] = resseq
+#
+#        ref = { '1ujb_core':
+#               [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+#                32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+#                56, 57, 58, 59, 60, 61, 62, 63, 64, 67, 69, 70, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 84, 85,
+#                86, 87, 88, 89, 90, 92, 93, 94, 95, 96, 97, 98, 99, 101, 102, 103, 104, 105, 106, 107, 108, 109,
+#                110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 124, 126, 127, 128, 129, 130,
+#                131, 132, 133, 134, 135, 136, 137, 138, 139, 141, 142, 143, 144, 145, 146, 147, 149, 150, 151],
+#               '3c7tA_core' :
+#                [73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133,
+#                 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154,
+#                 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 172, 174, 176, 180, 181, 182,
+#                 183, 184, 185, 186, 187, 188, 189, 233, 234, 235, 236, 237, 238, 239, 241, 242, 243, 244, 245, 246, 247,
+#                 248, 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272,
+#                 276, 277, 290, 291, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308,
+#                 309, 310, 311, 314, 315, 316],
+#               '2a6pA_core' :
+#                [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41,
+#                 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67,
+#                 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 122, 123, 124, 125, 126, 127,
+#                 128, 129, 130, 131, 132, 133, 134, 135, 136, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151,
+#                 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 167, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178,
+#                 179, 180, 181, 184, 185, 186, 187, 188, 189, 190, 191, 193, 194, 195] }
+#        
+#        self.assertEqual(got, ref)
+#        shutil.rmtree(work_dir)
+#        return
+#
+#    def _coreFromTheseusTest(self,core_models):
+#        got = {}
+#        for m in core_models:
+#            name = os.path.splitext(os.path.basename(m))[0]
+#            resseqd = pdb_edit.resseq(m)
+#            resseq = resseqd[resseqd.keys()[0]]
+#            got[name] = resseq
+#            
+#        ref = { '1ujb_core':
+#               [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 
+#                31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 
+#                59, 60, 61, 62, 63, 64, 69, 70, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
+#                91, 92, 93, 94, 95, 96, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 
+#                116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 
+#                138, 139, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152],
+#                '2a6pA_core' :
+#                [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 
+#                 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 
+#                 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 122, 125, 126, 127, 128, 129, 
+#                 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 
+#                 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 165, 166, 169, 170, 171, 172, 173, 174, 175, 176, 177, 
+#                 178, 179, 180, 181, 184, 185, 186, 187, 188, 189, 190, 191, 193, 194, 196],
+#               '3c7tA_core' :
+#                [73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131,
+#                 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 148, 149, 150, 151, 152, 153, 154,
+#                 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 174, 177, 179, 180, 181, 182, 183,
+#                 184, 185, 186, 187, 188, 189, 233, 236, 237, 238, 239, 240, 241, 242, 243, 245, 246, 247, 248, 249, 251, 252,
+#                 253, 254, 255, 256, 257, 258, 259, 260, 261, 262, 263, 264, 265, 266, 267, 268, 269, 270, 271, 272, 281, 282,
+#                 283, 287, 288, 289, 292, 293, 294, 295, 296, 297, 298, 299, 300, 301, 302, 303, 304, 305, 306, 307, 308, 309,
+#                 310, 311, 314, 315, 316]
+#               }
+#        
+#        self.assertEqual(got, ref)
+#        return
+#    
+#    def testCoreFromTheseus1(self):
+#        """Test with know alignment file and theseus_variances.txt file"""
+#        
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        work_dir = os.path.join(self.tests_dir, "theseus_core1")
+#        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#        os.chdir(work_dir)
+#
+#        pdbs = ['1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+#        models = [ os.path.join(self.ample_dir, "examples", "homologs", p) for p in pdbs ] 
+#        alignment_file = os.path.join(self.testfiles_dir, "1ujb_2a6pA_3c7tA.afasta")
+#        variance_file = os.path.join(self.testfiles_dir, "1ujb_2a6pA_3c7tA.variances")
+#        
+#        rt = theseus.Theseus(theseus_exe=self.theseus_exe)
+#        var_by_res = rt.parse_variances(variance_file)
+#        core_models = model_core_from_theseus(models, alignment_file, var_by_res, work_dir=work_dir)
+#        
+#        # First we test with a known alignment file and theseus variance file
+#        self._coreFromTheseusTest(core_models)
+#        
+#        shutil.rmtree(work_dir)
+#        return
+#    
+#    def testCoreFromTheseus2(self):
+#        """Test running theseus ourselves to get the varianes"""
+#        
+#        os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
+#        work_dir = os.path.join(self.tests_dir, "theseus_core2")
+#        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+#        os.mkdir(work_dir)
+#        os.chdir(work_dir)
+#
+#        pdbs = ['1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+#        models = [ os.path.join(self.ample_dir, "examples", "homologs", p) for p in pdbs ] 
+#        alignment_file = os.path.join(self.testfiles_dir, "1ujb_2a6pA_3c7tA.afasta")
+#        
+#        # We test twice to trap any changes in gesamt or theseus that might scupper us.
+#        rt = theseus.Theseus(theseus_exe=self.theseus_exe)
+#        rt.superpose_models(models, work_dir=work_dir, alignment_file=alignment_file, homologs=True)
+#        core_models = model_core_from_theseus(rt.aligned_models, alignment_file, rt.var_by_res(), work_dir=work_dir)
+#        self._coreFromTheseusTest(core_models)
+#        
+#        shutil.rmtree(work_dir)
+#        return
 
 #
 # Run unit tests
