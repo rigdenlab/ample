@@ -29,6 +29,7 @@ THIN_CLUSTERS = False
 import ample_scwrl
 import ample_sequence
 import ample_util
+import cluster_functions
 import fast_protein_cluster
 import pdb_edit
 import spicker
@@ -395,149 +396,52 @@ class Ensembler(object):
         truncation_residue_idxs.reverse()
         return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
         
-    def cluster_models(self,
-                       models=None,
-                       cluster_method=None,
-                       num_clusters=None,
-                       cluster_exe=None,
-                       cluster_dir=None,
-                       nproc=1,
-                       max_cluster_size=200
-                       ):
-        clusters = []
-        clusters_data = []
-        _logger.info('Clustering models using method: {0}'.format(cluster_method))
-        if cluster_method == 'import':
-            if not os.path.isdir(cluster_dir): raise RuntimeError, "Import cluster cannot find directory: {0}".format(cluster_dir)
-            cluster_models = glob.glob(os.path.join(cluster_dir, "*.pdb"))
-            if not cluster_models: raise RuntimeError, "Import cluster cannot find pdbs in directory: {0}".format(cluster_dir)
-            # Data on the cluster
-            cluster_data = self.create_dict()
-            cluster_data['cluster_num'] = 1
-            cluster_data['cluster_centroid'] = cluster_models[0]
-            cluster_data['cluster_num_models'] = len(cluster_models)
-            cluster_data['cluster_method'] = "import"
-            cluster_data['num_clusters'] = 1
-            clusters_data.append(cluster_data)
-            clusters.append(cluster_models)          
-               
-        elif cluster_method == "spicker" or cluster_method == "spicker_qscore" or cluster_method == "spicker_tmscore":
-            # Spicker Alternative for clustering
-            _logger.info('* Running SPICKER to cluster models *')
-            spicker_rundir = os.path.join(self.work_dir, 'spicker')
-            if cluster_method == "spicker_qscore" or cluster_method == "spicker_tmscore":
-                os.mkdir(spicker_rundir)
-                os.chdir(spicker_rundir)
-                if cluster_method == "spicker_qscore":
-                    clusterer = subcluster.GesamtClusterer(executable=self.gesamt_exe)
-                    clusterer.generate_distance_matrix(models, nproc=nproc)
-                    clusterer.dump_pdb_matrix()
-                elif cluster_method == "spicker_tmscore":
-                    shutil.copy(self.score_matrix, os.path.join(spicker_rundir,'score.matrix'))
-                
-            spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
-            spickerer.cluster(models, run_dir=spicker_rundir)
-            _logger.debug(spickerer.results_summary())
-            
-            ns_clusters=len(spickerer.results)
-            if ns_clusters == 0: raise RuntimeError,"No clusters returned by SPICKER"
-            if ns_clusters < num_clusters:
-                _logger.critical('Requested {0} clusters but SPICKER only found {0} so using {1} clusters'.format(num_clusters,ns_clusters))
-                num_clusters=ns_clusters
-            
-            for i in range(num_clusters):
-                # We truncate the list of models to max_cluster_size. This probably needs to be redone, because as the models are ordered by their similarity
-                # to the cluster centroid, we automatically select the 200 most similar to the centroid. However if the cluster is large and the models similar
-                # then when theseus calculates the variances, the variances will be representative of the 200, but might not show how the models vary throughout
-                # the whole cluster, which could provide better information for truncating the models.
-                cluster = spickerer.results[i].pdbs[0:max_cluster_size]
-                clusters.append(cluster)
-                # Data on the models
-                cluster_data = self.create_dict()
-                d = spickerer.results[i]
-                cluster_data['cluster_num'] = i + 1
-                cluster_data['cluster_centroid'] = d.cluster_centroid
-                cluster_data['cluster_num_models'] = len(cluster)
-                cluster_data['cluster_method'] = cluster_method
-                cluster_data['num_clusters'] = num_clusters
-                clusters_data.append(cluster_data)
+    def cluster_models(self, cluster_dir=None, cluster_exe=None, cluster_method=None,
+                       models=None, max_cluster_size=200, num_clusters=None, nproc=1):
+        """Wrapper function to run clustering of models dependent on the method
+        """
+        ########################################################################
+        ## Switch statement solution to find function to use
+        ## `Key` equal to cluster_method
+        ## `Value` equal to function name, function arguments
+        switch = {'fast_protein_cluster' : [cluster_functions.fast_protein_cluster, 
+                                            list([cluster_exe, max_cluster_size, 
+                                                  models, num_clusters, nproc, 
+                                                  self.work_dir])],
+                  
+                  'import' : [cluster_functions.import_cluster, 
+                              list([cluster_dir])],
+                  
+                  'random' : [cluster_functions.random_cluster, 
+                              list([cluster_method, max_cluster_size, models, 
+                                    num_clusters])],
+                  
+                  'spicker' : [cluster_functions.spicker_default, 
+                               list([cluster_exe, cluster_method, max_cluster_size, 
+                                     models, num_clusters, self.work_dir])],
+                  
+                  'spicker_qscore' : [cluster_functions.spicker_qscore, 
+                                      list([cluster_exe, cluster_method, self.gesamt_exe,
+                                            max_cluster_size, models, nproc, 
+                                            num_clusters, self.work_dir])],
+                  
+                  'spicker_tmscore' : [cluster_functions.spicker_tmscore, 
+                                       list([cluster_exe, cluster_method, 
+                                             max_cluster_size, models, num_clusters, 
+                                             self.score_matrix, self.work_dir])],
+        }
         
-        elif cluster_method == "fast_protein_cluster":
-            fpc = fast_protein_cluster.FPC()
-            SCORE_TYPE = 'rmsd'
-            CLUSTER_METHOD = 'kmeans'
-            _logger.info('Running fast_protein_cluster with: score_type: {0} cluster_method: {1}'.format(SCORE_TYPE,
-                                                                                                             CLUSTER_METHOD))
-            fpc_rundir = os.path.join(self.work_dir, 'fast_protein_cluster')
-            _logger.info('fast_protein_cluster running in directory: {0}'.format(fpc_rundir))
-            clusters, clusters_data = fpc.cluster(models=models,
-                                                num_clusters=num_clusters,
-                                                score_type=SCORE_TYPE,
-                                                cluster_method=CLUSTER_METHOD,
-                                                work_dir=fpc_rundir,
-                                                fpc_exe=cluster_exe,
-                                                nproc=nproc,
-                                                max_cluster_size=max_cluster_size)
-        elif cluster_method == 'random':
-            if len(models) <= max_cluster_size + 50: # completely arbitary number
-                raise RuntimeError,"Cannot randomly cluster so few models!"
-            i = 0
-            while len(clusters) < num_clusters:
-                if i > num_clusters * 3:
-                    raise RuntimeError,"Cannot find random clusters!"
-                cluster = set(random.sample(models, max_cluster_size))
-                if cluster in clusters:
-                    _logger.debug('Found duplicate cluster')
-                    continue
-                clusters.append(cluster)
-                # Data on the models
-                cluster_data = self.create_dict()
-                cluster_data['cluster_num'] = i + 1
-                #cluster_data['cluster_centroid'] = None
-                cluster_data['cluster_num_models'] = len(cluster)
-                cluster_data['cluster_method'] = cluster_method
-                cluster_data['num_clusters'] = num_clusters
-                clusters_data.append(cluster_data)
-                i += 1
-            # Convert all sets back to lists
-            clusters = [ list(s) for s in clusters ]
-        else:
-            raise RuntimeError, 'Unrecognised clustering method: {0}'.format(cluster_method)
+        # Get the function handler and keyword arguments
+        cluster_function, args = switch.get(cluster_method, None)
+        if not cluster_function:
+            msg = 'Unrecognised clustering method: {0}'.format(cluster_method)
+            raise RuntimeError(msg)
+                
+        # Cluster our protein structures
+        _logger.info('Clustering models using method: {0}'.format(cluster_method))
+        clusters, clusters_data = cluster_function(*args)
         
         return clusters, clusters_data
-    
-    def create_dict(self):
-        """Create an empty dictionary
-        Not strictly necessary but it's a place to remember what we capture
-        """
-        d = {}
-        d['cluster_method'] = None
-        d['num_clusters'] = None
-        d['cluster_num'] = None
-        d['cluster_centroid'] = None
-        d['cluster_num_models'] = None
-        
-        # truncation info
-        d['truncation_level'] = None
-        d['percent_truncation'] = None
-        d['truncation_method'] = None
-        d['truncation_residues'] = None
-        d['truncation_dir'] = None
-        d['truncation_variance'] = None
-        d['num_residues'] = None
-
-        # subclustering info
-        d['subcluster_num_models'] = None
-        d['subcluster_radius_threshold'] = None
-        d['subcluster_centroid_model'] = None
-    
-        # ensemble info
-        d['name'] = None
-        d['side_chain_treatment'] = None
-        d['ensemble_num_atoms'] = None
-        d['ensemble_pdb'] = None  # path to the ensemble file
-        
-        return d
     
     def edit_side_chains(self, raw_ensemble, raw_ensemble_data, side_chain_treatments, ensembles_directory, homologs=False):
         assert os.path.isdir(ensembles_directory), "Cannot find ensembles directory: {0}".format(ensembles_directory)
