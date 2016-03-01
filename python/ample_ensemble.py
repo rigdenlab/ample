@@ -1249,11 +1249,12 @@ class Ensembler(object):
                         truncation_method=None,
                         percent_truncation=None,
                         truncation_pruning=None,
+                        residue_scores=None,
                         homologs=False,
                         alignment_file=None,
                         work_dir=None):
         
-        assert len(models) > 1, "Cannot truncate as < 2 models!"
+        assert (len(models) > 1 or residue_scores), "Cannot truncate as < 2 models!"
         assert truncation_method and percent_truncation, "Missing arguments: {0}".format(truncation_method)
 
         # Create the directories we'll be working in
@@ -1261,11 +1262,12 @@ class Ensembler(object):
         os.chdir(work_dir)
         
         # Calculate variances between pdb and align them (we currently only require the aligned models for homologs)
-        run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
-        try: run_theseus.superpose_models(models, homologs=homologs, alignment_file=alignment_file)
-        except RuntimeError as e:
-            _logger.critical(e)
-            return [],[]
+        if truncation_method != "scores":
+            run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
+            try: run_theseus.superpose_models(models, homologs=homologs, alignment_file=alignment_file)
+            except RuntimeError as e:
+                _logger.critical(e)
+                return [],[]
         
         if homologs:
             # If using homologs, now trim down to the core. We only do this here so that we are using the aligned models from
@@ -1273,14 +1275,17 @@ class Ensembler(object):
             models = model_core_from_fasta(run_theseus.aligned_models,
                                            alignment_file=alignment_file,
                                            work_dir=os.path.join(work_dir,'core_models'))
-            # Ufortunately Theseus doesn't print all residues in its output format, so we can't use the variances we calculated before and
+            # Unfortunately Theseus doesn't print all residues in its output format, so we can't use the variances we calculated before and
             # need to calculate the variances of the core models 
             try: run_theseus.superpose_models(models, homologs=homologs, basename='homologs_core')
             except RuntimeError as e:
                 _logger.critical(e)
                 return [],[]
         
-        var_by_res = run_theseus.var_by_res()
+        # No THESEUS variances required if scores for each residue provided
+        var_by_res = run_theseus.var_by_res() if truncation_method != "scores" \
+            else self._convert_residue_scores(residue_scores)
+            
         if not len(var_by_res) > 0:
             msg = "Error reading residue variances!"
             _logger.critical(msg)
@@ -1290,6 +1295,8 @@ class Ensembler(object):
         # Calculate which residues to keep under the different methods
         truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = None, None, None, None
         if truncation_method == 'percent':
+            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = self._calculate_residues_percent(var_by_res, percent_truncation)
+        elif truncation_method == "scores":
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = self._calculate_residues_percent(var_by_res, percent_truncation)
         elif truncation_method == 'thresh':
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = self._calculate_residues_thresh(var_by_res, percent_truncation)
