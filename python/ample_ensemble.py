@@ -831,13 +831,9 @@ class Ensembler(object):
         else:
             return residues, None
 
-    def subcluster_models(self,
-                          truncated_models,
-                          truncated_models_data,
-                          subcluster_program=None,
-                          subcluster_exe=None,
-                          radius_thresholds=None,
-                          ensemble_max_models=None,
+    def subcluster_models(self, truncated_models, truncated_models_data,
+                          subcluster_program=None, subcluster_exe=None,
+                          radius_thresholds=None, ensemble_max_models=None,
                           work_dir=None):
         
         if self.subcluster_method == "ORIGINAL":
@@ -846,12 +842,9 @@ class Ensembler(object):
             f = self.subcluster_models_floating_radii
         else:
             assert False
-        return f(truncated_models,
-                 truncated_models_data,
-                 subcluster_program,
-                 subcluster_exe,
-                 ensemble_max_models,
-                 radius_thresholds=radius_thresholds,
+            
+        return f(truncated_models, truncated_models_data, subcluster_program, 
+                 subcluster_exe, ensemble_max_models, radius_thresholds=radius_thresholds, 
                  work_dir=work_dir)
         
     def subcluster_models_fixed_radii(self,
