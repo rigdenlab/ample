@@ -48,12 +48,11 @@ def analyse(amoptd, newroot=None):
     os.chdir(fixpath(amoptd['benchmark_dir']))
 
     # AnalysePdb may have already been called from the main script
-    if not amoptd['native_pdb']:
+    if amoptd['native_pdb'] and not amoptd.has_key('native_pdb_std'):
         analysePdb(amoptd)
 
-    if not (amoptd['homologs'] or \
-            amoptd['ideal_helices'] or \
-            amoptd['import_ensembles']):
+    if amoptd['native_pdb'] and \
+       not (amoptd['homologs'] or amoptd['ideal_helices'] or amoptd['import_ensembles']):
         analyseModels(amoptd)
     
 #     _logger.info("Benchmark: generating naitive density map")
@@ -96,14 +95,15 @@ def analyse(amoptd, newroot=None):
         d['ample_version'] = amoptd['ample_version']
         
         # Add in stuff we've cleaned from the pdb
-        d['native_pdb_code'] = amoptd['native_pdb_code']
-        d['native_pdb_title'] = amoptd['native_pdb_title']
-        d['native_pdb_resolution'] = amoptd['native_pdb_resolution']
-        d['native_pdb_solvent_content'] = amoptd['native_pdb_solvent_content']
-        d['native_pdb_space_group'] = amoptd['native_pdb_space_group']
-        d['native_pdb_num_chains'] = amoptd['native_pdb_num_chains']
-        d['native_pdb_num_atoms'] = amoptd['native_pdb_num_atoms']
-        d['native_pdb_num_residues'] = amoptd['native_pdb_num_residues']
+        if amoptd['native_pdb']:
+            d['native_pdb_code'] = amoptd['native_pdb_code']
+            d['native_pdb_title'] = amoptd['native_pdb_title']
+            d['native_pdb_resolution'] = amoptd['native_pdb_resolution']
+            d['native_pdb_solvent_content'] = amoptd['native_pdb_solvent_content']
+            d['native_pdb_space_group'] = amoptd['native_pdb_space_group']
+            d['native_pdb_num_chains'] = amoptd['native_pdb_num_chains']
+            d['native_pdb_num_atoms'] = amoptd['native_pdb_num_atoms']
+            d['native_pdb_num_residues'] = amoptd['native_pdb_num_residues']
  
         # Get the ensemble data and add to the MRBUMP data
         d['ensemble_percent_model'] = int((float(d['num_residues']) / float(amoptd['fasta_length'])) * 100)
@@ -122,7 +122,7 @@ def analyse(amoptd, newroot=None):
             #cm=d['cluster_centroid']
             d['ensemble_native_TM'] = amoptd['maxComp'].tm(cm)
             d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(cm)
-        analyseSolution(amoptd,d)
+        if amoptd['native_pdb']: analyseSolution(amoptd,d)
         data.append(d)
 
     fileName=os.path.join(fixpath(amoptd['benchmark_dir']),'results.csv' )
