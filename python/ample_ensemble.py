@@ -1213,6 +1213,9 @@ class Ensembler(object):
         self.truncation_variances = truncation_variances # save so we can put in results dict
         self.truncation_nresidues = [len(r) for r in truncation_residues] # save so we can put in results dict
         
+        # Use all models in cluster to calculate variance but then slice to max_cluster_size
+        #models = self._slice_models(models, 0, max_cluster_size)
+        
         truncated_models = []
         truncated_models_data = []
         truncated_models_dirs = []
@@ -1275,6 +1278,10 @@ class Ensembler(object):
                                  variance=float(sco)) \
                       for (res, sco) in residue_scores]
         return scores
+    
+    def _slice_models(self, data, start, end):
+        """Allows us to slice a list"""
+        return data[start:end]
 
 class Test(unittest.TestCase):
 
