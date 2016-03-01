@@ -989,7 +989,7 @@ class Ensembler(object):
                                          subcluster_exe=None,
                                          ensemble_max_models=None,
                                          work_dir=None):
-        _logger.info("subclustering with floaing radii")
+        _logger.info("subclustering with floating radii")
 
         # Run maxcluster to generate the distance matrix
         if subcluster_program == 'maxcluster':
@@ -1076,11 +1076,9 @@ class Ensembler(object):
         """
         MINRADIUS = 0.0001
         MAXRADIUS = 100
-        subcluster_models = clusterer.cluster_by_radius(radius)
-        if subcluster_models:
-            len_models = len(subcluster_models)
-        else:
-            len_models = 0
+        
+        len_models = len(subcluster_models) if subcluster_models else 0
+        
         _logger.debug("_subcluster_nmodels: {0} {1} {2} {3} {4}".format(len_models, nmodels, radius, direction, increment))
         if len_models == nmodels or radius < MINRADIUS or radius > MAXRADIUS:
             _logger.debug("_subcluster_nmodels returning: nmodels: {0} radius: {1}".format(len_models, radius))
@@ -1151,6 +1149,7 @@ class Ensembler(object):
     def truncate_models(self,
                         models,
                         models_data={},
+                        max_cluster_size=200,
                         truncation_method=None,
                         percent_truncation=None,
                         truncation_pruning=None,
@@ -1213,12 +1212,15 @@ class Ensembler(object):
         self.truncation_levels = truncation_levels # save so we can put in results dict
         self.truncation_variances = truncation_variances # save so we can put in results dict
         self.truncation_nresidues = [len(r) for r in truncation_residues] # save so we can put in results dict
-
+        
         truncated_models = []
         truncated_models_data = []
         truncated_models_dirs = []
         pruned_residues = None
-        for tlevel, tvar, tresidues, tresidue_idxs in zip(truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs):
+        for tlevel, tvar, tresidues, tresidue_idxs in zip(truncation_levels, 
+                                                          truncation_variances, 
+                                                          truncation_residues, 
+                                                          truncation_residue_idxs):
             # Prune singletone/doubletone etc. residues if required
             _logger.debug("truncation_pruning: {0}".format(truncation_pruning))
             if truncation_pruning == 'single':
@@ -1237,7 +1239,7 @@ class Ensembler(object):
             trunc_dir = os.path.join(work_dir, 'tlevel_{0}'.format(tlevel))
             os.mkdir(trunc_dir)
             _logger.info('Truncating at: {0} in directory {1}'.format(tlevel, trunc_dir))
-
+            
             # list of models for this truncation level
             level_models = []
             for infile in models:
