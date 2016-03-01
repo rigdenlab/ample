@@ -140,7 +140,7 @@ class AmpleOutput(object):
             pyrvapi.rvapi_add_section(self.summary_tab_ensemble_sec_id, "Ensembles", self.summary_tab_id, 0, 0, 1, 1, True)
             
             # Get the ensembling data
-            clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments = ensemble.collate_cluster_data(ensembles_data)
+            clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments = ensembler_util.collate_cluster_data(ensembles_data)
             
             rstr = ""
             rstr += "Ensemble Results<br/>"
@@ -165,7 +165,7 @@ class AmpleOutput(object):
             #     rstr += tableFormat.pprint_table(tdata)        
             # 
             cluster_num = 1
-            tdata = ensemble.cluster_table_data(clusters, cluster_num, side_chain_treatments)
+            tdata = ensembler_util.cluster_table_data(clusters, cluster_num, side_chain_treatments)
             self.fill_table(ensemble_table, tdata, tooltips=self._ensemble_tooltips)
         
         #
