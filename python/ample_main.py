@@ -688,13 +688,14 @@ class Ample(object):
         #
         # Benchmark Mode
         #
-        if amoptd['native_pdb']:
-            if not os.path.isfile(amoptd['native_pdb']):
+        if amoptd['native_pdb'] or amoptd['benchmark_mode']:
+            if amoptd['native_pdb'] and not os.path.isfile(amoptd['native_pdb']):
                 msg = "Cannot find crystal structure PDB: {0}".format(amoptd['native_pdb'])
                 ample_exit.exit_error(msg)
             amoptd['benchmark_mode'] = True
-            logger.info("*** AMPLE running in benchmark mode ***")
             amoptd['benchmark_dir'] = os.path.join(amoptd['work_dir'], "benchmark")
+            logger.info("*** AMPLE running in benchmark mode ***")
+            
     
         ###############################################################################
         #
@@ -1046,7 +1047,7 @@ class Ample(object):
         else:
             monitor = None
             
-        if amopt.d['benchmark_mode']:
+        if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
             ample_benchmark.analysePdb(amopt.d)       
     
