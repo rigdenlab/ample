@@ -20,7 +20,7 @@ class AmpleOptions(object):
                             'alignment_file' : None,
                             'all_atom' : True,
                             'allow_his_tag' : False,
-                            'AMPLE_ok' : False,
+                            'AMPLE_finished' : False,
                             'arpwarp_cycles' : 10,
                             'bbcontacts_file': None,
                             'benchmark_mode' : False,
