@@ -23,14 +23,14 @@ import time
 # Our imports
 import ample_config
 import ample_contacts
-import ample_ensemble
 import ample_mrbump
 import ample_exit
 import ample_options
 import ample_sequence
 import ample_util
 import ample_benchmark
-import ensemble
+import ensembler_util
+import ensembler
 import mtz_util
 import pdb_edit
 import pyrvapi_results
@@ -292,7 +292,7 @@ class Ample(object):
                            help='Path to a structure factor CIF file (instead of MTZ file)')
     
         parser.add_argument('-side_chain_treatments', type=str, nargs='+', action='append',
-                           help='The side chain treatments to use. Default: {0}'.format(ample_ensemble.SIDE_CHAIN_TREATMENTS))
+                           help='The side chain treatments to use. Default: {0}'.format(ensembler.SIDE_CHAIN_TREATMENTS))
         
         parser.add_argument('-SIGF', type=str, nargs=1,
                            help='Flag for SIGF column in the MTZ file')
@@ -1116,15 +1116,15 @@ class Ample(object):
                         amopt.d['use_scwrl'] = True
                     else:
                         # No SCWRL so don't do owt with the side chains
-                        logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(ample_ensemble.UNMODIFIED))
-                        amopt.d['side_chain_treatments'] = [ ample_ensemble.UNMODIFIED ]
+                        logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(ensembler.UNMODIFIED))
+                        amopt.d['side_chain_treatments'] = [ ensembler.UNMODIFIED ]
     
         # Save the results
         ample_util.saveAmoptd(amopt.d)
         
         if amopt.d['make_ensembles']:
             if amopt.d['import_ensembles']:
-                ensemble.import_ensembles(amopt.d)
+                ensembler_util.import_ensembles(amopt.d)
             elif amopt.d['ideal_helices']:
                 amopt.d['ensembles'], amopt.d['ensemble_options'], amopt.d['ensembles_data'] = ample_util.ideal_helices(amopt.d['fasta_length'])
                 logger.info("*** Using ideal helices to solve structure ***")
@@ -1138,7 +1138,7 @@ class Ample(object):
                 if amopt.d['submit_cluster']:
                     # Pickle dictionary so it can be opened by the job to get the parameters
                     ample_util.saveAmoptd(amopt.d)
-                    script = ensemble.cluster_script(amopt.d)
+                    script = ensembler_util.cluster_script(amopt.d)
                     workers.run_scripts(job_scripts=[script],
                                         monitor=monitor,
                                         chdir=True,
@@ -1153,7 +1153,7 @@ class Ample(object):
                     # queue finished so unpickle results
                     with open(amopt.d['results_path'], "r") as f: amopt.d = cPickle.load(f)
                 else:
-                    try: ensemble.create_ensembles(amopt.d)
+                    try: ensembler_util.create_ensembles(amopt.d)
                     except Exception, e:
                         msg = "Error creating ensembles: {0}".format(e)
                         ample_exit.exit_error(msg, sys.exc_info()[2])
@@ -1164,7 +1164,7 @@ class Ample(object):
                     ample_exit.exit_error(msg)
                     
                 if not amopt.d['homologs']:
-                    ensemble_summary = ensemble.ensemble_summary(amopt.d['ensembles_data'])
+                    ensemble_summary = ensembler_util.ensemble_summary(amopt.d['ensembles_data'])
                     logger.info(ensemble_summary)
                 
             # Save the results
@@ -1198,7 +1198,7 @@ class Ample(object):
                 
                 # Sort the ensembles in a favourable way
                 logger.info("Sorting ensembles")
-                ensemble_pdbs_sorted = ensemble.sort_ensembles(amopt.d['ensembles'],
+                ensemble_pdbs_sorted = ensembler_util.sort_ensembles(amopt.d['ensembles'],
                                                                amopt.d['ensembles_data'])
 
                 # Create job scripts

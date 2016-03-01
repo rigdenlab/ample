@@ -3,7 +3,7 @@ Created on Apr 18, 2013
 
 This structure of the ensembling modules is dictated by the need to be able to pickle
 and unpickle the results dictionary. As such all objects need to have a qualified path
-(e.g. ample_ensemble.Ensemble ) - otherwise, the module is taken as main, so that when
+(e.g. ensembler.Ensemble ) - otherwise, the module is taken as main, so that when
 the results are unpickled, it will look for Ensemble as an attribute of the main ample
 script.
 
@@ -21,9 +21,9 @@ import sys
 import unittest
 
 # our imports
-import ample_ensemble
 import ample_exit
 import ample_util
+import ensembler
 import iotbx.pdb
 import pdb_edit
 import printTable
@@ -47,7 +47,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
 def create_ensembles(amoptd):
     """Create the ensembles using the values in the amoptd dictionary"""
 
-    ensembler = ample_ensemble.Ensembler()
+    ensembler = ensembler.Ensembler()
     
     ensembler.theseus_exe = amoptd['theseus_exe']
     if amoptd['subcluster_program']:
@@ -406,7 +406,7 @@ class Test(unittest.TestCase):
     def testSummary(self):
 
         os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
-        ensembler = ample_ensemble.Ensembler()
+        ensembler = ensembler.Ensembler()
 
         work_dir = os.path.join(os.getcwd(), "summary")
         os.mkdir(work_dir)

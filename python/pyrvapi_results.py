@@ -16,7 +16,7 @@ import uuid
 # Our imports
 import ample_mrbump
 import ample_util
-import ensemble
+import ensembler_util
 
 try: import pyrvapi
 except: pyrvapi = None
