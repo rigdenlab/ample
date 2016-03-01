@@ -37,6 +37,10 @@ import theseus
 
 _logger = logging.getLogger(__name__)
 
+# Data structure to store residue information
+ScoreVariances = collections.namedtuple("ScoreVariances", ["idx", "resSeq", "variance"])
+
+
 def align_mustang(models, mustang_exe=None, work_dir=None):
     if not ample_util.is_exe(mustang_exe):
         raise RuntimeError, "Cannot find mustang executable: {0}".format(mustang_exe)
@@ -1350,6 +1354,14 @@ class Ensembler(object):
             
         return truncated_models, truncated_models_data, truncated_models_dirs
 
+    def _convert_residue_scores(self, residue_scores):
+        """Create named tuple to match store residue data"""
+        scores = [ScoreVariances(idx=int(res)-1,    # Required to match Theseus
+                                 resSeq=int(res),
+                                 variance=float(sco)) \
+                      for (res, sco) in residue_scores]
+        return scores
+
 class Test(unittest.TestCase):
 
     @classmethod
@@ -1864,6 +1876,38 @@ class Test(unittest.TestCase):
     def testSubclusterRadius(self):
         '''hlfsimko: probably nothing new really happens in function'''
         return
+    
+    def testConvertResidueScores(self):
+
+        ########################################################################
+        # Input data
+        ########################################################################  
+        residue_scores = [(i, 0.1*i) for i in xrange(1, 11)]
+        
+        ########################################################################
+        # Reference data
+        ########################################################################
+        ref_score_idxs = [i for i in xrange(10)] # Minus one compared to org data
+        ref_score_resSeq = [i for i in xrange(1, 11)] # Same i as org data
+        ref_score_variances = [(0.1*i) for i in xrange(1, 11)] # Same i as org data
+        
+        ########################################################################
+        # Function testing
+        ######################################################################## 
+        ensembler = Ensembler()
+        
+        scores = ensembler._convert_residue_scores(residue_scores)
+        
+        score_idxs = [i.idx for i in scores]
+        score_resSeq = [i.resSeq for i in scores]
+        score_variances = [i.variance for i in scores]
+         
+        self.assertEqual(ref_score_idxs, score_idxs)
+        self.assertEqual(ref_score_resSeq, score_resSeq)
+        self.assertEqual(ref_score_variances, score_variances)
+        
+        return
+    
     
     def testSplitSequence(self):
         
