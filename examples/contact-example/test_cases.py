@@ -26,6 +26,7 @@ if not sys.platform.startswith('win'):
         [ '-frags_9mers', 'aat000_09_05.200_v1_3' ],
         [ '-psipred_ss2', 'toxd_.psipred_ss2' ],
         [ '-nmodels', '30' ],
+        [ '-do_mr', 'False' ],
     ]
     
     ###############################################################################
@@ -42,11 +43,12 @@ if not sys.platform.startswith('win'):
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
     class AMPLETest(test_funcs.AMPLEBaseTest):
         def test_rosetta_contacts(self):
+            self.assertTrue(self.AMPLE_DICT['AMPLE_ok'])
             self.assertEqual(self.AMPLE_DICT['energy_function'], "FADE_default")
             self.assertIn('restraints_file', self.AMPLE_DICT)
             self.assertTrue(os.path.exists(self.AMPLE_DICT['restraints_file']))
             self.assertIn('contact_map', self.AMPLE_DICT)
-            self.assertTrue(os.path.exists(self.AMPLE_DICT['contact_map']))
+            self.assertTrue(os.path.isfile(self.AMPLE_DICT['contact_map']))
             self.assertIn('models_dir', self.AMPLE_DICT)
             m_dir = os.path.join(self.AMPLE_DICT['models_dir'], "..", "modelling")
             for line in open(os.path.join(m_dir, "model_0.log"), "r"):
@@ -57,7 +59,7 @@ if not sys.platform.startswith('win'):
                 else: nr_restraints=-1
             self.assertGreaterEqual(nr_restraints, 0, "Restraints not read")
             self.assertEqual(nr_restraints, 59, "Different number read")
-            nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
+            nmodels = len(glob.glob(os.path.join(self.AMPLE_DICT['models_dir'], "*.pdb")))
             self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
             return
      
@@ -79,8 +81,9 @@ if not sys.platform.startswith('win'):
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
     class AMPLETest(test_funcs.AMPLEBaseTest):
         def test_rosetta_contacts(self):
+            self.assertTrue(self.AMPLE_DICT['AMPLE_ok'])
             self.assertIn('contact_map', self.AMPLE_DICT)
-            self.assertTrue(os.path.exists(self.AMPLE_DICT['contact_map']))
+            self.assertTrue(os.path.isfile(self.AMPLE_DICT['contact_map']))
             self.assertIn('models_dir', self.AMPLE_DICT)
             m_dir = os.path.join(self.AMPLE_DICT['models_dir'], "..", "modelling")
             for line in open(os.path.join(m_dir, "model_0.log"), "r"):
@@ -91,7 +94,7 @@ if not sys.platform.startswith('win'):
                 else: nr_restraints=-1
             self.assertGreaterEqual(nr_restraints, 0, "Restraints not read")
             self.assertEqual(nr_restraints, 49, "Different number read")
-            nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
+            nmodels = len(glob.glob(os.path.join(self.AMPLE_DICT['models_dir'], "*.pdb")))
             self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
             return
     
