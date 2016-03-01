@@ -9,6 +9,10 @@ import sys
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
 sys.path.append(os.path.join(AMPLE_DIR,'python'))
+
+# Make sure our CCP4_AMPLE_DIR is the current version
+os.environ['CCP4_AMPLE_DIR'] = AMPLE_DIR
+
 import test_funcs
 
 # List of which test directories to process
