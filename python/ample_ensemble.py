@@ -30,9 +30,7 @@ import ample_scwrl
 import ample_sequence
 import ample_util
 import cluster_functions
-import fast_protein_cluster
 import pdb_edit
-import spicker
 import subcluster
 import theseus
 
