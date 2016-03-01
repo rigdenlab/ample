@@ -739,7 +739,7 @@ class Ensembler(object):
         # For chunking list
         def chunks(a_list, chunk_size):
             for i in xrange(0, len(a_list), chunk_size):
-                yield a_list[i:i + chunk_size ]
+                yield a_list[i:i + chunk_size]
 
         thresholds = []
         for x in list(chunks(try_list, chunk_size)):
@@ -791,19 +791,25 @@ class Ensembler(object):
         last = residues[0]
         this_residue = None
         last_chunk_end = residues[0] - (allowed_gap + 1)  # make sure starting gap is bigger than allowed 
-        i = 1
+        
         idxLast = lenr - 1
-        while i <= idxLast:
+        for i in xrange(1, idxLast+1):
             this_residue = residues[i]
+            
             if i == idxLast or this_residue != last + 1:
-                if i == idxLast:  # Need to fiddle things at the end
-                    if this_residue != last + 1:  # handle last if a singleton
-                        start = this_residue
-                        last_chunk_end = last
+            
+                if i == idxLast and this_residue != last + 1:
+                    start = this_residue
+                    last_chunk_end = last
                     last = this_residue
-                    postgap = allowed_gap + 1  # at end so just larger then gap
-                else:
-                    postgap = (this_residue - last) - 1
+                    postgap = allowed_gap + 1
+            
+                elif i == idxLast and this_residue == last + 1:
+                    last = this_residue
+                    postgap = allowed_gap + 1
+                      
+                elif i != idxLast and this_residue != last + 1:
+                    postgap = (this_residue - last) - 1 
                 
                 pregap = (start - last_chunk_end) - 1
                 this_chunk_size = (last - start) + 1
@@ -817,9 +823,7 @@ class Ensembler(object):
                 start = this_residue
                 last_chunk_end = last
                 
-            # update loop
             last = this_residue
-            i += 1
         
         # Remove the chunks and return
         if len(to_remove):
