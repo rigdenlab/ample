@@ -118,6 +118,7 @@ class AmpleOptions(object):
                             'shelxe_rebuild_buccaneer' : False,
                             'side_chain_treatments' : SIDE_CHAIN_TREATMENTS,
                             'SIGF' : None,
+                            'single_model' : None, 
                             'single_model_mode' : False,
                             'spicker_exe' : None,
                             'subcluster_program' : 'maxcluster',
@@ -136,6 +137,8 @@ class AmpleOptions(object):
                             'transmembrane_spanfile' : None,
                             'truncation_method' : 'percent',
                             'truncation_pruning' : None,
+                            'truncation_scorefile' : None,
+                            'truncation_scorefile_header' : None,
                             'use_arpwarp' : True,
                             'use_buccaneer' : True,
                             'use_contacts': False,
@@ -177,6 +180,7 @@ class AmpleOptions(object):
                     'rosetta_dir',
                     'rosetta_fragments_exe',
                     'rosetta_AbinitioRelax',
+                    'single_model',
                     'score_matrix',
                     'score_matrix_file_list',
                     'scwrl_exe',
@@ -187,6 +191,7 @@ class AmpleOptions(object):
                     'transmembrane_octopusfile',
                     'transmembrane_lipofile',
                     'transmembrane_spanfile',
+                    'truncation_scorefile',
                     'work_dir'
             ]    
 
