@@ -36,7 +36,7 @@ def find_ensembler_module(amoptd):
     """
     if amoptd['homologs']:
         _logger.debug("Importing homolog ensembler")
-        import ensembler_homolog as ensemble_module
+        import ensembler_homologs as ensemble_module
         
     elif amoptd['single_model_mode']:
         _logger.debug("Importing single model ensembler")
