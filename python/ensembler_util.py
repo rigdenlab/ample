@@ -68,21 +68,25 @@ def create_ensembles(amoptd):
 
     ensembler.max_ensemble_models = amoptd['max_ensemble_models']
 
-    if amoptd['cluster_method'] == 'spicker' or \
-       amoptd['cluster_method'] == 'spicker_qscore' or \
-       amoptd['cluster_method'] == 'spicker_tmscore':
-        cluster_exe = amoptd['spicker_exe']
-        if amoptd['cluster_method'] == 'spicker_tmscore':
-            if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
-                raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
-            ensembler.score_matrix = amoptd['score_matrix']
-    elif amoptd['cluster_method'] == 'fast_protein_cluster':
-        cluster_exe = amoptd['fast_protein_cluster_exe']
-    elif amoptd['cluster_method'] == 'import' or \
-         amoptd['cluster_method'] == 'random':
-        cluster_exe = None
-    else:
-        raise RuntimeError, "create_ensembles - unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
+    cluster_switch = {'fast_protein_cluster' : amoptd['fast_protein_cluster_exe'],
+                      'import' : None,
+                      'random' : None,
+                      'skip' : None,
+                      'spicker' : amoptd['spicker_exe'],
+                      'spicker_qscore' : amoptd['spicker_exe'],
+                      'spicker_tmscore' : amoptd['spicker_exe'],
+    }
+    cluster_exe = cluster_switch.get(amoptd['cluster_method'], default="unrecognised")
+    
+    if cluster_exe == "unrecognised":
+        msg = "unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
+        raise RuntimeError(msg)
+    
+    # We need a score matrix for the spicker tmscore clustering
+    if amoptd['cluster_method'] == 'spicker_tmscore':
+        if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
+            raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
+        ensembler.score_matrix = amoptd['score_matrix']
   
     amoptd['cluster_exe'] = cluster_exe
 
