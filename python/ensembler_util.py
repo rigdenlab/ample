@@ -52,22 +52,20 @@ def create_ensembles(amoptd):
     ensembler = ens.Ensembler()
     
     ############################################################################
-    #
-    # Set options specific to ensemble creation
-    #
+    # Set subclustering executable options
+    subcluster_switch = {'lsqkab': ensembler.lsqkab_exe,
+                         'maxcluster': amoptd['maxcluster_exe'],                 
+    }
+    subcluster_exe = subcluster_switch.get(amoptd['subcluster_program'], "unrecognised")
+    
+    if amoptd['subcluster_program'] and subcluster_exe == "unrecognised":
+        msg = 'unrecognised subcluster_program: {0}'.format(amoptd['subcluster_program'])
+        raise RuntimeError(msg)
+    elif amoptd['subcluster_program']:
+        ensembler.subcluster_exe = subcluster_exe
+    
     ############################################################################
-    ensembler.theseus_exe = amoptd['theseus_exe']
-    if amoptd['subcluster_program']:
-        ensembler.subcluster_program = amoptd['subcluster_program']
-        if amoptd['subcluster_program'] == 'maxcluster':
-            ensembler.subcluster_exe = amoptd['maxcluster_exe']
-        elif amoptd['subcluster_program'] == 'lsqkab':
-            ensembler.subcluster_exe = ensembler.lsqkab_exe
-        else:
-            raise RuntimeError('Unrecognised subcluster_program: {0}'.format(amoptd['subcluster_program']))
-
-    ensembler.max_ensemble_models = amoptd['max_ensemble_models']
-
+    # Set clustering executable options
     cluster_switch = {'fast_protein_cluster' : amoptd['fast_protein_cluster_exe'],
                       'import' : None,
                       'random' : None,
@@ -76,11 +74,12 @@ def create_ensembles(amoptd):
                       'spicker_qscore' : amoptd['spicker_exe'],
                       'spicker_tmscore' : amoptd['spicker_exe'],
     }
-    cluster_exe = cluster_switch.get(amoptd['cluster_method'], default="unrecognised")
+    cluster_exe = cluster_switch.get(amoptd['cluster_method'], "unrecognised")
     
     if cluster_exe == "unrecognised":
         msg = "unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
         raise RuntimeError(msg)
+    amoptd['cluster_exe'] = cluster_exe
     
     # We need a score matrix for the spicker tmscore clustering
     if amoptd['cluster_method'] == 'spicker_tmscore':
@@ -88,11 +87,13 @@ def create_ensembles(amoptd):
             raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
         ensembler.score_matrix = amoptd['score_matrix']
   
-    amoptd['cluster_exe'] = cluster_exe
-
-    ensembler.scwrl_exe = amoptd['scwrl_exe']
+    ############################################################################
+    # Set some further options
     ensembler.gesamt_exe = amoptd['gesamt_exe']
-
+    ensembler.max_ensemble_models = amoptd['max_ensemble_models']
+    ensembler.scwrl_exe = amoptd['scwrl_exe']
+    ensembler.theseus_exe = amoptd['theseus_exe']
+    
     ensembles_directory = os.path.join(amoptd['work_dir'], 'ensembles')
     if not os.path.isdir(ensembles_directory): os.mkdir(ensembles_directory)
     amoptd['ensembles_directory'] = ensembles_directory
@@ -102,11 +103,6 @@ def create_ensembles(amoptd):
     os.chdir(work_dir)
 
     ############################################################################
-    #
-    # Run input dependent ensembling
-    #
-    ############################################################################
-
     # For a single model we don't need to use glob.
     models = amoptd['models'] if amoptd['single_model_mode'] else \
         glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))
@@ -114,6 +110,7 @@ def create_ensembles(amoptd):
     if amoptd['cluster_method'] == 'spicker_tmscore':
         models = reorder_models(models, amoptd['score_matrix_file_list'])
 
+    ############################################################################
     # Get all the keywords required to generate ensembles
     kwargs = _get_ensembling_kwargs(amoptd)
     # Run ensemble creation
@@ -122,6 +119,7 @@ def create_ensembles(amoptd):
     else:
         ensembles = ensembler.generate_ensembles(models, work_dir=work_dir, **kwargs)
 
+    ############################################################################
     amoptd['ensembles'] = ensembles
     amoptd['ensembles_data'] = ensembler.ensembles_data
     amoptd['truncation_levels'] = ensembler.truncation_levels
