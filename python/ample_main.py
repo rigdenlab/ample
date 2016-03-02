@@ -30,7 +30,7 @@ import ample_sequence
 import ample_util
 import ample_benchmark
 import ensembler_util
-import ensembler
+from ensembling import ensembler
 import mtz_util
 import pdb_edit
 import pyrvapi_results
