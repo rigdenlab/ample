@@ -26,7 +26,6 @@ SIDE_CHAIN_TREATMENTS = [POLYALA, RELIABLE, ALLATOM]
 THIN_CLUSTERS = False
 
 # our imports
-import ample_scwrl
 import ample_sequence
 import ample_util
 import cluster_functions
@@ -40,59 +39,6 @@ _logger = logging.getLogger(__name__)
 ScoreVariances = collections.namedtuple("ScoreVariances", ["idx", "resSeq", "variance"])
 
 
-def align_mustang(models, mustang_exe=None, work_dir=None):
-    if not ample_util.is_exe(mustang_exe):
-        raise RuntimeError, "Cannot find mustang executable: {0}".format(mustang_exe)
-    
-    if not work_dir: work_dir = os.getcwd()
-    work_dir = os.path.abspath(work_dir)
-    if not os.path.isdir(work_dir): os.mkdir(work_dir)
-    os.chdir(work_dir)
-
-    logfile = os.path.join(work_dir, 'mustang.log')
-    basename = 'mustang'
-    cmd = [mustang_exe, '-F', 'fasta', '-o', basename, '-i' ] + models
-    rtn = ample_util.run_command(cmd, logfile=logfile, directory=work_dir)
-    if not rtn == 0:
-        raise RuntimeError, "Error running mustang. Check logfile: {0}".format(logfile)
-    
-    alignment_file = os.path.join(work_dir, basename + ".afasta")
-    if not os.path.isfile(alignment_file): raise RuntimeError, "Could not find alignment file: {0} after running mustang!".format(alignment_file)
-    return alignment_file
-
-def align_gesamt(models, gesamt_exe=None, work_dir=None):
-    if not ample_util.is_exe(gesamt_exe):
-        raise RuntimeError, "Cannot find gesamt executable: {0}".format(gesamt_exe)
-    
-    if not work_dir: work_dir = os.getcwd()
-    work_dir = os.path.abspath(work_dir)
-    if not os.path.isdir(work_dir): os.mkdir(work_dir)
-    os.chdir(work_dir)
-    
-    # Need to map chain name to pdb
-    model2chain = {}
-    for m in models:
-        seqd = pdb_edit.sequence(m)
-        if len(seqd) != 1: raise RuntimeError, "Model {0} does not contain a single chain, got: {1}".format(seqd.keys())
-        model2chain[m] = seqd.keys()[0]
-    
-    basename = 'gesamt'
-    logfile = os.path.join(work_dir, 'gesamt.log')
-    alignment_file = os.path.join(work_dir, basename + ".afasta")
-    
-    # Build up command-line
-    cmd = [gesamt_exe]
-    # We iterate through the models to make sure the order stays the same
-    for m in models: cmd += [ m, '-s', model2chain[m] ]
-    cmd += ['-o', '{0}.pdb'.format(basename), '-a', alignment_file]
-    
-    rtn = ample_util.run_command(cmd, logfile=logfile, directory=work_dir)
-    if not rtn == 0:
-        raise RuntimeError, "Error running gesamt. Check logfile: {0}".format(logfile)
-    
-    if not os.path.isfile(alignment_file): raise RuntimeError, "Gesamt did not generate an alignment file.\nPlease check the logfile: {0}".format(logfile)
-    return alignment_file
-    
 def model_core_from_fasta(models, alignment_file, work_dir=None, case_sensitive=False):
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
     
@@ -230,7 +176,6 @@ class Ensembler(object):
         # For all
         self.work_dir = None  # top directory where everything gets done
         self.theseus_exe = None
-        self.scwrl_exe = None
         self.gesamt_exe = None
         self.lsqkab_exe = os.path.join(os.environ['CCP4'],'bin','lsqkab' + ample_util.EXE_EXT)
         assert ample_util.is_exe(self.lsqkab_exe),"Cannot find lsqkab: {0}".format(self.lsqkab_exe)
@@ -492,201 +437,6 @@ class Ensembler(object):
                 
         return ensembles, ensembles_data
   
-    def generate_ensembles(self,
-                           models,
-                           cluster_method=None,
-                           cluster_exe=None,
-                           num_clusters=None,
-                           cluster_dir=None,
-                           percent_truncation=None,
-                           truncation_method=None,
-                           truncation_pruning=None,
-                           ensembles_directory=None,
-                           work_dir=None,
-                           nproc=None,
-                           use_scwrl=False,
-                           side_chain_treatments=SIDE_CHAIN_TREATMENTS):
-        
-        # Work dir set each time
-        if not work_dir: raise RuntimeError, "Need to set work_dir!"
-        self.work_dir = work_dir
-        
-        if not cluster_method:
-            cluster_method = self.cluster_method
-        if not cluster_exe:
-            cluster_exe = self.cluster_exe
-        if not num_clusters:
-            num_clusters = self.num_clusters
-        if not percent_truncation:
-            percent_truncation = self.percent_truncation
-        if not truncation_method:
-            truncation_method = self.truncation_method
-        if not truncation_pruning:
-            truncation_pruning = self.truncation_pruning
-        if not ensembles_directory:
-            self.ensembles_directory = os.path.join(work_dir, "ensembles")
-        else:
-            self.ensembles_directory = ensembles_directory
-        
-        if not cluster_method is 'import' and not len(models):
-            raise RuntimeError, "Cannot find any models for ensembling!" 
-        if not all([os.path.isfile(m) for m in models]):
-            raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
-        
-        _logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
-    
-        # Create final ensembles directory
-        if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
-
-        self.ensembles = []
-        self.ensembles_data = []
-        for cluster_idx, (cluster_models, cluster_data) in enumerate(zip(*self.cluster_models(models=models,
-                                                              cluster_method=cluster_method,
-                                                              num_clusters=num_clusters,
-                                                              cluster_exe=cluster_exe,
-                                                              cluster_dir=cluster_dir,
-                                                              nproc=nproc))):
-            if len(cluster_models) < 2:
-                _logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data['cluster_num']))
-                continue
-            _logger.info('Processing cluster: {0}'.format(cluster_idx+1))
-            
-            # New multi-cluster strategy
-            radius_thresholds = self.subcluster_radius_thresholds
-            side_chain_treatments = side_chain_treatments
-            if THIN_CLUSTERS and cluster_idx > 0:
-                radius_thresholds = [1, 3]
-                side_chain_treatments = [ POLYALA ]
-                
-            truncate_dir=os.path.join(self.work_dir,"cluster_{0}".format(cluster_idx+1))
-            if not os.path.isdir(truncate_dir): os.mkdir(truncate_dir)
-            os.chdir(truncate_dir)
-            
-            # Add sidechains using SCWRL here so we only add them to the models we actually use
-            if use_scwrl:
-                scwrl_directory = os.path.join(truncate_dir,"scrwl")
-                if not os.path.isdir(scwrl_directory): os.mkdir(scwrl_directory)
-                cluster_models = ample_scwrl.Scwrl(scwrl_exe=self.scwrl_exe).process_models(cluster_models, scwrl_directory, strip_oxt=True)
-                
-            for truncated_models, truncated_models_data, truncated_models_dir in zip(*self.truncate_models(cluster_models,
-                                                                                     cluster_data,
-                                                                                     truncation_method=truncation_method,
-                                                                                     truncation_pruning=truncation_pruning,
-                                                                                     percent_truncation=percent_truncation,
-                                                                                     work_dir=truncate_dir)):
-                for subcluster, subcluster_data in zip(*self.subcluster_models(truncated_models,
-                                                                               truncated_models_data,
-                                                                               subcluster_program=self.subcluster_program,
-                                                                               subcluster_exe=self.subcluster_program,
-                                                                               ensemble_max_models=self.ensemble_max_models,
-                                                                               radius_thresholds=radius_thresholds,
-                                                                               work_dir=truncated_models_dir)):
-                    for ensemble, ensemble_data in zip(*self.edit_side_chains(subcluster,
-                                                                              subcluster_data,
-                                                                              side_chain_treatments,
-                                                                              self.ensembles_directory)):
-                        self.ensembles.append(ensemble)
-                        self.ensembles_data.append(ensemble_data)
-        
-        return self.ensembles
-
-    def generate_ensembles_homologs(self,
-                                    models,
-                                    alignment_file=None,
-                                    percent_truncation=None,
-                                    truncation_method=None,
-                                    ensembles_directory=None,
-                                    work_dir=None,
-                                    nproc=None,
-                                    homolog_aligner=None,
-                                    mustang_exe=None,
-                                    gesamt_exe=None,
-                                    side_chain_treatments=SIDE_CHAIN_TREATMENTS,
-                                    use_scwrl=False):
-        
-        # Work dir set each time
-        if not work_dir: raise RuntimeError, "Need to set work_dir!"
-        self.work_dir = work_dir
-        
-        if not percent_truncation:
-            percent_truncation = self.percent_truncation
-        if not truncation_method:
-            truncation_method = self.truncation_method
-        if not ensembles_directory:
-            self.ensembles_directory = os.path.join(work_dir, "ensembles")
-        else:
-            self.ensembles_directory = ensembles_directory
-        
-        if not len(models):
-            raise RuntimeError, "Cannot find any models for ensembling!" 
-        if not all([os.path.isfile(m) for m in models]):
-            raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
-        
-        _logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
-    
-        # Create final ensembles directory
-        if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
-        
-        # standardise all the models
-        std_models_dir = os.path.join(work_dir, "std_models")
-        os.mkdir(std_models_dir)
-        std_models = []
-        for m in models:
-            std_model = ample_util.filename_append(m, 'std', std_models_dir)
-            pdb_edit.standardise(pdbin=m, pdbout=std_model, del_hetatm=True)
-            std_models.append(std_model)
-        
-        # Get a structural alignment between the different models
-        if not alignment_file:
-            if homolog_aligner == 'mustang':
-                _logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
-                alignment_file = align_mustang(std_models, mustang_exe=mustang_exe, work_dir=self.work_dir)
-            elif homolog_aligner == 'gesamt':
-                _logger.info("Generating alignment file with gesamt_exe: {0}".format(gesamt_exe))
-                alignment_file = align_gesamt(std_models, gesamt_exe=gesamt_exe, work_dir=self.work_dir)
-            else:
-                raise RuntimeError, "Unknown homolog_aligner: {0}".format(homolog_aligner)
-            _logger.info("Generated alignment file: {0}".format(alignment_file))
-        else:
-            _logger.info("Using alignment file: {0}".format(alignment_file))
-            
-        
-        truncate_dir = os.path.join(self.work_dir,"homolog_truncate")
-        if not os.path.isdir(truncate_dir): os.mkdir(truncate_dir)
-            
-        # Now truncate and create ensembles - as standard ample, but with no subclustering
-        self.ensembles = []
-        self.ensembles_data = []
-        for truncated_models, truncated_models_data, truncated_model_dir in zip(*self.truncate_models(std_models,
-                                                                                                      truncation_method=truncation_method,
-                                                                                                      truncation_pruning=None,
-                                                                                                      percent_truncation=percent_truncation,
-                                                                                                      homologs=True,
-                                                                                                      alignment_file=alignment_file,
-                                                                                                      work_dir=truncate_dir)):
-            tlevel = truncated_models_data['truncation_level']
-            ensemble_dir = os.path.join(truncated_model_dir, "ensemble_{0}".format(tlevel))
-            os.mkdir(ensemble_dir)
-            os.chdir(ensemble_dir)
-             
-            # Need to create an alignment file for theseus
-            basename = "e{0}".format(tlevel)
-            pre_ensemble = self.superpose_models(truncated_models, basename=basename, work_dir=ensemble_dir, homologs=True)
-            if not pre_ensemble:
-                _logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
-                continue
-            pre_ensemble_data = copy.copy(truncated_models_data)
-             
-            for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble,
-                                                                      pre_ensemble_data,
-                                                                      side_chain_treatments,
-                                                                      self.ensembles_directory,
-                                                                      homologs=True)):
-                self.ensembles.append(ensemble)
-                self.ensembles_data.append(ensemble_data)
-        
-        return self.ensembles
-
     def generate_thresholds(self, var_by_res, percent_interval):
         """
         This is the original method developed by Jaclyn and used in all work until November 2014 (including the coiled-coil paper)
