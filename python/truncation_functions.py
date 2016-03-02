@@ -1,5 +1,5 @@
 """
-23.02.2016
+02.03.2016
 
 @author: hlfsimko
 """
@@ -216,6 +216,63 @@ def _generate_thresholds2(values, chunk_size):
 
     thresholds.sort()
     return thresholds
+
+def prune_residues(residues, chunk_size=1, allowed_gap=2):
+    """Remove any residues that are < chunk_size where the gap before and after is > allowed_gap"""
+    
+    assert chunk_size > 0 and allowed_gap > 0, \
+        "chunk_size and allowed_gap must be > 0!: {0} {1}".format(chunk_size, allowed_gap)
+    
+    if not len(residues): return residues, None
+    lenr = len(residues)
+    if lenr <= chunk_size:
+        return [], residues
+    
+    # Build up a list of residues to remove
+    to_remove = []
+    start = residues[0]
+    last = residues[0]
+    this_residue = None
+    last_chunk_end = residues[0] - (allowed_gap + 1)  # make sure starting gap is bigger than allowed 
+    
+    idxLast = lenr - 1
+    for i in xrange(1, idxLast+1):
+        this_residue = residues[i]
+        
+        if i == idxLast or this_residue != last + 1:
+        
+            if i == idxLast and this_residue != last + 1:
+                start = this_residue
+                last_chunk_end = last
+                last = this_residue
+                postgap = allowed_gap + 1
+        
+            elif i == idxLast and this_residue == last + 1:
+                last = this_residue
+                postgap = allowed_gap + 1
+                  
+            elif i != idxLast and this_residue != last + 1:
+                postgap = (this_residue - last) - 1 
+            
+            pregap = (start - last_chunk_end) - 1
+            this_chunk_size = (last - start) + 1
+            
+            # remove if it satisfies the requirements
+            if (this_chunk_size <= chunk_size and pregap >= allowed_gap and postgap >= allowed_gap):
+                chunk = [x for x in range(start, last + 1)]
+                to_remove += chunk
+            
+            # reset start and last_chunk_end
+            start = this_residue
+            last_chunk_end = last
+            
+        last = this_residue
+    
+    # Remove the chunks and return
+    if len(to_remove):
+        return [r for r in residues if r not in to_remove], to_remove
+    else:
+        return residues, None
 
 def _split_sequence(length, percent_interval, min_chunk=3):
     """split a sequence of length into chunks each separated by percent_interval each being at least min_chunk size"""
@@ -535,6 +592,71 @@ class Test(unittest.TestCase):
         self.assertEqual(ref_thresholds, thresholds)
         
         return  
+    
+    def testPruneResidues(self):
+        '''Test we can reproduce the original thresholds'''
+
+        residues = []
+        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres, [])
+        self.assertEqual(pruned, None)
+          
+        residues = [1]
+        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres, [])
+        self.assertEqual(pruned, [1])
+         
+        residues = [1, 2]
+        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres, [])
+        self.assertEqual(pruned, [1, 2])
+         
+        residues = [1, 2, 4]
+        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres, [1, 2, 4])
+        self.assertEqual(pruned, None)
+         
+        # Big enough gap 
+        residues = [1, 2, 3, 4, 8, 13, 14, 15]
+        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres, [1, 2, 3, 4, 13, 14, 15])
+        self.assertEqual(pruned, [8])
+           
+        residues = [1, 2, 3, 4, 8, 9, 13, 14, 15]
+        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres, [1, 2, 3, 4, 13, 14, 15])
+        self.assertEqual(pruned, [8, 9])
+           
+        residues = [1, 2, 3, 4, 8, 9, 10, 13, 14, 15]
+        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres, residues)
+        self.assertEqual(pruned, None)
+           
+        # end gap not big enough
+        residues = [1, 2, 3, 4, 8, 9, 11, 12, 13]
+        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres, residues)
+        self.assertEqual(pruned, None)
+           
+        # Lone residue at start
+        residues = [1, 11, 12, 13]
+        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres, [11, 12, 13])
+        self.assertEqual(pruned, [1])
+        
+        # Lone residue at end
+        residues = [11, 12, 13, 19]
+        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        self.assertEqual(pres, [11, 12, 13])
+        self.assertEqual(pruned, [19])
+          
+        # Mixed
+        residues = [1, 3, 4, 7, 10, 11, 13, 15, 16, 19]
+        pres, pruned = prune_residues(residues, chunk_size=1, allowed_gap=2)
+        self.assertEqual(pres, [1, 3, 4, 10, 11, 13, 15, 16])
+        self.assertEqual(pruned, [7, 19])
+
+        return
     
     def testSplitSequence(self):
         
