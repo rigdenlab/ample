@@ -149,8 +149,8 @@ class Ensembler(ensembler.Ensembler):
         if not os.path.isdir(scwrl_directory): os.mkdir(scwrl_directory)
         
         scwrled_models = ample_scwrl.Scwrl(scwrl_exe=scwrl_exe).process_models(models, 
-                                                                                    scwrl_directory, 
-                                                                                    strip_oxt=True)
+                                                                               scwrl_directory, 
+                                                                               strip_oxt=True)
         return scwrled_models
         
 
