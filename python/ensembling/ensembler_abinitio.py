@@ -27,7 +27,6 @@ SIDE_CHAIN_TREATMENTS = ensembler.SIDE_CHAIN_TREATMENTS
 THIN_CLUSTERS = ensembler.THIN_CLUSTERS
 UNMODIFIED = ensembler.UNMODIFIED
 
-
 _logger = logging.getLogger(__name__)
 
 
