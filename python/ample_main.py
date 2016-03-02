@@ -107,7 +107,7 @@ class Ample(object):
         if amoptd['mtz'] and amoptd['sf_cif']:
             msg = "Please supply a single crystallographic data file."
             ample_exit.exit_error(msg)
-            
+        
         if amoptd['devel_mode'] and amoptd['quick_mode']:
             msg = "Only one of quick_mode or devel_mode is permitted"
             ample_exit.exit_error(msg)
@@ -282,6 +282,9 @@ class Ample(object):
         parser.add_argument('-scwrl_exe', metavar='path to scwrl', type=str, nargs=1,
                            help='Path to Scwrl4 executable')
         
+        parser.add_argument('-single_model', type=str, nargs=1,
+                           help='Single structure model to be used to create ensembles')
+        
         parser.add_argument('-score_matrix', type=str, nargs=1,
                            help='Path to score matrix for spicker')
         
@@ -322,10 +325,16 @@ class Ample(object):
                            help='Only process the top model in each ensemble')
         
         parser.add_argument('-truncation_method', type=str, nargs=1,
-                           help='How to truncate the models for ensembling percent|thresh|focussed')
+                           help='How to truncate the models for ensembling percent|thresh|focussed|scores')
         
         parser.add_argument('-truncation_pruning', type=str, nargs=1,
                            help='Whether to remove isolated residues (single)')
+    
+        parser.add_argument('-truncation_scorefile', type=str, nargs=1,
+                            help="CSV file containing per residue scores - COLUMN ONE MUST BE RESIDUE INDEX STARTING FROM 1")
+        
+        parser.add_argument('-truncation_scorefile_header', type=str, nargs='+', action='append',
+                            help="column headers to be used to create ensembles")
     
         parser.add_argument('--version', action='version', version='%(prog)s {0}'.format(version.__version__))
         
@@ -601,6 +610,13 @@ class Ample(object):
             amoptd['import_models'] = True
             amoptd['make_frags'] = False
             amoptd['make_models'] = False
+        elif amoptd['single_model']:
+            amoptd['cluster_method'] = "skip"
+            amoptd['make_frags'] = False
+            amoptd['make_models'] = False
+            amoptd['single_model_mode'] = True
+            if amoptd['truncation_scorefile'] and amoptd['truncation_scorefile_header']:
+                amoptd['truncation_method'] = "scores"
             
         # Check import flags
         if amoptd['import_ensembles'] and (amoptd['import_models']):
@@ -720,8 +736,7 @@ class Ample(object):
         #
         # Ensemble options
         #
-        if amoptd['cluster_method'] == 'spicker' or amoptd['cluster_method'] == 'spicker_qscore' or \
-            amoptd['cluster_method'] == 'spicker_tmscore':
+        if amoptd['cluster_method'] in ['spicker', 'spicker_qscore', 'spicker_tmscore']:
             if not amoptd['spicker_exe']:
                 amoptd['spicker_exe'] = 'spicker'  + ample_util.EXE_EXT
             try:
@@ -729,15 +744,14 @@ class Ample(object):
             except Exception:
                 msg = "Cannot find spicker executable: {0}".format(amoptd['spicker_exe'])
                 ample_exit.exit_error(msg)
-        elif amoptd['cluster_method'] == 'fast_protein_cluster':
+        elif amoptd['cluster_method'] in ['fast_protein_cluster']:
             if not amoptd['fast_protein_cluster_exe']: amoptd['fast_protein_cluster_exe'] = 'fast_protein_cluster'
             try:
                 amoptd['fast_protein_cluster_exe'] = ample_util.find_exe(amoptd['fast_protein_cluster_exe'])
             except Exception:
                 msg = "Cannot find fast_protein_cluster executable: {0}".format(amoptd['fast_protein_cluster_exe'])
                 ample_exit.exit_error(msg)
-        elif amoptd['cluster_method'] == 'import' or \
-             amoptd['cluster_method'] == 'random':
+        elif amoptd['cluster_method'] in ['import', 'random', 'skip']:
             pass
         else:
             msg = "Unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
@@ -1130,7 +1144,8 @@ class Ample(object):
                 logger.info("*** Using ideal helices to solve structure ***")
             else:
                 # Check we have some models to work with
-                if not amopt.d['cluster_method'] is 'import' and not glob.glob(os.path.join(amopt.d['models_dir'], "*.pdb")):
+                if not (amopt.d['cluster_method'] is 'import' or amopt.d['single_model_mode']) and \
+                   not glob.glob(os.path.join(amopt.d['models_dir'], "*.pdb")):
                     ample_util.saveAmoptd(amopt.d)
                     msg = "ERROR! Cannot find any pdb files in: {0}".format(amopt.d['models_dir'])
                     ample_exit.exit_error(msg)
@@ -1163,7 +1178,7 @@ class Ample(object):
                     msg = "Problem generating ensembles!"
                     ample_exit.exit_error(msg)
                     
-                if not amopt.d['homologs']:
+                if not (amopt.d['homologs'] or amopt.d['single_model_mode']):
                     ensemble_summary = ensembler_util.ensemble_summary(amopt.d['ensembles_data'])
                     logger.info(ensemble_summary)
                 
