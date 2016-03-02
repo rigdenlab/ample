@@ -134,10 +134,7 @@ def create_ensembles(amoptd):
     # Get all the keywords required to generate ensembles
     kwargs = _get_ensembling_kwargs(amoptd)
     # Run ensemble creation
-    if amoptd['homologs']:
-        ensembles = ensembler.generate_ensembles_homologs(models, work_dir=work_dir, **kwargs)
-    else:
-        ensembles = ensembler.generate_ensembles(models, work_dir=work_dir, **kwargs)
+    ensembles = ensembler.generate_ensembles(models, work_dir=work_dir, **kwargs)
 
     ############################################################################
     amoptd['ensembles'] = ensembles
