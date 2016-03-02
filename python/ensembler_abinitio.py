@@ -24,9 +24,9 @@ ALLATOM = ensembler.ALLATOM
 POLYALA = ensembler.POLYALA
 RELIABLE = ensembler.RELIABLE
 SIDE_CHAIN_TREATMENTS = ensembler.SIDE_CHAIN_TREATMENTS
+THIN_CLUSTERS = ensembler.THIN_CLUSTERS
 UNMODIFIED = ensembler.UNMODIFIED
 
-THIN_CLUSTERS = False
 
 _logger = logging.getLogger(__name__)
 
