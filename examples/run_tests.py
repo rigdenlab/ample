@@ -22,6 +22,7 @@ dirs = [
     'import-data',
     'nmr.remodel',
     'nmr.truncate',
+    'single-model',
     'toxd-example',
 ]
 
