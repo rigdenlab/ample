@@ -123,8 +123,8 @@ def create_ensembles(amoptd):
     os.chdir(work_dir)
 
     ############################################################################
-    # For a single model we don't need to use glob.
-    models = amoptd['models'] if amoptd['single_model_mode'] else \
+    # For a single model we don't need to use glob 
+    models = list([amoptd['single_model']]) if amoptd['single_model_mode'] else \
         glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))
 
     if amoptd['cluster_method'] == 'spicker_tmscore':
