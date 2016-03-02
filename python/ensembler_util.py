@@ -23,12 +23,30 @@ import unittest
 # our imports
 import ample_exit
 import ample_util
-import ensembler as ens
 import iotbx.pdb
 import pdb_edit
 import printTable
 
 _logger = logging.getLogger(__name__)
+
+def find_ensembler_module(amoptd):
+    """Find which ensembler module to import
+    
+    :returns: imported module handler
+    """
+    if amoptd['homologs']:
+        _logger.debug("Importing homolog ensembler")
+        import ensembler_homolog as ensemble_module
+        
+    elif amoptd['single_model_mode']:
+        _logger.debug("Importing single model ensembler")
+        import ensembler_single_model as ensemble_module
+        
+    else:
+        _logger.debug("Importing abinitio ensembler")
+        import ensembler_abinitio as ensemble_module
+        
+    return ensemble_module
 
 def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for ensembling on a cluster"""
@@ -49,7 +67,9 @@ def cluster_script(amoptd, python_path="ccp4-python"):
 def create_ensembles(amoptd):
     """Create the ensembles using the values in the amoptd dictionary"""
 
-    ensembler = ens.Ensembler()
+    # Determine which ensembler we need and only import the specific one
+    ensemble_module = find_ensembler_module(amoptd)
+    ensembler = ensemble_module.Ensembler()
     
     ############################################################################
     # Set subclustering executable options
@@ -476,6 +496,29 @@ class Test(unittest.TestCase):
             ensembles_data.append(d)
 
         print ensemble_summary(ensembles_data)
+
+        return
+
+    def testImportModule(self):
+        """Test that we import the correct module for ensembling"""
+
+        ########################################################################
+        # Test Case 1
+        module_handler = find_ensembler_module({'homologs': False,
+                                                'single_model_mode': False})
+        self.assertEqual("abinitio_ensembler", module_handler.__name__)
+
+        ########################################################################
+        # Test Case 2
+        module_handler = find_ensembler_module({'homologs': True,
+                                                'single_model_mode': False})
+        self.assertEqual("homolog_ensembler", module_handler.__name__)
+
+        ########################################################################
+        # Test Case 3
+        module_handler = find_ensembler_module({'homologs': False,
+                                                'single_model_mode': True})
+        self.assertEqual("single_model_ensembler", module_handler.__name__)
 
         return
 
