@@ -67,12 +67,16 @@ class Ensembler(ensembler.Ensembler):
             self.ensembles_directory = os.path.join(work_dir, "ensembles")
         else:
             self.ensembles_directory = ensembles_directory
-        
+
         if len(models) > 1:
-            raise RuntimeError("More than 1 structure provided")
+            msg = "More than 1 structure provided"
+            _logger.critical(msg)
+            raise RuntimeError(msg)
         
         if len(truncation_scorefile_header) < 2:
-            raise RuntimeError("At least two header options for scorefile are required")
+            msg = "At least two header options for scorefile are required"
+            _logger.critical(msg)
+            raise RuntimeError(msg)
 
         # standardise the structure
         std_models_dir = os.path.join(work_dir, "std_models")
@@ -91,8 +95,11 @@ class Ensembler(ensembler.Ensembler):
         if not os.path.isdir(truncate_dir): os.mkdir(truncate_dir)
         
         # Read all the scores into a per residue dictionary
+        assert len(truncation_scorefile_header) > 1, "At least two column labels are required"
         residue_scores = self._read_scorefile(truncation_scorefile)
         residue_key = truncation_scorefile_header.pop(0).lower()
+        assert all(i.lower() in residue_scores[0].keys() for i in truncation_scorefile_header), \
+                "Not all column labels are in your CSV file"
         
         self.ensembles = []
         self.ensembles_data = []
