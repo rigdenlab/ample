@@ -87,7 +87,7 @@ class SubClusterer(object):
                 for j in range(i, l):
                     f.write("{0: > 4d} {1: > 4d} {2: > 8.3F}\n".format(i,j, self.distance_matrix[i-offset][j-offset]))
             f.write("\n")
-        return
+        return os.path.abspath(file_name)
 
 class CctbxClusterer(SubClusterer):
     """Class to cluster files with maxcluster"""
