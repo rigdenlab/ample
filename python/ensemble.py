@@ -65,10 +65,10 @@ def create_ensembles(amoptd):
        amoptd['cluster_method'] == 'spicker_qscore' or \
        amoptd['cluster_method'] == 'spicker_tmscore':
         cluster_exe = amoptd['spicker_exe']
-        if amoptd['cluster_method'] == 'spicker_tmscore':
-            if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
-                    raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
-            ensembler.score_matrix = amoptd['score_matrix']
+        #if amoptd['cluster_method'] == 'spicker_tmscore':
+        #    if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
+        #            raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
+        #    ensembler.score_matrix = amoptd['score_matrix']
     elif amoptd['cluster_method'] == 'fast_protein_cluster':
         cluster_exe = amoptd['fast_protein_cluster_exe']
     elif amoptd['cluster_method'] == 'import' or \
@@ -88,8 +88,8 @@ def create_ensembles(amoptd):
     os.chdir(work_dir)
 
     models = glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))
-    if amoptd['cluster_method'] == 'spicker_tmscore':   
-        models = reorder_models(models, amoptd['score_matrix_file_list'])
+    #if amoptd['cluster_method'] == 'spicker_tmscore':   
+    #    models = reorder_models(models, amoptd['score_matrix_file_list'])
     
     if amoptd['homologs']:
         ensembles = ensembler.generate_ensembles_homologs(models,

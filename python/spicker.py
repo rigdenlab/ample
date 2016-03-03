@@ -58,7 +58,7 @@ class Spickerer(object):
                     counter += 1
         return str(counter)
 
-    def create_input_files(self, models, score_matrix=None, score_type='rmsd'):
+    def create_input_files(self, models, score_type='rmsd', score_matrix=None):
         """
         jmht
         Create the input files required to run spicker
@@ -71,20 +71,21 @@ class Spickerer(object):
         
         if score_type: score_type = score_type.lower()
         logger.debug("Using score_type: {0}".format(score_type))
-        if score_matrix:
-            logger.debug("Using score_matrix: {0}".format(score_matrix))
-            if not os.path.isfile(score_matrix):
+        
+        if score_type == 'read_matrix':
+            if not (score_matrix and os.path.isfile(score_matrix)):
                 msg = 'Cannot find score_matrix: {0}'.format(score_matrix)
                 logger.critical(msg)
                 raise RuntimeError, msg
-            shutil.copy(score_matrix,os.path.join(self.run_dir,os.path.basename(score_matrix)))
+            logger.debug("Using score_matrix: {0}".format(score_matrix))
+            shutil.copy(score_matrix, os.path.join(self.run_dir,'score.matrix'))
+        elif score_type == 'tm':
+            # Create file so spicker knows to calculate TM scores
+            with open('TM.score','w') as f: f.write('\n')
+        elif score_type == 'rmsd':
+            pass
         else:
-            if score_type == 'tm':
-                with open('TM.score','w') as f: f.write('\n')
-            elif score_type == 'rmsd':
-                pass
-            else:
-                raise RuntimeError,"Unknown score_type: {0}".format(score_type)
+            raise RuntimeError,"Unknown score_type: {0}".format(score_type)
         
         # read_out - Input file for spicker with coordinates of the CA atoms for each of the PDB structures
         #
@@ -146,7 +147,7 @@ class Spickerer(object):
                         seq.write('\t' + split[5] + '\t' + split[3] + '\n')
         return
     
-    def cluster(self, models, run_dir=None, score_matrix=None, score_type='rmsd'):
+    def cluster(self, models, run_dir=None, score_type='rmsd', score_matrix=None):
         """
         Run spicker to cluster the models
         """
@@ -159,7 +160,7 @@ class Spickerer(object):
         logger.debug("Running spicker in directory: {0}".format(self.run_dir))
         logger.debug("Using executable: {0}".format(self.spicker_exe))
         
-        self.create_input_files(models, score_matrix=score_matrix, score_type=score_type)
+        self.create_input_files(models, score_type=score_type, score_matrix=score_matrix)
         
         logfile = os.path.abspath("spicker.log")
         rtn = ample_util.run_command([self.spicker_exe], logfile=logfile)
