@@ -123,8 +123,8 @@ class AmpleOutput(object):
         # Summary Tab
         #
         if not self.log_tab_id: return
+        if results_dict['single_model_mode'] or results_dict['homologs']: return
         if not('ensembles_data' in results_dict and len(results_dict['ensembles_data'])): return
-        if results_dict['homologs'] and not('mrbump_results' in results_dict and len(results_dict['mrbump_results'])): return
         ensembles_data = results_dict['ensembles_data']
         
         self.summary_tab_id = "summary_tab"
