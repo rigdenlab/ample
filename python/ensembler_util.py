@@ -168,8 +168,7 @@ def _get_ensembling_kwargs(amoptd):
         kwargs.update({'alignment_file' : amoptd['alignment_file'],
                        'gesamt_exe' : amoptd['gesamt_exe'],
                        'homolog_aligner' : amoptd['homolog_aligner'],
-                       'mustang_exe' : amoptd['mustang_exe'],
-                       'use_scwrl' : amoptd['use_scwrl']})
+                       'mustang_exe' : amoptd['mustang_exe']})
 
     elif amoptd['single_model_mode']:
         kwargs.update({'truncation_pruning' : amoptd['truncation_pruning'],
