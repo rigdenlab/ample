@@ -102,10 +102,10 @@ def create_ensembles(amoptd):
     amoptd['cluster_exe'] = cluster_exe
     
     # We need a score matrix for the spicker tmscore clustering
-    if amoptd['cluster_method'] == 'spicker_tmscore':
-        if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
-            raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
-        ensembler.score_matrix = amoptd['score_matrix']
+    #if amoptd['cluster_method'] == 'spicker_tmscore':
+    #    if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
+    #        raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
+    #    ensembler.score_matrix = amoptd['score_matrix']
   
     ############################################################################
     # Set some further options
@@ -127,8 +127,8 @@ def create_ensembles(amoptd):
     models = list([amoptd['single_model']]) if amoptd['single_model_mode'] else \
         glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))
 
-    if amoptd['cluster_method'] == 'spicker_tmscore':
-        models = reorder_models(models, amoptd['score_matrix_file_list'])
+    #if amoptd['cluster_method'] == 'spicker_tmscore':
+    #    models = reorder_models(models, amoptd['score_matrix_file_list'])
 
     ############################################################################
     # Get all the keywords required to generate ensembles
@@ -168,7 +168,8 @@ def _get_ensembling_kwargs(amoptd):
         kwargs.update({'alignment_file' : amoptd['alignment_file'],
                        'gesamt_exe' : amoptd['gesamt_exe'],
                        'homolog_aligner' : amoptd['homolog_aligner'],
-                       'mustang_exe' : amoptd['mustang_exe']})
+                       'mustang_exe' : amoptd['mustang_exe'],
+                       'use_scwrl' : amoptd['use_scwrl']})
 
     elif amoptd['single_model_mode']:
         kwargs.update({'truncation_pruning' : amoptd['truncation_pruning'],

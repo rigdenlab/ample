@@ -983,7 +983,8 @@ c      write(*,*)"MINA MAXA ",mina,maxa
       do i=1,n_str*n_str
 c          read(1,'(i4,1x,i4,1x,1x,f8.3)',end=3,err=2) j, k, scored
           read(1,*,end=3,err=2) j, k, scored
-          if (scored .gt. 1.0 .or. j .gt. n_str .or. k .gt. n_str) then
+          if (scored .gt. 1.0 .or. scored .lt. 0.0 .or.
+     &        j .gt. n_str .or. k .gt. n_str) then
               write(*,*)"Invalid score line: ", j ,k ,scored
               stop
           endif
@@ -1008,7 +1009,7 @@ c     matrix indexing starts from 1
 3     continue
       close(1)
 
-      if (i .ne. n_str*n_str) then
+      if (i .le. n_str*n_str/2 - n_str/2) then
          write(*,*),"NOT ENOUGH SCORE MATRIX VALUES!"
         stop 1
       endif
