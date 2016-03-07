@@ -896,7 +896,7 @@ c      write(*,*)"MINA MAXA ",mina,maxa
       real RMSD_min, RMSD_max
       parameter(RMSD_min=0)
       parameter(RMSD_max=50)
-      real rmsd,rmsd2_a,armsd,TM,Rcomm
+      real rmsd,rmsd2_a,TM,Rcomm
       integer i,j,k,n_rmsd,ier,Lcomm
 
 !     Arrays to pass data into TMscore routine
@@ -939,8 +939,8 @@ c     write(*,*)'number of used structures=',n_str
             amat(i,j)=rmsd
             amat(j,i)=rmsd
             n_rmsd=n_rmsd+1
-            rmsd_a=rmsd_a+armsd
-            rmsd2_a=rmsd2_a+armsd*armsd
+            rmsd_a=rmsd_a+rmsd
+            rmsd2_a=rmsd2_a+rmsd*rmsd
          enddo
       enddo
       rmsd_a=rmsd_a/n_rmsd
