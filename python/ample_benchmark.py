@@ -52,7 +52,8 @@ def analyse(amoptd, newroot=None):
         analysePdb(amoptd)
 
     if amoptd['native_pdb'] and \
-       not (amoptd['homologs'] or amoptd['ideal_helices'] or amoptd['import_ensembles']):
+       not (amoptd['homologs'] or amoptd['ideal_helices'] or \
+            amoptd['import_ensembles'] or amoptd['single_model_mode']):
         analyseModels(amoptd)
     
 #     _logger.info("Benchmark: generating naitive density map")
@@ -193,7 +194,8 @@ def analyseSolution(amoptd,d):
 
     if not (amoptd['homologs'] or \
             amoptd['ideal_helices'] or \
-            amoptd['import_ensembles']):
+            amoptd['import_ensembles'] or \
+            amoptd['single_model_mode']):
 
         # Get reforigin info
         rmsder = reforigin.ReforiginRmsd()
