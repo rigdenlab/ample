@@ -30,15 +30,23 @@ args_universal = [
 args_import_models = args_universal + [
         [ '-do_mr', 'False' ],
         [ '-models', 'models' ],
-        [ '-num_clusters', '3' ],
+        [ '-num_clusters', '4' ],
 ]
 
 class AMPLETest(test_funcs.AMPLEBaseTest):
     def test_import_models(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
-        self.assertEqual(3, self.AMPLE_DICT['num_clusters'])
+        self.assertEqual(4, self.AMPLE_DICT['num_clusters'])
         self.assertIn('ensembles', self.AMPLE_DICT)
-        self.assertEqual(243, len(self.AMPLE_DICT['ensembles_data']))
+        ensembles_data = self.AMPLE_DICT['ensembles_data']
+        self.assertEqual(309, len(ensembles_data))
+        for i in xrange(1, 5):
+            cluster_ensembles = [ens for ens in ensembles_data if ens['cluster_num']==i]
+            cluster_num_models = cluster_ensembles[0]['cluster_num_models']
+            switch = {1: (6, 93), 2: (4, 72), 3: (3, 78), 4: (2, 66)}
+            num_models, num_ensembles = switch[i]
+            self.assertEqual(num_ensembles, len(cluster_ensembles))
+            self.assertEqual(num_models, cluster_num_models)
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory
