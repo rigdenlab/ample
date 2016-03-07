@@ -65,7 +65,7 @@ def setup_file_logging(main_logfile, debug_logfile):
     # create file handler for debug output
     fl = logging.FileHandler(debug_logfile)
     fl.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(lineno)d - %(levelname)s - %(message)s')
     fl.setFormatter(formatter)
     logger.addHandler(fl)
 
