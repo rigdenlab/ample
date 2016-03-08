@@ -178,17 +178,18 @@ def run(test_dict,
 
 def write_script(path, args):
     """Write script - ARGS MUST BE IN PAIRS"""
+    linechar = "^" if sys.platform.startswith('win') else "\\"
     ample = os.path.join(AMPLE_DIR,'bin', 'ample.py')
     script = path + SCRIPT_EXT
     with open(script, 'w') as f:
         f.write(SCRIPT_HEADER + os.linesep)
         f.write(os.linesep)
-        f.write(ample + " \\" + os.linesep)
+        f.write("ccp4-python " + ample + " " + linechar + os.linesep)
         # Assumption is all arguments are in pairs
         #arg_list = [ " ".join(args[i:i+2]) for i in range(0, len(args), 2) ]
         #f.write(" \\\n".join(arg_list))
         for argt in args:
-            f.write(" ".join(argt) + " \\\n")
+            f.write(" ".join(argt) + " " + linechar + "\n")
         f.write(os.linesep)
         f.write(os.linesep)
     
