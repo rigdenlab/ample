@@ -1,6 +1,6 @@
-#!/usr/bin/python2.6
-
-#
+'''
+@author: jmht
+'''
 
 import glob
 import os
@@ -8,6 +8,8 @@ import logging
 
 import ample_util
 import pdb_edit
+
+LOGGER = logging.getLogger(__name__)
 
 class Scwrl( object ):
     
@@ -53,16 +55,16 @@ class Scwrl( object ):
         return os.path.abspath(pdbout)
     
     def process_directory(self, in_dir, out_dir, strip_oxt=False, prefix="scwrl" ):
-        logging.info('Adding sidechains with SCWRL to models in directory: {0}'.format(in_dir))
+        LOGGER.info('Adding sidechains with SCWRL to models in directory: {0}'.format(in_dir))
         self.process_models(glob.glob( os.path.join( in_dir, '*.pdb') ), out_dir, strip_oxt=strip_oxt, prefix=prefix)
         return
     
     def process_models(self, models, out_dir, strip_oxt=False, prefix="scwrl"):
-        logging.info('Adding sidechains with SCWRL to models')
+        LOGGER.info('Adding sidechains with SCWRL to models')
         out_pdbs = []
         for i, pdb in enumerate(models):
             out_pdbs.append(self.add_sidechains(pdbin=pdb,
                                                 pdbout=ample_util.filename_append(pdb, prefix, directory=out_dir),
                                                 strip_oxt=strip_oxt))
-        logging.info('Processed {0} models with SCWRL into directory: {1}'.format(i+1, out_dir))
+        LOGGER.info('Processed {0} models with SCWRL into directory: {1}'.format(i+1, out_dir))
         return out_pdbs
