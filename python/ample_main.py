@@ -899,6 +899,8 @@ class Ample(object):
         amoptd['mrbump_scripts'] = []
         if 'mrbump_dir' in amoptd:
             amoptd['mrbump_scripts'] = ample_mrbump.unfinished_scripts(amoptd)
+            if not amoptd['mrbump_scripts']:
+                amoptd['do_mr'] = False
     
         if amoptd['do_mr']:
             if len(amoptd['mrbump_scripts']):
