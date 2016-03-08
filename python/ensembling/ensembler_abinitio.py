@@ -15,9 +15,9 @@ import sys
 import unittest
 
 # Custom
+import ample_scwrl
 import ample_util
 import ensembler
-import util.scwrl_util
 
 # Inherit some variables defined in the ensembler module
 ALLATOM = ensembler.ALLATOM
@@ -147,9 +147,9 @@ class Ensembler(ensembler.Ensembler):
         scwrl_directory = os.path.join(work_dir, "scrwl")
         if not os.path.isdir(scwrl_directory): os.mkdir(scwrl_directory)
         
-        scwrled_models = util.scwrl_util.Scwrl(scwrl_exe=scwrl_exe).process_models(models, 
-                                                                                   scwrl_directory, 
-                                                                                   strip_oxt=True)
+        scwrled_models = ample_scwrl.Scwrl(scwrl_exe=scwrl_exe).process_models(models, 
+                                                                               scwrl_directory, 
+                                                                               strip_oxt=True)
         return scwrled_models
         
 
