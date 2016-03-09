@@ -36,18 +36,14 @@ def find_ensembler_module(amoptd):
     :returns: imported module handler
     """
     if amoptd['homologs']:
-        _logger.debug("Importing homolog ensembler")
-        import ensembler_homologs as ensemble_module
-        
+        m = 'ensembler_homologs'
     elif amoptd['single_model_mode']:
-        _logger.debug("Importing single model ensembler")
-        import ensembler_single_model as ensemble_module
-        
-    else:
-        _logger.debug("Importing abinitio ensembler")
-        import ensembler_abinitio as ensemble_module
-        
-    return ensemble_module
+        m = 'ensembler_single_model'
+    else: 
+        m = 'ensembler_abinitio'
+
+    _logger.debug("Importing module: {0}".format(m)) 
+    return __import__(m)
 
 def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for ensembling on a cluster"""
