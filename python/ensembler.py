@@ -28,13 +28,13 @@ THIN_CLUSTERS = False
 # our imports
 import ample_sequence
 import ample_util
+import cluster_util
 import pdb_edit
 import subcluster
+import subcluster_util
 import theseus
+import truncation_util
 
-import util.cluster_util as cluster_util
-import util.subcluster_util as subcluster_util
-import util.truncation_util as truncation_util
 
 _logger = logging.getLogger(__name__)
 

@@ -29,8 +29,8 @@ import ample_options
 import ample_sequence
 import ample_util
 import ample_benchmark
+import ensembler
 import ensembler_util
-from ensembling import ensembler
 import mtz_util
 import pdb_edit
 import pyrvapi_results

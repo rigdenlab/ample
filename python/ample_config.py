@@ -23,7 +23,7 @@ elif "CCP4" in os.environ:
 else:
     raise RuntimeError("Cannot locate CCP4 install")
 
-from ensembling.ensembler import SIDE_CHAIN_TREATMENTS
+from ensembler import SIDE_CHAIN_TREATMENTS
 import version
 
 ##############################################################
