@@ -503,19 +503,19 @@ class Test(unittest.TestCase):
         # Test Case 1
         module_handler = find_ensembler_module({'homologs': False,
                                                 'single_model_mode': False})
-        self.assertEqual("abinitio_ensembler", module_handler.__name__)
+        self.assertEqual("ensembler_abinitio", module_handler.__name__)
 
         ########################################################################
         # Test Case 2
         module_handler = find_ensembler_module({'homologs': True,
                                                 'single_model_mode': False})
-        self.assertEqual("homolog_ensembler", module_handler.__name__)
+        self.assertEqual("ensembler_homologs", module_handler.__name__)
 
         ########################################################################
         # Test Case 3
         module_handler = find_ensembler_module({'homologs': False,
                                                 'single_model_mode': True})
-        self.assertEqual("single_model_ensembler", module_handler.__name__)
+        self.assertEqual("ensembler_single_model", module_handler.__name__)
 
         return
 
