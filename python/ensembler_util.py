@@ -10,6 +10,7 @@ script.
 @author: jmht
 '''
 
+import collections
 import cPickle
 import glob
 import itertools
@@ -391,20 +392,18 @@ def _sort_ensembles_prioritise(ensembles_zipped, keys_to_sort):
     # ... otherwise throw them all in one pot
     #
     ############################################################################
+    tmp_data = collections.defaultdict(list)
     if "cluster_num" in keys_to_sort:
-        tmp_data = {ens[1]['cluster_num']: [] for ens in ensembles_zipped}
         for ensemble in ensembles_zipped:
             tmp_data[ensemble[1]['cluster_num']].append(ensemble)
         iterator_keys = sorted(tmp_data.keys(), key=int)
 
     elif "truncation_score_key" in keys_to_sort:
-        tmp_data = {ens[1]['truncation_score_key']: [] for ens in ensembles_zipped}
         for ensemble in ensembles_zipped:
             tmp_data[ensemble[1]['truncation_score_key']].append(ensemble)
         iterator_keys = sorted(tmp_data.keys())
 
     else:
-        tmp_data = {"all": []}
         for ensemble in ensembles_zipped:
             tmp_data["all"].append(ensemble)
         iterator_keys = sorted(tmp_data.keys())
