@@ -1,29 +1,14 @@
 """Test functions for ensembler.ensembler_util"""
 
+import itertools
+import random
+import os
 import unittest
 
 from ample.ensembler import ensembler_util
 
 class Test(unittest.TestCase):
         
-    @classmethod
-    def setUpClass(cls):
-        """
-        Set up paths. Need to do this with setUpClass, as otherwise the __file__
-        variable is updated whenever the cwd is changed in a test and the next test
-        gets the wrong paths.
-        """
-        cls.thisd = os.path.abspath(os.path.dirname(__file__))
-        paths = cls.thisd.split(os.sep)
-        cls.ample_dir = os.sep.join(paths[ :-1 ])
-        cls.tests_dir = os.path.join(cls.ample_dir, "tests")
-        cls.testfiles_dir = os.path.join(cls.tests_dir, 'testfiles')
-        cls.theseus_exe = ample_util.find_exe('theseus')
-        cls.spicker_exe = ample_util.find_exe('spicker')
-        cls.maxcluster_exe = ample_util.find_exe('maxcluster')
-
-        return
-    
     def testSummary(self):
         """Not really a unittest but prints a table for 
            visual analysis of correctness
@@ -54,7 +39,7 @@ class Test(unittest.TestCase):
                  'cluster_centroid': '/foo/bar/centroid.pdb'}
             ensembles_data.append(d)
 
-        print ensemble_summary(ensembles_data)
+        print ensembler_util.ensemble_summary(ensembles_data)
 
         return
 
@@ -63,21 +48,20 @@ class Test(unittest.TestCase):
 
         ########################################################################
         # Test Case 1
-        module_handler = find_ensembler_module({'homologs': False,
-                                                'single_model_mode': False})
-        print module_handler
+        module_handler = ensembler_util.find_ensembler_module({'homologs': False,
+                                                               'single_model_mode': False})
         self.assertEqual("ample.ensembler.abinitio", module_handler.__name__)
 
         ########################################################################
         # Test Case 2
-        module_handler = find_ensembler_module({'homologs': True,
-                                                'single_model_mode': False})
+        module_handler = ensembler_util.find_ensembler_module({'homologs': True,
+                                                               'single_model_mode': False})
         self.assertEqual("ample.ensembler.homologs", module_handler.__name__)
 
         ########################################################################
         # Test Case 3
-        module_handler = find_ensembler_module({'homologs': False,
-                                                'single_model_mode': True})
+        module_handler = ensembler_util.find_ensembler_module({'homologs': False,
+                                                               'single_model_mode': True})
         self.assertEqual("ample.ensembler.single_model", module_handler.__name__)
 
         return
@@ -108,21 +92,21 @@ class Test(unittest.TestCase):
         ########################################################################
         # Test Case 1 - ab initio
         ref_keys = common_keys + abinitio_keys
-        kwargs = _get_ensembling_kwargs(amoptd_fake)
+        kwargs = ensembler_util._get_ensembling_kwargs(amoptd_fake)
         self.assertEqual(sorted(ref_keys), sorted(kwargs.keys()))
 
         ########################################################################
         # Test Case 2 - homologs and no single model
         ref_keys = common_keys + homolog_keys
         amoptd_fake.update({'homologs': True, 'single_model_mode': False})
-        kwargs = _get_ensembling_kwargs(amoptd_fake)
+        kwargs = ensembler_util._get_ensembling_kwargs(amoptd_fake)
         self.assertEqual(sorted(ref_keys), sorted(kwargs.keys()))
 
         ########################################################################
         # Test Case 3 - no homologs but single model
         ref_keys = common_keys + single_model_keys
         amoptd_fake.update({'homologs': False, 'single_model_mode': True})
-        kwargs = _get_ensembling_kwargs(amoptd_fake)
+        kwargs = ensembler_util._get_ensembling_kwargs(amoptd_fake)
         self.assertEqual(sorted(ref_keys), sorted(kwargs.keys()))
 
         return
@@ -167,7 +151,7 @@ class Test(unittest.TestCase):
 
         ########################################################################       
         # Test Case 1    
-        ensemble_pdb_sorted = sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
+        ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
         self.assertEqual("/foo/bar/c1_tl20_r1_allatom.pdb", ensemble_pdb_sorted[0])
         self.assertEqual("/foo/bar/c1_tl19_r1_allatom.pdb", ensemble_pdb_sorted[18])
         self.assertEqual("/foo/bar/c1_tl100_r3_reliable.pdb", ensemble_pdb_sorted[44])
@@ -179,13 +163,13 @@ class Test(unittest.TestCase):
         self.assertEqual("/foo/bar/c3_tl100_r3_reliable.pdb", ensemble_pdb_sorted[-1])
         ########################################################################       
         # Test Case 2
-        ensemble_pdb_sorted = sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
+        ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
         self.assertEqual("/foo/bar/c1_tl19_r1_allatom.pdb", ensemble_pdb_sorted[0])
         self.assertEqual("/foo/bar/c3_tl100_r3_reliable.pdb", ensemble_pdb_sorted[-1])
         self.assertEqual("/foo/bar/c2_tl50_r2_polyAla.pdb", ensemble_pdb_sorted[67])
         ########################################################################       
         # Test Case 3
-        ensemble_pdb_sorted = sort_ensembles(ensemble_pdbs)
+        ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs)
         self.assertEqual("/foo/bar/c1_tl100_r1_allatom.pdb", ensemble_pdb_sorted[0])
         self.assertEqual("/foo/bar/c3_tl80_r3_reliable.pdb", ensemble_pdb_sorted[-1])
 
@@ -224,19 +208,19 @@ class Test(unittest.TestCase):
 
         ########################################################################       
         # Test Case 1
-        ensemble_pdb_sorted = sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
+        ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
         self.assertEqual("/foo/bar/e20_allatom.pdb", ensemble_pdb_sorted[0])
         self.assertEqual("/foo/bar/e19_polyAla.pdb", ensemble_pdb_sorted[len(ensemble_pdb_sorted)/2])
         self.assertEqual("/foo/bar/e100_reliable.pdb", ensemble_pdb_sorted[-1])
         ########################################################################       
         # Test Case 2
-        ensemble_pdb_sorted = sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
+        ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
         self.assertEqual("/foo/bar/e19_allatom.pdb", ensemble_pdb_sorted[0])
         self.assertEqual("/foo/bar/e100_reliable.pdb", ensemble_pdb_sorted[-1])
         self.assertEqual("/foo/bar/e50_polyAla.pdb", ensemble_pdb_sorted[len(ensemble_pdb_sorted)/2])
         ########################################################################       
         # Test Case 3
-        ensemble_pdb_sorted = sort_ensembles(ensemble_pdbs)
+        ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs)
         self.assertEqual("/foo/bar/e100_allatom.pdb", ensemble_pdb_sorted[0])
         self.assertEqual("/foo/bar/e80_reliable.pdb", ensemble_pdb_sorted[-1])
 
@@ -278,7 +262,7 @@ class Test(unittest.TestCase):
 
         ########################################################################       
         # Test Case 1
-        ensemble_pdb_sorted = sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
+        ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
         self.assertEqual("/foo/bar/bbc_tl20_allatom.pdb", ensemble_pdb_sorted[0])
         self.assertEqual("/foo/bar/bbc_tl19_allatom.pdb", ensemble_pdb_sorted[6])
         self.assertEqual("/foo/bar/bbc_tl100_reliable.pdb", ensemble_pdb_sorted[14])
@@ -290,13 +274,13 @@ class Test(unittest.TestCase):
         self.assertEqual("/foo/bar/ntv_tl100_reliable.pdb", ensemble_pdb_sorted[-1])
         ########################################################################       
         # Test Case 2
-        ensemble_pdb_sorted = sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
+        ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
         self.assertEqual("/foo/bar/bbc_tl19_allatom.pdb", ensemble_pdb_sorted[0])
         self.assertEqual("/foo/bar/ntv_tl100_reliable.pdb", ensemble_pdb_sorted[-1])
         self.assertEqual("/foo/bar/kicker_tl50_polyAla.pdb", ensemble_pdb_sorted[len(ensemble_pdb_sorted)/2])
         ########################################################################       
         # Test Case 3
-        ensemble_pdb_sorted = sort_ensembles(ensemble_pdbs)
+        ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs)
         self.assertEqual("/foo/bar/bbc_tl100_allatom.pdb", ensemble_pdb_sorted[0])
         self.assertEqual("/foo/bar/ntv_tl80_reliable.pdb", ensemble_pdb_sorted[-1])
 

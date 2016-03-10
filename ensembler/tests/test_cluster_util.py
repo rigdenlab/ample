@@ -2,7 +2,7 @@
 
 import unittest
 
-from ample.ensembler import cluster_util
+from ample.ensembler.cluster_util import *
 
 class Test(unittest.TestCase):
     

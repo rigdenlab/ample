@@ -2,7 +2,7 @@
 import shutil
 import unittest
 
-from ample.ensembler import homologs
+from ample.ensembler.homologs import *
 
 class Test(unittest.TestCase):
 

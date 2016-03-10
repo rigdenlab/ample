@@ -3,7 +3,7 @@
 import collections
 import unittest
 
-from ample.ensembler import truncation_util
+from ample.ensembler import truncation_util 
 
 class Test(unittest.TestCase):
     
@@ -65,7 +65,7 @@ class Test(unittest.TestCase):
                              [0, 1, 2, 3, 4, 5, 6, 7], 
                              [0, 1, 2, 3]]
 
-        tlevels, tvariances, tresidues, tresidue_idxs = calculate_residues_focussed(var_by_res)
+        tlevels, tvariances, tresidues, tresidue_idxs = truncation_util.calculate_residues_focussed(var_by_res)
          
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tvariances, tvariances)
@@ -129,7 +129,7 @@ class Test(unittest.TestCase):
                          [16, 17, 18, 19, 20], 
                          [17, 18, 19, 20], 
                          [18, 19, 20]]
-        tlevels, tvariances, tresidues, _ = calculate_residues_percent(var_by_res, percent_interval=5)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent(var_by_res, percent_interval=5)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -145,7 +145,7 @@ class Test(unittest.TestCase):
                          [16, 17, 18, 19, 20]]
         ref_tvariances = [55.757579, 39.857312, 24.610979, 21.62225, 
                           16.568056, 8.722879]
-        tlevels, tvariances, tresidues, _ = calculate_residues_percent(var_by_res, percent_interval=15)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent(var_by_res, percent_interval=15)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -156,7 +156,7 @@ class Test(unittest.TestCase):
         ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
                          [9, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
         ref_tvariances = [55.757579, 21.187131]
-        tlevels, tvariances, tresidues, _ = calculate_residues_percent(var_by_res, percent_interval=50)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent(var_by_res, percent_interval=50)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -204,7 +204,7 @@ class Test(unittest.TestCase):
                          [13, 14, 15], 
                          [14, 15], 
                          [15]]
-        tlevels, _, tresidues, _ = calculate_residues_thresh(var_by_res, percent_interval=10)
+        tlevels, _, tresidues, _ = truncation_util.calculate_residues_thresh(var_by_res, percent_interval=10)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         
@@ -217,7 +217,7 @@ class Test(unittest.TestCase):
                          [9, 11, 12, 13, 14, 15], 
                          [13, 14, 15]]
         
-        tlevels, _, tresidues, _ = calculate_residues_thresh(var_by_res, percent_interval=20)
+        tlevels, _, tresidues, _ = truncation_util.calculate_residues_thresh(var_by_res, percent_interval=20)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         
@@ -227,7 +227,7 @@ class Test(unittest.TestCase):
         ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
                          [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
                          [9, 10, 11, 12, 13, 14, 15]]
-        tlevels, _, tresidues, _ = calculate_residues_thresh(var_by_res, percent_interval=50)
+        tlevels, _, tresidues, _ = truncation_util.calculate_residues_thresh(var_by_res, percent_interval=50)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         
@@ -252,19 +252,19 @@ class Test(unittest.TestCase):
                           46.53, 50.1, 50.666000000000004, 50.85, 52.0,
                           53.907000000000004, 58.254000000000005]
         chunk_size = int((float(len(var_list)) / 100) * float(5))
-        thresholds = _generate_thresholds(var_list, chunk_size)
+        thresholds = truncation_util._generate_thresholds(var_list, chunk_size)
         self.assertEqual(ref_thresholds, thresholds)
         
         # Test Case 2
         ref_thresholds = [9.324000000000002, 19.551, 31.186, 46.53, 58.254000000000005]
         chunk_size = int((float(len(var_list)) / 100) * float(20))
-        thresholds = _generate_thresholds(var_list, chunk_size)
+        thresholds = truncation_util._generate_thresholds(var_list, chunk_size)
         self.assertEqual(ref_thresholds, thresholds)
         
         # Test Case 3
         ref_thresholds = [24.104, 58.254000000000005]
         chunk_size = int((float(len(var_list)) / 100) * float(50))
-        thresholds = _generate_thresholds(var_list, chunk_size)
+        thresholds = truncation_util._generate_thresholds(var_list, chunk_size)
         self.assertEqual(ref_thresholds, thresholds)
         
         return
@@ -288,19 +288,19 @@ class Test(unittest.TestCase):
                           46.53, 50.1, 50.666000000000004, 50.85, 52.0, 
                           53.907000000000004, 58.254000000000005]
         chunk_size = int((float(len(var_list)) / 100) * float(5))
-        thresholds = _generate_thresholds2(var_list, chunk_size)
+        thresholds = truncation_util._generate_thresholds2(var_list, chunk_size)
         self.assertEqual(ref_thresholds, thresholds)
 
         # Test Case 2
         ref_thresholds = [9.324000000000002, 19.551, 31.186, 46.53, 58.254000000000005]
         chunk_size = int((float(len(var_list)) / 100) * float(20))
-        thresholds = _generate_thresholds2(var_list, chunk_size)
+        thresholds = truncation_util._generate_thresholds2(var_list, chunk_size)
         self.assertEqual(ref_thresholds, thresholds)
 
         # Test Case 3
         ref_thresholds = [24.104, 58.254000000000005]
         chunk_size = int((float(len(var_list)) / 100) * float(50))
-        thresholds = _generate_thresholds2(var_list, chunk_size)
+        thresholds = truncation_util._generate_thresholds2(var_list, chunk_size)
         self.assertEqual(ref_thresholds, thresholds)
         
         return  
@@ -309,62 +309,62 @@ class Test(unittest.TestCase):
         '''Test we can reproduce the original thresholds'''
 
         residues = []
-        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres, [])
         self.assertEqual(pruned, None)
           
         residues = [1]
-        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres, [])
         self.assertEqual(pruned, [1])
          
         residues = [1, 2]
-        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres, [])
         self.assertEqual(pruned, [1, 2])
          
         residues = [1, 2, 4]
-        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres, [1, 2, 4])
         self.assertEqual(pruned, None)
          
         # Big enough gap 
         residues = [1, 2, 3, 4, 8, 13, 14, 15]
-        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres, [1, 2, 3, 4, 13, 14, 15])
         self.assertEqual(pruned, [8])
            
         residues = [1, 2, 3, 4, 8, 9, 13, 14, 15]
-        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres, [1, 2, 3, 4, 13, 14, 15])
         self.assertEqual(pruned, [8, 9])
            
         residues = [1, 2, 3, 4, 8, 9, 10, 13, 14, 15]
-        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres, residues)
         self.assertEqual(pruned, None)
            
         # end gap not big enough
         residues = [1, 2, 3, 4, 8, 9, 11, 12, 13]
-        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres, residues)
         self.assertEqual(pruned, None)
            
         # Lone residue at start
         residues = [1, 11, 12, 13]
-        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres, [11, 12, 13])
         self.assertEqual(pruned, [1])
         
         # Lone residue at end
         residues = [11, 12, 13, 19]
-        pres, pruned = prune_residues(residues, chunk_size=2, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
         self.assertEqual(pres, [11, 12, 13])
         self.assertEqual(pruned, [19])
           
         # Mixed
         residues = [1, 3, 4, 7, 10, 11, 13, 15, 16, 19]
-        pres, pruned = prune_residues(residues, chunk_size=1, allowed_gap=2)
+        pres, pruned = truncation_util.prune_residues(residues, chunk_size=1, allowed_gap=2)
         self.assertEqual(pres, [1, 3, 4, 10, 11, 13, 15, 16])
         self.assertEqual(pruned, [7, 19])
 
@@ -375,43 +375,43 @@ class Test(unittest.TestCase):
         ########################################################################       
         # Test Case 1
         ref_idxs = [99, 94, 89, 84, 79, 74, 69, 64, 59, 54, 49, 44, 39, 34, 29, 24, 19, 14, 9, 4]
-        idxs = _split_sequence(100, 5, 3)
+        idxs = truncation_util._split_sequence(100, 5, 3)
         self.assertEqual(ref_idxs, idxs)
         
         ########################################################################       
         # Test Case 2        
         ref_idxs = [99, 79, 59, 39, 19]
-        idxs = _split_sequence(100, 20, 3)
+        idxs = truncation_util._split_sequence(100, 20, 3)
         self.assertEqual(ref_idxs, idxs)
         
         ########################################################################       
         # Test Case 3        
         ref_idxs = [99, 49]
-        idxs = _split_sequence(100, 50, 3)
+        idxs = truncation_util._split_sequence(100, 50, 3)
         self.assertEqual(ref_idxs, idxs)
         
         ########################################################################       
         # Test Case 4        
         ref_idxs = [99, 94, 89, 84, 79, 74, 69, 64, 59, 54, 49, 44, 39, 34, 29, 24]
-        idxs = _split_sequence(100, 5, 21)
+        idxs = truncation_util._split_sequence(100, 5, 21)
         self.assertEqual(ref_idxs, idxs)
         
         ########################################################################       
         # Test Case 5        
         ref_idxs = [99, 79, 59, 39]
-        idxs = _split_sequence(100, 20, 21)
+        idxs = truncation_util._split_sequence(100, 20, 21)
         self.assertEqual(ref_idxs, idxs)
         
         ########################################################################       
         # Test Case 6        
         ref_idxs = [99, 49]
-        idxs = _split_sequence(100, 50, 21)
+        idxs = truncation_util._split_sequence(100, 50, 21)
         self.assertEqual(ref_idxs, idxs)
         
         ########################################################################       
         # Test Case 7
         ref_idxs = [99]
-        idxs = _split_sequence(100, 50, 99)
+        idxs = truncation_util._split_sequence(100, 50, 99)
         self.assertEqual(ref_idxs, idxs)
                 
         return
