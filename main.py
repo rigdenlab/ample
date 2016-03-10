@@ -29,7 +29,7 @@ from ample.python import ample_exit
 from ample.python import ample_options
 from ample.python import ample_sequence
 from ample.python import ample_util
-from ample.python import ample_benchmark
+from ample.python import benchmark
 from ample.python import contacts
 from ample.python import mtz_util
 from ample.python import pdb_edit
@@ -1065,7 +1065,7 @@ class Ample(object):
             
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
-            ample_benchmark.analysePdb(amopt.d)       
+            benchmark.analysePdb(amopt.d)       
     
         # Make Rosetta fragments
         if amopt.d['make_frags']:
@@ -1283,7 +1283,7 @@ class Ample(object):
             if amopt.d['submit_cluster']:
                 # Pickle dictionary so it can be opened by the job to get the parameters
                 ample_util.saveAmoptd(amopt.d)
-                script = ample_benchmark.cluster_script(amopt.d)
+                script = benchmark.cluster_script(amopt.d)
                 workers.run_scripts(job_scripts=[script],
                                     monitor=monitor,
                                     chdir=True,
@@ -1298,7 +1298,7 @@ class Ample(object):
                 # queue finished so unpickle results
                 with open(amopt.d['results_path'], "r") as f: amopt.d = cPickle.load(f)
             else:
-                ample_benchmark.analyse(amopt.d)
+                benchmark.analyse(amopt.d)
                 ample_util.saveAmoptd(amopt.d)
         
         # Flag to show that we reached the end without error - useful for integration testing

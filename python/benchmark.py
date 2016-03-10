@@ -140,7 +140,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
         job_script.write("#!/bin/sh\n")
         # Find path to this directory to get path to python ensemble.py script
         pydir = os.path.abspath(os.path.dirname(__file__))
-        benchmark_script = os.path.join(pydir, "ample_benchmark.py")
+        benchmark_script = os.path.join(pydir, "benchmark.py")
         job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", benchmark_script, amoptd['results_path']))
 
     # Make executable
