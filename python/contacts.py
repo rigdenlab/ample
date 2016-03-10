@@ -23,7 +23,7 @@ from ample.python import pdb_edit
 
 # Check matplotlib is available - problems with Windows
 try:
-    import ample_plot
+    import plot
     _MATPLOTLIB = True
 except ImportError:
     _MATPLOTLIB = False
@@ -217,7 +217,7 @@ class Contacter(object):
         # Just to make sure we have a structurefile and we can import Biopython
         availableStructure = True if structurefile and _BIOPYTHON else False
             
-        ap = ample_plot.Plotter()
+        ap = plot.Plotter()
         ap.initialise(figsize=(5,5), dpi=600)
         
         # Get the coordinates from the reference structure and plot in gray
