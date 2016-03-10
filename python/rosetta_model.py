@@ -16,7 +16,7 @@ import sys
 import unittest
 
 # Our modules
-from ample.parsers import parse_psipred
+from ample.parsers import psipred
 from ample.python import ample_sequence
 from ample.python import ample_util
 from ample.python import octopus_predict
@@ -464,7 +464,7 @@ class RosettaModel(object):
             
         psipred_ss2 = os.path.join(self.fragments_directory, self.name + '.psipred_ss2')
         if os.path.exists(psipred_ss2):
-            parse_psipred.PsipredSs2Parser(psipred_ss2).checkContent()
+            psipred.PsipredSs2Parser(psipred_ss2).checkContent()
             self.psipred_ss2 = psipred_ss2
 
         return
