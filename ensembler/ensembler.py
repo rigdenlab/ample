@@ -26,15 +26,14 @@ SIDE_CHAIN_TREATMENTS = [POLYALA, RELIABLE, ALLATOM]
 THIN_CLUSTERS = False
 
 # our imports
-import ample_sequence
-import ample_util
-import cluster_util
-import pdb_edit
-import subcluster
-import subcluster_util
-import theseus
-import truncation_util
-
+from ample.ensembler.funcs import cluster_util
+from ample.ensembler.funcs import subcluster_util
+from ample.ensembler.funcs import truncation_util
+from ample.python import ample_sequence
+from ample.python import ample_util
+from ample.python import pdb_edit
+from ample.python import subcluster
+from ample.python import theseus
 
 _logger = logging.getLogger(__name__)
 

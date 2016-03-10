@@ -22,11 +22,13 @@ import sys
 import unittest
 
 # our imports
-import ample_exit
-import ample_util
 import iotbx.pdb
-import pdb_edit
-import printTable
+
+from ample.ensembler import ensembler
+from ample.python import ample_exit
+from ample.python import ample_util
+from ample.python import pdb_edit
+from ample.python import printTable
 
 _logger = logging.getLogger(__name__)
 

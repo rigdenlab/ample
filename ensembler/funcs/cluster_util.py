@@ -13,9 +13,9 @@ import sys
 import unittest
 
 # Custom
-import fast_protein_cluster
-import spicker
-import subcluster
+from ample.python import fast_protein_cluster
+from ample.python import spicker
+from ample.python import subcluster
 
 _logger = logging.getLogger(__name__)
 
