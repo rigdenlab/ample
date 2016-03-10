@@ -53,9 +53,9 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     script_path = os.path.join(work_dir, "submit_ensemble.sh")
     with open(script_path, "w") as job_script:
         job_script.write("#!/bin/sh\n")
-        # Find path to this directory to get path to python ensemble.py script
+        # Find path to this directory to get path to python ensembler_util.py script
         pydir = os.path.abspath(os.path.dirname(__file__))
-        ensemble_script = os.path.join(pydir, "ensemble.py")
+        ensemble_script = os.path.join(pydir, "ensembler_util.py")
         job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", ensemble_script, amoptd['results_path']))
 
     # Make executable
