@@ -97,3 +97,6 @@ class Test(unittest.TestCase):
         pdbs = pick_nmodels(models, clusters, 30)
         ref_pdbs = None
         self.assertEqual(ref_pdbs, pdbs)
+        
+if __name__ == "__main__":
+    unittest.main()

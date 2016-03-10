@@ -415,3 +415,6 @@ class Test(unittest.TestCase):
         self.assertEqual(ref_idxs, idxs)
                 
         return
+    
+if __name__ == "__main__":
+    unittest.main()

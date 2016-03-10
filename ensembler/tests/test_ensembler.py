@@ -19,3 +19,6 @@ class Test(unittest.TestCase):
         score_variances = [i.variance for i in scores]
         ref_score_variances = [(0.1*i) for i in xrange(1, 11)] # Same i as org data
         self.assertEqual(ref_score_variances, score_variances)
+        
+if __name__ == "__main__":
+    unittest.main()

@@ -24,3 +24,5 @@ class Test(unittest.TestCase):
                        (10, 34.519999999999996)]
         self.assertEqual(ref_rosetta, zipped_rosetta)
  
+if __name__ == "__main__":
+    unittest.main()

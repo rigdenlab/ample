@@ -32,3 +32,6 @@ class Test(unittest.TestCase):
         self.assertEqual(num_clusters, len(clusters))
         for cluster in clusters:
             self.assertEqual(max_cluster_size, len(cluster))
+            
+if __name__ == "__main__":
+    unittest.main()

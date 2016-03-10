@@ -301,4 +301,6 @@ class Test(unittest.TestCase):
         self.assertEqual("/foo/bar/ntv_tl80_reliable.pdb", ensemble_pdb_sorted[-1])
 
         return
-    
+
+if __name__ == "__main__":
+    unittest.main()

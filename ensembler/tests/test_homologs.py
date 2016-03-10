@@ -59,3 +59,6 @@ class Test(unittest.TestCase):
         self.assertTrue(os.path.isfile(alignment_file))
         shutil.rmtree(work_dir)
         return
+
+if __name__ == "__main__":
+    unittest.main()
