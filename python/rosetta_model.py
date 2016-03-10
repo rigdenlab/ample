@@ -15,22 +15,13 @@ import shutil
 import sys
 import unittest
 
-if "CCP4_AMPLE_ROOT" in os.environ.keys() and "CCP4" in os.environ.keys():
-    root = os.environ["CCP4_AMPLE_ROOT"]
-elif "CCP4" in os.environ.keys():
-    root = os.path.join(os.environ["CCP4"], "share", "ample")
-else:
-    raise RuntimeError('CCP4 not found')
-
-sys.path.append( os.path.join( root, "python" ) )
-
 # Our modules
-import ample_sequence
-import ample_util
-import octopus_predict
-import parse_psipred
-import pdb_edit
-import workers
+from ample.parsers import parse_psipred
+from ample.python import ample_sequence
+from ample.python import ample_util
+from ample.python import octopus_predict
+from ample.python import pdb_edit
+from ample.python import workers
 
 def align_mafft(query_seq, template_seq, logger, mafft_exe=None):
     if not mafft_exe:

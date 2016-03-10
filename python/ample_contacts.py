@@ -13,22 +13,13 @@ import os
 import sys
 import unittest
 
-if "CCP4_AMPLE_ROOT" in os.environ.keys() and "CCP4" in os.environ.keys(): 
-    root = os.environ["CCP4_AMPLE_ROOT"]
-elif "CCP4" in os.environ.keys(): 
-    root = os.path.join(os.environ["CCP4"], "share", "ample")
-else:
-    raise RuntimeError('CCP4 not found')
-
-sys.path.insert(0, os.path.join(root, "parsers"))
-
 # Custom
-import ample_sequence
-import energy_functions
-import parse_casprr
-import parse_restraints
-import parse_psipred
-import pdb_edit
+from ample.parsers import parse_casprr
+from ample.parsers import parse_restraints
+from ample.parsers import parse_psipred
+from ample.python import ample_sequence
+from ample.python import energy_functions
+from ample.python import pdb_edit
 
 # Check matplotlib is available - problems with Windows
 try:

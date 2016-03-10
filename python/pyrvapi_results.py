@@ -14,9 +14,9 @@ import urlparse
 import uuid
 
 # Our imports
-import ample_mrbump
-import ample_util
-import ensembler_util
+from ample.python import ample_mrbump
+from ample.python import ample_util
+from ample.ensembler import ensembler_util
 
 try: import pyrvapi
 except: pyrvapi = None

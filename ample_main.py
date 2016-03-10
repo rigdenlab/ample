@@ -21,22 +21,22 @@ import sys
 import time
 
 # Our imports
-import ample_config
-import ample_contacts
-import ample_mrbump
-import ample_exit
-import ample_options
-import ample_sequence
-import ample_util
-import ample_benchmark
-import ensembler
-import ensembler_util
-import mtz_util
-import pdb_edit
-import pyrvapi_results
-import rosetta_model
-import version
-import workers
+from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, UNMODIFIED
+from ample.ensembler import ensembler_util
+from ample.python import ample_config
+from ample.python import ample_contacts
+from ample.python import ample_mrbump
+from ample.python import ample_exit
+from ample.python import ample_options
+from ample.python import ample_sequence
+from ample.python import ample_util
+from ample.python import ample_benchmark
+from ample.python import mtz_util
+from ample.python import pdb_edit
+from ample.python import pyrvapi_results
+from ample.python import rosetta_model
+from ample.python import version
+from ample.python import workers
 
 def setup_console_logging():
     logger = logging.getLogger()
@@ -295,7 +295,7 @@ class Ample(object):
                            help='Path to a structure factor CIF file (instead of MTZ file)')
     
         parser.add_argument('-side_chain_treatments', type=str, nargs='+', action='append',
-                           help='The side chain treatments to use. Default: {0}'.format(ensembler.SIDE_CHAIN_TREATMENTS))
+                           help='The side chain treatments to use. Default: {0}'.format(SIDE_CHAIN_TREATMENTS))
         
         parser.add_argument('-SIGF', type=str, nargs=1,
                            help='Flag for SIGF column in the MTZ file')
@@ -1132,8 +1132,8 @@ class Ample(object):
                         amopt.d['use_scwrl'] = True
                     else:
                         # No SCWRL so don't do owt with the side chains
-                        logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(ensembler.UNMODIFIED))
-                        amopt.d['side_chain_treatments'] = [ ensembler.UNMODIFIED ]
+                        logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(UNMODIFIED))
+                        amopt.d['side_chain_treatments'] = [ UNMODIFIED ]
     
         # Save the results
         ample_util.saveAmoptd(amopt.d)

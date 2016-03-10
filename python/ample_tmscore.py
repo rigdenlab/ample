@@ -15,19 +15,10 @@ import sys
 import tempfile
 import unittest
 
-if "CCP4_AMPLE_ROOT" in os.environ.keys() and "CCP4" in os.environ.keys():
-    root = os.environ["CCP4_AMPLE_ROOT"]
-elif "CCP4" in os.environ.keys():
-    root = os.path.join(os.environ["CCP4"], "share", "ample")
-else:
-    raise RuntimeError('CCP4 not found')
-
-sys.path.insert(0, os.path.join(root, "parsers"))
-
 # Custom
-import ample_util
-import parse_tmscore
-import pdb_edit
+from ample.parsers import parse_tmscore
+from ample.python import ample_util
+from ample.python import pdb_edit
 
 try:
     import parse_alignment

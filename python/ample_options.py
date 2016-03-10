@@ -5,7 +5,7 @@ Class to hold the options for ample
 import os
 
 # our imports
-from ensembler import SIDE_CHAIN_TREATMENTS
+from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 import version
 
 class AmpleOptions(object):
