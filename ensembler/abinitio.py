@@ -12,10 +12,9 @@ import logging
 import os
 import shutil
 import sys
-import unittest
 
 # Custom
-from ample.ensembler import ensembler
+from ample.ensembler import _ensembler
 from ample.ensembler.constants import *
 from ample.python import ample_scwrl
 from ample.python import ample_util
@@ -23,14 +22,14 @@ from ample.python import ample_util
 _logger = logging.getLogger(__name__)
 
 
-class Ensembler(ensembler.Ensembler):
+class Ensembler(_ensembler.Ensembler):
     """Ensemble creator using on multiple models with identical sequences most
        likely created using Rosetta or Quark ab initio modelling
     """
     
     def __init__(self):
         # Inherit all functions from Parent Ensembler
-        ensembler.Ensembler.__init__(self)
+        _ensembler.Ensembler.__init__(self)
         
         self.scwrl_exe = None
         

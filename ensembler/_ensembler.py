@@ -14,13 +14,12 @@ import random
 import re
 import shutil
 import sys
-import unittest
 
 # our imports
 from ample.ensembler.constants import *
-from ample.ensembler.funcs import cluster_util
-from ample.ensembler.funcs import subcluster_util
-from ample.ensembler.funcs import truncation_util
+from ample.ensembler import cluster_util
+from ample.ensembler import subcluster_util
+from ample.ensembler import truncation_util
 from ample.python import ample_sequence
 from ample.python import ample_util
 from ample.python import pdb_edit
@@ -614,37 +613,4 @@ class Ensembler(object):
     def _slice_models(self, data, start, end):
         """Allows us to slice a list"""
         return data[start:end]
-
-class Test(unittest.TestCase):
-    
-    def testConvertResidueScores(self):
-
-        ########################################################################
-        # Input data
-        ########################################################################  
-        residue_scores = [(i, 0.1*i) for i in xrange(1, 11)]
-        
-        ########################################################################
-        # Reference data
-        ########################################################################
-        ref_score_idxs = [i for i in xrange(10)] # Minus one compared to org data
-        ref_score_resSeq = [i for i in xrange(1, 11)] # Same i as org data
-        ref_score_variances = [(0.1*i) for i in xrange(1, 11)] # Same i as org data
-        
-        ########################################################################
-        # Function testing
-        ######################################################################## 
-        ensembler = Ensembler()
-        
-        scores = ensembler._convert_residue_scores(residue_scores)
-        
-        score_idxs = [i.idx for i in scores]
-        score_resSeq = [i.resSeq for i in scores]
-        score_variances = [i.variance for i in scores]
-         
-        self.assertEqual(ref_score_idxs, score_idxs)
-        self.assertEqual(ref_score_resSeq, score_resSeq)
-        self.assertEqual(ref_score_variances, score_variances)
-        
-        return
 
