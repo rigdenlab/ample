@@ -13,9 +13,9 @@ import sys
 import unittest
 
 # Custom
-import ample_util
-import ensembler
-import pdb_edit
+from ample.ensembler import ensembler
+from ample.python import ample_util
+from ample.python import pdb_edit
 
 # Inherit some variables defined in the ensembler module
 SIDE_CHAIN_TREATMENTS = ensembler.SIDE_CHAIN_TREATMENTS

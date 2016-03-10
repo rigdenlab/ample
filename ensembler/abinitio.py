@@ -15,9 +15,9 @@ import sys
 import unittest
 
 # Custom
-import ample_scwrl
-import ample_util
-import ensembler
+from ample.ensembler import ensembler
+from ample.python import ample_scwrl
+from ample.python import ample_util
 
 # Inherit some variables defined in the ensembler module
 ALLATOM = ensembler.ALLATOM
