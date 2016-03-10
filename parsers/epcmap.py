@@ -1,9 +1,7 @@
-#!/usr/bin/env ccp4-python
 
-import parse_contactfile
+from ample.parsers import _contactfile
 
-
-class EPCMapContactParser(parse_contactfile.ContactfileParser):
+class EPCMapContactParser(_contactfile.ContactfileParser):
     """ Parser class for EPC-Map contact prediction files """
 
     _RES1 = 0
@@ -13,7 +11,7 @@ class EPCMapContactParser(parse_contactfile.ContactfileParser):
     _METHOD = "epcmap"
 
     def __init__(self):
-        parse_contactfile.ContactfileParser.__init__(self)
+        _contactfile.ContactfileParser.__init__(self)
 
     def read(self, contactfile):
         with open(contactfile, 'r') as fh:
@@ -29,4 +27,3 @@ class EPCMapContactParser(parse_contactfile.ContactfileParser):
                                              file=contactfile)
                 self.contacts.append(contact)
         return
-##End EPCMapContactParser

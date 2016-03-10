@@ -1,15 +1,9 @@
-#!/usr/bin/env ccp4-python
 
-# system
-import unittest
-
-#3rd party
 import Bio.AlignIO
 import Bio.Alphabet
 import Bio.pairwise2
 import Bio.Seq
 import Bio.SeqIO
-
 
 class AlignmentParser(object):
     """ Parser for manipulation of MSAs """

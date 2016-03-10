@@ -1,9 +1,7 @@
-#!/usr/bin/env ccp4-python
 
-import parse_contactfile
+from ample.parsers import _contactfile
 
-
-class PconscContactParser(parse_contactfile.ContactfileParser):
+class PconscContactParser(_contactfile.ContactfileParser):
     """ Parser for PconsC1/2/3 contact prediction files """
 
     _RES1 = 0
@@ -13,7 +11,7 @@ class PconscContactParser(parse_contactfile.ContactfileParser):
     _METHOD = "pconsc"
 
     def __init__(self):
-        parse_contactfile.ContactfileParser.__init__(self)
+        _contactfile.ContactfileParser.__init__(self)
 
     def read(self, contactfile):
         with open(contactfile, "r") as fh:
@@ -30,4 +28,3 @@ class PconscContactParser(parse_contactfile.ContactfileParser):
 
                 self.contacts.append(contact)
         return
-##End PconscContactParser

@@ -1,13 +1,11 @@
-#!/usr/bin/env ccp4-python
 
-import parse_contactfile
-      
+from ample.parsers import _contactfile
 
-class RestraintfileParser(parse_contactfile.ContactfileParser):
+class RestraintfileParser(_contactfile.ContactfileParser):
     """Parser class for Rosetta restraints files"""
     
     def __init__(self):
-        parse_contactfile.ContactfileParser.__init__(self)
+        _contactfile.ContactfileParser.__init__(self)
         
     def read(self, restraintfile):
         """Read a restraints file to convert it to an array of

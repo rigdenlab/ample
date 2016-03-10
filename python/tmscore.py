@@ -16,12 +16,12 @@ import tempfile
 import unittest
 
 # Custom
-from ample.parsers import parse_tmscore
+from ample.parsers import tmscore
 from ample.python import ample_util
 from ample.python import pdb_edit
 
 try:
-    import parse_alignment
+    import alignment
     _BIOPYTHON = True
 except ImportError:
     _BIOPYTHON = False
@@ -115,7 +115,7 @@ class TMscorer(object):
             # Do the try clause here to allow anything that is required from here to throw
             # exceptions. In that case we revert to the TMscoreLogParser default values of
             # 0.0 for every score.
-            pt = parse_tmscore.TMscoreLogParser()
+            pt = tmscore.TMscoreLogParser()
             
             try:
                 pt.parse(log)
@@ -161,7 +161,7 @@ class TMscorer(object):
         structure_seq = pdb_edit.sequence(structure).values()[0]
 
         # Align the sequences to see how much of the predicted decoys are in the xtal
-        aligned_seq_list = parse_alignment.AlignmentParser().align_sequences(pdbin_seq, 
+        aligned_seq_list = alignment.AlignmentParser().align_sequences(pdbin_seq, 
                                                                              structure_seq)
         pdbin_seq_ali     = aligned_seq_list[0]
         structure_seq_ali = aligned_seq_list[1]

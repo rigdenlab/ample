@@ -1,24 +1,25 @@
-#!/usr/bin/env ccp4-python
 
-import parse_contactfile
+from ample.parsers import _contactfile
 
+class GremlinContactParser(_contactfile.ContactfileParser):
+    """ Parser class for GREMLIN contact prediction files """
 
-class EVfoldContactParser(parse_contactfile.ContactfileParser):
-    """ Parser class for evfold contact prediction files """
-
-    _RES1 = 0
-    _RES2 = 2
-    _RAW_SCORE = 5
-
-    _METHOD = "evfold"
-
+    _RES1       = 0
+    _RES2       = 1
+    _RAW_SCORE  = 4
+    #_S_SCORE    = 5
+    #_PROB       = 6
+    
+    _METHOD     = "gremlin"
+    
     def __init__(self):
-        parse_contactfile.ContactfileParser.__init__(self)
+        _contactfile.ContactfileParser.__init__(self)
 
     def read(self, contactfile):
-        with open(contactfile, 'r') as f:
-            for line in iter(f.readline, ''):
+        with open(contactfile, 'r') as fh:
+            for line in iter(fh.readline, ''):
                 line = line.strip().split()
+                
                 if line[0].isdigit():
                     
                     # Define the contact in a dictionary - use parent method
@@ -30,5 +31,5 @@ class EVfoldContactParser(parse_contactfile.ContactfileParser):
                                                  file=contactfile)
                     
                     self.contacts.append(contact)
+                
         return
-##End EVfoldContactParser

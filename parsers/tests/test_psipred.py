@@ -1,0 +1,30 @@
+"""Test functions for parsers.psipred"""
+import os
+import unittest
+from ample.parsers import psipred
+
+class Test(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
+        thisd = os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        cls.ample_dir = os.sep.join( paths[ : -2 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        return
+
+    def testParse(self):
+        ss2file = os.path.join(self.testfiles_dir, "1aba_.psipred_ss2")
+        PA = psipred.PsipredSs2Parser(ss2file)
+        ref_ss2 = "CEEEEEECCCCCCCCHHHHHHHHHHHCCCCEEEEEECCCCCCCCHHHHHHHHHHHCCCCCCCCCCCEEEEECCEEEECHHHHHHHHC"
+        ss2 = "".join([i.ss for i in PA.residues])
+        self.assertEqual(ref_ss2, ss2 )
+        
+if __name__ == "__main__":
+    unittest.main()

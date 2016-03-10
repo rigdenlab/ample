@@ -11,23 +11,13 @@ import logging
 import os
 import sys
 
-if 'CCP4_AMPLE_ROOT' in os.environ.keys() and "CCP4" in os.environ.keys():
-    root = os.environ["CCP4_AMPLE_ROOT"]
-elif "CCP4" in os.environ.keys():
-    root = os.path.join(os.environ["CCP4"], "share", "ample")
-else:
-    raise RuntimeError('CCP4 not found')
-
-sys.path.insert(0, os.path.join(root, "parsers"))
-
-import parse_bbcontacts
-import parse_casprr
-import parse_ccmpred
-import parse_epcmap
-import parse_evfold
-import parse_gremlin
-import parse_pconsc
-
+from ample.parsers import bbcontacts
+from ample.parsers import casprr
+from ample.parsers import ccmpred
+from ample.parsers import epcmap
+from ample.parsers import evfold
+from ample.parsers import gremlin
+from ample.parsers import pconsc
 
 def main(args):
     contactfile = os.path.abspath(args['contactfile'])
@@ -38,27 +28,27 @@ def main(args):
                                          os.path.basename(contactfile).rsplit('.', 1)[0] + ".CASPRR"))
 
     if args['bbcontacts']:
-        cp = parse_bbcontacts.BBcontactsContactParser()
+        cp = bbcontacts.BBcontactsContactParser()
         cp.read(contactfile)
     elif args['ccmpred']:
-        cp = parse_ccmpred.CCMpredContactParser()
+        cp = ccmpred.CCMpredContactParser()
         cp.read(contactfile)
     elif args['epcmap']:
-        cp = parse_epcmap.EPCMapContactParser()
+        cp = epcmap.EPCMapContactParser()
         cp.read(contactfile)
     elif args['evfold']:
-        cp = parse_evfold.EVfoldContactParser()
+        cp = evfold.EVfoldContactParser()
         cp.read(contactfile)
     elif args['gremlin']:
-        cp = parse_gremlin.GremlinContactParser()
+        cp = gremlin.GremlinContactParser()
         cp.read(contactfile)
     elif args['pconsc']:
-        cp = parse_pconsc.PconscContactParser()
+        cp = pconsc.PconscContactParser()
         cp.read(contactfile)
         
     contacts = cp.getContacts()
 
-    op = parse_casprr.CaspContactParser()
+    op = casprr.CaspContactParser()
     op.setContacts(contacts)
     op.sortContacts('res1_index', descending=False)
     op.write(outfile)

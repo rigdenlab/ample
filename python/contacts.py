@@ -14,9 +14,9 @@ import sys
 import unittest
 
 # Custom
-from ample.parsers import parse_casprr
-from ample.parsers import parse_restraints
-from ample.parsers import parse_psipred
+from ample.parsers import casprr
+from ample.parsers import psipred
+from ample.parsers import restraints
 from ample.python import ample_sequence
 from ample.python import energy_functions
 from ample.python import pdb_edit
@@ -30,7 +30,7 @@ except ImportError:
 
 # Check biopython is availbale - compatibility with older ccp4-python 
 try:
-    import parse_alignment
+    import alignment
     _BIOPYTHON = True
 except ImportError:
     _BIOPYTHON = False
@@ -51,7 +51,7 @@ def checkOptions(amoptd):
             msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
             raise RuntimeError(msg)
            
-        if not parse_casprr.CaspContactParser().checkFormat(amoptd['contact_file']):
+        if not casprr.CaspContactParser().checkFormat(amoptd['contact_file']):
             msg = "Wrong format in contact file:\n{0}".format(amoptd['contact_file'])
             raise RuntimeError(msg)
     
@@ -62,7 +62,7 @@ def checkOptions(amoptd):
             msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
             raise RuntimeError(msg)
             
-        if not parse_casprr.CaspContactParser().checkFormat(amoptd['bbcontacts_file']):
+        if not casprr.CaspContactParser().checkFormat(amoptd['bbcontacts_file']):
             msg = "Wrong format in contact file:\n{0}".format(amoptd['bbcontacts_file'])
             raise RuntimeError(msg)
     
@@ -312,7 +312,7 @@ class Contacter(object):
         return ppv
     
     def secondaryStructureContacts(self, ss2file):
-        pp = parse_psipred.PsipredSs2Parser(ss2file)
+        pp = psipred.PsipredSs2Parser(ss2file)
         pred = pp.getSecondaryStructure()
         
         coords = [[],[]]
@@ -336,7 +336,7 @@ class Contacter(object):
         
         # Adjust the residue list to that of the input sequence
         if alignmentSequence and _BIOPYTHON:
-            aligned_seq_list = parse_alignment.AlignmentParser().align_sequences(alignmentSequence, self.structure_seq)
+            aligned_seq_list = alignment.AlignmentParser().align_sequences(alignmentSequence, self.structure_seq)
    
             j = 0
             gapped_cb_lst=[]
@@ -454,7 +454,7 @@ class Contacter(object):
     
     def _readContacts(self, contactfile, sequence):
         '''Read the contactfile using the CASP RR Parser'''
-        cp = parse_casprr.CaspContactParser()
+        cp = casprr.CaspContactParser()
         cp.read(contactfile)
         cp.sortContacts("raw_score", descending=True)
         cp.assignAminoAcids(sequence)
@@ -463,7 +463,7 @@ class Contacter(object):
     
     def _readRestraints(self, restraintsfile):
         '''Read the restraintsfile using parser'''
-        cp = parse_restraints.RestraintfileParser()
+        cp = restraints.RestraintfileParser()
         try: 
             cp.read(restraintsfile)
         except ValueError, e: 

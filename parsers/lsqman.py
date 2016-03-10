@@ -1,4 +1,3 @@
-#!/usr/bin/env ccp4-python
 
 class LsqmanLogParser(object):
     """ Class to mine information from a lsqman log """
@@ -20,4 +19,3 @@ class LsqmanLogParser(object):
                 if line.startswith("RMSD / Nalign"): self.rmsd_norm=float(line.split()[-2])
                 if line.startswith("Version"): self.version=line.split()[-1]
         return
-##End LsqmanLogParser

@@ -1,15 +1,12 @@
-#!/usr/bin/env ccp4-python
 
 import os
+from ample.parsers import _contactfile
 
-import parse_contactfile
-
-
-class CaspContactParser(parse_contactfile.ContactfileParser):
+class CaspContactParser(_contactfile.ContactfileParser):
     """ Parser class for CASP RR contact prediction files """
 
     def __init__(self):
-        parse_contactfile.ContactfileParser.__init__(self)
+        _contactfile.ContactfileParser.__init__(self)
         self.method = "CASP RR"
 
     def checkFormat(self, contactfile):
