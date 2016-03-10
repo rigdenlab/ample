@@ -13,6 +13,7 @@ script.
 import collections
 import cPickle
 import glob
+import importlib
 import itertools
 import logging
 import os
@@ -37,15 +38,13 @@ def find_ensembler_module(amoptd):
     
     :returns: imported module handler
     """
-    if amoptd['homologs']:
-        m = 'ensembler_homologs'
-    elif amoptd['single_model_mode']:
-        m = 'ensembler_single_model'
-    else: 
-        m = 'ensembler_abinitio'
+    if amoptd['homologs']: m='homologs'
+    elif amoptd['single_model_mode']: m='single_model'
+    else: m='abinitio'
 
-    _logger.debug("Importing module: {0}".format(m)) 
-    return __import__(m)
+    _logger.debug("Importing module: {0}".format(m))
+    # make it relative import otherwise won't work ?!
+    return importlib.import_module("." + m, 'ample.ensembler')
 
 def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for ensembling on a cluster"""
@@ -500,19 +499,20 @@ class Test(unittest.TestCase):
         # Test Case 1
         module_handler = find_ensembler_module({'homologs': False,
                                                 'single_model_mode': False})
-        self.assertEqual("ensembler_abinitio", module_handler.__name__)
+        print module_handler
+        self.assertEqual("ample.ensembler.abinitio", module_handler.__name__)
 
         ########################################################################
         # Test Case 2
         module_handler = find_ensembler_module({'homologs': True,
                                                 'single_model_mode': False})
-        self.assertEqual("ensembler_homologs", module_handler.__name__)
+        self.assertEqual("ample.ensembler.homologs", module_handler.__name__)
 
         ########################################################################
         # Test Case 3
         module_handler = find_ensembler_module({'homologs': False,
                                                 'single_model_mode': True})
-        self.assertEqual("ensembler_single_model", module_handler.__name__)
+        self.assertEqual("ample.ensembler.single_model", module_handler.__name__)
 
         return
 
