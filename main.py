@@ -24,13 +24,13 @@ import time
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, UNMODIFIED
 from ample.ensembler import ensembler_util
 from ample.python import ample_config
-from ample.python import ample_contacts
 from ample.python import ample_mrbump
 from ample.python import ample_exit
 from ample.python import ample_options
 from ample.python import ample_sequence
 from ample.python import ample_util
 from ample.python import ample_benchmark
+from ample.python import contacts
 from ample.python import mtz_util
 from ample.python import pdb_edit
 from ample.python import pyrvapi_results
@@ -541,7 +541,7 @@ class Ample(object):
         ###############################################################################
         
         if amoptd['contact_file'] or amoptd['bbcontacts_file']:
-            ample_contacts.checkOptions(amoptd)
+            contacts.checkOptions(amoptd)
             amoptd['use_contacts'] = True
         ###############################################################################
         #
@@ -1077,7 +1077,7 @@ class Ample(object):
         # In case file created above we need to tell the rosetta_modeller where it is
         # otherwise not used as not created before object initialised    
         if amopt.d['make_models'] and (amopt.d['use_contacts'] or amopt.d['restraints_file']):
-            cm = ample_contacts.Contacter(optd=amopt.d)
+            cm = contacts.Contacter(optd=amopt.d)
             
             cm.process_restraintsfile() if not amopt.d['use_contacts'] and amopt.d['restraints_file'] \
                 else cm.process_contactfile()
