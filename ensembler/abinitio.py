@@ -16,16 +16,9 @@ import unittest
 
 # Custom
 from ample.ensembler import ensembler
+from ample.ensembler.constants import *
 from ample.python import ample_scwrl
 from ample.python import ample_util
-
-# Inherit some variables defined in the ensembler module
-ALLATOM = ensembler.ALLATOM
-POLYALA = ensembler.POLYALA
-RELIABLE = ensembler.RELIABLE
-SIDE_CHAIN_TREATMENTS = ensembler.SIDE_CHAIN_TREATMENTS
-THIN_CLUSTERS = ensembler.THIN_CLUSTERS
-UNMODIFIED = ensembler.UNMODIFIED
 
 _logger = logging.getLogger(__name__)
 

@@ -16,16 +16,8 @@ import shutil
 import sys
 import unittest
 
-# Module-level definitions. These need to come here because they are used in ample_util, which we also import
-# If they are defined after ample_util is imported then they aren't seen by ample_util and we get an import error
-POLYALA = 'polyAla'
-RELIABLE = 'reliable'
-ALLATOM = 'allatom'
-UNMODIFIED = 'unmod'
-SIDE_CHAIN_TREATMENTS = [POLYALA, RELIABLE, ALLATOM]
-THIN_CLUSTERS = False
-
 # our imports
+from ample.ensembler.constants import *
 from ample.ensembler.funcs import cluster_util
 from ample.ensembler.funcs import subcluster_util
 from ample.ensembler.funcs import truncation_util

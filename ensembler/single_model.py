@@ -16,11 +16,9 @@ import unittest
 
 # Custom
 from ample.ensembler import ensembler
+from ample.ensembler.constants import *
 from ample.python import ample_util
 from ample.python import pdb_edit
-
-# Inherit some other variables defined in the ensembler module
-SIDE_CHAIN_TREATMENTS = ensembler.SIDE_CHAIN_TREATMENTS
 
 _logger = logging.getLogger(__name__)
 
