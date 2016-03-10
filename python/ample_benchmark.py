@@ -15,7 +15,7 @@ import sys
 import unittest
 
 # Our imports
-import ample_tmscore
+from ample.python import tmscore
 import ample_util
 import csymmatch
 import maxcluster
@@ -363,9 +363,9 @@ def analyseModels(amoptd):
 #         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
 #     except RuntimeError,e:
 #         print e
-    if ample_tmscore.tmscoreAvail():
+    if tmscore.tmscoreAvail():
         amoptd['tmscore_exe'] = ample_util.find_exe("TMscore")
-        tm = ample_tmscore.TMscorer(amoptd['native_pdb_std'], 
+        tm = tmscore.TMscorer(amoptd['native_pdb_std'], 
                                     amoptd['tmscore_exe'], 
                                     fixpath(amoptd['benchmark_dir']))
         _logger.info("Analysing Rosetta models with TMscore")
