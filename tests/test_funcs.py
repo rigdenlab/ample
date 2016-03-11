@@ -179,7 +179,8 @@ def run(test_dict,
 def write_script(path, args):
     """Write script - ARGS MUST BE IN PAIRS"""
     linechar = "^" if sys.platform.startswith('win') else "\\"
-    ample = os.path.join(AMPLE_DIR,'bin', 'ample.py')
+    #ample = os.path.join(AMPLE_DIR,'bin', 'ample.py')
+    ample = os.path.join(AMPLE_DIR, "main.py")
     script = path + SCRIPT_EXT
     with open(script, 'w') as f:
         f.write(SCRIPT_HEADER + os.linesep)
