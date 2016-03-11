@@ -2,47 +2,45 @@
 
 import unittest
 
-from ample.python.tmscore import TMscorer
+from ample.python import tmscore
 
 class TestTMScore(unittest.TestCase):
-    def setUp(self):
-        self.TM = TMscorer("foo", "bar", "cho")
 
     def test_read(self):
-        seq1 = "-----AAAA---"
-        ref1_offset = 5
+        TM = tmscore.TMscorer("foo", "bar", "cho")
+        
+        seq = "-----AAAA---"
+        offset = TM.read_sequence(seq)
+        ref_offset = 5
+        self.assertEqual(ref_offset, offset)
 
-        seq2 = "AAA---"
-        ref2_offset = 0
+        seq = "AAA---"
+        offset = TM.read_sequence(seq)
+        ref_offset = 0
+        self.assertEqual(ref_offset, offset)
 
-        seq3 = "AAAA"
-        ref3_offset = 0
+        seq = "AAAA"
+        offset = TM.read_sequence(seq)
+        ref_offset = 0
+        self.assertEqual(ref_offset, offset)
 
-        offset1 = self.TM.read_sequence(seq1)
-        offset2 = self.TM.read_sequence(seq2)
-        offset3 = self.TM.read_sequence(seq3)
+    def test_gaps(self):        
+        TM = tmscore.TMscorer("foo", "bar", "cho")
+        
+        seq = "AAAA---AA--AA"
+        gaps = TM.find_gaps(seq)
+        ref_gaps = [5, 6, 7, 10, 11]
+        self.assertEqual(ref_gaps, gaps)
 
-        self.assertEqual(ref1_offset, offset1)
-        self.assertEqual(ref3_offset, offset2)
-        self.assertEqual(ref3_offset, offset3)
+        seq = "---AA-AA"
+        gaps = TM.find_gaps(seq)
+        ref_gaps = [1, 2, 3, 6]
+        self.assertEqual(ref_gaps, gaps)
 
-    def test_gaps(self):
-        seq1 = "AAAA---AA--AA"
-        ref_gaps1 = [5, 6, 7, 10, 11]
-
-        seq2 = "---AA-AA"
-        ref_gaps2 = [1, 2, 3, 6]
-
-        seq3 = "-AAA--"
-        ref_gaps3 = [1, 5, 6]
-
-        gaps1 = self.TM.find_gaps(seq1)
-        gaps2 = self.TM.find_gaps(seq2)
-        gaps3 = self.TM.find_gaps(seq3)
-
-        self.assertEqual(ref_gaps1, gaps1)
-        self.assertEqual(ref_gaps2, gaps2)
-        self.assertEqual(ref_gaps3, gaps3)
+        seq = "-AAA--"
+        gaps = TM.find_gaps(seq)
+        ref_gaps = [1, 5, 6]
+        self.assertEqual(ref_gaps, gaps)
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,15 +4,30 @@ import os
 import tempfile
 import unittest
 from ample.python import config
+from ample.python import version
 
 class TestCases(unittest.TestCase):
-    maxDiff = None
+    MAX_DIFF = None
+    
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
+        cls.thisd = os.path.abspath(os.path.dirname(__file__))
+        paths = cls.thisd.split(os.sep)
+        cls.ample_dir = os.sep.join(paths[ :-2 ])
+        cls.tests_dir = os.path.join(cls.ample_dir, "tests")
+        cls.testfiles_dir = os.path.join(cls.tests_dir, 'testfiles')
+    
     def test_process_options(self):
         #Test the process_options
         options = config.AMPLEConfigOptions()
         options.d = {
-                     'fasta' : os.path.join(root, 'tests', 'testfiles', '2uui.fasta'),
-                     'native_pdb' : os.path.join(root, 'tests', 'testfiles', '2UUI.pdb'),
+                     'fasta' : os.path.join(self.testfiles_dir, '2uui.fasta'),
+                     'native_pdb' : os.path.join(self.testfiles_dir, '2UUI.pdb'),
                      'rcdir' : 'foo/bar',
                      'side_chain_treatments' : False,
                      'submit_qtype' : "sge",
@@ -24,9 +39,9 @@ class TestCases(unittest.TestCase):
         
     
         expected = {
-                    'ample_version' : '1.0.1',
-                    'fasta' : os.path.join(root, 'tests', 'testfiles', '2uui.fasta'),
-                    'native_pdb' : os.path.join(root, 'tests', 'testfiles', '2UUI.pdb'),
+                    'ample_version' : version.__version__,
+                    'fasta' : os.path.join(self.testfiles_dir, '2uui.fasta'),
+                    'native_pdb' : os.path.join(self.testfiles_dir, '2UUI.pdb'),
                     'rcdir' : 'foo/bar',
                     'side_chain_treatments' : ['polyAla', 'reliable', 'allatom'],
                     'submit_qtype' : "SGE",
@@ -39,7 +54,7 @@ class TestCases(unittest.TestCase):
                     }
         
         options._process_options()
-        self.assertDictEqual(options.d, expected)
+        self.assertItemsEqual(options.d, expected)
         
     def test_preset_options(self):
         #Test the preset options
@@ -150,7 +165,6 @@ class TestCases(unittest.TestCase):
         options = config.AMPLEConfigOptions()
          
         f = tempfile.NamedTemporaryFile("w", delete=False)
-         
         f.write("[Databases]" + os.linesep)
         f.write("nr : nr_database" + os.linesep)
         f.write("rosetta_db : rosetta_database" + os.linesep + os.linesep)
@@ -182,7 +196,6 @@ class TestCases(unittest.TestCase):
         f.write("psipred_ss2 : None" + os.linesep)
         f.write("restart_pkl : False" + os.linesep)
         f.write("score_matrix : True")
-         
         f.close()
         
         options._read_config_file(f.name)
@@ -218,7 +231,7 @@ class TestCases(unittest.TestCase):
                     'score_matrix' : True
                     }
         
-        self.assertDictEqual(options.d, expected)
+        self.assertItemsEqual(options.d, expected)
         
     def test_read_config_opts(self):
         #Test read config options
@@ -267,7 +280,7 @@ class TestCases(unittest.TestCase):
         }
         
         options._read_config_opts(config_opts)
-        self.assertDictEqual(options.d, expected)
+        self.assertItemsEqual(options.d, expected)
     
     def test_isfloat(self):
         #Test the _isfloat function
