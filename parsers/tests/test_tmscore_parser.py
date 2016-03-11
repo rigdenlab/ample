@@ -1,7 +1,7 @@
 """Test functions for parsers.tmscore"""
 import os
 import unittest
-from ample.parsers import tmscore
+from ample.parsers import tmscore_parser
 
 class Test(unittest.TestCase):
 
@@ -21,7 +21,7 @@ class Test(unittest.TestCase):
 
     def test_parse(self):
         logfile = os.path.join(self.testfiles_dir, "tmscore.log")
-        TM = tmscore.TMscoreLogParser()
+        TM = tmscore_parser.TMscoreLogParser()
         TM.parse(logfile)
 
         self.assertEqual(173, TM.nrResiduesCommon)
