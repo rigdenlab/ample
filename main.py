@@ -913,7 +913,7 @@ class Ample(object):
         # We always check first to see if there are any mrbump jobs
         amoptd['mrbump_scripts'] = []
         if 'mrbump_dir' in amoptd:
-            amoptd['mrbump_scripts'] = ample_mrbump.unfinished_scripts(amoptd)
+            amoptd['mrbump_scripts'] = mrbump_util.unfinished_scripts(amoptd)
             if not amoptd['mrbump_scripts']:
                 amoptd['do_mr'] = False
     
@@ -1220,15 +1220,15 @@ class Ample(object):
 
                 # Create job scripts
                 logger.info("Generating MRBUMP runscripts")
-                amopt.d['mrbump_scripts'] = ample_mrbump.write_mrbump_files(ensemble_pdbs_sorted,
+                amopt.d['mrbump_scripts'] = mrbump_util.write_mrbump_files(ensemble_pdbs_sorted,
                                                                             amopt.d,
-                                                                            job_time=ample_mrbump.MRBUMP_RUNTIME,
+                                                                            job_time=mrbump_util.MRBUMP_RUNTIME,
                                                                             ensemble_options=amopt.d['ensemble_options'],
                                                                             directory=bump_dir )
             # Create function for monitoring jobs - static function decorator?
             if self.output_gui:
                 def monitor():
-                    r = ample_mrbump.ResultsSummary()
+                    r = mrbump_util.ResultsSummary()
                     r.extractResults(amopt.d['mrbump_dir'], purge=amopt.d['purge'])
                     amopt.d['mrbump_results'] = r.results
                     return self.output_gui.display_results(amopt.d)
@@ -1242,11 +1242,11 @@ class Ample(object):
             os.chdir(amopt.d['mrbump_dir'])  
             ok = workers.run_scripts(job_scripts=amopt.d['mrbump_scripts'],
                                      monitor=monitor,
-                                     check_success=ample_mrbump.checkSuccess,
+                                     check_success=mrbump_util.checkSuccess,
                                      early_terminate=amopt.d['early_terminate'],
                                      chdir=False,
                                      nproc=amopt.d['nproc'],
-                                     job_time=ample_mrbump.MRBUMP_RUNTIME,
+                                     job_time=mrbump_util.MRBUMP_RUNTIME,
                                      job_name='mrbump',
                                      submit_cluster=amopt.d['submit_cluster'],
                                      submit_qtype=amopt.d['submit_qtype'],
@@ -1259,14 +1259,14 @@ class Ample(object):
                 ample_exit.exit_error(msg)
         
             # Collect the MRBUMP results
-            results_summary = ample_mrbump.ResultsSummary()
+            results_summary = mrbump_util.ResultsSummary()
             amopt.d['mrbump_results'] = results_summary.extractResults(amopt.d['mrbump_dir'], purge=amopt.d['purge'])
             amopt.d['success'] = results_summary.success
             
             ample_util.saveAmoptd(amopt.d)
         
             # Now print out the final summary
-            summary = ample_mrbump.finalSummary(amopt.d)
+            summary = mrbump_util.finalSummary(amopt.d)
             logger.info(summary)
             
         # Timing data
