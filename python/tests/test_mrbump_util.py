@@ -43,3 +43,5 @@ class Test(unittest.TestCase):
             with open(pkl) as f: d = cPickle.load(f)
             print mrbump_util.finalSummary(d)
 
+if __name__ == "__main__":
+    unittest.main()

@@ -43,4 +43,6 @@ class TestContacts( unittest.TestCase ):
         self.assertEqual(c.chainShifts, {'A': [{'resStart': 1, 'score': 0.440815, 'resEnd': 27}],
                                          'B': [{'resStart': 1, 'score': 0.558538, 'resEnd': 6}]})
         self.assertEqual(c.averageScore(), 0.49967649999999997)
-    
+
+if __name__ == "__main__":
+    unittest.main()

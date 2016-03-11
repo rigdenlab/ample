@@ -469,29 +469,5 @@ def tmpFileName():
     tmp1 = t.name
     t.close()
     return tmp1
-
-class Test(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        """
-        Set up paths. Need to do this with setUpClass, as otherwise the __file__
-        variable is updated whenever the cwd is changed in a test and the next test
-        gets the wrong paths.
-        """
-        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = cls.thisd.split( os.sep )
-        cls.ample_dir = os.sep.join( paths[ : -1 ] )
-        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
-        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
-        return
-
-    def testCcp4Version(self):
-        print ccp4_version()
-        self.assertEqual(ccp4_version(),(6,5,15))
-        return
-
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
         
 
