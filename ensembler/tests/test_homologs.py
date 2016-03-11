@@ -37,28 +37,26 @@ class Test(unittest.TestCase):
         return
     
     def test_gesamt(self):
-        gesamt_exe = "/opt/ccp4-devtools/install/bin/gesamt"
-        if not ample_util.is_exe(gesamt_exe): return
-        
-        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
-        models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
-        work_dir = os.path.join(self.tests_dir, "gesamt_test")
-        alignment_file = align_gesamt(models, gesamt_exe=gesamt_exe, work_dir=work_dir)
-        self.assertTrue(os.path.isfile(alignment_file))
-        shutil.rmtree(work_dir)
-        return
+        with self.assertRaises(IOError):
+            gesamt_exe = "/opt/ccp4-devtools/install/bin/gesamt"
+            if not ample_util.is_exe(gesamt_exe): raise IOError
+            pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+            models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
+            work_dir = os.path.join(self.tests_dir, "gesamt_test")
+            alignment_file = align_gesamt(models, gesamt_exe=gesamt_exe, work_dir=work_dir)
+            self.assertTrue(os.path.isfile(alignment_file))
+            shutil.rmtree(work_dir)
     
     def test_mustang(self):
-        mustang_exe = "/opt/MUSTANG_v3.2.2/bin/mustang-3.2.1"
-        if not ample_util.is_exe(mustang_exe): return
-        
-        pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
-        models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
-        work_dir = os.path.join(self.tests_dir, "mustang_test")
-        alignment_file = align_mustang(models, mustang_exe=mustang_exe, work_dir=work_dir)
-        self.assertTrue(os.path.isfile(alignment_file))
-        shutil.rmtree(work_dir)
-        return
+        with self.assertRaises(IOError):
+            mustang_exe = "/opt/MUSTANG_v3.2.2/bin/mustang-3.2.1"
+            if not ample_util.is_exe(mustang_exe): raise IOError
+            pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
+            models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
+            work_dir = os.path.join(self.tests_dir, "mustang_test")
+            alignment_file = align_mustang(models, mustang_exe=mustang_exe, work_dir=work_dir)
+            self.assertTrue(os.path.isfile(alignment_file))
+            shutil.rmtree(work_dir)
 
 if __name__ == "__main__":
     unittest.main()
