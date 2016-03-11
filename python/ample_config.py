@@ -15,16 +15,8 @@ try:
 except:
     import ConfigParser
 
-# Need the root directory to find config file if no other is provided
-if "CCP4_AMPLE_ROOT" in os.environ and "CCP4" in os.environ:
-    root = os.environ["CCP4_AMPLE_ROOT"]
-elif "CCP4" in os.environ:
-    root = os.path.join(os.environ["CCP4"], "share", "ample")
-else:
-    raise RuntimeError("Cannot locate CCP4 install")
-
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
-import version
+from ample.python import version
 
 ##############################################################
 # The sections and options within need to be stored
@@ -330,11 +322,3 @@ class AMPLEConfigOptions(object):
 
         return
 
-if __name__ == "__main__":
-    import argparse
-    options = argparse.ArgumentParser()
-    options.add_argument("config_file")
-    optd = vars(options.parse_args())
-    
-    cp = AMPLEConfigOptions(optd)
-    cp.write_config_file("check.config")
