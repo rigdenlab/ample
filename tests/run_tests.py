@@ -55,8 +55,16 @@ def _unittest(argd):
 
 def main():
     
-    options = argparse.ArgumentParser()
-    suboptions = options.add_subparsers(help="Testing framework options")
+    desc = """ample.tests <command> [<args>]
+
+Available tests include:
+   integration     Integration testing of typical Ample routines
+   unittest        Unittesting of all Ample subroutines
+"""
+    
+    parser = argparse.ArgumentParser(prog="run_tests.py",
+                                     usage=desc)
+    suboptions = parser.add_subparsers(help="Testing framework options")
     
     # Integration testing using examples
     integ = suboptions.add_parser("integration", help="Integration testing with examples")
@@ -78,12 +86,12 @@ def main():
     unit = suboptions.add_parser("unittest", help="Unittest all functions")
     unit.set_defaults(which="unittest")
     
-    argd = vars(options.parse_args())
+    argd = vars(parser.parse_args())
       
     if argd['which'] == "integration" :
         _integration(argd)
     elif argd['which'] == 'unittest':
-        _unittest(argd)     
+        _unittest(argd)
     
 if __name__ == "__main__":
     main()
