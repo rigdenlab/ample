@@ -90,6 +90,7 @@ class Contacter(object):
         self.native_cutoff = 8
         self.psipred_ss2 = None
         self.restraints_file = None
+        self.restraints_infile = None
         self.structure_pdb = None
         
         self.contacts = None
@@ -106,8 +107,8 @@ class Contacter(object):
 
         self.contact_file = optd['contact_file']
         self.contact_map = os.path.join(optd['work_dir'], optd['name'] + ".cm.pdf")
-        self.restraints_file = os.path.join(optd['work_dir'], optd['name'] + ".cst") \
-            if not optd['restraints_file'] else optd['restraints_file']
+        self.restraints_file = os.path.join(optd['work_dir'], optd['name'] + ".cst")
+        self.restraints_infile = optd['restraints_file']
         self.sequence = optd['sequence']
         
         self.energy_function = optd['energy_function']
@@ -131,8 +132,8 @@ class Contacter(object):
                 self.bbcontacts_file = optd['bbcontacts_file']
                 self._readAdditionalBBcontacts(optd['bbcontacts_file'])
                 
-        elif self.restraints_file:
-            self.contacts = self._readRestraints(self.restraints_file)
+        elif self.restraints_infile:
+            self.contacts = self._readRestraints(self.restraints_infile)
    
         return
                 
@@ -203,7 +204,13 @@ class Contacter(object):
         
         if self.structure_pdb:
             self.contact_ppv=self.ppv(self.structure_pdb)
-        
+        ## MOVE ME - fix for GREMLIN prediction with commented bits on top
+        with open(self.restraints_infile, "r") as in_fh, \
+             open(self.restraints_file, "w") as out_fh:
+            for line in iter(in_fh.readline):
+                if not line.strip() or line.startswith("#"): continue
+                out_fh.write(line)
+
         return
           
     def plot(self, figurefile, ss2file=None, structurefile=None, offset=0):
