@@ -49,7 +49,7 @@ class Csymmatch( object ):
         if cleanup: os.unlink(self.logfile)
         return
     
-    def parseLog( self,  logfile=None, cleanup=True):
+    def parseLog(self,  logfile=None, cleanup=True):
         """Parse the log"""
         
         if logfile is None: logfile = self.logfile
@@ -102,7 +102,7 @@ class Csymmatch( object ):
         if cleanup: os.unlink(logfile)
         return
     
-    def origin(self,  logfile=None, failOnChangeOfHand=True):
+    def origin(self, logfile=None, failOnChangeOfHand=True):
         """Return the change of origin.
         Csymmatch will always return something so we use a changeOfHand as indication of failure
         """
