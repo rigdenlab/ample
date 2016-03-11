@@ -23,12 +23,12 @@ import time
 # Our imports
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, UNMODIFIED
 from ample.ensembler import ensembler_util
-from ample.python import ample_config
 from ample.python import ample_exit
 from ample.python import ample_options
 from ample.python import ample_sequence
 from ample.python import ample_util
 from ample.python import benchmark
+from ample.python import config
 from ample.python import mrbump_util
 from ample.python import contacts
 from ample.python import mtz_util
