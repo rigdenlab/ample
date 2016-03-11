@@ -24,6 +24,9 @@ import sys
 # our imports
 import iotbx.pdb
 
+from ample.ensembler import abinitio
+from ample.ensembler import homologs
+from ample.ensembler import single_model
 from ample.python import ample_exit
 from ample.python import ample_util
 from ample.python import pdb_edit
@@ -36,13 +39,12 @@ def find_ensembler_module(amoptd):
     
     :returns: imported module handler
     """
-    if amoptd['homologs']: m='homologs'
-    elif amoptd['single_model_mode']: m='single_model'
-    else: m='abinitio'
-
-    _logger.debug("Importing module: {0}".format(m))
-    # make it relative import otherwise won't work ?!
-    return importlib.import_module("." + m, 'ample.ensembler')
+    if amoptd['homologs']: 
+         return homologs
+    elif amoptd['single_model_mode']:
+         return single_model
+    else: 
+         return abinitio
 
 def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for ensembling on a cluster"""
