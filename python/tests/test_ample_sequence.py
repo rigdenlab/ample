@@ -40,7 +40,7 @@ class Test(unittest.TestCase):
 
     def test_addPdbData(self):
         fasta1 = os.path.join(self.testfiles_dir,'1ujb_2a6pA_3c7tA.afasta')
-        pdbin1 = os.path.join(self.ample_dir, 'examples', 'homologs','1ujb.pdb')
+        pdbin1 = os.path.join(self.ample_dir, 'examples', 'homologs','1ujbA.pdb')
         pdbin2 = os.path.join(self.ample_dir, 'examples', 'homologs','2a6pA.pdb')
         pdbin3 = os.path.join(self.ample_dir, 'examples', 'homologs','3c7tA.pdb')
         s1 = ample_sequence.Sequence(fasta=fasta1)
