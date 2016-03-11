@@ -16,7 +16,7 @@ import tempfile
 import unittest
 
 # Custom
-from ample.parsers import tmscore
+from ample.parsers import tmscore_parser
 from ample.python import ample_util
 from ample.python import pdb_edit
 
@@ -115,7 +115,7 @@ class TMscorer(object):
             # Do the try clause here to allow anything that is required from here to throw
             # exceptions. In that case we revert to the TMscoreLogParser default values of
             # 0.0 for every score.
-            pt = tmscore.TMscoreLogParser()
+            pt = tmscore_parser.TMscoreLogParser()
             
             try:
                 pt.parse(log)
