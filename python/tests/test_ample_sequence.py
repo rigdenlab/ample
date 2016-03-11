@@ -87,7 +87,7 @@ class Test(unittest.TestCase):
         self.assertEqual(s1.resseqs[1], p2r)
         self.assertEqual(s1.resseqs[2], p3r)
 
-    def testFailChar(self):
+    def test_failChar(self):
         
         infasta=""">3HAP:A|PDBID|CHAIN|SEQUENCE
 QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVXAIAFTMYLSMLLGYGLTMVPFGGEQNPIYWARYADWLFTTPLLLLDLALLVDADQGTI

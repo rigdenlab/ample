@@ -2,8 +2,8 @@
 import logging
 import os
 
-from ample.python import ample_exit
-from ample.python import pdb_edit
+import ample_exit
+import pdb_edit
 
 class Sequence(object):
     """A class to handle a fasta file"""
