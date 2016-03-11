@@ -1,6 +1,7 @@
-
+"""main routine for Ample testing"""
+import sys
 from ample.python import ample_exit
-from ample.tests import run_tests.py
+from ample.tests import run_tests
 
 try:
     run_tests.main()
