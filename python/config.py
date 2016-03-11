@@ -18,6 +18,9 @@ except:
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.python import version
 
+AMPLE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+LOGGER = logging.getLogger(__name__)
+
 ##############################################################
 # The sections and options within need to be stored
 # otherwise we cannot manage interplay between 
@@ -96,7 +99,6 @@ class AMPLEConfigOptions(object):
         
         self.d = {} # store all options here
         self.debug = False
-        self.logger = logging.getLogger(__name__)
         
         self.quick_mode = {
                            'max_ensemble_models' : 10,
@@ -137,8 +139,8 @@ class AMPLEConfigOptions(object):
         # Identify which config file to use
         config_file = os.path.abspath(config_opts["config_file"]) \
             if config_opts["config_file"] else \
-                os.path.join(root, "include", "ample.ini")
-        self.logger.debug("Using configuration file: {0}".format(config_file))
+                os.path.join(AMPLE_DIR, "include", "ample.ini")
+        LOGGER.debug("Using configuration file: {0}".format(config_file))
 
          # Read the configuration file
         self._read_config_file(config_file)
@@ -289,7 +291,7 @@ class AMPLEConfigOptions(object):
         # Write config to job specific directory
         self.d["out_config_file"] = f = os.path.join(self.d['work_dir'], 
                                                      self.d['name']+".ini")
-        self.logger.info("AMPLE configuration written to: {0}".format(f))
+        LOGGER.info("AMPLE configuration written to: {0}".format(f))
         with open(f, "w") as out: config.write(out)
         return
     
