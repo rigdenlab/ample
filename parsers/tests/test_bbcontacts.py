@@ -8,7 +8,7 @@ class Test(unittest.TestCase):
     def setUp(self):
         self.bp = bbcontacts.BBcontactsContactParser()
 
-    def testFirstLast(self):
+    def test_firstLast(self):
         self.bp.contacts = [{'res2': 43, 
                              'res1': 37, 
                              'raw_score': -4.767827, 

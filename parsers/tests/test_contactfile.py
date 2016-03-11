@@ -6,7 +6,7 @@ class Test(unittest.TestCase):
     def setUp(self):
         self.cp = _contactfile.ContactfileParser()
 
-    def testSorting(self):
+    def test_sorting(self):
         contacts = [{'res1': 5, 'res2': 37, 'raw_score': -4.767827},
                     {'res1': 1, 'res2': 100, 'raw_score': -100},
                     {'res1': 6, 'res2': 10, 'raw_score': 1}]
@@ -37,7 +37,7 @@ class Test(unittest.TestCase):
         sorted_contacts3 = self.cp.getContacts()
         self.assertEqual(ref_contacts3, sorted_contacts3)
         
-    def testScalarScoring(self):
+    def test_scalarScoring(self):
         contacts = [{'res1': 5, 'res2': 37, 'raw_score': 0.4},
                     {'res1': 1, 'res2': 100, 'raw_score': 0.6},
                     {'res1': 6, 'res2': 10, 'raw_score': 0.5}]

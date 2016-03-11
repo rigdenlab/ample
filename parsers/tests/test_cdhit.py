@@ -4,7 +4,7 @@ import unittest
 from ample.parsers import cdhit
 
 class Test(unittest.TestCase):
-    def testAverage(self):
+    def test_average(self):
         data = {0: {'count': 1, 'averageId': 100.00, 'averageLength': 99, 'centroid': 'test1', 'neffWeight': 1.00},
                 1: {'count': 3, 'averageId': 332.16, 'averageLength': 290, 'centroid': 'test2', 'neffWeight': 1.00},
                 2: {'count': 2, 'averageId': 100.00, 'averageLength': 199, 'centroid': 'test3', 'neffWeight': 1.00},

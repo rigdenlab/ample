@@ -19,7 +19,7 @@ class Test(unittest.TestCase):
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
-    def testParse(self):
+    def test_parse(self):
         logfile = os.path.join(self.testfiles_dir, "tmscore.log")
         TM = tmscore.TMscoreLogParser()
         TM.parse(logfile)

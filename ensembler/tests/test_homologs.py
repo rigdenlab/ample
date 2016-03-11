@@ -36,7 +36,7 @@ class Test(unittest.TestCase):
 
         return
     
-    def testGesamt(self):
+    def test_gesamt(self):
         gesamt_exe = "/opt/ccp4-devtools/install/bin/gesamt"
         if not ample_util.is_exe(gesamt_exe): return
         
@@ -48,7 +48,7 @@ class Test(unittest.TestCase):
         shutil.rmtree(work_dir)
         return
     
-    def testMustang(self):
+    def test_mustang(self):
         mustang_exe = "/opt/MUSTANG_v3.2.2/bin/mustang-3.2.1"
         if not ample_util.is_exe(mustang_exe): return
         

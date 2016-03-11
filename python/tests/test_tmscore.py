@@ -8,7 +8,7 @@ class TestTMScore(unittest.TestCase):
     def setUp(self):
         self.TM = TMscorer("foo", "bar", "cho")
 
-    def testRead(self):
+    def test_read(self):
         seq1 = "-----AAAA---"
         ref1_offset = 5
 
@@ -26,7 +26,7 @@ class TestTMScore(unittest.TestCase):
         self.assertEqual(ref3_offset, offset2)
         self.assertEqual(ref3_offset, offset3)
 
-    def testGaps(self):
+    def test_gaps(self):
         seq1 = "AAAA---AA--AA"
         ref_gaps1 = [5, 6, 7, 10, 11]
 

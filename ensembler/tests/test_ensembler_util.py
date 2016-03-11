@@ -4,16 +4,11 @@ import itertools
 import random
 import os
 import unittest
-
 from ample.ensembler import ensembler_util
 
 class Test(unittest.TestCase):
         
-    def testSummary(self):
-        """Not really a unittest but prints a table for 
-           visual analysis of correctness
-        """
-
+    def test_summary(self):
         ensembles_data = []
         for i in xrange(1, 101, 5):
             d = {'truncation_variance' : round(i*3.54*1.25, 1),
@@ -43,9 +38,7 @@ class Test(unittest.TestCase):
 
         return
 
-    def testImportModule(self):
-        """Test that we import the correct module for ensembling"""
-
+    def test_importModule(self):
         ########################################################################
         # Test Case 1
         module_handler = ensembler_util.find_ensembler_module({'homologs': False,
@@ -66,9 +59,7 @@ class Test(unittest.TestCase):
 
         return
 
-    def testGetEnsemblingKwargs(self):
-        """Test that the keyword arguments for ensembling are set correctly"""
-
+    def test_getEnsemblingKwargs(self):
         # All keys found in return kwargs written here in corresponding sections
         common_keys = ['ensembles_directory', 'nproc', 'percent_truncation',
                        'side_chain_treatments', 'truncation_method']
@@ -112,8 +103,6 @@ class Test(unittest.TestCase):
         return
 
     def test_sortEnsembles1(self):
-        """Test sorting for ab initio data"""
-
         clusters = [1, 2, 3]
         tlevels = [19, 20, 50, 80, 100]
         radii = [1, 2, 3]
@@ -176,8 +165,6 @@ class Test(unittest.TestCase):
         return
     
     def test_sortEnsembles2(self):
-        """Test sorting for homolog data"""
-
         tlevels = [19, 20, 50, 80, 100]
         sidechains = ["allatom", "polyAla", "reliable"]
 
@@ -227,8 +214,6 @@ class Test(unittest.TestCase):
         return
     
     def test_sortEnsembles3(self):
-        '''Test sorting for single model data'''
-
         score_keys = ["ntv", "bbc", "kicker"]
         tlevels = [19, 20, 50, 80, 100]
         sidechains = ["allatom", "polyAla", "reliable"]

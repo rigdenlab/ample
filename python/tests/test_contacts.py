@@ -9,7 +9,7 @@ class Test(unittest.TestCase):
     def setUp(self):
         self.c = Contacter()
     
-    def testFilter(self):
+    def test_filter(self):
         contacts = [{'res1_index': 1, 'res2_index': 10},
                     {'res1_index': 1, 'res2_index': 6},
                     {'res1_index': 1, 'res2_index': 5},
@@ -30,7 +30,7 @@ class Test(unittest.TestCase):
         self.assertEqual(ref_contacts1, contacts_f1)
         self.assertEqual(ref_contacts2, contacts_f2)
 
-    def testIter(self):
+    def test_iter(self):
         self.c.contacts = [{'res1_index': 1, 'res2_index': 6, 'weight': 1},
                            {'res1_index': 2, 'res2_index': 7, 'weight': 1},
                            {'res1_index': 3, 'res2_index': 8, 'weight': 1},
@@ -54,7 +54,7 @@ class Test(unittest.TestCase):
         
         self.assertItemsEqual(ref_contacts, self.c.contacts)        
 
-    def testNeighbour(self):
+    def test_neighbour(self):
         self.c.contacts = [{'res1_index': 1, 'res2_index': 6, 'weight': 1},
                            {'res1_index': 2, 'res2_index': 7, 'weight': 1},
                            {'res1_index': 3, 'res2_index': 8, 'weight': 1},
@@ -98,7 +98,7 @@ class Test(unittest.TestCase):
         
         self.assertItemsEqual(ref_contacts, self.c.contacts)
 
-    def testPPV(self):
+    def test_PPV(self):
         contacts = [[19.089, 51.837, 57.937], [16.279, 47.215, 58.769],
                     [7.599, 48.942, 52.633], [14.616, 50.231, 60.890],
                     [6.783, 46.760, 42.296]]
@@ -164,7 +164,7 @@ class Test(unittest.TestCase):
         self.assertEqual(0.0, ppv3)
         self.assertEqual(0.4, ppv4)
 
-    def testRefContacts(self):
+    def test_refContacts(self):
         contacts = [[19.089, 51.837, 57.937], [16.279, 47.215, 58.769],
                     [7.599, 48.942, 52.633], [14.616, 50.231, 60.890],
                     [6.783, 46.760, 42.296]]
@@ -206,7 +206,7 @@ class Test(unittest.TestCase):
         numpy.testing.assert_equal(ref_contacts, contacts_out)
         numpy.testing.assert_equal(ref_map, contact_map)
 
-    def testTruncate(self):
+    def test_truncate(self):
         contacts = [{'res1_index': 1, 'res2_index': 10},
                     {'res1_index': 1, 'res2_index': 6},
                     {'res1_index': 1, 'res2_index': 5},

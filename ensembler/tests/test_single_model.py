@@ -1,7 +1,6 @@
 """Test functions for ensembler.single_model"""
 
 import unittest
-
 from ample.ensembler import single_model
 
 

@@ -3,7 +3,7 @@ import unittest
 from ample.parsers import ccmpred
 
 class Test(unittest.TestCase):
-    def testFilter(self):
+    def test_filter(self):
         c = ccmpred.CCMpredContactParser()
         contacts_duplicated = [{'res1_index': 11, 'res2_index': 100, 'raw_score': 0.5},
                                {'res1_index': 100, 'res2_index': 11, 'raw_score': 0.5},

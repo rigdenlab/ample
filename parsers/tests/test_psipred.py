@@ -19,7 +19,7 @@ class Test(unittest.TestCase):
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
-    def testParse(self):
+    def test_parse(self):
         ss2file = os.path.join(self.testfiles_dir, "1aba_.psipred_ss2")
         PA = psipred.PsipredSs2Parser(ss2file)
         ref_ss2 = "CEEEEEECCCCCCCCHHHHHHHHHHHCCCCEEEEEECCCCCCCCHHHHHHHHHHHCCCCCCCCCCCEEEEECCEEEECHHHHHHHHC"

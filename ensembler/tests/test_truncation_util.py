@@ -2,12 +2,11 @@
 
 import collections
 import unittest
-
 from ample.ensembler import truncation_util 
 
 class Test(unittest.TestCase):
     
-    def testResiduesFocussed(self):
+    def test_residuesFocussed(self):
 
         TheseusVariances = collections.namedtuple('TheseusVariances', 
                                                   ['idx', 'resName', 'resSeq', 
@@ -76,7 +75,7 @@ class Test(unittest.TestCase):
             
         return
     
-    def testResiduesPercent(self):
+    def test_residuesPercent(self):
 
         TheseusVariances = collections.namedtuple("TheseusVariances", 
                                                   ["idx", "resName", "resSeq", 
@@ -163,8 +162,7 @@ class Test(unittest.TestCase):
         
         return
     
-    def testResiduesThresh(self):
-        '''Test we can calculate the original list of residues'''
+    def test_residuesThresh(self):
         
         TheseusVariances = collections.namedtuple("TheseusVariances", 
                                                   ["idx", "resName", "resSeq", 
@@ -233,8 +231,7 @@ class Test(unittest.TestCase):
         
         return
    
-    def testGenerateThresholds(self):
-        '''Test for Jaclyn's threshold method'''
+    def test_generateThresholds(self):
 
         var_list = [31.186, 24.104, 16.448, 40.365, 52.0, 11.549999999999999, 
                     18.252000000000002, 9.324000000000002, 19.551, 46.53, 
@@ -269,8 +266,7 @@ class Test(unittest.TestCase):
         
         return
     
-    def testGenerateThresholds2(self):
-        '''Test for Jens' threshold method'''
+    def test_generateThresholds2(self):
 
         var_list = [31.186, 24.104, 16.448, 40.365, 52.0, 11.549999999999999, 
                     18.252000000000002, 9.324000000000002, 19.551, 46.53, 
@@ -305,8 +301,7 @@ class Test(unittest.TestCase):
         
         return  
     
-    def testPruneResidues(self):
-        '''Test we can reproduce the original thresholds'''
+    def test_pruneResidues(self):
 
         residues = []
         pres, pruned = truncation_util.prune_residues(residues, chunk_size=2, allowed_gap=2)
@@ -370,7 +365,7 @@ class Test(unittest.TestCase):
 
         return
     
-    def testSplitSequence(self):
+    def test_splitSequence(self):
         
         ########################################################################       
         # Test Case 1

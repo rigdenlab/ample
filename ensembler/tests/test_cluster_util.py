@@ -1,8 +1,7 @@
 """Test functions for ensembler.cluster_util.py"""
 
 import unittest
-
-from ample.ensembler.cluster_util import *
+from ample.ensembler import cluster_util
 
 class Test(unittest.TestCase):
     
@@ -12,7 +11,7 @@ class Test(unittest.TestCase):
         # Test Case 1
         max_cluster_size = 200
         num_clusters = 5
-        clusters, _ = random_cluster("random", max_cluster_size, models, num_clusters)
+        clusters, _ = cluster_util.random_cluster("random", max_cluster_size, models, num_clusters)
         self.assertEqual(num_clusters, len(clusters))
         for cluster in clusters:
             self.assertEqual(max_cluster_size, len(cluster))
@@ -20,7 +19,7 @@ class Test(unittest.TestCase):
         # Test Case 2
         max_cluster_size = 100
         num_clusters = 1
-        clusters, _ = random_cluster("random", max_cluster_size, models, num_clusters)
+        clusters, _ = cluster_util.random_cluster("random", max_cluster_size, models, num_clusters)
         self.assertEqual(num_clusters, len(clusters))
         for cluster in clusters:
             self.assertEqual(max_cluster_size, len(cluster))
@@ -28,7 +27,7 @@ class Test(unittest.TestCase):
         # Test Case 3
         max_cluster_size = 200
         num_clusters = 10
-        clusters, _ = random_cluster("random", max_cluster_size, models, num_clusters)
+        clusters, _ = cluster_util.random_cluster("random", max_cluster_size, models, num_clusters)
         self.assertEqual(num_clusters, len(clusters))
         for cluster in clusters:
             self.assertEqual(max_cluster_size, len(cluster))
