@@ -207,7 +207,7 @@ class Contacter(object):
         ## MOVE ME - fix for GREMLIN prediction with commented bits on top
         with open(self.restraints_infile, "r") as in_fh, \
              open(self.restraints_file, "w") as out_fh:
-            for line in iter(in_fh.readline):
+            for line in iter(in_fh.readline, ''):
                 if not line.strip() or line.startswith("#"): continue
                 out_fh.write(line)
 
