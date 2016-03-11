@@ -1,14 +1,14 @@
 
 import numpy
-from ample.parsers import _contactfile
+from ample.parsers import _contactfile_parser
 
-class CCMpredContactParser(_contactfile.ContactfileParser):
+class CCMpredContactParser(_contactfile_parser.ContactfileParser):
     """ Class to parse a CCMpred contact matrix """
     
     _METHOD = "CCMpred"
     
     def __init__(self):
-        _contactfile.ContactfileParser.__init__(self)
+        _contactfile_parser.ContactfileParser.__init__(self)
         
     def read(self, contactmatrix):
         mat = numpy.loadtxt(contactmatrix)

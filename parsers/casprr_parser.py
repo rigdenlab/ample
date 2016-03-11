@@ -1,12 +1,12 @@
 
 import os
-from ample.parsers import _contactfile
+from ample.parsers import _contactfile_parser
 
-class CaspContactParser(_contactfile.ContactfileParser):
+class CaspContactParser(_contactfile_parser.ContactfileParser):
     """ Parser class for CASP RR contact prediction files """
 
     def __init__(self):
-        _contactfile.ContactfileParser.__init__(self)
+        _contactfile_parser.ContactfileParser.__init__(self)
         self.method = "CASP RR"
 
     def checkFormat(self, contactfile):

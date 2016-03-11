@@ -1,7 +1,7 @@
 
-from ample.parsers import _contactfile
+from ample.parsers import _contactfile_parser
 
-class BBcontactsContactParser(_contactfile.ContactfileParser):
+class BBcontactsContactParser(_contactfile_parser.ContactfileParser):
     """ Parser class for bbcontacts contact prediction files """
 
     _ID         = 0
@@ -16,7 +16,7 @@ class BBcontactsContactParser(_contactfile.ContactfileParser):
     _METHOD     = "bbcontacts"
     
     def __init__(self):
-        _contactfile.ContactfileParser.__init__(self)
+        _contactfile_parser.ContactfileParser.__init__(self)
 
     def read(self, contactfile, removeFirstLast=True):
         with open(contactfile, 'r') as fh:

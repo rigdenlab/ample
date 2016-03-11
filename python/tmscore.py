@@ -21,7 +21,7 @@ from ample.python import ample_util
 from ample.python import pdb_edit
 
 try:
-    import alignment
+    from ample.parsers import alignment_parser
     _BIOPYTHON = True
 except ImportError:
     _BIOPYTHON = False
@@ -161,8 +161,8 @@ class TMscorer(object):
         structure_seq = pdb_edit.sequence(structure).values()[0]
 
         # Align the sequences to see how much of the predicted decoys are in the xtal
-        aligned_seq_list = alignment.AlignmentParser().align_sequences(pdbin_seq, 
-                                                                             structure_seq)
+        aligned_seq_list = alignment_parser.AlignmentParser().align_sequences(pdbin_seq, 
+                                                                              structure_seq)
         pdbin_seq_ali     = aligned_seq_list[0]
         structure_seq_ali = aligned_seq_list[1]
         

@@ -1,10 +1,10 @@
-"""Test functions for parsers._contactfile"""
+"""Test functions for parsers._contactfile_parser"""
 import unittest
-from ample.parsers import _contactfile
+from ample.parsers import _contactfile_parser
 
 class Test(unittest.TestCase):
     def setUp(self):
-        self.cp = _contactfile.ContactfileParser()
+        self.cp = _contactfile_parser.ContactfileParser()
 
     def test_sorting(self):
         contacts = [{'res1': 5, 'res2': 37, 'raw_score': -4.767827},

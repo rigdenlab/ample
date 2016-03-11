@@ -1,7 +1,7 @@
-"""Test functions for parsers.psipred"""
+"""Test functions for parsers.psipred_parser"""
 import os
 import unittest
-from ample.parsers import psipred
+from ample.parsers import psipred_parser
 
 class Test(unittest.TestCase):
 
@@ -20,8 +20,8 @@ class Test(unittest.TestCase):
         return
 
     def test_parse(self):
-        ss2file = os.path.join(self.testfiles_dir, "1aba_.psipred_ss2")
-        PA = psipred.PsipredSs2Parser(ss2file)
+        ss2file = os.path.join(self.testfiles_dir, "1aba_.psipred_parser_ss2")
+        PA = psipred_parser.PsipredSs2Parser(ss2file)
         ref_ss2 = "CEEEEEECCCCCCCCHHHHHHHHHHHCCCCEEEEEECCCCCCCCHHHHHHHHHHHCCCCCCCCCCCEEEEECCEEEECHHHHHHHHC"
         ss2 = "".join([i.ss for i in PA.residues])
         self.assertEqual(ref_ss2, ss2 )

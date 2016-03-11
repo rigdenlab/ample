@@ -1,11 +1,11 @@
 
-from ample.parsers import _contactfile
+from ample.parsers import _contactfile_parser
 
-class RestraintfileParser(_contactfile.ContactfileParser):
+class RestraintfileParser(_contactfile_parser.ContactfileParser):
     """Parser class for Rosetta restraints files"""
     
     def __init__(self):
-        _contactfile.ContactfileParser.__init__(self)
+        _contactfile_parser.ContactfileParser.__init__(self)
         
     def read(self, restraintfile):
         """Read a restraints file to convert it to an array of

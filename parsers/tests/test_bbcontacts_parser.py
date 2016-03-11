@@ -2,11 +2,11 @@
 
 import unittest
 
-from ample.parsers import bbcontacts
+from ample.parsers import bbcontacts_parser
 
 class Test(unittest.TestCase):
     def setUp(self):
-        self.bp = bbcontacts.BBcontactsContactParser()
+        self.bp = bbcontacts_parser.BBcontactsContactParser()
 
     def test_firstLast(self):
         self.bp.contacts = [{'res2': 43, 

@@ -1,7 +1,7 @@
-"""Test functions for parsers.cdhit"""
+"""Test functions for parsers.cdhit_parser"""
 
 import unittest
-from ample.parsers import cdhit
+from ample.parsers import cdhit_parser
 
 class Test(unittest.TestCase):
     def test_average(self):
@@ -15,7 +15,7 @@ class Test(unittest.TestCase):
                     2: {'count': 2, 'averageId': 50.00, 'averageLength': 99, 'centroid': 'test3', 'neffWeight': 0.5},
                     3: {'count': 2, 'averageId': 50.00, 'averageLength': 100, 'centroid': 'test4', 'neffweight': 0.5}}
         
-        cp = cdhit.CDhitLogParser()
+        cp = cdhit_parser.CDhitLogParser()
         out_data = cp.averageClusters(data)
 
         self.assertItemsEqual(ref_data, out_data)

@@ -1,10 +1,10 @@
-"""Test functions for parsers.ccmpred"""
+"""Test functions for parsers.ccmpred_parser"""
 import unittest
-from ample.parsers import ccmpred
+from ample.parsers import ccmpred_parser
 
 class Test(unittest.TestCase):
     def test_filter(self):
-        c = ccmpred.CCMpredContactParser()
+        c = ccmpred_parser.CCMpredContactParser()
         contacts_duplicated = [{'res1_index': 11, 'res2_index': 100, 'raw_score': 0.5},
                                {'res1_index': 100, 'res2_index': 11, 'raw_score': 0.5},
                                

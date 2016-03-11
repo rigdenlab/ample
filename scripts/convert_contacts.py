@@ -11,13 +11,13 @@ import logging
 import os
 import sys
 
-from ample.parsers import bbcontacts
-from ample.parsers import casprr
-from ample.parsers import ccmpred
-from ample.parsers import epcmap
-from ample.parsers import evfold
-from ample.parsers import gremlin
-from ample.parsers import pconsc
+from ample.parsers import bbcontacts_parser
+from ample.parsers import casprr_parser
+from ample.parsers import ccmpred_parser
+from ample.parsers import epcmap_parser
+from ample.parsers import evfold_parser
+from ample.parsers import gremlin_parser
+from ample.parsers import pconsc_parser
 
 def main(args):
     contactfile = os.path.abspath(args['contactfile'])
@@ -28,32 +28,30 @@ def main(args):
                                          os.path.basename(contactfile).rsplit('.', 1)[0] + ".CASPRR"))
 
     if args['bbcontacts']:
-        cp = bbcontacts.BBcontactsContactParser()
+        cp = bbcontacts_parser.BBcontactsContactParser()
         cp.read(contactfile)
     elif args['ccmpred']:
-        cp = ccmpred.CCMpredContactParser()
+        cp = ccmpred_parser.CCMpredContactParser()
         cp.read(contactfile)
     elif args['epcmap']:
-        cp = epcmap.EPCMapContactParser()
+        cp = epcmap_parser.EPCMapContactParser()
         cp.read(contactfile)
     elif args['evfold']:
-        cp = evfold.EVfoldContactParser()
+        cp = evfold_parser.EVfoldContactParser()
         cp.read(contactfile)
     elif args['gremlin']:
-        cp = gremlin.GremlinContactParser()
+        cp = gremlin_parser.GremlinContactParser()
         cp.read(contactfile)
     elif args['pconsc']:
-        cp = pconsc.PconscContactParser()
+        cp = pconsc_parser.PconscContactParser()
         cp.read(contactfile)
         
     contacts = cp.getContacts()
 
-    op = casprr.CaspContactParser()
+    op = casprr_parser.CaspContactParser()
     op.setContacts(contacts)
     op.sortContacts('res1_index', descending=False)
     op.write(outfile)
-##End main()
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

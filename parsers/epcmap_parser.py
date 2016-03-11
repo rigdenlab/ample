@@ -1,21 +1,21 @@
 
-from ample.parsers import _contactfile
+from ample.parsers import _contactfile_parser
 
-class PconscContactParser(_contactfile.ContactfileParser):
-    """ Parser for PconsC1/2/3 contact prediction files """
+class EPCMapContactParser(_contactfile_parser.ContactfileParser):
+    """ Parser class for EPC-Map contact prediction files """
 
     _RES1 = 0
     _RES2 = 1
-    _RAW_SCORE = 2
+    _RAW_SCORE = 4
 
-    _METHOD = "pconsc"
+    _METHOD = "epcmap"
 
     def __init__(self):
-        _contactfile.ContactfileParser.__init__(self)
+        _contactfile_parser.ContactfileParser.__init__(self)
 
     def read(self, contactfile):
-        with open(contactfile, "r") as fh:
-            for line in iter(fh.readline, ''):
+        with open(contactfile, 'r') as fh:
+            for line in iter(fh.readline, ''): 
                 line = line.strip().split()
                 
                 # Define the contact in a dictionary - use parent method
@@ -25,6 +25,5 @@ class PconscContactParser(_contactfile.ContactfileParser):
                                              raw_score_idx=self._RAW_SCORE,
                                              method=self._METHOD,
                                              file=contactfile)
-
                 self.contacts.append(contact)
         return

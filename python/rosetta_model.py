@@ -16,7 +16,7 @@ import sys
 import unittest
 
 # Our modules
-from ample.parsers import psipred
+from ample.parsers import psipred_parser
 from ample.python import ample_sequence
 from ample.python import ample_util
 from ample.python import octopus_predict
@@ -457,14 +457,9 @@ class RosettaModel(object):
 
         self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
 
-        # removed by HLFSIMKO. Can be done with psipred_ss2 prediction. See below
-        #psipred_file = os.path.join(self.fragments_directory, self.name + '.psipred')
-        #if os.path.exists(psipred_file):
-        #    ample_util.get_psipred_prediction(psipred_file)
-            
         psipred_ss2 = os.path.join(self.fragments_directory, self.name + '.psipred_ss2')
         if os.path.exists(psipred_ss2):
-            psipred.PsipredSs2Parser(psipred_ss2).checkContent()
+            psipred_parser.PsipredSs2Parser(psipred_ss2).checkContent()
             self.psipred_ss2 = psipred_ss2
 
         return
@@ -1365,8 +1360,4 @@ for i in range(10):
         
         return
     
-#
-# Run unit tests
-if __name__ == "__main__":
-    unittest.main()
 
