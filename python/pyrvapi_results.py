@@ -14,8 +14,8 @@ import urlparse
 import uuid
 
 # Our imports
-from ample.python import ample_mrbump
 from ample.python import ample_util
+from ample.python import mrbump_util
 from ample.ensembler import ensembler_util
 
 try: import pyrvapi
@@ -106,15 +106,15 @@ class AmpleOutput(object):
         self.results_tab_sections = []
         
         self.results_section(self.results_tab_id,
-                        ample_mrbump.ResultsSummary().sortResults(mrb_results,
-                                                                    prioritise="SHELXE_CC")[0:min(len(mrb_results),ample_mrbump.TOP_KEEP)],
+                        mrbump_util.ResultsSummary().sortResults(mrb_results,
+                                                                 prioritise="SHELXE_CC")[0:min(len(mrb_results),mrbump_util.TOP_KEEP)],
                         ensemble_results,
-                        "Top {0} SHELXE Results".format(ample_mrbump.TOP_KEEP))
+                        "Top {0} SHELXE Results".format(mrbump_util.TOP_KEEP))
         self.results_section(self.results_tab_id,
-                        ample_mrbump.ResultsSummary().sortResults(mrb_results,
-                                                                    prioritise="PHASER_TFZ")[0:min(len(mrb_results),ample_mrbump.TOP_KEEP)],
+                        mrbump_util.ResultsSummary().sortResults(mrb_results,
+                                                                 prioritise="PHASER_TFZ")[0:min(len(mrb_results),mrbump_util.TOP_KEEP)],
                         ensemble_results,
-                        "Top {0} PHASER Results".format(ample_mrbump.TOP_KEEP))
+                        "Top {0} PHASER Results".format(mrbump_util.TOP_KEEP))
         
         return self.results_tab_id
 
@@ -183,7 +183,7 @@ class AmpleOutput(object):
         if not mrb_results == self.old_mrbump_results:
             # We set old_mrbump_results when we create the results_tab
             self.fill_table(self.summary_tab_results_sec_table_id,
-                             ample_mrbump.ResultsSummary().results_table(mrb_results),
+                             mrbump_util.ResultsSummary().results_table(mrb_results),
                              tooltips=self._mrbump_tooltips)
             
         #
@@ -322,7 +322,7 @@ class AmpleOutput(object):
             pyrvapi.rvapi_add_section(sec_table, title, container_id, 0, 0, 1, 1, True)
             table_id = "table_{0}".format(name) + uid
             pyrvapi.rvapi_add_table(table_id, "", sec_table, 1, 0, 1, 1, False)
-            tdata = ample_mrbump.ResultsSummary().results_table([r])
+            tdata = mrbump_util.ResultsSummary().results_table([r])
             self.fill_table(table_id, tdata, tooltips=self._mrbump_tooltips)
             
             # Ensemble
