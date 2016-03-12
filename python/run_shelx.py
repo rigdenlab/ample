@@ -360,23 +360,3 @@ def RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles, BumpDir):
   sys.stdout.write('\n')
 
 
-
-
- # if EarlyTerminate:
- #   if isnumber(shelscore):
- #    if float(shelscore) >25:
- #        print 'A solution is found  -Exiting'
-  #       sys.exit()    
-  return shelscore, refmacfreeR, HKLOUT, XYZOUT, SPACE
-#####
-if __name__ == "__main__":
-  pdb ='/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP/search_All_atom_trunc_26.441364_rad_3_mrbump/data/loc0_ALL_All_atom_trunc_26.441364_rad_3/unmod/mr/phaser/refine/refmac_phaser_loc0_ALL_All_atom_trunc_26.441364_rad_3_UNMOD.pdb'
-  mtz = '/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP/search_All_atom_trunc_26.441364_rad_3_mrbump/data/loc0_ALL_All_atom_trunc_26.441364_rad_3/unmod/mr/phaser/refine/refmac_phaser_HKLOUT_loc0_ALL_All_atom_trunc_26.441364_rad_3_UNMOD.mtz'
-  fasta = '/home/jaclyn/Ample_tests/toxd-example/toxd_.fasta'
-  run_dir = '/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP/search_All_atom_trunc_26.441364_rad_3_mrbump/phaser_shelx'
-  ASU = '1'
-  EarlyTerminate = False
-  NoShelxCycles = 1
-  BumpDir = '/home/jaclyn/Ample_tests/toxd-example/Ro/MRBUMP'
-  RUN(mtz, pdb, ASU, fasta, run_dir, EarlyTerminate, NoShelxCycles, BumpDir)
-
