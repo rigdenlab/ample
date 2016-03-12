@@ -10,8 +10,6 @@ import os
 import sys
 import unittest
 
-#AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-2 ])
-#sys.path.append(os.path.join(AMPLE_DIR,'python'))
 from ample.tests import test_funcs
 
 test_dict = {}
