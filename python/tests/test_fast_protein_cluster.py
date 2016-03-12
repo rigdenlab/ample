@@ -26,18 +26,13 @@ class Test(unittest.TestCase):
         try: 
             fpc_exe = ample_util.find_exe("fast_protein_cluster")
         except:
-            fpc_exe = None
+            self.assertTrue(False, "Cannot find fast_protein_cluster executable in environment")
         return fpc_exe
 
     def test_fpc_kmeans_rmsd(self):
         
-        fpc_exe = self._find_exe()
-        if not fpc_exe: 
-            self.assertTrue(False, "Cannot find fast_protein_cluster executable")
-            return
-        
+        fpc_exe = self._find_exe()        
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
-        
         mdir=os.path.join(self.testfiles_dir,"models")
         models=glob.glob(mdir+os.sep+"*.pdb")
         
@@ -53,7 +48,7 @@ class Test(unittest.TestCase):
                                           score_type=score_type,
                                           cluster_method=cluster_method,
                                           work_dir=wdir,
-                                          fpc_exe='/opt/fast_protein_cluster.1.1.2/fast_protein_cluster',
+                                          fpc_exe=fpc_exe,
                                           benchmark=True
                                           )
         
@@ -66,11 +61,7 @@ class Test(unittest.TestCase):
 
     def test_fpc_hierarch_tm(self):
         
-        fpc_exe = self._find_exe()
-        if not fpc_exe: 
-            self.assertTrue(False, "Cannot find fast_protein_cluster executable")
-            return
-        
+        fpc_exe = self._find_exe()        
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         
         mdir=os.path.join(self.testfiles_dir,"models")
@@ -87,7 +78,7 @@ class Test(unittest.TestCase):
                                           score_type=score_type,
                                           cluster_method=cluster_method,
                                           work_dir=wdir,
-                                          fpc_exe='/opt/fast_protein_cluster.1.1.2/fast_protein_cluster',
+                                          fpc_exe=fpc_exe,
                                           nproc=4,
                                           benchmark=True
                                           )
