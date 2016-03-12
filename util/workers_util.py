@@ -10,7 +10,6 @@ import logging
 import multiprocessing
 import os
 import time
-import unittest
 
 # our imports
 from ample.python import clusterize

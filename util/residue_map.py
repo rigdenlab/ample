@@ -5,7 +5,6 @@ Useful manipulations on PDB files
 # Python imports
 import os
 import types
-import unittest
 
 # our imports
 import pdb_edit

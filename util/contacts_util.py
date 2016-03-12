@@ -11,7 +11,6 @@ import logging
 import numpy
 import os
 import sys
-import unittest
 
 # Custom
 from ample.parsers import casprr_parser

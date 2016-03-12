@@ -7,13 +7,11 @@
 '''
 
 # System
-import argparse
 import collections
 import logging
 import os
 import sys
 import tempfile
-import unittest
 
 # Custom
 from ample.parsers import tmscore_parser
