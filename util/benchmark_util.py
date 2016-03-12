@@ -385,11 +385,12 @@ def analyseModels(amoptd):
 
 
 def analyseSS(amoptd):
+    from ample.parsers import dssp_parser
     # Secondary Structure assignments
     psipred_file = os.path.join( dataDir, "{0}.psipred_ss2".format(pdbCode)  )
     psipredP = PsipredParser( psipred_file )
     dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode ) )
-    dsspP = dssp.DsspParser( dsspLog )
+    dsspP = dssp_parser.DsspParser( dsspLog )
     return
 
 def fixpath(path):
