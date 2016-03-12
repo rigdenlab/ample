@@ -28,7 +28,7 @@ class Test(unittest.TestCase):
             spicker_exe = ample_util.find_exe('spicker')
         cls.spicker_exe = spicker_exe
     
-    def testSpicker(self):
+    def test_spicker(self):
         mdir = os.path.join(self.testfiles_dir, "models")
         models = glob.glob(mdir + os.sep + "*.pdb")
         work_dir = os.path.join(self.tests_dir, "spicker")

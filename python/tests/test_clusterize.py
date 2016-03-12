@@ -2,13 +2,23 @@
 import os
 import unittest
 from ample.python import clusterize
+from ample.util import ample_util
 
 class Test(unittest.TestCase):
     
-    def test_submit(self):    
-        # Test array jobs
+    def on_cluster(self):
+        cmd = ["qstat"]
+        try:
+            retcode = ample_util.run_command(cmd)
+            return True if retcode == 0 else False
+        except:
+            return False
         
-        # Create run scripts
+    def test_submit(self):
+        if not self.on_cluster(): 
+            self.assertTrue(True)
+            return
+        
         jobScripts=[]
         for i in range(10):
             s = """#!/bin/bash
