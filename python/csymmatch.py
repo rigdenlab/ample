@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-import os
-import unittest
 
-# Our imports
+import os
+
 from ample.util import ample_util
 from ample.util import pdb_edit
 
+# Our imports
 class Csymmatch( object ):
     
     def __init__(self):
