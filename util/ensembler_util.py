@@ -27,8 +27,6 @@ import iotbx.pdb
 from ample.ensembler import abinitio
 from ample.ensembler import homologs
 from ample.ensembler import single_model
-from ample.util import ample_util
-from ample.util import exit_util
 from ample.util import pdb_edit
 from ample.util import printTable
 

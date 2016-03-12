@@ -1,8 +1,8 @@
 import os
 
-import ample_util
-import pdb_edit
-import residue_map
+from ample.util import ample_util
+from ample.util import pdb_edit
+from ample.util import residue_map
 
 class ReforiginRmsd(object):
     """Class to use reforigin to determine how well the model was placed.

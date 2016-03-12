@@ -10,10 +10,10 @@ import sys, re
 #from signal import alarm, signal, SIGALRM, SIGKILL
 from subprocess import PIPE, Popen
 
-import get_TFZ_resolution
-import run_refmac
+from ample.python import get_TFZ_resolution
+from ample.python import run_refmac
 #import local_map_correlation
-import printTable
+from ample.util import printTable
 
 def isnumber(n):
   try :

@@ -4,8 +4,8 @@ import glob
 import os
 import re
 
-import ample_util
-import pdb_edit
+from ample.util import ample_util
+from ample.util import pdb_edit
 
 class Maxcluster(object):
     """

@@ -22,13 +22,13 @@ import time
 
 # Our imports
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, UNMODIFIED
-from ample.ensembler import ensembler_util
 from ample.python import pyrvapi_results
 from ample.python import rosetta_model
 from ample.util import ample_util
 from ample.util import benchmark_util
 from ample.util import config_util
 from ample.util import contacts_util
+from ample.util import ensembler_util
 from ample.util import exit_util
 from ample.util import mrbump_util
 from ample.util import mtz_util

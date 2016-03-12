@@ -15,10 +15,10 @@ import os
 import types
 import unittest
 
-import ample_util
-import csymmatch
-import dssp
-import pdb_edit
+from ample.python import csymmatch
+from ample.python import dssp
+from ample.util import ample_util
+from ample.util import pdb_edit
 
 class RioData(object):
     def __init__(self):

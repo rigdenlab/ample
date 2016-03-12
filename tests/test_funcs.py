@@ -161,11 +161,11 @@ def run(test_dict,
         nproc = len(scripts)
         
     if not dry_run:
-        workers.run_scripts(job_scripts=scripts,
-                            monitor=None,
-                            chdir=True,
-                            nproc=nproc,
-                            job_name='test')
+        workers_util.run_scripts(job_scripts=scripts,
+                                 monitor=None,
+                                 chdir=True,
+                                 nproc=nproc,
+                                 job_name='test')
     
     # Now run the tests
     all_suites = []

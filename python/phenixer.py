@@ -6,7 +6,7 @@ Created on 5 Mar 2014
 
 import os
 import shutil
-import ample_util
+from ample.util import ample_util
 
 def generateMap( mtz, pdb, FP='FP', SIGFP='SIGFP', FREE='FREE', directory=None ):
     """Generate a map from an mtz file and a pdb using reforigin"""

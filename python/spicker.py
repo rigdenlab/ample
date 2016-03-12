@@ -11,7 +11,7 @@ import unittest
 
 # our imports
 try:
-    import ample_util
+    from ample.util import ample_util
 except:
     ample_util = None
     
