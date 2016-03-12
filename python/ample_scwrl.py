@@ -6,8 +6,8 @@ import glob
 import os
 import logging
 
-import ample_util
-import pdb_edit
+from ample.util import ample_util
+from ample.util import pdb_edit
 
 LOGGER = logging.getLogger(__name__)
 

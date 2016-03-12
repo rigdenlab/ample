@@ -27,10 +27,10 @@ import iotbx.pdb
 from ample.ensembler import abinitio
 from ample.ensembler import homologs
 from ample.ensembler import single_model
-from ample.python import ample_exit
-from ample.python import ample_util
-from ample.python import pdb_edit
-from ample.python import printTable
+from ample.util import ample_util
+from ample.util import exit_util
+from ample.util import pdb_edit
+from ample.util import printTable
 
 _logger = logging.getLogger(__name__)
 
@@ -280,7 +280,7 @@ def ensemble_summary(ensembles_data):
 def import_ensembles(amoptd):
     if not pdb_edit.check_pdb_directory(amoptd['ensembles'], single=False):
         msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles'])
-        ample_exit.exit_error(msg)
+        exit_util.exit_error(msg)
 
     _logger.info("Importing ensembles from directory: {0}".format(amoptd['ensembles']))
 

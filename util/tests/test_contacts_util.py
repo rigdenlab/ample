@@ -1,9 +1,9 @@
-"""Test functions for python.contacts"""
+"""Test functions for util.contacts_util"""
 
 import numpy
 import unittest
 
-from ample.python import contacts
+from ample.util import contacts_util
 
 class Test(unittest.TestCase):
     
@@ -12,7 +12,7 @@ class Test(unittest.TestCase):
                  {'res1_index': 1, 'res2_index': 6},
                  {'res1_index': 1, 'res2_index': 5},
                  {'res1_index': 1, 'res2_index': 2}]
-        c = contacts.Contacter()
+        c = contacts_util.Contacter()
         input_f = c._filterNeighbours(input, 5)
         ref_output = [{'res1_index': 1, 'res2_index': 10},
                       {'res1_index': 1, 'res2_index': 6}]
@@ -25,7 +25,7 @@ class Test(unittest.TestCase):
         self.assertEqual(ref_output, input_f)
 
     def test_iter(self):
-        c = contacts.Contacter()
+        c = contacts_util.Contacter()
         c.contacts = [{'res1_index': 1, 'res2_index': 6, 'weight': 1},
                       {'res1_index': 2, 'res2_index': 7, 'weight': 1},
                       {'res1_index': 3, 'res2_index': 8, 'weight': 1},
@@ -46,7 +46,7 @@ class Test(unittest.TestCase):
         self.assertItemsEqual(ref_contacts, c.contacts)        
 
     def test_neighbour(self):
-        c = contacts.Contacter()
+        c = contacts_util.Contacter()
         c.contacts = [{'res1_index': 1, 'res2_index': 6, 'weight': 1},
                       {'res1_index': 2, 'res2_index': 7, 'weight': 1},
                       {'res1_index': 3, 'res2_index': 8, 'weight': 1},
@@ -115,7 +115,7 @@ class Test(unittest.TestCase):
         RCmap = dist_mat < 8
         RCmap_seq = "AAAAA"
 
-        c = contacts.Contacter()
+        c = contacts_util.Contacter()
         input_contacts = [{'res1_index': 1, 'res2_index': 3},
                           {'res1_index': 1, 'res2_index': 4},
                           {'res1_index': 2, 'res2_index': 4},
@@ -181,7 +181,7 @@ class Test(unittest.TestCase):
         ref_map = dist_mat < 8
         ref_contacts = numpy.where(dist_mat < 8)
         
-        c = contacts.Contacter()
+        c = contacts_util.Contacter()
         contacts_out, contact_map = c._cb_contacts(input, input, length)
         
         numpy.testing.assert_equal(ref_contacts, contacts_out)
@@ -193,7 +193,7 @@ class Test(unittest.TestCase):
                  {'res1_index': 1, 'res2_index': 5},
                  {'res1_index': 1, 'res2_index': 2}]
         
-        c = contacts.Contacter()
+        c = contacts_util.Contacter()
         ref_c = [{'res1_index': 1, 'res2_index': 10},
                  {'res1_index': 1, 'res2_index': 6},
                  {'res1_index': 1, 'res2_index': 5},

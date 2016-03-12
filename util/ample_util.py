@@ -17,8 +17,8 @@ import urllib
 import zipfile
 
 # our imports
-import ample_exit
-import pdb_edit
+import exit_util
+import pdb_edit # Avoid circular dependencies
 
 CCP4_VERSION=None
 SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
@@ -134,7 +134,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
         # Here we are extracting from a file
         if not os.path.isfile(filename):
             msg="Cannot find models file: {0}".format(filename)
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
             
         # we need a directory to extract into
         assert directory,"extractModels needs a directory path!"
@@ -152,7 +152,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
         suffixes=tsuffixes + ['.zip']
         if suffix not in suffixes:
             msg="Do not know how to extract files from file: {0}\n Acceptable file types are: {1}".format(filename,suffixes)
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         if suffix in tsuffixes:
             files = extract_tar(filename, directory)
         else:
@@ -165,7 +165,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
             if not f == quark_filename:
                 msg="Only found one member ({0}) in file: {1} and the name was not {2}\n".format(f, filename, quark_filename)
                 msg+="If this file contains valid QUARK decoys, please email: ccp4@stfc.ac.uk"
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
             # Now extract the quark pdb files from the monolithic file
             split_quark(files[0], models_dir)
             # We delete the quark_name file as otherwise we'll try and model it
@@ -177,7 +177,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
     
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
         msg="Problem importing pdb files - please check the log for more information"
-        ample_exit.exit_error(msg)
+        exit_util.exit_error(msg)
     return models_dir
 
 def extract_tar(filename, directory, suffixes=['.pdb']):
@@ -188,7 +188,7 @@ def extract_tar(filename, directory, suffixes=['.pdb']):
         memb = tf.getmembers()
         if not len(memb):
             msg='Empty archive: {0}'.format(filename)
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         for m in memb:
             if os.path.splitext(m.name)[1] in suffixes:
                 # Hack to remove any paths
@@ -197,7 +197,7 @@ def extract_tar(filename, directory, suffixes=['.pdb']):
                 files.append(os.path.join(directory, m.name))
     if not len(files):
         msg='Could not find any files with suffixes {0} in archive: {1}'.format(suffixes, filename)
-        ample_exit.exit_error(msg)
+        exit_util.exit_error(msg)
     return files
 
 def extract_zip(filename, directory, suffixes=['.pdb']):
@@ -205,12 +205,12 @@ def extract_zip(filename, directory, suffixes=['.pdb']):
     _logger.info('Extracting files from zipfile: {0}'.format(filename) )
     if not zipfile.is_zipfile(filename):
             msg='File is not a valid zip archive: {0}'.format(filename)
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
     zipf = zipfile.ZipFile(filename)
     zif = zipf.infolist()
     if not len(zif):
         msg = 'Empty zip file: {0}'.format(filename)
-        ample_exit.exit_error(msg)
+        exit_util.exit_error(msg)
     files = []
     for f in zif:
         if os.path.splitext(f.filename)[1] in suffixes:
@@ -220,7 +220,7 @@ def extract_zip(filename, directory, suffixes=['.pdb']):
             files.append(os.path.join(directory, f.filename))
     if not len(files):
         msg = 'Could not find any files with suffixes {0} in zipfile: {1}'.format(suffixes,filename)
-        ample_exit.exit_error(msg)
+        exit_util.exit_error(msg)
     return files
 
 def find_exe(executable, dirs=None):
@@ -303,7 +303,7 @@ def find_maxcluster(amoptd):
                 url='http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster'
             else:
                 msg="Unrecognised system type: {0} {1}".format(sys.platform,bit)
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
         elif sys.platform.startswith("darwin"):
             url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_i686_32bit.bin'
             #OSX PPC: http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_PPC_32bit.bin
@@ -312,13 +312,13 @@ def find_maxcluster(amoptd):
             maxcluster_exe = os.path.join( rcdir, 'maxcluster.exe' )
         else:
             msg="Unrecognised system type: {0}".format( sys.platform )
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         _logger.info("Attempting to download maxcluster binary from: {0}".format( url ) )
         try:
             urllib.urlretrieve( url, maxcluster_exe )
         except Exception, e:
             msg="Error downloading maxcluster executable: {0}\n{1}".format(url,e)
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
 
         # make executable
         os.chmod(maxcluster_exe, 0o777)

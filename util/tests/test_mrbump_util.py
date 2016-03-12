@@ -1,8 +1,8 @@
-"""Test functions for python.ample_mrbump"""
+"""Test functions for util.mrbump_util"""
 
 import os
 import unittest
-from ample.python import mrbump_util
+from ample.util import mrbump_util
 
 class Test(unittest.TestCase):
 

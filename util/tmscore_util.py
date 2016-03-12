@@ -17,8 +17,8 @@ import unittest
 
 # Custom
 from ample.parsers import tmscore_parser
-from ample.python import ample_util
-from ample.python import pdb_edit
+from ample.util import ample_util
+from ample.util import pdb_edit
 
 try:
     from ample.parsers import alignment_parser

@@ -23,20 +23,20 @@ import time
 # Our imports
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, UNMODIFIED
 from ample.ensembler import ensembler_util
-from ample.python import ample_exit
 from ample.python import ample_options
-from ample.python import ample_sequence
-from ample.python import ample_util
-from ample.python import benchmark
-from ample.python import config
-from ample.python import mrbump_util
-from ample.python import contacts
-from ample.python import mtz_util
-from ample.python import pdb_edit
 from ample.python import pyrvapi_results
 from ample.python import rosetta_model
 from ample.python import version
-from ample.python import workers
+from ample.util import ample_util
+from ample.util import benchmark_util
+from ample.util import config_util
+from ample.util import contacts_util
+from ample.util import exit_util
+from ample.util import mrbump_util
+from ample.util import mtz_util
+from ample.util import pdb_edit
+from ample.util import sequence_util
+from ample.util import workers_util
 
 def setup_console_logging():
     logger = logging.getLogger()
@@ -94,27 +94,27 @@ class Ample(object):
         
         if not (amoptd['fasta'] or amoptd['restart_pkl']):
             msg = "One of -fasta  or -restart_pkl option is required."
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
             
         if (amoptd['contact_file'] or amoptd['bbcontacts_file']) and amoptd['restraints_file']:
             msg = "Only one option of -contact_file or -restraints_file allowed."
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         
         if not amoptd['restart_pkl'] and not (amoptd['mtz'] or amoptd['sf_cif']):
             msg = "A crystallographic data file must be supplied with the -mtz or -sc_cif options."
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
             
         if amoptd['mtz'] and amoptd['sf_cif']:
             msg = "Please supply a single crystallographic data file."
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         
         if amoptd['devel_mode'] and amoptd['quick_mode']:
             msg = "Only one of quick_mode or devel_mode is permitted"
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
             
         if amoptd['molrep_only'] and amoptd['phaser_only']:
             msg = "Only one of molrep_only or phaser_only is permitted"
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         return
             
     def process_command_line(self, args=None):
@@ -517,19 +517,19 @@ class Ample(object):
         if amoptd['mr_sequence'] != None:
             if not (os.path.exists(str(amoptd['mr_sequence']))):
                 msg = 'Cannot find mr sequence file: {0}'.format(amoptd['mr_sequence'])
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
         else:
             amoptd['mr_sequence'] = amoptd['fasta']
             
         # Process the fasta file and run all the checks on the sequence    
-        ample_sequence.process_fasta(amoptd)
+        sequence_util.process_fasta(amoptd)
     
         #
         # Not sure if name actually required - see make_fragments.pl
         #
         if amoptd['name'] and len(amoptd['name']) != 4:
             msg = '-name argument is the wrong length, use 4 chars eg ABCD'
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
             
         # Underscore required by rosetta make_fragments.pl
         amoptd['name'] += '_'
@@ -541,7 +541,7 @@ class Ample(object):
         ###############################################################################
         
         if amoptd['contact_file'] or amoptd['bbcontacts_file']:
-            contacts.checkOptions(amoptd)
+            contacts_util.checkOptions(amoptd)
             amoptd['use_contacts'] = True
         ###############################################################################
         #
@@ -552,7 +552,7 @@ class Ample(object):
             mtz_util.processReflectionFile(amoptd)
         except Exception, e:
             msg = "Error processing reflection file: {0}".format(e)
-            ample_exit.exit_error(msg, sys.exc_info()[2])
+            exit_util.exit_error(msg, sys.exc_info()[2])
         logger.info("Using MTZ file: {0}".format(amoptd['mtz']))
         
         ###############################################################################
@@ -572,10 +572,10 @@ class Ample(object):
         elif amoptd['cluster_dir']:
             if not os.path.isdir(amoptd['cluster_dir']):
                 msg = "Import cluster cannot find directory: {0}".format(amoptd['cluster_dir'])
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
             if not glob.glob(os.path.join(amoptd['cluster_dir'], "*.pdb")):
                 msg = "Import cluster cannot find pdbs in directory: {0}".format(amoptd['cluster_dir'])
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
             logger.info("Importing pre-clustered models from directory: {0}\n".format(amoptd['cluster_dir']))   
             amoptd['cluster_method'] = 'import'
             amoptd['make_frags'] = False
@@ -593,18 +593,18 @@ class Ample(object):
                         amoptd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt' + ample_util.EXE_EXT)
                     if not ample_util.is_exe(str(amoptd['gesamt_exe'])):
                         msg = 'Using homologs without an alignment file and cannot find gesamt_exe: {0}'.format(amoptd['gesamt_exe'])
-                        ample_exit.exit_error(msg)
+                        exit_util.exit_error(msg)
                 elif amoptd['homolog_aligner'] == 'mustang':
                     if not ample_util.is_exe(str(amoptd['mustang_exe'])):
                         msg = 'Using homologs without an alignment file and cannot find mustang_exe: {0}'.format(amoptd['mustang_exe'])
-                        ample_exit.exit_error(msg)
+                        exit_util.exit_error(msg)
                 else:
                     msg = 'Unknown homolog_aligner: {0}'.format(amoptd['homolog_aligner'])
-                    ample_exit.exit_error(msg)
+                    exit_util.exit_error(msg)
             if not os.path.isdir(str(amoptd['models'])):
                 msg = "Homologs option requires a directory of pdb models to be supplied\n" + \
                 "Please supply the models with the -models flag"
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
             amoptd['import_models'] = True
         elif amoptd['models']:
             amoptd['import_models'] = True
@@ -621,7 +621,7 @@ class Ample(object):
         # Check import flags
         if amoptd['import_ensembles'] and (amoptd['import_models']):
                 msg = "Cannot import both models and ensembles/clusters!"
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
         
         # NMR Checks
         if amoptd['nmr_model_in']:
@@ -629,13 +629,13 @@ class Ample(object):
             logger.info(msg)
             if not os.path.isfile(amoptd['nmr_model_in']):
                 msg = "nmr_model_in flag given, but cannot find file: {0}".format(amoptd['nmr_model_in'])
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
             if amoptd['nmr_remodel']:
                 amoptd['make_models'] = True
                 if amoptd['nmr_remodel_fasta']:
                     if not os.path.isfile(amoptd['nmr_remodel_fasta']):
                         msg = "Cannot find nmr_remodel_fasta file: {0}".format(amoptd['nmr_remodel_fasta'])
-                        ample_exit.exit_error(msg)
+                        exit_util.exit_error(msg)
                 else:
                     amoptd['nmr_remodel_fasta'] = amoptd['fasta']
                 msg = "NMR model will be remodelled with ROSETTA using the sequence from: {0}".format(amoptd['nmr_remodel_fasta'])
@@ -648,7 +648,7 @@ class Ample(object):
                 else:
                     if not os.path.isfile(amoptd['frags_3mers']) or not os.path.isfile(amoptd['frags_9mers']):
                         msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(amoptd['frags_3mers'], amoptd['frags_9mers'])
-                        ample_exit.exit_error(msg)
+                        exit_util.exit_error(msg)
                     amoptd['make_frags'] = False
     
             else:
@@ -663,18 +663,18 @@ class Ample(object):
             if amoptd['frags_3mers'] and amoptd['frags_9mers']:
                 if not os.path.isfile(amoptd['frags_3mers']) or not os.path.isfile(amoptd['frags_9mers']):
                     msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(amoptd['frags_3mers'], amoptd['frags_9mers'])
-                    ample_exit.exit_error(msg)
+                    exit_util.exit_error(msg)
                 amoptd['make_frags'] = False
             if amoptd['make_frags'] and (amoptd['frags_3mers'] or  amoptd['frags_9mers']):
                 msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
         
             if not amoptd['make_frags'] and not (amoptd['frags_3mers'] and amoptd['frags_9mers']):
                 msg = """*** Missing fragment files! ***
         Please supply the paths to the fragment files using the -frags_3mers and -frags_9mers flags.
         These can be generated using the Robetta server: http://robetta.bakerlab.org
         Please see the AMPLE documentation for further information."""
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
         
         ###############################################################################
         #
@@ -687,13 +687,13 @@ class Ample(object):
             logger.info('Processing missing domain\n')
             if not os.path.exists(amoptd['domain_all_chains_pdb']):
                 msg = 'Cannot find file domain_all_chains_pdb: {0}'.format(amoptd['domain_all_chains_pdb'])
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
     
         # MR programs
         if amoptd['molrep_only']:
                 amoptd['phaser_only'] = False
                 #msg = 'you say you want molrep only AND phaser only, choose one or both'
-                #ample_exit.exit_error(msg)
+                #exit_util.exit_error(msg)
         
         if amoptd['molrep_only']:
             amoptd['mrbump_programs'] = [ 'molrep' ]
@@ -707,7 +707,7 @@ class Ample(object):
         if amoptd['native_pdb'] or amoptd['benchmark_mode']:
             if amoptd['native_pdb'] and not os.path.isfile(amoptd['native_pdb']):
                 msg = "Cannot find crystal structure PDB: {0}".format(amoptd['native_pdb'])
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
             amoptd['benchmark_mode'] = True
             amoptd['benchmark_dir'] = os.path.join(amoptd['work_dir'], "benchmark")
             logger.info("*** AMPLE running in benchmark mode ***")
@@ -743,26 +743,26 @@ class Ample(object):
                 amoptd['spicker_exe'] = ample_util.find_exe(amoptd['spicker_exe'])
             except Exception:
                 msg = "Cannot find spicker executable: {0}".format(amoptd['spicker_exe'])
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
         elif amoptd['cluster_method'] in ['fast_protein_cluster']:
             if not amoptd['fast_protein_cluster_exe']: amoptd['fast_protein_cluster_exe'] = 'fast_protein_cluster'
             try:
                 amoptd['fast_protein_cluster_exe'] = ample_util.find_exe(amoptd['fast_protein_cluster_exe'])
             except Exception:
                 msg = "Cannot find fast_protein_cluster executable: {0}".format(amoptd['fast_protein_cluster_exe'])
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
         elif amoptd['cluster_method'] in ['import', 'random', 'skip']:
             pass
         else:
             msg = "Unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         if not amoptd['theseus_exe']:
             amoptd['theseus_exe'] = 'theseus' + ample_util.EXE_EXT
         try:
             amoptd['theseus_exe'] = ample_util.find_exe(amoptd['theseus_exe'])
         except Exception:
             msg = "Cannot find theseus executable: {0}".format(amoptd['theseus_exe'])
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         #
         # SCRWL - we always check for SCRWL as if we are processing QUARK models we want to add sidechains to them
         #
@@ -795,7 +795,7 @@ class Ample(object):
         #
         if amoptd['shelxe_rebuild'] and not amoptd['use_shelxe']:
             msg = 'shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.'
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         
         if amoptd['make_frags']:
             if amoptd['use_homs']:
@@ -824,7 +824,7 @@ class Ample(object):
         # cluster queueing
         if amoptd['submit_cluster'] and not amoptd['submit_qtype']:
             msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         
         if amoptd['purge']:
             logger.info('*** Purge mode specified - all intermediate files will be deleted ***')
@@ -869,7 +869,7 @@ class Ample(object):
         if not amoptd['restart_pkl']: return amoptd
         if not os.path.isfile(amoptd['restart_pkl']):
             msg = 'Cannot find restart_pkl file: {0}'.format(amoptd['restart_pkl'])
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         
         logger.info('Restarting from existing pkl file: {0}'.format(amoptd['restart_pkl']))
         # We use the old dictionary, but udpate it with any new values
@@ -929,7 +929,7 @@ class Ample(object):
                 allsame = False if amoptd['homologs'] else True 
                 if not pdb_edit.check_pdb_directory(amoptd['models_dir'], sequence=None, single=True, allsame=allsame):
                     msg = "Error importing restart models: {0}".format(amoptd['models_dir'])
-                    ample_exit.exit_error(msg)
+                    exit_util.exit_error(msg)
                 amoptd['make_ensembles'] = True
             elif amoptd['frags_3mers'] and amoptd['frags_9mers']:
                 logger.info('Restarting from existing fragments: {0}, {1}'.format(amoptd['frags_3mers'], amoptd['frags_9mers']))
@@ -946,7 +946,7 @@ class Ample(object):
                 rosetta_modeller = rosetta_model.RosettaModel(optd=amoptd)
             except Exception, e:
                 msg = "Error setting ROSETTA options: {0}".format(e)
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
         return rosetta_modeller
     
     def setup_ccp4(self, amoptd):
@@ -954,11 +954,11 @@ class Ample(object):
         # Make sure CCP4 is around
         if not "CCP4" in os.environ:
             msg = "Cannot find CCP4 installation - please make sure CCP4 is installed and the setup scripts have been run!"
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
             
         if not "CCP4_SCR" in os.environ:
             msg = "$CCP4_SCR environement variable not set - please make sure CCP4 is installed and the setup scripts have been run!"
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
             
         if not os.path.isdir(os.environ['CCP4_SCR']):
             msg = "*** WARNING ***\n"
@@ -967,7 +967,7 @@ class Ample(object):
             msg += "Please make sure CCP4 is installed and the setup scripts have been run."
             logger.critical(msg)
             os.mkdir(os.environ['CCP4_SCR'])
-            #ample_exit.exit_error(msg)
+            #exit_util.exit_error(msg)
     
         # Record the CCP4 version we're running with  - also required in pyrvapi_results
         amoptd['ccp4_version'] = ample_util.ccp4_version()
@@ -993,11 +993,11 @@ class Ample(object):
                 os.mkdir(amopt.d['work_dir'])
             except:
                 msg = "Cannot create work_dir {0}".format(amopt.d['work_dir'])
-                ample_exit.exit_error(msg, sys.exc_info()[2])
+                exit_util.exit_error(msg, sys.exc_info()[2])
         else:
             if not os.path.exists(amopt.d['run_dir']):
                 msg = 'Cannot find run directory: {0}'.format(amopt.d['run_dir'])
-                ample_exit.exit_error(msg, sys.exc_info()[2])
+                exit_util.exit_error(msg, sys.exc_info()[2])
             logger.info('Making a run directory: checking for previous runs...')
             amopt.d['work_dir'] = ample_util.make_workdir(amopt.d['run_dir'], ccp4_jobid=amopt.d['ccp4_jobid'])
         # Go to the work directory
@@ -1065,7 +1065,7 @@ class Ample(object):
             
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
-            benchmark.analysePdb(amopt.d)       
+            benchmark_util.analysePdb(amopt.d)       
     
         # Make Rosetta fragments
         if amopt.d['make_frags']:
@@ -1077,7 +1077,7 @@ class Ample(object):
         # In case file created above we need to tell the rosetta_modeller where it is
         # otherwise not used as not created before object initialised    
         if amopt.d['make_models'] and (amopt.d['use_contacts'] or amopt.d['restraints_file']):
-            cm = contacts.Contacter(optd=amopt.d)
+            cm = contacts_util.Contacter(optd=amopt.d)
             
             cm.process_restraintsfile() if not amopt.d['use_contacts'] and amopt.d['restraints_file'] \
                 else cm.process_contactfile()
@@ -1106,17 +1106,17 @@ class Ample(object):
                                                  monitor=monitor)
                 except Exception, e:
                     msg = "Error remodelling NMR ensemble: {0}".format(e)
-                    ample_exit.exit_error(msg, sys.exc_info()[2])
+                    exit_util.exit_error(msg, sys.exc_info()[2])
             else:
                 logger.info('making {0} models...'.format(amopt.d['nmodels']))
                 try:
                     rosetta_modeller.ab_initio_model(monitor=monitor)
                 except Exception, e:
                     msg = "Error running ROSETTA to create models: {0}".format(e)
-                    ample_exit.exit_error(msg, sys.exc_info()[2])
+                    exit_util.exit_error(msg, sys.exc_info()[2])
                 if not pdb_edit.check_pdb_directory(amopt.d['models_dir'], sequence=amopt.d['sequence']):
                     msg = "Problem with rosetta pdb files - please check the log for more information"
-                    ample_exit.exit_error(msg)
+                    exit_util.exit_error(msg)
                 msg = 'Modelling complete - models stored in: {0}\n'.format(amopt.d['models_dir'])
             
         elif amopt.d['import_models']:
@@ -1150,35 +1150,35 @@ class Ample(object):
                    not glob.glob(os.path.join(amopt.d['models_dir'], "*.pdb")):
                     ample_util.saveAmoptd(amopt.d)
                     msg = "ERROR! Cannot find any pdb files in: {0}".format(amopt.d['models_dir'])
-                    ample_exit.exit_error(msg)
+                    exit_util.exit_error(msg)
                 amopt.d['ensemble_ok'] = os.path.join(amopt.d['work_dir'],'ensemble.ok')
                 if amopt.d['submit_cluster']:
                     # Pickle dictionary so it can be opened by the job to get the parameters
                     ample_util.saveAmoptd(amopt.d)
                     script = ensembler_util.cluster_script(amopt.d)
-                    workers.run_scripts(job_scripts=[script],
-                                        monitor=monitor,
-                                        chdir=True,
-                                        nproc=amopt.d['nproc'],
-                                        job_time=3600,
-                                        job_name='ensemble',
-                                        submit_cluster=amopt.d['submit_cluster'],
-                                        submit_qtype=amopt.d['submit_qtype'],
-                                        submit_queue=amopt.d['submit_queue'],
-                                        submit_array=amopt.d['submit_array'],
-                                        submit_max_array=amopt.d['submit_max_array'])
+                    workers_util.run_scripts(job_scripts=[script],
+                                             monitor=monitor,
+                                             chdir=True,
+                                             nproc=amopt.d['nproc'],
+                                             job_time=3600,
+                                             job_name='ensemble',
+                                             submit_cluster=amopt.d['submit_cluster'],
+                                             submit_qtype=amopt.d['submit_qtype'],
+                                             submit_queue=amopt.d['submit_queue'],
+                                             submit_array=amopt.d['submit_array'],
+                                             submit_max_array=amopt.d['submit_max_array'])
                     # queue finished so unpickle results
                     with open(amopt.d['results_path'], "r") as f: amopt.d = cPickle.load(f)
                 else:
                     try: ensembler_util.create_ensembles(amopt.d)
                     except Exception, e:
                         msg = "Error creating ensembles: {0}".format(e)
-                        ample_exit.exit_error(msg, sys.exc_info()[2])
+                        exit_util.exit_error(msg, sys.exc_info()[2])
                         
                 # Check we have something to work with
                 if not os.path.isfile(amopt.d['ensemble_ok']) or not amopt.d.has_key('ensembles') or not len(amopt.d['ensembles']):
                     msg = "Problem generating ensembles!"
-                    ample_exit.exit_error(msg)
+                    exit_util.exit_error(msg)
                     
                 if not (amopt.d['homologs'] or amopt.d['single_model_mode']):
                     ensemble_summary = ensembler_util.ensemble_summary(amopt.d['ensembles_data'])
@@ -1190,7 +1190,7 @@ class Ample(object):
             # Bail here if we didn't create anything
             if not len(amopt.d['ensembles']):
                 msg = "### AMPLE FAILED TO GENERATE ANY ENSEMBLES! ###\nExiting..."
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
         
         # Update results view
         if self.output_gui: self.output_gui.display_results(amopt.d)
@@ -1201,7 +1201,7 @@ class Ample(object):
                 logger.info('----- Running MRBUMP on ensembles--------\n\n')
                 if len(amopt.d['ensembles']) < 1:
                     msg = "ERROR! Cannot run MRBUMP as there are no ensembles!"
-                    ample_exit.exit_error(msg)
+                    exit_util.exit_error(msg)
                  
                 if amopt.d['mrbump_dir'] is None:
                     bump_dir = os.path.join(amopt.d['work_dir'], 'MRBUMP')
@@ -1240,23 +1240,23 @@ class Ample(object):
                 
             # Change to mrbump directory before running
             os.chdir(amopt.d['mrbump_dir'])  
-            ok = workers.run_scripts(job_scripts=amopt.d['mrbump_scripts'],
-                                     monitor=monitor,
-                                     check_success=mrbump_util.checkSuccess,
-                                     early_terminate=amopt.d['early_terminate'],
-                                     chdir=False,
-                                     nproc=amopt.d['nproc'],
-                                     job_time=mrbump_util.MRBUMP_RUNTIME,
-                                     job_name='mrbump',
-                                     submit_cluster=amopt.d['submit_cluster'],
-                                     submit_qtype=amopt.d['submit_qtype'],
-                                     submit_queue=amopt.d['submit_queue'],
-                                     submit_array=amopt.d['submit_array'],
-                                     submit_max_array=amopt.d['submit_max_array'])
+            ok = workers_util.run_scripts(job_scripts=amopt.d['mrbump_scripts'],
+                                          monitor=monitor,
+                                          check_success=mrbump_util.checkSuccess,
+                                          early_terminate=amopt.d['early_terminate'],
+                                          chdir=False,
+                                          nproc=amopt.d['nproc'],
+                                          job_time=mrbump_util.MRBUMP_RUNTIME,
+                                          job_name='mrbump',
+                                          submit_cluster=amopt.d['submit_cluster'],
+                                          submit_qtype=amopt.d['submit_qtype'],
+                                          submit_queue=amopt.d['submit_queue'],
+                                          submit_array=amopt.d['submit_array'],
+                                          submit_max_array=amopt.d['submit_max_array'])
          
             if not ok:
                 msg = "Error running MRBUMP on the ensembles!\nCheck logs in directory: {0}".format(amopt.d['mrbump_dir'])
-                ample_exit.exit_error(msg)
+                exit_util.exit_error(msg)
         
             # Collect the MRBUMP results
             results_summary = mrbump_util.ResultsSummary()
@@ -1283,22 +1283,22 @@ class Ample(object):
             if amopt.d['submit_cluster']:
                 # Pickle dictionary so it can be opened by the job to get the parameters
                 ample_util.saveAmoptd(amopt.d)
-                script = benchmark.cluster_script(amopt.d)
-                workers.run_scripts(job_scripts=[script],
-                                    monitor=monitor,
-                                    chdir=True,
-                                    nproc=amopt.d['nproc'],
-                                    job_time=7200,
-                                    job_name='benchmark',
-                                    submit_cluster=amopt.d['submit_cluster'],
-                                    submit_qtype=amopt.d['submit_qtype'],
-                                    submit_queue=amopt.d['submit_queue'],
-                                    submit_array=amopt.d['submit_array'],
-                                    submit_max_array=amopt.d['submit_max_array'])
+                script = benchmark_util.cluster_script(amopt.d)
+                workers_util.run_scripts(job_scripts=[script],
+                                         monitor=monitor,
+                                         chdir=True,
+                                         nproc=amopt.d['nproc'],
+                                         job_time=7200,
+                                         job_name='benchmark',
+                                         submit_cluster=amopt.d['submit_cluster'],
+                                         submit_qtype=amopt.d['submit_qtype'],
+                                         submit_queue=amopt.d['submit_queue'],
+                                         submit_array=amopt.d['submit_array'],
+                                         submit_max_array=amopt.d['submit_max_array'])
                 # queue finished so unpickle results
                 with open(amopt.d['results_path'], "r") as f: amopt.d = cPickle.load(f)
             else:
-                benchmark.analyse(amopt.d)
+                benchmark_util.analyse(amopt.d)
                 ample_util.saveAmoptd(amopt.d)
         
         # Flag to show that we reached the end without error - useful for integration testing
@@ -1317,4 +1317,4 @@ if __name__ == "__main__":
         Ample().run()
     except Exception as e:
         msg = "Error running main AMPLE program: {0}".format(e.message)
-        ample_exit.exit_error(msg, sys.exc_info()[2])
+        exit_util.exit_error(msg, sys.exc_info()[2])

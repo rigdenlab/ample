@@ -15,8 +15,9 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.join(root, "scripts"))
 
 # Our imports
-from ample_util import SCRIPT_EXT
-import mrbump_cmd
+from ample.util.ample_util import SCRIPT_EXT
+from ample.util import mrbump_cmd
+from ample.util import printTable
 
 # MRBUMP imports
 if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
@@ -26,7 +27,6 @@ sys.path.insert(0, mrbumpd)
 import parse_arpwarp
 import parse_buccaneer
 import parse_phaser
-import printTable
 
 TOP_KEEP = 3 # How many of the top shelxe/phaser results to keep for the gui
 MRBUMP_RUNTIME = 172800 # allow 48 hours for each mrbump job

@@ -10,7 +10,7 @@ import os
 import sys
 
 # our imports
-import ample_util
+from ample.util import ample_util
 
 def worker(inqueue, early_terminate=False, check_success=None, chdir=False):
     """

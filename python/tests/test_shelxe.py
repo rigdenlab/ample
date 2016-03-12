@@ -2,8 +2,8 @@
 
 import os
 import unittest
-from ample.python import ample_util
 from ample.python import shelxe
+from ample.util import ample_util
 
 class Test(unittest.TestCase):
 

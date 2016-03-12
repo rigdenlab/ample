@@ -20,11 +20,11 @@ from ample.ensembler.constants import *
 from ample.ensembler import cluster_util
 from ample.ensembler import subcluster_util
 from ample.ensembler import truncation_util
-from ample.python import ample_sequence
-from ample.python import ample_util
-from ample.python import pdb_edit
 from ample.python import subcluster
 from ample.python import theseus
+from ample.util import sequence_util
+from ample.util import ample_util
+from ample.util import pdb_edit
 
 _logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ def model_core_from_fasta(models, alignment_file, work_dir=None, case_sensitive=
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
     
     # Read in alignment to get
-    align_seq = ample_sequence.Sequence(fasta=alignment_file)
+    align_seq = sequence_util.Sequence(fasta=alignment_file)
     
     # Check all alignments the same length
     
@@ -101,7 +101,7 @@ def model_core_from_theseus(models, alignment_file, var_by_res, work_dir=None):
     """
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
 
-    seqalign = ample_sequence.Sequence(fasta=alignment_file)
+    seqalign = sequence_util.Sequence(fasta=alignment_file)
 
     # We now need to add the list of pdbs, chains and resSeqs of the other models to the Sequence object
     for m in models: seqalign.add_pdb_data(m)

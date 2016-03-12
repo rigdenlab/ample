@@ -15,9 +15,9 @@ import sys
 
 # Custom
 from ample.ensembler import _ensembler
-from ample.ensembler.constants import *
+from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, THIN_CLUSTERS
 from ample.python import ample_scwrl
-from ample.python import ample_util
+from ample.util import ample_util
 
 _logger = logging.getLogger(__name__)
 

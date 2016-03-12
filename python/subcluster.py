@@ -15,8 +15,8 @@ import unittest
 import mmtbx.superpose
 
 # Internal imports
-import ample_util
-import pdb_edit
+from ample.util import ample_util
+from ample.util import pdb_edit
 
 _logger = logging.getLogger()
 

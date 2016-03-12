@@ -1,8 +1,8 @@
-"""Test functions for python.mtz_util"""
+"""Test functions for util.mtz_util"""
 
 import os
 import unittest
-from ample.python import mtz_util
+from ample.util import mtz_util
 
 
 class Test(unittest.TestCase):

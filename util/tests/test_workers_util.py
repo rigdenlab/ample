@@ -1,10 +1,10 @@
-"""Test functions for python.workers"""
+"""Test functions for util.workers_util"""
 
 import glob
 import os
 import tempfile
 import unittest
-from ample.python import workers
+from ample.util import workers_util
 
 class Test(unittest.TestCase):
 
@@ -43,9 +43,9 @@ sys.exit(0)
             j = os.path.abspath("job_{0}".format(j))
             jobs.append(self.makeJob(j))
              
-        js = workers.JobServer()
+        js = workers_util.JobServer()
         js.setJobs(jobs)
-        js.start(nproc=2, early_terminate=True, check_success=workers._check_success_test)
+        js.start(nproc=2, early_terminate=True, check_success=workers_util._check_success_test)
          
         # Cleanup
         for j in jobs: os.unlink(j)

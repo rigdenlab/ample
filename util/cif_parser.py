@@ -12,10 +12,9 @@ import os
 import sys
 
 # Our imports
-import ample_util
-import mtz_util
-
+from ample.util import ample_util
 from iotbx.cif import reader as cif_reader
+import mtz_util # Avoid circular dependencies
 
 class CifParser(object):
     """Class for manipulating CIF files."""

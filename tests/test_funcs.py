@@ -12,8 +12,8 @@ import sys
 import unittest
 
 # Our imports
-from ample.python.ample_util import SCRIPT_EXT, SCRIPT_HEADER
-from ample.python import workers
+from ample.util.ample_util import SCRIPT_EXT, SCRIPT_HEADER
+from ample.util import workers_util
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
 

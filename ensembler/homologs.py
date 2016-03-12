@@ -12,9 +12,9 @@ import sys
 
 # Custom
 from ample.ensembler import _ensembler
-from ample.ensembler.constants import *
-from ample.python import ample_util
-from ample.python import pdb_edit
+from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
+from ample.util import ample_util
+from ample.util import pdb_edit
 
 _logger = logging.getLogger(__name__)
 

@@ -13,9 +13,9 @@ import time
 import unittest
 
 # our imports
-import ample_util
-import clusterize
-import worker
+from ample.python import clusterize
+from ample.util import ample_util
+from ample.util import worker
 
 class JobServer(object):
     def __init__(self):

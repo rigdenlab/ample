@@ -1,13 +1,12 @@
-"""Test functions for python.tmscore"""
+"""Test functions for util.tmscore_util"""
 
 import unittest
-
-from ample.python import tmscore
+from ample.util import tmscore_util
 
 class TestTMScore(unittest.TestCase):
 
     def test_read(self):
-        TM = tmscore.TMscorer("foo", "bar", "cho")
+        TM = tmscore_util.TMscorer("foo", "bar", "cho")
         
         seq = "-----AAAA---"
         offset = TM.read_sequence(seq)
@@ -25,7 +24,7 @@ class TestTMScore(unittest.TestCase):
         self.assertEqual(ref_offset, offset)
 
     def test_gaps(self):        
-        TM = tmscore.TMscorer("foo", "bar", "cho")
+        TM = tmscore_util.TMscorer("foo", "bar", "cho")
         
         seq = "AAAA---AA--AA"
         gaps = TM.find_gaps(seq)

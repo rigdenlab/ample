@@ -17,9 +17,8 @@ import unittest
 from ample.parsers import casprr_parser
 from ample.parsers import psipred_parser
 from ample.parsers import restraints_parser
-from ample.python import ample_sequence
 from ample.python import energy_functions
-from ample.python import pdb_edit
+from ample.util import pdb_edit
 
 # Check matplotlib is available - problems with Windows
 try:

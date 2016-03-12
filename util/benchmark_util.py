@@ -15,16 +15,16 @@ import sys
 import unittest
 
 # Our imports
-from ample.python import tmscore
-import ample_util
-import csymmatch
-import maxcluster
-import pdb_edit
-import pdb_model
-import reforigin
-import residue_map
-import rio
-import shelxe
+from ample.python import csymmatch
+from ample.python import maxcluster
+from ample.python import reforigin
+from ample.python import rio
+from ample.python import shelxe
+from ample.util import ample_util
+from ample.util import pdb_edit
+from ample.util import pdb_model
+from ample.util import residue_map
+from ample.util import tmscore_util
 
 _logger=logging.getLogger()
 
@@ -363,11 +363,11 @@ def analyseModels(amoptd):
 #         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
 #     except RuntimeError,e:
 #         print e
-    if tmscore.tmscoreAvail():
+    if tmscore_util.tmscoreAvail():
         amoptd['tmscore_exe'] = ample_util.find_exe("TMscore")
-        tm = tmscore.TMscorer(amoptd['native_pdb_std'], 
-                                    amoptd['tmscore_exe'], 
-                                    fixpath(amoptd['benchmark_dir']))
+        tm = tmscore_util.TMscorer(amoptd['native_pdb_std'], 
+                                   amoptd['tmscore_exe'], 
+                                   fixpath(amoptd['benchmark_dir']))
         _logger.info("Analysing Rosetta models with TMscore")
         model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
         amoptd['tmComp'] = tm.compare_to_structure(model_list, 

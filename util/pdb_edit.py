@@ -18,10 +18,10 @@ import iotbx.pdb
 #iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 
 # our imports
-import ample_sequence
-import ample_util
+import ample_util  
 import pdb_model
 import residue_map
+import sequence_util
 
 three2one = {
     'ALA' : 'A',    
@@ -2226,7 +2226,7 @@ if __name__ == "__main__":
     elif args.std:
         standardise(args.input_file, args.output_file, del_hetatm=True, chain=args.chain)
     elif args.seq:
-        print ample_sequence.Sequence(pdb=args.input_file).fasta_str()
+        print sequence_util.Sequence(pdb=args.input_file).fasta_str()
     elif args.split_models:
         print split_pdb(args.input_file)
     elif args.split_chains:

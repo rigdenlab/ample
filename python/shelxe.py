@@ -8,8 +8,8 @@ import shutil
 import sys
 
 # our imports
-from ample.python import ample_util
-from ample.python import mtz_util
+from ample.util import ample_util
+from ample.util import mtz_util
 
 if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
 mrbumpd=os.path.join(os.environ['CCP4'],"share","mrbump","include","parsers")

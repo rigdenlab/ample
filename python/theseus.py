@@ -12,9 +12,9 @@ import sys
 import unittest
 
 # local imports
-import ample_sequence
-import ample_util
-import pdb_edit
+from ample.util import ample_util
+from ample.util import sequence_util
+from ample.util import pdb_edit
 
 # We create this here otherwise it causes problems with pickling
 TheseusVariances = collections.namedtuple('TheseusVariances', ['idx', 'resName', 'resSeq', 'variance', 'stdDev', 'rmsd', 'core'])
@@ -44,8 +44,8 @@ class Theseus(object):
         """Create an alignment file for the models - this is based on the assumption they are all the same length
         but may have different residues"""
         if not alignment_file: alignment_file = os.path.join(self.work_dir,'homologs.fasta')
-        all_seq = ample_sequence.Sequence(pdb=models[0])
-        for model in models[1:]: all_seq += ample_sequence.Sequence(pdb=model)
+        all_seq = sequence_util.Sequence(pdb=models[0])
+        for model in models[1:]: all_seq += sequence_util.Sequence(pdb=model)
         if not all(map(lambda x: x == len(all_seq.sequences[0]), [ len(s) for s in all_seq.sequences ])):
             raise RuntimeError,'PDB files are not all of the same length!\n{0}'.format(models)
         all_seq.write_fasta(alignment_file,pdbname=True)

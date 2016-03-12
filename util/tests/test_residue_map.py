@@ -1,9 +1,9 @@
-"""Test functions for python.residue_map"""
+"""Test functions for util.residue_map"""
 
 import os
 import unittest
-from ample.python import pdb_edit
-from ample.python import residue_map
+from ample.util import pdb_edit
+from ample.util import residue_map
 
 class Test(unittest.TestCase):
 

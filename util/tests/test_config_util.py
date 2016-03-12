@@ -1,10 +1,10 @@
-"""Tests for python.config"""
+"""Tests for util.config_util"""
 
 import os
 import tempfile
 import unittest
-from ample.python import config
 from ample.python import version
+from ample.util import config_util
 
 class TestCases(unittest.TestCase):
     MAX_DIFF = None
@@ -24,7 +24,7 @@ class TestCases(unittest.TestCase):
     
     def test_process_options(self):
         #Test the process_options
-        options = config.AMPLEConfigOptions()
+        options = config_util.AMPLEConfigOptions()
         options.d = {
                      'fasta' : os.path.join(self.testfiles_dir, '2uui.fasta'),
                      'native_pdb' : os.path.join(self.testfiles_dir, '2UUI.pdb'),
@@ -59,7 +59,7 @@ class TestCases(unittest.TestCase):
     def test_preset_options(self):
         #Test the preset options
         
-        options = config.AMPLEConfigOptions()
+        options = config_util.AMPLEConfigOptions()
         #quick_mode test
         options.d = {
                      'max_ensemble_models' : 10,
@@ -162,7 +162,7 @@ class TestCases(unittest.TestCase):
     def test_read_config_file(self):
         #Test reading the config file
         
-        options = config.AMPLEConfigOptions()
+        options = config_util.AMPLEConfigOptions()
          
         f = tempfile.NamedTemporaryFile("w", delete=False)
         f.write("[Databases]" + os.linesep)
@@ -236,7 +236,7 @@ class TestCases(unittest.TestCase):
     def test_read_config_opts(self):
         #Test read config options
         
-        options = config.AMPLEConfigOptions()
+        options = config_util.AMPLEConfigOptions()
         config_opts = {
                        'early_terminate': False,
                        'benchmark_mode': True,
@@ -285,7 +285,7 @@ class TestCases(unittest.TestCase):
     def test_isfloat(self):
         #Test the _isfloat function
         
-        options = config.AMPLEConfigOptions()
+        options = config_util.AMPLEConfigOptions()
         value = 75
         expected = True
         self.assertEqual(expected, options._isfloat(value))

@@ -4,8 +4,8 @@ import os
 import unittest
 
 # Our imports
-import ample_util
-import pdb_edit
+from ample.util import ample_util
+from ample.util import pdb_edit
 
 class Csymmatch( object ):
     

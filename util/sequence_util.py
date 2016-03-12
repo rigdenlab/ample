@@ -2,7 +2,7 @@
 import logging
 import os
 
-import ample_exit
+import exit_util
 import pdb_edit
 
 class Sequence(object):
@@ -251,17 +251,17 @@ def process_fasta(amoptd):
     # Check we can find the input fasta
     if not os.path.exists(str(amoptd['fasta'])):
         msg = 'Cannot find fasta file: {0}'.format(amoptd['fasta'])
-        ample_exit.exit_error(msg)
+        exit_util.exit_error(msg)
     
     # Reformat to what we need
     logging.debug('Parsing FASTA file')
     try: fp = Sequence(fasta=amoptd['fasta'])
     except Exception as e:
         msg = "Error parsing FASTA file: {0}\n\n{1}".format(amoptd['fasta'],e.message)
-        ample_exit.exit_error(msg)
+        exit_util.exit_error(msg)
     if fp.numSequences() != 1:
         msg = "ERROR! Fasta file {0} has > 1 sequence in it.".format(amoptd['fasta'])
-        ample_exit.exit_error(msg)
+        exit_util.exit_error(msg)
     
     # Length checks
     amoptd['fasta_length'] = fp.length()
@@ -270,12 +270,12 @@ def process_fasta(amoptd):
     # Check we have a decent length
     if amoptd['fasta_length'] < 9:
         msg = "ERROR! Fasta is of length {0}. This is much too short!".format(amoptd['fasta_length'])
-        ample_exit.exit_error(msg)
+        exit_util.exit_error(msg)
     
     # Check we will be able to truncate at this level
     if (float(amoptd['fasta_length']) / 100) * float(amoptd['percent']) < 1:
         msg = "Cannot truncate a fasta sequence of length {0} with {1} percent intervals. Please select a larger interval.".format(amoptd['fasta_length'], amoptd['percent'])
-        ample_exit.exit_error(msg)
+        exit_util.exit_error(msg)
         
     # Check that the sequence doesn't have a his-tag in it
     if not amoptd['allow_his_tag']:
@@ -284,7 +284,7 @@ def process_fasta(amoptd):
         l = fp.length()
         if (0 <= i <= 20) or (l-20 <= i <= l):
             msg = 'The fasta sequence contains a his tag sequence {0} at position {1}. If you wish to use ample with this sequence, please use the \"-allow_his_tag True\" option'.format(his_tag,i)
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
     
     # Fasta is ok, so write out a canonical fasta in the work directory
     outfasta = os.path.join(amoptd['work_dir'], amoptd['name'] + '_.fasta')

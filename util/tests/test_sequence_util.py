@@ -1,8 +1,8 @@
-"""Test functions for python.ample_sequence"""
+"""Test functions for util.sequence_util"""
 
 import os
 import unittest
-from ample.python import ample_sequence
+from ample.util import sequence_util
 
 class Test(unittest.TestCase):
     
@@ -21,8 +21,8 @@ class Test(unittest.TestCase):
         return
 
     def test_add(self):
-        s1 = ample_sequence.Sequence(pdb=os.path.join(self.testfiles_dir,'1GU8.pdb'))
-        s2 = ample_sequence.Sequence(fasta=os.path.join(self.testfiles_dir,'2uui.fasta'))
+        s1 = sequence_util.Sequence(pdb=os.path.join(self.testfiles_dir,'1GU8.pdb'))
+        s2 = sequence_util.Sequence(fasta=os.path.join(self.testfiles_dir,'2uui.fasta'))
         s1 += s2
         
         self.assertTrue(len(s1.sequences),2)
@@ -43,7 +43,7 @@ class Test(unittest.TestCase):
         pdbin1 = os.path.join(self.ample_dir, 'examples', 'homologs','1ujbA.pdb')
         pdbin2 = os.path.join(self.ample_dir, 'examples', 'homologs','2a6pA.pdb')
         pdbin3 = os.path.join(self.ample_dir, 'examples', 'homologs','3c7tA.pdb')
-        s1 = ample_sequence.Sequence(fasta=fasta1)
+        s1 = sequence_util.Sequence(fasta=fasta1)
         s1.add_pdb_data(pdbin1)
         s1.add_pdb_data(pdbin2)
         s1.add_pdb_data(pdbin3)
@@ -93,7 +93,7 @@ class Test(unittest.TestCase):
 QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVXAIAFTMYLSMLLGYGLTMVPFGGEQNPIYWARYADWLFTTPLLLLDLALLVDADQGTI
 LAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKAESMRPEVASTFKVLRNVTVVLWSAYPVVWLIGSEGAGIVPLNIETLLFMVLDVSAKVGFGLILLRSRAIFGEAEAPEPSA
 GDGAAATSD"""
-        fp = ample_sequence.Sequence()
+        fp = sequence_util.Sequence()
         self.assertRaises(RuntimeError, fp._parse_fasta, infasta.split(os.linesep))    
     
     def test_OK(self):
@@ -101,7 +101,7 @@ GDGAAATSD"""
 QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVPAIAFTMYLSMLLGYGLTMVPFGGEQNPIYWARYADWLFTTPLLLLDLALLVDADQGTI
 LAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKAESMRPEVASTFKVLRNVTVVLWSAYPVVWLIGSEGAGIVPLNIETLLFMVLDVSAKVGFGLILLRSRAIFGEAEAPEPSA
 GDGAAATSD"""
-        fp =ample_sequence. Sequence()
+        fp =sequence_util. Sequence()
         fp._parse_fasta(infasta.split(os.linesep))
         outfasta=""">3HAP:A|PDBID|CHAIN|SEQUENCE
 QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVPAIAFTMYLSMLLGYGLTMVPFGGEQNPIYW
@@ -114,7 +114,7 @@ GDGAAATSD
         self.assertEqual(fp.length(), 249)
 
     def test_fromPdb(self):
-        s1 = ample_sequence.Sequence(pdb=os.path.join(self.testfiles_dir,'4DZN.pdb'))
+        s1 = sequence_util.Sequence(pdb=os.path.join(self.testfiles_dir,'4DZN.pdb'))
         self.assertEqual(s1.name, '4DZN')
         self.assertEqual(s1.pdbs, ['4DZN.pdb', '4DZN.pdb', '4DZN.pdb'])
         self.assertEqual(s1.chains, ['A', 'B', 'C'])
@@ -133,7 +133,7 @@ GEIAALKQEIAALKKEIAALKEIAALKQGYY
 
     def test_resSeq(self):
         pdbin = os.path.join(self.testfiles_dir,'1D7M.pdb')
-        s1 = ample_sequence.Sequence(pdb=pdbin)
+        s1 = sequence_util.Sequence(pdb=pdbin)
         self.assertTrue(len(s1.sequences),2)
         self.assertTrue(len(s1.headers),2)
         self.assertTrue(len(s1.pdbs),2)
@@ -144,9 +144,9 @@ GEIAALKQEIAALKKEIAALKEIAALKQGYY
         pdbin1 = os.path.join(self.testfiles_dir,'1D7M.pdb')
         pdbin2 = os.path.join(self.testfiles_dir,'1GU8.pdb')
         pdbin3 = os.path.join(self.testfiles_dir,'2UUI.pdb')
-        s1 = ample_sequence.Sequence(pdb=pdbin1)
-        s1 += ample_sequence.Sequence(pdb=pdbin2)
-        s1 += ample_sequence.Sequence(pdb=pdbin3)
+        s1 = sequence_util.Sequence(pdb=pdbin1)
+        s1 += sequence_util.Sequence(pdb=pdbin2)
+        s1 += sequence_util.Sequence(pdb=pdbin3)
         
         ref = """>1D7M.pdb
 EMANRLAGLENSLESEKVSREQLIKQKDQLNSLLASLESEGAEREKRLRELEAKLDETLKNLELEKLARMELEARLAKTE

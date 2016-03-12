@@ -17,11 +17,11 @@ import unittest
 
 # Our modules
 from ample.parsers import psipred_parser
-from ample.python import ample_sequence
-from ample.python import ample_util
 from ample.python import octopus_predict
-from ample.python import pdb_edit
-from ample.python import workers
+from ample.util import ample_util
+from ample.util import pdb_edit
+from ample.util import sequence_util
+from ample.util import workers_util
 
 def align_mafft(query_seq, template_seq, logger, mafft_exe=None):
     if not mafft_exe:
@@ -46,7 +46,7 @@ def align_mafft(query_seq, template_seq, logger, mafft_exe=None):
     if ret != 0:
         raise RuntimeError,"Error running mafft for alignnment - check logfile: {0}".format(logfile)
     
-    seq_align = ample_sequence.Sequence()
+    seq_align = sequence_util.Sequence()
     seq_align.from_fasta(logfile,canonicalise=False)
     
     logger.info("Got Alignment:\n{0}\n{1}".format(seq_align.sequences[0],seq_align.sequences[1]))
@@ -84,7 +84,7 @@ def align_clustalw(query_seq, template_seq, logger, clustalw_exe=None):
     if ret != 0:
         raise RuntimeError,"Error running clustalw2 for alignnment - check logfile: {0}".format(logfile)
     
-    seq_align = ample_sequence.Sequence()
+    seq_align = sequence_util.Sequence()
     seq_align.from_fasta(align_out,canonicalise=False)
     
     logger.info("Got Alignment:\n{0}\n{1}".format(seq_align.sequences[0],seq_align.sequences[1]))
@@ -635,12 +635,12 @@ class RosettaModel(object):
         os.chdir(remodel_dir)
       
         # Sequence object for idealized models
-        id_seq = ample_sequence.Sequence(pdb=id_pdbs[0])
+        id_seq = sequence_util.Sequence(pdb=id_pdbs[0])
         
         # Get the alignment for the structure - assumes all models have the same sequence
         if not alignment_file:
             # fasta sequence of first model
-            remodel_seq = ample_sequence.Sequence(fasta=remodel_fasta)
+            remodel_seq = sequence_util.Sequence(fasta=remodel_fasta)
             alignment_file = align_mafft(remodel_seq,id_seq,self.logger)
         
         # Remodel each idealized model nmr_process times
@@ -720,19 +720,19 @@ class RosettaModel(object):
     def run_scripts(self, job_scripts, job_time=None, job_name=None, monitor=None, chdir=True):
         # We need absolute paths to the scripts
         #job_scripts=[os.path.abspath(j) for j in job_scripts]
-        return workers.run_scripts(job_scripts=job_scripts, 
-                                   monitor=monitor,
-                                   check_success=None,
-                                   early_terminate=None,
-                                   chdir=chdir,
-                                   nproc=self.nproc,
-                                   job_time=job_time,
-                                   job_name=job_name,
-                                   submit_cluster=self.submit_cluster,
-                                   submit_qtype=self.submit_qtype,
-                                   submit_queue=self.submit_queue,
-                                   submit_array=self.submit_array,
-                                   submit_max_array=self.submit_max_array)
+        return workers_util.run_scripts(job_scripts=job_scripts, 
+                                        monitor=monitor,
+                                        check_success=None,
+                                        early_terminate=None,
+                                        chdir=chdir,
+                                        nproc=self.nproc,
+                                        job_time=job_time,
+                                        job_name=job_name,
+                                        submit_cluster=self.submit_cluster,
+                                        submit_qtype=self.submit_qtype,
+                                        submit_queue=self.submit_queue,
+                                        submit_array=self.submit_array,
+                                        submit_max_array=self.submit_max_array)
 
     def setup_domain_restraints(self):
         """

@@ -4,7 +4,7 @@ import shutil
 import unittest
 
 # our imports
-import ample_util
+from ample.util import ample_util
 
 class FPC(object):
     """

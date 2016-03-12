@@ -1,7 +1,7 @@
-"""Test functions for python.ample_util"""
+"""Test functions for util.ample_util"""
 
 import unittest
-from ample.python import ample_util
+from ample.util import ample_util
 
 class Test(unittest.TestCase):
 
