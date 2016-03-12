@@ -5,6 +5,7 @@ import shutil
 import unittest
 from ample.python import theseus
 from ample.util import ample_util
+from ample.util import pdb_edit
 
 class Test(unittest.TestCase):
 
@@ -25,8 +26,7 @@ class Test(unittest.TestCase):
 
         return
 
-    def testAlignModels(self):
-        """Test we can reproduce the original thresholds"""
+    def test_align_models(self):
         os.chdir(self.thisd)
         
         models = glob.glob(os.path.join(self.testfiles_dir,'models','*.pdb'))
@@ -56,12 +56,11 @@ class Test(unittest.TestCase):
             
         shutil.rmtree(work_dir)
     
-    def testAlignModelsHomo(self):
-        """Test we can reproduce the original thresholds"""
+    def test_align_models_homo(self):
         os.chdir(self.thisd)
 
         work_dir = os.path.join(self.tests_dir,'theseus_align_homo')
-        os.mkdir(work_dir)
+        if not os.path.isdir(work_dir): os.mkdir(work_dir)
         pdb_list = [ '1D7M.pdb', '1GU8.pdb', '2UUI.pdb', '1K33.pdb' ,'1BYZ.pdb' ]
         models = []
         tokeep_idx = [ i for i in range(12) ]
@@ -71,8 +70,6 @@ class Test(unittest.TestCase):
             pdbout = os.path.join(self.testfiles_dir,"{0}_cut.pdb".format(name))
             pdb_edit.select_residues(pdbin, pdbout, tokeep_idx=tokeep_idx)
             models.append(pdbout)
-        
-        #models = [ os.path.join(self.testfiles_dir,pdb) for pdb in pdb_list]
 
         homologs = True
         rtheseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)

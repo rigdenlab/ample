@@ -21,7 +21,6 @@ class Test(unittest.TestCase):
         return
 
     def test_get_predict(self):
-        """See we can get the prediction"""
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()        
          
         fastafile = os.path.join(self.ample_dir,"tests","testfiles","2uui.fasta")
