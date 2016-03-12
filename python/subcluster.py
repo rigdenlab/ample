@@ -9,7 +9,6 @@ import logging
 import re
 import os
 import shutil
-import unittest
 
 # External imports
 import mmtbx.superpose

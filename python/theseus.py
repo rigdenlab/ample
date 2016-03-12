@@ -9,7 +9,6 @@ import logging
 import os
 import shutil
 import sys
-import unittest
 
 # local imports
 from ample.util import ample_util
