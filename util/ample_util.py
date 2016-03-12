@@ -12,13 +12,12 @@ import subprocess
 import sys
 import tarfile
 import tempfile
-import unittest
 import urllib
 import zipfile
 
 # our imports
 import exit_util
-import pdb_edit # Avoid circular dependencies
+import pdb_edit
 
 CCP4_VERSION=None
 SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
