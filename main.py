@@ -23,10 +23,8 @@ import time
 # Our imports
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, UNMODIFIED
 from ample.ensembler import ensembler_util
-from ample.python import ample_options
 from ample.python import pyrvapi_results
 from ample.python import rosetta_model
-from ample.python import version
 from ample.util import ample_util
 from ample.util import benchmark_util
 from ample.util import config_util
@@ -34,9 +32,11 @@ from ample.util import contacts_util
 from ample.util import exit_util
 from ample.util import mrbump_util
 from ample.util import mtz_util
+from ample.util import options_util
 from ample.util import pdb_edit
 from ample.util import sequence_util
 from ample.util import workers_util
+from ample.util import version
 
 def setup_console_logging():
     logger = logging.getLogger()
@@ -496,7 +496,7 @@ class Ample(object):
         argso = parser.parse_args(args)
         
         # Create amopt object to hold options
-        amopt = ample_options.AmpleOptions()
+        amopt = options_util.AmpleOptions()
         
         # Now put them in the amopt object - this also sets/checks any defaults
         amopt.populate(argso)

@@ -6,7 +6,7 @@ import os
 
 # our imports
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
-import version
+from ample.util import version
 
 class AmpleOptions(object):
 

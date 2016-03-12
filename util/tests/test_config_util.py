@@ -3,8 +3,8 @@
 import os
 import tempfile
 import unittest
-from ample.python import version
 from ample.util import config_util
+from ample.util import version
 
 class TestCases(unittest.TestCase):
     MAX_DIFF = None

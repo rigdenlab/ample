@@ -16,7 +16,7 @@ except:
     import ConfigParser
 
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
-from ample.python import version
+from ample.util import version
 
 AMPLE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 LOGGER = logging.getLogger(__name__)

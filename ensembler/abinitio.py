@@ -16,8 +16,8 @@ import sys
 # Custom
 from ample.ensembler import _ensembler
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, THIN_CLUSTERS
-from ample.python import ample_scwrl
 from ample.util import ample_util
+from ample.util import scwrl_util
 
 _logger = logging.getLogger(__name__)
 
@@ -139,9 +139,9 @@ class Ensembler(_ensembler.Ensembler):
         scwrl_directory = os.path.join(work_dir, "scrwl")
         if not os.path.isdir(scwrl_directory): os.mkdir(scwrl_directory)
         
-        scwrled_models = ample_scwrl.Scwrl(scwrl_exe=scwrl_exe).process_models(models, 
-                                                                               scwrl_directory, 
-                                                                               strip_oxt=True)
+        scwrled_models = scwrl_util.Scwrl(scwrl_exe=scwrl_exe).process_models(models, 
+                                                                              scwrl_directory, 
+                                                                              strip_oxt=True)
         return scwrled_models
         
 

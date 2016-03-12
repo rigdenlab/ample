@@ -12,7 +12,7 @@ import unittest
 
 from iotbx import reflection_file_reader
 
-import exit_util # Avoid circular dependencies
+import ample_util # Avoid circular dependencies
 import exit_util
 import cif_parser # Avoid circular dependencies
 
@@ -21,11 +21,11 @@ _logger.setLevel(logging.DEBUG)
 
 def del_column(file_name, column, overwrite=True):
     """Delete a column from an mtz file and return a path to the file"""
-    mtzDel = exit_util.filename_append(file_name, "d{0}".format(column) )
+    mtzDel = ample_util.filename_append(file_name, "d{0}".format(column) )
     cmd = [ "mtzutils", "hklin1", file_name, "hklout", mtzDel ]
     stdin = "EXCLUDE 1 {0}".format( column )
     logfile = os.path.join( os.getcwd(), "mtzutils.log" )
-    retcode = exit_util.run_command(cmd, stdin=stdin, logfile=logfile)
+    retcode = ample_util.run_command(cmd, stdin=stdin, logfile=logfile)
     if retcode != 0:
         msg = "Error running mtzutils. Check the logfile: {0}".format(logfile)
         _logger.critical(msg)
@@ -39,11 +39,11 @@ def del_column(file_name, column, overwrite=True):
 
 def add_rfree(file_name,directory=None,overwrite=True):
     """Run uniqueify on mtz file to generate RFREE data column"""
-    mtzUnique = exit_util.filename_append(file_name, "uniqueify", directory=directory)
+    mtzUnique = ample_util.filename_append(file_name, "uniqueify", directory=directory)
 
     cmd = ['uniqueify', file_name, mtzUnique]
     logfile = os.path.join( os.getcwd(), "uniqueify.log" )
-    retcode = exit_util.run_command(cmd, logfile=logfile)
+    retcode = ample_util.run_command(cmd, logfile=logfile)
     if retcode != 0:
         msg = "Error running command: {0}. Check the logfile: {1}".format(" ".join(cmd),logfile)
         _logger.critical(msg)
@@ -133,7 +133,7 @@ OUTPUT SHELX
 FSQUARED
 END""".format(F,SIGF,FREE)
     
-    ret = exit_util.run_command(cmd=cmd, logfile=logfile, directory=None, dolog=False, stdin=stdin)
+    ret = ample_util.run_command(cmd=cmd, logfile=logfile, directory=None, dolog=False, stdin=stdin)
     if not ret==0:
         raise RuntimeError,"Error converting {0} to HKL format - see log: {1}".format(mtz_file,logfile)
     else:
@@ -151,10 +151,10 @@ def processReflectionFile(amoptd):
     if amoptd['sf_cif']:
         if not os.path.isfile(amoptd['sf_cif']):
             msg="Cannot find sf_cif file: {0}".format(amoptd['sf_cif'])
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
         if not os.path.splitext(amoptd['sf_cif'])[1].lower() == ".cif":
             msg="Cif file extension is not .cif Please rename the file to give it a .cif extension."
-            ample_exit.exit_error(msg)
+            exit_util.exit_error(msg)
 
         cp = cif_parser.CifParser()
         amoptd['mtz'] = cp.sfcif2mtz(amoptd['sf_cif'])
