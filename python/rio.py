@@ -13,10 +13,9 @@ parse ncont file to generate map & analyse whether placed bits match and what ty
 from operator import itemgetter
 import os
 import types
-import unittest
 
+from ample.parsers import dssp_parser
 from ample.python import csymmatch
-from ample.python import dssp
 from ample.util import ample_util
 from ample.util import pdb_edit
 
@@ -334,7 +333,7 @@ class Rio(object):
         
         #print "GOT DSSP ",dsspP.asDict()
         # Parse the dssp Log
-        dsspP = dssp.DsspParser( dsspLog )
+        dsspP = dssp_parser.DsspParser( dsspLog )
         #
         # Loop through the contacts finding the start, stop indices in the list of contacts of contiguous chunks
         #
@@ -745,166 +744,6 @@ class Rio(object):
                 stopIdx  = i + 1
   
         return chunks
-    
-class TestContacts( unittest.TestCase ):
-    
-    @classmethod
-    def setUpClass(cls):
-        """
-        Set up paths. Need to do this with setUpClass, as otherwise the __file__
-        variable is updated whenever the cwd is changed in a test and the next test
-        gets the wrong paths.
-        """
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
-        cls.ample_dir = os.sep.join( paths[ : -1 ] )
-        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
-        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
-        return
 
-    def testParse1(self):
-        
-        logfile = os.path.join( self.testfiles_dir, "ncont1.log" )
-        
-        c = Rio()
-        contactData = RioData()
-        c.parseNcontLog( contactData, logfile=logfile )
-        c.analyseRio(contactData)
-        
-        self.assertEqual( contactData.numContacts, 26 )
-        self.assertEqual( contactData.rioInRegister, 0 )
-        self.assertEqual( contactData.rioOoRegister, 0 )
-        self.assertEqual( contactData.rioBackwards, 0 )
-        
-        return
-    
-    def testParse2(self):
-        
-        logfile = os.path.join( self.testfiles_dir, "ncont2.log" )
-        
-        c = Rio()
-        contactData = RioData()
-        c.parseNcontLog( contactData, logfile=logfile )
-        c.analyseRio(contactData)
-        
-        self.assertEqual( contactData.numContacts, 10 )
-        self.assertEqual( contactData.rioInRegister, 0 )
-        self.assertEqual( contactData.rioOoRegister, 7 )
-        self.assertEqual( contactData.rioBackwards, 7 )
-        
-        return
-    
-    def testParse3(self):
-        
-        logfile = os.path.join( self.testfiles_dir, "ncont3.log" )
-        
-        c = Rio()
-        contactData = RioData()
-        c.parseNcontLog( contactData, logfile=logfile )
-        c.analyseRio(contactData)
-        
-        self.assertEqual( contactData.numContacts, 14 )
-        self.assertEqual( contactData.rioInRegister, 0 )
-        self.assertEqual( contactData.rioOoRegister, 10 )
-        self.assertEqual( contactData.rioBackwards, 0 )
-        
-        return
-    
-    def testParse4(self):
-        
-        logfile = os.path.join( self.testfiles_dir, "ncont4.log" )
-        
-        c = Rio()
-        contactData = RioData()
-        c.parseNcontLog( contactData, logfile=logfile )
-        c.analyseRio(contactData)
-        
-        self.assertEqual( contactData.numContacts, 56 )
-        self.assertEqual( contactData.rioInRegister, 0 )
-        self.assertEqual( contactData.rioOoRegister, 55 )
-        self.assertEqual( contactData.rioBackwards, 0 )
-        
-        return
-    
-    def testParse5(self):
-        
-        logfile = os.path.join( self.testfiles_dir, "ncont5.log" )
-        
-        c = Rio()
-        contactData = RioData()
-        c.parseNcontLog( contactData, logfile=logfile )
-        c.analyseRio(contactData)
-        
-        self.assertEqual( contactData.numContacts, 77 )
-        self.assertEqual( contactData.rioInRegister, 19 )
-        self.assertEqual( contactData.rioOoRegister, 54 )
-        self.assertEqual( contactData.rioBackwards,16 )
-        
-        return
-
-    def testParse7(self):
-        
-        logfile = os.path.join( self.testfiles_dir, "ncont7.log" )
-        
-        c = Rio()
-        contactData = RioData()
-        c.parseNcontLog( contactData, logfile=logfile )
-        c.analyseRio(contactData)
-
-        self.assertEqual( contactData.numContacts, 18 )
-        self.assertEqual( contactData.rioInRegister, 0 )
-        self.assertEqual( contactData.rioOoRegister, 0 )
-        self.assertEqual( contactData.rioBackwards,0 )
-   
-        return
-    
-    def testParse8(self):
-        
-        logfile = os.path.join( self.testfiles_dir, "ncont8.log" )
-        
-        c = Rio()
-        contactData = RioData()
-        c.parseNcontLog( contactData, logfile=logfile )
-        c.analyseRio(contactData)
-        
-        self.assertEqual( contactData.numContacts, 9 )
-        self.assertEqual( contactData.rioInRegister, 0 )
-        self.assertEqual( contactData.rioOoRegister, 0 )
-        self.assertEqual( contactData.rioBackwards,0 )
-        
-        return
-
-
-    def testHelix5(self):
-
-        logfile = os.path.join( self.testfiles_dir, "ncont5.log" )
-        dssplog = os.path.join( self.testfiles_dir, "3RA3.dssp" )
-        
-        c = Rio()
-        contactData = RioData()
-        c.parseNcontLog( contactData, logfile=logfile )       
-        
-        sequence = c.helixFromContacts( contactData.contacts, dssplog )
-        self.assertEqual( "NARLKQEIAALEYEIAAL", sequence )
-        
-        return
-
-
-def testSuite():
-    suite = unittest.TestSuite()
-    suite.addTest(TestContacts('testParse1'))
-    suite.addTest(TestContacts('testParse2'))
-    suite.addTest(TestContacts('testParse3'))
-    suite.addTest(TestContacts('testParse4'))
-    suite.addTest(TestContacts('testParse5'))
-    suite.addTest(TestContacts('testParse7'))
-    suite.addTest(TestContacts('testParse8'))
-    suite.addTest(TestContacts('testHelix5'))
-    return suite
-    
-#
-# Run unit tests
-if __name__ == "__main__":
-    unittest.TextTestRunner(verbosity=2).run(testSuite())
 
 
