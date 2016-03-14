@@ -16,9 +16,8 @@ class Test(unittest.TestCase):
         cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         paths = cls.thisd.split( os.sep )
         cls.ample_dir = os.sep.join( paths[ : -2 ] )
-        cls.tests_dir=os.path.join(cls.ample_dir,"tests")
+        cls.tests_dir=os.path.join(cls.ample_dir,"testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
-        return
 
     def test_add(self):
         s1 = sequence_util.Sequence(pdb=os.path.join(self.testfiles_dir,'1GU8.pdb'))

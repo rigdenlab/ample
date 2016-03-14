@@ -7,7 +7,7 @@ import os
 import sys
 import unittest
 
-from ample.tests import test_funcs
+from ample.testing import test_funcs
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
 
