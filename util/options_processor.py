@@ -1,4 +1,6 @@
-
+"""
+@author: jmht, hlfsimko
+"""
 
 import glob
 import logging
