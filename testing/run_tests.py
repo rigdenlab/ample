@@ -54,7 +54,7 @@ def _unittest(argd):
     return
 
 def main():  
-    desc = """ample.tests <command> [<args>]
+    desc = """ccp4-python -m ample.testing <command> [<args>]
 
 Available tests include:
    integration     Integration testing of typical Ample routines
