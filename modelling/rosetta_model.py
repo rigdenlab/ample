@@ -16,8 +16,8 @@ import sys
 import unittest
 
 # Our modules
+from ample.modelling import octopus_predict
 from ample.parsers import psipred_parser
-from ample.python import octopus_predict
 from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import sequence_util
