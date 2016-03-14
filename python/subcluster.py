@@ -336,13 +336,17 @@ end""".format(nresidues, 'A')
         
         # Create a square distance_matrix no_models in size filled with None
         self.distance_matrix = [[None for col in range(num_models)] for row in range(num_models)]
-        # Set zeros diagonal
         
         logfile='lsqkab.out'
+        parity = 0.0
         for i, fixed in enumerate(models):
             for j, model2 in enumerate(models):
-                if j <= i: continue
-                self.distance_matrix[i][j] = self.calc_rmsd(fixed, model2, nresidues=nresidues, logfile=logfile)
+                if j < i: continue
+                if j == i:
+                    rmsd = parity
+                elif j > i:
+                    rmsd = self.calc_rmsd(fixed, model2, nresidues=nresidues, logfile=logfile)
+                self.distance_matrix[i][j] = rmsd
         
         # Clean up output files from lsqkab
         os.unlink(logfile)
