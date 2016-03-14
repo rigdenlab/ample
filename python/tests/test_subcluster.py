@@ -108,7 +108,7 @@ class Test(unittest.TestCase):
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
         indices=clusterer._cluster_indices(radius) 
-        ref=[2, 3, 5, 6, 13, 14, 15, 16, 22, 23, 25, 26, 27]
+        ref=[2, 4, 9, 10, 11, 14, 15, 18, 19, 21, 23, 25, 28]
         self.assertEqual(ref,indices)
         os.unlink('files.list')
         os.unlink('cluster_output.names')
