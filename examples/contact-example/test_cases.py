@@ -9,7 +9,7 @@ import glob
 import os
 import sys
 
-from ample.tests import test_funcs
+from ample.testing import test_funcs
 
 test_dict = {}
 

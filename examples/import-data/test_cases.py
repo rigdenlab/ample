@@ -8,7 +8,7 @@ Created on 25 Feb 2016
 import os
 import sys
 
-from ample.tests import test_funcs
+from ample.testing import test_funcs
 
 test_dict = {}
 

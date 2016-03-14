@@ -5,12 +5,11 @@ Created on 29 Dec 2015
 @author: jmht
 '''
 
-import cPickle
 import os
 import sys
 import unittest
 
-from ample.tests import test_funcs
+from ample.testing import test_funcs
 
 test_dict = {}
 
