@@ -13,10 +13,10 @@ import os
 import sys
 
 # Custom
+from ample.modelling import energy_functions
 from ample.parsers import casprr_parser
 from ample.parsers import psipred_parser
 from ample.parsers import restraints_parser
-from ample.python import energy_functions
 from ample.util import pdb_edit
 
 # Check matplotlib is available - problems with Windows

@@ -22,8 +22,8 @@ import time
 
 # Our imports
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, UNMODIFIED
+from ample.modelling import rosetta_model
 from ample.python import pyrvapi_results
-from ample.python import rosetta_model
 from ample.util import ample_util
 from ample.util import benchmark_util
 from ample.util import config_util
