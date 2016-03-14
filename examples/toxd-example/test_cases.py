@@ -60,7 +60,7 @@ if not sys.platform.startswith('win'):
 #
 ###############################################################################
 args_from_existing_models = args_vanilla + [
-    [ '-models', '../../tests/testfiles/models' ],
+    [ '-models', '../../testing/testfiles/models' ],
     [ '-native_pdb', '1DTX.pdb' ],                                         
 ]
 
@@ -90,7 +90,7 @@ test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
 #
 ###############################################################################
 args_from_quark_models = args_vanilla + [
-    [ '-models', '../../tests/testfiles/decoys_200.tar.gz'],
+    [ '-models', '../../testing/testfiles/decoys_200.tar.gz'],
     [ '-do_mr', 'False' ]                                         
 ]
 

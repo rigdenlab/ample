@@ -12,9 +12,9 @@ import shutil
 import sys
 
 # Custom
-from ample.python import fast_protein_cluster
-from ample.python import spicker
-from ample.python import subcluster
+from ample.util import fast_protein_cluster
+from ample.util import spicker
+from ample.util import subcluster
 
 _logger = logging.getLogger(__name__)
 

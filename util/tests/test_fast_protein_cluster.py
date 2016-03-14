@@ -3,8 +3,8 @@ import glob
 import os
 import shutil
 import unittest
-from ample.python import fast_protein_cluster
 from ample.util import ample_util
+from ample.util import fast_protein_cluster
 
 class Test(unittest.TestCase):
 

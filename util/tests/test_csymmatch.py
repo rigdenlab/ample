@@ -2,7 +2,7 @@
 
 import os
 import unittest
-from ample.python import csymmatch
+from ample.util import csymmatch
 
 class TestContacts( unittest.TestCase ):
 

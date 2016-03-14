@@ -2,10 +2,8 @@
 import glob
 import os
 import unittest
-from ample.python import subcluster
 from ample.util import ample_util
-
-from ample.python.subcluster import FILE_LIST_NAME, SCORE_MATRIX_NAME
+from ample.util import subcluster
 
 class Test(unittest.TestCase):
 
@@ -60,7 +58,7 @@ class Test(unittest.TestCase):
         self.assertIsNotNone(qscore, "No q-score found")
         # read score matrix
         matrix = []
-        with open(SCORE_MATRIX_NAME) as f:
+        with open(subcluster.SCORE_MATRIX_NAME) as f:
             for l in f.readlines():
                 if not l.strip(): continue
                 fields = l.split()
@@ -71,8 +69,8 @@ class Test(unittest.TestCase):
                 # Gesamt log and out file formats have different precisions
                 self.assertAlmostEqual(l[2], qscore, 3, "Q-scores differ: {0} - {1}".format(l[2], qscore))
         os.unlink(logfile)
-        os.unlink(SCORE_MATRIX_NAME)
-        os.unlink(FILE_LIST_NAME)
+        os.unlink(subcluster.SCORE_MATRIX_NAME)
+        os.unlink(subcluster.FILE_LIST_NAME)
     
     def test_radius_lsqkab(self):
         # Test we can reproduce the original thresholds

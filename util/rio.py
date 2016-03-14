@@ -15,8 +15,8 @@ import os
 import types
 
 from ample.parsers import dssp_parser
-from ample.python import csymmatch
 from ample.util import ample_util
+from ample.util import csymmatch
 from ample.util import pdb_edit
 
 class RioData(object):

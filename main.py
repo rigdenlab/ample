@@ -22,7 +22,6 @@ import time
 
 # Our imports
 from ample.modelling import rosetta_model
-from ample.python import pyrvapi_results
 from ample.util import ample_util
 from ample.util import argparse_util
 from ample.util import benchmark_util
@@ -35,6 +34,7 @@ from ample.util import mtz_util
 from ample.util import options_util
 from ample.util import options_processor
 from ample.util import pdb_edit
+from ample.util import pyrvapi_results
 from ample.util import sequence_util
 from ample.util import workers_util
 from ample.util import version
@@ -80,6 +80,7 @@ def setup_file_logging(main_logfile, debug_logfile):
     return logger
 
 logger = setup_console_logging()
+monitor = None
 
 class Ample(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
@@ -167,14 +168,14 @@ class Ample(object):
         return
    
     def benchmarking(self, optd):
-        if amopt.d['submit_cluster']:
+        if optd['submit_cluster']:
             # Pickle dictionary so it can be opened by the job to get the parameters
             ample_util.saveAmoptd(optd)
             script = benchmark_util.cluster_script(optd)
             workers_util.run_scripts(job_scripts=[script],
                                      monitor=monitor,
                                      chdir=True,
-                                     nproc=amopt.d['nproc'],
+                                     nproc=optd['nproc'],
                                      job_time=7200,
                                      job_name='benchmark',
                                      submit_cluster=optd['submit_cluster'],
@@ -252,6 +253,7 @@ class Ample(object):
         
     def modelling(self, optd):      
         # Make Rosetta fragments
+        rosetta_modeller = options_processor.process_rosetta_options(optd) 
         if optd['make_frags']:
             rosetta_modeller.generate_fragments(optd)
             optd['frags_3mers'] = rosetta_modeller.frags_3mers
@@ -453,7 +455,7 @@ class Ample(object):
         optd = options_processor.process_restart_options(optd)
         if not optd['restart_pkl']:
             options_processor.process_options(optd) # Only process the remaining options if we aren't in restart mode
-        rosetta_modeller = options_processor.process_rosetta_options(optd)
+        #rosetta_modeller = options_processor.process_rosetta_options(optd)
         
         # Bail and clean up if we were only checking the options
         if optd['dry_run']:

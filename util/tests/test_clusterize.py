@@ -1,8 +1,8 @@
 
 import os
 import unittest
-from ample.python import clusterize
 from ample.util import ample_util
+from ample.util import clusterize
 
 class Test(unittest.TestCase):
     

@@ -12,8 +12,8 @@ import os
 import time
 
 # our imports
-from ample.python import clusterize
 from ample.util import ample_util
+from ample.util import clusterize
 from ample.util import worker
 
 class JobServer(object):

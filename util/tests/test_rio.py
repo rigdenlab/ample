@@ -1,7 +1,7 @@
 
 import os
 import unittest
-from ample.python import rio
+from ample.util import rio
 
 class TestContacts( unittest.TestCase ):
     

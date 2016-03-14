@@ -3,9 +3,9 @@ import glob
 import os
 import shutil
 import unittest
-from ample.python import theseus
 from ample.util import ample_util
 from ample.util import pdb_edit
+from ample.util import theseus
 
 class Test(unittest.TestCase):
 

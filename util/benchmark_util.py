@@ -15,15 +15,15 @@ import sys
 import unittest
 
 # Our imports
-from ample.python import csymmatch
-from ample.python import maxcluster
-from ample.python import reforigin
-from ample.python import rio
-from ample.python import shelxe
 from ample.util import ample_util
+from ample.util import csymmatch
+from ample.util import maxcluster
 from ample.util import pdb_edit
 from ample.util import pdb_model
+from ample.util import reforigin
 from ample.util import residue_map
+from ample.util import rio
+from ample.util import shelxe
 from ample.util import tmscore_util
 
 _logger=logging.getLogger()

@@ -9,6 +9,7 @@ import sys
 
 from ample.modelling import rosetta_model
 from ample.util import ample_util
+from ample.util import contacts_util
 from ample.util import exit_util
 from ample.util import mtz_util
 from ample.util import sequence_util

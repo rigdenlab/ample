@@ -3,8 +3,8 @@ import glob
 import os
 import shutil
 import unittest
-from ample.python import spicker
 from ample.util import ample_util
+from ample.util import spicker
 
 class Test(unittest.TestCase):
 
