@@ -54,7 +54,7 @@ class Test(unittest.TestCase):
         
         self.assertEqual(len(clusters),num_clusters)
         d=cluster_data[0]
-        self.assertEqual(d['cluster_num_models'],17)
+        self.assertEqual(d['cluster_num_models'],16)
         self.assertEqual(d['cluster_method'],'kmeans_rmsd')
         self.assertEqual(os.path.basename(d['cluster_centroid']),'4_S_00000005.pdb')
         shutil.rmtree(wdir)
@@ -85,7 +85,7 @@ class Test(unittest.TestCase):
         
         self.assertEqual(len(clusters),num_clusters)
         d=cluster_data[0]
-        self.assertEqual(d['cluster_num_models'],16)
+        self.assertEqual(d['cluster_num_models'], 16)
         self.assertEqual(d['cluster_method'],'hcomplete_tm')
         self.assertEqual(os.path.basename(d['cluster_centroid']),'5_S_00000005.pdb')
         shutil.rmtree(wdir)
