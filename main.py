@@ -21,6 +21,7 @@ import sys
 import time
 
 # Our imports
+from ample.ensembler.constants import UNMODIFIED
 from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import argparse_util

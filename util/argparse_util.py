@@ -4,7 +4,7 @@
 
 import argparse
 
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, UNMODIFIED
+from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import version
 
 
