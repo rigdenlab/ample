@@ -1,5 +1,3 @@
-"""Facility to run all tests"""
-
 #!/usr/bin/env ccp4-python
 
 import argparse
@@ -34,7 +32,9 @@ def _integration(argd):
     all_test_cases = {}
     TEST_MODULE_NAME = 'test_cases'
     for directory in dirs:
-        test_module = test_funcs.load_module(TEST_MODULE_NAME, [os.path.join(AMPLE_DIR, "examples", directory)])
+        test_module = test_funcs.load_module(TEST_MODULE_NAME, 
+                                             [os.path.join(AMPLE_DIR, "examples", 
+                                                           directory)])
         for k, v in test_module.test_dict.iteritems():
             if k in all_test_cases:
                 raise RuntimeError,"Duplicate key: {0}".format(k)
