@@ -154,12 +154,12 @@ def run(test_dict,
     for name in test_cases:
         print "{0}: {1}".format(name, test_dict[name]['directory'] )
     
-    # Run all the jobs
-    # If we're running on a cluster, we run on as many processors as there are jobs, as the jobs are just
-    # sitting and monitoring the queue
+    ## Run all the jobs
+    # If we're running on a cluster, we run on as many processors as there are jobs, 
+    # as the jobs are just sitting and monitoring the queue
     if submit_cluster:
         nproc = len(scripts)
-        
+    
     if not dry_run:
         workers_util.run_scripts(job_scripts=scripts,
                                  monitor=None,
@@ -179,16 +179,12 @@ def run(test_dict,
 def write_script(path, args):
     """Write script - ARGS MUST BE IN PAIRS"""
     linechar = "^" if sys.platform.startswith('win') else "\\"
-    #ample = os.path.join(AMPLE_DIR,'bin', 'ample.py')
     ample = os.path.join(AMPLE_DIR, "main.py")
     script = path + SCRIPT_EXT
     with open(script, 'w') as f:
         f.write(SCRIPT_HEADER + os.linesep)
         f.write(os.linesep)
         f.write("ccp4-python " + ample + " " + linechar + os.linesep)
-        # Assumption is all arguments are in pairs
-        #arg_list = [ " ".join(args[i:i+2]) for i in range(0, len(args), 2) ]
-        #f.write(" \\\n".join(arg_list))
         for argt in args:
             f.write(" ".join(argt) + " " + linechar + "\n")
         f.write(os.linesep)
