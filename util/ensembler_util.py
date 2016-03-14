@@ -27,6 +27,7 @@ import iotbx.pdb
 from ample.ensembler import abinitio
 from ample.ensembler import homologs
 from ample.ensembler import single_model
+from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import printTable
 
@@ -432,7 +433,6 @@ def _sort_ensembles_parameters(ensembles_zipped, keys_to_sort):
 
 
 if __name__ == "__main__":
-
     # This runs the ensembling starting from a pickled file containing an amopt dictionary.
     # - used when submitting the modelling jobs to a cluster
 

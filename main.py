@@ -109,6 +109,7 @@ class Ample(object):
     
         # Setup things like logging, file structure, etc...
         self.setup(amopt.d)
+        rosetta_modeller = options_processor.process_rosetta_options(amopt.d) 
         
         # Display the parameters used
         logger.debug(amopt.prettify_parameters())
@@ -134,7 +135,7 @@ class Ample(object):
         # Modelling business happens here
         if (amopt.d['import_models'] or amopt.d['make_frags'] or amopt.d['make_models'] or \
             (amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel'])):
-            self.modelling(amopt.d)
+            self.modelling(amopt.d, rosetta_modeller)
         
         # Ensembling business next
         if amopt.d['make_ensembles']:
@@ -223,7 +224,7 @@ class Ample(object):
                                          submit_array=optd['submit_array'],
                                          submit_max_array=optd['submit_max_array'])
                 # queue finished so unpickle results
-                with open(optd['results_path'], "r") as f: optd = cPickle.load(f)
+                with open(optd['results_path'], "r") as f: optd.update(cPickle.load(f))
             else:
                 try: ensembler_util.create_ensembles(optd)
                 except Exception, e:
@@ -231,7 +232,7 @@ class Ample(object):
                     exit_util.exit_error(msg, sys.exc_info()[2])
                     
             # Check we have something to work with
-            if not os.path.isfile(optd['ensemble_ok']) or not 'ensembles' in optd or not len(optd['ensembles']):
+            if not os.path.isfile(optd['ensemble_ok']) or not 'ensembles' in optd.keys() or not len(optd['ensembles']):
                 msg = "Problem generating ensembles!"
                 exit_util.exit_error(msg)
                 
@@ -252,9 +253,10 @@ class Ample(object):
         
         return
         
-    def modelling(self, optd):      
+    def modelling(self, optd, rosetta_modeller=None):
+        if not rosetta_modeller: 
+            rosetta_modeller = options_processor.process_rosetta_options(optd)       
         # Make Rosetta fragments
-        rosetta_modeller = options_processor.process_rosetta_options(optd) 
         if optd['make_frags']:
             rosetta_modeller.generate_fragments(optd)
             optd['frags_3mers'] = rosetta_modeller.frags_3mers
