@@ -2,7 +2,7 @@
 
 import itertools
 import unittest
-from ample.python import energy_functions
+from ample.modelling import energy_functions
 
 class Test(unittest.TestCase):
     

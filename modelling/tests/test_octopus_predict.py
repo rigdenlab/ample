@@ -1,7 +1,7 @@
 
 import os
 import unittest
-from ample.python import octopus_predict
+from ample.modelling import octopus_predict
 
 
 class Test(unittest.TestCase):
