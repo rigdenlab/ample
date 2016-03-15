@@ -104,9 +104,10 @@ class Ample(object):
         for the program - required for testing.
         """ 
         argso = argparse_util.process_command_line(args=args)
-        self.amopt = amopt = options_util.AmpleOptions()
+        #self.amopt = amopt = options_util.AmpleOptions()
+        self.amopt = amopt = config_util.AMPLEConfigOptions()
         amopt.populate(argso)
-    
+
         # Setup things like logging, file structure, etc...
         self.setup(amopt.d)
         rosetta_modeller = options_processor.process_rosetta_options(amopt.d) 
@@ -161,6 +162,9 @@ class Ample(object):
         # Flag to show that we reached the end without error - useful for integration testing
         amopt.d['AMPLE_finished'] = True
         ample_util.saveAmoptd(amopt.d)
+        
+        # Write out a config file
+        amopt.write_config_file()
         
         logger.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
         logger.info(ample_util.footer)
