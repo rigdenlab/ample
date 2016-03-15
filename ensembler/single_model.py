@@ -78,11 +78,10 @@ class Ensembler(_ensembler.Ensembler):
         # standardise the structure
         std_models_dir = os.path.join(work_dir, "std_models")
         os.mkdir(std_models_dir)
-        std_models = []
-        for m in models:
-            std_model = ample_util.filename_append(m, 'std', std_models_dir)
-            pdb_edit.standardise(pdbin=m, pdbout=std_model, del_hetatm=True)
-            std_models.append(std_model)
+        
+        std_model = ample_util.filename_append(models[0], 'std', std_models_dir)
+        pdb_edit.standardise(pdbin=models[0], pdbout=std_model, del_hetatm=True)
+        std_models = [std_model]
         _logger.info('Standardised input model: {0}'.format(std_models[0]))
               
         # Create final ensembles directory
