@@ -16,7 +16,7 @@ import shutil
 import sys
 
 # our imports
-from ample.ensembler.constants import *
+from ample.ensembler.constants import ALLATOM, POLYALA, RELIABLE, UNMODIFIED
 from ample.ensembler import cluster_util
 from ample.ensembler import subcluster_util
 from ample.ensembler import truncation_util
