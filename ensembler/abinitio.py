@@ -71,7 +71,7 @@ class Ensembler(_ensembler.Ensembler):
         else:
             self.ensembles_directory = ensembles_directory
         
-        if not (cluster_method is 'import' or len(models)):
+        if cluster_method != 'import' and not len(models):
             raise RuntimeError, "Cannot find any models for ensembling!" 
         if not all([os.path.isfile(m) for m in models]):
             raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
