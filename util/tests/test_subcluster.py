@@ -4,6 +4,7 @@ import os
 import unittest
 from ample.util import ample_util
 from ample.util import subcluster
+from ample.testing.test_funcs import found_exe
 
 class Test(unittest.TestCase):
 
@@ -19,8 +20,7 @@ class Test(unittest.TestCase):
         cls.ample_dir = os.sep.join( paths[ : -2 ] )
         cls.tests_dir=os.path.join(cls.ample_dir,"testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
-        cls.maxcluster_exe=ample_util.find_exe('maxcluster')
-
+    
     def test_radius_cctbx(self):
         # Test we can reproduce the original thresholds
         radius = 4
@@ -81,10 +81,12 @@ class Test(unittest.TestCase):
         clusterer.dump_pdb_matrix('lsqkab.matrix')
         os.unlink('lsqkab.matrix')
 
+    @unittest.skipUnless(found_exe("mustang"), "maxcluster exec missing")
     def test_radius_maxcluster(self):
         # Test we can reproduce the original thresholds
+        maxcluster_exe = ample_util.find_exe('maxcluster')
         radius = 4
-        clusterer = subcluster.MaxClusterer( self.maxcluster_exe )
+        clusterer = subcluster.MaxClusterer( maxcluster_exe )
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius( radius )]
@@ -94,6 +96,7 @@ class Test(unittest.TestCase):
         self.assertItemsEqual(ref,cluster_files1)
         os.unlink('maxcluster.log')
     
+    @unittest.skipUnless(found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
     def test_indices_fpc(self):
         # Test we can reproduce the original thresholds
         try: 
@@ -115,12 +118,10 @@ class Test(unittest.TestCase):
         os.unlink('fpc.matrix')
         os.unlink('fast_protein_cluster.log')
     
+    @unittest.skipUnless(found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
     def test_radius_fpc(self):
         # Test we can reproduce the original thresholds
-        try: 
-            fpc_exe = ample_util.find_exe("fast_protein_cluster")
-        except:
-            self.assertTrue(False, "Cannot find fast_protein_cluster executable in environment")
+        fpc_exe = ample_util.find_exe("fast_protein_cluster")
         radius = 4
         clusterer = subcluster.FpcClusterer( fpc_exe )
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))

@@ -5,6 +5,7 @@ import shutil
 import unittest
 from ample.util import ample_util
 from ample.util import fast_protein_cluster
+from ample.testing.test_funcs import found_exe
 
 class Test(unittest.TestCase):
 
@@ -22,16 +23,10 @@ class Test(unittest.TestCase):
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
-    def _find_exe(self):
-        try: 
-            fpc_exe = ample_util.find_exe("fast_protein_cluster")
-        except:
-            self.assertTrue(False, "Cannot find fast_protein_cluster executable in environment")
-        return fpc_exe
-
+    @unittest.skipUnless(found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
     def test_fpc_kmeans_rmsd(self):
         
-        fpc_exe = self._find_exe()        
+        fpc_exe = ample_util.find_exe("fast_protein_cluster")        
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         mdir=os.path.join(self.testfiles_dir,"models")
         models=glob.glob(mdir+os.sep+"*.pdb")
@@ -59,9 +54,10 @@ class Test(unittest.TestCase):
         self.assertEqual(os.path.basename(d['cluster_centroid']),'4_S_00000005.pdb')
         shutil.rmtree(wdir)
 
+    @unittest.skipUnless(found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
     def test_fpc_hierarch_tm(self):
         
-        fpc_exe = self._find_exe()        
+        fpc_exe = ample_util.find_exe("fast_protein_cluster")         
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         
         mdir=os.path.join(self.testfiles_dir,"models")

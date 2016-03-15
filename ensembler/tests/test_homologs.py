@@ -1,8 +1,10 @@
 
+import os
 import shutil
 import unittest
 
-from ample.ensembler.homologs import *
+from ample.ensembler.homologs import align_gesamt, align_mustang
+from ample.testing.test_funcs import found_exe
 
 class Test(unittest.TestCase):
 
@@ -18,19 +20,9 @@ class Test(unittest.TestCase):
         cls.ample_dir = os.sep.join(paths[ :-1 ])
         cls.tests_dir = os.path.join(cls.ample_dir, "testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir, 'testfiles')
-        cls.theseus_exe = ample_util.find_exe('theseus')
-        cls.spicker_exe = ample_util.find_exe('spicker')
-        cls.maxcluster_exe = ample_util.find_exe('maxcluster')
 
-    def _find_exe(self, e):
-        try:
-            exe = ample_util.find_exe(e)
-        except:
-            self.assertTrue(False, "Cannot find {0} executable in environment".format(e))
-        return exe
- 
     def test_gesamt(self):
-        gesamt_exe = self._find_exe("gesamt")
+        gesamt_exe = os.path.join(os.environ['CCP4'], "bin", "gesamt")
         pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
         models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
         work_dir = os.path.join(self.tests_dir, "gesamt_test")
@@ -38,8 +30,9 @@ class Test(unittest.TestCase):
         self.assertTrue(os.path.isfile(alignment_file))
         shutil.rmtree(work_dir)
     
+    @unittest.skipUnless(found_exe("mustang"), "mustang exec missing")
     def test_mustang(self):
-        mustang_exe = self._find_exe("mustang")
+        mustang_exe = ample_util.find_exe("mustang")
         pdb_list = [ '1ujb.pdb', '2a6pA.pdb', '3c7tA.pdb']
         models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
         work_dir = os.path.join(self.tests_dir, "mustang_test")

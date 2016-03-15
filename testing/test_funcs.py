@@ -201,3 +201,10 @@ def update_args(args, new_args):
         else:
             replace_arg(argt, args)
     return args
+
+def found_exe(e):
+    try:
+        ample_util.find_exe(e)
+    except:
+        return False
+    return True
