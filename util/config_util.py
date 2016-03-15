@@ -10,16 +10,14 @@ import logging
 import os
 import sys
 
-try:
-    import configparser as ConfigParser
-except:
-    import ConfigParser
-
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import version
 
-AMPLE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-LOGGER = logging.getLogger(__name__)
+# Python 3.x --> ConfigParser renamed to configparser
+try:
+    import configparser as ConfigParser
+except ImportError:
+    import ConfigParser 
 
 ##############################################################
 # The sections and options within need to be stored
@@ -82,7 +80,8 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
                                   'transmembrane_spanfile',
                                   'work_dir'],
                         # Data stored in amopt.d but not really part of AMPLE's configuation
-                        "No_config" : ["ensembles_data",
+                        "No_config" : ["ensembles",
+                                       "ensembles_data",
                                        "fasta_length",
                                        "sequence",
                                        "truncation_variances",
@@ -92,6 +91,8 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
                         "Unspecified" : [],
 }
 
+AMPLE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+LOGGER = logging.getLogger(__name__)
 
 class AMPLEConfigOptions(object):
     
