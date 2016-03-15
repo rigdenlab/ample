@@ -63,14 +63,17 @@ class AmpleArgParser(object):
         parser.add_argument('-blast_dir', type=str, nargs=1,
                            help='Directory where ncbi blast is installed (binaries in expected in bin subdirectory)')
         
+        parser.add_argument('-ccp4_jobid', type=int, nargs=1,
+                           help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
+        
         parser.add_argument('-cluster_dir', type=str, nargs=1,
                            help='Path to directory of pre-clustered models to import')
         
         parser.add_argument('-cluster_method', type=str, nargs=1,
                            help='How to cluster the models for ensembling (spicker|fast_protein_cluster')
         
-        parser.add_argument('-ccp4_jobid', type=int, nargs=1,
-                           help='Set the CCP4 job id - only needed when running from the CCP4 GUI')
+        parser.add_argument('-config_file', type=str, nargs=1,
+                           help="user configuration file")
         
         parser.add_argument('-debug', metavar='True/False', type=str, nargs=1,
                            help='Run in debug mode (CURRENTLY UNUSED)')
