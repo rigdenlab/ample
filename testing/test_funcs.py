@@ -12,7 +12,7 @@ import sys
 import unittest
 
 # Our imports
-from ample.util.ample_util import SCRIPT_EXT, SCRIPT_HEADER
+from ample.util import ample_util 
 from ample.util import workers_util
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
@@ -42,7 +42,7 @@ def clean(test_dict):
         if os.path.isdir(work_dir): shutil.rmtree(work_dir)
         logfile = work_dir + '.log'
         if os.path.isfile(logfile): os.unlink(logfile)  
-        script = work_dir + SCRIPT_EXT
+        script = work_dir + ample_util.SCRIPT_EXT
         if os.path.isfile(script): os.unlink(script)
 
 def is_in_args(argt, args):
@@ -180,9 +180,9 @@ def write_script(path, args):
     """Write script - ARGS MUST BE IN PAIRS"""
     linechar = "^" if sys.platform.startswith('win') else "\\"
     ample = os.path.join(AMPLE_DIR, "main.py")
-    script = path + SCRIPT_EXT
+    script = path + ample_util.SCRIPT_EXT
     with open(script, 'w') as f:
-        f.write(SCRIPT_HEADER + os.linesep)
+        f.write(ample_util.SCRIPT_HEADER + os.linesep)
         f.write(os.linesep)
         f.write("ccp4-python " + ample + " " + linechar + os.linesep)
         for argt in args:
