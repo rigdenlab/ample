@@ -1,6 +1,7 @@
 """Test functions for util.mtz_util"""
 
 import os
+import sys
 import unittest
 from ample.util import mtz_util
 
@@ -23,8 +24,8 @@ class Test(unittest.TestCase):
         cls.tests_dir=os.path.join(cls.ample_dir,"testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
-
-    def test_processReflectionFile(self):
+    
+    def test_process_reflection_file(self):
         # Get MTZ flags
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         mtz = os.path.join( self.ample_dir, "examples", "toxd-example" , "1dtx.mtz" )
@@ -38,11 +39,12 @@ class Test(unittest.TestCase):
              }
 
         mtz_util.processReflectionFile( d )
-        self.assertEqual( 'FP', d['F'], "Correct F")
-        self.assertEqual( 'SIGFP', d['SIGF'], "Correct SIGF")
-        self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
+        self.assertEqual('FP', d['F'], "Correct F")
+        self.assertEqual('SIGFP', d['SIGF'], "Correct SIGF")
+        self.assertEqual('FreeR_flag', d['FREE'], "Correct FREE")
 
-    def test_processReflectionFileNORFREE(self):
+    @unittest.skipIf(sys.platform.startswith('win'), "uniqueify not executable")
+    def test_process_reflection_file_NORFREE(self):
         # Get MTZ flags
 
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
@@ -66,8 +68,9 @@ class Test(unittest.TestCase):
         os.unlink('uniqueify.log')
         os.unlink('2uui_sigmaa_uniqueify.mtz')
         os.unlink('2uui_sigmaa_uniqueify.log')
-
-    def test_processReflectionFileCIF(self):
+    
+    @unittest.skipIf(sys.platform.startswith('win'), "uniqueify not executable")
+    def test_process_reflection_file_CIF(self):
         # Get MTZ flags
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         cif = os.path.join( self.testfiles_dir, "1x79-sf.cif" )
@@ -82,9 +85,9 @@ class Test(unittest.TestCase):
 
         mtz_util.processReflectionFile( d )
 
-        self.assertEqual( 'FP', d['F'], "Correct F")
-        self.assertEqual( 'SIGFP', d['SIGF'], "Correct SIGF")
-        self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
+        self.assertEqual('FP', d['F'], "Correct F")
+        self.assertEqual('SIGFP', d['SIGF'], "Correct SIGF")
+        self.assertEqual('FreeR_flag', d['FREE'], "Correct FREE")
 
         os.unlink('cif2mtz.log')
         os.unlink('1x79-sf.mtz')
@@ -94,7 +97,7 @@ class Test(unittest.TestCase):
         os.unlink('1x79-sf_uniqueify.mtz')
         os.unlink('1x79-sf_uniqueify.log')
     
-    def test_processMtzLabels(self):
+    def test_process_mtz_labels(self):
         # Get MTZ flags
         
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
@@ -105,7 +108,7 @@ class Test(unittest.TestCase):
         self.assertEqual(SIGFP,'SIGF')
         self.assertEqual(FREE,None)
     
-    def test_processMtzLabels2(self):
+    def test_process_mtz_labels2(self):
         # Get MTZ flags
         
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
