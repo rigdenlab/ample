@@ -33,6 +33,7 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
                                       'rosetta_db'],
                        
                        "Executables" : ['blast_dir',
+                                        'cluster_exe',
                                         'fast_protein_cluster_exe',
                                         'gesamt_exe',
                                         'maxcluster_exe',
@@ -53,7 +54,6 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
                                   'contact_file',
                                   'disulfide_constraints_file',
                                   'domain_all_chains_pdb',
-                                  'ensembles',
                                   'ensembles_directory',
                                   'ensemble_ok',
                                   'fasta',
@@ -81,10 +81,11 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
                                   'transmembrane_spanfile',
                                   'truncation_scorefile',
                                   'work_dir'],
-                        # Data stored in amopt.d but not really part of AMPLE's configuation
+                        # Data stored in amopt.d but not really part of AMPLE's configuration
                         "No_config" : ["ensembles",
                                        "ensembles_data",
                                        "fasta_length",
+                                       "mrbump_results",
                                        "sequence",
                                        "truncation_variances",
                                        "truncation_levels",
@@ -306,11 +307,11 @@ class AMPLEConfigOptions(object):
         
         # Place all entries in our dictionary in the corresponding section in
         # the configparser
-        for option, value in self.d.iteritems():
+        for option in sorted(self.d.keys()):
             # Extract the section in which the entry needs to go
             sections = [k for (k, v) in _SECTIONS_REFERENCE.items() \
                             if any(entry.lower() == option.lower() for entry in v)]
-            
+
             # Make sure we only have each option assigned to a single section
             section = "Unspecified" if len(sections) != 1 else sections[0]
 
@@ -318,12 +319,12 @@ class AMPLEConfigOptions(object):
             # Comment those specifically out to avoid any errors
             if section.lower() == "no_config":
                 continue
-            elif section.lower() == "ample_info":
-                config_parser.set(section, "#"+option, str(value))
-            elif section.lower() == "files" or section.lower() == "unspecified":
-                config_parser.set(section, "#"+option, str(value))
+            elif section.lower() == "ample_info" or \
+                 section.lower() == "files" or \
+                 section.lower() == "unspecified":
+                config_parser.set(section, "#" + option, str(self.d[option]))
             else:
-                config_parser.set(section, option, str(value))
+                config_parser.set(section, option, str(self.d[option]))
 
         return
 
