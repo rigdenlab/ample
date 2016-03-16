@@ -291,7 +291,7 @@ class GesamtClusterer(SubClusterer):
                                            tmp.seq_id,
                                            int(tmp.nalign),
                                            int(tmp.nres),
-                                           tmp.file_name))
+                                           os.path.basename(tmp.file_name)))
                 except Exception as e:
                     msg = 'Error parsing line {0}: {1}\n{2}'.format(i, line, e.message)
                     logging.critical(msg)
