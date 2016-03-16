@@ -116,10 +116,8 @@ class Ample(object):
         logger.debug(amopt.prettify_parameters())
         
         #######################################################
-        #
         # SCRIPT PROPER STARTS HERE
-        #
-        ######################################################
+        
         time_start = time.time()
     
         # Create function for monitoring jobs - static function decorator?
@@ -159,12 +157,12 @@ class Ample(object):
         if amopt.d['benchmark_mode']:
             self.benchmarking(amopt.d)
         
+        # Write out a config file
+        amopt.write_config_file()
+        
         # Flag to show that we reached the end without error - useful for integration testing
         amopt.d['AMPLE_finished'] = True
         ample_util.saveAmoptd(amopt.d)
-        
-        # Write out a config file
-        amopt.write_config_file()
         
         logger.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
         logger.info(ample_util.footer)
