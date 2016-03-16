@@ -14,8 +14,8 @@ def on_cluster():
 
 class Test(unittest.TestCase):
 
-    @unittest.skipUnless(on_cluster(), "not on cluster")
-    def test_submit(self):
+    @unittest.skipUnless(on_cluster(), "not on SGE cluster")
+    def test_submit_SGE(self):
         jobScripts=[]
         for i in range(10):
             s = """#!/bin/bash
