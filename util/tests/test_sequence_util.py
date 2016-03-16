@@ -37,7 +37,7 @@ class Test(unittest.TestCase):
         #os.unlink(out_fasta)
         return
 
-    def test_addPdbData(self):
+    def test_addPdb_data(self):
         fasta1 = os.path.join(self.testfiles_dir,'1ujb_2a6pA_3c7tA.afasta')
         pdbin1 = os.path.join(self.ample_dir, 'examples', 'homologs','1ujbA.pdb')
         pdbin2 = os.path.join(self.ample_dir, 'examples', 'homologs','2a6pA.pdb')
@@ -86,21 +86,22 @@ class Test(unittest.TestCase):
         self.assertEqual(s1.resseqs[1], p2r)
         self.assertEqual(s1.resseqs[2], p3r)
 
-    def test_failChar(self):
-        
-        infasta=""">3HAP:A|PDBID|CHAIN|SEQUENCE
-QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVXAIAFTMYLSMLLGYGLTMVPFGGEQNPIYWARYADWLFTTPLLLLDLALLVDADQGTI
-LAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKAESMRPEVASTFKVLRNVTVVLWSAYPVVWLIGSEGAGIVPLNIETLLFMVLDVSAKVGFGLILLRSRAIFGEAEAPEPSA
-GDGAAATSD"""
+    def test_fail_char(self):
         fp = sequence_util.Sequence()
-        self.assertRaises(RuntimeError, fp._parse_fasta, infasta.split(os.linesep))    
+        # Test case 1 - expected to work
+        fp.sequences = ["YFLVKGMGVSDPDAKKFYAITTLVYAIAFTMYLSMLLGYGLTMVP"]
+        try: fp.canonicalise()
+        except RuntimeError as msg: self.assertTrue(False, msg)
+        # Test case 2 - expected to fail
+        fp.sequences = ["YFLVKGMGVSDPDAKKFYAITTLVXAIAFTMYLSMLLGYGLTMVP"]
+        self.assertRaises(RuntimeError, fp.canonicalise)    
     
     def test_OK(self):
         infasta=""">3HAP:A|PDBID|CHAIN|SEQUENCE
 QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVPAIAFTMYLSMLLGYGLTMVPFGGEQNPIYWARYADWLFTTPLLLLDLALLVDADQGTI
 LAAVGADGIMIGTGLVGALTKVYSYRFVWWAISTAAMLYILYVLFFGFTSKAESMRPEVASTFKVLRNVTVVLWSAYPVVWLIGSEGAGIVPLNIETLLFMVLDVSAKVGFGLILLRSRAIFGEAEAPEPSA
 GDGAAATSD"""
-        fp =sequence_util. Sequence()
+        fp =sequence_util.Sequence()
         fp._parse_fasta(infasta.split(os.linesep))
         outfasta=""">3HAP:A|PDBID|CHAIN|SEQUENCE
 QAQITGRPEWIWLALGTALMGLGTLYFLVKGMGVSDPDAKKFYAITTLVPAIAFTMYLSMLLGYGLTMVPFGGEQNPIYW
@@ -112,7 +113,7 @@ GDGAAATSD
         self.assertEqual(outfasta, "".join(fp.fasta_str()))
         self.assertEqual(fp.length(), 249)
 
-    def test_fromPdb(self):
+    def test_from_pdb(self):
         s1 = sequence_util.Sequence(pdb=os.path.join(self.testfiles_dir,'4DZN.pdb'))
         self.assertEqual(s1.name, '4DZN')
         self.assertEqual(s1.pdbs, ['4DZN.pdb', '4DZN.pdb', '4DZN.pdb'])
@@ -130,7 +131,7 @@ GEIAALKQEIAALKKEIAALKEIAALKQGYY
 """
         self.assertEqual(outfasta, "".join(s1.fasta_str()))
 
-    def test_resSeq(self):
+    def test_resseq(self):
         pdbin = os.path.join(self.testfiles_dir,'1D7M.pdb')
         s1 = sequence_util.Sequence(pdb=pdbin)
         self.assertTrue(len(s1.sequences),2)
@@ -139,7 +140,7 @@ GEIAALKQEIAALKKEIAALKEIAALKQGYY
         self.assertEqual(s1.pdbs[0],os.path.basename(pdbin))
         self.assertTrue(s1.resseqs[0][-1],343)
     
-    def test_alignFile(self):
+    def test_align_file(self):
         pdbin1 = os.path.join(self.testfiles_dir,'1D7M.pdb')
         pdbin2 = os.path.join(self.testfiles_dir,'1GU8.pdb')
         pdbin3 = os.path.join(self.testfiles_dir,'2UUI.pdb')
