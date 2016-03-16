@@ -14,7 +14,8 @@ class Test(unittest.TestCase):
             d = {'truncation_variance' : round(i*3.54*1.25, 1),
                  'truncation_pruning': None,
                  'truncation_method': 'percent',
-                 'subcluster_centroid_model': '/foo/bar/TEST_{0}.pdb'.format(i),
+                 'subcluster_centroid_model': os.path.join(os.sep, 'foo', 'bar', 
+                                                           'TEST_{0}.pdb'.format(i)),
                  'ensemble_num_atoms': 100,
                  'truncation_level': i,
                  'truncation_dir': '/foo/bar/TEST',
@@ -26,7 +27,8 @@ class Test(unittest.TestCase):
                  'side_chain_treatment': 'TEST',
                  'cluster_num_models': 31,
                  'subcluster_num_models': 3,
-                 'ensemble_pdb': '/foo/bar/TEST_ENS_{0}.pdb'.format(i),
+                 'ensemble_pdb': os.path.join(os.sep, 'foo', 'bar', 
+                                              'TEST_ENS_{0}.pdb'.format(i)),
                  'truncation_residues': [i for i in xrange(1, 21)],
                  'subcluster_radius_threshold': 1,
                  'cluster_num': 1,
@@ -126,7 +128,7 @@ class Test(unittest.TestCase):
                                                                          truncation=comb[1],
                                                                          radius=comb[2],
                                                                          schain=comb[3])
-            pdb = os.path.join("/foo", "bar", name+".pdb")
+            pdb = os.path.join(os.sep, "foo", "bar", name+".pdb")
             ensemble = {'name' : name,
                         'ensemble_pdb': pdb,
                         'cluster_num': comb[0],
@@ -138,29 +140,30 @@ class Test(unittest.TestCase):
             ensemble_data.append(ensemble)
             ensemble_pdbs.append(pdb)
 
+        _root = os.path.join(os.sep, "foo", "bar")  
         ########################################################################       
         # Test Case 1    
         ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
-        self.assertEqual("/foo/bar/c1_tl20_r1_allatom.pdb", ensemble_pdb_sorted[0])
-        self.assertEqual("/foo/bar/c1_tl19_r1_allatom.pdb", ensemble_pdb_sorted[18])
-        self.assertEqual("/foo/bar/c1_tl100_r3_reliable.pdb", ensemble_pdb_sorted[44])
-        self.assertEqual("/foo/bar/c2_tl20_r1_allatom.pdb", ensemble_pdb_sorted[45])
-        self.assertEqual("/foo/bar/c2_tl19_r1_allatom.pdb", ensemble_pdb_sorted[63])
-        self.assertEqual("/foo/bar/c2_tl100_r3_reliable.pdb", ensemble_pdb_sorted[89])
-        self.assertEqual("/foo/bar/c3_tl20_r1_allatom.pdb", ensemble_pdb_sorted[90])
-        self.assertEqual("/foo/bar/c3_tl19_r1_allatom.pdb", ensemble_pdb_sorted[108])
-        self.assertEqual("/foo/bar/c3_tl100_r3_reliable.pdb", ensemble_pdb_sorted[-1])
+        self.assertEqual(os.path.join(_root, "c1_tl20_r1_allatom.pdb"), ensemble_pdb_sorted[0])
+        self.assertEqual(os.path.join(_root, "c1_tl19_r1_allatom.pdb"), ensemble_pdb_sorted[18])
+        self.assertEqual(os.path.join(_root, "c1_tl100_r3_reliable.pdb"), ensemble_pdb_sorted[44])
+        self.assertEqual(os.path.join(_root, "c2_tl20_r1_allatom.pdb"), ensemble_pdb_sorted[45])
+        self.assertEqual(os.path.join(_root, "c2_tl19_r1_allatom.pdb"), ensemble_pdb_sorted[63])
+        self.assertEqual(os.path.join(_root, "c2_tl100_r3_reliable.pdb"), ensemble_pdb_sorted[89])
+        self.assertEqual(os.path.join(_root, "c3_tl20_r1_allatom.pdb"), ensemble_pdb_sorted[90])
+        self.assertEqual(os.path.join(_root, "c3_tl19_r1_allatom.pdb"), ensemble_pdb_sorted[108])
+        self.assertEqual(os.path.join(_root, "c3_tl100_r3_reliable.pdb"), ensemble_pdb_sorted[-1])
         ########################################################################       
         # Test Case 2
         ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
-        self.assertEqual("/foo/bar/c1_tl19_r1_allatom.pdb", ensemble_pdb_sorted[0])
-        self.assertEqual("/foo/bar/c3_tl100_r3_reliable.pdb", ensemble_pdb_sorted[-1])
-        self.assertEqual("/foo/bar/c2_tl50_r2_polyAla.pdb", ensemble_pdb_sorted[67])
+        self.assertEqual(os.path.join(_root, "c1_tl19_r1_allatom.pdb"), ensemble_pdb_sorted[0])
+        self.assertEqual(os.path.join(_root, "c3_tl100_r3_reliable.pdb"), ensemble_pdb_sorted[-1])
+        self.assertEqual(os.path.join(_root, "c2_tl50_r2_polyAla.pdb"), ensemble_pdb_sorted[67])
         ########################################################################       
         # Test Case 3
         ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs)
-        self.assertEqual("/foo/bar/c1_tl100_r1_allatom.pdb", ensemble_pdb_sorted[0])
-        self.assertEqual("/foo/bar/c3_tl80_r3_reliable.pdb", ensemble_pdb_sorted[-1])
+        self.assertEqual(os.path.join(_root, "c1_tl100_r1_allatom.pdb"), ensemble_pdb_sorted[0])
+        self.assertEqual(os.path.join(_root, "c3_tl80_r3_reliable.pdb"), ensemble_pdb_sorted[-1])
 
         return
     
@@ -183,7 +186,7 @@ class Test(unittest.TestCase):
             name = "e{truncation}_{schain}".format(truncation=comb[0],
                                                    schain=comb[1])
 
-            pdb = os.path.join("/foo", "bar", name+".pdb")
+            pdb = os.path.join(os.sep, "foo", "bar", name+".pdb")
             ensemble = {'name' : name,
                         'ensemble_pdb': pdb,
                         'truncation_level': comb[0],
@@ -193,23 +196,24 @@ class Test(unittest.TestCase):
             ensemble_data.append(ensemble)
             ensemble_pdbs.append(pdb)
 
+        _root = os.path.join(os.sep, "foo", "bar")
         ########################################################################       
         # Test Case 1
         ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
-        self.assertEqual("/foo/bar/e20_allatom.pdb", ensemble_pdb_sorted[0])
-        self.assertEqual("/foo/bar/e19_polyAla.pdb", ensemble_pdb_sorted[len(ensemble_pdb_sorted)/2])
-        self.assertEqual("/foo/bar/e100_reliable.pdb", ensemble_pdb_sorted[-1])
+        self.assertEqual(os.path.join(_root, "e20_allatom.pdb"), ensemble_pdb_sorted[0])
+        self.assertEqual(os.path.join(_root, "e19_polyAla.pdb"), ensemble_pdb_sorted[len(ensemble_pdb_sorted)/2])
+        self.assertEqual(os.path.join(_root, "e100_reliable.pdb"), ensemble_pdb_sorted[-1])
         ########################################################################       
         # Test Case 2
         ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
-        self.assertEqual("/foo/bar/e19_allatom.pdb", ensemble_pdb_sorted[0])
-        self.assertEqual("/foo/bar/e100_reliable.pdb", ensemble_pdb_sorted[-1])
-        self.assertEqual("/foo/bar/e50_polyAla.pdb", ensemble_pdb_sorted[len(ensemble_pdb_sorted)/2])
+        self.assertEqual(os.path.join(_root, "e19_allatom.pdb"), ensemble_pdb_sorted[0])
+        self.assertEqual(os.path.join(_root, "e100_reliable.pdb"), ensemble_pdb_sorted[-1])
+        self.assertEqual(os.path.join(_root, "e50_polyAla.pdb"), ensemble_pdb_sorted[len(ensemble_pdb_sorted)/2])
         ########################################################################       
         # Test Case 3
         ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs)
-        self.assertEqual("/foo/bar/e100_allatom.pdb", ensemble_pdb_sorted[0])
-        self.assertEqual("/foo/bar/e80_reliable.pdb", ensemble_pdb_sorted[-1])
+        self.assertEqual(os.path.join(_root, "e100_allatom.pdb"), ensemble_pdb_sorted[0])
+        self.assertEqual(os.path.join(_root, "e80_reliable.pdb"), ensemble_pdb_sorted[-1])
 
         return
     
@@ -234,7 +238,7 @@ class Test(unittest.TestCase):
             name = "{score_key}_tl{truncation}_{schain}".format(score_key=comb[0],
                                                                 truncation=comb[1],
                                                                 schain=comb[2])
-            pdb = os.path.join("/foo", "bar", name+".pdb")
+            pdb = os.path.join(os.sep, "foo", "bar", name+".pdb")
             ensemble = {'name' : name,
                         'ensemble_pdb': pdb,
                         'truncation_score_key': comb[0],
@@ -245,29 +249,30 @@ class Test(unittest.TestCase):
             ensemble_data.append(ensemble)
             ensemble_pdbs.append(pdb)
 
+        _root = os.path.join(os.sep, "foo", "bar")
         ########################################################################       
         # Test Case 1
         ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=True)
-        self.assertEqual("/foo/bar/bbc_tl20_allatom.pdb", ensemble_pdb_sorted[0])
-        self.assertEqual("/foo/bar/bbc_tl19_allatom.pdb", ensemble_pdb_sorted[6])
-        self.assertEqual("/foo/bar/bbc_tl100_reliable.pdb", ensemble_pdb_sorted[14])
-        self.assertEqual("/foo/bar/kicker_tl20_allatom.pdb", ensemble_pdb_sorted[15])
-        self.assertEqual("/foo/bar/kicker_tl19_allatom.pdb", ensemble_pdb_sorted[21])
-        self.assertEqual("/foo/bar/kicker_tl100_reliable.pdb", ensemble_pdb_sorted[29])
-        self.assertEqual("/foo/bar/ntv_tl20_allatom.pdb", ensemble_pdb_sorted[30])
-        self.assertEqual("/foo/bar/ntv_tl19_allatom.pdb", ensemble_pdb_sorted[36])
-        self.assertEqual("/foo/bar/ntv_tl100_reliable.pdb", ensemble_pdb_sorted[-1])
+        self.assertEqual(os.path.join(_root, "bbc_tl20_allatom.pdb"), ensemble_pdb_sorted[0])
+        self.assertEqual(os.path.join(_root, "bbc_tl19_allatom.pdb"), ensemble_pdb_sorted[6])
+        self.assertEqual(os.path.join(_root, "bbc_tl100_reliable.pdb"), ensemble_pdb_sorted[14])
+        self.assertEqual(os.path.join(_root, "kicker_tl20_allatom.pdb"), ensemble_pdb_sorted[15])
+        self.assertEqual(os.path.join(_root, "kicker_tl19_allatom.pdb"), ensemble_pdb_sorted[21])
+        self.assertEqual(os.path.join(_root, "kicker_tl100_reliable.pdb"), ensemble_pdb_sorted[29])
+        self.assertEqual(os.path.join(_root, "ntv_tl20_allatom.pdb"), ensemble_pdb_sorted[30])
+        self.assertEqual(os.path.join(_root, "ntv_tl19_allatom.pdb"), ensemble_pdb_sorted[36])
+        self.assertEqual(os.path.join(_root, "ntv_tl100_reliable.pdb"), ensemble_pdb_sorted[-1])
         ########################################################################       
         # Test Case 2
         ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs, ensemble_data, prioritise=False)
-        self.assertEqual("/foo/bar/bbc_tl19_allatom.pdb", ensemble_pdb_sorted[0])
-        self.assertEqual("/foo/bar/ntv_tl100_reliable.pdb", ensemble_pdb_sorted[-1])
-        self.assertEqual("/foo/bar/kicker_tl50_polyAla.pdb", ensemble_pdb_sorted[len(ensemble_pdb_sorted)/2])
+        self.assertEqual(os.path.join(_root, "bbc_tl19_allatom.pdb"), ensemble_pdb_sorted[0])
+        self.assertEqual(os.path.join(_root, "ntv_tl100_reliable.pdb"), ensemble_pdb_sorted[-1])
+        self.assertEqual(os.path.join(_root, "kicker_tl50_polyAla.pdb"), ensemble_pdb_sorted[len(ensemble_pdb_sorted)/2])
         ########################################################################       
         # Test Case 3
         ensemble_pdb_sorted = ensembler_util.sort_ensembles(ensemble_pdbs)
-        self.assertEqual("/foo/bar/bbc_tl100_allatom.pdb", ensemble_pdb_sorted[0])
-        self.assertEqual("/foo/bar/ntv_tl80_reliable.pdb", ensemble_pdb_sorted[-1])
+        self.assertEqual(os.path.join(_root, "bbc_tl100_allatom.pdb"), ensemble_pdb_sorted[0])
+        self.assertEqual(os.path.join(_root, "ntv_tl80_reliable.pdb"), ensemble_pdb_sorted[-1])
 
         return
 
