@@ -2,9 +2,9 @@
 import glob
 import os
 import unittest
+from ample.testing import test_funcs
 from ample.util import ample_util
 from ample.util import subcluster
-from ample.testing.test_funcs import found_exe
 
 class Test(unittest.TestCase):
 
@@ -35,9 +35,10 @@ class Test(unittest.TestCase):
              '1_S_00000005.pdb']
         self.assertItemsEqual(ref,cluster_files1)
     
-    def test_gesamt_matrix(self):
+    @unittest.skipUnless(test_funcs.found_exe("gesamt"), "gesamt exec missing")
+    def Xtest_gesamt_matrix(self):
         # Test we can reproduce the original thresholds
-        gesamt_exe = os.path.join(os.environ['CCP4'], "bin", "gesamt")
+        gesamt_exe = ample_util.find_exe("gesamt")
         clusterer = subcluster.GesamtClusterer(executable = gesamt_exe)
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix(pdb_list, purge_all=True)
@@ -81,7 +82,7 @@ class Test(unittest.TestCase):
         clusterer.dump_pdb_matrix('lsqkab.matrix')
         os.unlink('lsqkab.matrix')
 
-    @unittest.skipUnless(found_exe("mustang"), "maxcluster exec missing")
+    @unittest.skipUnless(test_funcs.found_exe("maxcluster"), "maxcluster exec missing")
     def test_radius_maxcluster(self):
         # Test we can reproduce the original thresholds
         maxcluster_exe = ample_util.find_exe('maxcluster')
@@ -94,9 +95,10 @@ class Test(unittest.TestCase):
              '5_S_00000005.pdb', '3_S_00000003.pdb', '1_S_00000004.pdb', '4_S_00000005.pdb',
              '3_S_00000004.pdb', '1_S_00000002.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb', '1_S_00000005.pdb']
         self.assertItemsEqual(ref,cluster_files1)
+        os.unlink('files.list')
         os.unlink('maxcluster.log')
     
-    @unittest.skipUnless(found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
+    @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
     def test_indices_fpc(self):
         # Test we can reproduce the original thresholds
         try: 
@@ -118,7 +120,7 @@ class Test(unittest.TestCase):
         os.unlink('fpc.matrix')
         os.unlink('fast_protein_cluster.log')
     
-    @unittest.skipUnless(found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
+    @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
     def test_radius_fpc(self):
         # Test we can reproduce the original thresholds
         fpc_exe = ample_util.find_exe("fast_protein_cluster")

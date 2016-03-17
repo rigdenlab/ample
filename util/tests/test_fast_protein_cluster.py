@@ -3,9 +3,10 @@ import glob
 import os
 import shutil
 import unittest
+from ample.testing import test_funcs
 from ample.util import ample_util
 from ample.util import fast_protein_cluster
-from ample.testing.test_funcs import found_exe
+
 
 class Test(unittest.TestCase):
 
@@ -23,7 +24,8 @@ class Test(unittest.TestCase):
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         return
 
-    @unittest.skipUnless(found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
+    @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster"), 
+                         "fast_protein_cluster exec missing")
     def test_fpc_kmeans_rmsd(self):
         
         fpc_exe = ample_util.find_exe("fast_protein_cluster")        
@@ -54,7 +56,8 @@ class Test(unittest.TestCase):
         self.assertEqual(os.path.basename(d['cluster_centroid']),'4_S_00000005.pdb')
         shutil.rmtree(wdir)
 
-    @unittest.skipUnless(found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
+    @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster"), 
+                         "fast_protein_cluster exec missing")
     def test_fpc_hierarch_tm(self):
         
         fpc_exe = ample_util.find_exe("fast_protein_cluster")         

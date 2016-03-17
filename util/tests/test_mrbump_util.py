@@ -18,7 +18,6 @@ class Test(unittest.TestCase):
         cls.ample_dir = os.sep.join(paths[ :-2 ])
         cls.tests_dir = os.path.join(cls.ample_dir, "testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir, 'testfiles')
-        return
 
     def test_process(self):
         with self.assertRaises(IOError):
@@ -26,7 +25,6 @@ class Test(unittest.TestCase):
             if not os.path.isdir(mrbdir): raise IOError
             rs = mrbump_util.ResultsSummary()
             print rs.summariseResults(mrbdir)
-        return
     
     def test_final_summary(self):
         with self.assertRaises(IOError):

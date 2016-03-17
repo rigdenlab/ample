@@ -2,6 +2,8 @@
 
 import glob
 import os
+import stat
+import sys
 import tempfile
 import unittest
 from ample.util import workers_util
@@ -22,21 +24,20 @@ class Test(unittest.TestCase):
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
      
     def makeJob(self, name):
-        
         script = """#!/usr/bin/python
 import sys,time
 print "I am job: {0}"
 time.sleep( 3 )
 sys.exit(0)
 """.format( name )
-    
-        f = tempfile.NamedTemporaryFile("w+b", prefix=name, suffix="py", delete=False)
+        f = tempfile.NamedTemporaryFile("w+b", prefix=name, suffix=".py", delete=False)
         f.write(script)
         f.close()
-        os.chmod(f.name, 0o77)
-         
+        os.chmod(f.name, stat.S_IRWXU)
+
         return f.name
- 
+    
+    @unittest.skipIf(sys.platform.startswith("win"), "cannot launch scripts on Windows")
     def test_jobServer(self):
         jobs = []
         for j in range(15):

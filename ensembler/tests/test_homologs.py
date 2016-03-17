@@ -4,7 +4,8 @@ import shutil
 import unittest
 
 from ample.ensembler.homologs import align_gesamt, align_mustang
-from ample.testing.test_funcs import found_exe
+from ample.testing import test_funcs
+from ample.util import ample_util
 
 class Test(unittest.TestCase):
 
@@ -21,8 +22,9 @@ class Test(unittest.TestCase):
         cls.tests_dir = os.path.join(cls.ample_dir, "testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir, 'testfiles')
 
+    @unittest.skipUnless(test_funcs.found_exe("gesamt"), "gesamt exec missing")
     def test_gesamt(self):
-        gesamt_exe = os.path.join(os.environ['CCP4'], "bin", "gesamt")
+        gesamt_exe = ample_util.find_exe("gesamt")
         pdb_list = [ '1ujbA.pdb', '2a6pA.pdb', '3c7tA.pdb']
         models = [ os.path.join(self.ample_dir, 'examples', 'homologs', pdb) for pdb in pdb_list ]
         work_dir = os.path.join(self.tests_dir, "gesamt_test")
@@ -30,7 +32,7 @@ class Test(unittest.TestCase):
         self.assertTrue(os.path.isfile(alignment_file))
         shutil.rmtree(work_dir)
     
-    @unittest.skipUnless(found_exe("mustang"), "mustang exec missing")
+    @unittest.skipUnless(test_funcs.found_exe("mustang"), "mustang exec missing")
     def test_mustang(self):
         mustang_exe = ample_util.find_exe("mustang")
         pdb_list = [ '1ujbA.pdb', '2a6pA.pdb', '3c7tA.pdb']
