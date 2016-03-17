@@ -186,7 +186,7 @@ def write_script(path, args):
         f.write(os.linesep)
         f.write("ccp4-python " + ample + " " + linechar + os.linesep)
         for argt in args:
-            f.write(" ".join(argt) + " " + linechar + "\n")
+            f.write(" ".join(argt) + " " + linechar + os.linesep)
         f.write(os.linesep)
         f.write(os.linesep)
     
