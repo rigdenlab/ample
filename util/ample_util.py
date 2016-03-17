@@ -247,10 +247,6 @@ def find_exe(executable, dirs=None):
             paths += dirs
         _logger.debug('Checking paths: {0}'.format(paths))
         
-        # Making sure we can find an executable that works on Windows
-        if sys.platform.startswith("win"):
-            executable = executable + ".exe"
-            
         for path in paths:
             exe_file = os.path.abspath(os.path.join(path, executable))   
             if is_exe(exe_file):
