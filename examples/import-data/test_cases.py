@@ -86,7 +86,7 @@ test_dict['import_cluster'] = { 'args' : args_import_cluster,
 
 # Specify the arguments to AMPLE to run this test case
 args_import_ensembles = args_universal + [
-        [ '-ensembles', 'ensembles/' ],
+        [ '-ensembles', 'ensembles' ],
         [ '-native_pdb', '1aba.pdb' ],
         [ '-shelx_cycles', '1' ],
         [ '-use_arpwarp', 'False' ],
