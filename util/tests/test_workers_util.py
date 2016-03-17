@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from ample.util import workers_util
 
+@unittest.skipIf(sys.platform.startswith("win"), "cannot launch scripts on Windows")
 class Test(unittest.TestCase):
 
     @classmethod
@@ -34,10 +35,8 @@ sys.exit(0)
         f.write(script)
         f.close()
         os.chmod(f.name, stat.S_IRWXU)
-
         return f.name
     
-    @unittest.skipIf(sys.platform.startswith("win"), "cannot launch scripts on Windows")
     def test_jobServer(self):
         jobs = []
         for j in range(15):

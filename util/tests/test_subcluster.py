@@ -6,7 +6,7 @@ from ample.testing import test_funcs
 from ample.util import ample_util
 from ample.util import subcluster
 
-class Test(unittest.TestCase):
+class Test_1(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
@@ -35,10 +35,10 @@ class Test(unittest.TestCase):
              '1_S_00000005.pdb']
         self.assertItemsEqual(ref,cluster_files1)
     
-    @unittest.skipUnless(test_funcs.found_exe("gesamt"), "gesamt exec missing")
-    def Xtest_gesamt_matrix(self):
+    @unittest.skipUnless(test_funcs.found_exe("gesamt" + ample_util.EXE_EXT), "gesamt exec missing")
+    def test_gesamt_matrix(self):
         # Test we can reproduce the original thresholds
-        gesamt_exe = ample_util.find_exe("gesamt")
+        gesamt_exe = ample_util.find_exe("gesamt" + ample_util.EXE_EXT)
         clusterer = subcluster.GesamtClusterer(executable = gesamt_exe)
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix(pdb_list, purge_all=True)
@@ -82,10 +82,10 @@ class Test(unittest.TestCase):
         clusterer.dump_pdb_matrix('lsqkab.matrix')
         os.unlink('lsqkab.matrix')
 
-    @unittest.skipUnless(test_funcs.found_exe("maxcluster"), "maxcluster exec missing")
+    @unittest.skipUnless(test_funcs.found_exe("maxcluster" + ample_util.EXE_EXT), "maxcluster exec missing")
     def test_radius_maxcluster(self):
         # Test we can reproduce the original thresholds
-        maxcluster_exe = ample_util.find_exe('maxcluster')
+        maxcluster_exe = ample_util.find_exe('maxcluster' + ample_util.EXE_EXT)
         radius = 4
         clusterer = subcluster.MaxClusterer( maxcluster_exe )
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
@@ -97,17 +97,29 @@ class Test(unittest.TestCase):
         self.assertItemsEqual(ref,cluster_files1)
         os.unlink('files.list')
         os.unlink('maxcluster.log')
-    
-    @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
+
+
+@unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster" + ample_util.EXE_EXT), "fast_protein_cluster exec missing")
+class Test_2(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Set up paths. Need to do this with setUpClass, as otherwise the __file__
+        variable is updated whenever the cwd is changed in a test and the next test
+        gets the wrong paths.
+        """
+        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        paths = thisd.split( os.sep )
+        cls.ample_dir = os.sep.join( paths[ : -2 ] )
+        cls.tests_dir=os.path.join(cls.ample_dir,"testing")
+        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        cls.fpc_exe = ample_util.find_exe("fast_protein_cluster" + ample_util.EXE_EXT)
+
     def test_indices_fpc(self):
         # Test we can reproduce the original thresholds
-        try: 
-            fpc_exe = ample_util.find_exe("fast_protein_cluster")
-        except:
-            self.assertTrue(False, "Cannot find fast_protein_cluster executable in environment")
-        
         radius = 4
-        clusterer = subcluster.FpcClusterer( fpc_exe )
+        clusterer = subcluster.FpcClusterer( self.fpc_exe )
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
         indices=clusterer._cluster_indices(radius) 
@@ -120,12 +132,10 @@ class Test(unittest.TestCase):
         os.unlink('fpc.matrix')
         os.unlink('fast_protein_cluster.log')
     
-    @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster"), "fast_protein_cluster exec missing")
     def test_radius_fpc(self):
         # Test we can reproduce the original thresholds
-        fpc_exe = ample_util.find_exe("fast_protein_cluster")
         radius = 4
-        clusterer = subcluster.FpcClusterer( fpc_exe )
+        clusterer = subcluster.FpcClusterer( self.fpc_exe )
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix( pdb_list )
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius( radius )]

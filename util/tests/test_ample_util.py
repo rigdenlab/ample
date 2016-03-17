@@ -11,13 +11,13 @@ class Test(unittest.TestCase):
         i, j, k = ample_util.ccp4_version()
         self.assertEqual((i, j, 0),(7, 0, 0))
 
-    @unittest.skipIf(sys.platform.startswith("win"), "")
+    @unittest.skipIf(sys.platform.startswith("win"), "-> on Windows")
     def test_find_exe_UNIX(self):
         self.assertTrue("gesamt", os.path.basename(ample_util.find_exe("gesamt")))
         self.assertTrue("spicker", os.path.basename(ample_util.find_exe("spicker")))
         self.assertTrue("theseus", os.path.basename(ample_util.find_exe("theseus")))
         
-    @unittest.skipUnless(sys.platform.startswith("win"), "")
+    @unittest.skipUnless(sys.platform.startswith("win"), "-> on Unix")
     def test_find_exe_WINDOWS(self):
         self.assertTrue("gesamt.exe", os.path.basename(ample_util.find_exe("gesamt")))
         self.assertTrue("spicker.exe", os.path.basename(ample_util.find_exe("spicker")))

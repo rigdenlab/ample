@@ -6,6 +6,7 @@ from ample.util import ample_util
 from ample.util import shelxe
 from ample.testing import test_funcs
 
+@unittest.skipUnless(test_funcs.found_exe("shelxe" + ample_util.EXE_EXT),  "shelxe exec missing")
 class Test(unittest.TestCase):
 
     @classmethod
@@ -21,9 +22,8 @@ class Test(unittest.TestCase):
         cls.tests_dir =os.path.join(cls.ample_dir,"testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
 
-    @unittest.skipUnless(test_funcs.found_exe("shelxe"), "shelxe exec missing")
     def test_shelxe_1BYZ(self):
-        shelxe_exe = ample_util.find_exe('shelxe')
+        shelxe_exe = ample_util.find_exe('shelxe' + ample_util.EXE_EXT)
         pdb = os.path.join(self.testfiles_dir, "1BYZ.pdb")
         mtz = os.path.join(self.testfiles_dir, "1BYZ-cad.mtz")
         mrPdb = os.path.join(self.testfiles_dir, 
@@ -31,9 +31,8 @@ class Test(unittest.TestCase):
         origin = shelxe.shelxe_origin(shelxe_exe, pdb, mtz, mrPdb)
         self.assertEqual(origin,[0.326, 0.19, 0.275])
     
-    @unittest.skipUnless(test_funcs.found_exe("shelxe"), "shelxe exec missing")
     def test_shelxe_1D7M(self):
-        shelxe_exe = ample_util.find_exe('shelxe')
+        shelxe_exe = ample_util.find_exe('shelxe' + ample_util.EXE_EXT)
         pdb = os.path.join(self.testfiles_dir, "1D7M.pdb")
         mtz = os.path.join(self.testfiles_dir, "1D7M-cad.mtz")
         mrPdb = os.path.join(self.testfiles_dir, 

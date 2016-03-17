@@ -7,7 +7,7 @@ from ample.testing import test_funcs
 from ample.util import ample_util
 from ample.util import fast_protein_cluster
 
-
+@unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster" + ample_util.EXE_EXT), "fast_protein_cluster exec missing")
 class Test(unittest.TestCase):
 
     @classmethod
@@ -22,13 +22,9 @@ class Test(unittest.TestCase):
         cls.ample_dir = os.sep.join( paths[ : -2 ] )
         cls.tests_dir=os.path.join(cls.ample_dir,"testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
-        return
-
-    @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster"), 
-                         "fast_protein_cluster exec missing")
+        cls.fpc_exe = ample_util.find_exe("fast_protein_cluster" + ample_util.EXE_EXT)   
+    
     def test_fpc_kmeans_rmsd(self):
-        
-        fpc_exe = ample_util.find_exe("fast_protein_cluster")        
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         mdir=os.path.join(self.testfiles_dir,"models")
         models=glob.glob(mdir+os.sep+"*.pdb")
@@ -45,7 +41,7 @@ class Test(unittest.TestCase):
                                           score_type=score_type,
                                           cluster_method=cluster_method,
                                           work_dir=wdir,
-                                          fpc_exe=fpc_exe,
+                                          fpc_exe=self.fpc_exe,
                                           benchmark=True
                                           )
         
@@ -56,11 +52,7 @@ class Test(unittest.TestCase):
         self.assertEqual(os.path.basename(d['cluster_centroid']),'4_S_00000005.pdb')
         shutil.rmtree(wdir)
 
-    @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster"), 
-                         "fast_protein_cluster exec missing")
-    def test_fpc_hierarch_tm(self):
-        
-        fpc_exe = ample_util.find_exe("fast_protein_cluster")         
+    def test_fpc_hierarch_tm(self):    
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
         
         mdir=os.path.join(self.testfiles_dir,"models")
@@ -77,7 +69,7 @@ class Test(unittest.TestCase):
                                           score_type=score_type,
                                           cluster_method=cluster_method,
                                           work_dir=wdir,
-                                          fpc_exe=fpc_exe,
+                                          fpc_exe=self.fpc_exe,
                                           nproc=4,
                                           benchmark=True
                                           )

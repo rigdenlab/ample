@@ -8,7 +8,7 @@ from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import theseus
 
-
+@unittest.skipUnless(test_funcs.found_exe("theseus" + ample_util.EXE_EXT), "theseus not found")
 class Test(unittest.TestCase):
 
     @classmethod
@@ -23,17 +23,15 @@ class Test(unittest.TestCase):
         cls.ample_dir = os.sep.join( paths[ : -2 ] )
         cls.tests_dir=os.path.join(cls.ample_dir,"testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        cls.theseus_exe = ample_util.find_exe("theseus" + ample_util.EXE_EXT)
 
-    
-    @unittest.skipUnless(test_funcs.found_exe("theseus"), "theseus not found")
     def test_align_models(self):
-        theseus_exe = ample_util.find_exe("theseus")
         os.chdir(self.thisd)
         
         models = glob.glob(os.path.join(self.testfiles_dir,'models','*.pdb'))
         work_dir = os.path.join(self.tests_dir,'theseus_align')
         homologs = False
-        rtheseus = theseus.Theseus(work_dir=work_dir,theseus_exe=theseus_exe)
+        rtheseus = theseus.Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
         rtheseus.superpose_models(models,homologs=homologs)
         var_by_res = rtheseus.var_by_res()
         # Below with theseus 3.1.1 on osx 10.9.5
@@ -57,10 +55,7 @@ class Test(unittest.TestCase):
             
         shutil.rmtree(work_dir)
     
-    @unittest.skipUnless(test_funcs.found_exe("theseus"), "theseus not found")
     def test_align_models_homo(self):
-
-        theseus_exe = ample_util.find_exe("theseus")
         os.chdir(self.thisd)
 
         work_dir = os.path.join(self.tests_dir,'theseus_align_homo')
@@ -76,7 +71,7 @@ class Test(unittest.TestCase):
             models.append(pdbout)
 
         homologs = True
-        rtheseus = theseus.Theseus(work_dir=work_dir, theseus_exe=theseus_exe)
+        rtheseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
         rtheseus.superpose_models(models, homologs=homologs)
         var_by_res = rtheseus.var_by_res()
         # Below with theseus 3.1.1 on osx 10.9.5
