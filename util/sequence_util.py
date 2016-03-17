@@ -85,10 +85,10 @@ class Sequence(object):
     def _fasta_str(self,headers,sequences):
         s=""
         for i, seq in enumerate(sequences):
-            s += headers[i]+'\n'
+            s += headers[i] + os.linesep
             for chunk in range(0, len(seq), self.MAXWIDTH):
-                s += seq[chunk:chunk+self.MAXWIDTH]+"\n"
-            s += "\n"
+                s += seq[chunk:chunk+self.MAXWIDTH] + os.linesep
+            s += os.linesep
         return s
    
     def from_fasta(self, fasta_file, canonicalise=True, resseq=True):
@@ -203,14 +203,14 @@ class Sequence(object):
     def pirStr(self,seqNo=0):
         """Return a canonical MAXWIDTH PIR representation of the file as a line-separated string"""
     
-        pirStr = [ self.title + "\n\n" ] # Title plus the obligatory blank line
+        pirStr = [ self.title + os.linesep + os.linesep ] # Title plus the obligatory blank line
         
         # Now reformat to MAXWIDTH chars
         for chunk in range(0, len(self.sequances[seqNo]), self.MAXWIDTH):
-            pirStr.append(self.sequences[seqNo][ chunk:chunk+self.MAXWIDTH ]+"\n")
+            pirStr.append(self.sequences[seqNo][ chunk:chunk+self.MAXWIDTH ]+os.linesep)
             
         # Add last newline
-        pirStr.append("\n")
+        pirStr.append(os.linesep)
         
         return pirStr
 
@@ -245,7 +245,7 @@ class Sequence(object):
         return self
     
     def __str__(self):
-        return self.__repr__() + "\n" + self.fasta_str()
+        return self.__repr__() + os.linesep + self.fasta_str()
 
 def process_fasta(amoptd):
     # Check we can find the input fasta
