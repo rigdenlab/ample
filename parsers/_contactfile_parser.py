@@ -9,9 +9,9 @@ class ContactfileParser(object):
         
         self.isSorted = False
         
-        self.contact = self._contactTemplate()
+        self.contact = self._contact_template()
 
-    def assignAminoAcids(self, sequence):
+    def assign_amino_acids(self, sequence):
         assert self.contacts, "No contacts defined"
         
         for contact in self.contacts:
@@ -25,7 +25,7 @@ class ContactfileParser(object):
             
         return
 
-    def calculateScalarScores(self):
+    def calculate_scalar_scores(self):
         """Calculate the scale score for each contact
     
         Each scale score is defined by (raw_score/average(raw_scores))
@@ -39,7 +39,7 @@ class ContactfileParser(object):
         
         return
     
-    def defineContact(self, line, **kwargs):
+    def define_contact(self, line, **kwargs):
         contact = self.contact.copy()
         
         try:
@@ -54,13 +54,13 @@ class ContactfileParser(object):
         
         return contact
 
-    def getContacts(self):
+    def get_contacts(self):
         return self.contacts
 
-    def setContacts(self, contact_list):
+    def set_contacts(self, contact_list):
         self.contacts = contact_list
 
-    def sortContacts(self, key, descending=False):
+    def sort_contacts(self, key, descending=False):
         assert self.contacts, "No contacts provided"
         assert key in self.contacts[0], "Key not defined"
 
@@ -70,7 +70,7 @@ class ContactfileParser(object):
         self.isSorted = True
         return
     
-    def _contactTemplate(self):
+    def _contact_template(self):
         """ create a contact template """
         
         d = {"atom1": None,

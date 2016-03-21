@@ -13,9 +13,9 @@ class CCMpredContactParser(_contactfile_parser.ContactfileParser):
     def read(self, contactmatrix):
         mat = numpy.loadtxt(contactmatrix)
 
-        raw_contacts = self.getContactPairs(mat)
+        raw_contacts = self.get_contact_pairs(mat)
         
-        for i,j, raw in zip(raw_contacts[0], raw_contacts[1], mat[raw_contacts]):        
+        for i, j, raw in zip(raw_contacts[0], raw_contacts[1], mat[raw_contacts]):        
             contact = self.contact.copy()
             contact['res1_index'] = i+1             # Matrix starts with 0,
             contact['res2_index'] = j+1             # residue 1 in sequence
@@ -24,11 +24,11 @@ class CCMpredContactParser(_contactfile_parser.ContactfileParser):
             contact['file'] = contactmatrix
             self.contacts.append(contact)
         
-        self.contacts = self.filterDuplicates(self.contacts)
+        self.contacts = self.filter_duplicates(self.contacts)
         
         return
         
-    def getContactPairs(self, mat):
+    def get_contact_pairs(self, mat):
         """Get the top-scoring contacts"""
 
         contacts = mat.argsort(axis=None)[::-1]
@@ -36,7 +36,7 @@ class CCMpredContactParser(_contactfile_parser.ContactfileParser):
                     numpy.floor(contacts / mat.shape[0]).astype(numpy.uint16)
         return contacts
     
-    def filterDuplicates(self, contacts_duplicated):
+    def filter_duplicates(self, contacts_duplicated):
         
         contacts_filtered = [contact for contact in contacts_duplicated \
                              if contact['res1_index'] < contact['res2_index']]

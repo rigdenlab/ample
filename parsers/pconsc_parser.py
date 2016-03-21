@@ -19,12 +19,12 @@ class PconscContactParser(_contactfile_parser.ContactfileParser):
                 line = line.strip().split()
                 
                 # Define the contact in a dictionary - use parent method
-                contact = self.defineContact(line,
-                                             res1_idx=self._RES1,
-                                             res2_idx=self._RES2,
-                                             raw_score_idx=self._RAW_SCORE,
-                                             method=self._METHOD,
-                                             file=contactfile)
+                contact = self.define_contact(line,
+                                              res1_idx=self._RES1,
+                                              res2_idx=self._RES2,
+                                              raw_score_idx=self._RAW_SCORE,
+                                              method=self._METHOD,
+                                              file=contactfile)
 
                 self.contacts.append(contact)
         return

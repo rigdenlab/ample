@@ -3,6 +3,7 @@ import unittest
 from ample.parsers import ccmpred_parser
 
 class Test(unittest.TestCase):
+    
     def test_filter(self):
         c = ccmpred_parser.CCMpredContactParser()
         contacts_duplicated = [{'res1_index': 11, 'res2_index': 100, 'raw_score': 0.5},
@@ -27,10 +28,8 @@ class Test(unittest.TestCase):
                         {'res1_index': 1, 'res2_index': 8, 'raw_score': 0.2},
                         {'res1_index': 2, 'res2_index': 9, 'raw_score': 0.2},
                         {'res1_index': 50, 'res2_index': 80, 'raw_score': 0.5}]
-        
-        
-        contacts_filtered = c.filterDuplicates(contacts_duplicated)
-        
+
+        contacts_filtered = c.filter_duplicates(contacts_duplicated)
         self.assertItemsEqual(ref_contacts, contacts_filtered)
     
 if __name__ == "__main__":

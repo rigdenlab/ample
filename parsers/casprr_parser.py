@@ -34,7 +34,7 @@ class CaspContactParser(_contactfile_parser.ContactfileParser):
             elif line[0].isdigit():
                 
                 # Define the contact in a dictionary - use parent method
-                contact = self.defineContact(line,
+                contact = self.define_contact(line,
                                              res1_idx=0,
                                              res2_idx=1,
                                              raw_score_idx=4,
@@ -51,7 +51,7 @@ class CaspContactParser(_contactfile_parser.ContactfileParser):
         assert self.contacts, "No contacts provided"
         
         # Sort the contacts if not done already
-        if not self.isSorted: self.sortContacts('res1_index', descending=False)
+        if not self.isSorted: self.sort_contacts('res1_index', descending=False)
         
         # Set the name of the method used to get these contacts
         self.method = self.contacts[0]['method']
