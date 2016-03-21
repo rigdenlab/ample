@@ -12,18 +12,10 @@ import sys
 import unittest
 
 # Our imports
+from ample.testing.constants import AMPLE_DIR, CLUSTER_ARGS
 from ample.util import ample_util 
 from ample.util import workers_util
 
-AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
-
-CLUSTER_ARGS = [ [ '-submit_cluster', 'True' ],
-                 [ '-submit_qtype', 'SGE' ],
-                 [ '-submit_array', 'True' ],
-                 [ '-no_gui', 'True' ],
-                 #[ '-submit_max_array', None ],
-                 #[ '-submit_queue', None ],
-                ]
 
 class AMPLEBaseTest(unittest.TestCase):
     RESULTS_PKL = None
