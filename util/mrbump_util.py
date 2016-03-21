@@ -580,7 +580,8 @@ def checkSuccess(script_path):
     """
     directory, script = os.path.split(script_path)
     scriptname = os.path.splitext(script)[0]
-    rfile = os.path.join(directory, 'search_' + scriptname + '_mrbump', 'results/resultsTable.pkl')
+    rfile = os.path.join(directory, 'search_' + scriptname + '_mrbump', 
+                         'results', 'resultsTable.pkl')
     # print "{0} checking for file: {1}".format(multiprocessing.current_process().name,rfile)
     if not os.path.isfile(rfile):
         # print "{0} cannot find results file: {1}".format(multiprocessing.current_process().name,rfile)
