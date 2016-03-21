@@ -5,9 +5,8 @@
 # Date: 21-Mar-2016
 
 import os
-import unittest
-
-AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
+from ample.testing.constants import AMPLE_DIR
+from unittest import TestLoader, TextTestRunner, TestSuite
 
 class AMPLEUnittestFramework(object):
     """Framework to run Ample unittesting"""
@@ -23,18 +22,16 @@ class AMPLEUnittestFramework(object):
         if cases:
             suite = self._load_for_subselection(cases, pattern)
         else:
-            suite = unittest.TestLoader().discover(AMPLE_DIR, 
-                                                   pattern=pattern,
-                                                   top_level_dir=AMPLE_DIR)
-        unittest.TextTestRunner(verbosity=verbosity, buffer=buffer).run(suite)
+            suite = TestLoader().discover(AMPLE_DIR, pattern=pattern,
+                                          top_level_dir=AMPLE_DIR)
+        TextTestRunner(verbosity=verbosity, buffer=buffer).run(suite)
 
     def _load_for_subselection(self, cases, pattern):
-        suite = unittest.TestSuite()
+        suite = TestSuite()
         for case in cases:
             path = os.path.join(AMPLE_DIR, case)
-            _suite = unittest.TestLoader().discover(path, 
-                                                    pattern=pattern,
-                                                    top_level_dir=AMPLE_DIR)
+            _suite = TestLoader().discover(path, pattern=pattern,
+                                           top_level_dir=AMPLE_DIR)
             suite.addTests(_suite)
             del _suite
         return suite
