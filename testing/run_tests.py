@@ -6,6 +6,7 @@ import sys
 import unittest
 
 from ample.testing import test_funcs
+from ample.testing.unittest_util import AMPLEUnittestFramework
 
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
 
@@ -48,34 +49,6 @@ def _integration(argd):
         test_funcs.run(all_test_cases, extra_args=EXTRA_ARGS, **argd)
     return
 
-class AmpleUnittestFramework(object):
-    """Framework to run Ample unittesting"""
-    
-    def run(self, cases=None, pattern="test*.py"):
-        """main routine for running the test cases"""
-        if not cases:
-            suite = unittest.TestLoader().discover(AMPLE_DIR, 
-                                                   pattern=pattern,
-                                                   top_level_dir=AMPLE_DIR)
-        else:
-            suite = self._load_for_subselection(cases, pattern)
-            
-                
-        unittest.TextTestRunner(verbosity=2, buffer=True).run(suite)
-        return
-
-    def _load_for_subselection(self, cases, pattern):
-        suite = unittest.TestSuite()
-        for case in cases:
-            path = os.path.join(AMPLE_DIR, case)
-            _suite = unittest.TestLoader().discover(path, 
-                                                    pattern=pattern,
-                                                    top_level_dir=AMPLE_DIR)
-            suite.addTests(_suite)
-            del _suite
-        return suite
-
-
 def main():  
     desc = """ccp4-python -m ample.testing <command> [<args>]
 
@@ -115,7 +88,7 @@ Available tests include:
     if argd['which'] == "integration" :
         _integration(argd)
     elif argd['which'] == 'unittest':
-        AmpleUnittestFramework().run(cases=argd['test_cases'])
+        AMPLEUnittestFramework().run(cases=argd['test_cases'])
     
 if __name__ == "__main__":
     main()
