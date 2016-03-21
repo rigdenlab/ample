@@ -32,10 +32,10 @@ class BCLContactsContactParser(_contactfile_parser.ContactfileParser):
                                               raw_score_idx=self._RAW_SCORE,
                                               method=self._METHOD, 
                                               file=contactfile)
-                contact['helix_helix'] = line[self._HH_IDX]
-                contact['helix_strand'] = line[self._HS_IDX]
-                contact['strand_helix'] = line[self._SH_IDX]
-                contact['strand_strand'] = line[self._SS_IDX]
-                contact['sheet_sheet'] = line[self._ShSh_IDX]
+                contact['helix_helix'] = float(line[self._HH_IDX])
+                contact['helix_strand'] = float(line[self._HS_IDX])
+                contact['strand_helix'] = float(line[self._SH_IDX])
+                contact['strand_strand'] = float(line[self._SS_IDX])
+                contact['sheet_sheet'] = float(line[self._ShSh_IDX])
                 
                 self.contacts.append(contact)
