@@ -47,7 +47,7 @@ class CaspContactParser(_contactfile_parser.ContactfileParser):
                 self.contacts.append(contact)
         return
     
-    def write(self, outfile):
+    def write(self, outfile, score="raw_score"):
         assert self.contacts, "No contacts provided"
         
         # Sort the contacts if not done already
@@ -57,26 +57,26 @@ class CaspContactParser(_contactfile_parser.ContactfileParser):
         self.method = self.contacts[0]['method']
 
         # Populate the final output string and write it to a file
-        out_str = self._write(self.contacts)
+        out_str = self._write(self.contacts, score)
         with open(outfile, 'w') as fh: fh.write(out_str)
 
         return
 
-    def _write(self, contacts):
+    def _write(self, contacts, score):
         format_str = "PFRMAT RR"
         method_str = "METHOD %s" % self.method.upper()
         model_str  = "MODEL 1"
         # Format the contacts to writable string
-        contact_str= "\n".join(self._format_contacts(contacts))
+        contact_str= "\n".join(self._format_contacts(contacts, score))
         end_str    = "END"
         out_str = "\n".join([format_str, method_str, model_str, contact_str, end_str])
         return out_str
 
-    def _format_contacts(self, contacts):
+    def _format_contacts(self, contacts, score):
         formatted_contacts = [("%4d %4d %2d %2d %f" % (contact['res1_index'],
                                                        contact['res2_index'],
                                                        contact['lb'], 
                                                        contact['ub'],
-                                                       contact['raw_score'])) \
+                                                       contact[score])) \
                                     for contact in contacts]
         return formatted_contacts
