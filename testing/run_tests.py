@@ -6,31 +6,13 @@ import sys
 import unittest
 
 from ample.testing import test_funcs
+from ample.testing.constants import AMPLE_DIR, EXAMPLE_DIRS, EXTRA_ARGS
 from ample.testing.unittest_util import AMPLEUnittestFramework
-
-# List of which test directories to process
-# TODO: 'transmembrane.3LBW'
-#    'missing-domain.1k04',
-dirs = [
-    'contact-example',
-    'homologs',
-    'ideal-helices',
-    'import-data',
-    'nmr.remodel',
-    'nmr.truncate',
-    'single-model',
-    'toxd-example',
-]
-
-# Any args that are to be added/updated
-EXTRA_ARGS = [ ['-no_gui','True' ],
-              #[ '-do_mr','False'],
-]
 
 def _integration(argd):
     all_test_cases = {}
     TEST_MODULE_NAME = 'test_cases'
-    for directory in dirs:
+    for directory in EXAMPLE_DIRS:
         test_module = test_funcs.load_module(TEST_MODULE_NAME, 
                                              [os.path.join(AMPLE_DIR, "examples", 
                                                            directory)])
@@ -46,6 +28,9 @@ def _integration(argd):
         print "Running test cases: {0}".format(all_test_cases.keys())
         test_funcs.run(all_test_cases, extra_args=EXTRA_ARGS, **argd)
     return
+
+def _unittest(test_cases): 
+    AMPLEUnittestFramework().run(cases=test_cases)
 
 def main():  
     desc = """ccp4-python -m ample.testing <command> [<args>]
@@ -88,7 +73,7 @@ Available tests include:
     if argd['which'] == "integration" :
         _integration(argd)
     elif argd['which'] == 'unittest':
-        AMPLEUnittestFramework().run(cases=argd['test_cases'])
+        _unittest(argd['test_cases'])
     
 if __name__ == "__main__":
     main()
