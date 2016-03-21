@@ -1,5 +1,6 @@
-# Module containing a framework for unittesting of AMPLE modules. This framework 
-# serves the purpose of loading all/selected test cases and running them.
+
+# Module containing a framework for unittesting of AMPLE modules. 
+# This framework serves the purpose of loading and running all/selected test cases.
 #
 # Author: hlfsimko
 # Date: 21-Mar-2016
