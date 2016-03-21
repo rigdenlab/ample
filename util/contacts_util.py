@@ -461,9 +461,9 @@ class Contacter(object):
         '''Read the contactfile using the CASP RR Parser'''
         cp = casprr_parser.CaspContactParser()
         cp.read(contactfile)
-        cp.sortContacts("raw_score", descending=True)
-        cp.assignAminoAcids(sequence)
-        cp.calculateScalarScores()
+        cp.sort_contacts("raw_score", descending=True)
+        cp.assign_amino_acids(sequence)
+        cp.calculate_scalar_scores()
         return cp.contacts
     
     def _readRestraints(self, restraintsfile):
