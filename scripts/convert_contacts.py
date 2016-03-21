@@ -31,10 +31,11 @@ OPTIONS = {'bbcontacts' : bbcontacts_parser.BBcontactsContactParser,
 def main(args):
     contactfile = os.path.abspath(args['contactfile'])
 
-    outfile = os.path.abspath(args['outfile']) \
-                    if args['outfile'] \
-                    else os.path.abspath(os.path.join(os.getcwd(), 
-                                         os.path.basename(contactfile).rsplit('.', 1)[0] + ".CASPRR"))
+    if args['outfile']:
+        outfile = os.path.abspath(args['outfile'])
+    else:
+        fname = os.path.basename(contactfile).rsplit('.', 1)[0] + ".CASPRR"
+        outfile = os.path.join(os.getcwd(), fname)
                     
     contact_parser = OPTIONS.get(args['method'])
     if not contact_parser: 
@@ -43,12 +44,9 @@ def main(args):
     
     cp = contact_parser()
     cp.read(contactfile)
-    
-    
-    
-    sys.exit()
+     
     contacts = cp.get_contacts()
-
+ 
     op = casprr_parser.CaspContactParser()
     op.set_contacts(contacts)
     op.sort_contacts('res1_index', descending=False)
@@ -58,7 +56,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-m",  metavar="OPTION", dest="method", type=str,
-                        help="options are [ {0} ]".format(" | ".join(SWITCH.keys())))
+                        help="options are [ {0} ]".format(" | ".join(OPTIONS.keys())))
     parser.add_argument('-o', metavar="FILE", dest="outfile", type=str, 
                         help="output filename")
     parser.add_argument('contactfile', type=str, help="contact filename")
