@@ -6,20 +6,16 @@ import unittest
 from ample.testing import test_funcs
 from ample.util import ample_util
 from ample.util import fast_protein_cluster
+from ample.testing import constants
+from ample.testing import test_funcs
 
 @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster" + ample_util.EXE_EXT), "fast_protein_cluster exec missing")
 class Test(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """
-        Set up paths. Need to do this with setUpClass, as otherwise the __file__
-        variable is updated whenever the cwd is changed in a test and the next test
-        gets the wrong paths.
-        """
         cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = cls.thisd.split( os.sep )
-        cls.ample_dir = os.sep.join( paths[ : -2 ] )
+        cls.ample_dir = constants.AMPLE_DIR
         cls.tests_dir=os.path.join(cls.ample_dir,"testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
         cls.fpc_exe = ample_util.find_exe("fast_protein_cluster" + ample_util.EXE_EXT)   

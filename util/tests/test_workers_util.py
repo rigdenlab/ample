@@ -7,20 +7,15 @@ import sys
 import tempfile
 import unittest
 from ample.util import workers_util
+from ample.testing import constants
 
 @unittest.skipIf(sys.platform.startswith("win"), "cannot launch scripts on Windows")
 class Test(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """
-        Set up paths. Need to do this with setUpClass, as otherwise the __file__
-        variable is updated whenever the cwd is changed in a test and the next test
-        gets the wrong paths.
-        """
-        thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        paths = thisd.split( os.sep )
-        cls.ample_dir = os.sep.join( paths[ : -2 ] )
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        cls.ample_dir = constants.AMPLE_DIR
         cls.tests_dir=os.path.join(cls.ample_dir,"testing")
         cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
      

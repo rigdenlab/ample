@@ -33,7 +33,8 @@ class Test(unittest.TestCase):
                  'subcluster_radius_threshold': 1,
                  'cluster_num': 1,
                  'pruned_residues': None,
-                 'cluster_centroid': '/foo/bar/centroid.pdb'}
+                 'cluster_centroid': os.path.join(os.sep, 'foo', 
+                                                  'bar', 'centroid.pdb')}
             ensembles_data.append(d)
 
         print ensembler_util.ensemble_summary(ensembles_data)

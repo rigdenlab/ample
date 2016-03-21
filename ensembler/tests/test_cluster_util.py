@@ -1,12 +1,13 @@
 """Test functions for ensembler.cluster_util.py"""
 
+import os
 import unittest
 from ample.ensembler import cluster_util
 
 class Test(unittest.TestCase):
     
     def test_random_cluster(self):
-        models = ["/foo/bar/model_{0}.pdb".format(i) for i in xrange(1000)]
+        models = ["{0}foo{0}bar{0}model_{1}.pdb".format(os.sep, i) for i in xrange(1000)]
         ########################################################################
         # Test Case 1
         max_cluster_size = 200
