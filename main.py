@@ -80,7 +80,7 @@ def setup_file_logging(main_logfile, debug_logfile):
     
     return logger
 
-logger = setup_console_logging()
+LOGGER = setup_console_logging()
 monitor = None
 
 class Ample(object):
@@ -113,7 +113,7 @@ class Ample(object):
         rosetta_modeller = options_processor.process_rosetta_options(amopt.d) 
         
         # Display the parameters used
-        logger.debug(amopt.prettify_parameters())
+        LOGGER.debug(amopt.prettify_parameters())
         
         #######################################################
         # SCRIPT PROPER STARTS HERE
@@ -164,8 +164,8 @@ class Ample(object):
         amopt.d['AMPLE_finished'] = True
         ample_util.saveAmoptd(amopt.d)
         
-        logger.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
-        logger.info(ample_util.footer)
+        LOGGER.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+        LOGGER.info(ample_util.footer)
         
         # Finally update pyrvapi results
         if self.output_gui: self.output_gui.display_results(amopt.d)
@@ -201,7 +201,7 @@ class Ample(object):
             ensembler_util.import_ensembles(optd)
         elif optd['ideal_helices']:
             optd['ensembles'], optd['ensemble_options'], optd['ensembles_data'] = ample_util.ideal_helices(optd['fasta_length'])
-            logger.info("*** Using ideal helices to solve structure ***")
+            LOGGER.info("*** Using ideal helices to solve structure ***")
         else:
             # Check we have some models to work with
             if not (optd['cluster_method'] is 'import' or optd['single_model_mode']) and \
@@ -240,7 +240,7 @@ class Ample(object):
                 
             if not (optd['homologs'] or optd['single_model_mode']):
                 ensemble_summary = ensembler_util.ensemble_summary(optd['ensembles_data'])
-                logger.info(ensemble_summary)
+                LOGGER.info(ensemble_summary)
             
         # Save the results
         ample_util.saveAmoptd(optd)
@@ -286,7 +286,7 @@ class Ample(object):
             pdb_edit.prepare_nmr_model(optd['nmr_model_in'], optd['models_dir'])
         elif optd['make_models']:
             # Make the models
-            logger.info('----- making Rosetta models--------')
+            LOGGER.info('----- making Rosetta models--------')
             if optd['nmr_remodel']:
                 try:
                     rosetta_modeller.nmr_remodel(nmr_model_in=optd['nmr_model_in'],
@@ -298,7 +298,7 @@ class Ample(object):
                     msg = "Error remodelling NMR ensemble: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
             else:
-                logger.info('making {0} models...'.format(optd['nmodels']))
+                LOGGER.info('making {0} models...'.format(optd['nmodels']))
                 try:
                     rosetta_modeller.ab_initio_model(monitor=monitor)
                 except Exception, e:
@@ -310,7 +310,7 @@ class Ample(object):
                 msg = 'Modelling complete - models stored in: {0}\n'.format(optd['models_dir'])
             
         elif optd['import_models']:
-            logger.info('Importing models from directory: {0}\n'.format(optd['models_dir']))
+            LOGGER.info('Importing models from directory: {0}\n'.format(optd['models_dir']))
             if optd['homologs']:
                 optd['models_dir'] = ample_util.extract_models(optd, sequence=None, single=True, allsame=False)
             else:
@@ -322,7 +322,7 @@ class Ample(object):
                         optd['use_scwrl'] = True
                     else:
                         # No SCWRL so don't do owt with the side chains
-                        logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(UNMODIFIED))
+                        LOGGER.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(UNMODIFIED))
                         optd['side_chain_treatments'] = [ UNMODIFIED ]
     
         # Save the results
@@ -334,7 +334,7 @@ class Ample(object):
         
         if not optd['mrbump_scripts']:
             # MRBUMP analysis of the ensembles
-            logger.info('----- Running MRBUMP on ensembles--------\n\n')
+            LOGGER.info('----- Running MRBUMP on ensembles--------\n\n')
             if len(optd['ensembles']) < 1:
                 msg = "ERROR! Cannot run MRBUMP as there are no ensembles!"
                 exit_util.exit_error(msg)
@@ -347,15 +347,15 @@ class Ample(object):
             if not os.path.exists(bump_dir): os.mkdir(bump_dir)
              
             optd['mrbump_results'] = []
-            logger.info("Running MRBUMP jobs in directory: {0}".format(bump_dir))
+            LOGGER.info("Running MRBUMP jobs in directory: {0}".format(bump_dir))
             
             # Sort the ensembles in a favourable way
-            logger.info("Sorting ensembles")
+            LOGGER.info("Sorting ensembles")
             ensemble_pdbs_sorted = ensembler_util.sort_ensembles(optd['ensembles'],
                                                            optd['ensembles_data'])
 
             # Create job scripts
-            logger.info("Generating MRBUMP runscripts")
+            LOGGER.info("Generating MRBUMP runscripts")
             optd['mrbump_scripts'] = mrbump_util.write_mrbump_files(ensemble_pdbs_sorted,
                                                                     optd,
                                                                     job_time=mrbump_util.MRBUMP_RUNTIME,
@@ -403,7 +403,7 @@ class Ample(object):
     
         # Now print out the final summary
         summary = mrbump_util.finalSummary(optd)
-        logger.info(summary)
+        LOGGER.info(summary)
         
         return
 
@@ -411,7 +411,7 @@ class Ample(object):
         
         # Make a work directory - this way all output goes into this directory
         if optd['work_dir']:
-            logger.info('Making a named work directory: {0}'.format(optd['work_dir']))
+            LOGGER.info('Making a named work directory: {0}'.format(optd['work_dir']))
             try:
                 os.mkdir(optd['work_dir'])
             except:
@@ -421,7 +421,7 @@ class Ample(object):
             if not os.path.exists(optd['run_dir']):
                 msg = 'Cannot find run directory: {0}'.format(optd['run_dir'])
                 exit_util.exit_error(msg, sys.exc_info()[2])
-            logger.info('Making a run directory: checking for previous runs...')
+            LOGGER.info('Making a run directory: checking for previous runs...')
             optd['work_dir'] = ample_util.make_workdir(optd['run_dir'], 
                                                        ccp4_jobid=optd['ccp4_jobid'])
         # Go to the work directory
@@ -439,13 +439,13 @@ class Ample(object):
         ccp4_version = ".".join([str(x) for x in optd['ccp4_version']])
         
         # Print out Version and invocation
-        logger.info(ample_util.header)
-        logger.info("AMPLE version: {0}".format(version.__version__))
-        logger.info("Running with CCP4 version: {0} from directory: {1}".format(ccp4_version, ccp4_home))
-        logger.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
-        logger.info("Running on host: {0}".format(platform.node()))
-        logger.info("Invoked with command-line:\n{0}\n".format(" ".join(sys.argv)))
-        logger.info("Running in directory: {0}\n".format(optd['work_dir']))
+        LOGGER.info(ample_util.header)
+        LOGGER.info("AMPLE version: {0}".format(version.__version__))
+        LOGGER.info("Running with CCP4 version: {0} from directory: {1}".format(ccp4_version, ccp4_home))
+        LOGGER.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+        LOGGER.info("Running on host: {0}".format(platform.node()))
+        LOGGER.info("Invoked with command-line:\n{0}\n".format(" ".join(sys.argv)))
+        LOGGER.info("Running in directory: {0}\n".format(optd['work_dir']))
         
         # Display pyrvapi results
         if pyrvapi_results.pyrvapi:
@@ -464,12 +464,12 @@ class Ample(object):
         
         # Bail and clean up if we were only checking the options
         if optd['dry_run']:
-            logger.info('Dry run finished checking options - cleaning up...')
+            LOGGER.info('Dry run finished checking options - cleaning up...')
             os.chdir(optd['run_dir'])
             shutil.rmtree(optd['work_dir'])
             sys.exit(0)
         
-        logger.info('All needed programs are found, continuing...')
+        LOGGER.info('All needed programs are found, continuing...')
         
         return
 
@@ -489,7 +489,7 @@ class Ample(object):
             msg += "Cannot find the $CCP4_SCR directory: {0}\n".format(os.environ['CCP4_SCR'])
             msg += "The directory will be created, but it should have already been created by the CCP4 startup scripts\n"
             msg += "Please make sure CCP4 is installed and the setup scripts have been run."
-            logger.critical(msg)
+            LOGGER.critical(msg)
             os.mkdir(os.environ['CCP4_SCR'])
             #exit_util.exit_error(msg)
     
