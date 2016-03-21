@@ -7,20 +7,17 @@ import os
 import sys
 
 def mrbump_cmd(name, mtz, mr_sequence, keyword_file):
-    """Return the command to run mrbump
-    Need to return the full path as on *!*windoze*!* the mrbump script isn't executable
-    """
-    if sys.platform.startswith("win"):
-        ccp4python = os.path.join(os.environ["CCP4"], "bin", "ccp4-python")
-        mrbump = os.path.join(os.environ["CCP4"], "bin", "mrbump")
-        mrbump = "{0} {1}".format(ccp4python, mrbump)
-    else:
-        mrbump = 'mrbump'
-    return'{0} KEYIN {1} HKLIN {2} SEQIN {3} HKLOUT {4}.mtz  XYZOUT {4}.pdb'.format(mrbump,
-                                                                                    keyword_file,
-                                                                                    mtz,
-                                                                                    mr_sequence,
-                                                                                    name)
+    """Return the command to run mrbump"""
+    cmd = [
+        "ccp4-python",
+        "-m", "mrbump",
+        "KEYIN", "{0}".format(keyword_file),
+        "HKLIN", "{0}".format(mtz),
+        "SEQIN", "{0}".format(mr_sequence),
+        "HKLOUT", "{0}.mtz".format(name),
+        "XYZOUT", "{0}.pdb".format(name),
+    ]
+    return " ".join(cmd)
 
 def keyword_dict(ensemble_pdb, name, amoptd, extra_options={}):
     """Extract the mrbump keywords from the main ample dictionary and add/change any from
