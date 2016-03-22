@@ -5,6 +5,7 @@
 import glob
 import logging
 import os
+import shutil
 import sys
 
 from ample.modelling import rosetta_model
@@ -21,30 +22,38 @@ def check_mandatory_options(optd):
     to be an easy way to get the logic to work of having overlapping 
     required and mutually exclusive options
     """
+    def _exit(msg, wdir):
+        shutil.rmtree(wdir)
+        exit_util.exit_error(msg)
     
     if not (optd['fasta'] or optd['restart_pkl']):
         msg = "One of -fasta  or -restart_pkl option is required."
-        exit_util.exit_error(msg)
+        _exit(msg, optd['work_dir'])
         
     if (optd['contact_file'] or optd['bbcontacts_file']) and optd['restraints_file']:
         msg = "Only one option of -contact_file or -restraints_file allowed."
-        exit_util.exit_error(msg)
+        _exit(msg, optd['work_dir'])
     
     if not optd['restart_pkl'] and not (optd['mtz'] or optd['sf_cif']):
         msg = "A crystallographic data file must be supplied with the -mtz or -sc_cif options."
-        exit_util.exit_error(msg)
+        _exit(msg, optd['work_dir'])
         
     if optd['do_mr'] and (optd['mtz'] and optd['sf_cif']):
         msg = "Please supply a single crystallographic data file."
-        exit_util.exit_error(msg)
+        _exit(msg, optd['work_dir'])
     
     if optd['devel_mode'] and optd['quick_mode']:
         msg = "Only one of quick_mode or devel_mode is permitted"
-        exit_util.exit_error(msg)
+        _exit(msg, optd['work_dir'])
         
     if optd['molrep_only'] and optd['phaser_only']:
         msg = "Only one of molrep_only or phaser_only is permitted"
-        exit_util.exit_error(msg)
+        _exit(msg, optd['work_dir'])
+
+    if optd['single_model'] and not (optd['truncation_scorefile'] and optd['truncation_scorefile_header']):
+        msg = "Truncating a single model requires -truncation_scorefile and -truncation_scorefile_header"
+        _exit(msg, optd['work_dir'])
+
     return
 
 def process_options(optd):
