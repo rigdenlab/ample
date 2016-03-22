@@ -9,7 +9,11 @@ import glob
 import os
 import sys
 
+from ample.testing.constants import AMPLE_DIR
 from ample.testing import test_funcs
+
+# Directory containing AMPLE's testfiles
+TESTFILES_DIR = os.path.join(AMPLE_DIR, "testing", "testfiles")
 
 test_dict = {}
 
@@ -60,7 +64,7 @@ if not sys.platform.startswith('win'):
 #
 ###############################################################################
 args_from_existing_models = args_vanilla + [
-    [ '-models', '../../testing/testfiles/models' ],
+    [ '-models', os.path.join(TESTFILES_DIR, 'models') ],
     [ '-native_pdb', '1DTX.pdb' ],                                         
 ]
 
@@ -90,7 +94,7 @@ test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
 #
 ###############################################################################
 args_from_quark_models = args_vanilla + [
-    [ '-models', '../../testing/testfiles/decoys_200.tar.gz'],
+    [ '-models', os.path.join(TESTFILES_DIR, 'decoys_200.tar.gz') ],
     [ '-do_mr', 'False' ]                                         
 ]
 
