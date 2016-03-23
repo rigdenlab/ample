@@ -24,6 +24,7 @@ class AMPLEUnittestFramework(object):
         return
 
 class SuiteLoader(object):
+    """Loader designed to obtain all test cases in a package"""
     
     def load_suite(self, directory, pattern="test*.py", cases=None):
         """function to load a unittest test suite"""
