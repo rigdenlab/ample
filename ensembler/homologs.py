@@ -82,7 +82,7 @@ def _gesamt_aln_windows_fix(alnf):
     with open(alnf, "w") as outfh:
         for line in open(alnf+'.backup', "r").readlines():
             if line.startswith(">"): 
-                line = ">" + os.path.basename(line)
+                line = line[0] + os.path.basename(line[1:])
             outfh.write(line)
     return alnf
 
