@@ -1,26 +1,25 @@
 
-# Module containing a framework for unittesting of AMPLE modules. 
-# This framework serves the purpose of loading and running all/selected test cases.
-#
-# Author: hlfsimko
-# Date: 21-Mar-2016
+"""Module containing a framework for unittesting of AMPLE modules
+"""
 
 import glob
 import os
+
 from ample.testing.constants import AMPLE_DIR
 from unittest import TestLoader, TextTestRunner, TestSuite
+
+__author__ = "Felix Simkovic"
+__email__ = "hlfsimko@liverpool.ac.uk"
+__date__ = "22-Mar-2016"
 
 class AMPLEUnittestFramework(object):
     """Framework to run Ample unittesting"""
     
     def run(self, buffer=False, cases=None, pattern="test*.py", verbosity=2):
         """main routine for running the test cases"""
-        
         suite = SuiteLoader().load_suite(AMPLE_DIR, cases=cases, pattern=pattern)
-        
         if int(suite.countTestCases()) > 0:
             TextTestRunner(verbosity=verbosity, buffer=buffer).run(suite)
-            
         return
 
 class SuiteLoader(object):
@@ -34,9 +33,7 @@ class SuiteLoader(object):
             search_pattern = os.path.join(directory, "*")
             cases = [ os.path.basename(folder) for folder in \
                         glob.glob(search_pattern) if os.path.isdir(folder) ]
-            
-        suite = self._load_suite(cases, pattern, directory)
-        return suite
+        return self._load_suite(cases, pattern, directory)
 
     def _load_suite(self, cases, pattern, directory):
         suite = TestSuite()
@@ -49,6 +46,5 @@ class SuiteLoader(object):
                 suite.addTests(_suite)
                 del _suite
             except ImportError:
-                print "*** not a package: {0} ***".format(path)
-            
+                print "*** not a package: {0} ***".format(path)    
         return suite
