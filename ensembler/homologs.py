@@ -78,9 +78,9 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
 ## BUG: reported to Eugene - 22/03/2016 by hlfsimko
 def _gesamt_aln_windows_fix(alnf):
     """fix for MSA to be readable by Theseus"""
-    oldf = shutil.copy(alnf, alnf+".backup")
+    shutil.copy(alnf, alnf+'.backup')   # create backup file
     with open(alnf, "w") as outfh:
-        for line in open(oldf, "r").readlines():
+        for line in open(alnf+'.backup', "r").readlines():
             if line.startswith(">"): 
                 line = os.path.basename(line)
             outfh.write(line)
