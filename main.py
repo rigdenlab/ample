@@ -1,16 +1,8 @@
 #!/usr/bin/env ccp4-python
 """
 This is AMPLE
-
-This script is named ample.py due to a problem with running the multiprocessing 
-(which is used to parallelise the running of jobs on a local machine - see python/workers.py) 
-module under windows. The multiprocessing module on windows requires that it 
-can import the main module, and the import machinery requires that any file 
-being imported is named <foo>.py, and any changes to this would require hacking 
-the multiprocessing module, so to avoid this, our script must be called ample.py
 """
 
-# python imports
 import cPickle
 import glob
 import logging
@@ -20,7 +12,6 @@ import shutil
 import sys
 import time
 
-# Our imports
 from ample.ensembler.constants import UNMODIFIED
 from ample.util import ample_util
 from ample.util import argparse_util
@@ -36,6 +27,10 @@ from ample.util import pyrvapi_results
 from ample.util import workers_util
 from ample.util import version
 
+__author__ = "Jens Thomas, Felix Simkovic, Adam Simpkin, Ronan Keegan, and Daniel Rigden"
+__credits__ = "Jaclyn Bibby, Martyn Winn, and Olga Mayans"
+__email__ = "drigden@liverpool.ac.uk"
+__version__ = version.__version__
 
 def setup_console_logging():
     logger = logging.getLogger()
