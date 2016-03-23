@@ -4,12 +4,12 @@
 @author: jmht
 """
 
-# System
 import copy
 import logging
 import os
+import shutil
+import sys
 
-# Custom
 from ample.ensembler import _ensembler
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util
@@ -69,8 +69,22 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
         raise RuntimeError, "Error running gesamt. Check logfile: {0}".format(logfile)
     
     if not os.path.isfile(alignment_file): raise RuntimeError, "Gesamt did not generate an alignment file.\nPlease check the logfile: {0}".format(logfile)
+    
+    if sys.platform.startswith("win"):
+        alignment_file = _gesamt_aln_windows_fix(alignment_file)
+    
     return alignment_file
  
+## BUG: reported to Eugene - 22/03/2016 by hlfsimko
+def _gesamt_aln_windows_fix(alnf):
+    """fix for MSA to be readable by Theseus"""
+    oldf = shutil.copy(alnf, alnf+".backup")
+    with open(alnf, "w") as outfh:
+        for line in open(oldf, "r").readlines():
+            if line.startswith(">"): 
+                line = os.path.basename(line)
+            outfh.write(line)
+    return alnf
 
 class Ensembler(_ensembler.Ensembler):
     """Ensemble creator using on multiple distant homologous structures
