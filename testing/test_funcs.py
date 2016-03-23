@@ -11,7 +11,6 @@ import shutil
 import sys
 import unittest
 
-# Our imports
 from ample.testing.constants import AMPLE_DIR, CLUSTER_ARGS
 from ample.util import ample_util 
 from ample.util import workers_util
