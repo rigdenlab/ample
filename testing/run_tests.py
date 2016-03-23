@@ -2,8 +2,6 @@
 
 import argparse
 import os
-import sys
-import unittest
 
 from ample.testing import test_funcs
 from ample.testing.constants import AMPLE_DIR, EXAMPLE_DIRS, EXTRA_ARGS
@@ -29,8 +27,10 @@ def _integration(argd):
         test_funcs.run(all_test_cases, extra_args=EXTRA_ARGS, **argd)
     return
 
-def _unittest(test_cases): 
-    AMPLEUnittestFramework().run(cases=test_cases)
+def _unittest(argd): 
+    AMPLEUnittestFramework().run(buffer=argd['buffer'],
+                                 cases=argd['test_cases'], 
+                                 verbosity=argd['verbosity'])
 
 def main():  
     desc = """ccp4-python -m ample.testing <command> [<args>]
@@ -65,15 +65,19 @@ Available tests include:
     unit = suboptions.add_parser("unittest", 
                                  help="Unittest all functions")
     unit.set_defaults(which="unittest")
+    unit.add_argument('-b', dest='buffer', action="store_false", default=True,
+                      help="debugging by printing print messages")
     unit.add_argument('test_cases', nargs='*',
                       help="A list of test cases to run")
+    unit.add_argument('-v', dest="verbosity", default=2, type=int, 
+                      help="level of verbosity [default: 2]")
     
     argd = vars(parser.parse_args())
       
     if argd['which'] == "integration" :
         _integration(argd)
     elif argd['which'] == 'unittest':
-        _unittest(argd['test_cases'])
+        _unittest(argd)
     
 if __name__ == "__main__":
     main()
