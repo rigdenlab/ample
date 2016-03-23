@@ -12,7 +12,6 @@ import os
 import random
 import re
 import shutil
-import sys
 import unittest
 
 # Our modules

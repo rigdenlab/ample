@@ -1,6 +1,5 @@
 
 from __future__ import division
-import copy
 
 # # #                                                # # #
 # This file contains Rosetta energy function definitions #
