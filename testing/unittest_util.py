@@ -49,6 +49,6 @@ class SuiteLoader(object):
                 suite.addTests(_suite)
                 del _suite
             except ImportError:
-                print "*** no test cases found for: {0} ***".format(case)
+                print "*** not a package: {0} ***".format(path)
             
         return suite
