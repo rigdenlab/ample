@@ -4,12 +4,10 @@ Created on Feb 28, 2013
 @author: jmht
 '''
 
-# python imports
 import multiprocessing
 import os
 import sys
 
-# our imports
 from ample.util import ample_util
 
 def worker(inqueue, early_terminate=False, check_success=None, chdir=False):

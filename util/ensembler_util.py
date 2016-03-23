@@ -13,11 +13,8 @@ script.
 import collections
 import cPickle
 import glob
-import importlib
-import itertools
 import logging
 import os
-import random
 import shutil
 import sys
 
@@ -40,11 +37,11 @@ def find_ensembler_module(amoptd):
     :returns: imported module handler
     """
     if amoptd['homologs']: 
-         return homologs
+        return homologs
     elif amoptd['single_model_mode']:
-         return single_model
+        return single_model
     else: 
-         return abinitio
+        return abinitio
 
 def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for ensembling on a cluster"""

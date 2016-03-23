@@ -10,7 +10,6 @@
 import logging
 import numpy
 import os
-import sys
 
 # Custom
 from ample.modelling import energy_functions

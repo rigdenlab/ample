@@ -4,7 +4,6 @@ import locale
 import sys
 locale.setlocale(locale.LC_NUMERIC, "")
 
-
 class Table:
 
     def format_num(self, num):

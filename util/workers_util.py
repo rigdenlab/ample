@@ -4,14 +4,11 @@ Created on Feb 28, 2013
 @author: jmht
 '''
 
-# python imports
-import glob
 import logging
 import multiprocessing
 import os
 import time
 
-# our imports
 from ample.util import ample_util
 from ample.util import clusterize
 from ample.util import worker

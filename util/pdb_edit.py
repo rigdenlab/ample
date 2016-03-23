@@ -12,12 +12,10 @@ import re
 import sys
 import unittest
 
-# External imports
 import iotbx.file_reader
 import iotbx.pdb
 #iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 
-# our imports
 import ample_util  
 import pdb_model
 import residue_map

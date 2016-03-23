@@ -4,16 +4,12 @@ Created on 26 May 2015
 @author: jmht
 '''
 import collections
-import glob
 import logging
 import os
 import shutil
-import sys
 
-# local imports
 from ample.util import ample_util
 from ample.util import sequence_util
-from ample.util import pdb_edit
 
 # We create this here otherwise it causes problems with pickling
 TheseusVariances = collections.namedtuple('TheseusVariances', ['idx', 'resName', 'resSeq', 'variance', 'stdDev', 'rmsd', 'core'])

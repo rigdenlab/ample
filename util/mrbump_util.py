@@ -7,7 +7,6 @@ import logging
 import os
 import shutil
 import sys
-import unittest
 
 # Hack to make sure we can find the modules we need
 if __name__ == "__main__":

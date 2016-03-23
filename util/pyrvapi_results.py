@@ -5,7 +5,6 @@ Created on 3 Mar 2015
 @author: jmht
 
 '''
-# Python imports
 import cPickle
 import logging
 import os
@@ -13,7 +12,6 @@ import subprocess
 import urlparse
 import uuid
 
-# Our imports
 from ample.util import ample_util
 from ample.util import ensembler_util
 from ample.util import mrbump_util

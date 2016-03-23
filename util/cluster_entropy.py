@@ -5,12 +5,7 @@
 #sort and rewrite
 import re
 import os, glob
-import sys
-import subprocess
-import time
-#import pp
-#import threading
-from multiprocessing import Process, Queue, JoinableQueue
+from multiprocessing import Process, JoinableQueue
 
 
 ##############

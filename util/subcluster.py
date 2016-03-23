@@ -4,16 +4,13 @@
 
 import copy
 from collections import namedtuple
-import glob
 import logging
 import re
 import os
 import shutil
 
-# External imports
 import mmtbx.superpose
 
-# Internal imports
 from ample.util import ample_util
 from ample.util import pdb_edit
 

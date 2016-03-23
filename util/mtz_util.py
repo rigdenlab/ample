@@ -8,7 +8,6 @@ import logging
 import os
 import shutil
 import sys
-import unittest
 
 from iotbx import reflection_file_reader
 

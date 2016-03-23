@@ -2,11 +2,8 @@
 Useful manipulations on PDB files
 '''
 
-# Python imports
-import os
 import types
 
-# our imports
 import pdb_edit
 import pdb_model
 

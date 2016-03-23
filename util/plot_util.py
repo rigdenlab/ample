@@ -4,7 +4,6 @@ import matplotlib
 matplotlib.use('Cairo')
 import matplotlib.pyplot
 
-
 class Plotter(object):
     """ Class to plot graphs """
     

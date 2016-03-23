@@ -1,10 +1,8 @@
 '''
 Class to hold the options for ample
 '''
-# python imports
 import os
 
-# our imports
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import version
 

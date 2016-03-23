@@ -12,7 +12,6 @@ import logging
 import os
 import shutil
 import sys
-import unittest
 
 # Our imports
 from ample.util import ample_util
@@ -384,14 +383,15 @@ def analyseModels(amoptd):
     return
 
 
-def analyseSS(amoptd):
-    from ample.parsers import dssp_parser
-    # Secondary Structure assignments
-    psipred_file = os.path.join( dataDir, "{0}.psipred_ss2".format(pdbCode)  )
-    psipredP = PsipredParser( psipred_file )
-    dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode ) )
-    dsspP = dssp_parser.DsspParser( dsspLog )
-    return
+# def analyseSS(amoptd):
+#     from ample.parsers import dssp_parser
+#     from ample.parsers import psipred_parser
+#     # Secondary Structure assignments
+#     psipred_file = os.path.join( dataDir, "{0}.psipred_ss2".format(pdbCode)  )
+#     psipredP = psipred_parser.PsipredParser( psipred_file )
+#     dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode ) )
+#     dsspP = dssp_parser.DsspParser( dsspLog )
+#     return
 
 def fixpath(path):
     # fix for analysing on a different machine
@@ -537,16 +537,6 @@ def writeCsv(fileName,resultList):
 #         csvwriter.writerows(resultList)
     return
 
-class Test(unittest.TestCase):
-    def testBenchmark(self):
-        pklfile="/home/jmht/ample-dev1/examples/toxd-example/ROSETTA_MR_0/resultsd.pkl"
-        with open(pklfile) as f: d=cPickle.load(f)
-        bd="/home/jmht/ample-dev1/python/foo"
-        if not os.path.isdir(bd): os.mkdir(bd)
-        d['benchmark_dir']=bd
-        analyse(d)
-        return
-#
 # Run unit tests
 if __name__ == "__main__":
 

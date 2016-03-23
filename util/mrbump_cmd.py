@@ -3,8 +3,6 @@ Created on 28 Feb 2013
 
 @author: jmht
 '''
-import os
-import sys
 
 def mrbump_cmd(name, mtz, mr_sequence, keyword_file):
     """Return the command to run mrbump"""

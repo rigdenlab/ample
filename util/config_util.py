@@ -8,7 +8,6 @@
 
 import logging
 import os
-import sys
 
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import version

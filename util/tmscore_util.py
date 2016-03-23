@@ -6,14 +6,11 @@
 @author: hlfsimko
 '''
 
-# System
 import collections
 import logging
 import os
-import sys
 import tempfile
 
-# Custom
 from ample.parsers import tmscore_parser
 from ample.util import ample_util
 from ample.util import pdb_edit
