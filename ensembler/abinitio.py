@@ -7,16 +7,12 @@
 """
 
 # System
-import glob
 import logging
 import os
-import shutil
-import sys
 
 # Custom
 from ample.ensembler import _ensembler
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, THIN_CLUSTERS
-from ample.util import ample_util
+from ample.ensembler.constants import POLYALA, SIDE_CHAIN_TREATMENTS, THIN_CLUSTERS
 from ample.util import scwrl_util
 
 _logger = logging.getLogger(__name__)

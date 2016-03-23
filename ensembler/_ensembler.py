@@ -7,13 +7,10 @@ Created on Apr 18, 2013
 # system imports
 import collections
 import copy
-import glob
 import logging
 import os
-import random
 import re
 import shutil
-import sys
 
 # our imports
 from ample.ensembler.constants import ALLATOM, POLYALA, RELIABLE, UNMODIFIED

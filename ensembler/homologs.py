@@ -8,7 +8,6 @@
 import copy
 import logging
 import os
-import sys
 
 # Custom
 from ample.ensembler import _ensembler

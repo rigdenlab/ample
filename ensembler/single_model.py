@@ -10,7 +10,6 @@
 import copy
 import csv
 import logging
-import sys
 import os
 
 # Custom

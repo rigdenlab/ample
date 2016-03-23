@@ -8,8 +8,6 @@ import glob
 import logging
 import os
 import random
-import shutil
-import sys
 
 # Custom
 from ample.util import fast_protein_cluster
