@@ -5,7 +5,6 @@
 import glob
 import logging
 import os
-import shutil
 import sys
 
 from ample.modelling import rosetta_model
@@ -23,7 +22,6 @@ def check_mandatory_options(optd):
     required and mutually exclusive options
     """
     def _exit(msg, wdir):
-        shutil.rmtree(wdir)
         exit_util.exit_error(msg)
     
     if not (optd['fasta'] or optd['restart_pkl']):
