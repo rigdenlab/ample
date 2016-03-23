@@ -54,5 +54,4 @@ class BBcontactsContactParser(_contactfile_parser.ContactfileParser):
             if self.contacts[-1]['internal_strand_position'].upper() == "FIRST" \
             and line[self._STRAND_POS].upper() == "LAST" \
             else False
-##End BBcontactsContactParser
 

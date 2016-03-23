@@ -1,4 +1,3 @@
-#!/usr/bin/env ccp4-python
 
 from ample.parsers import _contactfile_parser
 
@@ -30,4 +29,3 @@ class EVfoldContactParser(_contactfile_parser.ContactfileParser):
                     
                     self.contacts.append(contact)
         return
-##End EVfoldContactParser

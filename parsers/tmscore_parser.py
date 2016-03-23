@@ -1,6 +1,4 @@
 
-import os
-
 class TMscoreLogParser(object):
     """ Class to mine information from a tmscore log """
 

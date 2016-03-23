@@ -1,6 +1,5 @@
 
 import collections
-import os
 
 class PsipredSs2Parser(object):
     """Parser for psipred ss2 file"""
