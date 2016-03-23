@@ -13,7 +13,8 @@ from ample.util import ample_util
 from ample.util import clusterize
 from ample.util import worker
 
-LOGGER = logging.getLogger(__name__)
+# LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger()
 
 class JobServer(object):
     def __init__(self):
