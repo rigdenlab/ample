@@ -6,8 +6,9 @@ import stat
 import sys
 import tempfile
 import unittest
-from ample.util import workers_util
+
 from ample.testing import constants
+from ample.util import workers_util
 
 @unittest.skipIf(sys.platform.startswith("win"), "cannot launch scripts on Windows")
 class Test(unittest.TestCase):
@@ -41,8 +42,7 @@ sys.exit(0)
         js = workers_util.JobServer()
         js.setJobs(jobs)
         js.start(nproc=2, early_terminate=True, check_success=workers_util._check_success_test)
-         
-        # Cleanup
+        
         for j in jobs: os.unlink(j)
         for l in glob.glob("job_*.log"): os.unlink(l)
         pass
