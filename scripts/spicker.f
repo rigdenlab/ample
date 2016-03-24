@@ -912,37 +912,50 @@ c     write(*,*)'number of used structures=',n_str
       rmsd_a=0
       rmsd2_a=0
       n_rmsd=0
+!$OMP PARALLEL DEFAULT(NONE)
+!$OMP& SHARED(n_str,Lch,x,y,z,amat,n_rmsd,rmsd_a,rmsd2_a)
+!$OMP DO
+!$OMP& PRIVATE(i,j,k,x1,y1,z1,x2,y2,z2,nn1,nn2,TM,Rcomm,Lcomm,rmsd)
+!$OMP& REDUCTION(+:n_rmsd,rmsd_a,rmsd2_a)
+!$OMP& COLLAPSE(2)
       do i=1,n_str
-         do j=i,n_str
-            do k=1,Lch
-               x1(k)=x(k,i)
-               y1(k)=y(k,i)
-               z1(k)=z(k,i)
-               nn1(k)=k
-               x2(k)=x(k,j)
-               y2(k)=y(k,j)
-               z2(k)=z(k,j)
-               nn2(k)=k
-            enddo
-            call TMscore(Lch,x1,y1,z1,nn1,Lch,x2,y2,z2,nn2,TM,Rcomm,
-     &                    Lcomm)
-!            armsd=dsqrt(rms/Lch) !RMSD12
-            if (TM .eq. 0.0) then
-                rmsd = RMSD_max
-            else
-                rmsd = 1.0/TM
+         do j=1,n_str
+            if (j .ge. i) then
+                if (j .eq. i) then
+                    rmsd = 0.0
+                else
+                    do k=1,Lch
+                       x1(k)=x(k,i)
+                       y1(k)=y(k,i)
+                       z1(k)=z(k,i)
+                       nn1(k)=k
+                       x2(k)=x(k,j)
+                       y2(k)=y(k,j)
+                       z2(k)=z(k,j)
+                       nn2(k)=k
+                    enddo
+                    call TMscore(Lch,x1,y1,z1,nn1,Lch,x2,y2,z2,nn2,TM,
+     &                           Rcomm,Lcomm)
+    !                armsd=dsqrt(rms/Lch) !RMSD12
+                    if (TM .eq. 0.0) then
+                        rmsd = RMSD_max
+                    else
+                        rmsd = 1.0/TM
+                    endif
+    !               Make sure rmsd fits in bounds
+                    rmsd=min(rmsd,RMSD_max)
+                    rmsd=max(rmsd,RMSD_min)
+                endif
+                amat(i,j)=rmsd
+                amat(j,i)=rmsd
+                n_rmsd=n_rmsd+1
+                rmsd_a=rmsd_a+rmsd
+                rmsd2_a=rmsd2_a+rmsd*rmsd
             endif
-!           Make sure rmsd fits in bounds
-            rmsd=min(rmsd,RMSD_max)
-            rmsd=max(rmsd,RMSD_min)
-
-            amat(i,j)=rmsd
-            amat(j,i)=rmsd
-            n_rmsd=n_rmsd+1
-            rmsd_a=rmsd_a+rmsd
-            rmsd2_a=rmsd2_a+rmsd*rmsd
          enddo
       enddo
+!$OMP END DO
+!$OMP END PARALLEL
       rmsd_a=rmsd_a/n_rmsd
       rmsd2_a=rmsd2_a/n_rmsd
       rmsd_delta=sqrt(rmsd2_a-rmsd_a**2) ! 68.2% is in [-d,+d]
@@ -1380,6 +1393,7 @@ c      write(*,*)"RETURNING rmsd_delta ",rmsd_delta
       common/scores/score
       double precision score,score_max
       dimension xa(nmax),ya(nmax),za(nmax)
+!$OMP THREADPRIVATE(/stru/,/nres/,/para/,/align/,/nscore/,/scores/)
 
       dimension x1(nmax),y1(nmax),z1(nmax),n1(nmax)
       dimension x2(nmax),y2(nmax),z2(nmax),n2(nmax)
@@ -1582,6 +1596,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       common/nscore/i_ali(nmax),n_cut ![1,n_ali],align residues for the score
       common/scores/score
       double precision score,score_max
+!$OMP THREADPRIVATE(/stru/,/nres/,/para/,/align/,/nscore/,/scores/)
 
       d_tmp=d
  21   n_cut=0                   !number of residue-pairs dis<d, for iteration
