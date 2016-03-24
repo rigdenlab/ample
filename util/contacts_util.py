@@ -32,6 +32,7 @@ try:
 except ImportError:
     _BIOPYTHON = False
 
+LOGGER = logging.getLogger(__name__)
 
 def checkOptions(amoptd):
     """Function to check that all contact files are available"""
@@ -39,6 +40,7 @@ def checkOptions(amoptd):
     # Make sure contact file is provided with bbcontacts_file
     if not amoptd['contact_file'] and amoptd['bbcontacts_file']:
         msg = "Must provide -contact_file when using -bbcontacts_file or use as -contact_file"
+        LOGGER.critical(msg)
         raise RuntimeError(msg)
     
     # Check the existence of the contact file and whether it is CASP RR format
@@ -46,10 +48,12 @@ def checkOptions(amoptd):
     if amoptd['contact_file']:
         if not os.path.exists(str(amoptd['contact_file'])):
             msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
+            LOGGER.critical(msg)
             raise RuntimeError(msg)
            
         if not casprr_parser.CaspContactParser().checkFormat(amoptd['contact_file']):
             msg = "Wrong format in contact file:\n{0}".format(amoptd['contact_file'])
+            LOGGER.critical(msg)
             raise RuntimeError(msg)
     
     # Check the existence of the contact file and whether it is CASP RR format
@@ -57,10 +61,12 @@ def checkOptions(amoptd):
     if amoptd['bbcontacts_file']:
         if not os.path.exists(amoptd['bbcontacts_file']):
             msg = "Cannot find contact file:\n{0}".format(amoptd['contact_file'])
+            LOGGER.critical(msg)
             raise RuntimeError(msg)
             
         if not casprr_parser.CaspContactParser().checkFormat(amoptd['bbcontacts_file']):
             msg = "Wrong format in contact file:\n{0}".format(amoptd['bbcontacts_file'])
+            LOGGER.critical(msg)
             raise RuntimeError(msg)
     
     # Make sure user selected energy function is pre-defined
@@ -69,6 +75,7 @@ def checkOptions(amoptd):
             energyFunction = getattr(energy_functions, amoptd['energy_function'])
         except AttributeError:
             msg = "Rosetta energy function {0} unavailable".format(amoptd['energy_function'])
+            LOGGER.critical(msg)
             raise RuntimeError(msg)
     
     return
@@ -78,7 +85,6 @@ class Contacter(object):
     """ Class to handle contact predictions """
     
     def __init__(self, optd=None):
-        self.logger = logging.getLogger(__name__)
         
         self.bbcontacts_file = None
         self.contact_file = None
@@ -137,8 +143,8 @@ class Contacter(object):
     def format(self, restraintfile):
         """ Format contacts to Rosetta restraints """
         
-        self.logger.info("Re-formatting contacts to restraints " +
-                         "using the {0} function".format(self.energy_function))
+        LOGGER.info("Re-formatting contacts to restraints " +
+                    "using the {0} function".format(self.energy_function))
         
         # Format the contacts to restraints
         contact_formatted_lines = self._formatToRestraints(self.contacts, 
@@ -215,7 +221,7 @@ class Contacter(object):
         
         # make sure we can import matplotlib
         if not _MATPLOTLIB: 
-            self.logger.warning("Cannot plot contact map due to missing python dependencies")
+            LOGGER.warning("Cannot plot contact map due to missing python dependencies")
             return
         
         # Just to make sure we have a structurefile and we can import Biopython
@@ -293,7 +299,7 @@ class Contacter(object):
         
         ppv = self._ppv_score(self.contacts, RCm, self.structure_seq)
         
-        self.logger.info("Accuracy of contact prediction (PPV): {0} %".format(ppv*100))
+        LOGGER.info("Accuracy of contact prediction (PPV): {0} %".format(ppv*100))
         
         return ppv
     
@@ -361,7 +367,7 @@ class Contacter(object):
     def _cb_contacts(self, cb1_lst, cb2_lst, length, cutoff=8):
         '''Get the contacts between the two lists of contacts'''
         
-        self.logger.info("Distance cutoff of participating atoms is: %.1fA" % cutoff)
+        LOGGER.info("Distance cutoff of participating atoms is: %.1fA" % cutoff)
 
         dist_mat = numpy.zeros((length, length), numpy.float)
         dist_mat.fill(float('inf'))
@@ -420,7 +426,7 @@ class Contacter(object):
         """
         assert self.contacts, "Need normal contacts first"
         
-        self.logger.info("Mapping bbcontacts file to previously read contacts")
+        LOGGER.info("Mapping bbcontacts file to previously read contacts")
         # Read the contacts from the CASP RR formatted file. Unlike with other
         # contacts, bbcontacts contact pairs are also predicted around the turn
         # of a B-strand, so do not filter neighbours.
@@ -471,7 +477,7 @@ class Contacter(object):
         try: 
             cp.read(restraintsfile)
         except ValueError, e: 
-            self.logger.warning("Skipping reading of restraints for processing:\n{0}".format(e))
+            LOGGER.warning("Skipping reading of restraints for processing:\n{0}".format(e))
             cp.contacts = []
         return cp.contacts
         
