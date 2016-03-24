@@ -3,7 +3,6 @@
 import unittest
 from ample.ensembler import single_model
 
-
 class Test(unittest.TestCase):
     
     def test_generateResidueScorelist(self):

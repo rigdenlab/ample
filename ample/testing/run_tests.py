@@ -3,8 +3,9 @@
 import argparse
 import os
 
+from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
-from ample.testing.constants import AMPLE_DIR, EXAMPLE_DIRS, EXTRA_ARGS
+from ample.testing.constants import EXAMPLE_DIRS, EXTRA_ARGS
 from ample.testing.unittest_util import AMPLEUnittestFramework
 
 def _integration(argd):
@@ -12,7 +13,7 @@ def _integration(argd):
     TEST_MODULE_NAME = 'test_cases'
     for directory in EXAMPLE_DIRS:
         test_module = test_funcs.load_module(TEST_MODULE_NAME, 
-                                             [os.path.join(AMPLE_DIR, "examples", 
+                                             [os.path.join(SHARE_DIR, "examples", 
                                                            directory)])
         for k, v in test_module.test_dict.iteritems():
             if k in all_test_cases:

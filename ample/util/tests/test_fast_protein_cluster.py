@@ -3,11 +3,10 @@ import glob
 import os
 import shutil
 import unittest
+from ample import constants
 from ample.testing import test_funcs
 from ample.util import ample_util
 from ample.util import fast_protein_cluster
-from ample.testing import constants
-from ample.testing import test_funcs
 
 @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster" + ample_util.EXE_EXT), "fast_protein_cluster exec missing")
 class Test(unittest.TestCase):
@@ -15,9 +14,8 @@ class Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        cls.ample_dir = constants.AMPLE_DIR
-        cls.tests_dir=os.path.join(cls.ample_dir,"testing")
-        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        cls.ample_share = constants.SHARE_DIR
+        cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
         cls.fpc_exe = ample_util.find_exe("fast_protein_cluster" + ample_util.EXE_EXT)   
     
     def test_fpc_kmeans_rmsd(self):

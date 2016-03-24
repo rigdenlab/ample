@@ -2,12 +2,13 @@
 import glob
 import os
 import shutil
+import tempfile
 import unittest
 
+from ample import constants
 from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import theseus
-from ample.testing import constants
 from ample.testing import test_funcs
 
 @unittest.skipUnless(test_funcs.found_exe("theseus" + ample_util.EXE_EXT), "theseus not found")
@@ -16,9 +17,9 @@ class Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        cls.ample_dir = constants.AMPLE_DIR
-        cls.tests_dir=os.path.join(cls.ample_dir,"testing")
-        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        cls.ample_share = constants.SHARE_DIR
+        cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
+        cls.tests_dir = tempfile.gettempdir()
         cls.theseus_exe = ample_util.find_exe("theseus" + ample_util.EXE_EXT)
 
     def test_align_models(self):

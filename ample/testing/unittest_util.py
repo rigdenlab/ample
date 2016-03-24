@@ -5,7 +5,7 @@
 import glob
 import os
 
-from ample.testing.constants import AMPLE_DIR
+from ample.constants import AMPLE_DIR
 from unittest import TestLoader, TextTestRunner, TestSuite
 
 __author__ = "Felix Simkovic"

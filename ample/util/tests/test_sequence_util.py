@@ -2,17 +2,16 @@
 
 import os
 import unittest
+from ample import constants
 from ample.util import sequence_util
-from ample.testing import constants
 
 class Test(unittest.TestCase):
     
     @classmethod
     def setUpClass(cls):
         cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        cls.ample_dir = constants.AMPLE_DIR
-        cls.tests_dir=os.path.join(cls.ample_dir,"testing")
-        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        cls.ample_share = constants.SHARE_DIR
+        cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
 
     def test_add(self):
         s1 = sequence_util.Sequence(pdb=os.path.join(self.testfiles_dir,'1GU8.pdb'))
@@ -26,17 +25,13 @@ class Test(unittest.TestCase):
         self.assertTrue(len(s1.chains),2)
         self.assertTrue(len(s1.fasta_files),2)
         
-        # Test write for the hell of it
-        #out_fasta = 'seq_add.fasta'
-        #s1.write_fasta(out_fasta)
-        #os.unlink(out_fasta)
         return
 
     def test_addPdb_data(self):
         fasta1 = os.path.join(self.testfiles_dir,'1ujb_2a6pA_3c7tA.afasta')
-        pdbin1 = os.path.join(self.ample_dir, 'examples', 'homologs','1ujbA.pdb')
-        pdbin2 = os.path.join(self.ample_dir, 'examples', 'homologs','2a6pA.pdb')
-        pdbin3 = os.path.join(self.ample_dir, 'examples', 'homologs','3c7tA.pdb')
+        pdbin1 = os.path.join(self.ample_share, 'examples', 'homologs','1ujbA.pdb')
+        pdbin2 = os.path.join(self.ample_share, 'examples', 'homologs','2a6pA.pdb')
+        pdbin3 = os.path.join(self.ample_share, 'examples', 'homologs','3c7tA.pdb')
         s1 = sequence_util.Sequence(fasta=fasta1)
         s1.add_pdb_data(pdbin1)
         s1.add_pdb_data(pdbin2)

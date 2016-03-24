@@ -11,7 +11,8 @@ import shutil
 import sys
 import unittest
 
-from ample.testing.constants import AMPLE_DIR, CLUSTER_ARGS
+from ample.constants import SHARE_DIR
+from ample.testing.constants import CLUSTER_ARGS
 from ample.util import ample_util 
 from ample.util import workers_util
 
@@ -170,7 +171,7 @@ def run(test_dict,
 def write_script(path, args):
     """Write script - ARGS MUST BE IN PAIRS"""
     linechar = "^" if sys.platform.startswith('win') else "\\"
-    ample = os.path.join(AMPLE_DIR, "main.py")
+    ample = os.path.join(SHARE_DIR, "main.py")
     script = path + ample_util.SCRIPT_EXT
     with open(script, 'w') as f:
         f.write(ample_util.SCRIPT_HEADER + os.linesep)

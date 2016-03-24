@@ -2,10 +2,9 @@
 import glob
 import os
 import unittest
-
+from ample import constants
 from ample.util import ample_util
 from ample.util import subcluster
-from ample.testing import constants
 from ample.testing import test_funcs
 
 class Test_1(unittest.TestCase):
@@ -13,9 +12,8 @@ class Test_1(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        cls.ample_dir = constants.AMPLE_DIR
-        cls.tests_dir=os.path.join(cls.ample_dir,"testing")
-        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        cls.ample_share = constants.SHARE_DIR
+        cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
         
     def test_radius_cctbx(self):
         # Test we can reproduce the original thresholds
@@ -101,9 +99,8 @@ class Test_2(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        cls.ample_dir = constants.AMPLE_DIR
-        cls.tests_dir=os.path.join(cls.ample_dir,"testing")
-        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        cls.ample_share = constants.SHARE_DIR
+        cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
         cls.fpc_exe = ample_util.find_exe("fast_protein_cluster" + ample_util.EXE_EXT)
 
     def test_indices_fpc(self):

@@ -3,26 +3,22 @@
 import os
 import sys
 import unittest
+from ample import constants
 from ample.util import mtz_util
-from ample.testing import constants
 
 class Test(unittest.TestCase):
-    """
-    Unit test
-    """
 
     @classmethod
     def setUpClass(cls):
         cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        cls.ample_dir = constants.AMPLE_DIR
-        cls.tests_dir=os.path.join(cls.ample_dir,"testing")
-        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        cls.ample_share = constants.SHARE_DIR
+        cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
         return
     
     def test_process_reflection_file(self):
         # Get MTZ flags
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
-        mtz = os.path.join( self.ample_dir, "examples", "toxd-example" , "1dtx.mtz" )
+        mtz = os.path.join( self.ample_share, "examples", "toxd-example" , "1dtx.mtz" )
 
         d = { 'mtz'    : mtz,
               'sf_cif' : None,

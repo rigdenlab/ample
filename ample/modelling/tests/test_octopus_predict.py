@@ -1,17 +1,17 @@
 
 import os
 import unittest
+
+from ample import constants
 from ample.modelling import octopus_predict
-from ample.testing import constants
 
 class Test(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
-        cls.ample_dir = constants.AMPLE_DIR
-        cls.tests_dir=os.path.join(cls.ample_dir,"testing")
-        cls.testfiles_dir = os.path.join(cls.tests_dir,'testfiles')
+        cls.ample_share = constants.SHARE_DIR
+        cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
 
     def test_get_predict(self):
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()        

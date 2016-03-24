@@ -1,7 +1,6 @@
 """Test functions for ensembler._ensembler"""
 
 import unittest
-
 from ample.ensembler import _ensembler
 
 class Test(unittest.TestCase):

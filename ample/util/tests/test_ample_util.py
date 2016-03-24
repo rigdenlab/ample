@@ -1,7 +1,6 @@
 """Test functions for util.ample_util"""
 
 import os
-import sys
 import unittest
 from ample.util import ample_util
 
