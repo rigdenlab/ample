@@ -27,8 +27,8 @@ from ample.util import pyrvapi_results
 from ample.util import workers_util
 from ample.util import version
 
-__author__ = "Jens Thomas, Felix Simkovic, Adam Simpkin, Ronan Keegan, and Daniel Rigden"
-__credits__ = "Jaclyn Bibby, Martyn Winn, and Olga Mayans"
+__author__ = "Jens Thomas, Felix Simkovic, Adam Simpkin, Ronan Keegan, and Jaclyn Bibby"
+__credits__ = "Daniel Rigden, Martyn Winn, and Olga Mayans"
 __email__ = "drigden@liverpool.ac.uk"
 __version__ = version.__version__
 
