@@ -6,7 +6,7 @@ __all__ = ["AMPLE_DIR", "CLUSTER_ARGS", "EXAMPLE_DIRS", "EXTRA_ARGS"]
 ################################################################################
 # AMPLE's root directory
 AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-1 ])
-
+SHARE_DIR = os.path.join(os.environ["CCP4"], "share", "ample")
 ################################################################################
 # Arguments used on the cluster
 CLUSTER_ARGS = [ 
