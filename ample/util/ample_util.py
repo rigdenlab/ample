@@ -19,6 +19,8 @@ import zipfile
 import exit_util
 import pdb_edit
 
+from ample.constants import SHARE_DIR
+
 CCP4_VERSION=None
 SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
 EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
@@ -327,10 +329,7 @@ def find_maxcluster(amoptd):
 
 def ideal_helices(nresidues):
     ""
-    thisd =  os.path.abspath(os.path.dirname(__file__))
-    paths = thisd.split(os.sep)
-    ample_dir = os.sep.join(paths[:-1])
-    include_dir = os.path.join(ample_dir,'include')
+    include_dir = os.path.join(SHARE_DIR, 'include')
     names = [ 'polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25',
               'polyala30', 'polyala35', 'polyala40' ]
     polya_lengths = [5,10,15,20,25,30,35,40]

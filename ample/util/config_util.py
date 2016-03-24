@@ -9,6 +9,7 @@
 import logging
 import os
 
+from ample.constants import SHARE_DIR
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import version
 
@@ -17,6 +18,8 @@ try:
     import configparser as ConfigParser
 except ImportError:
     import ConfigParser 
+
+LOGGER = logging.getLogger(__name__)
 
 ##############################################################
 # The sections and options within need to be stored
@@ -93,9 +96,6 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
                         "Unspecified" : [],
 }
 
-AMPLE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-LOGGER = logging.getLogger(__name__)
-
 class AMPLEConfigOptions(object):
     
     def __init__(self):
@@ -142,7 +142,7 @@ class AMPLEConfigOptions(object):
         # Identify which config file to use
         config_file = os.path.abspath(config_opts["config_file"]) \
             if config_opts["config_file"] else \
-                os.path.join(AMPLE_DIR, "include", "ample.ini")
+                os.path.join(SHARE_DIR, "include", "ample.ini")
         LOGGER.debug("Using configuration file: {0}".format(config_file))
 
          # Read the configuration file
