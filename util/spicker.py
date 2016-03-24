@@ -327,7 +327,7 @@ if __name__ == "__main__":
     if not os.path.exists(models): raise RuntimeError("Cannot find models: {0}".format(models))
     
     if os.path.isdir(models):
-        models = glob.glob(os.path.join(models, "*.pdb"))
+        models = [ os.path.abspath(m) for m in glob.glob(os.path.join(models, "*.pdb")) ]
     elif os.path.isfile(models):
         with open(models) as f:
             models = [ l.strip() for l in f.readlines() if l.strip() ]
@@ -339,6 +339,6 @@ if __name__ == "__main__":
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    spicker = Spickerer(spicker_exe=args.executable)
+    spicker = Spickerer(spicker_exe=os.path.abspath(args.executable))
     spicker.cluster(models, score_type=args.score_type)
     print spicker.results_summary()
