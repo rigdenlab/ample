@@ -8,9 +8,7 @@ Created on 29 Dec 2015
 import os
 import sys
 
-AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-2 ])
-sys.path.append(os.path.join(AMPLE_DIR,'python'))
-import test_funcs
+from ample.testing import test_funcs
 
 test_dict = {}
 

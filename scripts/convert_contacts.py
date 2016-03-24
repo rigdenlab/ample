@@ -11,80 +11,54 @@ import logging
 import os
 import sys
 
-if 'CCP4_AMPLE_ROOT' in os.environ.keys() and "CCP4" in os.environ.keys():
-    root = os.environ["CCP4_AMPLE_ROOT"]
-elif "CCP4" in os.environ.keys():
-    root = os.path.join(os.environ["CCP4"], "share", "ample")
-else:
-    raise RuntimeError('CCP4 not found')
+from ample.parsers import bbcontacts_parser
+from ample.parsers import bclcontact_parser
+from ample.parsers import casprr_parser
+from ample.parsers import ccmpred_parser
+from ample.parsers import epcmap_parser
+from ample.parsers import evfold_parser
+from ample.parsers import gremlin_parser
+from ample.parsers import pconsc_parser
 
-sys.path.insert(0, os.path.join(root, "parsers"))
-
-import parse_bbcontacts
-import parse_casprr
-import parse_ccmpred
-import parse_epcmap
-import parse_evfold
-import parse_gremlin
-import parse_pconsc
-
+OPTIONS = {'bbcontacts' : bbcontacts_parser.BBcontactsContactParser,
+           'bclcontact' : bclcontact_parser.BCLContactsContactParser,
+           'ccmpred' : ccmpred_parser.CCMpredContactParser,
+           'epcmap' : epcmap_parser.EPCMapContactParser,
+           'evfold' : evfold_parser.EVfoldContactParser,
+           'gremlin' : gremlin_parser.GremlinContactParser,
+           'pconsc' : pconsc_parser.PconscContactParser}
 
 def main(args):
     contactfile = os.path.abspath(args['contactfile'])
 
-    outfile = os.path.abspath(args['outfile']) \
-                    if args['outfile'] \
-                    else os.path.abspath(os.path.join(os.getcwd(), 
-                                         os.path.basename(contactfile).rsplit('.', 1)[0] + ".CASPRR"))
-
-    if args['bbcontacts']:
-        cp = parse_bbcontacts.BBcontactsContactParser()
-        cp.read(contactfile)
-    elif args['ccmpred']:
-        cp = parse_ccmpred.CCMpredContactParser()
-        cp.read(contactfile)
-    elif args['epcmap']:
-        cp = parse_epcmap.EPCMapContactParser()
-        cp.read(contactfile)
-    elif args['evfold']:
-        cp = parse_evfold.EVfoldContactParser()
-        cp.read(contactfile)
-    elif args['gremlin']:
-        cp = parse_gremlin.GremlinContactParser()
-        cp.read(contactfile)
-    elif args['pconsc']:
-        cp = parse_pconsc.PconscContactParser()
-        cp.read(contactfile)
-        
-    contacts = cp.getContacts()
-
-    op = parse_casprr.CaspContactParser()
-    op.setContacts(contacts)
-    op.sortContacts('res1_index', descending=False)
+    if args['outfile']:
+        outfile = os.path.abspath(args['outfile'])
+    else:
+        fname = os.path.basename(contactfile).rsplit('.', 1)[0] + ".CASPRR"
+        outfile = os.path.join(os.getcwd(), fname)
+                    
+    contact_parser = OPTIONS.get(args['method'])
+    if not contact_parser: 
+        print "No parser defined for this method: {0}".format(args['method'])
+        sys.exit(1)
+    
+    cp = contact_parser()
+    cp.read(contactfile)
+     
+    contacts = cp.get_contacts()
+ 
+    op = casprr_parser.CaspContactParser()
+    op.set_contacts(contacts)
+    op.sort_contacts('res1_index', descending=False)
     op.write(outfile)
-##End main()
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
+    parser.add_argument("-m",  metavar="OPTION", dest="method", type=str,
+                        help="options are [ {0} ]".format(" | ".join(OPTIONS.keys())))
     parser.add_argument('-o', metavar="FILE", dest="outfile", type=str, 
                         help="output filename")
     parser.add_argument('contactfile', type=str, help="contact filename")
-
-    contacts = parser.add_mutually_exclusive_group(required=True)
-    contacts.add_argument("-bb", action="store_true", dest="bbcontacts",
-                          help="bbcontacts contact file")
-    contacts.add_argument("-ccm", action="store_true", dest="ccmpred",
-                          help="CCMpred contact matrix")
-    contacts.add_argument("-epc", action="store_true", dest="epcmap",
-                          help="EPC-Map contact file")
-    contacts.add_argument("-evf", action="store_true", dest="evfold",
-                          help="EVFold contact file")
-    contacts.add_argument("-gre", action="store_true", dest="gremlin",
-                          help="GREMLIN contact file")
-    contacts.add_argument("-pco", action="store_true", dest="pconsc",
-                          help="PconsC1/2/3 contact file")
-
     args = vars(parser.parse_args())
     main(args)

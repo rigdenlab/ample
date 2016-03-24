@@ -9,9 +9,7 @@ import glob
 import os
 import sys
 
-AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-2 ])
-sys.path.append(os.path.join(AMPLE_DIR,'python'))
-import test_funcs
+from ample.testing import test_funcs
 
 test_dict = {}
 
@@ -50,7 +48,7 @@ if not sys.platform.startswith('win'):
             self.assertIn('contact_map', self.AMPLE_DICT)
             self.assertTrue(os.path.isfile(self.AMPLE_DICT['contact_map']))
             self.assertIn('models_dir', self.AMPLE_DICT)
-            m_dir = os.path.join(self.AMPLE_DICT['models_dir'], "..", "modelling")
+            m_dir = os.path.join(self.AMPLE_DICT['models_dir'], "..", "modelling", "job_0")
             for line in open(os.path.join(m_dir, "model_0.log"), "r"):
                 if line.startswith("core.scoring.constraints.ConstraintsIO: Read in") \
                         and line.strip().endswith("constraints"):
@@ -85,7 +83,7 @@ if not sys.platform.startswith('win'):
             self.assertIn('contact_map', self.AMPLE_DICT)
             self.assertTrue(os.path.isfile(self.AMPLE_DICT['contact_map']))
             self.assertIn('models_dir', self.AMPLE_DICT)
-            m_dir = os.path.join(self.AMPLE_DICT['models_dir'], "..", "modelling")
+            m_dir = os.path.join(self.AMPLE_DICT['models_dir'], "..", "modelling", "job_0")
             for line in open(os.path.join(m_dir, "model_0.log"), "r"):
                 if line.startswith("core.scoring.constraints.ConstraintsIO: Read in") \
                         and line.strip().endswith("constraints"):

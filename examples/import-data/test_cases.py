@@ -8,9 +8,7 @@ Created on 25 Feb 2016
 import os
 import sys
 
-AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-2 ])
-sys.path.append(os.path.join(AMPLE_DIR,'python'))
-import test_funcs
+from ample.testing import test_funcs
 
 test_dict = {}
 
@@ -38,7 +36,15 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertEqual(3, self.AMPLE_DICT['num_clusters'])
         self.assertIn('ensembles', self.AMPLE_DICT)
-        self.assertEqual(243, len(self.AMPLE_DICT['ensembles_data']))
+        ensembles_data = self.AMPLE_DICT['ensembles_data']
+        self.assertEqual(243, len(ensembles_data))
+        for i in xrange(1, 4):
+            cluster_ensembles = [ens for ens in ensembles_data if ens['cluster_num']==i]
+            cluster_num_models = cluster_ensembles[0]['cluster_num_models']
+            switch = {1: (6, 93), 2: (4, 72), 3: (3, 78)}
+            num_models, num_ensembles = switch[i]
+            self.assertEqual(num_ensembles, len(cluster_ensembles))
+            self.assertEqual(num_models, cluster_num_models)
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory
@@ -80,7 +86,7 @@ test_dict['import_cluster'] = { 'args' : args_import_cluster,
 
 # Specify the arguments to AMPLE to run this test case
 args_import_ensembles = args_universal + [
-        [ '-ensembles', 'ensembles/' ],
+        [ '-ensembles', 'ensembles' ],
         [ '-native_pdb', '1aba.pdb' ],
         [ '-shelx_cycles', '1' ],
         [ '-use_arpwarp', 'False' ],
