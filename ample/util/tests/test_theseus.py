@@ -16,22 +16,22 @@ class Test(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         cls.ample_share = constants.SHARE_DIR
         cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
         cls.tests_dir = tempfile.gettempdir()
         cls.theseus_exe = ample_util.find_exe("theseus" + ample_util.EXE_EXT)
 
     def test_align_models(self):
-        os.chdir(self.thisd)
-        
+        ## BUG - hlfsimko
+        # CAUSES PROBLEMS ON MAC BECAUSE OF SYM LINK IN root on Mac OS X
+        tests_dir = os.environ["HOME"]
+        work_dir = os.path.join(tests_dir, 'theseus_align')
         models = glob.glob(os.path.join(self.testfiles_dir,'models','*.pdb'))
-        work_dir = os.path.join(self.tests_dir,'theseus_align')
+        
         homologs = False
         rtheseus = theseus.Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
         rtheseus.superpose_models(models,homologs=homologs)
         var_by_res = rtheseus.var_by_res()
-        # Below with theseus 3.1.1 on osx 10.9.5
         ref = [(0, 1, 55.757593), (1, 2, 46.981238), (2, 3, 47.734236), (3, 4, 39.857326), (4, 5, 35.477433),
                (5, 6, 26.066719), (6, 7, 24.114493), (7, 8, 24.610988), (8, 9, 21.187142), (9, 10, 21.882375),
                (10, 11, 21.622263), (11, 12, 18.680601), (12, 13, 16.568074), (13, 14, 14.889583), (14, 15, 13.889769),
@@ -49,12 +49,9 @@ class Test(unittest.TestCase):
         self.assertEqual([x.resSeq for x in var_by_res],[x[1] for x in ref])
         for i,(t,r) in enumerate(zip([x.variance for x in var_by_res], [x[2] for x in ref])):
             self.assertTrue(abs(t-r) < 0.0001,"Mismatch for: {0} {1} {2}".format(i,t,r))
-            
         shutil.rmtree(work_dir)
     
     def test_align_models_homo(self):
-        os.chdir(self.thisd)
-
         work_dir = os.path.join(self.tests_dir,'theseus_align_homo')
         if not os.path.isdir(work_dir): os.mkdir(work_dir)
         pdb_list = [ '1D7M.pdb', '1GU8.pdb', '2UUI.pdb', '1K33.pdb' ,'1BYZ.pdb' ]
@@ -80,9 +77,7 @@ class Test(unittest.TestCase):
         self.assertEqual([x.resSeq for x in var_by_res],[x[1] for x in ref])
         for i,(t,r) in enumerate(zip([x.variance for x in var_by_res], [x[2] for x in ref])):
             self.assertTrue(abs(t-r) < 0.0001,"Mismatch for: {0} {1} {2}".format(i,t,r))
-
         self.assertTrue(all([os.path.isfile(os.path.join(work_dir,m)) for m in rtheseus.aligned_models]))
-        # clean up
         for m in models: os.unlink(m)
         shutil.rmtree(work_dir)
 
