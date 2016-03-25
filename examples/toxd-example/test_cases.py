@@ -9,11 +9,11 @@ import glob
 import os
 import sys
 
-from ample.testing.constants import AMPLE_DIR
+from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
 
 # Directory containing AMPLE's testfiles
-TESTFILES_DIR = os.path.join(AMPLE_DIR, "testing", "testfiles")
+TESTFILES_DIR = os.path.join(SHARE_DIR, "testfiles")
 
 test_dict = {}
 
