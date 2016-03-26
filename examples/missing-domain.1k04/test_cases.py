@@ -8,9 +8,12 @@ Created on 29 Dec 2015
 import os
 import sys
 
+from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
+from ample.testing.integration_util import AMPLEBaseTest
 
-test_dict = {}
+DIR = os.path.join(SHARE_DIR, "examples", "missing-domain.1k04")
+TEST_DICT = {}
 
 ###############################################################################
 #
@@ -20,16 +23,16 @@ test_dict = {}
 
 # Specify the arguments to AMPLE to run this test case
 args_missing_domain =  [
-                       [ '-fasta', '1k04_.fasta' ],
-                       [ '-mtz', '1k04_cad-unique.mtz' ],
-                       [ '-domain_all_chains_pdb', 'Known_40.pdb' ],
-                       [ '-missing_domain', 'True' ],
-                       [ '-frags_3mers', 'aa1k04_03_05.200_v1_3' ],
-                       [ '-frags_9mers', 'aa1k04_09_05.200_v1_3' ],
-                       [ '-rosetta_dir', '/opt/rosetta-3.5' ]
+       [ '-fasta', os.path.join(DIR, '1k04_.fasta') ],
+       [ '-mtz', os.path.join(DIR, '1k04_cad-unique.mtz') ],
+       [ '-domain_all_chains_pdb', os.path.join(DIR, 'Known_40.pdb') ],
+       [ '-missing_domain', 'True' ],
+       [ '-frags_3mers', os.path.join(DIR, 'aa1k04_03_05.200_v1_3') ],
+       [ '-frags_9mers', os.path.join(DIR, 'aa1k04_09_05.200_v1_3') ],
+       [ '-rosetta_dir', '/opt/rosetta-3.5' ],
 ]
 
-class AMPLETest(test_funcs.AMPLEBaseTest):
+class AMPLETest(AMPLEBaseTest):
     def test_missing_domain(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('mrbump_results', self.AMPLE_DICT)
@@ -39,9 +42,8 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory
-test_dict['missing_domain'] = { 'args' : args_missing_domain,
+TEST_DICT['missing_domain'] = { 'args' : args_missing_domain,
                                'test' :  AMPLETest,
-                               'directory' : os.path.abspath(os.path.dirname(__file__))
                                 }
 
 ###############################################################################
@@ -51,4 +53,4 @@ test_dict['missing_domain'] = { 'args' : args_missing_domain,
 ###############################################################################
 
 if __name__ == '__main__':
-    test_funcs.parse_args(test_dict)
+    test_funcs.parse_args(TEST_DICT)

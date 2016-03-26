@@ -9,22 +9,25 @@ import glob
 import os
 import sys
 
+from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
+from ample.testing.integration_util import AMPLEBaseTest
 
-test_dict = {}
+DIR = os.path.join(SHARE_DIR, "examples", "contact-example")
+TEST_DICT = {}
 
 if not sys.platform.startswith('win'):
     # vanilla test
     args_vanilla = [
-        [ '-fasta', 'toxd_.fasta' ],
-        [ '-mtz', '1dtx.mtz' ],
+        [ '-fasta', os.path.join(DIR, 'toxd_.fasta') ],
+        [ '-mtz', os.path.join(DIR, '1dtx.mtz') ],
         [ '-percent', '50' ],
-        [ '-rosetta_dir', '/opt/rosetta-3.5' ],
-        [ '-frags_3mers', 'aat000_03_05.200_v1_3' ],
-        [ '-frags_9mers', 'aat000_09_05.200_v1_3' ],
-        [ '-psipred_ss2', 'toxd_.psipred_ss2' ],
+        [ '-frags_3mers', os.path.join(DIR, 'aat000_03_05.200_v1_3') ],
+        [ '-frags_9mers', os.path.join(DIR, 'aat000_09_05.200_v1_3') ],
+        [ '-psipred_ss2', os.path.join(DIR, 'toxd_.psipred_ss2') ],
         [ '-nmodels', '30' ],
         [ '-do_mr', 'False' ],
+        [ '-rosetta_dir', '/opt/rosetta-3.5' ],
     ]
     
     ###############################################################################
@@ -34,12 +37,12 @@ if not sys.platform.startswith('win'):
     ###############################################################################
     
     args_rosetta_contacts = args_vanilla + [
-        [ '-contact_file', 'toxd_.pconsc2.CASPRR' ],
+        [ '-contact_file', os.path.join(DIR, 'toxd_.pconsc2.CASPRR') ],
         [ '-energy_function', 'FADE_default' ],
     ]
     
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-    class AMPLETest(test_funcs.AMPLEBaseTest):
+    class AMPLETest(AMPLEBaseTest):
         def test_rosetta_contacts(self):
             self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
             self.assertEqual(self.AMPLE_DICT['energy_function'], "FADE_default")
@@ -61,9 +64,8 @@ if not sys.platform.startswith('win'):
             self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
             return
      
-    test_dict['rosetta_contacts'] = { 'args' : args_rosetta_contacts,
-                                      'test' :  AMPLETest,
-                                      'directory' : os.path.abspath(os.path.dirname(__file__))
+    TEST_DICT['rosetta_contacts'] = {'args' : args_rosetta_contacts,
+                                     'test' :  AMPLETest,
                                     }
     
     ###############################################################################
@@ -73,11 +75,11 @@ if not sys.platform.startswith('win'):
     ###############################################################################
     
     args_rosetta_restraints = args_vanilla + [
-        [ '-restraints_file', 'toxd_.cst']
+        [ '-restraints_file', os.path.join(DIR, 'toxd_.cst')]
     ]
     
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-    class AMPLETest(test_funcs.AMPLEBaseTest):
+    class AMPLETest(AMPLEBaseTest):
         def test_rosetta_contacts(self):
             self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
             self.assertIn('contact_map', self.AMPLE_DICT)
@@ -96,11 +98,9 @@ if not sys.platform.startswith('win'):
             self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
             return
     
-    test_dict['rosetta_restraints'] = { 'args' : args_rosetta_restraints,
-                                      'test' :  AMPLETest,
-                                      'directory' : os.path.abspath(os.path.dirname(__file__))
-                        
+    TEST_DICT['rosetta_restraints'] = {'args' : args_rosetta_restraints,
+                                       'test' :  AMPLETest,
                                       }
 
 if __name__ == '__main__':
-    test_funcs.parse_args(test_dict)
+    test_funcs.parse_args(TEST_DICT)
