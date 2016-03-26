@@ -9,9 +9,12 @@ import os
 import sys
 import unittest
 
+from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
+from ample.testing.integration_util import AMPLEBaseTest
 
-test_dict = {}
+DIR = os.path.join(SHARE_DIR, "examples", "nmr-remodel")
+TEST_DICT = {}
 
 if not sys.platform.startswith('win'):
     ###############################################################################
@@ -21,18 +24,18 @@ if not sys.platform.startswith('win'):
     ###############################################################################
     args =  [
         [ '-name', '1t00' ],
-        [ '-fasta', '1T00.fasta' ],
-        [ '-mtz', '1t00.mtz' ],
+        [ '-fasta', os.path.join(DIR, '1T00.fasta') ],
+        [ '-mtz', os.path.join(DIR,'1t00.mtz') ],
         [ '-rosetta_dir', '/opt/rosetta-3.5' ],
-        [ '-nmr_model_in', '2DIZ.pdb' ],
+        [ '-nmr_model_in', os.path.join(DIR,'2DIZ.pdb') ],
         [ '-nmr_remodel', 'True' ],
-        [ '-frags_3mers', '1t00.200.3mers' ],
-        [ '-frags_9mers', '1t00.200.9mers' ],
+        [ '-frags_3mers', os.path.join(DIR, '1t00.200.3mers') ],
+        [ '-frags_9mers', os.path.join(DIR, '1t00.200.9mers') ],
         [ '-nmr_process', '1' ]
     ]
     
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-    class AMPLETest(test_funcs.AMPLEBaseTest):
+    class AMPLETest(AMPLEBaseTest):
         def test_nmr_remodel(self):
             self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
             self.assertIn('mrbump_results', self.AMPLE_DICT)
@@ -41,9 +44,8 @@ if not sys.platform.startswith('win'):
             self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
             return
             
-    test_dict['nmr_remodel'] = { 'args' : args,
+    TEST_DICT['nmr_remodel'] = { 'args' : args,
                                  'test' :  AMPLETest,
-                                 'directory' : os.path.abspath(os.path.dirname(__file__))
                                  }
 
 ###############################################################################
@@ -53,4 +55,4 @@ if not sys.platform.startswith('win'):
 ###############################################################################
 
 if __name__ == '__main__':
-    test_funcs.parse_args(test_dict)
+    test_funcs.parse_args(TEST_DICT)

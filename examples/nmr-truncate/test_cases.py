@@ -8,9 +8,12 @@ Created on 29 Dec 2015
 import os
 import sys
 
+from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
+from ample.testing.integration_util import AMPLEBaseTest
 
-test_dict = {}
+DIR = os.path.join(SHARE_DIR, "examples", "nmr-truncate")
+TEST_DICT = {}
 
 ###############################################################################
 #
@@ -19,13 +22,13 @@ test_dict = {}
 ###############################################################################
 args =  [
     [ '-name', '102l' ],
-    [ '-fasta', '102L.fasta' ],
-    [ '-mtz', '102l.mtz' ],
-    [ '-nmr_model_in', '2LC9.pdb' ],
+    [ '-fasta', os.path.join(DIR, '102L.fasta') ],
+    [ '-mtz', os.path.join(DIR, '102l.mtz') ],
+    [ '-nmr_model_in', os.path.join(DIR, '2LC9.pdb') ],
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-class AMPLETest(test_funcs.AMPLEBaseTest):
+class AMPLETest(AMPLEBaseTest):
     def test_nmr_truncate(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('mrbump_results', self.AMPLE_DICT)
@@ -34,9 +37,8 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
         return
         
-test_dict['nmr_truncate'] = { 'args' : args,
+TEST_DICT['nmr_truncate'] = { 'args' : args,
                               'test' :  AMPLETest,
-                              'directory' : os.path.abspath(os.path.dirname(__file__))
                                }
 
 ###############################################################################
@@ -46,4 +48,4 @@ test_dict['nmr_truncate'] = { 'args' : args,
 ###############################################################################
 
 if __name__ == '__main__':
-    test_funcs.parse_args(test_dict)
+    test_funcs.parse_args(TEST_DICT)
