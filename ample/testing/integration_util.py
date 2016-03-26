@@ -55,7 +55,7 @@ class AMPLEIntegrationFramework(object):
         self.test_dict = SuiteLoader().load_cases(os.path.join(SHARE_DIR, "examples"), 
                                                   test_cases=test_cases)
         # Make a directory to keep all files together
-        _root = run_dir if run_dir else self.get_run_dir()
+        _root = os.path.abspath(run_dir) if run_dir else self.get_run_dir()
         self.run_dir = os.path.join(_root, "ample_testing")
         if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
     
