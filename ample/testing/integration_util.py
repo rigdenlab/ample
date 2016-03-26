@@ -78,6 +78,7 @@ class AMPLEIntegrationFramework(object):
             if clean_all:
                 script = work_dir + SCRIPT_EXT
                 if os.path.isfile(script): os.unlink(script)
+        if clean_dir and os.path.isdir(self.run_dir): shutil.rmtree(self.run_dir)
     
     def run(self, nproc=1, submit_cluster=False, dry_run=False, clean_up=True, 
             rosetta_dir=None, extra_args=None, **kw):
