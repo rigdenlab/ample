@@ -9,8 +9,19 @@ from ample.constants import AMPLE_DIR
 from unittest import TestLoader, TextTestRunner, TestSuite
 
 __author__ = "Felix Simkovic"
-__email__ = "hlfsimko@liverpool.ac.uk"
 __date__ = "22-Mar-2016"
+
+# Available packages. Hard-coded for now to show visually what we have in
+# argparse module. Not needed otherwise
+PACKAGES = ["ensembler", "modelling", "parsers", "util"]
+
+def add_cmd_options(parser):
+    parser.add_argument('-b', dest='buffer', action="store_false", default=True,
+                        help="debugging by printing print messages")
+    parser.add_argument('test_cases', nargs='*',
+                        help="[ {0} ]".format(" | ".join(PACKAGES)))
+    parser.add_argument('-v', dest="verbosity", default=2, type=int, 
+                        help="level of verbosity [default: 2]")
 
 class AMPLEUnittestFramework(object):
     """Framework to run Ample unittesting"""
@@ -39,7 +50,6 @@ class SuiteLoader(object):
         suite = TestSuite()
         for case in cases:
             path = os.path.join(directory, case)
-            
             try:
                 _suite = TestLoader().discover(path, pattern=pattern,
                                                top_level_dir=directory)
