@@ -13,14 +13,14 @@ from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
 from ample.testing.integration_util import AMPLEBaseTest
 
-DIR = os.path.join(SHARE_DIR, "examples", "toxd-example")
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "toxd-example", "input")
 TEST_DICT = {}
 TESTFILES_DIR = os.path.join(SHARE_DIR, "testfiles")
 
 # vanilla test
 args_vanilla = [
-    [ '-fasta', os.path.join(DIR, 'toxd_.fasta') ],
-    [ '-mtz', os.path.join(DIR, '1dtx.mtz') ],
+    [ '-fasta', os.path.join(INPUT_DIR, 'toxd_.fasta') ],
+    [ '-mtz', os.path.join(INPUT_DIR, '1dtx.mtz') ],
     [ '-percent', '50' ]
 ]
 
@@ -33,8 +33,8 @@ if not sys.platform.startswith('win'):
 
     args_rosetta_modelling = args_vanilla + [
         [ '-rosetta_dir', '/opt/rosetta-3.5' ],
-        [ '-frags_3mers', os.path.join(DIR, 'aat000_03_05.200_v1_3') ],
-        [ '-frags_9mers', os.path.join(DIR, 'aat000_09_05.200_v1_3') ],
+        [ '-frags_3mers', os.path.join(INPUT_DIR, 'aat000_03_05.200_v1_3') ],
+        [ '-frags_9mers', os.path.join(INPUT_DIR, 'aat000_09_05.200_v1_3') ],
         [ '-nmodels', '40']
     ]
     
@@ -64,7 +64,7 @@ if not sys.platform.startswith('win'):
 ###############################################################################
 args_from_existing_models = args_vanilla + [
     [ '-models', os.path.join(TESTFILES_DIR, 'models') ],
-    [ '-native_pdb', os.path.join(DIR, '1DTX.pdb') ],                                         
+    [ '-native_pdb', os.path.join(INPUT_DIR, '1DTX.pdb') ],                                         
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in

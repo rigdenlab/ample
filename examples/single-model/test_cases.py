@@ -1,8 +1,8 @@
 #!/usr/bin/env ccp4-python
 '''
-Created on 29 Dec 2015
+Created on 16 Jan 2016
 
-@author: jmht
+@author: hlfsimko
 '''
 
 import glob
@@ -13,13 +13,13 @@ from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
 from ample.testing.integration_util import AMPLEBaseTest
 
-DIR = os.path.join(SHARE_DIR, "examples", "single-model")
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "single-model", "input")
 TEST_DICT = {}
 
 # vanilla test
 args_vanilla = [
-    [ '-fasta', os.path.join(DIR, '1ujb.fasta') ],
-    [ '-mtz', os.path.join(DIR, '1ujb-sf.mtz') ],
+    [ '-fasta', os.path.join(INPUT_DIR, '1ujb.fasta') ],
+    [ '-mtz', os.path.join(INPUT_DIR, '1ujb-sf.mtz') ],
 ]
 
 ###############################################################################
@@ -29,8 +29,8 @@ args_vanilla = [
 ###############################################################################
 args_from_single_model = args_vanilla + [
     [ '-percent', '20' ],
-    [ '-single_model', os.path.join(DIR, '3c7t.pdb') ],
-    [ '-truncation_scorefile', os.path.join(DIR, '3c7t_scores.csv') ],
+    [ '-single_model', os.path.join(INPUT_DIR, '3c7t.pdb') ],
+    [ '-truncation_scorefile', os.path.join(INPUT_DIR, '3c7t_scores.csv') ],
     [ '-truncation_scorefile_header', 'residue', 'concoord' ],                                         
 ]
 

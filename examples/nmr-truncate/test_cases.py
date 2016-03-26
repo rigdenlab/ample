@@ -12,7 +12,7 @@ from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
 from ample.testing.integration_util import AMPLEBaseTest
 
-DIR = os.path.join(SHARE_DIR, "examples", "nmr-truncate")
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "nmr-truncate", "input")
 TEST_DICT = {}
 
 ###############################################################################
@@ -22,9 +22,9 @@ TEST_DICT = {}
 ###############################################################################
 args =  [
     [ '-name', '102l' ],
-    [ '-fasta', os.path.join(DIR, '102L.fasta') ],
-    [ '-mtz', os.path.join(DIR, '102l.mtz') ],
-    [ '-nmr_model_in', os.path.join(DIR, '2LC9.pdb') ],
+    [ '-fasta', os.path.join(INPUT_DIR, '102L.fasta') ],
+    [ '-mtz', os.path.join(INPUT_DIR, '102l.mtz') ],
+    [ '-nmr_model_in', os.path.join(INPUT_DIR, '2LC9.pdb') ],
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in

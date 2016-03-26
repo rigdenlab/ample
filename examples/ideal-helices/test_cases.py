@@ -12,7 +12,7 @@ from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
 from ample.testing.integration_util import AMPLEBaseTest
 
-DIR = os.path.join(SHARE_DIR, "examples", "ideal-helices")
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "ideal-helices", "input")
 TEST_DICT = {}
 
 ###############################################################################
@@ -23,8 +23,8 @@ TEST_DICT = {}
 
 # Specify the arguments to AMPLE to run this test case
 args_ideal_helices =  [
-        [ '-fasta', os.path.join(DIR, '2OVC.fasta') ],
-        [ '-mtz', os.path.join(DIR, '2OVC-cad.mtz') ],
+        [ '-fasta', os.path.join(INPUT_DIR, '2OVC.fasta') ],
+        [ '-mtz', os.path.join(INPUT_DIR, '2OVC-cad.mtz') ],
         [ '-ideal_helices', 'True' ],
 ]
 

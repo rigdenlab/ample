@@ -13,7 +13,7 @@ from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
 from ample.testing.integration_util import AMPLEBaseTest
 
-DIR = os.path.join(SHARE_DIR, "examples", "nmr-remodel")
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "nmr-remodel", "input")
 TEST_DICT = {}
 
 if not sys.platform.startswith('win'):
@@ -24,13 +24,13 @@ if not sys.platform.startswith('win'):
     ###############################################################################
     args =  [
         [ '-name', '1t00' ],
-        [ '-fasta', os.path.join(DIR, '1T00.fasta') ],
-        [ '-mtz', os.path.join(DIR,'1t00.mtz') ],
+        [ '-fasta', os.path.join(INPUT_DIR, '1T00.fasta') ],
+        [ '-mtz', os.path.join(INPUT_DIR,'1t00.mtz') ],
         [ '-rosetta_dir', '/opt/rosetta-3.5' ],
-        [ '-nmr_model_in', os.path.join(DIR,'2DIZ.pdb') ],
+        [ '-nmr_model_in', os.path.join(INPUT_DIR,'2DIZ.pdb') ],
         [ '-nmr_remodel', 'True' ],
-        [ '-frags_3mers', os.path.join(DIR, '1t00.200.3mers') ],
-        [ '-frags_9mers', os.path.join(DIR, '1t00.200.9mers') ],
+        [ '-frags_3mers', os.path.join(INPUT_DIR, '1t00.200.3mers') ],
+        [ '-frags_9mers', os.path.join(INPUT_DIR, '1t00.200.9mers') ],
         [ '-nmr_process', '1' ]
     ]
     

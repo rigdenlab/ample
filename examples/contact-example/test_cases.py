@@ -13,18 +13,18 @@ from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
 from ample.testing.integration_util import AMPLEBaseTest
 
-DIR = os.path.join(SHARE_DIR, "examples", "contact-example")
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "contact-example", "input")
 TEST_DICT = {}
 
 if not sys.platform.startswith('win'):
     # vanilla test
     args_vanilla = [
-        [ '-fasta', os.path.join(DIR, 'toxd_.fasta') ],
-        [ '-mtz', os.path.join(DIR, '1dtx.mtz') ],
+        [ '-fasta', os.path.join(INPUT_DIR, 'toxd_.fasta') ],
+        [ '-mtz', os.path.join(INPUT_DIR, '1dtx.mtz') ],
         [ '-percent', '50' ],
-        [ '-frags_3mers', os.path.join(DIR, 'aat000_03_05.200_v1_3') ],
-        [ '-frags_9mers', os.path.join(DIR, 'aat000_09_05.200_v1_3') ],
-        [ '-psipred_ss2', os.path.join(DIR, 'toxd_.psipred_ss2') ],
+        [ '-frags_3mers', os.path.join(INPUT_DIR, 'aat000_03_05.200_v1_3') ],
+        [ '-frags_9mers', os.path.join(INPUT_DIR, 'aat000_09_05.200_v1_3') ],
+        [ '-psipred_ss2', os.path.join(INPUT_DIR, 'toxd_.psipred_ss2') ],
         [ '-nmodels', '30' ],
         [ '-do_mr', 'False' ],
         [ '-rosetta_dir', '/opt/rosetta-3.5' ],
@@ -37,7 +37,7 @@ if not sys.platform.startswith('win'):
     ###############################################################################
     
     args_rosetta_contacts = args_vanilla + [
-        [ '-contact_file', os.path.join(DIR, 'toxd_.pconsc2.CASPRR') ],
+        [ '-contact_file', os.path.join(INPUT_DIR, 'toxd_.pconsc2.CASPRR') ],
         [ '-energy_function', 'FADE_default' ],
     ]
     
@@ -75,7 +75,7 @@ if not sys.platform.startswith('win'):
     ###############################################################################
     
     args_rosetta_restraints = args_vanilla + [
-        [ '-restraints_file', os.path.join(DIR, 'toxd_.cst')]
+        [ '-restraints_file', os.path.join(INPUT_DIR, 'toxd_.cst')]
     ]
     
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in

@@ -11,7 +11,7 @@ from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
 from ample.testing.integration_util import AMPLEBaseTest
 
-DIR = os.path.join(SHARE_DIR, "examples", "homologs")
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "homologs", "input")
 TEST_DICT = {}
 
 ###############################################################################
@@ -22,10 +22,10 @@ TEST_DICT = {}
 
 # Specify the arguments to AMPLE to run this test case
 args_homologs =  [
-                       [ '-fasta', os.path.join(DIR, '3DCY.fasta') ],
-                       [ '-mtz', os.path.join(DIR, '3dcy-sf.mtz') ],
+                       [ '-fasta', os.path.join(INPUT_DIR, '3DCY.fasta') ],
+                       [ '-mtz', os.path.join(INPUT_DIR, '3dcy-sf.mtz') ],
                        [ '-homologs', 'True' ],
-                       [ '-models', DIR ]
+                       [ '-models', INPUT_DIR ]
 ]
 
 class AMPLETest(AMPLEBaseTest):

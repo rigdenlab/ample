@@ -56,8 +56,8 @@ class AMPLEIntegrationFramework(object):
                                                   test_cases=test_cases)
         # Make a directory to keep all files together
         _root = run_dir if run_dir else self.get_run_dir()
-        _dir = os.path.join(_root, "ample_testing")
-        if not os.path.isdir(_dir): os.mkdir(_dir)
+        self.run_dir = os.path.join(_root, "ample_testing")
+        if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
     
     def get_run_dir(self):
         # OS X has problems with relative paths - symlink in root messes

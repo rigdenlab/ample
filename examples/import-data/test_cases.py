@@ -12,13 +12,13 @@ from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
 from ample.testing.integration_util import AMPLEBaseTest
 
-DIR = os.path.join(SHARE_DIR, "examples", "import-data")
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "import-data", "input")
 TEST_DICT = {}
 
 # Universal args
 args_universal = [
-        [ '-fasta', os.path.join(DIR, '1aba.fasta') ],
-        [ '-mtz', os.path.join(DIR, '1aba-sf.mtz') ],
+        [ '-fasta', os.path.join(INPUT_DIR, '1aba.fasta') ],
+        [ '-mtz', os.path.join(INPUT_DIR, '1aba-sf.mtz') ],
 ]
 
 ###############################################################################
@@ -29,8 +29,8 @@ args_universal = [
 
 # Specify the arguments to AMPLE to run this test case
 args_import_models = args_universal + [
+        [ '-models', os.path.join(INPUT_DIR, 'models') ],
         [ '-do_mr', 'False' ],
-        [ '-models', os.path.join(DIR, 'models') ],
         [ '-num_clusters', '3' ],
 ]
 
@@ -63,7 +63,7 @@ TEST_DICT['import_models'] = { 'args' : args_import_models,
 
 # Specify the arguments to AMPLE to run this test case
 args_import_cluster = args_universal + [
-        [ '-cluster_dir', os.path.join(DIR, 'models') ],
+        [ '-cluster_dir', os.path.join(INPUT_DIR, 'models') ],
         [ '-do_mr', 'False' ],
 ]
 
@@ -87,8 +87,8 @@ TEST_DICT['import_cluster'] = { 'args' : args_import_cluster,
 
 # Specify the arguments to AMPLE to run this test case
 args_import_ensembles = args_universal + [
-        [ '-ensembles', os.path.join(DIR, 'ensembles') ],
-        [ '-native_pdb', os.path.join(DIR, '1aba.pdb') ],
+        [ '-ensembles', os.path.join(INPUT_DIR, 'ensembles') ],
+        [ '-native_pdb', os.path.join(INPUT_DIR, '1aba.pdb') ],
         [ '-shelx_cycles', '1' ],
         [ '-use_arpwarp', 'False' ],
         [ '-use_buccaneer', 'False' ],
