@@ -11,7 +11,7 @@ def run_integration(argd):
     m = integration_util.AMPLEIntegrationFramework(test_cases=argd['test_cases'], 
                                                    run_dir=argd['run_dir'])
     if argd['clean']: 
-        m.clean()
+        m.clean() if argd['test_cases'] else m.clean(clean_dir=True)
     else:
         m.run(**argd)
 
