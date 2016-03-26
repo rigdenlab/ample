@@ -18,7 +18,7 @@ class Test(unittest.TestCase):
     def test_process_reflection_file(self):
         # Get MTZ flags
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()
-        mtz = os.path.join( self.ample_share, "examples", "toxd-example" , "1dtx.mtz" )
+        mtz = os.path.join( self.ample_share, "examples", "toxd-example" , "input", "1dtx.mtz" )
 
         d = { 'mtz'    : mtz,
               'sf_cif' : None,
