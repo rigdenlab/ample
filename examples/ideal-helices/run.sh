@@ -9,9 +9,9 @@ export PATH=\
 /opt/shelx:\
 $PATH
 
-/opt/ample-dev1/bin/ample.py \
--fasta 2OVC.fasta \
--mtz 2OVC-cad.mtz \
+$CCP4/bin/ccp4-python -m ample \
+-fasta input/2OVC.fasta \
+-mtz input/2OVC-cad.mtz \
 -use_shelxe True \
 -ideal_helices True \
 -nproc 8 \

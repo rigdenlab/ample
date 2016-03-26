@@ -8,10 +8,10 @@ export PATH=\
 /opt/shelxe:\
 $PATH
 
-${CCP4}/bin/ample.py \
--mtz 102l.mtz \
--fasta 102L.fasta \
+$CCP4/bin/ccp4-python -m ample \
+-mtz input/102l.mtz \
+-fasta input/102L.fasta \
 -name 102l \
--nmr_model_in 2LC9.pdb \
+-nmr_model_in input/2LC9.pdb \
 -quick_mode True
 
