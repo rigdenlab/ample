@@ -140,12 +140,9 @@ class AMPLEConfigOptions(object):
         self.config_opts = config_opts = vars(config_opts)
 
         # Identify which config file to use
-        config_file = os.path.abspath(config_opts["config_file"]) \
-            if config_opts["config_file"] else \
-                os.path.join(SHARE_DIR, "include", "ample.ini")
-        LOGGER.debug("Using configuration file: {0}".format(config_file))
+        config_file = self._get_config_file(config_opts['config_file'])
 
-         # Read the configuration file
+        # Read the configuration file
         self._read_config_file(config_file)
         # Read the command line arguments
         self._read_config_opts(config_opts) 
@@ -153,6 +150,16 @@ class AMPLEConfigOptions(object):
         # Set further options
         self._process_options()
         return
+     
+    def _get_config_file(self, cmd_file=None):
+        config_file = os.path.abspath(cmd_file) if cmd_file else \
+                            os.path.join(SHARE_DIR, "include", "ample.ini")
+        if not os.path.isfile(config_file):
+            msg = "Cannot find configuration file - terminating..."
+            LOGGER.critical(msg)
+            raise RuntimeError(msg)
+        LOGGER.debug("Using configuration file: {0}".format(config_file))
+        return config_file
      
     def _process_options(self):
         
