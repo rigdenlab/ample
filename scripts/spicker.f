@@ -1,3 +1,11 @@
+cjmht Compiling with OpenMP changes where variables are stored and can cause the
+cjmht stack to get overloaded. To prevent this happening on Linux I had to set
+cjmht 'ulimit -s unlimited' when running. To get it to work on OSX, I had to add
+cjmht the compiler flags: -Wl,-stack_size,0x10000000,-stack_addr,0xc0000000 (256Mb)
+cjmht The OMP_STACKSIZE variables controls the stack for _additional_ variables,
+cjmht not the main OMP thread - the default is the ulimit option on Linux or the
+cjmht compile-time option on OSX (I think)
+
 *******************************************************************************
 *     SPICKER_2.0, released on December 29, 2010
 *     
@@ -97,6 +105,48 @@
 c        1         2         3         4         5         6         7 !
 c 345678901234567890123456789012345678901234567890123456789012345678901234567
       program cluster
+
+cjmht Need to add interfaces for all subroutines we call with allocated arrays
+      interface
+      subroutine tm_score_all(ndim,n_str,Lch,x,y,z,amat,rmsd_delta,
+     &                        rmsd_a)
+        integer ndim
+        integer n_str
+        integer Lch
+        real, allocatable, intent(in) :: x(:,:), y(:,:), z(:,:)
+        real, allocatable, intent(inout) :: amat(:,:)
+         real rmsd_delta
+         double precision rmsd_a
+      end subroutine tm_score_all
+      end interface
+      interface
+
+      subroutine rmsd_score_all(ndim,w,n_str,Lch,x,y,z,amat,
+     &                          rmsd_delta,rmsd_a)
+        integer ndim
+        double precision w(ndim)
+        integer n_str
+        integer Lch
+        real, allocatable, intent(in) :: x(:,:), y(:,:), z(:,:)
+        real, allocatable, intent(inout) :: amat(:,:)
+         real rmsd_delta
+         double precision rmsd_a
+      end subroutine rmsd_score_all
+      end interface
+
+      interface
+      subroutine TMscore(L1,x1,y1,z1,n1,L2,x2,y2,z2,n2,TM,Rcomm,Lcomm)
+          integer L1, L2
+          real, allocatable, intent(inout) :: x1(:),y1(:),z1(:)
+          integer, allocatable, intent(in) :: n1(:)
+          real, allocatable, intent(inout) :: x2(:),y2(:),z2(:)
+          integer, allocatable, intent(in) :: n2(:)
+          real TM, Rcomm
+          integer Lcomm
+      end subroutine TMscore
+      end interface
+cjmt  END INTERFACES
+
       parameter(ndim=2000)      !Length
       parameter(nst=13000)      !number of used structure, maximum allowed
 c      parameter(nst=100)      !number of used structure, maximum allowed
@@ -112,8 +162,11 @@ ccc
       dimension xtemp(ndim),ytemp(ndim),ztemp(ndim) !structure close to templ
       dimension xt(ndim),yt(ndim),zt(ndim) !temporal coordinate
       dimension x_n(ndim),y_n(ndim),z_n(ndim) !native structure
-      dimension x(ndim,nst),y(ndim,nst),z(ndim,nst) !used structures
-      dimension amat(nst,nst)    !RMSD matrics
+cjmht dimension x(ndim,nst),y(ndim,nst),z(ndim,nst) !used structures
+cjmht dimension amat(nst,nst)    !RMSD matrics
+      real, allocatable :: x(:,:), y(:,:), z(:,:)
+      real, allocatable :: amat(:,:)
+cjmht
       dimension mark(nst)       !for removing used structures
       dimension n_str_near(nst) !numbef of neighboring structures
       dimension itra(nst),istr(nst),E(nst)
@@ -134,8 +187,11 @@ ccc
       dimension ires(ndim)
       double precision rmsd_a,rmsd2_a
       
-      dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
-      dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
+cjmht dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
+cjmht dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
+      real, allocatable :: x1(:),y1(:),z1(:)
+      real, allocatable :: x2(:),y2(:),z2(:)
+      integer, allocatable :: nn1(:), nn2(:)
 
 cjmht
       integer score_type
@@ -163,6 +219,7 @@ cjmht
       if (score_type .eq. 0) then
           write(*,*)"Calculating RMSD scores"
       endif
+cjmht END SCORE TYPE CHECK
 
 **********************************************************************
 
@@ -230,6 +287,17 @@ c      endif
 c     write(*,*)'Total number structures=',n_str_all
       close(4)
 c^^^^^^^^^^^^^^^^^^^^^^^^ n_str_all done ^^^^^^^^^^^^^^^^^^^^^^^^
+
+cjmht we can now allocate the arrays
+      allocate(x(Lch,n_str_all))
+      allocate(y(Lch,n_str_all))
+      allocate(z(Lch,n_str_all))
+      allocate(amat(n_str_all,n_str_all))
+cjmht check this will be sufficient for native if used for that
+      allocate(x1(Lch),y1(Lch),z1(Lch))
+      allocate(x2(Lch),y2(Lch),z2(Lch))
+      allocate(nn1(Lch))
+      allocate(nn2(Lch))
       
 cccccccccccc read native structure cccccccccccccccccccc
       i=0
@@ -356,10 +424,10 @@ cjmht Calculate the amat with the all-by-all scores
       if (score_type .eq. 1) then
           call read_score_matrix(nst,n_str,amat,rmsd_delta, rmsd_a)
       elseif (score_type .eq. 2) then
-          call tm_score_all(ndim,nst,n_str,Lch,x,y,z,amat,rmsd_delta,
+          call tm_score_all(ndim,n_str,Lch,x,y,z,amat,rmsd_delta,
      &                      rmsd_a)
       else
-          call rmsd_score_all(ndim,nst,w,n_str,Lch,x,y,z,amat,
+          call rmsd_score_all(ndim,w,n_str,Lch,x,y,z,amat,
      &                        rmsd_delta,rmsd_a)
       endif
 
@@ -799,6 +867,13 @@ ccccccccccccccccccoutput cluster analysis cccccccccccccccccccc
          write(20,*)filen(i)
       enddo
 c^^^^^^^^^^^^^^^^^^^^output done ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+cjmht
+      deallocate(x,y,z)
+      deallocate(amat)
+      deallocate(x1,y1,z1)
+      deallocate(x2,y2,z2)
+      deallocate(nn1,nn2)
       
       stop
       end
@@ -818,24 +893,26 @@ c       -1: superposition is not unique but optimal
 c       -2: no result obtained because of negative weights w
 c           or all weights equal to zero.
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      subroutine rmsd_score_all(ndim,nst,w,n_str,Lch,x,y,z,amat,
-     & rmsd_delta,rmsd_a)
+      subroutine rmsd_score_all(ndim,w,n_str,Lch,x,y,z,amat, rmsd_delta,
+     &                          rmsd_a)
 !     REM: I, J, K, L, M, or N are int
       implicit none
 !     Intent In
-      integer ndim,nst
+cjmht integer ndim,nst
+      integer ndim
       integer n_str,Lch
       double precision w(ndim)
-      real x(ndim,nst),y(ndim,nst),z(ndim,nst)
+cjmht real x(ndim,nst),y(ndim,nst),z(ndim,nst)
+      real, allocatable, intent(in) :: x(:,:), y(:,:), z(:,:)
 !     Intent Out
-      real amat(nst,nst)
+cjmht real amat(nst,nst)
+      real, allocatable, intent(inout) :: amat(:,:)
       real rmsd_delta
       double precision rmsd_a
 !     Local variables
       real rmsd2_a,armsd
       integer i,j,k,n_rmsd,ier
       double precision u(3,3),t(3),rms,r_1(3,ndim),r_2(3,ndim)
-
       real mina,maxa
 
       mina=1000.0
@@ -878,17 +955,31 @@ c      write(*,*)"MINA MAXA ",mina,maxa
       return
       end
 
-      subroutine tm_score_all(ndim,nst,n_str,Lch,x,y,z,amat,rmsd_delta,
+      subroutine tm_score_all(ndim,n_str,Lch,x,y,z,amat,rmsd_delta,
      &                        rmsd_a)
       implicit none
+
+      interface
+      subroutine TMscore(L1,x1,y1,z1,n1,L2,x2,y2,z2,n2,TM,Rcomm,Lcomm)
+          integer L1, L2
+          real, allocatable, intent(inout) :: x1(:),y1(:),z1(:)
+          integer, allocatable, intent(in) :: n1(:)
+          real, allocatable, intent(inout) :: x2(:),y2(:),z2(:)
+          integer, allocatable, intent(in) :: n2(:)
+          real TM, Rcomm
+          integer Lcomm
+      end subroutine TMscore
+      end interface
+
 !     Intent In
-      integer ndim ! Longest dimensions of a coordinate array
-      integer nst ! Maximum number of structures
+      integer ndim
       integer n_str ! Number of structures in use
       integer Lch ! Chain length of the structures (all same)
-      real x(ndim,nst),y(ndim,nst),z(ndim,nst)
+c      real x(ndim,nst),y(ndim,nst),z(ndim,nst)
+      real, allocatable, intent(in) :: x(:,:),y(:,:), z(:,:)
+      real, allocatable, intent(inout) :: amat(:,:)
 !     Intent Out
-      real amat(nst,nst)
+c      real amat(nst,nst)
       real rmsd_delta
       double precision rmsd_a
 
@@ -900,10 +991,16 @@ c      write(*,*)"MINA MAXA ",mina,maxa
       integer i,j,k,n_rmsd,ier,Lcomm
 
 !     Arrays to pass data into TMscore routine
-      integer nn1, nn2 ! resseq of structures - assume all same
-      real x1,y1,z1,x2,y2,z2 ! coordinates
-      dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
-      dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
+!      integer nn1, nn2 ! resseq of structures - assume all same
+!      real x1,y1,z1,x2,y2,z2 ! coordinates
+!      dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
+!      dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
+      real, allocatable :: x1(:),y1(:),z1(:)
+      integer, allocatable :: nn1(:)
+      real, allocatable :: x2(:),y2(:),z2(:)
+      integer, allocatable :: nn2(:)
+      allocate(x1(Lch),y1(Lch),z1(Lch),nn1(Lch))
+      allocate(x2(Lch),y2(Lch),z2(Lch),nn2(Lch))
 
       WRITE(*,*)'* SPICKER CALCULATING TM SCORE MATRIX *'
 
@@ -914,12 +1011,17 @@ c     write(*,*)'number of used structures=',n_str
       n_rmsd=0
 !$OMP PARALLEL DEFAULT(NONE)
 !$OMP& SHARED(n_str,Lch,x,y,z,amat,n_rmsd,rmsd_a,rmsd2_a)
-!$OMP DO
 !$OMP& PRIVATE(i,j,k,x1,y1,z1,x2,y2,z2,nn1,nn2,TM,Rcomm,Lcomm,rmsd)
+!$OMP DO
+! which is the correct place?
+!!$OMP& PRIVATE(i,j,k,x1,y1,z1,x2,y2,z2,nn1,nn2,TM,Rcomm,Lcomm,rmsd)
 !$OMP& REDUCTION(+:n_rmsd,rmsd_a,rmsd2_a)
 !$OMP& COLLAPSE(2)
       do i=1,n_str
          do j=1,n_str
+c OMP the COLLAPSE(2) directive unrolls both loops so we need to loop
+c over all indices. continue doesn't seem to work so we just protect the
+c j lt i with the if statement
             if (j .ge. i) then
                 if (j .eq. i) then
                     rmsd = 0.0
@@ -936,6 +1038,7 @@ c     write(*,*)'number of used structures=',n_str
                     enddo
                     call TMscore(Lch,x1,y1,z1,nn1,Lch,x2,y2,z2,nn2,TM,
      &                           Rcomm,Lcomm)
+                    write(*,*)'TMSCORE ',i,j,TM,Rcomm,Lcomm
     !                armsd=dsqrt(rms/Lch) !RMSD12
                     if (TM .eq. 0.0) then
                         rmsd = RMSD_max
@@ -960,14 +1063,12 @@ c     write(*,*)'number of used structures=',n_str
       rmsd2_a=rmsd2_a/n_rmsd
       rmsd_delta=sqrt(rmsd2_a-rmsd_a**2) ! 68.2% is in [-d,+d]
 
-
 c^^^^^^^^^^^^RMSD matrics finished ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 c      write(*,*)"RETURNING rmsd_a ",rmsd_a
 c      write(*,*)"RETURNING rmsd_delta ",rmsd_delta
 c      write(*,*)"MINA MAXA ",mina,maxa
       return
       end
-
 
       subroutine read_score_matrix(nst,n_str,amat,rmsd_delta,
      & rmsd_a)
@@ -1394,9 +1495,12 @@ c      write(*,*)"RETURNING rmsd_delta ",rmsd_delta
       double precision score,score_max
       dimension xa(nmax),ya(nmax),za(nmax)
 !$OMP THREADPRIVATE(/stru/,/nres/,/para/,/align/,/nscore/,/scores/)
-
-      dimension x1(nmax),y1(nmax),z1(nmax),n1(nmax)
-      dimension x2(nmax),y2(nmax),z2(nmax),n2(nmax)
+cjmht dimension x1(nmax),y1(nmax),z1(nmax),n1(nmax)
+cjmht dimension x2(nmax),y2(nmax),z2(nmax),n2(nmax)
+      real, allocatable, intent(inout) :: x1(:),y1(:),z1(:)
+      integer, allocatable, intent(in) :: n1(:)
+      real, allocatable, intent(inout) :: x2(:),y2(:),z2(:)
+      integer, allocatable, intent(in) :: n2(:)
 
 ccc   RMSD:
       double precision r_1(3,nmax),r_2(3,nmax),r_3(3,nmax),w(nmax)
@@ -1576,6 +1680,24 @@ c         write(*,*)'There is no common residues in the input structures'
          y1(j)=t(2)+u(2,1)*xa(j)+u(2,2)*ya(j)+u(2,3)*za(j)
          z1(j)=t(3)+u(3,1)*xa(j)+u(3,2)*ya(j)+u(3,3)*za(j)
       enddo
+cjmht
+cjmht Attempt to get rmsd of TM-score component
+ccc   RMSD (d<5.0)-------->
+      LL=0
+      do i=1,n_cut
+         m=i_ali(i)             ![1,nseqA]
+         r_1(1,i)=xa(iA(m))
+         r_1(2,i)=ya(iA(m))
+         r_1(3,i)=za(iA(m))
+         r_2(1,i)=xb(iB(m))
+         r_2(2,i)=yb(iB(m))
+         r_2(3,i)=zb(iB(m))
+         LL=LL+1
+      enddo
+      call u3b(w,r_1,r_2,LL,0,rms,u,t,ier)
+      Rcomm=dsqrt(rms/LL)
+      Lcomm=LL
+cjmht END
       TM=score_max
 
 c^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
