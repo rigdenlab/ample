@@ -1,7 +1,7 @@
 cjmht Compiling with OpenMP changes where variables are stored and can cause the
 cjmht stack to get overloaded. To prevent this happening on Linux I had to set
 cjmht 'ulimit -s unlimited' when running. To get it to work on OSX, I had to add
-cjmht the compiler flags: -Wl,-stack_size,0x10000000,-stack_addr,0xc0000000 (256Mb)
+cjmht the compiler flags: -Wl,-stack_size,0x2000000 (32Mb - empirically determined)
 cjmht The OMP_STACKSIZE variables controls the stack for _additional_ variables,
 cjmht not the main OMP thread - the default is the ulimit option on Linux or the
 cjmht compile-time option on OSX (I think)
@@ -133,19 +133,7 @@ cjmht Need to add interfaces for all subroutines we call with allocated arrays
          double precision rmsd_a
       end subroutine rmsd_score_all
       end interface
-
-      interface
-      subroutine TMscore(L1,x1,y1,z1,n1,L2,x2,y2,z2,n2,TM,Rcomm,Lcomm)
-          integer L1, L2
-          real, allocatable, intent(inout) :: x1(:),y1(:),z1(:)
-          integer, allocatable, intent(in) :: n1(:)
-          real, allocatable, intent(inout) :: x2(:),y2(:),z2(:)
-          integer, allocatable, intent(in) :: n2(:)
-          real TM, Rcomm
-          integer Lcomm
-      end subroutine TMscore
-      end interface
-cjmt  END INTERFACES
+cjmht  end of interfaces
 
       parameter(ndim=2000)      !Length
       parameter(nst=13000)      !number of used structure, maximum allowed
@@ -166,7 +154,6 @@ cjmht dimension x(ndim,nst),y(ndim,nst),z(ndim,nst) !used structures
 cjmht dimension amat(nst,nst)    !RMSD matrics
       real, allocatable :: x(:,:), y(:,:), z(:,:)
       real, allocatable :: amat(:,:)
-cjmht
       dimension mark(nst)       !for removing used structures
       dimension n_str_near(nst) !numbef of neighboring structures
       dimension itra(nst),istr(nst),E(nst)
@@ -186,12 +173,8 @@ cjmht
       dimension order(nst)
       dimension ires(ndim)
       double precision rmsd_a,rmsd2_a
-      
-cjmht dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
-cjmht dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
-      real, allocatable :: x1(:),y1(:),z1(:)
-      real, allocatable :: x2(:),y2(:),z2(:)
-      integer, allocatable :: nn1(:), nn2(:)
+      dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
+      dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
 
 cjmht
       integer score_type
@@ -293,11 +276,6 @@ cjmht we can now allocate the arrays
       allocate(y(Lch,n_str_all))
       allocate(z(Lch,n_str_all))
       allocate(amat(n_str_all,n_str_all))
-cjmht check this will be sufficient for native if used for that
-      allocate(x1(Lch),y1(Lch),z1(Lch))
-      allocate(x2(Lch),y2(Lch),z2(Lch))
-      allocate(nn1(Lch))
-      allocate(nn2(Lch))
       
 cccccccccccc read native structure cccccccccccccccccccc
       i=0
@@ -871,9 +849,6 @@ c^^^^^^^^^^^^^^^^^^^^output done ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 cjmht
       deallocate(x,y,z)
       deallocate(amat)
-      deallocate(x1,y1,z1)
-      deallocate(x2,y2,z2)
-      deallocate(nn1,nn2)
       
       stop
       end
@@ -959,18 +934,6 @@ c      write(*,*)"MINA MAXA ",mina,maxa
      &                        rmsd_a)
       implicit none
 
-      interface
-      subroutine TMscore(L1,x1,y1,z1,n1,L2,x2,y2,z2,n2,TM,Rcomm,Lcomm)
-          integer L1, L2
-          real, allocatable, intent(inout) :: x1(:),y1(:),z1(:)
-          integer, allocatable, intent(in) :: n1(:)
-          real, allocatable, intent(inout) :: x2(:),y2(:),z2(:)
-          integer, allocatable, intent(in) :: n2(:)
-          real TM, Rcomm
-          integer Lcomm
-      end subroutine TMscore
-      end interface
-
 !     Intent In
       integer ndim
       integer n_str ! Number of structures in use
@@ -991,16 +954,10 @@ c      real amat(nst,nst)
       integer i,j,k,n_rmsd,ier,Lcomm
 
 !     Arrays to pass data into TMscore routine
-!      integer nn1, nn2 ! resseq of structures - assume all same
-!      real x1,y1,z1,x2,y2,z2 ! coordinates
-!      dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
-!      dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
-      real, allocatable :: x1(:),y1(:),z1(:)
-      integer, allocatable :: nn1(:)
-      real, allocatable :: x2(:),y2(:),z2(:)
-      integer, allocatable :: nn2(:)
-      allocate(x1(Lch),y1(Lch),z1(Lch),nn1(Lch))
-      allocate(x2(Lch),y2(Lch),z2(Lch),nn2(Lch))
+      integer nn1, nn2 ! resseq of structures - assume all same
+      real x1,y1,z1,x2,y2,z2 ! coordinates
+      dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
+      dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
 
       WRITE(*,*)'* SPICKER CALCULATING TM SCORE MATRIX *'
 
@@ -1038,7 +995,6 @@ c j lt i with the if statement
                     enddo
                     call TMscore(Lch,x1,y1,z1,nn1,Lch,x2,y2,z2,nn2,TM,
      &                           Rcomm,Lcomm)
-                    write(*,*)'TMSCORE ',i,j,TM,Rcomm,Lcomm
     !                armsd=dsqrt(rms/Lch) !RMSD12
                     if (TM .eq. 0.0) then
                         rmsd = RMSD_max
@@ -1495,12 +1451,8 @@ c      write(*,*)"RETURNING rmsd_delta ",rmsd_delta
       double precision score,score_max
       dimension xa(nmax),ya(nmax),za(nmax)
 !$OMP THREADPRIVATE(/stru/,/nres/,/para/,/align/,/nscore/,/scores/)
-cjmht dimension x1(nmax),y1(nmax),z1(nmax),n1(nmax)
-cjmht dimension x2(nmax),y2(nmax),z2(nmax),n2(nmax)
-      real, allocatable, intent(inout) :: x1(:),y1(:),z1(:)
-      integer, allocatable, intent(in) :: n1(:)
-      real, allocatable, intent(inout) :: x2(:),y2(:),z2(:)
-      integer, allocatable, intent(in) :: n2(:)
+      dimension x1(nmax),y1(nmax),z1(nmax),n1(nmax)
+      dimension x2(nmax),y2(nmax),z2(nmax),n2(nmax)
 
 ccc   RMSD:
       double precision r_1(3,nmax),r_2(3,nmax),r_3(3,nmax),w(nmax)
