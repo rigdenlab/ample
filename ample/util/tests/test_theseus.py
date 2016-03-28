@@ -2,6 +2,7 @@
 import glob
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 
@@ -24,7 +25,8 @@ class Test(unittest.TestCase):
     def test_align_models(self):
         ## BUG - hlfsimko
         # CAUSES PROBLEMS ON MAC BECAUSE OF SYM LINK IN root on Mac OS X
-        tests_dir = os.environ["HOME"]
+        tests_dir = os.environ["HOMEPATH"] if sys.platform.startswith("win") \
+                        else os.environ["HOME"]
         work_dir = os.path.join(tests_dir, 'theseus_align')
         models = glob.glob(os.path.join(self.testfiles_dir,'models','*.pdb'))
         
