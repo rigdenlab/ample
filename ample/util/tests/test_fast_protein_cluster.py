@@ -8,6 +8,7 @@ from ample.testing import test_funcs
 from ample.util import ample_util
 from ample.util import fast_protein_cluster
 
+@unittest.skip("fast_protein_cluster deprecated")
 @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster" + ample_util.EXE_EXT), "fast_protein_cluster exec missing")
 class Test(unittest.TestCase):
 
@@ -41,9 +42,9 @@ class Test(unittest.TestCase):
         
         self.assertEqual(len(clusters),num_clusters)
         d=cluster_data[0]
-        self.assertEqual(d['cluster_num_models'],16)
-        self.assertEqual(d['cluster_method'],'kmeans_rmsd')
-        self.assertEqual(os.path.basename(d['cluster_centroid']),'4_S_00000005.pdb')
+        self.assertEqual(d['cluster_num_models'], 16)
+        self.assertEqual(d['cluster_method'], 'kmeans_rmsd')
+        self.assertEqual(os.path.basename(d['cluster_centroid']), '4_S_00000005.pdb')
         shutil.rmtree(wdir)
 
     def test_fpc_hierarch_tm(self):    
