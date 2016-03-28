@@ -3,12 +3,15 @@ Created on 28 Feb 2013
 
 @author: jmht
 '''
+import sys
+from ample.util import ample_util
 
 def mrbump_cmd(name, mtz, mr_sequence, keyword_file):
     """Return the command to run mrbump"""
+    mrbump = "mrbump" + ample_util.SCRIPT_EXT if sys.platform.startswith("win") \
+                else "mrbump"
     cmd = [
-        "ccp4-python",
-        "-m", "mrbump",
+        ample_util.find_exe(mrbump),
         "KEYIN", "{0}".format(keyword_file),
         "HKLIN", "{0}".format(mtz),
         "SEQIN", "{0}".format(mr_sequence),

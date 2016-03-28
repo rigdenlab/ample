@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 from ample.constants import SHARE_DIR
-from ample.util.ample_util import SCRIPT_EXT, SCRIPT_HEADER
+from ample.util import ample_util
 from ample.util import workers_util
 from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
 from unittest import TestCase, TestLoader, TextTestRunner, TestSuite
@@ -76,7 +76,7 @@ class AMPLEIntegrationFramework(object):
             logfile = work_dir + '.log'
             if os.path.isfile(logfile): os.unlink(logfile)  
             if clean_all:
-                script = work_dir + SCRIPT_EXT
+                script = work_dir + ample_util.SCRIPT_EXT
                 if os.path.isfile(script): os.unlink(script)
         if clean_dir and os.path.isdir(self.run_dir): shutil.rmtree(self.run_dir)
     
@@ -174,11 +174,14 @@ class AMPLEIntegrationFramework(object):
     def write_script(self, path, args):
         """Write script - ARGS MUST BE IN PAIRS"""
         linechar = "^" if sys.platform.startswith('win') else "\\"
-        script = path + SCRIPT_EXT
+        script = path + ample_util.SCRIPT_EXT
+        ample = "ample" + ample_util.SCRIPT_EXT if sys.platform.startswith("win") \
+                    else "ample"
         with open(script, 'w') as f:
-            f.write(SCRIPT_HEADER + os.linesep)
+            f.write(ample_util.SCRIPT_HEADER + os.linesep)
             f.write(os.linesep)
-            f.write("ccp4-python -m ample " + linechar + os.linesep)
+            f.write("{0} {1}".format(ample_util.find_exe(ample), 
+                                     linechar + os.linesep))
             for argt in args:
                 f.write(" ".join(argt) + " " + linechar + os.linesep)
             f.write(os.linesep)

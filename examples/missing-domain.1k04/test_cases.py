@@ -31,6 +31,7 @@ if not sys.platform.startswith('win'):
            [ '-frags_3mers', os.path.join(INPUT_DIR, 'aa1k04_03_05.200_v1_3') ],
            [ '-frags_9mers', os.path.join(INPUT_DIR, 'aa1k04_09_05.200_v1_3') ],
            [ '-rosetta_dir', '/opt/rosetta-3.5' ],
+           [ '-nmodels', '100'],
     ]
     
     class AMPLETest(AMPLEBaseTest):
