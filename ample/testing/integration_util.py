@@ -182,8 +182,7 @@ class AMPLEIntegrationFramework(object):
         with open(script, 'w') as f:
             f.write(ample_util.SCRIPT_HEADER + os.linesep)
             f.write(os.linesep)
-            f.write("{0} {1}".format(ample_util.find_exe(ample), 
-                                     linechar + os.linesep))
+            f.write("{0} {1}".format(ample, linechar + os.linesep))
             for argt in args:
                 f.write(" ".join(argt) + " " + linechar + os.linesep)
             f.write(os.linesep)
