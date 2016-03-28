@@ -26,7 +26,9 @@ class Test(unittest.TestCase):
         work_dir = os.path.join(self.tests_dir, "gesamt_test")
         alignment_file = align_gesamt(models, gesamt_exe=gesamt_exe, work_dir=work_dir)
         self.assertTrue(os.path.isfile(alignment_file))
-        shutil.rmtree(work_dir)
+        # TODO: fix this error on Windows...not sure how this arises
+        try: shutil.rmtree(work_dir)
+        except WindowsError: pass
     
     @unittest.skipUnless(test_funcs.found_exe("mustang" + ample_util.EXE_EXT), "mustang exec missing")
     def test_mustang(self):
