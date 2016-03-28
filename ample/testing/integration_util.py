@@ -175,8 +175,10 @@ class AMPLEIntegrationFramework(object):
         """Write script - ARGS MUST BE IN PAIRS"""
         linechar = "^" if sys.platform.startswith('win') else "\\"
         script = path + ample_util.SCRIPT_EXT
-        ample = "ample" + ample_util.SCRIPT_EXT if sys.platform.startswith("win") \
-                    else "ample"
+        if sys.platform.startswith("win"):
+            ample = os.path.join(os.environ["CCP4"], "bin", "ample" + ample_util.SCRIPT_EXT)
+        else:
+            ample = os.path.join(os.environ["CCP4"], "bin", "ample")
         with open(script, 'w') as f:
             f.write(ample_util.SCRIPT_HEADER + os.linesep)
             f.write(os.linesep)
