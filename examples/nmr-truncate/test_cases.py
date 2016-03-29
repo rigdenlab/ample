@@ -6,41 +6,40 @@ Created on 29 Dec 2015
 '''
 
 import os
+import sys
 
 from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
 from ample.testing.integration_util import AMPLEBaseTest
 
-INPUT_DIR = os.path.join(SHARE_DIR, "examples", "homologs", "input")
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "nmr-truncate", "input")
 TEST_DICT = {}
 
 ###############################################################################
 #
-# Homologs
+# NMR Truncation
 #
 ###############################################################################
-
-# Specify the arguments to AMPLE to run this test case
-args_homologs =  [
-                       [ '-fasta', os.path.join(INPUT_DIR, '3DCY.fasta') ],
-                       [ '-mtz', os.path.join(INPUT_DIR, '3dcy-sf.mtz') ],
-                       [ '-homologs', 'True' ],
-                       [ '-models', INPUT_DIR ]
+args =  [
+    [ '-name', '102l' ],
+    [ '-fasta', os.path.join(INPUT_DIR, '102L.fasta') ],
+    [ '-mtz', os.path.join(INPUT_DIR, '102l.mtz') ],
+    [ '-nmr_model_in', os.path.join(INPUT_DIR, '2LC9.pdb') ],
 ]
 
+# Test class that holds the functions to test the RESULTS_PKL file that will be passed in
 class AMPLETest(AMPLEBaseTest):
-    def test_homologs(self):
+    def test_nmr_truncate(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('mrbump_results', self.AMPLE_DICT)
         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
         self.assertTrue(self.AMPLE_DICT['success'])
         self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
         return
-
-# Add everything to the test_dict - the key is used to name the script and run directory
-TEST_DICT['homologs'] = {'args' : args_homologs,
-                         'test' :  AMPLETest,
-                         }
+        
+TEST_DICT['nmr_truncate'] = { 'args' : args,
+                              'test' :  AMPLETest,
+                               }
 
 ###############################################################################
 #

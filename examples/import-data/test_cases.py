@@ -8,14 +8,17 @@ Created on 25 Feb 2016
 import os
 import sys
 
+from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
+from ample.testing.integration_util import AMPLEBaseTest
 
-test_dict = {}
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "import-data", "input")
+TEST_DICT = {}
 
 # Universal args
 args_universal = [
-        [ '-fasta', '1aba.fasta' ],
-        [ '-mtz', '1aba-sf.mtz' ],
+        [ '-fasta', os.path.join(INPUT_DIR, '1aba.fasta') ],
+        [ '-mtz', os.path.join(INPUT_DIR, '1aba-sf.mtz') ],
 ]
 
 ###############################################################################
@@ -26,12 +29,12 @@ args_universal = [
 
 # Specify the arguments to AMPLE to run this test case
 args_import_models = args_universal + [
+        [ '-models', os.path.join(INPUT_DIR, 'models') ],
         [ '-do_mr', 'False' ],
-        [ '-models', 'models' ],
         [ '-num_clusters', '3' ],
 ]
 
-class AMPLETest(test_funcs.AMPLEBaseTest):
+class AMPLETest(AMPLEBaseTest):
     def test_import_models(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertEqual(3, self.AMPLE_DICT['num_clusters'])
@@ -48,9 +51,8 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory
-test_dict['import_models'] = { 'args' : args_import_models,
+TEST_DICT['import_models'] = { 'args' : args_import_models,
                                'test' :  AMPLETest,
-                               'directory' : os.path.abspath(os.path.dirname(__file__))
 }
 
 ###############################################################################
@@ -61,11 +63,11 @@ test_dict['import_models'] = { 'args' : args_import_models,
 
 # Specify the arguments to AMPLE to run this test case
 args_import_cluster = args_universal + [
-        [ '-cluster_dir', 'models' ],
+        [ '-cluster_dir', os.path.join(INPUT_DIR, 'models') ],
         [ '-do_mr', 'False' ],
 ]
 
-class AMPLETest(test_funcs.AMPLEBaseTest):
+class AMPLETest(AMPLEBaseTest):
     def test_import_cluster(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('ensembles', self.AMPLE_DICT)
@@ -73,9 +75,8 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory
-test_dict['import_cluster'] = { 'args' : args_import_cluster,
+TEST_DICT['import_cluster'] = { 'args' : args_import_cluster,
                                 'test' :  AMPLETest,
-                                'directory' : os.path.abspath(os.path.dirname(__file__))
 }
 
 ###############################################################################
@@ -86,14 +87,14 @@ test_dict['import_cluster'] = { 'args' : args_import_cluster,
 
 # Specify the arguments to AMPLE to run this test case
 args_import_ensembles = args_universal + [
-        [ '-ensembles', 'ensembles' ],
-        [ '-native_pdb', '1aba.pdb' ],
+        [ '-ensembles', os.path.join(INPUT_DIR, 'ensembles') ],
+        [ '-native_pdb', os.path.join(INPUT_DIR, '1aba.pdb') ],
         [ '-shelx_cycles', '1' ],
         [ '-use_arpwarp', 'False' ],
         [ '-use_buccaneer', 'False' ],
 ]
 
-class AMPLETest(test_funcs.AMPLEBaseTest):
+class AMPLETest(AMPLEBaseTest):
     def test_import_ensembles(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('ensembles', self.AMPLE_DICT)
@@ -103,9 +104,8 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory
-test_dict['import_ensembles'] = { 'args' : args_import_ensembles,
+TEST_DICT['import_ensembles'] = { 'args' : args_import_ensembles,
                                   'test' :  AMPLETest,
-                                  'directory' : os.path.abspath(os.path.dirname(__file__))
 }
 
 ###############################################################################
@@ -115,4 +115,4 @@ test_dict['import_ensembles'] = { 'args' : args_import_ensembles,
 ###############################################################################
 
 if __name__ == '__main__':
-     test_funcs.parse_args(test_dict)
+     test_funcs.parse_args(TEST_DICT)

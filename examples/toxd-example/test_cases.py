@@ -9,18 +9,18 @@ import glob
 import os
 import sys
 
-from ample.testing.constants import AMPLE_DIR
+from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
+from ample.testing.integration_util import AMPLEBaseTest
 
-# Directory containing AMPLE's testfiles
-TESTFILES_DIR = os.path.join(AMPLE_DIR, "testing", "testfiles")
-
-test_dict = {}
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "toxd-example", "input")
+TEST_DICT = {}
+TESTFILES_DIR = os.path.join(SHARE_DIR, "testfiles")
 
 # vanilla test
 args_vanilla = [
-    [ '-fasta', 'toxd_.fasta' ],
-    [ '-mtz', '1dtx.mtz' ],
+    [ '-fasta', os.path.join(INPUT_DIR, 'toxd_.fasta') ],
+    [ '-mtz', os.path.join(INPUT_DIR, '1dtx.mtz') ],
     [ '-percent', '50' ]
 ]
 
@@ -33,13 +33,13 @@ if not sys.platform.startswith('win'):
 
     args_rosetta_modelling = args_vanilla + [
         [ '-rosetta_dir', '/opt/rosetta-3.5' ],
-        [ '-frags_3mers', 'aat000_03_05.200_v1_3' ],
-        [ '-frags_9mers', 'aat000_09_05.200_v1_3' ],
+        [ '-frags_3mers', os.path.join(INPUT_DIR, 'aat000_03_05.200_v1_3') ],
+        [ '-frags_9mers', os.path.join(INPUT_DIR, 'aat000_09_05.200_v1_3') ],
         [ '-nmodels', '40']
     ]
     
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-    class AMPLETest(test_funcs.AMPLEBaseTest):
+    class AMPLETest(AMPLEBaseTest):
         def test_rosetta_modelling(self):
             self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
             self.assertIn('models_dir', self.AMPLE_DICT)
@@ -53,9 +53,8 @@ if not sys.platform.startswith('win'):
             self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
             return
             
-    test_dict['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
+    TEST_DICT['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
                                        'test' :  AMPLETest,
-                                       'directory' : os.path.abspath(os.path.dirname(__file__))
                                         }
 
 ###############################################################################
@@ -65,12 +64,11 @@ if not sys.platform.startswith('win'):
 ###############################################################################
 args_from_existing_models = args_vanilla + [
     [ '-models', os.path.join(TESTFILES_DIR, 'models') ],
-    [ '-native_pdb', '1DTX.pdb' ],                                         
+    [ '-native_pdb', os.path.join(INPUT_DIR, '1DTX.pdb') ],                                         
 ]
 
-
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-class AMPLETest(test_funcs.AMPLEBaseTest):
+class AMPLETest(AMPLEBaseTest):
     def test_from_existing_models(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('ensembles', self.AMPLE_DICT)
@@ -83,9 +81,8 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         self.assertTrue(os.path.isfile(os.path.join(self.AMPLE_DICT['benchmark_dir'],'results.csv')),"Missing benchmark results.csv")
         return
         
-test_dict['from_existing_models'] = { 'args' : args_from_existing_models,
+TEST_DICT['from_existing_models'] = { 'args' : args_from_existing_models,
                                      'test' :  AMPLETest,
-                                     'directory' : os.path.abspath(os.path.dirname(__file__))
                                       }
 
 ###############################################################################
@@ -99,7 +96,7 @@ args_from_quark_models = args_vanilla + [
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-class AMPLETest(test_funcs.AMPLEBaseTest):
+class AMPLETest(AMPLEBaseTest):
     def test_from_quark_models(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
@@ -110,9 +107,8 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         self.assertEqual(nensembles, ref_nensembles, "Incorrect number of ensembles produced: {0}".format(nensembles))
         return
          
-test_dict['from_quark_models'] = { 'args' : args_from_quark_models,
+TEST_DICT['from_quark_models'] = { 'args' : args_from_quark_models,
                                    'test' :  AMPLETest,
-                                   'directory' : os.path.abspath(os.path.dirname(__file__))
                                  }
 
 ###############################################################################
@@ -122,4 +118,4 @@ test_dict['from_quark_models'] = { 'args' : args_from_quark_models,
 ###############################################################################
 
 if __name__ == '__main__':
-    test_funcs.parse_args(test_dict)
+    test_funcs.parse_args(TEST_DICT)

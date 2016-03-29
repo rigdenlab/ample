@@ -1,22 +1,25 @@
 #!/usr/bin/env ccp4-python
 '''
-Created on 29 Dec 2015
+Created on 16 Jan 2016
 
-@author: jmht
+@author: hlfsimko
 '''
 
 import glob
 import os
 import sys
 
+from ample.constants import SHARE_DIR
 from ample.testing import test_funcs
+from ample.testing.integration_util import AMPLEBaseTest
 
-test_dict = {}
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "single-model", "input")
+TEST_DICT = {}
 
 # vanilla test
 args_vanilla = [
-    [ '-fasta', '1ujb.fasta' ],
-    [ '-mtz', '1ujb-sf.mtz' ],
+    [ '-fasta', os.path.join(INPUT_DIR, '1ujb.fasta') ],
+    [ '-mtz', os.path.join(INPUT_DIR, '1ujb-sf.mtz') ],
 ]
 
 ###############################################################################
@@ -26,14 +29,14 @@ args_vanilla = [
 ###############################################################################
 args_from_single_model = args_vanilla + [
     [ '-percent', '20' ],
-    [ '-single_model', '3c7t.pdb' ],
-    [ '-truncation_scorefile', '3c7t_scores.csv' ],
+    [ '-single_model', os.path.join(INPUT_DIR, '3c7t.pdb') ],
+    [ '-truncation_scorefile', os.path.join(INPUT_DIR, '3c7t_scores.csv') ],
     [ '-truncation_scorefile_header', 'residue', 'concoord' ],                                         
 ]
 
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
-class AMPLETest(test_funcs.AMPLEBaseTest):
+class AMPLETest(AMPLEBaseTest):
     def test_from_single_model(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         nensembles = len(self.AMPLE_DICT['ensembles'])
@@ -46,9 +49,8 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
         return
         
-test_dict['from_single_model'] = { 'args' : args_from_single_model,
+TEST_DICT['from_single_model'] = { 'args' : args_from_single_model,
                                    'test' :  AMPLETest,
-                                   'directory' : os.path.abspath(os.path.dirname(__file__))
                                  }
 
 ###############################################################################
@@ -58,4 +60,4 @@ test_dict['from_single_model'] = { 'args' : args_from_single_model,
 ###############################################################################
 
 if __name__ == '__main__':
-    test_funcs.parse_args(test_dict)
+    test_funcs.parse_args(TEST_DICT)
