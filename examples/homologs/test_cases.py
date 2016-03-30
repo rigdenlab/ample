@@ -6,13 +6,13 @@ Created on 29 Dec 2015
 '''
 
 import os
-import sys
 
-AMPLE_DIR = os.sep.join(os.path.abspath(os.path.dirname(__file__)).split(os.sep)[ :-2 ])
-sys.path.append(os.path.join(AMPLE_DIR,'python'))
-import test_funcs
+from ample.constants import SHARE_DIR
+from ample.testing import test_funcs
+from ample.testing.integration_util import AMPLEBaseTest
 
-test_dict = {}
+INPUT_DIR = os.path.join(SHARE_DIR, "examples", "homologs", "input")
+TEST_DICT = {}
 
 ###############################################################################
 #
@@ -22,14 +22,15 @@ test_dict = {}
 
 # Specify the arguments to AMPLE to run this test case
 args_homologs =  [
-                       [ '-fasta', '3DCY.fasta' ],
-                       [ '-mtz', '3dcy-sf.mtz' ],
+                       [ '-fasta', os.path.join(INPUT_DIR, '3DCY.fasta') ],
+                       [ '-mtz', os.path.join(INPUT_DIR, '3dcy-sf.mtz') ],
                        [ '-homologs', 'True' ],
-                       [ '-models', '.' ]
+                       [ '-models', INPUT_DIR ]
 ]
 
-class AMPLETest(test_funcs.AMPLEBaseTest):
+class AMPLETest(AMPLEBaseTest):
     def test_homologs(self):
+        self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('mrbump_results', self.AMPLE_DICT)
         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
         self.assertTrue(self.AMPLE_DICT['success'])
@@ -37,9 +38,8 @@ class AMPLETest(test_funcs.AMPLEBaseTest):
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory
-test_dict['homologs'] = { 'args' : args_homologs,
+TEST_DICT['homologs'] = {'args' : args_homologs,
                          'test' :  AMPLETest,
-                         'directory' : os.path.abspath(os.path.dirname(__file__))
                          }
 
 ###############################################################################
@@ -49,4 +49,4 @@ test_dict['homologs'] = { 'args' : args_homologs,
 ###############################################################################
 
 if __name__ == '__main__':
-    test_funcs.parse_args(test_dict)
+    test_funcs.parse_args(TEST_DICT)

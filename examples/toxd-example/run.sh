@@ -12,12 +12,12 @@ $PATH
 # Path to the rosetta directory
 rosetta_dir=/opt/rosetta-3.5
 
-$CCP4/bin/ample.py \
+$CCP4/bin/ccp4-python -m ample \
 -rosetta_dir $rosetta_dir \
--fasta toxd_.fasta \
--mtz 1dtx.mtz \
--frags_3mers aat000_03_05.200_v1_3 \
--frags_9mers aat000_09_05.200_v1_3 \
+-fasta input/toxd_.fasta \
+-mtz input/1dtx.mtz \
+-frags_3mers input/aat000_03_05.200_v1_3 \
+-frags_9mers input/aat000_09_05.200_v1_3 \
 -nmodels 30 \
 -percent 50 \
 -use_shelxe True \
@@ -31,15 +31,8 @@ $CCP4/bin/ample.py \
 #-models  ../../tests/testfiles/decoys_200.tar.gz \
 
 # Add below for running in benchmark mode
-#-native_pdb  1DTX.pdb \
+#-native_pdb  inpuy/1DTX.pdb \
 
 # Add below for running from pre-made ensembles
 #-ensembles ./ROSETTA_MR_0/ensembles_1 \
 
-# Add below for running with contact predictions
-#-contact_file toxd_.pconsc2.CASPRR \
-#-contact_file toxd_.gremlin.CASPRR \
-#-bbcontacts_file toxd_.bbcontacts.CASPRR \
-#-constraints_file toxd_.cst \
-#-native_pdb 1DTX_std.pdb \
-#-energy_function FADE_default \
