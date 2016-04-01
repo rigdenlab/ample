@@ -4,13 +4,14 @@ import matplotlib
 matplotlib.use('Cairo')
 import matplotlib.pyplot
 
+# Set some matplotlib parameters
+matplotlib.rcParams['font.family'] = 'Arial'
+matplotlib.rcParams['font.size'] = 8
+matplotlib.rcParams['xtick.direction'] = 'out'
+matplotlib.rcParams['ytick.direction'] = 'out'
+
 class Plotter(object):
     """ Class to plot graphs """
-    
-    def __init__(self):
-        matplotlib.rcParams.update({'family': 'Arial', 'font.size': 8})
-        matplotlib.rcParams['xtick.direction'] = 'out'
-        matplotlib.rcParams['ytick.direction'] = 'out'
     
     def initialise(self, **kwargs):
         fig = matplotlib.pyplot.figure(**kwargs)
