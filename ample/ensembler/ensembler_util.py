@@ -1,25 +1,20 @@
-'''
-Created on Apr 18, 2013
+'''Utility file containing functions for ensembling
 
 This structure of the ensembling modules is dictated by the need to be able to pickle
 and unpickle the results dictionary. As such all objects need to have a qualified path
 (e.g. ensembler.Ensemble ) - otherwise, the module is taken as main, so that when
 the results are unpickled, it will look for Ensemble as an attribute of the main ample
 script.
-
-@author: jmht
 '''
 
 import collections
 import cPickle
 import glob
+import iotbx.pdb
 import logging
 import os
 import shutil
 import sys
-
-# our imports
-import iotbx.pdb
 
 from ample.ensembler import abinitio
 from ample.ensembler import homologs
@@ -29,7 +24,10 @@ from ample.util import exit_util
 from ample.util import pdb_edit
 from ample.util import printTable
 
-_logger = logging.getLogger(__name__)
+__author__ = "Jens Thomas and Felix Simkovic"
+__date__ = "18.04.2013"
+
+LOGGER = logging.getLogger(__name__)
 
 def find_ensembler_module(amoptd):
     """Find which ensembler module to import
@@ -279,7 +277,7 @@ def import_ensembles(amoptd):
         msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles'])
         exit_util.exit_error(msg)
 
-    _logger.info("Importing ensembles from directory: {0}".format(amoptd['ensembles']))
+    LOGGER.info("Importing ensembles from directory: {0}".format(amoptd['ensembles']))
 
     ensembles = glob.glob(os.path.join(amoptd['ensembles'], '*.pdb'))
     amoptd['ensembles'] = ensembles
