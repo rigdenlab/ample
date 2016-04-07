@@ -1,25 +1,17 @@
 #!/usr/bin/env ccp4-python
 
-'''
-09.11.2015
-
-@author: hlfsimko
-'''
-
 import collections
 import logging
 import os
 import tempfile
 
+from ample.parsers import alignment_parser
 from ample.parsers import tmscore_parser
 from ample.util import ample_util
 from ample.util import pdb_edit
 
-try:
-    from ample.parsers import alignment_parser
-    _BIOPYTHON = True
-except ImportError:
-    _BIOPYTHON = False
+__author__ = "Felix Simkovic"
+__date__ = "09.11.2015"
 
 LOGGER = logging.getLogger(__name__)
 
@@ -136,9 +128,6 @@ class TMscorer(object):
 
     def mod_structures(self, pdbin, pdbin_mod, structure, structure_mod):
         """Make sure the decoy and the xtal pdb align to get an accurate TM-score"""
-        
-        if not _BIOPYTHON:
-            raise ImportError
         
         # Disable the info logger to not spam the user with which chain of native extracted.
         # Happens for every model + native below
