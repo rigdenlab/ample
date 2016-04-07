@@ -12,8 +12,8 @@ import subprocess
 import urlparse
 import uuid
 
-from ample.ensembler import ensembler_util
 from ample.util import ample_util
+from ample.util import ensembler_util
 from ample.util import mrbump_util
 
 try: import pyrvapi
