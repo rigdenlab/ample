@@ -1,8 +1,8 @@
 REM Windows version
 
-%CCP4%\bin\ccp4-python -m ample ^
+%CCP4%\bin\ample.bat ^
 -fasta input\1ujb.fasta ^
--mtz inut\1ujb-sf.mtz ^
+-mtz input\1ujb-sf.mtz ^
 -single_model input\3c7t.pdb ^
 -do_mr False ^
 -truncation_method scores ^
