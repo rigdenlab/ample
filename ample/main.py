@@ -12,13 +12,13 @@ import shutil
 import sys
 import time
 
+from ample.ensembler import ensembler_util
 from ample.ensembler.constants import UNMODIFIED
 from ample.util import ample_util
 from ample.util import argparse_util
 from ample.util import benchmark_util
 from ample.util import config_util
 from ample.util import contacts_util
-from ample.util import ensembler_util
 from ample.util import exit_util
 from ample.util import mrbump_util
 from ample.util import options_processor

@@ -21,6 +21,7 @@ import sys
 # our imports
 import iotbx.pdb
 
+from ample import constants
 from ample.ensembler import abinitio
 from ample.ensembler import homologs
 from ample.ensembler import single_model
@@ -51,8 +52,9 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     with open(script_path, "w") as job_script:
         job_script.write("#!/bin/sh\n")
         # Find path to this directory to get path to python ensembler_util.py script
-        pydir = os.path.abspath(os.path.dirname(__file__))
-        ensemble_script = os.path.join(pydir, "ensembler_util.py")
+        #pydir = os.path.abspath(os.path.dirname(__file__))
+        #ensemble_script = os.path.join(pydir, "ensembler_util.py")
+        ensemble_script = os.path.join(constants.AMPLE_DIR, "ensembler", "ensembler_util.py")
         job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", ensemble_script, amoptd['results_path']))
 
     # Make executable
