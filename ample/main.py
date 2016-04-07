@@ -106,9 +106,9 @@ class Ample(object):
         # Display the parameters used
         LOGGER.debug(amopt.prettify_parameters())
         
+        amopt.write_config_file() 
         #######################################################
         # SCRIPT PROPER STARTS HERE
-        
         time_start = time.time()
     
         # Create function for monitoring jobs - static function decorator?
@@ -117,7 +117,7 @@ class Ample(object):
                 return self.output_gui.display_results(amopt.d)
         else:
             monitor = None
-        
+
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
             benchmark_util.analysePdb(amopt.d) 
@@ -126,15 +126,18 @@ class Ample(object):
         if (amopt.d['import_models'] or amopt.d['make_frags'] or amopt.d['make_models'] or \
             (amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel'])):
             self.modelling(amopt.d, rosetta_modeller)
-        
+            amopt.write_config_file()
+
         # Ensembling business next
         if amopt.d['make_ensembles']:
             self.ensembling(amopt.d)
-        
+            amopt.write_config_file()
+
         # Some MR here
         if amopt.d['do_mr']:
             self.molecular_replacement(amopt.d)
-        
+            amopt.write_config_file()
+
         # Timing data
         time_stop = time.time()
         elapsed_time = time_stop - time_start
@@ -147,10 +150,9 @@ class Ample(object):
         # Benchmark mode
         if amopt.d['benchmark_mode']:
             self.benchmarking(amopt.d)
+            amopt.write_config_file()
         
-        # Write out a config file
         amopt.write_config_file()
-        
         # Flag to show that we reached the end without error - useful for integration testing
         amopt.d['AMPLE_finished'] = True
         ample_util.saveAmoptd(amopt.d)
