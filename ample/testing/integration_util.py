@@ -1,4 +1,6 @@
 
+
+from unittest import TestCase, TestLoader, TextTestRunner, TestSuite
 import cPickle
 import glob
 import imp
@@ -8,10 +10,9 @@ import sys
 import tempfile
 
 from ample.constants import SHARE_DIR
+from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
 from ample.util import ample_util
 from ample.util import workers_util
-from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
-from unittest import TestCase, TestLoader, TextTestRunner, TestSuite
 
 __author__ = "Felix Simkovic and Jens Thomas"
 __date__ = "25-Mar-2016"
