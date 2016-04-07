@@ -9,7 +9,7 @@ export PATH=\
 /opt/shelx:\
 $PATH
 
-$CCP4/bin/ccp4-python -m ample \
+$CCP4/bin/ample \
 -fasta input/2OVC.fasta \
 -mtz input/2OVC-cad.mtz \
 -use_shelxe True \

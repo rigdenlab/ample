@@ -8,7 +8,7 @@ export PATH=\
 /opt/shelxe:\
 $PATH
 
-$CCP4/bin/ccp4-python -m ample \
+$CCP4/bin/ample \
 -mtz input/102l.mtz \
 -fasta input/102L.fasta \
 -name 102l \
