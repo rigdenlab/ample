@@ -1,9 +1,17 @@
 
-import Bio.AlignIO
-import Bio.Alphabet
-import Bio.pairwise2
-import Bio.Seq
-import Bio.SeqIO
+import os
+import sys
+
+try:
+    import Bio.AlignIO
+    import Bio.Alphabet
+    import Bio.pairwise2
+    import Bio.Seq
+    import Bio.SeqIO
+except ImportError:
+    msg = "Cannot import Biopython - please install separately" + os.linesep
+    sys.stderr.write(msg)
+    sys.exit(1)
 
 class AlignmentParser(object):
     """ Parser for manipulation of MSAs """
