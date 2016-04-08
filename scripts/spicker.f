@@ -1,3 +1,4 @@
+cjmht To compile with OpenMP support add the -fopenmp flag with gfortran
 cjmht Compiling with OpenMP changes where variables are stored and can cause the
 cjmht stack to get overloaded. To prevent this happening on Linux I had to set
 cjmht 'ulimit -s unlimited' when running. To get it to work on OSX, I had to add
@@ -5,6 +6,9 @@ cjmht the compiler flags: -Wl,-stack_size,0x2000000 (32Mb - empirically determin
 cjmht The OMP_STACKSIZE variables controls the stack for _additional_ variables,
 cjmht not the main OMP thread - the default is the ulimit option on Linux or the
 cjmht compile-time option on OSX (I think)
+cjmht The x, y, z and amat matrices are now allocated. This was done to decrease
+cjmht the stack size. This has necessitated adding fortran90 constructs and interfaces
+cjmht for some of the subroutines.
 
 *******************************************************************************
 *     SPICKER_2.0, released on December 29, 2010
