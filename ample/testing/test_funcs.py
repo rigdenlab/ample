@@ -1,5 +1,6 @@
 
 import argparse
+import urllib2
 
 from ample.testing import integration_util
 from ample.testing import run_tests
@@ -12,6 +13,14 @@ def found_exe(e):
     try:
         ample_util.find_exe(e)
     except:
+        return False
+    return True
+
+def internet_on():
+    # Taken from stackoverflow.com/questions/3764291/checking-network-connection
+    try:
+        reponse=urllib2.urlopen("http://74.125.228.100", timeout=1)
+    except urllib2.URLError:
         return False
     return True
 

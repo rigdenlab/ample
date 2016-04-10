@@ -4,7 +4,9 @@ import unittest
 
 from ample import constants
 from ample.modelling import octopus_predict
+from ample.testing import test_funcs
 
+@unittest.skipUnless(test_funcs.internet_on(), "No internet connection")
 class Test(unittest.TestCase):
 
     @classmethod
