@@ -19,7 +19,7 @@ def found_exe(e):
 def internet_on():
     # Taken from stackoverflow.com/questions/3764291/checking-network-connection
     try:
-        reponse=urllib2.urlopen("http://74.125.228.100", timeout=1)
+        reponse = urllib2.urlopen("http://google.com", timeout=5)
     except urllib2.URLError:
         return False
     return True
