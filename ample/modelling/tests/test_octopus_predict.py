@@ -6,7 +6,9 @@ from ample import constants
 from ample.modelling import octopus_predict
 from ample.testing import test_funcs
 
-@unittest.skipUnless(test_funcs.internet_on(), "No internet connection")
+INTERNET_AVAIL = test_funcs.internet_on()
+
+@unittest.skipUnless(INTERNET_AVAIL, "No internet connection")
 class Test(unittest.TestCase):
 
     @classmethod
