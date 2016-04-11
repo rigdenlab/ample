@@ -97,6 +97,8 @@ class AMPLEIntegrationFramework(object):
             self.clean()
         
         scripts = self._create_scripts(rosetta_dir, submit_cluster)
+        if not len(scripts):
+            raise RuntimeError("Could not find any test cases to run!")
         
         print "The following test cases will be run:"
         for name in self.test_dict.keys():
@@ -211,7 +213,8 @@ class SuiteLoader(object):
         for example_dir in cases:
             path = os.path.join(directory, example_dir)
             test_module = self.load_module(pattern, [path])
-            if not test_module: continue
+            # Skip anything that's not a valid AMPLE test module
+            if not test_module or not hasattr(test_module, 'TEST_DICT'): continue
             for k, v in test_module.TEST_DICT.iteritems():
                 if k in test_cases:
                     raise RuntimeError("Duplicate key: {0}".format(k))
