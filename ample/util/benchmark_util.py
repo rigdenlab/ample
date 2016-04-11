@@ -191,6 +191,9 @@ def analyseSolution(amoptd,d):
     # can now delete origin pdb
     os.unlink(originPdb)
 
+    # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
+    # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
+    # the native structure.
     if not (amoptd['homologs'] or \
             amoptd['ideal_helices'] or \
             amoptd['import_ensembles'] or \
