@@ -435,8 +435,9 @@ class Ample(object):
         LOGGER.info(ample_util.header)
         LOGGER.info("AMPLE version: {0}".format(version.__version__))
         LOGGER.info("Running with CCP4 version: {0} from directory: {1}".format(ccp4_version, ccp4_home))
-        LOGGER.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
         LOGGER.info("Running on host: {0}".format(platform.node()))
+        LOGGER.info("Running on platform: {0}".format(platform.platform()))
+        LOGGER.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
         LOGGER.info("Invoked with command-line:\n{0}\n".format(" ".join(sys.argv)))
         LOGGER.info("Running in directory: {0}\n".format(optd['work_dir']))
         
