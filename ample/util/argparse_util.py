@@ -8,11 +8,29 @@ from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import version
 
 
+def add_core_options(parser):
+    """Function to add any arguments required by all runtypes"""
+    
+    parser.add_argument('-config_file', type=str, help="user configuration file")
+        
+    parser.add_argument('-debug', metavar='True/False', type=str, nargs=1,
+                       help='Run in debug mode (CURRENTLY UNUSED)')
+    
+    parser.add_argument('-nproc', type=int, nargs=1,
+                       help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
+                        "For cluster submission, this should be the number of processors on a node.")
+
+    parser.add_argument('-work_dir', type=str, nargs=1,
+                       help='Path to the directory where the job will run (will be created if it doesn\'t exist)')
+    
+    return
+
 class AmpleArgParser(object):
     
     def main(self, args=None, contacts=True, modelling=True, mol_rep=True):
         parser = argparse.ArgumentParser(description="AMPLE: Ab initio Modelling of Proteins for moLEcular replacement", 
                                          prefix_chars="-")
+        add_core_options(parser)
         self._add_GENERAL(parser)
         
         if contacts: self._add_CONTACTS(parser)
@@ -71,12 +89,7 @@ class AmpleArgParser(object):
         
         parser.add_argument('-cluster_method', type=str, nargs=1,
                            help='How to cluster the models for ensembling (spicker|fast_protein_cluster')
-        
-        parser.add_argument('-config_file', type=str, help="user configuration file")
-        
-        parser.add_argument('-debug', metavar='True/False', type=str, nargs=1,
-                           help='Run in debug mode (CURRENTLY UNUSED)')
-    
+            
         parser.add_argument('-devel_mode', metavar='devel_mode', type=str, nargs=1,
                            help='Preset options to run in development mode - takes longer')
         
@@ -179,10 +192,6 @@ class AmpleArgParser(object):
         parser.add_argument('-no_gui', metavar='True/False', type=str, nargs=1,
                            help='Do not display the AMPLE gui.')
         
-        parser.add_argument('-nproc', type=int, nargs=1,
-                           help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
-                            "For cluster submission, this should be the number of processors on a node.")
-        
         parser.add_argument('-num_clusters', type=int, nargs=1,
                            help='The number of Spicker clusters of the original decoys that will be sampled [1]')
         
@@ -272,9 +281,6 @@ class AmpleArgParser(object):
         parser.add_argument('-webserver_uri', type=str, nargs=1,
                            help='URI of the webserver directory - also indicates we are running as a webserver')
         
-        parser.add_argument('-work_dir', type=str, nargs=1,
-                           help='Path to the directory where AMPLE will run (will be created if it doesn\'t exist)')
-  
     def _add_MR(self, parser): 
         
         mr_group = parser.add_argument_group('MRBUMP/Molecular Replacement Options')

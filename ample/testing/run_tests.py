@@ -3,6 +3,7 @@
 import argparse
 
 from ample.testing import integration_util, unittest_util
+from ample.util.argparse_util import add_core_options
 
 __author__ = "Felix Simkovic"
 __date__ = "25-Mar-2016"
@@ -28,6 +29,10 @@ Available tests include:
 """
     
     parser = argparse.ArgumentParser(prog="run_tests.py", usage=desc)
+    
+    # Add options that work on all runtypes
+    add_core_options(parser)
+    
     suboptions = parser.add_subparsers(help="Testing framework options")
     
     integ = suboptions.add_parser("integration", help="Integration testing with examples")
