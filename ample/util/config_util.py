@@ -156,7 +156,7 @@ class AMPLEConfigOptions(object):
         config_file = os.path.abspath(cmd_file) if cmd_file else \
                             os.path.join(SHARE_DIR, "include", "ample.ini")
         if not os.path.isfile(config_file):
-            msg = "Cannot find configuration file - terminating..."
+            msg = "Cannot find configuration file: {0} - terminating...".format(config_file)
             LOGGER.critical(msg)
             raise RuntimeError(msg)
         LOGGER.debug("Using configuration file: {0}".format(config_file))
