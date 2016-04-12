@@ -72,8 +72,7 @@ class AmpleArgParser(object):
         parser.add_argument('-cluster_method', type=str, nargs=1,
                            help='How to cluster the models for ensembling (spicker|fast_protein_cluster')
         
-        parser.add_argument('-config_file', type=str, nargs=1,
-                           help="user configuration file")
+        parser.add_argument('-config_file', type=str, help="user configuration file")
         
         parser.add_argument('-debug', metavar='True/False', type=str, nargs=1,
                            help='Run in debug mode (CURRENTLY UNUSED)')
