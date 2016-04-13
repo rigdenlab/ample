@@ -325,9 +325,10 @@ if __name__ == "__main__":
         return p.returncode
     
     # Mock up ample_util for when we don't have CCP4 installed
-    class Tmp(object):pass
-    ample_util = Tmp()
-    ample_util.run_command = run_command
+    if ample_util is None:
+        class Tmp(object):pass
+        ample_util = Tmp()
+        ample_util.run_command = run_command
     
     #
     # Run Spicker on a directory of PDB files
@@ -335,7 +336,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--executable',
                         help="spicker executable to use")
-    parser.add_argument('-m', '--models',
+    parser.add_argument('-m', '--models', required=True,
                         help="Models to cluster")
     parser.add_argument('-s', '--score_type', default='rmsd',
                         help="Use TM score")
@@ -353,10 +354,14 @@ if __name__ == "__main__":
     if not len(models):
         print "Cannot find any pdbs in: {0}".format(models)
         sys.exit(1)
+
+    spicker_exe=None
+    if args.executable:
+       spicker_exe=os.path.abspath(args.executable)
         
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    spicker = Spickerer(spicker_exe=os.path.abspath(args.executable))
+    spicker = Spickerer(spicker_exe=spicker_exe)
     spicker.cluster(models, score_type=args.score_type)
     print spicker.results_summary()
