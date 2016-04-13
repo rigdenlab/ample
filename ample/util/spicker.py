@@ -164,8 +164,8 @@ class Spickerer(object):
         # We need special care if we are running on > 1 processor as we will be using the OPENMP
         # version of spicker which requires increasing the stack size on linux and setting the 
         # OMP_NUM_THREADS environment variable on all platforms
-        # The stack size on 64-bit linux seems to be 15Mb, so I guess asking for 30 seems reasonable
-        # I'm assuming that the limit is in bytes and specified by an integer so 30Mb -> 30000000
+        # The stack size on 64-bit linux seems to be 15Mb, so I guess asking for 50 seems reasonable
+        # I'm assuming that the limit is in bytes and specified by an integer so 50Mb -> 50000000
         preexec_fn=None
         env=None
         if nproc > 1:
@@ -173,11 +173,10 @@ class Spickerer(object):
             if sys.platform.lower().startswith('linux'):
                 def set_stack():
                     import resource
-                    stack_bytes = 30000000
+                    stack_bytes = 50000000
                     #resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,resource.RLIM_INFINITY))
                     resource.setrlimit(resource.RLIMIT_STACK, (stack_bytes,stack_bytes))
                 preexec_fn=set_stack
-                logger.critical("SET STACK and ENV")
 
         logfile = os.path.abspath("spicker.log")
         rtn = ample_util.run_command([self.spicker_exe], logfile=logfile, env=env, preexec_fn=preexec_fn)
