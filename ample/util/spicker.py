@@ -146,7 +146,7 @@ class Spickerer(object):
                         seq.write('\t' + split[5] + '\t' + split[3] + '\n')
         return
     
-    def cluster(self, models, run_dir=None, score_type='rmsd', score_matrix=None):
+    def cluster(self, models, run_dir=None, score_type='rmsd', score_matrix=None, nproc=1):
         """
         Run spicker to cluster the models
         """
@@ -157,12 +157,30 @@ class Spickerer(object):
         os.chdir(self.run_dir)
         
         logger.debug("Running spicker in directory: {0}".format(self.run_dir))
-        logger.debug("Using executable: {0}".format(self.spicker_exe))
+        logger.debug("Using executable: {0} on {1} processors".format(self.spicker_exe, nproc))
         
         self.create_input_files(models, score_type=score_type, score_matrix=score_matrix)
         
+        # We need special care if we are running on > 1 processor as we will be using the OPENMP
+        # version of spicker which requires increasing the stack size on linux and setting the 
+        # OMP_NUM_THREADS environment variable on all platforms
+        # The stack size on 64-bit linux seems to be 15Mb, so I guess asking for 30 seems reasonable
+        # I'm assuming that the limit is in bytes and specified by an integer so 30Mb -> 30000000
+        preexec_fn=None
+        env=None
+        if nproc > 1:
+            env = { 'OMP_NUM_THREADS' : str(nproc)}
+            if sys.platform.lower().startswith('linux'):
+                def set_stack():
+                    import resource
+                    stack_bytes = 30000000
+                    #resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,resource.RLIM_INFINITY))
+                    resource.setrlimit(resource.RLIMIT_STACK, (stack_bytes,stack_bytes))
+                preexec_fn=set_stack
+                logger.critical("SET STACK and ENV")
+
         logfile = os.path.abspath("spicker.log")
-        rtn = ample_util.run_command([self.spicker_exe], logfile=logfile)
+        rtn = ample_util.run_command([self.spicker_exe], logfile=logfile, env=env, preexec_fn=preexec_fn)
         if not rtn == 0:
             raise RuntimeError,"Error running spicker, check logfile: {0}".format(logfile)
     
