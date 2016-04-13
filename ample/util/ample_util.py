@@ -376,7 +376,7 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
     return work_dir
 
-def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False, env=None):
+def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False, **kwargs):
     """Execute a command and return the exit code.
 
     We take care of outputting stuff to the logs and opening/closing logfiles
@@ -412,10 +412,9 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         stdin = subprocess.PIPE
 
     # Windows needs some special treatment
-    kwargs = {}
     if os.name == "nt":
-        kwargs = { 'bufsize': 0, 'shell' : "False" }
-    p = subprocess.Popen(cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, env=env, **kwargs)
+        kwargs.update( { 'bufsize': 0, 'shell' : "False" } )
+    p = subprocess.Popen(cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs)
 
     if stdin != None:
         p.stdin.write( stdinstr )
