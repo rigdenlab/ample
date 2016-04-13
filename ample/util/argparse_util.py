@@ -1,5 +1,28 @@
 """
 @author: jmht, hlfsimko
+
+
+Below is code for creating a boolean argument parser with a default, and a range of choices
+
+class BoolAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is None: values = self.default
+        if values in [ '0', 'f', 'F', 'false', 'False', False ]:
+            values=False
+        elif values in [ '1', 't', 'T', 'true', 'True', True ]:
+            values=True
+        else:
+            msg = 'Unrecognised True/False value: {0}'.format(values)
+            raise argparse.ArgumentError(self, msg)
+        setattr(namespace, self.dest, values)
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-d', '--debug', action=BoolAction, default=True, metavar='True/False', nargs='?', help="debug")
+#print parser.parse_args('-d 2'.split())
+print parser.parse_args('-d false'.split())
+
+
 """
 
 import argparse
