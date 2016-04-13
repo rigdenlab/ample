@@ -61,6 +61,11 @@ class TMscorer(object):
         
         :returns:                  list of TMscore data per model
         """
+        if not identical_sequences and not alignment_parser.BIOPYTHON_AVAILABLE:
+            msg = 'Cannot compare non-identical sequences as Biopython is not available'
+            LOGGER.critical(msg)
+            raise RuntimeError(msg)
+
         LOGGER.info('-------Evaluating decoys/models-------')        
         entries = []                                                    # For data storage
 

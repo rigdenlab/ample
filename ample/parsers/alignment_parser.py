@@ -2,16 +2,17 @@
 import os
 import sys
 
+BIOPYTHON_AVAILABLE=False
 try:
     import Bio.AlignIO
     import Bio.Alphabet
     import Bio.pairwise2
     import Bio.Seq
     import Bio.SeqIO
+    BIOPYTHON_AVAILABLE=True
 except ImportError:
-    msg = "Cannot import Biopython - please install separately" + os.linesep
+    msg = "Cannot import Biopython - some functionality will not be available." + os.linesep
     sys.stderr.write(msg)
-    sys.exit(1)
 
 class AlignmentParser(object):
     """ Parser for manipulation of MSAs """
