@@ -44,10 +44,12 @@ Available tests include:
     unittest_util.add_cmd_options(unit)
     
     argd = vars(parser.parse_args())
+    
     which_test = argd['which']
-    cases = {"integration" : run_integration,
-             "unittest" : run_unittest}
-    cases[which_test](argd)
+    if which_test is 'integration':
+        run_integration(argd)
+    elif which_test is 'unittest':
+        run_unittest(argd)
     
 if __name__ == "__main__":
     main()
