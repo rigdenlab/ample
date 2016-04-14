@@ -53,8 +53,16 @@ class AMPLEIntegrationFramework(object):
     """Framework to run Ample integration testing"""
     
     def __init__(self, test_cases=None, run_dir=None):
-        self.test_dict = SuiteLoader().load_cases(os.path.join(SHARE_DIR, "examples"), 
+        examples_dir = os.path.join(SHARE_DIR, "examples")
+        self.test_dict = SuiteLoader().load_cases(examples_dir, 
                                                   test_cases=test_cases)
+        if not len(self.test_dict):
+            if len(test_cases):
+                msg = 'Could not find test cases {0} in directory {1}'.format(test_cases,examples_dir)
+            else:
+                msg = "Could not find any test cases in directory: {0}".format(examples_dir)
+            raise RuntimeError(msg)
+        
         # Make a directory to keep all files together
         _root = os.path.abspath(run_dir) if run_dir else self.get_run_dir()
         self.run_dir = os.path.join(_root, "ample_testing")
