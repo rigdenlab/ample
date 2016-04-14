@@ -58,7 +58,7 @@ class TestCases(unittest.TestCase):
                      'use_buccaneer' : True,
                      'phaser_kill' : 360,
         }
-        options.config_opts = {}
+        options.cmdline_opts = {}
         expected = {'max_ensemble_models' : 10,
                     'nmodels' : 200,
                     'percent' : 20,
@@ -81,7 +81,7 @@ class TestCases(unittest.TestCase):
                      'use_arpwarp' : None,
                      'use_buccaneer' : False,
         }
-        options.config_opts = {}
+        options.cmdline_opts = {}
         expected = {'just_to_check' : True,
                     'benchmark_mode': True,
                     'early_terminate': False,
@@ -102,7 +102,7 @@ class TestCases(unittest.TestCase):
                      'submit_max_array' : 20,
                      'submit_qtype' : None,
         }
-        options.config_opts = {}
+        options.cmdline_opts = {}
         expected = {'purge': True,
                     'shelxe_rebuild_buccaneer': True,
                     'submit_cluster' : True,
@@ -233,7 +233,7 @@ class TestCases(unittest.TestCase):
                      'use_buccaneer' : False,
         }
         
-        options._read_config_opts(config_opts)
+        options._read_cmdline_opts(config_opts)
         self.assertItemsEqual(options.d, expected)
     
     def test_isfloat(self):
