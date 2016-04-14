@@ -32,6 +32,8 @@ __credits__ = "Daniel Rigden, Martyn Winn, and Olga Mayans"
 __email__ = "drigden@liverpool.ac.uk"
 __version__ = version.__version__
 
+DEBUG = False
+
 def setup_console_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -43,7 +45,12 @@ def setup_console_logging():
         cl = logging.StreamHandler(stream=sys.stdout)
     except TypeError:
         cl = logging.StreamHandler(strm=sys.stdout)
-    cl.setLevel(logging.INFO)
+        
+    if DEBUG:
+        cl.setLevel(logging.DEBUG)
+    else:
+        cl.setLevel(logging.INFO)
+        
     formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
     cl.setFormatter(formatter)
     logger.addHandler(cl)
