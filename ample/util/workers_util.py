@@ -117,6 +117,7 @@ def run_scripts(job_scripts,
                 submit_max_array=None):
     if submit_cluster:
         return run_scripts_cluster(job_scripts,
+                                   nproc=nproc,
                                    monitor=monitor,
                                    job_time=job_time,
                                    job_name=job_name,
