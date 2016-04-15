@@ -15,6 +15,8 @@ import time
 if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
+LOGGER = logging.getLogger(__name__)
+
 class ClusterRun:
 
     def __init__(self):
@@ -30,7 +32,6 @@ class ClusterRun:
         self.scriptDir=None
         self._scriptFile  = None
         self.debug=True
-        self.logger =  logging.getLogger()
         
         return
 
@@ -60,10 +61,10 @@ class ClusterRun:
                 newLog = os.path.join(logDir, "{0}.log".format(jobName))
                 
             if os.path.isfile(oldLog):
-                self.logger.debug("Moving {0} to {1}".format(oldLog, newLog))
+                LOGGER.debug("Moving {0} to {1}".format(oldLog, newLog))
                 os.rename(oldLog, newLog ) 
             else:
-                self.logger.critical("Cannot find logfile {0} to copy to {1}".format(oldLog, newLog))
+                LOGGER.critical("Cannot find logfile {0} to copy to {1}".format(oldLog, newLog))
         
         return
 
@@ -154,7 +155,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         if not len(self.qList):
             raise RuntimeError,"No jobs found in self.qList!"
 
-        self.logger.info("Jobs submitted to cluster queue, awaiting their completion...")
+        LOGGER.info("Jobs submitted to cluster queue, awaiting their completion...")
 
         # set a holder for the qlist
         runningList=self.qList
@@ -168,9 +169,9 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 if str(job) in self.runningQueueList:
                     newRunningList.append(job)
             if len(runningList) > len(newRunningList):
-                self.logger.info("Queue Monitor: %d out of %d jobs remaining in cluster queue..." %  (len(newRunningList),len(self.qList)))
+                LOGGER.info("Queue Monitor: %d out of %d jobs remaining in cluster queue..." %  (len(newRunningList),len(self.qList)))
             if len(newRunningList) == 0:
-                self.logger.info("Queue Monitor: All jobs complete!")
+                LOGGER.info("Queue Monitor: All jobs complete!")
             runningList=newRunningList
             newRunningList=[]
             if monitor: monitor()
@@ -185,7 +186,9 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                         queue=None,
                         qtype=None,
                         num_array_jobs=None,
-                        max_array_jobs=None
+                        max_array_jobs=None,
+                        submit_pe_sge='#$ -pe mpi {0}',
+                        submit_pe_lsf='#BSUB -R "span[ptile={0}]"',
                         ):
         """
         Create a string suitable for writing out as the header of the submission script
@@ -208,15 +211,12 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             else:
                 if log_file: sh += ['#$ -o {0}\n'.format(log_file)]
             # jmht hack for morrigan
-            if nproc and nproc > 1: sh += ['#$ -pe threaded {0}\n'.format(nproc)]
+            #if nproc and nproc > 1: sh += ['#$ -pe threaded {0}\n'.format(nproc)]
+            if nproc and submit_pe_sge: sh += [submit_pe_sge.format(nproc) + os.linesep]
             sh += ['\n']
         elif qtype=="LSF":
             assert not num_array_jobs,"Array jobs not supported yet for LSF"
-            # jmht - hard-wired for hartree wonder
-            if nproc and nproc < 16:
-                sh += ['#BSUB -R "span[ptile={0}]"\n'.format(nproc)]
-            else:
-                sh += ['#BSUB -R "span[ptile=16]"\n']
+            if nproc and submit_pe_lsf: sh += [submit_pe_lsf.format(nproc) + os.linesep]
             if job_time:
                 sh += ['#BSUB -W {0}\n'.format(job_time)]
             else:
@@ -258,7 +258,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         else:
             raise RuntimeError,"Unrecognised QTYPE: ".format(self.QTYPE)            
 
-        self.logger.debug("Submitting job with command: {0}".format(command_line))
+        LOGGER.debug("Submitting job with command: {0}".format(command_line))
         process_args = shlex.split(command_line)
         try:
             p = subprocess.Popen(process_args,
@@ -291,7 +291,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                     self.qList.append(qNumber)                
 
             if qNumber:
-                self.logger.debug("Submission script {0} submitted to queue as job {1}".format( subScript, qNumber ) )
+                LOGGER.debug("Submission script {0} submitted to queue as job {1}".format( subScript, qNumber ) )
             out=child_stdout.readline()
         child_stdout.close()
         os.chdir(curDir)

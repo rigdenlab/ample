@@ -276,7 +276,13 @@ class AmpleArgParser(object):
                            help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
         
         parser.add_argument('-submit_qtype', type=str, nargs=1,
-                           help='cluster submission queue type - currently support SGE and LSF')
+                           help='Cluster submission queue type - currently support SGE and LSF')
+
+        parser.add_argument('-submit_pe_lsf', type=str, nargs=1,
+                           help='Cluster submission: string to set number of processors for LSF queueing system')
+
+        parser.add_argument('-submit_pe_sge', type=str, nargs=1,
+                           help='Cluster submission: string to set number of processors for SGE queueing system')
         
         parser.add_argument('-submit_queue', type=str, nargs=1,
                            help='The queue to submit to on the cluster.')
