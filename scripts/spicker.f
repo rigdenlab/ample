@@ -1,4 +1,5 @@
 cjmht To compile with OpenMP support add the -fopenmp flag with gfortran
+cjmht gfortran -g -static -O3 -ffast-math -lm -fopenmp -o spicker2 spicker.f
 cjmht Compiling with OpenMP changes where variables are stored and can cause the
 cjmht stack to get overloaded. To prevent this happening on Linux I had to set
 cjmht 'ulimit -s unlimited' when running. To get it to work on OSX, I had to add
