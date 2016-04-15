@@ -8,7 +8,7 @@
 import logging
 import os
 
-from ample.constants import SHARE_DIR
+from ample.constants import AMPLE_CONFIG_FILE
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import version
 
@@ -154,8 +154,7 @@ class AMPLEConfigOptions(object):
         return
      
     def _get_config_file(self, cmd_file=None):
-        config_file = os.path.abspath(cmd_file) if cmd_file else \
-                            os.path.join(SHARE_DIR, "include", "ample.ini")
+        config_file = os.path.abspath(cmd_file) if cmd_file else AMPLE_CONFIG_FILE
         if not os.path.isfile(config_file):
             msg = "Cannot find configuration file: {0} - terminating...".format(config_file)
             LOGGER.critical(msg)
