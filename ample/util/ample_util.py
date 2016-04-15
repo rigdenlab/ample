@@ -96,9 +96,9 @@ def ccp4_version():
     global CCP4_VERSION
     if CCP4_VERSION is None:
         # Currently there seems no sensible way of doing this other then running a program and grepping the output
-        cmd=['pdbcur']
+        pdbcur = 'pdbcur.exe' if sys.platform.startswith('win') else 'pdbcur'
         logf = tempfile.NamedTemporaryFile(delete=False)
-        run_command(cmd, stdin="", logfile=logf.name)
+        run_command([pdbcur], stdin="", logfile=logf.name)
         logf.seek(0) # rewind logfile
         tversion=None
         for i, line in enumerate(logf):
