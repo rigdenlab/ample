@@ -393,7 +393,10 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         if not is_exe(cmd[0]): raise RuntimeError,"run_command cannot find executable: {0}".format(cmd[0])
 
     if not directory:  directory = os.getcwd()
-    if dolog: _logger.debug("In directory {0}\nRunning command: {1}".format(directory, " ".join(cmd)))
+    if dolog:
+        _logger.debug("In directory {0}".format(directory))
+        _logger.debug("Running command: {0}".format(" ".join(cmd)))
+        if kwargs:  _logger.debug("kwargs are: {0}".format(kwargs))
     file_handle=False
     if logfile:
         if type(logfile)==file:
