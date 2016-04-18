@@ -151,8 +151,7 @@ def add_general_options(parser):
     parser.add_argument('-quick_mode', metavar='True/False', type=str, nargs=1,
                        help='Preset options to run quickly, but less thoroughly')
     
-    parser.add_argument('-restart_pkl', type=str, nargs=1,
-                       help='Rerun a job using the pickled ample dictionary')
+    parser.add_argument('-restart_pkl', type=str, help='Rerun a job using the pickled ample dictionary')
     
     parser.add_argument('-run_dir', metavar='run_directory', type=str, nargs=1,
                        help='Directory where the AMPLE work directory will be created [current dir]')
