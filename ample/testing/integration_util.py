@@ -136,6 +136,7 @@ class AMPLEIntegrationFramework(object):
             os.chdir(self.run_dir)
             work_dir = os.path.join(self.run_dir, name)
             args = self.test_dict[name]['args']
+            
             # Rosetta is the only think likely to change between platforms so we update the entry
             if rosetta_dir and self._is_in_args('-rosetta_dir', args):
                 args = self._update_args(args, [['-rosetta_dir', rosetta_dir]])
@@ -143,7 +144,11 @@ class AMPLEIntegrationFramework(object):
                 args = self._update_args(args, EXTRA_ARGS)
             if submit_cluster:
                 args = self._update_args(args, CLUSTER_ARGS)
-            script = self.write_script(work_dir,  args + [['-work_dir', work_dir]])
+            
+            # We track different modules using the name of the test case
+            ensembler = True if name.startswith('ensembler') else False
+            
+            script = self.write_script(work_dir,  args + [['-work_dir', work_dir]], ensembler=ensembler)
             scripts.append(script)
             # Set path to the results pkl file we will use to run the tests
             self.test_dict[name]['resultsd'] = os.path.join(work_dir,'resultsd.pkl')
@@ -182,18 +187,22 @@ class AMPLEIntegrationFramework(object):
             suite.addTests(_suite)  
         TextTestRunner(verbosity=2).run(suite)
     
-    def write_script(self, path, args):
-        """Write script - ARGS MUST BE IN PAIRS"""
+    def write_script(self, path, args, ensembler):
+        """Write script"""
         linechar = "^" if sys.platform.startswith('win') else "\\"
         script = path + ample_util.SCRIPT_EXT
-        if sys.platform.startswith("win"):
-            ample = os.path.join(os.environ["CCP4"], "bin", "ample" + ample_util.SCRIPT_EXT)
+        if ensembler:
+            test_exe = 'ccp4-python -m ample.ensembler'
         else:
-            ample = os.path.join(os.environ["CCP4"], "bin", "ample")
+            test_exe = 'ccp4-python -m ample'
+#             if sys.platform.startswith("win"):
+#                 ample = os.path.join(os.environ["CCP4"], "bin", "ample" + ample_util.SCRIPT_EXT)
+#             else:
+#                 ample = os.path.join(os.environ["CCP4"], "bin", "ample")
         with open(script, 'w') as f:
             f.write(ample_util.SCRIPT_HEADER + os.linesep)
             f.write(os.linesep)
-            f.write("{0} {1}".format(ample, linechar + os.linesep))
+            f.write("{0} {1}".format(test_exe, linechar + os.linesep))
             for argt in args:
                 f.write(" ".join(argt) + " " + linechar + os.linesep)
             f.write(os.linesep)
@@ -237,6 +246,9 @@ class SuiteLoader(object):
             return None
         try:
             test_module = imp.load_module(mod_name, mfile, pathname, desc)
+        except Exception as e:
+            sys.stderr.write("Error loading test case from directory: {0}\n {1}\n".format(paths, e))
+            raise Exception(e)
         finally:
             mfile.close()
         return test_module
