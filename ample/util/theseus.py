@@ -17,10 +17,12 @@ TheseusVariances = collections.namedtuple('TheseusVariances', ['idx', 'resName',
 class Theseus(object):
     
     def __init__(self, work_dir=None, theseus_exe=None):
-        
+
+        if theseus_exe is None:
+            if 'CCP4' in os.environ: theseus_exe = os.path.join(os.environ['CCP4'], 'bin', 'theseus')
+        if theseus_exe is None or not os.path.exists(theseus_exe) and os.access(theseus_exe, os.X_OK):
+            raise RuntimeError,"Cannot find theseus_exe: {0}".format(theseus_exe)
         self.theseus_exe = theseus_exe
-        if theseus_exe is None or not os.path.exists(self.theseus_exe) and os.access(self.theseus_exe, os.X_OK):
-            raise RuntimeError,"Cannot find theseus_exe: {0}".format(self.theseus_exe)
         self.logger = logging.getLogger()
         self.work_dir = None
         self.variance_log = None
