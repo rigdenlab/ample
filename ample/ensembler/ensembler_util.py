@@ -8,7 +8,6 @@ script.
 '''
 
 import collections
-import cPickle
 import glob
 import iotbx.pdb
 import logging
@@ -19,7 +18,6 @@ import sys
 from ample.ensembler import abinitio
 from ample.ensembler import homologs
 from ample.ensembler import single_model
-from ample.util import ample_util
 from ample.util import exit_util
 from ample.util import pdb_edit
 from ample.util import printTable
@@ -48,10 +46,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     script_path = os.path.join(work_dir, "submit_ensemble.sh")
     with open(script_path, "w") as job_script:
         job_script.write("#!/bin/sh\n")
-        # Find path to this directory to get path to python ensembler_util.py script
-        pydir = os.path.abspath(os.path.dirname(__file__))
-        ensemble_script = os.path.join(pydir, "ensembler_util.py")
-        job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", ensemble_script, amoptd['results_path']))
+        job_script.write("ccp4-python -m ample.ensembler -restart_pkl {0}\n".format(amoptd['results_path']))
 
     # Make executable
     os.chmod(script_path, 0o777)
@@ -417,9 +412,9 @@ def _sort_ensembles_prioritise(ensembles_zipped, keys_to_sort):
     ############################################################################
     ensembles_zipped_ordered = []
 
-    for bin in iterator_keys:
+    for sbin in iterator_keys:
         low, mid, high = [], [], []
-        for ensemble in _sort_ensembles_parameters(tmp_data[bin], keys_to_sort):
+        for ensemble in _sort_ensembles_parameters(tmp_data[sbin], keys_to_sort):
             if ensemble[1]['truncation_level'] > 50:
                 high.append(ensemble)
             elif ensemble[1]['truncation_level'] < 20:
