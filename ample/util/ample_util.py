@@ -123,12 +123,14 @@ def ccp4_version():
     return (major,minor,rev)
     
 def extract_models(amoptd, sequence=None, single=True, allsame=True):
-    """Extract pdb files from a given tar/zip file or directory of pdbs"""
+    """Check a directory of pdbs or extract pdb files from a given tar/zip file or directory of pdbs
+    and set the amoptd['models_dir'] entry with the directory of unpacked/validated pdbs
+    """
     
     filename = amoptd['models']
-    directory = amoptd['models_dir']
+    models_dir = amoptd['models_dir']
     
-    # If it's already a directory, just check it's valid   
+    # If it's already a models_dir, just check it's valid   
     if os.path.isdir(filename):
         models_dir = filename
     else:
@@ -137,11 +139,11 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
             msg="Cannot find models file: {0}".format(filename)
             exit_util.exit_error(msg)
             
-        # we need a directory to extract into
-        assert directory,"extractModels needs a directory path!"
-        if not os.path.isdir(directory):
-            os.mkdir(directory)
-        models_dir = directory
+        # we need a models_dir to extract into
+        assert models_dir,"extractModels needs a models_dir path!"
+        if not os.path.isdir(models_dir):
+            os.mkdir(models_dir)
+        models_dir = models_dir
         
         # See what sort of file this is:
         f,suffix=os.path.splitext(filename)
@@ -155,9 +157,9 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
             msg="Do not know how to extract files from file: {0}\n Acceptable file types are: {1}".format(filename,suffixes)
             exit_util.exit_error(msg)
         if suffix in tsuffixes:
-            files = extract_tar(filename, directory)
+            files = extract_tar(filename, models_dir)
         else:
-            files = extract_zip(filename, directory)
+            files = extract_zip(filename, models_dir)
         
         # Assume anything with one member is quark decoys
         if len(files) == 1:
@@ -179,7 +181,9 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
         msg="Problem importing pdb files - please check the log for more information"
         exit_util.exit_error(msg)
-    return models_dir
+    
+    amoptd['models_dir'] = models_dir
+    return
 
 def extract_tar(filename, directory, suffixes=['.pdb']):
     # Extracting tarfile
