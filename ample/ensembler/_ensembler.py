@@ -222,7 +222,7 @@ class Ensembler(object):
                   
                   'spicker_tmscore' : [cluster_util.spicker_tmscore, 
                                        list([cluster_exe, cluster_method, max_cluster_size, num_clusters, 
-                                             models, self.work_dir, nproc, self.score_matrix ])],
+                                             models, self.work_dir, nproc])],
         }
         
         # Get the function handler and keyword arguments
