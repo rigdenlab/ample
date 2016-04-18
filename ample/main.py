@@ -2,7 +2,7 @@
 """
 This is AMPLE
 """
-
+import argparse
 import cPickle
 import glob
 import logging
@@ -13,12 +13,12 @@ import sys
 import time
 
 from ample.ensembler.constants import UNMODIFIED
+from ample.ensembler import ensembler_util, ensembler_argparse
 from ample.util import ample_util
 from ample.util import argparse_util
 from ample.util import benchmark_util
 from ample.util import config_util
 from ample.util import contacts_util
-from ample.util import ensembler_util
 from ample.util import exit_util
 from ample.util import mrbump_util
 from ample.util import options_processor
@@ -101,7 +101,7 @@ class Ample(object):
         args is an option argument that can contain the command-line arguments 
         for the program - required for testing.
         """ 
-        argso = argparse_util.process_command_line(args=args)
+        argso = self.process_command_line(args=args)
         #self.amopt = amopt = options_util.AmpleOptions()
         self.amopt = amopt = config_util.AMPLEConfigOptions()
         amopt.populate(argso)
@@ -314,9 +314,9 @@ class Ample(object):
         elif optd['import_models']:
             LOGGER.info('Importing models from directory: {0}\n'.format(optd['models_dir']))
             if optd['homologs']:
-                optd['models_dir'] = ample_util.extract_models(optd, sequence=None, single=True, allsame=False)
+                ample_util.extract_models(optd, sequence=None, single=True, allsame=False)
             else:
-                optd['models_dir'] = ample_util.extract_models(optd)
+                ample_util.extract_models(optd)
                 # Need to check if Quark and handle things accordingly
                 if optd['quark_models']:
                     # We always add sidechains to QUARK models if SCWRL is installed
@@ -408,6 +408,22 @@ class Ample(object):
         LOGGER.info(summary)
         
         return
+
+    def process_command_line(self, args=None, contacts=True, modelling=True, mol_rep=True):
+        """Process the command-line.
+        :args: optional argument that can hold the command-line arguments if we 
+        have been called from within python for testing
+        """
+        parser = argparse.ArgumentParser(description="AMPLE: Ab initio Modelling of Proteins for moLEcular replacement", 
+                                         prefix_chars="-")
+        argparse_util.add_general_options(parser)
+        ensembler_argparse.add_ensembler_options(parser)
+        
+        if contacts: argparse_util.add_contact_options(parser)
+        if mol_rep: argparse_util.add_mr_options(parser)
+        if modelling: argparse_util.add_rosetta_options(parser)
+        
+        return parser.parse_args(args)
 
     def setup(self, optd):
         
