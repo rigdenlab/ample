@@ -5,7 +5,7 @@ import random
 import os
 import unittest
 
-from ample.util import ensembler_util
+from ample.ensembler import ensembler_util
 
 class Test(unittest.TestCase):
         

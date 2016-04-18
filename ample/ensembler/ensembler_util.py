@@ -117,6 +117,16 @@ def create_ensembles(amoptd):
 
     ############################################################################
     # For a single model we don't need to use glob 
+    if not (amoptd['single_model'] or amoptd['models_dir']):
+        msg = 'AMPLE ensembler needs either a single_model or a models_dir argument'
+        exit_util.exit_error(msg, sys.exc_info()[2])
+        if amoptd['single_model'] and not os.path.isfile(amoptd['single_model']):
+            msg = 'Cannot find single_model pdb: {0}'.format(amoptd['single_model'])
+            exit_util.exit_error(msg, sys.exc_info()[2])
+        elif amoptd['models_dir'] and not os.path.isfile(amoptd['models_dir']):
+            msg = 'Cannot find models_dir: {0}'.format(amoptd['models_dir'])
+            exit_util.exit_error(msg, sys.exc_info()[2])
+            
     models = list([amoptd['single_model']]) if amoptd['single_model_mode'] else \
         glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))
 
@@ -426,32 +436,3 @@ def _sort_ensembles_parameters(ensembles_zipped, keys_to_sort):
     def _extract(ens):
         return [ens[1][crit] for crit in keys_to_sort]
     return sorted(ensembles_zipped, key=_extract)
-
-
-if __name__ == "__main__":
-    # This runs the ensembling starting from a pickled file containing an amopt dictionary.
-    # - used when submitting the modelling jobs to a cluster
-
-    if len(sys.argv) != 2 or not os.path.isfile(sys.argv[1]):
-        print "ensemble script requires the path to a pickled amopt dictionary!"
-        sys.exit(1)
-
-    # Get the amopt dictionary
-    with open(sys.argv[1], "r") as f: amoptd = cPickle.load(f)
-
-    # if os.path.abspath(fpath) != os.path.abspath(amoptd['results_path']):
-    #    print "results_path must match the path to the pickle file"
-    #    sys.exit(1)
-
-    # Set up logging - could append to an existing log?
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    fl = logging.FileHandler(os.path.join(amoptd['work_dir'],"ensemble.log"))
-    fl.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fl.setFormatter(formatter)
-    logger.addHandler(fl)
-
-    # Create the ensembles & save them
-    create_ensembles(amoptd)
-    ample_util.saveAmoptd(amoptd)
