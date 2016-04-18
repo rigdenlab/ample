@@ -5,6 +5,7 @@ Created on Mar 18, 2015
 '''
 
 import logging
+import os
 import sys
 import traceback
 
@@ -62,8 +63,13 @@ def exit_error(msg, ample_tb=None):
         ample_tb = traceback.extract_stack()
     else:
         ample_tb = traceback.extract_tb(ample_tb)
-    logger.debug("AMPLE EXITING AT...")
-    logger.debug("".join(traceback.format_list(ample_tb)))
+    
+    msg = "AMPLE EXITING AT..." + os.linesep + "".join(traceback.format_list(ample_tb))
+    if debug_log:
+        logger.debug(msg)
+    else:
+        # If we don't have a debug file we want to output the traceback to the console
+        logger.info(msg)
     
     # Make sure the error widget is updated
     if pyrvapi: pyrvapi.rvapi_flush()
