@@ -195,7 +195,8 @@ class AMPLEIntegrationFramework(object):
         linechar = "^" if sys.platform.startswith('win') else "\\"
         script = path + ample_util.SCRIPT_EXT
 
-        test_exe = os.path.join(os.environ["CCP4"], "bin", "ample" + ample_util.SCRIPT_EXT)
+        test_exe = os.path.join(os.environ["CCP4"], "bin", "ample")
+        test_exe = test_exe + ample_util.SCRIPT_EXT if sys.platform.startswith("win") else test_exe
         if ensembler:
             if sys.platform.startswith("win"): raise RuntimeError("Cannot run ensemble module on windows due to multiprocessing bug")
             test_exe = '{0} -m ample.ensembler'.format(os.path.join(os.environ["CCP4"], "bin", "ccp4-python"))
