@@ -127,11 +127,13 @@ class Spickerer(object):
         # *                           modeling;
         # *                       -1, cutoff based on variation, best for decoys from
         # *                           ab initio modeling.
+        # *                       -2, use TM scores for clustering
         # *                  par3: 1, closc from all decoys; -1, closc clustered decoys
         # *                  From second lines are the file names which contain coordinates
         # *                  of 3D structure decoys. All these files are mandatory
+        par2 = '-2' if score_type == 'tm' else '-1'
         with open('tra.in', "w") as tra:
-            tra.write('1 -1 1 \nrep1.tra1\n')
+            tra.write('1 {0} 1 \nrep1.tra1\n'.format(par2))
     
         # Create the file with the sequence of the PDB structures
         # from spicker.f
@@ -168,7 +170,7 @@ class Spickerer(object):
         # I'm assuming that the limit is in bytes and specified by an integer so 50Mb -> 50000000
         preexec_fn=None
         env = None
-        if nproc > 1:
+        if score_type == 'tm':
             env = { 'OMP_NUM_THREADS' : str(nproc)}
             if sys.platform.lower().startswith('linux'):
                 def set_stack():
