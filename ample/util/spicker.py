@@ -163,7 +163,7 @@ class Spickerer(object):
         
         self.create_input_files(models, score_type=score_type, score_matrix=score_matrix)
         
-        # We need special care if we are running on > 1 processor as we will be using the OPENMP
+        # We need special care if we are running with tm scores as we will be using the OPENMP
         # version of spicker which requires increasing the stack size on linux and setting the 
         # OMP_NUM_THREADS environment variable on all platforms
         # The stack size on 64-bit linux seems to be 15Mb, so I guess asking for 50 seems reasonable
