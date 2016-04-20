@@ -48,6 +48,7 @@ cjmht for some of the subroutines.
 *                           template-based modeling; 
 *                       -1, cutoff based on variation, best for clustering 
 *                           decoys from ab initio modeling.
+*                       -2, cluster based on TM scores
 *                  par3: 1, select closc from all decoys; 
 *                       -1, closc from clustered decoys (slighly faster)
 *                  From second lines are file names which contain coordinates
@@ -145,14 +146,13 @@ cjmht  end of interfaces
 c      parameter(nst=100)      !number of used structure, maximum allowed
       parameter(ntr=20000)       !number of trajectories
       parameter(ncl=100)            !number of clusters
-      character filen(ntr)*72,c2*6,seq(ndim)*3,protein*10
+      character filen(ntr)*72,c2*6,seq(ndim)*3
       character txt1*70,txt2*70
 ccc   RMSD:
-      double precision r_1(3,ndim),r_2(3,ndim),r_3(3,ndim),w(ndim)
-      double precision u(3,3),t(3),rms,drms !armsd is real
+      double precision r_1(3,ndim),r_2(3,ndim),w(ndim)
+      double precision u(3,3),t(3),rms !armsd is real
       data w /ndim*1.0/
 ccc   
-      dimension xtemp(ndim),ytemp(ndim),ztemp(ndim) !structure close to templ
       dimension xt(ndim),yt(ndim),zt(ndim) !temporal coordinate
       dimension x_n(ndim),y_n(ndim),z_n(ndim) !native structure
 cjmht dimension x(ndim,nst),y(ndim,nst),z(ndim,nst) !used structures
@@ -170,44 +170,13 @@ cjmht dimension amat(nst,nst)    !RMSD matrics
       dimension xs(ndim),ys(ndim),zs(ndim)
       dimension xc(ncl,ndim),yc(ncl,ndim),zc(ncl,ndim)
       dimension xcl(ncl,ndim),ycl(ncl,ndim),zcl(ncl,ndim)
-      dimension xc3(ncl,ndim),yc3(ncl,ndim),zc3(ncl,ndim)
       dimension rmsd_close_min(ncl) !RMSD between 'combo.pdb' and 'closm.pdb'
-      dimension i1(100),i2(100)
-      integer q(ndim)
       dimension R_in(100),R_ex(100),Rc_in(100),Rc_ex(100)
       dimension order(nst)
       dimension ires(ndim)
-      double precision rmsd_a,rmsd2_a
+      double precision rmsd_a
       dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
       dimension x2(ndim),y2(ndim),z2(ndim),nn2(ndim)
-
-cjmht
-      integer score_type
-      logical fcheck
-      score_type=0
-      fcheck = .FALSE.
-
-**********************************************************************
-****  check if we are reading a score matrix or processing rmsds
-**********************************************************************
-      inquire(file='score.matrix',exist=fcheck)
-      if (fcheck) then
-          write(*,*)"Scores will be read from file: score.matrix"
-          score_type=1
-      endif
-      inquire(file='TM.score',exist=fcheck)
-      if (fcheck) then
-          write(*,*)"TM scores will be used"
-          if (score_type .ne. 0) then
-              write(*,*)'Cannot use score.matrix and TM.score!'
-              STOP 1
-          endif
-          score_type=2
-      endif
-      if (score_type .eq. 0) then
-          write(*,*)"Calculating RMSD scores"
-      endif
-cjmht END SCORE TYPE CHECK
 
 **********************************************************************
 
@@ -308,7 +277,7 @@ ccc read structures from trajectories and find best structure in 13000 cccccccc
       n_max=nst                 !maximum structures to handle
       delta=float(n_str_all)/float(n_max) !take a structure in each delta
       if(delta.lt.1)delta=1
-      i_str=1			!number of structure used for clustering
+      i_str=1                  !number of structure used for clustering
       i_str_all=0
       E_min=100000
       E_min_all=100000
@@ -404,28 +373,30 @@ c     Fill mark array
       enddo
       
 cjmht Calculate the amat with the all-by-all scores
-      if (score_type .eq. 1) then
-          call read_score_matrix(nst,n_str,amat,rmsd_delta, rmsd_a)
-      elseif (score_type .eq. 2) then
+      if (n_para.eq.-2) then
           call tm_score_all(ndim,n_str,Lch,x,y,z,amat,rmsd_delta,
      &                      rmsd_a)
+      elseif (n_para.eq.-3) then
+          call read_score_matrix(nst,n_str,amat,rmsd_delta, rmsd_a)
       else
           call rmsd_score_all(ndim,w,n_str,Lch,x,y,z,amat,
      &                        rmsd_delta,rmsd_a)
       endif
 
-cjmht write out the score matrix
-      open(30,file='spicker.matrix',status='unknown') !scores
-      do i=1,n_str
-         do j=i,n_str
-         write(30,2000)i-1,j-1,amat(i,j)
-         enddo
-      enddo
-      close(30)
+cjmht write out the score matrix of TM scores
+      if (n_para.eq.-2) then
+          open(30,file='tm.matrix',status='unknown') !scores
+          do i=1,n_str
+             do j=i,n_str
+             write(30,2000)i-1,j-1,amat(i,j)
+             enddo
+          enddo
+          close(30)
 2000  format(i4,2x,i4,2x,f9.4)
+      endif
 
 ******** reset RMSD_cutoff parameters:
-      if(n_para.eq.-1)then      !parameters for ab inito modeling
+      if(n_para.le.-1)then      !parameters for ab inito modeling
          RMSD_cut_initial=rmsd_a*0.5
          if(RMSD_cut_initial.lt.2)RMSD_cut_initial=2
          RMSD_cut_min=RMSD_cut_initial-0.8*rmsd_delta
@@ -875,21 +846,21 @@ c           or all weights equal to zero.
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       subroutine rmsd_score_all(ndim,w,n_str,Lch,x,y,z,amat, rmsd_delta,
      &                          rmsd_a)
-!     REM: I, J, K, L, M, or N are int
+c     REM: I, J, K, L, M, or N are int
       implicit none
-!     Intent In
+c     Intent In
 cjmht integer ndim,nst
       integer ndim
       integer n_str,Lch
       double precision w(ndim)
 cjmht real x(ndim,nst),y(ndim,nst),z(ndim,nst)
       real, allocatable, intent(in) :: x(:,:), y(:,:), z(:,:)
-!     Intent Out
+c     Intent Out
 cjmht real amat(nst,nst)
       real, allocatable, intent(inout) :: amat(:,:)
       real rmsd_delta
       double precision rmsd_a
-!     Local variables
+c     Local variables
       real rmsd2_a,armsd
       integer i,j,k,n_rmsd,ier
       double precision u(3,3),t(3),rms,r_1(3,ndim),r_2(3,ndim)
@@ -900,6 +871,7 @@ cjmht real amat(nst,nst)
 
 cccccccccccccc calculate RMSD matrics ccccccccccccccccccccccccccc
 c     write(*,*)'number of used structures=',n_str
+      write(*,*)"Calculating RMSD scores"
       rmsd_a=0
       rmsd2_a=0
       n_rmsd=0
@@ -937,28 +909,29 @@ c      write(*,*)"MINA MAXA ",mina,maxa
 
       subroutine tm_score_all(ndim,n_str,Lch,x,y,z,amat,rmsd_delta,
      &                        rmsd_a)
+c
       implicit none
 
-!     Intent In
+c     Intent In
       integer ndim
       integer n_str ! Number of structures in use
       integer Lch ! Chain length of the structures (all same)
 c      real x(ndim,nst),y(ndim,nst),z(ndim,nst)
       real, allocatable, intent(in) :: x(:,:),y(:,:), z(:,:)
       real, allocatable, intent(inout) :: amat(:,:)
-!     Intent Out
+c     Intent Out
 c      real amat(nst,nst)
       real rmsd_delta
       double precision rmsd_a
 
-!     Local variables
+c     Local variables
       real RMSD_min, RMSD_max
       parameter(RMSD_min=0)
       parameter(RMSD_max=50)
       real rmsd,rmsd2_a,TM,Rcomm
-      integer i,j,k,n_rmsd,ier,Lcomm
+      integer i,j,k,n_rmsd,Lcomm
 
-!     Arrays to pass data into TMscore routine
+c     Arrays to pass data into TMscore routine
       integer nn1, nn2 ! resseq of structures - assume all same
       real x1,y1,z1,x2,y2,z2 ! coordinates
       dimension x1(ndim),y1(ndim),z1(ndim),nn1(ndim)
@@ -975,8 +948,8 @@ c     write(*,*)'number of used structures=',n_str
 !$OMP& SHARED(n_str,Lch,x,y,z,amat,n_rmsd,rmsd_a,rmsd2_a)
 !$OMP& PRIVATE(i,j,k,x1,y1,z1,x2,y2,z2,nn1,nn2,TM,Rcomm,Lcomm,rmsd)
 !$OMP DO
-! which is the correct place?
-!!$OMP& PRIVATE(i,j,k,x1,y1,z1,x2,y2,z2,nn1,nn2,TM,Rcomm,Lcomm,rmsd)
+c which is the correct place?
+c!$OMP& PRIVATE(i,j,k,x1,y1,z1,x2,y2,z2,nn1,nn2,TM,Rcomm,Lcomm,rmsd)
 !$OMP& REDUCTION(+:n_rmsd,rmsd_a,rmsd2_a)
 !$OMP& COLLAPSE(2)
       do i=1,n_str
@@ -1033,11 +1006,11 @@ c      write(*,*)"MINA MAXA ",mina,maxa
 
       subroutine read_score_matrix(nst,n_str,amat,rmsd_delta,
      & rmsd_a)
-*     This routine reads in a matrix of score in a scale 0-1 and
+*     This routine reads in a matrix of scores in a scale 0-1 and
 *     uses the reciprocal to convert them into an rmsd-like score
       implicit none
 !     Intent In
-      integer nst,n_str,Lch
+      integer nst,n_str
 !     Intent Out
       real amat
       dimension amat(nst,nst)
@@ -1451,7 +1424,7 @@ c      write(*,*)"RETURNING rmsd_delta ",rmsd_delta
       common/align/n_ali,iA(nmax),iB(nmax)
       common/nscore/i_ali(nmax),n_cut ![1,n_ali],align residues for the score
       dimension k_ali(nmax),k_ali0(nmax)
-      dimension L_ini(100),iq(nmax)
+      dimension L_ini(100)
       common/scores/score
       double precision score,score_max
       dimension xa(nmax),ya(nmax),za(nmax)
@@ -1460,8 +1433,8 @@ c      write(*,*)"RETURNING rmsd_delta ",rmsd_delta
       dimension x2(nmax),y2(nmax),z2(nmax),n2(nmax)
 
 ccc   RMSD:
-      double precision r_1(3,nmax),r_2(3,nmax),r_3(3,nmax),w(nmax)
-      double precision u(3,3),t(3),rms,drms !armsd is real
+      double precision r_1(3,nmax),r_2(3,nmax),w(nmax)
+      double precision u(3,3),t(3),rms !armsd is real
       data w /nmax*1.0/
 ccc   
 
@@ -1674,7 +1647,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       common/align/n_ali,iA(nmax),iB(nmax)
       common/nscore/i_ali(nmax),n_cut ![1,n_ali],align residues for the score
       common/scores/score
-      double precision score,score_max
+      double precision score
 !$OMP THREADPRIVATE(/stru/,/nres/,/para/,/align/,/nscore/,/scores/)
 
       d_tmp=d
