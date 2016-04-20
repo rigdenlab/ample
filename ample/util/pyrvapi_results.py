@@ -73,13 +73,14 @@ class AmpleOutput(object):
 
     def create_log_tab(self, results_dict):
         if self.log_tab_id: return
-        
-        self.log_tab_id = "log_tab"
         logfile = results_dict['ample_log']
         if not os.path.isfile(logfile): return False
+        
+        self.log_tab_id = "log_tab"
         logurl = self.fix_path(logfile)
         pyrvapi.rvapi_add_tab(self.log_tab_id, "Log file", True)  # Last arg is "open" - i.e. show or hide
-        # Add watched (updatable) content to the log tab. Note that the log file does not exist yet.
+        
+        # Add watched (updatable) content to the log tab.
         pyrvapi.rvapi_append_content(logurl, True, self.log_tab_id)
         # pyrvapi.rvapi_flush()
         return self.log_tab_id
@@ -88,15 +89,16 @@ class AmpleOutput(object):
         if not self.summary_tab_id: return
         if not self.got_mrbump_results(results_dict): return
         
-        self.results_tab_id = "results_tab"
-        
-        # Insert results tab before summary tab
-        pyrvapi.rvapi_insert_tab(self.results_tab_id, "Results", self.summary_tab_id, False)  # Last arg is "open" - i.e. show or hide
-        
-        ensemble_results = results_dict['ensembles_data']
         mrb_results = results_dict['mrbump_results']
         if mrb_results == self.old_mrbump_results: return
         self.old_mrbump_results = mrb_results
+        
+        ensemble_results = results_dict['ensembles_data']
+        
+        if not self.results_tab_id:
+            self.results_tab_id = "results_tab"
+            # Insert results tab before summary tab
+            pyrvapi.rvapi_insert_tab(self.results_tab_id, "Results", self.summary_tab_id, False)  # Last arg is "open" - i.e. show or hide
         
         # Delete old sections:
         for section_id in self.results_tab_sections:
@@ -125,10 +127,11 @@ class AmpleOutput(object):
         if not('ensembles_data' in results_dict and len(results_dict['ensembles_data'])): return
         ensembles_data = results_dict['ensembles_data']
         
-        self.summary_tab_id = "summary_tab"
-        # Insert summary tab before log tab
-        pyrvapi.rvapi_insert_tab(self.summary_tab_id, "Summary", self.log_tab_id, False)  # Last arg is "open" - i.e. show or hide
-        
+        if not self.summary_tab_id:
+            self.summary_tab_id = "summary_tab"
+            # Insert summary tab before log tab
+            pyrvapi.rvapi_insert_tab(self.summary_tab_id, "Summary", self.log_tab_id, False)  # Last arg is "open" - i.e. show or hide
+            
         # Hack to cope with ideal helices and importing ensembles
         def do_ensemble_sec(results_dict):
             return not (results_dict['ideal_helices'] or results_dict['import_ensembles'] or results_dict['homologs'])
@@ -488,25 +491,26 @@ class AmpleOutput(object):
             
 if __name__ == "__main__":
     import copy, time
-    pklfile = "/opt/ample-dev1/examples/toxd-example/from_existing_models/resultsd.pkl"
-    #pklfile = "/opt/ample-dev1/examples/toxd-example/from_existing_models/resultsd.pkl"
+    pklfile = "resultsd.pkl"
     with open(pklfile) as f: results_dict = cPickle.load(f)
     
     results_dict['no_gui'] = False
+    results_dict['ample_log'] = os.path.abspath(__file__)
     
     view1_dict = copy.copy(results_dict)
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
     
-    SLEEP=1
+    SLEEP = 5
     
     AR = AmpleOutput()
-    AR.display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
+    run_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
+    AR.display_results(view1_dict,run_dir=run_dir)
     time.sleep(SLEEP)
     
     #for i in range(10):
     view1_dict['ensembles_data'] = results_dict['ensembles_data']
-    AR.display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
+    AR.display_results(view1_dict,run_dir=run_dir)
     time.sleep(SLEEP)
     
     mrbump_results = []
@@ -515,16 +519,12 @@ if __name__ == "__main__":
         r['SHELXE_ACL'] = None
         mrbump_results.append(r)
     view1_dict['mrbump_results'] = mrbump_results
-    AR.display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")
+    AR.display_results(view1_dict,run_dir=run_dir)
     time.sleep(SLEEP)
     
     view1_dict['mrbump_results'] = results_dict['mrbump_results'][0:5]
-    AR.display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")  
+    AR.display_results(view1_dict,run_dir=run_dir)  
     time.sleep(SLEEP)
     
     view1_dict['mrbump_results'] = results_dict['mrbump_results']
-    AR.display_results(view1_dict,run_dir="/opt/ample-dev1/python/foo")  
-    
-    #results_dict['webserver_uri'] = "http:www.jensrules.co.uk/ample/stuff"
-    #results_dict['webserver_uri'] = None
-
+    AR.display_results(view1_dict,run_dir=run_dir)  
