@@ -59,11 +59,13 @@ else:
 # Set up the working directory if one doesn't already exist
 if not ('work_dir' in optd and optd['work_dir']):
     optd['work_dir'] = os.path.join(os.path.abspath(os.path.curdir),ENSEMBLE_DIRNAME)
-try:
-    os.mkdir(optd['work_dir'])
-except OSError as e:
-    msg = 'Error making ensemble workdir {0} : {1}'.format(optd['work_dir'],e)
-    exit_util.exit_error(msg, sys.exc_info()[2])
+    try:
+        os.mkdir(optd['work_dir'])
+    except OSError as e:
+        msg = 'Error making ensemble workdir {0} : {1}'.format(optd['work_dir'],e)
+        exit_util.exit_error(msg, sys.exc_info()[2])
+assert os.path.isdir(optd['work_dir'])
+
 
 setup_logging()
     
