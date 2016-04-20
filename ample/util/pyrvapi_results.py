@@ -4,6 +4,32 @@ Created on 3 Mar 2015
 
 @author: jmht
 
+
+Notes on pyrvapi from Eugene
+
+remove_widget() may result in an unexpected unless you put flush() immediately before _and_ immediately after calling them, e.g.:
+
+rvapi_flush()
+for i in range():
+    rvapi_remove_widget(..i..)
+rvapi_flush()
+
+This is because chronology of rvapi calls between flushes() is not necessarily the same as chronology of making/changing widgets in the page. E.g. in sequence of calls:
+
+rvapi_flush()
+rvapi_action1()
+rvapi_action2()
+rvapi_action3()
+rvapi_flush()
+rvapi_action4()
+rvapi_action5()
+rvapi_action6()
+rvapi_flush()
+
+it is guaranteed that results of actions 4-6 will appear after results from 1-3, but there is no guarantee that results from 1-3 and 4-6 groups will appear in exactly that order. E.g., the page may perform actions like  3-1-2-5-4-6, but never like 6-4-1-2-3-5.
+
+
+
 '''
 import cPickle
 import logging
@@ -101,8 +127,10 @@ class AmpleOutput(object):
             pyrvapi.rvapi_insert_tab(self.results_tab_id, "Results", self.summary_tab_id, False)  # Last arg is "open" - i.e. show or hide
         
         # Delete old sections:
+        pyrvapi.rvapi_flush()
         for section_id in self.results_tab_sections:
             pyrvapi.rvapi_remove_widget(section_id)
+        pyrvapi.rvapi_flush()
         self.results_tab_sections = []
         
         self.results_section(self.results_tab_id,
