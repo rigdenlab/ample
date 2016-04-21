@@ -1,16 +1,3 @@
-cjmht To compile with OpenMP support add the -fopenmp flag with gfortran
-cjmht gfortran -g -static -O3 -ffast-math -lm -fopenmp -o spicker2 spicker.f
-cjmht Compiling with OpenMP changes where variables are stored and can cause the
-cjmht stack to get overloaded. To prevent this happening on Linux I had to set
-cjmht 'ulimit -s unlimited' when running. To get it to work on OSX, I had to add
-cjmht the compiler flags: -Wl,-stack_size,0x2000000 (32Mb - empirically determined)
-cjmht The OMP_STACKSIZE variables controls the stack for _additional_ variables,
-cjmht not the main OMP thread - the default is the ulimit option on Linux or the
-cjmht compile-time option on OSX (I think)
-cjmht The x, y, z and amat matrices are now allocated. This was done to decrease
-cjmht the stack size. This has necessitated adding fortran90 constructs and interfaces
-cjmht for some of the subroutines.
-
 *******************************************************************************
 *     SPICKER_2.0, released on December 29, 2010
 *     
@@ -111,36 +98,6 @@ cjmht for some of the subroutines.
 c        1         2         3         4         5         6         7 !
 c 345678901234567890123456789012345678901234567890123456789012345678901234567
       program cluster
-
-cjmht Need to add interfaces for all subroutines we call with allocated arrays
-      interface
-      subroutine tm_score_all(ndim,n_str,Lch,x,y,z,amat,rmsd_delta,
-     &                        rmsd_a)
-        integer ndim
-        integer n_str
-        integer Lch
-        real, allocatable, intent(in) :: x(:,:), y(:,:), z(:,:)
-        real, allocatable, intent(inout) :: amat(:,:)
-         real rmsd_delta
-         double precision rmsd_a
-      end subroutine tm_score_all
-      end interface
-      interface
-
-      subroutine rmsd_score_all(ndim,w,n_str,Lch,x,y,z,amat,
-     &                          rmsd_delta,rmsd_a)
-        integer ndim
-        double precision w(ndim)
-        integer n_str
-        integer Lch
-        real, allocatable, intent(in) :: x(:,:), y(:,:), z(:,:)
-        real, allocatable, intent(inout) :: amat(:,:)
-         real rmsd_delta
-         double precision rmsd_a
-      end subroutine rmsd_score_all
-      end interface
-cjmht  end of interfaces
-
       parameter(ndim=2000)      !Length
       parameter(nst=13000)      !number of used structure, maximum allowed
 c      parameter(nst=100)      !number of used structure, maximum allowed
@@ -155,10 +112,8 @@ ccc   RMSD:
 ccc   
       dimension xt(ndim),yt(ndim),zt(ndim) !temporal coordinate
       dimension x_n(ndim),y_n(ndim),z_n(ndim) !native structure
-cjmht dimension x(ndim,nst),y(ndim,nst),z(ndim,nst) !used structures
-cjmht dimension amat(nst,nst)    !RMSD matrics
-      real, allocatable :: x(:,:), y(:,:), z(:,:)
-      real, allocatable :: amat(:,:)
+      dimension x(ndim,nst),y(ndim,nst),z(ndim,nst) !used structures
+      dimension amat(nst,nst)    !RMSD matrics
       dimension mark(nst)       !for removing used structures
       dimension n_str_near(nst) !numbef of neighboring structures
       dimension itra(nst),istr(nst),E(nst)
@@ -245,12 +200,6 @@ c     write(*,*)'Total number structures=',n_str_all
       close(4)
 c^^^^^^^^^^^^^^^^^^^^^^^^ n_str_all done ^^^^^^^^^^^^^^^^^^^^^^^^
 
-cjmht we can now allocate the arrays
-      allocate(x(Lch,n_str_all))
-      allocate(y(Lch,n_str_all))
-      allocate(z(Lch,n_str_all))
-      allocate(amat(n_str_all,n_str_all))
-      
 cccccccccccc read native structure cccccccccccccccccccc
       i=0
  11   read(3,1239,end=5)tx,ii,tx,tx,ii,tx,a1,a2,a3
@@ -374,12 +323,12 @@ c     Fill mark array
       
 cjmht Calculate the amat with the all-by-all scores
       if (n_para.eq.-2) then
-          call tm_score_all(ndim,n_str,Lch,x,y,z,amat,rmsd_delta,
+          call tm_score_all(ndim,nst,n_str,Lch,x,y,z,amat,rmsd_delta,
      &                      rmsd_a)
       elseif (n_para.eq.-3) then
           call read_score_matrix(nst,n_str,amat,rmsd_delta, rmsd_a)
       else
-          call rmsd_score_all(ndim,w,n_str,Lch,x,y,z,amat,
+          call rmsd_score_all(ndim,nst,w,n_str,Lch,x,y,z,amat,
      &                        rmsd_delta,rmsd_a)
       endif
 
@@ -822,10 +771,6 @@ ccccccccccccccccccoutput cluster analysis cccccccccccccccccccc
       enddo
 c^^^^^^^^^^^^^^^^^^^^output done ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-cjmht
-      deallocate(x,y,z)
-      deallocate(amat)
-      
       stop
       end
       
@@ -844,20 +789,16 @@ c       -1: superposition is not unique but optimal
 c       -2: no result obtained because of negative weights w
 c           or all weights equal to zero.
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      subroutine rmsd_score_all(ndim,w,n_str,Lch,x,y,z,amat, rmsd_delta,
-     &                          rmsd_a)
-c     REM: I, J, K, L, M, or N are int
+      subroutine rmsd_score_all(ndim,nst,w,n_str,Lch,x,y,z,amat,
+     &                          rmsd_delta,rmsd_a)
       implicit none
 c     Intent In
-cjmht integer ndim,nst
-      integer ndim
+      integer ndim,nst ! dimenson of arrays
       integer n_str,Lch
       double precision w(ndim)
-cjmht real x(ndim,nst),y(ndim,nst),z(ndim,nst)
-      real, allocatable, intent(in) :: x(:,:), y(:,:), z(:,:)
+      real x(ndim,nst),y(ndim,nst),z(ndim,nst)
 c     Intent Out
-cjmht real amat(nst,nst)
-      real, allocatable, intent(inout) :: amat(:,:)
+      real amat(nst,nst)
       real rmsd_delta
       double precision rmsd_a
 c     Local variables
@@ -907,20 +848,17 @@ c      write(*,*)"MINA MAXA ",mina,maxa
       return
       end
 
-      subroutine tm_score_all(ndim,n_str,Lch,x,y,z,amat,rmsd_delta,
+      subroutine tm_score_all(ndim,nst,n_str,Lch,x,y,z,amat,rmsd_delta,
      &                        rmsd_a)
-c
       implicit none
-
 c     Intent In
       integer ndim
       integer n_str ! Number of structures in use
+      integer nst ! Max number of structures
       integer Lch ! Chain length of the structures (all same)
-c      real x(ndim,nst),y(ndim,nst),z(ndim,nst)
-      real, allocatable, intent(in) :: x(:,:),y(:,:), z(:,:)
-      real, allocatable, intent(inout) :: amat(:,:)
+      real x(ndim,nst),y(ndim,nst),z(ndim,nst)
 c     Intent Out
-c      real amat(nst,nst)
+      real amat(nst,nst)
       real rmsd_delta
       double precision rmsd_a
 
