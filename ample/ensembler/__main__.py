@@ -10,15 +10,10 @@ from ample.ensembler.ensembler_util import create_ensembles
 
 ENSEMBLE_DIRNAME = 'ample_ensemble'
 
-def setup_logging():
+def setup_console_logging():
     """Set up file and console logging"""
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    fl = logging.FileHandler(os.path.join(optd['work_dir'],"ensemble.log"))
-    fl.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fl.setFormatter(formatter)
-    logger.addHandler(fl)
     try:
         cl = logging.StreamHandler(stream=sys.stdout)
     except TypeError:
@@ -27,6 +22,15 @@ def setup_logging():
     formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
     cl.setFormatter(formatter)
     logger.addHandler(cl)
+    
+def setup_file_logging(logfile):
+    """Set up file and console logging"""
+    logger = logging.getLogger()
+    fl = logging.FileHandler(logfile)
+    fl.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fl.setFormatter(formatter)
+    logger.addHandler(fl)
     
 # Set up the command-line parsing
 parser = argparse.ArgumentParser(description="AMPLE Ensembling Module")
@@ -55,23 +59,26 @@ else:
     amopt = config_util.AMPLEConfigOptions()
     amopt.populate(args)  
     optd = amopt.d 
-        
-# Set up the working directory if one doesn't already exist
-if not ('work_dir' in optd and optd['work_dir']):
-    optd['work_dir'] = os.path.join(os.path.abspath(os.path.curdir),ENSEMBLE_DIRNAME)
-try:
-    os.mkdir(optd['work_dir'])
-except OSError as e:
-    msg = 'Error making ensemble workdir {0} : {1}'.format(optd['work_dir'],e)
-    exit_util.exit_error(msg, sys.exc_info()[2])
 
-setup_logging()
     
+setup_console_logging()
+
 # Make sure we have models if in standalone mode
 if not restart and not ('models' in optd and optd['models'] and os.path.exists(optd['models'])):
     msg = 'AMPLE ensembler requires a -models argument with a file/directory of pdbs'
     exit_util.exit_error(msg, sys.exc_info()[2])
-    
+
+# Set up the working directory if one doesn't already exist
+if not ('work_dir' in optd and optd['work_dir']):
+    optd['work_dir'] = os.path.join(os.path.abspath(os.path.curdir),ENSEMBLE_DIRNAME)
+    try:
+        os.mkdir(optd['work_dir'])
+    except OSError as e:
+        msg = 'Error making ensemble workdir {0} : {1}'.format(optd['work_dir'],e)
+        exit_util.exit_error(msg, sys.exc_info()[2])
+assert os.path.isdir(optd['work_dir'])
+
+setup_file_logging(os.path.join(optd['work_dir'],"ensemble.log"))
 try:
     if not restart:
         ample_util.extract_models(optd)
