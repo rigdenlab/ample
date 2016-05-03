@@ -107,7 +107,7 @@ class Ample(object):
         amopt.populate(argso)
 
         # Setup things like logging, file structure, etc...
-        self.setup(amopt.d)
+        amopt.d = self.setup(amopt.d)
         rosetta_modeller = options_processor.process_rosetta_options(amopt.d) 
         
         # Display the parameters used
@@ -426,6 +426,8 @@ class Ample(object):
         return parser.parse_args(args)
 
     def setup(self, optd):
+        """We take and return an ample dictionary as an argument. This is required because options_processor.process_restart_options
+        Changes what optd points at, and this means that if we just use the reference, we end up pointing at the old, obselete dictionary"""
         
         # Make a work directory - this way all output goes into this directory
         if optd['work_dir']:
@@ -490,7 +492,7 @@ class Ample(object):
         
         LOGGER.info('All needed programs are found, continuing...')
         
-        return
+        return optd
 
     def setup_ccp4(self, amoptd):
         """Check CCP4 is available and return the top CCP4 directory"""
