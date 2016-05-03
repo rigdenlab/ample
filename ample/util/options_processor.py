@@ -2,6 +2,7 @@
 @author: jmht, hlfsimko
 """
 
+import cPickle
 import glob
 import logging
 import os
