@@ -218,7 +218,7 @@ class Ample(object):
                                          monitor=monitor,
                                          chdir=True,
                                          nproc=optd['nproc'],
-                                         job_time=3600,
+                                         job_time=optd['ensembler_timeout'],
                                          job_name='ensemble',
                                          submit_cluster=optd['submit_cluster'],
                                          submit_qtype=optd['submit_qtype'],

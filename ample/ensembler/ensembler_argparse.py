@@ -46,6 +46,9 @@ def add_ensembler_options(parser, standalone=False):
     parser.add_argument('-cluster_method', type=str, nargs=1,
                        help='How to cluster the models for ensembling (spicker|fast_protein_cluster')
 
+    parser.add_argument('-ensembler_timeout', type=int, nargs=1,
+                       help='Time in seconds before timing out ensembling')
+
     parser.add_argument('-gesamt_exe', metavar='gesamt_exe', type=str, nargs=1,
                        help='Path to the gesamt executable')
 
