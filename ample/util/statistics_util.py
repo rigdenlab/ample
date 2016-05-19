@@ -1,5 +1,8 @@
 
 import numpy
+
+__author__ = "Felix Simkovic & Jens Thomas"
+__date__ = "02 May 2016"
     
 def mean(data): 
     return numpy.mean(data)
