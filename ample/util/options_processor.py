@@ -6,6 +6,7 @@ import cPickle
 import glob
 import logging
 import os
+import shutil
 import sys
 
 from ample.modelling import rosetta_model
@@ -474,6 +475,15 @@ def process_restart_options(optd):
     if optd['do_mr']:
         if len(optd['mrbump_scripts']):
             LOGGER.info('Restarting from unfinished mrbump scripts: {0}'.format(optd['mrbump_scripts']))
+            # Purge unfinished jobs
+            for spath in optd['mrbump_scripts']:
+                directory, script = os.path.split(spath)
+                name, _ = os.path.splitext(script)
+                # Hack to delete old job directories
+                logfile = os.path.join(directory,name + '.log')
+                if os.path.isfile(logfile): os.unlink(logfile)
+                jobdir = os.path.join(directory,'search_' + name + '_mrbump')
+                if os.path.isdir(jobdir): shutil.rmtree(jobdir)
         elif 'ensembles' in optd and optd['ensembles'] and len(optd['ensembles']):
             # Rerun from ensembles - check for data/ensembles are ok?
             LOGGER.info('Restarting from existing ensembles: {0}'.format(optd['ensembles']))
