@@ -2,7 +2,7 @@
 """
 This is AMPLE
 """
-
+import argparse
 import cPickle
 import glob
 import logging
@@ -13,12 +13,12 @@ import sys
 import time
 
 from ample.ensembler.constants import UNMODIFIED
+from ample.ensembler import ensembler_util, ensembler_argparse
 from ample.util import ample_util
 from ample.util import argparse_util
 from ample.util import benchmark_util
 from ample.util import config_util
 from ample.util import contacts_util
-from ample.util import ensembler_util
 from ample.util import exit_util
 from ample.util import mrbump_util
 from ample.util import options_processor
@@ -32,6 +32,8 @@ __credits__ = "Daniel Rigden, Martyn Winn, and Olga Mayans"
 __email__ = "drigden@liverpool.ac.uk"
 __version__ = version.__version__
 
+DEBUG = False
+
 def setup_console_logging():
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
@@ -43,7 +45,12 @@ def setup_console_logging():
         cl = logging.StreamHandler(stream=sys.stdout)
     except TypeError:
         cl = logging.StreamHandler(strm=sys.stdout)
-    cl.setLevel(logging.INFO)
+        
+    if DEBUG:
+        cl.setLevel(logging.DEBUG)
+    else:
+        cl.setLevel(logging.INFO)
+        
     formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
     cl.setFormatter(formatter)
     logger.addHandler(cl)
@@ -94,21 +101,21 @@ class Ample(object):
         args is an option argument that can contain the command-line arguments 
         for the program - required for testing.
         """ 
-        argso = argparse_util.process_command_line(args=args)
+        argso = self.process_command_line(args=args)
         #self.amopt = amopt = options_util.AmpleOptions()
         self.amopt = amopt = config_util.AMPLEConfigOptions()
         amopt.populate(argso)
 
         # Setup things like logging, file structure, etc...
-        self.setup(amopt.d)
+        amopt.d = self.setup(amopt.d)
         rosetta_modeller = options_processor.process_rosetta_options(amopt.d) 
         
         # Display the parameters used
         LOGGER.debug(amopt.prettify_parameters())
         
+        amopt.write_config_file() 
         #######################################################
         # SCRIPT PROPER STARTS HERE
-        
         time_start = time.time()
     
         # Create function for monitoring jobs - static function decorator?
@@ -117,7 +124,7 @@ class Ample(object):
                 return self.output_gui.display_results(amopt.d)
         else:
             monitor = None
-        
+
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
             benchmark_util.analysePdb(amopt.d) 
@@ -126,15 +133,18 @@ class Ample(object):
         if (amopt.d['import_models'] or amopt.d['make_frags'] or amopt.d['make_models'] or \
             (amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel'])):
             self.modelling(amopt.d, rosetta_modeller)
-        
+            amopt.write_config_file()
+
         # Ensembling business next
         if amopt.d['make_ensembles']:
             self.ensembling(amopt.d)
-        
+            amopt.write_config_file()
+
         # Some MR here
         if amopt.d['do_mr']:
             self.molecular_replacement(amopt.d)
-        
+            amopt.write_config_file()
+
         # Timing data
         time_stop = time.time()
         elapsed_time = time_stop - time_start
@@ -147,10 +157,9 @@ class Ample(object):
         # Benchmark mode
         if amopt.d['benchmark_mode']:
             self.benchmarking(amopt.d)
+            amopt.write_config_file()
         
-        # Write out a config file
         amopt.write_config_file()
-        
         # Flag to show that we reached the end without error - useful for integration testing
         amopt.d['AMPLE_finished'] = True
         ample_util.saveAmoptd(amopt.d)
@@ -209,11 +218,13 @@ class Ample(object):
                                          monitor=monitor,
                                          chdir=True,
                                          nproc=optd['nproc'],
-                                         job_time=3600,
+                                         job_time=optd['ensembler_timeout'],
                                          job_name='ensemble',
                                          submit_cluster=optd['submit_cluster'],
                                          submit_qtype=optd['submit_qtype'],
                                          submit_queue=optd['submit_queue'],
+                                         submit_pe_lsf=optd['submit_pe_lsf'],
+                                         submit_pe_sge=optd['submit_pe_sge'],
                                          submit_array=optd['submit_array'],
                                          submit_max_array=optd['submit_max_array'])
                 # queue finished so unpickle results
@@ -303,9 +314,9 @@ class Ample(object):
         elif optd['import_models']:
             LOGGER.info('Importing models from directory: {0}\n'.format(optd['models_dir']))
             if optd['homologs']:
-                optd['models_dir'] = ample_util.extract_models(optd, sequence=None, single=True, allsame=False)
+                ample_util.extract_models(optd, sequence=None, single=True, allsame=False)
             else:
-                optd['models_dir'] = ample_util.extract_models(optd)
+                ample_util.extract_models(optd)
                 # Need to check if Quark and handle things accordingly
                 if optd['quark_models']:
                     # We always add sidechains to QUARK models if SCWRL is installed
@@ -398,7 +409,25 @@ class Ample(object):
         
         return
 
+    def process_command_line(self, args=None, contacts=True, modelling=True, mol_rep=True):
+        """Process the command-line.
+        :args: optional argument that can hold the command-line arguments if we 
+        have been called from within python for testing
+        """
+        parser = argparse.ArgumentParser(description="AMPLE: Ab initio Modelling of Proteins for moLEcular replacement", 
+                                         prefix_chars="-")
+        argparse_util.add_general_options(parser)
+        ensembler_argparse.add_ensembler_options(parser)
+        
+        if contacts: argparse_util.add_contact_options(parser)
+        if mol_rep: argparse_util.add_mr_options(parser)
+        if modelling: argparse_util.add_rosetta_options(parser)
+        
+        return parser.parse_args(args)
+
     def setup(self, optd):
+        """We take and return an ample dictionary as an argument. This is required because options_processor.process_restart_options
+        Changes what optd points at, and this means that if we just use the reference, we end up pointing at the old, obselete dictionary"""
         
         # Make a work directory - this way all output goes into this directory
         if optd['work_dir']:
@@ -433,8 +462,9 @@ class Ample(object):
         LOGGER.info(ample_util.header)
         LOGGER.info("AMPLE version: {0}".format(version.__version__))
         LOGGER.info("Running with CCP4 version: {0} from directory: {1}".format(ccp4_version, ccp4_home))
-        LOGGER.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
         LOGGER.info("Running on host: {0}".format(platform.node()))
+        LOGGER.info("Running on platform: {0}".format(platform.platform()))
+        LOGGER.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
         LOGGER.info("Invoked with command-line:\n{0}\n".format(" ".join(sys.argv)))
         LOGGER.info("Running in directory: {0}\n".format(optd['work_dir']))
         
@@ -462,7 +492,7 @@ class Ample(object):
         
         LOGGER.info('All needed programs are found, continuing...')
         
-        return
+        return optd
 
     def setup_ccp4(self, amoptd):
         """Check CCP4 is available and return the top CCP4 directory"""

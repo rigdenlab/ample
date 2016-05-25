@@ -1,16 +1,26 @@
-#!/usr/bin/env ccp4-python
 
+import logging
 import matplotlib
-matplotlib.use('Cairo')
+
+LOGGER = logging.getLogger(__name__)
+
+try:
+    matplotlib.use('Cairo')
+    matplotlib.rcParams['font.family'] = 'Arial'
+    matplotlib.rcParams['font.size'] = 8
+    matplotlib.rcParams['xtick.direction'] = 'out'
+    matplotlib.rcParams['ytick.direction'] = 'out'
+except:
+    msg = "Problems setting matplotlib rcParams"
+    LOGGER.critical(msg)
+    raise ValueError(msg)
+
+# Needs to be importer AFTER matplotlib settings are set
 import matplotlib.pyplot
+
 
 class Plotter(object):
     """ Class to plot graphs """
-    
-    def __init__(self):
-        matplotlib.rcParams.update({'family': 'Arial', 'font.size': 8})
-        matplotlib.rcParams['xtick.direction'] = 'out'
-        matplotlib.rcParams['ytick.direction'] = 'out'
     
     def initialise(self, **kwargs):
         fig = matplotlib.pyplot.figure(**kwargs)

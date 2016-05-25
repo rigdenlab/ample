@@ -4,6 +4,7 @@
 
 import glob
 import os
+import sys
 
 from ample.constants import AMPLE_DIR
 from unittest import TestLoader, TextTestRunner, TestSuite
@@ -29,8 +30,12 @@ class AMPLEUnittestFramework(object):
     def run(self, buffer=False, cases=None, pattern="test*.py", verbosity=2):
         """main routine for running the test cases"""
         suite = SuiteLoader().load_suite(AMPLE_DIR, cases=cases, pattern=pattern)
-        if int(suite.countTestCases()) > 0:
-            TextTestRunner(verbosity=verbosity, buffer=buffer).run(suite)
+        if int(suite.countTestCases()) <= 0:
+            msg = 'Could not find any tests to run in directory: {0}'.format(AMPLE_DIR) + os.linesep
+            sys.stderr.write(msg)
+            sys.exit(1)
+        
+        TextTestRunner(verbosity=verbosity, buffer=buffer).run(suite)
         return
 
 class SuiteLoader(object):

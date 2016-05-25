@@ -3,9 +3,12 @@
 import os
 import tempfile
 import unittest
+
 from ample import constants
 from ample.util import config_util
 from ample.util import version
+
+__author__ = "Adam Simpkin & Felix Simkovic"
 
 class TestCases(unittest.TestCase):
     MAX_DIFF = None
@@ -19,137 +22,94 @@ class TestCases(unittest.TestCase):
     def test_process_options(self):
         #Test the process_options
         options = config_util.AMPLEConfigOptions()
-        options.d = {
-                     'fasta' : os.path.join(self.testfiles_dir, '2uui.fasta'),
-                     'native_pdb' : os.path.join(self.testfiles_dir, '2UUI.pdb'),
-                     'rcdir' : 'foo/bar',
-                     'side_chain_treatments' : False,
-                     'submit_qtype' : "sge",
+        options.d = {'fasta' : 'foo',
+                     'side_chain_treatments' : [],
+                     'rcdir' : os.path.join(os.sep, 'foo', 'bar'),
+                     'submit_qtype' : False,
                      'shelxe_rebuild' : True,
+                     'shelxe_rebuild_arpwap' : False,
+                     'shelxe_rebuild_buccaneer' : False,
                      'devel_mode' : False,
                      'quick_mode' : False,
-                     'webserver_uri' : False
-                     }
-        
-    
-        expected = {
-                    'ample_version' : version.__version__,
-                    'fasta' : os.path.join(self.testfiles_dir, '2uui.fasta'),
-                    'native_pdb' : os.path.join(self.testfiles_dir, '2UUI.pdb'),
-                    'rcdir' : 'foo/bar',
+                     'webserver_uri' : False,
+        }
+        expected = {'ample_version' : version.__version__,
+                    'fasta' : os.path.join(os.getcwd(), 'foo'),
+                    'rcdir' : os.path.join(os.sep, 'foo', 'bar'),
                     'side_chain_treatments' : ['polyAla', 'reliable', 'allatom'],
-                    'submit_qtype' : "SGE",
+                    'submit_qtype' : False,
                     'shelxe_rebuild' : True,
                     'shelxe_rebuild_arpwap' : True,
                     'shelxe_rebuild_buccaneer' : True,
                     'devel_mode' : False,
                     'quick_mode' : False,
-                    'webserver_uri' : False
-                    }
-        
+                    'webserver_uri' : False,
+        }
         options._process_options()
         self.assertItemsEqual(options.d, expected)
         
-    def test_preset_options(self):
-        #Test the preset options
-        
+    def test_preset_options_quick_mode(self):
         options = config_util.AMPLEConfigOptions()
-        #quick_mode test
-        options.d = {
-                     'max_ensemble_models' : 10,
-                     'nmodels' : 400,
-                     'percent' : 35,
-                     'shelx_cycles' : 5,
+        options.d = {'max_ensemble_models' : 1000,
+                     'nmodels' : 1000,
+                     'percent' : 5,
+                     'shelx_cycles' : 15,
                      'use_arpwarp' : True,
-                     'use_buccaneer' : None,
-                     'phaser_kill' : 15
+                     'use_buccaneer' : True,
+                     'phaser_kill' : 360,
         }
-        
-        options.config_opts = {
-                               'max_ensemble_models' : 10,
-                               'nmodels' : 200,
-                               'percent' : 20,
-                               'shelx_cycles' : 5,
-                               'use_arpwarp' : False,
-                               'use_buccaneer' : False,
-                               'phaser_kill' : 15
-        }
-        
-        expected = {
-                    'max_ensemble_models' : 10,
-                    'nmodels' : 400,
-                    'percent' : 35,
+        options.cmdline_opts = {}
+        expected = {'max_ensemble_models' : 10,
+                    'nmodels' : 200,
+                    'percent' : 20,
                     'shelx_cycles' : 5,
-                    'use_arpwarp' : True,
+                    'use_arpwarp' : False,
                     'use_buccaneer' : False,
-                    'phaser_kill' : 15
+                    'phaser_kill' : 15,
         }
-        
         options._preset_options("quick_mode")
         self.assertEqual(options.d, expected)
-        
-        #devel_mode test
-        options.d = {
+    
+    def test_preset_options_devel_mode(self):
+        options = config_util.AMPLEConfigOptions()
+        options.d = {'just_to_check' : True,
                      'early_terminate': True,
-                     'benchmark_mode': True,
+                     'benchmark_mode': False,
                      'shelxe_rebuild' : None,
-                     'shelxe_rebuild_arpwarp' : True,
-                     'shelxe_rebuild_buccaneer' : True,
+                     'shelxe_rebuild_arpwarp' : False,
+                     'shelxe_rebuild_buccaneer' : False,
                      'use_arpwarp' : None,
                      'use_buccaneer' : False,
         }
-        
-        options.config_opts = {
-                              'early_terminate': False,
-                              'benchmark_mode': True,
-                              'shelxe_rebuild' : True,
-                              'shelxe_rebuild_arpwarp' : True,
-                              'shelxe_rebuild_buccaneer' : True,
-                              'use_arpwarp' : False,
-                              'use_buccaneer' : False,
-        }
-        
-        expected = {
-                    'early_terminate': True,
+        options.cmdline_opts = {}
+        expected = {'just_to_check' : True,
                     'benchmark_mode': True,
+                    'early_terminate': False,
                     'shelxe_rebuild' : True,
                     'shelxe_rebuild_arpwarp' : True,
                     'shelxe_rebuild_buccaneer' : True,
                     'use_arpwarp' : False,
                     'use_buccaneer' : False,
         }
-        
         options._preset_options("devel_mode")
         self.assertEqual(options.d, expected)
         
-        #webserver_uri test
-        options.d = {
-                     'purge': True,
+    def test_preset_options_webserver_mode(self):
+        options = config_util.AMPLEConfigOptions()
+        options.d = {'purge': False,
                      'shelxe_rebuild_buccaneer': None,
                      'submit_cluster' : False,
                      'submit_max_array' : 20,
                      'submit_qtype' : None,
-                     'submit_queue' : "all.q",
         }
-        
-        options.config_opts = {
-                               'purge': True,
-                               'shelxe_rebuild_buccaneer': True,
-                               'submit_cluster' : True,
-                               'submit_max_array' : 10,
-                               'submit_qtype' : "SGE",
-                               'submit_queue' : "all.q",
-        }
-        
-        expected = {
-                    'purge': True,
+        options.cmdline_opts = {}
+        expected = {'purge': True,
                     'shelxe_rebuild_buccaneer': True,
-                    'submit_cluster' : False,
-                    'submit_max_array' : 20,
+                    'submit_cluster' : True,
+                    'submit_max_array' : 10,
                     'submit_qtype' : "SGE",
                     'submit_queue' : "all.q",
         }
-        
         options._preset_options("webserver_uri")
         self.assertEqual(options.d, expected)
     
@@ -273,7 +233,7 @@ class TestCases(unittest.TestCase):
                      'use_buccaneer' : False,
         }
         
-        options._read_config_opts(config_opts)
+        options._read_cmdline_opts(config_opts)
         self.assertItemsEqual(options.d, expected)
     
     def test_isfloat(self):

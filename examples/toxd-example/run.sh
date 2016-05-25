@@ -12,7 +12,7 @@ $PATH
 # Path to the rosetta directory
 rosetta_dir=/opt/rosetta-3.5
 
-$CCP4/bin/ccp4-python -m ample \
+$CCP4/bin/ample \
 -rosetta_dir $rosetta_dir \
 -fasta input/toxd_.fasta \
 -mtz input/1dtx.mtz \

@@ -12,7 +12,7 @@ $PATH
 # Need to say where we can find rosetta
 rosetta_dir=/opt/rosetta-3.5
 
-$CCP4/bin/ccp4-python -m ample \
+$CCP4/bin/ample \
 -name 1t00 \
 -mtz input/1t00.mtz \
 -fasta input/1T00.fasta  \

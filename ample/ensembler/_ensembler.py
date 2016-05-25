@@ -213,18 +213,16 @@ class Ensembler(object):
                                     num_clusters])],
                   
                   'spicker' : [cluster_util.spicker_default, 
-                               list([cluster_exe, cluster_method, max_cluster_size, 
-                                     models, num_clusters, self.work_dir])],
+                               list([cluster_exe, cluster_method, max_cluster_size, num_clusters,
+                                     models, self.work_dir, nproc])],
                   
                   'spicker_qscore' : [cluster_util.spicker_qscore, 
-                                      list([cluster_exe, cluster_method, self.gesamt_exe,
-                                            max_cluster_size, models, nproc, 
-                                            num_clusters, self.work_dir])],
+                                      list([cluster_exe, cluster_method, max_cluster_size, num_clusters, 
+                                            models, self.work_dir, nproc, self.gesamt_exe])],
                   
                   'spicker_tmscore' : [cluster_util.spicker_tmscore, 
-                                       list([cluster_exe, cluster_method, 
-                                             max_cluster_size, models, num_clusters, 
-                                             self.score_matrix, self.work_dir])],
+                                       list([cluster_exe, cluster_method, max_cluster_size, num_clusters, 
+                                             models, self.work_dir, nproc])],
         }
         
         # Get the function handler and keyword arguments

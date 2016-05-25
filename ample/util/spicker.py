@@ -127,11 +127,13 @@ class Spickerer(object):
         # *                           modeling;
         # *                       -1, cutoff based on variation, best for decoys from
         # *                           ab initio modeling.
+        # *                       -2, use TM scores for clustering
         # *                  par3: 1, closc from all decoys; -1, closc clustered decoys
         # *                  From second lines are the file names which contain coordinates
         # *                  of 3D structure decoys. All these files are mandatory
+        par2 = '-2' if score_type == 'tm' else '-1'
         with open('tra.in', "w") as tra:
-            tra.write('1 -1 1 \nrep1.tra1\n')
+            tra.write('1 {0} 1 \nrep1.tra1\n'.format(par2))
     
         # Create the file with the sequence of the PDB structures
         # from spicker.f
@@ -146,7 +148,7 @@ class Spickerer(object):
                         seq.write('\t' + split[5] + '\t' + split[3] + '\n')
         return
     
-    def cluster(self, models, run_dir=None, score_type='rmsd', score_matrix=None):
+    def cluster(self, models, run_dir=None, score_type='rmsd', score_matrix=None, nproc=1):
         """
         Run spicker to cluster the models
         """
@@ -157,12 +159,29 @@ class Spickerer(object):
         os.chdir(self.run_dir)
         
         logger.debug("Running spicker in directory: {0}".format(self.run_dir))
-        logger.debug("Using executable: {0}".format(self.spicker_exe))
+        logger.debug("Using executable: {0} on {1} processors".format(self.spicker_exe, nproc))
         
         self.create_input_files(models, score_type=score_type, score_matrix=score_matrix)
         
+        # We need special care if we are running with tm scores as we will be using the OPENMP
+        # version of spicker which requires increasing the stack size on linux and setting the 
+        # OMP_NUM_THREADS environment variable on all platforms
+        # The stack size on 64-bit linux seems to be 15Mb, so I guess asking for 50 seems reasonable
+        # I'm assuming that the limit is in bytes and specified by an integer so 50Mb -> 50000000
+        preexec_fn=None
+        env = None
+        if score_type == 'tm':
+            env = { 'OMP_NUM_THREADS' : str(nproc)}
+            if sys.platform.lower().startswith('linux'):
+                def set_stack():
+                    import resource
+                    stack_bytes = 50000000 # 50Mb
+                    #resource.setrlimit(resource.RLIMIT_STACK, (resource.RLIM_INFINITY,resource.RLIM_INFINITY))
+                    resource.setrlimit(resource.RLIMIT_STACK, (stack_bytes,stack_bytes))
+                preexec_fn=set_stack
+
         logfile = os.path.abspath("spicker.log")
-        rtn = ample_util.run_command([self.spicker_exe], logfile=logfile)
+        rtn = ample_util.run_command([self.spicker_exe], logfile=logfile, env=env, preexec_fn=preexec_fn)
         if not rtn == 0:
             raise RuntimeError,"Error running spicker, check logfile: {0}".format(logfile)
     
@@ -307,9 +326,10 @@ if __name__ == "__main__":
         return p.returncode
     
     # Mock up ample_util for when we don't have CCP4 installed
-    class Tmp(object):pass
-    ample_util = Tmp()
-    ample_util.run_command = run_command
+    if ample_util is None:
+        class Tmp(object):pass
+        ample_util = Tmp()
+        ample_util.run_command = run_command
     
     #
     # Run Spicker on a directory of PDB files
@@ -317,7 +337,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--executable',
                         help="spicker executable to use")
-    parser.add_argument('-m', '--models',
+    parser.add_argument('-m', '--models', required=True,
                         help="Models to cluster")
     parser.add_argument('-s', '--score_type', default='rmsd',
                         help="Use TM score")
@@ -335,10 +355,14 @@ if __name__ == "__main__":
     if not len(models):
         print "Cannot find any pdbs in: {0}".format(models)
         sys.exit(1)
+
+    spicker_exe=None
+    if args.executable:
+       spicker_exe=os.path.abspath(args.executable)
         
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
-    spicker = Spickerer(spicker_exe=os.path.abspath(args.executable))
+    spicker = Spickerer(spicker_exe=spicker_exe)
     spicker.cluster(models, score_type=args.score_type)
     print spicker.results_summary()

@@ -97,18 +97,17 @@ def import_cluster(cluster_dir):
     
     return [cluster_models], [cluster_data]
 
-def spicker_default(cluster_exe, cluster_method, max_cluster_size, models, 
-                    num_clusters, work_dir):
+def spicker_default(cluster_exe, cluster_method, max_cluster_size, num_clusters, models, work_dir, nproc):
     """Cluster models using default Spicker"""
     spicker_rundir = os.path.join(work_dir, 'spicker')
     
     score_type = "rmsd"
 
-    return _spicker_master(cluster_exe, cluster_method, max_cluster_size, models, 
-                           num_clusters, spicker_rundir, score_type)
+    return _spicker_master(cluster_exe, cluster_method, max_cluster_size, num_clusters, models, 
+                            spicker_rundir, nproc, score_type)
 
-def spicker_qscore(cluster_exe, cluster_method, gesamt_exe, max_cluster_size, 
-                   models, nproc, num_clusters, work_dir):
+def spicker_qscore(cluster_exe, cluster_method, max_cluster_size, num_clusters, 
+                   models, work_dir, nproc, gesamt_exe):
     """Cluster models using Spicker's qscore"""
     spicker_rundir = os.path.join(work_dir, 'spicker')
     
@@ -121,14 +120,12 @@ def spicker_qscore(cluster_exe, cluster_method, gesamt_exe, max_cluster_size,
     
     score_type = "read_matrix"
 
-    return _spicker_master(cluster_exe, cluster_method, max_cluster_size, models, 
-                           num_clusters, spicker_rundir, score_type, score_matrix)
+    return _spicker_master(cluster_exe, cluster_method, max_cluster_size, num_clusters, 
+                           models, spicker_rundir, nproc, score_type, score_matrix=score_matrix)
     
-def spicker_tmscore(cluster_exe, cluster_method, max_cluster_size, models, 
-                    num_clusters, score_matrix, work_dir):
+def spicker_tmscore(cluster_exe, cluster_method, max_cluster_size, num_clusters,
+                    models, work_dir, nproc):
     """Cluster models using Spicker's TMscore"""
-    
-    assert score_matrix, "Scoring matrix required"
     
     spicker_rundir = os.path.join(work_dir, 'spicker')
     
@@ -138,18 +135,18 @@ def spicker_tmscore(cluster_exe, cluster_method, max_cluster_size, models,
     score_type = "tm"
     #shutil.copy(score_matrix, os.path.join(spicker_rundir,'score.matrix'))
     
-    return _spicker_master(cluster_exe, cluster_method, max_cluster_size, models, 
-                           num_clusters, spicker_rundir, score_type, score_matrix)
+    return _spicker_master(cluster_exe, cluster_method, max_cluster_size, num_clusters,
+                           models, spicker_rundir, nproc, score_type)
 
-def _spicker_master(cluster_exe, cluster_method, max_cluster_size, models, 
-                    num_clusters, spicker_rundir, score_type, score_matrix=None):
+def _spicker_master(cluster_exe, cluster_method, max_cluster_size, num_clusters, 
+                    models, spicker_rundir, nproc, score_type, score_matrix=None):
     """Cluster models using spicker - master function"""
             
     # Spicker Alternative for clustering
     _logger.info('* Running SPICKER to cluster models *')
     
     spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
-    spickerer.cluster(models, score_type=score_type, run_dir=spicker_rundir, score_matrix=score_matrix)
+    spickerer.cluster(models, score_type=score_type, run_dir=spicker_rundir, score_matrix=score_matrix, nproc=nproc)
     _logger.debug(spickerer.results_summary())
     
     ns_clusters=len(spickerer.results)

@@ -9,11 +9,11 @@ export PATH=\
 /opt/shelx:\
 $PATH
 
-$CCP4/bin/ccp4-python -m ample \
+$CCP4/bin/ample \
 -fasta input/3DCY.fasta \
 -mtz input/3dcy-sf.mtz \
 -homologs True \
--models .  \
+-models input  \
 -nproc 8 \
 
 # Add below for running in benchmark mode

@@ -1,4 +1,3 @@
-#!/usr/bin/env ccp4-python
 
 '''
 30.01.2016
@@ -9,7 +8,7 @@
 import logging
 import os
 
-from ample.constants import SHARE_DIR
+from ample.constants import AMPLE_CONFIG_FILE
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import version
 
@@ -85,7 +84,8 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
                                   'truncation_scorefile',
                                   'work_dir'],
                         # Data stored in amopt.d but not really part of AMPLE's configuration
-                        "No_config" : ["ensembles_data",
+                        "No_config" : ["benchmark_results",
+                                       "ensembles_data",
                                        "fasta_length",
                                        "mrbump_results",
                                        "sequence",
@@ -101,6 +101,7 @@ class AMPLEConfigOptions(object):
     def __init__(self):
         
         self.d = {} # store all options here
+        self.cmdline_opts = {}
         self.debug = False
         
         self.quick_mode = {
@@ -115,8 +116,8 @@ class AMPLEConfigOptions(object):
 
         # Test use scrwl
         self.devel_mode = {
-                           'early_terminate': False,
                            'benchmark_mode': True,
+                           'early_terminate': False,
                            'shelxe_rebuild' : True,
                            'shelxe_rebuild_arpwarp' : True,
                            'shelxe_rebuild_buccaneer' : True,
@@ -134,28 +135,28 @@ class AMPLEConfigOptions(object):
                                'submit_queue' : "all.q",
         }
         
-    def populate(self, config_opts):
+    def populate(self, cmdline_opts):
         
         # Convert Namespace to Dictionary
-        self.config_opts = config_opts = vars(config_opts)
+        self.cmdline_opts = cmdline_opts = vars(cmdline_opts)
 
         # Identify which config file to use
-        config_file = self._get_config_file(config_opts['config_file'])
+        config_file = self._get_config_file(cmdline_opts['config_file'])
 
         # Read the configuration file
         self._read_config_file(config_file)
+        
         # Read the command line arguments
-        self._read_config_opts(config_opts) 
+        self._read_cmdline_opts(cmdline_opts) 
 
         # Set further options
         self._process_options()
         return
      
     def _get_config_file(self, cmd_file=None):
-        config_file = os.path.abspath(cmd_file) if cmd_file else \
-                            os.path.join(SHARE_DIR, "include", "ample.ini")
+        config_file = os.path.abspath(cmd_file) if cmd_file else AMPLE_CONFIG_FILE
         if not os.path.isfile(config_file):
-            msg = "Cannot find configuration file - terminating..."
+            msg = "Cannot find configuration file: {0} - terminating...".format(config_file)
             LOGGER.critical(msg)
             raise RuntimeError(msg)
         LOGGER.debug("Using configuration file: {0}".format(config_file))
@@ -197,20 +198,18 @@ class AMPLEConfigOptions(object):
     def _preset_options(self, mode):
         assert hasattr(self, mode),"Unknown mode: {0}".format(mode)
         for k, v in getattr(self, mode).iteritems():
-            # Set any that haven't been set
-            if self.d[k] == None:
-                self.d[k] = v
-            else:
-                # Already set - only overwrite if it's set to a default value, otherwise we
-                # let the user go with what they've chosen but warn
-                if self.d[k] != self.config_opts[k] and self.d[k] != v:
-                    print "WARNING! Overriding {0} setting: {1} : {2} with user setting {3}".format(mode, k, v, self.d[k])
+            if 'cmdline_flags' in self.d and k in self.d['cmdline_flags']:
+                if self.d[k] == v:
+                    msg = 'WARNING! {0} flag {1} => {2} was duplicated on the command line!'.format(mode,k, v)
                 else:
-                    # We overwrite the default with our value
-                    if self.debug:
-                        print "Overriding default setting: {0} : {1} with {2} setting {3}".format(k, mode, self.defaults[k], v)
-                    self.d[k] = v
-
+                    msg = "WARNING! Overriding {0} setting: {1} => {2} with {3}".format(mode, k, self.d[k], v)
+                LOGGER.critical(msg)
+            elif k in self.d:
+                    LOGGER.debug("{0} overriding default setting: {1} => {2} with {3}".format(mode, k, self.d[k], v))
+            else:
+                LOGGER.debug("{0} setting: {1} => {2}".format(mode, k, v))
+                
+            self.d[k] = v
         return
         
     def _read_config_file(self, config_file):
@@ -254,11 +253,11 @@ class AMPLEConfigOptions(object):
                 _SECTIONS_REFERENCE[section].append(k)
         return
     
-    def _read_config_opts(self, config_opts):
+    def _read_cmdline_opts(self, cmdline_opts):
         tmpv = None
         cmdline_flags = []
         
-        for k, v in config_opts.iteritems():
+        for k, v in cmdline_opts.iteritems():
             if v is not None: cmdline_flags.append(k)
             
             tmpv = v[0] if isinstance(v, list) else v
@@ -274,7 +273,7 @@ class AMPLEConfigOptions(object):
             if k not in self.d:
                 self.d[k] = tmpv
             elif tmpv != None: 
-                print("Changing {0}: {1} => {2}".format(k, self.d[k], tmpv))
+                LOGGER.debug("Cmdline setting {0}: {1} => {2}".format(k, self.d[k], tmpv))
                 self.d[k] = tmpv
             
         self.d['cmdline_flags'] = cmdline_flags

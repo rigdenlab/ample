@@ -22,7 +22,7 @@ from ample.util import pdb_edit
 try:
     from ample.util import plot_util
     _MATPLOTLIB = True
-except ImportError:
+except (ImportError, ValueError):
     _MATPLOTLIB = False
 
 # Check biopython is availbale - compatibility with older ccp4-python 

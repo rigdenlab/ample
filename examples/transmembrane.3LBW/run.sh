@@ -19,7 +19,7 @@ rosetta_dir=/opt/rosetta_2014.35.57232_bundle
 # -blast_dir /Applications/Blast/blast-2.2.26 \
 # -nr /opt/nr/nr \
 
-${CCP4}/bin/ample.py \
+$CCP4/bin/ample \
 -name 3LBW \
 -mtz 3LBW.sf.mtz   \
 -fasta 3LBW.fasta  \

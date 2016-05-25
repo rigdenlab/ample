@@ -1,35 +1,31 @@
-'''
-Created on Apr 18, 2013
+'''Utility file containing functions for ensembling
 
 This structure of the ensembling modules is dictated by the need to be able to pickle
 and unpickle the results dictionary. As such all objects need to have a qualified path
 (e.g. ensembler.Ensemble ) - otherwise, the module is taken as main, so that when
 the results are unpickled, it will look for Ensemble as an attribute of the main ample
 script.
-
-@author: jmht
 '''
 
 import collections
-import cPickle
 import glob
+import iotbx.pdb
 import logging
 import os
 import shutil
 import sys
 
-# our imports
-import iotbx.pdb
-
 from ample.ensembler import abinitio
 from ample.ensembler import homologs
 from ample.ensembler import single_model
-from ample.util import ample_util
 from ample.util import exit_util
 from ample.util import pdb_edit
 from ample.util import printTable
 
-_logger = logging.getLogger(__name__)
+__author__ = "Jens Thomas and Felix Simkovic"
+__date__ = "18.04.2013"
+
+LOGGER = logging.getLogger(__name__)
 
 def find_ensembler_module(amoptd):
     """Find which ensembler module to import
@@ -50,10 +46,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     script_path = os.path.join(work_dir, "submit_ensemble.sh")
     with open(script_path, "w") as job_script:
         job_script.write("#!/bin/sh\n")
-        # Find path to this directory to get path to python ensembler_util.py script
-        pydir = os.path.abspath(os.path.dirname(__file__))
-        ensemble_script = os.path.join(pydir, "ensembler_util.py")
-        job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", ensemble_script, amoptd['results_path']))
+        job_script.write("ccp4-python -m ample.ensembler -restart_pkl {0}\n".format(amoptd['results_path']))
 
     # Make executable
     os.chmod(script_path, 0o777)
@@ -119,6 +112,16 @@ def create_ensembles(amoptd):
 
     ############################################################################
     # For a single model we don't need to use glob 
+    if not (amoptd['single_model'] or amoptd['models_dir']):
+        msg = 'AMPLE ensembler needs either a single_model or a models_dir argument'
+        exit_util.exit_error(msg, sys.exc_info()[2])
+        if amoptd['single_model'] and not os.path.isfile(amoptd['single_model']):
+            msg = 'Cannot find single_model pdb: {0}'.format(amoptd['single_model'])
+            exit_util.exit_error(msg, sys.exc_info()[2])
+        elif amoptd['models_dir'] and not os.path.isfile(amoptd['models_dir']):
+            msg = 'Cannot find models_dir: {0}'.format(amoptd['models_dir'])
+            exit_util.exit_error(msg, sys.exc_info()[2])
+            
     models = list([amoptd['single_model']]) if amoptd['single_model_mode'] else \
         glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))
 
@@ -279,7 +282,7 @@ def import_ensembles(amoptd):
         msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles'])
         exit_util.exit_error(msg)
 
-    _logger.info("Importing ensembles from directory: {0}".format(amoptd['ensembles']))
+    LOGGER.info("Importing ensembles from directory: {0}".format(amoptd['ensembles']))
 
     ensembles = glob.glob(os.path.join(amoptd['ensembles'], '*.pdb'))
     amoptd['ensembles'] = ensembles
@@ -409,9 +412,9 @@ def _sort_ensembles_prioritise(ensembles_zipped, keys_to_sort):
     ############################################################################
     ensembles_zipped_ordered = []
 
-    for bin in iterator_keys:
+    for sbin in iterator_keys:
         low, mid, high = [], [], []
-        for ensemble in _sort_ensembles_parameters(tmp_data[bin], keys_to_sort):
+        for ensemble in _sort_ensembles_parameters(tmp_data[sbin], keys_to_sort):
             if ensemble[1]['truncation_level'] > 50:
                 high.append(ensemble)
             elif ensemble[1]['truncation_level'] < 20:
@@ -428,32 +431,3 @@ def _sort_ensembles_parameters(ensembles_zipped, keys_to_sort):
     def _extract(ens):
         return [ens[1][crit] for crit in keys_to_sort]
     return sorted(ensembles_zipped, key=_extract)
-
-
-if __name__ == "__main__":
-    # This runs the ensembling starting from a pickled file containing an amopt dictionary.
-    # - used when submitting the modelling jobs to a cluster
-
-    if len(sys.argv) != 2 or not os.path.isfile(sys.argv[1]):
-        print "ensemble script requires the path to a pickled amopt dictionary!"
-        sys.exit(1)
-
-    # Get the amopt dictionary
-    with open(sys.argv[1], "r") as f: amoptd = cPickle.load(f)
-
-    # if os.path.abspath(fpath) != os.path.abspath(amoptd['results_path']):
-    #    print "results_path must match the path to the pickle file"
-    #    sys.exit(1)
-
-    # Set up logging - could append to an existing log?
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    fl = logging.FileHandler(os.path.join(amoptd['work_dir'],"ensemble.log"))
-    fl.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fl.setFormatter(formatter)
-    logger.addHandler(fl)
-
-    # Create the ensembles & save them
-    create_ensembles(amoptd)
-    ample_util.saveAmoptd(amoptd)

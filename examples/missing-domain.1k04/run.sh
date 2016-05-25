@@ -12,8 +12,7 @@ export PATH=\
 /opt/shelx:\
 $PATH
 
-
-$CCP4/bin/ccp4-python -m ample \
+$CCP4/bin/ample \
 -mtz input/1k04_cad-unique.mtz \
 -fasta input/1k04_.fasta  \
 -domain_all_chains_pdb input/Known_40.pdb \

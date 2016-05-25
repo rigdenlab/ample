@@ -1,26 +1,19 @@
 #!/usr/bin/env ccp4-python
 
-'''
-09.11.2015
-
-@author: hlfsimko
-'''
-
 import collections
 import logging
 import os
 import tempfile
 
+from ample.parsers import alignment_parser
 from ample.parsers import tmscore_parser
 from ample.util import ample_util
 from ample.util import pdb_edit
 
-try:
-    from ample.parsers import alignment_parser
-    _BIOPYTHON = True
-except ImportError:
-    _BIOPYTHON = False
+__author__ = "Felix Simkovic"
+__date__ = "09.11.2015"
 
+LOGGER = logging.getLogger(__name__)
 
 TMScoreModel = collections.namedtuple("TMScoreModel", 
                                       ["name", "pdbin", "TMSCORE_log", "structure", 
@@ -30,21 +23,18 @@ TMScoreModel = collections.namedtuple("TMScoreModel",
 
 def tmscoreAvail():
     """Check if TMscore binary is available"""
-    try:
-        ample_util.find_exe("TMscore")
-    except:
-        return False
+    try: ample_util.find_exe("TMscore")
+    except: return False
     return True
 
 
 class TMscorer(object):
     
     def __init__(self, structure, tmscore_exe, wdir=None):
-        self.logger = logging.getLogger()
         self.pickle_file = None
         self.structure = structure
         self.tmscore_exe = tmscore_exe
-        self.workingDIR = wdir
+        self.work_dir = wdir
         return
 
     def main(self, pdb_list_file, keep_modified_structures=False, identical_sequences=False):
@@ -54,15 +44,12 @@ class TMscorer(object):
         :keep_modified_structures: do not delete any intermediate, modified structure files
         :sequence_identical:       avoid any modification of files due to sequence identity
         """
-        
         # Read all pdb files from list
         pdbs = self._read_list(pdb_list_file)
-
         # Compare each pdb in list against structure defined
         self.entries = self.compare_to_structure(pdbs, 
                                                  keep_modified_structures=keep_modified_structures, 
                                                  identical_sequences=identical_sequences)
-
         return
 
     def compare_to_structure(self, pdb_list, keep_modified_structures=False, identical_sequences=False):
@@ -74,32 +61,35 @@ class TMscorer(object):
         
         :returns:                  list of TMscore data per model
         """
-        
+        if not identical_sequences and not alignment_parser.BIOPYTHON_AVAILABLE:
+            msg = 'Cannot compare non-identical sequences as Biopython is not available'
+            LOGGER.critical(msg)
+            raise RuntimeError(msg)
+
+        LOGGER.info('-------Evaluating decoys/models-------')        
         entries = []                                                    # For data storage
-        
-        self.logger.info('-------Evaluating decoys/models-------')
 
         structure = os.path.abspath(self.structure)                        # Path to reference structure
         structure_name = os.path.splitext(os.path.basename(structure))[0]  # Filename
         pdb_list_abs = [ os.path.abspath(model) for model in pdb_list ]    # Full paths to models
 
         for pdbin in pdb_list_abs:
-            self.logger.debug("Working on %s" % pdbin)
+            LOGGER.debug("Working on %s" % pdbin)
             pdbin_name = os.path.splitext(os.path.basename(pdbin))[0]  # Filename        
             if not os.path.exists(pdbin): 
-                self.logger.warning("Cannot find {0}".format(pdbin))
+                LOGGER.warning("Cannot find {0}".format(pdbin))
                 continue
             
             # Modify structures to be identical as required by TMscore binary
             if not identical_sequences:
-                pdbin_mod     = os.path.join(self.workingDIR, pdbin_name + "_mod.pdb")
-                structure_mod = os.path.join(self.workingDIR, pdbin_name + "_" + 
+                pdbin_mod     = os.path.join(self.work_dir, pdbin_name + "_mod.pdb")
+                structure_mod = os.path.join(self.work_dir, pdbin_name + "_" + 
                                              structure_name + "_mod.pdb")
                 self.mod_structures(pdbin, pdbin_mod, structure, structure_mod)    
             model     = pdbin_mod     if not identical_sequences else pdbin
             reference = structure_mod if not identical_sequences else structure
     
-            log = os.path.join(self.workingDIR, pdbin_name + "_tmscore.log")
+            log = os.path.join(self.work_dir, pdbin_name + "_tmscore.log")
             self.execute_comparison(model, reference, log)
 
             # Delete the modified structures if not wanted       
@@ -115,7 +105,7 @@ class TMscorer(object):
             try:
                 pt.parse(log)
             except Exception as e:
-                self.logger.critical(e.msg)
+                LOGGER.critical(e.msg)
                 log = "None"
                 
             entry = self._store(pdbin_name, pdbin, log, self.structure, pt)
@@ -126,7 +116,7 @@ class TMscorer(object):
     def execute_comparison(self, model, reference, log=None):
         # Create a command list and execute TMscore
         cmd = [ self.tmscore_exe, model, reference ]
-        p = ample_util.run_command(cmd, logfile=log, directory=self.workingDIR)
+        p = ample_util.run_command(cmd, logfile=log, directory=self.work_dir)
         return p
     
     def dump_csv(self, csv_file):
@@ -143,9 +133,6 @@ class TMscorer(object):
 
     def mod_structures(self, pdbin, pdbin_mod, structure, structure_mod):
         """Make sure the decoy and the xtal pdb align to get an accurate TM-score"""
-        
-        if not _BIOPYTHON:
-            raise ImportError
         
         # Disable the info logger to not spam the user with which chain of native extracted.
         # Happens for every model + native below
