@@ -146,7 +146,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     os.chmod(script_path, 0o777)
     return script_path
     
-def analyseSolution(amoptd,d):
+def analyseSolution(amoptd, d, origin_finder='shelxe'):
 
     _logger.info("Benchmark: analysing result: {0}".format(d['ensemble_name']))
 
@@ -172,12 +172,27 @@ def analyseSolution(amoptd,d):
 
     # Find the MR origin wrt to the native
     #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
-    #mrOrigin=shelxe.shelxe_origin(amoptd['shelxe_exe'],amoptd['native_pdb'],amoptd['mtz'],mrPdb=mrPdb)
-    if not d['SHELXE_os']:
-        _logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
-        mrOrigin=shelxe.shelxe_origin(amoptd['shelxe_exe'], amoptd['native_pdb_info'].pdb, amoptd['mtz'], mrPdb)
-    else:
-        mrOrigin=[c*-1 for c in d['SHELXE_os']]
+    # There is a bug in SHELXE with the spacegroup F23. Luckily this is a non-polar spacegroup,
+    # so we can use csymmatch to determine the origin for this case. This clause can be removed
+    # once the SHELXE bug has been fixed. The bug was present as of 25/5/16
+    if 'native_pdb_space_group' in amoptd and amoptd['native_pdb_space_group'] is 'F 2 3':
+        origin_finder = 'csymmatch'
+    if origin_finder == 'shelxe':
+        if not d['SHELXE_os']:
+            _logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
+            mrOrigin = shelxe.shelxe_origin(amoptd['shelxe_exe'], amoptd['native_pdb_info'].pdb, amoptd['mtz'], mrPdb)
+        else:
+            mrOrigin=[c*-1 for c in d['SHELXE_os']]
+    elif origin_finder == 'csymmatch':
+        CS = csymmatch.Csymmatch()
+        csout = ample_util.filename_append(filename=mrPdb, astr='csymmatch_origin', directory=amoptd['benchmark_dir'] )
+        CS.run(refPdb=amoptd['native_pdb_info'].pdb,
+               inPdb=mrPdb,
+               outPdb=csout,
+               originHand=True,
+               cleanup=False)
+        CS.parseLog()
+        mrOrigin = CS.changeOfOrigin
     
     # Move pdb onto new origin
     originPdb = ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
