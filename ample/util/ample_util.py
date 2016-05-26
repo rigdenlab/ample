@@ -243,7 +243,7 @@ def find_exe(executable, dirs=None):
         found=True
     else:
         # If the user has given a path we just take the name part
-        fpath,fname = os.path.split(executable)
+        _, fname = os.path.split(executable)
         if fname:
             executable=fname
             
