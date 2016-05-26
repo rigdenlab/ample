@@ -1,22 +1,18 @@
 #!/usr/bin/env ccp4-python
 
-'''
-14.11.2015
-
-@author: hlfsimko
-'''
-
-# System
 import logging
 import numpy
 import os
 
-# Custom
 from ample.modelling import energy_functions
 from ample.parsers import casprr_parser
 from ample.parsers import psipred_parser
 from ample.parsers import restraints_parser
 from ample.util import pdb_edit
+
+__author__ = "Felix Simkovic"
+__date__ = "14.11.2015"
+__version__ = "1.0"
 
 # Check matplotlib is available - problems with Windows
 try:
@@ -24,6 +20,13 @@ try:
     _MATPLOTLIB = True
 except (ImportError, ValueError):
     _MATPLOTLIB = False
+
+# Check benchmark_util is available to standardise PDB if necessary
+try:
+    from ample.util import benchmark_util
+    _BENCHMARK = True
+except ImportError:
+    _BENCHMARK = False
 
 # Check biopython is availbale - compatibility with older ccp4-python 
 try:
@@ -72,17 +75,18 @@ def checkOptions(amoptd):
     # Make sure user selected energy function is pre-defined
     if amoptd['energy_function']:
         try: 
-            energyFunction = getattr(energy_functions, amoptd['energy_function'])
+            # We can discard the returned value as we only want to check if it
+            # exists in the module
+            _ = getattr(energy_functions, amoptd['energy_function'])
         except AttributeError:
             msg = "Rosetta energy function {0} unavailable".format(amoptd['energy_function'])
             LOGGER.critical(msg)
             raise RuntimeError(msg)
-    
     return
 
 
 class Contacter(object):
-    """ Class to handle contact predictions """
+    """Class to handle contact predictions"""
     
     def __init__(self, optd=None):
         
@@ -90,9 +94,11 @@ class Contacter(object):
         self.contact_file = None
         self.contact_map = None
         self.contact_ppv = None
+        self.distance_to_neighbour = 5
         self.native_cutoff = 8
         self.psipred_ss2 = None
         self.restraints_file = None
+        self.restraints_factor = 1.0
         self.restraints_infile = None
         self.structure_pdb = None
         
@@ -117,18 +123,28 @@ class Contacter(object):
         self.energy_function = optd['energy_function']
         
         # Optional files
-        if optd['native_pdb'] and optd['native_pdb_std']: self.structure_pdb=optd['native_pdb_std']
-        if optd['native_cutoff']: self.native_cutoff=optd['native_cutoff']
+        if optd['native_pdb'] and optd['native_pdb_std']: 
+            self.structure_pdb = optd['native_pdb_std']
+        elif optd['native_pdb'] and _BENCHMARK:
+            benchmark_util.analysePdb(optd)
+            self.structure_pdb = optd['native_pdb_std']
+        if optd['native_cutoff']: 
+            self.native_cutoff = optd['native_cutoff']
+        if optd['psipred_ss2']: 
+            self.psipred_ss2 = optd['psipred_ss2']
         
-        if optd['psipred_ss2']: self.psipred_ss2=optd['psipred_ss2']
+        # Set these parameters class wide so we can use them in the plot function
+        # in case a second map is given
+        self.distance_to_neighbour = optd['distance_to_neighbour']
+        self.restraints_factor = optd['restraints_factor']
         
         # Extract the raw sequence
         if self.contact_file:
             self.raw_contacts = self._readContacts(self.contact_file, self.sequence)
             # Prepare the contacts depending on all the user/default options
             self.contacts = self._prepare(self.raw_contacts, 
-                                          optd['restraints_factor'], 
-                                          optd['distance_to_neighbour'])
+                                          self.restraints_factor, 
+                                          self.distance_to_neighbour)
             
             # Map bbcontacts on top of the previously provided contacts
             if optd['bbcontacts_file']: 
@@ -137,11 +153,11 @@ class Contacter(object):
                 
         elif self.restraints_infile:
             self.contacts = self._readRestraints(self.restraints_infile)
-   
+            
         return
                 
     def format(self, restraintfile):
-        """ Format contacts to Rosetta restraints """
+        """Format contacts to Rosetta restraints"""
         
         LOGGER.info("Re-formatting contacts to restraints " +
                     "using the {0} function".format(self.energy_function))
@@ -157,7 +173,7 @@ class Contacter(object):
         return
        
     def _formatToRestraints(self, contacts, user_function):
-        """ Return a list of Rosetta string lines """
+        """Return a list of Rosetta string lines"""
     
         try: 
             energyFunction = getattr(energy_functions, user_function)
@@ -216,48 +232,71 @@ class Contacter(object):
 
         return
           
-    def plot(self, figurefile, ss2file=None, structurefile=None, offset=0):
-        """ Plot a contact map """
+    def plot(self, figurefile, second_contact_file=None, ss2file=None, structurefile=None, offset=0):
+        """Plot a contact map"""
         
         # make sure we can import matplotlib
         if not _MATPLOTLIB: 
-            LOGGER.warning("Cannot plot contact map due to missing python dependencies")
+            LOGGER.warning("Cannot plot contact map due to missing Python dependencies: MATPLOTLIB")
             return
         
-        # Just to make sure we have a structurefile and we can import Biopython
-        availableStructure = True if structurefile and _BIOPYTHON else False
+        # Just to make sure we have either a structurefile or a pre-defined structure
+        # and we can import Biopython
+        if structurefile and _BIOPYTHON:
+            available_structure = True
+        elif self.structure_pdb and _BIOPYTHON:
+            available_structure = True
+            structurefile = self.structure_pdb
+        else:
+            available_structure = False
             
         ap = plot_util.Plotter()
         ap.initialise(figsize=(5,5), dpi=600)
         
         # Get the coordinates from the reference structure and plot in gray
-        if availableStructure:
+        if available_structure:
             RCs, RCm = self.structureContacts(structurefile, self.sequence)
             RCs = list([i+offset for i in R] for R in RCs)
-            ap.addScatter(RCs[0], RCs[1], marker='.', c='#DDDDDD', s=10, \
-                                                      edgecolor="none", linewidths=0.0)
-            
+            ap.addScatter(RCs[0], RCs[1], marker='.', c='#DDDDDD', s=10,
+                          edgecolor="none", linewidths=0.0)
+        else:
+            RCs, RCm = numpy.empty(shape=(0,0)), numpy.empty(shape=(0,0))
+
         # Get the coordinates for the secondary structure prediction and plot it alogn the diagonal
         if ss2file:
             SCs, Scolors = self.secondaryStructureContacts(ss2file)
             SCs = list([i+offset for i in S] for S in SCs)
-            ap.addScatter(SCs[0], SCs[1], marker='.', c=Scolors, s=35, \
-                                                      edgecolor="black", linewidths=0.1)
-        
-        # Get the TP and FP colours
-        tp_colors = self._tp_codes(self.contacts, RCm, self.structure_seq, offset=offset) \
-                        if availableStructure \
-                            else ['#004F9D']
+            ap.addScatter(SCs[0], SCs[1], marker='.', c=Scolors, s=35,
+                          edgecolor="black", linewidths=0.1)
 
         # Bit cleaner code if we extract X and Y coordinates and then parse them two the plotter
         # Reduce residue index by one to account for counting from 0
         Xs = [ i['res1_index']+offset-1 for i in self.contacts ]
         Ys = [ i['res2_index']+offset-1 for i in self.contacts ]
- 
-        ap.addScatter(Xs, Ys, marker='.', c=tp_colors, s=10, \
-                                          edgecolor="none", linewidths=0.0)
-        ap.addScatter(Ys, Xs, marker='.', c=tp_colors, s=10, \
-                                          edgecolor="none", linewidths=0.0)
+        
+        # Get the color codes for main contact map
+        color_codes = self.get_color_codes(self.contacts, RCm=RCm, offset=offset)
+        
+        # Allow the plotting of two contact maps if a second set of contacts
+        # is provided
+        if second_contact_file:
+            second_raw_contacts = self._readContacts(second_contact_file,
+                                                     self.sequence)
+            # Prepare the contacts depending on all the user/default options
+            second_contacts = self._prepare(second_raw_contacts, 
+                                            self.restraints_factor, 
+                                            self.distance_to_neighbour)
+            color_codes_2 = self.get_color_codes(second_contacts, RCm=RCm, offset=offset)
+            X2s = [ i['res1_index']+offset-1 for i in second_contacts ]
+            Y2s = [ i['res2_index']+offset-1 for i in second_contacts ]
+        else:
+            X2s, Y2s = Xs, Ys
+            color_codes_2 = color_codes
+        
+        ap.addScatter(Xs, Ys, marker='.', c=color_codes, s=10,
+                      edgecolor="none", linewidths=0.0)
+        ap.addScatter(Y2s, X2s, marker='.', c=color_codes_2, s=10,
+                      edgecolor="none", linewidths=0.0)
         
         ap.axisLimits(len(self.sequence), offset=offset)
         ap.axisTitles("Residue number", "Residue number")
@@ -266,26 +305,56 @@ class Contacter(object):
         
         return
     
-    def _tp_codes(self, contacts, RCm, RCm_sequence, offset=0):
+    def get_color_codes(self, contacts, RCm=None, offset=0):
+        """Wrapper for getting the color codes"""
+        return self._color_codes(contacts, RCm=RCm, offset=offset)
+    
+    def _color_codes(self, contacts, RCm, offset):
         '''Get the color codes for each contact depending on match and weight'''
         
-        tp_colors = []
+        # Definitions of colors
+        color_choices = {'true_positive_double': '#2D9D00',
+                         'true_positive_single': '#38C700',
+                         'false_positive_double': '#AB0000',
+                         'false_positive_single': '#D70909',
+                         'default_double': '#004F9D',
+                         'default_single': '#0482ff',
+        }
+        
+        # Store the color codes per residue contact
+        contact_colors = []
         
         for idx in range(len(contacts)):
             c_x = contacts[idx]['res1_index']-offset-1
             c_y = contacts[idx]['res2_index']-offset-1
 
-            if RCm[c_x, c_y] > 0 and contacts[idx]['weight'] == 2: 
-                tp_colors.append('#2D9D00')
-            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight'] == 2: 
-                tp_colors.append('#AB0000')
-            elif RCm[c_x, c_y] > 0 and contacts[idx]['weight'] == 1: 
-                tp_colors.append("#38C700")
-            elif RCm[c_x, c_y] == 0 and contacts[idx]['weight'] == 1: 
-                tp_colors.append("#D70909")
-            else: tp_colors.append('#004F9D')
+            # No structure, use default colors but respect single/double weight
+            if not RCm.any():
+                color = color_choices['default_double'] \
+                            if contacts[idx]['weight'] == 2 else \
+                                color_choices['default_single']
             
-        return tp_colors
+            # Determine True Positives based on structure
+            elif RCm[c_x, c_y] > 0:     
+                color = color_choices['true_positive_double'] \
+                            if contacts[idx]['weight'] == 2 else \
+                                color_choices['true_positive_single']
+                                
+            # Determine False Positives based on structure
+            elif RCm[c_x, c_y] == 0:
+                color = color_choices['false_positive_double'] \
+                            if contacts[idx]['weight'] == 2 else \
+                                color_choices['false_positive_single']
+                                
+            # Make sure we have a color assigned
+            if not color:
+                msg = "Cannot handle a contact: {0} - {1}".format(c_x, c_y)
+                raise Exception(msg)
+            
+            # Save the color for this particular contact
+            contact_colors.append(color)
+                
+        return contact_colors
     
     def ppv(self, structurefile):
         """Calculate the True Positive Rate of contact prediction"""
@@ -295,7 +364,7 @@ class Contacter(object):
         
         assert structurefile, "You need to provide PDB to calculate the PPV"
         
-        RCs, RCm = self.structureContacts(structurefile, self.sequence)
+        _, RCm = self.structureContacts(structurefile, self.sequence)
         
         ppv = self._ppv_score(self.contacts, RCm, self.structure_seq)
         
@@ -346,7 +415,8 @@ class Contacter(object):
         
         # Adjust the residue list to that of the input sequence
         if alignmentSequence and _BIOPYTHON:
-            aligned_seq_list = alignment_parser.AlignmentParser().align_sequences(alignmentSequence, self.structure_seq)
+            aligned_seq_list = alignment_parser.AlignmentParser().align_sequences(alignmentSequence, 
+                                                                                  self.structure_seq)
    
             j = 0
             gapped_cb_lst=[]
@@ -435,13 +505,13 @@ class Contacter(object):
         self._iterBBcontactsIntoExistingContactList(bb_contacts)
                     
         return
-    ##End _readAdditionalBBcontacts()
     
     def _iterBBcontactsIntoExistingContactList(self, bb_contacts):
         for bbcontact in bb_contacts:           
             isPresent=False
             for index, contact in enumerate(self.contacts):
-                if bbcontact['res1_index'] == contact['res1_index'] and bbcontact['res2_index'] == contact['res2_index']:
+                if bbcontact['res1_index'] == contact['res1_index'] and \
+                   bbcontact['res2_index'] == contact['res2_index']:
                     self.contacts[index]['weight'] = 2
                     isPresent=True
                     
@@ -452,13 +522,17 @@ class Contacter(object):
     def _checkBBcontactsNeighbours(self, bbcontact):
         for index, contact in enumerate(self.contacts):
             for distance in [1, 2]:
-                if contact['res1_index'] == (bbcontact['res1_index'] + distance) and contact['res2_index'] == bbcontact['res2_index']:
+                if contact['res1_index'] == (bbcontact['res1_index'] + distance) and \
+                   contact['res2_index'] == bbcontact['res2_index']:
                     self.contacts[index]['weight'] = 2 
-                if contact['res1_index'] == (bbcontact['res1_index'] - distance) and contact['res2_index'] == bbcontact['res2_index']:
+                if contact['res1_index'] == (bbcontact['res1_index'] - distance) and \
+                   contact['res2_index'] == bbcontact['res2_index']:
                     self.contacts[index]['weight'] = 2 
-                if contact['res1_index'] == bbcontact['res1_index'] and contact['res2_index'] == (bbcontact['res2_index']  + distance):
+                if contact['res1_index'] == bbcontact['res1_index'] and \
+                   contact['res2_index'] == (bbcontact['res2_index']  + distance):
                     self.contacts[index]['weight'] = 2 
-                if contact['res1_index'] == bbcontact['res1_index'] and contact['res2_index'] == (bbcontact['res2_index']  - distance):
+                if contact['res1_index'] == bbcontact['res1_index'] and \
+                   contact['res2_index'] == (bbcontact['res2_index']  - distance):
                     self.contacts[index]['weight'] = 2 
         return
     
