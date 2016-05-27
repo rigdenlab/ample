@@ -39,7 +39,7 @@ Windows
 
    REM Script to run toxd test case
 
-   %CCP4%\bin\ample.bat \
+   %CCP4%\bin\ample.bat ^
    -fasta input\3DCY.fasta ^
    -mtz input\3dcy-sf.mtz ^
    -homologs True ^

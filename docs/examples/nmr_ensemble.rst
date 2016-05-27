@@ -48,7 +48,7 @@ Windows
    REM NMR ensembling example – 2LC9 is an ensemble model of a minor and transiently formed state of
    REM a T4 lysozyme mutant. The target 102l is X-ray data
 
-   %CCP4%\bin\ample.bat \
+   %CCP4%\bin\ample.bat ^
    -mtz input\102l.mtz ^
    -fasta input\102L.fasta ^
    -name 102l ^
