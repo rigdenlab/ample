@@ -54,7 +54,7 @@ def checkOptions(amoptd):
             LOGGER.critical(msg)
             raise RuntimeError(msg)
            
-        if not casprr_parser.CaspContactParser().checkFormat(amoptd['contact_file']):
+        if not casprr_parser.CaspContactParser().check_format(amoptd['contact_file']):
             msg = "Wrong format in contact file:\n{0}".format(amoptd['contact_file'])
             LOGGER.critical(msg)
             raise RuntimeError(msg)
@@ -67,7 +67,7 @@ def checkOptions(amoptd):
             LOGGER.critical(msg)
             raise RuntimeError(msg)
             
-        if not casprr_parser.CaspContactParser().checkFormat(amoptd['bbcontacts_file']):
+        if not casprr_parser.CaspContactParser().check_format(amoptd['bbcontacts_file']):
             msg = "Wrong format in contact file:\n{0}".format(amoptd['bbcontacts_file'])
             LOGGER.critical(msg)
             raise RuntimeError(msg)
