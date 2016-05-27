@@ -251,7 +251,7 @@ class Contacter(object):
             available_structure = False
             
         ap = plot_util.Plotter()
-        ap.initialise(figsize=(5,5), dpi=600)
+        ap.initialise(figsize=(3,3), dpi=600)
         
         # Get the coordinates from the reference structure and plot in gray
         if available_structure:
@@ -299,7 +299,7 @@ class Contacter(object):
                       edgecolor="none", linewidths=0.0)
         
         ap.axisLimits(len(self.sequence), offset=offset)
-        ap.axisTitles("Residue number", "Residue number")
+        #ap.axisTitles("Residue number", "Residue number")
 
         ap.saveFig(figurefile)
         

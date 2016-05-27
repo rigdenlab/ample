@@ -9,11 +9,6 @@ API Reference
 .. autosummary:
    :toctree: api/generated/
 
-    main
-    util.contacts_util
-    util.tmscore_util
-    
-    
 
 Indices and tables
 ==================
