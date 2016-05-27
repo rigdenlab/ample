@@ -17,6 +17,8 @@ Benchmarking of this approach on a large set of small globular proteins (<120 re
 The cluster-and-truncate approach is suitable for any kind of input structures in which structurally variable regions should be considered of lesser value. Thus, AMPLE works very well when fed an NMR ensemble as input, can profitably superimpose sets of distant homologues and can work with sets of homology models eg from ROSETTA_CM or I-TASSER. Finally, we have unpublished findings suggesting that a set of structures calculated for a single distant homologue with CONCOORD can be an effective input. 
 
 
+This webinar from April 2016 comes courtesy of our colleagues at `SBgrid`_.
+
 .. _description_video:
 
 .. raw:: html
@@ -24,3 +26,4 @@ The cluster-and-truncate approach is suitable for any kind of input structures i
   <iframe width="560" height="315" src="https://www.youtube.com/embed/_gLbqAIUuZM" frameborder="0" allowfullscreen></iframe>
 
 
+.. _SBgrid: https://sbgrid.org/
