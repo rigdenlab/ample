@@ -15,3 +15,12 @@ The key elements of AMPLE’s workings are clustering and truncation. Clustering
 Benchmarking of this approach on a large set of small globular proteins (<120 residues) solved around half, with success much more frequent for all-α proteins than for all-β targets, with mixed folds intermediate. In favourable cases where the target is a member of a large family of sequences, allowing for prediction of residue contacts, we have solved targets, treated as novel folds, of up to around 220 residues. We have also shown that this approach solves 80% of coiled-coil proteins, independent of their architecture.
 
 The cluster-and-truncate approach is suitable for any kind of input structures in which structurally variable regions should be considered of lesser value. Thus, AMPLE works very well when fed an NMR ensemble as input, can profitably superimpose sets of distant homologues and can work with sets of homology models eg from ROSETTA_CM or I-TASSER. Finally, we have unpublished findings suggesting that a set of structures calculated for a single distant homologue with CONCOORD can be an effective input. 
+
+
+.. _description_video:
+
+.. raw:: html
+
+  <iframe width="560" height="315" src="https://www.youtube.com/embed/_gLbqAIUuZM" frameborder="0" allowfullscreen></iframe>
+
+
