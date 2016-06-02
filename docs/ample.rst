@@ -6,9 +6,15 @@ API Reference
 
 .. currentmodule:: ample
 
-.. autosummary:
+.. autosummary::
    :toctree: api/generated/
-
+    
+   ensembler
+   modelling
+   parsers
+   testing
+   util
+   modules
 
 Indices and tables
 ==================
