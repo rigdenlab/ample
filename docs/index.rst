@@ -13,6 +13,8 @@ Some of AMPLE's most interesting features are:
 * Molecular Replacement using ideal helices
 * Molecular Replacement using NMR ensembles
 
+We also have a more ellaborate :ref:`description <description>` of AMPLE and a :ref:`webinar <description_video>` produced by Dan Rigden.
+
 Get involved
 ------------
 * Give us information on your targets by filling in our `questionnaire form`_
