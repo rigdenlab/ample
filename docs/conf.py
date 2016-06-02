@@ -23,6 +23,9 @@ except ImportError:
 Please read the README file in AMPLE_ROOT/docs
 """    
     sys.exit(msg)
+
+# Required by autosummary
+sys.path.insert(0, os.path.abspath("../ample"))
     
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -38,7 +41,9 @@ Please read the README file in AMPLE_ROOT/docs
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc', 'sphinx.ext.autosummary', 'sphinx.ext.viewcode', 
+    'sphinx.ext.autodoc', 
+    'sphinx.ext.autosummary', 
+    'sphinx.ext.viewcode', 
     'sphinxcontrib.napoleon',
 ]
 
