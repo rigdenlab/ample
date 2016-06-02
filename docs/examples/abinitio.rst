@@ -11,6 +11,8 @@ ROSETTA must be installed on the local system before AMPLE can be used to genera
 .. note:: 
    ROSETTA is a comprehensive package and requires compilation from source code. For a detailed explanation about how to install ROSETTA see `ROSETTA installation`_.
 
+------------------------------------------------------------------
+
 Running AMPLE
 =============
 Input Files
@@ -82,6 +84,8 @@ Finally we can specify some options about how AMPLE will run. Here we use:
 
 For a full list possible options see :ref:`AMPLE options <ample_options>`.
 
+------------------------------------------------------------------
+
 AMPLE Output
 ============
 On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to three tabs, the contents of which are explained below:
@@ -149,6 +153,8 @@ Log File
 This displays the text output by AMPLE as it is running. Any problems or errors will be displayed here.
 
 .. image:: ../_static/log_toxd.png
+
+------------------------------------------------------------------
 
 
 .. _QUARK online server: http://zhanglab.ccmb.med.umich.edu/QUARK

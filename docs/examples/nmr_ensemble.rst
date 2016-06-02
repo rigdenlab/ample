@@ -9,6 +9,8 @@ AMPLE can attempt molecular replacement with ensembles created from NMR ensemble
 .. note::
    To use AMPLE in this way, just supply the NMR model with the -nmr_model_in flag and set the -nmr_remodel flag to False.
 
+------------------------------------------------------------------
+
 Running AMPLE
 =============
 Input Files
@@ -69,6 +71,8 @@ Next we can specify a few run options for AMPLE:
 * ``-quick_mode`` – Preset options to run quickly, but less thoroughly.
 
 For a full list of options see :ref:`AMPLE options <ample_options>`.
+
+------------------------------------------------------------------
 
 AMPLE Output
 ============
@@ -135,9 +139,7 @@ This displays the text output by AMPLE as it is running. Any problems or errors 
 
 .. image:: ../_static/log_nmr.png
 
-
-
-
+------------------------------------------------------------------
 
 .. _here: https://drive.google.com/file/d/0B3NdI1poe0RhSVFyRjRHSER1Y0k/view.
 

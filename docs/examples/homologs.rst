@@ -62,6 +62,8 @@ Next we can specify a few run options for AMPLE:
 
 For a full list of options see :ref:`AMPLE options <ample_options>`.
 
+------------------------------------------------------------------
+
 AMPLE Output
 ============
 On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to three tabs, the contents of which are explained below:
@@ -126,5 +128,7 @@ Log File
 This displays the text output by AMPLE as it is running. Any problems or errors will be displayed here.
 
 .. image:: ../_static/homologs_log.png
+
+------------------------------------------------------------------
 
 .. _here: https://href.li/?https://drive.google.com/file/d/0B3NdI1poe0RhTl8tR0RiOHhzbGM/view?usp=sharing
