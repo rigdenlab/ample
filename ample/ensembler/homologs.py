@@ -107,7 +107,8 @@ class Ensembler(_ensembler.Ensembler):
                            percent_truncation=None,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS,
                            truncation_method=None,
-                           work_dir=None):
+                           work_dir=None,
+                           standardise=True):
         
         # Work dir set each time
         if not work_dir: raise RuntimeError, "Need to set work_dir!"
@@ -132,23 +133,25 @@ class Ensembler(_ensembler.Ensembler):
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
         
-        # standardise all the models
-        std_models_dir = os.path.join(work_dir, "std_models")
-        os.mkdir(std_models_dir)
-        std_models = []
-        for m in models:
-            std_model = ample_util.filename_append(m, 'std', std_models_dir)
-            pdb_edit.standardise(pdbin=m, pdbout=std_model, del_hetatm=True)
-            std_models.append(std_model)
+        if standardise:
+            # standardise all the models
+            std_models_dir = os.path.join(work_dir, "std_models")
+            os.mkdir(std_models_dir)
+            std_models = []
+            for m in models:
+                std_model = ample_util.filename_append(m, 'std', std_models_dir)
+                pdb_edit.standardise(pdbin=m, pdbout=std_model, del_hetatm=True)
+                std_models.append(std_model)
+            models = std_models
         
         # Get a structural alignment between the different models
         if not alignment_file:
             if homolog_aligner == 'mustang':
                 _logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
-                alignment_file = align_mustang(std_models, mustang_exe=mustang_exe, work_dir=self.work_dir)
+                alignment_file = align_mustang(models, mustang_exe=mustang_exe, work_dir=self.work_dir)
             elif homolog_aligner == 'gesamt':
                 _logger.info("Generating alignment file with gesamt_exe: {0}".format(gesamt_exe))
-                alignment_file = align_gesamt(std_models, gesamt_exe=gesamt_exe, work_dir=self.work_dir)
+                alignment_file = align_gesamt(models, gesamt_exe=gesamt_exe, work_dir=self.work_dir)
             else:
                 raise RuntimeError, "Unknown homolog_aligner: {0}".format(homolog_aligner)
             _logger.info("Generated alignment file: {0}".format(alignment_file))
@@ -162,7 +165,7 @@ class Ensembler(_ensembler.Ensembler):
         # Now truncate and create ensembles - as standard ample, but with no subclustering
         self.ensembles = []
         self.ensembles_data = []
-        for truncated_models, truncated_models_data, truncated_model_dir in zip(*self.truncate_models(std_models,
+        for truncated_models, truncated_models_data, truncated_model_dir in zip(*self.truncate_models(models,
                                                                                                       truncation_method=truncation_method,
                                                                                                       truncation_pruning=None,
                                                                                                       percent_truncation=percent_truncation,
