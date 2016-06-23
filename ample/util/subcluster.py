@@ -13,6 +13,7 @@ import mmtbx.superpose
 
 from ample.util import ample_util
 from ample.util import pdb_edit
+from ample.util import statistics_util
 
 _logger = logging.getLogger()
 
@@ -32,6 +33,7 @@ class SubClusterer(object):
         self.executable = executable
         self.distance_matrix = None
         self.index2pdb = []
+        self.cluster_variance = None
         return
     
     def generate_distance_matrix(self,pdb_list):
@@ -40,8 +42,9 @@ class SubClusterer(object):
     def cluster_by_radius(self, radius):
         """Return a list of pdbs clustered by the given radius"""
         if self.distance_matrix is None:
-            raise RuntimeError,"Need to call generate_distance_matrix before cluster_by_radius!"
-        cluster_indices = self._cluster_indices(radius)
+            raise RuntimeError("Need to call generate_distance_matrix before cluster_by_radius!")
+        cluster_indices, cluster_variance = self._cluster_indices(radius)
+        self.cluster_variance = cluster_variance
         if cluster_indices:
             return [ self.index2pdb[i] for i in cluster_indices ]
         else:
@@ -54,20 +57,33 @@ class SubClusterer(object):
         """
         #self.dump_matrix("maxcluster.csv")
         thresh=float(thresh)
-        max_cluster=[]
+        max_cluster = []
+        cluster_scores = []
         m=self.distance_matrix
         for i in range(len(m)):
-            cluster=[i]
+            cluster = [i] # Add this to the cluster
+            scores = [] # We don't add a score for the first as its with itself
             for j in range(len(m)):
                 if m[i][j] is None or j==i: continue
-                if float(m[i][j]) < thresh:
+                score = float(m[i][j])
+                if score < thresh:
                     cluster.append(j)
+                    scores.append(score)
             if len(cluster) > len(max_cluster):
-                max_cluster=copy.copy(cluster)
+                max_cluster = copy.copy(cluster)
+                cluster_scores = copy.copy(scores)
         if len(max_cluster) == 1:
-            return None
+            self.cluster_variance = None
+            return None, None
         else:
-            return sorted(max_cluster)
+            cluster_variance = self.calculate_variance(cluster_scores)
+            return sorted(max_cluster), cluster_variance
+    
+    def calculate_variance(self, cluster):
+        """Calcualate variance
+        This has n-1 scores as we don't include the first score as it's zero - self score
+        """
+        return statistics_util.variance(cluster)
     
     def dump_raw_matrix(self,file_name):
         with open(file_name,'w') as f:

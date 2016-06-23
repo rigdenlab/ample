@@ -172,9 +172,9 @@ class Ensembler(object):
         self.subcluster_exe = None
         self.subclustering_method = "radius"
         self.subcluster_radius_thresholds = [1, 2, 3]
-        self.ensemble_max_models = 30
         
         # ensembles
+        self.ensemble_max_models = 30
         self.ensembles_directory = None
         self.ensembles = None
         self.ensembles_data = None
@@ -182,15 +182,6 @@ class Ensembler(object):
         self.score_matrix = None
         
         return
-    
-    def superpose_models(self, models, basename=None, work_dir=None, homologs=False):
-        run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
-        try:
-            run_theseus.superpose_models(models, basename=basename, homologs=homologs)
-        except Exception, e:
-            _logger.critical("Error running theseus: {0}".format(e))
-            return False
-        return run_theseus.superposed_models
             
     def cluster_models(self, cluster_dir=None, cluster_exe=None, cluster_method=None,
                        models=None, max_cluster_size=200, num_clusters=None, nproc=1):
@@ -382,6 +373,7 @@ class Ensembler(object):
             ensemble_data = copy.copy(truncated_models_data)
             ensemble_data['subcluster_num_models'] = len(cluster_files)
             ensemble_data['subcluster_radius_threshold'] = radius
+            ensemble_data['subcluster_variance'] =  clusterer.cluster_variance
             ensemble_data['ensemble_pdb'] = ensemble
 
             # Get the centroid model name from the list of files given to theseus - we can't parse
@@ -471,6 +463,15 @@ class Ensembler(object):
             if cluster_size == len_truncated_models: break
             
         return subclusters, subclusters_data
+    
+    def superpose_models(self, models, basename=None, work_dir=None, homologs=False):
+        run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
+        try:
+            run_theseus.superpose_models(models, basename=basename, homologs=homologs)
+        except Exception, e:
+            _logger.critical("Error running theseus: {0}".format(e))
+            return False
+        return run_theseus.superposed_models
 
     def truncate_models(self,
                         models,
