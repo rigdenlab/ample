@@ -24,7 +24,7 @@ _TMScoreModel = collections.namedtuple("TMScoreModel",
                                        "nr_residues_common"])
 
 
-def tmscoreAvail():
+def tmscore_available():
     """
     Check if TMscore binary is available
 

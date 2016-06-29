@@ -365,7 +365,7 @@ def analyseModels(amoptd):
 #         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
 #     except RuntimeError,e:
 #         print e
-    if tmscore_util.tmscoreAvail():
+    if tmscore_util.tmscore_available():
         amoptd['tmscore_exe'] = ample_util.find_exe("TMscore")
         tm = tmscore_util.TMscorer(amoptd['native_pdb_std'], 
                                    amoptd['tmscore_exe'], 
