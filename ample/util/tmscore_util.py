@@ -18,8 +18,8 @@ __version__ = "1.0"
 
 LOGGER = logging.getLogger(__name__)
 
-_TMScoreModel = collections.namedtuple("TMScoreModel",
-                                       ["name", "pdbin", "TMSCORE_log", "structure",
+TMScoreModel = collections.namedtuple("TMScoreModel",
+                                      ["name", "pdbin", "TMSCORE_log", "structure",
                                        "tm", "maxsub", "gdtts", "gdtha", "rmsd",
                                        "nr_residues_common"])
 
@@ -289,6 +289,8 @@ class TMscorer(object):
         os.unlink(pdbin_stage1.name)
         os.unlink(structure_stage1.name)
 
+        logging.disable(logging.NOTSET)
+
         return
 
     def residue_one(self, pdb):
@@ -362,10 +364,10 @@ class TMscorer(object):
         return [l.strip() for l in open(list_file, 'r')]
     
     def _store(self, name, pdbin, logfile, structure, pt):
-        return _TMScoreModel(name=name, pdbin=pdbin,
-                             TMSCORE_log=logfile, structure=structure,
-                             tm=pt.tm, maxsub=pt.maxsub, gdtts=pt.gdtts,
-                             gdtha=pt.gdtha, rmsd=pt.rmsd,
-                             nr_residues_common=pt.nr_residues_common)
+        return TMScoreModel(name=name, pdbin=pdbin,
+                            TMSCORE_log=logfile, structure=structure,
+                            tm=pt.tm, maxsub=pt.maxsub, gdtts=pt.gdtts,
+                            gdtha=pt.gdtha, rmsd=pt.rmsd,
+                            nr_residues_common=pt.nr_residues_common)
 
 
