@@ -32,7 +32,7 @@ class TMscoreLogParser(object):
         self.gdtts = 0.0
         self.gdtha = 0.0
         self.rmsd = 0.0
-        self.nrResiduesCommon = 0
+        self.nr_residues_common = 0
         return
 
     def parse(self, logfile):
