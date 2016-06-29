@@ -4,7 +4,6 @@ import csv
 import collections
 import logging
 import os
-import tempfile
 import warnings
 
 from ample.parsers import alignment_parser
@@ -265,10 +264,8 @@ class TMscorer(object):
         structure_gaps = self.find_gaps(structure_seq_ali)
 
         ## STAGE 1 - REMOVE RESIDUES ##
-        pdbin_stage1 = tempfile.NamedTemporaryFile(delete=False)
-        pdbin_stage1.close()
-        structure_stage1 = tempfile.NamedTemporaryFile(delete=False)
-        structure_stage1.close()
+        pdbin_stage1 = ample_util.tmpFileName()
+        structure_stage1 = ample_util.tmpFileName()
 
         # Get first residue number to adjust list of residues to remove
         pdbin_res1 = self.residue_one(pdbin)
