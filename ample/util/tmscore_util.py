@@ -18,10 +18,10 @@ __version__ = "1.0"
 
 LOGGER = logging.getLogger(__name__)
 
-TMScoreModel = collections.namedtuple("TMScoreModel", 
-                                      ["name", "pdbin", "TMSCORE_log", "structure", 
-                                      "tm", "maxsub", "gdtts", "gdtha", "rmsd", 
-                                      "nrResiduesCommon"])
+_TMScoreModel = collections.namedtuple("TMScoreModel",
+                                       ["name", "pdbin", "TMSCORE_log", "structure",
+                                       "tm", "maxsub", "gdtts", "gdtha", "rmsd",
+                                       "nr_residues_common"])
 
 
 def tmscoreAvail():
@@ -362,10 +362,10 @@ class TMscorer(object):
         return [l.strip() for l in open(list_file, 'r')]
     
     def _store(self, name, pdbin, logfile, structure, pt):
-        return TMScoreModel(name=name, pdbin=pdbin, 
-                           TMSCORE_log=logfile, structure=structure, 
-                           tm=pt.tm, maxsub=pt.maxsub, gdtts=pt.gdtts,
-                           gdtha=pt.gdtha, rmsd=pt.rmsd,
-                           nrResiduesCommon=pt.nrResiduesCommon)
+        return _TMScoreModel(name=name, pdbin=pdbin,
+                             TMSCORE_log=logfile, structure=structure,
+                             tm=pt.tm, maxsub=pt.maxsub, gdtts=pt.gdtts,
+                             gdtha=pt.gdtha, rmsd=pt.rmsd,
+                             nr_residues_common=pt.nr_residues_common)
 
 
