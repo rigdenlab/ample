@@ -587,7 +587,7 @@ def split_quark(*args):
     --------
     split_models
     """
-    split_models(*args)
+    return split_models(*args)
 
 def split_models(dfile, directory):
     """
