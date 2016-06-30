@@ -3,7 +3,6 @@ Various miscellaneous functions.
 Might end up somewhere else at somepoint.
 '''
 
-# Python modules
 import cPickle
 import logging
 import os
@@ -92,21 +91,29 @@ footer = "\n" + """
 
 
 def ccp4_version():
-    """Return the CCP4 version as a tuple"""
+    """
+    Get CCP4 version as a tuple
+
+    Returns
+    -------
+    version : tuple
+       Major, minor, and revision number
+    """
     global CCP4_VERSION
     if CCP4_VERSION is None:
         # Currently there seems no sensible way of doing this other then running a program and grepping the output
-        pdbcur = 'pdbcur.exe' if sys.platform.startswith('win') else 'pdbcur'
+        pdbcur = 'pdbcur' + EXE_EXT
         logf = tempfile.NamedTemporaryFile(delete=False)
         run_command([pdbcur], stdin="", logfile=logf.name)
         logf.seek(0) # rewind logfile
         tversion=None
         for i, line in enumerate(logf):
-            if i > 20:break
+            if i > 20:
+                break
             if line.startswith(' ### CCP4'):
                 tversion=line.split()[2].rstrip(':')
                 break
-        
+
         logf.close()
         if not tversion: raise RuntimeError,"Cannot determine CCP4 version"
         vsplit = tversion.split('.')
@@ -466,11 +473,19 @@ def split_quark(dfile,directory):
         
     return quark_models
 
-def tmpFileName():
-    """Return a filename for a temporary file"""
+def tmp_file_name(delete=True, directory=None):
+    """
+    Return a filename for a temporary file
 
-    # Get temporary filenames
-    t = tempfile.NamedTemporaryFile(dir=os.getcwd(), delete=True)
+    Parameters
+    ---------
+    delete : bool
+       Flag whether the temporary file should be deleted
+    directory : str
+       Path to a directory to write the files to.
+    """
+    directory = os.getcwd() if not directory else directory
+    t = tempfile.NamedTemporaryFile(dir=directory, delete=delete)
     tmp1 = t.name
     t.close()
     return tmp1
