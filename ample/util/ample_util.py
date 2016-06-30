@@ -391,12 +391,27 @@ def is_exe(fpath):
 def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     """
     Make a work directory rooted at work_dir and return its path
+
+    Parameters
+    ----------
+    work_dir : str
+       The path to a working directory
+    ccp4_jobid : int
+       CCP4-assigned job identifier
+    rootname : str
+        Base name of the AMPLE directory
+
+    Returns
+    -------
+    work_dir : str
+       The path to the working directory
     """
 
     if ccp4_jobid:
-        dname = os.path.join( work_dir, rootname + str(ccp4_jobid) )
+        dname = os.path.join(work_dir, rootname + str(ccp4_jobid))
         if os.path.exists(dname):
-            raise RuntimeError,"There is an existing AMPLE CCP4 work directory: {0}\nPlease delete/move it aside."
+            raise RuntimeError("There is an existing AMPLE CCP4 work directory: {0}\n"
+                               "Please delete/move it aside.")
         os.mkdir(dname)
         return dname
 
@@ -405,7 +420,7 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     while not run_making_done:
         if not os.path.exists(work_dir + os.sep + rootname + str(run_inc)):
             run_making_done = True
-            os.mkdir(work_dir + os.sep +rootname + str(run_inc))
+            os.mkdir(work_dir + os.sep + rootname + str(run_inc))
         run_inc += 1
     work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
     return work_dir
