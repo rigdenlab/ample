@@ -481,11 +481,40 @@ def saveAmoptd(amoptd):
         LOGGER.info("Saved state as file: {0}\n".format( amoptd['results_path'] ) )
     return
 
-def split_quark(dfile,directory):
-    LOGGER.info("Extracting QUARK decoys from: {0} into {1}".format(dfile,directory))
+def split_quark(*args):
+    """
+    Split a single PDB with multiple models in individual PDB files
+
+    See Also
+    --------
+    split_models
+    """
+    split_models(*args)
+
+def split_models(dfile, directory):
+    """
+    Split a single PDB with multiple models in individual PDB files
+
+    Parameters
+    ----------
+    dfile : str
+       Single PDB file with multiple model entries
+    directory : str
+       Directory to extract the PDB files to
+
+    Returns
+    -------
+    extracted_models : list
+       List of PDB files for all models
+
+    TODO
+    ----
+    * Use the CCTBX library to perform this step
+    """
+    LOGGER.info("Extracting decoys from: {0} into {1}".format(dfile, directory))
     smodels = []
-    with open(dfile,'r') as f:
-        m=[]
+    with open(dfile, 'r') as f:
+        m = []
         for line in f:
             if line.startswith("ENDMDL"):
                 m.append(line)
@@ -493,20 +522,24 @@ def split_quark(dfile,directory):
                 m = []
             else:
                 m.append(line)
-    if not len(smodels): raise RuntimeError,"Could not extract any models from: {0}".format(dfile)
-    quark_models = []
-    for i,m in enumerate(smodels):
-        fpath = os.path.join(directory,"quark_{0}.pdb".format(i))
-        with open(fpath,'w') as f:
+
+    if not len(smodels):
+        raise RuntimeError("Could not extract any models from: {0}".format(dfile))
+
+    extracted_models = []
+    for i, m in enumerate(smodels):
+        # TODO: Maybe change the name from quark to something a little more general
+        fpath = os.path.join(directory, "quark_{0}.pdb".format(i))
+        with open(fpath, 'w') as f:
             for l in m:
-                # Need to reconstruct something sensible as from the coordinates on it's all quark-specific
+                # TODO: Reconstruct something sensible as from the coordinates on it's all quark-specific
                 if l.startswith("ATOM"):
                     l = l[:54]+"  1.00  0.00              \n"
                 f.write(l)
-            quark_models.append(fpath)
+            extracted_models.append(fpath)
             LOGGER.debug("Wrote: {0}".format(fpath))
         
-    return quark_models
+    return extracted_models
 
 def tmp_file_name(delete=True, directory=None):
     """
