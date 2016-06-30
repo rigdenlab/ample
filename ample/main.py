@@ -3,7 +3,6 @@
 This is AMPLE
 """
 import argparse
-import cPickle
 import glob
 import logging
 import os
@@ -188,7 +187,8 @@ class Ample(object):
                                      submit_array=optd['submit_array'],
                                      submit_max_array=optd['submit_max_array'])
             # queue finished so unpickle results
-            with open(optd['results_path'], "r") as f: optd = cPickle.load(f)
+            # TODO: Determine if we need to return this
+            optd.update(ample_util.read_amoptd(optd['results_path']))
         else:
             benchmark_util.analyse(optd)
             ample_util.save_amoptd(optd)
@@ -228,7 +228,7 @@ class Ample(object):
                                          submit_array=optd['submit_array'],
                                          submit_max_array=optd['submit_max_array'])
                 # queue finished so unpickle results
-                with open(optd['results_path'], "r") as f: optd.update(cPickle.load(f))
+                optd.update(ample_util.read_amoptd(optd['results_path']))
             else:
                 try: ensembler_util.create_ensembles(optd)
                 except Exception, e:
