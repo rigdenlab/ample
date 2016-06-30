@@ -59,7 +59,7 @@ def check_mandatory_options(optd):
 def process_options(optd):
     
     # Path for pickling results
-    optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
+    optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.json")
     
     ###############################################################################
     #
@@ -426,7 +426,7 @@ def process_restart_options(optd):
     
     LOGGER.info('Restarting from existing pkl file: {0}'.format(optd['restart_pkl']))
     # We use the old dictionary, but udpate it with any new values
-    with open(optd['restart_pkl']) as f: optd_old = cPickle.load(f)
+    optd_old = ample_util.read_amoptd(optd['restart_pkl'])
     
     # Update key variables that differ with a new run - everything else uses the old values
     optd_old['ample_log'] = optd['ample_log']
@@ -434,7 +434,7 @@ def process_restart_options(optd):
     optd_old['work_dir'] = optd['work_dir']
     optd_old['benchmark_mode'] = optd['benchmark_mode']
     optd_old['benchmark_dir'] = os.path.join(optd['work_dir'], "benchmark")
-    optd_old['results_path'] = os.path.join(optd['work_dir'],'resultsd.pkl')
+    optd_old['results_path'] = os.path.join(optd['work_dir'], 'resultsd.json')
     
     # Now update any variables that were given on the command-line
     for k in optd['cmdline_flags']:
