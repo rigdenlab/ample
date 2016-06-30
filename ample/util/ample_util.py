@@ -4,6 +4,7 @@ Might end up somewhere else at somepoint.
 '''
 
 import cPickle
+import json
 import logging
 import os
 import platform
@@ -12,6 +13,7 @@ import sys
 import tarfile
 import tempfile
 import urllib
+import warnings
 import zipfile
 
 # our imports
@@ -388,6 +390,18 @@ def is_exe(fpath):
     """
     return fpath and os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
+def is_file(fpath):
+    """
+    Check if a file exists
+
+    Parameters
+    ----------
+    fpath : str
+       The path to the file
+    """
+    return fpath and os.path.isfile(fpath) and \
+           os.access(fpath, os.R_OK) and os.stat(fpath).st_size > 0
+
 def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     """
     Make a work directory rooted at work_dir and return its path
@@ -497,10 +511,33 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
 
     return p.returncode
 
+def read_amoptd(amoptd_fname):
+    """
+    Read a JSON-formatted AMPLE options file
+
+    Parameters
+    ----------
+    amoptd_fname : str
+       The path to the JSON-formatted AMPLE options file
+
+    Returns
+    -------
+    amoptd : dict
+       AMPLE options from saved state
+    """
+    if not is_file(amoptd_fname):
+        raise RuntimeError("Something is wrong with your AMPLE options "
+                           "file: {0}\n".format(amoptd_fname))
+
+    with open(amoptd_fname, 'r') as f:
+        amoptd = json.load(f)
+        LOGGER.info("Loaded state from file: {0}\n".format(amoptd['results_path']))
+    return amoptd
+
 def saveAmoptd(amoptd):
     # Save results
     with open( amoptd['results_path'], 'w' ) as f:
-        cPickle.dump( amoptd, f )
+        cPickle.dump(amoptd, f)
         LOGGER.info("Saved state as file: {0}\n".format( amoptd['results_path'] ) )
     return
 
