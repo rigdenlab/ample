@@ -70,7 +70,7 @@ def ccp4_version():
     os.unlink(log_fname)
     return (major,minor,rev)
 
-def construct_references():
+def construct_references(optd):
     """
     Construct the reference list
 
@@ -81,12 +81,19 @@ def construct_references():
 
     If a more sophisticated parser is required, refer to one of the python packages available online.
 
+    Parameters
+    ----------
+    optd : dict
+       A dictionary containing AMPLE options
+
     Returns
     -------
     references : str
     """
 
+    # ========================================
     # Get the filename and check we can use it
+    # ========================================
     ref_fname = os.path.join(SHARE_DIR, "include", "references.bib")
     if not is_file(ref_fname):
         msg = "Cannot find BibTex file containing references. " \
@@ -100,51 +107,97 @@ def construct_references():
     with open(ref_fname, "r") as fhin:
         for line in fhin.readlines():
 
-            # Make sure line is not empty
             line = line.strip()
-            if not line:
+
+            if not line:                                # Make sure line is not empty
                 continue
 
-            # Beginning of all BibTex entries
-            if line.startswith("@"):
-                entry = True
-                article = {}                # Reset the article dictionary
-            # End of of all BibTex entries
-            elif line.startswith("}") and line.endswith("}"):
-                entry = False
-                articles.append(article)    # Save the article dictionary
+            elif line.startswith("@"):                  # Beginning of all BibTex entry blocks
+                entry = True                            # Notify that we have an article block
+                unique_id = line.replace("@article{", "").replace(",", "")
+                article = {'unique_id': unique_id}      # Reset the article dictionary
 
-            if entry and not line.startswith("@"):
+            elif line == "}":                           # End of all BibTex entry blocks
+                entry = False                           # Notify that we article block is over
+                articles.append(article)                # Save the article dictionary
 
-                line = line.replace("{", "")
-                line = line.replace("}", "")
-                line = line.split("=")
-
-                line = [line[0].strip(), line[1].strip().rstrip(",").replace("\"", "")]
-
-                # Do some formatting of the data so we can have a properly formatted string
-                # We might also want to - at some point ever - use this data otherhow so we
-                # this allows us to do it
-                if line[0].lower() == "author":
-                    tmp = line[1].split(" and ")[0]
-                    line[1] = tmp.split(",")[0] + " et al."
-                if line[0].lower() == "volume":
-                    line[1] = int(line[1])
-                if line[0].lower() == "year":
-                    line[1] = int(line[1])
-                if line[0].lower() == "number":
-                    line[1] = int(line[1])
-                if line[0].lower() == "pages":
-                    line[1] = line[1].replace("--", "-")
-
+            elif entry:                                 # BibTex entry block
+                # Some dirty line handling.
+                # Not very bulletproof but should do for now
+                line = line.replace("{", "").replace("}", "")
+                key, value = [l.strip() for l in line.split("=")]
+                value = value.rstrip(",").replace("\"", "")
                 # Save the data to the article entry
-                article[line[0]] = line[1]
+                article[key] = value
 
+    # Determine which applications we have used in the AMPLE pipeline
+    def used_apps(optd):
+        """determine which applications were used and return their labels"""
+
+        # For now print all AMPLE papers
+        labels = ['AMPLE', 'AMPLE_MODELLING', 'AMPLE_COILS', 'AMPLE_CONTACTS', 'CCP4']
+
+        # TODO: add molrep reference and label
+        if optd['nmr_model_in']:
+            labels += ['AMPLE_NMR']
+
+        # Flags related to cluster-and-truncate approach
+        elif not optd['import_ensembles']:
+            labels += ["THESEUS"]
+            if optd['use_scwrl']:
+                labels += ['SCWRL4']
+            # TODO: add reference for fast protein cluster
+            elif "spicker" in optd['cluster_method']:
+                labels += ["SPICKER"]
+
+        # Flags related to Molecular Replacement
+        elif optd['do_mr']:
+            labels += ['MrBUMP']
+            if optd['use_arpwarp']:
+                labels += ['Arp_Warp']
+            elif optd['use_buccaneer']:
+                labels += ['Buccaneer']
+            elif optd['use_shelxe']:
+                labels += ['SHELXE']
+            elif 'phaser' in optd['mrbump_programs']:
+                labels += ['Phaser', 'REFMAC']
+
+        return labels
+
+    # =====================================================
+    # Get the used applications to not print all references
+    # =====================================================
+    applications = used_apps(optd)
+
+    to_remove = [i for i, art in enumerate(articles) if art['label'] not in applications]
+    # reverse order so that we don't throw off the subsequent indexes
+    for index in sorted(to_remove, reverse=True):
+        del articles[index]
+
+    # =========================================================================
+    # Somewhat a template of how we want to write each article in BibTex format
+    # =========================================================================
+    template_bib = "@article{{{unique_id},{sep}author = {{{author}}},{sep}doi = {{{doi}}},{sep}" \
+                   "journal = {{{journal}}},{sep}number = {{{number}}},{sep}pages = {{{pages}}},{sep}" \
+                   "title = {{{{{title}}}}},{sep}volume = {{{volume}}},{sep}year = {{{year}}},{sep}}}{sep}"
+    references_bib = [template_bib.format(sep=os.linesep, **article) for article in articles]
+
+    ref_fname = os.path.join(optd['work_dir'], optd['name']+".bib")
+    with open(ref_fname, "w") as fhout:
+        fhout.write(os.linesep.join(references_bib))
+
+    # ==========================================================
     # Somewhat a template of how we want to display each article
-    template = "* {label}: {author} ({year}). {title}. {journal} {volume}({number}), {pages}. [doi:{doi}]"
-    references = [template.format(**article) for article in articles]
+    # ==========================================================
+    for article in articles:
+        # Shorten the author list for the displayed message
+        article['author'] = article['author'].split(" and ")[0].split(",")[0] + " et al."
+        # Display page separator as single dash
+        article['pages'] = article['pages'].replace("--", "-")
+    template_msg = "* {label}: {author} ({year}). {title}. {journal} {volume}({number}), {pages}. [doi:{doi}]"
+    references_msg = [template_msg.format(**article) for article in articles]
 
-    return (os.linesep*2).join(references)
+    return (os.linesep*2).join(references_msg)
 
 def extract_models(amoptd, sequence=None, single=True, allsame=True):
     """Check a directory of pdbs or extract pdb files from a given tar/zip file or directory of pdbs
@@ -656,19 +709,38 @@ def tmp_file_name(delete=True, directory=None):
     t.close()
     return tmp1
 
+# ======================================================================
+# Some default string messages that we need during the program to inform
+# the user of certain information
+# ======================================================================
 
-# Header string
-header ="""#########################################################################
+header = """
+#########################################################################
 #########################################################################
 #########################################################################
 # CCP4: AMPLE - Ab Initio Modelling Molecular Replacement               #
 #########################################################################
 
-The authors of specific programs should be referenced where applicable:""" + \
-"\n\n" + construct_references() + "\n\n"
+"""
+
+# ======================================================================
+# ======================================================================
+
+reference = """
+#########################################################################
+
+The authors of specific programs should be referenced where applicable:
+
+{refs}
+
+"""
+
+# ======================================================================
+# ======================================================================
 
 survey_url = "http://goo.gl/forms/7xP9M4P81O"
-footer = "\n" + """
+footer = """
+
 #########################################################################
 #***********************************************************************#
 #*                          How did we do?                             *#
@@ -679,3 +751,5 @@ footer = "\n" + """
 #***********************************************************************#
 #########################################################################
 """.format(url=survey_url)
+# ======================================================================
+# ======================================================================
