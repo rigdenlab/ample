@@ -94,7 +94,7 @@ def construct_references(optd):
     # ========================================
     # Get the filename and check we can use it
     # ========================================
-    ref_fname = os.path.join(SHARE_DIR, "include", "references.bib")
+    ref_fname = os.path.join(SHARE_DIR, "include", "ample.bib")
     if not is_file(ref_fname):
         msg = "Cannot find BibTex file containing references. " \
               "Please determine them yourself and cite AMPLE."
