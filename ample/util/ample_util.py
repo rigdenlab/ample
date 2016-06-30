@@ -146,12 +146,13 @@ def construct_references(optd):
 
         # Flags related to cluster-and-truncate approach
         elif not optd['import_ensembles']:
-            labels += ["THESEUS"]
+            labels += ['THESEUS']
             if optd['use_scwrl']:
                 labels += ['SCWRL4']
-            # TODO: add reference for fast protein cluster
-            elif "spicker" in optd['cluster_method']:
-                labels += ["SPICKER"]
+            elif optd['cluster_method'] in ['spicker', 'spicker_qscore', 'spicker_tmscore']:
+                labels = ['FPC']
+            elif optd['cluster_method'] in ['fast_protein_cluster']:
+                labels += ['SPICKER']
 
         # Flags related to Molecular Replacement
         elif optd['do_mr']:
@@ -162,7 +163,8 @@ def construct_references(optd):
                 labels += ['Buccaneer']
             elif optd['use_shelxe']:
                 labels += ['SHELXE']
-            # TODO: add molrep reference and label
+            elif 'molrep' in optd['mrbump_programs']:
+                labels += ['Molrep', 'REFMAC']
             elif 'phaser' in optd['mrbump_programs']:
                 labels += ['Phaser', 'REFMAC']
 
