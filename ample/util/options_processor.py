@@ -59,7 +59,7 @@ def check_mandatory_options(optd):
 def process_options(optd):
     
     # Path for pickling results
-    optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.json")
+    optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
     
     ###############################################################################
     #
@@ -434,7 +434,7 @@ def process_restart_options(optd):
     optd_old['work_dir'] = optd['work_dir']
     optd_old['benchmark_mode'] = optd['benchmark_mode']
     optd_old['benchmark_dir'] = os.path.join(optd['work_dir'], "benchmark")
-    optd_old['results_path'] = os.path.join(optd['work_dir'], 'resultsd.json')
+    optd_old['results_path'] = os.path.join(optd['work_dir'], 'resultsd.pkl')
     
     # Now update any variables that were given on the command-line
     for k in optd['cmdline_flags']:

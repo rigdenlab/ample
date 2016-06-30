@@ -518,7 +518,7 @@ class AmpleOutput(object):
             
 if __name__ == "__main__":
     import copy, time
-    pklfile = "resultsd.json"
+    pklfile = "resultsd.pkl"
     results_dict = ample_util.read_amoptd(pklfile)
     
     results_dict['no_gui'] = False

@@ -85,7 +85,7 @@ try:
         # find maxcluster so we just assume it's there
         optd['maxcluster_exe'] = ample_util.find_exe('maxcluster')
         optd['ensemble_ok'] = os.path.join(optd['work_dir'],'ensemble.ok')
-        optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.json")
+        optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
     create_ensembles(optd)
     ample_util.save_amoptd(optd)
 except Exception as e:
