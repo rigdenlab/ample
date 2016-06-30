@@ -130,14 +130,17 @@ def construct_references(optd):
                 # Save the data to the article entry
                 article[key] = value
 
-    # Determine which applications we have used in the AMPLE pipeline
+    # =====================================================
+    # Get the used applications to not print all references
+    # =====================================================
     def used_apps(optd):
         """determine which applications were used and return their labels"""
 
         # For now print all AMPLE papers
         labels = ['AMPLE', 'AMPLE_MODELLING', 'AMPLE_COILS', 'AMPLE_CONTACTS', 'CCP4']
 
-        # TODO: add molrep reference and label
+        # This conditional attempts to recognise which programs have run and therefore
+        # prints only the relevant references. It is under no circumstance perfect.
         if optd['nmr_model_in']:
             labels += ['AMPLE_NMR']
 
@@ -159,14 +162,12 @@ def construct_references(optd):
                 labels += ['Buccaneer']
             elif optd['use_shelxe']:
                 labels += ['SHELXE']
+            # TODO: add molrep reference and label
             elif 'phaser' in optd['mrbump_programs']:
                 labels += ['Phaser', 'REFMAC']
 
         return labels
 
-    # =====================================================
-    # Get the used applications to not print all references
-    # =====================================================
     applications = used_apps(optd)
 
     to_remove = [i for i, art in enumerate(articles) if art['label'] not in applications]
