@@ -550,12 +550,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Get the amopt dictionary
-    with open(sys.argv[1], "r") as f: amoptd = cPickle.load(f)
+    amoptd = ample_util.read_amoptd(sys.argv[1])
 
     # Set up logging - could append to an existing log?
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    fl = logging.FileHandler(os.path.join(amoptd['work_dir'],"benchmark.log"))
+    fl = logging.FileHandler(os.path.join(amoptd['work_dir'], "benchmark.log"))
     fl.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fl.setFormatter(formatter)
@@ -563,5 +563,5 @@ if __name__ == "__main__":
 
     # Create the ensembles & save them
     analyse(amoptd)
-    ample_util.saveAmoptd(amoptd)
+    ample_util.save_amoptd(amoptd)
 

@@ -88,7 +88,7 @@ try:
         optd['ensemble_ok'] = os.path.join(optd['work_dir'],'ensemble.ok')
         optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
     create_ensembles(optd)
-    ample_util.saveAmoptd(optd)
+    ample_util.save_amoptd(optd)
 except Exception as e:
     msg = "Error running ensembling: {0}".format(e.message)
     exit_util.exit_error(msg, sys.exc_info()[2])
