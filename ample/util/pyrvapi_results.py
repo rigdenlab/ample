@@ -31,7 +31,6 @@ it is guaranteed that results of actions 4-6 will appear after results from 1-3,
 
 
 '''
-import cPickle
 import logging
 import os
 import subprocess
@@ -519,8 +518,8 @@ class AmpleOutput(object):
             
 if __name__ == "__main__":
     import copy, time
-    pklfile = "resultsd.pkl"
-    with open(pklfile) as f: results_dict = cPickle.load(f)
+    pklfile = "resultsd.json"
+    results_dict = ample_util.read_amoptd(pklfile)
     
     results_dict['no_gui'] = False
     results_dict['ample_log'] = os.path.abspath(__file__)
