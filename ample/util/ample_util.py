@@ -341,11 +341,24 @@ def find_maxcluster(amoptd):
     return maxcluster_exe
 
 def ideal_helices(nresidues):
-    ""
+    """
+    Get some ideal helices
+
+    Parameters
+    ----------
+    nresidues : int
+       Number of residues to be used
+
+    Returns
+    -------
+    pdbs : list
+    ensemble_options : dict
+    ensembles_data : list
+    """
     include_dir = os.path.join(SHARE_DIR, 'include')
-    names = [ 'polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25',
-              'polyala30', 'polyala35', 'polyala40' ]
-    polya_lengths = [5,10,15,20,25,30,35,40]
+    names = ['polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25',
+             'polyala30', 'polyala35', 'polyala40']
+    polya_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
     
     ensemble_options = {}
     ensembles_data = []
@@ -353,13 +366,13 @@ def ideal_helices(nresidues):
     for name, nres in zip(names, polya_lengths):
         ncopies = nresidues / nres
         if ncopies < 1: ncopies = 1
-        ensemble_options[ name ] = { 'ncopies' : ncopies }
-        pdb = os.path.join(include_dir,"{0}.pdb".format(name))
+        ensemble_options[name] = {'ncopies' : ncopies}
+        pdb = os.path.join(include_dir, "{0}.pdb".format(name))
         # Needed for pyrvapi results
-        ensembles_data.append( { 'name' : name,
-                                'ensemble_pdb' : pdb,
-                                'num_residues' : nres,
-                                 } )
+        ensembles_data.append({'name': name,
+                               'ensemble_pdb': pdb,
+                               'num_residues': nres,
+                                })
         pdbs.append(pdb)
         
     return pdbs, ensemble_options, ensembles_data
