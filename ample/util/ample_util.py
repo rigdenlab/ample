@@ -3,7 +3,6 @@ Various miscellaneous functions.
 Might end up somewhere else at somepoint.
 '''
 
-import cPickle
 import json
 import logging
 import os
