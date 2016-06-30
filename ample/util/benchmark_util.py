@@ -6,7 +6,6 @@ Created on 24 Oct 2014
 
 # Python imports
 import copy
-import cPickle
 import glob
 import logging
 import os
