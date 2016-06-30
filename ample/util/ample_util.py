@@ -3,7 +3,7 @@ Various miscellaneous functions.
 Might end up somewhere else at somepoint.
 '''
 
-import json
+import cPickle
 import logging
 import os
 import platform
@@ -27,68 +27,6 @@ EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
 SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
 
 LOGGER = logging.getLogger(__name__)
-
-# Reference string
-references = """AMPLE: J. Bibby, R. M. Keegan, O. Mayans, M. D. Winn and D. J. Rigden.
-AMPLE: a cluster-and-truncate approach to solve the crystal structures of small proteins using
-rapidly computed ab initio models. (2012). Acta Cryst. D68, 1622-1631 [ doi:10.1107/S0907444912039194 ]
-
-Routine phasing of coiled-coil protein crystal structures with AMPLE (2015). Thomas, J. M. H.,
-Keegan, R. M., Bibby, J., Winn, M. D., Mayans, O. and Rigden, D. J. IUCrJ 2, 198-206.
-[doi:10.1107/S2052252515002080] 
-
-CCP4: Collaborative Computational Project, Number 4. (1994), The CCP4 Suite: Programs
-for Protein Crystallography. Acta Cryst. D50, 760-763
-
-MaxCluster: http://www.sbg.bio.ic.ac.uk/maxcluster/
-
-MOLREP: A.A.Vagin & A.Teplyakov (1997) J. Appl. Cryst. 30, 1022-1025
-
-MrBUMP: R.M.Keegan and M.D.Winn (2007) Acta Cryst. D63, 447-457
-
-PHASER: McCoy, A.J., Grosse-Kunstleve, R.W., Adams, P.D., Winn, M.D.,
-Storoni, L.C. & Read, R.J. (2007)
-Phaser crystallographic software J. Appl. Cryst. 40, 658-674
-
-REFMAC: G.N. Murshudov, A.A.Vagin and E.J.Dodson, (1997) Refinement of Macromolecular
-Structures by the Maximum-Likelihood Method. Acta Cryst. D53, 240-255
-
-SCWRL: G. G. Krivov, M. V. Shapovalov, and R. L. Dunbrack, Jr. Improved prediction of protein
-side-chain conformations with SCWRL4. Proteins (2009).
-
-SHELXE: "Extending molecular-replacement solutions with SHELXE". Thorn, A. and Sheldrick, G. M. (2013),
-Acta Crystallographica D, 69: 2251-2256. doi: 10.1107/S0907444913027534
-
-SPICKER: Y. Zhang, J. Skolnick, SPICKER: Approach to clustering protein structures for
-near-native model selection, Journal of Computational Chemistry, 2004 25: 865-871
-
-Theseus: THESEUS: Maximum likelihood superpositioning and analysis of macromolecular structures.
-Theobald, Douglas L. & Wuttke, Deborah S. (2006b) Bioinformatics 22(17):2171-2172 [Open Access]
-Supplementary Materials for Theobald and Wuttke 2006b."""
-
-# Header string
-header ="""#########################################################################
-#########################################################################
-#########################################################################
-# CCP4: AMPLE - Ab Initio Modelling Molecular Replacement               #
-#########################################################################
-
-The authors of specific programs should be referenced where applicable:""" + \
-"\n\n" + references + "\n\n"
-
-
-survey_url = "http://goo.gl/forms/7xP9M4P81O"
-footer = "\n" + """
-#########################################################################
-#***********************************************************************#
-#*                          How did we do?                             *#
-#*                                                                     *#
-#*           Please follow this link and leave some feedback!          *#
-#*                                                                     *#
-#*                 {url}                      *#
-#***********************************************************************#
-#########################################################################
-""".format(url=survey_url)
 
 
 def ccp4_version():
@@ -131,7 +69,83 @@ def ccp4_version():
             raise RuntimeError("Cannot split CCP4 version: {0}".format(tversion))
     os.unlink(log_fname)
     return (major,minor,rev)
-    
+
+def construct_references():
+    """
+    Construct the reference list
+
+    Description
+    -----------
+    This is somewhat a very basic BibTex parser. It is under no circumstances foolproof but rather
+    the bare minimum for what is required in AMPLE.
+
+    If a more sophisticated parser is required, refer to one of the python packages available online.
+
+    Returns
+    -------
+    references : str
+    """
+
+    # Get the filename and check we can use it
+    ref_fname = os.path.join(SHARE_DIR, "include", "references.bib")
+    if not is_file(ref_fname):
+        msg = "Cannot find BibTex file containing references. " \
+              "Please determine them yourself and cite AMPLE."
+        return msg
+
+    articles = []
+    article = {}
+    entry = False
+
+    with open(ref_fname, "r") as fhin:
+        for line in fhin.readlines():
+
+            # Make sure line is not empty
+            line = line.strip()
+            if not line:
+                continue
+
+            # Beginning of all BibTex entries
+            if line.startswith("@"):
+                entry = True
+                article = {}                # Reset the article dictionary
+            # End of of all BibTex entries
+            elif line.startswith("}") and line.endswith("}"):
+                entry = False
+                articles.append(article)    # Save the article dictionary
+
+            if entry and not line.startswith("@"):
+
+                line = line.replace("{", "")
+                line = line.replace("}", "")
+                line = line.split("=")
+
+                line = [line[0].strip(), line[1].strip().rstrip(",").replace("\"", "")]
+
+                # Do some formatting of the data so we can have a properly formatted string
+                # We might also want to - at some point ever - use this data otherhow so we
+                # this allows us to do it
+                if line[0].lower() == "author":
+                    tmp = line[1].split(" and ")[0]
+                    line[1] = tmp.split(",")[0] + " et al."
+                if line[0].lower() == "volume":
+                    line[1] = int(line[1])
+                if line[0].lower() == "year":
+                    line[1] = int(line[1])
+                if line[0].lower() == "number":
+                    line[1] = int(line[1])
+                if line[0].lower() == "pages":
+                    line[1] = line[1].replace("--", "-")
+
+                # Save the data to the article entry
+                article[line[0]] = line[1]
+
+    # Somewhat a template of how we want to display each article
+    template = "* {label}: {author} ({year}). {title}. {journal} {volume}({number}), {pages}. [doi:{doi}]"
+    references = [template.format(**article) for article in articles]
+
+    return (os.linesep*2).join(references)
+
 def extract_models(amoptd, sequence=None, single=True, allsame=True):
     """Check a directory of pdbs or extract pdb files from a given tar/zip file or directory of pdbs
     and set the amoptd['models_dir'] entry with the directory of unpacked/validated pdbs
@@ -512,12 +526,12 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
 
 def read_amoptd(amoptd_fname):
     """
-    Read a JSON-formatted AMPLE options file
+    Read a PICKLE-formatted AMPLE options file
 
     Parameters
     ----------
     amoptd_fname : str
-       The path to the JSON-formatted AMPLE options file
+       The path to the PICKLE-formatted AMPLE options file
 
     Returns
     -------
@@ -529,13 +543,13 @@ def read_amoptd(amoptd_fname):
                            "file: {0}\n".format(amoptd_fname))
 
     with open(amoptd_fname, 'r') as f:
-        amoptd = json.load(f)
+        amoptd = cPickle.load(f)
         LOGGER.info("Loaded state from file: {0}\n".format(amoptd['results_path']))
     return amoptd
 
 def saveAmoptd(*args):
     """
-    Save AMPLE options to a JSON-formatted file
+    Save AMPLE options to a PICKLE-formatted file
 
     See Also
     --------
@@ -552,7 +566,7 @@ def saveAmoptd(*args):
 
 def save_amoptd(amoptd):
     """
-    Save AMPLE options to a JSON-formatted file
+    Save AMPLE options to a PICKLE-formatted file
 
     Parameters
     ----------
@@ -561,7 +575,7 @@ def save_amoptd(amoptd):
     """
     # Save results
     with open(amoptd['results_path'], 'w') as f:
-        json.dump(amoptd, f)
+        cPickle.dump(amoptd, f)
         LOGGER.info("Saved state as file: {0}\n".format(amoptd['results_path']))
     return
 
@@ -641,5 +655,27 @@ def tmp_file_name(delete=True, directory=None):
     tmp1 = t.name
     t.close()
     return tmp1
-        
 
+
+# Header string
+header ="""#########################################################################
+#########################################################################
+#########################################################################
+# CCP4: AMPLE - Ab Initio Modelling Molecular Replacement               #
+#########################################################################
+
+The authors of specific programs should be referenced where applicable:""" + \
+"\n\n" + construct_references() + "\n\n"
+
+survey_url = "http://goo.gl/forms/7xP9M4P81O"
+footer = "\n" + """
+#########################################################################
+#***********************************************************************#
+#*                          How did we do?                             *#
+#*                                                                     *#
+#*           Please follow this link and leave some feedback!          *#
+#*                                                                     *#
+#*                 {url}                      *#
+#***********************************************************************#
+#########################################################################
+""".format(url=survey_url)
