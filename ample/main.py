@@ -188,7 +188,7 @@ class Ample(object):
                                      submit_array=optd['submit_array'],
                                      submit_max_array=optd['submit_max_array'])
             # queue finished so unpickle results
-            with open(optd['results_path'], "r") as f: optd = cPickle.load(f)
+            with open(optd['results_path'], "r") as f: optd.update(cPickle.load(f))
         else:
             benchmark_util.analyse(optd)
             ample_util.saveAmoptd(optd)
