@@ -403,38 +403,56 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     return work_dir
 
 def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False, **kwargs):
-    """Execute a command and return the exit code.
+    """
+    Execute a command and return the exit code.
 
+    Parameters
+    ----------
+    cmd : list
+       Command to run as a list
+    stdin : str
+       Stdin for the command
+    logfile : str
+       The path to the logfile
+    directory : str
+       The directory to run the job in (cwd assumed)
+    dolog : bool
+       Whether to output info to the system log
+
+    Returns
+    -------
+    returncode : int
+       Subprocess exit code
+
+    Notes
+    -----
     We take care of outputting stuff to the logs and opening/closing logfiles
-
-    Args:
-    cmd - command to run as a list
-    stdin - a string to use as stdin for the command
-    logfile (optional) - the path to the logfile
-    directory (optional) - the directory to run the job in (cwd assumed)
-    dolog: bool - whether to output info to the system log
     """
     assert type(cmd) is list, "run_command needs a list!"
-    if check:
-        if not is_exe(cmd[0]): raise RuntimeError,"run_command cannot find executable: {0}".format(cmd[0])
+    if check and not is_exe(cmd[0]):
+        raise RuntimeError("run_command cannot find executable: {0}".format(cmd[0]))
 
-    if not directory:  directory = os.getcwd()
+    if not directory:
+        directory = os.getcwd()
+
     if dolog:
         LOGGER.debug("In directory {0}".format(directory))
         LOGGER.debug("Running command: {0}".format(" ".join(cmd)))
-        if kwargs:  LOGGER.debug("kwargs are: {0}".format(kwargs))
-    file_handle=False
+        if kwargs:
+            LOGGER.debug("kwargs are: {0}".format(kwargs))
+
+    file_handle = False
     if logfile:
-        if type(logfile)==file:
-            file_handle=True
-            logf=logfile
-            logfile=os.path.abspath(logf.name)
+        if type(logfile) == file:
+            file_handle = True
+            logf = logfile
+            logfile = os.path.abspath(logf.name)
         else:
             logfile = os.path.abspath(logfile)
             logf = open(logfile, "w")
         if dolog: LOGGER.debug("Logfile is: {0}".format(logfile))
     else:
-        logf = tempfile.TemporaryFile()
+        logf = tmp_file_name()
         
     if stdin != None:
         stdinstr = stdin
@@ -442,16 +460,18 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
 
     # Windows needs some special treatment
     if os.name == "nt":
-        kwargs.update( { 'bufsize': 0, 'shell' : "False" } )
+        kwargs.update({'bufsize': 0, 'shell' : "False"})
     p = subprocess.Popen(cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs)
 
     if stdin != None:
-        p.stdin.write( stdinstr )
+        p.stdin.write(stdinstr)
         p.stdin.close()
-        if dolog: LOGGER.debug("stdin for cmd was: {0}".format( stdinstr ) )
+        if dolog: LOGGER.debug("stdin for cmd was: {0}".format(stdinstr))
 
     p.wait()
-    if not file_handle: logf.close()
+    if not file_handle:
+        logf.close()
+
     return p.returncode
 
 def saveAmoptd(amoptd):
