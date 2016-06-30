@@ -534,11 +534,36 @@ def read_amoptd(amoptd_fname):
         LOGGER.info("Loaded state from file: {0}\n".format(amoptd['results_path']))
     return amoptd
 
-def saveAmoptd(amoptd):
+def saveAmoptd(*args):
+    """
+    Save AMPLE options to a JSON-formatted file
+
+    See Also
+    --------
+    save_amoptd
+
+    Warnings
+    --------
+    This function was deprecated and will be removed in future releases. Please use ``save_amoptd()`` instead.
+    """
+    msg = "This function was deprecated and will be removed in future release"
+    warnings.warn(msg, DeprecationWarning, stacklevel=2)
+    save_amoptd(*args)
+    return
+
+def save_amoptd(amoptd):
+    """
+    Save AMPLE options to a JSON-formatted file
+
+    Parameters
+    ----------
+    amoptd : dict
+       AMPLE options from saved state
+    """
     # Save results
-    with open( amoptd['results_path'], 'w' ) as f:
-        cPickle.dump(amoptd, f)
-        LOGGER.info("Saved state as file: {0}\n".format( amoptd['results_path'] ) )
+    with open(amoptd['results_path'], 'w') as f:
+        json.dump(amoptd, f)
+        LOGGER.info("Saved state as file: {0}\n".format(amoptd['results_path']))
     return
 
 def split_quark(*args):
