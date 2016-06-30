@@ -164,6 +164,7 @@ class Ample(object):
         ample_util.save_amoptd(amopt.d)
         
         LOGGER.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+        LOGGER.info(ample_util.reference.format(refs=ample_util.construct_references(amopt.d)))
         LOGGER.info(ample_util.footer)
         
         # Finally update pyrvapi results
