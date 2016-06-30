@@ -1,5 +1,4 @@
 import argparse
-import cPickle
 import logging
 import os
 import sys
@@ -49,7 +48,7 @@ if 'restart_pkl' in optd and optd['restart_pkl']:
         msg = 'Cannot find ensemble pkl file: {0}'.format(optd['restart_pkl'])
         exit_util.exit_error(msg)
     try:
-        with open(optd['restart_pkl'], "r") as f: optd = cPickle.load(f)
+        optd = ample_util.read_amoptd(optd['restart_pkl'])
     except Exception as e:
         msg = "Error unpickling ensemble pkl: {0}".format(e.message)
         exit_util.exit_error(msg, sys.exc_info()[2])
@@ -86,7 +85,7 @@ try:
         # find maxcluster so we just assume it's there
         optd['maxcluster_exe'] = ample_util.find_exe('maxcluster')
         optd['ensemble_ok'] = os.path.join(optd['work_dir'],'ensemble.ok')
-        optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
+        optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.json")
     create_ensembles(optd)
     ample_util.save_amoptd(optd)
 except Exception as e:
