@@ -434,7 +434,7 @@ def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
                                                                                                         targetpdb
                                                                                                         )
         # Now we do our keep matching    
-    tmp1 = ample_util.tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix
+    tmp1 = ample_util.tmp_file_name()+".pdb" # pdbcur insists names have a .pdb suffix
     
     _keep_matching( refpdb, targetpdb, tmp1, resSeqMap=resSeqMap )
     
@@ -1562,7 +1562,7 @@ def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
     """Rename any non-standard AA, remove solvent and only keep most probably conformation.
     """
 
-    tmp1 = ample_util.tmpFileName() + ".pdb" # pdbcur insists names have a .pdb suffix
+    tmp1 = ample_util.tmp_file_name() + ".pdb" # pdbcur insists names have a .pdb suffix
     
     # Now clean up with pdbcur
     logfile = tmp1+".log"

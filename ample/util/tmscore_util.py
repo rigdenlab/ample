@@ -264,8 +264,8 @@ class TMscorer(object):
         structure_gaps = self.find_gaps(structure_seq_ali)
 
         ## STAGE 1 - REMOVE RESIDUES ##
-        pdbin_stage1 = ample_util.tmpFileName()
-        structure_stage1 = ample_util.tmpFileName()
+        pdbin_stage1 = ample_util.tmp_file_name(delete=False)
+        structure_stage1 = ample_util.tmp_file_name(delete=False)
 
         # Get first residue number to adjust list of residues to remove
         pdbin_res1 = self.residue_one(pdbin)
