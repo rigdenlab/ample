@@ -101,7 +101,6 @@ class Ample(object):
         for the program - required for testing.
         """ 
         argso = self.process_command_line(args=args)
-        #self.amopt = amopt = options_util.AmpleOptions()
         self.amopt = amopt = config_util.AMPLEConfigOptions()
         amopt.populate(argso)
 
@@ -129,8 +128,8 @@ class Ample(object):
             benchmark_util.analysePdb(amopt.d) 
         
         # Modelling business happens here
-        if (amopt.d['import_models'] or amopt.d['make_frags'] or amopt.d['make_models'] or \
-            (amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel'])):
+        if (amopt.d['import_models'] or amopt.d['make_frags'] or amopt.d['make_models'] or
+                (amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel'])):
             self.modelling(amopt.d, rosetta_modeller)
             amopt.write_config_file()
 
@@ -188,7 +187,6 @@ class Ample(object):
                                      submit_array=optd['submit_array'],
                                      submit_max_array=optd['submit_max_array'])
             # queue finished so unpickle results
-            # TODO: Determine if we need to return this
             optd.update(ample_util.read_amoptd(optd['results_path']))
         else:
             benchmark_util.analyse(optd)
