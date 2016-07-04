@@ -54,6 +54,11 @@ class TMscorer(object):
        Path to the TMscore executable
     work_dir : str
        Path to the working directory
+
+    Examples
+    --------
+    >>> tm = TMscorer("<REFERENCE>", "<PATH_TO_EXE>")
+    >>> entries = tm.compare_to_structure(["<MODEL_1>", "<MODEL_2>", "<MODEL_3>"])
     """
 
     def __init__(self, structure, tmscore_exe, wdir=None):
@@ -368,3 +373,13 @@ class TMscorer(object):
                             nr_residues_common=pt.nr_residues_common)
 
 
+if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("model")
+    parser.add_argument("reference")
+    parser.add_argument("tmscore")
+    args = parser.parse_args()
+    tm = TMscorer(args.reference, args.tmscore)
+    for entry in tm.compare_to_structure([args.model]):
+        print entry
