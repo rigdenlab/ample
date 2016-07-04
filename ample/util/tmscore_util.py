@@ -169,7 +169,8 @@ class TMscorer(object):
                 # Parse the TMscore logfile to extract the scores
                 pt.parse(log)
             except Exception as e:
-                LOGGER.critical(e.msg)
+                msg = "Issues processing the TMscore log file: ", log
+                LOGGER.critical(msg)
                 log = "None"
 
             entry = self._store(pdbin_name, pdbin, log, self.structure, pt)
@@ -313,6 +314,7 @@ class TMscorer(object):
             if line.startswith("ATOM"):
                 line = line.split()
                 index = int(line[5])
+                break
         return index
 
     def find_gaps(self, seq):
