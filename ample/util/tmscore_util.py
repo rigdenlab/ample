@@ -313,9 +313,7 @@ class TMscorer(object):
         for line in open(pdb, 'r'):
             if line.startswith("ATOM"):
                 line = line.split()
-                index = int(line[5])
-                break
-        return index
+                return int(line[5])
 
     def find_gaps(self, seq):
         """
