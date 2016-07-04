@@ -76,7 +76,7 @@ class TMscorer(object):
         self.pickle_file = None
         self.structure = structure
         self.tmscore_exe = tmscore_exe
-        self.work_dir = wdir
+        self.work_dir = wdir if wdir else os.getcwd()
         return
 
     def main(self, pdb_list_file, keep_modified_structures=False, identical_sequences=False):
