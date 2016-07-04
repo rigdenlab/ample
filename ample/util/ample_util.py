@@ -695,6 +695,22 @@ def split_models(dfile, directory):
         
     return extracted_models
 
+def tmpFileName():
+    """
+    Return a filename for a temporary file
+
+    See Also
+    --------
+    tmp_file_name
+
+    Warnings
+    --------
+    This function was deprecated and will be removed in future releases. Please use ``tmp_file_name()`` instead.
+    """
+    msg = "This function was deprecated and will be removed in future release"
+    warnings.warn(msg, DeprecationWarning, stacklevel=2)
+    return tmp_file_name()
+
 def tmp_file_name(delete=True, directory=None):
     """
     Return a filename for a temporary file
