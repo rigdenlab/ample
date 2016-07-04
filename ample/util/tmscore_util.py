@@ -281,15 +281,15 @@ class TMscorer(object):
         structure_gaps = [i + pdbin_res1-1 for i in structure_gaps]
 
         # Use gaps of other sequence to even out
-        pdb_edit.select_residues(pdbin, pdbin_stage1.name, delete=structure_gaps)
-        pdb_edit.select_residues(structure, structure_stage1.name, delete=pdbin_gaps)
+        pdb_edit.select_residues(pdbin, pdbin_stage1, delete=structure_gaps)
+        pdb_edit.select_residues(structure, structure_stage1, delete=pdbin_gaps)
 
         ## STAGE 2 - RENUMBER RESIDUES ##
-        pdb_edit.renumber_residues(pdbin_stage1.name, pdbin_mod)
-        pdb_edit.renumber_residues(structure_stage1.name, structure_mod)
+        pdb_edit.renumber_residues(pdbin_stage1, pdbin_mod)
+        pdb_edit.renumber_residues(structure_stage1, structure_mod)
 
-        os.unlink(pdbin_stage1.name)
-        os.unlink(structure_stage1.name)
+        os.unlink(pdbin_stage1)
+        os.unlink(structure_stage1)
 
         logging.disable(logging.NOTSET)
 
