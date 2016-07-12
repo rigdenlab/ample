@@ -47,18 +47,32 @@ class TMscoreLogParser(object):
         with open(logfile, 'r') as f:
             for line in iter(f.readline, ''):
                 if line.startswith("Number of residues in common"):
-                    self.nrResiduesCommon=int(line.split()[5])
+                    nr_residues_common = int(line.split()[5])
                 if line.startswith("RMSD"):
-                    self.rmsd = float(line.split()[5])
+                    rmsd = float(line.split()[5])
                 if line.startswith("TM-score"):
-                    self.tm = float(line.split()[2])
+                    tm = float(line.split()[2])
                 if line.startswith("MaxSub-score"):
-                    self.maxsub = float(line.split()[1])
+                    maxsub = float(line.split()[1])
                 if line.startswith("GDT-TS-score"):
-                    self.gdtts = float(line.split()[1])
+                    gdtts = float(line.split()[1])
                 if line.startswith("GDT-HA-score"):
-                    self.gdtha = float(line.split()[1])
+                    gdtha = float(line.split()[1])
 
+        self.set(tm, maxsub, gdtts, gdtha, rmsd, nr_residues_common)
+
+        return
+
+    def set(self, tm, maxsub, gdtts, gdtha, rmsd, nr_residues_common):
+        """
+        Manually set the TMscore parser parameters
+        """
+        self.tm = tm
+        self.maxsub = maxsub
+        self.gdtts = gdtts
+        self.gdtha = gdtha
+        self.rmsd = rmsd
+        self.nr_residues_common = nr_residues_common
         return
 
     def reset(self):
@@ -70,4 +84,5 @@ class TMscoreLogParser(object):
         self.gdtts = 0.0
         self.gdtha = 0.0
         self.rmsd = 0.0
-        self.nrResiduesCommon = 0
+        self.nr_residues_common = 0
+        return
