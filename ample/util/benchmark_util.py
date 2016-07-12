@@ -29,6 +29,11 @@ _logger=logging.getLogger()
 _oldroot=None
 _newroot=None
 
+TMSCORE_AVAILABLE = True
+if not tmscore_util.tmscore_available():
+    TMSCORE = ample_util.find_exe("TMscore")
+    TMSCORE_AVAILABLE = False
+
 def analyse(amoptd, newroot=None):
     if newroot:
         #if newroot.endswith("/"): newroot=newroot[:-1]
@@ -121,12 +126,20 @@ def analyse(amoptd, newroot=None):
             #cm=d['cluster_centroid']
             d['ensemble_native_TM'] = amoptd['maxComp'].tm(cm)
             d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(cm)
+
+            # Calculation of TMscores for subcluster centroid models
+            if TMSCORE_AVAILABLE:
+                tm = tmscore_util.TMscorer(TMSCORE, fixpath(amoptd['benchmark_dir']))
+                _logger.info("Analysing subcluster centroid model with TMscore")
+                d['subcluster_centroid_model_TM'] = tm.compare_structures([d['subcluster_centroid_model']],
+                                                                          [d['native_pdb_std']])[0].tm
+
         if amoptd['native_pdb']: analyseSolution(amoptd,d)
         data.append(d)
 
-    fileName=os.path.join(fixpath(amoptd['benchmark_dir']),'results.csv' )
-    writeCsv(fileName,data)
-    amoptd['benchmark_results']=data
+    fileName = os.path.join(fixpath(amoptd['benchmark_dir']), 'results.csv' )
+    writeCsv(fileName, data)
+    amoptd['benchmark_results'] = data
     return
 
 def cluster_script(amoptd, python_path="ccp4-python"):
@@ -293,7 +306,10 @@ def analysePdb(amoptd):
     natoms, nresidues = pdb_edit.num_atoms_and_residues(nativePdb)
 
     # Get information on the origins for this spaceGroup
-    originInfo = pdb_model.OriginInfo(spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup)
+    try:
+        originInfo = pdb_model.OriginInfo(spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup)
+    except:
+        originInfo = None
 
     # Do this here as a bug in pdbcur can knacker the CRYST1 data
     amoptd['native_pdb_code'] = nativePdbInfo.pdbCode
@@ -301,7 +317,11 @@ def analysePdb(amoptd):
     amoptd['native_pdb_resolution'] = nativePdbInfo.resolution
     amoptd['native_pdb_solvent_content'] = nativePdbInfo.solventContent
     amoptd['native_pdb_matthews_coefficient'] = nativePdbInfo.matthewsCoefficient
-    amoptd['native_pdb_space_group'] = originInfo.spaceGroup()
+    if not originInfo:
+        space_group = "P1"
+    else:
+        space_group = originInfo.spaceGroup()
+    amoptd['native_pdb_space_group'] = space_group
     amoptd['native_pdb_num_atoms'] = natoms
     amoptd['native_pdb_num_residues'] = nresidues
     
@@ -364,16 +384,14 @@ def analyseModels(amoptd):
 #         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
 #     except RuntimeError,e:
 #         print e
-    if tmscore_util.tmscore_available():
-        amoptd['tmscore_exe'] = ample_util.find_exe("TMscore")
-        tm = tmscore_util.TMscorer(amoptd['native_pdb_std'], 
-                                   amoptd['tmscore_exe'], 
-                                   fixpath(amoptd['benchmark_dir']))
+    if TMSCORE_AVAILABLE:
+        tm = tmscore_util.TMscorer(TMSCORE, fixpath(amoptd['benchmark_dir']))
+        # Calculation of TMscores for all models
         _logger.info("Analysing Rosetta models with TMscore")
         model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
-        amoptd['tmComp'] = tm.compare_to_structure(model_list, 
-                                                   keep_modified_structures=True, 
-                                                   identical_sequences=False)
+        structure_list = [amoptd['native_pdb_std']]
+        amoptd['tmComp'] = tm.compare_structures(model_list, structure_list,
+                                                 keep_modified_structures=True)
         
     amoptd['maxComp'] = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
     _logger.info("Analysing Rosetta models with Maxcluster")
@@ -444,6 +462,7 @@ def writeCsv(fileName,resultList):
                 'subcluster_num_models',
                 'subcluster_radius_threshold',
                 'subcluster_centroid_model',
+                'subcluster_centroid_model_TM',
                 
                 # ensemble info
                 #'name',
