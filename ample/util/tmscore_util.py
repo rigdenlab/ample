@@ -40,9 +40,9 @@ def tmscore_available():
     return True
 
 
-class TMscorer(object):
+class TMapps(object):
     """
-    Wrapper to handle TMscoring for one or more structures
+    Superclass of TMscore and TMalign
 
     Attributes
     ----------
@@ -50,15 +50,12 @@ class TMscorer(object):
        List containing the TMscore entries on a per-model basis
     structure : str
        Path to the reference structure
-    tmscore_exe : str
+    method : str
+       One of [TMscore|TMalign]
+    executable : str
        Path to the TMscore executable
     work_dir : str
        Path to the working directory
-
-    Examples
-    --------
-    >>> tm = TMscorer2("<REFERENCE>", "<PATH_TO_EXE>")
-    >>> entries = tm.compare_to_structure(["<MODEL_1>", "<MODEL_2>", "<MODEL_3>"])
 
     Todo
     ----
@@ -66,25 +63,68 @@ class TMscorer(object):
     * Function to return the entries in a pandas dataframe
     """
 
-    def __init__(self, tmscore_exe, wdir=None):
+    def __init__(self, executable, method, wdir=None):
         """
         Parameters
         ----------
-        tmscore_exe : str
-           Path to the TMscore executable
+        executable : str
+           Path to the executable
+        method : str
+           One of [TMscore|TMalign]
         work_dir : str
            Path to the working directory
         """
-        self.entries = []
-        self.tmscore_exe = tmscore_exe
+        self.executable = executable
+        self.method = method.lower()
         self.work_dir = wdir if wdir else os.getcwd()
+
+        self.entries = []
         return
 
-    def compare_to_structure(self, *args, **kwargs):
-        msg = "This function was deprecated and will be removed in a future release." \
-              "Use function ``compare_structures()`` instead."
-        warnings.warn(msg, DeprecationWarning, stacklevel=2)
-        return 1
+    def execute_comparison(self, model, reference, log=None):
+        """
+        Wrapper to execute the TMscore comparison command
+
+        Paramters
+        ---------
+        model : str
+           Path to the model structure file
+        reference : str
+           Path to the reference structure file
+        log : str
+           Path to the log file
+
+        Returns
+        -------
+        return_code : int
+           Return code of the process
+        """
+        # Create a command list and execute TMscore
+        cmd = [self.executable, model, reference]
+        return_code = ample_util.run_command(cmd, logfile=log, directory=self.work_dir)
+        return return_code
+
+
+class TMscore(TMapps):
+    """
+    Wrapper to handle TMscoring for one or more structures
+
+    Examples
+    --------
+    >>> models = ["<MODEL_1>", "<MODEL_2>", "<MODEL_3>"]
+    >>> references = ["<REFERENCE_1>", "<REFERENCE>", "<REFERENCE>"]
+    >>> tm = TMscore("<PATH_TO_EXE>")
+    >>> entries = tm.compare_to_structure(models, references)
+
+    Todo
+    ----
+    * Function to return the entries as numpy matrix
+    * Function to return the entries in a pandas dataframe
+    """
+
+    def __init__(self, executable, wdir=None):
+        super(TMscore, self).__init__(executable, "TMscore", wdir=wdir)
+        return
 
     def compare_structures(self, models, structures, all_vs_all=False, keep_modified_structures=False, identical_sequences=False):
         """
@@ -196,57 +236,6 @@ class TMscorer(object):
         self.entries = entries
         return entries
 
-    def execute_comparison(self, model, reference, log=None):
-        """
-        Wrapper to execute the TMscore comparison command
-
-        Paramters
-        ---------
-        model : str
-           Path to the model structure file
-        reference : str
-           Path to the reference structure file
-        log : str
-           Path to the log file
-
-        Returns
-        -------
-        return_code : int
-           Return code of the process
-        """
-        # Create a command list and execute TMscore
-        cmd = [self.tmscore_exe, model, reference]
-        return_code = ample_util.run_command(cmd, logfile=log, directory=self.work_dir)
-        return return_code
-
-    def dump_csv(self, csv_file):
-        """
-        Dump the entry data to a csv file
-
-        Parameters
-        ----------
-        csv_file : str
-           Path to a file to write the data to
-
-        Warnings
-        --------
-        This function was deprecated and will be removed in future releases
-        """
-        msg = "This function was deprecated and will be removed in a future release"
-        warnings.warn(msg, DeprecationWarning, stacklevel=2)
-
-        if not len(self.entries):
-            return
-
-        with open(csv_file, 'w') as f:
-            fieldnames = self.entries[0]._asdict().keys()
-            dw = csv.DictWriter(f, fieldnames=fieldnames)
-            dw.writeheader()
-            for e in self.entries:
-                dw.writerow(e._asdict())
-        LOGGER.info("Wrote csvfile: {0}".format(os.path.abspath(csv_file)))
-        return
-
     def mod_structures(self, model, model_mod, structure, structure_mod):
         """
         Modify the two structure files to match each other
@@ -350,41 +339,6 @@ class TMscorer(object):
         """
         return [i + 1 for i, c in enumerate(seq) if c == "-"]
 
-    def read_sequence(self, seq):
-        """
-        Determine the sequence offset
-
-        Parameters
-        ----------
-        seq : str
-           String of amino acids
-
-        Returns
-        -------
-        offset : int
-           Offset of sequence
-
-        Warnings
-        --------
-        This function was deprecated and will be removed in future releases
-        """
-
-        msg = "This function was deprecated and will be removed in future release"
-        warnings.warn(msg, DeprecationWarning, stacklevel=2)
-
-        offset = 0
-        for char in seq:
-            if char == "-":
-                offset += 1
-            if char != "-":
-                break
-        return offset
-
-    def _read_list(self, list_file):
-        msg = "This function was deprecated and will be removed in future release"
-        warnings.warn(msg, DeprecationWarning, stacklevel=2)
-        return [l.strip() for l in open(list_file, 'r')]
-
     def _store(self, name, model, logfile, structure, pt):
         return TMScoreModel(name=name, model=model,
                             TMSCORE_log=logfile, structure=structure,
@@ -401,7 +355,7 @@ def main():
     parser.add_argument('-s', '-structures', dest="structures", nargs="+", required=True)
     parser.add_argument('-t', '-tmscore', dest="tmscore", type=str, required=True)
     args = parser.parse_args()
-    tm = TMscorer(args.tmscore)
+    tm = TMscore(args.tmscore)
     return tm.compare_structures(args.models, args.structures, all_vs_all=args.allvall)
 
 if __name__ == "__main__":
