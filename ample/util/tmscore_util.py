@@ -143,7 +143,7 @@ class TMscorer(object):
         entries = []
 
         for model, structure in iterator(models, structures):
-
+            
             # Check for an all-vs-all comparison to not go through overhead of modifying
             # identical structure files. Important when making large comparisons.
             # Comparison itself important for statistics like nr_common_residues
@@ -288,8 +288,8 @@ class TMscorer(object):
         structure_gaps = self.find_gaps(structure_seq_ali)
 
         ## STAGE 1 - REMOVE RESIDUES ##
-        model_stage1 = ample_util.tmp_file_name(delete=False)
-        structure_stage1 = ample_util.tmp_file_name(delete=False)
+        model_stage1 = ample_util.tmp_file_name(delete=False, directory=self.work_dir, suffix=".pdb")
+        structure_stage1 = ample_util.tmp_file_name(delete=False, directory=self.work_dir, suffix=".pdb")
 
         # Get first residue number to adjust list of residues to remove
         model_res1 = self.residue_one(model)
@@ -381,6 +381,8 @@ class TMscorer(object):
         return offset
 
     def _read_list(self, list_file):
+        msg = "This function was deprecated and will be removed in future release"
+        warnings.warn(msg, DeprecationWarning, stacklevel=2)
         return [l.strip() for l in open(list_file, 'r')]
 
     def _store(self, name, model, logfile, structure, pt):
