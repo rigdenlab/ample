@@ -711,7 +711,7 @@ def tmpFileName():
     warnings.warn(msg, DeprecationWarning, stacklevel=2)
     return tmp_file_name()
 
-def tmp_file_name(delete=True, directory=None):
+def tmp_file_name(delete=True, directory=None, suffix=None):
     """
     Return a filename for a temporary file
 
@@ -721,9 +721,11 @@ def tmp_file_name(delete=True, directory=None):
        Flag whether the temporary file should be deleted
     directory : str
        Path to a directory to write the files to.
+    suffix : str
+       A suffix to the temporary filename
     """
     directory = os.getcwd() if not directory else directory
-    t = tempfile.NamedTemporaryFile(dir=directory, delete=delete)
+    t = tempfile.NamedTemporaryFile(dir=directory, delete=delete, suffix=suffix)
     tmp1 = t.name
     t.close()
     return tmp1
