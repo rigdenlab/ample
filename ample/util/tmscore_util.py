@@ -1,12 +1,10 @@
 #!/usr/bin/env ccp4-python
 
-import csv
 import collections
 import filecmp
 import itertools
 import logging
 import os
-import warnings
 
 from ample.parsers import alignment_parser
 from ample.parsers import tmscore_parser
