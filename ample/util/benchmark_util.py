@@ -129,7 +129,7 @@ def analyse(amoptd, newroot=None):
 
             # Calculation of TMscores for subcluster centroid models
             if TMSCORE_AVAILABLE:
-                tm = tmscore_util.TMscorer(TMSCORE, fixpath(amoptd['benchmark_dir']))
+                tm = tmscore_util.TMscore(TMSCORE, fixpath(amoptd['benchmark_dir']))
                 _logger.info("Analysing subcluster centroid model with TMscore")
                 d['subcluster_centroid_model_TM'] = tm.compare_structures([d['subcluster_centroid_model']],
                                                                           [d['native_pdb_std']])[0].tm
@@ -385,7 +385,7 @@ def analyseModels(amoptd):
 #     except RuntimeError,e:
 #         print e
     if TMSCORE_AVAILABLE:
-        tm = tmscore_util.TMscorer(TMSCORE, fixpath(amoptd['benchmark_dir']))
+        tm = tmscore_util.TMscore(TMSCORE, fixpath(amoptd['benchmark_dir']))
         # Calculation of TMscores for all models
         _logger.info("Analysing Rosetta models with TMscore")
         model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))

@@ -5,26 +5,8 @@ from ample.util import tmscore_util
 
 class TestTMScore(unittest.TestCase):
 
-    def test_read(self):
-        TM = tmscore_util.TMscorer("foo")
-        
-        seq = "-----AAAA---"
-        offset = TM.read_sequence(seq)
-        ref_offset = 5
-        self.assertEqual(ref_offset, offset)
-
-        seq = "AAA---"
-        offset = TM.read_sequence(seq)
-        ref_offset = 0
-        self.assertEqual(ref_offset, offset)
-
-        seq = "AAAA"
-        offset = TM.read_sequence(seq)
-        ref_offset = 0
-        self.assertEqual(ref_offset, offset)
-
     def test_gaps(self):        
-        TM = tmscore_util.TMscorer("cho")
+        TM = tmscore_util.TMscore("cho")
         
         seq = "AAAA---AA--AA"
         gaps = TM.find_gaps(seq)
