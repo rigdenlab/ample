@@ -83,8 +83,8 @@ class TMapps(object):
         """
         Wrapper to execute the TMscore comparison command
 
-        Paramters
-        ---------
+        Parameters
+        ----------
         model : str
            Path to the model structure file
         reference : str
@@ -101,6 +101,24 @@ class TMapps(object):
         cmd = [self.executable, model, reference]
         return_code = ample_util.run_command(cmd, logfile=log, directory=self.work_dir)
         return return_code
+
+
+class TMalign(TMapps):
+    """
+    Wrapper to handle TMalign scoring for one or more structures
+
+    Examples
+    --------
+    >>> models = ["<MODEL_1>", "<MODEL_2>", "<MODEL_3>"]
+    >>> references = ["<REFERENCE_1>", "<REFERENCE>", "<REFERENCE>"]
+    >>> tm = TMalign("<PATH_TO_EXE>")
+    >>> entries = tm.compare_to_structure(models, references)
+
+    """
+
+    def __init__(self, executable, wdir=None):
+        super(TMalign, self).__init__(executable, "TMalign", wdir=wdir)
+        return
 
 
 class TMscore(TMapps):
@@ -181,13 +199,9 @@ class TMscore(TMapps):
         entries = []
 
         for model, structure in iterator(models, structures):
-            
-            # Check for an all-vs-all comparison to not go through overhead of modifying
-            # identical structure files. Important when making large comparisons.
-            # Comparison itself important for statistics like nr_common_residues
-            identical_structures = False
-            if filecmp.cmp(model, structure):
-                identical_structures = True
+
+            # Quick file-check to check for similarity [skip identical files]
+            identical_structures = self.identical_structures(model, structure)
 
             model_name = os.path.splitext(os.path.basename(model))[0]
             structure_name = os.path.splitext(os.path.basename(structure))[0]
@@ -202,7 +216,7 @@ class TMscore(TMapps):
                 continue
 
             # Modify structures to be identical as required by TMscore binary
-            if not identical_sequences and not identical_structures:
+            if not (identical_sequences and identical_structures):
                 model_mod = os.path.join(self.work_dir, model_name + "_mod.pdb")
                 structure_mod = os.path.join(self.work_dir, model_name + "_" + structure_name + "_mod.pdb")
                 self.mod_structures(model, model_mod, structure, structure_mod)
@@ -213,8 +227,7 @@ class TMscore(TMapps):
             self.execute_comparison(model, structure, log)
 
             # Delete the modified structures if not wanted
-            if not keep_modified_structures and not identical_sequences and \
-                    not identical_structures:
+            if not (keep_modified_structures and identical_sequences and identical_structures):
                 os.remove(model_mod)
                 os.remove(structure_mod)
 
@@ -336,6 +349,28 @@ class TMscore(TMapps):
 
         """
         return [i + 1 for i, c in enumerate(seq) if c == "-"]
+
+    def identical_structures(self, model, structure):
+        """
+        Description
+        -----------
+        Check for an all-vs-all comparison to not go through overhead of modifying
+        identical structure files. Important when making large comparisons.
+        Comparison itself important for statistics like nr_common_residues
+
+        Arguments
+        ---------
+        model: str
+           The path to a PDB file
+        structure: str
+           The path to a PDB file
+
+        Returns
+        -------
+        identical_structures: bool
+
+        """
+        return True if filecmp.cmp(model, structure) else False
 
     def _store(self, name, model, logfile, structure, pt):
         return TMScoreModel(name=name, model=model,
