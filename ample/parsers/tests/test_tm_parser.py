@@ -1,4 +1,4 @@
-"""Test functions for parsers.tmscore_parser"""
+"""Test functions for parsers.tm_parser"""
 import os
 import unittest
 from ample import constants

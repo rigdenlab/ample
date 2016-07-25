@@ -7,7 +7,7 @@ import logging
 import os
 
 from ample.parsers import alignment_parser
-from ample.parsers import tmscore_parser
+from ample.parsers import tm_parser
 from ample.util import ample_util
 from ample.util import pdb_edit
 
@@ -193,7 +193,7 @@ class TMscore(TMapps):
         # =======================================================================
 
         # Create a TMscore logfile parser
-        pt = tmscore_parser.TMscoreLogParser()
+        pt = tm_parser.TMscoreLogParser()
 
         LOGGER.info('-------Evaluating decoys/models-------')
         entries = []
