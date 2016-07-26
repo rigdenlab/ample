@@ -711,7 +711,7 @@ def tmpFileName():
     warnings.warn(msg, DeprecationWarning, stacklevel=2)
     return tmp_file_name()
 
-def tmp_file_name(delete=True, directory=None, suffix=None):
+def tmp_file_name(delete=True, directory=None, suffix=""):
     """
     Return a filename for a temporary file
 
