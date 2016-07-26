@@ -1,6 +1,5 @@
 #!/usr/bin/env ccp4-python
 
-import collections
 import filecmp
 import itertools
 import logging
@@ -16,27 +15,6 @@ __date__ = "09.11.2015"
 __version__ = "2.0"
 
 LOGGER = logging.getLogger(__name__)
-
-TMScoreModel = collections.namedtuple("TMScoreModel",
-                                      ["name", "model", "TMSCORE_log", "structure",
-                                       "tm", "maxsub", "gdtts", "gdtha", "rmsd",
-                                       "nr_residues_common"])
-
-
-def tmscore_available():
-    """
-    Check if TMscore binary is available
-
-    Returns
-    -------
-    bool
-    """
-    try:
-        ample_util.find_exe("TMscore")
-    except:
-        return False
-    return True
-
 
 class TMapps(object):
     """
@@ -79,70 +57,7 @@ class TMapps(object):
         self.entries = []
         return
 
-    def execute_comparison(self, model, reference, log=None):
-        """
-        Wrapper to execute the TMscore comparison command
-
-        Parameters
-        ----------
-        model : str
-           Path to the model structure file
-        reference : str
-           Path to the reference structure file
-        log : str
-           Path to the log file
-
-        Returns
-        -------
-        return_code : int
-           Return code of the process
-        """
-        # Create a command list and execute TMscore
-        cmd = [self.executable, model, reference]
-        return_code = ample_util.run_command(cmd, logfile=log, directory=self.work_dir)
-        return return_code
-
-
-class TMalign(TMapps):
-    """
-    Wrapper to handle TMalign scoring for one or more structures
-
-    Examples
-    --------
-    >>> models = ["<MODEL_1>", "<MODEL_2>", "<MODEL_3>"]
-    >>> references = ["<REFERENCE_1>", "<REFERENCE>", "<REFERENCE>"]
-    >>> tm = TMalign("<PATH_TO_EXE>")
-    >>> entries = tm.compare_to_structure(models, references)
-
-    """
-
-    def __init__(self, executable, wdir=None):
-        super(TMalign, self).__init__(executable, "TMalign", wdir=wdir)
-        return
-
-
-class TMscore(TMapps):
-    """
-    Wrapper to handle TMscoring for one or more structures
-
-    Examples
-    --------
-    >>> models = ["<MODEL_1>", "<MODEL_2>", "<MODEL_3>"]
-    >>> references = ["<REFERENCE_1>", "<REFERENCE>", "<REFERENCE>"]
-    >>> tm = TMscore("<PATH_TO_EXE>")
-    >>> entries = tm.compare_to_structure(models, references)
-
-    Todo
-    ----
-    * Function to return the entries as numpy matrix
-    * Function to return the entries in a pandas dataframe
-    """
-
-    def __init__(self, executable, wdir=None):
-        super(TMscore, self).__init__(executable, "TMscore", wdir=wdir)
-        return
-
-    def compare_structures(self, models, structures, all_vs_all=False, keep_modified_structures=False, identical_sequences=False):
+    def comparison(self, models, structures, all_vs_all=False, keep_modified_structures=False, identical_sequences=False):
         """
         Compare a list of model structures to a second list of reference structures
 
@@ -188,20 +103,28 @@ class TMscore(TMapps):
             LOGGER.info("Direct comparison of models and structures")
             iterator = itertools.izip        # yields a zipped iterator
 
+        # Create a logfile parser
+        if self.method == "tmalign":
+            pt = tm_parser.TMalignLogParser()
+        elif self.method == "tmscore":
+            pt = tm_parser.TMscoreLogParser()
+        else:
+            msg = "Invalid method selected: ", self.method
+            LOGGER.critical(msg)
+            raise RuntimeError(msg)
+
         # =======================================================================
         # Iterate through the structure files and execute the TMscore comparisons
         # =======================================================================
 
-        # Create a TMscore logfile parser
-        pt = tm_parser.TMscoreLogParser()
-
         LOGGER.info('-------Evaluating decoys/models-------')
+        LOGGER.info('Using algorithm: ', self.method)
         entries = []
 
         for model, structure in iterator(models, structures):
 
             # Quick file-check to check for similarity [skip identical files]
-            identical_structures = self.identical_structures(model, structure)
+            identical_structures = self._identical_structures(model, structure)
 
             model_name = os.path.splitext(os.path.basename(model))[0]
             structure_name = os.path.splitext(os.path.basename(structure))[0]
@@ -216,28 +139,29 @@ class TMscore(TMapps):
                 continue
 
             # Modify structures to be identical as required by TMscore binary
-            if not (identical_sequences and identical_structures):
+            if not (identical_sequences and identical_structures and self.method != "tmalign"):
                 model_mod = os.path.join(self.work_dir, model_name + "_mod.pdb")
                 structure_mod = os.path.join(self.work_dir, model_name + "_" + structure_name + "_mod.pdb")
-                self.mod_structures(model, model_mod, structure, structure_mod)
+                self._mod_structures(model, model_mod, structure, structure_mod)
                 model, structure = model_mod, structure_mod
 
             # TODO: Spawn the jobs across a number of CPUs. ample_util.workers_util.run_scripts() maybe?
-            log = os.path.join(self.work_dir, model_name + "_tmscore.log")
-            self.execute_comparison(model, structure, log)
+            log = os.path.join(self.work_dir, model_name + "_{0}.log".format(self.method))
+            cmd = [self.executable, model, structure]
+            ample_util.run_command(cmd, logfile=log, directory=self.work_dir)
 
             # Delete the modified structures if not wanted
-            if not (keep_modified_structures and identical_sequences and identical_structures):
+            if not (keep_modified_structures and identical_sequences and identical_structures and self.method != "tmalign"):
                 os.remove(model_mod)
                 os.remove(structure_mod)
 
             try:
-                # Reset the TMscoreLogParser to default values of 0.0 for every score.
+                # Reset the TM log parser to default values
                 pt.reset()
-                # Parse the TMscore logfile to extract the scores
+                # Parse the TM method logfile to extract the data
                 pt.parse(log)
             except Exception:
-                msg = "Issues processing the TMscore log file: ", log
+                msg = "Issues processing the {0} log file: {1}".format(self.method, log)
                 LOGGER.critical(msg)
                 log = "None"
 
@@ -247,7 +171,29 @@ class TMscore(TMapps):
         self.entries = entries
         return entries
 
-    def mod_structures(self, model, model_mod, structure, structure_mod):
+    def _identical_structures(self, model, structure):
+        """
+        Description
+        -----------
+        Check for an all-vs-all comparison to not go through overhead of modifying
+        identical structure files. Important when making large comparisons.
+        Comparison itself important for statistics like nr_common_residues
+
+        Arguments
+        ---------
+        model: str
+           The path to a PDB file
+        structure: str
+           The path to a PDB file
+
+        Returns
+        -------
+        identical_structures: bool
+
+        """
+        return True if filecmp.cmp(model, structure) else False
+
+    def _mod_structures(self, model, model_mod, structure, structure_mod):
         """
         Modify the two structure files to match each other
 
@@ -284,16 +230,16 @@ class TMscore(TMapps):
         structure_seq_ali = aligned_seq_list[1]
 
         # Get the gaps in both sequences
-        model_gaps = self.find_gaps(model_seq_ali)
-        structure_gaps = self.find_gaps(structure_seq_ali)
+        model_gaps = self._find_gaps(model_seq_ali)
+        structure_gaps = self._find_gaps(structure_seq_ali)
 
         ## STAGE 1 - REMOVE RESIDUES ##
         model_stage1 = ample_util.tmp_file_name(delete=False, directory=self.work_dir, suffix=".pdb")
         structure_stage1 = ample_util.tmp_file_name(delete=False, directory=self.work_dir, suffix=".pdb")
 
         # Get first residue number to adjust list of residues to remove
-        model_res1 = self.residue_one(model)
-        structure_res1 = self.residue_one(structure)
+        model_res1 = self._residue_one(model)
+        structure_res1 = self._residue_one(structure)
 
         # Match the residue lists to fit the residue 1 number
         model_gaps = [i + structure_res1 - 1 for i in model_gaps]
@@ -314,7 +260,7 @@ class TMscore(TMapps):
 
         return
 
-    def residue_one(self, pdb):
+    def _residue_one(self, pdb):
         """
         Find the first residue index in a pdb structure
 
@@ -333,7 +279,7 @@ class TMscore(TMapps):
                 line = line.split()
                 return int(line[5])
 
-    def find_gaps(self, seq):
+    def _find_gaps(self, seq):
         """
         Identify gaps in the protein chain
 
@@ -350,35 +296,75 @@ class TMscore(TMapps):
         """
         return [i + 1 for i, c in enumerate(seq) if c == "-"]
 
-    def identical_structures(self, model, structure):
-        """
-        Description
-        -----------
-        Check for an all-vs-all comparison to not go through overhead of modifying
-        identical structure files. Important when making large comparisons.
-        Comparison itself important for statistics like nr_common_residues
-
-        Arguments
-        ---------
-        model: str
-           The path to a PDB file
-        structure: str
-           The path to a PDB file
-
-        Returns
-        -------
-        identical_structures: bool
-
-        """
-        return True if filecmp.cmp(model, structure) else False
-
     def _store(self, name, model, logfile, structure, pt):
-        return TMScoreModel(name=name, model=model,
-                            TMSCORE_log=logfile, structure=structure,
-                            tm=pt.tm, maxsub=pt.maxsub, gdtts=pt.gdtts,
-                            gdtha=pt.gdtha, rmsd=pt.rmsd,
-                            nr_residues_common=pt.nr_residues_common)
+        # Generic data that either both parsers have or are defined independently of the parser
+        data_storage = {'name': name, 'model': model, 'TM_log': logfile, 'structure': structure,
+                        'tmscore': pt.tm, 'rmsd': pt.rmsd, 'nr_residues_common': pt.nr_residues_common}
 
+        # Specific attributes that either but not both parsers have
+        if hasattr(pt, 'gdtts'):
+            data_storage['gdtts'] = pt.gdtts
+        if hasattr(pt, 'gdtha'):
+            data_storage['gdtha'] = pt.gdtha
+        if hasattr(pt, 'maxsub'):
+            data_storage['maxsub'] = pt.maxsub
+        if hasattr(pt, 'seq_id'):
+            data_storage['seq_id'] = pt.seq_id
+
+        return data_storage
+
+
+class TMalign(TMapps):
+    """
+    Wrapper to handle TMalign scoring for one or more structures
+
+    Examples
+    --------
+    >>> models = ["<MODEL_1>", "<MODEL_2>", "<MODEL_3>"]
+    >>> references = ["<REFERENCE_1>", "<REFERENCE>", "<REFERENCE>"]
+    >>> tm = TMalign("<PATH_TO_EXE>")
+    >>> entries = tm.compare_to_structure(models, references)
+    """
+
+    def __init__(self, executable, wdir=None):
+        super(TMalign, self).__init__(executable, "TMalign", wdir=wdir)
+
+    def compare_structures(self, *args, **kwargs):
+        return self.comparison(*args, **kwargs)
+
+
+class TMscore(TMapps):
+    """
+    Wrapper to handle TMscoring for one or more structures
+
+    Examples
+    --------
+    >>> models = ["<MODEL_1>", "<MODEL_2>", "<MODEL_3>"]
+    >>> references = ["<REFERENCE_1>", "<REFERENCE>", "<REFERENCE>"]
+    >>> tm = TMscore("<PATH_TO_EXE>")
+    >>> entries = tm.compare_to_structure(models, references)
+    """
+
+    def __init__(self, executable, wdir=None):
+        super(TMscore, self).__init__(executable, "TMscore", wdir=wdir)
+
+    def compare_structures(self, *args, **kwargs):
+        return self.comparison(*args, **kwargs)
+
+
+def tm_available(app):
+    """
+    Check if TM binary is available
+
+    Returns
+    -------
+    bool
+    """
+    try:
+        ample_util.find_exe(app)
+    except:
+        return False
+    return True
 
 def main():
     import argparse
@@ -386,9 +372,15 @@ def main():
     parser.add_argument('--allvall', action="store_true", help="All vs all comparison")
     parser.add_argument('-m', '-models', dest="models", nargs="+", required=True)
     parser.add_argument('-s', '-structures', dest="structures", nargs="+", required=True)
-    parser.add_argument('-t', '-tmscore', dest="tmscore", type=str, required=True)
+    tmapp = parser.add_mutually_exclusive_group()
+    tmapp.add_argument('-tm', '-tmscore', dest="tmscore", type=str)
+    tmapp.add_argument('-ta', '-tmalign', dest="tmalign", type=str)
     args = parser.parse_args()
-    tm = TMscore(args.tmscore)
+
+    if args.tmalign:
+        tm = TMalign(args.tmalign)
+    elif args.tmscore:
+        tm = TMscore(args.tmscore)
     return tm.compare_structures(args.models, args.structures, all_vs_all=args.allvall)
 
 if __name__ == "__main__":
