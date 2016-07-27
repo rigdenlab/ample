@@ -330,8 +330,24 @@ class TMalign(TMapps):
         super(TMalign, self).__init__(executable, "TMalign", wdir=wdir)
 
     def compare_structures(self, *args, **kwargs):
-        return self.comparison(*args, **kwargs)
+        """
+        Compare a list of model structures to a second list of reference structures
 
+        Parameters
+        ----------
+        models : list
+           List containing the paths to the model structure files
+        structures : list
+           List containing the paths to the reference structure files
+        all_vs_all : bool
+           Flag to compare all models against all structures
+
+        Returns
+        -------
+        entries : list
+        """
+        return self.comparison(*args, **kwargs)
+        
 
 class TMscore(TMapps):
     """
@@ -349,6 +365,29 @@ class TMscore(TMapps):
         super(TMscore, self).__init__(executable, "TMscore", wdir=wdir)
 
     def compare_structures(self, *args, **kwargs):
+        """
+        Compare a list of model structures to a second list of reference structures
+
+        Parameters
+        ----------
+        models : list
+           List containing the paths to the model structure files
+        structures : list
+           List containing the paths to the reference structure files
+        fasta : str
+           The path to a FASTA file for improved alignment
+        all_vs_all : bool
+           Flag to compare all models against all structures
+        keep_modified_structures : bool
+           Flag to delete intermediate, modified structure files
+        identical_sequences : bool
+           Flag to avoid any modification of files due to sequence identity
+
+        Returns
+        -------
+        entries : list
+           List of TMscore data entries on a per-model basis
+        """
         return self.comparison(*args, **kwargs)
 
 
