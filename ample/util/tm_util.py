@@ -4,6 +4,8 @@ import itertools
 import logging
 import operator
 import os
+import random
+import string
 import sys
 
 from ample.parsers import alignment_parser
@@ -220,6 +222,11 @@ class TMalign(TMapps):
         -------
         entries : list
         """
+        # Check what we are comparing
+        if len(structures) == 1:
+            LOGGER.info('Using single structure provided for all model comparisons')
+            structures = [structures[0] for _ in xrange(len(models))]
+
         # The models parsed forward to the comparison
         models_to_compare, structures_to_compare = [], []
         combination_iterator = self._get_iterator(all_vs_all)
@@ -246,7 +253,7 @@ class TMscore(TMapps):
     def __init__(self, executable, wdir=None):
         super(TMscore, self).__init__(executable, "TMscore", wdir=wdir)
 
-    def compare_structures(self, models, structures, fasta=None, all_vs_all=False):
+    def compare_structures(self, models, structures, fastas=None, all_vs_all=False):
         """
         Compare a list of model structures to a second list of reference structures
 
@@ -256,8 +263,8 @@ class TMscore(TMapps):
            List containing the paths to the model structure files
         structures : list
            List containing the paths to the reference structure files
-        fasta : str
-           The path to a FASTA file for improved alignment
+        fastas : list
+           List containing the paths to the FASTA files
         all_vs_all : bool
            Flag to compare all models against all structures
 
@@ -277,18 +284,22 @@ class TMscore(TMapps):
             LOGGER.info('Using single structure provided for all model comparisons')
             structures = [structures[0] for _ in xrange(len(models))]
 
+        if len(fastas) == 1:
+            LOGGER.info('Using single FASTA provided for all model comparisons')
+            fastas = [fastas[0] for _ in xrange(len(models))]
+
         # The models parsed forward to the comparison
         models_to_compare, structures_to_compare = [], []
         combination_iterator = self._get_iterator(all_vs_all)
 
-        if fasta:
-
-            # Extract the FASTA sequence
-            fasta_record = list(SeqIO.parse(open(fasta, 'r'), 'fasta'))[0]
-            fasta_data = [(i + 1, j) for i, j in enumerate(str(fasta_record.seq))]
+        if fastas:
 
             # Determine the iterator and create the combinations to be compared
-            for index, (model, structure) in enumerate(combination_iterator(models, structures)):
+            for index, (model, structure, fasta) in enumerate(combination_iterator(models, structures, fastas)):
+
+                # Extract the FASTA sequence
+                fasta_record = list(SeqIO.parse(open(fasta, 'r'), 'fasta'))[0]
+                fasta_data = [(i + 1, j) for i, j in enumerate(str(fasta_record.seq))]
 
                 # Extract some information from each PDB structure file
                 model_data = list(self._pdb_info(model))
@@ -305,11 +316,11 @@ class TMscore(TMapps):
                                                                                "".join(zip(*structure_data)[1]))
                 alignment = zip("".join(zip(*model_data)[1]), alignment[1])
 
+                # Remove parts of the alignment that are gaps in both sequences
                 to_remove = []
                 for index, (model_res, structure_res) in enumerate(alignment):
                     if model_res == "-" and structure_res == "-":
                         to_remove.append(index)
-
                 for i in reversed(to_remove):
                     alignment.pop(i)
 
@@ -402,12 +413,22 @@ class TMscore(TMapps):
         if not os.path.isdir(work_dir_mod):
             os.mkdir(work_dir_mod)
 
+        # Create a random file suffix to avoid overwriting file names if duplicate
+        # Taken from http://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
+        random_suffix = ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(10))
+
         # Create return files
         model_name = os.path.basename(model_pdb).rsplit(".", 1)[0]
-        model_pdb_ret = os.path.join(work_dir_mod, model_name+"_mod.pdb")
+        model_pdb_ret = os.path.join(work_dir_mod, "_".join([model_name, random_suffix, "mod.pdb"]))
 
         structure_name = os.path.basename(structure_pdb).rsplit(".", 1)[0]
-        structure_pdb_ret = os.path.join(work_dir_mod, structure_name + "_" + model_name + "_mod.pdb")
+        structure_pdb_ret = os.path.join(work_dir_mod, "_".join([structure_name, random_suffix, "mod.pdb"]))
+
+        # Check if the files we are to create for comparison do not exist
+        if os.path.isfile(model_pdb_ret) or os.path.isfile(structure_pdb_ret):
+            msg = "Comparison structures exist. Move, delete or rename before continuing"
+            LOGGER.critical(msg)
+            raise RuntimeError(msg)
 
         # Create temporary files
         model_pdb_temp = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
@@ -445,22 +466,24 @@ class TMscore(TMapps):
 
         structure = PDB.PDBParser().get_structure("pdb", pdb)
 
-        top_model = list(structure.get_models())[0]
-        top_chain = list(top_model.get_chains())[0]
+        # Weird problem with get_...() methods if MODEL is not explicitly stated in
+        # PDB file. Thus, just iterate over everything return when top chain completed
+        for model in structure:
+            for index, chain in enumerate(model):
+                if index > 0: return
+                for residue in chain:
+                    hetero, res_seq, _ = residue.get_id()
 
-        for residue in top_chain:
-            hetero, res_seq, _ = residue.get_id()
+                    if hetero.strip():
+                        LOGGER.debug("Hetero atom detected in {0}: {1}".format(pdb, res_seq))
+                        continue
 
-            if hetero.strip():
-                LOGGER.debug("Hetero atom detected in {0}: {1}".format(pdb, res_seq))
-                continue
+                    resname_three = residue.resname
+                    if resname_three == "MSE":
+                        resname_three = "MET"
+                    resname_one = PDB.Polypeptide.three_to_one(resname_three)
 
-            resname_three = residue.resname
-            if resname_three == "MSE":
-                resname_three = "MET"
-            resname_one = PDB.Polypeptide.three_to_one(resname_three)
-
-            yield (res_seq, resname_one)
+                    yield (res_seq, resname_one)
 
     def _residue_one(self, pdb):
         """
@@ -506,9 +529,12 @@ def main():
         PANDAS_AVAILABLE = False
 
     import argparse
+
+    logging.getLogger()
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--allvall', action="store_true", help="All vs all comparison")
-    parser.add_argument('-f', '-fasta', dest="fasta", default=None)
+    parser.add_argument('-f', '-fasta', dest="fastas", nargs="+", default=None)
     parser.add_argument('-m', '-models', dest="models", nargs="+", required=True)
     parser.add_argument('-s', '-structures', dest="structures", nargs="+", required=True)
     tmapp = parser.add_mutually_exclusive_group()
@@ -519,7 +545,7 @@ def main():
     if args.tmalign:
         entries = TMalign(args.tmalign).compare_structures(args.models, args.structures, all_vs_all=args.allvall)
     elif args.tmscore:
-        entries = TMscore(args.tmscore).compare_structures(args.models, args.structures, fasta=args.fasta, all_vs_all=args.allvall)
+        entries = TMscore(args.tmscore).compare_structures(args.models, args.structures, fastas=args.fastas, all_vs_all=args.allvall)
     else:
         entries = None
 
