@@ -56,11 +56,18 @@ class TMapps(object):
         work_dir : str
            Path to the working directory
         """
-        self.executable = executable
+        self.entries = []
         self.method = method.lower()
         self.work_dir = wdir if wdir else os.getcwd()
 
-        self.entries = []
+        # Quick check if the executable exists
+        if ample_util.is_exe(executable):
+            self.executable = executable
+        else:
+            msg = "Cannot find provided executable: {0}".format(executable)
+            LOGGER.critical(msg)
+            raise RuntimeError(msg)
+
         return
 
     def comparison(self, models, structures):
