@@ -1,20 +1,24 @@
 #!/usr/bin/env ccp4-python
 
-import filecmp
 import itertools
 import logging
+import operator
 import os
+import sys
 
 from ample.parsers import alignment_parser
 from ample.parsers import tm_parser
 from ample.util import ample_util
 from ample.util import pdb_edit
+from Bio import PDB
+from Bio import SeqIO
 
 __author__ = "Felix Simkovic"
-__date__ = "09.11.2015"
+__date__ = "28 July 2016"
 __version__ = "2.0"
 
 LOGGER = logging.getLogger(__name__)
+
 
 class TMapps(object):
     """
@@ -57,7 +61,7 @@ class TMapps(object):
         self.entries = []
         return
 
-    def comparison(self, models, structures, all_vs_all=False, keep_modified_structures=False, identical_sequences=False):
+    def comparison(self, models, structures):
         """
         Compare a list of model structures to a second list of reference structures
 
@@ -67,12 +71,6 @@ class TMapps(object):
            List containing the paths to the model structure files
         structures : list
            List containing the paths to the reference structure files
-        all_vs_all : bool
-           Flag to compare all models against all structures
-        keep_modified_structures : bool
-           Flag to delete intermediate, modified structure files
-        identical_sequences : bool
-           Flag to avoid any modification of files due to sequence identity
 
         Returns
         -------
@@ -95,14 +93,6 @@ class TMapps(object):
             LOGGER.critical(msg)
             raise RuntimeError(msg)
 
-        # Use different itertools functions depending on the comparison type
-        if all_vs_all:
-            LOGGER.info("All-vs-all comparison of models and structures")
-            iterator = itertools.product     # yields an iterator of all unique combinations
-        else:
-            LOGGER.info("Direct comparison of models and structures")
-            iterator = itertools.izip        # yields a zipped iterator
-
         # Create a logfile parser
         if self.method == "tmalign":
             pt = tm_parser.TMalignLogParser()
@@ -121,39 +111,25 @@ class TMapps(object):
         LOGGER.info('Using algorithm: ', self.method)
         entries = []
 
-        for model, structure in iterator(models, structures):
+        for model_pdb, structure_pdb in zip(models, structures):
 
-            # Quick file-check to check for similarity [skip identical files]
-            identical_structures = self._identical_structures(model, structure)
-
-            model_name = os.path.splitext(os.path.basename(model))[0]
-            structure_name = os.path.splitext(os.path.basename(structure))[0]
+            model_name = os.path.splitext(os.path.basename(model_pdb))[0]
+            structure_name = os.path.splitext(os.path.basename(structure_pdb))[0]
 
             LOGGER.debug("Working on: {0} - {1}".format(model_name, structure_name))
 
-            if not os.path.isfile(model):
-                LOGGER.warning("Cannot find: {0}".format(model))
+            if not os.path.isfile(model_pdb):
+                LOGGER.warning("Cannot find: {0}".format(model_pdb))
                 continue
-            elif not os.path.isfile(structure):
-                LOGGER.warning("Cannot find: {0}".format(structure))
+            elif not os.path.isfile(structure_pdb):
+                LOGGER.warning("Cannot find: {0}".format(structure_pdb))
                 continue
-
-            # Modify structures to be identical as required by TMscore binary
-            if not (identical_sequences and identical_structures and self.method != "tmalign"):
-                model_mod = os.path.join(self.work_dir, model_name + "_mod.pdb")
-                structure_mod = os.path.join(self.work_dir, model_name + "_" + structure_name + "_mod.pdb")
-                self._mod_structures(model, model_mod, structure, structure_mod)
-                model, structure = model_mod, structure_mod
 
             # TODO: Spawn the jobs across a number of CPUs. ample_util.workers_util.run_scripts() maybe?
-            log = os.path.join(self.work_dir, model_name + "_{0}.log".format(self.method))
-            cmd = [self.executable, model, structure]
+            log_name = "{0}_{1}_{2}.log".format(model_name, structure_name, self.method)
+            log = os.path.join(self.work_dir, log_name)
+            cmd = [self.executable, model_pdb, structure_pdb]
             ample_util.run_command(cmd, logfile=log, directory=self.work_dir)
-
-            # Delete the modified structures if not wanted
-            if not (keep_modified_structures and identical_sequences and identical_structures and self.method != "tmalign"):
-                os.remove(model_mod)
-                os.remove(structure_mod)
 
             try:
                 # Reset the TM log parser to default values
@@ -165,141 +141,39 @@ class TMapps(object):
                 LOGGER.critical(msg)
                 log = "None"
 
-            _entry = self._store(model_name, model, log, structure, pt)
+            _entry = self._store(model_name, structure_name, model_pdb, structure_pdb, log, pt)
             entries.append(_entry)
 
         self.entries = entries
         return entries
 
-    def _identical_structures(self, model, structure):
+    def _get_iterator(self, all_vs_all):
         """
-        Description
-        -----------
-        Check for an all-vs-all comparison to not go through overhead of modifying
-        identical structure files. Important when making large comparisons.
-        Comparison itself important for statistics like nr_common_residues
 
         Arguments
         ---------
-        model: str
-           The path to a PDB file
-        structure: str
-           The path to a PDB file
+        all_vs_all: bool
 
         Returns
         -------
-        identical_structures: bool
+        iterator : function
 
         """
-        return True if filecmp.cmp(model, structure) else False
+        # Use different itertools functions depending on the comparison type
+        if all_vs_all:
+            LOGGER.info("All-vs-all comparison of models and structures")
+            iterator = itertools.product     # yields an iterator of all unique combinations
+        else:
+            LOGGER.info("Direct comparison of models and structures")
+            iterator = itertools.izip        # yields a zipped iterator
+        return iterator
 
-    def _mod_structures(self, model, model_mod, structure, structure_mod):
-        """
-        Modify the two structure files to match each other
-
-        Description
-        -----------
-        Structure files often contain unequal residue numberings, missing residues in the
-        chain or other mal-formatted data. This function aims to remove such discrepancies
-        to allow for the most accurate comparisons possible.
-
-        Parameters
-        ----------
-        model : str
-           Path to the model pdb structure file
-        model_mod : str
-           Path to the modified model pdb structure file [does not need to exist]
-        structure : str
-           Path to the reference pdb structure file
-        structure_mod : str
-           Path to the modified reference pdb structure file [does not need to exist]
-        """
-
-        # Disable the info logger to not spam the user with which chain of native extracted.
-        # Happens for every model + native below
-        # http://stackoverflow.com/questions/2266646/how-to-i-disable-and-re-enable-console-logging-in-python
-        logging.disable(logging.INFO)
-
-        model_seq = pdb_edit.sequence(model).values()[0]
-        structure_seq = pdb_edit.sequence(structure).values()[0]
-
-        # Align the sequences to see how much of the predicted decoys are in the xtal
-        aligned_seq_list = alignment_parser.AlignmentParser().align_sequences(model_seq,
-                                                                              structure_seq)
-        model_seq_ali = aligned_seq_list[0]
-        structure_seq_ali = aligned_seq_list[1]
-
-        # Get the gaps in both sequences
-        model_gaps = self._find_gaps(model_seq_ali)
-        structure_gaps = self._find_gaps(structure_seq_ali)
-
-        ## STAGE 1 - REMOVE RESIDUES ##
-        model_stage1 = ample_util.tmp_file_name(delete=False, directory=self.work_dir, suffix=".pdb")
-        structure_stage1 = ample_util.tmp_file_name(delete=False, directory=self.work_dir, suffix=".pdb")
-
-        # Get first residue number to adjust list of residues to remove
-        model_res1 = self._residue_one(model)
-        structure_res1 = self._residue_one(structure)
-
-        # Match the residue lists to fit the residue 1 number
-        model_gaps = [i + structure_res1 - 1 for i in model_gaps]
-        structure_gaps = [i + model_res1 - 1 for i in structure_gaps]
-
-        # Use gaps of other sequence to even out
-        pdb_edit.select_residues(model, model_stage1, delete=structure_gaps)
-        pdb_edit.select_residues(structure, structure_stage1, delete=model_gaps)
-
-        ## STAGE 2 - RENUMBER RESIDUES ##
-        pdb_edit.renumber_residues(model_stage1, model_mod)
-        pdb_edit.renumber_residues(structure_stage1, structure_mod)
-
-        os.unlink(model_stage1)
-        os.unlink(structure_stage1)
-
-        logging.disable(logging.NOTSET)
-
-        return
-
-    def _residue_one(self, pdb):
-        """
-        Find the first residue index in a pdb structure
-
-        Parameters
-        ----------
-        pdb : str
-           Path to a structure file in PDB format
-
-        Returns
-        -------
-        index : int
-           Residue sequence index of first residue in structure file
-        """
-        for line in open(pdb, 'r'):
-            if line.startswith("ATOM"):
-                line = line.split()
-                return int(line[5])
-
-    def _find_gaps(self, seq):
-        """
-        Identify gaps in the protein chain
-
-        Parameters
-        ----------
-        seq : str
-           String of amino acids
-
-        Returns
-        -------
-        indeces : list
-           List of indices that contain gaps
-
-        """
-        return [i + 1 for i, c in enumerate(seq) if c == "-"]
-
-    def _store(self, name, model, logfile, structure, pt):
+    def _store(self, model_name, structure_name, model_pdb, structure_pdb, logfile, pt):
         # Generic data that either both parsers have or are defined independently of the parser
-        data_storage = {'name': name, 'model': model, 'TM_log': logfile, 'structure': structure,
-                        'tmscore': pt.tm, 'rmsd': pt.rmsd, 'nr_residues_common': pt.nr_residues_common}
+        data_storage = {'model_name': model_name, 'structure_name': structure_name,
+                        'model_fname': model_pdb, 'structure_fname': structure_pdb,
+                        'TM_log': logfile, 'tmscore': pt.tm, 'rmsd': pt.rmsd,
+                        'nr_residues_common': pt.nr_residues_common}
 
         # Specific attributes that either but not both parsers have
         if hasattr(pt, 'gdtts'):
@@ -329,7 +203,7 @@ class TMalign(TMapps):
     def __init__(self, executable, wdir=None):
         super(TMalign, self).__init__(executable, "TMalign", wdir=wdir)
 
-    def compare_structures(self, *args, **kwargs):
+    def compare_structures(self, models, structures, all_vs_all=False):
         """
         Compare a list of model structures to a second list of reference structures
 
@@ -346,7 +220,15 @@ class TMalign(TMapps):
         -------
         entries : list
         """
-        return self.comparison(*args, **kwargs)
+        # The models parsed forward to the comparison
+        models_to_compare, structures_to_compare = [], []
+        combination_iterator = self._get_iterator(all_vs_all)
+
+        for (model, structure) in combination_iterator(models, structures):
+            models_to_compare.append(model)
+            structures_to_compare.append(structure)
+
+        return self.comparison(models_to_compare, structures_to_compare)
         
 
 class TMscore(TMapps):
@@ -364,7 +246,7 @@ class TMscore(TMapps):
     def __init__(self, executable, wdir=None):
         super(TMscore, self).__init__(executable, "TMscore", wdir=wdir)
 
-    def compare_structures(self, *args, **kwargs):
+    def compare_structures(self, models, structures, fasta=None, all_vs_all=False):
         """
         Compare a list of model structures to a second list of reference structures
 
@@ -378,17 +260,226 @@ class TMscore(TMapps):
            The path to a FASTA file for improved alignment
         all_vs_all : bool
            Flag to compare all models against all structures
-        keep_modified_structures : bool
-           Flag to delete intermediate, modified structure files
-        identical_sequences : bool
-           Flag to avoid any modification of files due to sequence identity
 
         Returns
         -------
         entries : list
            List of TMscore data entries on a per-model basis
+
+        Notes
+        -----
+        If a FASTA sequence is provided, a much more accurate comparison can be carried out. However, to by-pass this
+        there is also an option to run the comparison without it. This might work just fine for larger models.
         """
-        return self.comparison(*args, **kwargs)
+
+        # Check what we are comparing
+        if len(structures) == 1:
+            LOGGER.info('Using single structure provided for all model comparisons')
+            structures = [structures[0] for _ in xrange(len(models))]
+
+        # The models parsed forward to the comparison
+        models_to_compare, structures_to_compare = [], []
+        combination_iterator = self._get_iterator(all_vs_all)
+
+        if fasta:
+
+            # Extract the FASTA sequence
+            fasta_record = list(SeqIO.parse(open(fasta, 'r'), 'fasta'))[0]
+            fasta_data = [(i + 1, j) for i, j in enumerate(str(fasta_record.seq))]
+
+            # Determine the iterator and create the combinations to be compared
+            for index, (model, structure) in enumerate(combination_iterator(models, structures)):
+
+                # Extract some information from each PDB structure file
+                model_data = list(self._pdb_info(model))
+                structure_data = list(self._pdb_info(structure))
+
+                # Sort out the data from the model first
+                for fasta_pos in fasta_data:
+                    if not fasta_pos in model_data:
+                        model_data.append(tuple([fasta_pos[0], "-"]))
+                model_data.sort(key=operator.itemgetter(0))
+
+                # Make sure our structure is fine too
+                alignment = alignment_parser.AlignmentParser().align_sequences("".join(zip(*fasta_data)[1]),
+                                                                               "".join(zip(*structure_data)[1]))
+                alignment = zip("".join(zip(*model_data)[1]), alignment[1])
+
+                to_remove = []
+                for index, (model_res, structure_res) in enumerate(alignment):
+                    if model_res == "-" and structure_res == "-":
+                        to_remove.append(index)
+
+                for i in reversed(to_remove):
+                    alignment.pop(i)
+
+                model_aln = "".join(zip(*alignment)[0])
+                structure_aln = "".join(zip(*alignment)[1])
+
+                pdb_combo = self._mod_structures(model_aln, structure_aln, model, structure)
+
+                models_to_compare.append(pdb_combo[0])
+                structures_to_compare.append(pdb_combo[1])
+
+        else:
+            # No FASTA processing etc, pure comparisons of sequences
+            for index, (model, structure) in enumerate(combination_iterator(models, structures)):
+
+                # Extract some information from each PDB structure file
+                model_data = list(self._pdb_info(model))
+                structure_data = list(self._pdb_info(structure))
+
+                # Align the sequences to see how much of the predicted decoys are in the xtal
+                alignment = alignment_parser.AlignmentParser().align_sequences("".join(zip(*model_data)[1]),
+                                                                               "".join(zip(*structure_data)[1]))
+                # Redundant but identical to if
+                alignment = zip(alignment[0], alignment[1])
+
+                model_aln = "".join(zip(*alignment)[0])
+                structure_aln = "".join(zip(*alignment)[1])
+
+                pdb_combo = self._mod_structures(model_aln, structure_aln, model, structure)
+
+                models_to_compare.append(pdb_combo[0])
+                structures_to_compare.append(pdb_combo[1])
+
+        return self.comparison(models_to_compare, structures_to_compare)
+
+    def _find_gaps(self, seq):
+        """
+        Identify gaps in the protein chain
+
+        Parameters
+        ----------
+        seq : str
+           String of amino acids
+
+        Returns
+        -------
+        indeces : list
+           List of indices that contain gaps
+
+        """
+        return [i+1 for i, c in enumerate(seq) if c == "-"]
+
+    def _mod_structures(self, model_aln, structure_aln, model_pdb, structure_pdb):
+        """
+
+        Arguments
+        ---------
+        model_aln : str
+           A string containing the aligned sequence of the model
+        structure_aln : str
+           A string containing the alignment sequence of the structure
+        model_pdb : str
+           The path to the model pdb file
+        structure_pdb : str
+           The path to the structure pdb file
+
+        Returns
+        -------
+        model_pdb_ret : str
+           The path to the modified model pdb file
+        structure_pdb_ret : str
+           The path to the modified structure pdb file
+
+        """
+
+        # Get the gaps in both sequences
+        model_gaps = self._find_gaps(model_aln)
+        structure_gaps = self._find_gaps(structure_aln)
+
+        # Get first residue number to adjust list of residues to remove
+        model_res1 = self._residue_one(model_pdb)
+        structure_res1 = self._residue_one(structure_pdb)
+
+        # Match the residue lists to fit the residue 1 number
+        model_gaps = [i + structure_res1 - 1 for i in model_gaps]
+        structure_gaps = [i + model_res1 - 1 for i in structure_gaps]
+
+        # Create a storage for the files
+        work_dir_mod = os.path.join(self.work_dir, "tm_util_pdbs")
+        if not os.path.isdir(work_dir_mod):
+            os.mkdir(work_dir_mod)
+
+        # Create return files
+        model_name = os.path.basename(model_pdb).rsplit(".", 1)[0]
+        model_pdb_ret = os.path.join(work_dir_mod, model_name+"_mod.pdb")
+
+        structure_name = os.path.basename(structure_pdb).rsplit(".", 1)[0]
+        structure_pdb_ret = os.path.join(work_dir_mod, structure_name + "_" + model_name + "_mod.pdb")
+
+        # Create temporary files
+        model_pdb_temp = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+        structure_pdb_temp = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+
+        # Use gaps of other sequence to even out
+        pdb_edit.select_residues(model_pdb, model_pdb_temp, delete=structure_gaps)
+        pdb_edit.select_residues(structure_pdb, structure_pdb_temp, delete=model_gaps)
+
+        # Renumber the pdb files
+        pdb_edit.renumber_residues(model_pdb_temp, model_pdb_ret)
+        pdb_edit.renumber_residues(structure_pdb_temp, structure_pdb_ret)
+
+        os.unlink(model_pdb_temp)
+        os.unlink(structure_pdb_temp)
+
+        return model_pdb_ret, structure_pdb_ret
+
+    def _pdb_info(self, pdb):
+        """
+        Obtain the pdb indeces and residue names
+
+        Arguments
+        ---------
+        pdb : str
+           The path to a PDB file
+
+        Yields
+        ------
+        list
+            A list containing per residue information
+
+        """
+        LOGGER.info("Editing structure: ", pdb)
+
+        structure = PDB.PDBParser().get_structure("pdb", pdb)
+
+        top_model = list(structure.get_models())[0]
+        top_chain = list(top_model.get_chains())[0]
+
+        for residue in top_chain:
+            hetero, res_seq, _ = residue.get_id()
+
+            if hetero.strip():
+                LOGGER.debug("Hetero atom detected in {0}: {1}".format(pdb, res_seq))
+                continue
+
+            resname_three = residue.resname
+            if resname_three == "MSE":
+                resname_three = "MET"
+            resname_one = PDB.Polypeptide.three_to_one(resname_three)
+
+            yield (res_seq, resname_one)
+
+    def _residue_one(self, pdb):
+        """
+        Find the first residue index in a pdb structure
+
+        Parameters
+        ----------
+        pdb : str
+           Path to a structure file in PDB format
+
+        Returns
+        -------
+        index : int
+           Residue sequence index of first residue in structure file
+        """
+        for line in open(pdb, 'r'):
+            if line.startswith("ATOM"):
+                line = line.split()
+                return int(line[5])
 
 
 def tm_available(app):
@@ -405,10 +496,19 @@ def tm_available(app):
         return False
     return True
 
+
 def main():
+
+    try:
+        import pandas
+        PANDAS_AVAILABLE = True
+    except ImportError:
+        PANDAS_AVAILABLE = False
+
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--allvall', action="store_true", help="All vs all comparison")
+    parser.add_argument('-f', '-fasta', dest="fasta", default=None)
     parser.add_argument('-m', '-models', dest="models", nargs="+", required=True)
     parser.add_argument('-s', '-structures', dest="structures", nargs="+", required=True)
     tmapp = parser.add_mutually_exclusive_group()
@@ -417,10 +517,19 @@ def main():
     args = parser.parse_args()
 
     if args.tmalign:
-        tm = TMalign(args.tmalign)
+        entries = TMalign(args.tmalign).compare_structures(args.models, args.structures, all_vs_all=args.allvall)
     elif args.tmscore:
-        tm = TMscore(args.tmscore)
-    return tm.compare_structures(args.models, args.structures, all_vs_all=args.allvall)
+        entries = TMscore(args.tmscore).compare_structures(args.models, args.structures, fasta=args.fasta, all_vs_all=args.allvall)
+    else:
+        entries = None
+
+    if PANDAS_AVAILABLE and entries:
+        df = pandas.pandas.DataFrame(data=entries)
+        df.sort("tmscore", inplace=True, ascending=False)
+        print df[["model_name", "structure_name", "tmscore"]].to_string()
+
+    return entries
 
 if __name__ == "__main__":
-    print main()
+    main()
+    sys.exit(0)
