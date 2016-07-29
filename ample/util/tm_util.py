@@ -109,8 +109,8 @@ class TMapps(object):
         # Iterate through the structure files and execute the TMscore comparisons
         # =======================================================================
 
+        LOGGER.info('Using algorithm: {0}'.format(self.method))
         LOGGER.info('-------Evaluating decoys/models-------')
-        LOGGER.info('Using algorithm: ', self.method)
         entries = []
 
         for model_pdb, structure_pdb in zip(models, structures):
@@ -396,17 +396,9 @@ class TMscore(TMapps):
 
         """
 
-        # Get the gaps in both sequences
-        model_gaps = self._find_gaps(model_aln)
-        structure_gaps = self._find_gaps(structure_aln)
-
-        # Get first residue number to adjust list of residues to remove
-        model_res1 = self._residue_one(model_pdb)
-        structure_res1 = self._residue_one(structure_pdb)
-
-        # Match the residue lists to fit the residue 1 number
-        model_gaps = [i + structure_res1 - 1 for i in model_gaps]
-        structure_gaps = [i + model_res1 - 1 for i in structure_gaps]
+        # ================================
+        # File definitions
+        # ================================
 
         # Create a storage for the files
         work_dir_mod = os.path.join(self.work_dir, "tm_util_pdbs")
@@ -417,7 +409,7 @@ class TMscore(TMapps):
         # Taken from http://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
         random_suffix = ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(10))
 
-        # Create return files
+        # File names and output files
         model_name = os.path.basename(model_pdb).rsplit(".", 1)[0]
         model_pdb_ret = os.path.join(work_dir_mod, "_".join([model_name, random_suffix, "mod.pdb"]))
 
@@ -431,19 +423,51 @@ class TMscore(TMapps):
             raise RuntimeError(msg)
 
         # Create temporary files
-        model_pdb_temp = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
-        structure_pdb_temp = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+        _model_pdb_temp = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+        _structure_pdb_temp = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+
+        # ==================================
+        # File manipulation and modification
+        # ==================================
+
+        # Get the gaps in both sequences
+        model_gaps = self._find_gaps(model_aln)
+        structure_gaps = self._find_gaps(structure_aln)
+
+        # Renumber the pdb files - required in case there are any gaps
+        pdb_edit.renumber_residues(model_pdb, _model_pdb_temp)
+        pdb_edit.renumber_residues(structure_pdb, _structure_pdb_temp)
+
+        # Get first residue number to adjust list of residues to remove
+        model_res1 = self._residue_one(_model_pdb_temp)
+        structure_res1 = self._residue_one(_structure_pdb_temp)
+
+        # Match the residue lists to fit the residue 1 number
+        model_gaps = [i + structure_res1 - 1 for i in model_gaps]
+        structure_gaps = [i + model_res1 - 1 for i in structure_gaps]
 
         # Use gaps of other sequence to even out
-        pdb_edit.select_residues(model_pdb, model_pdb_temp, delete=structure_gaps)
-        pdb_edit.select_residues(structure_pdb, structure_pdb_temp, delete=model_gaps)
+        pdb_edit.select_residues(_model_pdb_temp, _model_pdb_temp, delete=structure_gaps)
+        pdb_edit.select_residues(_structure_pdb_temp, _structure_pdb_temp, delete=model_gaps)
 
-        # Renumber the pdb files
-        pdb_edit.renumber_residues(model_pdb_temp, model_pdb_ret)
-        pdb_edit.renumber_residues(structure_pdb_temp, structure_pdb_ret)
+        # Renumber the pdb files - required by TMscore binary
+        pdb_edit.renumber_residues(_model_pdb_temp, model_pdb_ret)
+        pdb_edit.renumber_residues(_structure_pdb_temp, structure_pdb_ret)
 
-        os.unlink(model_pdb_temp)
-        os.unlink(structure_pdb_temp)
+        # ==================================
+        # Checks and validations
+        # ==================================
+        # Extract some information from each PDB structure file
+        model_data = set(self._pdb_info(model_pdb_ret))
+        structure_data = set(self._pdb_info(structure_pdb_ret))
+
+        if len(model_data - structure_data) != 0:
+            msg = "Structure file modification did not work"
+            LOGGER.critical(msg)
+            raise RuntimeError(msg)
+
+        os.unlink(_model_pdb_temp)
+        os.unlink(_structure_pdb_temp)
 
         return model_pdb_ret, structure_pdb_ret
 
@@ -462,8 +486,6 @@ class TMscore(TMapps):
             A list containing per residue information
 
         """
-        LOGGER.info("Editing structure: ", pdb)
-
         structure = PDB.PDBParser().get_structure("pdb", pdb)
 
         # Weird problem with get_...() methods if MODEL is not explicitly stated in
@@ -521,19 +543,11 @@ def tm_available(app):
 
 
 def main():
-
-    try:
-        import pandas
-        PANDAS_AVAILABLE = True
-    except ImportError:
-        PANDAS_AVAILABLE = False
-
     import argparse
-
-    logging.getLogger()
-
     parser = argparse.ArgumentParser()
     parser.add_argument('--allvall', action="store_true", help="All vs all comparison")
+    parser.add_argument('--log', default='info', choices=['debug', 'info', 'warning', 'error'],
+                        help="logging level (defaults to 'warning')")
     parser.add_argument('-f', '-fasta', dest="fastas", nargs="+", default=None)
     parser.add_argument('-m', '-models', dest="models", nargs="+", required=True)
     parser.add_argument('-s', '-structures', dest="structures", nargs="+", required=True)
@@ -542,6 +556,10 @@ def main():
     tmapp.add_argument('-ta', '-tmalign', dest="tmalign", type=str)
     args = parser.parse_args()
 
+    # Set up some very basic logging - Logging taken from
+    # http://stackoverflow.com/questions/30824981/do-i-need-to-explicitly-check-for-name-main-before-calling-getlogge
+    logging.basicConfig(level=getattr(logging, args.log.upper(), None), format='%(levelname)s: %(message)s')
+
     if args.tmalign:
         entries = TMalign(args.tmalign).compare_structures(args.models, args.structures, all_vs_all=args.allvall)
     elif args.tmscore:
@@ -549,10 +567,19 @@ def main():
     else:
         entries = None
 
+    # Do a much fancier table print statement if pandas is installed
+    # TODO: Print statement from entries dictionary if we don't have pandas
+    try:
+        import pandas
+        PANDAS_AVAILABLE = True
+    except ImportError:
+        PANDAS_AVAILABLE = False
+
     if PANDAS_AVAILABLE and entries:
         df = pandas.pandas.DataFrame(data=entries)
-        df.sort("tmscore", inplace=True, ascending=False)
-        print df[["model_name", "structure_name", "tmscore"]].to_string()
+        df.sort_values("tmscore", inplace=True, ascending=False)
+        df.reset_index(drop=True)
+        LOGGER.info("Results table:\n{0}".format(df[["model_name", "structure_name", "tmscore"]].to_string()))
 
     return entries
 
