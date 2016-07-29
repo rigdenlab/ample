@@ -136,7 +136,7 @@ def analyse(amoptd, newroot=None):
             #    _logger.info("Analysing subcluster centroid model with TMscore")
             #    d['subcluster_centroid_model_TM'] = tm.compare_structures([d['subcluster_centroid_model']],
             #                                                              [amoptd['native_pdb_std']],
-            #                                                              fasta=amoptd['fasta'])[0].tm
+            #                                                              fastas=[amoptd['fasta']])[0].tm
             # ===============================================================================================
 
         if amoptd['native_pdb']: analyseSolution(amoptd,d)
@@ -395,7 +395,7 @@ def analyseModels(amoptd):
         _logger.info("Analysing Rosetta models with TMscore")
         model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
         structure_list = [amoptd['native_pdb_std']]
-        amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fasta=amoptd['fasta'])
+        amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fastas=[amoptd['fasta']])
         
     amoptd['maxComp'] = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
     _logger.info("Analysing Rosetta models with Maxcluster")
