@@ -126,13 +126,18 @@ def analyse(amoptd, newroot=None):
             #cm=d['cluster_centroid']
             d['ensemble_native_TM'] = amoptd['maxComp'].tm(cm)
             d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(cm)
-
+            
+            # ===============================================================================================
+            # EXPERIMENTAL SO LEAVE IT OUT FOR NOW UNTIL WE HAVE FIXED THIS
+            # ===============================================================================================
             # Calculation of TMscores for subcluster centroid models
-            if TMSCORE_AVAILABLE:
-                tm = tm_util.TMscore(TMSCORE, wdir=fixpath(amoptd['benchmark_dir']))
-                _logger.info("Analysing subcluster centroid model with TMscore")
-                d['subcluster_centroid_model_TM'] = tm.compare_structures([d['subcluster_centroid_model']],
-                                                                          [d['native_pdb_std']])[0].tm
+            #if TMSCORE_AVAILABLE:
+            #    tm = tm_util.TMscore(TMSCORE, wdir=fixpath(amoptd['benchmark_dir']))
+            #    _logger.info("Analysing subcluster centroid model with TMscore")
+            #    d['subcluster_centroid_model_TM'] = tm.compare_structures([d['subcluster_centroid_model']],
+            #                                                              [amoptd['native_pdb_std']],
+            #                                                              fasta=amoptd['fasta'])[0].tm
+            # ===============================================================================================
 
         if amoptd['native_pdb']: analyseSolution(amoptd,d)
         data.append(d)
@@ -390,8 +395,7 @@ def analyseModels(amoptd):
         _logger.info("Analysing Rosetta models with TMscore")
         model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
         structure_list = [amoptd['native_pdb_std']]
-        amoptd['tmComp'] = tm.compare_structures(model_list, structure_list,
-                                                 keep_modified_structures=True)
+        amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fasta=amoptd['fasta'])
         
     amoptd['maxComp'] = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
     _logger.info("Analysing Rosetta models with Maxcluster")
