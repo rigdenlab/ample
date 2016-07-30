@@ -287,11 +287,11 @@ class TMscore(TMapps):
         """
 
         # Check what we are comparing
-        if len(structures) == 1:
+        if structures and len(structures) == 1:
             LOGGER.info('Using single structure provided for all model comparisons')
             structures = [structures[0] for _ in xrange(len(models))]
 
-        if len(fastas) == 1:
+        if fastas and len(fastas) == 1:
             LOGGER.info('Using single FASTA provided for all model comparisons')
             fastas = [fastas[0] for _ in xrange(len(models))]
 
@@ -328,6 +328,7 @@ class TMscore(TMapps):
                 for index, (model_res, structure_res) in enumerate(alignment):
                     if model_res == "-" and structure_res == "-":
                         to_remove.append(index)
+                # Reverse the list so we can truncate it without affecting indeces
                 for i in reversed(to_remove):
                     alignment.pop(i)
 
@@ -362,23 +363,6 @@ class TMscore(TMapps):
                 structures_to_compare.append(pdb_combo[1])
 
         return self.comparison(models_to_compare, structures_to_compare)
-
-    def _find_gaps(self, seq):
-        """
-        Identify gaps in the protein chain
-
-        Parameters
-        ----------
-        seq : str
-           String of amino acids
-
-        Returns
-        -------
-        indeces : list
-           List of indices that contain gaps
-
-        """
-        return [i+1 for i, c in enumerate(seq) if c == "-"]
 
     def _mod_structures(self, model_aln, structure_aln, model_pdb, structure_pdb):
         """
@@ -430,53 +414,72 @@ class TMscore(TMapps):
             raise RuntimeError(msg)
 
         # Create temporary files
-        _model_pdb_temp = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
-        _structure_pdb_temp = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+        _model_pdb_tmp_stage1 = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+        _model_pdb_tmp_stage2 = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+
+        _structure_pdb_tmp_stage1 = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+        _structure_pdb_tmp_stage2 = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
 
         # ==================================
         # File manipulation and modification
         # ==================================
 
-        # Get the gaps in both sequences
+        # Get the gap positions in both sequences
         model_gaps = self._find_gaps(model_aln)
         structure_gaps = self._find_gaps(structure_aln)
 
         # Renumber the pdb files - required in case there are any gaps
-        pdb_edit.renumber_residues(model_pdb, _model_pdb_temp)
-        pdb_edit.renumber_residues(structure_pdb, _structure_pdb_temp)
+        pdb_edit.renumber_residues_gaps(model_pdb, _model_pdb_tmp_stage1, model_gaps)
+        pdb_edit.renumber_residues_gaps(structure_pdb, _structure_pdb_tmp_stage1, structure_gaps)
 
-        # Get first residue number to adjust list of residues to remove
-        model_res1 = self._residue_one(_model_pdb_temp)
-        structure_res1 = self._residue_one(_structure_pdb_temp)
-
-        # Match the residue lists to fit the residue 1 number
-        model_gaps = [i + structure_res1 - 1 for i in model_gaps]
-        structure_gaps = [i + model_res1 - 1 for i in structure_gaps]
+        # Determine the gap indeces
+        model_gaps_indeces = [i+1 for i, is_gap in enumerate(model_gaps) if is_gap]
+        structure_gaps_indeces = [i + 1 for i, is_gap in enumerate(structure_gaps) if is_gap]
 
         # Use gaps of other sequence to even out
-        pdb_edit.select_residues(_model_pdb_temp, _model_pdb_temp, delete=structure_gaps)
-        pdb_edit.select_residues(_structure_pdb_temp, _structure_pdb_temp, delete=model_gaps)
+        pdb_edit.select_residues(_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, delete=structure_gaps_indeces)
+        pdb_edit.select_residues(_structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2, delete=model_gaps_indeces)
 
         # Renumber the pdb files - required by TMscore binary
-        pdb_edit.renumber_residues(_model_pdb_temp, model_pdb_ret)
-        pdb_edit.renumber_residues(_structure_pdb_temp, structure_pdb_ret)
+        pdb_edit.renumber_residues(_model_pdb_tmp_stage2, model_pdb_ret)
+        pdb_edit.renumber_residues(_structure_pdb_tmp_stage2, structure_pdb_ret)
 
         # ==================================
         # Checks and validations
         # ==================================
-        # Extract some information from each PDB structure file
-        model_data = set(self._pdb_info(model_pdb_ret))
-        structure_data = set(self._pdb_info(structure_pdb_ret))
 
-        if len(model_data - structure_data) != 0:
+        # Extract some information from each PDB structure file
+        _model_data = list(self._pdb_info(model_pdb_ret))
+        _structure_data = list(self._pdb_info(structure_pdb_ret))
+
+        # Make sure our structures contain the same residues with correct indeces
+        if set(_model_data) != set(_structure_data):
             msg = "Structure file modification did not work"
             LOGGER.critical(msg)
             raise RuntimeError(msg)
 
-        os.unlink(_model_pdb_temp)
-        os.unlink(_structure_pdb_temp)
+        # Remove the temporary files
+        for f in [_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, _structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2]:
+            os.unlink(f)
 
         return model_pdb_ret, structure_pdb_ret
+
+    def _find_gaps(self, seq):
+        """
+        Identify gaps in the protein chain
+
+        Parameters
+        ----------
+        seq : str
+           String of amino acids
+
+        Returns
+        -------
+        indeces : list
+           List of booleans that contain gaps
+
+        """
+        return [True if char == "-" else False for char in seq]
 
     def _pdb_info(self, pdb):
         """
