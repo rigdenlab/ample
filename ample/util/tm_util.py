@@ -323,19 +323,22 @@ class TMscore(TMapps):
                 fasta_structure_aln = aln_parser.align_sequences("".join(zip(*fasta_data)[1]),
                                                                  "".join(zip(*structure_data)[1]))
 
-                fasta_model_aln = aln_parser.align_sequences("".join(zip(*fasta_data)[1]),
-                                                             "".join(zip(*model_data)[1]))
-
                 # Remove parts of the alignment that are gaps in both sequences
                 to_remove = []
-                _alignment = zip(fasta_model_aln[1], fasta_structure_aln[1])
+                _alignment = zip("".join(zip(*model_data)[1]), fasta_structure_aln[1])
                 for index, (model_res, structure_res) in enumerate(_alignment):
                     if model_res == "-" and structure_res == "-":
                         to_remove.append(index)
                 for i in reversed(to_remove):
                     _alignment.pop(i)
+
                 model_aln = "".join(zip(*_alignment)[0])
                 structure_aln = "".join(zip(*_alignment)[1])
+
+                if len(model_aln) != len(structure_aln):
+                    msg = "Unequal lengths of your model and structure sequences"
+                    LOGGER.critical(msg)
+                    raise RuntimeError(msg)
 
                 # Modify the structures based on the aligned sequences
                 pdb_combo = self._mod_structures(model_aln, structure_aln, model, structure)
@@ -361,8 +364,15 @@ class TMscore(TMapps):
                 model_aln = "".join(zip(*alignment)[0])
                 structure_aln = "".join(zip(*alignment)[1])
 
+                if len(model_aln) != len(structure_aln):
+                    msg = "Unequal lengths of your model and structure sequences"
+                    LOGGER.critical(msg)
+                    raise RuntimeError(msg)
+
+                # Modify the structures based on the aligned sequences
                 pdb_combo = self._mod_structures(model_aln, structure_aln, model, structure)
 
+                # Save the models9
                 models_to_compare.append(pdb_combo[0])
                 structures_to_compare.append(pdb_combo[1])
 
