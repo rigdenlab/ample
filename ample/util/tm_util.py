@@ -312,31 +312,32 @@ class TMscore(TMapps):
                 model_data = list(self._pdb_info(model))
                 structure_data = list(self._pdb_info(structure))
 
-                # Sort out the data from the model first
+                # Align the model sequence to the FASTA sequence
                 for fasta_pos in fasta_data:
                     if not fasta_pos in model_data:
-                        model_data.append(tuple([fasta_pos[0], "-"]))
+                        model_data.append((fasta_pos[0], "-"))
                 model_data.sort(key=operator.itemgetter(0))
 
-                # Make sure our structure is fine too
-                alignment = alignment_parser.AlignmentParser().align_sequences("".join(zip(*fasta_data)[1]),
-                                                                               "".join(zip(*structure_data)[1]))
-                alignment = zip("".join(zip(*model_data)[1]), alignment[1])
+                # Align the structure_sequence to the model sequence
+                aln_parser = alignment_parser.AlignmentParser()
+                model_structure_aln = aln_parser.align_sequences("".join(zip(*model_data)[1]),
+                                                                 "".join(zip(*structure_data)[1]))
 
                 # Remove parts of the alignment that are gaps in both sequences
                 to_remove = []
-                for index, (model_res, structure_res) in enumerate(alignment):
+                _alignment = zip(model_structure_aln[0], model_structure_aln[1])
+                for index, (model_res, structure_res) in enumerate(_alignment):
                     if model_res == "-" and structure_res == "-":
                         to_remove.append(index)
-                # Reverse the list so we can truncate it without affecting indeces
                 for i in reversed(to_remove):
-                    alignment.pop(i)
+                    _alignment.pop(i)
+                model_aln = "".join(zip(*_alignment)[0])
+                structure_aln = "".join(zip(*_alignment)[1])
 
-                model_aln = "".join(zip(*alignment)[0])
-                structure_aln = "".join(zip(*alignment)[1])
-
+                # Modify the structures based on the aligned sequences
                 pdb_combo = self._mod_structures(model_aln, structure_aln, model, structure)
 
+                # Save the models
                 models_to_compare.append(pdb_combo[0])
                 structures_to_compare.append(pdb_combo[1])
 
