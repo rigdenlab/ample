@@ -159,8 +159,8 @@ class TMapps(object):
     def _get_iterator(self, all_vs_all):
         """
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         all_vs_all: bool
 
         Returns
@@ -367,8 +367,8 @@ class TMscore(TMapps):
     def _mod_structures(self, model_aln, structure_aln, model_pdb, structure_pdb):
         """
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         model_aln : str
            A string containing the aligned sequence of the model
         structure_aln : str
@@ -454,7 +454,7 @@ class TMscore(TMapps):
 
         # Make sure our structures contain the same residues with correct indeces
         if set(_model_data) != set(_structure_data):
-            msg = "Structure file modification did not work"
+            msg = "Structure file modification did not work. Affected PDBs {0} - {1}".format(model_name, structure_name)
             LOGGER.critical(msg)
             raise RuntimeError(msg)
 
@@ -485,8 +485,8 @@ class TMscore(TMapps):
         """
         Obtain the pdb indeces and residue names
 
-        Arguments
-        ---------
+        Parameters
+        ----------
         pdb : str
            The path to a PDB file
 
