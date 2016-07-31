@@ -320,12 +320,15 @@ class TMscore(TMapps):
 
                 # Align the structure_sequence to the model sequence
                 aln_parser = alignment_parser.AlignmentParser()
-                model_structure_aln = aln_parser.align_sequences("".join(zip(*model_data)[1]),
+                fasta_structure_aln = aln_parser.align_sequences("".join(zip(*fasta_data)[1]),
                                                                  "".join(zip(*structure_data)[1]))
+
+                fasta_model_aln = aln_parser.align_sequences("".join(zip(*fasta_data)[1]),
+                                                             "".join(zip(*model_data)[1]))
 
                 # Remove parts of the alignment that are gaps in both sequences
                 to_remove = []
-                _alignment = zip(model_structure_aln[0], model_structure_aln[1])
+                _alignment = zip(fasta_model_aln[1], fasta_structure_aln[1])
                 for index, (model_res, structure_res) in enumerate(_alignment):
                     if model_res == "-" and structure_res == "-":
                         to_remove.append(index)
