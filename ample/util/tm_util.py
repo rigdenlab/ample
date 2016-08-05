@@ -604,6 +604,7 @@ def main():
         df.sort_values("tmscore", inplace=True, ascending=False)
         df.reset_index(drop=True)
         LOGGER.info("Results table:\n{0}".format(df[["model_name", "structure_name", "tmscore"]].to_string()))
+        df.to_csv("tm_results.csv")
 
     return entries
 
