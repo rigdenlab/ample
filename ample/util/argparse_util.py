@@ -118,6 +118,9 @@ def add_general_options(parser):
     parser.add_argument('-native_pdb', metavar='native_pdb', type=str, nargs=1,
                        help='Path to the crystal structure PDB for benchmarking.')
     
+    parser.add_argument('-native_mtz', metavar='native_pdb', type=str, nargs=1,
+                       help='Path to the native MTZ containing FC and PHIC calculated phases for benchmarking.')
+    
     parser.add_argument('-nmodels', metavar='number of models', type=int, nargs=1,
                        help='number of models to make (default: 1000)')
     

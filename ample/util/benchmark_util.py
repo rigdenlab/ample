@@ -16,6 +16,7 @@ import sys
 # Our imports
 from ample.util import ample_util
 from ample.util import csymmatch
+from ample.util import cphasematch
 from ample.util import maxcluster
 from ample.util import pdb_edit
 from ample.util import pdb_model
@@ -110,7 +111,7 @@ def analyse(amoptd, newroot=None):
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
         
         # Need to get the subcluster_centroid_model and then get the path to the original model
-        if 'subcluster_centroid_model' in d:
+        if 'subcluster_centroid_model' in d and amoptd['native_pdb']:
             n = os.path.splitext(os.path.basename(d['subcluster_centroid_model']))[0]
             cm = None
             for pdb in glob.glob(os.path.join(amoptd['models_dir'],"*.pdb")):
@@ -122,7 +123,7 @@ def analyse(amoptd, newroot=None):
             #cm=d['cluster_centroid']
             d['ensemble_native_TM'] = amoptd['maxComp'].tm(cm)
             d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(cm)
-        if amoptd['native_pdb']: analyseSolution(amoptd,d)
+        if amoptd['native_pdb'] or amoptd['native_mtz']: analyseSolution(amoptd,d)
         data.append(d)
 
     fileName=os.path.join(fixpath(amoptd['benchmark_dir']),'results.csv' )
@@ -153,6 +154,7 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
     mrPdb=None
     if d['MR_program']=="PHASER":
         mrPdb = d['PHASER_pdbout']
+        mrMTZ = d['PHASER_mtzout']
     elif d['MR_program']=="MOLREP":
         mrPdb = d['MOLREP_pdbout']
     elif d['MR_program']=="unknown":
@@ -169,133 +171,140 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
     
     d['num_placed_atoms'] = mrPdbInfo.numAtoms()
     d['num_placed_CA'] = mrPdbInfo.numCalpha()
-
-    # Find the MR origin wrt to the native
-    #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
-    # There is a bug in SHELXE with the spacegroup F23. Luckily this is a non-polar spacegroup,
-    # so we can use csymmatch to determine the origin for this case. This clause can be removed
-    # once the SHELXE bug has been fixed. The bug was present as of 25/5/16
-    if 'native_pdb_space_group' in amoptd and amoptd['native_pdb_space_group'] is 'F 2 3':
-        origin_finder = 'csymmatch'
-    if origin_finder == 'shelxe':
-        if not d['SHELXE_os']:
-            _logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
-            mrOrigin = shelxe.shelxe_origin(amoptd['shelxe_exe'], amoptd['native_pdb_info'].pdb, amoptd['mtz'], mrPdb)
-        else:
-            mrOrigin=[c*-1 for c in d['SHELXE_os']]
-    elif origin_finder == 'csymmatch':
-        CS = csymmatch.Csymmatch()
-        csout = ample_util.filename_append(filename=mrPdb, astr='csymmatch_origin', directory=amoptd['benchmark_dir'] )
-        CS.run(refPdb=amoptd['native_pdb_info'].pdb,
-               inPdb=mrPdb,
-               outPdb=csout,
-               originHand=True,
-               cleanup=False)
-        CS.parseLog()
-        mrOrigin = CS.changeOfOrigin
     
-    # Move pdb onto new origin
-    originPdb = ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
-    pdb_edit.translate(mrPdb, originPdb, mrOrigin)
+    if amoptd['native_mtz']:
+        CP = cphasematch.Cphasematch()
+        CP.run(amoptd['native_mtz'], mrMTZ)
+        d['Mean_phase_error_before_origin_shift']=CP.before_origin
+        d['Mean_phase_error_after_origin_shift']=CP.after_origin
     
-    # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
-    csymmatch.Csymmatch().wrapModelToNative(originPdb,
-                                            amoptd['native_pdb'],
-                                            csymmatchPdb=os.path.join(fixpath(amoptd['benchmark_dir']),
-                                            "phaser_{0}_csymmatch.pdb".format(d['ensemble_name'])))
-    # can now delete origin pdb
-    os.unlink(originPdb)
-
-    # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
-    # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
-    # the native structure.
-    if not (amoptd['homologs'] or \
-            amoptd['ideal_helices'] or \
-            amoptd['import_ensembles'] or \
-            amoptd['single_model_mode']):
-
-        # Get reforigin info
-        rmsder = reforigin.ReforiginRmsd()
-        try:
-            rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
-                           placedPdbInfo=mrPdbInfo,
-                           refModelPdbInfo=amoptd['ref_model_pdb_info'],
-                           cAlphaOnly=True,
-                           workdir=fixpath(amoptd['benchmark_dir']))
-            d['reforigin_RMSD']=rmsder.rmsd
-        except Exception,e:
-            _logger.critical("Error calculating RMSD: {0}".format(e))
-            d['reforigin_RMSD']=999
-
-
-        # Score the origin with all-atom and rio
-        rioData=rio.Rio().scoreOrigin(mrOrigin,
-                                      mrPdbInfo=mrPdbInfo,
-                                      nativePdbInfo=amoptd['native_pdb_info'],
-                                      resSeqMap=amoptd['res_seq_map'],
-                                      workdir=fixpath(amoptd['benchmark_dir'])
-                                      )
-    
-        # Set attributes
-        d['AA_num_contacts']  = rioData.aaNumContacts
-        d['RIO_num_contacts'] = rioData.rioNumContacts
-        d['RIO_in_register']  = rioData.rioInRegister
-        d['RIO_oo_register']  = rioData.rioOoRegister
-        d['RIO_backwards']    = rioData.rioBackwards
-        d['RIO']              = rioData.rioInRegister + rioData.rioOoRegister
-        d['RIO_no_cat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
-        d['RIO_norm']         = float(d['RIO']) / float(d['native_pdb_num_residues'])
-    else:
-        d['AA_num_contacts']  = None
-        d['RIO_num_contacts'] = None
-        d['RIO_in_register']  = None
-        d['RIO_oo_register']  = None
-        d['RIO_backwards']    = None
-        d['RIO']              = None
-        d['RIO_no_cat']       = None
-        d['RIO_norm']         = None
-
-#     # Now get the helix
-#     helixSequence = contacts.Rio().helixFromContacts( contacts=rioData.contacts,
-#                                                            dsspLog=dsspLog )
-#     if helixSequence is not None:
-#         ampleResult.rioHelixSequence = helixSequence
-#         ampleResult.rioLenHelix      = len( helixSequence )
-#         hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
-#         with open( hfile, 'w' ) as f:
-#             f.write( helixSequence+"\n" )
-
-    #
-    # This purely for checking and so we have pdbs to view
-    # 
-    # Wrap shelxe trace onto native using Csymmatch
-    if not d['SHELXE_pdbout'] is None and os.path.isfile(fixpath(d['SHELXE_pdbout'])):
-        csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SHELXE_pdbout']),
-                                                 amoptd['native_pdb'],
-                                                 origin=mrOrigin,
-                                                 workdir=fixpath(amoptd['benchmark_dir']))
-
-    # Wrap parse_buccaneer model onto native
-    if d['SXRBUCC_pdbout'] and os.path.isfile(fixpath(d['SXRBUCC_pdbout'])):
-        # Need to rename Pdb as is just called buccSX_output.pdb
-        csymmatchPdb = os.path.join(fixpath(amoptd['benchmark_dir']), "buccaneer_{0}_csymmatch.pdb".format(d['ensemble_name']))
-
-        csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SXRBUCC_pdbout']),
-                                                 amoptd['native_pdb'],
-                                                 origin=mrOrigin,
-                                                 csymmatchPdb=csymmatchPdb,
-                                                 workdir=fixpath(amoptd['benchmark_dir']))
+    if amoptd['native_pdb']:
+        # Find the MR origin wrt to the native
+        #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
+        # There is a bug in SHELXE with the spacegroup F23. Luckily this is a non-polar spacegroup,
+        # so we can use csymmatch to determine the origin for this case. This clause can be removed
+        # once the SHELXE bug has been fixed. The bug was present as of 25/5/16
+        if 'native_pdb_space_group' in amoptd and amoptd['native_pdb_space_group'] is 'F 2 3':
+            origin_finder = 'csymmatch'
+        if origin_finder == 'shelxe':
+            if not d['SHELXE_os']:
+                _logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
+                mrOrigin = shelxe.shelxe_origin(amoptd['shelxe_exe'], amoptd['native_pdb_info'].pdb, amoptd['mtz'], mrPdb)
+            else:
+                mrOrigin=[c*-1 for c in d['SHELXE_os']]
+        elif origin_finder == 'csymmatch':
+            CS = csymmatch.Csymmatch()
+            csout = ample_util.filename_append(filename=mrPdb, astr='csymmatch_origin', directory=amoptd['benchmark_dir'] )
+            CS.run(refPdb=amoptd['native_pdb_info'].pdb,
+                   inPdb=mrPdb,
+                   outPdb=csout,
+                   originHand=True,
+                   cleanup=False)
+            CS.parseLog()
+            mrOrigin = CS.changeOfOrigin
         
-    # Wrap parse_buccaneer model onto native
-    if d['SXRARP_pdbout'] and os.path.isfile(fixpath(d['SXRARP_pdbout'])):
-        # Need to rename Pdb as is just called buccSX_output.pdb
-        csymmatchPdb = os.path.join(fixpath(amoptd['benchmark_dir']), "arpwarp_{0}_csymmatch.pdb".format(d['ensemble_name']))
-
-        csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SXRARP_pdbout']),
-                                                 amoptd['native_pdb'],
-                                                 origin=mrOrigin,
-                                                 csymmatchPdb=csymmatchPdb,
-                                                 workdir=fixpath(amoptd['benchmark_dir']))
+        # Move pdb onto new origin
+        originPdb = ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
+        pdb_edit.translate(mrPdb, originPdb, mrOrigin)
+        
+        # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
+        csymmatch.Csymmatch().wrapModelToNative(originPdb,
+                                                amoptd['native_pdb'],
+                                                csymmatchPdb=os.path.join(fixpath(amoptd['benchmark_dir']),
+                                                "phaser_{0}_csymmatch.pdb".format(d['ensemble_name'])))
+        # can now delete origin pdb
+        os.unlink(originPdb)
+    
+        # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
+        # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
+        # the native structure.
+        if not (amoptd['homologs'] or \
+                amoptd['ideal_helices'] or \
+                amoptd['import_ensembles'] or \
+                amoptd['single_model_mode']):
+    
+            # Get reforigin info
+            rmsder = reforigin.ReforiginRmsd()
+            try:
+                rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
+                               placedPdbInfo=mrPdbInfo,
+                               refModelPdbInfo=amoptd['ref_model_pdb_info'],
+                               cAlphaOnly=True,
+                               workdir=fixpath(amoptd['benchmark_dir']))
+                d['reforigin_RMSD']=rmsder.rmsd
+            except Exception,e:
+                _logger.critical("Error calculating RMSD: {0}".format(e))
+                d['reforigin_RMSD']=999
+    
+    
+            # Score the origin with all-atom and rio
+            rioData=rio.Rio().scoreOrigin(mrOrigin,
+                                          mrPdbInfo=mrPdbInfo,
+                                          nativePdbInfo=amoptd['native_pdb_info'],
+                                          resSeqMap=amoptd['res_seq_map'],
+                                          workdir=fixpath(amoptd['benchmark_dir'])
+                                          )
+        
+            # Set attributes
+            d['AA_num_contacts']  = rioData.aaNumContacts
+            d['RIO_num_contacts'] = rioData.rioNumContacts
+            d['RIO_in_register']  = rioData.rioInRegister
+            d['RIO_oo_register']  = rioData.rioOoRegister
+            d['RIO_backwards']    = rioData.rioBackwards
+            d['RIO']              = rioData.rioInRegister + rioData.rioOoRegister
+            d['RIO_no_cat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
+            d['RIO_norm']         = float(d['RIO']) / float(d['native_pdb_num_residues'])
+        else:
+            d['AA_num_contacts']  = None
+            d['RIO_num_contacts'] = None
+            d['RIO_in_register']  = None
+            d['RIO_oo_register']  = None
+            d['RIO_backwards']    = None
+            d['RIO']              = None
+            d['RIO_no_cat']       = None
+            d['RIO_norm']         = None
+    
+    #     # Now get the helix
+    #     helixSequence = contacts.Rio().helixFromContacts( contacts=rioData.contacts,
+    #                                                            dsspLog=dsspLog )
+    #     if helixSequence is not None:
+    #         ampleResult.rioHelixSequence = helixSequence
+    #         ampleResult.rioLenHelix      = len( helixSequence )
+    #         hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
+    #         with open( hfile, 'w' ) as f:
+    #             f.write( helixSequence+"\n" )
+    
+        #
+        # This purely for checking and so we have pdbs to view
+        # 
+        # Wrap shelxe trace onto native using Csymmatch
+        if not d['SHELXE_pdbout'] is None and os.path.isfile(fixpath(d['SHELXE_pdbout'])):
+            csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SHELXE_pdbout']),
+                                                     amoptd['native_pdb'],
+                                                     origin=mrOrigin,
+                                                     workdir=fixpath(amoptd['benchmark_dir']))
+    
+        # Wrap parse_buccaneer model onto native
+        if d['SXRBUCC_pdbout'] and os.path.isfile(fixpath(d['SXRBUCC_pdbout'])):
+            # Need to rename Pdb as is just called buccSX_output.pdb
+            csymmatchPdb = os.path.join(fixpath(amoptd['benchmark_dir']), "buccaneer_{0}_csymmatch.pdb".format(d['ensemble_name']))
+    
+            csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SXRBUCC_pdbout']),
+                                                     amoptd['native_pdb'],
+                                                     origin=mrOrigin,
+                                                     csymmatchPdb=csymmatchPdb,
+                                                     workdir=fixpath(amoptd['benchmark_dir']))
+            
+        # Wrap parse_buccaneer model onto native
+        if d['SXRARP_pdbout'] and os.path.isfile(fixpath(d['SXRARP_pdbout'])):
+            # Need to rename Pdb as is just called buccSX_output.pdb
+            csymmatchPdb = os.path.join(fixpath(amoptd['benchmark_dir']), "arpwarp_{0}_csymmatch.pdb".format(d['ensemble_name']))
+    
+            csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SXRARP_pdbout']),
+                                                     amoptd['native_pdb'],
+                                                     origin=mrOrigin,
+                                                     csymmatchPdb=csymmatchPdb,
+                                                     workdir=fixpath(amoptd['benchmark_dir']))
 
     return
 
@@ -514,6 +523,9 @@ def writeCsv(fileName,resultList):
                 
                 'num_placed_atoms',
                 'reforigin_RMSD',
+                
+                'Mean_phase_error_before_origin_shift',
+                'Mean_phase_error_after_origin_shift',
                 
                 'AA_num_contacts',
                 'RIO_num_contacts',

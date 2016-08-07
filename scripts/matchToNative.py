@@ -7,12 +7,12 @@ import sys
 
 if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
 sys.path.insert(0, os.path.join(os.environ['CCP4'], "share", "ample", "python"))
-import ample_util
-import csymmatch
-import mtz_util
-import pdb_edit
-import phenixer
-import shelxe
+from ample.util import ample_util
+from ample.util import csymmatch
+from ample.util import mtz_util
+from ample.util import pdb_edit
+from ample.util import phenixer
+from ample.util import shelxe
 
 def run(nativePdb, nativeMtz=None, nativeMap=None, mrPdbs=None, outDir=None):
     

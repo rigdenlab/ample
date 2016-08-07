@@ -5,12 +5,12 @@
 #
 
 # Set path to include where shelxe is located
-export PATH=\
-/opt/shelx:\
-$PATH
+#export PATH=\
+#/opt/shelx:\
+#$PATH
 
 # Path to the rosetta directory
-rosetta_dir=/opt/rosetta-3.5
+rosetta_dir=/opt/rosetta_bin_linux_2015.39.58186_bundle/
 
 $CCP4/bin/ample \
 -rosetta_dir $rosetta_dir \

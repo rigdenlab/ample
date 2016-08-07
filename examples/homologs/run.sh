@@ -5,9 +5,9 @@
 #
 
 # Set path to include where shelxe is located
-export PATH=\
-/opt/shelx:\
-$PATH
+#export PATH=\
+#/opt/shelx:\
+#$PATH
 
 $CCP4/bin/ample \
 -fasta input/3DCY.fasta \

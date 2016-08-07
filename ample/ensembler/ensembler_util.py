@@ -135,15 +135,11 @@ def create_ensembles(amoptd):
     ensembles = ensembler.generate_ensembles(models, work_dir=work_dir, **kwargs)
 
     ############################################################################
-    # Extract any general data from the ensembles that is required in the main dictionary (for analysis)
     amoptd['ensembles'] = ensembles
     amoptd['ensembles_data'] = ensembler.ensembles_data
     amoptd['truncation_levels'] = ensembler.truncation_levels
     amoptd['truncation_variances'] = ensembler.truncation_variances
     amoptd['truncation_nresidues'] = ensembler.truncation_nresidues
-    
-    # Process any additional per-ensemble options
-    set_ensemble_options(amoptd)
 
     # We need to let the main process know that we have succeeded as this module could be run on a cluster node with no link
     # to the parent process, so we create a file here indicating that we got this far and didn't die from an exception
@@ -322,16 +318,6 @@ def reorder_models(models, ordered_list_file):
         assert name in model_names,"TM model {0} is not in models!".format(name)
         reordered_models.append(os.path.join(mdir, name))
     return reordered_models
-
-def set_ensemble_options(amoptd):
-    """Set any per-ensemble options based on general options"""
-    if amoptd['phaser_rms_from_subcluster']:
-        # We are setting the phaser_rms based on the subcluster variance as opposed to the default of 0.1
-        if not 'ensemble_options' in amoptd: amoptd['ensemble_options'] = {}
-        for ensemble_data in amoptd['ensembles_data']:
-            name = ensemble_data['name']
-            amoptd['ensemble_options'][name] = {'phaser_rms' : ensemble_data['subcluster_variance']}  
-    return
 
 def sort_ensembles(ensemble_pdbs, ensembles_data=None, prioritise=True):
     """Sort AMPLE ensemble data.

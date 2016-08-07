@@ -188,7 +188,7 @@ class Ample(object):
                                      submit_array=optd['submit_array'],
                                      submit_max_array=optd['submit_max_array'])
             # queue finished so unpickle results
-            with open(optd['results_path'], "r") as f: optd.update(cPickle.load(f))
+            with open(optd['results_path'], "r") as f: optd = cPickle.load(f)
         else:
             benchmark_util.analyse(optd)
             ample_util.saveAmoptd(optd)
@@ -355,7 +355,6 @@ class Ample(object):
             LOGGER.info("Sorting ensembles")
             ensemble_pdbs_sorted = ensembler_util.sort_ensembles(optd['ensembles'],
                                                            optd['ensembles_data'])
-
             # Create job scripts
             LOGGER.info("Generating MRBUMP runscripts")
             optd['mrbump_scripts'] = mrbump_util.write_mrbump_files(ensemble_pdbs_sorted,
@@ -363,6 +362,7 @@ class Ample(object):
                                                                     job_time=mrbump_util.MRBUMP_RUNTIME,
                                                                     ensemble_options=optd['ensemble_options'],
                                                                     directory=bump_dir )
+
         # Create function for monitoring jobs - static function decorator?
         if self.output_gui:
             def monitor():

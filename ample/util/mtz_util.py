@@ -4,6 +4,7 @@ Created on 2 Dec 2014
 @author: jmht
 '''
 
+import clipper
 import logging
 import os
 import shutil
@@ -91,7 +92,17 @@ def get_rfree(file_name):
     # Read the file
     content=reflection_file.file_content()
     return _get_rfree(content)
+
+def get_resolution(file_name):
+    hkl_info=clipper.HKL_info()
+    mtz_file=clipper.CCP4MTZfile()
+    mtz_file.open_read(file_name)
+    mtz_file.import_hkl_info(hkl_info)
+
+    resolution =  "%.2lf" % hkl_info.resolution().limit()
     
+    return resolution
+
 def _get_rfree(content):
     rfree_label=None
     #print "GOT ",content.column_labels()
