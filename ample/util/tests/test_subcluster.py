@@ -91,6 +91,19 @@ class Test_1(unittest.TestCase):
         self.assertItemsEqual(ref,cluster_files1)
         os.unlink('files.list')
         os.unlink('maxcluster.log')
+        
+    @unittest.skipUnless(test_funcs.found_exe("maxcluster" + ample_util.EXE_EXT), "maxcluster exec missing")
+    def test_cluster_variance(self):
+        # Test we can reproduce the original thresholds
+        maxcluster_exe = ample_util.find_exe('maxcluster' + ample_util.EXE_EXT)
+        radius = 4
+        clusterer = subcluster.MaxClusterer( maxcluster_exe )
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
+        clusterer.generate_distance_matrix( pdb_list )
+        clusterer.cluster_by_radius( radius )
+        variance = clusterer.cluster_score
+        ref = 0.131750083333
+        self.assertLessEqual(abs(ref-variance), 0.000001, "Incorrect variance: {0} -> {1}".format(variance, ref))
 
 
 @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster" + ample_util.EXE_EXT), "fast_protein_cluster exec missing")

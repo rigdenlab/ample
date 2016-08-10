@@ -382,6 +382,7 @@ class Ensembler(object):
             ensemble_data = copy.copy(truncated_models_data)
             ensemble_data['subcluster_num_models'] = len(cluster_files)
             ensemble_data['subcluster_radius_threshold'] = radius
+            ensemble_data['subcluster_score'] =  clusterer.cluster_score
             ensemble_data['ensemble_pdb'] = ensemble
 
             # Get the centroid model name from the list of files given to theseus - we can't parse

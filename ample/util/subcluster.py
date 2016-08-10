@@ -32,6 +32,7 @@ class SubClusterer(object):
         self.executable = executable
         self.distance_matrix = None
         self.index2pdb = []
+        self.cluster_score = None
         return
     
     def generate_distance_matrix(self,pdb_list):
@@ -40,8 +41,9 @@ class SubClusterer(object):
     def cluster_by_radius(self, radius):
         """Return a list of pdbs clustered by the given radius"""
         if self.distance_matrix is None:
-            raise RuntimeError,"Need to call generate_distance_matrix before cluster_by_radius!"
-        cluster_indices = self._cluster_indices(radius)
+            raise RuntimeError("Need to call generate_distance_matrix before cluster_by_radius!")
+        cluster_indices, cluster_score = self._cluster_indices(radius)
+        self.cluster_score = cluster_score
         if cluster_indices:
             return [ self.index2pdb[i] for i in cluster_indices ]
         else:
@@ -65,9 +67,16 @@ class SubClusterer(object):
             if len(cluster) > len(max_cluster):
                 max_cluster=copy.copy(cluster)
         if len(max_cluster) == 1:
-            return None
+            return None, None
         else:
-            return sorted(max_cluster)
+            cluster_score = self.calculate_score(cluster_scores)
+            return sorted(max_cluster), cluster_score
+    
+    def calculate_score(self, cluster):
+        """Calcualate variance
+        This has n-1 scores as we don't include the first score as it's zero - self score
+        """
+        return statistics_util.variance(cluster)
     
     def dump_raw_matrix(self,file_name):
         with open(file_name,'w') as f:
