@@ -506,6 +506,12 @@ class PdbInfo(object):
             
         return natoms
     
+    def numChains(self, modelIdx=0):
+        """Return the total number of chains in the model"""
+        assert len(self.models) >= 1,"Need at least one model!"
+        assert len(self.models[modelIdx].chains) >= 1,"Need at least one chain!"
+        return len(self.models[ modelIdx ].chains)
+    
     def numCalpha(self, modelIdx=0):
         """Return the total number of CA ATOM atoms in the model"""
         assert len(self.models) >= 1,"Need at least one model!"

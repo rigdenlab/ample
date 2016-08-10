@@ -169,6 +169,7 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
     
     mrPdbInfo = pdb_edit.get_info( mrPdb )
     
+    d['num_placed_chains'] = mrPdbInfo.numChains()
     d['num_placed_atoms'] = mrPdbInfo.numAtoms()
     d['num_placed_CA'] = mrPdbInfo.numCalpha()
     
@@ -521,6 +522,7 @@ def writeCsv(fileName,resultList):
                 'SXRARP_final_Rfact',
                 'SXRARP_final_Rfree',
                 
+                'num_placed_chains',
                 'num_placed_atoms',
                 'reforigin_RMSD',
                 
