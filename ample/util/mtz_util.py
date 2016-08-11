@@ -4,7 +4,7 @@ Created on 2 Dec 2014
 @author: jmht
 '''
 
-import clipper
+
 import logging
 import os
 import shutil
@@ -13,6 +13,9 @@ import sys
 from iotbx import reflection_file_reader
 
 import ample_util # Avoid circular dependencies
+CCP4_VERSION = ample_util.ccp4_version()
+if int(CCP4_VERSION[0]) >= 7: 
+    import clipper
 import exit_util
 import cif_parser # Avoid circular dependencies
 
@@ -94,12 +97,15 @@ def get_rfree(file_name):
     return _get_rfree(content)
 
 def get_resolution(file_name):
-    hkl_info=clipper.HKL_info()
-    mtz_file=clipper.CCP4MTZfile()
-    mtz_file.open_read(file_name)
-    mtz_file.import_hkl_info(hkl_info)
+    if int(CCP4_VERSION[0]) >= 7:
+        hkl_info=clipper.HKL_info()
+        mtz_file=clipper.CCP4MTZfile()
+        mtz_file.open_read(file_name)
+        mtz_file.import_hkl_info(hkl_info)
 
-    resolution =  "%.2lf" % hkl_info.resolution().limit()
+        resolution =  "%.2lf" % hkl_info.resolution().limit()
+    else:
+        resolution = None
     
     return resolution
 
