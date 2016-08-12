@@ -5,7 +5,7 @@ import unittest
 from ample import constants
 from ample.util import cphasematch
 
-class TestContacts( unittest.TestCase ):
+class Test( unittest.TestCase ):
 
     @classmethod
     def setUpClass(cls):
@@ -18,7 +18,6 @@ class TestContacts( unittest.TestCase ):
         cp = cphasematch.Cphasematch()
         native_mtz =  os.path.join(self.testfiles_dir, "toxd_59.1.mtz")
         placed_mtz =  os.path.join(self.testfiles_dir, "phaser_loc0_ALL_c1_tl49_r1_allatom_UNMOD.1.mtz")
-        
         
         cp.run(native_mtz, placed_mtz)
         self.assertEqual('88.8476', cp.before_origin)

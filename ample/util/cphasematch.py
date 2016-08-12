@@ -26,7 +26,8 @@ class Cphasematch( object ):
     def run_cad(self, native_MTZ, placed_MTZ, cleanup=True):
         
         self.F, self.SIGF, _ = mtz_util.get_labels(native_MTZ)
-        self.resolution = mtz_util.get_resolution(native_MTZ)
+        _, minr = mtz_util.max_min_resolution(native_MTZ)
+        self.resolution = minr
         self.name = os.path.basename(placed_MTZ)[16:33]
         self.cad_logfile = self.name + "_cad.log"
         

@@ -4,7 +4,6 @@ Created on 2 Dec 2014
 @author: jmht
 '''
 
-
 import logging
 import os
 import shutil
@@ -96,18 +95,17 @@ def get_rfree(file_name):
     content=reflection_file.file_content()
     return _get_rfree(content)
 
-def get_resolution(file_name):
-    if int(CCP4_VERSION[0]) >= 7:
-        hkl_info=clipper.HKL_info()
-        mtz_file=clipper.CCP4MTZfile()
-        mtz_file.open_read(file_name)
-        mtz_file.import_hkl_info(hkl_info)
-
-        resolution =  "%.2lf" % hkl_info.resolution().limit()
-    else:
-        resolution = None
-    
-    return resolution
+# def get_resolution(file_name):
+#     if int(CCP4_VERSION[0]) >= 7:
+#         hkl_info=clipper.HKL_info()
+#         mtz_file=clipper.CCP4MTZfile()
+#         mtz_file.open_read(file_name)
+#         mtz_file.import_hkl_info(hkl_info)
+# 
+#         resolution =  "%.2lf" % hkl_info.resolution().limit()
+#     else:
+#         resolution = None
+#     return resolution
 
 def _get_rfree(content):
     rfree_label=None
@@ -129,6 +127,13 @@ def _get_rfree(content):
                     _logger.warning("FOUND >1 RFREE label in file!")
                 rfree_label=label
     return rfree_label
+
+def max_min_resolution(file_name):
+    reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
+    if not reflection_file.file_type()=="ccp4_mtz":
+        print("File is not of type ccp4_mtz: {0}".format( file_name ) )
+        sys.exit(1)
+    return reflection_file.file_content().max_min_resolution()
 
 def to_hkl(mtz_file,hkl_file=None,directory=None,F=None,SIGF=None,FREE=None):
     
