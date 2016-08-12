@@ -12,9 +12,6 @@ import sys
 from iotbx import reflection_file_reader
 
 import ample_util # Avoid circular dependencies
-CCP4_VERSION = ample_util.ccp4_version()
-if int(CCP4_VERSION[0]) >= 7: 
-    import clipper
 import exit_util
 import cif_parser # Avoid circular dependencies
 
@@ -187,12 +184,12 @@ def processReflectionFile(amoptd):
 
     # Get column label info
     reflection_file = reflection_file_reader.any_reflection_file(file_name=amoptd['mtz'])
-    if not reflection_file.file_type()=="ccp4_mtz":
+    if not reflection_file.file_type() == "ccp4_mtz":
         _logger.critical("File is not of type ccp4_mtz: {0}".format( amoptd['mtz'] ) )
         sys.exit(1)
     
     # Read the file
-    content=reflection_file.file_content()
+    content = reflection_file.file_content()
     
     # Check any user-given flags
     for flag in ['F','SIGF','FREE']:
@@ -233,6 +230,12 @@ def processReflectionFile(amoptd):
                 _logger.critical("Cannot find valid rfree flag in mtz file {0} after running uniquiefy".format(amoptd['mtz']))
                 sys.exit(1)
         amoptd['FREE']  = rfree
+    
+    # Output information to user and save to amoptd
+    _logger.info("Using MTZ file: {0}".format(amoptd['mtz']))
+    maxr, minr = content.max_min_resolution()
+    amoptd['mtz_max_resolution'] = maxr
+    amoptd['mtz_min_resolution'] = minr
+    _logger.info("Resolution limits of MTZ file are: {0: > 6.3F} and {1: > 6.3F}".format(maxr, minr))
 
     return True
-

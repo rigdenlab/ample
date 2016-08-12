@@ -108,7 +108,6 @@ def process_options(optd):
     except Exception, e:
         msg = "Error processing reflection file: {0}".format(e)
         exit_util.exit_error(msg, sys.exc_info()[2])
-    LOGGER.info("Using MTZ file: {0}".format(optd['mtz']))
     
     ###############################################################################
     #
