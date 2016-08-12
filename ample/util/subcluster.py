@@ -13,6 +13,7 @@ import mmtbx.superpose
 
 from ample.util import ample_util
 from ample.util import pdb_edit
+from ample.util import statistics_util
 
 _logger = logging.getLogger()
 
@@ -55,21 +56,25 @@ class SubClusterer(object):
         how many pdbs are < thresh to this pdb. We return the largest cluster.
         """
         #self.dump_matrix("maxcluster.csv")
-        thresh=float(thresh)
-        max_cluster=[]
-        m=self.distance_matrix
-        for i in range(len(m)):
-            cluster=[i]
-            for j in range(len(m)):
-                if m[i][j] is None or j==i: continue
-                if float(m[i][j]) < thresh:
+        thresh = float(thresh)
+        max_cluster = []
+        max_cluster_scores = []
+        len_matrix = len(self.distance_matrix)
+        for i in range(len_matrix):
+            cluster = [i]
+            scores = []
+            for j in range(len_matrix):
+                if self.distance_matrix[i][j] is None or j==i: continue
+                if float(self.distance_matrix[i][j]) < thresh:
                     cluster.append(j)
+                    scores.append(self.distance_matrix[i][j])
             if len(cluster) > len(max_cluster):
-                max_cluster=copy.copy(cluster)
+                max_cluster = copy.copy(cluster)
+                max_cluster_scores = copy.copy(scores)
         if len(max_cluster) == 1:
             return None, None
         else:
-            cluster_score = self.calculate_score(cluster_scores)
+            cluster_score = self.calculate_score(max_cluster_scores)
             return sorted(max_cluster), cluster_score
     
     def calculate_score(self, cluster):
