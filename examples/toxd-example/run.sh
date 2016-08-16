@@ -25,10 +25,10 @@ $CCP4/bin/ample \
 
 # Additional optional flags
 # Add below to run from pre-made models
-#-models ../../tests/testfiles/models \
+#-models ../../testfiles/models \
 
 # Thes are QUARK models
-#-models  ../../tests/testfiles/decoys_200.tar.gz \
+#-models  ../../testfiles/decoys_200.tar.gz \
 
 # Add below for running in benchmark mode
 #-native_pdb  inpuy/1DTX.pdb \
