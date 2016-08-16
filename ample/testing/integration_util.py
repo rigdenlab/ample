@@ -69,12 +69,13 @@ class AMPLEIntegrationFramework(object):
         if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
     
     def get_run_dir(self):
-        # OS X has problems with relative paths - symlink in root messes
-        # up the search in theseus - therefore default set to $HOME directory
-        if "darwin" in sys.platform.lower():
-            return os.environ["HOME"]
-        else:
-            return tempfile.gettempdir()
+#         # OS X has problems with relative paths - symlink in root messes
+#         # up the search in theseus - therefore default set to $HOME directory
+#         if "darwin" in sys.platform.lower():
+#             return os.environ["HOME"]
+#         else:
+#             return tempfile.gettempdir()
+        return os.getcwd()
     
     def clean(self, clean_all=True, clean_dir=False):
         for name in self.test_dict.keys():
