@@ -273,8 +273,8 @@ def add_mr_options(parser):
     mr_group.add_argument('-phaser_only', metavar='True/False', type=str, nargs=1,
                        help='Only use Phaser for Molecular Replacement step in MRBUMP')
 
-    mr_group.add_argument('-phaser_rms', metavar='phaser_rms', type=float, nargs=1,
-                       help='rms value for phaser (default=0.1)')
+    mr_group.add_argument('-phaser_rms', metavar='phaser_rms', type=str, nargs=1,
+                       help='RMS value for phaser')
 
     mr_group.add_argument('-shelx_cycles', type=str, nargs=1,
                          help='The number of shelx cycles to run when rebuilding.')

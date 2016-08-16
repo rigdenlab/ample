@@ -102,7 +102,6 @@ class Ample(object):
         for the program - required for testing.
         """ 
         argso = self.process_command_line(args=args)
-        #self.amopt = amopt = options_util.AmpleOptions()
         self.amopt = amopt = config_util.AMPLEConfigOptions()
         amopt.populate(argso)
 
@@ -200,7 +199,7 @@ class Ample(object):
         if optd['import_ensembles']:
             ensembler_util.import_ensembles(optd)
         elif optd['ideal_helices']:
-            optd['ensembles'], optd['ensemble_options'], optd['ensembles_data'] = ample_util.ideal_helices(optd['fasta_length'])
+            ample_util.ideal_helices(optd)
             LOGGER.info("*** Using ideal helices to solve structure ***")
         else:
             # Check we have some models to work with
@@ -350,6 +349,10 @@ class Ample(object):
              
             optd['mrbump_results'] = []
             LOGGER.info("Running MRBUMP jobs in directory: {0}".format(bump_dir))
+            
+            # Set an ensemble-specific phaser_rms if required
+            if optd['phaser_rms'] == 'auto':
+                ensembler_util.set_phaser_rms_from_subcluster_score(optd)
             
             # Sort the ensembles in a favourable way
             LOGGER.info("Sorting ensembles")

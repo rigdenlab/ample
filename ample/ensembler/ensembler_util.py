@@ -319,6 +319,16 @@ def reorder_models(models, ordered_list_file):
         reordered_models.append(os.path.join(mdir, name))
     return reordered_models
 
+def set_phaser_rms_from_subcluster_score(optd):
+    """Set the phaser_rms for each ensemble based on its score."""
+    if optd['ensemble_options'] is None: optd['ensemble_options'] = {}
+    for ensemble_data in optd['ensembles_data']:
+        name = ensemble_data['name']
+        if name not in optd['ensemble_options']: optd['ensemble_options'][name] = {}
+        optd['ensemble_options'][name]['phaser_rms'] = ensemble_data['subcluster_score']
+        
+    return
+
 def sort_ensembles(ensemble_pdbs, ensembles_data=None, prioritise=True):
     """Sort AMPLE ensemble data.
     

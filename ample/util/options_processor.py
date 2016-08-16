@@ -243,7 +243,7 @@ def process_options(optd):
             msg = 'Cannot find file domain_all_chains_pdb: {0}'.format(optd['domain_all_chains_pdb'])
             exit_util.exit_error(msg)
 
-    # MR programs
+    # Molecular Replacement Options
     if optd['molrep_only']:
             optd['phaser_only'] = False
             #msg = 'you say you want molrep only AND phaser only, choose one or both'
@@ -255,6 +255,15 @@ def process_options(optd):
         optd['mrbump_programs'] = [ 'phaser' ]
     else:
         optd['mrbump_programs'] = ['molrep', 'phaser']
+        
+    if optd['phaser_rms'] != 'auto':
+        try:
+            phaser_rms = float(optd['phaser_rms'])
+            optd['phaser_rms'] = phaser_rms
+        except ValueError as e:
+            msg = "Error converting phaser_rms '{0}' to floating point: {1}".format(optd['phaser_rms'], e)
+            exit_util.exit_error(msg)
+    
     #
     # Benchmark Mode
     #
