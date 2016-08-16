@@ -684,9 +684,12 @@ def unfinished_scripts(amoptd):
 def write_mrbump_files(ensemble_pdbs, amoptd, job_time=MRBUMP_RUNTIME, ensemble_options=None, directory=None):
     """Write the MRBUMP job files for all the ensembles.
 
-    Args:
-    ensemble_pdbs -- list of the ensembles, each a single pdb file
-    amoptd -- dictionary with job options
+    Arguments:
+    ensemble_pdbs -- list of the ensembles, each a single pdb file.
+    amoptd -- dictionary with job options.
+    job_time -- maximum permissible runtime (mainly used for batch queueing systems).
+    ensemble_options -- dictionary with ensemble-specific keywords e.g. ensemble_options[ensemble_name] = {'ncopies' : ncopies}
+    directory -- working directory to write files to.
     """
     if not directory: directory = os.getcwd()
     
