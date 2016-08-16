@@ -88,9 +88,7 @@ def get_rfree(file_name):
         logging.critical(msg)
         raise RuntimeError,msg
     
-    # Read the file
-    content=reflection_file.file_content()
-    return _get_rfree(content)
+    return _get_rfree(reflection_file.file_content())
 
 # def get_resolution(file_name):
 #     if int(CCP4_VERSION[0]) >= 7:
@@ -105,7 +103,7 @@ def get_rfree(file_name):
 #     return resolution
 
 def _get_rfree(content):
-    rfree_label=None
+    rfree_label = None
     #print "GOT ",content.column_labels()
     for label in content.column_labels():
         if 'free' in label.lower():
@@ -210,15 +208,14 @@ def processReflectionFile(amoptd):
             sys.exit(1)
         amoptd['SIGF']  = l
         
+    rfree=_get_rfree(content)
     if amoptd['FREE']:
         # Check is valid
-        rfree=_get_rfree(content)
         if not rfree or not rfree==amoptd['FREE']:
             _logger.critical("Given RFREE label {0} is not valid for mtz file: {0}".format( amoptd['FREE'], amoptd['mtz'] ) )
             sys.exit(1)
     else:
         # See if we can find a valid label in the file
-        rfree=_get_rfree(content)
         if not rfree:
             # Need to generate RFREE
             _logger.warning("Cannot find a valid FREE flag - running uniquefy to generate column with RFREE data." )
