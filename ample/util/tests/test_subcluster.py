@@ -93,8 +93,7 @@ class Test_1(unittest.TestCase):
         os.unlink('maxcluster.log')
         
     @unittest.skipUnless(test_funcs.found_exe("maxcluster" + ample_util.EXE_EXT), "maxcluster exec missing")
-    def test_cluster_variance(self):
-        # Test we can reproduce the original thresholds
+    def test_cluster_score(self):
         maxcluster_exe = ample_util.find_exe('maxcluster' + ample_util.EXE_EXT)
         radius = 4
         clusterer = subcluster.MaxClusterer( maxcluster_exe )
@@ -102,8 +101,8 @@ class Test_1(unittest.TestCase):
         clusterer.generate_distance_matrix( pdb_list )
         clusterer.cluster_by_radius( radius )
         variance = clusterer.cluster_score
-        ref = 0.131750083333
-        self.assertLessEqual(abs(ref-variance), 0.000001, "Incorrect variance: {0} -> {1}".format(variance, ref))
+        ref = 4.748
+        self.assertLessEqual(abs(ref-variance), 0.001, "Incorrect variance: {0} -> {1}".format(variance, ref))
 
 
 @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster" + ample_util.EXE_EXT), "fast_protein_cluster exec missing")

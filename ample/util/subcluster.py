@@ -58,30 +58,45 @@ class SubClusterer(object):
         #self.dump_matrix("maxcluster.csv")
         thresh = float(thresh)
         max_cluster = []
-        max_cluster_scores = []
         len_matrix = len(self.distance_matrix)
         for i in range(len_matrix):
             cluster = [i]
-            scores = []
             for j in range(len_matrix):
                 if self.distance_matrix[i][j] is None or j==i: continue
                 if float(self.distance_matrix[i][j]) < thresh:
                     cluster.append(j)
-                    scores.append(self.distance_matrix[i][j])
             if len(cluster) > len(max_cluster):
                 max_cluster = copy.copy(cluster)
-                max_cluster_scores = copy.copy(scores)
         if len(max_cluster) == 1:
             return None, None
         else:
-            cluster_score = self.calculate_score(max_cluster_scores)
+            cluster_score = self.calculate_score(max_cluster)
             return sorted(max_cluster), cluster_score
     
     def calculate_score(self, cluster):
-        """Calcualate variance
-        This has n-1 scores as we don't include the first score as it's zero - self score
+        """Given a list of indices of a cluster, calculate the rmsd we want to give to phaser 
         """
-        return statistics_util.variance(cluster)
+        ALL_BY_ALL = True
+        if ALL_BY_ALL:
+            # Calculate all the rmsds of all decoys in the cluster with each other
+            rmsds = []
+            lenc = len(cluster)
+            for i in range(lenc):
+                for j in range(i+1,lenc):
+                    i1 = cluster[i]
+                    i2 = cluster[j]
+                    rmsds.append(self.distance_matrix[i1][i2])
+        else:
+            # Just use the rmsds of the decoys to the the cluster centroid - assumes
+            # the centroid approximates the native
+            row = cluster[0]
+            rmsds = [self.distance_matrix[row][j] for j in cluster[1:]]
+            
+        #print "rmsds: ",rmsds
+        #print "mean: ",statistics_util.mean(rmsds)
+        #print "max: ",max(rmsds)
+        return max(rmsds)
+        #return statistics_util.mean(rmsds)
     
     def dump_raw_matrix(self,file_name):
         with open(file_name,'w') as f:
