@@ -331,8 +331,10 @@ def find_maxcluster(amoptd):
 
     return maxcluster_exe
 
-def ideal_helices(nresidues):
-    ""
+def ideal_helices(optd):
+    """Populate amoptd with data to run with ideal helices"""
+    
+    nresidues = optd['fasta_length']
     include_dir = os.path.join(SHARE_DIR, 'include')
     names = [ 'polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25',
               'polyala30', 'polyala35', 'polyala40' ]
@@ -353,7 +355,10 @@ def ideal_helices(nresidues):
                                  } )
         pdbs.append(pdb)
         
-    return pdbs, ensemble_options, ensembles_data
+    optd['ensembles'] = pdbs
+    optd['ensemble_options'] = ensemble_options
+    optd['ensembles_data'] = ensembles_data
+    return
 
 def is_exe(fpath):
     return fpath and os.path.exists(fpath) and os.access(fpath, os.X_OK)
