@@ -7,6 +7,7 @@ Created on 12 Jan 2016
 
 import glob
 import os
+import re
 import sys
 
 from ample.constants import SHARE_DIR
@@ -15,6 +16,19 @@ from ample.testing.integration_util import AMPLEBaseTest
 
 INPUT_DIR = os.path.join(SHARE_DIR, "examples", "contact-example", "input")
 TEST_DICT = {}
+
+def parse_restraints(logfile):
+    re35 = re.compile('^core.io.constraints: Read in (\d+) constraints') 
+    re36 = re.compile('^core.scoring.constraints.ConstraintsIO: Read in (\d+) constraints')
+    re_objects = (re35, re36)
+    with open(logfile) as f:
+        for line in f:
+            for reo in re_objects:
+                m = reo.match(line)
+                if m:
+                    nr_restraints = int(m.group(1))
+                    return nr_restraints
+    return -1
 
 if not sys.platform.startswith('win'):
     # vanilla test
@@ -51,13 +65,8 @@ if not sys.platform.startswith('win'):
             self.assertIn('contact_map', self.AMPLE_DICT)
             self.assertTrue(os.path.isfile(self.AMPLE_DICT['contact_map']))
             self.assertIn('models_dir', self.AMPLE_DICT)
-            m_dir = os.path.join(self.AMPLE_DICT['models_dir'], "..", "modelling", "job_0")
-            for line in open(os.path.join(m_dir, "model_0.log"), "r"):
-                if line.startswith("core.scoring.constraints.ConstraintsIO: Read in") \
-                        and line.strip().endswith("constraints"):
-                    nr_restraints=int(line.split()[-2])
-                    break
-                else: nr_restraints=-1
+            m_file = os.path.join(self.AMPLE_DICT['models_dir'], "..", "modelling", "job_0", "model_0.log")
+            nr_restraints = parse_restraints(m_file)
             self.assertGreaterEqual(nr_restraints, 0, "Restraints not read")
             self.assertEqual(nr_restraints, 59, "Different number read")
             nmodels = len(glob.glob(os.path.join(self.AMPLE_DICT['models_dir'], "*.pdb")))
@@ -85,13 +94,8 @@ if not sys.platform.startswith('win'):
             self.assertIn('contact_map', self.AMPLE_DICT)
             self.assertTrue(os.path.isfile(self.AMPLE_DICT['contact_map']))
             self.assertIn('models_dir', self.AMPLE_DICT)
-            m_dir = os.path.join(self.AMPLE_DICT['models_dir'], "..", "modelling", "job_0")
-            for line in open(os.path.join(m_dir, "model_0.log"), "r"):
-                if line.startswith("core.scoring.constraints.ConstraintsIO: Read in") \
-                        and line.strip().endswith("constraints"):
-                    nr_restraints=int(line.split()[-2])
-                    break
-                else: nr_restraints=-1
+            m_file = os.path.join(self.AMPLE_DICT['models_dir'], "..", "modelling", "job_0", "model_0.log")
+            nr_restraints = parse_restraints(m_file)
             self.assertGreaterEqual(nr_restraints, 0, "Restraints not read")
             self.assertEqual(nr_restraints, 49, "Different number read")
             nmodels = len(glob.glob(os.path.join(self.AMPLE_DICT['models_dir'], "*.pdb")))
