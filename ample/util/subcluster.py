@@ -10,10 +10,13 @@ import os
 import shutil
 
 import mmtbx.superpose
+import numpy
 
 from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import statistics_util
+#from scipy.stats.mstats_basic import threshold
+
 
 _logger = logging.getLogger()
 
@@ -57,16 +60,31 @@ class SubClusterer(object):
         """
         #self.dump_matrix("maxcluster.csv")
         thresh = float(thresh)
-        max_cluster = []
-        len_matrix = len(self.distance_matrix)
-        for i in range(len_matrix):
-            cluster = [i]
-            for j in range(len_matrix):
-                if self.distance_matrix[i][j] is None or j==i: continue
-                if float(self.distance_matrix[i][j]) < thresh:
-                    cluster.append(j)
-            if len(cluster) > len(max_cluster):
-                max_cluster = copy.copy(cluster)
+        
+        # get mask of all elements where condition is true. We exclude 0.0 to ensure we don't get the
+        # index of the model that the row is compared with, as this needs to be the first model in the 
+        # ensemble. This means we would also exclude models that had an rmsd of zero to the centroid, but
+        # as these are likely to be identical (and this occurrence rare), this should be ok
+        condition = numpy.logical_and(self.distance_matrix <= thresh, self.distance_matrix != 0.0)
+        # Array of sums of each row - largest number is a row where most items satisfy condition
+        condition_sum =  sum(condition)
+        # Find all rows that have the maximum of the condition true and then select the first one
+        row_index = numpy.where(condition_sum == numpy.max(condition_sum))[0][0]
+        # Select all values from that row where the condition is true and insert the first index so that
+        # it becomes the centroid of that cluster 
+        max_cluster = numpy.insert(numpy.where(condition[row_index])[0], 0, row_index)
+#             max_cluster = []
+
+#             len_matrix = len(self.distance_matrix)
+#             for i in range(len_matrix):
+#                 cluster = [i]
+#                 for j in range(len_matrix):
+#                     if self.distance_matrix[i][j] is None or j==i: continue
+#                     if float(self.distance_matrix[i][j]) < thresh:
+#                         cluster.append(j)
+#                 if len(cluster) > len(max_cluster):
+#                     max_cluster = copy.copy(cluster)
+
         if len(max_cluster) == 1:
             return None, None
         else:
@@ -130,7 +148,7 @@ class CctbxClusterer(SubClusterer):
         self.index2pdb=pdb_list
      
         # Create a square distance_matrix num_models in size filled with None
-        self.distance_matrix = [[None for col in range(num_models)] for row in range(num_models)]
+        self.distance_matrix = numpy.zeros([num_models, num_models])
         # Set zeros diagonal
          
         for i, m1 in enumerate(pdb_list):
@@ -190,7 +208,7 @@ class FpcClusterer(SubClusterer):
         # create empty matrix - we use None's but this means we need to check for then when
         # looking through the matrix
         # use square matrix to make indexing easier as we're unlikely to be very big
-        m=[[None for i in range(mlen)] for j in range(mlen)]
+        m = numpy.zeros([mlen, mlen])
          
         # Fill in all values (upper triangle)
         for i,j,d in data:
@@ -247,7 +265,9 @@ class GesamtClusterer(SubClusterer):
         elif metric == 'qscore':
             parity = 1
         else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
-        m = [[parity for _ in range(nmodels)] for _ in range(nmodels)]
+        
+        #m = [[parity for _ in range(nmodels)] for _ in range(nmodels)]
+        m = numpy.full([nmodels, nmodels], parity)
         
         for i, model in enumerate(models):
             mname = os.path.basename(model)
@@ -361,7 +381,7 @@ end""".format(nresidues, 'A')
         _, nresidues = pdb_edit.num_atoms_and_residues(models[0], first=True)
         
         # Create a square distance_matrix no_models in size filled with None
-        self.distance_matrix = [[None for col in range(num_models)] for row in range(num_models)]
+        self.distance_matrix = numpy.zeros([num_models, num_models])
         
         logfile='lsqkab.out'
         parity = 0.0
@@ -397,13 +417,13 @@ class MaxClusterer(SubClusterer):
     def generate_distance_matrix(self, pdb_list):
         """Run maxcluster to generate the distance distance_matrix"""
         
-        no_models = len( pdb_list )
-        if not no_models:
+        num_models = len( pdb_list )
+        if not num_models:
             msg = "generate_distance_matrix got empty pdb_list!"
             logging.critical( msg )
             raise RuntimeError, msg
         
-        self.index2pdb=[0]*no_models
+        self.index2pdb=[0]*num_models
     
         # Maxcluster arguments
         # -l [file]   File containing a list of PDB model fragments
@@ -431,9 +451,9 @@ class MaxClusterer(SubClusterer):
             raise RuntimeError, msg
         
         # Create a square distance_matrix no_models in size filled with None
-        parity = 0
-        self.distance_matrix = [[parity for col in range(no_models)] for row in range(no_models)]
-    
+        parity = 0.0
+        self.distance_matrix = numpy.full([num_models, num_models], parity)
+
         #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
         #max_log = open(cur_dir+'/MAX_LOG')
         max_log = open( log_name, 'r')
@@ -461,6 +481,3 @@ class MaxClusterer(SubClusterer):
             for y in range(len(self.distance_matrix)):
                 self.distance_matrix[y][x] = self.distance_matrix[x][y]
         return
-
-
- 
