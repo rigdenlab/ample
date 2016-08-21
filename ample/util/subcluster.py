@@ -4,6 +4,7 @@
 
 import copy
 from collections import namedtuple
+import itertools
 import logging
 import re
 import os
@@ -73,8 +74,8 @@ class SubClusterer(object):
         # Select all values from that row where the condition is true and insert the first index so that
         # it becomes the centroid of that cluster 
         max_cluster = numpy.insert(numpy.where(condition[row_index])[0], 0, row_index)
+        
 #             max_cluster = []
-
 #             len_matrix = len(self.distance_matrix)
 #             for i in range(len_matrix):
 #                 cluster = [i]
@@ -97,19 +98,20 @@ class SubClusterer(object):
         ALL_BY_ALL = True
         if ALL_BY_ALL:
             # Calculate all the rmsds of all decoys in the cluster with each other
-            rmsds = []
-            lenc = len(cluster)
-            for i in range(lenc):
-                for j in range(i+1,lenc):
-                    i1 = cluster[i]
-                    i2 = cluster[j]
-                    rmsds.append(self.distance_matrix[i1][i2])
+#             rmsds = []
+#             lenc = len(cluster)
+#             for i in range(lenc):
+#                 for j in range(i+1,lenc):
+#                     i1 = cluster[i]
+#                     i2 = cluster[j]
+#                     rmsds.append(self.distance_matrix[i1][i2])
+            rmsds = [ self.distance_matrix[i] for i in itertools.combinations(cluster,2) ]
         else:
             # Just use the rmsds of the decoys to the the cluster centroid - assumes
             # the centroid approximates the native
             row = cluster[0]
             rmsds = [self.distance_matrix[row][j] for j in cluster[1:]]
-            
+
         #print "rmsds: ",rmsds
         #print "mean: ",statistics_util.mean(rmsds)
         #print "max: ",max(rmsds)
