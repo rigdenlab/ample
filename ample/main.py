@@ -3,7 +3,6 @@
 This is AMPLE
 """
 import argparse
-import cPickle
 import glob
 import logging
 import os
@@ -129,8 +128,8 @@ class Ample(object):
             benchmark_util.analysePdb(amopt.d) 
         
         # Modelling business happens here
-        if (amopt.d['import_models'] or amopt.d['make_frags'] or amopt.d['make_models'] or \
-            (amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel'])):
+        if (amopt.d['import_models'] or amopt.d['make_frags'] or amopt.d['make_models'] or
+                (amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel'])):
             self.modelling(amopt.d, rosetta_modeller)
             amopt.write_config_file()
 
@@ -161,9 +160,10 @@ class Ample(object):
         amopt.write_config_file()
         # Flag to show that we reached the end without error - useful for integration testing
         amopt.d['AMPLE_finished'] = True
-        ample_util.saveAmoptd(amopt.d)
+        ample_util.save_amoptd(amopt.d)
         
         LOGGER.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+        LOGGER.info(ample_util.reference.format(refs=ample_util.construct_references(amopt.d)))
         LOGGER.info(ample_util.footer)
         
         # Finally update pyrvapi results
@@ -173,7 +173,7 @@ class Ample(object):
     def benchmarking(self, optd):
         if optd['submit_cluster']:
             # Pickle dictionary so it can be opened by the job to get the parameters
-            ample_util.saveAmoptd(optd)
+            ample_util.save_amoptd(optd)
             script = benchmark_util.cluster_script(optd)
             workers_util.run_scripts(job_scripts=[script],
                                      monitor=monitor,
@@ -187,10 +187,10 @@ class Ample(object):
                                      submit_array=optd['submit_array'],
                                      submit_max_array=optd['submit_max_array'])
             # queue finished so unpickle results
-            with open(optd['results_path'], "r") as f: optd = cPickle.load(f)
+            optd.update(ample_util.read_amoptd(optd['results_path']))
         else:
             benchmark_util.analyse(optd)
-            ample_util.saveAmoptd(optd)
+            ample_util.save_amoptd(optd)
         
         return
     
@@ -205,13 +205,13 @@ class Ample(object):
             # Check we have some models to work with
             if not (optd['cluster_method'] is 'import' or optd['single_model_mode']) and \
                not glob.glob(os.path.join(optd['models_dir'], "*.pdb")):
-                ample_util.saveAmoptd(optd)
+                ample_util.save_amoptd(optd)
                 msg = "ERROR! Cannot find any pdb files in: {0}".format(optd['models_dir'])
                 exit_util.exit_error(msg)
             optd['ensemble_ok'] = os.path.join(optd['work_dir'],'ensemble.ok')
             if optd['submit_cluster']:
                 # Pickle dictionary so it can be opened by the job to get the parameters
-                ample_util.saveAmoptd(optd)
+                ample_util.save_amoptd(optd)
                 script = ensembler_util.cluster_script(optd)
                 workers_util.run_scripts(job_scripts=[script],
                                          monitor=monitor,
@@ -227,7 +227,7 @@ class Ample(object):
                                          submit_array=optd['submit_array'],
                                          submit_max_array=optd['submit_max_array'])
                 # queue finished so unpickle results
-                with open(optd['results_path'], "r") as f: optd.update(cPickle.load(f))
+                optd.update(ample_util.read_amoptd(optd['results_path']))
             else:
                 try: ensembler_util.create_ensembles(optd)
                 except Exception, e:
@@ -244,7 +244,7 @@ class Ample(object):
                 LOGGER.info(ensemble_summary)
             
         # Save the results
-        ample_util.saveAmoptd(optd)
+        ample_util.save_amoptd(optd)
         
         # Bail here if we didn't create anything
         if not len(optd['ensembles']):
@@ -327,7 +327,7 @@ class Ample(object):
                         optd['side_chain_treatments'] = [ UNMODIFIED ]
     
         # Save the results
-        ample_util.saveAmoptd(optd)
+        ample_util.save_amoptd(optd)
         
         return
         
@@ -377,7 +377,7 @@ class Ample(object):
             monitor = None
             
         # Save results here so that we have the list of scripts and mrbump directory set
-        ample_util.saveAmoptd(optd)
+        ample_util.save_amoptd(optd)
             
         # Change to mrbump directory before running
         os.chdir(optd['mrbump_dir'])  
@@ -404,7 +404,7 @@ class Ample(object):
         optd['mrbump_results'] = results_summary.extractResults(optd['mrbump_dir'], purge=optd['purge'])
         optd['success'] = results_summary.success
         
-        ample_util.saveAmoptd(optd)
+        ample_util.save_amoptd(optd)
     
         # Now print out the final summary
         summary = mrbump_util.finalSummary(optd)

@@ -14,7 +14,7 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.join(root, "scripts"))
 
 # Our imports
-from ample.util.ample_util import SCRIPT_EXT
+from ample.util import ample_util
 from ample.util import mrbump_cmd
 from ample.util import printTable
 
@@ -678,7 +678,7 @@ def unfinished_scripts(amoptd):
     for r in [ r for r in amoptd['mrbump_results'] if job_unfinished(r) ]:
         #print "DIR ", r['Job_directory']
         #print "DIR2 ", r['Search_directory']
-        scripts.append( os.path.join(amoptd['mrbump_dir'],r['ensemble_name'] + SCRIPT_EXT) )
+        scripts.append(os.path.join(amoptd['mrbump_dir'], r['ensemble_name']+ample_util.SCRIPT_EXT))
     return scripts
 
 def write_mrbump_files(ensemble_pdbs, amoptd, job_time=MRBUMP_RUNTIME, ensemble_options=None, directory=None):
@@ -728,7 +728,7 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
     if not directory: directory = os.getcwd()
         
     # Next the script to run mrbump
-    script_path = os.path.abspath(os.path.join(directory,name+SCRIPT_EXT))
+    script_path = os.path.abspath(os.path.join(directory, name+ample_util.SCRIPT_EXT))
     with open(script_path, "w") as job_script:
         # Header
         if not sys.platform.startswith("win"):

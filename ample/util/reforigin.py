@@ -28,7 +28,7 @@ class ReforiginRmsd(object):
         # Don't need to do this as we process the file before hand
         # HACK - REFORIGIN has a limit on the length of the command line, so we need to create copies of inputfile
         # as this has the potentially longest path
-        #tmptarget = ample_util.tmpFileName()+".pdb"
+        #tmptarget = ample_util.tmp_file_name()+".pdb"
         #shutil.copy(targetpdb, tmptarget)
         
         logfile = outpdb+".log"

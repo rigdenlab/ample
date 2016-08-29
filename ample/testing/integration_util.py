@@ -1,7 +1,6 @@
 
 
 from unittest import TestCase, TestLoader, TextTestRunner, TestSuite
-import cPickle
 import glob
 import imp
 import os
@@ -42,12 +41,14 @@ def add_cmd_options(parser):
     parser.add_argument('-w', '--run_dir', type=str, default=None,
                         help="directory to run jobs in")
 
+
 class AMPLEBaseTest(TestCase):
     RESULTS_PKL = None
     AMPLE_DICT = None
     def setUp(self):
-        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
-        with open(self.RESULTS_PKL) as f: self.AMPLE_DICT = cPickle.load(f)
+        self.assertTrue(os.path.isfile(self.RESULTS_PKL), "Missing pkl file: {0}".format(self.RESULTS_PKL))
+        self.AMPLE_DICT = ample_util.read_amoptd(self.RESULTS_PKL)
+
 
 class AMPLEIntegrationFramework(object):
     """Framework to run Ample integration testing"""
@@ -212,7 +213,8 @@ class AMPLEIntegrationFramework(object):
             f.write(os.linesep)
         os.chmod(script, 0o777)
         return os.path.abspath(script)
-    
+
+
 class SuiteLoader(object):
     """Loader designed to obtain all test cases in a package"""
     
@@ -255,5 +257,3 @@ class SuiteLoader(object):
         finally:
             mfile.close()
         return test_module
-
-        

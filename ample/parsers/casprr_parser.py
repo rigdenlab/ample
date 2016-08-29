@@ -1,22 +1,48 @@
 
 import os
+
 from ample.parsers import _contactfile_parser
 
+__author__ = "Felix Simkovic"
+__date__ = "16.01.2016"
+__version__ = "1.0"
+
 class CaspContactParser(_contactfile_parser.ContactfileParser):
-    """ Parser class for CASP RR contact prediction files """
+    """Parser class for CASP RR contact prediction files
+    
+    This class servers as a parser for contact prediction files in 
+    CASP RR format. It allows you to read and write contact files
+    as well as check their format.
+    """
 
     def __init__(self):
         _contactfile_parser.ContactfileParser.__init__(self)
         self.method = "CASP RR"
 
-    def checkFormat(self, contactfile):
-        """Check for correctness of CASP RR contact file
-        :returns: True or False
+    def check_format(self, contactfile):
+        """This function checks the format of a contact prediction file
+    
+        This function can be used to check if a contact prediction file 
+        is in CASP RR format based on the first line. This must correspond 
+        to ``PFRMAT RR``.
+
+        Args:
+            contactfile (str): The path to a contact file to read
+
+        Returns:
+            bool: True if file is in CASP RR format, else False
         """
         with open(contactfile, 'r') as fh: line = fh.readline().strip().split()
-        return True if line[0]=="PFRMAT" and line[1]=="RR" else False
+        if line[0]=="PFRMAT" and line[1]=="RR":
+            return True
+        return False
         
     def read(self, contactfile):
+        """Read a contactfile into a list of contacts
+        
+        Args:
+            contactfile (str): The path to a contact file to read
+        """
         self.infile = os.path.abspath(contactfile)
         with open(self.infile, 'r') as fh: self._read(fh)
         return
@@ -48,14 +74,20 @@ class CaspContactParser(_contactfile_parser.ContactfileParser):
         return
     
     def write(self, outfile, score="raw_score"):
-        assert self.contacts, "No contacts provided"
+        """Write a set of contacts to a file
         
+        Write a list of contacts to a file, sorted by a the score provided.
+
+        Args:
+            outfile (str): The path to the CASP RR output file
+            score (str): The value by which the contacts will be sorted
+        """
+
+        assert self.contacts, "No contacts provided"
         # Sort the contacts if not done already
         if not self.isSorted: self.sort_contacts('res1_index', descending=False)
-        
         # Set the name of the method used to get these contacts
         self.method = self.contacts[0]['method']
-
         # Populate the final output string and write it to a file
         out_str = self._write(self.contacts, score)
         with open(outfile, 'w') as fh: fh.write(out_str)

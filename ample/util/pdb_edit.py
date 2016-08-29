@@ -434,7 +434,7 @@ def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
                                                                                                         targetpdb
                                                                                                         )
         # Now we do our keep matching    
-    tmp1 = ample_util.tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix
+    tmp1 = ample_util.tmp_file_name()+".pdb" # pdbcur insists names have a .pdb suffix
     
     _keep_matching( refpdb, targetpdb, tmp1, resSeqMap=resSeqMap )
     
@@ -1332,6 +1332,36 @@ def _renumber(hierarchy, start):
                 residue_group.resseq = idx + start
     return
 
+def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
+    """
+    Renumber the residues in the chain based on specified gaps
+
+    Parameters
+    ----------
+    pdbin : str
+    pdbout : str
+    gaps : list
+        List containing True/False for gaps
+    """
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    hierarchy = pdb_input.construct_hierarchy()
+
+    for model in hierarchy.models():
+        for chain in model.chains():
+            resseq = 0
+            for idx, is_gap in enumerate(gaps):
+                if is_gap:
+                    continue
+                residue_group = chain.residue_groups()[resseq]
+                residue_group.resseq = idx + start
+                resseq += 1
+
+    with open(pdbout, 'w') as f:
+        f.write("REMARK Original file:\n")
+        f.write("REMARK   {0}\n".format(pdbin))
+        f.write(hierarchy.as_pdb_string(anisou=False))
+    return
+
 def Xselect_residues(inpath=None, outpath=None, residues=None):
     """Create a new pdb by selecting only the numbered residues from the list.
     This only keeps ATOM lines - everything else gets discarded.
@@ -1562,7 +1592,7 @@ def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
     """Rename any non-standard AA, remove solvent and only keep most probably conformation.
     """
 
-    tmp1 = ample_util.tmpFileName() + ".pdb" # pdbcur insists names have a .pdb suffix
+    tmp1 = ample_util.tmp_file_name() + ".pdb" # pdbcur insists names have a .pdb suffix
     
     # Now clean up with pdbcur
     logfile = tmp1+".log"

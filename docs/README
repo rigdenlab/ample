@@ -1,0 +1,33 @@
+=======================================================
+Please read this file before attempting to generate the 
+documentation associated with AMPLE.
+=======================================================
+
+In order to generate any form of the documentation, you
+need to install certain requirements within your CCP4
+installation.
+
+These dependencies are not automatically shipped with
+CCP4 and without those, you cannot generate the our any
+format of the documentation.
+
+The dependencies you require are:
+    - Sphinx 
+        http://www.sphinx-doc.org/en/stable/index.html
+    - Sphinx Autobuild
+        https://pypi.python.org/pypi/sphinx-autobuild
+    - Sphinx ReadTheDocs Theme
+        https://pypi.python.org/pypi/sphinx_rtd_theme
+
+Luckily, these are installed in just a few steps. Open
+your command prompt or terminal and type the following:
+
+$ ccp4-python -m pip install sphinx sphinx-autobuild sphinx_rtd_theme sphinxcontrib-napoleon 
+
+Then, you are ready to go. Generate the documentation from
+within the docs folder of AMPLE by using the following command:
+
+$ ccp4-python -m sphinx -b html . _build/html
+
+This will generate an HTML version of the documentation, 
+which you can view by openening the _build/html/index.html file.

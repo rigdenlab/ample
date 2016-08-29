@@ -1,0 +1,3 @@
+matplotlib
+numpydoc
+sphinxcontrib-napoleon
