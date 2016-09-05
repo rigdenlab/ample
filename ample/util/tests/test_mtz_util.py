@@ -52,7 +52,6 @@ class Test(unittest.TestCase):
 
         self.assertEqual( 'F', d['F'], "Correct F")
         self.assertEqual( 'SIGF', d['SIGF'], "Correct SIGF")
-        print "GOT ",d['FREE']
         self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
         
         os.unlink('uniqueify.log')
