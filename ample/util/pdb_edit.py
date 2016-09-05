@@ -1,4 +1,3 @@
-#!/usr/bin/env ccp4-python
 '''
 Useful manipulations on PDB files
 '''
@@ -1118,37 +1117,25 @@ def merge(pdb1=None, pdb2=None, pdbout=None  ):
         
     return
 
+def molecular_weight(pdbin):
+    logfile = "rwcontents.log"
+    _run_rwcontents(pdbin, logfile)
+    _, _, mw = _parse_rwcontents(logfile)
+    os.unlink(logfile)
+    return mw
+
 def num_atoms_and_residues(pdbin,first=False):
     """"Return number of atoms and residues in a pdb file.
     If all is True, return all atoms and residues, else just for the first chain in the first model'
     """
-    
     #pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
     #model = pdb_obj.hierarchy.models()[0]
     #return sum(  [ len( chain.residues() ) for chain in model.chains() ]  )
 
     if not first:
-        cmd=[ 'rwcontents', 'xyzin', pdbin ]
-        
-        logfile="rwcontents.log"
-        stdin='' # blank to trigger EOF
-        retcode = ample_util.run_command(cmd=cmd,
-                                         directory=os.getcwd(),
-                                         logfile=logfile,
-                                         stdin=stdin)
-        if retcode != 0:
-            raise RuntimeError,"Error running cmd {0}\nSee logfile: {1}".format(cmd,logfile)
-        
-        natoms=0
-        nresidues = 0
-        with open( logfile ) as f:
-            for line in f:
-                if line.startswith(" Number of amino-acids residues"):
-                    nresidues = int(line.strip().split()[5])
-                #Total number of protein atoms (including hydrogens)
-                if line.startswith(" Total number of         atoms (including hydrogens)"):
-                    natoms = int(float(line.strip().split()[6]))
-                    break
+        logfile = "rwcontents.log"
+        _run_rwcontents(pdbin, logfile)
+        natoms, nresidues, _ = _parse_rwcontents(logfile)
         os.unlink(logfile)
     else:
         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
@@ -1159,6 +1146,33 @@ def num_atoms_and_residues(pdbin,first=False):
     assert natoms > 0 and nresidues > 0
     
     return (natoms, nresidues)
+
+def _parse_rwcontents(logfile):
+    natoms = 0
+    nresidues = 0
+    molecular_weight = 0
+    with open( logfile ) as f:
+        for line in f:
+            if line.startswith(" Number of amino-acids residues"):
+                nresidues = int(line.strip().split()[5])
+            #Total number of protein atoms (including hydrogens)
+            if line.startswith(" Total number of         atoms (including hydrogens)"):
+                natoms = int(float(line.strip().split()[6]))
+            if line.startswith(" Molecular Weight of protein:"):
+                molecular_weight = float(line.strip().split()[4])
+    return natoms, nresidues, molecular_weight
+
+def _run_rwcontents(pdbin, logfile):
+    logfile = os.path.abspath(logfile)
+    cmd=[ 'rwcontents', 'xyzin', pdbin ]
+    stdin='' # blank to trigger EOF
+    retcode = ample_util.run_command(cmd=cmd,
+                                     directory=os.getcwd(),
+                                     logfile=logfile,
+                                     stdin=stdin)
+    if retcode != 0:
+        raise RuntimeError,"Error running cmd {0}\nSee logfile: {1}".format(cmd,logfile)
+    return
 
 def _parse_modres(modres_text):
     """
