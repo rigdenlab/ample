@@ -13,20 +13,32 @@ class Test( unittest.TestCase ):
         cls.ample_share = constants.SHARE_DIR
         cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
         
-    def test_cphasematch(self):
+    def test_cphasematch_mtz(self):
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()        
-        cp = cphasematch.Cphasematch()
-        native_mtz =  os.path.join(self.testfiles_dir, "toxd_59.1.mtz")
-        placed_mtz =  os.path.join(self.testfiles_dir, "phaser_loc0_ALL_c1_tl49_r1_allatom_UNMOD.1.mtz")
-        
-        cp.run(native_mtz, placed_mtz)
-        self.assertEqual('88.8476', cp.before_origin)
-        self.assertEqual('62.4833', cp.after_origin)
-        
-        os.unlink('all_phases.mtz')
-        os.unlink('cphasematch.mtz')
-        os.unlink('c1_tl49_r1_allato_cphasematch.log')
- 
+        native_mtz_phased =  os.path.join(self.testfiles_dir, "toxd_59.1.mtz")
+        mr_mtz =  os.path.join(self.testfiles_dir, "phaser_loc0_ALL_c1_tl49_r1_allatom_UNMOD.1.mtz")
+        before_origin, after_origin, change_of_hand, origin_shift = cphasematch.calc_phase_error_mtz(native_mtz_phased,
+                                                                                                     mr_mtz,
+                                                                                                     f_label='FP',
+                                                                                                     sigf_label='SIGFP')
+        self.assertEqual(88.8476, before_origin)
+        self.assertEqual(62.4833, after_origin)
+        self.assertEqual([0.0, 0.5, 0.0], origin_shift)
+        return
+    
+    def test_cphasematch_pdb(self):
+        os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()        
+        native_pdb =  os.path.join(self.ample_share, "examples", 'toxd-example', 'input', '1DTX.pdb')
+        native_mtz =  os.path.join(self.ample_share, "examples", 'toxd-example', 'input', '1dtx.mtz')
+        mr_mtz =  os.path.join(self.testfiles_dir, "phaser_loc0_ALL_c1_tl49_r1_allatom_UNMOD.1.mtz")
+        before_origin, after_origin, change_of_hand, origin_shift = cphasematch.calc_phase_error_pdb(native_pdb,
+                                                                                                     native_mtz,
+                                                                                                     mr_mtz,
+                                                                                                     f_label='FP',
+                                                                                                     sigf_label='SIGFP')
+        self.assertEqual(89.6715, before_origin)
+        self.assertEqual(62.4345, after_origin)
+        self.assertEqual([0.0, 0.0, 0.5], origin_shift)
         return
 
 if __name__ == "__main__":
