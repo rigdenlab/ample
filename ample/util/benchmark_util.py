@@ -70,6 +70,14 @@ def analyse(amoptd, newroot=None):
 #                                                      SIGFP=amoptd['SIGF'],
 #                                                      FREE=amoptd['FREE'],
 #                                                      directory=amoptd['benchmark_dir'])
+
+    # Generate a mtz with phases from the native_pdb so that we can calculate phase errors
+    if amoptd['native_pdb']:
+        amoptd['native_mtz_phased'] = cphasematch.place_native_pdb(amoptd['native_pdb'],
+                                                                   amoptd['mtz'],
+                                                                   amoptd['F'],
+                                                                   amoptd['SIGF'])
+    
     # Get the ensembling data
     if not len(amoptd['ensembles_data']):
         _logger.critical("Benchmark cannot find any ensemble data!")
@@ -142,7 +150,7 @@ def analyse(amoptd, newroot=None):
                     msg = "Unable to run TMscores. See debug.log."
                     _logger.critical(msg)
 
-        if amoptd['native_pdb'] or amoptd['native_mtz']: analyseSolution(amoptd,d)
+        if amoptd['native_pdb']: analyseSolution(amoptd,d)
         data.append(d)
 
     fileName = os.path.join(fixpath(amoptd['benchmark_dir']), 'results.csv' )
@@ -192,11 +200,6 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
     d['num_placed_atoms'] = mrPdbInfo.numAtoms()
     d['num_placed_CA'] = mrPdbInfo.numCalpha()
     
-    if amoptd['native_mtz']:
-        CP = cphasematch.Cphasematch()
-        CP.run(amoptd['native_mtz'], mrMTZ)
-        d['Mean_phase_error_before_origin_shift']=CP.before_origin
-        d['Mean_phase_error_after_origin_shift']=CP.after_origin
     
     if amoptd['native_pdb']:
         # Find the MR origin wrt to the native
@@ -234,6 +237,15 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
                                                 "phaser_{0}_csymmatch.pdb".format(d['ensemble_name'])))
         # can now delete origin pdb
         os.unlink(originPdb)
+        
+        # Calculate phase error between mr_pdb and native - need to think about what to do about origins - we have an
+        # origin-shifted pdb so do we use that or the original one? We should probably use the one from SHELXE as it's not
+        # clear that clippers' origin finding works for polar space groups
+        _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
+                                                                             mrMTZ,
+                                                                             amoptd['F'],
+                                                                             amoptd['SIGF'])
+        amoptd['mr_phase_error'] = phase_error_after_origin_shift
     
         # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
         # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
