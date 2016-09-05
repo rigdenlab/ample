@@ -18,6 +18,9 @@ import cif_parser # Avoid circular dependencies
 _logger = logging.getLogger()
 _logger.setLevel(logging.DEBUG)
 
+COLTYPE_F = 'F'
+COLTYPE_SIGF = 'Q'
+
 def del_column(file_name, column, overwrite=True):
     """Delete a column from an mtz file and return a path to the file"""
     mtzDel = ample_util.filename_append(file_name, "d{0}".format(column) )
@@ -55,7 +58,7 @@ def add_rfree(file_name,directory=None,overwrite=True):
         return mtzUnique
 
 def get_labels(file_name):
-    """Return the F, FP and FREE column labels"""
+    """Return the F, SIGF and FREE column labels"""
     
     reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
     if not reflection_file.file_type()=="ccp4_mtz":
@@ -66,18 +69,20 @@ def get_labels(file_name):
     content=reflection_file.file_content()
     ctypes=content.column_types()
     clabels=content.column_labels()
-    ftype='F'
-    if not ftype in ctypes:
+    if not COLTYPE_F in ctypes:
         raise RuntimeError,"Cannot find any structure amplitudes in: {0}".format(file_name)
-    F=clabels[ctypes.index(ftype)]
+    F = clabels[ctypes.index(COLTYPE_F)]
     
-    # FP derived from F
-    FP='SIG'+F
-    if not FP in clabels:
-        raise RuntimeError,"Cannot find label {0} in file: {1}".format(FP,file_name)
+    # SIGF derived from F
+    SIGF = 'SIG' + F
+    if not SIGF in clabels:
+        raise RuntimeError,"Cannot find label {0} in file: {1}".format(SIGF)
+    i = clabels.index(SIGF)
+    if ctypes[i] != COLTYPE_SIGF:
+        raise RuntimeError,"SIGF label {0} is not of type: {1}".format(SIGF, )
     
     FREE=_get_rfree(content)
-    return F,FP,FREE
+    return F,SIGF,FREE
 
 def get_rfree(file_name):
     """Return the Rfree label"""
@@ -118,8 +123,7 @@ def _get_rfree(content):
             #print "Number of 1 (test):",n1
             #print float(n0)/float(n1)*100
             if n0>0 and n1>0:
-                if rfree_label:
-                    _logger.warning("FOUND >1 RFREE label in file!")
+                if rfree_label: _logger.warning("FOUND >1 RFREE label in file!")
                 rfree_label=label
     return rfree_label
 
