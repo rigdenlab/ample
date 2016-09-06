@@ -37,7 +37,7 @@ def _check_mtz(mtz_file, labels=[]):
     if len(mtz.crystals()[1].datasets()) > 1: raise RuntimeError("Cannot deal with > 1 dataset in mtz")
     for label in labels:
         if not mtz.has_column(label):
-            raise RuntimeError("Cannot find label :{0} in native mtz file: {1}".format(label, mtz_file))
+            raise RuntimeError("Cannot find label: {0} in mtz file: {1}".format(label, mtz_file))
     return mtz
 
 def _get_miller_array_from_label(mtz_object, column_label):
@@ -52,26 +52,34 @@ def _get_miller_array_from_label(mtz_object, column_label):
     assert col_key
     return miller_dict[col_key]
 
-def calc_phase_error_pdb(native_pdb, native_mtz, mr_mtz, f_label, sigf_label, fc_label='FC', cleanup=True, origin=None):
+def calc_phase_error_pdb(native_pdb, native_mtz, mr_mtz, f_label, sigf_label, native_phase_labels=['FC', 'PHIF'], mr_phase_labels=['FC', 'PHIC'], cleanup=True, origin=None):
     """Phase error between native_pdb+native_mtz and mr_mtz
     """
     assert f_label and sigf_label,"Need f_label and sigf_label to be given!"
     native_mtz_phased = place_native_pdb(native_pdb, native_mtz, f_label, sigf_label)
-    return calc_phase_error_mtz(native_mtz_phased, mr_mtz, f_label, sigf_label, fc_label, cleanup, origin)
+    return calc_phase_error_mtz(native_mtz_phased,
+                                mr_mtz,
+                                f_label,
+                                sigf_label,
+                                native_phase_labels=native_phase_labels,
+                                mr_phase_labels=mr_phase_labels,
+                                cleanup=cleanup,origin=origin)
 
-def calc_phase_error_mtz(native_mtz_phased, mr_mtz, f_label=None, sigf_label=None, fc_label='FC', cleanup=True, origin=None):
+def calc_phase_error_mtz(native_mtz_phased, mr_mtz, f_label=None, sigf_label=None, native_phase_labels=['FC', 'PHIC'], mr_phase_labels=['FC', 'PHIC'], cleanup=True, origin=None):
     """Phase error between native_pdb+native_mtz and mr_mtz
     """
+    
+    assert False
     if origin:
         # if we are given an origin shift we can calculate the phase difference directly with cctbx
         change_of_hand = False # hard-wired as we don't have this information
         origin_shift = origin
 
-        native_object = _check_mtz(native_mtz_phased, labels = [fc_label])
-        mr_object = _check_mtz(mr_mtz, labels = [fc_label])
+        native_object = _check_mtz(native_mtz_phased, labels=native_phase_labels)
+        mr_object = _check_mtz(mr_mtz, labels = mr_phase_labels)
         
-        native_fc_miller_array = _get_miller_array_from_label(native_object, fc_label)
-        mr_fc_miller_array = _get_miller_array_from_label(mr_object, fc_label)
+        native_fc_miller_array = _get_miller_array_from_label(native_object, native_phase_labels[0])
+        mr_fc_miller_array = _get_miller_array_from_label(mr_object, mr_phase_labels[0])
         
         before_origin = native_fc_miller_array.mean_phase_error(mr_fc_miller_array)
         basis_str = _basis_str(origin)
@@ -79,23 +87,21 @@ def calc_phase_error_mtz(native_mtz_phased, mr_mtz, f_label=None, sigf_label=Non
     else:
         assert f_label and sigf_label,"Need f_label and sigf_label to be given!"
         # we use cphasematch to calculate the phase difference and origin shift
-        r = make_merged_mtz(native_mtz_phased, mr_mtz, f_label)
+        r = make_merged_mtz(native_mtz_phased, mr_mtz, f_label,native_phase_labels=native_phase_labels, mr_phase_labels=mr_phase_labels)
         before_origin, after_origin, change_of_hand, origin_shift = run_cphasematch(r.merged_mtz,
                                                                                     f_label,
                                                                                     sigf_label,
-                                                                                    fc_label=r.fc_label,
-                                                                                    phifc_label=r.phifc_label,
-                                                                                    fcalc_label=r.fcalc_label,
-                                                                                    phifcalc_label=r.phifcalc_label)
+                                                                                    native_phase_labels=[r.fc_label,r.phifc_label],
+                                                                                    mr_phase_labels=[r.fcalc_label,r.phifcalc_label])
         if cleanup:
             os.unlink(r.merged_mtz)
     return before_origin, after_origin, change_of_hand, origin_shift
 
-def make_merged_mtz(native_mtz, mr_mtz, f_label, fc_label='FC', fcalc_label='FCALC'):
+def make_merged_mtz(native_mtz, mr_mtz, f_label, native_phase_labels, mr_phase_labels):
     """Create MTZ file with F from native_mtz and calculated phases from native_mtz and mr_mtz to enable phaser error calc by cphasematch"""
     # Check mtz files have required columns
     native_object = _check_mtz(native_mtz, labels = [f_label])
-    mr_object = _check_mtz(mr_mtz, labels = [fc_label])
+    mr_object = _check_mtz(mr_mtz, labels = mr_phase_labels)
 
     merged_object = iotbx.mtz.object()
     merged_object.set_title("Calculated phases from {0} and {1}".format(native_mtz, mr_mtz))
@@ -103,7 +109,7 @@ def make_merged_mtz(native_mtz, mr_mtz, f_label, fc_label='FC', fcalc_label='FCA
     merged_object.add_history(line="Created from: {0} and {1}".format(native_mtz, mr_mtz))
     
     f_miller_array = _get_miller_array_from_label(native_object, f_label)
-    fc_miller_array = _get_miller_array_from_label(native_object, fc_label)
+    fc_miller_array = _get_miller_array_from_label(native_object, native_phase_labels[0])
     
     unit_cell = fc_miller_array.unit_cell()
     merged_object.set_space_group_info(fc_miller_array.space_group_info())
@@ -124,16 +130,16 @@ def make_merged_mtz(native_mtz, mr_mtz, f_label, fc_label='FC', fcalc_label='FCA
                              )
     dataset.add_miller_array(
                              miller_array=fc_miller_array,
-                             column_root_label=fc_label,
+                             column_root_label=native_phase_labels[0],
                              )
     
     # Now add the other calculated data
-    mr_fc_miller_array = _get_miller_array_from_label(mr_object, fc_label)
+    fcalc_label='FCALC'
+    mr_fc_miller_array = _get_miller_array_from_label(mr_object, mr_phase_labels[0])
     dataset.add_miller_array(
                              miller_array=mr_fc_miller_array,
                              column_root_label=fcalc_label,
                              )
-    
     # as mtz dataset and then change labels?
     #dataset.add_column(label=fcalc_label, type="F").set_values(values=mr_object.get_column(fc_label).extract_values())
     #dataset.add_column(label=phicalc_label, type="P").set_values(values=mr_object.get_column(phic_label).extract_values())
@@ -144,30 +150,10 @@ def make_merged_mtz(native_mtz, mr_mtz, f_label, fc_label='FC', fcalc_label='FCA
     merged_mtz = "{0}_{1}.mtz".format(name1, name2)
     merged_object.write(merged_mtz)
     
-    phifc_label = 'PHI' + fc_label
+    phifc_label = 'PHI' + native_phase_labels[0]
     phifcalc_label = 'PHI' + fcalc_label
     results = namedtuple('results', ['merged_mtz','f_label', 'fc_label' ,'phifc_label','fcalc_label','phifcalc_label'])
-    return results(merged_mtz, f_label, fc_label, phifc_label, fcalc_label, phifcalc_label)
-
-# def make_merged_mtz(native_mtz, mr_mtz, fc_label = 'FC', phic_label = 'PHIC', fcalc_label='FCalc', phicalc_label='PHICalc'):
-#     """Add fc_label and phic_label columns from mr_mtz to native_mtz and write out as a new mtz file.
-#     """
-#     # Add calculated phases from mr_mtz to those in native_mtz
-#     native_iotbx = iotbx.mtz.object(file_name=native_mtz)
-#     mr_iotbx = iotbx.mtz.object(file_name=mr_mtz)
-#     
-#     # Assume there is only one real crystal and one dataset
-#     dataset = native_iotbx.crystals()[1].datasets()[0]
-#     
-#     dataset.add_column(label=fcalc_label, type="F").set_values(values=mr_iotbx.get_column(fc_label).extract_values())
-#     dataset.add_column(label=phicalc_label, type="P").set_values(values=mr_iotbx.get_column(phic_label).extract_values())
-#     
-#     # Write out the file
-#     name1 = os.path.splitext(os.path.basename(native_mtz))[0]
-#     name2 = os.path.splitext(os.path.basename(mr_mtz))[0]
-#     merged_mtz = "{0}_{1}.mtz".format(name1, name2)
-#     native_iotbx.write(merged_mtz)
-#     return merged_mtz
+    return results(merged_mtz, f_label, native_phase_labels[0], phifc_label, fcalc_label, phifcalc_label)
 
 def place_native_pdb(native_pdb, native_mtz, f_label, sigf_label, cleanup=True):
     """Place native_pdb into data from native_mtz using phaser with f_label and sigf_label"""
@@ -246,10 +232,8 @@ def parse_cphasematch_log(logfile):
 def run_cphasematch(merged_mtz,
                     f_label,
                     sigf_label,
-                    fc_label='FC',
-                    phifc_label='PHIFC',
-                    fcalc_label='FCALC',
-                    phifcalc_label='PHIFCALC',
+                    native_phase_labels=['FC', 'PHIFC'],
+                    mr_phase_labels=['FCALC', 'PHIFCALC'],
                     resolution_bins=12,
                     cleanup=True):
     """run cphasematch to get phase error"""
@@ -258,17 +242,17 @@ def run_cphasematch(merged_mtz,
     argd = { 'merged_mtz' : merged_mtz,
              'f_label' : f_label,
              'sigf_label' : sigf_label,
-             'fc_label' : fc_label,
-             'phic_label' : phifc_label,
-             'fcalc_label' : fcalc_label,
-             'phicalc_label' : phifcalc_label,
+             'native_phase_label1' : native_phase_labels[0],
+             'native_phase_label2' : native_phase_labels[1],
+             'mr_phase_label1' : mr_phase_labels[0],
+             'mr_phase_label2' : mr_phase_labels[1],
              'resolution_bins' : resolution_bins }
     
     stdin = """
 mtzin {merged_mtz}
 colin-fo /*/*/[{f_label},{sigf_label}]
-colin-fc-1 /*/*/[{fc_label},{phic_label}]
-colin-fc-2 /*/*/[{fcalc_label},{phicalc_label}]
+colin-fc-1 /*/*/[{native_phase_label1},{native_phase_label2}]
+colin-fc-2 /*/*/[{mr_phase_label1},{mr_phase_label2}]
 resolution-bins {resolution_bins}
 """.format(**argd)
 
