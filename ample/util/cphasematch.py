@@ -1,16 +1,5 @@
 #!/usr/bin/env ccp4-python
 
-"""
-Notes:
-
-To calculate phase errors directly:
-print "ERROR ",native_fc_miller_array.mean_phase_error(mr_fc_miller_array)
-print "ERROR WEIGHTED",native_fc_miller_array.mean_weighted_phase_error(mr_fc_miller_array)
-print "ERROR WEIGHTED SHIFT",native_fc_miller_array.mean_phase_error(mr_fc_miller_array.change_basis('x,y+0.5,z'))
-
-"""
-
-
 from collections import namedtuple
 import datetime
 import logging
@@ -26,7 +15,22 @@ from ample.util import mtz_util
 
 _logger = logging.getLogger(__name__)
 
+def _basis_str(origin_shift):
+    """Return the string to get the sgtbx basis_op for the given origin shift"""
+    bstr = ''
+    for i, axis in enumerate(['x', 'y', 'z']):
+        if origin_shift[i] == 0.0:
+            s = axis
+        else:
+            s = '{0}{1:+F}'.format(axis,origin_shift[i])
+        if i == 0:
+            bstr = s
+        else:
+            bstr = bstr + ',' +s
+    return bstr
+
 def _check_mtz(mtz_file, labels=[]):
+    """Return an iotbx.mtz object for the mtz_file making sure the file is valid and contains the given labels"""
     mtz = iotbx.mtz.object(file_name=mtz_file)
     if len(mtz.crystals()) > 2: raise RuntimeError("Cannot deal with multiple crystal in mtz")
     # # Assume the first crystal is always the base so we use the second
@@ -48,47 +52,43 @@ def _get_miller_array_from_label(mtz_object, column_label):
     assert col_key
     return miller_dict[col_key]
 
-def calc_phase_error_pdb(native_pdb, native_mtz, mr_mtz, f_label, sigf_label, fc_label='FC', phic_label='PHIC', cleanup=True):
+def calc_phase_error_pdb(native_pdb, native_mtz, mr_mtz, f_label, sigf_label, fc_label='FC', cleanup=True, origin=None):
     """Phase error between native_pdb+native_mtz and mr_mtz
     """
-    
     assert f_label and sigf_label,"Need f_label and sigf_label to be given!"
-    
     native_mtz_phased = place_native_pdb(native_pdb, native_mtz, f_label, sigf_label)
-    #native_mtz_phased = '1DTX_1dtx.1.mtz'
-    r = make_merged_mtz(native_mtz_phased, mr_mtz, f_label)
-    before_origin, after_origin, change_of_hand, origin_shift = run_cphasematch(r.merged_mtz,
-                                                                                f_label,
-                                                                                sigf_label,
-                                                                                fc_label=r.fc_label,
-                                                                                phifc_label=r.phifc_label,
-                                                                                fcalc_label=r.fcalc_label,
-                                                                                phifcalc_label=r.phifcalc_label)
-    if cleanup:
-        os.unlink(native_mtz_phased)
-        os.unlink(r.merged_mtz)
-    return before_origin, after_origin, change_of_hand, origin_shift
+    return calc_phase_error_mtz(native_mtz_phased, mr_mtz, f_label, sigf_label, fc_label, cleanup, origin)
 
-def calc_phase_error_mtz(native_mtz_phased, mr_mtz, f_label, sigf_label, fc_label='FC', phic_label='PHIC', cleanup=True):
+def calc_phase_error_mtz(native_mtz_phased, mr_mtz, f_label=None, sigf_label=None, fc_label='FC', cleanup=True, origin=None):
     """Phase error between native_pdb+native_mtz and mr_mtz
     """
-    assert f_label and sigf_label,"Need f_label and sigf_label to be given!"
-    
-    #jmht
-    # scitbx.math.phase_error
-    
-    
+    if origin:
+        # if we are given an origin shift we can calculate the phase difference directly with cctbx
+        change_of_hand = False # hard-wired as we don't have this information
+        origin_shift = origin
 
-    r = make_merged_mtz(native_mtz_phased, mr_mtz, f_label)
-    before_origin, after_origin, change_of_hand, origin_shift = run_cphasematch(r.merged_mtz,
-                                                                                f_label,
-                                                                                sigf_label,
-                                                                                fc_label=r.fc_label,
-                                                                                phifc_label=r.phifc_label,
-                                                                                fcalc_label=r.fcalc_label,
-                                                                                phifcalc_label=r.phifcalc_label)
-    if cleanup:
-        os.unlink(r.merged_mtz)
+        native_object = _check_mtz(native_mtz_phased, labels = [fc_label])
+        mr_object = _check_mtz(mr_mtz, labels = [fc_label])
+        
+        native_fc_miller_array = _get_miller_array_from_label(native_object, fc_label)
+        mr_fc_miller_array = _get_miller_array_from_label(mr_object, fc_label)
+        
+        before_origin = native_fc_miller_array.mean_phase_error(mr_fc_miller_array)
+        basis_str = _basis_str(origin)
+        after_origin = native_fc_miller_array.mean_phase_error(mr_fc_miller_array.change_basis(basis_str))
+    else:
+        assert f_label and sigf_label,"Need f_label and sigf_label to be given!"
+        # we use cphasematch to calculate the phase difference and origin shift
+        r = make_merged_mtz(native_mtz_phased, mr_mtz, f_label)
+        before_origin, after_origin, change_of_hand, origin_shift = run_cphasematch(r.merged_mtz,
+                                                                                    f_label,
+                                                                                    sigf_label,
+                                                                                    fc_label=r.fc_label,
+                                                                                    phifc_label=r.phifc_label,
+                                                                                    fcalc_label=r.fcalc_label,
+                                                                                    phifcalc_label=r.phifcalc_label)
+        if cleanup:
+            os.unlink(r.merged_mtz)
     return before_origin, after_origin, change_of_hand, origin_shift
 
 def make_merged_mtz(native_mtz, mr_mtz, f_label, fc_label='FC', fcalc_label='FCALC'):

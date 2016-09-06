@@ -200,7 +200,6 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
     d['num_placed_atoms'] = mrPdbInfo.numAtoms()
     d['num_placed_CA'] = mrPdbInfo.numCalpha()
     
-    
     if amoptd['native_pdb']:
         # Find the MR origin wrt to the native
         #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
@@ -238,14 +237,11 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
         # can now delete origin pdb
         os.unlink(originPdb)
         
-        # Calculate phase error between mr_pdb and native - need to think about what to do about origins - we have an
-        # origin-shifted pdb so do we use that or the original one? We should probably use the one from SHELXE as it's not
-        # clear that clippers' origin finding works for polar space groups
+        # Calculate phase error between mr_pdb and native
         _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
-                                                                             mrMTZ,
-                                                                             amoptd['F'],
-                                                                             amoptd['SIGF'])
-        amoptd['mr_phase_error'] = phase_error_after_origin_shift
+                                                                                   mrMTZ,
+                                                                                   origin=mrOrigin)
+        amoptd['MR_phase_error'] = phase_error_after_origin_shift
     
         # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
         # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
@@ -315,6 +311,13 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
                                                      amoptd['native_pdb'],
                                                      origin=mrOrigin,
                                                      workdir=fixpath(amoptd['benchmark_dir']))
+        # Calculate phase error from mtz file
+        if not d['SHELXE_mtzout'] is None and os.path.isfile(fixpath(d['SHELXE_mtzout'])):
+            _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
+                                                                                       fixpath(d['SHELXE_mtzout']),
+                                                                                       origin=mrOrigin)
+            amoptd['SHELXE_phase_error'] = phase_error_after_origin_shift
+
     
         # Wrap parse_buccaneer model onto native
         if d['SXRBUCC_pdbout'] and os.path.isfile(fixpath(d['SXRBUCC_pdbout'])):
@@ -326,6 +329,12 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
                                                      origin=mrOrigin,
                                                      csymmatchPdb=csymmatchPdb,
                                                      workdir=fixpath(amoptd['benchmark_dir']))
+        # Calculate phase error from mtz file
+        if not d['SXRBUCC_mtzout'] is None and os.path.isfile(fixpath(d['SXRBUCC_mtzout'])):
+            _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
+                                                                                       fixpath(d['SXRBUCC_mtzout']),
+                                                                                       origin=mrOrigin)
+            amoptd['SXRBUCC_phase_error'] = phase_error_after_origin_shift
             
         # Wrap parse_buccaneer model onto native
         if d['SXRARP_pdbout'] and os.path.isfile(fixpath(d['SXRARP_pdbout'])):
@@ -337,6 +346,12 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
                                                      origin=mrOrigin,
                                                      csymmatchPdb=csymmatchPdb,
                                                      workdir=fixpath(amoptd['benchmark_dir']))
+        # Calculate phase error from mtz file
+        if not d['SXRARP_mtzout'] is None and os.path.isfile(fixpath(d['SXRARP_mtzout'])):
+            _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
+                                                                                       fixpath(d['SXRARP_mtzout']),
+                                                                                       origin=mrOrigin)
+            amoptd['SXRARP_phase_error'] = phase_error_after_origin_shift
 
     return
 
@@ -533,6 +548,8 @@ def writeCsv(fileName,resultList):
                 'MOLREP_time',
                 'MOLREP_version',
                 
+                'MR_phase_error',
+                
                 'REFMAC_Rfact',
                 'REFMAC_Rfree',
                 'REFMAC_version',
@@ -553,21 +570,21 @@ def writeCsv(fileName,resultList):
                 'SHELXE_os',
                 'SHELXE_time',
                 'SHELXE_version',
+                'SHELXE_phase_error',
                 
                 'SXRBUCC_version',
                 'SXRBUCC_final_Rfact',
                 'SXRBUCC_final_Rfree',
+                'SXRBUCC_phase_error',
                 
                 'SXRARP_version',
                 'SXRARP_final_Rfact',
                 'SXRARP_final_Rfree',
+                'SXRARP_phase_error',
                 
                 'num_placed_chains',
                 'num_placed_atoms',
                 'reforigin_RMSD',
-                
-                'Mean_phase_error_before_origin_shift',
-                'Mean_phase_error_after_origin_shift',
                 
                 'AA_num_contacts',
                 'RIO_num_contacts',
