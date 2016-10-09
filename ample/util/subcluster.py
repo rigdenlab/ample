@@ -2,7 +2,6 @@
 
 #edit the sidechains to make polyala, all and reliable
 
-import copy
 from collections import namedtuple
 import itertools
 import logging
@@ -15,11 +14,9 @@ import numpy
 
 from ample.util import ample_util
 from ample.util import pdb_edit
-from ample.util import statistics_util
-#from scipy.stats.mstats_basic import threshold
-
 
 _logger = logging.getLogger()
+logging.basicConfig(level=logging.DEBUG)
 
 SCORE_MATRIX_NAME = 'score.matrix'
 FILE_LIST_NAME = 'files.list'
@@ -177,7 +174,7 @@ class FpcClusterer(SubClusterer):
         with open( fname, 'w' ) as f: f.write( "\n".join( pdb_list )+"\n" )
             
         # Index is just the order of the pdb in the file
-        self.index2pdb=pdb_list
+        self.index2pdb = pdb_list
         
         # Run fast_protein_cluster - this is just to generate the distance matrix, but there
         # doesn't seem to be a way to stop it clustering as well - not a problem as it just
@@ -200,11 +197,11 @@ class FpcClusterer(SubClusterer):
         data=[]
         with open(matrix_file) as f:
             for l in f:
-                l=l.strip().split()
-                x=int(l[0])
-                y=int(l[1])
-                d=float(l[2])
-                mlen=max(mlen,x+1) # +1 as we want the length
+                l = l.strip().split()
+                x = int(l[0])
+                y = int(l[1])
+                d = float(l[2])
+                mlen = max(mlen,x+1) # +1 as we want the length
                 data.append((x,y,d))
          
         # create empty matrix - we use None's but this means we need to check for then when
@@ -215,9 +212,9 @@ class FpcClusterer(SubClusterer):
         # Fill in all values (upper triangle)
         for i,j,d in data:
             if i > j:
-                m[j][i]=d
+                m[j][i] = d
             else:
-                m[i][j]=d
+                m[i][j] = d
                  
         # Copy to lower
         for x in range(mlen):
@@ -225,13 +222,95 @@ class FpcClusterer(SubClusterer):
                 if x==y: continue
                 m[y][x] = m[x][y]
                 
-        self.distance_matrix=m
+        self.distance_matrix = m
         return
     
 class GesamtClusterer(SubClusterer):
     """Class to cluster files with Gesamt"""
     
-    def generate_distance_matrix(self, models, purge=True, purge_all=False, metric='qscore', nproc=1):
+    def generate_distance_matrix(self, pdb_list, nproc=1, purge=True):
+        if True:
+            self._generate_pairwise_rmsd_matrix(pdb_list, nproc=nproc, purge=purge)
+        else:
+            self._generate_distance_matrix_generic(self,
+                                                   pdb_list,
+                                                   purge=purge,
+                                                   purge_all=False,
+                                                   metric='qscore',
+                                                   nproc=nproc)
+        return
+    
+    def _generate_pairwise_rmsd_matrix(self, models, nproc=1, purge=True):
+        """
+        Use gesamt to generate an all-by-all pairwise rmsd matrix of a list of pdb models
+        
+        Notes: 
+        gesamt -input-list inp_list.dat -sheaf-x
+
+where inp_list.dat  contains:
+
+1ADZ.pdb -s /1/A
+1ADZ.pdb -s /2/A
+1ADZ.pdb -s /3/A
+
+        """
+
+        # Index is just the order of the pdb in the file
+        self.index2pdb = models
+
+        # Create file with list of pdbs and model/chain
+        glist = 'gesamt_models.dat'
+        with open(glist, 'w') as w:
+            for m in models:
+                w.write("{0} -s /1/A \n".format(m))
+            w.write('\n')
+        
+        cmd = [ self.executable, '-input-list', glist, '-sheaf-x', '-nthreads={0}'.format(nproc)]
+
+        logfile = os.path.abspath('gesamt_archive.log')
+        rtn = ample_util.run_command(cmd, logfile)
+        if rtn != 0: raise RuntimeError("Error running gesamt - check logfile: {0}".format(logfile))
+        
+        # Create a square distance_matrix no_models in size filled with None
+        num_models = len(models)
+        self.distance_matrix = numpy.zeros([num_models, num_models])
+        
+        # Read in the rmsds calculated
+        self._parse_gesamt_rmsd_log(logfile, num_models)
+        
+        if purge:
+            os.unlink(glist)
+            os.unlink(logfile)
+        return
+    
+    def _parse_gesamt_rmsd_log(self, logfile, num_models):
+        found = False
+        with open(logfile) as f:
+            while True:
+                line = f.readline()
+                if line.startswith(' ===== CROSS-RMSDs'):
+                    line = f.readline() # skip blank line
+                    for i in range(num_models):
+                        line = f.readline().strip()
+                        fields = line.split('|')
+                        
+                        # paranoid check
+                        nmodel = int(fields[0])
+                        assert nmodel ==  i+1
+                        
+                        rmsd_txt = fields[2].strip()
+                        # poke into distance matrix
+                        rmsds = [ float(r) for r in rmsd_txt.split() ]
+                        for j in range(len(rmsds)):
+                            if j == i: continue
+                            self.distance_matrix[i][j] = rmsds[j]
+                    found = True
+                    break
+        
+        if not found: raise RuntimeError("Could not generate distance matrix with gesamt")
+        return
+        
+    def _generate_distance_matrix_generic(self, models, purge=True, purge_all=False, metric='qscore', nproc=1):
         # Make sure all the files are in the same directory otherwise we wont' work
         mdir = os.path.dirname(models[0])
         if not all([ os.path.dirname(p) == mdir for p in models ]):
@@ -282,7 +361,7 @@ class GesamtClusterer(SubClusterer):
             else:
                 if purge: os.unlink(logfile)
                 
-            gdata = self.parse_gesamt_out(gesamt_out)
+            gdata = self._parse_gesamt_out(gesamt_out)
             assert gdata[0].file_name == mname, gdata[0].file_name + " " + mname
             score_dict = { g.file_name: (g.rmsd, g.q_score) for g in gdata  }
             
@@ -321,7 +400,7 @@ class GesamtClusterer(SubClusterer):
         self.dump_pdb_matrix(SCORE_MATRIX_NAME)
         return
 
-    def parse_gesamt_out(self, out_file):
+    def _parse_gesamt_out(self, out_file):
         # Assumption is there are no pdb_codes
         GesamtData = namedtuple('GesamtData', ['count', 'chain_id', 'q_score', 'rmsd', 'seq_id', 'nalign', 'nres', 'file_name'])
         data = []
