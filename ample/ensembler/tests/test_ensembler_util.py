@@ -65,7 +65,7 @@ class Test(unittest.TestCase):
 
     def test_getEnsemblingKwargs(self):
         # All keys found in return kwargs written here in corresponding sections
-        common_keys = ['ensembles_directory', 'nproc', 'percent_truncation',
+        common_keys = ['ensembles_directory', 'percent_truncation',
                        'side_chain_treatments', 'truncation_method']
 
         abinitio_keys = ['cluster_dir', 'cluster_exe', 'cluster_method',
