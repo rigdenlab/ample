@@ -240,7 +240,7 @@ class GesamtClusterer(SubClusterer):
                                                    nproc=nproc)
         return
     
-    def _generate_pairwise_rmsd_matrix(self, models, nproc=1, purge=True):
+    def _generate_pairwise_rmsd_matrix(self, models, nproc=1, purge=False):
         """
         Use gesamt to generate an all-by-all pairwise rmsd matrix of a list of pdb models
         
@@ -296,7 +296,7 @@ where inp_list.dat  contains:
                         
                         # paranoid check
                         nmodel = int(fields[0])
-                        assert nmodel ==  i+1
+                        assert nmodel ==  i+1,"Error parsing gesamt logfile: {0}".format(logfile)
                         
                         rmsd_txt = fields[2].strip()
                         # poke into distance matrix
