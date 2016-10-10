@@ -3,8 +3,8 @@ import glob
 import os
 import unittest
 from ample import constants
+from ample.ensembler import subcluster
 from ample.util import ample_util
-from ample.util import subcluster
 from ample.testing import test_funcs
 
 class Test_1(unittest.TestCase):
@@ -17,25 +17,22 @@ class Test_1(unittest.TestCase):
         
     def test_radius_cctbx(self):
         # Test we can reproduce the original thresholds
-        radius = 4
+        radius = 8
         clusterer = subcluster.CctbxClusterer()
-        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
+        # Only select a few as is very slow
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))[:4]
         clusterer.generate_distance_matrix(pdb_list)
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius(radius)]
-        ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', 
-             '3_S_00000006.pdb', '5_S_00000005.pdb', '3_S_00000003.pdb', 
-             '1_S_00000004.pdb', '4_S_00000005.pdb', '3_S_00000004.pdb', 
-             '1_S_00000002.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb', 
-             '1_S_00000005.pdb']
+        ref = ['1_S_00000002.pdb', '1_S_00000004.pdb']
         self.assertItemsEqual(ref,cluster_files1)
     
     @unittest.skipUnless(test_funcs.found_exe("gesamt" + ample_util.EXE_EXT), "gesamt exec missing")
-    def test_gesamt_matrix(self):
+    def test_gesamt_matrix_generic(self):
         # Test we can reproduce the original thresholds
         gesamt_exe = ample_util.find_exe("gesamt" + ample_util.EXE_EXT)
         clusterer = subcluster.GesamtClusterer(executable = gesamt_exe)
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
-        clusterer.generate_distance_matrix(pdb_list, purge_all=True)
+        clusterer._generate_distance_matrix_generic(pdb_list, purge_all=True)
         # Test two files manually
         index1=2
         index2=25
@@ -66,15 +63,35 @@ class Test_1(unittest.TestCase):
         os.unlink(logfile)
         os.unlink(subcluster.SCORE_MATRIX_NAME)
         os.unlink(subcluster.FILE_LIST_NAME)
-    
+        return
+
+    @unittest.skipUnless(test_funcs.found_exe("gesamt" + ample_util.EXE_EXT), "gesamt exec missing")
+    def test_radius_gesamt(self):
+        # Test we can reproduce the original thresholds
+        gesamt_exe = ample_util.find_exe("gesamt" + ample_util.EXE_EXT)
+        clusterer = subcluster.GesamtClusterer(executable = gesamt_exe)
+        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
+
+        radius = 4
+        clusterer.generate_distance_matrix( pdb_list )
+        cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius( radius )]
+        ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', '3_S_00000006.pdb',
+             '5_S_00000005.pdb', '3_S_00000003.pdb', '1_S_00000004.pdb', '4_S_00000005.pdb',
+             '3_S_00000004.pdb', '1_S_00000002.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb', '1_S_00000005.pdb']
+        self.assertItemsEqual(ref,cluster_files1)
+        
+        #clusterer.dump_pdb_matrix('foo')
+
+        return
+        
     def test_radius_lsqkab(self):
         # Test we can reproduce the original thresholds
-        radius = 4
         clusterer = subcluster.LsqkabClusterer()
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
         clusterer.generate_distance_matrix(pdb_list)
         clusterer.dump_pdb_matrix('lsqkab.matrix')
         os.unlink('lsqkab.matrix')
+        return
 
     @unittest.skipUnless(test_funcs.found_exe("maxcluster" + ample_util.EXE_EXT), "maxcluster exec missing")
     def test_radius_maxcluster(self):
@@ -98,6 +115,7 @@ class Test_1(unittest.TestCase):
         radius = 4
         clusterer = subcluster.MaxClusterer( maxcluster_exe )
         pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))
+        
         clusterer.generate_distance_matrix( pdb_list )
         clusterer.cluster_by_radius( radius )
         variance = clusterer.cluster_score

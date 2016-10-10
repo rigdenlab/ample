@@ -10,9 +10,9 @@ import os
 import random
 
 # Custom
+from ample.ensembler import subcluster
 from ample.util import fast_protein_cluster
 from ample.util import spicker
-from ample.util import subcluster
 
 _logger = logging.getLogger(__name__)
 

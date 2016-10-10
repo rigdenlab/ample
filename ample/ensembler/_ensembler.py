@@ -15,12 +15,12 @@ import shutil
 # our imports
 from ample.ensembler.constants import ALLATOM, POLYALA, RELIABLE, UNMODIFIED
 from ample.ensembler import cluster_util
+from ample.ensembler import subcluster
 from ample.ensembler import subcluster_util
 from ample.ensembler import truncation_util
 from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import sequence_util
-from ample.util import subcluster
 from ample.util import theseus
 
 _logger = logging.getLogger(__name__)

@@ -16,7 +16,6 @@ from ample.util import ample_util
 from ample.util import pdb_edit
 
 _logger = logging.getLogger()
-logging.basicConfig(level=logging.DEBUG)
 
 SCORE_MATRIX_NAME = 'score.matrix'
 FILE_LIST_NAME = 'files.list'
