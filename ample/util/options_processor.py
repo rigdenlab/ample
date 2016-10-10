@@ -13,6 +13,7 @@ from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import contacts_util
 from ample.util import exit_util
+from ample.util import maxcluster
 from ample.util import mrbump_util
 from ample.util import mtz_util
 from ample.util import pdb_edit
@@ -294,8 +295,16 @@ def process_options(optd):
     # Check we can find all the required programs
     #
     # Maxcluster handled differently as we may need to download the binary
-    optd['maxcluster_exe'] = ample_util.find_maxcluster(optd)
-    
+    if optd['subcluster_program'] == 'maxcluster':
+        optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
+    elif optd['subcluster_program'] == 'gesamt':
+        if not optd['gesamt_exe']:
+            optd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt' + ample_util.EXE_EXT)
+        try:
+            optd['gesamt_exe'] = ample_util.find_exe(optd['gesamt_exe'])
+        except Exception as e:
+            LOGGER.info("Cannot find Gesamt executable: {0}".format(optd['gesamt_exe']))
+            raise(e)
     #
     # Ensemble options
     #

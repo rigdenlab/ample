@@ -27,10 +27,11 @@ class SubClusterer(object):
     Sub-classes just need to provide a generate_distance_matrix class
     """
     
-    def __init__(self,executable=None):
+    def __init__(self,executable=None, nproc=1):
         if executable and not os.path.exists(executable) and os.access(executable, os.X_OK):
             raise RuntimeError,"Cannot find subclusterer executable: {0}".format(executable) 
         self.executable = executable
+        self.nproc = nproc
         self.distance_matrix = None
         self.index2pdb = []
         self.cluster_score = None
@@ -227,19 +228,18 @@ class FpcClusterer(SubClusterer):
 class GesamtClusterer(SubClusterer):
     """Class to cluster files with Gesamt"""
     
-    def generate_distance_matrix(self, pdb_list, nproc=1, purge=True):
+    def generate_distance_matrix(self, pdb_list, purge=True):
         if True:
-            self._generate_pairwise_rmsd_matrix(pdb_list, nproc=nproc, purge=purge)
+            self._generate_pairwise_rmsd_matrix(pdb_list, purge=purge)
         else:
             self._generate_distance_matrix_generic(self,
                                                    pdb_list,
                                                    purge=purge,
                                                    purge_all=False,
-                                                   metric='qscore',
-                                                   nproc=nproc)
+                                                   metric='qscore')
         return
     
-    def _generate_pairwise_rmsd_matrix(self, models, nproc=1, purge=False):
+    def _generate_pairwise_rmsd_matrix(self, models, purge=False):
         """
         Use gesamt to generate an all-by-all pairwise rmsd matrix of a list of pdb models
         
@@ -264,7 +264,7 @@ where inp_list.dat  contains:
                 w.write("{0} -s /1/A \n".format(m))
             w.write('\n')
         
-        cmd = [ self.executable, '-input-list', glist, '-sheaf-x', '-nthreads={0}'.format(nproc)]
+        cmd = [ self.executable, '-input-list', glist, '-sheaf-x', '-nthreads={0}'.format(self.nproc)]
 
         logfile = os.path.abspath('gesamt_archive.log')
         rtn = ample_util.run_command(cmd, logfile)
@@ -309,7 +309,7 @@ where inp_list.dat  contains:
         if not found: raise RuntimeError("Could not generate distance matrix with gesamt")
         return
         
-    def _generate_distance_matrix_generic(self, models, purge=True, purge_all=False, metric='qscore', nproc=1):
+    def _generate_distance_matrix_generic(self, models, purge=True, purge_all=False, metric='qscore'):
         # Make sure all the files are in the same directory otherwise we wont' work
         mdir = os.path.dirname(models[0])
         if not all([ os.path.dirname(p) == mdir for p in models ]):
@@ -330,7 +330,7 @@ where inp_list.dat  contains:
         logfile = os.path.abspath('gesamt_archive.log')
         cmd = [ self.executable, '--make-archive', garchive, '-pdb', mdir ]
         #cmd += [ '-nthreads=auto' ]
-        cmd += [ '-nthreads={0}'.format(nproc) ]
+        cmd += [ '-nthreads={0}'.format(self.nproc) ]
         # HACK FOR DYLD!!!!
         env = None
         #env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4-devtools/install/lib'}
@@ -354,7 +354,7 @@ where inp_list.dat  contains:
             gesamt_out = '{0}_gesamt.out'.format(mname)
             logfile = '{0}_gesamt.log'.format(mname)
             cmd = [ self.executable, model, '-archive', garchive, '-o', gesamt_out ]
-            cmd += [ '-nthreads={0}'.format(nproc) ]
+            cmd += [ '-nthreads={0}'.format(self.nproc) ]
             rtn = ample_util.run_command(cmd, logfile)
             if rtn != 0: raise RuntimeError("Error running gesamt!")
             else:

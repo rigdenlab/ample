@@ -148,8 +148,8 @@ class Ensembler(object):
         self.work_dir = None  # top directory where everything gets done
         self.theseus_exe = None
         self.gesamt_exe = None
-        self.lsqkab_exe = os.path.join(os.environ['CCP4'],'bin','lsqkab' + ample_util.EXE_EXT)
-        assert ample_util.is_exe(self.lsqkab_exe),"Cannot find lsqkab: {0}".format(self.lsqkab_exe)
+        self.lsqkab_exe = None
+        self.nproc = 1
         
         # clustering
         self.cluster_method = "spicker"  # the method for initial clustering
@@ -192,49 +192,62 @@ class Ensembler(object):
             return False
         return run_theseus.superposed_models
             
-    def cluster_models(self, cluster_dir=None, cluster_exe=None, cluster_method=None,
-                       models=None, max_cluster_size=200, num_clusters=None, nproc=1):
+    def cluster_models(self,
+                       cluster_dir=None,
+                       cluster_exe=None,
+                       cluster_method=None,
+                       models=None,
+                       max_cluster_size=200,
+                       num_clusters=None):
         """Wrapper function to run clustering of models dependent on the method
         """
-        ########################################################################
-        ## Switch statement solution to find function to use
-        ## `Key` equal to cluster_method
-        ## `Value` equal to function name, function arguments
-        switch = {'fast_protein_cluster' : [cluster_util.fast_protein_cluster, 
-                                            list([cluster_exe, max_cluster_size, 
-                                                  models, num_clusters, nproc, 
-                                                  self.work_dir])],
-                  
-                  'import' : [cluster_util.import_cluster, 
-                              list([cluster_dir])],
-                  
-                  'random' : [cluster_util.random_cluster, 
-                              list([cluster_method, max_cluster_size, models, 
-                                    num_clusters])],
-                  
-                  'spicker' : [cluster_util.spicker_default, 
-                               list([cluster_exe, cluster_method, max_cluster_size, num_clusters,
-                                     models, self.work_dir, nproc])],
-                  
-                  'spicker_qscore' : [cluster_util.spicker_qscore, 
-                                      list([cluster_exe, cluster_method, max_cluster_size, num_clusters, 
-                                            models, self.work_dir, nproc, self.gesamt_exe])],
-                  
-                  'spicker_tmscore' : [cluster_util.spicker_tmscore, 
-                                       list([cluster_exe, cluster_method, max_cluster_size, num_clusters, 
-                                             models, self.work_dir, nproc])],
-        }
         
-        # Get the function handler and keyword arguments
-        cluster_function, args = switch.get(cluster_method, None)
-        if not cluster_function:
+        # Cluster our protein structures
+        _logger.info('Clustering models using method: {0}'.format(cluster_method))
+        
+        if cluster_method == 'fast_protein_cluster':
+            clusters, clusters_data = cluster_util.fast_protein_cluster(cluster_exe,
+                                                                        max_cluster_size, 
+                                                                        models,
+                                                                        num_clusters, 
+                                                                        self.work_dir)
+        elif cluster_method == 'import':
+            clusters, clusters_data = cluster_util.import_cluster(cluster_dir)
+        elif cluster_method == 'random':
+            clusters, clusters_data = cluster_util.random_cluster(cluster_method,
+                                                                  max_cluster_size,
+                                                                  models,
+                                                                  num_clusters)
+        elif cluster_method == 'spicker':
+            clusters, clusters_data = cluster_util.spicker_default(cluster_exe,
+                                                                   cluster_method,
+                                                                   max_cluster_size,
+                                                                   num_clusters,
+                                                                   models,
+                                                                   self.work_dir,
+                                                                   self.nproc
+                                                                   )
+        elif cluster_method == 'spicker_qscore':
+            clusters, clusters_data = cluster_util.spicker_qscore(cluster_exe,
+                                                                  cluster_method,
+                                                                  max_cluster_size,
+                                                                  num_clusters, 
+                                                                  models,
+                                                                  self.work_dir,
+                                                                  self.nproc,
+                                                                  self.gesamt_exe)
+        elif cluster_method == 'spicker_tmscore':
+            clusters, clusters_data = cluster_util.spicker_tmscore(cluster_exe,
+                                                                  cluster_method,
+                                                                  max_cluster_size,
+                                                                  num_clusters, 
+                                                                  models,
+                                                                  self.nproc,
+                                                                  self.work_dir)
+        else:
             msg = 'Unrecognised clustering method: {0}'.format(cluster_method)
             raise RuntimeError(msg)
                 
-        # Cluster our protein structures
-        _logger.info('Clustering models using method: {0}'.format(cluster_method))
-        clusters, clusters_data = cluster_function(*args)
-        
         return clusters, clusters_data
     
     def edit_side_chains(self, raw_ensemble, raw_ensemble_data, side_chain_treatments, 
@@ -289,7 +302,6 @@ class Ensembler(object):
         return ensembles, ensembles_data
 
     def subcluster_models(self, truncated_models, truncated_models_data,
-                          subcluster_program=None, subcluster_exe=None,
                           radius_thresholds=None, ensemble_max_models=None,
                           work_dir=None):
         
@@ -300,15 +312,12 @@ class Ensembler(object):
         else:
             assert False
             
-        return f(truncated_models, truncated_models_data, subcluster_program, 
-                 subcluster_exe, ensemble_max_models, radius_thresholds=radius_thresholds, 
-                 work_dir=work_dir)
+        return f(truncated_models, truncated_models_data, ensemble_max_models,
+                 radius_thresholds=radius_thresholds, work_dir=work_dir)
         
     def subcluster_models_fixed_radii(self,
                                       truncated_models,
                                       truncated_models_data,
-                                      subcluster_program=None,
-                                      subcluster_exe=None,
                                       ensemble_max_models=None,
                                       radius_thresholds=None,
                                       work_dir=None):
@@ -328,15 +337,16 @@ class Ensembler(object):
         owd = os.getcwd()
         os.chdir(work_dir)
             
-        # Run maxcluster to generate the distance matrix
-        if subcluster_program == 'gesamt':
-            clusterer = subcluster.GesamtClusterer(self.subcluster_exe)
-        elif subcluster_program == 'maxcluster':
+        # Generate the distance matrix
+        if self.subcluster_program == 'gesamt':
+            clusterer = subcluster.GesamtClusterer(self.subcluster_exe, nproc=self.nproc)
+        elif self.subcluster_program == 'maxcluster':
             clusterer = subcluster.MaxClusterer(self.subcluster_exe)
-        elif subcluster_program == 'lsqkab':
+        elif self.subcluster_program == 'lsqkab':
             clusterer = subcluster.LsqkabClusterer(self.subcluster_exe)
         else:
-            assert False,subcluster_program
+            assert False,self.subcluster_program
+            
         clusterer.generate_distance_matrix(truncated_models)
         # clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
 
@@ -402,16 +412,19 @@ class Ensembler(object):
     def subcluster_models_floating_radii(self,
                                          truncated_models,
                                          truncated_models_data,
-                                         subcluster_program=None,
-                                         subcluster_exe=None,
                                          ensemble_max_models=None,
                                          work_dir=None):
         _logger.info("subclustering with floating radii")
 
-        # Run maxcluster to generate the distance matrix
-        if subcluster_program == 'maxcluster':
+        # Generate the distance matrix
+        if self.subcluster_program == 'gesamt':
+            clusterer = subcluster.GesamtClusterer(self.subcluster_exe)
+        elif self.subcluster_program == 'maxcluster':
             clusterer = subcluster.MaxClusterer(self.subcluster_exe)
-        else: assert False
+        elif self.subcluster_program == 'lsqkab':
+            clusterer = subcluster.LsqkabClusterer(self.subcluster_exe)
+        else:
+            assert False,self.subcluster_program
         clusterer.generate_distance_matrix(truncated_models)
         # clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
         

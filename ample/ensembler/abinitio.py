@@ -37,7 +37,6 @@ class Ensembler(_ensembler.Ensembler):
                            cluster_exe=None,
                            cluster_method=None,
                            ensembles_directory=None,
-                           nproc=None,
                            num_clusters=None,
                            percent_truncation=None,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS,
@@ -83,8 +82,7 @@ class Ensembler(_ensembler.Ensembler):
                                                                                               cluster_method=cluster_method,
                                                                                               num_clusters=num_clusters,
                                                                                               cluster_exe=cluster_exe,
-                                                                                              cluster_dir=cluster_dir,
-                                                                                              nproc=nproc))):
+                                                                                              cluster_dir=cluster_dir))):
             if len(cluster_models) < 2:
                 _logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster_data['cluster_num']))
                 continue
@@ -114,8 +112,6 @@ class Ensembler(_ensembler.Ensembler):
                 
                 for subcluster, subcluster_data in zip(*self.subcluster_models(truncated_models,
                                                                                truncated_models_data,
-                                                                               subcluster_program=self.subcluster_program,
-                                                                               subcluster_exe=self.subcluster_program,
                                                                                ensemble_max_models=self.ensemble_max_models,
                                                                                radius_thresholds=radius_thresholds,
                                                                                work_dir=truncated_models_dir)):

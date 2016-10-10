@@ -355,62 +355,6 @@ def filename_append(filename=None, astr=None,directory=None, separator="_"):
         directory = dirname
     return os.path.join( directory, name )
 
-def find_maxcluster(amoptd):
-    """Return path to maxcluster binary.
-    If we can't find one in the path, we create a $HOME/.ample
-    directory and downlod it to there
-    """
-
-    if amoptd['maxcluster_exe'] and is_exe(amoptd['maxcluster_exe']):
-        return amoptd['maxcluster_exe']
-
-    if not amoptd['maxcluster_exe']:
-        if sys.platform.startswith("win"):
-            amoptd['maxcluster_exe']='maxcluster.exe'
-        else:
-            amoptd['maxcluster_exe']='maxcluster'
-    
-    try:
-        maxcluster_exe = find_exe(amoptd['maxcluster_exe'], dirs=[ amoptd['rcdir'] ] )
-    except Exception:
-        # Cannot find so we need to try and download it
-        rcdir = amoptd['rcdir']
-        LOGGER.info("Cannot find maxcluster binary in path so attempting to download it directory: {0}".format( rcdir )  )
-        if not os.path.isdir( rcdir ):
-            LOGGER.info("No ample rcdir found so creating in: {0}".format( rcdir ) )
-            os.mkdir( rcdir )
-        url = None
-        maxcluster_exe = os.path.join( rcdir, 'maxcluster' )
-        if sys.platform.startswith("linux"):
-            bit=platform.architecture()[0]
-            if bit=='64bit':
-                url='http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster64bit'
-            elif bit=='32bit':
-                url='http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster'
-            else:
-                msg="Unrecognised system type: {0} {1}".format(sys.platform,bit)
-                exit_util.exit_error(msg)
-        elif sys.platform.startswith("darwin"):
-            url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_i686_32bit.bin'
-            #OSX PPC: http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster_PPC_32bit.bin
-        elif sys.platform.startswith("win"):
-            url = 'http://www.sbg.bio.ic.ac.uk/~maxcluster/maxcluster.exe'
-            maxcluster_exe = os.path.join( rcdir, 'maxcluster.exe' )
-        else:
-            msg="Unrecognised system type: {0}".format( sys.platform )
-            exit_util.exit_error(msg)
-        LOGGER.info("Attempting to download maxcluster binary from: {0}".format( url ) )
-        try:
-            urllib.urlretrieve( url, maxcluster_exe )
-        except Exception, e:
-            msg="Error downloading maxcluster executable: {0}\n{1}".format(url,e)
-            exit_util.exit_error(msg)
-
-        # make executable
-        os.chmod(maxcluster_exe, 0o777)
-
-    return maxcluster_exe
-
 def ideal_helices(optd):
     """
     Get some ideal helices

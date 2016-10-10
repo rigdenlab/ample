@@ -68,7 +68,7 @@ def fast_protein_cluster(cluster_exe, max_cluster_size, models, num_clusters,
                                           max_cluster_size=max_cluster_size,
                                           models=models,
                                           num_clusters=num_clusters,
-                                          nproc=argsnproc,
+                                          nproc=nproc,
                                           score_type=SCORE_TYPE,
                                           work_dir=fpc_rundir)
     
@@ -102,7 +102,6 @@ def spicker_default(cluster_exe, cluster_method, max_cluster_size, num_clusters,
     spicker_rundir = os.path.join(work_dir, 'spicker')
     
     score_type = "rmsd"
-
     return _spicker_master(cluster_exe, cluster_method, max_cluster_size, num_clusters, models, 
                             spicker_rundir, nproc, score_type)
 

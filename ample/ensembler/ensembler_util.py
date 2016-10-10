@@ -60,20 +60,6 @@ def create_ensembles(amoptd):
     ensembler = ensemble_module.Ensembler()
     
     ############################################################################
-    # Set subclustering executable options
-    subcluster_switch = {'gesamt': amoptd['gesamt_exe'],
-                         'lsqkab': ensembler.lsqkab_exe,
-                         'maxcluster': amoptd['maxcluster_exe']                
-    }
-    subcluster_exe = subcluster_switch.get(amoptd['subcluster_program'], "unrecognised")
-    
-    if amoptd['subcluster_program'] and subcluster_exe == "unrecognised":
-        msg = 'unrecognised subcluster_program: {0}'.format(amoptd['subcluster_program'])
-        raise RuntimeError(msg)
-    elif amoptd['subcluster_program']:
-        ensembler.subcluster_exe = subcluster_exe
-    
-    ############################################################################
     # Set clustering executable options
     cluster_switch = {'fast_protein_cluster' : amoptd['fast_protein_cluster_exe'],
                       'import' : None,
@@ -95,9 +81,27 @@ def create_ensembles(amoptd):
     #    if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
     #        raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
     #    ensembler.score_matrix = amoptd['score_matrix']
+
+
+    ############################################################################
+    # Set subclustering executable options
+    if amoptd['subcluster_program'] == 'gesamt':
+        ensembler.subcluster_program = amoptd['subcluster_program']
+        ensembler.subcluster_exe = amoptd['gesamt_exe']
+    elif amoptd['subcluster_program'] == 'maxcluster':
+        ensembler.subcluster_program = amoptd['subcluster_program']
+        ensembler.subcluster_exe = amoptd['maxcluster_exe']
+    elif amoptd['subcluster_program'] == 'lsqkab':
+        ensembler.subcluster_program = amoptd['subcluster_program']
+        ensembler.subcluster_exe = amoptd['lsqkab_exe']
+    else:
+        msg = 'unrecognised subcluster_program: {0}'.format(amoptd['subcluster_program'])
+        raise RuntimeError(msg)
+
   
     ############################################################################
     # Set some further options
+    ensembler.nproc = amoptd['nproc']
     ensembler.gesamt_exe = amoptd['gesamt_exe']
     ensembler.max_ensemble_models = amoptd['max_ensemble_models']
     ensembler.scwrl_exe = amoptd['scwrl_exe']
@@ -157,7 +161,6 @@ def _get_ensembling_kwargs(amoptd):
        :returns: kwargs dictionary
     """
     kwargs = {'ensembles_directory' : amoptd['ensembles_directory'],
-              'nproc' : amoptd['nproc'],
               'percent_truncation' : amoptd['percent'],
               'side_chain_treatments' : amoptd['side_chain_treatments'],
               'truncation_method' : amoptd['truncation_method']}
