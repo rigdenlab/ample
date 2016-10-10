@@ -22,7 +22,8 @@ def align_mustang(models, mustang_exe=None, work_dir=None):
     if not ample_util.is_exe(mustang_exe):
         raise RuntimeError, "Cannot find mustang executable: {0}".format(mustang_exe)
     
-    if not work_dir: work_dir = os.getcwd()
+    owd = os.getcwd()
+    if not work_dir: work_dir = owd
     work_dir = os.path.abspath(work_dir)
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
     os.chdir(work_dir)
@@ -35,14 +36,16 @@ def align_mustang(models, mustang_exe=None, work_dir=None):
         raise RuntimeError, "Error running mustang. Check logfile: {0}".format(logfile)
     
     alignment_file = os.path.join(work_dir, basename + ".afasta")
-    if not os.path.isfile(alignment_file): raise RuntimeError, "Could not find alignment file: {0} after running mustang!".format(alignment_file)
+    if not os.path.isfile(alignment_file): raise RuntimeError("Could not find alignment file: {0} after running mustang!".format(alignment_file))
+    os.chdir(owd) # always need to go back to original directory
     return alignment_file
 
 def align_gesamt(models, gesamt_exe=None, work_dir=None):
     if not ample_util.is_exe(gesamt_exe):
         raise RuntimeError, "Cannot find gesamt executable: {0}".format(gesamt_exe)
     
-    if not work_dir: work_dir = os.getcwd()
+    owd = os.getcwd()
+    if not work_dir: work_dir = owd
     work_dir = os.path.abspath(work_dir)
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
     os.chdir(work_dir)
@@ -73,6 +76,7 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
     if sys.platform.startswith("win"):
         alignment_file = _gesamt_aln_windows_fix(alignment_file)
     
+    os.chdir(owd) # always need to go back to original directory
     return alignment_file
  
 ## BUG: reported to Eugene - 22/03/2016 by hlfsimko
