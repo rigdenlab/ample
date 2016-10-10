@@ -61,8 +61,9 @@ def create_ensembles(amoptd):
     
     ############################################################################
     # Set subclustering executable options
-    subcluster_switch = {'lsqkab': ensembler.lsqkab_exe,
-                         'maxcluster': amoptd['maxcluster_exe'],                 
+    subcluster_switch = {'gesamt': amoptd['gesamt_exe'],
+                         'lsqkab': ensembler.lsqkab_exe,
+                         'maxcluster': amoptd['maxcluster_exe']                
     }
     subcluster_exe = subcluster_switch.get(amoptd['subcluster_program'], "unrecognised")
     

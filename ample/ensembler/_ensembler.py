@@ -329,7 +329,9 @@ class Ensembler(object):
         os.chdir(work_dir)
             
         # Run maxcluster to generate the distance matrix
-        if subcluster_program == 'maxcluster':
+        if subcluster_program == 'gesamt':
+            clusterer = subcluster.GesamtClusterer(self.subcluster_exe)
+        elif subcluster_program == 'maxcluster':
             clusterer = subcluster.MaxClusterer(self.subcluster_exe)
         elif subcluster_program == 'lsqkab':
             clusterer = subcluster.LsqkabClusterer(self.subcluster_exe)
