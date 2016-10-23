@@ -50,7 +50,7 @@ class TestCases(unittest.TestCase):
         
     def test_preset_options_quick_mode(self):
         options = config_util.AMPLEConfigOptions()
-        options.d = {'max_ensemble_models' : 1000,
+        options.d = {'ensemble_max_models' : 1000,
                      'nmodels' : 1000,
                      'percent' : 5,
                      'shelx_cycles' : 15,
@@ -59,7 +59,7 @@ class TestCases(unittest.TestCase):
                      'phaser_kill' : 360,
         }
         options.cmdline_opts = {}
-        expected = {'max_ensemble_models' : 10,
+        expected = {'ensemble_max_models' : 10,
                     'nmodels' : 200,
                     'percent' : 20,
                     'shelx_cycles' : 5,
@@ -202,7 +202,7 @@ class TestCases(unittest.TestCase):
         }
         
         options.d = {
-                     'max_ensemble_models' : 10,
+                     'ensemble_max_models' : 10,
                      'nmodels' : 400,
                      'percent' : 35,
                      'shelx_cycles' : 5,
@@ -226,7 +226,7 @@ class TestCases(unittest.TestCase):
                      'early_terminate': False,
                      'benchmark_mode': True,
                      'shelxe_rebuild' : True,
-                     'max_ensemble_models' : 10,
+                     'ensemble_max_models' : 10,
                      'shelxe_rebuild_arpwarp' : None,
                      'shelxe_rebuild_buccaneer' : True,
                      'use_arpwarp' : False,

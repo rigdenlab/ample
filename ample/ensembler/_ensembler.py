@@ -14,9 +14,6 @@ import shutil
 
 # our imports
 from ample.ensembler.constants import ALLATOM, POLYALA, RELIABLE, UNMODIFIED
-from ample.ensembler import cluster_util
-from ample.ensembler import subcluster
-from ample.ensembler import subcluster_util
 from ample.ensembler import truncation_util
 from ample.util import ample_util
 from ample.util import pdb_edit
@@ -27,7 +24,6 @@ _logger = logging.getLogger(__name__)
 
 # Data structure to store residue information
 ScoreVariances = collections.namedtuple("ScoreVariances", ["idx", "resSeq", "variance"])
-
 
 def model_core_from_fasta(models, alignment_file, work_dir=None, case_sensitive=False):
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
@@ -142,20 +138,42 @@ class Ensembler(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
     
     """
-    def __init__(self):
+    def __init__(self,
+                 ensembles_directory=None,
+                 ensemble_max_models=30,
+                 nproc=1,
+                 work_dir=None,
+                 # Executables
+                 gesamt_exe=None,
+                 fast_protein_cluster_exe=None,
+                 lsqkab_exe=None,
+                 maxcluster_exe=None,
+                 mustang_exe=None,
+                 scwrl_exe=None,
+                 spicker_exe=None,
+                 theseus_exe=None,
+                 ):
+        """Set all variables required by all ensemblers"""
         
         # For all
-        self.work_dir = None  # top directory where everything gets done
-        self.theseus_exe = None
-        self.gesamt_exe = None
-        self.lsqkab_exe = None
-        self.nproc = 1
+        self.nproc = nproc
+        assert ensembles_directory and work_dir
+        if not os.path.isdir(ensembles_directory): os.mkdir(ensembles_directory)
+        self.ensembles_directory = ensembles_directory
+        if not os.path.isdir(work_dir): os.mkdir(work_dir)
+        self.work_dir = work_dir
+        os.chdir(work_dir)
         
-        # clustering
-        self.cluster_method = "spicker"  # the method for initial clustering
-        self.cluster_exe = None
-        self.num_clusters = 1
-        
+        # executables
+        self.gesamt_exe = gesamt_exe
+        self.fast_protein_cluster_exe = fast_protein_cluster_exe
+        self.lsqkab_exe = lsqkab_exe
+        self.maxcluster_exe = maxcluster_exe
+        self.mustang_exe = mustang_exe
+        self.scwrl_exe = scwrl_exe
+        self.spicker_exe = spicker_exe
+        self.theseus_exe = theseus_exe     
+           
         # truncation
         self.percent_truncation = 5
         self.truncation_levels = None
@@ -165,95 +183,18 @@ class Ensembler(object):
         self.truncation_scorefile = None
         self.truncation_variances = None
         
-        # subclustering
-        # self.subcluster_method='FLOATING_RADII'
-        self.subcluster_method = 'ORIGINAL'
-        self.subcluster_program = "maxcluster"
-        self.subcluster_exe = None
-        self.subclustering_method = "radius"
-        self.subcluster_radius_thresholds = [1, 2, 3]
-        self.ensemble_max_models = 30
+        # side chain
         
         # ensembles
-        self.ensembles_directory = None
+        self.ensemble_max_models = ensemble_max_models
         self.ensembles = None
         self.ensembles_data = None
         
-        self.score_matrix = None
-        
         return
-    
-    def superpose_models(self, models, basename=None, work_dir=None, homologs=False):
-        run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
-        try:
-            run_theseus.superpose_models(models, basename=basename, homologs=homologs)
-        except Exception, e:
-            _logger.critical("Error running theseus: {0}".format(e))
-            return False
-        return run_theseus.superposed_models
             
-    def cluster_models(self,
-                       cluster_dir=None,
-                       cluster_exe=None,
-                       cluster_method=None,
-                       models=None,
-                       max_cluster_size=200,
-                       num_clusters=None):
-        """Wrapper function to run clustering of models dependent on the method
-        """
-        
-        # Cluster our protein structures
-        _logger.info('Clustering models using method: {0}'.format(cluster_method))
-        
-        if cluster_method == 'fast_protein_cluster':
-            clusters, clusters_data = cluster_util.fast_protein_cluster(cluster_exe,
-                                                                        max_cluster_size, 
-                                                                        models,
-                                                                        num_clusters, 
-                                                                        self.work_dir)
-        elif cluster_method == 'import':
-            clusters, clusters_data = cluster_util.import_cluster(cluster_dir)
-        elif cluster_method == 'random':
-            clusters, clusters_data = cluster_util.random_cluster(cluster_method,
-                                                                  max_cluster_size,
-                                                                  models,
-                                                                  num_clusters)
-        elif cluster_method == 'spicker':
-            clusters, clusters_data = cluster_util.spicker_default(cluster_exe,
-                                                                   cluster_method,
-                                                                   max_cluster_size,
-                                                                   num_clusters,
-                                                                   models,
-                                                                   self.work_dir,
-                                                                   self.nproc
-                                                                   )
-        elif cluster_method == 'spicker_qscore':
-            clusters, clusters_data = cluster_util.spicker_qscore(cluster_exe,
-                                                                  cluster_method,
-                                                                  max_cluster_size,
-                                                                  num_clusters, 
-                                                                  models,
-                                                                  self.work_dir,
-                                                                  self.nproc,
-                                                                  self.gesamt_exe)
-        elif cluster_method == 'spicker_tmscore':
-            clusters, clusters_data = cluster_util.spicker_tmscore(cluster_exe,
-                                                                  cluster_method,
-                                                                  max_cluster_size,
-                                                                  num_clusters, 
-                                                                  models,
-                                                                  self.nproc,
-                                                                  self.work_dir)
-        else:
-            msg = 'Unrecognised clustering method: {0}'.format(cluster_method)
-            raise RuntimeError(msg)
-                
-        return clusters, clusters_data
-    
     def edit_side_chains(self, raw_ensemble, raw_ensemble_data, side_chain_treatments, 
-                         ensembles_directory, homologs=False, single_structure=False):
-        
-        assert os.path.isdir(ensembles_directory), "Cannot find ensembles directory: {0}".format(ensembles_directory)
+                         homologs=False, single_structure=False):
+        """Mutate side chains for the supplied all-atom ensembles"""
         ensembles = []
         ensembles_data = []
         if side_chain_treatments is None: side_chain_treatments=[UNMODIFIED]
@@ -273,7 +214,7 @@ class Ensembler(object):
                                                                    sct)
             # create filename based on name and side chain treatment
             # fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=ensembles_directory)
-            fpath = os.path.join(ensembles_directory, "{0}.pdb".format(ensemble_data['name']))
+            fpath = os.path.join(self.ensembles_directory, "{0}.pdb".format(ensemble_data['name']))
             
             # Create the files
             if sct == ALLATOM or sct == UNMODIFIED:
@@ -301,192 +242,19 @@ class Ensembler(object):
                 
         return ensembles, ensembles_data
 
-    def subcluster_models(self, truncated_models, truncated_models_data,
-                          radius_thresholds=None, ensemble_max_models=None,
-                          work_dir=None):
+    def generate_ensembles(self, models, **kwargs):
+        """Generate ensembles from models and supplied key word arguments.
         
-        if self.subcluster_method == "ORIGINAL":
-            f = self.subcluster_models_fixed_radii
-        elif self.subcluster_method == "FLOATING_RADII":
-            f = self.subcluster_models_floating_radii
-        else:
-            assert False
-            
-        return f(truncated_models, truncated_models_data, ensemble_max_models,
-                 radius_thresholds=radius_thresholds, work_dir=work_dir)
-        
-    def subcluster_models_fixed_radii(self,
-                                      truncated_models,
-                                      truncated_models_data,
-                                      ensemble_max_models=None,
-                                      radius_thresholds=None,
-                                      work_dir=None):
-        
-        # Theseus only works with > 3 residues
-        if truncated_models_data['num_residues'] <= 2: return [], []
-        
-        if not radius_thresholds: radius_thresholds = self.subcluster_radius_thresholds
-        ensembles = []
-        ensembles_data = []
-        
-        # Use first model to get data on level
-        cluster_num = truncated_models_data['cluster_num']
-        truncation_level = truncated_models_data['truncation_level']
-        
-        # Make sure everyting happens in the truncation directory
-        owd = os.getcwd()
-        os.chdir(work_dir)
-            
-        # Generate the distance matrix
-        if self.subcluster_program == 'gesamt':
-            clusterer = subcluster.GesamtClusterer(self.subcluster_exe, nproc=self.nproc)
-        elif self.subcluster_program == 'maxcluster':
-            clusterer = subcluster.MaxClusterer(self.subcluster_exe)
-        elif self.subcluster_program == 'lsqkab':
-            clusterer = subcluster.LsqkabClusterer(self.subcluster_exe)
-        else:
-            assert False,self.subcluster_program
-            
-        clusterer.generate_distance_matrix(truncated_models)
-        # clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
-
-        # Loop through the radius thresholds
-        previous_clusters = []
-        for radius in radius_thresholds:
-            _logger.debug("subclustering models under radius: {0}".format(radius))
-
-            # Get list of pdbs clustered according to radius threshold
-            cluster_files = clusterer.cluster_by_radius(radius)
-            if not cluster_files:
-                _logger.debug("Skipping radius {0} as no files clustered in directory {1}".format(radius, work_dir))
-                continue
-                
-            _logger.debug("Clustered {0} files".format(len(cluster_files)))
-            cluster_files = subcluster_util.slice_subcluster(cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds)
-            if not cluster_files:
-                _logger.debug('Could not create different cluster for radius {0} in directory: {1}'.format(radius, work_dir))
-                continue
-            
-            # Remember this cluster so we don't create duplicate clusters
-            previous_clusters.append(cluster_files)
-
-            # Got files so create the directories
-            subcluster_dir = os.path.join(work_dir, 'subcluster_{0}'.format(radius))
-            os.mkdir(subcluster_dir)
-            os.chdir(subcluster_dir)
-            basename = 'c{0}_t{1}_r{2}'.format(cluster_num, truncation_level, radius)
-            
-            # List of files for reference
-            with open(os.path.join(subcluster_dir, "{0}.list".format(basename)), 'w') as f:
-                for m in cluster_files: f.write(m + "\n")
-                f.write("\n")
-            
-            cluster_file = self.superpose_models(cluster_files, work_dir=subcluster_dir)
-            if not cluster_file:
-                msg = "Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename, subcluster_dir)
-                _logger.critical(msg)
-                continue
-             
-            ensemble = os.path.join(subcluster_dir, basename + '.pdb')
-            shutil.move(cluster_file, ensemble)
-
-            # The data we've collected is the same for all pdbs in this level so just keep using the first  
-            ensemble_data = copy.copy(truncated_models_data)
-            ensemble_data['subcluster_num_models'] = len(cluster_files)
-            ensemble_data['subcluster_radius_threshold'] = radius
-            ensemble_data['subcluster_score'] =  clusterer.cluster_score
-            ensemble_data['ensemble_pdb'] = ensemble
-
-            # Get the centroid model name from the list of files given to theseus - we can't parse
-            # the pdb file as theseus truncates the filename
-            ensemble_data['subcluster_centroid_model'] = os.path.abspath(cluster_files[0])
-            
-            ensembles.append(ensemble)
-            ensembles_data.append(ensemble_data)
-        
-        # back to where we started
-        os.chdir(owd)
-        
-        return ensembles, ensembles_data
+        Needs to be implemented in each class.
+        """
+        raise NotImplementedError
     
-    def subcluster_models_floating_radii(self,
-                                         truncated_models,
-                                         truncated_models_data,
-                                         ensemble_max_models=None,
-                                         work_dir=None):
-        _logger.info("subclustering with floating radii")
-
-        # Generate the distance matrix
-        if self.subcluster_program == 'gesamt':
-            clusterer = subcluster.GesamtClusterer(self.subcluster_exe)
-        elif self.subcluster_program == 'maxcluster':
-            clusterer = subcluster.MaxClusterer(self.subcluster_exe)
-        elif self.subcluster_program == 'lsqkab':
-            clusterer = subcluster.LsqkabClusterer(self.subcluster_exe)
-        else:
-            assert False,self.subcluster_program
-        clusterer.generate_distance_matrix(truncated_models)
-        # clusterer.dump_matrix(os.path.join(truncation_dir,"subcluster_distance.matrix")) # for debugging
+    def generate_ensembles_from_amoptd(self, models, amoptd):
+        """Generate ensembles from data in supplied ample data dictionary.
         
-        subclusters = []
-        subclusters_data = []
-        clusters = []
-        radii = []
-        len_truncated_models = len(truncated_models)
-        for i in range(len(self.subcluster_radius_thresholds)):
-            radius = None
-            nmodels = None
-            if i > 0 and radii[i - 1] > self.subcluster_radius_thresholds[i]:
-                radius = radii[i - 1]
-                nmodels = len(clusters[i - 1])
-                cluster_files, radius = subcluster_util.subcluster_nmodels(nmodels, radius, clusterer, direction='up', increment=1)
-            else:
-                radius = self.subcluster_radius_thresholds[i]
-                cluster_files = clusterer.cluster_by_radius(radius)
-            
-            if cluster_files:
-                cluster_files = tuple(sorted(cluster_files))  # Need to sort so that we can check if we've had this lot before
-                cluster_size = len(cluster_files)
-            else:
-                cluster_files = []
-                cluster_size = 0
-
-            if radius in radii or cluster_size == 0:
-                # Increase radius till we have one more than the last one
-                if cluster_size == 0:
-                    nmodels = 2
-                else:
-                    radius = radii[i - 1]
-                    nmodels = len(clusters[i - 1]) + 1
-                cluster_files, radius = subcluster_util.subcluster_nmodels(nmodels, radius, clusterer, direction='up', increment=1)
-                cluster_files = sorted(cluster_files)
-            elif cluster_size >= ensemble_max_models or cluster_files in clusters:
-                # Randomly pick ensemble_max_models
-                cluster_files = subcluster_util.pick_nmodels(cluster_files, clusters, ensemble_max_models)
-                if not cluster_files:
-                    _logger.debug('Could not cluster files under radius: {0} - could not find different models'.format(radius))
-                    break
-            
-            # Need to check in case we couldn't cluster under this radius
-            if cluster_size == 0 or radius in radii:
-                _logger.debug('Could not cluster files under radius: {0} - got {1} files'.format(radius, len(cluster_files)))
-                break
-            
-            _logger.debug('Subclustering {0} files under radius {1}'.format(cluster_size, radius))
-            try:
-                cluster_ensemble, data = subcluster_util.subcluster_radius(list(cluster_files), radius, truncated_models_data)
-            except RuntimeError:
-                _logger.debug('Could not cluster files under radius: {0} as theseus failed'.format(radius, len(cluster_files)))
-                # If theseus fails, we just move
-                break
-            
-            subclusters.append(cluster_ensemble)
-            subclusters_data.append(data)
-            clusters.append(tuple(cluster_files))  # append as tuple so it is hashable
-            radii.append(radius)
-            if cluster_size == len_truncated_models: break
-            
-        return subclusters, subclusters_data
+        Needs to be implemented in each class
+        """
+        raise NotImplementedError
 
     def truncate_models(self,
                         models,
@@ -612,8 +380,9 @@ class Ensembler(object):
             truncated_models_data.append(model_data)
             
         return truncated_models, truncated_models_data, truncated_models_dirs
-
-    def _convert_residue_scores(self, residue_scores):
+    
+    @staticmethod
+    def _convert_residue_scores(residue_scores):
         """Create named tuple to match store residue data"""
         scores = [ScoreVariances(idx=int(res)-1,    # Required to match Theseus
                                  resSeq=int(res),
@@ -621,7 +390,8 @@ class Ensembler(object):
                       for (res, sco) in residue_scores]
         return scores
     
-    def _slice_models(self, data, start, end):
+    @staticmethod
+    def _slice_models(data, start, end):
         """Allows us to slice a list"""
         return data[start:end]
 

@@ -7,8 +7,9 @@ class Test(unittest.TestCase):
     
     def test_convert_residue_scores(self):
         residue_scores = [(i, 0.1*i) for i in xrange(1, 11)]
-        ensembler = _ensembler.Ensembler()
-        scores = ensembler._convert_residue_scores(residue_scores)
+        #ensembler = _ensembler.Ensembler()
+        #scores = ensembler._convert_residue_scores(residue_scores)
+        scores = _ensembler.Ensembler._convert_residue_scores(residue_scores)
         score_idxs = [i.idx for i in scores]
         ref_score_idxs = [i for i in xrange(10)] # Minus one compared to org data
         self.assertEqual(ref_score_idxs, score_idxs)

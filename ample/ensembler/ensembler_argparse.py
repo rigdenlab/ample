@@ -58,7 +58,7 @@ def add_ensembler_options(parser, standalone=False):
     parser.add_argument('-homolog_aligner', metavar='homolog_aligner', type=str, nargs=1,
                        help='Program to use for structural alignment of homologs (gesamt|mustang)')
 
-    parser.add_argument('-max_ensemble_models', type=str, nargs=1,
+    parser.add_argument('-ensemble_max_models', type=str, nargs=1,
                        help='Maximum number of models permitted in an ensemble')
 
     parser.add_argument('-maxcluster_exe', type=str, nargs=1,

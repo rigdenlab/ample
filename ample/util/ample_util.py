@@ -543,8 +543,7 @@ def read_amoptd(amoptd_fname):
        AMPLE options from saved state
     """
     if not is_file(amoptd_fname):
-        raise RuntimeError("Something is wrong with your AMPLE options "
-                           "file: {0}\n".format(amoptd_fname))
+        raise RuntimeError("Cannot access AMPLE options file: {0}\n".format(amoptd_fname))
 
     with open(amoptd_fname, 'r') as f:
         amoptd = cPickle.load(f)

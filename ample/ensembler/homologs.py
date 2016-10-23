@@ -189,10 +189,17 @@ class Ensembler(_ensembler.Ensembler):
             for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble,
                                                                       pre_ensemble_data,
                                                                       side_chain_treatments,
-                                                                      self.ensembles_directory,
                                                                       homologs=True)):
                 self.ensembles.append(ensemble)
                 self.ensembles_data.append(ensemble_data)
         
         return self.ensembles
+
+    def generate_ensembles_from_amoptd(self, models, amoptd):
+        kwargs = {'percent_truncation' : amoptd['percent'],
+                  'side_chain_treatments' : amoptd['side_chain_treatments'],
+                  'truncation_method' : amoptd['truncation_method'],
+                  'alignment_file' : amoptd['alignment_file'],
+                  'homolog_aligner' : amoptd['homolog_aligner']}
+        return self.generate_ensembles(models, **kwargs)
 

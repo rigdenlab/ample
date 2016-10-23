@@ -106,7 +106,7 @@ class AMPLEConfigOptions(object):
         self.debug = False
         
         self.quick_mode = {
-                           'max_ensemble_models' : 10,
+                           'ensemble_max_models' : 10,
                            'nmodels' : 200,
                            'percent' : 20,
                            'shelx_cycles' : 5,

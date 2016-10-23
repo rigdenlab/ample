@@ -27,17 +27,37 @@ __date__ = "18.04.2013"
 
 LOGGER = logging.getLogger(__name__)
 
-def find_ensembler_module(amoptd):
-    """Find which ensembler module to import
+def ensembler_factory(amoptd):
+    """Return an ensembler object for the required ensembles
     
-    :returns: imported module handler
+    :returns: instantiated ensembler object
     """
     if amoptd['homologs']: 
-        return homologs
+        ensemble_module = homologs
     elif amoptd['single_model_mode']:
-        return single_model
+        ensemble_module = single_model
     else: 
-        return abinitio
+        ensemble_module = abinitio
+
+    # Paths to ensembling directories
+    ensembles_directory = os.path.join(amoptd['work_dir'], 'ensembles')
+    amoptd['ensembles_directory'] = ensembles_directory
+    work_dir = os.path.join(amoptd['work_dir'], 'ensemble_workdir')
+
+    return ensemble_module.Ensembler(
+                                    ensembles_directory=ensembles_directory,
+                                    ensemble_max_models=amoptd['ensemble_max_models'],
+                                    nproc=amoptd['nproc'],
+                                    work_dir=work_dir,
+                                    # Executables
+                                    fast_protein_cluster_exe=amoptd['fast_protein_cluster_exe'],
+                                    gesamt_exe=amoptd['gesamt_exe'],
+                                    lsqkab_exe=amoptd['lsqkab_exe'],
+                                    maxcluster_exe=amoptd['maxcluster_exe'],
+                                    scwrl_exe=amoptd['scwrl_exe'],
+                                    spicker_exe=amoptd['spicker_exe'],
+                                    theseus_exe=amoptd['theseus_exe'],
+                                    )
 
 def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for ensembling on a cluster"""
@@ -54,66 +74,9 @@ def cluster_script(amoptd, python_path="ccp4-python"):
 
 def create_ensembles(amoptd):
     """Create the ensembles using the values in the amoptd dictionary"""
-
-    # Determine which ensembler we need and only import the specific one
-    ensemble_module = find_ensembler_module(amoptd)
-    ensembler = ensemble_module.Ensembler()
     
-    ############################################################################
-    # Set clustering executable options
-    cluster_switch = {'fast_protein_cluster' : amoptd['fast_protein_cluster_exe'],
-                      'import' : None,
-                      'random' : None,
-                      'skip' : None,
-                      'spicker' : amoptd['spicker_exe'],
-                      'spicker_qscore' : amoptd['spicker_exe'],
-                      'spicker_tmscore' : amoptd['spicker_exe'],
-    }
-    cluster_exe = cluster_switch.get(amoptd['cluster_method'], "unrecognised")
-    
-    if cluster_exe == "unrecognised":
-        msg = "unrecognised cluster_method: {0}".format(amoptd['cluster_method'])
-        raise RuntimeError(msg)
-    amoptd['cluster_exe'] = cluster_exe
-    
-    # We need a score matrix for the spicker tmscore clustering
-    #if amoptd['cluster_method'] == 'spicker_tmscore':
-    #    if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
-    #        raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
-    #    ensembler.score_matrix = amoptd['score_matrix']
-
-
-    ############################################################################
-    # Set subclustering executable options
-    if amoptd['subcluster_program'] == 'gesamt':
-        ensembler.subcluster_program = amoptd['subcluster_program']
-        ensembler.subcluster_exe = amoptd['gesamt_exe']
-    elif amoptd['subcluster_program'] == 'maxcluster':
-        ensembler.subcluster_program = amoptd['subcluster_program']
-        ensembler.subcluster_exe = amoptd['maxcluster_exe']
-    elif amoptd['subcluster_program'] == 'lsqkab':
-        ensembler.subcluster_program = amoptd['subcluster_program']
-        ensembler.subcluster_exe = amoptd['lsqkab_exe']
-    else:
-        msg = 'unrecognised subcluster_program: {0}'.format(amoptd['subcluster_program'])
-        raise RuntimeError(msg)
-
-  
-    ############################################################################
-    # Set some further options
-    ensembler.nproc = amoptd['nproc']
-    ensembler.gesamt_exe = amoptd['gesamt_exe']
-    ensembler.max_ensemble_models = amoptd['max_ensemble_models']
-    ensembler.scwrl_exe = amoptd['scwrl_exe']
-    ensembler.theseus_exe = amoptd['theseus_exe']
-    
-    ensembles_directory = os.path.join(amoptd['work_dir'], 'ensembles')
-    if not os.path.isdir(ensembles_directory): os.mkdir(ensembles_directory)
-    amoptd['ensembles_directory'] = ensembles_directory
-
-    work_dir = os.path.join(amoptd['work_dir'], 'ensemble_workdir')
-    os.mkdir(work_dir)
-    os.chdir(work_dir)
+    # Create instance of the ensembler
+    ensembler = ensembler_factory(amoptd)
 
     ############################################################################
     # For a single model we don't need to use glob 
@@ -132,12 +95,12 @@ def create_ensembles(amoptd):
 
     #if amoptd['cluster_method'] == 'spicker_tmscore':
     #    models = reorder_models(models, amoptd['score_matrix_file_list'])
+    #    if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
+    #        raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
+    #    ensembler.score_matrix = amoptd['score_matrix']
 
-    ############################################################################
-    # Get all the keywords required to generate ensembles
-    kwargs = _get_ensembling_kwargs(amoptd)
     # Run ensemble creation
-    ensembles = ensembler.generate_ensembles(models, work_dir=work_dir, **kwargs)
+    ensembles = ensembler.generate_ensembles_from_amoptd(models, amoptd)
 
     ############################################################################
     amoptd['ensembles'] = ensembles
@@ -151,45 +114,12 @@ def create_ensembles(amoptd):
     with open(amoptd['ensemble_ok'],'w') as f: f.write('ok\n')
 
     # Delete all intermediate files if we're purging
-    if amoptd['purge']: shutil.rmtree(work_dir)
+    if amoptd['purge']: shutil.rmtree(ensembler.work_dir)
     return
-
-def _get_ensembling_kwargs(amoptd):
-    """Determine keyword arguments for ensembler based on information in
-       the original AMPLE option dictionary
-       
-       :returns: kwargs dictionary
-    """
-    kwargs = {'ensembles_directory' : amoptd['ensembles_directory'],
-              'percent_truncation' : amoptd['percent'],
-              'side_chain_treatments' : amoptd['side_chain_treatments'],
-              'truncation_method' : amoptd['truncation_method']}
-
-    # Add some more specific options for each method
-    if amoptd['homologs']:
-        kwargs.update({'alignment_file' : amoptd['alignment_file'],
-                       'gesamt_exe' : amoptd['gesamt_exe'],
-                       'homolog_aligner' : amoptd['homolog_aligner'],
-                       'mustang_exe' : amoptd['mustang_exe']})
-
-    elif amoptd['single_model_mode']:
-        kwargs.update({'truncation_pruning' : amoptd['truncation_pruning'],
-                       'truncation_scorefile' : amoptd['truncation_scorefile'],
-                       'truncation_scorefile_header' : amoptd['truncation_scorefile_header']})
-
-    else:
-        kwargs.update({'cluster_dir' : amoptd['cluster_dir'],
-                       'cluster_exe' : amoptd['cluster_exe'],
-                       'cluster_method' : amoptd['cluster_method'],
-                       'num_clusters' : amoptd['num_clusters'],
-                       'truncation_pruning' : amoptd['truncation_pruning'],
-                       'use_scwrl' : amoptd['use_scwrl']})
-
-    return kwargs
 
 ################################################################################
 #
-# Functions below here are primarily to manipulate, summaries or handle
+# Functions below here are primarily to manipulate, summarise or handle
 # existing ensembling data. 
 #
 ################################################################################

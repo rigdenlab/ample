@@ -121,14 +121,25 @@ class Ensembler(_ensembler.Ensembler):
                 for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble,
                                                                           pre_ensemble_data,
                                                                           side_chain_treatments,
-                                                                          self.ensembles_directory,
                                                                           single_structure=True)):
                     self.ensembles.append(ensemble)
                     self.ensembles_data.append(ensemble_data)
     
         return self.ensembles
-    
-    def _generate_residue_scorelist(self, residue_key, score_key, scores):
+
+    def generate_ensembles_from_amoptd(self, models, amoptd):
+        """Generate ensembles from data in supplied ample data dictionary."""
+        kwargs = {'percent_truncation' : amoptd['percent'],
+                  'side_chain_treatments' : amoptd['side_chain_treatments'],
+                  'truncation_method' : amoptd['truncation_method'],
+                  'truncation_pruning' : amoptd['truncation_pruning'],
+                  'truncation_scorefile' : amoptd['truncation_scorefile'],
+                  'truncation_scorefile_header' : amoptd['truncation_scorefile_header']}
+        return self.generate_ensembles(models, **kwargs)
+
+    # staticmethod so that we can test without instantiating an Ensembler
+    @staticmethod
+    def _generate_residue_scorelist(residue_key, score_key, scores):
         """Generate a zipped list of residue indexes and corresponding scores
         
         :residue_key: residue column header keyword
@@ -142,7 +153,9 @@ class Ensembler(_ensembler.Ensembler):
         assert scores[0].has_key(score_key), "Cannot find score key in scoresfile"
         return [(i[residue_key], i[score_key]) for i in scores]
     
-    def _read_scorefile(self, scorefile):
+    # staticmethod so that we can test without instantiating an Ensembler
+    @staticmethod
+    def _read_scorefile(scorefile):
         """
         :scorefile: CSV score file INCLUDING header line
         
