@@ -98,11 +98,11 @@ def import_cluster(cluster_dir):
 
 def spicker_cluster(models,
                     cluster_dir,
-                    cluster_method,
-                    cluster_exe,
+                    cluster_method_type,
+                    cluster_score_type,
                     num_clusters,
                     max_cluster_size,
-                    cluster_score_type,
+                    cluster_exe,
                     nproc,
                     score_matrix=None):
     """Cluster models using spicker - master function"""
@@ -117,11 +117,11 @@ def spicker_cluster(models,
     spickerer.cluster(models, score_type=cluster_score_type, run_dir=cluster_dir, score_matrix=score_matrix, nproc=nproc)
     _logger.debug(spickerer.results_summary())
     
-    ns_clusters=len(spickerer.results)
+    ns_clusters = len(spickerer.results)
     if ns_clusters == 0: 
         raise RuntimeError,"No clusters returned by SPICKER"
-    if ns_clusters < num_clusters:
-        _logger.critical('Requested {0} clusters but SPICKER only found {0} so using {1} clusters'.format(num_clusters, ns_clusters))
+    if ns_clusters < int(num_clusters):
+        _logger.critical('Requested {0} clusters but SPICKER only found {1} so using {1} clusters'.format(num_clusters, ns_clusters))
         num_clusters = ns_clusters
     
     clusters, clusters_data = [], []
@@ -145,7 +145,8 @@ def spicker_cluster(models,
         cluster_data['cluster_num'] = i + 1
         cluster_data['cluster_centroid'] = d.cluster_centroid
         cluster_data['cluster_num_models'] = len(cluster)
-        cluster_data['cluster_method'] = cluster_method
+        cluster_data['cluster_method'] = cluster_method_type
+        cluster_data['cluster_score_type'] = cluster_score_type
         cluster_data['num_clusters'] = num_clusters
         
         clusters.append(cluster)

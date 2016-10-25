@@ -8,13 +8,13 @@ class Test(unittest.TestCase):
     def test_generateResidueScorelist(self):
         scores = [{'residue': (i), 'concoord': (i*0.5*3.452), 'rosetta': (i*3.452),
                    'unknown': (i*1.11*3.452)} for i in xrange(1, 11)]
-        zipped_concoord = single_model.Ensembler._generate_residue_scorelist('residue', 'concoord', scores)
+        zipped_concoord = single_model.SingleModelEnsembler._generate_residue_scorelist('residue', 'concoord', scores)
         ref_concoord = [(1, 1.726), (2, 3.452), (3, 5.178), (4, 6.904),
                         (5, 8.629999999999999), (6, 10.356), (7, 12.082),
                         (8, 13.808), (9, 15.533999999999999), 
                         (10, 17.259999999999998)]
         self.assertEqual(ref_concoord, zipped_concoord)
-        zipped_rosetta = single_model.Ensembler._generate_residue_scorelist('residue', 'rosetta', scores)
+        zipped_rosetta = single_model.SingleModelEnsembler._generate_residue_scorelist('residue', 'rosetta', scores)
         ref_rosetta = [(1, 3.452), (2, 6.904), (3, 10.356), (4, 13.808),
                        (5, 17.259999999999998), (6, 20.712), (7, 24.164),
                        (8, 27.616), (9, 31.067999999999998), 

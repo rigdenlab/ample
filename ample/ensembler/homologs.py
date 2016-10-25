@@ -90,13 +90,14 @@ def _gesamt_aln_windows_fix(alnf):
             outfh.write(line)
     return alnf
 
-class Ensembler(_ensembler.Ensembler):
+class HomologEnsembler(_ensembler.Ensembler):
     """Ensemble creator using on multiple distant homologous structures
     """
     
-    def __init__(self):
+    def __init__(self, **kwargs):
+
         # Inherit all functions from Parent Ensembler
-        _ensembler.Ensembler.__init__(self)
+        super(HomologEnsembler, self).__init__(**kwargs)
         
         return
     
@@ -104,27 +105,16 @@ class Ensembler(_ensembler.Ensembler):
                            models,
                            alignment_file=None,
                            ensembles_directory=None,
-                           gesamt_exe=None,
                            homolog_aligner=None,
-                           mustang_exe=None,
                            nproc=None,
                            percent_truncation=None,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS,
-                           truncation_method=None,
-                           work_dir=None):
-        
-        # Work dir set each time
-        if not work_dir: raise RuntimeError, "Need to set work_dir!"
-        self.work_dir = work_dir
+                           truncation_method=None):
         
         if not percent_truncation:
             percent_truncation = self.percent_truncation
         if not truncation_method:
             truncation_method = self.truncation_method
-        if not ensembles_directory:
-            self.ensembles_directory = os.path.join(work_dir, "ensembles")
-        else:
-            self.ensembles_directory = ensembles_directory
         
         if not len(models):
             raise RuntimeError, "Cannot find any models for ensembling!" 
@@ -137,7 +127,7 @@ class Ensembler(_ensembler.Ensembler):
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
         
         # standardise all the models
-        std_models_dir = os.path.join(work_dir, "std_models")
+        std_models_dir = os.path.join(self.work_dir, "std_models")
         os.mkdir(std_models_dir)
         std_models = []
         for m in models:
@@ -148,11 +138,11 @@ class Ensembler(_ensembler.Ensembler):
         # Get a structural alignment between the different models
         if not alignment_file:
             if homolog_aligner == 'mustang':
-                _logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
-                alignment_file = align_mustang(std_models, mustang_exe=mustang_exe, work_dir=self.work_dir)
+                _logger.info("Generating alignment file with mustang_exe: {0}".format(self.mustang_exe))
+                alignment_file = align_mustang(std_models, mustang_exe=self.mustang_exe, work_dir=self.work_dir)
             elif homolog_aligner == 'gesamt':
-                _logger.info("Generating alignment file with gesamt_exe: {0}".format(gesamt_exe))
-                alignment_file = align_gesamt(std_models, gesamt_exe=gesamt_exe, work_dir=self.work_dir)
+                _logger.info("Generating alignment file with gesamt_exe: {0}".format(self.gesamt_exe))
+                alignment_file = align_gesamt(std_models, gesamt_exe=self.gesamt_exe, work_dir=self.work_dir)
             else:
                 raise RuntimeError, "Unknown homolog_aligner: {0}".format(homolog_aligner)
             _logger.info("Generated alignment file: {0}".format(alignment_file))

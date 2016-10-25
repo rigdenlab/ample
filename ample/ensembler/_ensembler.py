@@ -152,6 +152,7 @@ class Ensembler(object):
                  scwrl_exe=None,
                  spicker_exe=None,
                  theseus_exe=None,
+                 **kwargs
                  ):
         """Set all variables required by all ensemblers"""
         
@@ -255,6 +256,15 @@ class Ensembler(object):
         Needs to be implemented in each class
         """
         raise NotImplementedError
+
+    def superpose_models(self, models, basename=None, work_dir=None, homologs=False):
+        run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
+        try:
+            run_theseus.superpose_models(models, basename=basename, homologs=homologs)
+        except Exception, e:
+            _logger.critical("Error running theseus: {0}".format(e))
+            return False
+        return run_theseus.superposed_models
 
     def truncate_models(self,
                         models,

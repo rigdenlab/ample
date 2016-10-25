@@ -21,16 +21,16 @@ from ample.util import pdb_edit
 _logger = logging.getLogger(__name__)
 
 
-class Ensembler(_ensembler.Ensembler):
+class SingleModelEnsembler(_ensembler.Ensembler):
     """Ensemble creator using on a single input structure and a corresponding
        score file with per residue scores for truncation
     """
         
-    def __init__(self):
+    def __init__(self, **kwargs):
         # Inherit all functions from Parent Ensembler
-        _ensembler.Ensembler.__init__(self)
+        super(SingleModelEnsembler, self).__init__(**kwargs)
         
-        # Set Ensembler_Single specific parameters
+        # Set SingleModelEnsembler specific parameters
         self.truncation_scorefile = None
         
         return
@@ -44,14 +44,9 @@ class Ensembler(_ensembler.Ensembler):
                            truncation_method=None,
                            truncation_pruning=None,
                            truncation_scorefile=None,
-                           truncation_scorefile_header=None,
-                           work_dir=None):
+                           truncation_scorefile_header=None):
         """Method to generate ensembles from a single structure based on 
         residue scores"""
-        
-        # Work dir set each time
-        if not work_dir: raise RuntimeError, "Need to set work_dir!"
-        self.work_dir = work_dir
         
         if not truncation_method:
             truncation_method = self.truncation_method
@@ -59,10 +54,6 @@ class Ensembler(_ensembler.Ensembler):
             truncation_pruning = self.truncation_pruning
         if not truncation_scorefile:
             truncation_scorefile = self.truncation_scorefile
-        if not ensembles_directory:
-            self.ensembles_directory = os.path.join(work_dir, "ensembles")
-        else:
-            self.ensembles_directory = ensembles_directory
 
         if len(models) > 1:
             msg = "More than 1 structure provided"
@@ -75,7 +66,7 @@ class Ensembler(_ensembler.Ensembler):
             raise RuntimeError(msg)
 
         # standardise the structure
-        std_models_dir = os.path.join(work_dir, "std_models")
+        std_models_dir = os.path.join(self.work_dir, "std_models")
         os.mkdir(std_models_dir)
         
         std_model = ample_util.filename_append(models[0], 'std', std_models_dir)

@@ -78,13 +78,13 @@ class Spickerer(object):
                 raise RuntimeError, msg
             logger.debug("Using score_matrix: {0}".format(score_matrix))
             shutil.copy(score_matrix, os.path.join(self.run_dir,'score.matrix'))
-        elif score_type == 'tm':
-            # Create file so spicker knows to calculate TM scores
-            with open('TM.score','w') as f: f.write('\n')
-        elif score_type == 'rmsd':
-            pass
-        else:
-            raise RuntimeError,"Unknown score_type: {0}".format(score_type)
+#         elif score_type == 'tm':
+#             # Create file so spicker knows to calculate TM scores
+#             with open('TM.score','w') as f: f.write('\n')
+#         elif score_type == 'rmsd':
+#             pass
+#         else:
+#             raise RuntimeError,"Unknown score_type: {0}".format(score_type)
         
         # read_out - Input file for spicker with coordinates of the CA atoms for each of the PDB structures
         #
@@ -158,7 +158,7 @@ class Spickerer(object):
         if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
         os.chdir(self.run_dir)
         
-        logger.debug("Running spicker in directory: {0}".format(self.run_dir))
+        logger.debug("Running spicker with score_type {0} in directory: {1}".format(score_type, self.run_dir))
         logger.debug("Using executable: {0} on {1} processors".format(self.spicker_exe, nproc))
         
         self.create_input_files(models, score_type=score_type, score_matrix=score_matrix)

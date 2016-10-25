@@ -19,11 +19,10 @@ from ample.ensembler import subcluster
 from ample.ensembler import subcluster_util
 from ample.ensembler.constants import POLYALA, SIDE_CHAIN_TREATMENTS, THIN_CLUSTERS
 from ample.util import scwrl_util
-from ample.util import theseus
 
 _logger = logging.getLogger(__name__)
 
-class Ensembler(_ensembler.Ensembler):
+class AbinitioEnsembler(_ensembler.Ensembler):
     """Ensemble creator using on multiple models with identical sequences most
        likely created using Rosetta or Quark ab initio modelling
     """
@@ -31,7 +30,7 @@ class Ensembler(_ensembler.Ensembler):
     def __init__(self, **kwargs):
         
         # Inherit all functions from Parent Ensembler
-        _ensembler.Ensembler.__init__(self, **kwargs)
+        super(AbinitioEnsembler, self).__init__(**kwargs)
 
         # self.subcluster_method='FLOATING_RADII'
         self.cluster_score_matrix = None
@@ -83,10 +82,10 @@ class Ensembler(_ensembler.Ensembler):
             clusters, clusters_data = cluster_util.spicker_cluster(models,
                                                                    cluster_dir,
                                                                    cluster_method_type,
-                                                                   cluster_exe,
+                                                                   cluster_score_type,
                                                                    num_clusters,
                                                                    max_cluster_size,
-                                                                   cluster_score_type,
+                                                                   cluster_exe,
                                                                    self.nproc,
                                                                    score_matrix=self.cluster_score_matrix)
         else:
@@ -188,7 +187,7 @@ class Ensembler(_ensembler.Ensembler):
 
     def parse_cluster_method(self, cluster_method):
         """Return the cluster_method_type, cluster_score_type, cluster_exe from a generic cluster_method"""
-        cluster_score_type = 'tm'
+        cluster_score_type = 'rmsd'
         if cluster_method == 'fast_protein_cluster':
             cluster_method_type = 'fast_protein_cluster'
             cluster_exe = self.fast_protein_cluster_exe
@@ -205,6 +204,7 @@ class Ensembler(_ensembler.Ensembler):
         else:
             msg = "Unrecognised cluster_method: {0}".format(cluster_method)
             raise RuntimeError(msg)
+        _logger.debug('cluster_method_type: {0} cluster_score_type: {1} cluster_exe {2}'.format(cluster_method_type, cluster_score_type, cluster_exe))
         return cluster_method_type, cluster_score_type, cluster_exe
     
     def scwrl_models(self, models, work_dir, scwrl_exe):
@@ -407,11 +407,3 @@ class Ensembler(_ensembler.Ensembler):
             
         return subclusters, subclusters_data
 
-    def superpose_models(self, models, basename=None, work_dir=None, homologs=False):
-        run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
-        try:
-            run_theseus.superpose_models(models, basename=basename, homologs=homologs)
-        except Exception, e:
-            _logger.critical("Error running theseus: {0}".format(e))
-            return False
-        return run_theseus.superposed_models

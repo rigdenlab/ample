@@ -27,38 +27,6 @@ __date__ = "18.04.2013"
 
 LOGGER = logging.getLogger(__name__)
 
-def ensembler_factory(amoptd):
-    """Return an ensembler object for the required ensembles
-    
-    :returns: instantiated ensembler object
-    """
-    if amoptd['homologs']: 
-        ensemble_module = homologs
-    elif amoptd['single_model_mode']:
-        ensemble_module = single_model
-    else: 
-        ensemble_module = abinitio
-
-    # Paths to ensembling directories
-    ensembles_directory = os.path.join(amoptd['work_dir'], 'ensembles')
-    amoptd['ensembles_directory'] = ensembles_directory
-    work_dir = os.path.join(amoptd['work_dir'], 'ensemble_workdir')
-
-    return ensemble_module.Ensembler(
-                                    ensembles_directory=ensembles_directory,
-                                    ensemble_max_models=amoptd['ensemble_max_models'],
-                                    nproc=amoptd['nproc'],
-                                    work_dir=work_dir,
-                                    # Executables
-                                    fast_protein_cluster_exe=amoptd['fast_protein_cluster_exe'],
-                                    gesamt_exe=amoptd['gesamt_exe'],
-                                    lsqkab_exe=amoptd['lsqkab_exe'],
-                                    maxcluster_exe=amoptd['maxcluster_exe'],
-                                    scwrl_exe=amoptd['scwrl_exe'],
-                                    spicker_exe=amoptd['spicker_exe'],
-                                    theseus_exe=amoptd['theseus_exe'],
-                                    )
-
 def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for ensembling on a cluster"""
     # write out script
@@ -116,6 +84,38 @@ def create_ensembles(amoptd):
     # Delete all intermediate files if we're purging
     if amoptd['purge']: shutil.rmtree(ensembler.work_dir)
     return
+
+def ensembler_factory(amoptd):
+    """Return an ensembler object for the required ensembles
+    
+    :returns: instantiated ensembler object
+    """
+    if amoptd['homologs']: 
+        ensembler_class = homologs.HomologEnsembler
+    elif amoptd['single_model_mode']:
+        ensembler_class = single_model.SingleModelEnsembler
+    else: 
+        ensembler_class = abinitio.AbinitioEnsembler
+
+    # Paths to ensembling directories
+    ensembles_directory = os.path.join(amoptd['work_dir'], 'ensembles')
+    amoptd['ensembles_directory'] = ensembles_directory
+    work_dir = os.path.join(amoptd['work_dir'], 'ensemble_workdir')
+
+    return ensembler_class(
+                           ensembles_directory=ensembles_directory,
+                           ensemble_max_models=amoptd['ensemble_max_models'],
+                           nproc=amoptd['nproc'],
+                           work_dir=work_dir,
+                           # Executables
+                           fast_protein_cluster_exe=amoptd['fast_protein_cluster_exe'],
+                           gesamt_exe=amoptd['gesamt_exe'],
+                           lsqkab_exe=amoptd['lsqkab_exe'],
+                           maxcluster_exe=amoptd['maxcluster_exe'],
+                           scwrl_exe=amoptd['scwrl_exe'],
+                           spicker_exe=amoptd['spicker_exe'],
+                           theseus_exe=amoptd['theseus_exe'],
+                           )
 
 ################################################################################
 #
