@@ -79,7 +79,7 @@ def analyse(amoptd, newroot=None):
                                                                    amoptd['SIGF'])
     
     # Get the ensembling data
-    if not len(amoptd['ensembles_data']):
+    if 'ensembles_data' not in amoptd or not len(amoptd['ensembles_data']):
         _logger.critical("Benchmark cannot find any ensemble data!")
         return
 
