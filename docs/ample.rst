@@ -7,7 +7,7 @@ API Reference
 .. currentmodule:: ample
 
 .. autosummary::
-   :toctree: api/generated/
+   :toctree: generated
     
    ensembler
    modelling
