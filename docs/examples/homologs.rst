@@ -21,30 +21,14 @@ System-dependent example scripts to run AMPLE are shown below:
 UNIX (Linux|Mac)
 ^^^^^^^^^^^^^^^^
 
-.. code-block:: bash
-
-   #!/bin/bash
-
-   $CCP4/bin/ample \
-   -fasta input/3DCY.fasta \
-   -mtz input/3dcy-sf.mtz \
-   -homologs True \
-   -models input \
-   -nproc 8 \
+.. literalinclude:: /../examples/homologs/run.sh
+   :language: bash
 
 Windows
 ^^^^^^^
 
-.. code-block:: batch
-
-   REM Script to run toxd test case
-
-   %CCP4%\bin\ample.bat ^
-   -fasta input\3DCY.fasta ^
-   -mtz input\3dcy-sf.mtz ^
-   -homologs True ^
-   -models input ^
-   -nproc 8
+.. literalinclude:: /../examples/homologs/run.bat
+   :language: batch
 
 We need to provide the locations of our input files, this is done using the following flag:
 

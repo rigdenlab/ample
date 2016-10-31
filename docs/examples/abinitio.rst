@@ -29,35 +29,15 @@ System-dependent example scripts to run AMPLE are shown below:
 
 UNIX (Linux|Mac)
 ^^^^^^^^^^^^^^^^
-.. code-block:: bash
 
-   #!/bin/bash
-
-   # Path to the rosetta directory
-   rosetta_dir=/opt/rosetta-3.5
-
-   $CCP4/bin/ample \
-   -rosetta_dir $rosetta_dir \
-   -fasta input/toxd_.fasta \
-   -mtz input/1dtx.mtz \
-   -frags_3mers input/aat000_03_05.200_v1_3 \
-   -frags_9mers input/aat000_09_05.200_v1_3 \
-   -nmodels 30 \
-   -percent 50 \
-   -use_shelxe True \
-   -nproc 5
+.. literalinclude:: /../examples/toxd-example/run.sh
+   :language: bash
 
 Windows
 ^^^^^^^
-.. code-block:: batch
 
-    %CCP4%\bin\ample.bat ^
-    -fasta input\toxd_.fasta ^
-    -mtz input\1dtx.mtz ^
-    -percent 50 ^
-    -quick_mode True ^
-    -nproc 6 ^
-    -models ..\..\tests\testfiles\models
+.. literalinclude:: /../examples/toxd-example/run.bat
+   :language: batch
 
 First we set the path to the location where ROSETTA is installed. This is then input into ample using the ``-rosetta_dir`` flag.
 

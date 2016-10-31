@@ -27,36 +27,14 @@ System-dependent example scripts to run AMPLE are shown below:
 UNIX (Linux|Mac)
 ^^^^^^^^^^^^^^^^
 
-.. code-block:: bash
-
-   #!/bin/bash
-
-   # NMR ensembling example – 2LC9 is an ensemble model of a minor and transiently formed state of
-   # a T4 lysozyme mutant. The target 102l is X-ray data
-
-   $CCP4/bin/ample \
-   -mtz input/102l.mtz \
-   -fasta input/102L.fasta \
-   -name 102l \
-   -nmr_model_in input/2LC9.pdb \
-   -nmr_remodel False \
-   -quick_mode True
+.. literalinclude:: /../examples/nmr-truncate/run.sh
+   :language: bash
 
 Windows
 ^^^^^^^
 
-.. code-block:: batch
-
-   REM NMR ensembling example – 2LC9 is an ensemble model of a minor and transiently formed state of
-   REM a T4 lysozyme mutant. The target 102l is X-ray data
-
-   %CCP4%\bin\ample.bat ^
-   -mtz input\102l.mtz ^
-   -fasta input\102L.fasta ^
-   -name 102l ^
-   -nmr_model_in input\2LC9.pdb ^
-   -nmr_remodel False ^
-   -quick_mode True
+.. literalinclude:: /../examples/nmr-truncate/run.bat
+   :language: batch
 
 We need to provide the locations of our input files, this is done using the following flag:
 
