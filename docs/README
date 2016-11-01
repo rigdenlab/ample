@@ -22,7 +22,8 @@ The dependencies you require are:
 Luckily, these are installed in just a few steps. Open
 your command prompt or terminal and type the following:
 
-$ ccp4-python -m pip install sphinx sphinx-autobuild sphinx_rtd_theme sphinx_bootstrap_theme
+$ ccp4-python -m pip install sphinx sphinx-autobuild \
+      sphinx_rtd_theme sphinx_bootstrap_theme
 
 Then, you are ready to go. Generate the documentation from
 within the docs folder of AMPLE by using the following command:
