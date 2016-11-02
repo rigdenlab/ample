@@ -59,13 +59,15 @@ class Theseus(object):
             if not alignment_file: alignment_file = self.alignment_file(models)
             copy_models = [ os.path.join(self.work_dir,os.path.basename(m)) for m in models ]
             for orig, copy in zip(models, copy_models): shutil.copy(orig, copy)
+            models = copy_models
         
-        # -Z included so we don't line the models up to the principle axis and can compare the ensembles
-        #cmd = [ self.theseus_exe, '-a0', '-r', basename, '-Z', '-o', os.path.basename(copy_models[0]) ]
-        cmd = [ self.theseus_exe, '-a0', '-r', basename ]
+        # -Z included so we don't line the models up to the principle axis and -o so that they all line
+        # up with the first model
+        #cmd = [ self.theseus_exe, '-a0', '-r', basename ]
+        cmd = [ self.theseus_exe, '-a0', '-r', basename, '-Z', '-o', os.path.basename(models[0]) ]
         if homologs:
             cmd += [ '-A', alignment_file ]
-            cmd += [ os.path.basename(m) for m in copy_models ]
+            cmd += [ os.path.basename(m) for m in models ]
         else:
             cmd += [ os.path.relpath(m,self.work_dir) for m in models ]
         
