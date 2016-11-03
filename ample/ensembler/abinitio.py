@@ -302,7 +302,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                                       radius_thresholds=None):
         
         # Theseus only works with > 3 residues
-        if truncation.num_residues <= 2: return [], []
+        if truncation.num_residues <= 2: return []
         
         if not radius_thresholds: radius_thresholds = self.subcluster_radius_thresholds
         
