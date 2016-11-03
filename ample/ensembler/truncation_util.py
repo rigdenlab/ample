@@ -99,8 +99,6 @@ def calculate_residues_percent(var_by_res, percent_interval):
         thresh = variances[start]  # For the threshold we take the threshold of the most variable residue
         truncation_variances.append(thresh)
         truncation_levels.append(percent)
-        # print "GOT PERCENT,THRESH ",percent,thresh
-        # print "residues ",residues
         truncation_residues.append(sorted(residues))
         truncation_residue_idxs.append(sorted(idxs))
              

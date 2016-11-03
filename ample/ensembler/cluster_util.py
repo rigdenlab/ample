@@ -53,9 +53,9 @@ def import_cluster(cluster_dir):
     
     # Data on the cluster
     cluster = Cluster()
-    cluster.cluster_method = "import"
+    cluster.method = "import"
     cluster.num_clusters = 1
-    cluster.cluster_num = 1
+    cluster.index = 1
     cluster.models = cluster_models
     
     return [cluster]
@@ -126,9 +126,9 @@ def random_cluster(cluster_method, max_cluster_size, models, num_clusters):
         
         # Data on the models
         cluster = Cluster()
-        cluster.cluster_method = cluster_method
+        cluster.method = cluster_method
         cluster.num_clusters = num_clusters
-        cluster.cluster_num = i + 1
+        cluster.index = i + 1
         cluster.models = list(cmodels) # convert list back to set
         
         clusters.append(cluster)
