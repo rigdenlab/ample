@@ -148,7 +148,7 @@ class Cluster(object):
     
     @centroid.setter
     def centroid(self, model):
-        self._centroid = self._centroid
+        self._centroid = model
     
     @property
     def size(self):
@@ -203,9 +203,6 @@ class Ensemble(object):
         if pdb: self.from_pdb(pdb)
         return
 
-    def from_pdb(self, pdb):
-        raise NotImplementedError
-    
     def copy(self):
         return copy.deepcopy(self)
     
@@ -218,7 +215,7 @@ class Ensemble(object):
         return _str
 
 class Ensembler(object):
-    """Class to generate ensembles from ab inito models (all models must have same sequence).
+    """Class to generate ensembles from ab inito models (all models must have the same sequence).
     
     Attributes
     ----------
@@ -267,7 +264,7 @@ class Ensembler(object):
                  theseus_exe=None,
                  **kwargs
                  ):
-        """Set the variables required by all Ensemblers
+        """Set the variables required by all Ensemblers.
         
         Universal variables that are required by all Ensemblers are set on initialisation.
         These include things like the directory to store ensembles and the path to any executables
@@ -357,7 +354,12 @@ class Ensembler(object):
         homologs : bool
             True if these ensembles have been generated from homologs
         single_structure : bool
-            True if the ensemble was generated from a single structure      
+            True if the ensemble was generated from a single structure
+
+        Returns
+        -------
+        ensembles : :obj:`list`
+            A `list` of :obj:`Ensemble` objects    
         """
         ensembles = []
         if side_chain_treatments is None: side_chain_treatments=[UNMODIFIED]
@@ -441,7 +443,6 @@ class Ensembler(object):
         -------
         ensembles : :obj:`list`
             A `list` of :obj:`Ensemble` objects
-
         """
         raise NotImplementedError
 
