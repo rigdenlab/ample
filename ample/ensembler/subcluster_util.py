@@ -4,11 +4,8 @@
 @author: hlfsimko
 """
 
-import copy
 import logging
-import os
 import random
-import shutil
 
 _logger = logging.getLogger(__name__)
 
@@ -109,37 +106,4 @@ def subcluster_nmodels(nmodels, radius, clusterer, direction, increment):
         return subcluster_models, radius
         
     return subcluster_nmodels(nmodels, radius, clusterer, direction, increment)
-
-def subcluster_radius(models, radius, truncated_models_data):
-    # Extract data from dictionary
-    cluster_num = truncated_models_data['cluster_num']
-    truncation_level = truncated_models_data['truncation_level']
-    truncation_dir = truncated_models_data['truncation_dir']
-
-    # Got files so create the directories
-    subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
-    os.mkdir(subcluster_dir)
-    os.chdir(subcluster_dir)
-
-    basename = 'c{0}_t{1}_r{2}'.format(cluster_num, truncation_level, radius)
-    cluster_file = self.superpose_models(models)
-    if not cluster_file:
-        msg = "Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename,
-                                                                                            subcluster_dir)
-        _logger.critical(msg)
-        raise RuntimeError, msg
-    
-    ensemble = os.path.join(subcluster_dir, basename + '.pdb')
-    shutil.move(cluster_file, ensemble)
-
-    # The data we've collected is the same for all pdbs in this level so just keep using the first  
-    subcluster_data = copy.copy(truncated_models_data)
-    subcluster_data['subcluster_num_models'] = len(models)
-    subcluster_data['subcluster_radius_threshold'] = radius
-    subcluster_data['ensemble_pdb'] = ensemble
-
-    # Get the centroid model name from the list of files given to theseus - we can't parse
-    # the pdb file as theseus truncates the filename
-    subcluster_data['subcluster_centroid_model'] = os.path.abspath(models[0])
-    return ensemble, subcluster_data
 

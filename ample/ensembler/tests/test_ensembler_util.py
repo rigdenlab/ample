@@ -23,7 +23,7 @@ class Test(unittest.TestCase):
                  'cluster_method': 'spicker',
                  'num_clusters': 1,
                  'num_residues': 20,
-                 'percent_truncation': '10',
+                 'truncation_percent': '10',
                  'name': 'TEST_{0}'.format(i),
                  'side_chain_treatment': 'TEST',
                  'cluster_num_models': 31,

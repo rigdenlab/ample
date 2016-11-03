@@ -69,13 +69,11 @@ def create_ensembles(amoptd):
 
     # Run ensemble creation
     ensembles = ensembler.generate_ensembles_from_amoptd(models, amoptd)
-
+    
     ############################################################################
-    amoptd['ensembles'] = ensembles
-    amoptd['ensembles_data'] = ensembler.ensembles_data
-    amoptd['truncation_levels'] = ensembler.truncation_levels
-    amoptd['truncation_variances'] = ensembler.truncation_variances
-    amoptd['truncation_nresidues'] = ensembler.truncation_nresidues
+    # Hack to pull out the data - need to update code to work with ensemble objects rather than dictionaries
+    amoptd['ensembles'] = [e.pdb for e in ensembles]
+    amoptd['ensembles_data'] = [e.__dict__ for e in ensembles]
 
     # We need to let the main process know that we have succeeded as this module could be run on a cluster node with no link
     # to the parent process, so we create a file here indicating that we got this far and didn't die from an exception
@@ -128,12 +126,12 @@ def collate_cluster_data(ensembles_data):
     clusters = {}  # Loop through all ensemble data objects and build up a data tree
     cluster_method = None
     truncation_method = None
-    percent_truncation = None
+    truncation_percent = None
     side_chain_treatments = []
     for e in ensembles_data:
         if not cluster_method:
             cluster_method = e['cluster_method']
-            percent_truncation = e['percent_truncation']
+            truncation_percent = e['truncation_percent']
             truncation_method = e['truncation_method']
             # num_clusters = e['num_clusters']
         cnum = e['cluster_num']
@@ -160,7 +158,7 @@ def collate_cluster_data(ensembles_data):
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['name'] = e['name']
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['num_atoms'] = e['ensemble_num_atoms']
 
-    return clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments
+    return clusters, cluster_method, truncation_method, truncation_percent, side_chain_treatments
 
 def cluster_table_data(clusters, cluster_num, side_chain_treatments):
     # FIX TO IGNORE side_chain_treatments
@@ -186,7 +184,7 @@ def cluster_table_data(clusters, cluster_num, side_chain_treatments):
 def ensemble_summary(ensembles_data):
     """Print a summary of the ensembling process"""
 
-    clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments = collate_cluster_data(ensembles_data)
+    clusters, cluster_method, truncation_method, truncation_percent, side_chain_treatments = collate_cluster_data(ensembles_data)
     num_clusters = len(clusters)
 
     tableFormat = printTable.Table()
@@ -195,7 +193,7 @@ def ensemble_summary(ensembles_data):
     rstr += "----------------\n\n"
     rstr += "Cluster method: {0}\n".format(cluster_method)
     rstr += "Truncation method: {0}\n".format(truncation_method)
-    rstr += "Percent truncation: {0}\n".format(percent_truncation)
+    rstr += "Percent truncation: {0}\n".format(truncation_percent   )
     rstr += "Number of clusters: {0}\n".format(num_clusters)
 
     for cluster_num in sorted(clusters.keys()):

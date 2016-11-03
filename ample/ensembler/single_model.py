@@ -7,19 +7,18 @@
 """
 
 # System
-import copy
 import csv
 import logging
 import os
 
 # Custom
 from ample.ensembler import _ensembler
+from ample.ensembler import truncation_util
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util
 from ample.util import pdb_edit
 
 _logger = logging.getLogger(__name__)
-
 
 class SingleModelEnsembler(_ensembler.Ensembler):
     """Ensemble creator using on a single input structure and a corresponding
@@ -88,8 +87,6 @@ class SingleModelEnsembler(_ensembler.Ensembler):
                 "Not all column labels are in your CSV file"
         
         self.ensembles = []
-        self.ensembles_data = []
-        
         for score_key in truncation_scorefile_header:
             score_key = score_key.lower()
             zipped_scores = self._generate_residue_scorelist(residue_key, 
@@ -98,24 +95,32 @@ class SingleModelEnsembler(_ensembler.Ensembler):
 
             score_truncate_dir = os.path.join(truncate_dir, "{0}".format(score_key))
             if not os.path.isdir(score_truncate_dir): os.mkdir(score_truncate_dir)
-            
-            for truncated_model, truncated_model_data, truncated_model_dir in zip(*self.truncate_models(std_models,
-                                                                                                        truncation_pruning=truncation_pruning,
-                                                                                                        truncation_method=truncation_method,
-                                                                                                        percent_truncation=percent_truncation,
-                                                                                                        residue_scores=zipped_scores,
-                                                                                                        work_dir=score_truncate_dir)):
-                pre_ensemble = truncated_model[0]
-                pre_ensemble_data = copy.copy(truncated_model_data)
-                pre_ensemble_data['truncation_score_key'] = score_key.lower()
+
+            self.truncator = truncation_util.Truncator(work_dir=score_truncate_dir)
+            self.truncator.theseus_exe = self.theseus_exe
+            for truncation in self.truncator.truncate_models(models=std_models,
+                                                             truncation_method=truncation_method,
+                                                             percent_truncation=percent_truncation,
+                                                             truncation_pruning=truncation_pruning,
+                                                             residue_scores=zipped_scores):
+
+                # Create Ensemble object
+                pre_ensemble = _ensembler.Ensemble()
+                pre_ensemble.num_residues = truncation.num_residues
+                pre_ensemble.truncation_dir = truncation.directory
+                pre_ensemble.truncation_level = truncation.level
+                pre_ensemble.truncation_method = truncation.method
+                pre_ensemble.truncation_percent = truncation.percent
+                pre_ensemble.truncation_residues = truncation.residues
+                pre_ensemble.truncation_variance = truncation.variances
+                pre_ensemble.truncation_score_key = score_key.lower()
+                pre_ensemble.pdb = truncation.models[0]
                 
-                for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble,
-                                                                          pre_ensemble_data,
-                                                                          side_chain_treatments,
-                                                                          single_structure=True)):
+                for ensemble in self.edit_side_chains(pre_ensemble,
+                                                      side_chain_treatments,
+                                                      single_structure=True):
                     self.ensembles.append(ensemble)
-                    self.ensembles_data.append(ensemble_data)
-    
+
         return self.ensembles
 
     def generate_ensembles_from_amoptd(self, models, amoptd):

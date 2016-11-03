@@ -4,13 +4,13 @@
 @author: jmht
 """
 
-import copy
 import logging
 import os
 import shutil
 import sys
 
 from ample.ensembler import _ensembler
+from ample.ensembler import truncation_util
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util
 from ample.util import pdb_edit
@@ -155,34 +155,41 @@ class HomologEnsembler(_ensembler.Ensembler):
             
         # Now truncate and create ensembles - as standard ample, but with no subclustering
         self.ensembles = []
-        self.ensembles_data = []
-        for truncated_models, truncated_models_data, truncated_model_dir in zip(*self.truncate_models(std_models,
-                                                                                                      truncation_method=truncation_method,
-                                                                                                      truncation_pruning=None,
-                                                                                                      percent_truncation=percent_truncation,
-                                                                                                      homologs=True,
-                                                                                                      alignment_file=alignment_file,
-                                                                                                      work_dir=truncate_dir)):
-            tlevel = truncated_models_data['truncation_level']
-            ensemble_dir = os.path.join(truncated_model_dir, "ensemble_{0}".format(tlevel))
+        self.truncator = truncation_util.Truncator(work_dir=truncate_dir)
+        self.truncator.theseus_exe = self.theseus_exe
+        for truncation in self.truncator.truncate_models(models=std_models,
+                                                         truncation_method=truncation_method,
+                                                         percent_truncation=percent_truncation,
+                                                         truncation_pruning=None,
+                                                         homologs=True,
+                                                         alignment_file=alignment_file):
+            ensemble_dir = os.path.join(truncation.directory, "ensemble_{0}".format(truncation.level))
             os.mkdir(ensemble_dir)
             os.chdir(ensemble_dir)
              
             # Need to create an alignment file for theseus
-            basename = "e{0}".format(tlevel)
-            pre_ensemble = self.superpose_models(truncated_models, basename=basename, work_dir=ensemble_dir, homologs=True)
-            if not pre_ensemble:
+            basename = "e{0}".format(truncation.level)
+            superposed_models = self.superpose_models(truncation.models, basename=basename, work_dir=ensemble_dir, homologs=True)
+            if not superposed_models:
                 _logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
                 continue
-            pre_ensemble_data = copy.copy(truncated_models_data)
-             
-            for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble,
-                                                                      pre_ensemble_data,
-                                                                      side_chain_treatments,
-                                                                      homologs=True)):
+            
+            # Create Ensemble object
+            pre_ensemble = _ensembler.Ensemble()
+            pre_ensemble.num_residues = truncation.num_residues
+            pre_ensemble.truncation_dir = truncation.directory
+            pre_ensemble.truncation_level = truncation.level
+            pre_ensemble.truncation_method = truncation.method
+            pre_ensemble.truncation_percent = truncation.percent
+            pre_ensemble.truncation_residues = truncation.residues
+            pre_ensemble.truncation_variance = truncation.variances
+            pre_ensemble.pdb = superposed_models
+
+            for ensemble in self.edit_side_chains(pre_ensemble,
+                                                  side_chain_treatments,
+                                                  homologs=True):
                 self.ensembles.append(ensemble)
-                self.ensembles_data.append(ensemble_data)
-        
+                
         return self.ensembles
 
     def generate_ensembles_from_amoptd(self, models, amoptd):

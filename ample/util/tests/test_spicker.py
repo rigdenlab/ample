@@ -31,7 +31,7 @@ class Test(unittest.TestCase):
         spickerer = spicker.Spickerer(spicker_exe=self.spicker_exe)
         spickerer.cluster(models, run_dir=work_dir)
         # This with spicker from ccp4 6.5.010 on osx 10.9.5
-        names = sorted([os.path.basename(m) for m in spickerer.results[0].pdbs])
+        names = sorted([os.path.basename(m) for m in spickerer.results[0].models])
         ref = ['5_S_00000005.pdb', '4_S_00000005.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb',
                '4_S_00000003.pdb', '3_S_00000006.pdb', '3_S_00000004.pdb', '2_S_00000005.pdb',
                '2_S_00000001.pdb', '3_S_00000003.pdb', '1_S_00000005.pdb', '1_S_00000002.pdb',
@@ -39,7 +39,7 @@ class Test(unittest.TestCase):
         self.assertEqual(names, sorted(ref)) # seem to get different results on osx
         self.assertEqual(len(names), len(ref)) 
         # Centroid of third cluster
-        self.assertEqual(os.path.basename(spickerer.results[2].cluster_centroid), '5_S_00000006.pdb', 
+        self.assertEqual(os.path.basename(spickerer.results[2].centroid), '5_S_00000006.pdb', 
                          "WARNING: Spicker might run differently on different operating systems")
         shutil.rmtree(work_dir)
 

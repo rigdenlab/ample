@@ -5,7 +5,6 @@ Created on Apr 18, 2013
 '''
 
 # system imports
-import collections
 import copy
 import logging
 import os
@@ -14,16 +13,12 @@ import shutil
 
 # our imports
 from ample.ensembler.constants import ALLATOM, POLYALA, RELIABLE, UNMODIFIED
-from ample.ensembler import truncation_util
 from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import sequence_util
 from ample.util import theseus
 
 _logger = logging.getLogger(__name__)
-
-# Data structure to store residue information
-ScoreVariances = collections.namedtuple("ScoreVariances", ["idx", "resSeq", "variance"])
 
 def model_core_from_fasta(models, alignment_file, work_dir=None, case_sensitive=False):
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
@@ -134,9 +129,127 @@ def model_core_from_theseus(models, alignment_file, var_by_res, work_dir=None):
         
     return core_models
 
-class Ensembler(object):
-    """Class to generate ensembles from ab inito models (all models must have same sequence)
+class Cluster(object):
+    """Class to hold all data related to a cluster"""
+    def __init__(self):
+        self.cluster_method = None
+        self.index = None # index of the cluster in the list of clusters (counting from 1)
+        self.models = []
+        self.num_clusters = None # How many clusters there are in list of clusters
+        self.r_cen = []  # ordered list of the distance from the cluster centroid for each pdb (for Spicker)
+        self.score_type = None
+        
+        # This may be set if it's not the first model
+        self._centroid = None
     
+    @property
+    def centroid(self):
+        return self.models[0] if self._centroid is None else self._centroid
+    
+    @centroid.setter
+    def centroid(self, model):
+        self._centroid = self._centroid
+    
+    @property
+    def size(self):
+        return self.__len__()
+    
+    def __len__(self):
+        """Return the number of models in this cluster."""
+        return 0 if self.models is None else len(self.models)
+
+    def __str__(self):
+        """Return a string representation of this object."""
+        _str = super(Cluster, self).__str__() + "\n"
+        # Iterate through all attributes in order
+        for k in sorted(self.__dict__.keys()):
+            _str += "{0} : {1}\n".format(k, self.__dict__[k])
+        return _str
+    
+class Ensemble(object):
+    """Class to hold data relating to an ensemble of one or more molecular models"""
+    
+    def __init__(self, pdb=None):
+        
+        # ensemble info
+        self.name = None
+        self.pdb = None
+        self.side_chain_treatment = None
+        self.ensemble_num_atoms = None
+        
+        # cluster info
+        self.cluster_method = None
+        self.num_clusters = None
+        self.cluster_num = None
+        self.cluster_centroid = None
+        self.cluster_num_models = None
+        
+        # truncation info
+        self.truncation_dir = None
+        self.truncation_level = None
+        self.truncation_method = None
+        self.truncation_percent = None
+        self.truncation_residues = None
+        self.truncation_score_key = None
+        self.truncation_variance = None
+        self.num_residues = None
+    
+        # subclustering info
+        self.subcluster_centroid_model = None
+        self.subcluster_num_models = None
+        self.subcluster_radius_threshold = None
+        self.subcluster_score = None
+    
+        if pdb: self.from_pdb(pdb)
+        return
+
+    def from_pdb(self, pdb):
+        raise NotImplementedError
+    
+    def copy(self):
+        return copy.deepcopy(self)
+    
+    def __str__(self):
+        """Return a string representation of this object."""
+        _str = super(Ensemble, self).__str__() + "\n"
+        # Iterate through all attributes in order
+        for k in sorted(self.__dict__.keys()):
+            _str += "{0} : {1}\n".format(k, self.__dict__[k])
+        return _str
+
+class Ensembler(object):
+    """Class to generate ensembles from ab inito models (all models must have same sequence).
+    
+    Attributes
+    ----------
+    ensembles_directory : str
+        Path to the directory where the final ensembles will be stored. Should
+        be outside of work_dir so it won't be deleted on purging.
+    ensemble_max_models: int
+        The maximum number of models that will be included in an ensemble
+    nproc : int
+        The number of processors that each multi-core program will be run on.
+    work_dir : str
+        The working directory where all the processing takes place and all intermediary
+        files are kept. This may be deleted when AMPLE is run with the purge option.
+        
+    gesamt_exe : str
+        Path to an executable
+    fast_protein_cluster_exe : str
+        Path to an executable
+    lsqkab_exe : str
+        Path to an executable
+    maxcluster_exe : str
+        Path to an executable
+    mustang_exe : str
+        Path to an executable
+    scwrl_exe : str
+        Path to an executable
+    spicker_exe : str
+        Path to an executable
+    theseus_exe : str
+        Path to an executable
+        
     """
     def __init__(self,
                  ensembles_directory=None,
@@ -154,7 +267,43 @@ class Ensembler(object):
                  theseus_exe=None,
                  **kwargs
                  ):
-        """Set all variables required by all ensemblers"""
+        """Set the variables required by all Ensemblers
+        
+        Universal variables that are required by all Ensemblers are set on initialisation.
+        These include things like the directory to store ensembles and the path to any executables
+        that might be required by an Ensembler.
+        
+        Parameters
+        ----------
+        ensembles_directory : str
+            Path to the directory where the final ensembles will be stored. Should
+            be outside of work_dir so it won't be deleted on purging.
+        ensemble_max_models: int
+            The maximum number of models that will be included in an ensemble
+        nproc : int
+            The number of processors that each multi-core program will be run on.
+        work_dir : str
+            The working directory where all the processing takes place and all intermediary
+            files are kept. This may be deleted when AMPLE is run with the purge option.
+        gesamt_exe : str
+            Path to an executable
+        fast_protein_cluster_exe : str
+            Path to an executable
+        lsqkab_exe : str
+            Path to an executable
+        maxcluster_exe : str
+            Path to an executable
+        mustang_exe : str
+            Path to an executable
+        scwrl_exe : str
+            Path to an executable
+        spicker_exe : str
+            Path to an executable
+        theseus_exe : str
+            Path to an executable
+        **kwargs
+            Arbitrary keyword arguments.
+        """
         
         # For all
         self.nproc = nproc
@@ -189,42 +338,55 @@ class Ensembler(object):
         # ensembles
         self.ensemble_max_models = ensemble_max_models
         self.ensembles = None
-        self.ensembles_data = None
         
         return
             
-    def edit_side_chains(self, raw_ensemble, raw_ensemble_data, side_chain_treatments, 
-                         homologs=False, single_structure=False):
-        """Mutate side chains for the supplied all-atom ensembles"""
+    def edit_side_chains(self,
+                         raw_ensemble,
+                         side_chain_treatments=None, 
+                         homologs=False,
+                         single_structure=False):
+        """Mutate side chains for the supplied all-atom ensembles
+        
+        Parameters
+        ----------
+        raw_ensemble : :obj:`Ensemble`
+            Ensemble object referencing the model file and holding associated data
+        side_chain_treatments : :obj:`list`
+            A list of the side chain treatments to be applied
+        homologs : bool
+            True if these ensembles have been generated from homologs
+        single_structure : bool
+            True if the ensemble was generated from a single structure      
+        """
         ensembles = []
-        ensembles_data = []
         if side_chain_treatments is None: side_chain_treatments=[UNMODIFIED]
         for sct in side_chain_treatments:
-            ensemble_data = copy.copy(raw_ensemble_data)
-            ensemble_data['side_chain_treatment'] = sct
+            ensemble = raw_ensemble.copy()
+            ensemble.side_chain_treatment = sct
             if homologs:
-                ensemble_data['name'] = 'e{0}_{1}'.format(ensemble_data['truncation_level'], sct)
+                ensemble.name = 'e{0}_{1}'.format(ensemble.truncation_level, sct)
             elif single_structure:
-                ensemble_data['name'] = '{0}_t{1}_{2}'.format(ensemble_data['truncation_score_key'], 
-                                                              ensemble_data['truncation_level'], 
-                                                              sct)
+                ensemble.name = '{0}_t{1}_{2}'.format(ensemble.truncation_score_key, 
+                                                      ensemble.truncation_level, 
+                                                      sct)
             else:
-                ensemble_data['name'] = 'c{0}_t{1}_r{2}_{3}'.format(ensemble_data['cluster_num'],
-                                                                   ensemble_data['truncation_level'],
-                                                                   ensemble_data['subcluster_radius_threshold'],
-                                                                   sct)
+                ensemble.name = 'c{0}_t{1}_r{2}_{3}'.format(ensemble.cluster_num,
+                                                            ensemble.truncation_level,
+                                                            ensemble.subcluster_radius_threshold,
+                                                            sct)
             # create filename based on name and side chain treatment
             # fpath = ample_util.filename_append(raw_ensemble,astr=sct, directory=ensembles_directory)
-            fpath = os.path.join(self.ensembles_directory, "{0}.pdb".format(ensemble_data['name']))
+            fpath = os.path.join(self.ensembles_directory, "{0}.pdb".format(ensemble.name))
             
             # Create the files
             if sct == ALLATOM or sct == UNMODIFIED:
                 # For all atom just copy the file
-                shutil.copy2(raw_ensemble, fpath)
+                shutil.copy2(raw_ensemble.pdb, fpath)
             elif sct == RELIABLE:
-                pdb_edit.reliable_sidechains(raw_ensemble, fpath)
+                pdb_edit.reliable_sidechains(raw_ensemble.pdb, fpath)
             elif sct == POLYALA:
-                pdb_edit.backbone(raw_ensemble, fpath)
+                pdb_edit.backbone(raw_ensemble.pdb, fpath)
             else:
                 raise RuntimeError, "Unrecognised side_chain_treatment: {0}".format(sct)
             
@@ -232,32 +394,58 @@ class Ensembler(object):
             natoms, nresidues = pdb_edit.num_atoms_and_residues(fpath, first=True)
             
             # Process ensemble data
-            ensemble_data['ensemble_pdb'] = fpath
-            ensemble_data['ensemble_num_atoms'] = natoms
+            ensemble.pdb = fpath
+            ensemble.ensemble_num_atoms = natoms
             # check
-            assert ensemble_data['num_residues'] == nresidues, "Unmatching number of residues: {0} : {1} \n{2}".format(ensemble_data['num_residues'],
-                                                                                                                       nresidues,
-                                                                                                                       raw_ensemble_data)
-            ensembles.append(fpath)
-            ensembles_data.append(ensemble_data)
+            assert ensemble.num_residues == nresidues, "Unmatching number of residues: {0} : {1}".format(ensemble.num_residues,
+                                                                                                         nresidues)
+            ensembles.append(ensemble)
                 
-        return ensembles, ensembles_data
+        return ensembles
 
     def generate_ensembles(self, models, **kwargs):
         """Generate ensembles from models and supplied key word arguments.
-        
+
         Needs to be implemented in each class.
+        
+        Parameters
+        ----------
+        models : :obj:`list`
+            A list of the models to generate ensembles from
+        **kwargs
+            Arbitrary keyword arguments.
+            
+        Returns
+        -------
+        ensembles : :obj:`list`
+            A `list` of :obj:`Ensemble` objects
         """
         raise NotImplementedError
     
     def generate_ensembles_from_amoptd(self, models, amoptd):
         """Generate ensembles from data in supplied ample data dictionary.
         
-        Needs to be implemented in each class
+        Needs to be implemented in each class.
+        
+        This takes an AMPLE options dictionary and extracts the parameters
+        from it needed to call `generate_ensembles`.
+
+        Parameters
+        ----------
+        models : :obj:`list`
+            A list of the models to generate ensembles from
+        amoptd : :obj:`dict`
+            An instance of the AMPLE options dictionary.
+            
+        Returns
+        -------
+        ensembles : :obj:`list`
+            A `list` of :obj:`Ensemble` objects
+
         """
         raise NotImplementedError
 
-    def superpose_models(self, models, basename=None, work_dir=None, homologs=False):
+    def superpose_models(self, models, basename='theseus', work_dir=None, homologs=False):
         run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
         try:
             run_theseus.superpose_models(models, basename=basename, homologs=homologs)
@@ -265,143 +453,3 @@ class Ensembler(object):
             _logger.critical("Error running theseus: {0}".format(e))
             return False
         return run_theseus.superposed_models
-
-    def truncate_models(self,
-                        models,
-                        models_data={},
-                        max_cluster_size=200,
-                        truncation_method=None,
-                        percent_truncation=None,
-                        truncation_pruning=None,
-                        residue_scores=None,
-                        homologs=False,
-                        alignment_file=None,
-                        work_dir=None):
-        
-        assert (len(models) > 1 or residue_scores), "Cannot truncate as < 2 models!"
-        assert truncation_method and percent_truncation, "Missing arguments: {0}".format(truncation_method)
-
-        # Create the directories we'll be working in
-        assert work_dir and os.path.isdir(work_dir), "truncate_models needs a work_dir"
-        os.chdir(work_dir)
-        
-        # Calculate variances between pdb and align them (we currently only require the aligned models for homologs)
-        if truncation_method != "scores":
-            run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
-            try: run_theseus.superpose_models(models, homologs=homologs, alignment_file=alignment_file)
-            except RuntimeError as e:
-                _logger.critical(e)
-                return [],[]
-        
-        if homologs:
-            # If using homologs, now trim down to the core. We only do this here so that we are using the aligned models from
-            # theseus, which makes it easier to see what the truncation is doing.
-            models = model_core_from_fasta(run_theseus.aligned_models,
-                                           alignment_file=alignment_file,
-                                           work_dir=os.path.join(work_dir,'core_models'))
-            # Unfortunately Theseus doesn't print all residues in its output format, so we can't use the variances we calculated before and
-            # need to calculate the variances of the core models 
-            try: run_theseus.superpose_models(models, homologs=homologs, basename='homologs_core')
-            except RuntimeError as e:
-                _logger.critical(e)
-                return [],[]
-        
-        # No THESEUS variances required if scores for each residue provided
-        var_by_res = run_theseus.var_by_res() if truncation_method != "scores" \
-            else self._convert_residue_scores(residue_scores)
-            
-        if not len(var_by_res) > 0:
-            msg = "Error reading residue variances!"
-            _logger.critical(msg)
-            raise RuntimeError(msg)
-        
-        _logger.info('Using truncation method: {0}'.format(truncation_method))
-        # Calculate which residues to keep under the different methods
-        truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = None, None, None, None
-        if truncation_method == 'percent':
-            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = truncation_util.calculate_residues_percent(var_by_res, percent_truncation)
-        elif truncation_method == 'scores':
-            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = truncation_util.calculate_residues_percent(var_by_res, percent_truncation)
-        elif truncation_method == 'thresh':
-            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = truncation_util.calculate_residues_thresh(var_by_res, percent_truncation)
-        elif truncation_method == 'focussed':
-            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = truncation_util.calculate_residues_focussed(var_by_res)
-        else:
-            raise RuntimeError, "Unrecognised ensembling mode: {0}".format(truncation_method)
-        
-        self.truncation_levels = truncation_levels # save so we can put in results dict
-        self.truncation_variances = truncation_variances # save so we can put in results dict
-        self.truncation_nresidues = [len(r) for r in truncation_residues] # save so we can put in results dict
-        
-        # Use all models in cluster to calculate variance but then slice to max_cluster_size
-        #models = self._slice_models(models, 0, max_cluster_size)
-        
-        truncated_models = []
-        truncated_models_data = []
-        truncated_models_dirs = []
-        pruned_residues = None
-        for tlevel, tvar, tresidues, tresidue_idxs in zip(truncation_levels, 
-                                                          truncation_variances, 
-                                                          truncation_residues, 
-                                                          truncation_residue_idxs):
-            # Prune singletone/doubletone etc. residues if required
-            _logger.debug("truncation_pruning: {0}".format(truncation_pruning))
-            if truncation_pruning == 'single':
-                tresidue_idxs, pruned_residues=truncation_util.prune_residues(tresidue_idxs, chunk_size=1, allowed_gap=2)
-                if pruned_residues: _logger.debug("prune_residues removing: {0}".format(pruned_residues))
-            elif truncation_pruning is None:
-                pass
-            else:
-                raise RuntimeError("Unrecognised truncation_pruning: {0}".format(truncation_pruning))
-            
-            # Skip if there are no residues
-            if not tresidue_idxs:
-                _logger.debug("Skipping truncation level {0} with variance {1} as no residues".format(tlevel, tvar))
-                continue
-            
-            trunc_dir = os.path.join(work_dir, 'tlevel_{0}'.format(tlevel))
-            os.mkdir(trunc_dir)
-            _logger.info('Truncating at: {0} in directory {1}'.format(tlevel, trunc_dir))
-            
-            # list of models for this truncation level
-            level_models = []
-            for infile in models:
-                pdbout = ample_util.filename_append(infile, str(tlevel), directory=trunc_dir)
-                # Loop through PDB files and create new ones that only contain the residues left after truncation
-                pdb_edit.select_residues(pdbin=infile, pdbout=pdbout, tokeep_idx=tresidue_idxs)
-                level_models.append(pdbout)
-            
-            # Add the model
-            truncated_models.append(level_models)
-            truncated_models_dirs.append(trunc_dir)
-
-            # Add the data
-            model_data = copy.copy(models_data)
-            model_data['truncation_level'] = tlevel
-            model_data['truncation_variance'] = tvar
-            model_data['truncation_residues'] = tresidues
-            model_data['num_residues'] = len(tresidues)
-            model_data['truncation_dir'] = trunc_dir
-            model_data['percent_truncation'] = percent_truncation
-            model_data['truncation_method'] = truncation_method
-            model_data['truncation_pruning'] = truncation_pruning
-            model_data['pruned_residues'] = pruned_residues
-            
-            truncated_models_data.append(model_data)
-            
-        return truncated_models, truncated_models_data, truncated_models_dirs
-    
-    @staticmethod
-    def _convert_residue_scores(residue_scores):
-        """Create named tuple to match store residue data"""
-        scores = [ScoreVariances(idx=int(res)-1,    # Required to match Theseus
-                                 resSeq=int(res),
-                                 variance=float(sco)) \
-                      for (res, sco) in residue_scores]
-        return scores
-    
-    @staticmethod
-    def _slice_models(data, start, end):
-        """Allows us to slice a list"""
-        return data[start:end]
-

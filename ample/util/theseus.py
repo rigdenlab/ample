@@ -14,8 +14,14 @@ from ample.util import sequence_util
 # We create this here otherwise it causes problems with pickling
 TheseusVariances = collections.namedtuple('TheseusVariances', ['idx', 'resName', 'resSeq', 'variance', 'stdDev', 'rmsd', 'core'])
 
+_logger = logging.getLogger(__name__)
+
 class Theseus(object):
+    """Class to run THESEUS to superpose pdb files and determine the per-residue variances.
     
+    .. _THESEUS website:
+        http://www.theseus3d.org/
+    """
     def __init__(self, work_dir=None, theseus_exe=None):
 
         if theseus_exe is None:
@@ -23,9 +29,10 @@ class Theseus(object):
         if theseus_exe is None or not os.path.exists(theseus_exe) and os.access(theseus_exe, os.X_OK):
             raise RuntimeError,"Cannot find theseus_exe: {0}".format(theseus_exe)
         self.theseus_exe = theseus_exe
-        self.logger = logging.getLogger()
         self.work_dir = None
+        self.var_by_res = None
         self.variance_log = None
+        self.variance_log_test = None # For mocking up a test
         self.superposed_models = None
         self.aligned_models = None
         self._set_work_dir(work_dir)
@@ -48,9 +55,30 @@ class Theseus(object):
         all_seq.write_fasta(alignment_file,pdbname=True)
         return alignment_file
 
-    def superpose_models(self, models, work_dir=None, basename=None, homologs=False, alignment_file=None):
+    def superpose_models(self, models, work_dir=None, basename='theseus', homologs=False, alignment_file=None):
+        """Superpose models and return the ensemble. Also set superposed_models and var_by_res variables.
+        
+        This also sets the `superposed_models` and `var_by_res` parameters.
+
+        Parameters
+        ----------
+        models : :obj:`list`
+            List of pdb files to be superposed.
+        work_dir: str
+            The directory to run theseus in and generate all the output files
+        basename : str
+            The stem that will be used to name all files
+        homologs : bool
+            True if the pdbs are homologous models as opposed to ab initio ones
+        alignment_file : str
+            An externally generated alignment file for homolgous models in FASTA format
+            
+        Returns
+        -------
+        superposed_models : a pdb file containing an ensemble of the superposed models 
+        
+        """
         self._set_work_dir(work_dir)
-        if not basename: basename = 'theseus'
         if homologs:
             # Theseus expects all the models to be in the directory that it is run in as the string given in 
             # the fasta header is used to construct the file names of the aligned pdb files. If a full or 
@@ -69,18 +97,21 @@ class Theseus(object):
             cmd += [ '-A', alignment_file ]
             cmd += [ os.path.basename(m) for m in models ]
         else:
-            cmd += [ os.path.relpath(m,self.work_dir) for m in models ]
+            # Not sure why we had relpath - fails some of the tests so changing
+            #cmd += [ os.path.relpath(m,self.work_dir) for m in models ]
+            cmd += models
         
         self.theseus_log = os.path.join(self.work_dir,"tlog_{0}.log".format(basename))
+        _logger.critical("GOT CMD {0} {1} {2}".format(cmd,self.theseus_log, basename))
         retcode = ample_util.run_command(cmd,
                                          logfile = self.theseus_log,
                                          directory = self.work_dir)
         if retcode != 0:
             msg = "non-zero return code for theseus in superpose_models!\n See log: {0}".format(self.theseus_log)
-            self.logger.critical(msg)
+            _logger.critical(msg)
             raise RuntimeError, msg
         
-        self.variance_file = os.path.join(self.work_dir,'{0}_variances.txt'.format(basename))
+        self.variance_log = os.path.join(self.work_dir,'{0}_variances.txt'.format(basename))
         self.superposed_models = os.path.join(self.work_dir,'{0}_sup.pdb'.format(basename))
         if homologs:
             # Horrible - need to rename the models so that they match the names in the alignment file
@@ -91,19 +122,26 @@ class Theseus(object):
                 os.unlink(m)
                 os.rename(aligned_model, os.path.join(self.work_dir,mb))
                 self.aligned_models.append(mb)
-        
+            
+        # Set the variances
+        self.var_by_res = self.parse_variances()
         return self.superposed_models
     
-    def parse_variances(self, variance_file):
-        if not os.path.isfile(variance_file): raise RuntimeError,"Cannot find theseus variance file: {0}".format(variance_file)
-        data = []
-        
-        with open(variance_file) as f:
+    def parse_variances(self):
+        # The variance_log_test variable may be set if we are mocking out the variances for testing  
+        if self.variance_log_test:
+            variance_log = self.variance_log_test
+        else:
+            variance_log = self.variance_log
+            
+        if not os.path.isfile(variance_log): raise RuntimeError,"Cannot find theseus variance log: {0}".format(variance_log)
+        var_by_res = []
+        with open(variance_log) as f:
             for i, line in enumerate(f):
                 # Skip header
                 if i==0: continue
 
-                line=line.strip()
+                line = line.strip()
                 if not line: continue # Skip blank lines
 
                 #print line
@@ -127,24 +165,13 @@ class Theseus(object):
                     idxCore = 6
                 
                 # Core may or may not be there
-                core = False
-                if len(tokens) > idxCore and tokens[idxCore] == 'CORE': core = True
-                data.append( TheseusVariances( idx = int(tokens[idxidx]) - 1, # Theseus counts from 1, we count from 0,
+                isCore = False
+                if len(tokens) > idxCore and tokens[idxCore] == 'CORE': isCore = True
+                var_by_res.append( TheseusVariances( idx = int(tokens[idxidx]) - 1, # Theseus counts from 1, we count from 0,
                                                resName = tokens[idxResName],
                                                resSeq = int(tokens[idxResSeq]),
                                                variance = float(tokens[idxVariance]),
                                                stdDev = float(tokens[idxStdDev]),
                                                rmsd = float(tokens[idxRmsd]),
-                                               core = core ) )
-        return data
-
-    def var_by_res(self, core=False):
-        """Return a namedtuple with variance data"""
-        if not os.path.isfile(self.variance_file):
-            raise RuntimeError,"Cannot find theseus variance file: {0} Please check the log: {1}".format(self.variance_file, self.theseus_log)
-        var_by_res = self.parse_variances(self.variance_file)
-        if core:
-            return [v for v in var_by_res if v.core]
-        else:
-            return var_by_res
-
+                                               core = isCore ) )
+        return var_by_res

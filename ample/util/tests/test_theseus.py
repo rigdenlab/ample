@@ -33,7 +33,7 @@ class Test(unittest.TestCase):
         homologs = False
         rtheseus = theseus.Theseus(work_dir=work_dir,theseus_exe=self.theseus_exe)
         rtheseus.superpose_models(models,homologs=homologs)
-        var_by_res = rtheseus.var_by_res()
+        var_by_res = rtheseus.var_by_res
         ref = [(0, 1, 55.757593), (1, 2, 46.981238), (2, 3, 47.734236), (3, 4, 39.857326), (4, 5, 35.477433),
                (5, 6, 26.066719), (6, 7, 24.114493), (7, 8, 24.610988), (8, 9, 21.187142), (9, 10, 21.882375),
                (10, 11, 21.622263), (11, 12, 18.680601), (12, 13, 16.568074), (13, 14, 14.889583), (14, 15, 13.889769),
@@ -69,7 +69,7 @@ class Test(unittest.TestCase):
         homologs = True
         rtheseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
         rtheseus.superpose_models(models, homologs=homologs)
-        var_by_res = rtheseus.var_by_res()
+        var_by_res = rtheseus.var_by_res
         # Below with theseus 3.1.1 on osx 10.9.5
         ref  = [(0, 243, 8.049061), (1, 244, 2.614031), (2, 245, 1.343609), (3, 246, 2.261761), (4, 247, 1.112115),
                 (5, 248, 0.574936), (6, 249, 0.03114), (7, 250, 0.002894), (8, 251, 0.002314), (9, 252, 0.002174),
