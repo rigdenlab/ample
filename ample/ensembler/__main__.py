@@ -86,6 +86,7 @@ try:
         # Hack - we'll be using gesamt to subcluster so it's not worth wiring in the stuff to
         # find maxcluster so we just assume it's there
         optd['maxcluster_exe'] = ample_util.find_exe('maxcluster')
+        optd['theseus_exe'] = ample_util.find_exe('theseus')
         optd['ensemble_ok'] = os.path.join(optd['work_dir'],'ensemble.ok')
         optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
     create_ensembles(optd)
