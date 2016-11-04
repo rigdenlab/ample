@@ -164,7 +164,7 @@ class Test(unittest.TestCase):
                     'mustang_exe' : os.path.abspath('mustang.exe'),
                     'rosetta_dir' : os.path.abspath('rosetta_directory'),
                     'rosetta_fragments_exe' : os.path.abspath('bar.exe'),
-                    'rosetta_abinitiorelax' :os.path.abspath('rosetta_ab_relax'),
+                    'rosetta_AbinitioRelax' :os.path.abspath('rosetta_ab_relax'),
                     'scwrl_exe' : os.path.abspath('scwrl.exe'),
                     'shelxe_exe' : os.path.abspath('shelxe.exe'),
                     'spicker_exe' : os.path.abspath('spicker.exe'),
