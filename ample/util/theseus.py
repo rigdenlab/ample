@@ -102,7 +102,6 @@ class Theseus(object):
             cmd += models
         
         self.theseus_log = os.path.join(self.work_dir,"tlog_{0}.log".format(basename))
-        _logger.critical("GOT CMD {0} {1} {2}".format(cmd,self.theseus_log, basename))
         retcode = ample_util.run_command(cmd,
                                          logfile = self.theseus_log,
                                          directory = self.work_dir)
