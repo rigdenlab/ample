@@ -102,6 +102,8 @@ class AMPLEConfigOptions(object):
     def __init__(self):
         
         self.d = {} # store all options here
+        
+        
         self.cmdline_opts = {}
         self.debug = False
         
@@ -215,6 +217,8 @@ class AMPLEConfigOptions(object):
         
     def _read_config_file(self, config_file):
         config = ConfigParser.SafeConfigParser()
+        # We need to make sure that the keys aren't converted to lower case on reading
+        config.optionxform = str
         config.read(config_file)
         
         for section in config.sections():
@@ -295,17 +299,21 @@ class AMPLEConfigOptions(object):
             pstr += "{0} : {1}\n".format(k, v)
         return pstr
     
-    def write_config_file(self):
+    def write_config_file(self, config_file=None):
         config = ConfigParser.SafeConfigParser()
-        self._write_config_file(config)
+        # We need to make sure that the keys aren't converted to lower case on writing
+        config.optionxform = str
+        self._update_config(config)
+        if config_file is None:
+            # Can be None for testing
+            config_file = os.path.join(self.d['work_dir'], self.d['name']+".ini")
         # Write config to job specific directory
-        self.d["out_config_file"] = f = os.path.join(self.d['work_dir'], 
-                                                     self.d['name']+".ini")
-        LOGGER.info("AMPLE configuration written to: {0}".format(f))
-        with open(f, "w") as out: config.write(out)
+        self.d["out_config_file"] = config_file
+        LOGGER.info("AMPLE configuration written to: {0}".format(config_file))
+        with open(config_file, "w") as out: config.write(out)
         return
     
-    def _write_config_file(self, config_parser):
+    def _update_config(self, config_parser):
         # Add all sections to the configparser
         for section in sorted(_SECTIONS_REFERENCE.keys()):
             if section.lower() == "no_config": continue

@@ -10,7 +10,7 @@ from ample.util import version
 
 __author__ = "Adam Simpkin & Felix Simkovic"
 
-class TestCases(unittest.TestCase):
+class Test(unittest.TestCase):
     MAX_DIFF = None
     
     @classmethod
@@ -186,6 +186,59 @@ class TestCases(unittest.TestCase):
                     }
         
         self.assertItemsEqual(options.d, expected)
+  
+    def test_roundtrip_config_file(self):
+        """Test we can read in and write out a config file with no changes"""
+        options = config_util.AMPLEConfigOptions()
+         
+        
+        # All files are run through abspath on reading by the config parser so we need to convert the names
+        # We can't test [Files] as these are hashed out on writing and ignored on reading
+        inputd = { 'nr' : os.path.abspath('nr'),
+                   'rosetta_db' : os.path.abspath('rosetta_db'),
+                   'blast_dir' : os.path.abspath('blast_dir'),
+                   'fast_protein_cluster_exe' : os.path.abspath('fpc.exe'),
+                  }
+        input_str = """[AMPLE_info]
+
+[Databases]
+nr = {nr}
+rosetta_db = {rosetta_db}
+
+[Executables]
+blast_dir = {blast_dir}
+fast_protein_cluster_exe = {fast_protein_cluster_exe}
+
+[Files]
+
+[Molecular_Replacement]
+F = None
+FREE = None
+arpwarp_cycles = 10
+ensemble_options = None
+
+[Unspecified]
+
+""".format(**inputd)
+        f1 = tempfile.NamedTemporaryFile("w", delete=False)
+        f1.write(input_str)
+        f1.close()
+        
+        # Read in the file from disk
+        options._read_config_file(f1.name)
+        
+        f2 = tempfile.NamedTemporaryFile("w", delete=False)
+        f2.close()
+        
+        # Write back out to disk
+        options.write_config_file(config_file=f2.name)
+        
+        # Read in and make sure the strings are the same
+        with open(f2.name) as f2: output_str = f2.read()
+        
+        self.assertItemsEqual(output_str, input_str)
+        os.unlink(f1.name)
+        os.unlink(f2.name)
         
     def test_read_config_opts(self):
         #Test read config options
