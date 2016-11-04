@@ -6,7 +6,6 @@ import imp
 import os
 import shutil
 import sys
-import tempfile
 
 from ample.constants import SHARE_DIR
 from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
