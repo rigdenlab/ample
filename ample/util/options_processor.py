@@ -2,7 +2,6 @@
 @author: jmht, hlfsimko
 """
 
-import cPickle
 import glob
 import logging
 import os
@@ -284,9 +283,9 @@ def process_options(optd):
     #
     #
     ###############################################################################
-    if self.d['shelxe_rebuild']:
-        self.d['shelxe_rebuild_arpwap'] = True
-        self.d['shelxe_rebuild_buccaneer'] = True
+    if optd['shelxe_rebuild']:
+        optd['shelxe_rebuild_arpwap'] = True
+        optd['shelxe_rebuild_buccaneer'] = True
     
     # Model building programs
     if optd['use_arpwarp']:
@@ -406,8 +405,8 @@ def process_options(optd):
         LOGGER.info('Not rebuilding in ARP/wARP')
     
     # cluster queueing
-    if self.d['submit_qtype']:
-        self.d['submit_qtype'] = self.d['submit_qtype'].upper()
+    if optd['submit_qtype']:
+        optd['submit_qtype'] = optd['submit_qtype'].upper()
     if optd['submit_cluster'] and not optd['submit_qtype']:
         msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
         exit_util.exit_error(msg)
