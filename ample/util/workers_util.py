@@ -213,8 +213,8 @@ def run_scripts_serial(job_scripts,
         script=job_scripts[0]
         name=os.path.splitext(os.path.basename(script))[0]
         logfile="{0}.log".format(name)
-        dir=os.path.dirname(script)
-        if chdir: os.chdir(dir)
+        wdir=os.path.dirname(script)
+        if chdir: os.chdir(wdir)
         rtn = ample_util.run_command([script], logfile=logfile)
         if rtn == 0: success = True
     return success
