@@ -6,12 +6,10 @@ Might end up somewhere else at somepoint.
 import cPickle
 import logging
 import os
-import platform
 import subprocess
 import sys
 import tarfile
 import tempfile
-import urllib
 import warnings
 import zipfile
 
