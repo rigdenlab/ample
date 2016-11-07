@@ -187,7 +187,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                         qtype=None,
                         num_array_jobs=None,
                         max_array_jobs=None,
-                        submit_pe_sge='#$ -pe mpi {0}',
+                        submit_pe_sge='mpi',
                         submit_pe_lsf='#BSUB -R "span[ptile={0}]"',
                         ):
         """
@@ -212,11 +212,11 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 if log_file: sh += ['#$ -o {0}\n'.format(log_file)]
             # jmht hack for morrigan
             #if nproc and nproc > 1: sh += ['#$ -pe threaded {0}\n'.format(nproc)]
-            if nproc and submit_pe_sge: sh += [submit_pe_sge.format(nproc) + os.linesep]
+            if nproc: sh += ['#$ -pe {0} {1}\n'.format(submit_pe_sge, nproc)]
             sh += ['\n']
         elif qtype=="LSF":
             assert not num_array_jobs,"Array jobs not supported yet for LSF"
-            if nproc and submit_pe_lsf: sh += [submit_pe_lsf.format(nproc) + os.linesep]
+            if nproc: sh += [submit_pe_lsf.format(nproc) + os.linesep]
             if job_time:
                 sh += ['#BSUB -W {0}\n'.format(job_time)]
             else:
