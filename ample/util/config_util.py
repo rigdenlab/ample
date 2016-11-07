@@ -168,7 +168,13 @@ class AMPLEConfigOptions(object):
         """
         Handle any top-level options that affect the overall running of AMPLE.
 
+        Notes
+        -----
         Any specific processing of options should be handled in ample/util/options_processor.py/process_options
+        
+        See Also
+        --------
+        options_processor
 
         """
         
