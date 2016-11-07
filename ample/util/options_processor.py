@@ -9,6 +9,7 @@ import os
 import shutil
 import sys
 
+from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import contacts_util
@@ -283,6 +284,9 @@ def process_options(optd):
     #
     #
     ###############################################################################
+    if self.d['shelxe_rebuild']:
+        self.d['shelxe_rebuild_arpwap'] = True
+        self.d['shelxe_rebuild_buccaneer'] = True
     
     # Model building programs
     if optd['use_arpwarp']:
@@ -308,7 +312,7 @@ def process_options(optd):
     #
     # Ensemble options
     #
-    if optd['cluster_method'] in ['spicker', 'spicker_qscore', 'spicker_tmscore']:
+    if optd['cluster_method'] in ['spicker', 'spicker_qscore', 'spicker_tm']:
         if not optd['spicker_exe']:
             optd['spicker_exe'] = 'spicker'  + ample_util.EXE_EXT
         try:
@@ -334,6 +338,14 @@ def process_options(optd):
         optd['theseus_exe'] = ample_util.find_exe(optd['theseus_exe'])
     except Exception:
         msg = "Cannot find theseus executable: {0}".format(optd['theseus_exe'])
+        exit_util.exit_error(msg)
+
+    if "side_chain_treatments" in optd and not optd["side_chain_treatments"]:
+        optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
+    unrecognised_sidechains = set(optd["side_chain_treatments"]).difference(SIDE_CHAIN_TREATMENTS)
+    if unrecognised_sidechains:
+        msg = "Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains)
+        LOGGER.critical(msg)
         exit_util.exit_error(msg)
     #
     # SCRWL - we always check for SCRWL as if we are processing QUARK models we want to add sidechains to them
@@ -394,6 +406,8 @@ def process_options(optd):
         LOGGER.info('Not rebuilding in ARP/wARP')
     
     # cluster queueing
+    if self.d['submit_qtype']:
+        self.d['submit_qtype'] = self.d['submit_qtype'].upper()
     if optd['submit_cluster'] and not optd['submit_qtype']:
         msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
         exit_util.exit_error(msg)

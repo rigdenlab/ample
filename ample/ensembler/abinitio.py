@@ -239,10 +239,10 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         if cluster_method == 'fast_protein_cluster':
             cluster_method_type = 'fast_protein_cluster'
             cluster_exe = self.fast_protein_cluster_exe
-        elif cluster_method in ['spicker', 'spicker_qm', 'spicker_tm']:
+        elif cluster_method in ['spicker', 'spicker_qscore', 'spicker_tm']:
             cluster_method_type = 'spicker'
             cluster_exe = self.spicker_exe
-            if cluster_method == 'spicker_qm':
+            if cluster_method == 'spicker_qscore':
                 cluster_score_type = 'read_matrix'
             elif cluster_method == 'spicker_tm':
                 cluster_score_type = 'tm'

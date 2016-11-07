@@ -12,8 +12,13 @@ from ample.parsers import alignment_parser
 from ample.parsers import tm_parser
 from ample.util import ample_util
 from ample.util import pdb_edit
-from Bio import PDB
-from Bio import SeqIO
+
+try:
+    from Bio import PDB
+    from Bio import SeqIO
+    BIOPYTHON_AVAILABLE = True
+except ImportError:
+    BIOPYTHON_AVAILABLE = False
 
 __author__ = "Felix Simkovic"
 __date__ = "28 July 2016"
@@ -21,6 +26,7 @@ __version__ = "2.0"
 
 LOGGER = logging.getLogger(__name__)
 
+TMSCORE_EXE = None
 
 class TMapps(object):
     """
@@ -288,7 +294,7 @@ class TMscore(TMapps):
         If a FASTA sequence is provided, a much more accurate comparison can be carried out. However, to by-pass this
         there is also an option to run the comparison without it. This might work just fine for larger models.
         """
-
+        if not BIOPYTHON_AVAILABLE: raise RuntimeError("Biopython is not available")
         # Check what we are comparing
         if structures and len(structures) == 1:
             LOGGER.info('Using single structure provided for all model comparisons')
@@ -513,6 +519,7 @@ class TMscore(TMapps):
             A list containing per residue information
 
         """
+        if not BIOPYTHON_AVAILABLE: raise RuntimeError("Biopython is not available")
         structure = PDB.PDBParser().get_structure("pdb", pdb)
 
         # Weird problem with get_...() methods if MODEL is not explicitly stated in
@@ -554,17 +561,19 @@ class TMscore(TMapps):
                 return int(line[5])
 
 
-def tm_available(app):
+def tm_available():
     """
-    Check if TM binary is available
+    Check if TM binary is available and set TMSCORE_EXE module variable.
 
     Returns
     -------
     bool
     """
+    exe_name = "TMscore" + ample_util.EXE_EXT
     try:
-        ample_util.find_exe(app)
+        TMSCORE_EXE = ample_util.find_exe(exe_name)
     except:
+        TMSCORE_EXE = None
         return False
     return True
 

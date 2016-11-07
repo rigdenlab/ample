@@ -9,7 +9,6 @@ import logging
 import os
 
 from ample.constants import AMPLE_CONFIG_FILE
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import version
 
 # Python 3.x --> ConfigParser renamed to configparser
@@ -166,6 +165,12 @@ class AMPLEConfigOptions(object):
         return config_file
      
     def _process_options(self):
+        """
+        Handle any top-level options that affect the overall running of AMPLE.
+
+        Any specific processing of options should be handled in ample/util/options_processor.py/process_options
+
+        """
         
         self.d['ample_version'] = version.__version__
         
@@ -174,22 +179,11 @@ class AMPLEConfigOptions(object):
         
         if "run_dir" in self.d and not self.d["run_dir"]:
             self.d["run_dir"] = os.getcwd()
-            
-        if "side_chain_treatments" in self.d and not self.d["side_chain_treatments"]:
-            self.d["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
         
         # Set full file paths
         for k, v in self.d.iteritems():
             if k in _SECTIONS_REFERENCE["Files"] and v:
                 self.d[k] = os.path.abspath(v)
-        
-        # Any changes here
-        if self.d['submit_qtype']:
-            self.d['submit_qtype'] = self.d['submit_qtype'].upper()
-        
-        if self.d['shelxe_rebuild']:
-            self.d['shelxe_rebuild_arpwap']=True
-            self.d['shelxe_rebuild_buccaneer']=True
         
         # Check if using any preset options
         if self.d['devel_mode']: self._preset_options('devel_mode')

@@ -31,11 +31,8 @@ _oldroot=None
 _newroot=None
 
 TMSCORE_AVAILABLE = True
-if not tm_util.tm_available("TMscore"):
+if not tm_util.tm_available():
     TMSCORE_AVAILABLE = False
-else:
-    TMSCORE = ample_util.find_exe("TMscore")
-
 
 def analyse(amoptd, newroot=None):
     if newroot:
@@ -141,7 +138,7 @@ def analyse(amoptd, newroot=None):
             # Calculation of TMscores for subcluster centroid models
             if TMSCORE_AVAILABLE:
                 try:
-                    tm = tm_util.TMscore(TMSCORE, wdir=fixpath(amoptd['benchmark_dir']))
+                    tm = tm_util.TMscore(tm_util.TMSCORE_EXE, wdir=fixpath(amoptd['benchmark_dir']))
                     _logger.info("Analysing subcluster centroid model with TMscore")
                     d['subcluster_centroid_model_TM'] = tm.compare_structures([d['subcluster_centroid_model']],
                                                                               [amoptd['native_pdb_std']],
@@ -449,7 +446,7 @@ def analyseModels(amoptd):
 #         print e
     if TMSCORE_AVAILABLE:
         try:
-            tm = tm_util.TMscore(TMSCORE, wdir=fixpath(amoptd['benchmark_dir']))
+            tm = tm_util.TMscore(tm_util.TMSCORE_EXE, wdir=fixpath(amoptd['benchmark_dir']))
             # Calculation of TMscores for all models
             _logger.info("Analysing Rosetta models with TMscore")
             model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
