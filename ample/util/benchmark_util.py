@@ -70,10 +70,13 @@ def analyse(amoptd, newroot=None):
 
     # Generate a mtz with phases from the native_pdb so that we can calculate phase errors
     if amoptd['native_pdb']:
-        amoptd['native_mtz_phased'] = cphasematch.place_native_pdb(amoptd['native_pdb'],
-                                                                   amoptd['mtz'],
-                                                                   amoptd['F'],
-                                                                   amoptd['SIGF'])
+        try:
+            amoptd['native_mtz_phased'] = cphasematch.place_native_pdb(amoptd['native_pdb'],
+                                                                       amoptd['mtz'],
+                                                                       amoptd['F'],
+                                                                       amoptd['SIGF'])
+        except Exception as e:
+            _logger.critical("Error phasing native pdb: {0}".format(e))
     
     # Get the ensembling data
     if 'ensembles_data' not in amoptd or not len(amoptd['ensembles_data']):
