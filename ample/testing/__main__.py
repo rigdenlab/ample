@@ -1,8 +1,12 @@
 """main routine for Ample testing"""
+import logging
 import os
 import sys
 from ample.util import exit_util
 from ample.testing import run_tests
+
+logging.basicConfig()
+logger = logging.getLogger()
 
 #############################################################################
 ## Multiprocessing crashes on Windows when running multiple jobs.
@@ -18,7 +22,8 @@ Please invoke using the following command:
 % ccp4-python {0}{1}run_tests.py <command> [<args>]                           
 *****************************************************************************
 """
-    print msg.format(os.path.dirname(__file__), os.sep)
+    msg.format(os.path.dirname(__file__), os.sep)
+    logger.critical(msg)
     sys.exit(1)
 
 #############################################################################
@@ -27,4 +32,5 @@ try:
     run_tests.main()
 except Exception as e:
     msg = "Error running Ample testsuite: {0}".format(e.message)
+    logger.critical(msg)
     exit_util.exit_error(msg, sys.exc_info()[2])

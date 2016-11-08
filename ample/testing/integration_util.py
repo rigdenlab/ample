@@ -3,6 +3,7 @@
 from unittest import TestCase, TestLoader, TextTestRunner, TestSuite
 import glob
 import imp
+import logging
 import os
 import shutil
 import sys
@@ -14,6 +15,8 @@ from ample.util import workers_util
 
 __author__ = "Felix Simkovic and Jens Thomas"
 __date__ = "25-Mar-2016"
+
+logger = logging.getLogger(__name__)
 
 # Available packages. Hard-coded for now to show visually what we have in
 # argparse module. Not needed otherwise
@@ -80,7 +83,7 @@ class AMPLEIntegrationFramework(object):
     def clean(self, clean_all=True, clean_dir=False):
         for name in self.test_dict.keys():
             os.chdir(self.run_dir)
-            print "Cleaning {0} in directory {1}".format(name, self.run_dir)
+            logger.info("Cleaning {0} in directory {1}".format(name, self.run_dir))
             work_dir = os.path.join(self.run_dir, name)
             if os.path.isdir(work_dir): shutil.rmtree(work_dir)
             logfile = work_dir + '.log'
@@ -93,7 +96,7 @@ class AMPLEIntegrationFramework(object):
     def run(self, nproc=1, submit_cluster=False, dry_run=False, clean_up=True, 
             rosetta_dir=None, extra_args=None, **kw):
         
-        print "Writing files to: {0}".format(self.run_dir)
+        logger.info("Writing files to: {0}".format(self.run_dir))
         
         if dry_run: 
             clean_up = False
@@ -109,9 +112,9 @@ class AMPLEIntegrationFramework(object):
         if not len(scripts):
             raise RuntimeError("Could not find any test cases to run!")
         
-        print "The following test cases will be run:"
+        logger.info("The following test cases will be run:")
         for name in self.test_dict.keys():
-            print "{0}: {1}".format(name, self.run_dir )
+            logger.info("{0}: {1}".format(name, self.run_dir))
         
         ## Run all the jobs
         # If we're running on a cluster, we run on as many processors as there are jobs, 
@@ -149,7 +152,7 @@ class AMPLEIntegrationFramework(object):
             # We track different modules using the name of the test case
             ensembler = True if name.startswith('ensembler') else False
             if ensembler and sys.platform.startswith('win'):
-                print "Cannot run ensemble module on windows due to multiprocessing bug"
+                logger.critical("Cannot run ensemble module on windows due to multiprocessing bug")
                 continue
             
             script = self.write_script(work_dir,  args + [['-work_dir', work_dir]], ensembler=ensembler)
@@ -246,12 +249,12 @@ class SuiteLoader(object):
         try:
             mfile, pathname, desc = imp.find_module(mod_name, paths)
         except ImportError:
-            print "Cannot find test module in {1}".format(mod_name, paths)
+            logger.critical("Cannot find test module in {1}".format(mod_name, paths))
             return None
         try:
             test_module = imp.load_module(mod_name, mfile, pathname, desc)
         except Exception as e:
-            sys.stderr.write("Error loading test case from directory: {0}\n {1}\n".format(paths, e))
+            logger.critical("Error loading test case from directory: {0}\n {1}\n".format(paths, e))
             raise Exception(e)
         finally:
             mfile.close()
