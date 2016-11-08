@@ -223,6 +223,9 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                   'subcluster_program' : amoptd['subcluster_program'],
                   'truncation_pruning' : amoptd['truncation_pruning'],
                   'use_scwrl' : amoptd['use_scwrl']}
+
+        # strip out any that are None
+        kwargs = { k : v for k, v in kwargs.iteritems() if v is not None }
         
         ensembles = self.generate_ensembles(models, **kwargs)
         

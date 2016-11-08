@@ -131,6 +131,8 @@ class SingleModelEnsembler(_ensembler.Ensembler):
                   'truncation_pruning' : amoptd['truncation_pruning'],
                   'truncation_scorefile' : amoptd['truncation_scorefile'],
                   'truncation_scorefile_header' : amoptd['truncation_scorefile_header']}
+        # strip out any that are None
+        kwargs = { k : v for k, v in kwargs.iteritems() if v is not None }
         return self.generate_ensembles(models, **kwargs)
 
     # staticmethod so that we can test without instantiating an Ensembler

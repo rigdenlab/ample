@@ -198,5 +198,7 @@ class HomologEnsembler(_ensembler.Ensembler):
                   'truncation_method' : amoptd['truncation_method'],
                   'alignment_file' : amoptd['alignment_file'],
                   'homolog_aligner' : amoptd['homolog_aligner']}
+        # strip out any that are None
+        kwargs = { k : v for k, v in kwargs.iteritems() if v is not None }
         return self.generate_ensembles(models, **kwargs)
 
