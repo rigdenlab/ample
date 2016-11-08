@@ -1,5 +1,11 @@
 #!/usr/bin/env ccp4-python
 
+from __future__ import division
+
+__author__ = "Felix Simkovic"
+__date__ = "28 Jul 2016"
+__version__ = 2.0
+
 import itertools
 import logging
 import operator
@@ -7,6 +13,7 @@ import os
 import random
 import string
 import sys
+import warnings
 
 from ample.parsers import alignment_parser
 from ample.parsers import tm_parser
@@ -20,13 +27,11 @@ try:
 except ImportError:
     BIOPYTHON_AVAILABLE = False
 
-__author__ = "Felix Simkovic"
-__date__ = "28 July 2016"
-__version__ = "2.0"
-
-LOGGER = logging.getLogger(__name__)
 
 TMSCORE_EXE = None
+
+logger = logging.getLogger(__name__)
+
 
 class TMapps(object):
     """
@@ -74,7 +79,7 @@ class TMapps(object):
                 self.executable = ample_util.find_exe(executable)
             except:
                 msg = "Cannot find provided executable: {0}".format(executable)
-                LOGGER.critical(msg)
+                logger.critical(msg)
                 raise RuntimeError(msg)
 
         return
@@ -99,16 +104,16 @@ class TMapps(object):
         if len(models) < 1 or len(structures) < 1:
             msg = 'No model structures provided' if len(models) < 1 else \
                 'No reference structures provided'
-            LOGGER.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
 
         elif len(structures) == 1:
-            LOGGER.info('Using single structure provided for all model comparisons')
+            logger.info('Using single structure provided for all model comparisons')
             structures = [structures[0] for _ in xrange(len(models))]
 
         elif len(models) != len(structures):
             msg = "Unequal number of models and structures"
-            LOGGER.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
 
         # Create a logfile parser
@@ -118,15 +123,15 @@ class TMapps(object):
             pt = tm_parser.TMscoreLogParser()
         else:
             msg = "Invalid method selected: ", self.method
-            LOGGER.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
 
         # =======================================================================
         # Iterate through the structure files and execute the TMscore comparisons
         # =======================================================================
 
-        LOGGER.info('Using algorithm: {0}'.format(self.method))
-        LOGGER.info('-------Evaluating decoys/models-------')
+        logger.info('Using algorithm: {0}'.format(self.method))
+        logger.info('-------Evaluating decoys/models-------')
         entries = []
 
         for model_pdb, structure_pdb in zip(models, structures):
@@ -134,13 +139,13 @@ class TMapps(object):
             model_name = os.path.splitext(os.path.basename(model_pdb))[0]
             structure_name = os.path.splitext(os.path.basename(structure_pdb))[0]
 
-            LOGGER.debug("Working on: {0} - {1}".format(model_name, structure_name))
+            logger.debug("Working on: {0} - {1}".format(model_name, structure_name))
 
             if not os.path.isfile(model_pdb):
-                LOGGER.warning("Cannot find: {0}".format(model_pdb))
+                logger.warning("Cannot find: {0}".format(model_pdb))
                 continue
             elif not os.path.isfile(structure_pdb):
-                LOGGER.warning("Cannot find: {0}".format(structure_pdb))
+                logger.warning("Cannot find: {0}".format(structure_pdb))
                 continue
 
             # TODO: Spawn the jobs across a number of CPUs. ample_util.workers_util.run_scripts() maybe?
@@ -156,7 +161,7 @@ class TMapps(object):
                 pt.parse(log)
             except Exception:
                 msg = "Issues processing the {0} log file: {1}".format(self.method, log)
-                LOGGER.critical(msg)
+                logger.critical(msg)
                 log = "None"
 
             _entry = self._store(model_name, structure_name, model_pdb, structure_pdb, log, pt)
@@ -179,10 +184,10 @@ class TMapps(object):
         """
         # Use different itertools functions depending on the comparison type
         if all_vs_all:
-            LOGGER.info("All-vs-all comparison of models and structures")
+            logger.info("All-vs-all comparison of models and structures")
             iterator = itertools.product     # yields an iterator of all unique combinations
         else:
-            LOGGER.info("Direct comparison of models and structures")
+            logger.info("Direct comparison of models and structures")
             iterator = itertools.izip        # yields a zipped iterator
         return iterator
 
@@ -204,6 +209,39 @@ class TMapps(object):
             data_storage['seq_id'] = pt.seq_id
 
         return data_storage
+
+    @staticmethod
+    def binary_avail(binary):
+        """Check if TM binary is available
+
+        Paramaters
+        ----------
+        binary : str
+           The binary name of `TMscore` or `TMalign`
+
+        Returns
+        -------
+        bool
+        
+        Raises
+        ------
+        ValueError
+           The binary is not `TMalign` or `TMscore`
+
+        """
+        if binary.lower() == 'tmalign':
+            exe_name = "TMalign" + ample_util.EXE_EXT
+        elif binary.lower() == 'tmscore':
+            exe_name = "TMscore" + ample_util.EXE_EXT
+        else:
+            raise ValueError('Provide one of TMalign or TMscore')
+
+        try:
+            TMSCORE_EXE = ample_util.find_exe(exe_name)
+        except:
+            TMSCORE_EXE = None
+            return False
+        return True
 
 
 class TMalign(TMapps):
@@ -240,7 +278,7 @@ class TMalign(TMapps):
         """
         # Check what we are comparing
         if len(structures) == 1:
-            LOGGER.info('Using single structure provided for all model comparisons')
+            logger.info('Using single structure provided for all model comparisons')
             structures = [structures[0] for _ in xrange(len(models))]
 
         # The models parsed forward to the comparison
@@ -297,11 +335,11 @@ class TMscore(TMapps):
         if not BIOPYTHON_AVAILABLE: raise RuntimeError("Biopython is not available")
         # Check what we are comparing
         if structures and len(structures) == 1:
-            LOGGER.info('Using single structure provided for all model comparisons')
+            logger.info('Using single structure provided for all model comparisons')
             structures = [structures[0] for _ in xrange(len(models))]
 
         if fastas and len(fastas) == 1:
-            LOGGER.info('Using single FASTA provided for all model comparisons')
+            logger.info('Using single FASTA provided for all model comparisons')
             fastas = [fastas[0] for _ in xrange(len(models))]
 
         # The models parsed forward to the comparison
@@ -346,7 +384,7 @@ class TMscore(TMapps):
 
                 if len(model_aln) != len(structure_aln):
                     msg = "Unequal lengths of your model and structure sequences"
-                    LOGGER.critical(msg)
+                    logger.critical(msg)
                     raise RuntimeError(msg)
 
                 # Modify the structures based on the aligned sequences
@@ -375,7 +413,7 @@ class TMscore(TMapps):
 
                 if len(model_aln) != len(structure_aln):
                     msg = "Unequal lengths of your model and structure sequences"
-                    LOGGER.critical(msg)
+                    logger.critical(msg)
                     raise RuntimeError(msg)
 
                 # Modify the structures based on the aligned sequences
@@ -433,7 +471,7 @@ class TMscore(TMapps):
         # Check if the files we are to create for comparison do not exist
         if os.path.isfile(model_pdb_ret) or os.path.isfile(structure_pdb_ret):
             msg = "Comparison structures exist. Move, delete or rename before continuing"
-            LOGGER.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
 
         # Create temporary files
@@ -478,7 +516,7 @@ class TMscore(TMapps):
         # Make sure our structures contain the same residues with correct indeces
         if set(_model_data) != set(_structure_data):
             msg = "Structure file modification did not work. Affected PDBs {0} - {1}".format(model_name, structure_name)
-            LOGGER.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
 
         # Remove the temporary files
@@ -531,7 +569,7 @@ class TMscore(TMapps):
                     hetero, res_seq, _ = residue.get_id()
 
                     if hetero.strip():
-                        LOGGER.debug("Hetero atom detected in {0}: {1}".format(pdb, res_seq))
+                        logger.debug("Hetero atom detected in {0}: {1}".format(pdb, res_seq))
                         continue
 
                     resname_three = residue.resname
@@ -569,6 +607,8 @@ def tm_available():
     -------
     bool
     """
+    warnings.warn("This method will be deprecated in future releases. Use `TMapps.binary_avail()` instead.", DeprecationWarning)
+
     exe_name = "TMscore" + ample_util.EXE_EXT
     try:
         TMSCORE_EXE = ample_util.find_exe(exe_name)
@@ -615,7 +655,7 @@ def main():
         df = pandas.pandas.DataFrame(data=entries)
         df.sort_values("tmscore", inplace=True, ascending=False)
         df.reset_index(drop=True)
-        LOGGER.info("Results table:\n{0}".format(df[["model_name", "structure_name", "tmscore"]].to_string()))
+        logger.info("Results table:\n{0}".format(df[["model_name", "structure_name", "tmscore"]].to_string()))
         df.to_csv("tm_results.csv")
 
     return entries
