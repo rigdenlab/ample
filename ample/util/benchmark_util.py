@@ -25,10 +25,11 @@ from ample.util import rio
 from ample.util import shelxe
 from ample.util import tm_util
 
-_logger=logging.getLogger()
+logger = logging.getLogger()
 
-_oldroot=None
-_newroot=None
+_oldroot = None
+_newroot = None
+_MAXCLUSTERER = None
 
 TMSCORE_AVAILABLE = True
 if not tm_util.tm_available():
@@ -59,7 +60,7 @@ def analyse(amoptd, newroot=None):
             amoptd['import_ensembles'] or amoptd['single_model_mode']):
         analyseModels(amoptd)
     
-#     _logger.info("Benchmark: generating naitive density map")
+#     logger.info("Benchmark: generating naitive density map")
 #     # Generate map so that we can do origin searching
 #     amoptd['native_density_map']=phenixer.generateMap(amoptd['mtz'],
 #                                                      amoptd['native_pdb'],
@@ -76,11 +77,11 @@ def analyse(amoptd, newroot=None):
                                                                        amoptd['F'],
                                                                        amoptd['SIGF'])
         except Exception as e:
-            _logger.critical("Error phasing native pdb: {0}".format(e))
+            logger.critical("Error phasing native pdb: {0}".format(e))
     
     # Get the ensembling data
     if 'ensembles_data' not in amoptd or not len(amoptd['ensembles_data']):
-        _logger.critical("Benchmark cannot find any ensemble data!")
+        logger.critical("Benchmark cannot find any ensemble data!")
         return
 
     # Get dict of ensemble name -> ensemble result
@@ -88,7 +89,7 @@ def analyse(amoptd, newroot=None):
                     
     # Get mrbump_results for cluster
     if 'mrbump_results' not in amoptd or not len(amoptd['mrbump_results']):
-        _logger.critical("Benchmark cannot find any mrbump results!")
+        logger.critical("Benchmark cannot find any mrbump results!")
         return
     
     data=[]
@@ -135,20 +136,20 @@ def analyse(amoptd, newroot=None):
             if not cm:
                 raise RuntimeError,"Cannot find model for subcluster_centroid_model {0}".format(d['subcluster_centroid_model'])
             #cm=d['cluster_centroid']
-            d['ensemble_native_TM'] = amoptd['maxComp'].tm(cm)
-            d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(cm)
+            d['ensemble_native_TM'] = _MAXCLUSTERER.tm(cm)
+            d['ensemble_native_RMSD'] = _MAXCLUSTERER.rmsd(cm)
             
             # Calculation of TMscores for subcluster centroid models
             if TMSCORE_AVAILABLE:
                 try:
                     tm = tm_util.TMscore(tm_util.TMSCORE_EXE, wdir=fixpath(amoptd['benchmark_dir']))
-                    _logger.info("Analysing subcluster centroid model with TMscore")
+                    logger.info("Analysing subcluster centroid model with TMscore")
                     d['subcluster_centroid_model_TM'] = tm.compare_structures([d['subcluster_centroid_model']],
                                                                               [amoptd['native_pdb_std']],
                                                                               fastas=[amoptd['fasta']])[0].tm
                 except:
                     msg = "Unable to run TMscores. See debug.log."
-                    _logger.critical(msg)
+                    logger.critical(msg)
 
         if amoptd['native_pdb']: analyseSolution(amoptd,d)
         data.append(d)
@@ -176,7 +177,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     
 def analyseSolution(amoptd, d, origin_finder='shelxe'):
 
-    _logger.info("Benchmark: analysing result: {0}".format(d['ensemble_name']))
+    logger.info("Benchmark: analysing result: {0}".format(d['ensemble_name']))
 
     mrPdb=None
     if d['MR_program']=="PHASER":
@@ -188,7 +189,7 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
         return
 
     if mrPdb is None or not os.path.isfile(mrPdb):
-        #_logger.critical("Cannot find mrPdb {0} for solution {1}".format(mrPdb,d))
+        #logger.critical("Cannot find mrPdb {0} for solution {1}".format(mrPdb,d))
         return
 
     # debug - copy into work directory as reforigin struggles with long pathnames
@@ -210,7 +211,7 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
             origin_finder = 'csymmatch'
         if origin_finder == 'shelxe':
             if not d['SHELXE_os']:
-                _logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
+                logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
                 mrOrigin = shelxe.shelxe_origin(amoptd['shelxe_exe'], amoptd['native_pdb_info'].pdb, amoptd['mtz'], mrPdb)
             else:
                 mrOrigin=[c*-1 for c in d['SHELXE_os']]
@@ -244,7 +245,7 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
                                                                                        origin=mrOrigin)
             d['MR_phase_error'] = phase_error_after_origin_shift
         except Exception as e:
-            _logger.critical("Error calculating phase_error from: {0}\n{1}".format(mrMTZ,e))
+            logger.critical("Error calculating phase_error from: {0}\n{1}".format(mrMTZ,e))
     
         # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
         # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
@@ -264,7 +265,7 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
                                workdir=fixpath(amoptd['benchmark_dir']))
                 d['reforigin_RMSD']=rmsder.rmsd
             except Exception,e:
-                _logger.critical("Error calculating RMSD: {0}".format(e))
+                logger.critical("Error calculating RMSD: {0}".format(e))
                 d['reforigin_RMSD']=999
     
     
@@ -390,7 +391,7 @@ def analysePdb(amoptd):
     
     # First check if the native has > 1 model and extract the first if so
     if len( nativePdbInfo.models ) > 1:
-        _logger.info("nativePdb has > 1 model - using first")
+        logger.info("nativePdb has > 1 model - using first")
         nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=fixpath(amoptd['work_dir']))
         pdb_edit.extract_model( nativePdb, nativePdb1, modelID=nativePdbInfo.models[0].serial )
         nativePdb = nativePdb1
@@ -442,7 +443,7 @@ def analyseModels(amoptd):
     # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
     # requires a separate run to generate total RMSD
     #if False:
-#     _logger.info("Analysing RMSD scores for Rosetta models")
+#     logger.info("Analysing RMSD scores for Rosetta models")
 #     try:
 #         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
 #     except RuntimeError,e:
@@ -451,21 +452,21 @@ def analyseModels(amoptd):
         try:
             tm = tm_util.TMscore(tm_util.TMSCORE_EXE, wdir=fixpath(amoptd['benchmark_dir']))
             # Calculation of TMscores for all models
-            _logger.info("Analysing Rosetta models with TMscore")
+            logger.info("Analysing Rosetta models with TMscore")
             model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
             structure_list = [amoptd['native_pdb_std']]
             amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fastas=[amoptd['fasta']])
         except:
             msg = "Unable to run TMscores. See debug.log."
-            _logger.critical(msg)
+            logger.critical(msg)
         
-    amoptd['maxComp'] = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
-    _logger.info("Analysing Rosetta models with Maxcluster")
-    amoptd['maxComp'].compareDirectory( nativePdbInfo=nativePdbInfo,
-                                  resSeqMap=resSeqMap,
-                                  modelsDirectory=amoptd['models_dir'],
-                                  workdir=fixpath(amoptd['benchmark_dir']))
-        
+    global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
+    _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
+    logger.info("Analysing Rosetta models with Maxcluster")
+    _MAXCLUSTERER.compareDirectory(nativePdbInfo=nativePdbInfo,
+                                   resSeqMap=resSeqMap,
+                                    modelsDirectory=amoptd['models_dir'],
+                                    workdir=fixpath(amoptd['benchmark_dir']))
     return
 
 
