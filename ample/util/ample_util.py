@@ -24,8 +24,10 @@ SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
 EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
 SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
 
-LOGGER = logging.getLogger(__name__)
-
+# ample_util is used before anything else so there is no logger available
+# and we need to a Null handler
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 def ccp4_version():
     """
@@ -253,7 +255,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
             os.unlink(files[0])
             # If we've got quark models we don't want to modify the side chains as we only have polyalanine so we
             # set this here - horribly untidy as we should have one place to decide on side chains
-            LOGGER.info('Found QUARK models in file: {0}'.format(filename))
+            logger.info('Found QUARK models in file: {0}'.format(filename))
             amoptd['quark_models'] = True
     
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
@@ -265,7 +267,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
 
 def extract_tar(filename, directory, suffixes=['.pdb']):
     # Extracting tarfile
-    LOGGER.info('Extracting files from tarfile: {0}'.format(filename) )
+    logger.info('Extracting files from tarfile: {0}'.format(filename) )
     files = []
     with tarfile.open(filename,'r:*') as tf:
         memb = tf.getmembers()
@@ -285,7 +287,7 @@ def extract_tar(filename, directory, suffixes=['.pdb']):
 
 def extract_zip(filename, directory, suffixes=['.pdb']):
     # zip file extraction
-    LOGGER.info('Extracting files from zipfile: {0}'.format(filename) )
+    logger.info('Extracting files from zipfile: {0}'.format(filename) )
     if not zipfile.is_zipfile(filename):
             msg='File is not a valid zip archive: {0}'.format(filename)
             exit_util.exit_error(msg)
@@ -312,7 +314,7 @@ def find_exe(executable, dirs=None):
     executable: the name of the program or the path to an existing executable
     dirs - additional directories to search for the location
     """
-    LOGGER.debug('Looking for executable: {0}'.format(executable) )
+    logger.debug('Looking for executable: {0}'.format(executable) )
     
     exe_file=None
     found=False
@@ -329,19 +331,19 @@ def find_exe(executable, dirs=None):
         paths = os.environ["PATH"].split(os.pathsep)
         if dirs:
             paths += dirs
-        LOGGER.debug('Checking paths: {0}'.format(paths))
+        logger.debug('Checking paths: {0}'.format(paths))
         
         for path in paths:
             exe_file = os.path.abspath(os.path.join(path, executable))   
             if is_exe(exe_file):
-                LOGGER.debug( 'Found executable {0} in directory {1}'.format(executable,path) )
+                logger.debug( 'Found executable {0} in directory {1}'.format(executable,path) )
                 found=True
                 break
     
     if not found:
         raise Exception("Cannot find executable: {0}".format(executable))
     
-    LOGGER.debug('find_exe found executable: {0}'.format(exe_file) )
+    logger.debug('find_exe found executable: {0}'.format(exe_file) )
     return exe_file
 
 def filename_append(filename=None, astr=None,directory=None, separator="_"):
@@ -488,10 +490,10 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         directory = os.getcwd()
 
     if dolog:
-        LOGGER.debug("In directory {0}".format(directory))
-        LOGGER.debug("Running command: {0}".format(" ".join(cmd)))
+        logger.debug("In directory {0}".format(directory))
+        logger.debug("Running command: {0}".format(" ".join(cmd)))
         if kwargs:
-            LOGGER.debug("kwargs are: {0}".format(kwargs))
+            logger.debug("kwargs are: {0}".format(kwargs))
 
     file_handle = False
     if logfile:
@@ -502,7 +504,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         else:
             logfile = os.path.abspath(logfile)
             logf = open(logfile, "w")
-        if dolog: LOGGER.debug("Logfile is: {0}".format(logfile))
+        if dolog: logger.debug("Logfile is: {0}".format(logfile))
     else:
         logf = tmp_file_name()
         
@@ -518,7 +520,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
     if stdin != None:
         p.stdin.write(stdinstr)
         p.stdin.close()
-        if dolog: LOGGER.debug("stdin for cmd was: {0}".format(stdinstr))
+        if dolog: logger.debug("stdin for cmd was: {0}".format(stdinstr))
 
     p.wait()
     if not file_handle:
@@ -545,7 +547,7 @@ def read_amoptd(amoptd_fname):
 
     with open(amoptd_fname, 'r') as f:
         amoptd = cPickle.load(f)
-        LOGGER.info("Loaded state from file: {0}\n".format(amoptd['results_path']))
+        logger.info("Loaded state from file: {0}\n".format(amoptd['results_path']))
     return amoptd
 
 def saveAmoptd(*args):
@@ -577,7 +579,7 @@ def save_amoptd(amoptd):
     # Save results
     with open(amoptd['results_path'], 'w') as f:
         cPickle.dump(amoptd, f)
-        LOGGER.info("Saved state as file: {0}\n".format(amoptd['results_path']))
+        logger.info("Saved state as file: {0}\n".format(amoptd['results_path']))
     return
 
 def split_quark(*args):
@@ -610,7 +612,7 @@ def split_models(dfile, directory):
     ----
     * Use the CCTBX library to perform this step
     """
-    LOGGER.info("Extracting decoys from: {0} into {1}".format(dfile, directory))
+    logger.info("Extracting decoys from: {0} into {1}".format(dfile, directory))
     smodels = []
     with open(dfile, 'r') as f:
         m = []
@@ -636,7 +638,7 @@ def split_models(dfile, directory):
                     l = l[:54]+"  1.00  0.00              \n"
                 f.write(l)
             extracted_models.append(fpath)
-            LOGGER.debug("Wrote: {0}".format(fpath))
+            logger.debug("Wrote: {0}".format(fpath))
         
     return extracted_models
 
