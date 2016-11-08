@@ -19,6 +19,7 @@ from ample.util import benchmark_util
 from ample.util import config_util
 from ample.util import contacts_util
 from ample.util import exit_util
+from ample.util import logging_util
 from ample.util import mrbump_util
 from ample.util import options_processor
 from ample.util import pdb_edit
@@ -31,53 +32,7 @@ __credits__ = "Daniel Rigden, Martyn Winn, and Olga Mayans"
 __email__ = "drigden@liverpool.ac.uk"
 __version__ = version.__version__
 
-DEBUG = False
-
-def setup_console_logging():
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    
-    # First create console logger for outputting stuff
-    # create file handler and set level to debug
-    # Seems they changed the api in python 2.6->2.7
-    try:
-        cl = logging.StreamHandler(stream=sys.stdout)
-    except TypeError:
-        cl = logging.StreamHandler(strm=sys.stdout)
-        
-    if DEBUG:
-        cl.setLevel(logging.DEBUG)
-    else:
-        cl.setLevel(logging.INFO)
-        
-    formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
-    cl.setFormatter(formatter)
-    logger.addHandler(cl)
-    return logger
-
-def setup_file_logging(main_logfile, debug_logfile):
-    """
-    Set up the various log files/console logging
-    and return the logger
-    """
-    logger = logging.getLogger()
-
-    # create file handler for debug output
-    fl = logging.FileHandler(debug_logfile)
-    fl.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s [%(lineno)d] - %(levelname)s - %(message)s')
-    fl.setFormatter(formatter)
-    logger.addHandler(fl)
-
-    # Finally create the main logger
-    fl = logging.FileHandler(main_logfile)
-    fl.setLevel(logging.INFO)
-    fl.setFormatter(formatter) # Same formatter as screen
-    logger.addHandler(fl)
-    
-    return logger
-
-LOGGER = setup_console_logging()
+logger = logging_util.setup_console_logging()
 monitor = None
 
 class Ample(object):
@@ -109,7 +64,7 @@ class Ample(object):
         rosetta_modeller = options_processor.process_rosetta_options(amopt.d) 
         
         # Display the parameters used
-        LOGGER.debug(amopt.prettify_parameters())
+        logger.debug(amopt.prettify_parameters())
         
         amopt.write_config_file() 
         #######################################################
@@ -162,9 +117,9 @@ class Ample(object):
         amopt.d['AMPLE_finished'] = True
         ample_util.save_amoptd(amopt.d)
         
-        LOGGER.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
-        LOGGER.info(ample_util.reference.format(refs=ample_util.construct_references(amopt.d)))
-        LOGGER.info(ample_util.footer)
+        logger.info("AMPLE finished at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+        logger.info(ample_util.reference.format(refs=ample_util.construct_references(amopt.d)))
+        logger.info(ample_util.footer)
         
         # Finally update pyrvapi results
         if self.output_gui: self.output_gui.display_results(amopt.d)
@@ -200,7 +155,7 @@ class Ample(object):
             ensembler_util.import_ensembles(optd)
         elif optd['ideal_helices']:
             ample_util.ideal_helices(optd)
-            LOGGER.info("*** Using ideal helices to solve structure ***")
+            logger.info("*** Using ideal helices to solve structure ***")
         else:
             # Check we have some models to work with
             if not (optd['cluster_method'] is 'import' or optd['single_model_mode']) and \
@@ -241,7 +196,7 @@ class Ample(object):
                 
             if not (optd['homologs'] or optd['single_model_mode']):
                 ensemble_summary = ensembler_util.ensemble_summary(optd['ensembles_data'])
-                LOGGER.info(ensemble_summary)
+                logger.info(ensemble_summary)
             
         # Save the results
         ample_util.save_amoptd(optd)
@@ -287,7 +242,7 @@ class Ample(object):
             pdb_edit.prepare_nmr_model(optd['nmr_model_in'], optd['models_dir'])
         elif optd['make_models']:
             # Make the models
-            LOGGER.info('----- making Rosetta models--------')
+            logger.info('----- making Rosetta models--------')
             if optd['nmr_remodel']:
                 try:
                     rosetta_modeller.nmr_remodel(nmr_model_in=optd['nmr_model_in'],
@@ -299,7 +254,7 @@ class Ample(object):
                     msg = "Error remodelling NMR ensemble: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
             else:
-                LOGGER.info('making {0} models...'.format(optd['nmodels']))
+                logger.info('making {0} models...'.format(optd['nmodels']))
                 try:
                     rosetta_modeller.ab_initio_model(monitor=monitor)
                 except Exception, e:
@@ -311,7 +266,7 @@ class Ample(object):
                 msg = 'Modelling complete - models stored in: {0}\n'.format(optd['models_dir'])
             
         elif optd['import_models']:
-            LOGGER.info('Importing models from directory: {0}\n'.format(optd['models_dir']))
+            logger.info('Importing models from directory: {0}\n'.format(optd['models_dir']))
             if optd['homologs']:
                 ample_util.extract_models(optd, sequence=None, single=True, allsame=False)
             else:
@@ -323,7 +278,7 @@ class Ample(object):
                         optd['use_scwrl'] = True
                     else:
                         # No SCWRL so don't do owt with the side chains
-                        LOGGER.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(UNMODIFIED))
+                        logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(UNMODIFIED))
                         optd['side_chain_treatments'] = [ UNMODIFIED ]
     
         # Save the results
@@ -335,7 +290,7 @@ class Ample(object):
         
         if not optd['mrbump_scripts']:
             # MRBUMP analysis of the ensembles
-            LOGGER.info('----- Running MRBUMP on ensembles--------\n\n')
+            logger.info('----- Running MRBUMP on ensembles--------\n\n')
             if len(optd['ensembles']) < 1:
                 msg = "ERROR! Cannot run MRBUMP as there are no ensembles!"
                 exit_util.exit_error(msg)
@@ -348,18 +303,18 @@ class Ample(object):
             if not os.path.exists(bump_dir): os.mkdir(bump_dir)
              
             optd['mrbump_results'] = []
-            LOGGER.info("Running MRBUMP jobs in directory: {0}".format(bump_dir))
+            logger.info("Running MRBUMP jobs in directory: {0}".format(bump_dir))
             
             # Set an ensemble-specific phaser_rms if required
             if optd['phaser_rms'] == 'auto':
                 ensembler_util.set_phaser_rms_from_subcluster_score(optd)
             
             # Sort the ensembles in a favourable way
-            LOGGER.info("Sorting ensembles")
+            logger.info("Sorting ensembles")
             ensemble_pdbs_sorted = ensembler_util.sort_ensembles(optd['ensembles'],
                                                            optd['ensembles_data'])
             # Create job scripts
-            LOGGER.info("Generating MRBUMP runscripts")
+            logger.info("Generating MRBUMP runscripts")
             optd['mrbump_scripts'] = mrbump_util.write_mrbump_files(ensemble_pdbs_sorted,
                                                                     optd,
                                                                     job_time=mrbump_util.MRBUMP_RUNTIME,
@@ -408,7 +363,7 @@ class Ample(object):
     
         # Now print out the final summary
         summary = mrbump_util.finalSummary(optd)
-        LOGGER.info(summary)
+        logger.info(summary)
         
         return
 
@@ -434,7 +389,7 @@ class Ample(object):
         
         # Make a work directory - this way all output goes into this directory
         if optd['work_dir']:
-            LOGGER.info('Making a named work directory: {0}'.format(optd['work_dir']))
+            logger.info('Making a named work directory: {0}'.format(optd['work_dir']))
             try:
                 os.mkdir(optd['work_dir'])
             except:
@@ -444,7 +399,7 @@ class Ample(object):
             if not os.path.exists(optd['run_dir']):
                 msg = 'Cannot find run directory: {0}'.format(optd['run_dir'])
                 exit_util.exit_error(msg, sys.exc_info()[2])
-            LOGGER.info('Making a run directory: checking for previous runs...')
+            logger.info('Making a run directory: checking for previous runs...')
             optd['work_dir'] = ample_util.make_workdir(optd['run_dir'], 
                                                        ccp4_jobid=optd['ccp4_jobid'])
         # Go to the work directory
@@ -455,21 +410,23 @@ class Ample(object):
         debug_log = os.path.join(optd['work_dir'], 'debug.log')
         optd['ample_log'] = ample_log
         
-        setup_file_logging(ample_log, debug_log)
+        # Set up ample output file and debug log file.
+        logging_util.setup_file_logging(ample_log, level=logging.INFO)
+        logging_util.setup_file_logging(debug_log, level=logging.DEBUG)
         
         # Make sure the CCP4 environment is set up properly
         ccp4_home = self.setup_ccp4(optd)
         ccp4_version = ".".join([str(x) for x in optd['ccp4_version']])
         
         # Print out Version and invocation
-        LOGGER.info(ample_util.header)
-        LOGGER.info("AMPLE version: {0}".format(version.__version__))
-        LOGGER.info("Running with CCP4 version: {0} from directory: {1}".format(ccp4_version, ccp4_home))
-        LOGGER.info("Running on host: {0}".format(platform.node()))
-        LOGGER.info("Running on platform: {0}".format(platform.platform()))
-        LOGGER.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
-        LOGGER.info("Invoked with command-line:\n{0}\n".format(" ".join(sys.argv)))
-        LOGGER.info("Running in directory: {0}\n".format(optd['work_dir']))
+        logger.info(ample_util.header)
+        logger.info("AMPLE version: {0}".format(version.__version__))
+        logger.info("Running with CCP4 version: {0} from directory: {1}".format(ccp4_version, ccp4_home))
+        logger.info("Running on host: {0}".format(platform.node()))
+        logger.info("Running on platform: {0}".format(platform.platform()))
+        logger.info("Job started at: {0}".format(time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
+        logger.info("Invoked with command-line:\n{0}\n".format(" ".join(sys.argv)))
+        logger.info("Running in directory: {0}\n".format(optd['work_dir']))
         
         # Display pyrvapi results
         if pyrvapi_results.pyrvapi:
@@ -488,12 +445,12 @@ class Ample(object):
         
         # Bail and clean up if we were only checking the options
         if optd['dry_run']:
-            LOGGER.info('Dry run finished checking options - cleaning up...')
+            logger.info('Dry run finished checking options - cleaning up...')
             os.chdir(optd['run_dir'])
             shutil.rmtree(optd['work_dir'])
             sys.exit(0)
         
-        LOGGER.info('All needed programs are found, continuing...')
+        logger.info('All needed programs are found, continuing...')
         
         return optd
 
@@ -513,7 +470,7 @@ class Ample(object):
             msg += "Cannot find the $CCP4_SCR directory: {0}\n".format(os.environ['CCP4_SCR'])
             msg += "The directory will be created, but it should have already been created by the CCP4 startup scripts\n"
             msg += "Please make sure CCP4 is installed and the setup scripts have been run."
-            LOGGER.critical(msg)
+            logger.critical(msg)
             os.mkdir(os.environ['CCP4_SCR'])
             #exit_util.exit_error(msg)
     

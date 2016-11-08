@@ -1,35 +1,12 @@
 import argparse
-import logging
 import os
 import sys
 
-from ample.util import ample_util, config_util, exit_util
+from ample.util import ample_util, config_util, exit_util, logging_util
 from ample.ensembler import ensembler_argparse
 from ample.ensembler.ensembler_util import create_ensembles
 
 ENSEMBLE_DIRNAME = 'ample_ensemble'
-
-def setup_console_logging():
-    """Set up file and console logging"""
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    try:
-        cl = logging.StreamHandler(stream=sys.stdout)
-    except TypeError:
-        cl = logging.StreamHandler(strm=sys.stdout)
-    cl.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
-    cl.setFormatter(formatter)
-    logger.addHandler(cl)
-    
-def setup_file_logging(logfile):
-    """Set up file and console logging"""
-    logger = logging.getLogger()
-    fl = logging.FileHandler(logfile)
-    fl.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fl.setFormatter(formatter)
-    logger.addHandler(fl)
     
 # Set up the command-line parsing
 parser = argparse.ArgumentParser(description="AMPLE Ensembling Module")
@@ -59,8 +36,8 @@ else:
     amopt.populate(args)  
     optd = amopt.d 
 
-    
-setup_console_logging()
+# Start logging to the console
+logging_util.setup_console_logging()
 
 # Make sure we have models if in standalone mode
 if not restart and not ('models' in optd and optd['models'] and os.path.exists(optd['models'])):
@@ -79,7 +56,8 @@ if not os.path.isdir(optd['work_dir']):
 
 assert os.path.isdir(optd['work_dir'])
 
-setup_file_logging(os.path.join(optd['work_dir'],"ensemble.log"))
+# Start logging to a file
+logging_util.setup_file_logging(os.path.join(optd['work_dir'],"ensemble.log"))
 try:
     if not restart:
         ample_util.extract_models(optd)
