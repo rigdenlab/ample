@@ -7,6 +7,9 @@ from ample.testing import run_tests
 
 logging.basicConfig()
 logger = logging.getLogger()
+#jmht - the default handler is set to DEBUG so we need to set it to CRITICAL
+# to avoid drowning in output
+logger.handlers[0].setLevel(logging.CRITICAL)
 
 #############################################################################
 ## Multiprocessing crashes on Windows when running multiple jobs.
