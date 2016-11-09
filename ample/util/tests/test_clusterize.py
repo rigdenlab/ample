@@ -31,7 +31,7 @@ echo "I am script {0}"
         qtype="SGE"
         c.QTYPE=qtype
         
-        c.submitArrayJob(jobScripts,qtype=qtype)
+        c.submitArrayJob(jobScripts,submit_qtype=qtype)
         c.monitorQueue()
         c.cleanUpArrayJob()
         

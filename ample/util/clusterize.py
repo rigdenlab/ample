@@ -306,10 +306,18 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         os.chdir(curDir)
         return str(qNumber)
     
-    def submitArrayJob(self,job_scripts,job_name=None,job_dir=None,job_time=None,queue=None,qtype=None,max_array_jobs=None):
+    def submitArrayJob(self,
+                       job_scripts,
+                       job_name=None,
+                       job_dir=None,
+                       job_time=None,
+                       submit_max_array=None,
+                       submit_queue=None,
+                       submit_qtype=None
+                       ):
         """Submit a list of jobs as an SGE array job"""
         
-        if qtype != "SGE": raise RuntimeError,"Need to add code for non-SGE array jobs"
+        if submit_qtype != "SGE": raise RuntimeError,"Need to add code for non-SGE array jobs"
         if job_dir is None:
             if self.scriptDir and os.path.isdir(self.scriptDir):
                 job_dir=self.scriptDir
@@ -336,10 +344,10 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                                   log_file=None,
                                   job_name=job_name,
                                   job_time=job_time,
-                                  queue=queue,
-                                  qtype=qtype,
-                                  num_array_jobs=nJobs,
-                                  max_array_jobs=max_array_jobs
+                                  submit_max_array=submit_max_array,
+                                  submit_num_array_jobs=nJobs,
+                                  submit_queue=submit_queue,
+                                  submit_qtype=submit_qtype
                                   ))
         # Command to run 
         s += "scriptlist={0}\n".format(self._scriptFile)

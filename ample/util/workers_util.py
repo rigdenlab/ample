@@ -129,7 +129,7 @@ def run_scripts(job_scripts,
                                    submit_pe_lsf=submit_pe_lsf,
                                    submit_pe_sge=submit_pe_sge,
                                    submit_array=submit_array,
-                                   submit_max_array=submit_max_array,
+                                   submit_max_array=submit_max_array
                                    )
     else:
         return run_scripts_serial(job_scripts,
@@ -160,9 +160,9 @@ def run_scripts_cluster(job_scripts,
         cluster_run.submitArrayJob(job_scripts,
                                    job_time=job_time,
                                    job_name=job_name,
+                                   submit_max_array=submit_max_array,
                                    submit_qtype=submit_qtype,
-                                   queue=submit_queue,
-                                   submit_max_array=submit_max_array
+                                   submit_queue=submit_queue
                                    )
     else:
         for script in job_scripts:
@@ -178,7 +178,7 @@ def run_scripts_cluster(job_scripts,
                                                              submit_queue=submit_queue,
                                                              submit_qtype=submit_qtype,
                                                              submit_pe_lsf=submit_pe_lsf,
-                                                             submit_pe_sge=submit_pe_sge,
+                                                             submit_pe_sge=submit_pe_sge
                                                              )
             # We add the queue directives after the first line of the script
             with open(script,'w') as f: f.writelines("".join([lines[0]] + slines + lines[1:]))
