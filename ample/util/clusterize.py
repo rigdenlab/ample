@@ -15,7 +15,7 @@ import time
 if not "CCP4" in sorted(os.environ.keys()):
     raise RuntimeError('CCP4 not found')
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 class ClusterRun:
 
@@ -61,10 +61,10 @@ class ClusterRun:
                 newLog = os.path.join(logDir, "{0}.log".format(jobName))
                 
             if os.path.isfile(oldLog):
-                LOGGER.debug("Moving {0} to {1}".format(oldLog, newLog))
+                logger.debug("Moving {0} to {1}".format(oldLog, newLog))
                 os.rename(oldLog, newLog ) 
             else:
-                LOGGER.critical("Cannot find logfile {0} to copy to {1}".format(oldLog, newLog))
+                logger.critical("Cannot find logfile {0} to copy to {1}".format(oldLog, newLog))
         
         return
 
@@ -155,7 +155,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         if not len(self.qList):
             raise RuntimeError,"No jobs found in self.qList!"
 
-        LOGGER.info("Jobs submitted to cluster queue, awaiting their completion...")
+        logger.info("Jobs submitted to cluster queue, awaiting their completion...")
 
         # set a holder for the qlist
         runningList=self.qList
@@ -169,9 +169,9 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 if str(job) in self.runningQueueList:
                     newRunningList.append(job)
             if len(runningList) > len(newRunningList):
-                LOGGER.info("Queue Monitor: %d out of %d jobs remaining in cluster queue..." %  (len(newRunningList),len(self.qList)))
+                logger.info("Queue Monitor: %d out of %d jobs remaining in cluster queue..." %  (len(newRunningList),len(self.qList)))
             if len(newRunningList) == 0:
-                LOGGER.info("Queue Monitor: All jobs complete!")
+                logger.info("Queue Monitor: All jobs complete!")
             runningList=newRunningList
             newRunningList=[]
             if monitor: monitor()
@@ -258,22 +258,32 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         else:
             raise RuntimeError,"Unrecognised QTYPE: ".format(self.QTYPE)            
 
-        LOGGER.debug("Submitting job with command: {0}".format(command_line))
+        logger.debug("Submitting job with command: {0}".format(command_line))
         process_args = shlex.split(command_line)
         try:
             p = subprocess.Popen(process_args,
                                  stdin = stdin,
-                                 stdout = subprocess.PIPE)
+                                 stdout = subprocess.PIPE,
+                                 stderr = subprocess.PIPE)
         except Exception,e:
-            raise RuntimeError,"Error submitting job to queue with commmand: {0}\n{1}".format(command_line,e)
+            raise RuntimeError("Error submitting job to queue with commmand: {0}\n{1}".format(command_line,e))
 
         child_stdout = p.stdout
+        child_stderr = p.stderr
+
+        # Check there were no errors
+        stderr_str = child_stderr.readline()
+        if self.QTYPE=="SGE" and "Unable to run job" in stderr_str:
+            raise RuntimeError("Error submitting job to cluster queueing system: {0}".format(stderr_str))
+
         # Watch the output for successful termination
-        out=child_stdout.readline()
+        out = child_stdout.readline()
 
         qNumber=0
+        err_str = None
         while out:
             qNumber = None
+            logger.info("GOT OUT {0}".format(out))
             if self.QTYPE=="SGE":
                 if "Your job-array" in out:
                     # Array jobs have different form
@@ -291,7 +301,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                     self.qList.append(qNumber)                
 
             if qNumber:
-                LOGGER.debug("Submission script {0} submitted to queue as job {1}".format( subScript, qNumber ) )
+                logger.debug("Submission script {0} submitted to queue as job {1}".format( subScript, qNumber ) )
             out=child_stdout.readline()
         child_stdout.close()
         os.chdir(curDir)
