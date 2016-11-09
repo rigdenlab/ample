@@ -183,51 +183,51 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                         log_file=None,
                         job_name=None,
                         job_time=None,
-                        queue=None,
-                        qtype=None,
-                        num_array_jobs=None,
-                        max_array_jobs=None,
+                        submit_max_array=None,
+                        submit_num_array_jobs=None,
                         submit_pe_sge='mpi',
                         submit_pe_lsf='#BSUB -R "span[ptile={0}]"',
+                        submit_qtype=None,
+                        submit_queue=None,
                         ):
         """
         Create a string suitable for writing out as the header of the submission script
         for submitting to a particular queueing system
         """
         sh = []
-        if qtype=="SGE":
+        if submit_qtype=="SGE":
             sh += ['#$ -j y\n',
                    '#$ -cwd\n',
                    '#$ -w e\n',
                    '#$ -V\n',
                    '#$ -S /bin/bash\n']
             if job_time: sh += ['#$ -l h_rt={0}\n'.format(job_time)]
-            if queue: sh += ['#$ -q {0}\n'.format(queue)]
+            if submit_queue: sh += ['#$ -q {0}\n'.format(submit_queue)]
             if job_name: sh += ['#$ -N {0}\n'.format(job_name)]
-            if num_array_jobs:
+            if submit_num_array_jobs:
                 sh += ['#$ -o arrayJob_$TASK_ID.log\n']
-                sh += ['#$ -t 1-{0}\n'.format(num_array_jobs)]
-                if max_array_jobs: sh += ['#$ -tc {0}\n'.format(max_array_jobs)]
+                sh += ['#$ -t 1-{0}\n'.format(submit_num_array_jobs)]
+                if submit_max_array: sh += ['#$ -tc {0}\n'.format(submit_max_array)]
             else:
                 if log_file: sh += ['#$ -o {0}\n'.format(log_file)]
             # jmht hack for morrigan
             #if nproc and nproc > 1: sh += ['#$ -pe threaded {0}\n'.format(nproc)]
             if nproc: sh += ['#$ -pe {0} {1}\n'.format(submit_pe_sge, nproc)]
             sh += ['\n']
-        elif qtype=="LSF":
-            assert not num_array_jobs,"Array jobs not supported yet for LSF"
+        elif submit_qtype=="LSF":
+            assert not submit_num_array_jobs,"Array jobs not supported yet for LSF"
             if nproc: sh += [submit_pe_lsf.format(nproc) + os.linesep]
             if job_time:
                 sh += ['#BSUB -W {0}\n'.format(job_time)]
             else:
                 sh += ['#BSUB -W 4:00\n']
             if nproc: sh += ['#BSUB -n {0}\n'.format(nproc)]
-            if queue: sh += ['#BSUB -q {0}\n'.format(queue)]
+            if submit_queue: sh += ['#BSUB -q {0}\n'.format(submit_queue)]
             if log_file: sh += ['#BSUB -o {0}\n'.format(log_file)]
             if job_name: sh += ['#BSUB -J {0}\n'.format(job_name)]       
             sh += ['\n']
         else:
-            raise RuntimeError,"Unrecognised QTYPE: {0}".format(qtype)
+            raise RuntimeError,"Unrecognised QTYPE: {0}".format(submit_max_array)
         sh += ['\n']
         return sh
     

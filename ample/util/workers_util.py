@@ -155,15 +155,14 @@ def run_scripts_cluster(job_scripts,
     logger = logging.getLogger()
     logger.info("Running jobs on a cluster")
     cluster_run = clusterize.ClusterRun()
-    qtype = submit_qtype
     cluster_run.QTYPE = submit_qtype
     if submit_array and len(job_scripts) > 1:
         cluster_run.submitArrayJob(job_scripts,
                                    job_time=job_time,
                                    job_name=job_name,
-                                   qtype=qtype,
+                                   submit_qtype=submit_qtype,
                                    queue=submit_queue,
-                                   max_array_jobs=submit_max_array
+                                   submit_max_array=submit_max_array
                                    )
     else:
         for script in job_scripts:
@@ -176,8 +175,8 @@ def run_scripts_cluster(job_scripts,
                                                              job_name=job_name,
                                                              job_time=job_time,
                                                              log_file=logfile,
-                                                             queue=submit_queue,
-                                                             qtype=submit_qtype,
+                                                             submit_queue=submit_queue,
+                                                             submit_qtype=submit_qtype,
                                                              submit_pe_lsf=submit_pe_lsf,
                                                              submit_pe_sge=submit_pe_sge,
                                                              )
