@@ -132,7 +132,9 @@ class AMPLEIntegrationFramework(object):
         ## Run all the jobs
         # If we're running on a cluster, we run on as many processors as there are jobs, 
         # as the jobs are just sitting and monitoring the queue
-        if kwargs['submit_cluster']: nproc = len(scripts)
+        if kwargs['submit_cluster']:
+            logger.info("Jobs will be submitted to a cluster queueing system")
+            nproc = len(scripts)
         
         if not dry_run:
             workers_util.run_scripts(job_scripts=scripts,
