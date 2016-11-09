@@ -283,7 +283,6 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         err_str = None
         while out:
             qNumber = None
-            logger.info("GOT OUT {0}".format(out))
             if self.QTYPE=="SGE":
                 if "Your job-array" in out:
                     # Array jobs have different form
