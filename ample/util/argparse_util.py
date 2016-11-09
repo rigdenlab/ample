@@ -48,28 +48,28 @@ def add_cluster_submit_options(parser):
     
     submit_group = parser.add_argument_group('Cluster queue submission options')
 
-    submit_group.add_argument('-submit_array', metavar='True/False', type=str, nargs=1,
+    submit_group.add_argument('-submit_array', metavar='True/False',
                               help='Submit SGE jobs as array jobs')
     
-    submit_group.add_argument('-submit_cluster', metavar='True/False', type=str, nargs=1,
+    submit_group.add_argument('-submit_cluster', metavar='True/False',
                               help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
 
-    submit_group.add_argument('-submit_max_array', type=str, nargs=1,
+    submit_group.add_argument('-submit_max_array', type=int,
                               help='The maximum number of jobs to run concurrently with SGE array job submission' )
     
-    submit_group.add_argument('-submit_num_array_jobs', type=str, nargs=1,
+    submit_group.add_argument('-submit_num_array_jobs', type=int,
                               help='The number of jobs to run concurrently with SGE array job submission' )
     
-    submit_group.add_argument('-submit_pe_lsf', type=str, nargs=1,
+    submit_group.add_argument('-submit_pe_lsf', type=str,
                               help='Cluster submission: string to set number of processors for LSF queueing system')
 
-    submit_group.add_argument('-submit_pe_sge', type=str, nargs=1,
+    submit_group.add_argument('-submit_pe_sge', type=str,
                               help='Cluster submission: string to set number of processors for SGE queueing system')
     
-    submit_group.add_argument('-submit_queue', type=str, nargs=1,
+    submit_group.add_argument('-submit_queue', type=str,
                               help='The queue to submit to on the cluster.')
     
-    submit_group.add_argument('-submit_qtype', type=str, nargs=1,
+    submit_group.add_argument('-submit_qtype', type=str,
                               help='Cluster submission queue type - currently support SGE and LSF')
     return
     
