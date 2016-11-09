@@ -227,7 +227,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             if job_name: sh += ['#BSUB -J {0}\n'.format(job_name)]       
             sh += ['\n']
         else:
-            raise RuntimeError,"Unrecognised QTYPE: {0}".format(submit_max_array)
+            raise RuntimeError,"Unrecognised QTYPE: {0}".format(submit_queue)
         sh += ['\n']
         return sh
     
