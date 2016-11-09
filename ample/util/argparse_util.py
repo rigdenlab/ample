@@ -41,9 +41,38 @@ def add_core_options(parser):
 
     parser.add_argument('-work_dir', type=str, nargs=1,
                        help='Path to the directory where the job will run (will be created if it doesn\'t exist)')
-    
     return
 
+def add_cluster_submit_options(parser):
+    """Add the options for submission to a cluster queuing system"""
+    
+    submit_group = parser.add_argument_group('Cluster queue submission options')
+
+    submit_group.add_argument('-submit_array', metavar='True/False', type=str, nargs=1,
+                              help='Submit SGE jobs as array jobs')
+    
+    submit_group.add_argument('-submit_cluster', metavar='True/False', type=str, nargs=1,
+                              help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
+
+    submit_group.add_argument('-submit_max_array', type=str, nargs=1,
+                              help='The maximum number of jobs to run concurrently with SGE array job submission' )
+    
+    submit_group.add_argument('-submit_num_array_jobs', type=str, nargs=1,
+                              help='The number of jobs to run concurrently with SGE array job submission' )
+    
+    submit_group.add_argument('-submit_pe_lsf', type=str, nargs=1,
+                              help='Cluster submission: string to set number of processors for LSF queueing system')
+
+    submit_group.add_argument('-submit_pe_sge', type=str, nargs=1,
+                              help='Cluster submission: string to set number of processors for SGE queueing system')
+    
+    submit_group.add_argument('-submit_queue', type=str, nargs=1,
+                              help='The queue to submit to on the cluster.')
+    
+    submit_group.add_argument('-submit_qtype', type=str, nargs=1,
+                              help='Cluster submission queue type - currently support SGE and LSF')
+    return
+    
 def add_general_options(parser):
     
     # Always add the core option
@@ -173,24 +202,6 @@ def add_general_options(parser):
     
     parser.add_argument('-spicker_exe', type=str, nargs=1,
                        help='Path to spicker executable')
-    
-    parser.add_argument('-submit_array', metavar='True/False', type=str, nargs=1,
-                       help='Submit SGE jobs as array jobs')
-    
-    parser.add_argument('-submit_cluster', metavar='True/False', type=str, nargs=1,
-                       help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.')
-    
-    parser.add_argument('-submit_qtype', type=str, nargs=1,
-                       help='Cluster submission queue type - currently support SGE and LSF')
-
-    parser.add_argument('-submit_pe_lsf', type=str, nargs=1,
-                       help='Cluster submission: string to set number of processors for LSF queueing system')
-
-    parser.add_argument('-submit_pe_sge', type=str, nargs=1,
-                       help='Cluster submission: string to set number of processors for SGE queueing system')
-    
-    parser.add_argument('-submit_queue', type=str, nargs=1,
-                       help='The queue to submit to on the cluster.')
     
     parser.add_argument('-top_model_only', metavar='True/False', type=str, nargs=1,
                        help='Only process the top model in each ensemble')
@@ -359,6 +370,3 @@ def add_rosetta_options(parser):
     rosetta_group.add_argument('-use_homs', metavar='True/False', type=str, nargs=1,
                        help='Select ROSETTA fragments from homologous models')
     return
-
-
-    

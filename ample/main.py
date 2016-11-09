@@ -375,6 +375,7 @@ class Ample(object):
         parser = argparse.ArgumentParser(description="AMPLE: Ab initio Modelling of Proteins for moLEcular replacement", 
                                          prefix_chars="-")
         argparse_util.add_general_options(parser)
+        argparse_util.add_cluster_submit_options(parser)
         ensembler_argparse.add_ensembler_options(parser)
         
         if contacts: argparse_util.add_contact_options(parser)
