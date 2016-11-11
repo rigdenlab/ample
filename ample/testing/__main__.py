@@ -5,7 +5,7 @@ import sys
 from ample.util import exit_util, logging_util
 from ample.testing import run_tests
 
-logger = logging_util.setup_console_logging(level=logging.CRITICAL, formatstr='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging_util.setup_console_logging(level=logging.INFO, formatstr='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 #############################################################################
 ## Multiprocessing crashes on Windows when running multiple jobs.
