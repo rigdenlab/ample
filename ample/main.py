@@ -12,6 +12,7 @@ import sys
 import time
 
 from ample import ensembler
+from ample.ensembler.constants import UNMODIFIED
 from ample.util import ample_util
 from ample.util import argparse_util
 from ample.util import benchmark_util
@@ -277,8 +278,8 @@ class Ample(object):
                         optd['use_scwrl'] = True
                     else:
                         # No SCWRL so don't do owt with the side chains
-                        logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(ensembler.UNMODIFIED))
-                        optd['side_chain_treatments'] = [ ensembler.UNMODIFIED ]
+                        logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(UNMODIFIED))
+                        optd['side_chain_treatments'] = [ UNMODIFIED ]
     
         # Save the results
         ample_util.save_amoptd(optd)
