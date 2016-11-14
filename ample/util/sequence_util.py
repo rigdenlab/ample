@@ -126,13 +126,17 @@ class Sequence(object):
         return
 
     def canonicalise(self):
-        """
-        Reformat the fasta file
+        """Reformat the fasta file
+        
+        Description
+        -----------
         Needed because Rosetta has problems reading fastas. For it to be read, it has to have no spaces in the sequence,
         a name that is 4 characters and an underscore (ABCD_), everything has to be uppercase, and there has to be a
         return carriage at the end - this has to be linux formatted as when I make a fasta in windows, it doesnt recognize
         the return carriage.
+
         Rosetta has a lot of problems with fastas so we put in this script to deal with it.
+
         """
         aa = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V']
         for i,seq in enumerate(self.sequences):
@@ -152,10 +156,7 @@ class Sequence(object):
         return len(self.sequences)
     
     def _parse_fasta(self, fasta, fasta_file=None, canonicalise=True):
-        """Parse the fasta file int our data structures & check for consistency 
-        Args:
-        fasta -- list of strings or open filehandle to read from the fasta file
-        """
+        """Parse the fasta file int our data structures & check for consistency"""
         headers = []
         sequences = []
         sequence = ""

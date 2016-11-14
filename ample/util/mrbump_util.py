@@ -567,16 +567,22 @@ def _resultsKeys(results):
     return keys
 
 def checkSuccess(script_path):
-    """
-    Check if a job ran successfully.
+    """Check if a job ran successfully.
     
-    Args:
-    directory -- directory mr bump ran the job
+    Parameters
+    ----------
+    script_path : str
+       Path to the MrBUMP script
     
-    Returns:
-    True if success
-    
+    Returns
+    -------
+    bool
+       True if success
+   
+    Notes
+    -----
     Success is assumed as a SHELX CC score of >= SHELXSUCCESS
+
     """
     directory, script = os.path.split(script_path)
     scriptname = os.path.splitext(script)[0]
@@ -597,7 +603,6 @@ def checkSuccess(script_path):
 
 def finalSummary(amoptd):
     """Print a final summary of the job"""
-    
     
     mrbump_data = amoptd['mrbump_results']
     if not mrbump_data:

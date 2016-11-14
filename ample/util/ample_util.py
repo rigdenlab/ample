@@ -1,7 +1,8 @@
-'''
-Various miscellaneous functions.
-Might end up somewhere else at somepoint.
-'''
+"""Various miscellaneous functions"""
+
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "01 Jan 2016"
+__version__ = "1.0"
 
 import cPickle
 import logging
@@ -13,7 +14,6 @@ import tempfile
 import warnings
 import zipfile
 
-# our imports
 import exit_util
 import pdb_edit
 
@@ -29,14 +29,15 @@ SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+
 def ccp4_version():
-    """
-    Get CCP4 version as a tuple
+    """Get CCP4 version as a tuple
 
     Returns
     -------
     version : tuple
        Major, minor, and revision number
+
     """
     global CCP4_VERSION
     if CCP4_VERSION is None:
@@ -70,9 +71,9 @@ def ccp4_version():
     os.unlink(log_fname)
     return (major,minor,rev)
 
+
 def construct_references(optd):
-    """
-    Construct the reference list
+    """Construct the reference list
 
     Description
     -----------
@@ -88,9 +89,10 @@ def construct_references(optd):
 
     Returns
     -------
-    references : str
-    """
+    str
+        A string containing the references
 
+    """
     # ========================================
     # Get the filename and check we can use it
     # ========================================
@@ -202,8 +204,13 @@ def construct_references(optd):
 
     return (os.linesep*2).join(references_msg)
 
+
 def extract_models(amoptd, sequence=None, single=True, allsame=True):
-    """Check a directory of pdbs or extract pdb files from a given tar/zip file or directory of pdbs
+    """Extract some models
+    
+    Description
+    -----------
+    Check a directory of pdbs or extract pdb files from a given tar/zip file or directory of pdbs
     and set the amoptd['models_dir'] entry with the directory of unpacked/validated pdbs
     """
     
@@ -265,6 +272,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
     amoptd['models_dir'] = models_dir
     return
 
+
 def extract_tar(filename, directory, suffixes=['.pdb']):
     # Extracting tarfile
     logger.info('Extracting files from tarfile: {0}'.format(filename) )
@@ -284,6 +292,7 @@ def extract_tar(filename, directory, suffixes=['.pdb']):
         msg='Could not find any files with suffixes {0} in archive: {1}'.format(suffixes, filename)
         exit_util.exit_error(msg)
     return files
+
 
 def extract_zip(filename, directory, suffixes=['.pdb']):
     # zip file extraction
@@ -308,11 +317,16 @@ def extract_zip(filename, directory, suffixes=['.pdb']):
         exit_util.exit_error(msg)
     return files
 
+
 def find_exe(executable, dirs=None):
     """Find the executable exename.
-    Args:
-    executable: the name of the program or the path to an existing executable
-    dirs - additional directories to search for the location
+    
+    Parameters
+    ----------
+    executable : str
+       The name of the program or the path to an existing executable
+    dirs : list, tuple, optional
+       Additional directories to search for the location
     """
     logger.debug('Looking for executable: {0}'.format(executable) )
     
@@ -346,6 +360,7 @@ def find_exe(executable, dirs=None):
     logger.debug('find_exe found executable: {0}'.format(exe_file) )
     return exe_file
 
+
 def filename_append(filename=None, astr=None,directory=None, separator="_"):
     """Append astr to filename, before the suffix, and return the new filename."""
     dirname, fname = os.path.split( filename )
@@ -355,9 +370,9 @@ def filename_append(filename=None, astr=None,directory=None, separator="_"):
         directory = dirname
     return os.path.join( directory, name )
 
+
 def ideal_helices(optd):
-    """
-    Get some ideal helices
+    """Get some ideal helices
 
     Parameters
     ----------
@@ -396,46 +411,57 @@ def ideal_helices(optd):
     optd['ensembles_data'] = ensembles_data
     return
 
+
 def is_exe(fpath):
-    """
-    Check if an executable exists
+    """Check if an executable exists
 
     Parameters
     ----------
     fpath : str
        The path to the executable
+    
+    Returns
+    -------
+    bool
+
     """
     return fpath and os.path.exists(fpath) and os.access(fpath, os.X_OK)
 
+
 def is_file(fpath):
-    """
-    Check if a file exists
+    """Check if a file exists
 
     Parameters
     ----------
     fpath : str
        The path to the file
+
+    Returns
+    ------
+    bool
+
     """
     return fpath and os.path.isfile(fpath) and \
            os.access(fpath, os.R_OK) and os.stat(fpath).st_size > 0
 
+
 def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
-    """
-    Make a work directory rooted at work_dir and return its path
+    """Make a work directory rooted at work_dir and return its path
 
     Parameters
     ----------
     work_dir : str
        The path to a working directory
-    ccp4_jobid : int
+    ccp4_jobid : int, optional
        CCP4-assigned job identifier
-    rootname : str
-        Base name of the AMPLE directory
+    rootname : str, optional
+        Base name of the AMPLE directory [default: \'AMPLE_\']
 
     Returns
     -------
     work_dir : str
        The path to the working directory
+
     """
 
     if ccp4_jobid:
@@ -456,22 +482,22 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
     work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
     return work_dir
 
+
 def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False, **kwargs):
-    """
-    Execute a command and return the exit code.
+    """Execute a command and return the exit code.
 
     Parameters
     ----------
     cmd : list
        Command to run as a list
-    stdin : str
+    stdin : str, optional
        Stdin for the command
-    logfile : str
+    logfile : str, optional
        The path to the logfile
-    directory : str
+    directory : str, optional
        The directory to run the job in (cwd assumed)
-    dolog : bool
-       Whether to output info to the system log
+    dolog : bool, optional
+       Whether to output info to the system log [default: False]
 
     Returns
     -------
@@ -481,6 +507,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
     Notes
     -----
     We take care of outputting stuff to the logs and opening/closing logfiles
+
     """
     assert type(cmd) is list, "run_command needs a list!"
     if check and not is_exe(cmd[0]):
@@ -528,9 +555,9 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
 
     return p.returncode
 
+
 def read_amoptd(amoptd_fname):
-    """
-    Read a PICKLE-formatted AMPLE options file
+    """Read a PICKLE-formatted AMPLE options file
 
     Parameters
     ----------
@@ -541,6 +568,7 @@ def read_amoptd(amoptd_fname):
     -------
     amoptd : dict
        AMPLE options from saved state
+
     """
     if not is_file(amoptd_fname):
         raise RuntimeError("Cannot access AMPLE options file: {0}\n".format(amoptd_fname))
@@ -550,9 +578,9 @@ def read_amoptd(amoptd_fname):
         logger.info("Loaded state from file: {0}\n".format(amoptd['results_path']))
     return amoptd
 
+
 def saveAmoptd(*args):
-    """
-    Save AMPLE options to a PICKLE-formatted file
+    """Save AMPLE options to a PICKLE-formatted file
 
     See Also
     --------
@@ -561,20 +589,22 @@ def saveAmoptd(*args):
     Warnings
     --------
     This function was deprecated and will be removed in future releases. Please use ``save_amoptd()`` instead.
+
     """
     msg = "This function was deprecated and will be removed in future release"
     warnings.warn(msg, DeprecationWarning, stacklevel=2)
     save_amoptd(*args)
     return
 
+
 def save_amoptd(amoptd):
-    """
-    Save AMPLE options to a PICKLE-formatted file
+    """Save AMPLE options to a PICKLE-formatted file
 
     Parameters
     ----------
     amoptd : dict
        AMPLE options from saved state
+
     """
     # Save results
     with open(amoptd['results_path'], 'w') as f:
@@ -582,19 +612,20 @@ def save_amoptd(amoptd):
         logger.info("Saved state as file: {0}\n".format(amoptd['results_path']))
     return
 
+
 def split_quark(*args):
-    """
-    Split a single PDB with multiple models in individual PDB files
+    """Split a single PDB with multiple models in individual PDB files
 
     See Also
     --------
     split_models
+
     """
     return split_models(*args)
 
+
 def split_models(dfile, directory):
-    """
-    Split a single PDB with multiple models in individual PDB files
+    """Split a single PDB with multiple models in individual PDB files
 
     Parameters
     ----------
@@ -611,6 +642,7 @@ def split_models(dfile, directory):
     TODO
     ----
     * Use the CCTBX library to perform this step
+
     """
     logger.info("Extracting decoys from: {0} into {1}".format(dfile, directory))
     smodels = []
@@ -642,9 +674,9 @@ def split_models(dfile, directory):
         
     return extracted_models
 
+
 def tmpFileName():
-    """
-    Return a filename for a temporary file
+    """Return a filename for a temporary file
 
     See Also
     --------
@@ -653,23 +685,25 @@ def tmpFileName():
     Warnings
     --------
     This function was deprecated and will be removed in future releases. Please use ``tmp_file_name()`` instead.
+
     """
     msg = "This function was deprecated and will be removed in future release"
     warnings.warn(msg, DeprecationWarning, stacklevel=2)
     return tmp_file_name()
 
+
 def tmp_file_name(delete=True, directory=None, suffix=""):
-    """
-    Return a filename for a temporary file
+    """Return a filename for a temporary file
 
     Parameters
-    ---------
-    delete : bool
-       Flag whether the temporary file should be deleted
-    directory : str
+    ----------
+    delete : bool, optional
+       Flag whether the temporary file should be deleted [default: True]
+    directory : str, optional
        Path to a directory to write the files to.
-    suffix : str
+    suffix : str, optional
        A suffix to the temporary filename
+
     """
     directory = os.getcwd() if not directory else directory
     t = tempfile.NamedTemporaryFile(dir=directory, delete=delete, suffix=suffix)
