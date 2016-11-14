@@ -1,16 +1,21 @@
+#!/usr/bin/env ccp4-python
+
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "01 Oct 2016"
+__version__ = "1.0"
+
 import argparse
 import os
 import sys
 
+from ample import ensembler
 from ample.util import ample_util, config_util, exit_util, logging_util
-from ample.ensembler import ensembler_argparse
-from ample.ensembler.ensembler_util import create_ensembles
 
 ENSEMBLE_DIRNAME = 'ample_ensemble'
     
 # Set up the command-line parsing
 parser = argparse.ArgumentParser(description="AMPLE Ensembling Module")
-ensembler_argparse.add_ensembler_options(parser, standalone=True)
+ensembler.add_argparse_options(parser, standalone=True)
 
 # Get command-line arguments and see if we have a restart_pkl option as this
 # is how we pass in an existing ample dictionary when we are running the ensembling
@@ -67,9 +72,9 @@ try:
         optd['theseus_exe'] = ample_util.find_exe('theseus')
         optd['ensemble_ok'] = os.path.join(optd['work_dir'],'ensemble.ok')
         optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
-    create_ensembles(optd)
+    ensembler.create_ensembles(optd)
     ample_util.save_amoptd(optd)
 except Exception as e:
     msg = "Error running ensembling: {0}".format(e.message)
     exit_util.exit_error(msg, sys.exc_info()[2])
-    
+

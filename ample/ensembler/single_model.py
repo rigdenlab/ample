@@ -1,24 +1,21 @@
-#!/usr/bin/env ccp4-python
+"""Ensembler module for single model structures"""
 
-"""
-16.02.2016
+__author__ = "Felix Simkovic, and Jens Thomas"
+__date__ = "16 Feb 2016"
+__version__ = "1.0"
 
-@author: hlfsimko
-"""
-
-# System
 import csv
 import logging
 import os
 
-# Custom
 from ample.ensembler import _ensembler
 from ample.ensembler import truncation_util
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util
 from ample.util import pdb_edit
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
 
 class SingleModelEnsembler(_ensembler.Ensembler):
     """Ensemble creator using on a single input structure and a corresponding
@@ -56,12 +53,12 @@ class SingleModelEnsembler(_ensembler.Ensembler):
 
         if len(models) > 1:
             msg = "More than 1 structure provided"
-            _logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
         
         if len(truncation_scorefile_header) < 2:
             msg = "At least two header options for scorefile are required"
-            _logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
 
         # standardise the structure
@@ -71,7 +68,7 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         std_model = ample_util.filename_append(models[0], 'std', std_models_dir)
         pdb_edit.standardise(pdbin=models[0], pdbout=std_model, del_hetatm=True)
         std_models = [std_model]
-        _logger.info('Standardised input model: {0}'.format(std_models[0]))
+        logger.info('Standardised input model: {0}'.format(std_models[0]))
               
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
