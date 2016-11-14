@@ -4,7 +4,7 @@ from __future__ import division
 
 __author__ = "Felix Simkovic"
 __date__ = "28 Jul 2016"
-__version__ = 2.0
+__version__ = 1.0
 
 import itertools
 import logging
@@ -13,7 +13,6 @@ import os
 import random
 import string
 import sys
-import warnings
 
 from ample.parsers import alignment_parser
 from ample.parsers import tm_parser
@@ -26,9 +25,6 @@ try:
     BIOPYTHON_AVAILABLE = True
 except ImportError:
     BIOPYTHON_AVAILABLE = False
-
-
-TMSCORE_EXE = None
 
 logger = logging.getLogger(__name__)
 
@@ -263,9 +259,8 @@ class TMapps(object):
             raise ValueError('Provide one of TMalign or TMscore')
 
         try:
-            TMSCORE_EXE = ample_util.find_exe(exe_name)
+            ample_util.find_exe(exe_name)
         except:
-            TMSCORE_EXE = None
             return False
         return True
 
@@ -623,25 +618,6 @@ class TMscore(TMapps):
             if line.startswith("ATOM"):
                 line = line.split()
                 return int(line[5])
-
-
-def tm_available():
-    """
-    Check if TM binary is available and set TMSCORE_EXE module variable.
-
-    Returns
-    -------
-    bool
-    """
-    warnings.warn("This method will be deprecated in future releases. Use `TMapps.binary_avail()` instead.", DeprecationWarning)
-
-    exe_name = "TMscore" + ample_util.EXE_EXT
-    try:
-        TMSCORE_EXE = ample_util.find_exe(exe_name)
-    except:
-        TMSCORE_EXE = None
-        return False
-    return True
 
 
 def main():
