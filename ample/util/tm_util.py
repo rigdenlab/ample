@@ -4,7 +4,7 @@ from __future__ import division
 
 __author__ = "Felix Simkovic"
 __date__ = "28 Jul 2016"
-__version__ = 2.0
+__version__ = 1.0
 
 import itertools
 import logging
@@ -13,7 +13,6 @@ import os
 import random
 import string
 import sys
-import warnings
 
 from ample.parsers import alignment_parser
 from ample.parsers import tm_parser
@@ -27,10 +26,37 @@ try:
 except ImportError:
     BIOPYTHON_AVAILABLE = False
 
-
-TMSCORE_EXE = None
-
 logger = logging.getLogger(__name__)
+
+
+class ModelData(object):
+    """Class to store model data"""
+    __slots__ = ('model_name', 'structure_name', 'model_fname', 'structure_fname', 
+                 'log_fname', 'tmscore', 'rmsd', 'nr_residues_common', 'gdtts', 
+                 'gdtha', 'maxsub', 'seq_id')
+    
+    def __init__(self, model_name, structure_name, model_fname, structure_fname, log_fname, tmscore, rmsd, nr_residues_common):
+        self.model_name = model_name
+        self.structure_name = structure_name
+        self.model_fname = model_fname
+        self.structure_fname = structure_fname
+        self.log_fname = log_fname
+        self.tmscore = tmscore
+        self.rmsd = rmsd
+        self.nr_residues_common = nr_residues_common
+        self.gdtts = 0.0
+        self.gdtha = 0.0
+        self.maxsub = 0.0
+        self.seq_id = 0
+        
+    def _to_dict(self):
+        """Convert the object to a dictionary"""
+        dictionary = {'model_name': self.model_name, 'structure_name': self.structure_name,
+                      'model_fname': self.model_fname, 'structure_fname': self.structure_fname,
+                      'log_fname': self.log_fname, 'tmscore': self.tmscore, 'rmsd': self.rmsd,
+                      'nr_residues_common': self.nr_residues_common, 'gdtts': self.gdtts,
+                      'gdtha': self.gdtha, 'maxsub': self.maxsub, 'seq_id': self.seq_id}
+        return dictionary
 
 
 class TMapps(object):
@@ -193,22 +219,18 @@ class TMapps(object):
 
     def _store(self, model_name, structure_name, model_pdb, structure_pdb, logfile, pt):
         # Generic data that either both parsers have or are defined independently of the parser
-        data_storage = {'model_name': model_name, 'structure_name': structure_name,
-                        'model_fname': model_pdb, 'structure_fname': structure_pdb,
-                        'TM_log': logfile, 'tmscore': pt.tm, 'rmsd': pt.rmsd,
-                        'nr_residues_common': pt.nr_residues_common}
-
+        model = ModelData(model_name, structure_name, model_pdb, structure_pdb, logfile, pt.tm, pt.rmsd, pt.nr_residues_common)
         # Specific attributes that either but not both parsers have
         if hasattr(pt, 'gdtts'):
-            data_storage['gdtts'] = pt.gdtts
+            model.gdtts = pt.gdtts
         if hasattr(pt, 'gdtha'):
-            data_storage['gdtha'] = pt.gdtha
+            model.gdtha = pt.gdtha
         if hasattr(pt, 'maxsub'):
-            data_storage['maxsub'] = pt.maxsub
+            model.maxsub = pt.maxsub
         if hasattr(pt, 'seq_id'):
-            data_storage['seq_id'] = pt.seq_id
+            model.seq_id = pt.seq_id
 
-        return data_storage
+        return model._to_dict()
 
     @staticmethod
     def binary_avail(binary):
@@ -237,9 +259,8 @@ class TMapps(object):
             raise ValueError('Provide one of TMalign or TMscore')
 
         try:
-            TMSCORE_EXE = ample_util.find_exe(exe_name)
+            ample_util.find_exe(exe_name)
         except:
-            TMSCORE_EXE = None
             return False
         return True
 
@@ -599,31 +620,15 @@ class TMscore(TMapps):
                 return int(line[5])
 
 
-def tm_available():
-    """
-    Check if TM binary is available and set TMSCORE_EXE module variable.
-
-    Returns
-    -------
-    bool
-    """
-    warnings.warn("This method will be deprecated in future releases. Use `TMapps.binary_avail()` instead.", DeprecationWarning)
-
-    exe_name = "TMscore" + ample_util.EXE_EXT
-    try:
-        TMSCORE_EXE = ample_util.find_exe(exe_name)
-    except:
-        TMSCORE_EXE = None
-        return False
-    return True
-
-
 def main():
     import argparse
+    import shutil
     parser = argparse.ArgumentParser()
     parser.add_argument('--allvall', action="store_true", help="All vs all comparison")
     parser.add_argument('--log', default='info', choices=['debug', 'info', 'warning', 'error'],
                         help="logging level (defaults to 'warning')")
+    # parser.add_argument('--purge', action="store_true", help="Remove the run directory")
+    parser.add_argument('--rundir', default=os.getcwd(), help="Run directory")
     parser.add_argument('-f', '-fasta', dest="fastas", nargs="+", default=None)
     parser.add_argument('-m', '-models', dest="models", nargs="+", required=True)
     parser.add_argument('-s', '-structures', dest="structures", nargs="+", required=True)
@@ -635,13 +640,22 @@ def main():
     # Set up some very basic logging - Logging taken from
     # http://stackoverflow.com/questions/30824981/do-i-need-to-explicitly-check-for-name-main-before-calling-getlogge
     logging.basicConfig(level=getattr(logging, args.log.upper(), None), format='%(levelname)s: %(message)s')
-
+    
+    # Make the run directory if it doesn't exist
+    if not os.path.isdir(args.rundir):
+        os.mkdir(args.rundir)
+    
+    # Perform the comparison
     if args.tmalign:
-        entries = TMalign(args.tmalign).compare_structures(args.models, args.structures, all_vs_all=args.allvall)
+        entries = TMalign(args.tmalign, wdir=args.rundir).compare_structures(args.models, args.structures, all_vs_all=args.allvall)
     elif args.tmscore:
-        entries = TMscore(args.tmscore).compare_structures(args.models, args.structures, fastas=args.fastas, all_vs_all=args.allvall)
+        entries = TMscore(args.tmscore, wdir=args.rundir).compare_structures(args.models, args.structures, fastas=args.fastas, all_vs_all=args.allvall)
     else:
         entries = None
+    
+    # Remove run directory if required
+    # if args.purge:
+    #     shutil.rmtree(os.path.join(args.rundir))
 
     # Do a much fancier table print statement if pandas is installed
     # TODO: Print statement from entries dictionary if we don't have pandas
@@ -649,14 +663,22 @@ def main():
         import pandas
         PANDAS_AVAILABLE = True
     except ImportError:
+        import csv
         PANDAS_AVAILABLE = False
-
+    
+    csv_file = os.path.join(args.rundir, 'tm_results.csv')
     if PANDAS_AVAILABLE and entries:
         df = pandas.pandas.DataFrame(data=entries)
         df.sort_values("tmscore", inplace=True, ascending=False)
         df.reset_index(drop=True)
         logger.info("Results table:\n{0}".format(df[["model_name", "structure_name", "tmscore"]].to_string()))
-        df.to_csv("tm_results.csv")
+        df.to_csv(csv_file)
+    elif entries:
+        with open(csv_file, 'wb') as f_out:
+            w = csv.DictWriter(f_out, entries[0].keys())
+            w.writeheader()
+            for entry in entries:
+                w.writerow(entry)
 
     return entries
 

@@ -1,43 +1,47 @@
 #!/usr/bin/env ccp4-python
-'''
-Created on 3 Mar 2015
+"""Module to interact with pyrvapi
 
-@author: jmht
+Notes
+-----
 
+:obj:`remove_widget()` may result in an unexpected unless you put :obj:`flush()` immediately before **and** immediately after calling them, e.g.:
 
-Notes on pyrvapi from Eugene
+.. code-block:: python
+   
+   >>> pyrvapi_flush()
+   >>> for i in range():
+   ...     rvapi_remove_widget(..i..)
+   >>> rvapi_flush()
 
-remove_widget() may result in an unexpected unless you put flush() immediately before _and_ immediately after calling them, e.g.:
+This is because chronology of rvapi calls between flushes is not necessarily the same as chronology of making/changing widgets in the page. E.g. in sequence of calls:
 
-rvapi_flush()
-for i in range():
-    rvapi_remove_widget(..i..)
-rvapi_flush()
+.. code-block:: python
 
-This is because chronology of rvapi calls between flushes() is not necessarily the same as chronology of making/changing widgets in the page. E.g. in sequence of calls:
-
-rvapi_flush()
-rvapi_action1()
-rvapi_action2()
-rvapi_action3()
-rvapi_flush()
-rvapi_action4()
-rvapi_action5()
-rvapi_action6()
-rvapi_flush()
+   >>> rvapi_flush()
+   >>> rvapi_action1()
+   >>> rvapi_action2()
+   >>> rvapi_action3()
+   >>> rvapi_flush()
+   >>> rvapi_action4()
+   >>> rvapi_action5()
+   >>> rvapi_action6()
+   >>> rvapi_flush()
 
 it is guaranteed that results of actions 4-6 will appear after results from 1-3, but there is no guarantee that results from 1-3 and 4-6 groups will appear in exactly that order. E.g., the page may perform actions like  3-1-2-5-4-6, but never like 6-4-1-2-3-5.
 
+"""
 
+__author__ = "Jens Thomas"
+__date__ = "03 Mar 2015"
+__version__ = "1.0"
 
-'''
 import logging
 import os
 import subprocess
 import urlparse
 import uuid
 
-from ample.ensembler import ensembler_util
+from ample import ensembler
 from ample.util import ample_util
 from ample.util import mrbump_util
 
@@ -173,7 +177,7 @@ class AmpleOutput(object):
                 pyrvapi.rvapi_add_section(self.summary_tab_ensemble_sec_id, "Ensembles", self.summary_tab_id, 0, 0, 1, 1, True)
                 
                 # Get the ensembling data
-                clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments = ensembler_util.collate_cluster_data(ensembles_data)
+                clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments = ensembler.collate_cluster_data(ensembles_data)
                 
                 rstr = ""
                 rstr += "Ensemble Results<br/>"
@@ -198,7 +202,7 @@ class AmpleOutput(object):
                 #     rstr += tableFormat.pprint_table(tdata)        
                 # 
                 cluster_num = 1
-                tdata = ensembler_util.cluster_table_data(clusters, cluster_num, side_chain_treatments)
+                tdata = ensembler.cluster_table_data(clusters, cluster_num, side_chain_treatments)
                 self.fill_table(ensemble_table, tdata, tooltips=self._ensemble_tooltips)
         
         #

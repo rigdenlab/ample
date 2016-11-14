@@ -1,26 +1,28 @@
-#!/usr/bin/env ccp4-python
+"""Subcluster core module"""
 
-#edit the sidechains to make polyala, all and reliable
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "01 Oct 2016"
+__version__ = "1.0"
 
 from collections import namedtuple
 import itertools
 import logging
+import mmtbx.superpose
+import numpy
 import re
 import os
 import shutil
 
-import mmtbx.superpose
-import numpy
-
 from ample.util import ample_util
 from ample.util import pdb_edit
 
-_logger = logging.getLogger()
+logger = logging.getLogger()
 
 SCORE_MATRIX_NAME = 'score.matrix'
 FILE_LIST_NAME = 'files.list'
 RMSD_MAX = 50
 QSCORE_MIN = 0.01
+
 
 class SubClusterer(object):
     """Base class for clustering pdbs by distance
@@ -131,6 +133,7 @@ class SubClusterer(object):
             f.write("\n")
         return os.path.abspath(file_name)
 
+
 class CctbxClusterer(SubClusterer):
     """Class to cluster files with maxcluster"""
 
@@ -163,7 +166,8 @@ class CctbxClusterer(SubClusterer):
             for y in range(len(self.distance_matrix)):
                 self.distance_matrix[y][x] = self.distance_matrix[x][y]
         return
-    
+
+
 class FpcClusterer(SubClusterer):
     """Class to cluster files with fast_protein_clusterer"""
     
@@ -224,7 +228,8 @@ class FpcClusterer(SubClusterer):
                 
         self.distance_matrix = m
         return
-    
+
+
 class GesamtClusterer(SubClusterer):
     """Class to cluster files with Gesamt"""
     
@@ -324,7 +329,7 @@ where inp_list.dat  contains:
         nmodels = len(models)
         
         # Make the archive
-        _logger.debug("Generating gesamt archive from models in directory {0}".format(mdir))
+        logger.debug("Generating gesamt archive from models in directory {0}".format(mdir))
         garchive = 'gesamt.archive'
         if not os.path.isdir(garchive): os.mkdir(garchive)
         logfile = os.path.abspath('gesamt_archive.log')
@@ -426,6 +431,7 @@ where inp_list.dat  contains:
         assert len(data),"Failed to read any data!"
         return data
     
+
 class LsqkabClusterer(SubClusterer):
     """Class to cluster files with Lsqkab"""
     
@@ -490,6 +496,7 @@ end""".format(nresidues, 'A')
                 if l.startswith("          RMS     XYZ DISPLACEMENT ="):
                     return float(l.split()[4])
         assert False
+
 
 class MaxClusterer(SubClusterer):
     """Class to cluster files with maxcluster"""
@@ -561,3 +568,4 @@ class MaxClusterer(SubClusterer):
             for y in range(len(self.distance_matrix)):
                 self.distance_matrix[y][x] = self.distance_matrix[x][y]
         return
+

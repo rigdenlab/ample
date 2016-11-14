@@ -11,8 +11,8 @@ import shutil
 import sys
 import time
 
+from ample import ensembler
 from ample.ensembler.constants import UNMODIFIED
-from ample.ensembler import ensembler_util, ensembler_argparse
 from ample.util import ample_util
 from ample.util import argparse_util
 from ample.util import benchmark_util
@@ -152,7 +152,7 @@ class Ample(object):
     def ensembling(self, optd):
 
         if optd['import_ensembles']:
-            ensembler_util.import_ensembles(optd)
+            ensembler.import_ensembles(optd)
         elif optd['ideal_helices']:
             ample_util.ideal_helices(optd)
             logger.info("*** Using ideal helices to solve structure ***")
@@ -167,7 +167,7 @@ class Ample(object):
             if optd['submit_cluster']:
                 # Pickle dictionary so it can be opened by the job to get the parameters
                 ample_util.save_amoptd(optd)
-                script = ensembler_util.cluster_script(optd)
+                script = ensembler.cluster_script(optd)
                 workers_util.run_scripts(job_scripts=[script],
                                          monitor=monitor,
                                          chdir=True,
@@ -184,7 +184,7 @@ class Ample(object):
                 # queue finished so unpickle results
                 optd.update(ample_util.read_amoptd(optd['results_path']))
             else:
-                try: ensembler_util.create_ensembles(optd)
+                try: ensembler.create_ensembles(optd)
                 except Exception, e:
                     msg = "Error creating ensembles: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
@@ -195,7 +195,7 @@ class Ample(object):
                 exit_util.exit_error(msg)
                 
             if not (optd['homologs'] or optd['single_model_mode']):
-                ensemble_summary = ensembler_util.ensemble_summary(optd['ensembles_data'])
+                ensemble_summary = ensembler.ensemble_summary(optd['ensembles_data'])
                 logger.info(ensemble_summary)
             
         # Save the results
@@ -307,11 +307,11 @@ class Ample(object):
             
             # Set an ensemble-specific phaser_rms if required
             if optd['phaser_rms'] == 'auto':
-                ensembler_util.set_phaser_rms_from_subcluster_score(optd)
+                ensembler.set_phaser_rms_from_subcluster_score(optd)
             
             # Sort the ensembles in a favourable way
             logger.info("Sorting ensembles")
-            ensemble_pdbs_sorted = ensembler_util.sort_ensembles(optd['ensembles'],
+            ensemble_pdbs_sorted = ensembler.sort_ensembles(optd['ensembles'],
                                                            optd['ensembles_data'])
             # Create job scripts
             logger.info("Generating MRBUMP runscripts")
@@ -376,7 +376,7 @@ class Ample(object):
                                          prefix_chars="-")
         argparse_util.add_general_options(parser)
         argparse_util.add_cluster_submit_options(parser)
-        ensembler_argparse.add_ensembler_options(parser)
+        ensembler.add_argparse_options(parser)
         
         if contacts: argparse_util.add_contact_options(parser)
         if mol_rep: argparse_util.add_mr_options(parser)

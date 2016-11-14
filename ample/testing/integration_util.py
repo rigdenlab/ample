@@ -1,4 +1,10 @@
+"""Module containing a framework for integration testing of AMPLE modules"""
 
+from __future__ import print_function
+
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "25 Mar 2016"
+__version__ = "1.0"
 
 from unittest import TestCase, TestLoader, TextTestRunner, TestSuite
 import glob
@@ -13,9 +19,6 @@ from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
 from ample.util import ample_util
 from ample.util import workers_util
 
-__author__ = "Felix Simkovic and Jens Thomas"
-__date__ = "25-Mar-2016"
-
 logger = logging.getLogger(__name__)
 
 # Available packages. Hard-coded for now to show visually what we have in
@@ -27,6 +30,7 @@ if not sys.platform.startswith("win"):
     PACKAGES += ['nmr_remodel', 'rosetta_contacts', 'rosetta_modelling', 
                  'rosetta_restraints']
 
+    
 def add_cmd_options(parser):
     parser.add_argument('-clean', action='store_true', default=False,
                         help="Clean up all test files/directories")
@@ -116,7 +120,7 @@ class AMPLEIntegrationFramework(object):
         if dry_run: clean_up = False
         
         if rosetta_dir and not os.path.isdir(rosetta_dir):
-            print "Cannot find rosetta_dir: {0}".format(rosetta_dir)
+            print("Cannot find rosetta_dir: {0}".format(rosetta_dir))
             sys.exit(1)
         
         if clean_up: self.clean()
@@ -292,3 +296,4 @@ class SuiteLoader(object):
         finally:
             mfile.close()
         return test_module
+

@@ -1,24 +1,23 @@
-'''
-Created on Apr 18, 2013
+"""Ensembler core module"""
 
-@author: jmht
-'''
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "01 Nov 2016"
+__version__ = "1.0"
 
-# system imports
 import copy
 import logging
 import os
 import re
 import shutil
 
-# our imports
 from ample.ensembler.constants import ALLATOM, POLYALA, RELIABLE, UNMODIFIED
 from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import sequence_util
 from ample.util import theseus
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
 
 def model_core_from_fasta(models, alignment_file, work_dir=None, case_sensitive=False):
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
@@ -75,6 +74,7 @@ def model_core_from_fasta(models, alignment_file, work_dir=None, case_sensitive=
         
     return core_models
 
+
 def model_core_from_theseus(models, alignment_file, var_by_res, work_dir=None):
     """
     Only residues from the first protein are listed in the theseus output, but then not even all of them
@@ -129,6 +129,7 @@ def model_core_from_theseus(models, alignment_file, var_by_res, work_dir=None):
         
     return core_models
 
+
 class Cluster(object):
     """Class to hold all data related to a cluster"""
     def __init__(self):
@@ -165,6 +166,7 @@ class Cluster(object):
         for k in sorted(self.__dict__.keys()):
             _str += "{0} : {1}\n".format(k, self.__dict__[k])
         return _str
+
     
 class Ensemble(object):
     """Class to hold data relating to an ensemble of one or more molecular models"""
@@ -213,6 +215,7 @@ class Ensemble(object):
         for k in sorted(self.__dict__.keys()):
             _str += "{0} : {1}\n".format(k, self.__dict__[k])
         return _str
+
 
 class Ensembler(object):
     """Class to generate ensembles from ab inito models (all models must have the same sequence).
@@ -451,6 +454,7 @@ class Ensembler(object):
         try:
             run_theseus.superpose_models(models, basename=basename, homologs=homologs)
         except Exception, e:
-            _logger.critical("Error running theseus: {0}".format(e))
+            logger.critical("Error running theseus: {0}".format(e))
             return False
         return run_theseus.superposed_models
+

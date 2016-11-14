@@ -1,13 +1,14 @@
-"""
-02.03.2016
+"""Subcluster utility module"""
 
-@author: hlfsimko
-"""
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "02 Mar 2016"
+__version__ = "1.0"
 
 import logging
 import random
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
 
 def pick_nmodels(models, clusters, ensemble_max_models):
     MAXTRIES = 50
@@ -21,6 +22,7 @@ def pick_nmodels(models, clusters, ensemble_max_models):
         tries += 1
         if tries >= MAXTRIES: return None
     return subcluster
+
 
 def slice_subcluster(cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds):
     """Select a unique set of models from a subcluster of models.
@@ -65,6 +67,7 @@ def slice_subcluster(cluster_files, previous_clusters, ensemble_max_models, radi
     
     return None
 
+
 def subcluster_nmodels(nmodels, radius, clusterer, direction, increment):
 
     MINRADIUS = 0.0001
@@ -73,9 +76,9 @@ def subcluster_nmodels(nmodels, radius, clusterer, direction, increment):
     subcluster_models = clusterer.cluster_by_radius(radius)
     len_models = len(subcluster_models) if subcluster_models else 0
     
-    _logger.debug("subcluster nmodels: {0} {1} {2} {3} {4}".format(len_models, nmodels, radius, direction, increment))
+    logger.debug("subcluster nmodels: {0} {1} {2} {3} {4}".format(len_models, nmodels, radius, direction, increment))
     if len_models == nmodels or radius < MINRADIUS or radius > MAXRADIUS:
-        _logger.debug("nmodels: {0} radius: {1}".format(len_models, radius))
+        logger.debug("nmodels: {0} radius: {1}".format(len_models, radius))
         return subcluster_models, radius
     
     def lower_increment(increment):
@@ -102,7 +105,7 @@ def subcluster_nmodels(nmodels, radius, clusterer, direction, increment):
             radius += increment
     except RuntimeError:
         # Can't get a match so just return what we have
-        _logger.debug("subcluster nmodels exceeded increment. Returning: nmodels: {0} radius: {1}".format(len(subcluster_models), radius))
+        logger.debug("subcluster nmodels exceeded increment. Returning: nmodels: {0} radius: {1}".format(len(subcluster_models), radius))
         return subcluster_models, radius
         
     return subcluster_nmodels(nmodels, radius, clusterer, direction, increment)

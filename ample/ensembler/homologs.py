@@ -1,8 +1,8 @@
-"""
-17.02.2016
+"""Ensembler module for homolog structures"""
 
-@author: jmht
-"""
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "17 Nov 2016"
+__version__ = "1.0"
 
 import logging
 import os
@@ -15,7 +15,7 @@ from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util
 from ample.util import pdb_edit
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def align_mustang(models, mustang_exe=None, work_dir=None):
@@ -39,6 +39,7 @@ def align_mustang(models, mustang_exe=None, work_dir=None):
     if not os.path.isfile(alignment_file): raise RuntimeError("Could not find alignment file: {0} after running mustang!".format(alignment_file))
     os.chdir(owd) # always need to go back to original directory
     return alignment_file
+
 
 def align_gesamt(models, gesamt_exe=None, work_dir=None):
     if not ample_util.is_exe(gesamt_exe):
@@ -79,6 +80,7 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
     os.chdir(owd) # always need to go back to original directory
     return alignment_file
  
+
 ## BUG: reported to Eugene - 22/03/2016 by hlfsimko
 def _gesamt_aln_windows_fix(alnf):
     """fix for MSA to be readable by Theseus"""
@@ -89,6 +91,7 @@ def _gesamt_aln_windows_fix(alnf):
                 line = line[0] + os.path.basename(line[1:])
             outfh.write(line)
     return alnf
+
 
 class HomologEnsembler(_ensembler.Ensembler):
     """Ensemble creator using on multiple distant homologous structures
@@ -121,7 +124,7 @@ class HomologEnsembler(_ensembler.Ensembler):
         if not all([os.path.isfile(m) for m in models]):
             raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
         
-        _logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
+        logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
     
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
@@ -138,16 +141,16 @@ class HomologEnsembler(_ensembler.Ensembler):
         # Get a structural alignment between the different models
         if not alignment_file:
             if homolog_aligner == 'mustang':
-                _logger.info("Generating alignment file with mustang_exe: {0}".format(self.mustang_exe))
+                logger.info("Generating alignment file with mustang_exe: {0}".format(self.mustang_exe))
                 alignment_file = align_mustang(std_models, mustang_exe=self.mustang_exe, work_dir=self.work_dir)
             elif homolog_aligner == 'gesamt':
-                _logger.info("Generating alignment file with gesamt_exe: {0}".format(self.gesamt_exe))
+                logger.info("Generating alignment file with gesamt_exe: {0}".format(self.gesamt_exe))
                 alignment_file = align_gesamt(std_models, gesamt_exe=self.gesamt_exe, work_dir=self.work_dir)
             else:
                 raise RuntimeError, "Unknown homolog_aligner: {0}".format(homolog_aligner)
-            _logger.info("Generated alignment file: {0}".format(alignment_file))
+            logger.info("Generated alignment file: {0}".format(alignment_file))
         else:
-            _logger.info("Using alignment file: {0}".format(alignment_file))
+            logger.info("Using alignment file: {0}".format(alignment_file))
             
         
         truncate_dir = os.path.join(self.work_dir,"homolog_truncate")
@@ -171,7 +174,7 @@ class HomologEnsembler(_ensembler.Ensembler):
             basename = "e{0}".format(truncation.level)
             superposed_models = self.superpose_models(truncation.models, basename=basename, work_dir=ensemble_dir, homologs=True)
             if not superposed_models:
-                _logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
+                logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
                 continue
             
             # Create Ensemble object
