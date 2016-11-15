@@ -20,7 +20,10 @@ class Test_1(unittest.TestCase):
         radius = 8
         clusterer = subcluster.CctbxClusterer()
         # Only select a few as is very slow
-        pdb_list = glob.glob(os.path.join(self.testfiles_dir,"models",'*.pdb'))[:4]
+        pdb_list = [ os.path.join(self.testfiles_dir,"models",pdb) for pdb in ['1_S_00000001.pdb',
+                                                                               '1_S_00000002.pdb',
+                                                                               '1_S_00000003.pdb',
+                                                                               '1_S_00000004.pdb'] ]
         clusterer.generate_distance_matrix(pdb_list)
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius(radius)]
         ref = ['1_S_00000002.pdb', '1_S_00000004.pdb']
