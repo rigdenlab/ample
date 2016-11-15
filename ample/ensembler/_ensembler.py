@@ -10,7 +10,7 @@ import os
 import re
 import shutil
 
-from ample.ensembler.constants import ALLATOM, POLYALA, RELIABLE, UNMODIFIED
+from constants import ALLATOM, POLYALA, RELIABLE, UNMODIFIED
 from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import sequence_util

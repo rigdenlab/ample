@@ -10,7 +10,7 @@ import sys
 
 # our imports
 from ample.util import ample_util
-from ample.ensembler._ensembler import Cluster
+from ample.util.cluster_data import ClusterData
     
 logger = logging.getLogger(__name__)
 
@@ -293,7 +293,7 @@ class Spickerer(object):
         # create results
         num_clusters = len(clusterCounts)
         for cluster in range(num_clusters):
-            result = Cluster()
+            result = ClusterData()
             result.cluster_method = self.cluster_method
             result.score_type = self.score_type
             result.index = cluster + 1

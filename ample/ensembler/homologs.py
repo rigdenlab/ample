@@ -9,9 +9,9 @@ import os
 import shutil
 import sys
 
-from ample.ensembler import _ensembler
-from ample.ensembler import truncation_util
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
+import _ensembler
+import truncation_util
+from constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util
 from ample.util import pdb_edit
 

@@ -2,7 +2,7 @@
 import os
 
 from ample.util import ample_util
-from ample.ensembler._ensembler import Cluster
+from ample.util.cluster_data import ClusterData
 
 class FPC(object):
     """
@@ -126,7 +126,7 @@ class FPC(object):
         # Create the data - we loop through the number of clusters specified by the user
         clusters=[]
         for i in range(num_clusters):
-            cluster = Cluster()
+            cluster = ClusterData()
             cluster.method = cluster_method
             cluster.score_type = score_type
             cluster.index = i + 1

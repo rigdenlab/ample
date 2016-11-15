@@ -8,12 +8,13 @@ import logging
 import os
 import shutil
 
-from ample.ensembler import _ensembler
-from ample.ensembler import cluster_util
-from ample.ensembler import subcluster
-from ample.ensembler import subcluster_util
-from ample.ensembler import truncation_util
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
+import _ensembler
+import cluster_util
+import subcluster
+import subcluster_util
+import truncation_util
+from constants import SIDE_CHAIN_TREATMENTS
+
 from ample.util import fast_protein_cluster
 from ample.util import scwrl_util
 from ample.util import spicker

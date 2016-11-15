@@ -18,10 +18,10 @@ import os
 import shutil
 import sys
 
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
-from ample.ensembler.abinitio import AbinitioEnsembler
-from ample.ensembler.homologs import HomologEnsembler
-from ample.ensembler.single_model import SingleModelEnsembler
+from constants import SIDE_CHAIN_TREATMENTS
+from abinitio import AbinitioEnsembler
+from homologs import HomologEnsembler
+from single_model import SingleModelEnsembler
 from ample.util import ample_util
 from ample.util import argparse_util
 from ample.util import exit_util
@@ -29,7 +29,6 @@ from ample.util import pdb_edit
 from ample.util import printTable
 
 logger = logging.getLogger(__name__)
-
 
 def add_argparse_options(parser, standalone=False):
     """Function to add the ensemble-specific options
