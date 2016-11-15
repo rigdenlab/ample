@@ -134,7 +134,68 @@ class Spickerer(object):
                         seq.write('\t' + split[5] + '\t' + split[3] + '\n')
         return
     
-    def cluster(self, models, run_dir=None, score_type='rmsd', score_matrix=None, nproc=1):
+    def cluster(self, models, num_clusters=10, max_cluster_size=200, run_dir=None, score_type='rmsd', score_matrix=None, nproc=1):
+        """Cluster decoys using spicker
+    
+        Parameters
+        ----------
+        models : list
+           A list containing structure decoys
+        cluster_dir : str
+           The directory to store the cluster data in
+        cluster_method_type : str
+           The method to be used to cluster the decoys
+        cluster_score_type : str
+           The score type
+        num_clusters : int
+           The number of clusters to produce
+        max_cluster_size : int
+           The maximum number of decoys per cluster
+        cluster_exe : str
+           The path to the spicker executable
+        nproc : int
+           The number of processors to use
+        score_matrix : str, optional
+           The path to the score matrix to be used
+    
+        Returns
+        -------
+        list
+           A list containing the clusters
+    
+        Raises
+        ------
+        RuntimeError
+           No clusters returned by SPICKER
+        """
+        self._cluster(models, run_dir=run_dir, score_type=score_type, score_matrix=score_matrix, nproc=nproc)
+
+        ns_clusters = len(self.results)
+        if ns_clusters == 0: raise RuntimeError('No clusters returned by SPICKER')
+        if ns_clusters < int(num_clusters):
+            logger.critical('Requested {0} clusters but SPICKER only found {1} so using {1} clusters'.format(num_clusters, ns_clusters))
+            num_clusters = ns_clusters
+        
+        clusters = []
+        for i in range(num_clusters):
+            cluster = self.results[i]
+            # We truncate the list of models to max_cluster_size. This probably 
+            # needs to be redone, because as the models are ordered by their similarity
+            # to the cluster centroid, we automatically select the 200 most similar 
+            # to the centroid. However if the cluster is large and the models similar
+            # then when theseus calculates the variances, the variances will be 
+            # representative of the 200, but might not show how the models vary throughout
+            # the whole cluster, which could provide better information for truncating the models.
+            #
+            # Note - hlfsimko - 24.02.16: Maybe we can keep the full length clusters 
+            #                             and slice the list after truncation?
+            cluster.num_clusters = ns_clusters
+            cluster.models = cluster.models[0:max_cluster_size]
+            clusters.append(cluster)
+        
+        return clusters
+
+    def _cluster(self, models, run_dir=None, score_type='rmsd', score_matrix=None, nproc=1):
         """
         Run spicker to cluster the models
         """

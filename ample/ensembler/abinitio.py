@@ -14,7 +14,9 @@ from ample.ensembler import subcluster
 from ample.ensembler import subcluster_util
 from ample.ensembler import truncation_util
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
+from ample.util import fast_protein_cluster
 from ample.util import scwrl_util
+from ample.util import spicker
 
 logger = logging.getLogger(__name__)
 
@@ -61,15 +63,26 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         cluster_method_type, cluster_score_type, cluster_exe = self.parse_cluster_method(cluster_method)
         
         # Set directory
-        if cluster_method_type not in ['import', 'random', 'skip']:
+        if cluster_method_type not in ['skip']:
+            pass
+        elif cluster_method_type in ['import', 'random']:
+            if not os.path.isdir(cluster_dir): 
+                raise RuntimeError('Cannot find cluster directory: {0}'.format(cluster_dir))
+        else:
             cluster_dir = os.path.join(self.work_dir, 'clustering')
         
         if cluster_method_type == 'fast_protein_cluster':
-            clusters = cluster_util.fast_protein_cluster(cluster_exe,
-                                                         max_cluster_size, 
-                                                         models,
-                                                         num_clusters, 
-                                                         cluster_dir)
+            SCORE_TYPE = 'rmsd'
+            CLUSTER_METHOD = 'kmeans'
+            logger.info('Running fast_protein_cluster with: score_type: {0} cluster_method: {1}'.format(SCORE_TYPE, CLUSTER_METHOD))
+            clusters = fast_protein_cluster.FPC().fpc.cluster(cluster_method=CLUSTER_METHOD,
+                                                              fpc_exe=cluster_exe,
+                                                              max_cluster_size=max_cluster_size,
+                                                              models=models,
+                                                              num_clusters=num_clusters,
+                                                              nproc=self.nproc,
+                                                              score_type=SCORE_TYPE,
+                                                              work_dir=cluster_dir)
         elif cluster_method_type == 'import':
             clusters = cluster_util.import_cluster(cluster_dir)
         elif cluster_method_type == 'random':
@@ -78,15 +91,16 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                                                    models,
                                                    num_clusters)
         elif cluster_method_type == 'spicker':
-            clusters = cluster_util.spicker_cluster(models,
-                                                    cluster_dir,
-                                                    cluster_method_type,
-                                                    cluster_score_type,
-                                                    num_clusters,
-                                                    max_cluster_size,
-                                                    cluster_exe,
-                                                    self.nproc,
-                                                    score_matrix=self.cluster_score_matrix)
+            logger.info('* Running SPICKER to cluster models *')
+            spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
+            clusters = spickerer.cluster(models,
+                                         num_clusters=num_clusters,
+                                         max_cluster_size=max_cluster_size,
+                                         score_type=cluster_score_type,
+                                         run_dir=cluster_dir,
+                                         score_matrix=None,
+                                         nproc=self.nproc)
+            logger.debug(spickerer.results_summary())
         else:
             msg = 'Unrecognised clustering method: {0}'.format(cluster_method_type)
             raise RuntimeError(msg)
