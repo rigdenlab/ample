@@ -275,23 +275,19 @@ class AMPLEConfigOptions(object):
         
         for k, v in cmdline_opts.iteritems():
             if v is not None: cmdline_flags.append(k)
-            
-            #jmht - we need to stop using nargs=1 in the argparser and better handle lists
-            tmpv = v[0] if isinstance(v, list) and len(v) == 1 else v
-                        
-            if isinstance(tmpv, str):
-                if tmpv.lower() == "true":
-                    tmpv = True
-                elif tmpv.lower() == "false":
-                    tmpv = False
-                elif tmpv.lower() == "none":
-                    tmpv = None
+            if isinstance(v, str):
+                if v.lower() == "true":
+                    v = True
+                elif v.lower() == "false":
+                    v = False
+                elif v.lower() == "none":
+                    v = None
 
             if k not in self.d:
-                self.d[k] = tmpv
-            elif tmpv != None: 
-                logger.debug("Cmdline setting {0}: {1} => {2}".format(k, self.d[k], tmpv))
-                self.d[k] = tmpv
+                self.d[k] = v
+            elif v != None: 
+                logger.debug("Cmdline setting {0}: {1} => {2}".format(k, self.d[k], v))
+                self.d[k] = v
             
         self.d['cmdline_flags'] = cmdline_flags
         return
