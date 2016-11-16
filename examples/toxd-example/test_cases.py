@@ -64,7 +64,7 @@ if not sys.platform.startswith('win'):
 ###############################################################################
 args_from_existing_models = args_vanilla + [
     [ '-models', os.path.join(TESTFILES_DIR, 'models') ],
-    [ '-native_pdb', os.path.join(INPUT_DIR, '1DTX.pdb') ],                                         
+    [ '-native_pdb', os.path.join(INPUT_DIR, '1DTX.pdb') ],                  
 ]
 
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
@@ -110,6 +110,42 @@ class AMPLETest(AMPLEBaseTest):
 TEST_DICT['from_quark_models'] = { 'args' : args_from_quark_models,
                                    'test' :  AMPLETest,
                                  }
+
+###############################################################################
+#
+# test thin_clusters ensembling
+#
+###############################################################################
+args_thin_clusters = args_vanilla + [
+    [ '-models', os.path.join(TESTFILES_DIR, 'models') ],
+    [ '-thin_clusters', 'true' ],
+    [ '-do_mr', 'False' ]                                         
+]
+
+# Test class that holds the functions to test the RESULTS_PKL file that will be passed in
+class AMPLETest(AMPLEBaseTest):
+    def test_thin_clusters(self):
+        nclusters = 10
+        radii = set([1,3])
+        sidechains = set(['polyAla'])
+        self.assertEqual(nclusters, self.AMPLE_DICT['num_clusters'])
+        self.assertEqual(list(radii), self.AMPLE_DICT['subcluster_radius_thresholds'])
+        self.assertEqual(list(sidechains), self.AMPLE_DICT['side_chain_treatments'])
+        self.assertIn('ensembles', self.AMPLE_DICT)
+        ensembles_data = self.AMPLE_DICT['ensembles_data']
+        # We need to make sure that only the set sidechains and radii are present in the ensembles, so we need to check that what we
+        # find is a subset of the allowed values
+        for i in xrange(1, len(ensembles_data) + 1):
+            cluster_ensembles = [ens for ens in ensembles_data if ens['cluster_num']==i]
+            side_chain_treatments = set([ens['side_chain_treatment'] for ens in ensembles_data if ens['cluster_num']==i ]  )
+            subcluster_radius_thresholds = set([ens['subcluster_radius_threshold'] for ens in ensembles_data if ens['cluster_num']==i ]  )
+            self.assertTrue(side_chain_treatments.issubset(sidechains), side_chain_treatments)
+            self.assertTrue(subcluster_radius_thresholds.issubset(radii), subcluster_radius_thresholds)
+        return
+         
+TEST_DICT['thin_clusters'] = { 'args' : args_thin_clusters,
+                               'test' :  AMPLETest,
+                               }
 
 ###############################################################################
 #

@@ -31,6 +31,7 @@ class Test(unittest.TestCase):
                      'shelxe_rebuild_buccaneer' : False,
                      'devel_mode' : False,
                      'quick_mode' : False,
+                     'thin_clusters' : False,
                      'webserver_uri' : False,
         }
         expected = {'ample_version' : version.__version__,
@@ -43,6 +44,7 @@ class Test(unittest.TestCase):
                     'shelxe_rebuild_buccaneer' : True,
                     'devel_mode' : False,
                     'quick_mode' : False,
+                    'thin_clusters' : False,
                     'webserver_uri' : False,
         }
         options._process_options()

@@ -10,7 +10,7 @@ import os
 import re
 import shutil
 
-from constants import ALLATOM, POLYALA, RELIABLE, UNMODIFIED
+from constants import ENSEMBLE_MAX_MODELS, ALLATOM, POLYALA, RELIABLE, UNMODIFIED
 from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import sequence_util
@@ -253,7 +253,7 @@ class Ensembler(object):
     """
     def __init__(self,
                  ensembles_directory=None,
-                 ensemble_max_models=30,
+                 ensemble_max_models=ENSEMBLE_MAX_MODELS,
                  nproc=1,
                  work_dir=None,
                  # Executables

@@ -9,6 +9,7 @@ import logging
 import os
 
 from ample.constants import AMPLE_CONFIG_FILE
+from ample.ensembler.constants import POLYALA
 from ample.util import version
 
 # Python 3.x --> ConfigParser renamed to configparser
@@ -17,7 +18,7 @@ try:
 except ImportError:
     import ConfigParser 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 ##############################################################
 # The sections and options within need to be stored
@@ -106,15 +107,6 @@ class AMPLEConfigOptions(object):
         self.cmdline_opts = {}
         self.debug = False
         
-        self.quick_mode = {
-                           'ensemble_max_models' : 10,
-                           'nmodels' : 200,
-                           'percent' : 20,
-                           'shelx_cycles' : 5,
-                           'use_arpwarp' : False,
-                           'use_buccaneer' : False,
-                           'phaser_kill' : 15
-        }
 
         # Test use scrwl
         self.devel_mode = {
@@ -126,6 +118,23 @@ class AMPLEConfigOptions(object):
                            'use_arpwarp' : False,
                            'use_buccaneer' : False,
                            #'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
+        }
+        
+        self.quick_mode = {
+                           'ensemble_max_models' : 10,
+                           'nmodels' : 200,
+                           'percent' : 20,
+                           'shelx_cycles' : 5,
+                           'use_arpwarp' : False,
+                           'use_buccaneer' : False,
+                           'phaser_kill' : 15
+        }
+        
+        self.thin_clusters = {
+                              'side_chain_treatments' : [POLYALA],
+                              'subcluster_radius_thresholds' : [1,3],
+                              'percent' : 5,
+                              'num_clusters' : 10,
         }
         
         self.webserver_uri = {
@@ -159,9 +168,9 @@ class AMPLEConfigOptions(object):
         config_file = os.path.abspath(cmd_file) if cmd_file else AMPLE_CONFIG_FILE
         if not os.path.isfile(config_file):
             msg = "Cannot find configuration file: {0} - terminating...".format(config_file)
-            LOGGER.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
-        LOGGER.debug("Using configuration file: {0}".format(config_file))
+        logger.debug("Using configuration file: {0}".format(config_file))
         return config_file
      
     def _process_options(self):
@@ -194,25 +203,27 @@ class AMPLEConfigOptions(object):
         # Check if using any preset options
         if self.d['devel_mode']: self._preset_options('devel_mode')
         if self.d['quick_mode']: self._preset_options('quick_mode')
+        if self.d['thin_clusters']: self._preset_options('thin_clusters')
         if self.d['webserver_uri']: self._preset_options('webserver_uri')
         
         return
     
     def _preset_options(self, mode):
         assert hasattr(self, mode),"Unknown mode: {0}".format(mode)
+        logger.info("Using preset mode: {0}".format(mode))
         for k, v in getattr(self, mode).iteritems():
             if 'cmdline_flags' in self.d and k in self.d['cmdline_flags']:
                 if self.d[k] == v:
-                    msg = 'WARNING! {0} flag {1} => {2} was duplicated on the command line!'.format(mode,k, v)
+                    msg = 'WARNING! {0} flag {1} => {2} was duplicated on the command line!'.format(mode, v, k)
                 else:
-                    msg = "WARNING! Overriding {0} setting: {1} => {2} with {3}".format(mode, k, self.d[k], v)
-                LOGGER.critical(msg)
+                    msg = "WARNING! Overriding {0} setting: {1} => {2} with {3}".format(mode, k, v, self.d[k])
+                logger.critical(msg)
             elif k in self.d:
-                    LOGGER.debug("{0} overriding default setting: {1} => {2} with {3}".format(mode, k, self.d[k], v))
+                logger.debug("{0} overriding default setting: {1} => {2} with {3}".format(mode, k, v, self.d[k]))
+                self.d[k] = v
             else:
-                LOGGER.debug("{0} setting: {1} => {2}".format(mode, k, v))
-                
-            self.d[k] = v
+                logger.debug("{0} setting: {1} => {2}".format(mode, k, v))
+                self.d[k] = v
         return
         
     def _read_config_file(self, config_file):
@@ -265,7 +276,8 @@ class AMPLEConfigOptions(object):
         for k, v in cmdline_opts.iteritems():
             if v is not None: cmdline_flags.append(k)
             
-            tmpv = v[0] if isinstance(v, list) else v
+            #jmht - we need to stop using nargs=1 in the argparser and better handle lists
+            tmpv = v[0] if isinstance(v, list) and len(v) == 1 else v
                         
             if isinstance(tmpv, str):
                 if tmpv.lower() == "true":
@@ -278,7 +290,7 @@ class AMPLEConfigOptions(object):
             if k not in self.d:
                 self.d[k] = tmpv
             elif tmpv != None: 
-                LOGGER.debug("Cmdline setting {0}: {1} => {2}".format(k, self.d[k], tmpv))
+                logger.debug("Cmdline setting {0}: {1} => {2}".format(k, self.d[k], tmpv))
                 self.d[k] = tmpv
             
         self.d['cmdline_flags'] = cmdline_flags
@@ -309,7 +321,7 @@ class AMPLEConfigOptions(object):
             config_file = os.path.join(self.d['work_dir'], self.d['name']+".ini")
         # Write config to job specific directory
         self.d["out_config_file"] = config_file
-        LOGGER.info("AMPLE configuration written to: {0}".format(config_file))
+        logger.info("AMPLE configuration written to: {0}".format(config_file))
         with open(config_file, "w") as out: config.write(out)
         return
     

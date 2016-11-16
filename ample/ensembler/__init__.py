@@ -90,11 +90,17 @@ def add_argparse_options(parser, standalone=False):
     parser.add_argument('-side_chain_treatments', type=str, nargs='+', action='append',
                         help='The side chain treatments to use. Default: {0}'.format(SIDE_CHAIN_TREATMENTS))
 
+    parser.add_argument('-subcluster_radius_thresholds', type=float, nargs='+',
+                        help='The radii to use for subclustering the truncated ensembles')
+    
     parser.add_argument('-subcluster_program', type=str, nargs=1,
                         help='Program for subclustering models [maxcluster]')
 
     parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', type=str, nargs=1,
                         help='Path to theseus executable')
+    
+    parser.add_argument('-thin_clusters', metavar='True/False', type=str,
+                        help='Create ensembles from 10 clusters with 1 + 3A subclustering and polyAlanine sidechains')
 
     parser.add_argument('-truncation_method', type=str, nargs=1,
                         help='How to truncate the models for ensembling percent|thresh|focussed|scores')

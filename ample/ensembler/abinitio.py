@@ -13,7 +13,7 @@ import cluster_util
 import subcluster
 import subcluster_util
 import truncation_util
-from constants import SIDE_CHAIN_TREATMENTS
+from constants import SIDE_CHAIN_TREATMENTS, SUBCLUSTER_RADIUS_THRESHOLDS
 
 from ample.util import fast_protein_cluster
 from ample.util import scwrl_util
@@ -37,7 +37,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         self.subcluster_method = 'ORIGINAL'
         self.subcluster_program = "maxcluster"
         self.subclustering_method = "radius"
-        self.subcluster_radius_thresholds = [1, 2, 3]
+        self.subcluster_radius_thresholds = SUBCLUSTER_RADIUS_THRESHOLDS
         
         # we save the truncator so that we can query it for data later
         self.truncator = None
@@ -168,9 +168,11 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                            cluster_dir=None,
                            cluster_method=None,
                            ensembles_directory=None,
+                           ensemble_max_models=None,
                            num_clusters=None,
                            percent_truncation=None,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS,
+                           subcluster_radius_thresholds=SUBCLUSTER_RADIUS_THRESHOLDS,
                            subcluster_program=None,
                            truncation_method=None,
                            truncation_pruning=None,
@@ -218,7 +220,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                 for ensemble in self.subcluster_models(truncation,
                                                        subcluster_program=subcluster_program,
                                                        ensemble_max_models=self.ensemble_max_models,
-                                                       radius_thresholds=self.subcluster_radius_thresholds):
+                                                       radius_thresholds=subcluster_radius_thresholds):
                     # Now add the side chains
                     for ensemble in self.edit_side_chains(ensemble, side_chain_treatments):
                         self.ensembles.append(ensemble)
@@ -226,15 +228,18 @@ class AbinitioEnsembler(_ensembler.Ensembler):
 
     def generate_ensembles_from_amoptd(self, models, amoptd):
         """Generate ensembles from data in supplied ample data dictionary."""
-        kwargs = {'percent_truncation' : amoptd['percent'],
-                  'side_chain_treatments' : amoptd['side_chain_treatments'],
-                  'truncation_method' : amoptd['truncation_method'],
+        kwargs = {
                   'cluster_dir' : amoptd['cluster_dir'],
                   'cluster_method' : amoptd['cluster_method'],
                   'num_clusters' : amoptd['num_clusters'],
+                  'percent_truncation' : amoptd['percent'],
+                  'side_chain_treatments' : amoptd['side_chain_treatments'],
                   'subcluster_program' : amoptd['subcluster_program'],
+                  'subcluster_radius_thresholds' : amoptd['subcluster_radius_thresholds'],
+                  'truncation_method' : amoptd['truncation_method'],
                   'truncation_pruning' : amoptd['truncation_pruning'],
-                  'use_scwrl' : amoptd['use_scwrl']}
+                  'use_scwrl' : amoptd['use_scwrl']
+                  }
 
         # strip out any that are None
         kwargs = { k : v for k, v in kwargs.iteritems() if v is not None }
