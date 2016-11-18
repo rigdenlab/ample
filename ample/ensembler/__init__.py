@@ -111,7 +111,7 @@ def add_argparse_options(parser, standalone=False):
     parser.add_argument('-truncation_scorefile',
                         help="CSV file containing per residue scores - COLUMN ONE MUST BE RESIDUE INDEX STARTING FROM 1")
 
-    parser.add_argument('-truncation_scorefile_header', type=str, nargs='+', action='append',
+    parser.add_argument('-truncation_scorefile_header', nargs='+',
                         help="column headers to be used to create ensembles")
 
     return
