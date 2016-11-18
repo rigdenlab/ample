@@ -136,7 +136,7 @@ class AMPLEIntegrationFramework(object):
         ## Run all the jobs
         # If we're running on a cluster, we run on as many processors as there are jobs, 
         # as the jobs are just sitting and monitoring the queue
-        if kwargs['submit_cluster']:
+        if 'submit_cluster' in kwargs and kwargs['submit_cluster']:
             logger.info("Jobs will be submitted to a cluster queueing system")
             nproc = len(scripts)
         
@@ -209,7 +209,7 @@ class AMPLEIntegrationFramework(object):
         
         See if any of the clustering submission arguments are in **kwarg and append
         any non-None ones to args. Otherwise we use the non-None arguments from CLUSTER_ARGS"""
-        if not kwargs['submit_cluster']: return args
+        if not 'submit_cluster' in kwargs or not kwargs['submit_cluster']: return args
         for k, v in kwargs.iteritems():
             value = None
             if k in CLUSTER_ARGS.keys():
