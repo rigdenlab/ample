@@ -126,31 +126,36 @@ def analyse(amoptd, newroot=None):
         d['ensemble_percent_model'] = int((float(d['num_residues']) / float(amoptd['fasta_length'])) * 100)
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
         
-        # Need to get the subcluster_centroid_model and then get the path to the original model
         if 'subcluster_centroid_model' in d and amoptd['native_pdb']:
-            n = os.path.splitext(os.path.basename(d['subcluster_centroid_model']))[0]
-            cm = None
-            for pdb in glob.glob(os.path.join(amoptd['models_dir'],"*.pdb")):
-                if n.startswith(os.path.splitext(os.path.basename(pdb))[0]):
-                    cm = pdb
-                    break
-            if not cm:
-                raise RuntimeError,"Cannot find model for subcluster_centroid_model {0}".format(d['subcluster_centroid_model'])
-            #cm=d['cluster_centroid']
-            d['ensemble_native_TM'] = _MAXCLUSTERER.tm(cm)
-            d['ensemble_native_RMSD'] = _MAXCLUSTERER.rmsd(cm)
-            
             # Calculation of TMscores for subcluster centroid models
             if TMSCORE_AVAILABLE:
                 try:
                     tm = tm_util.TMscore('TMscore', wdir=fixpath(amoptd['benchmark_dir']))
                     logger.info("Analysing subcluster centroid model with TMscore")
-                    d['subcluster_centroid_model_TM'] = tm.compare_structures([d['subcluster_centroid_model']],
+                    tm_results = tm.compare_structures([d['subcluster_centroid_model']],
                                                                               [amoptd['native_pdb_std']],
-                                                                              fastas=[amoptd['fasta']])[0].tm
+                                                                              fastas=[amoptd['fasta']])
+                    d['subcluster_centroid_model_TM'] = tm_results[0]['tmscore']
+                    d['subcluster_centroid_model_RMSD'] = tm_results[0]['rmsd']
+                    
                 except:
                     msg = "Unable to run TMscores. See debug.log."
                     logger.critical(msg)
+            else:
+                # Use maxcluster
+                # Need to get the subcluster_centroid_model and then get the path to the original model
+                n = os.path.splitext(os.path.basename(d['subcluster_centroid_model']))[0]
+                cm = None
+                for pdb in glob.glob(os.path.join(amoptd['models_dir'],"*.pdb")):
+                    if n.startswith(os.path.splitext(os.path.basename(pdb))[0]):
+                        cm = pdb
+                        break
+                if not cm:
+                    raise RuntimeError,"Cannot find model for subcluster_centroid_model {0}".format(d['subcluster_centroid_model'])
+                d['subcluster_centroid_model_TM'] = _MAXCLUSTERER.tm(cm)
+                # There is an issue here as this is the RMSD over the TM-aligned residues - NOT the global RMSD, which it is for the tm_util results
+                #d['subcluster_centroid_model_RMSD'] = _MAXCLUSTERER.rmsd(cm)
+                d['subcluster_centroid_model_RMSD'] = None
 
         if amoptd['native_pdb']: analyseSolution(amoptd,d)
         data.append(d)
@@ -460,14 +465,14 @@ def analyseModels(amoptd):
         except:
             msg = "Unable to run TMscores. See debug.log."
             logger.critical(msg)
-        
-    global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
-    _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
-    logger.info("Analysing Rosetta models with Maxcluster")
-    _MAXCLUSTERER.compareDirectory(nativePdbInfo=nativePdbInfo,
-                                   resSeqMap=resSeqMap,
-                                    modelsDirectory=amoptd['models_dir'],
-                                    workdir=fixpath(amoptd['benchmark_dir']))
+    else:
+        global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
+        _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
+        logger.info("Analysing Rosetta models with Maxcluster")
+        _MAXCLUSTERER.compareDirectory(nativePdbInfo=nativePdbInfo,
+                                       resSeqMap=resSeqMap,
+                                        modelsDirectory=amoptd['models_dir'],
+                                        workdir=fixpath(amoptd['benchmark_dir']))
     return
 
 
@@ -507,8 +512,6 @@ def writeCsv(fileName,resultList):
                 # Get the ensemble data and add to the MRBUMP data
                 'ensemble_name',
                 'ensemble_percent_model',
-                'ensemble_native_TM',
-                'ensemble_native_RMSD',
                 
                 # cluster info
                 'cluster_method',
@@ -530,6 +533,7 @@ def writeCsv(fileName,resultList):
                 'subcluster_num_models',
                 'subcluster_radius_threshold',
                 'subcluster_centroid_model',
+                'subcluster_centroid_model_RMSD',
                 'subcluster_centroid_model_TM',
                 
                 # ensemble info
@@ -614,6 +618,7 @@ def writeCsv(fileName,resultList):
             values=[]
             for k in keylist:
                 if k in d and d[k] is not None:
+                    # Remove any commas that might mess with the csv file
                     values.append(str(d[k]).replace(",","^"))
                 else:
                     values.append("N/A")
