@@ -80,6 +80,7 @@ class TMapps(object):
     ----
     * Function to return the entries as numpy matrix
     * Function to return the entries in a pandas dataframe
+
     """
 
     def __init__(self, executable, method, wdir=None):
@@ -92,23 +93,23 @@ class TMapps(object):
            One of [TMscore|TMalign]
         work_dir : str
            Path to the working directory
+
         """
         self.entries = []
+        self.executable = executable
         self.method = method.lower()
         self.work_dir = wdir if wdir else os.getcwd()
 
-        # Quick check if the executable exists
-        if ample_util.is_exe(executable):
-            self.executable = executable
-        else:
-            try:
-                self.executable = ample_util.find_exe(executable)
-            except:
-                msg = "Cannot find provided executable: {0}".format(executable)
-                logger.critical(msg)
-                raise RuntimeError(msg)
-
-        return
+        # # Quick check if the executable exists
+        # if ample_util.is_exe(executable):
+        #     self.executable = executable
+        # else:
+        #     try:
+        #         self.executable = ample_util.find_exe(executable)
+        #     except:
+        #         msg = "Cannot find provided executable: {0}".format(executable)
+        #         logger.critical(msg)
+        #         raise RuntimeError(msg)
 
     def comparison(self, models, structures):
         """
@@ -125,6 +126,7 @@ class TMapps(object):
         -------
         entries : list
            List of TMscore data entries on a per-model basis
+
         """
 
         if len(models) < 1 or len(structures) < 1:
@@ -205,7 +207,7 @@ class TMapps(object):
 
         Returns
         -------
-        iterator : function
+        function
 
         """
         # Use different itertools functions depending on the comparison type
@@ -229,7 +231,6 @@ class TMapps(object):
             model.maxsub = pt.maxsub
         if hasattr(pt, 'seq_id'):
             model.seq_id = pt.seq_id
-
         return model._to_dict()
 
     @staticmethod
@@ -275,6 +276,7 @@ class TMalign(TMapps):
     >>> references = ["<REFERENCE_1>", "<REFERENCE>", "<REFERENCE>"]
     >>> tm = TMalign("<PATH_TO_EXE>")
     >>> entries = tm.compare_to_structure(models, references)
+
     """
 
     def __init__(self, executable, wdir=None):
@@ -296,6 +298,7 @@ class TMalign(TMapps):
         Returns
         -------
         entries : list
+
         """
         # Check what we are comparing
         if len(structures) == 1:
@@ -323,6 +326,7 @@ class TMscore(TMapps):
     >>> references = ["<REFERENCE_1>", "<REFERENCE>", "<REFERENCE>"]
     >>> tm = TMscore("<PATH_TO_EXE>")
     >>> entries = tm.compare_to_structure(models, references)
+
     """
 
     def __init__(self, executable, wdir=None):
@@ -352,6 +356,7 @@ class TMscore(TMapps):
         -----
         If a FASTA sequence is provided, a much more accurate comparison can be carried out. However, to by-pass this
         there is also an option to run the comparison without it. This might work just fine for larger models.
+
         """
         if not BIOPYTHON_AVAILABLE: raise RuntimeError("Biopython is not available")
         # Check what we are comparing
@@ -536,7 +541,7 @@ class TMscore(TMapps):
 
         # Make sure our structures contain the same residues with correct indeces
         if set(_model_data) != set(_structure_data):
-            msg = "Structure file modification did not work. Affected PDBs {0} - {1}".format(model_name, structure_name)
+            msg = "Residues in model and structure non-identical. Affected PDBs {0} - {1}".format(model_name, structure_name)
             logger.critical(msg)
             raise RuntimeError(msg)
 
@@ -557,7 +562,7 @@ class TMscore(TMapps):
 
         Returns
         -------
-        indeces : list
+        indexes : list
            List of booleans that contain gaps
 
         """
@@ -611,8 +616,9 @@ class TMscore(TMapps):
 
         Returns
         -------
-        index : int
+        int
            Residue sequence index of first residue in structure file
+
         """
         for line in open(pdb, 'r'):
             if line.startswith("ATOM"):
