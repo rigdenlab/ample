@@ -24,6 +24,8 @@ SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
 EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
 SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
 
+class FileNotFoundError(Exception): pass
+
 # ample_util is used before anything else so there is no logger available
 # and we need to a Null handler
 logger = logging.getLogger(__name__)
@@ -355,7 +357,7 @@ def find_exe(executable, dirs=None):
                 break
     
     if not found:
-        raise Exception("Cannot find executable: {0}".format(executable))
+        raise FileNotFoundError("Cannot find executable: {0}".format(executable))
     
     logger.debug('find_exe found executable: {0}'.format(exe_file) )
     return exe_file

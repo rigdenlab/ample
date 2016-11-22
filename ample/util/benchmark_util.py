@@ -31,11 +31,6 @@ _oldroot = None
 _newroot = None
 _MAXCLUSTERER = None
 
-TMSCORE_AVAILABLE = True
-if not tm_util.TMapps.binary_avail('TMscore'):
-    TMSCORE_AVAILABLE = False
-
-
 def analyse(amoptd, newroot=None):
     if newroot:
         #if newroot.endswith("/"): newroot=newroot[:-1]
@@ -128,9 +123,9 @@ def analyse(amoptd, newroot=None):
         
         if 'subcluster_centroid_model' in d and amoptd['native_pdb']:
             # Calculation of TMscores for subcluster centroid models
-            if TMSCORE_AVAILABLE:
+            if amoptd['have_tmscore']:
                 try:
-                    tm = tm_util.TMscore('TMscore', wdir=fixpath(amoptd['benchmark_dir']))
+                    tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']))
                     logger.info("Analysing subcluster centroid model with TMscore")
                     tm_results = tm.compare_structures([d['subcluster_centroid_model']],
                                                                               [amoptd['native_pdb_std']],
@@ -454,9 +449,9 @@ def analyseModels(amoptd):
 #         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
 #     except RuntimeError,e:
 #         print e
-    if TMSCORE_AVAILABLE:
+    if amoptd['have_tmscore']:
         try:
-            tm = tm_util.TMscore('TMscore',  wdir=fixpath(amoptd['benchmark_dir']))
+            tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']))
             # Calculation of TMscores for all models
             logger.info("Analysing Rosetta models with TMscore")
             model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))

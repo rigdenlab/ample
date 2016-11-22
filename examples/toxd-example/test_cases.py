@@ -78,7 +78,12 @@ class AMPLETest(AMPLEBaseTest):
         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
         self.assertTrue(self.AMPLE_DICT['success'],"Job did not succeed")
         self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        # Check some random benchmarking data
         self.assertTrue(os.path.isfile(os.path.join(self.AMPLE_DICT['benchmark_dir'],'results.csv')),"Missing benchmark results.csv")
+        result = self.AMPLE_DICT['benchmark_results'][0]
+        self.assertTrue(result['MR_program'], 'PHASER')
+        self.assertTrue(result['native_pdb_solvent_content'], 47.67)
+        self.assertGreater(result['PHASER_TFZ'], 5.0, "Low PHASER_TFZ: {0}".format(result['PHASER_TFZ']))
         return
         
 TEST_DICT['from_existing_models'] = { 'args' : args_from_existing_models,

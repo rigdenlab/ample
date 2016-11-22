@@ -31,7 +31,7 @@ def find_maxcluster(amoptd):
     
     try:
         maxcluster_exe = ample_util.find_exe(amoptd['maxcluster_exe'], dirs=[ amoptd['rcdir'] ] )
-    except Exception:
+    except ample_util.FileNotFoundError:
         # Cannot find so we need to try and download it
         rcdir = amoptd['rcdir']
         LOGGER.info("Cannot find maxcluster binary in path so attempting to download it directory: {0}".format( rcdir )  )

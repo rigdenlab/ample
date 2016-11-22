@@ -69,7 +69,13 @@ def check_mandatory_options(optd):
 
 
 def process_options(optd):
+    """Process the initial options from the command-line/ample.ini file to set any additional options.
     
+    Description
+    -----------
+    This is where we take the options determining the type of run we are undertaking and set any additional 
+    options required based on that runtype. All the major 
+    """
     # Path for pickling results
     optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
     
@@ -274,9 +280,11 @@ def process_options(optd):
             msg = "Error converting phaser_rms '{0}' to floating point: {1}".format(optd['phaser_rms'], e)
             exit_util.exit_error(msg)
     
+    ###############################################################################
     #
     # Benchmark Mode
     #
+    ###############################################################################
     if optd['native_pdb'] or optd['benchmark_mode']:
         if optd['native_pdb'] and not os.path.isfile(optd['native_pdb']):
             msg = "Cannot find crystal structure PDB: {0}".format(optd['native_pdb'])
@@ -284,7 +292,17 @@ def process_options(optd):
         optd['benchmark_mode'] = True
         optd['benchmark_dir'] = os.path.join(optd['work_dir'], "benchmark")
         logger.info("*** AMPLE running in benchmark mode ***")
-        
+        # See if we can find TMscore
+        if not optd['tmscore_exe']:
+            optd['tmscore_exe'] = 'TMscore'  + ample_util.EXE_EXT
+        try:
+            optd['tmscore_exe'] = ample_util.find_exe(optd['tmscore_exe'])
+            optd['have_tmscore'] = True 
+        except ample_util.FileNotFoundError:
+            logger.debug("Cannot find TMScore executable: {0}".format(optd['tmscore_exe']))
+            # No TMscore so try and find Maxcluster
+            optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
+            optd['have_tmscore'] = False 
 
     ###############################################################################
     #
@@ -314,7 +332,7 @@ def process_options(optd):
             optd['gesamt_exe'] = os.path.join(os.environ['CCP4'],'bin','gesamt' + ample_util.EXE_EXT)
         try:
             optd['gesamt_exe'] = ample_util.find_exe(optd['gesamt_exe'])
-        except Exception as e:
+        except ample_util.FileNotFoundError as e:
             logger.info("Cannot find Gesamt executable: {0}".format(optd['gesamt_exe']))
             raise(e)
     #
@@ -325,14 +343,14 @@ def process_options(optd):
             optd['spicker_exe'] = 'spicker'  + ample_util.EXE_EXT
         try:
             optd['spicker_exe'] = ample_util.find_exe(optd['spicker_exe'])
-        except Exception:
+        except ample_util.FileNotFoundError:
             msg = "Cannot find spicker executable: {0}".format(optd['spicker_exe'])
             exit_util.exit_error(msg)
     elif optd['cluster_method'] in ['fast_protein_cluster']:
         if not optd['fast_protein_cluster_exe']: optd['fast_protein_cluster_exe'] = 'fast_protein_cluster'
         try:
             optd['fast_protein_cluster_exe'] = ample_util.find_exe(optd['fast_protein_cluster_exe'])
-        except Exception:
+        except ample_util.FileNotFoundError:
             msg = "Cannot find fast_protein_cluster executable: {0}".format(optd['fast_protein_cluster_exe'])
             exit_util.exit_error(msg)
     elif optd['cluster_method'] in ['import', 'random', 'skip']:
@@ -344,7 +362,7 @@ def process_options(optd):
         optd['theseus_exe'] = 'theseus' + ample_util.EXE_EXT
     try:
         optd['theseus_exe'] = ample_util.find_exe(optd['theseus_exe'])
-    except Exception:
+    except ample_util.FileNotFoundError:
         msg = "Cannot find theseus executable: {0}".format(optd['theseus_exe'])
         exit_util.exit_error(msg)
 
@@ -363,7 +381,7 @@ def process_options(optd):
         optd['scwrl_exe'] = 'Scwrl4' + ample_util.EXE_EXT
     try:
         optd['scwrl_exe'] = ample_util.find_exe(optd['scwrl_exe'])
-    except Exception as e:
+    except ample_util.FileNotFoundError as e:
         logger.info("Cannot find Scwrl executable: {0}".format(optd['scwrl_exe']))
         if optd['use_scwrl']: raise(e)
     #
@@ -374,7 +392,7 @@ def process_options(optd):
             optd['shelxe_exe'] = 'shelxe' + ample_util.EXE_EXT
         try:
             optd['shelxe_exe'] = ample_util.find_exe(optd['shelxe_exe'])
-        except Exception:
+        except ample_util.FileNotFoundError:
             msg = """*** Cannot find shelxe executable in PATH - turning off use of SHELXE. ***
     SHELXE is recommended for the best chance of success. We recommend you install shelxe from:
     http://shelx.uni-ac.gwdg.de/SHELX/
