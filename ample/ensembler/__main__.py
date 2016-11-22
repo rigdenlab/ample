@@ -10,12 +10,14 @@ import sys
 
 from ample import ensembler
 from ample.util import ample_util, config_util, exit_util, logging_util
+from ample.util import argparse_util
 
 ENSEMBLE_DIRNAME = 'ample_ensemble'
     
 # Set up the command-line parsing
 parser = argparse.ArgumentParser(description="AMPLE Ensembling Module")
 ensembler.add_argparse_options(parser, standalone=True)
+argparse_util.add_cluster_submit_options(parser)
 
 # Get command-line arguments and see if we have a restart_pkl option as this
 # is how we pass in an existing ample dictionary when we are running the ensembling
