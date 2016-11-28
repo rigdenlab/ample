@@ -443,7 +443,6 @@ def process_options(optd):
     
     return
 
-
 def process_restart_options(optd):
     """Process the restart options
 
@@ -480,37 +479,14 @@ def process_restart_options(optd):
     
     Notes
     -----
-    We return the dictionary as we may need to change it and it seems we can't change the extermal
+    We return the dictionary as we may need to change it and it seems we can't change the external
     reference in this scope. I think?...
 
     """
     if not optd['restart_pkl']: return optd
-    if not os.path.isfile(optd['restart_pkl']):
-        msg = 'Cannot find restart_pkl file: {0}'.format(optd['restart_pkl'])
-        exit_util.exit_error(msg)
-    
     logger.info('Restarting from existing pkl file: {0}'.format(optd['restart_pkl']))
-    # We use the old dictionary, but udpate it with any new values
-    optd_old = ample_util.read_amoptd(optd['restart_pkl'])
-    
-    # Update key variables that differ with a new run - everything else uses the old values
-    optd_old['ample_log'] = optd['ample_log']
-    optd_old['run_dir'] = optd['run_dir']
-    optd_old['work_dir'] = optd['work_dir']
-    optd_old['benchmark_mode'] = optd['benchmark_mode']
-    optd_old['benchmark_dir'] = os.path.join(optd['work_dir'], "benchmark")
-    optd_old['results_path'] = os.path.join(optd['work_dir'], 'resultsd.pkl')
-    
-    # Now update any variables that were given on the command-line
-    for k in optd['cmdline_flags']:
-        logger.debug("Restart updating amopt variable: {0} : {1}".format(k, optd[k]))
-        optd_old[k] = optd[k]
-    
-    # We can now replace the old dictionary with this new one
-    optd = optd_old
-    
+
     # Go through and see what we need to do
-    
     # Reset all variables for doing stuff - otherwise we will always restart from the earliest point
     optd['make_ensembles'] = False
     optd['import_ensembles'] = False # Needs thinking about - have to set so we don't just reimport models/ensembles
@@ -564,7 +540,6 @@ def process_restart_options(optd):
     
     return optd
 
-
 def process_rosetta_options(optd):
     # Create the rosetta modeller - this runs all the checks required
     rosetta_modeller = None
@@ -576,4 +551,34 @@ def process_rosetta_options(optd):
             msg = "Error setting ROSETTA options: {0}".format(e)
             exit_util.exit_error(msg)
     return rosetta_modeller
+
+
+def restart_amoptd(optd):
+    """Create an ample dictionary from a restart pkl file
+
+    Description
+    -----------
+    For any new command-line options, we update the old dictionary with the new values
+    We then go through the new dictionary and set ant of the flags corresponding to the data we find:
+    
+    Notes
+    -----
+    We return the dictionary as we may need to change it and it seems we can't change the external
+    reference in this scope. I think?...
+
+    """
+    if not optd['restart_pkl']: return optd
+    logger.info('Restarting from existing pkl file: {0}'.format(optd['restart_pkl']))
+    # We use the old dictionary, but udpate it with any new values
+    optd_old = ample_util.read_amoptd(optd['restart_pkl'])
+    
+    # Now update any variables that were given on the command-line
+    for k in optd['cmdline_flags']:
+        logger.debug("Restart updating amopt variable: {0} : {1}".format(k, optd[k]))
+        optd_old[k] = optd[k]
+    
+    # We can now replace the old dictionary with this new one
+    optd = optd_old
+    
+    return optd
 

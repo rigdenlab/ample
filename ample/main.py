@@ -388,15 +388,19 @@ class Ample(object):
         """We take and return an ample dictionary as an argument. This is required because options_processor.process_restart_options
         Changes what optd points at, and this means that if we just use the reference, we end up pointing at the old, obselete dictionary"""
         
+        # Update the ample dictionary in case we are restarting
+        optd = options_processor.restart_amoptd(optd)
+        
         # Make a work directory - this way all output goes into this directory
-        if optd['work_dir']:
+        if optd['work_dir'] and not optd['restart_pkl']:
             logger.info('Making a named work directory: {0}'.format(optd['work_dir']))
             try:
                 os.mkdir(optd['work_dir'])
-            except:
-                msg = "Cannot create work_dir {0}".format(optd['work_dir'])
+            except Exception as e:
+                msg = "Cannot create work_dir {0}: {1}".format(optd['work_dir'], e)
                 exit_util.exit_error(msg, sys.exc_info()[2])
-        else:
+                
+        if not optd['work_dir']:
             if not os.path.exists(optd['run_dir']):
                 msg = 'Cannot find run directory: {0}'.format(optd['run_dir'])
                 exit_util.exit_error(msg, sys.exc_info()[2])
@@ -442,7 +446,6 @@ class Ample(object):
         optd = options_processor.process_restart_options(optd)
         if not optd['restart_pkl']:
             options_processor.process_options(optd) # Only process the remaining options if we aren't in restart mode
-        #rosetta_modeller = options_processor.process_rosetta_options(optd)
         
         # Bail and clean up if we were only checking the options
         if optd['dry_run']:
