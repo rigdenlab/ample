@@ -489,7 +489,7 @@ def process_restart_options(optd):
     # Go through and see what we need to do
     # Reset all variables for doing stuff - otherwise we will always restart from the earliest point
     optd['make_ensembles'] = False
-    optd['import_ensembles'] = False # Needs thinking about - have to set so we don't just reimport models/ensembles
+    #optd['import_ensembles'] = False # Needs thinking about - have to set so we don't just reimport models/ensembles
     optd['import_models'] = False # Needs thinking about
     optd['make_models'] = False
     optd['make_frags'] = False
