@@ -35,7 +35,7 @@ def add_core_options(parser):
     parser.add_argument('-debug', metavar='True/False',
                        help='Run in debug mode (CURRENTLY UNUSED)')
     
-    parser.add_argument('-nproc', type=int, default=1,
+    parser.add_argument('-nproc', type=int,
                        help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
                         "For cluster submission, this should be the number of processors on a node.")
 
