@@ -52,7 +52,7 @@ def _get_miller_array_from_label(mtz_object, column_label):
     assert col_key
     return miller_dict[col_key]
 
-def calc_phase_error_pdb(native_pdb, native_mtz, mr_mtz, f_label, sigf_label, native_phase_labels=['FC', 'PHIF'], mr_phase_labels=['FC', 'PHIC'], cleanup=True, origin=None):
+def calc_phase_error_pdb(native_pdb, native_mtz, mr_mtz, f_label, sigf_label, native_phase_labels=['FC', 'PHIC'], mr_phase_labels=['FC', 'PHIC'], cleanup=True, origin=None):
     """Phase error between native_pdb+native_mtz and mr_mtz
     """
     assert f_label and sigf_label,"Need f_label and sigf_label to be given!"
@@ -63,14 +63,15 @@ def calc_phase_error_pdb(native_pdb, native_mtz, mr_mtz, f_label, sigf_label, na
                                 sigf_label,
                                 native_phase_labels=native_phase_labels,
                                 mr_phase_labels=mr_phase_labels,
-                                cleanup=cleanup,origin=origin)
+                                cleanup=cleanup,
+                                origin=origin)
 
 def calc_phase_error_mtz(native_mtz_phased, mr_mtz, f_label=None, sigf_label=None, native_phase_labels=['FC', 'PHIC'], mr_phase_labels=['FC', 'PHIC'], cleanup=True, origin=None):
     """Phase error between native_pdb+native_mtz and mr_mtz
     """
     
-    assert False
     if origin:
+        assert False
         # if we are given an origin shift we can calculate the phase difference directly with cctbx
         change_of_hand = False # hard-wired as we don't have this information
         origin_shift = origin
@@ -87,32 +88,31 @@ def calc_phase_error_mtz(native_mtz_phased, mr_mtz, f_label=None, sigf_label=Non
     else:
         assert f_label and sigf_label,"Need f_label and sigf_label to be given!"
         # we use cphasematch to calculate the phase difference and origin shift
-        r = make_merged_mtz(native_mtz_phased, mr_mtz, f_label,native_phase_labels=native_phase_labels, mr_phase_labels=mr_phase_labels)
-        before_origin, after_origin, change_of_hand, origin_shift = run_cphasematch(r.merged_mtz,
-                                                                                    f_label,
-                                                                                    sigf_label,
-                                                                                    native_phase_labels=[r.fc_label,r.phifc_label],
-                                                                                    mr_phase_labels=[r.fcalc_label,r.phifcalc_label])
-        if cleanup:
-            os.unlink(r.merged_mtz)
+        merged_mtz, labels = merge_mtz(native_mtz_phased, [f_label, sigf_label] + native_phase_labels, mr_mtz, mr_phase_labels)
+        assert len(labels)==6
+        before_origin, after_origin, change_of_hand, origin_shift = run_cphasematch(merged_mtz,
+                                                                                    labels[0:2],
+                                                                                    native_phase_labels=labels[2:4],
+                                                                                    mr_phase_labels=labels[4:])
+        if cleanup: os.unlink(merged_mtz)
     return before_origin, after_origin, change_of_hand, origin_shift
 
-def make_merged_mtz(native_mtz, mr_mtz, f_label, native_phase_labels, mr_phase_labels):
-    """Create MTZ file with F from native_mtz and calculated phases from native_mtz and mr_mtz to enable phaser error calc by cphasematch"""
+def merge_mtz_cctbx(mtz1_path, mtz1_labels, mtz2_path, mtz2_labels):
+    """TODO!
+    Create MTZ file with F from native_mtz and calculated phases from native_mtz and mr_mtz to enable phaser error calc by cphasematch"""
     # Check mtz files have required columns
-    native_object = _check_mtz(native_mtz, labels = [f_label])
-    mr_object = _check_mtz(mr_mtz, labels = mr_phase_labels)
+    mtz1 = _check_mtz(mtz1_path, labels = mtz1_labels)
+    mtz2 = _check_mtz(mtz2_path, labels = mtz2_labels)
 
     merged_object = iotbx.mtz.object()
-    merged_object.set_title("Calculated phases from {0} and {1}".format(native_mtz, mr_mtz))
-    merged_object.add_history(line="Created by ample make_merged_mtz on: {0}".format(datetime.datetime.now()))
-    merged_object.add_history(line="Created from: {0} and {1}".format(native_mtz, mr_mtz))
+    merged_object.set_title("Calculated phases from {0} and {1}".format(mtz1_path, mtz2_path))
+    merged_object.add_history(line="Created by ample merged_mtz on: {0}".format(datetime.datetime.now()))
+    merged_object.add_history(line="Created from: {0} and {1}".format(mtz1_path, mtz2_path))
     
-    f_miller_array = _get_miller_array_from_label(native_object, f_label)
-    fc_miller_array = _get_miller_array_from_label(native_object, native_phase_labels[0])
+    miller_array1 = _get_miller_array_from_label(mtz1, mtz1_labels[0])
     
-    unit_cell = fc_miller_array.unit_cell()
-    merged_object.set_space_group_info(fc_miller_array.space_group_info())
+    unit_cell = miller_array1.unit_cell()
+    merged_object.set_space_group_info(miller_array1.space_group_info())
     merged_object.set_hkl_base(unit_cell)
     crystal = merged_object.add_crystal(
                                         name="cphasematch_crystal",
@@ -121,39 +121,94 @@ def make_merged_mtz(native_mtz, mr_mtz, f_label, native_phase_labels, mr_phase_l
                                         )
     dataset = crystal.add_dataset(name = "test_dataset",
                                   wavelength=1) # FIX
+    
     # The labels in add_miller_array automatically controlled by the label_decorator which adds 'PHI' 
     # as a prefix to the appropriate columns we therefore either need to make our own decorator or just stay with
     # using the PHI prefix
-    dataset.add_miller_array(
-                             miller_array=f_miller_array,
-                             column_root_label=f_label,
-                             )
-    dataset.add_miller_array(
-                             miller_array=fc_miller_array,
-                             column_root_label=native_phase_labels[0],
-                             )
     
-    # Now add the other calculated data
-    fcalc_label='FCALC'
-    mr_fc_miller_array = _get_miller_array_from_label(mr_object, mr_phase_labels[0])
-    dataset.add_miller_array(
-                             miller_array=mr_fc_miller_array,
-                             column_root_label=fcalc_label,
-                             )
+    # Loop through the labels in each mtz
+    labels = []
+    for i, mtz in enumerate([mtz1, mtz2]):
+        for label in [mtz1_labels, mtz2_labels][i]:
+            miller_array = _get_miller_array_from_label(mtz, label)
+            dataset.add_miller_array(
+                                     miller_array=miller_array,
+                                     column_root_label=label,
+                                     )
+            labels.append(label)
+    
     # as mtz dataset and then change labels?
     #dataset.add_column(label=fcalc_label, type="F").set_values(values=mr_object.get_column(fc_label).extract_values())
     #dataset.add_column(label=phicalc_label, type="P").set_values(values=mr_object.get_column(phic_label).extract_values())
 
     # Write out the file
-    name1 = os.path.splitext(os.path.basename(native_mtz))[0]
-    name2 = os.path.splitext(os.path.basename(mr_mtz))[0]
+    name1 = os.path.splitext(os.path.basename(mtz1_path))[0]
+    name2 = os.path.splitext(os.path.basename(mtz2_path))[0]
     merged_mtz = "{0}_{1}.mtz".format(name1, name2)
     merged_object.write(merged_mtz)
     
-    phifc_label = 'PHI' + native_phase_labels[0]
-    phifcalc_label = 'PHI' + fcalc_label
-    results = namedtuple('results', ['merged_mtz','f_label', 'fc_label' ,'phifc_label','fcalc_label','phifcalc_label'])
-    return results(merged_mtz, f_label, native_phase_labels[0], phifc_label, fcalc_label, phifcalc_label)
+    return os.path.abspath(merged_mtz), labels
+
+def merge_mtz(mtz1_path, mtz1_labels, mtz2_path, mtz2_labels):
+    """Create MTZ file with columns from the given mtz files and mtz labels in each file"""
+    
+    # Can't have any duplicates in file labels
+    assert len(mtz1_labels) == len(set(mtz1_labels)),"Duplicate labels in mtz1_labels"
+    assert len(mtz2_labels) == len(set(mtz2_labels)),"Duplicate labels in mtz2_labels"
+
+    name1 = os.path.splitext(os.path.basename(mtz1_path))[0]
+    name2 = os.path.splitext(os.path.basename(mtz2_path))[0]
+    merged_mtz = os.path.abspath("{0}_{1}.mtz".format(name1, name2))
+    
+    cmd = [ 'cad', 'hklin1', mtz1_path, 'hklin2', mtz2_path, 'hklout', merged_mtz ]
+
+    # See if any labels are duplicate and need to be renamed
+    rename = [] # List of (File_number, file_label_idx, orig_label, renamed_label)
+    labels = []
+    for i, mtz in enumerate([mtz1_path, mtz2_path]):
+        for j, label in enumerate([mtz1_labels, mtz2_labels][i]):
+            if label in labels:
+                newlabel = label + str(i+1)
+                rename.append((i+1,j+1, label, newlabel))
+            else:
+                newlabel = label
+                rename.append((i+1,j+1, label, None))
+            assert newlabel not in labels, "Too many duplicate label names: {0}".format(newlabel)
+            labels.append(newlabel)
+
+    # Build up the list of which labels to extract from which files
+    stdin = ""
+    last_fileno = None
+    for fileno, labelno, orig_label, rename_label in rename:
+        if fileno != last_fileno:
+            if last_fileno is not None:
+                stdin += '\n' # Need to terminate the line
+            stdin += "LABIN FILE {0}".format(fileno)
+            last_fileno = fileno
+        stdin += " E{0}={1}".format(labelno, orig_label)
+    stdin += '\n' # Need to terminate the line
+    
+    # Do any renaming for duplicate labels
+    last_fileno = None
+    for i, (fileno, label_idx, orig_label, rename_label) in enumerate(rename):
+        if rename_label is not None:
+            if last_fileno != fileno:
+                stdin += 'LABOUT FILE_NUMBER {0}'.format(fileno)
+                if last_fileno is not None:
+                    # for anything other then then first, we need to terminate this block
+                    stdin += '\n'
+                last_fileno = fileno
+            if fileno == last_fileno:
+                stdin += ' E{0}={1}'.format(label_idx,rename_label)
+    
+    if fileno is not None:
+        stdin += '\n' # Add last linebreak as we have added a rename clause
+    
+    logfile = os.path.abspath("cad.log")
+    retcode = ample_util.run_command(cmd=cmd, stdin=stdin, logfile=logfile)
+    if retcode != 0: raise RuntimeError, "Error running command: {0}\nCheck logfile: {1}".format( " ".join(cmd), logfile )
+    
+    return os.path.abspath(merged_mtz), labels
 
 def place_native_pdb(native_pdb, native_mtz, f_label, sigf_label, cleanup=True):
     """Place native_pdb into data from native_mtz using phaser with f_label and sigf_label"""
@@ -230,18 +285,16 @@ def parse_cphasematch_log(logfile):
     return before_origin, after_origin, change_of_hand, origin_shift
 
 def run_cphasematch(merged_mtz,
-                    f_label,
-                    sigf_label,
-                    native_phase_labels=['FC', 'PHIFC'],
-                    mr_phase_labels=['FCALC', 'PHIFCALC'],
+                    f_sigf_labels,
+                    native_phase_labels,
+                    mr_phase_labels,
                     resolution_bins=12,
                     cleanup=True):
     """run cphasematch to get phase error"""
     
-    assert merged_mtz and f_label and sigf_label
     argd = { 'merged_mtz' : merged_mtz,
-             'f_label' : f_label,
-             'sigf_label' : sigf_label,
+             'f_label' : f_sigf_labels[0],
+             'sigf_label' : f_sigf_labels[1],
              'native_phase_label1' : native_phase_labels[0],
              'native_phase_label2' : native_phase_labels[1],
              'mr_phase_label1' : mr_phase_labels[0],
