@@ -352,10 +352,10 @@ def add_rosetta_options(parser):
     rosetta_group.add_argument('-rosetta_version', type=float,
                        help='The version number of Rosetta')
 
-    rosetta_group.add_argument('-transmembrane',
+    rosetta_group.add_argument('-transmembrane', metavar='True/False',
                        help='Do Rosetta modelling for transmembrane proteins')
     
-    rosetta_group.add_argument('-transmembrane2',
+    rosetta_group.add_argument('-transmembrane2', metavar='True/False',
                        help='Do Rosetta modelling for transmembrane proteins (NEW PROTOCOL)')
     
     rosetta_group.add_argument('-transmembrane_octopusfile',
