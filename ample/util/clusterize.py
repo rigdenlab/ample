@@ -214,7 +214,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             sh += ['\n']
         elif submit_qtype=="LSF":
             assert not submit_num_array_jobs,"Array jobs not supported yet for LSF"
-            if nproc: sh += [submit_pe_lsf.format(nproc) + os.linesep]
+            if nproc and submit_pe_lsf: sh += [submit_pe_lsf.format(nproc) + os.linesep]
             if job_time:
                 sh += ['#BSUB -W {0}\n'.format(job_time)]
             else:
