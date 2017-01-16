@@ -242,6 +242,8 @@ class AMPLEIntegrationFramework(object):
             if sys.platform.startswith("win"): raise RuntimeError("Cannot run ensemble module on windows due to multiprocessing bug")
             test_exe = '{0} -m ample.ensembler'.format(os.path.join(os.environ["CCP4"], "bin", "ccp4-python"))
 
+        # All arguments need to be strings
+        args = [ map(str,a) for a in args ]
         with open(script, 'w') as f:
             f.write(ample_util.SCRIPT_HEADER + os.linesep)
             f.write(os.linesep)
