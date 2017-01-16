@@ -145,8 +145,8 @@ class Spickerer(object):
            The directory to store the cluster data in
         cluster_method_type : str
            The method to be used to cluster the decoys
-        cluster_score_type : str
-           The score type
+        score_type : str
+           The scoring metric for clustering
         num_clusters : int
            The number of clusters to produce
         max_cluster_size : int
@@ -295,7 +295,7 @@ class Spickerer(object):
         for cluster in range(num_clusters):
             result = Cluster()
             result.cluster_method = self.cluster_method
-            result.score_type = self.score_type
+            result.cluster_score_type = self.score_type
             result.index = cluster + 1
             result.num_clusters = num_clusters
             pdb_file = os.path.join(self.run_dir, "spicker_cluster_{0}.list".format(cluster + 1))

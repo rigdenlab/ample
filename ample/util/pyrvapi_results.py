@@ -177,15 +177,17 @@ class AmpleOutput(object):
                 pyrvapi.rvapi_add_section(self.summary_tab_ensemble_sec_id, "Ensembles", self.summary_tab_id, 0, 0, 1, 1, True)
                 
                 # Get the ensembling data
-                clusters, cluster_method, truncation_method, percent_truncation, side_chain_treatments = ensembler.collate_cluster_data(ensembles_data)
+                d = ensembler.collate_cluster_data(ensembles_data)
+                clusters = d['clusters']
                 
                 rstr = ""
                 rstr += "Ensemble Results<br/>"
                 rstr += "----------------<br/><br/>"
-                rstr += "Cluster method: {0}<br/>".format(cluster_method)
-                rstr += "Truncation method: {0}<br/>".format(truncation_method)
-                rstr += "Percent truncation: {0}<br/>".format(percent_truncation)
-                rstr += "Side-chain treatments: {0}<br/>".format(side_chain_treatments)
+                rstr += "Cluster method: {0}<br/>".format(d['cluster_method'])
+                rstr += "Cluster score type: {0}<br/>".format(d['cluster_score_type'])
+                rstr += "Truncation method: {0}<br/>".format(d['truncation_method'])
+                rstr += "Percent truncation: {0}<br/>".format(d['percent_truncation'])
+                rstr += "Side-chain treatments: {0}<br/>".format(d['side_chain_treatments'])
                 rstr += "Number of clusters: {0}<br/><br/>".format(len(clusters.keys()))
                 rstr += "Generated {0} ensembles<br/><br/>".format(len(ensembles_data))
                 pyrvapi.rvapi_add_text(rstr, self.summary_tab_ensemble_sec_id, 0, 0, 1, 1)
@@ -202,7 +204,7 @@ class AmpleOutput(object):
                 #     rstr += tableFormat.pprint_table(tdata)        
                 # 
                 cluster_num = 1
-                tdata = ensembler.cluster_table_data(clusters, cluster_num, side_chain_treatments)
+                tdata = ensembler.cluster_table_data(clusters, cluster_num, d['side_chain_treatments'])
                 self.fill_table(ensemble_table, tdata, tooltips=self._ensemble_tooltips)
         
         #

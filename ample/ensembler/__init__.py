@@ -246,22 +246,20 @@ def collate_cluster_data(ensembles_data):
 
     Returns
     -------
-    clusters : dict
-    cluster_method : str
-    truncation_method : str
-    truncation_percent : float
-    side_chain_treatments : list
+    A dictionary with the collated data
     
     """
     clusters = {}  # Loop through all ensemble data objects and build up a data tree
     cluster_method = None
+    cluster_score_type = None
     truncation_method = None
-    truncation_percent = None
+    percent_truncation = None
     side_chain_treatments = []
     for e in ensembles_data:
         if not cluster_method:
             cluster_method = e['cluster_method']
-            truncation_percent = e['truncation_percent']
+            cluster_score_type = e['cluster_score_type']
+            percent_truncation = e['truncation_percent']
             truncation_method = e['truncation_method']
             # num_clusters = e['num_clusters']
         cnum = e['cluster_num']
@@ -288,7 +286,14 @@ def collate_cluster_data(ensembles_data):
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['name'] = e['name']
             clusters[cnum]['tlevels'][tlvl]['radius_thresholds'][srt]['sct'][sct]['num_atoms'] = e['ensemble_num_atoms']
 
-    return clusters, cluster_method, truncation_method, truncation_percent, side_chain_treatments
+    return {
+            'clusters' : clusters,
+            'cluster_method' : cluster_method,
+            'cluster_score_type' : cluster_score_type,
+            'truncation_method' : truncation_method,
+            'percent_truncation' : percent_truncation,
+            'side_chain_treatments': side_chain_treatments,
+            }
 
 
 def cluster_table_data(clusters, cluster_num, side_chain_treatments):
@@ -343,17 +348,22 @@ def ensemble_summary(ensembles_data):
     str
 
     """
-    clusters, cluster_method, truncation_method, truncation_percent, side_chain_treatments = collate_cluster_data(ensembles_data)
-    num_clusters = len(clusters)
 
     tableFormat = printTable.Table()
+
+    d = collate_cluster_data(ensembles_data)
+    clusters = d['clusters']
+    num_clusters = len(clusters)
+
     rstr = "\n"
     rstr += "Ensemble Results\n"
     rstr += "----------------\n\n"
-    rstr += "Cluster method: {0}\n".format(cluster_method)
-    rstr += "Truncation method: {0}\n".format(truncation_method)
-    rstr += "Percent truncation: {0}\n".format(truncation_percent   )
+    rstr += "Cluster method: {0}\n".format(d['cluster_method'])
+    rstr += "Cluster score type: {0}\n".format(d['cluster_score_type'])
     rstr += "Number of clusters: {0}\n".format(num_clusters)
+    rstr += "Truncation method: {0}\n".format(d['truncation_method'])
+    rstr += "Percent truncation: {0}\n".format(d['percent_truncation'])
+    rstr += "Side-chain treatments: {0}\n".format(d['side_chain_treatments'])
 
     for cluster_num in sorted(clusters.keys()):
         rstr += "\n"
@@ -361,7 +371,7 @@ def ensemble_summary(ensembles_data):
         rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
         rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
         rstr += "\n"
-        tdata = cluster_table_data(clusters, cluster_num, side_chain_treatments)
+        tdata = cluster_table_data(clusters, cluster_num, d['side_chain_treatments'])
         rstr += tableFormat.pprint_table(tdata)
 
     rstr += "\nGenerated {0} ensembles\n\n".format(len(ensembles_data))

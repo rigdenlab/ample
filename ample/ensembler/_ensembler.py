@@ -134,11 +134,11 @@ class Cluster(object):
     """Class to hold all data related to a cluster"""
     def __init__(self):
         self.cluster_method = None
+        self.score_type = None # The scoring method used for clustering
         self.index = None # index of the cluster in the list of clusters (counting from 1)
         self.models = []
         self.num_clusters = None # How many clusters there are in list of clusters
         self.r_cen = []  # ordered list of the distance from the cluster centroid for each pdb (for Spicker)
-        self.score_type = None
         
         # This may be set if it's not the first model
         self._centroid = None
@@ -180,6 +180,7 @@ class Ensemble(object):
         
         # cluster info
         self.cluster_method = None
+        self.cluster_score_type = None
         self.num_clusters = None
         self.cluster_num = None
         self.cluster_centroid = None

@@ -136,6 +136,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         
         # First add the data from the cluster
         ensemble.cluster_method = truncation.cluster.cluster_method
+        ensemble.cluster_score_type = truncation.cluster.cluster_score_type
         ensemble.num_clusters = truncation.cluster.num_clusters
         ensemble.cluster_num = truncation.cluster.index
         ensemble.cluster_centroid = truncation.cluster.centroid
