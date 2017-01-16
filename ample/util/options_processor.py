@@ -340,7 +340,11 @@ def process_options(optd):
     #
     if optd['cluster_method'] in ['spicker', 'spicker_qscore', 'spicker_tm']:
         if not optd['spicker_exe']:
-            optd['spicker_exe'] = 'spicker'  + ample_util.EXE_EXT
+            if optd['cluster_method'] == 'spicker_tm' and optd['nproc'] > 1:
+                # We need to use the multicore version of SPICKER
+                optd['spicker_exe'] = 'spicker_omp'  + ample_util.EXE_EXT
+            else:
+                optd['spicker_exe'] = 'spicker'  + ample_util.EXE_EXT
         try:
             optd['spicker_exe'] = ample_util.find_exe(optd['spicker_exe'])
         except ample_util.FileNotFoundError:
@@ -406,6 +410,9 @@ def process_options(optd):
     if optd['shelxe_rebuild'] and not optd['use_shelxe']:
         msg = 'shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.'
         exit_util.exit_error(msg)
+        
+    # Output various information to the user
+    logger.info('Running on %d processors' % optd['nproc'])
     
     if optd['make_frags']:
         if optd['use_homs']:

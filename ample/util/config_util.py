@@ -6,6 +6,7 @@
 '''
 
 import logging
+import multiprocessing
 import os
 
 from ample.constants import AMPLE_CONFIG_FILE
@@ -199,7 +200,11 @@ class AMPLEConfigOptions(object):
         for k, v in self.d.iteritems():
             if k in _SECTIONS_REFERENCE["Files"] and v:
                 self.d[k] = os.path.abspath(v)
-        
+                
+        # Use the maximum number of processors unless overridden by the user
+        if self.d['nproc'] is None:
+            self.d['nproc'] = multiprocessing.cpu_count()
+            
         # Check if using any preset options
         if self.d['devel_mode']: self._preset_options('devel_mode')
         if self.d['quick_mode']: self._preset_options('quick_mode')
