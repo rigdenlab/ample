@@ -227,20 +227,20 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         elif submit_qtype=="LSF":
             if nproc and submit_pe_lsf: sh += [submit_pe_lsf.format(nproc) + os.linesep]
             if job_time:
-                sh += ['#BSUB -W {0}\n'.format(job_time)]
+                sh += ['#BSUB -W {0}\n'.format(job_time/60)]
             else:
                 sh += ['#BSUB -W 4:00\n']
             if nproc and nproc > 1: sh += ['#BSUB -n {0}\n'.format(nproc)]
             if submit_queue: sh += ['#BSUB -q {0}\n'.format(submit_queue)]
             if log_file: sh += ['#BSUB -o {0}\n'.format(log_file)]
-            if job_name: sh += ['#BSUB -J {0}\n'.format(job_name)]       
             if submit_num_array_jobs:
                 assert job_name,"LSF array job requires a job name"
-                sh += ['#BSUB -o arrayJob_$LSB_JOBINDEX.log\n']
+                sh += ['#BSUB -o arrayJob_%I.log\n']
                 if submit_max_array:
                     sh += ['#BSUB -J {0}[1-{1}]%{2}\n'.format(job_name, submit_num_array_jobs, submit_max_array)]
                 else:
                     sh += ['#BSUB -J {0}[1-{1}]\n'.format(job_name, submit_num_array_jobs)]
+            elif job_name: sh += ['#BSUB -J {0}\n'.format(job_name)]       
             sh += ['\n']
         else:
             raise RuntimeError,"Unrecognised QTYPE: {0}".format(submit_queue)
