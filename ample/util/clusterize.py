@@ -192,7 +192,19 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                         ):
         """
         Create a string suitable for writing out as the header of the submission script
-        for submitting to a particular queueing system
+        for submitting to a particular queueing system.
+    
+        Args:
+        job_scripts -- the list of scripts to run as the array
+        job_name -- the name of the job in the queue (required for LSF array jobs)
+        job_dir -- the directory the job will run in
+        job_time -- maximum job runtime in minutes (CHECK)
+        submit_max_array -- maximum number of array jobs to run concurrently
+        submit_queue -- the name of the queue to submit the job to
+        submit_qtype -- the type of the queueing system (e.g. SGE)
+        
+        Returns:
+        queue directives as a list of EOL-terminated strings
         """
         sh = []
         if submit_qtype=="SGE":
@@ -213,7 +225,6 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             if nproc and nproc > 1: sh += ['#$ -pe {0} {1}\n'.format(submit_pe_sge, nproc)]
             sh += ['\n']
         elif submit_qtype=="LSF":
-            assert not submit_num_array_jobs,"Array jobs not supported yet for LSF"
             if nproc and submit_pe_lsf: sh += [submit_pe_lsf.format(nproc) + os.linesep]
             if job_time:
                 sh += ['#BSUB -W {0}\n'.format(job_time)]
@@ -223,6 +234,13 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             if submit_queue: sh += ['#BSUB -q {0}\n'.format(submit_queue)]
             if log_file: sh += ['#BSUB -o {0}\n'.format(log_file)]
             if job_name: sh += ['#BSUB -J {0}\n'.format(job_name)]       
+            if submit_num_array_jobs:
+                assert job_name,"LSF array job requires a job name"
+                sh += ['#BSUB -o arrayJob_$LSB_JOBINDEX.log\n']
+                if submit_max_array:
+                    sh += ['#BSUB -J {0}[1-{1}]%{2}\n'.format(job_name, submit_num_array_jobs, submit_max_array)]
+                else:
+                    sh += ['#BSUB -J {0}[1-{1}]\n'.format(job_name, submit_num_array_jobs)]
             sh += ['\n']
         else:
             raise RuntimeError,"Unrecognised QTYPE: {0}".format(submit_queue)
@@ -278,7 +296,6 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         out = child_stdout.readline()
 
         qNumber=0
-        err_str = None
         while out:
             qNumber = None
             if self.QTYPE=="SGE":
@@ -313,9 +330,19 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                        submit_queue=None,
                        submit_qtype=None
                        ):
-        """Submit a list of jobs as an SGE array job"""
+        """Submit a list of jobs as an array job
         
-        if submit_qtype != "SGE": raise RuntimeError,"Need to add code for non-SGE array jobs"
+        Args:
+        job_scripts -- the list of scripts to run as the array
+        job_name -- the name of the job in the queue (required for LSF array jobs)
+        job_dir -- the directory the job will run in
+        job_time -- maximum job runtime in minutes (CHECK)
+        submit_max_array -- maximum number of array jobs to run concurrently
+        submit_queue -- the name of the queue to submit the job to
+        submit_qtype -- the type of the queueing system (e.g. SGE)
+        
+        """
+        
         if job_dir is None:
             if self.scriptDir and os.path.isdir(self.scriptDir):
                 job_dir=self.scriptDir
@@ -336,8 +363,16 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         # Generate the qsub array script
         arrayScript = os.path.abspath(os.path.join(job_dir,"array.script"))
  
+        if submit_qtype == "SGE":
+            task_env = 'SGE_TASK_ID'
+        elif submit_qtype == "LSF":
+            task_env = 'LSB_JOBINDEX'
+        else:
+            raise RuntimeError("Unsupported submission type: {0}".format(submit_qtype))
+        
         # Write head of script
         s = "#!/bin/sh\n"
+        # Queue directives
         s += "".join(self.queueDirectives(nproc=None,
                                   log_file=None,
                                   job_name=job_name,
@@ -347,13 +382,11 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                                   submit_queue=submit_queue,
                                   submit_qtype=submit_qtype
                                   ))
-        # Command to run 
-        s += "scriptlist={0}\n".format(self._scriptFile)
+        # body
+        s += """scriptlist={0}
 
-        # Add on the rest of the script - need to do in two bits or the stuff in here gets interpreted by format
-        s += """
 # Extract info on what we need to run
-script=`sed -n "${SGE_TASK_ID}p" $scriptlist`
+script=`sed -n "${{{1}}}p" $scriptlist`
 
 jobdir=`dirname $script`
 jobname=`basename $script .sh`
@@ -363,7 +396,7 @@ cd $jobdir
 
 # Run the script
 $script
-"""
+""".format(self._scriptFile, task_env)
         with open(arrayScript,'w') as f: f.write(s)
         self.submitJob(subScript=arrayScript, jobDir=job_dir)
         return
