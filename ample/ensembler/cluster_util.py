@@ -9,7 +9,7 @@ import logging
 import os
 import random
 
-from ample.util.cluster_data import ClusterData
+from ample.ensembler._ensembler import Cluster
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ def import_cluster(cluster_dir):
         raise RuntimeError("Cannot find pdbs in directory: {0}".format(cluster_dir))
     
     # Data on the cluster
-    cluster = ClusterData()
+    cluster = Cluster()
     cluster.method = "import"
     cluster.num_clusters = 1
     cluster.index = 1
@@ -89,7 +89,7 @@ def random_cluster(cluster_method, max_cluster_size, models, num_clusters):
             continue
         
         # Data on the models
-        cluster = ClusterData()
+        cluster = Cluster()
         cluster.method = cluster_method
         cluster.num_clusters = num_clusters
         cluster.index = i + 1

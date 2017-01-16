@@ -166,7 +166,6 @@ class Cluster(object):
         for k in sorted(self.__dict__.keys()):
             _str += "{0} : {1}\n".format(k, self.__dict__[k])
         return _str
-
     
 class Ensemble(object):
     """Class to hold data relating to an ensemble of one or more molecular models"""
