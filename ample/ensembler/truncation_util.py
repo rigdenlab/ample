@@ -474,6 +474,10 @@ class Truncator(object):
                                                  residue_scores=residue_scores,
                                                  alignment_file=alignment_file,
                                                  homologs=homologs)
+        if truncations is None or len(truncations) < 1:
+            msg = "Unable to truncate the ensembles - no viable truncations"
+            logger.critical(msg)
+            raise RuntimeError(msg)
         # Loop through the Truncation objects, truncating the models based on the truncation data and adding
         # the truncated models to the Truncation.models attribute
         for truncation in truncations:
