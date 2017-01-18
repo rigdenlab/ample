@@ -9,15 +9,11 @@
 
 # System
 import argparse
-import glob
 import logging
 import os
 import cPickle
-import re
 import shutil
-import subprocess
 import sys
-import tempfile
 
 # Horribleness to find MRBUMP
 if not "CCP4" in sorted(os.environ.keys()):
@@ -26,9 +22,9 @@ if not "CCP4" in sorted(os.environ.keys()):
 
 # Update the python path with the mrbump folders
 if os.path.isdir(os.path.join(os.environ["CCP4"], "share", "mrbump")):
-   mrbump = os.path.join(os.environ["CCP4"], "share", "mrbump")
+    mrbump = os.path.join(os.environ["CCP4"], "share", "mrbump")
 elif os.path.isdir(os.path.join(os.environ["MRBUMP"], "share", "mrbump")):
-   mrbump = os.path.join(os.environ["MRBUMP"], "share", "mrbump")
+    mrbump = os.path.join(os.environ["MRBUMP"], "share", "mrbump")
 else:
     sys.stderr.write("Error: MrBUMP installation not found" + os.linesep)
     sys.exit(1)
@@ -39,7 +35,6 @@ sys.path.append(os.path.join(mrbump_incl, 'building'))
 import MRBUMP_Shelxe
 
 # Custom
-from ample.util import ample_util
 from ample.util import workers_util
 
 sys.dont_write_bytecode = True
@@ -136,12 +131,10 @@ sys.exit(0)
 def create_scripts(amoptd):
     # For each mrbump job in amoptd
     job_scripts = []
-    mrbump_dir = None
     for d in amoptd['mrbump_results']:
         #print sorted(d.keys())
         
         # Define the various directories         
-        top_dir = d['Search_directory']
         mr_dir = d['Job_directory']
         build_dir = os.path.join(mr_dir, 'build')
         if not os.path.isdir(build_dir): continue # Can't do owt if it doesn't exist
@@ -213,14 +206,14 @@ def manipulate_shelxe_script(old_script, new_script, **kwargs):
         os.chmod(new_script, 0o777)
     return new_script
 
-def manipulate_arp_script(old_script, new_script):
+def manipulate_arp_script(old_script, new_script, **kwargs):
     """Copy old_script to new_script, if necessary updating according to given kwargs"""
     if len(kwargs) == 0:
         shutil.copy2(old_script, new_script)
     else:
         raise NotImplementedError()
     
-def manipulate_bucc_script(old_script, new_script):
+def manipulate_bucc_script(old_script, new_script, **kwargs):
     """Copy old_script to new_script, if necessary updating according to given kwargs"""
     if len(kwargs) == 0:
         shutil.copy2(old_script, new_script)
