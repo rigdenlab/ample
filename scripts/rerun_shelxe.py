@@ -45,10 +45,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 # String for Python script to run shelxe and arpwarp/buccanner depending on SHELXE results
-run_shelxe_script_str = """#!/bin/bash
-echo hello
-"""
-run_shelxe_script_str1 = """#!/usr/bin/env ccp4-python
+run_shelxe_script_str = """#!/usr/bin/env ccp4-python
 import os
 import subprocess
 import sys
@@ -76,11 +73,11 @@ sys.path.append(os.path.join(mrbump_incl, 'parsers'))
 sys.path.append(os.path.join(mrbump_incl, 'building'))
 import MRBUMP_Shelxe
 
-sys.stdout.write("Running SHELXE" + os.linesep)
 cmd = [ shelxe_script ]
 wdir = os.path.dirname(shelxe_script)
 shelxe_logfile = os.path.join(wdir, 'shelxe_run.log')
 log = open(shelxe_logfile, 'w')
+sys.stdout.write("Running SHELXE cmd: {0} and logging to: {1}{2}".format(cmd, shelxe_logfile, os.linesep))
 p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, cwd=wdir)
 rtn = p.wait()
 log.close()
@@ -127,6 +124,9 @@ if bucc_script:
 sys.exit(0)
     
 """
+#run_shelxe_script_str = """#!/bin/bash
+#echo hello
+#"""
 
 def create_scripts(amoptd):
     # For each mrbump job in amoptd
@@ -162,7 +162,7 @@ def create_scripts(amoptd):
         # Copy in the run scripts, amending if necessary - add any keywords required here for time being
         if not os.path.isfile(shelxe_script_old):
             raise RuntimeError("Cannot find shelxe_script: {0}".format(shelxe_script_old))
-        manipulate_shelxe_script(shelxe_script_old, shelxe_script_new, shelxe_exe='/opt/ccp4/ccp4-7.0/bin/shelxe')
+        manipulate_shelxe_script(shelxe_script_old, shelxe_script_new, shelxe_exe='/home/jmht/bin/shelxe.2014.4.george')
         
         if os.path.isfile(arp_script_old):
             manipulate_arp_script(arp_script_old, arp_script_new)
