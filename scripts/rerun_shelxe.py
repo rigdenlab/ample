@@ -77,7 +77,7 @@ cmd = [ shelxe_script ]
 wdir = os.path.dirname(shelxe_script)
 shelxe_logfile = os.path.join(wdir, 'shelxe_run.log')
 log = open(shelxe_logfile, 'w')
-sys.stdout.write("Running SHELXE cmd: {0} and logging to: {1}{2}".format(cmd, shelxe_logfile, os.linesep))
+sys.stdout.write("Running SHELXE cmd: {{0}} Logfile is: {{1}}{{2}}".format(" ".join(cmd), shelxe_logfile, os.linesep))
 p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, cwd=wdir)
 rtn = p.wait()
 log.close()
@@ -162,7 +162,12 @@ def create_scripts(amoptd):
         # Copy in the run scripts, amending if necessary - add any keywords required here for time being
         if not os.path.isfile(shelxe_script_old):
             raise RuntimeError("Cannot find shelxe_script: {0}".format(shelxe_script_old))
-        manipulate_shelxe_script(shelxe_script_old, shelxe_script_new, shelxe_exe='/home/jmht/bin/shelxe.2014.4.george')
+        kwargs = {
+                  'shelxe_exe' : '/home/jmht/bin/shelxe.2014.4.george'
+        }
+        if 'native_pdb' in amoptd and amoptd['native_pdb'] and os.path.isfile(amoptd['native_pdb']):
+            kwargs['native_pdb'] = amoptd['native_pdb']
+        manipulate_shelxe_script(shelxe_script_old, shelxe_script_new, **kwargs)
         
         if os.path.isfile(arp_script_old):
             manipulate_arp_script(arp_script_old, arp_script_new)
@@ -201,6 +206,11 @@ def manipulate_shelxe_script(old_script, new_script, **kwargs):
                     if 'n_cycles' in kwargs:
                         pass
                     line = " ".join(l + [os.linesep])
+                    if 'native_pdb' in kwargs:
+                        # Hack in copy of native before command to run shelxe
+                        assert os.path.isfile(kwargs['native_pdb'])
+                        cline = "cp {0} shelxe-input.ent\n\n".format(kwargs['native_pdb'])
+                        line = cline + line
                 cmd += line
         with open(new_script, 'w') as o: o.write(cmd)
         os.chmod(new_script, 0o777)
