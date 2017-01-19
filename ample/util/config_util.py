@@ -203,7 +203,10 @@ class AMPLEConfigOptions(object):
                 
         # Use the maximum number of processors unless overridden by the user
         if self.d['nproc'] is None:
-            self.d['nproc'] = multiprocessing.cpu_count()
+            if self.d['submit_cluster']:
+                self.d['nproc'] = 1
+            else:
+                self.d['nproc'] = multiprocessing.cpu_count()
             
         # Check if using any preset options
         if self.d['devel_mode']: self._preset_options('devel_mode')
