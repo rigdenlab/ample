@@ -189,7 +189,7 @@ def create_scripts(amoptd, args):
         if args.submit_cluster:
             run_script_sh = os.path.join(build_dir, "run_{0}.sh".format(d['name']))
             with open(run_script_sh, 'w') as w:
-                w.write("#!/bin/bash\n\n./{0}\n".format(run_script))
+                w.write("#!/bin/bash\n\n{0}\n".format(run_script))
             os.chmod(run_script_sh, 0o777)
             run_script = run_script_sh
         
