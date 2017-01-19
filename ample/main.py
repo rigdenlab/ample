@@ -132,7 +132,6 @@ class Ample(object):
             script = benchmark_util.cluster_script(optd)
             workers_util.run_scripts(job_scripts=[script],
                                      monitor=monitor,
-                                     chdir=True,
                                      nproc=optd['nproc'],
                                      job_time=7200,
                                      job_name='benchmark',
@@ -170,7 +169,6 @@ class Ample(object):
                 script = ensembler.cluster_script(optd)
                 workers_util.run_scripts(job_scripts=[script],
                                          monitor=monitor,
-                                         chdir=True,
                                          nproc=optd['nproc'],
                                          job_time=optd['ensembler_timeout'],
                                          job_name='ensemble',
@@ -340,7 +338,6 @@ class Ample(object):
                                       monitor=monitor,
                                       check_success=mrbump_util.checkSuccess,
                                       early_terminate=optd['early_terminate'],
-                                      chdir=False,
                                       nproc=optd['nproc'],
                                       job_time=mrbump_util.MRBUMP_RUNTIME,
                                       job_name='mrbump',

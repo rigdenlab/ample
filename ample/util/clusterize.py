@@ -29,20 +29,19 @@ class ClusterRun:
 
         self.runDir=None
         self.logDir=None
-        self.scriptDir=None
         self._scriptFile  = None
         self.debug=True
         
         return
 
-    def cleanUpArrayJob(self,scriptFile=None,logDir=None):
+    def cleanUpArrayJob(self, scriptFile=None, logDir=None):
         """Rename all the log files
         Args:
         logDir: directory that the logfiles should end up in
         """
         
         if not scriptFile:
-            scriptFile=self._scriptFile
+            scriptFile = self._scriptFile
         assert os.path.isfile(scriptFile),"Cannot find scriptFile {0}".format(scriptFile)
         
         scriptFiles = []
@@ -247,13 +246,12 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         sh += ['\n']
         return sh
     
-    def submitJob(self, subScript=None, jobDir=None):
+    def submitJob(self, subScript):
         """
         Submit the job to the queue and return the job number.
         
         Args:
         subScript -- the path to the submission script
-        jobDir -- the directory the job is submitted from - will run in
         
         Returns:
         job number as a string
@@ -261,14 +259,11 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
          We cd to the job directory, submit and then cd back to where we came from
         """
         
-        curDir=os.getcwd()
-        if jobDir: os.chdir(jobDir)
-        
-        command_line=None
+        command_line = None
         stdin = None
-        if self.QTYPE=="SGE":
-            command_line='qsub -V %s' % subScript
-        elif self.QTYPE=="LSF":
+        if self.QTYPE == "SGE":
+            command_line = 'qsub -V %s' % subScript
+        elif self.QTYPE == "LSF":
             command_line='bsub'
             stdin = open( subScript, "r")
         else:
@@ -298,7 +293,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         qNumber=0
         while out:
             qNumber = None
-            if self.QTYPE=="SGE":
+            if self.QTYPE == "SGE":
                 if "Your job-array" in out:
                     # Array jobs have different form
                     #Your job-array 19094.1-10:1 ("array.script") has been submitted
@@ -307,24 +302,21 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 elif "Your job" in out:
                     qNumber=int(out.split()[2])
                     self.qList.append(qNumber)
-            elif self.QTYPE=="LSF":
+            elif self.QTYPE == "LSF":
                 # Job <35339> is submitted to queue <q1h32>.
                 if "is submitted to queue" in out:
                     qStr=out.split()[1]
                     qNumber=int(qStr.strip("<>"))
                     self.qList.append(qNumber)                
-
             if qNumber:
                 logger.debug("Submission script {0} submitted to queue as job {1}".format( subScript, qNumber ) )
-            out=child_stdout.readline()
+            out = child_stdout.readline()
         child_stdout.close()
-        os.chdir(curDir)
         return str(qNumber)
     
     def submitArrayJob(self,
                        job_scripts,
                        job_name=None,
-                       job_dir=None,
                        job_time=None,
                        submit_max_array=None,
                        submit_queue=None,
@@ -343,16 +335,11 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
         """
         
-        if job_dir is None:
-            if self.scriptDir and os.path.isdir(self.scriptDir):
-                job_dir=self.scriptDir
-            else:
-                job_dir=os.getcwd()
-        os.chdir(job_dir)
+        job_dir = os.getcwd()
         
         # Create the list of scripts
         self._scriptFile = os.path.abspath(os.path.join(job_dir,"array.jobs"))
-        nJobs=len(job_scripts)
+        nJobs = len(job_scripts)
         with open(self._scriptFile,'w') as f:
             for s in job_scripts:
                 # Check the scripts are of the correct format - abspath and .sh extension
@@ -374,14 +361,14 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         s = "#!/bin/sh\n"
         # Queue directives
         s += "".join(self.queueDirectives(nproc=None,
-                                  log_file=None,
-                                  job_name=job_name,
-                                  job_time=job_time,
-                                  submit_max_array=submit_max_array,
-                                  submit_num_array_jobs=nJobs,
-                                  submit_queue=submit_queue,
-                                  submit_qtype=submit_qtype
-                                  ))
+                                          log_file=None,
+                                          job_name=job_name,
+                                          job_time=job_time,
+                                          submit_max_array=submit_max_array,
+                                          submit_num_array_jobs=nJobs,
+                                          submit_queue=submit_queue,
+                                          submit_qtype=submit_qtype
+                                          ))
         # body
         s += """scriptlist={0}
 
@@ -398,6 +385,6 @@ cd $jobdir
 $script
 """.format(self._scriptFile, task_env)
         with open(arrayScript,'w') as f: f.write(s)
-        self.submitJob(subScript=arrayScript, jobDir=job_dir)
+        self.submitJob(arrayScript)
         return
 

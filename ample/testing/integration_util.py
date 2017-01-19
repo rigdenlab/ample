@@ -143,7 +143,6 @@ class AMPLEIntegrationFramework(object):
         if not dry_run:
             workers_util.run_scripts(job_scripts=scripts,
                                      monitor=None,
-                                     chdir=True,
                                      nproc=nproc,
                                      job_name='test')
         
