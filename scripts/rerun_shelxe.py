@@ -280,7 +280,6 @@ def rerun_shelxe(args):
         logger.info("Running scripts:\n{0}".format(os.linesep.join(job_scripts)))
         ok = workers_util.run_scripts(job_scripts=job_scripts,
                                       nproc=args.nproc,
-                                      chdir=True,
                                       submit_cluster=args.submit_cluster,
                                       submit_qtype="SGE",
                                       submit_queue="all.q",
