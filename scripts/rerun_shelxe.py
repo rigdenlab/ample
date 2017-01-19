@@ -128,7 +128,7 @@ sys.exit(0)
 #echo hello
 #"""
 
-def create_scripts(amoptd):
+def create_scripts(amoptd, args):
     # For each mrbump job in amoptd
     job_scripts = []
     for d in amoptd['mrbump_results']:
@@ -184,6 +184,14 @@ def create_scripts(amoptd):
         with open(run_script, 'w') as w:
             w.write(run_shelxe_script_str.format(shelxe_script_new, arp_script_new, bucc_script_new))
         os.chmod(run_script, 0o777)
+        
+        # Horrible - the submission script needs to be a shell script, so we create a wrapper bash script
+        if args.submit_cluster:
+            run_script_sh = os.path.join(build_dir, "run_{0}.sh".format(d['name']))
+            with open(run_script_sh, 'w') as w:
+                w.write("#!/bin/bash\n\n./{0}\n".format(run_script))
+            os.chmod(run_script_sh, 0o777)
+            run_script = run_script_sh
         
         # Add script to run as bash script so that we can submit to the queieing system? - TEST IF NEEDED
         # Add to list of scripts
@@ -265,7 +273,7 @@ def rerun_shelxe(args):
     shutil.copy2(amopt_pkl, amopt_pkl + BK_SUFFIX)
 
     # Get list of jobs to rerun the SHELXE pipeline
-    job_scripts = create_scripts(amoptd)
+    job_scripts = create_scripts(amoptd, args)
     
     # Run the jobs
     if True:
