@@ -81,6 +81,7 @@ import MRBUMP_phs2mtz
 
 cmd = [ shelxe_script ]
 wdir = os.path.dirname(shelxe_script)
+os.chdir(wdir)
 shelxe_logfile = os.path.join(wdir, 'shelxe_run.log')
 log = open(shelxe_logfile, 'w')
 sys.stdout.write("Running SHELXE cmd: {{0}} Logfile is: {{1}}{{2}}".format(" ".join(cmd), shelxe_logfile, os.linesep))
@@ -117,7 +118,7 @@ if os.path.isfile(phsin) and os.path.isfile(pdbin):
                 "{shelxe_dir}",
                 hklref="{hklref}",
                 freeLabel="{free}",
-                resolution="{resolution}"
+                resolution={resolution}
                 )
 
 # Shelxe Worked so run arpwarp and then buccaneer
@@ -125,6 +126,7 @@ if arp_script:
     sys.stdout.write("Running ARPWARP" + os.linesep)
     cmd = [ arp_script ]
     wdir = os.path.dirname(arp_script)
+    os.chdir(wdir)
     arp_logfile = os.path.join(wdir, 'arpwarp.log')
     log = open(arp_logfile, 'w')
     p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, cwd=wdir)
@@ -135,6 +137,7 @@ if bucc_script:
     sys.stdout.write("Running BUCCANEER" + os.linesep)
     cmd = [ bucc_script ]
     wdir = os.path.dirname(bucc_script)
+    os.chdir(wdir)
     bucc_logfile = os.path.join(wdir, 'buccaneer.log')
     log = open(bucc_logfile, 'w')
     p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, cwd=wdir)
@@ -200,12 +203,14 @@ def create_scripts(amoptd, args):
             bucc_script_new = None
 
         # Get required data for phs2mtz and to run shelxe/arp/bucc
-        base_name = 'shelxe_phaser_loc0_ALL_{0}_UNMOD'.format(d['name'])
+        #base_name = 'shelxe_phaser_loc0_ALL_{0}_UNMOD'.format(d['name'])
+        base_name = 'shelxe_phaser_{0}'.format(d['name'])
         shelxd = { 'phsin' : base_name + '.phs',
                    'pdbin' : base_name + '.pdb',
                    'mtzin' : base_name + '.mtz',
                    'hklref' : amoptd['mtz'],
-                   'resolution' : "{0:1.2F}".format(amoptd['mtz_min_resolution']),
+                   #'resolution' : "{0:1.2F}".format(amoptd['mtz_min_resolution']),
+                   'resolution' : amoptd['mtz_min_resolution'],
                    'free' : amoptd['FREE'],
                    'shelxe_dir' : shelxe_dir,
                    'shelxe_script' : shelxe_script_new,
