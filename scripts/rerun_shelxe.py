@@ -30,8 +30,8 @@ else:
     sys.exit(1)
 
 mrbump_incl = os.path.join(mrbump, "include")
-sys.path.append(os.path.join(mrbump_incl, 'parsers'))
 sys.path.append(os.path.join(mrbump_incl, 'building'))
+sys.path.append(os.path.join(mrbump_incl, 'parsers'))
 import MRBUMP_Shelxe
 import parse_arpwarp
 import parse_buccaneer
@@ -73,8 +73,9 @@ else:
     sys.exit(1)
 
 mrbump_incl = os.path.join(mrbump, "include")
-sys.path.append(os.path.join(mrbump_incl, 'parsers'))
 sys.path.append(os.path.join(mrbump_incl, 'building'))
+sys.path.append(os.path.join(mrbump_incl, 'parsers'))
+sys.path.append(os.path.join(mrbump_incl, 'tools'))
 import MRBUMP_Shelxe
 import MRBUMP_phs2mtz
 
@@ -318,7 +319,7 @@ def rerun_shelxe(args):
     job_scripts = create_scripts(amoptd, args)
     
     # Run the jobs
-    if False:
+    if True:
         logger.info("Running scripts:\n{0}".format(os.linesep.join(job_scripts)))
         ok = workers_util.run_scripts(job_scripts=job_scripts,
                                       nproc=args.nproc,
