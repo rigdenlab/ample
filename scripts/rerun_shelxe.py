@@ -52,9 +52,11 @@ import os
 import subprocess
 import sys
 
-shelxe_script = "{0}"
-arp_script = "{1}"
-bucc_script = "{2}"
+shelxe_script = "{shelxe_script}"
+arp_script = "{arp_script}"
+if arp_script == "None": arp_script = None
+bucc_script = "{bucc_script}"
+if bucc_script == "None": bucc_script = None
 
 # Horribleness to find MRBUMP
 if not "CCP4" in sorted(os.environ.keys()):
@@ -74,6 +76,7 @@ mrbump_incl = os.path.join(mrbump, "include")
 sys.path.append(os.path.join(mrbump_incl, 'parsers'))
 sys.path.append(os.path.join(mrbump_incl, 'building'))
 import MRBUMP_Shelxe
+import MRBUMP_phs2mtz
 
 cmd = [ shelxe_script ]
 wdir = os.path.dirname(shelxe_script)
@@ -101,6 +104,20 @@ if not shelxe_job.succeeded():
 else:
     sys.stdout.write("SHELXE WORKED" + os.linesep)
     
+# Convert the phs file to an mtz
+phsin = "{phsin}"
+pdbin = "{pdbin}"
+if os.path.isfile(phsin) and os.path.isfile(pdbin):
+    sys.stdout.write("Running phs2mtz" + os.linesep)
+    p2m = MRBUMP_phs2mtz.PHS2MTZ()
+    p2m.phs2mtz(phsin,
+                pdbin,
+                "{mtzin}",
+                "{shelxe_dir}",
+                hklref="{hklref}",
+                freeLabel="{free}",
+                resolution="{resolution}"
+                )
 
 # Shelxe Worked so run arpwarp and then buccaneer
 if arp_script:
@@ -181,13 +198,26 @@ def create_scripts(amoptd, args):
         else:
             bucc_script_new = None
 
+        # Get required data for phs2mtz and to run shelxe/arp/bucc
+        base_name = 'shelxe_phaser_loc0_ALL_{0}_UNMOD'.format(d['name'])
+        shelxd = { 'phsin' : base_name + '.phs',
+                   'pdbin' : base_name + '.pdb',
+                   'mtzin' : base_name + '.mtz',
+                   'hklref' : amoptd['mtz'],
+                   'resolution' : "{0:1.2F}".format(amoptd['mtz_min_resolution']),
+                   'free' : amoptd['FREE'],
+                   'shelxe_dir' : shelxe_dir,
+                   'shelxe_script' : shelxe_script_new,
+                   'arp_script' : arp_script_new,
+                   'bucc_script' : bucc_script_new,
+                  }
         # Create script to run the steps for this job
         run_script = os.path.join(build_dir, "run_{0}.py".format(d['name']))
         with open(run_script, 'w') as w:
-            w.write(run_shelxe_script_str.format(shelxe_script_new, arp_script_new, bucc_script_new))
+            w.write(run_shelxe_script_str.format(**shelxd))
         os.chmod(run_script, 0o777)
         
-        # Horrible - the submission script needs to be a shell script, so we create a wrapper bash script
+        # Horrible - the submission script needs to be a shell script, so we create a wrapper bash script    
         if args.submit_cluster:
             run_script_sh = os.path.join(build_dir, "run_{0}.sh".format(d['name']))
             with open(run_script_sh, 'w') as w:
