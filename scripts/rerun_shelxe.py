@@ -33,6 +33,8 @@ mrbump_incl = os.path.join(mrbump, "include")
 sys.path.append(os.path.join(mrbump_incl, 'parsers'))
 sys.path.append(os.path.join(mrbump_incl, 'building'))
 import MRBUMP_Shelxe
+import parse_arpwarp
+import parse_buccaneer
 
 # Custom
 from ample.util import workers_util
@@ -226,17 +228,27 @@ def manipulate_shelxe_script(old_script, new_script, **kwargs):
 
 def manipulate_arp_script(old_script, new_script, **kwargs):
     """Copy old_script to new_script, if necessary updating according to given kwargs"""
-    if len(kwargs) == 0:
-        shutil.copy2(old_script, new_script)
-    else:
-        raise NotImplementedError()
+    shebang = '#!/bin/bash\n'
+    with open(old_script) as f: s = f.read()
+    s = shebang + s
+    with open(new_script,'w') as w: w.write(s)
+    #if len(kwargs) == 0:
+    #   shutil.copy2(old_script, new_script)
+    #else:
+    #    raise NotImplementedError()
+    os.chmod(new_script, 0o777)
     
 def manipulate_bucc_script(old_script, new_script, **kwargs):
     """Copy old_script to new_script, if necessary updating according to given kwargs"""
-    if len(kwargs) == 0:
-        shutil.copy2(old_script, new_script)
-    else:
-        raise NotImplementedError()
+    shebang = '#!/bin/bash\n'
+    with open(old_script) as f: s = f.read()
+    s = shebang + s
+    with open(new_script,'w') as w: w.write(s)
+    #if len(kwargs) == 0:
+    #    shutil.copy2(old_script, new_script)
+    #else:
+    #    raise NotImplementedError()
+    os.chmod(new_script, 0o777)
     
 def shelxe_results(shelxe_logfile, d):
     shelxe_job = MRBUMP_Shelxe.Shelxe()
@@ -276,7 +288,7 @@ def rerun_shelxe(args):
     job_scripts = create_scripts(amoptd, args)
     
     # Run the jobs
-    if True:
+    if False:
         logger.info("Running scripts:\n{0}".format(os.linesep.join(job_scripts)))
         ok = workers_util.run_scripts(job_scripts=job_scripts,
                                       nproc=args.nproc,
