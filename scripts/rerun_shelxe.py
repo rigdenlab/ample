@@ -234,7 +234,7 @@ def create_scripts(amoptd, args):
         # Add script to run as bash script so that we can submit to the queieing system? - TEST IF NEEDED
         # Add to list of scripts
         job_scripts.append(run_script)
-        break
+        #break
     return job_scripts
 
 def manipulate_shelxe_script(old_script, new_script, **kwargs):
@@ -318,13 +318,14 @@ def rerun_shelxe(args):
     assert 'mrbump_results' in amoptd, "No MRBUMP results in: %s" % amopt_pkl
     
     # Back up old AMPLE pkl file - preserve metadata
+    #assert not os.path.isfile(amopt_pkl + BK_SUFFIX)
     shutil.copy2(amopt_pkl, amopt_pkl + BK_SUFFIX)
 
-    # Get list of jobs to rerun the SHELXE pipeline
-    job_scripts = create_scripts(amoptd, args)
-    
-    # Run the jobs
     if True:
+        # Get list of jobs to rerun the SHELXE pipeline
+        job_scripts = create_scripts(amoptd, args)
+
+        # Run the jobs
         logger.info("Running scripts:\n{0}".format(os.linesep.join(job_scripts)))
         ok = workers_util.run_scripts(job_scripts=job_scripts,
                                       nproc=args.nproc,
@@ -335,10 +336,12 @@ def rerun_shelxe(args):
                                       submit_max_array=10)
     
     # Collect results from completed jobs
-    for oldd in amoptd['mrbump_results']:
+    for i, oldd in enumerate(amoptd['mrbump_results']):
+        #if i == 1: continue
+        #print("CHECKING ",oldd['Search_directory'])
         #print sorted(d.keys())
         
-        # Add SHELXE, ARPWARP and BUCCANEER results to amoptd
+        # Add SHELXE, ARPWARP and BUCCANEER results to a dictionary
         # We can use the path to the old log files as the paths should be the same
         newd = {}
         if oldd['SHELXE_logfile'] and os.path.isfile(oldd['SHELXE_logfile']):
@@ -350,17 +353,18 @@ def rerun_shelxe(args):
         
         # Update AMPLE and MRBUMP dictionaries with new values
         mrb_pkl = os.path.join(oldd['Search_directory'], 'results', 'resultsTable.pkl')
+        assert not os.path.isfile(mrb_pkl + BK_SUFFIX)
         shutil.copy2(mrb_pkl, mrb_pkl + BK_SUFFIX) # Backup old MRBUMP results
         with open(mrb_pkl) as w:  mrb_dict = cPickle.load(w)
        
         # Update values in dictionaries
         for k in newd.keys():
             oldd[k] = newd[k]
-            mrb_dict[oldd['name']][k] = newd[k]
+            mrb_dict[oldd['name']][oldd['MR_program']][k] = newd[k]
 
         # Writ out updated mrbump dict
         with open(mrb_pkl, 'w') as w: cPickle.dump(mrb_dict,w)
-        break
+        #break
     
     # Write out the updated amoptd
     with open(amopt_pkl, 'w') as w: cPickle.dump(amoptd,w)
