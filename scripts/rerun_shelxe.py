@@ -32,6 +32,8 @@ else:
 mrbump_incl = os.path.join(mrbump, "include")
 sys.path.append(os.path.join(mrbump_incl, 'building'))
 sys.path.append(os.path.join(mrbump_incl, 'parsers'))
+import MRBUMP_ARPwARP
+import MRBUMP_Buccaneer
 import MRBUMP_Shelxe
 import parse_arpwarp
 import parse_buccaneer
@@ -60,7 +62,7 @@ if bucc_script == "None": bucc_script = None
 
 # Horribleness to find MRBUMP
 if not "CCP4" in sorted(os.environ.keys()):
-    sys.stderr.write('CCP4 not found' + os.linesep)
+    logger.critical('CCP4 not found' + os.linesep)
     sys.exit(1)
 
 # Update the python path with the mrbump folders
@@ -69,7 +71,7 @@ if os.path.isdir(os.path.join(os.environ["CCP4"], "share", "mrbump")):
 elif os.path.isdir(os.path.join(os.environ["MRBUMP"], "share", "mrbump")):
    mrbump = os.path.join(os.environ["MRBUMP"], "share", "mrbump")
 else:
-    sys.stderr.write("Error: MrBUMP installation not found" + os.linesep)
+    logger.critical("Error: MrBUMP installation not found" + os.linesep)
     sys.exit(1)
 
 mrbump_incl = os.path.join(mrbump, "include")
@@ -80,50 +82,56 @@ import MRBUMP_Shelxe
 import MRBUMP_phs2mtz
 
 cmd = [ shelxe_script ]
-wdir = os.path.dirname(shelxe_script)
-os.chdir(wdir)
+shelxe_dir = os.path.dirname(shelxe_script)
+os.chdir(shelxe_dir)
 shelxe_logfile = os.path.join(wdir, 'shelxe_run.log')
 log = open(shelxe_logfile, 'w')
-sys.stdout.write("Running SHELXE cmd: {{0}} Logfile is: {{1}}{{2}}".format(" ".join(cmd), shelxe_logfile, os.linesep))
-p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, cwd=wdir)
+logger.info("Running SHELXE cmd: {{0}} Logfile is: {{1}}{{2}}".format(" ".join(cmd), shelxe_logfile, os.linesep))
+p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, cwd=shelxe_dir)
 rtn = p.wait()
 log.close()
 
 if rtn != 0:
-    sys.stderr.write("SHELXE returned non-zero return code" + os.linesep)
+    logger.critical("SHELXE returned non-zero return code" + os.linesep)
     sys.exit(1)
 
 if not (arp_script or bucc_script):
     # No rebuiling so we are finished
     sys.exit(0)
 
-# We can do a rebuild - so first check SHELXE scores
+# Check SHELXE scores
+if not os.path.isfile(shelxe_logfile):
+    logger.critical("No SHELXE logfile: {0}{1}".format(shelxe_logfile,os.linesep))
+    sys.exit(1)
+
 shelxe_job = MRBUMP_Shelxe.Shelxe()
 shelxe_job.shelxeLogfile = shelxe_logfile
 if not shelxe_job.succeeded():
-    sys.stdout.write("SHELXE did not succeed" + os.linesep)
+    logger.info("SHELXE did not succeed" + os.linesep)
     sys.exit(0)
 else:
-    sys.stdout.write("SHELXE WORKED" + os.linesep)
+    logger.info("SHELXE WORKED" + os.linesep)
     
 # Convert the phs file to an mtz
-phsin = "{phsin}"
-pdbin = "{pdbin}"
+phsin = "{shelxe_phs}"
+pdbin = "{shelxe_pdb}"
 if os.path.isfile(phsin) and os.path.isfile(pdbin):
     sys.stdout.write("Running phs2mtz" + os.linesep)
     p2m = MRBUMP_phs2mtz.PHS2MTZ()
     p2m.phs2mtz(phsin,
                 pdbin,
-                "{mtzin}",
+                "{shelxe_mtz}",
                 "{shelxe_dir}",
                 hklref="{hklref}",
-                freeLabel="{free}",
+                freeLabel="{FREE}",
                 resolution={resolution}
                 )
 
+rebuild_dir = os.path.join(shelxe_dir,'build')
+
 # Shelxe Worked so run arpwarp and then buccaneer
 if arp_script:
-    sys.stdout.write("Running ARPWARP" + os.linesep)
+    logger.info("Running ARPWARP from existing script" + os.linesep)
     cmd = [ arp_script ]
     wdir = os.path.dirname(arp_script)
     os.chdir(wdir)
@@ -132,9 +140,26 @@ if arp_script:
     p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, cwd=wdir)
     rtn = p.wait()
     log.close()
+else:
+    logger.info("Running ARPWARP from scratch" + os.linesep)
+    arpwarp_dir = os.path.join(rebuild_dir, "arpwarp")
+    if not os.path.isdir(arpwarp_dir): os.mkdir(arpwarp_dir)
+    arpwarpSX = MRBUMP_ARPwARP.Arpwarp()
+    arpwarpSX.runARPwARP("{fasta}",
+                         "{shelxe_mtz}",
+                         arpwarp_dir,
+                         '{F}',
+                         '{SIGF}',
+                         '{FREE}',
+                         "PHI_SHELXE",
+                         "FOM_SHELXE",
+                         '{nmasu}',
+                         cycles=5,
+                         pdbinFile="{shelxe_pdb}")
+    
     
 if bucc_script:
-    sys.stdout.write("Running BUCCANEER" + os.linesep)
+    logger.info("Running BUCCANEER from existing script" + os.linesep)
     cmd = [ bucc_script ]
     wdir = os.path.dirname(bucc_script)
     os.chdir(wdir)
@@ -142,7 +167,23 @@ if bucc_script:
     log = open(bucc_logfile, 'w')
     p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, cwd=wdir)
     rtn = p.wait()
-    log.close() 
+    log.close()
+else:
+    logger.info("Running BUCCANEER from scratch" + os.linesep)
+    bucc_dir = os.path.join(rebuild_dir, "buccaneer")
+    if not os.path.isdir(bucc_dir): os.mkdir(bucc_dir)
+    buccaneerSX = MRBUMP_Buccaneer.Buccaneer()
+    buccaneerSX.runBuccaneer("{fasta}",
+                             "{shelxe_mtz}",
+                             os.path.join(bucc_dir, "buccSX_output.pdb"),
+                             bucc_dir,
+                             '{F}',
+                             '{SIGF}',
+                             '{FREE}',
+                             "PHI_SHELXE",
+                             "FOM_SHELXE",
+                             cycles=5,
+                             pdbinFile="{shelxe_pdb}")
 
 sys.exit(0)
     
@@ -151,7 +192,20 @@ sys.exit(0)
 #echo hello
 #"""
 
+def get_nmasu(amoptd):
+    """Parse mrbump logfile to get nmasu"""
+    d = amoptd['mrbump_results'][0]
+    logfile = os.path.join(amoptd['mrbump_dir'],d['ensemble_name'] + '.log')
+    with open(logfile) as f:
+        for line in f:
+            if line.startswith('Estimated number of molecules to search for in a.s.u.:'):
+                return line.split()[9]
+    assert False
+
 def create_scripts(amoptd, args):
+    
+    nmasu = get_nmasu(amoptd)
+    
     # For each mrbump job in amoptd
     job_scripts = []
     for d in amoptd['mrbump_results']:
@@ -183,6 +237,11 @@ def create_scripts(amoptd, args):
         bucc_script_old = os.path.join(build_dir_bk, 'shelxe', 'rebuild', 'buccaneer', 'buccaneer-script.sh')
         bucc_script_new = os.path.join(build_dir, 'shelxe', 'rebuild', 'buccaneer', 'buccaneer-script.sh')
         
+        # Need to set arp and bucc logfile paths if they haven't already been set or we can't parse any newly generated results
+        d['SXRARP_logfile'] =  os.path.join(arp_dir,"arpwarp.log")
+        d['SXRBUCC_logfile'] =  os.path.join(arp_dir,"buccaneer.log")
+        
+        
         # Copy in the run scripts, amending if necessary - add any keywords required here for time being
         if not os.path.isfile(shelxe_script_old):
             #raise RuntimeError("Cannot find shelxe_script: {0}".format(shelxe_script_old))
@@ -203,21 +262,25 @@ def create_scripts(amoptd, args):
             manipulate_bucc_script(bucc_script_old, bucc_script_new)
         else:
             bucc_script_new = None
-
+            
         # Get required data for phs2mtz and to run shelxe/arp/bucc
         #base_name = 'shelxe_phaser_loc0_ALL_{0}_UNMOD'.format(d['name'])
         base_name = 'shelxe_phaser_{0}'.format(d['name'])
-        shelxd = { 'phsin' : base_name + '.phs',
-                   'pdbin' : base_name + '.pdb',
-                   'mtzin' : base_name + '.mtz',
+        shelxd = { 'shelxe_phs' : base_name + '.phs',
+                   'shelxe_pdb' : base_name + '.pdb',
+                   'shelxe_mtz' : base_name + '.mtz',
                    'hklref' : amoptd['mtz'],
                    #'resolution' : "{0:1.2F}".format(amoptd['mtz_min_resolution']),
                    'resolution' : amoptd['mtz_min_resolution'],
-                   'free' : amoptd['FREE'],
+                   'fasta' : amoptd['fasta'],
+                   'F' : amoptd['F'],
+                   'SIGF' : amoptd['SIGF'],
+                   'FREE' : amoptd['FREE'],
                    'shelxe_dir' : shelxe_dir,
                    'shelxe_script' : shelxe_script_new,
                    'arp_script' : arp_script_new,
                    'bucc_script' : bucc_script_new,
+                   'nmasu' : nmasu
                   }
         # Create script to run the steps for this job
         run_script = os.path.join(build_dir, "run_{0}.py".format(d['name']))
@@ -236,7 +299,7 @@ def create_scripts(amoptd, args):
         # Add script to run as bash script so that we can submit to the queieing system? - TEST IF NEEDED
         # Add to list of scripts
         job_scripts.append(run_script)
-        #break
+        break
     return job_scripts
 
 def manipulate_shelxe_script(old_script, new_script, **kwargs):
@@ -321,7 +384,7 @@ def rerun_shelxe(args):
     
     # Back up old AMPLE pkl file - preserve metadata
     #assert not os.path.isfile(amopt_pkl + BK_SUFFIX)
-    shutil.copy2(amopt_pkl, amopt_pkl + BK_SUFFIX)
+    #shutil.copy2(amopt_pkl, amopt_pkl + BK_SUFFIX)
 
     if True:
         # Get list of jobs to rerun the SHELXE pipeline
@@ -344,19 +407,21 @@ def rerun_shelxe(args):
         #print sorted(d.keys())
         
         # Add SHELXE, ARPWARP and BUCCANEER results to a dictionary
-        # We can use the path to the old log files as the paths should be the same
+        # We need to manually set the path to the arp and bucc logfiles as 
+        # they may not have been set in the previous run.
+        
         newd = {}
         if oldd['SHELXE_logfile'] and os.path.isfile(oldd['SHELXE_logfile']):
             newd = shelxe_results(oldd['SHELXE_logfile'], newd)
         if oldd['SXRARP_logfile'] and os.path.isfile(oldd['SXRARP_logfile']):
             newd = arp_results(oldd['SXRARP_logfile'], newd)
-        if oldd['SXRARP_logfile'] and os.path.isfile(oldd['SXRBUCC_logfile']):
-            newd = arp_results(oldd['SXRBUCC_logfile'], newd)
+        if oldd['SXRBUCC_logfile'] and os.path.isfile(oldd['SXRBUCC_logfile']):
+            newd = bucc_results(oldd['SXRBUCC_logfile'], newd)
         
         # Update AMPLE and MRBUMP dictionaries with new values
         mrb_pkl = os.path.join(oldd['Search_directory'], 'results', 'resultsTable.pkl')
         assert not os.path.isfile(mrb_pkl + BK_SUFFIX)
-        shutil.copy2(mrb_pkl, mrb_pkl + BK_SUFFIX) # Backup old MRBUMP results
+        #shutil.copy2(mrb_pkl, mrb_pkl + BK_SUFFIX) # Backup old MRBUMP results
         with open(mrb_pkl) as w:  mrb_dict = cPickle.load(w)
        
         # Update values in dictionaries
@@ -365,8 +430,8 @@ def rerun_shelxe(args):
             mrb_dict[oldd['name']][oldd['MR_program']][k] = newd[k]
 
         # Writ out updated mrbump dict
-        with open(mrb_pkl, 'w') as w: cPickle.dump(mrb_dict,w)
-        #break
+        #with open(mrb_pkl, 'w') as w: cPickle.dump(mrb_dict,w)
+        break
     
     # Write out the updated amoptd
     with open(amopt_pkl, 'w') as w: cPickle.dump(amoptd,w)
