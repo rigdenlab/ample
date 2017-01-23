@@ -161,6 +161,7 @@ def create_scripts(amoptd, args):
         mr_dir = d['Job_directory']
         build_dir = os.path.join(mr_dir, 'build')
         if not os.path.isdir(build_dir): continue # Can't do owt if it doesn't exist
+        logger.info("Processing directory: {0}".format(mr_dir))
         
         # Backup old build directory and create new ones
         build_dir_bk = build_dir + BK_SUFFIX
@@ -184,7 +185,8 @@ def create_scripts(amoptd, args):
         
         # Copy in the run scripts, amending if necessary - add any keywords required here for time being
         if not os.path.isfile(shelxe_script_old):
-            raise RuntimeError("Cannot find shelxe_script: {0}".format(shelxe_script_old))
+            #raise RuntimeError("Cannot find shelxe_script: {0}".format(shelxe_script_old))
+            continue
         kwargs = {
                   'shelxe_exe' : '/home/jmht/bin/shelxe.2014.4.george'
         }
