@@ -56,6 +56,7 @@ class Ample(object):
         for the program - required for testing.
         """ 
         argso = self.process_command_line(args=args)
+        
         self.amopt = amopt = config_util.AMPLEConfigOptions()
         amopt.populate(argso)
 

@@ -87,7 +87,7 @@ def add_argparse_options(parser, standalone=False):
     parser.add_argument('-score_matrix_file_list',
                        help='File with list of ordered model names for the score_matrix')
      
-    parser.add_argument('-side_chain_treatments', type=str, nargs='+', action='append',
+    parser.add_argument('-side_chain_treatments', type=str, nargs='+',
                         help='The side chain treatments to use. Default: {0}'.format(SIDE_CHAIN_TREATMENTS))
 
     parser.add_argument('-subcluster_radius_thresholds', type=float, nargs='+',

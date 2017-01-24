@@ -10,7 +10,7 @@ import os
 import shutil
 import sys
 
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, ALLOWED_SIDE_CHAIN_TREATMENTS
+from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, ALLOWED_SIDE_CHAIN_TREATMENTS, SUBCLUSTER_RADIUS_THRESHOLDS
 from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import contacts_util
@@ -370,9 +370,13 @@ def process_options(optd):
         msg = "Cannot find theseus executable: {0}".format(optd['theseus_exe'])
         exit_util.exit_error(msg)
 
+    if "subcluster_radius_thresholds" in optd and not optd["subcluster_radius_thresholds"]:
+        optd["subcluster_radius_thresholds"] = SUBCLUSTER_RADIUS_THRESHOLDS
+        
     if "side_chain_treatments" in optd and not optd["side_chain_treatments"]:
         optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
-    unrecognised_sidechains = set(optd["side_chain_treatments"]).difference(ALLOWED_SIDE_CHAIN_TREATMENTS)
+    
+    unrecognised_sidechains = set(optd["side_chain_treatments"]).difference(set(ALLOWED_SIDE_CHAIN_TREATMENTS))
     if unrecognised_sidechains:
         msg = "Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains)
         logger.critical(msg)

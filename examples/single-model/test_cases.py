@@ -30,6 +30,8 @@ args_vanilla = [
 args_from_single_model = args_vanilla + [
     [ '-percent', '20' ],
     [ '-single_model', os.path.join(INPUT_DIR, '3c7t.pdb') ],
+    [ '-subcluster_radius_thresholds', 1,2,3 ],
+    [ '-side_chain_treatments', 'polyAla', 'reliable', 'allatom' ],
     [ '-truncation_scorefile', os.path.join(INPUT_DIR, '3c7t_scores.csv') ],
     [ '-truncation_scorefile_header', 'residue', 'concoord' ],                                         
 ]
