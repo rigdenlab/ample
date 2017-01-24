@@ -52,6 +52,7 @@ class Test( unittest.TestCase ):
         
         return
     
+    @unittest.skip("Work in progress")
     def test_cphasematch_pdb(self):
         os.chdir(self.thisd) # Need as otherwise tests that happen in other directories change os.cwd()        
         native_pdb =  os.path.join(self.ample_share, "examples", 'toxd-example', 'input', '1DTX.pdb')
