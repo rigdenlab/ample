@@ -101,6 +101,8 @@ class Test(unittest.TestCase):
     def test_preset_options_webserver_mode(self):
         options = config_util.AMPLEConfigOptions()
         options.d = {'purge': False,
+                     'cluster_method' : 'spicker',
+                     'nproc': None,
                      'shelxe_rebuild_buccaneer': None,
                      'submit_cluster' : False,
                      'submit_max_array' : 20,
@@ -108,6 +110,8 @@ class Test(unittest.TestCase):
         }
         options.cmdline_opts = {}
         expected = {'purge': True,
+                    'cluster_method' : 'spicker_tm',
+                    'nproc': 8,
                     'shelxe_rebuild_buccaneer': True,
                     'submit_cluster' : True,
                     'submit_max_array' : 10,

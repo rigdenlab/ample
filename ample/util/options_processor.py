@@ -10,7 +10,7 @@ import os
 import shutil
 import sys
 
-from ample.ensembler import SIDE_CHAIN_TREATMENTS
+from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, ALLOWED_SIDE_CHAIN_TREATMENTS
 from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import contacts_util
@@ -372,7 +372,7 @@ def process_options(optd):
 
     if "side_chain_treatments" in optd and not optd["side_chain_treatments"]:
         optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
-    unrecognised_sidechains = set(optd["side_chain_treatments"]).difference(SIDE_CHAIN_TREATMENTS)
+    unrecognised_sidechains = set(optd["side_chain_treatments"]).difference(ALLOWED_SIDE_CHAIN_TREATMENTS)
     if unrecognised_sidechains:
         msg = "Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains)
         logger.critical(msg)

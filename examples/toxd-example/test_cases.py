@@ -70,6 +70,73 @@ args_from_existing_models = args_vanilla + [
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
 class AMPLETest(AMPLEBaseTest):
     def test_from_existing_models(self):
+
+        nclusters = 10
+        radii = set([1,3])
+        sidechains = set(['polyAla'])
+        self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
+        self.assertEqual(nclusters, self.AMPLE_DICT['num_clusters'])
+        self.assertEqual(list(radii), self.AMPLE_DICT['subcluster_radius_thresholds'])
+        self.assertEqual(list(sidechains), self.AMPLE_DICT['side_chain_treatments'])
+        self.assertIn('ensembles', self.AMPLE_DICT)
+        nensembles = len(self.AMPLE_DICT['ensembles'])
+        self.assertEqual(nensembles, 12, "Incorrect number of ensembles produced: {0}".format(nensembles))
+        ensembles_data = self.AMPLE_DICT['ensembles_data']
+        # We need to make sure that only the set sidechains and radii are present in the ensembles, so we need to check that what we
+        # find is a subset of the allowed values
+        for i in xrange(1, len(ensembles_data) + 1):
+            cluster_ensembles = [ens for ens in ensembles_data if ens['cluster_num']==i]
+            side_chain_treatments = set([ens['side_chain_treatment'] for ens in ensembles_data if ens['cluster_num']==i ]  )
+            subcluster_radius_thresholds = set([ens['subcluster_radius_threshold'] for ens in ensembles_data if ens['cluster_num']==i ]  )
+            self.assertTrue(side_chain_treatments.issubset(sidechains), side_chain_treatments)
+            self.assertTrue(subcluster_radius_thresholds.issubset(radii), subcluster_radius_thresholds)
+        
+        self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
+        self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
+        self.assertTrue(self.AMPLE_DICT['success'],"Job did not succeed")
+        self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+        # Check some random benchmarking data
+        self.assertTrue(os.path.isfile(os.path.join(self.AMPLE_DICT['benchmark_dir'],'results.csv')),"Missing benchmark results.csv")
+        result = self.AMPLE_DICT['benchmark_results'][0]
+        self.assertTrue(result['MR_program'], 'PHASER')
+        self.assertTrue(result['native_pdb_solvent_content'], 47.67)
+        self.assertGreater(result['PHASER_TFZ'], 5.0, "Low PHASER_TFZ: {0}".format(result['PHASER_TFZ']))
+
+
+#         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
+#         self.assertIn('ensembles', self.AMPLE_DICT)
+#         nensembles = len(self.AMPLE_DICT['ensembles'])
+#         self.assertEqual(nensembles, 12, "Incorrect number of ensembles produced: {0}".format(nensembles))
+#         self.assertIn('mrbump_results', self.AMPLE_DICT)
+#         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
+#         self.assertTrue(self.AMPLE_DICT['success'],"Job did not succeed")
+#         self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+#         # Check some random benchmarking data
+#         self.assertTrue(os.path.isfile(os.path.join(self.AMPLE_DICT['benchmark_dir'],'results.csv')),"Missing benchmark results.csv")
+#         result = self.AMPLE_DICT['benchmark_results'][0]
+#         self.assertTrue(result['MR_program'], 'PHASER')
+#         self.assertTrue(result['native_pdb_solvent_content'], 47.67)
+#         self.assertGreater(result['PHASER_TFZ'], 5.0, "Low PHASER_TFZ: {0}".format(result['PHASER_TFZ']))
+        return
+        
+TEST_DICT['from_existing_models'] = { 'args' : args_from_existing_models,
+                                     'test' :  AMPLETest,
+                                      }
+
+###############################################################################
+#
+# test from pre-existing models with classic_mode- to check we can still run in
+# the old modality
+#
+###############################################################################
+args_from_existing_models_classic = args_vanilla + [
+                                                    [ '-models', os.path.join(TESTFILES_DIR, 'models') ],
+                                                    [ '-classic_mode', True ],
+]
+
+# Test class that holds the functions to test the RESULTS_PKL file that will be passed in
+class AMPLETest(AMPLEBaseTest):
+    def test_from_existing_models(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertIn('ensembles', self.AMPLE_DICT)
         nensembles = len(self.AMPLE_DICT['ensembles'])
@@ -86,9 +153,9 @@ class AMPLETest(AMPLEBaseTest):
         self.assertGreater(result['PHASER_TFZ'], 5.0, "Low PHASER_TFZ: {0}".format(result['PHASER_TFZ']))
         return
         
-TEST_DICT['from_existing_models'] = { 'args' : args_from_existing_models,
-                                     'test' :  AMPLETest,
-                                      }
+TEST_DICT['from_existing_models_classic'] = { 'args' : args_from_existing_models_classic,
+                                             'test' :  AMPLETest,
+                                             }
 
 ###############################################################################
 #

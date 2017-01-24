@@ -10,7 +10,7 @@ import multiprocessing
 import os
 
 from ample.constants import AMPLE_CONFIG_FILE
-from ample.ensembler.constants import POLYALA
+from ample.ensembler.constants import POLYALA, RELIABLE, ALLATOM
 from ample.util import version
 
 # Python 3.x --> ConfigParser renamed to configparser
@@ -107,8 +107,15 @@ class AMPLEConfigOptions(object):
         
         self.cmdline_opts = {}
         self.debug = False
-        
 
+        # The original AMPLE clustering/truncation mode used in all work prior to January 2017
+        self.classic_mode = {
+                              'percent' : 5,
+                              'num_clusters' : 1,
+                              'subcluster_radius_thresholds' : [1,2,3],
+                              'side_chain_treatments' : [POLYALA, RELIABLE, ALLATOM],
+        }
+        
         # Test use scrwl
         self.devel_mode = {
                            'benchmark_mode': True,
@@ -131,17 +138,12 @@ class AMPLEConfigOptions(object):
                            'phaser_kill' : 15
         }
         
-        self.thin_clusters = {
-                              'side_chain_treatments' : [POLYALA],
-                              'subcluster_radius_thresholds' : [1,3],
-                              'percent' : 5,
-                              'num_clusters' : 10,
-        }
-        
         self.webserver_uri = {
                                'purge': True,
                                'shelxe_rebuild_buccaneer': True,
+                               'cluster_method' : 'spicker_tm',
                                'submit_cluster' : True,
+                               'nproc' : 8,
                                'submit_max_array' : 10,
                                'submit_qtype' : "SGE",
                                'submit_queue' : "all.q",
@@ -209,6 +211,7 @@ class AMPLEConfigOptions(object):
                 self.d['nproc'] = multiprocessing.cpu_count()
             
         # Check if using any preset options
+        if self.d['classic_mode']: self._preset_options('classic_mode')
         if self.d['devel_mode']: self._preset_options('devel_mode')
         if self.d['quick_mode']: self._preset_options('quick_mode')
         if self.d['thin_clusters']: self._preset_options('thin_clusters')
