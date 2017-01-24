@@ -50,9 +50,14 @@ logger.setLevel(logging.DEBUG)
 
 # String for Python script to run shelxe and arpwarp/buccanner depending on SHELXE results
 run_shelxe_script_str = """#!/usr/bin/env ccp4-python
+import logging
 import os
 import subprocess
 import sys
+
+logging.basicConfig()
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 shelxe_script = "{shelxe_script}"
 arp_script = "{arp_script}"
@@ -84,7 +89,7 @@ import MRBUMP_phs2mtz
 cmd = [ shelxe_script ]
 shelxe_dir = os.path.dirname(shelxe_script)
 os.chdir(shelxe_dir)
-shelxe_logfile = os.path.join(wdir, 'shelxe_run.log')
+shelxe_logfile = os.path.join(shelxe_dir, 'shelxe_run.log')
 log = open(shelxe_logfile, 'w')
 logger.info("Running SHELXE cmd: {{0}} Logfile is: {{1}}{{2}}".format(" ".join(cmd), shelxe_logfile, os.linesep))
 p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, cwd=shelxe_dir)
@@ -101,7 +106,7 @@ if not (arp_script or bucc_script):
 
 # Check SHELXE scores
 if not os.path.isfile(shelxe_logfile):
-    logger.critical("No SHELXE logfile: {0}{1}".format(shelxe_logfile,os.linesep))
+    logger.critical("No SHELXE logfile: {{0}}{{1}}".format(shelxe_logfile,os.linesep))
     sys.exit(1)
 
 shelxe_job = MRBUMP_Shelxe.Shelxe()
@@ -199,7 +204,9 @@ def get_nmasu(amoptd):
     with open(logfile) as f:
         for line in f:
             if line.startswith('Estimated number of molecules to search for in a.s.u.:'):
-                return line.split()[9]
+                nmasu = line.split()[9]
+                logger.info('Got nmasu: {0}'.format(nmasu))
+                return nmasu
     assert False
 
 def create_scripts(amoptd, args):
@@ -239,7 +246,7 @@ def create_scripts(amoptd, args):
         
         # Need to set arp and bucc logfile paths if they haven't already been set or we can't parse any newly generated results
         d['SXRARP_logfile'] =  os.path.join(arp_dir,"arpwarp.log")
-        d['SXRBUCC_logfile'] =  os.path.join(arp_dir,"buccaneer.log")
+        d['SXRBUCC_logfile'] =  os.path.join(bucc_dir,"buccaneer.log")
         
         
         # Copy in the run scripts, amending if necessary - add any keywords required here for time being
@@ -299,7 +306,7 @@ def create_scripts(amoptd, args):
         # Add script to run as bash script so that we can submit to the queieing system? - TEST IF NEEDED
         # Add to list of scripts
         job_scripts.append(run_script)
-        break
+        #break
     return job_scripts
 
 def manipulate_shelxe_script(old_script, new_script, **kwargs):
@@ -384,7 +391,7 @@ def rerun_shelxe(args):
     
     # Back up old AMPLE pkl file - preserve metadata
     #assert not os.path.isfile(amopt_pkl + BK_SUFFIX)
-    #shutil.copy2(amopt_pkl, amopt_pkl + BK_SUFFIX)
+    shutil.copy2(amopt_pkl, amopt_pkl + BK_SUFFIX)
 
     if True:
         # Get list of jobs to rerun the SHELXE pipeline
@@ -430,8 +437,8 @@ def rerun_shelxe(args):
             mrb_dict[oldd['name']][oldd['MR_program']][k] = newd[k]
 
         # Writ out updated mrbump dict
-        #with open(mrb_pkl, 'w') as w: cPickle.dump(mrb_dict,w)
-        break
+        with open(mrb_pkl, 'w') as w: cPickle.dump(mrb_dict,w)
+        #break
     
     # Write out the updated amoptd
     with open(amopt_pkl, 'w') as w: cPickle.dump(amoptd,w)
