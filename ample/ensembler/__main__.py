@@ -73,7 +73,7 @@ try:
         ample_util.extract_models(optd)
         if optd['subcluster_program'] == 'gesamt':
             optd['gesamt_exe'] = ample_util.find_exe('gesamt')
-        elif optd['subcluster_program'] == 'gesamt':
+        elif optd['subcluster_program'] == 'maxcluster':
             optd['maxcluster_exe'] = ample_util.find_exe('maxcluster')
         else:
             raise RuntimeError("Unknown subcluster_program: {0}".format(optd['subcluster_program']))
