@@ -30,7 +30,7 @@ from ample.util import printTable
 
 logger = logging.getLogger(__name__)
 
-def add_argparse_options(parser, standalone=False):
+def add_argparse_options(parser):
     """Function to add the ensemble-specific options
     
     Parameters
@@ -41,11 +41,7 @@ def add_argparse_options(parser, standalone=False):
 
     """
     
-    if standalone:
-        # Add options for running as a standalone module
-        argparse_util.add_general_options(parser)
-    else:
-        parser = parser.add_argument_group('Ensemble Options')
+    parser = parser.add_argument_group('Ensemble Options')
 
     # Ensenble-specific options here
     parser.add_argument('-cluster_dir',

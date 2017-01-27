@@ -16,8 +16,11 @@ ENSEMBLE_DIRNAME = 'ample_ensemble'
     
 # Set up the command-line parsing
 parser = argparse.ArgumentParser(description="AMPLE Ensembling Module")
-ensembler.add_argparse_options(parser, standalone=True)
+# Add options for running as a standalone module
+argparse_util.add_general_options(parser)
 argparse_util.add_cluster_submit_options(parser)
+# Ensemble options
+ensembler.add_argparse_options(parser)
 
 # Get command-line arguments and see if we have a restart_pkl option as this
 # is how we pass in an existing ample dictionary when we are running the ensembling
@@ -68,9 +71,12 @@ logging_util.setup_file_logging(os.path.join(optd['work_dir'],"ensemble.log"))
 try:
     if not restart:
         ample_util.extract_models(optd)
-        # Hack - we'll be using gesamt to subcluster so it's not worth wiring in the stuff to
-        # find maxcluster so we just assume it's there
-        optd['maxcluster_exe'] = ample_util.find_exe('maxcluster')
+        if optd['subcluster_program'] == 'gesamt':
+            optd['gesamt_exe'] = ample_util.find_exe('gesamt')
+        elif optd['subcluster_program'] == 'gesamt':
+            optd['maxcluster_exe'] = ample_util.find_exe('maxcluster')
+        else:
+            raise RuntimeError("Unknown subcluster_program: {0}".format(optd['subcluster_program']))
         optd['theseus_exe'] = ample_util.find_exe('theseus')
         optd['ensemble_ok'] = os.path.join(optd['work_dir'],'ensemble.ok')
         optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
