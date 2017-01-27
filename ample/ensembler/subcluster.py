@@ -233,7 +233,7 @@ class FpcClusterer(SubClusterer):
 class GesamtClusterer(SubClusterer):
     """Class to cluster files with Gesamt"""
     
-    def generate_distance_matrix(self, pdb_list, purge=True):
+    def generate_distance_matrix(self, pdb_list, purge=False):
         if True:
             self._generate_pairwise_rmsd_matrix(pdb_list, purge=purge)
         else:
