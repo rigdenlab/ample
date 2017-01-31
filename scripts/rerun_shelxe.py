@@ -85,6 +85,8 @@ sys.path.append(os.path.join(mrbump_incl, 'parsers'))
 sys.path.append(os.path.join(mrbump_incl, 'tools'))
 import MRBUMP_Shelxe
 import MRBUMP_phs2mtz
+import MRBUMP_ARPwARP
+import MRBUMP_Buccaneer
 
 cmd = [ shelxe_script ]
 shelxe_dir = os.path.dirname(shelxe_script)
@@ -99,10 +101,6 @@ log.close()
 if rtn != 0:
     logger.critical("SHELXE returned non-zero return code" + os.linesep)
     sys.exit(1)
-
-if not (arp_script or bucc_script):
-    # No rebuiling so we are finished
-    sys.exit(0)
 
 # Check SHELXE scores
 if not os.path.isfile(shelxe_logfile):
@@ -132,7 +130,8 @@ if os.path.isfile(phsin) and os.path.isfile(pdbin):
                 resolution={resolution}
                 )
 
-rebuild_dir = os.path.join(shelxe_dir,'build')
+rebuild_dir = os.path.join(shelxe_dir,'rebuild')
+if not os.path.isdir(rebuild_dir): os.mkdir(rebuild_dir)
 
 # Shelxe Worked so run arpwarp and then buccaneer
 if arp_script:
@@ -153,8 +152,8 @@ else:
     arpwarpSX.runARPwARP("{fasta}",
                          "{shelxe_mtz}",
                          arpwarp_dir,
-                         '{F}',
-                         '{SIGF}',
+                         'F',
+                         'SIGF',
                          '{FREE}',
                          "PHI_SHELXE",
                          "FOM_SHELXE",
@@ -182,8 +181,8 @@ else:
                              "{shelxe_mtz}",
                              os.path.join(bucc_dir, "buccSX_output.pdb"),
                              bucc_dir,
-                             '{F}',
-                             '{SIGF}',
+                             'F',
+                             'SIGF',
                              '{FREE}',
                              "PHI_SHELXE",
                              "FOM_SHELXE",
@@ -258,7 +257,7 @@ def create_scripts(amoptd, args):
         }
         if 'native_pdb' in amoptd and amoptd['native_pdb'] and os.path.isfile(amoptd['native_pdb']):
             kwargs['native_pdb'] = amoptd['native_pdb']
-        manipulate_shelxe_script(shelxe_script_old, shelxe_script_new, **kwargs)
+        manipulate_shelxe_script(shelxe_script_old, shelxe_script_new, 'shelxe_phaser_{0}'.format(d['name']), **kwargs)
         
         if os.path.isfile(arp_script_old):
             manipulate_arp_script(arp_script_old, arp_script_new)
@@ -273,9 +272,9 @@ def create_scripts(amoptd, args):
         # Get required data for phs2mtz and to run shelxe/arp/bucc
         #base_name = 'shelxe_phaser_loc0_ALL_{0}_UNMOD'.format(d['name'])
         base_name = 'shelxe_phaser_{0}'.format(d['name'])
-        shelxd = { 'shelxe_phs' : base_name + '.phs',
-                   'shelxe_pdb' : base_name + '.pdb',
-                   'shelxe_mtz' : base_name + '.mtz',
+        shelxd = { 'shelxe_phs' : os.path.join(shelxe_dir,base_name + '.phs'),
+                   'shelxe_pdb' : os.path.join(shelxe_dir,base_name + '.pdb'),
+                   'shelxe_mtz' : os.path.join(shelxe_dir,base_name + '.mtz'),
                    'hklref' : amoptd['mtz'],
                    #'resolution' : "{0:1.2F}".format(amoptd['mtz_min_resolution']),
                    'resolution' : amoptd['mtz_min_resolution'],
@@ -309,7 +308,7 @@ def create_scripts(amoptd, args):
         #break
     return job_scripts
 
-def manipulate_shelxe_script(old_script, new_script, **kwargs):
+def manipulate_shelxe_script(old_script, new_script, sbase, **kwargs):
     """Copy old_script to new_script, if necessary updating according to given kwargs"""
     if len(kwargs) == 0:
         shutil.copy2(old_script, new_script)
@@ -329,6 +328,12 @@ def manipulate_shelxe_script(old_script, new_script, **kwargs):
                         assert os.path.isfile(kwargs['native_pdb'])
                         cline = "cp {0} shelxe-input.ent\n\n".format(kwargs['native_pdb'])
                         line = cline + line
+                # Old job failed, this one might not...
+                if line.startswith('# No output from SHELXE'):
+                    nline = "[[ -f shelxe-input.pdb ]] && mv shelxe-input.pdb {0}.pdb\n".format(sbase)
+                    nline += "[[ -f shelxe-input.phs ]] && mv shelxe-input.phs {0}.phs\n\n".format(sbase)
+                    line = nline
+
                 cmd += line
         with open(new_script, 'w') as o: o.write(cmd)
         os.chmod(new_script, 0o777)
