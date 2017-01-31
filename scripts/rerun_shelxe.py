@@ -217,8 +217,13 @@ def create_scripts(amoptd, args):
     for d in amoptd['mrbump_results']:
         #print sorted(d.keys())
         
-        # Define the various directories         
-        mr_dir = d['Job_directory']
+        # Define the various directories
+        if 'MR_directory' in d:  
+            mr_dir = d['MR_directory']
+        elif 'Job_directory' in d:
+            mr_dir = d['Job_directory']
+        else: assert "No valid MR_directory key in dict!"
+            
         build_dir = os.path.join(mr_dir, 'build')
         if not os.path.isdir(build_dir): continue # Can't do owt if it doesn't exist
         logger.info("Processing directory: {0}".format(mr_dir))
