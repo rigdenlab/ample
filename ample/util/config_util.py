@@ -139,11 +139,12 @@ class AMPLEConfigOptions(object):
         }
         
         self.webserver_uri = {
-                               'purge': True,
+                               'shelxe_rebuild_arpwarp' : False, # Need to sort out the ArpWarp licence details
                                'shelxe_rebuild_buccaneer': True,
                                'cluster_method' : 'spicker_tm',
+                               'nproc' : 1,
+                               'purge': True,
                                'submit_cluster' : True,
-                               'nproc' : 8,
                                'submit_max_array' : 10,
                                'submit_qtype' : "SGE",
                                'submit_queue' : "all.q",
