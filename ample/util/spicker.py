@@ -9,26 +9,10 @@ import shutil
 import sys
 
 # our imports
-try:
-    from ample.util import ample_util
-except:
-    ample_util = None
+from ample.util import ample_util
+from ample.ensembler._ensembler import Cluster
     
 logger = logging.getLogger(__name__)
-
-class SpickerResult(object):
-    """
-    A class to hold the result of running Spicker
-    """
-
-    def __init__(self):
-
-        self.pdb_file = None  # Path to a list of the pdbs for this cluster
-        self.cluster_size = None
-        self.cluster_centroid = "N/A"
-        self.pdbs = []  # ordered list of the pdbs in their results directory
-        self.r_cen = []  # ordered list of the distance from the cluster centroid for each pdb
-        return
 
 class Spickerer(object):
 
@@ -43,6 +27,8 @@ class Spickerer(object):
         self.spicker_exe = spicker_exe
         self.run_dir = run_dir
         self.results = None
+        self.cluster_method = 'spicker'
+        self.score_type = 'rmsd'
         return
         
     def get_length(self, pdb):
@@ -78,13 +64,13 @@ class Spickerer(object):
                 raise RuntimeError, msg
             logger.debug("Using score_matrix: {0}".format(score_matrix))
             shutil.copy(score_matrix, os.path.join(self.run_dir,'score.matrix'))
-        elif score_type == 'tm':
-            # Create file so spicker knows to calculate TM scores
-            with open('TM.score','w') as f: f.write('\n')
-        elif score_type == 'rmsd':
-            pass
-        else:
-            raise RuntimeError,"Unknown score_type: {0}".format(score_type)
+#         elif score_type == 'tm':
+#             # Create file so spicker knows to calculate TM scores
+#             with open('TM.score','w') as f: f.write('\n')
+#         elif score_type == 'rmsd':
+#             pass
+#         else:
+#             raise RuntimeError,"Unknown score_type: {0}".format(score_type)
         
         # read_out - Input file for spicker with coordinates of the CA atoms for each of the PDB structures
         #
@@ -148,7 +134,68 @@ class Spickerer(object):
                         seq.write('\t' + split[5] + '\t' + split[3] + '\n')
         return
     
-    def cluster(self, models, run_dir=None, score_type='rmsd', score_matrix=None, nproc=1):
+    def cluster(self, models, num_clusters=10, max_cluster_size=200, run_dir=None, score_type='rmsd', score_matrix=None, nproc=1):
+        """Cluster decoys using spicker
+    
+        Parameters
+        ----------
+        models : list
+           A list containing structure decoys
+        cluster_dir : str
+           The directory to store the cluster data in
+        cluster_method_type : str
+           The method to be used to cluster the decoys
+        score_type : str
+           The scoring metric for clustering
+        num_clusters : int
+           The number of clusters to produce
+        max_cluster_size : int
+           The maximum number of decoys per cluster
+        cluster_exe : str
+           The path to the spicker executable
+        nproc : int
+           The number of processors to use
+        score_matrix : str, optional
+           The path to the score matrix to be used
+    
+        Returns
+        -------
+        list
+           A list containing the clusters
+    
+        Raises
+        ------
+        RuntimeError
+           No clusters returned by SPICKER
+        """
+        self._cluster(models, run_dir=run_dir, score_type=score_type, score_matrix=score_matrix, nproc=nproc)
+
+        ns_clusters = len(self.results)
+        if ns_clusters == 0: raise RuntimeError('No clusters returned by SPICKER')
+        if ns_clusters < int(num_clusters):
+            logger.critical('Requested {0} clusters but SPICKER only found {1} so using {1} clusters'.format(num_clusters, ns_clusters))
+            num_clusters = ns_clusters
+        
+        clusters = []
+        for i in range(num_clusters):
+            cluster = self.results[i]
+            # We truncate the list of models to max_cluster_size. This probably 
+            # needs to be redone, because as the models are ordered by their similarity
+            # to the cluster centroid, we automatically select the 200 most similar 
+            # to the centroid. However if the cluster is large and the models similar
+            # then when theseus calculates the variances, the variances will be 
+            # representative of the 200, but might not show how the models vary throughout
+            # the whole cluster, which could provide better information for truncating the models.
+            #
+            # Note - hlfsimko - 24.02.16: Maybe we can keep the full length clusters 
+            #                             and slice the list after truncation?
+            cluster.num_clusters = ns_clusters
+            cluster.models = cluster.models[0:max_cluster_size]
+            clusters.append(cluster)
+        
+        return clusters
+
+    def _cluster(self, models, run_dir=None, score_type='rmsd', score_matrix=None, nproc=1):
         """
         Run spicker to cluster the models
         """
@@ -158,9 +205,10 @@ class Spickerer(object):
         if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
         os.chdir(self.run_dir)
         
-        logger.debug("Running spicker in directory: {0}".format(self.run_dir))
+        logger.debug("Running spicker with score_type {0} in directory: {1}".format(score_type, self.run_dir))
         logger.debug("Using executable: {0} on {1} processors".format(self.spicker_exe, nproc))
         
+        self.score_type = score_type
         self.create_input_files(models, score_type=score_type, score_matrix=score_matrix)
         
         # We need special care if we are running with tm scores as we will be using the OPENMP
@@ -243,15 +291,19 @@ class Spickerer(object):
         
         results = []
         # create results
-        for cluster in range(len(clusterCounts)):
-            result = SpickerResult()
-            result.cluster_size = clusterCounts[ cluster ]
-            result.pdb_file = os.path.join(self.run_dir, "spicker_cluster_{0}.list".format(cluster + 1))
-            with open(result.pdb_file, "w") as f:
+        num_clusters = len(clusterCounts)
+        for cluster in range(num_clusters):
+            result = Cluster()
+            result.cluster_method = self.cluster_method
+            result.cluster_score_type = self.score_type
+            result.index = cluster + 1
+            result.num_clusters = num_clusters
+            pdb_file = os.path.join(self.run_dir, "spicker_cluster_{0}.list".format(cluster + 1))
+            with open(pdb_file, "w") as f:
                 for i, (idx, rcen) in enumerate(index2rcens[ cluster ]):
                     pdb = pdb_list[idx - 1]
-                    if i == 0: result.cluster_centroid = pdb
-                    result.pdbs.append(pdb)
+                    #if i == 0: result.cluster_centroid = pdb
+                    result.models.append(pdb)
                     result.r_cen.append(rcen)
                     f.write(pdb + "\n")
             results.append(result)
@@ -265,72 +317,15 @@ class Spickerer(object):
         
         for i, r in enumerate(self.results):
             rstr += "Cluster: {0}\n".format(i + 1)
-            rstr += "* number of models: {0}\n".format(r.cluster_size)
-            rstr += "* files are listed in file: {0}\n".format(r.pdb_file)
-            rstr += "* centroid model is: {0}\n".format(r.cluster_centroid)
+            rstr += "* number of models: {0}\n".format(r.size)
+            #rstr += "* files are listed in file: {0}\n".format(r.pdb_file)
+            rstr += "* centroid model is: {0}\n".format(r.centroid)
             rstr += "\n"
             
         return rstr
 
 if __name__ == "__main__":
-    import argparse, subprocess, tempfile
-    
-    # For running as a stand-alone script
-    def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False):
-        """Execute a command and return the exit_error code.
-    
-        We take care of outputting stuff to the logs and opening/closing logfiles
-    
-        Args:
-        cmd - command to run as a list
-        stdin - a string to use as stdin for the command
-        logfile (optional) - the path to the logfile
-        directory (optional) - the directory to run the job in (cwd assumed)
-        dolog: bool - whether to output info to the system log
-        """
-    
-        assert type(cmd) is list
-    
-        if not directory:
-            directory = os.getcwd()
-    
-        if dolog:
-            logging.debug("In directory {0}\nRunning command: {1}".format(directory, " ".join(cmd)))
-    
-        if logfile:
-            if dolog:
-                logging.debug("Logfile is: {0}".format(logfile))
-            logf = open(logfile, "w")
-        else:
-            logf = tempfile.TemporaryFile()
-            
-        if stdin != None:
-            stdinstr = stdin
-            stdin = subprocess.PIPE
-    
-        # Windows needs some special treatment
-        kwargs = {}
-        if os.name == "nt":
-            kwargs = { 'bufsize': 0, 'shell' : "False" }
-        p = subprocess.Popen(cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs)
-    
-        if stdin != None:
-            p.stdin.write(stdinstr)
-            p.stdin.close()
-            if dolog:
-                logging.debug("stdin for cmd was: {0}".format(stdinstr))
-    
-        p.wait()
-        logf.close()
-        
-        return p.returncode
-    
-    # Mock up ample_util for when we don't have CCP4 installed
-    if ample_util is None:
-        class Tmp(object):pass
-        ample_util = Tmp()
-        ample_util.run_command = run_command
-    
+    import argparse
     #
     # Run Spicker on a directory of PDB files
     #
@@ -356,9 +351,7 @@ if __name__ == "__main__":
         print "Cannot find any pdbs in: {0}".format(models)
         sys.exit(1)
 
-    spicker_exe=None
-    if args.executable:
-       spicker_exe=os.path.abspath(args.executable)
+    spicker_exe = os.path.abspath(args.executable) if args.executable else None
         
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)

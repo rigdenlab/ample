@@ -1,13 +1,24 @@
-"""
-02.03.2016
+"""Truncation utility module"""
 
-@author: hlfsimko
-"""
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "02 Mar 2016"
+__version__ = "1.0"
 
+import collections
 import copy
 import logging
+import os
 
-_logger = logging.getLogger(__name__)
+from ample.ensembler._ensembler import model_core_from_fasta 
+from ample.util import ample_util
+from ample.util import pdb_edit
+from ample.util import theseus
+
+logger = logging.getLogger(__name__)
+
+# Data structure to store residue information
+ScoreVariances = collections.namedtuple("ScoreVariances", ["idx", "resSeq", "variance"])
+
 
 def calculate_residues_focussed(var_by_res):
     """
@@ -61,6 +72,7 @@ def calculate_residues_focussed(var_by_res):
     
     return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
 
+
 def calculate_residues_percent(var_by_res, percent_interval):
     """Calculate the list of residues to keep if we are keeping self.percent residues under
     each truncation bin. The threshold is just the threshold of the most variable residue"""
@@ -90,12 +102,11 @@ def calculate_residues_percent(var_by_res, percent_interval):
         thresh = variances[start]  # For the threshold we take the threshold of the most variable residue
         truncation_variances.append(thresh)
         truncation_levels.append(percent)
-        # print "GOT PERCENT,THRESH ",percent,thresh
-        # print "residues ",residues
         truncation_residues.append(sorted(residues))
         truncation_residue_idxs.append(sorted(idxs))
              
     return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
+
 
 def calculate_residues_thresh(var_by_res, percent_interval):
     """Txxx
@@ -127,6 +138,7 @@ def calculate_residues_thresh(var_by_res, percent_interval):
     truncation_residue_idxs.reverse()
     return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
 
+
 def generate_thresholds(var_by_res, percent_interval):
     """
     This is the original method developed by Jaclyn and used in all work until November 2014 (including the coiled-coil paper)
@@ -139,7 +151,7 @@ def generate_thresholds(var_by_res, percent_interval):
     FIXED_INTERVALS = False
     if FIXED_INTERVALS:
         thresholds = [ 1, 1.5, 2 , 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 7, 8 ]
-        _logger.debug("Got {0} thresholds: {1}".format(len(thresholds), thresholds))
+        logger.debug("Got {0} thresholds: {1}".format(len(thresholds), thresholds))
         return
 
     # List of variances ordered by residue index
@@ -147,7 +159,7 @@ def generate_thresholds(var_by_res, percent_interval):
     length = len(var_list)
     if length == 0:
         msg = "Error generating thresholds, got len: {0}".format(length)
-        _logger.critical(msg)
+        logger.critical(msg)
         raise RuntimeError, msg
 
     # How many residues should fit in each bin
@@ -155,7 +167,7 @@ def generate_thresholds(var_by_res, percent_interval):
     chunk_size = int((float(length) / 100) * float(percent_interval))
     if chunk_size < 1:
         msg = "Error generating thresholds, got < 1 AA in chunk_size"
-        _logger.critical(msg)
+        logger.critical(msg)
         raise RuntimeError, msg
 
     # # try to find intervals for truncation
@@ -164,9 +176,10 @@ def generate_thresholds(var_by_res, percent_interval):
     # Jens' new untested method
     # truncation_thresholds=self._generate_thresholds2(var_list, chunk_size)
     
-    _logger.debug("Got {0} thresholds: {1}".format(len(truncation_thresholds), truncation_thresholds))
+    logger.debug("Got {0} thresholds: {1}".format(len(truncation_thresholds), truncation_thresholds))
 
     return truncation_thresholds
+
 
 def _generate_thresholds(values, chunk_size):
     """Jaclyn's threshold method
@@ -189,6 +202,7 @@ def _generate_thresholds(values, chunk_size):
             thresholds.append(x[-1])
             
     return thresholds
+
 
 def _generate_thresholds2(values, chunk_size):
     """
@@ -214,6 +228,7 @@ def _generate_thresholds2(values, chunk_size):
 
     thresholds.sort()
     return thresholds
+
 
 def prune_residues(residues, chunk_size=1, allowed_gap=2):
     """Remove any residues that are < chunk_size where the gap before and after is > allowed_gap"""
@@ -272,6 +287,7 @@ def prune_residues(residues, chunk_size=1, allowed_gap=2):
     else:
         return residues, None
 
+
 def _split_sequence(length, percent_interval, min_chunk=3):
     """split a sequence of length into chunks each separated by percent_interval each being at least min_chunk size"""
     
@@ -290,3 +306,199 @@ def _split_sequence(length, percent_interval, min_chunk=3):
         else:
             break
     return idxs
+
+
+class Truncation(object):
+    """Holds information relating to a single truncation of a cluster of models"""
+    def __init__(self):
+        self.cluster = None # The cluster object this truncation was created from
+        self.directory = None
+        self.level = None
+        self.method = None
+        self.models = None
+        self.percent = None
+        self.residues = None
+        self.residues_idxs = None
+        self.variances = None
+    
+    @property
+    def num_residues(self):
+        return 0 if self.residues is None else len(self.residues)
+
+    def __str__(self):
+        """Return a string representation of this object."""
+        _str = super(Truncation, self).__str__() + "\n"
+        # Iterate through all attributes in order
+        for k in sorted(self.__dict__.keys()):
+            _str += "{0} : {1}\n".format(k, self.__dict__[k])
+        return _str
+        
+
+class Truncator(object):
+    def __init__(self, work_dir):
+        """Class to take one or more models and truncate them based on a supplied or generated metric"""
+        self.work_dir = work_dir
+        self.models = None
+        self.aligned_models = None
+        self.truncations = None
+        self.theseus_exe = None
+        
+        # We keep these for bookeeping as they go in the ample dictionary
+        self.truncation_levels =  None
+        self.truncation_variances = None
+        self.truncation_nresidues = None
+    
+    def calculate_truncations(self,
+                              models=None,
+                              truncation_method=None,
+                              percent_truncation=None,
+                              truncation_pruning=None,
+                              residue_scores=None,
+                              alignment_file=None,
+                              homologs=False):
+        """Returns a list of Truncation objects, one for each truncation level.
+        
+        This method doesn't do any truncating - it just calculates the data for each truncation level.
+        """
+        
+        assert (len(models) > 1 or residue_scores), "Cannot truncate as < 2 models!"
+        assert truncation_method and percent_truncation, "Missing arguments: {0} : {1}".format(truncation_method,
+                                                                                               percent_truncation)
+        assert ample_util.is_exe(self.theseus_exe),"Cannot find theseus_exe: {0}".format(self.theseus_exe)
+
+        # Create the directories we'll be working in
+        assert self.work_dir and os.path.isdir(self.work_dir), "truncate_models needs a self.work_dir"
+        os.chdir(self.work_dir)
+        
+        self.models = models
+        # Calculate variances between pdb and align them (we currently only require the aligned models for homologs)
+        if truncation_method != "scores":
+            run_theseus = theseus.Theseus(work_dir=self.work_dir, theseus_exe=self.theseus_exe)
+            try:
+                run_theseus.superpose_models(self.models, homologs=homologs, alignment_file=alignment_file)
+                self.aligned_models = run_theseus.aligned_models
+            except RuntimeError as e:
+                logger.critical(e)
+                return []
+        
+        if homologs:
+            # If using homologs, now trim down to the core. We only do this here so that we are using the aligned models from
+            # theseus, which makes it easier to see what the truncation is doing.
+            models = model_core_from_fasta(self.aligned_models,
+                                           alignment_file=alignment_file,
+                                           work_dir=os.path.join(self.work_dir,'core_models'))
+            # Unfortunately Theseus doesn't print all residues in its output format, so we can't use the variances we calculated before and
+            # need to calculate the variances of the core models 
+            try:
+                run_theseus.superpose_models(models, homologs=homologs, basename='homologs_core')
+                self.models = run_theseus.aligned_models
+                self.aligned_models = run_theseus.aligned_models
+            except RuntimeError as e:
+                logger.critical(e)
+                return []
+        
+        # No THESEUS variances required if scores for each residue provided
+        var_by_res = run_theseus.var_by_res if truncation_method != "scores" \
+            else self._convert_residue_scores(residue_scores)
+            
+        if not len(var_by_res) > 0:
+            msg = "Error reading residue variances!"
+            logger.critical(msg)
+            raise RuntimeError(msg)
+        
+        logger.info('Using truncation method: {0}'.format(truncation_method))
+        # Calculate which residues to keep under the different methods
+        if truncation_method == 'percent':
+            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_percent(var_by_res, percent_truncation)
+        elif truncation_method == 'scores':
+            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_percent(var_by_res, percent_truncation)
+        elif truncation_method == 'thresh':
+            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_thresh(var_by_res, percent_truncation)
+        elif truncation_method == 'focussed':
+            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_focussed(var_by_res)
+        else:
+            raise RuntimeError, "Unrecognised ensembling mode: {0}".format(truncation_method)
+        
+        # Somewhat of a hack to save the data so we can put it in the amoptd
+        self.truncation_levels =  truncation_levels
+        self.truncation_variances = truncation_variances
+        self.truncation_nresidues =  [len(r) for r in truncation_residues]
+        
+        truncations = []
+        for tlevel, tvar, tresidues, tresidue_idxs in zip(truncation_levels, 
+                                                          truncation_variances, 
+                                                          truncation_residues, 
+                                                          truncation_residue_idxs):
+            # Prune singletone/doubletone etc. residues if required
+            logger.debug("truncation_pruning: {0}".format(truncation_pruning))
+            if truncation_pruning == 'single':
+                tresidue_idxs, pruned_residues = prune_residues(tresidue_idxs, chunk_size=1, allowed_gap=2)
+                if pruned_residues: logger.debug("prune_residues removing: {0}".format(pruned_residues))
+            elif truncation_pruning is None:
+                pass
+            else:
+                raise RuntimeError("Unrecognised truncation_pruning: {0}".format(truncation_pruning))
+            
+            # Skip if there are no residues
+            if not tresidue_idxs:
+                logger.debug("Skipping truncation level {0} with variance {1} as no residues".format(tlevel, tvar))
+                continue
+            
+            truncation = Truncation()
+            truncation.method = truncation_method
+            truncation.percent = percent_truncation
+            truncation.level = tlevel
+            truncation.variances = tvar
+            truncation.residues = tresidues
+            truncation.residues_idxs = tresidue_idxs
+            
+            truncations.append(truncation)
+        
+        return truncations
+      
+    def truncate_models(self,
+                        models,
+                        max_cluster_size=200,
+                        truncation_method=None,
+                        percent_truncation=None,
+                        truncation_pruning=None,
+                        residue_scores=None,
+                        homologs=False,
+                        alignment_file=None,
+                        work_dir=None):
+        """Generate a set of Truncation objects, referencing a set of truncated models generated from the supplied models"""
+        truncations = self.calculate_truncations(models=models,
+                                                 truncation_method=truncation_method,
+                                                 percent_truncation=percent_truncation,
+                                                 truncation_pruning=truncation_pruning,
+                                                 residue_scores=residue_scores,
+                                                 alignment_file=alignment_file,
+                                                 homologs=homologs)
+        if truncations is None or len(truncations) < 1:
+            msg = "Unable to truncate the ensembles - no viable truncations"
+            logger.critical(msg)
+            return []
+        # Loop through the Truncation objects, truncating the models based on the truncation data and adding
+        # the truncated models to the Truncation.models attribute
+        for truncation in truncations:
+            truncation.directory = os.path.join(self.work_dir, 'tlevel_{0}'.format(truncation.level))
+            os.mkdir(truncation.directory)
+            logger.info('Truncating at: {0} in directory {1}'.format(truncation.level, truncation.directory))
+            truncation.models = []
+            for infile in self.models:
+                pdbout = ample_util.filename_append(infile, str(truncation.level), directory=truncation.directory)
+                # Loop through PDB files and create new ones that only contain the residues left after truncation
+                pdb_edit.select_residues(pdbin=infile, pdbout=pdbout, tokeep_idx=truncation.residues_idxs)
+                truncation.models.append(pdbout)
+        self.truncations = truncations
+        return truncations
+
+    @staticmethod
+    def _convert_residue_scores(residue_scores):
+        """Create named tuple to match store residue data"""
+        scores = [ScoreVariances(idx=int(res)-1,    # Required to match Theseus
+                                 resSeq=int(res),
+                                 variance=float(sco)) \
+                      for (res, sco) in residue_scores]
+        return scores
+

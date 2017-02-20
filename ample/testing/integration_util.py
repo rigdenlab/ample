@@ -1,21 +1,25 @@
+"""Module containing a framework for integration testing of AMPLE modules"""
 
+from __future__ import print_function
+
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "25 Mar 2016"
+__version__ = "1.0"
 
 from unittest import TestCase, TestLoader, TextTestRunner, TestSuite
-import cPickle
 import glob
 import imp
+import logging
 import os
 import shutil
 import sys
-import tempfile
 
 from ample.constants import SHARE_DIR
 from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
 from ample.util import ample_util
 from ample.util import workers_util
 
-__author__ = "Felix Simkovic and Jens Thomas"
-__date__ = "25-Mar-2016"
+logger = logging.getLogger(__name__)
 
 # Available packages. Hard-coded for now to show visually what we have in
 # argparse module. Not needed otherwise
@@ -26,28 +30,29 @@ if not sys.platform.startswith("win"):
     PACKAGES += ['nmr_remodel', 'rosetta_contacts', 'rosetta_modelling', 
                  'rosetta_restraints']
 
+    
 def add_cmd_options(parser):
-    parser.add_argument('-c', '--clean', action='store_true', default=False,
+    parser.add_argument('-clean', action='store_true', default=False,
                         help="Clean up all test files/directories")
-    parser.add_argument('-n', '--nproc', type=int, default=1,
+    parser.add_argument('-nproc', type=int, default=1,
                         help="Number of processors to run on (1 per job)")
-    parser.add_argument('-d', '--dry_run', action='store_true', default=False,
+    parser.add_argument('-dry_run', action='store_true', default=False,
                         help="Don\'t actually run the jobs")
-    parser.add_argument('-r', '--rosetta_dir',
+    parser.add_argument('-rosetta_dir',
                         help="Location of rosetta installation directory")
-    parser.add_argument('-s', '--submit_cluster', action='store_true', default=False,
-                        help="Submit to a cluster queueing system")
     parser.add_argument('test_cases', nargs='*',
                         help="[ {0} ]".format(" | ".join(PACKAGES)))
-    parser.add_argument('-w', '--run_dir', type=str, default=None,
+    parser.add_argument('-run_dir', type=str, default=None,
                         help="directory to run jobs in")
+
 
 class AMPLEBaseTest(TestCase):
     RESULTS_PKL = None
     AMPLE_DICT = None
     def setUp(self):
-        self.assertTrue(os.path.isfile(self.RESULTS_PKL),"Missing pkl file: {0}".format(self.RESULTS_PKL))
-        with open(self.RESULTS_PKL) as f: self.AMPLE_DICT = cPickle.load(f)
+        self.assertTrue(os.path.isfile(self.RESULTS_PKL), "Missing pkl file: {0}".format(self.RESULTS_PKL))
+        self.AMPLE_DICT = ample_util.read_amoptd(self.RESULTS_PKL)
+
 
 class AMPLEIntegrationFramework(object):
     """Framework to run Ample integration testing"""
@@ -69,17 +74,18 @@ class AMPLEIntegrationFramework(object):
         if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
     
     def get_run_dir(self):
-        # OS X has problems with relative paths - symlink in root messes
-        # up the search in theseus - therefore default set to $HOME directory
-        if "darwin" in sys.platform.lower():
-            return os.environ["HOME"]
-        else:
-            return tempfile.gettempdir()
+#         # OS X has problems with relative paths - symlink in root messes
+#         # up the search in theseus - therefore default set to $HOME directory
+#         if "darwin" in sys.platform.lower():
+#             return os.environ["HOME"]
+#         else:
+#             return tempfile.gettempdir()
+        return os.getcwd()
     
     def clean(self, clean_all=True, clean_dir=False):
         for name in self.test_dict.keys():
             os.chdir(self.run_dir)
-            print "Cleaning {0} in directory {1}".format(name, self.run_dir)
+            logger.info("Cleaning {0} in directory {1}".format(name, self.run_dir))
             work_dir = os.path.join(self.run_dir, name)
             if os.path.isdir(work_dir): shutil.rmtree(work_dir)
             logfile = work_dir + '.log'
@@ -89,46 +95,62 @@ class AMPLEIntegrationFramework(object):
                 if os.path.isfile(script): os.unlink(script)
         if clean_dir and os.path.isdir(self.run_dir): shutil.rmtree(self.run_dir)
     
-    def run(self, nproc=1, submit_cluster=False, dry_run=False, clean_up=True, 
-            rosetta_dir=None, extra_args=None, **kw):
+    def run(self,
+            nproc=1,
+            dry_run=False,
+            clean_up=True, 
+            rosetta_dir=None,
+            **kwargs):
+        """Run the integration testing jobs and then the unittests to test them.
         
-        print "Writing files to: {0}".format(self.run_dir)
+        In all cases jobs are run on a single processor. For running on a cluster, the
+        ample job scripts have the queue directives added to them, and  each ample job
+        is launched on the head node. The individual jobs then submit their various job
+        stages to the queue and the integration test job just manages running all the 
+        individual ample jobs until they have finished. Although this means lots of jobs
+        running on the head node, the actual computation done on the head node should be minimal
+        as all processing is submitted to the queue.
         
-        if dry_run: 
-            clean_up = False
+        Previously when running on a cluster we created a single single-processor serial ample script 
+        for each job and then submitted a single array job to run all the jobs on the cluster. This
+        approach had to be abandoned as (I think) the individual jobs timed out. 
+        """
+        logger.info("Writing files to: {0}".format(self.run_dir))
+        
+        if dry_run: clean_up = False
         
         if rosetta_dir and not os.path.isdir(rosetta_dir):
-            print "Cannot find rosetta_dir: {0}".format(rosetta_dir)
+            print("Cannot find rosetta_dir: {0}".format(rosetta_dir))
             sys.exit(1)
         
-        if clean_up: 
-            self.clean()
-        
-        scripts = self._create_scripts(rosetta_dir, submit_cluster)
+        if clean_up: self.clean()
+            
+        scripts = self._create_scripts(rosetta_dir, **kwargs)
         if not len(scripts):
             raise RuntimeError("Could not find any test cases to run!")
         
-        print "The following test cases will be run:"
+        logger.info("The following test cases will be run:")
         for name in self.test_dict.keys():
-            print "{0}: {1}".format(name, self.run_dir )
+            logger.info("{0}: {1}".format(name, self.run_dir))
         
         ## Run all the jobs
         # If we're running on a cluster, we run on as many processors as there are jobs, 
         # as the jobs are just sitting and monitoring the queue
-        if submit_cluster:
+        if 'submit_cluster' in kwargs and kwargs['submit_cluster']:
+            logger.info("Jobs will be submitted to a cluster queueing system")
             nproc = len(scripts)
         
         if not dry_run:
             workers_util.run_scripts(job_scripts=scripts,
                                      monitor=None,
-                                     chdir=True,
                                      nproc=nproc,
                                      job_name='test')
-
+        
+        # Now check the results using the unittesting framework
         self.run_unittest_suite()
         return 
     
-    def _create_scripts(self, rosetta_dir, submit_cluster):
+    def _create_scripts(self, rosetta_dir, **kwargs):
         """Create scripts and path to resultsd"""
         scripts = []
         owd = os.getcwd()
@@ -140,15 +162,15 @@ class AMPLEIntegrationFramework(object):
             # Rosetta is the only think likely to change between platforms so we update the entry
             if rosetta_dir and self._is_in_args('-rosetta_dir', args):
                 args = self._update_args(args, [['-rosetta_dir', rosetta_dir]])
+            # Additional argumenst for submitting to a cluster
+            args = self._update_cluster_args(args, **kwargs)
             if EXTRA_ARGS:
                 args = self._update_args(args, EXTRA_ARGS)
-            if submit_cluster:
-                args = self._update_args(args, CLUSTER_ARGS)
             
             # We track different modules using the name of the test case
             ensembler = True if name.startswith('ensembler') else False
             if ensembler and sys.platform.startswith('win'):
-                print "Cannot run ensemble module on windows due to multiprocessing bug"
+                logger.critical("Cannot run ensemble module on windows due to multiprocessing bug")
                 continue
             
             script = self.write_script(work_dir,  args + [['-work_dir', work_dir]], ensembler=ensembler)
@@ -181,6 +203,24 @@ class AMPLEIntegrationFramework(object):
                 self._replace_arg(argt, args)
         return args
     
+    def _update_cluster_args(self, args, **kwargs):
+        """Add the cluster submission arguments
+        
+        See if any of the clustering submission arguments are in **kwarg and append
+        any non-None ones to args. Otherwise we use the non-None arguments from CLUSTER_ARGS"""
+        if not 'submit_cluster' in kwargs or not kwargs['submit_cluster']: return args
+        for k, v in kwargs.iteritems():
+            value = None
+            if k in CLUSTER_ARGS.keys():
+                if v is not None:
+                    value = v
+                elif CLUSTER_ARGS[k] is not None:
+                    value = CLUSTER_ARGS[k]
+            if value:
+                # Need to add the hypen on to the key so it can be used as a command-line arg
+                args.append(["-"+k, value])
+        return args
+    
     def run_unittest_suite(self):
         suite = TestSuite()
         for name in self.test_dict.keys():
@@ -190,10 +230,10 @@ class AMPLEIntegrationFramework(object):
             suite.addTests(_suite)  
         TextTestRunner(verbosity=2).run(suite)
     
-    def write_script(self, path, args, ensembler):
+    def write_script(self, work_dir, args, ensembler):
         """Write script"""
         linechar = "^" if sys.platform.startswith('win') else "\\"
-        script = path + ample_util.SCRIPT_EXT
+        script = work_dir + ample_util.SCRIPT_EXT
 
         test_exe = os.path.join(os.environ["CCP4"], "bin", "ample")
         test_exe = test_exe + ample_util.SCRIPT_EXT if sys.platform.startswith("win") else test_exe
@@ -201,6 +241,8 @@ class AMPLEIntegrationFramework(object):
             if sys.platform.startswith("win"): raise RuntimeError("Cannot run ensemble module on windows due to multiprocessing bug")
             test_exe = '{0} -m ample.ensembler'.format(os.path.join(os.environ["CCP4"], "bin", "ccp4-python"))
 
+        # All arguments need to be strings
+        args = [ map(str,a) for a in args ]
         with open(script, 'w') as f:
             f.write(ample_util.SCRIPT_HEADER + os.linesep)
             f.write(os.linesep)
@@ -211,7 +253,8 @@ class AMPLEIntegrationFramework(object):
             f.write(os.linesep)
         os.chmod(script, 0o777)
         return os.path.abspath(script)
-    
+
+
 class SuiteLoader(object):
     """Loader designed to obtain all test cases in a package"""
     
@@ -244,15 +287,14 @@ class SuiteLoader(object):
         try:
             mfile, pathname, desc = imp.find_module(mod_name, paths)
         except ImportError:
-            print "Cannot find test module in {1}".format(mod_name, paths)
+            logger.critical("Cannot find test module in {1}".format(mod_name, paths))
             return None
         try:
             test_module = imp.load_module(mod_name, mfile, pathname, desc)
         except Exception as e:
-            sys.stderr.write("Error loading test case from directory: {0}\n {1}\n".format(paths, e))
+            logger.critical("Error loading test case from directory: {0}\n {1}\n".format(paths, e))
             raise Exception(e)
         finally:
             mfile.close()
         return test_module
 
-        

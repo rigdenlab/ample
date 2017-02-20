@@ -10,7 +10,7 @@ import sys
 
 from ample.util import ample_util
 
-def worker(inqueue, early_terminate=False, check_success=None, chdir=False):
+def worker(inqueue, early_terminate=False, check_success=None):
     """
     Worker process to run MrBump jobs until no more left.
 
@@ -46,7 +46,7 @@ def worker(inqueue, early_terminate=False, check_success=None, chdir=False):
         jobname = os.path.splitext(sname)[0]
         
         # Change directory to the script directory
-        if chdir: os.chdir(directory)
+        os.chdir(directory)
         retcode = ample_util.run_command([job], logfile=jobname + ".log", dolog=False, check=True)
 
         # Can we use the retcode to check?

@@ -10,7 +10,7 @@ from ample.util import version
 
 __author__ = "Adam Simpkin & Felix Simkovic"
 
-class TestCases(unittest.TestCase):
+class Test(unittest.TestCase):
     MAX_DIFF = None
     
     @classmethod
@@ -25,24 +25,30 @@ class TestCases(unittest.TestCase):
         options.d = {'fasta' : 'foo',
                      'side_chain_treatments' : [],
                      'rcdir' : os.path.join(os.sep, 'foo', 'bar'),
+                     'nproc' : 1,
                      'submit_qtype' : False,
                      'shelxe_rebuild' : True,
                      'shelxe_rebuild_arpwap' : False,
                      'shelxe_rebuild_buccaneer' : False,
+                     'classic_mode' : False,
                      'devel_mode' : False,
                      'quick_mode' : False,
+                     'thin_clusters' : False,
                      'webserver_uri' : False,
         }
         expected = {'ample_version' : version.__version__,
                     'fasta' : os.path.join(os.getcwd(), 'foo'),
                     'rcdir' : os.path.join(os.sep, 'foo', 'bar'),
                     'side_chain_treatments' : ['polyAla', 'reliable', 'allatom'],
+                     'nproc' : 1,
                     'submit_qtype' : False,
                     'shelxe_rebuild' : True,
                     'shelxe_rebuild_arpwap' : True,
                     'shelxe_rebuild_buccaneer' : True,
+                    'classic_mode' : False,
                     'devel_mode' : False,
                     'quick_mode' : False,
+                    'thin_clusters' : False,
                     'webserver_uri' : False,
         }
         options._process_options()
@@ -50,7 +56,7 @@ class TestCases(unittest.TestCase):
         
     def test_preset_options_quick_mode(self):
         options = config_util.AMPLEConfigOptions()
-        options.d = {'max_ensemble_models' : 1000,
+        options.d = {'ensemble_max_models' : 1000,
                      'nmodels' : 1000,
                      'percent' : 5,
                      'shelx_cycles' : 15,
@@ -59,7 +65,7 @@ class TestCases(unittest.TestCase):
                      'phaser_kill' : 360,
         }
         options.cmdline_opts = {}
-        expected = {'max_ensemble_models' : 10,
+        expected = {'ensemble_max_models' : 10,
                     'nmodels' : 200,
                     'percent' : 20,
                     'shelx_cycles' : 5,
@@ -97,6 +103,8 @@ class TestCases(unittest.TestCase):
     def test_preset_options_webserver_mode(self):
         options = config_util.AMPLEConfigOptions()
         options.d = {'purge': False,
+                     'cluster_method' : 'spicker',
+                     'nproc': None,
                      'shelxe_rebuild_buccaneer': None,
                      'submit_cluster' : False,
                      'submit_max_array' : 20,
@@ -104,6 +112,8 @@ class TestCases(unittest.TestCase):
         }
         options.cmdline_opts = {}
         expected = {'purge': True,
+                    'cluster_method' : 'spicker_tm',
+                    'nproc': 8,
                     'shelxe_rebuild_buccaneer': True,
                     'submit_cluster' : True,
                     'submit_max_array' : 10,
@@ -164,7 +174,7 @@ class TestCases(unittest.TestCase):
                     'mustang_exe' : os.path.abspath('mustang.exe'),
                     'rosetta_dir' : os.path.abspath('rosetta_directory'),
                     'rosetta_fragments_exe' : os.path.abspath('bar.exe'),
-                    'rosetta_abinitiorelax' :os.path.abspath('rosetta_ab_relax'),
+                    'rosetta_AbinitioRelax' :os.path.abspath('rosetta_ab_relax'),
                     'scwrl_exe' : os.path.abspath('scwrl.exe'),
                     'shelxe_exe' : os.path.abspath('shelxe.exe'),
                     'spicker_exe' : os.path.abspath('spicker.exe'),
@@ -186,6 +196,59 @@ class TestCases(unittest.TestCase):
                     }
         
         self.assertItemsEqual(options.d, expected)
+  
+    def test_roundtrip_config_file(self):
+        """Test we can read in and write out a config file with no changes"""
+        options = config_util.AMPLEConfigOptions()
+         
+        
+        # All files are run through abspath on reading by the config parser so we need to convert the names
+        # We can't test [Files] as these are hashed out on writing and ignored on reading
+        inputd = { 'nr' : os.path.abspath('nr'),
+                   'rosetta_db' : os.path.abspath('rosetta_db'),
+                   'blast_dir' : os.path.abspath('blast_dir'),
+                   'fast_protein_cluster_exe' : os.path.abspath('fpc.exe'),
+                  }
+        input_str = """[AMPLE_info]
+
+[Databases]
+nr = {nr}
+rosetta_db = {rosetta_db}
+
+[Executables]
+blast_dir = {blast_dir}
+fast_protein_cluster_exe = {fast_protein_cluster_exe}
+
+[Files]
+
+[Molecular_Replacement]
+F = None
+FREE = None
+arpwarp_cycles = 10
+ensemble_options = None
+
+[Unspecified]
+
+""".format(**inputd)
+        f1 = tempfile.NamedTemporaryFile("w", delete=False)
+        f1.write(input_str)
+        f1.close()
+        
+        # Read in the file from disk
+        options._read_config_file(f1.name)
+        
+        f2 = tempfile.NamedTemporaryFile("w", delete=False)
+        f2.close()
+        
+        # Write back out to disk
+        options.write_config_file(config_file=f2.name)
+        
+        # Read in and make sure the strings are the same
+        with open(f2.name) as f2: output_str = f2.read()
+        
+        self.assertItemsEqual(output_str, input_str)
+        os.unlink(f1.name)
+        os.unlink(f2.name)
         
     def test_read_config_opts(self):
         #Test read config options
@@ -202,7 +265,7 @@ class TestCases(unittest.TestCase):
         }
         
         options.d = {
-                     'max_ensemble_models' : 10,
+                     'ensemble_max_models' : 10,
                      'nmodels' : 400,
                      'percent' : 35,
                      'shelx_cycles' : 5,
@@ -226,7 +289,7 @@ class TestCases(unittest.TestCase):
                      'early_terminate': False,
                      'benchmark_mode': True,
                      'shelxe_rebuild' : True,
-                     'max_ensemble_models' : 10,
+                     'ensemble_max_models' : 10,
                      'shelxe_rebuild_arpwarp' : None,
                      'shelxe_rebuild_buccaneer' : True,
                      'use_arpwarp' : False,

@@ -1,4 +1,3 @@
-#!/usr/bin/env ccp4-python
 '''
 Useful manipulations on PDB files
 '''
@@ -434,7 +433,7 @@ def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
                                                                                                         targetpdb
                                                                                                         )
         # Now we do our keep matching    
-    tmp1 = ample_util.tmpFileName()+".pdb" # pdbcur insists names have a .pdb suffix
+    tmp1 = ample_util.tmp_file_name()+".pdb" # pdbcur insists names have a .pdb suffix
     
     _keep_matching( refpdb, targetpdb, tmp1, resSeqMap=resSeqMap )
     
@@ -1118,37 +1117,25 @@ def merge(pdb1=None, pdb2=None, pdbout=None  ):
         
     return
 
+def molecular_weight(pdbin):
+    logfile = "rwcontents.log"
+    _run_rwcontents(pdbin, logfile)
+    _, _, mw = _parse_rwcontents(logfile)
+    os.unlink(logfile)
+    return mw
+
 def num_atoms_and_residues(pdbin,first=False):
     """"Return number of atoms and residues in a pdb file.
     If all is True, return all atoms and residues, else just for the first chain in the first model'
     """
-    
     #pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
     #model = pdb_obj.hierarchy.models()[0]
     #return sum(  [ len( chain.residues() ) for chain in model.chains() ]  )
 
     if not first:
-        cmd=[ 'rwcontents', 'xyzin', pdbin ]
-        
-        logfile="rwcontents.log"
-        stdin='' # blank to trigger EOF
-        retcode = ample_util.run_command(cmd=cmd,
-                                         directory=os.getcwd(),
-                                         logfile=logfile,
-                                         stdin=stdin)
-        if retcode != 0:
-            raise RuntimeError,"Error running cmd {0}\nSee logfile: {1}".format(cmd,logfile)
-        
-        natoms=0
-        nresidues = 0
-        with open( logfile ) as f:
-            for line in f:
-                if line.startswith(" Number of amino-acids residues"):
-                    nresidues = int(line.strip().split()[5])
-                #Total number of protein atoms (including hydrogens)
-                if line.startswith(" Total number of         atoms (including hydrogens)"):
-                    natoms = int(float(line.strip().split()[6]))
-                    break
+        logfile = "rwcontents.log"
+        _run_rwcontents(pdbin, logfile)
+        natoms, nresidues, _ = _parse_rwcontents(logfile)
         os.unlink(logfile)
     else:
         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
@@ -1159,6 +1146,33 @@ def num_atoms_and_residues(pdbin,first=False):
     assert natoms > 0 and nresidues > 0
     
     return (natoms, nresidues)
+
+def _parse_rwcontents(logfile):
+    natoms = 0
+    nresidues = 0
+    molecular_weight = 0
+    with open( logfile ) as f:
+        for line in f:
+            if line.startswith(" Number of amino-acids residues"):
+                nresidues = int(line.strip().split()[5])
+            #Total number of protein atoms (including hydrogens)
+            if line.startswith(" Total number of         atoms (including hydrogens)"):
+                natoms = int(float(line.strip().split()[6]))
+            if line.startswith(" Molecular Weight of protein:"):
+                molecular_weight = float(line.strip().split()[4])
+    return natoms, nresidues, molecular_weight
+
+def _run_rwcontents(pdbin, logfile):
+    logfile = os.path.abspath(logfile)
+    cmd=[ 'rwcontents', 'xyzin', pdbin ]
+    stdin='' # blank to trigger EOF
+    retcode = ample_util.run_command(cmd=cmd,
+                                     directory=os.getcwd(),
+                                     logfile=logfile,
+                                     stdin=stdin)
+    if retcode != 0:
+        raise RuntimeError,"Error running cmd {0}\nSee logfile: {1}".format(cmd,logfile)
+    return
 
 def _parse_modres(modres_text):
     """
@@ -1330,6 +1344,36 @@ def _renumber(hierarchy, start):
         for chain in model.chains():
             for idx, residue_group in enumerate(chain.residue_groups()):
                 residue_group.resseq = idx + start
+    return
+
+def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
+    """
+    Renumber the residues in the chain based on specified gaps
+
+    Parameters
+    ----------
+    pdbin : str
+    pdbout : str
+    gaps : list
+        List containing True/False for gaps
+    """
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    hierarchy = pdb_input.construct_hierarchy()
+
+    for model in hierarchy.models():
+        for chain in model.chains():
+            resseq = 0
+            for idx, is_gap in enumerate(gaps):
+                if is_gap:
+                    continue
+                residue_group = chain.residue_groups()[resseq]
+                residue_group.resseq = idx + start
+                resseq += 1
+
+    with open(pdbout, 'w') as f:
+        f.write("REMARK Original file:\n")
+        f.write("REMARK   {0}\n".format(pdbin))
+        f.write(hierarchy.as_pdb_string(anisou=False))
     return
 
 def Xselect_residues(inpath=None, outpath=None, residues=None):
@@ -1562,7 +1606,7 @@ def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
     """Rename any non-standard AA, remove solvent and only keep most probably conformation.
     """
 
-    tmp1 = ample_util.tmpFileName() + ".pdb" # pdbcur insists names have a .pdb suffix
+    tmp1 = ample_util.tmp_file_name() + ".pdb" # pdbcur insists names have a .pdb suffix
     
     # Now clean up with pdbcur
     logfile = tmp1+".log"

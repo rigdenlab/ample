@@ -5,12 +5,12 @@
 #
 
 # Set path to include where shelxe is located
-export PATH=\
-/opt/shelx:\
-$PATH
+#export PATH=\
+#/opt/shelx:\
+#$PATH
 
 # Path to the rosetta directory
-rosetta_dir=/opt/rosetta-3.5
+rosetta_dir=/opt/rosetta_bin_linux_2015.39.58186_bundle/
 
 $CCP4/bin/ample \
 -rosetta_dir $rosetta_dir \
@@ -25,10 +25,10 @@ $CCP4/bin/ample \
 
 # Additional optional flags
 # Add below to run from pre-made models
-#-models ../../tests/testfiles/models \
+#-models ../../testfiles/models \
 
 # Thes are QUARK models
-#-models  ../../tests/testfiles/decoys_200.tar.gz \
+#-models  ../../testfiles/decoys_200.tar.gz \
 
 # Add below for running in benchmark mode
 #-native_pdb  inpuy/1DTX.pdb \

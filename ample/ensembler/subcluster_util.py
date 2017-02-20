@@ -1,16 +1,14 @@
-"""
-02.03.2016
+"""Subcluster utility module"""
 
-@author: hlfsimko
-"""
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "02 Mar 2016"
+__version__ = "1.0"
 
-import copy
 import logging
-import os
 import random
-import shutil
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+
 
 def pick_nmodels(models, clusters, ensemble_max_models):
     MAXTRIES = 50
@@ -24,6 +22,7 @@ def pick_nmodels(models, clusters, ensemble_max_models):
         tries += 1
         if tries >= MAXTRIES: return None
     return subcluster
+
 
 def slice_subcluster(cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds):
     """Select a unique set of models from a subcluster of models.
@@ -68,6 +67,7 @@ def slice_subcluster(cluster_files, previous_clusters, ensemble_max_models, radi
     
     return None
 
+
 def subcluster_nmodels(nmodels, radius, clusterer, direction, increment):
 
     MINRADIUS = 0.0001
@@ -76,9 +76,9 @@ def subcluster_nmodels(nmodels, radius, clusterer, direction, increment):
     subcluster_models = clusterer.cluster_by_radius(radius)
     len_models = len(subcluster_models) if subcluster_models else 0
     
-    _logger.debug("subcluster nmodels: {0} {1} {2} {3} {4}".format(len_models, nmodels, radius, direction, increment))
+    logger.debug("subcluster nmodels: {0} {1} {2} {3} {4}".format(len_models, nmodels, radius, direction, increment))
     if len_models == nmodels or radius < MINRADIUS or radius > MAXRADIUS:
-        _logger.debug("nmodels: {0} radius: {1}".format(len_models, radius))
+        logger.debug("nmodels: {0} radius: {1}".format(len_models, radius))
         return subcluster_models, radius
     
     def lower_increment(increment):
@@ -105,41 +105,8 @@ def subcluster_nmodels(nmodels, radius, clusterer, direction, increment):
             radius += increment
     except RuntimeError:
         # Can't get a match so just return what we have
-        _logger.debug("subcluster nmodels exceeded increment. Returning: nmodels: {0} radius: {1}".format(len(subcluster_models), radius))
+        logger.debug("subcluster nmodels exceeded increment. Returning: nmodels: {0} radius: {1}".format(len(subcluster_models), radius))
         return subcluster_models, radius
         
     return subcluster_nmodels(nmodels, radius, clusterer, direction, increment)
-
-def subcluster_radius(models, radius, truncated_models_data):
-    # Extract data from dictionary
-    cluster_num = truncated_models_data['cluster_num']
-    truncation_level = truncated_models_data['truncation_level']
-    truncation_dir = truncated_models_data['truncation_dir']
-
-    # Got files so create the directories
-    subcluster_dir = os.path.join(truncation_dir, 'subcluster_{0}'.format(radius))
-    os.mkdir(subcluster_dir)
-    os.chdir(subcluster_dir)
-
-    basename = 'c{0}_t{1}_r{2}'.format(cluster_num, truncation_level, radius)
-    cluster_file = self.superpose_models(models)
-    if not cluster_file:
-        msg = "Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename,
-                                                                                            subcluster_dir)
-        _logger.critical(msg)
-        raise RuntimeError, msg
-    
-    ensemble = os.path.join(subcluster_dir, basename + '.pdb')
-    shutil.move(cluster_file, ensemble)
-
-    # The data we've collected is the same for all pdbs in this level so just keep using the first  
-    subcluster_data = copy.copy(truncated_models_data)
-    subcluster_data['subcluster_num_models'] = len(models)
-    subcluster_data['subcluster_radius_threshold'] = radius
-    subcluster_data['ensemble_pdb'] = ensemble
-
-    # Get the centroid model name from the list of files given to theseus - we can't parse
-    # the pdb file as theseus truncates the filename
-    subcluster_data['subcluster_centroid_model'] = os.path.abspath(models[0])
-    return ensemble, subcluster_data
 

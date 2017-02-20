@@ -30,5 +30,5 @@ for pdb in pdb_codes:
     os.mkdir(bd)
     benchmark.analyse(amoptd,newroot=ample_dir)
     amoptd['results_path']=os.path.join(ample_dir,"resultsd.pkl")
-    ample_util.saveAmoptd(amoptd)
+    ample_util.save_amoptd(amoptd)
 

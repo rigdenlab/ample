@@ -14,7 +14,7 @@ if __name__ == "__main__":
     sys.path.insert(0, os.path.join(root, "scripts"))
 
 # Our imports
-from ample.util.ample_util import SCRIPT_EXT
+from ample.util import ample_util
 from ample.util import mrbump_cmd
 from ample.util import printTable
 
@@ -53,7 +53,7 @@ class ResultsSummary(object):
 
     def analyseResult(self, result):
         
-        mrDir = result["Job_directory"]
+        mrDir = result["MR_directory"]
         
         # result.ensembleName = result.name[9:-6]
         if result["MR_program"] == "PHASER":
@@ -109,7 +109,7 @@ class ResultsSummary(object):
         d['Search_directory'] = None
         # END
         
-        d['Job_directory'] = None
+        d['MR_directory'] = None
         d['Solution_Type'] = None
         
         d['PHASER_LLG'] = None
@@ -339,39 +339,39 @@ class ResultsSummary(object):
                 result[title2key[title]] = v
 
             dirName = result['name'][:-6]
-            result["Job_directory"] = os.path.join(jobDir, 'data', dirName, 'unmod', 'mr', result["MR_program"].lower())
+            result["MR_directory"] = os.path.join(jobDir, 'data', dirName, 'unmod', 'mr', result["MR_program"].lower())
             
             # See which pdb files were created
             if result["MR_program"] == 'PHASER':
-                phaserPdb = os.path.join(result["Job_directory"],
+                phaserPdb = os.path.join(result["MR_directory"],
                                        "refine",
                                        "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(), result['ensemble_name']))
                 if os.path.isfile(phaserPdb):
                     result['PHASER_pdbout'] = phaserPdb
             elif result.program == 'molrep':
-                molrepPdb = os.path.join(result["Job_directory"],
+                molrepPdb = os.path.join(result["MR_directory"],
                                        "refine",
                                        "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(), result['ensemble_name']))
                 if os.path.isfile(molrepPdb):
                     result['MOLREP_pdbout'] = molrepPdb
 
-            refmacPdb = os.path.join(result["Job_directory"],
+            refmacPdb = os.path.join(result["MR_directory"],
                                    'refine',
                                    "refmac_" + result["MR_program"].lower() + "_loc0_ALL_" + result['ensemble_name'] + "_UNMOD.pdb")
             if os.path.isfile(refmacPdb):
                 result["REFMAC_pdbout"] = refmacPdb
                 
-            shelxePdb = os.path.join(result["Job_directory"], 'build', 'shelxe',
+            shelxePdb = os.path.join(result["MR_directory"], 'build', 'shelxe',
                                    "shelxe_" + result["MR_program"].lower() + "_loc0_ALL_" + result['ensemble_name'] + "_UNMOD.pdb")
             if os.path.isfile(shelxePdb):
                 result["SHELXE_pdbout"] = shelxePdb
                 
-            buccaneerPdb = os.path.join(result["Job_directory"], 'build', 'shelxe', 'rebuild', 'buccaneer',
+            buccaneerPdb = os.path.join(result["MR_directory"], 'build', 'shelxe', 'rebuild', 'buccaneer',
                                       "buccSX_output.pdb")
             if os.path.isfile(buccaneerPdb):
                 result["SXRBUCC_pdbout"] = buccaneerPdb
                 
-            arpWarpPdb = os.path.join(result["Job_directory"], 'build', 'shelxe', 'rebuild', 'arpwarp',
+            arpWarpPdb = os.path.join(result["MR_directory"], 'build', 'shelxe', 'rebuild', 'arpwarp',
                                       "refmacSX_output_warpNtrace.pdb")
             if os.path.isfile(arpWarpPdb):
                 result["SXRARP_pdbout"] = arpWarpPdb
@@ -403,9 +403,9 @@ class ResultsSummary(object):
                 d['MR_program'] = mrprog
                 # Hack for old versions
                 if 'JobDirectory' in d:
-                    d['Job_directory'] = d['JobDirectory']
+                    d['MR_directory'] = d['JobDirectory']
                     del d['JobDirectory']
-                    d['Search_directory'] = os.sep.join(d['Job_directory'].split(os.sep)[:-5])
+                    d['Search_directory'] = os.sep.join(d['MR_directory'].split(os.sep)[:-5])
                 if 'final_Rfree' in d:
                     d['REFMAC_Rfree'] = d['final_Rfree']
                     d['REFMAC_Rfact'] = d['final_Rfact']
@@ -534,9 +534,9 @@ class ResultsSummary(object):
         r += summary
 
         # Hack need to think of a better way to do this when there are no valid results
-        if self.results[0]["Job_directory"]:
+        if self.results[0]["MR_directory"]:
             r += '\nBest Molecular Replacement results so far are in:\n\n'
-            r += self.results[0]["Job_directory"]
+            r += self.results[0]["MR_directory"]
 
 #         if self.results[0].pdb and os.path.isfile(self.results[0].pdb):
 #             r += '\n\nFinal PDB is:\n\n'
@@ -567,16 +567,22 @@ def _resultsKeys(results):
     return keys
 
 def checkSuccess(script_path):
-    """
-    Check if a job ran successfully.
+    """Check if a job ran successfully.
     
-    Args:
-    directory -- directory mr bump ran the job
+    Parameters
+    ----------
+    script_path : str
+       Path to the MrBUMP script
     
-    Returns:
-    True if success
-    
+    Returns
+    -------
+    bool
+       True if success
+   
+    Notes
+    -----
     Success is assumed as a SHELX CC score of >= SHELXSUCCESS
+
     """
     directory, script = os.path.split(script_path)
     scriptname = os.path.splitext(script)[0]
@@ -597,7 +603,6 @@ def checkSuccess(script_path):
 
 def finalSummary(amoptd):
     """Print a final summary of the job"""
-    
     
     mrbump_data = amoptd['mrbump_results']
     if not mrbump_data:
@@ -635,9 +640,9 @@ def finalSummary(amoptd):
 
     r = "\n\nOverall Summary:\n\n"
     r += summary
-    if len(results) and "Job_directory" in results[0]:
+    if len(results) and "MR_directory" in results[0]:
         r += '\nBest Molecular Replacement results so far are in:\n\n'
-        r += str(results[0]["Job_directory"])
+        r += str(results[0]["MR_directory"])
         r += '\n\n'
     return r
 
@@ -676,17 +681,20 @@ def unfinished_scripts(amoptd):
     
     scripts = []
     for r in [ r for r in amoptd['mrbump_results'] if job_unfinished(r) ]:
-        #print "DIR ", r['Job_directory']
+        #print "DIR ", r['MR_directory']
         #print "DIR2 ", r['Search_directory']
-        scripts.append( os.path.join(amoptd['mrbump_dir'],r['ensemble_name'] + SCRIPT_EXT) )
+        scripts.append(os.path.join(amoptd['mrbump_dir'], r['ensemble_name']+ample_util.SCRIPT_EXT))
     return scripts
 
 def write_mrbump_files(ensemble_pdbs, amoptd, job_time=MRBUMP_RUNTIME, ensemble_options=None, directory=None):
     """Write the MRBUMP job files for all the ensembles.
 
-    Args:
-    ensemble_pdbs -- list of the ensembles, each a single pdb file
-    amoptd -- dictionary with job options
+    Arguments:
+    ensemble_pdbs -- list of the ensembles, each a single pdb file.
+    amoptd -- dictionary with job options.
+    job_time -- maximum permissible runtime (mainly used for batch queueing systems).
+    ensemble_options -- dictionary with ensemble-specific keywords e.g. ensemble_options[ensemble_name] = {'ncopies' : ncopies}
+    directory -- working directory to write files to.
     """
     if not directory: directory = os.getcwd()
     
@@ -725,7 +733,7 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
     if not directory: directory = os.getcwd()
         
     # Next the script to run mrbump
-    script_path = os.path.abspath(os.path.join(directory,name+SCRIPT_EXT))
+    script_path = os.path.abspath(os.path.join(directory, name+ample_util.SCRIPT_EXT))
     with open(script_path, "w") as job_script:
         # Header
         if not sys.platform.startswith("win"):

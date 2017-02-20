@@ -26,8 +26,8 @@ $CCP4/bin/ample \
 -nproc 5 \
 
 # Add below for running with contact predictions
-#-bbcontacts_file toxd_.bbcontacts.CASPRR \
-#-constraints_file toxd_.cst \
-#-native_pdb 1DTX.pdb \
+#-bbcontacts_file input/toxd_.bbcontacts.CASPRR \
+#-constraints_file input/toxd_.cst \
+#-native_pdb input/1DTX.pdb \
 #-native_cutoff 9 \
 #-energy_function FADE_default \

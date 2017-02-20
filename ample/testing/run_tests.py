@@ -3,7 +3,7 @@
 import argparse
 
 from ample.testing import integration_util, unittest_util
-from ample.util.argparse_util import add_core_options
+from ample.util.argparse_util import add_core_options, add_cluster_submit_options
 
 __author__ = "Felix Simkovic"
 __date__ = "25-Mar-2016"
@@ -38,6 +38,7 @@ Available tests include:
     integ = suboptions.add_parser("integration", help="Integration testing with examples")
     integ.set_defaults(which="integration")
     integration_util.add_cmd_options(integ)
+    add_cluster_submit_options(integ)
     
     unit = suboptions.add_parser("unittest", help="Unittest all functions")
     unit.set_defaults(which="unittest")

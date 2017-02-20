@@ -18,6 +18,9 @@ import cif_parser # Avoid circular dependencies
 _logger = logging.getLogger()
 _logger.setLevel(logging.DEBUG)
 
+COLTYPE_F = 'F'
+COLTYPE_SIGF = 'Q'
+
 def del_column(file_name, column, overwrite=True):
     """Delete a column from an mtz file and return a path to the file"""
     mtzDel = ample_util.filename_append(file_name, "d{0}".format(column) )
@@ -55,7 +58,7 @@ def add_rfree(file_name,directory=None,overwrite=True):
         return mtzUnique
 
 def get_labels(file_name):
-    """Return the F, FP and FREE column labels"""
+    """Return the F, SIGF and FREE column labels"""
     
     reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
     if not reflection_file.file_type()=="ccp4_mtz":
@@ -66,18 +69,20 @@ def get_labels(file_name):
     content=reflection_file.file_content()
     ctypes=content.column_types()
     clabels=content.column_labels()
-    ftype='F'
-    if not ftype in ctypes:
+    if not COLTYPE_F in ctypes:
         raise RuntimeError,"Cannot find any structure amplitudes in: {0}".format(file_name)
-    F=clabels[ctypes.index(ftype)]
+    F = clabels[ctypes.index(COLTYPE_F)]
     
-    # FP derived from F
-    FP='SIG'+F
-    if not FP in clabels:
-        raise RuntimeError,"Cannot find label {0} in file: {1}".format(FP,file_name)
+    # SIGF derived from F
+    SIGF = 'SIG' + F
+    if not SIGF in clabels:
+        raise RuntimeError,"Cannot find label {0} in file: {1}".format(SIGF)
+    i = clabels.index(SIGF)
+    if ctypes[i] != COLTYPE_SIGF:
+        raise RuntimeError,"SIGF label {0} is not of type: {1}".format(SIGF, )
     
     FREE=_get_rfree(content)
-    return F,FP,FREE
+    return F,SIGF,FREE
 
 def get_rfree(file_name):
     """Return the Rfree label"""
@@ -88,12 +93,22 @@ def get_rfree(file_name):
         logging.critical(msg)
         raise RuntimeError,msg
     
-    # Read the file
-    content=reflection_file.file_content()
-    return _get_rfree(content)
-    
+    return _get_rfree(reflection_file.file_content())
+
+# def get_resolution(file_name):
+#     if int(CCP4_VERSION[0]) >= 7:
+#         hkl_info=clipper.HKL_info()
+#         mtz_file=clipper.CCP4MTZfile()
+#         mtz_file.open_read(file_name)
+#         mtz_file.import_hkl_info(hkl_info)
+# 
+#         resolution =  "%.2lf" % hkl_info.resolution().limit()
+#     else:
+#         resolution = None
+#     return resolution
+
 def _get_rfree(content):
-    rfree_label=None
+    rfree_label = None
     #print "GOT ",content.column_labels()
     for label in content.column_labels():
         if 'free' in label.lower():
@@ -108,10 +123,16 @@ def _get_rfree(content):
             #print "Number of 1 (test):",n1
             #print float(n0)/float(n1)*100
             if n0>0 and n1>0:
-                if rfree_label:
-                    _logger.warning("FOUND >1 RFREE label in file!")
+                if rfree_label: _logger.warning("FOUND >1 RFREE label in file!")
                 rfree_label=label
     return rfree_label
+
+def max_min_resolution(file_name):
+    reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
+    if not reflection_file.file_type()=="ccp4_mtz":
+        print("File is not of type ccp4_mtz: {0}".format( file_name ) )
+        sys.exit(1)
+    return reflection_file.file_content().max_min_resolution()
 
 def to_hkl(mtz_file,hkl_file=None,directory=None,F=None,SIGF=None,FREE=None):
     
@@ -165,12 +186,12 @@ def processReflectionFile(amoptd):
 
     # Get column label info
     reflection_file = reflection_file_reader.any_reflection_file(file_name=amoptd['mtz'])
-    if not reflection_file.file_type()=="ccp4_mtz":
+    if not reflection_file.file_type() == "ccp4_mtz":
         _logger.critical("File is not of type ccp4_mtz: {0}".format( amoptd['mtz'] ) )
         sys.exit(1)
     
     # Read the file
-    content=reflection_file.file_content()
+    content = reflection_file.file_content()
     
     # Check any user-given flags
     for flag in ['F','SIGF','FREE']:
@@ -191,15 +212,14 @@ def processReflectionFile(amoptd):
             sys.exit(1)
         amoptd['SIGF']  = l
         
+    rfree=_get_rfree(content)
     if amoptd['FREE']:
         # Check is valid
-        rfree=_get_rfree(content)
         if not rfree or not rfree==amoptd['FREE']:
             _logger.critical("Given RFREE label {0} is not valid for mtz file: {0}".format( amoptd['FREE'], amoptd['mtz'] ) )
             sys.exit(1)
     else:
         # See if we can find a valid label in the file
-        rfree=_get_rfree(content)
         if not rfree:
             # Need to generate RFREE
             _logger.warning("Cannot find a valid FREE flag - running uniquefy to generate column with RFREE data." )
@@ -211,6 +231,12 @@ def processReflectionFile(amoptd):
                 _logger.critical("Cannot find valid rfree flag in mtz file {0} after running uniquiefy".format(amoptd['mtz']))
                 sys.exit(1)
         amoptd['FREE']  = rfree
+    
+    # Output information to user and save to amoptd
+    _logger.info("Using MTZ file: {0}".format(amoptd['mtz']))
+    maxr, minr = content.max_min_resolution()
+    amoptd['mtz_max_resolution'] = maxr
+    amoptd['mtz_min_resolution'] = minr
+    _logger.info("Resolution limits of MTZ file are: {0: > 6.3F} and {1: > 6.3F}".format(maxr, minr))
 
     return True
-

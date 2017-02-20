@@ -1,11 +1,45 @@
 """Test functions for ensembler.truncation_util.py"""
 
 import collections
+import glob
+import os
+import shutil
+import tempfile
 import unittest
+
+from ample import constants
 from ample.ensembler import truncation_util 
+from ample.ensembler.truncation_util import Truncator
+from ample.util import ample_util
+
+#import logging
+#logging.basicConfig(level=logging.DEBUG)
 
 class Test(unittest.TestCase):
-    
+
+    @classmethod
+    def setUpClass(cls):
+        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        cls.ample_share = constants.SHARE_DIR
+        cls.testfiles_dir = os.path.join(cls.ample_share, 'testfiles')
+        cls.tests_dir = tempfile.gettempdir()
+        cls.theseus_exe = ample_util.find_exe('theseus' + ample_util.EXE_EXT)
+
+    def test_convert_residue_scores(self):
+        residue_scores = [(i, 0.1*i) for i in xrange(1, 11)]
+        #ensembler = _ensembler.Ensembler()
+        #scores = ensembler._convert_residue_scores(residue_scores)
+        scores = truncation_util.Truncator._convert_residue_scores(residue_scores)
+        score_idxs = [i.idx for i in scores]
+        ref_score_idxs = [i for i in xrange(10)] # Minus one compared to org data
+        self.assertEqual(ref_score_idxs, score_idxs)
+        score_resSeq = [i.resSeq for i in scores]
+        ref_score_resSeq = [i for i in xrange(1, 11)] # Same i as org data
+        self.assertEqual(ref_score_resSeq, score_resSeq)
+        score_variances = [i.variance for i in scores]
+        ref_score_variances = [(0.1*i) for i in xrange(1, 11)] # Same i as org data
+        self.assertEqual(ref_score_variances, score_variances)
+
     def test_residuesFocussed(self):
 
         TheseusVariances = collections.namedtuple('TheseusVariances', 
@@ -411,5 +445,27 @@ class Test(unittest.TestCase):
                 
         return
     
+    def test_truncator(self):
+        """Test of the Truncator object.
+        """
+        mdir = os.path.join(self.testfiles_dir, "models")
+        models = glob.glob(mdir + os.sep + "*.pdb")
+        work_dir = os.path.join(self.tests_dir, "truncator")
+        if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+        os.mkdir(work_dir)
+
+        truncator = Truncator(work_dir=work_dir)
+        truncator.theseus_exe = self.theseus_exe
+        truncation_method = 'percent'
+        truncations = truncator.truncate_models(models=models,
+                                                truncation_method=truncation_method,
+                                                percent_truncation='50')
+        
+        self.assertEqual(len(truncations), 2, "Failed to return two truncations")
+        truncation = truncations[1]
+        self.assertEqual(truncation.num_residues, 29, "Failed to return correct number of residues")
+        self.assertEqual(truncation.method, truncation_method)
+        return
+        
 if __name__ == "__main__":
     unittest.main()

@@ -43,7 +43,7 @@ class JobServer(object):
         
         return
     
-    def start(self, nproc=None, early_terminate=False, check_success=None, monitor=None, chdir=False):
+    def start(self, nproc=None, early_terminate=False, check_success=None, monitor=None):
         
         assert nproc != None
 
@@ -52,8 +52,7 @@ class JobServer(object):
         for i in range(nproc):
             process = multiprocessing.Process(target=worker.worker, args=(self.inqueue,
                                                                           early_terminate,
-                                                                          check_success,
-                                                                          chdir))
+                                                                          check_success))
             process.start()
             processes.append(process)
         
@@ -106,7 +105,6 @@ def run_scripts(job_scripts,
                 monitor=None,
                 check_success=None,
                 early_terminate=None,
-                chdir=False,
                 nproc=None,
                 job_time=None,
                 job_name=None,
@@ -129,7 +127,7 @@ def run_scripts(job_scripts,
                                    submit_pe_lsf=submit_pe_lsf,
                                    submit_pe_sge=submit_pe_sge,
                                    submit_array=submit_array,
-                                   submit_max_array=submit_max_array,
+                                   submit_max_array=submit_max_array
                                    )
     else:
         return run_scripts_serial(job_scripts,
@@ -137,7 +135,6 @@ def run_scripts(job_scripts,
                                   monitor=monitor,
                                   early_terminate=early_terminate,
                                   check_success=check_success,
-                                  chdir=chdir
                                   )
 
 def run_scripts_cluster(job_scripts,
@@ -155,20 +152,20 @@ def run_scripts_cluster(job_scripts,
     logger = logging.getLogger()
     logger.info("Running jobs on a cluster")
     cluster_run = clusterize.ClusterRun()
-    qtype = submit_qtype
     cluster_run.QTYPE = submit_qtype
     if submit_array and len(job_scripts) > 1:
         cluster_run.submitArrayJob(job_scripts,
                                    job_time=job_time,
                                    job_name=job_name,
-                                   qtype=qtype,
-                                   queue=submit_queue,
-                                   max_array_jobs=submit_max_array
+                                   submit_max_array=submit_max_array,
+                                   submit_qtype=submit_qtype,
+                                   submit_queue=submit_queue
                                    )
     else:
         for script in job_scripts:
-            name=os.path.splitext(os.path.basename(script))[0]
-            logfile="{0}.log".format(name)
+            dirname, sname = os.path.split(script)
+            name = os.path.splitext(sname)[0]
+            logfile = os.path.join(dirname, "{0}.log".format(name))
             if not job_name: job_name = name
             if nproc is None: nproc = 1
             with open(script) as f: lines = f.readlines()
@@ -176,15 +173,15 @@ def run_scripts_cluster(job_scripts,
                                                              job_name=job_name,
                                                              job_time=job_time,
                                                              log_file=logfile,
-                                                             queue=submit_queue,
-                                                             qtype=submit_qtype,
+                                                             submit_queue=submit_queue,
+                                                             submit_qtype=submit_qtype,
                                                              submit_pe_lsf=submit_pe_lsf,
-                                                             submit_pe_sge=submit_pe_sge,
+                                                             submit_pe_sge=submit_pe_sge
                                                              )
             # We add the queue directives after the first line of the script
             with open(script,'w') as f: f.writelines("".join([lines[0]] + slines + lines[1:]))
             os.chmod(script, 0o777)
-            cluster_run.submitJob(subScript=script)
+            cluster_run.submitJob(script)
 
     # Monitor the cluster queue to see when all jobs have finished
     cluster_run.monitorQueue(monitor=monitor)
@@ -198,7 +195,7 @@ def run_scripts_serial(job_scripts,
                        monitor=None,
                        early_terminate=None,
                        check_success=None,
-                       chdir=False):
+                       ):
     success=False
     if len(job_scripts) > 1:
         # Don't need early terminate - check_success if it exists states what's happening
@@ -208,13 +205,13 @@ def run_scripts_serial(job_scripts,
                            early_terminate=bool(early_terminate),
                            check_success=check_success,
                            monitor=monitor,
-                           chdir=chdir)
+                           )
     else:
         script=job_scripts[0]
         name=os.path.splitext(os.path.basename(script))[0]
         logfile="{0}.log".format(name)
-        dir=os.path.dirname(script)
-        if chdir: os.chdir(dir)
+        wdir=os.path.dirname(script)
+        os.chdir(wdir)
         rtn = ample_util.run_command([script], logfile=logfile)
         if rtn == 0: success = True
     return success

@@ -6,7 +6,6 @@ Created on 24 Oct 2014
 
 # Python imports
 import copy
-import cPickle
 import glob
 import logging
 import os
@@ -16,6 +15,7 @@ import sys
 # Our imports
 from ample.util import ample_util
 from ample.util import csymmatch
+from ample.util import cphasematch
 from ample.util import maxcluster
 from ample.util import pdb_edit
 from ample.util import pdb_model
@@ -23,12 +23,13 @@ from ample.util import reforigin
 from ample.util import residue_map
 from ample.util import rio
 from ample.util import shelxe
-from ample.util import tmscore_util
+from ample.util import tm_util
 
-_logger=logging.getLogger()
+logger = logging.getLogger()
 
-_oldroot=None
-_newroot=None
+_oldroot = None
+_newroot = None
+_MAXCLUSTERER = None
 
 def analyse(amoptd, newroot=None):
     if newroot:
@@ -55,7 +56,7 @@ def analyse(amoptd, newroot=None):
             amoptd['import_ensembles'] or amoptd['single_model_mode']):
         analyseModels(amoptd)
     
-#     _logger.info("Benchmark: generating naitive density map")
+#     logger.info("Benchmark: generating naitive density map")
 #     # Generate map so that we can do origin searching
 #     amoptd['native_density_map']=phenixer.generateMap(amoptd['mtz'],
 #                                                      amoptd['native_pdb'],
@@ -63,9 +64,20 @@ def analyse(amoptd, newroot=None):
 #                                                      SIGFP=amoptd['SIGF'],
 #                                                      FREE=amoptd['FREE'],
 #                                                      directory=amoptd['benchmark_dir'])
+
+    # Generate a mtz with phases from the native_pdb so that we can calculate phase errors
+    if amoptd['native_pdb']:
+        try:
+            amoptd['native_mtz_phased'] = cphasematch.place_native_pdb(amoptd['native_pdb'],
+                                                                       amoptd['mtz'],
+                                                                       amoptd['F'],
+                                                                       amoptd['SIGF'])
+        except Exception as e:
+            logger.critical("Error phasing native pdb: {0}".format(e))
+    
     # Get the ensembling data
-    if not len(amoptd['ensembles_data']):
-        _logger.critical("Benchmark cannot find any ensemble data!")
+    if 'ensembles_data' not in amoptd or not len(amoptd['ensembles_data']):
+        logger.critical("Benchmark cannot find any ensemble data!")
         return
 
     # Get dict of ensemble name -> ensemble result
@@ -73,7 +85,7 @@ def analyse(amoptd, newroot=None):
                     
     # Get mrbump_results for cluster
     if 'mrbump_results' not in amoptd or not len(amoptd['mrbump_results']):
-        _logger.critical("Benchmark cannot find any mrbump results!")
+        logger.critical("Benchmark cannot find any mrbump results!")
         return
     
     data=[]
@@ -109,25 +121,43 @@ def analyse(amoptd, newroot=None):
         d['ensemble_percent_model'] = int((float(d['num_residues']) / float(amoptd['fasta_length'])) * 100)
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
         
-        # Need to get the subcluster_centroid_model and then get the path to the original model
-        if 'subcluster_centroid_model' in d:
-            n = os.path.splitext(os.path.basename(d['subcluster_centroid_model']))[0]
-            cm = None
-            for pdb in glob.glob(os.path.join(amoptd['models_dir'],"*.pdb")):
-                if n.startswith(os.path.splitext(os.path.basename(pdb))[0]):
-                    cm = pdb
-                    break
-            if not cm:
-                raise RuntimeError,"Cannot find model for subcluster_centroid_model {0}".format(d['subcluster_centroid_model'])
-            #cm=d['cluster_centroid']
-            d['ensemble_native_TM'] = amoptd['maxComp'].tm(cm)
-            d['ensemble_native_RMSD'] = amoptd['maxComp'].rmsd(cm)
+        if 'subcluster_centroid_model' in d and amoptd['native_pdb']:
+            # Calculation of TMscores for subcluster centroid models
+            if amoptd['have_tmscore']:
+                try:
+                    tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']))
+                    logger.info("Analysing subcluster centroid model with TMscore")
+                    tm_results = tm.compare_structures([d['subcluster_centroid_model']],
+                                                                              [amoptd['native_pdb_std']],
+                                                                              fastas=[amoptd['fasta']])
+                    d['subcluster_centroid_model_TM'] = tm_results[0]['tmscore']
+                    d['subcluster_centroid_model_RMSD'] = tm_results[0]['rmsd']
+                    
+                except:
+                    msg = "Unable to run TMscores. See debug.log."
+                    logger.critical(msg)
+            else:
+                # Use maxcluster
+                # Need to get the subcluster_centroid_model and then get the path to the original model
+                n = os.path.splitext(os.path.basename(d['subcluster_centroid_model']))[0]
+                cm = None
+                for pdb in glob.glob(os.path.join(amoptd['models_dir'],"*.pdb")):
+                    if n.startswith(os.path.splitext(os.path.basename(pdb))[0]):
+                        cm = pdb
+                        break
+                if not cm:
+                    raise RuntimeError,"Cannot find model for subcluster_centroid_model {0}".format(d['subcluster_centroid_model'])
+                d['subcluster_centroid_model_TM'] = _MAXCLUSTERER.tm(cm)
+                # There is an issue here as this is the RMSD over the TM-aligned residues - NOT the global RMSD, which it is for the tm_util results
+                #d['subcluster_centroid_model_RMSD'] = _MAXCLUSTERER.rmsd(cm)
+                d['subcluster_centroid_model_RMSD'] = None
+
         if amoptd['native_pdb']: analyseSolution(amoptd,d)
         data.append(d)
 
-    fileName=os.path.join(fixpath(amoptd['benchmark_dir']),'results.csv' )
-    writeCsv(fileName,data)
-    amoptd['benchmark_results']=data
+    fileName = os.path.join(fixpath(amoptd['benchmark_dir']), 'results.csv' )
+    writeCsv(fileName, data)
+    amoptd['benchmark_results'] = data
     return
 
 def cluster_script(amoptd, python_path="ccp4-python"):
@@ -148,18 +178,19 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     
 def analyseSolution(amoptd, d, origin_finder='shelxe'):
 
-    _logger.info("Benchmark: analysing result: {0}".format(d['ensemble_name']))
+    logger.info("Benchmark: analysing result: {0}".format(d['ensemble_name']))
 
     mrPdb=None
     if d['MR_program']=="PHASER":
         mrPdb = d['PHASER_pdbout']
+        mrMTZ = d['PHASER_mtzout']
     elif d['MR_program']=="MOLREP":
         mrPdb = d['MOLREP_pdbout']
     elif d['MR_program']=="unknown":
         return
 
     if mrPdb is None or not os.path.isfile(mrPdb):
-        #_logger.critical("Cannot find mrPdb {0} for solution {1}".format(mrPdb,d))
+        #logger.critical("Cannot find mrPdb {0} for solution {1}".format(mrPdb,d))
         return
 
     # debug - copy into work directory as reforigin struggles with long pathnames
@@ -167,135 +198,166 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
     
     mrPdbInfo = pdb_edit.get_info( mrPdb )
     
+    d['num_placed_chains'] = mrPdbInfo.numChains()
     d['num_placed_atoms'] = mrPdbInfo.numAtoms()
     d['num_placed_CA'] = mrPdbInfo.numCalpha()
-
-    # Find the MR origin wrt to the native
-    #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
-    # There is a bug in SHELXE with the spacegroup F23. Luckily this is a non-polar spacegroup,
-    # so we can use csymmatch to determine the origin for this case. This clause can be removed
-    # once the SHELXE bug has been fixed. The bug was present as of 25/5/16
-    if 'native_pdb_space_group' in amoptd and amoptd['native_pdb_space_group'] is 'F 2 3':
-        origin_finder = 'csymmatch'
-    if origin_finder == 'shelxe':
-        if not d['SHELXE_os']:
-            _logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
-            mrOrigin = shelxe.shelxe_origin(amoptd['shelxe_exe'], amoptd['native_pdb_info'].pdb, amoptd['mtz'], mrPdb)
-        else:
-            mrOrigin=[c*-1 for c in d['SHELXE_os']]
-    elif origin_finder == 'csymmatch':
-        CS = csymmatch.Csymmatch()
-        csout = ample_util.filename_append(filename=mrPdb, astr='csymmatch_origin', directory=amoptd['benchmark_dir'] )
-        CS.run(refPdb=amoptd['native_pdb_info'].pdb,
-               inPdb=mrPdb,
-               outPdb=csout,
-               originHand=True,
-               cleanup=False)
-        CS.parseLog()
-        mrOrigin = CS.changeOfOrigin
     
-    # Move pdb onto new origin
-    originPdb = ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
-    pdb_edit.translate(mrPdb, originPdb, mrOrigin)
-    
-    # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
-    csymmatch.Csymmatch().wrapModelToNative(originPdb,
-                                            amoptd['native_pdb'],
-                                            csymmatchPdb=os.path.join(fixpath(amoptd['benchmark_dir']),
-                                            "phaser_{0}_csymmatch.pdb".format(d['ensemble_name'])))
-    # can now delete origin pdb
-    os.unlink(originPdb)
-
-    # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
-    # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
-    # the native structure.
-    if not (amoptd['homologs'] or \
-            amoptd['ideal_helices'] or \
-            amoptd['import_ensembles'] or \
-            amoptd['single_model_mode']):
-
-        # Get reforigin info
-        rmsder = reforigin.ReforiginRmsd()
-        try:
-            rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
-                           placedPdbInfo=mrPdbInfo,
-                           refModelPdbInfo=amoptd['ref_model_pdb_info'],
-                           cAlphaOnly=True,
-                           workdir=fixpath(amoptd['benchmark_dir']))
-            d['reforigin_RMSD']=rmsder.rmsd
-        except Exception,e:
-            _logger.critical("Error calculating RMSD: {0}".format(e))
-            d['reforigin_RMSD']=999
-
-
-        # Score the origin with all-atom and rio
-        rioData=rio.Rio().scoreOrigin(mrOrigin,
-                                      mrPdbInfo=mrPdbInfo,
-                                      nativePdbInfo=amoptd['native_pdb_info'],
-                                      resSeqMap=amoptd['res_seq_map'],
-                                      workdir=fixpath(amoptd['benchmark_dir'])
-                                      )
-    
-        # Set attributes
-        d['AA_num_contacts']  = rioData.aaNumContacts
-        d['RIO_num_contacts'] = rioData.rioNumContacts
-        d['RIO_in_register']  = rioData.rioInRegister
-        d['RIO_oo_register']  = rioData.rioOoRegister
-        d['RIO_backwards']    = rioData.rioBackwards
-        d['RIO']              = rioData.rioInRegister + rioData.rioOoRegister
-        d['RIO_no_cat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
-        d['RIO_norm']         = float(d['RIO']) / float(d['native_pdb_num_residues'])
-    else:
-        d['AA_num_contacts']  = None
-        d['RIO_num_contacts'] = None
-        d['RIO_in_register']  = None
-        d['RIO_oo_register']  = None
-        d['RIO_backwards']    = None
-        d['RIO']              = None
-        d['RIO_no_cat']       = None
-        d['RIO_norm']         = None
-
-#     # Now get the helix
-#     helixSequence = contacts.Rio().helixFromContacts( contacts=rioData.contacts,
-#                                                            dsspLog=dsspLog )
-#     if helixSequence is not None:
-#         ampleResult.rioHelixSequence = helixSequence
-#         ampleResult.rioLenHelix      = len( helixSequence )
-#         hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
-#         with open( hfile, 'w' ) as f:
-#             f.write( helixSequence+"\n" )
-
-    #
-    # This purely for checking and so we have pdbs to view
-    # 
-    # Wrap shelxe trace onto native using Csymmatch
-    if not d['SHELXE_pdbout'] is None and os.path.isfile(fixpath(d['SHELXE_pdbout'])):
-        csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SHELXE_pdbout']),
-                                                 amoptd['native_pdb'],
-                                                 origin=mrOrigin,
-                                                 workdir=fixpath(amoptd['benchmark_dir']))
-
-    # Wrap parse_buccaneer model onto native
-    if d['SXRBUCC_pdbout'] and os.path.isfile(fixpath(d['SXRBUCC_pdbout'])):
-        # Need to rename Pdb as is just called buccSX_output.pdb
-        csymmatchPdb = os.path.join(fixpath(amoptd['benchmark_dir']), "buccaneer_{0}_csymmatch.pdb".format(d['ensemble_name']))
-
-        csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SXRBUCC_pdbout']),
-                                                 amoptd['native_pdb'],
-                                                 origin=mrOrigin,
-                                                 csymmatchPdb=csymmatchPdb,
-                                                 workdir=fixpath(amoptd['benchmark_dir']))
+    if amoptd['native_pdb']:
+        # Find the MR origin wrt to the native
+        #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
+        # There is a bug in SHELXE with the spacegroup F23. Luckily this is a non-polar spacegroup,
+        # so we can use csymmatch to determine the origin for this case. This clause can be removed
+        # once the SHELXE bug has been fixed. The bug was present as of 25/5/16
+        if 'native_pdb_space_group' in amoptd and amoptd['native_pdb_space_group'] is 'F 2 3':
+            origin_finder = 'csymmatch'
+        if origin_finder == 'shelxe':
+            if not d['SHELXE_os']:
+                logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
+                mrOrigin = shelxe.shelxe_origin(amoptd['shelxe_exe'], amoptd['native_pdb_info'].pdb, amoptd['mtz'], mrPdb)
+            else:
+                mrOrigin=[c*-1 for c in d['SHELXE_os']]
+        elif origin_finder == 'csymmatch':
+            CS = csymmatch.Csymmatch()
+            csout = ample_util.filename_append(filename=mrPdb, astr='csymmatch_origin', directory=amoptd['benchmark_dir'] )
+            CS.run(refPdb=amoptd['native_pdb_info'].pdb,
+                   inPdb=mrPdb,
+                   outPdb=csout,
+                   originHand=True,
+                   cleanup=False)
+            CS.parseLog()
+            mrOrigin = CS.changeOfOrigin
         
-    # Wrap parse_buccaneer model onto native
-    if d['SXRARP_pdbout'] and os.path.isfile(fixpath(d['SXRARP_pdbout'])):
-        # Need to rename Pdb as is just called buccSX_output.pdb
-        csymmatchPdb = os.path.join(fixpath(amoptd['benchmark_dir']), "arpwarp_{0}_csymmatch.pdb".format(d['ensemble_name']))
+        # Move pdb onto new origin
+        originPdb = ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
+        pdb_edit.translate(mrPdb, originPdb, mrOrigin)
+        
+        # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
+        csymmatch.Csymmatch().wrapModelToNative(originPdb,
+                                                amoptd['native_pdb'],
+                                                csymmatchPdb=os.path.join(fixpath(amoptd['benchmark_dir']),
+                                                "phaser_{0}_csymmatch.pdb".format(d['ensemble_name'])))
+        # can now delete origin pdb
+        os.unlink(originPdb)
+        
+        try:
+            # Calculate phase error between mr_pdb and native
+            _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
+                                                                                       mrMTZ,
+                                                                                       origin=mrOrigin)
+            d['MR_phase_error'] = phase_error_after_origin_shift
+        except Exception as e:
+            logger.critical("Error calculating phase_error from: {0}\n{1}".format(mrMTZ,e))
+    
+        # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
+        # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
+        # the native structure.
+        if not (amoptd['homologs'] or \
+                amoptd['ideal_helices'] or \
+                amoptd['import_ensembles'] or \
+                amoptd['single_model_mode']):
+    
+            # Get reforigin info
+            rmsder = reforigin.ReforiginRmsd()
+            try:
+                rmsder.getRmsd(nativePdbInfo=amoptd['native_pdb_info'],
+                               placedPdbInfo=mrPdbInfo,
+                               refModelPdbInfo=amoptd['ref_model_pdb_info'],
+                               cAlphaOnly=True,
+                               workdir=fixpath(amoptd['benchmark_dir']))
+                d['reforigin_RMSD']=rmsder.rmsd
+            except Exception,e:
+                logger.critical("Error calculating RMSD: {0}".format(e))
+                d['reforigin_RMSD']=999
+    
+    
+            # Score the origin with all-atom and rio
+            rioData=rio.Rio().scoreOrigin(mrOrigin,
+                                          mrPdbInfo=mrPdbInfo,
+                                          nativePdbInfo=amoptd['native_pdb_info'],
+                                          resSeqMap=amoptd['res_seq_map'],
+                                          workdir=fixpath(amoptd['benchmark_dir'])
+                                          )
+        
+            # Set attributes
+            d['AA_num_contacts']  = rioData.aaNumContacts
+            d['RIO_num_contacts'] = rioData.rioNumContacts
+            d['RIO_in_register']  = rioData.rioInRegister
+            d['RIO_oo_register']  = rioData.rioOoRegister
+            d['RIO_backwards']    = rioData.rioBackwards
+            d['RIO']              = rioData.rioInRegister + rioData.rioOoRegister
+            d['RIO_no_cat']       = rioData.rioNumContacts - ( rioData.rioInRegister + rioData.rioOoRegister )
+            d['RIO_norm']         = float(d['RIO']) / float(d['native_pdb_num_residues'])
+        else:
+            d['AA_num_contacts']  = None
+            d['RIO_num_contacts'] = None
+            d['RIO_in_register']  = None
+            d['RIO_oo_register']  = None
+            d['RIO_backwards']    = None
+            d['RIO']              = None
+            d['RIO_no_cat']       = None
+            d['RIO_norm']         = None
+    
+    #     # Now get the helix
+    #     helixSequence = contacts.Rio().helixFromContacts( contacts=rioData.contacts,
+    #                                                            dsspLog=dsspLog )
+    #     if helixSequence is not None:
+    #         ampleResult.rioHelixSequence = helixSequence
+    #         ampleResult.rioLenHelix      = len( helixSequence )
+    #         hfile = os.path.join( workdir, "{0}.helix".format( ampleResult.ensembleName ) )
+    #         with open( hfile, 'w' ) as f:
+    #             f.write( helixSequence+"\n" )
+    
+        #
+        # This purely for checking and so we have pdbs to view
+        # 
+        # Wrap shelxe trace onto native using Csymmatch
+        if not d['SHELXE_pdbout'] is None and os.path.isfile(fixpath(d['SHELXE_pdbout'])):
+            csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SHELXE_pdbout']),
+                                                     amoptd['native_pdb'],
+                                                     origin=mrOrigin,
+                                                     workdir=fixpath(amoptd['benchmark_dir']))
+#         # Calculate phase error from mtz file
+#         if not d['SHELXE_mtzout'] is None and os.path.isfile(fixpath(d['SHELXE_mtzout'])):
+#             _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
+#                                                                                        fixpath(d['SHELXE_mtzout']),
+#                                                                                        fc_label='PHI_SHELXE',
+#                                                                                        origin=mrOrigin)
+#             amoptd['SHELXE_phase_error'] = phase_error_after_origin_shift
 
-        csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SXRARP_pdbout']),
-                                                 amoptd['native_pdb'],
-                                                 origin=mrOrigin,
-                                                 csymmatchPdb=csymmatchPdb,
-                                                 workdir=fixpath(amoptd['benchmark_dir']))
+    
+        # Wrap parse_buccaneer model onto native
+        if d['SXRBUCC_pdbout'] and os.path.isfile(fixpath(d['SXRBUCC_pdbout'])):
+            # Need to rename Pdb as is just called buccSX_output.pdb
+            csymmatchPdb = os.path.join(fixpath(amoptd['benchmark_dir']), "buccaneer_{0}_csymmatch.pdb".format(d['ensemble_name']))
+    
+            csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SXRBUCC_pdbout']),
+                                                     amoptd['native_pdb'],
+                                                     origin=mrOrigin,
+                                                     csymmatchPdb=csymmatchPdb,
+                                                     workdir=fixpath(amoptd['benchmark_dir']))
+#         # Calculate phase error from mtz file
+#         if not d['SXRBUCC_mtzout'] is None and os.path.isfile(fixpath(d['SXRBUCC_mtzout'])):
+#             _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
+#                                                                                        fixpath(d['SXRBUCC_mtzout']),
+#                                                                                        origin=mrOrigin)
+#             amoptd['SXRBUCC_phase_error'] = phase_error_after_origin_shift
+            
+        # Wrap parse_buccaneer model onto native
+        if d['SXRARP_pdbout'] and os.path.isfile(fixpath(d['SXRARP_pdbout'])):
+            # Need to rename Pdb as is just called buccSX_output.pdb
+            csymmatchPdb = os.path.join(fixpath(amoptd['benchmark_dir']), "arpwarp_{0}_csymmatch.pdb".format(d['ensemble_name']))
+    
+            csymmatch.Csymmatch().wrapModelToNative( fixpath(d['SXRARP_pdbout']),
+                                                     amoptd['native_pdb'],
+                                                     origin=mrOrigin,
+                                                     csymmatchPdb=csymmatchPdb,
+                                                     workdir=fixpath(amoptd['benchmark_dir']))
+#         # Calculate phase error from mtz file
+#         if not d['SXRARP_mtzout'] is None and os.path.isfile(fixpath(d['SXRARP_mtzout'])):
+#             _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
+#                                                                                        fixpath(d['SXRARP_mtzout']),
+#                                                                                        origin=mrOrigin)
+#             amoptd['SXRARP_phase_error'] = phase_error_after_origin_shift
 
     return
 
@@ -309,7 +371,10 @@ def analysePdb(amoptd):
     natoms, nresidues = pdb_edit.num_atoms_and_residues(nativePdb)
 
     # Get information on the origins for this spaceGroup
-    originInfo = pdb_model.OriginInfo(spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup)
+    try:
+        originInfo = pdb_model.OriginInfo(spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup)
+    except:
+        originInfo = None
 
     # Do this here as a bug in pdbcur can knacker the CRYST1 data
     amoptd['native_pdb_code'] = nativePdbInfo.pdbCode
@@ -317,13 +382,17 @@ def analysePdb(amoptd):
     amoptd['native_pdb_resolution'] = nativePdbInfo.resolution
     amoptd['native_pdb_solvent_content'] = nativePdbInfo.solventContent
     amoptd['native_pdb_matthews_coefficient'] = nativePdbInfo.matthewsCoefficient
-    amoptd['native_pdb_space_group'] = originInfo.spaceGroup()
+    if not originInfo:
+        space_group = "P1"
+    else:
+        space_group = originInfo.spaceGroup()
+    amoptd['native_pdb_space_group'] = space_group
     amoptd['native_pdb_num_atoms'] = natoms
     amoptd['native_pdb_num_residues'] = nresidues
     
     # First check if the native has > 1 model and extract the first if so
     if len( nativePdbInfo.models ) > 1:
-        _logger.info("nativePdb has > 1 model - using first")
+        logger.info("nativePdb has > 1 model - using first")
         nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=fixpath(amoptd['work_dir']))
         pdb_edit.extract_model( nativePdb, nativePdb1, modelID=nativePdbInfo.models[0].serial )
         nativePdb = nativePdb1
@@ -375,29 +444,30 @@ def analyseModels(amoptd):
     # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
     # requires a separate run to generate total RMSD
     #if False:
-#     _logger.info("Analysing RMSD scores for Rosetta models")
+#     logger.info("Analysing RMSD scores for Rosetta models")
 #     try:
 #         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
 #     except RuntimeError,e:
 #         print e
-    if tmscore_util.tmscoreAvail():
-        amoptd['tmscore_exe'] = ample_util.find_exe("TMscore")
-        tm = tmscore_util.TMscorer(amoptd['native_pdb_std'], 
-                                   amoptd['tmscore_exe'], 
-                                   fixpath(amoptd['benchmark_dir']))
-        _logger.info("Analysing Rosetta models with TMscore")
-        model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
-        amoptd['tmComp'] = tm.compare_to_structure(model_list, 
-                                                   keep_modified_structures=True, 
-                                                   identical_sequences=False)
-        
-    amoptd['maxComp'] = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
-    _logger.info("Analysing Rosetta models with Maxcluster")
-    amoptd['maxComp'].compareDirectory( nativePdbInfo=nativePdbInfo,
-                                  resSeqMap=resSeqMap,
-                                  modelsDirectory=amoptd['models_dir'],
-                                  workdir=fixpath(amoptd['benchmark_dir']))
-        
+    if amoptd['have_tmscore']:
+        try:
+            tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']))
+            # Calculation of TMscores for all models
+            logger.info("Analysing Rosetta models with TMscore")
+            model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
+            structure_list = [amoptd['native_pdb_std']]
+            amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fastas=[amoptd['fasta']])
+        except:
+            msg = "Unable to run TMscores. See debug.log."
+            logger.critical(msg)
+    else:
+        global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
+        _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
+        logger.info("Analysing Rosetta models with Maxcluster")
+        _MAXCLUSTERER.compareDirectory(nativePdbInfo=nativePdbInfo,
+                                       resSeqMap=resSeqMap,
+                                        modelsDirectory=amoptd['models_dir'],
+                                        workdir=fixpath(amoptd['benchmark_dir']))
     return
 
 
@@ -437,8 +507,6 @@ def writeCsv(fileName,resultList):
                 # Get the ensemble data and add to the MRBUMP data
                 'ensemble_name',
                 'ensemble_percent_model',
-                'ensemble_native_TM',
-                'ensemble_native_RMSD',
                 
                 # cluster info
                 'cluster_method',
@@ -460,6 +528,8 @@ def writeCsv(fileName,resultList):
                 'subcluster_num_models',
                 'subcluster_radius_threshold',
                 'subcluster_centroid_model',
+                'subcluster_centroid_model_RMSD',
+                'subcluster_centroid_model_TM',
                 
                 # ensemble info
                 #'name',
@@ -483,6 +553,8 @@ def writeCsv(fileName,resultList):
                 'MOLREP_time',
                 'MOLREP_version',
                 
+                'MR_phase_error',
+                
                 'REFMAC_Rfact',
                 'REFMAC_Rfree',
                 'REFMAC_version',
@@ -503,15 +575,19 @@ def writeCsv(fileName,resultList):
                 'SHELXE_os',
                 'SHELXE_time',
                 'SHELXE_version',
+#                 'SHELXE_phase_error',
                 
                 'SXRBUCC_version',
                 'SXRBUCC_final_Rfact',
                 'SXRBUCC_final_Rfree',
+#                 'SXRBUCC_phase_error',
                 
                 'SXRARP_version',
                 'SXRARP_final_Rfact',
                 'SXRARP_final_Rfree',
+#                 'SXRARP_phase_error',
                 
+                'num_placed_chains',
                 'num_placed_atoms',
                 'reforigin_RMSD',
                 
@@ -526,9 +602,9 @@ def writeCsv(fileName,resultList):
     
     ]
     
-    #for d in resultList:
-    #    for k in sorted(d.keys()):
-    #        print "GOT ",k,d[k]
+#     for d in resultList:
+#         for k in sorted(d.keys()):
+#             print "GOT ",k,d[k]
     
     with open(fileName,'wb') as csvfile:
         csvfile.write(",".join(keylist)+"\n")
@@ -537,6 +613,7 @@ def writeCsv(fileName,resultList):
             values=[]
             for k in keylist:
                 if k in d and d[k] is not None:
+                    # Remove any commas that might mess with the csv file
                     values.append(str(d[k]).replace(",","^"))
                 else:
                     values.append("N/A")
@@ -565,12 +642,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # Get the amopt dictionary
-    with open(sys.argv[1], "r") as f: amoptd = cPickle.load(f)
+    amoptd = ample_util.read_amoptd(sys.argv[1])
 
     # Set up logging - could append to an existing log?
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    fl = logging.FileHandler(os.path.join(amoptd['work_dir'],"benchmark.log"))
+    fl = logging.FileHandler(os.path.join(amoptd['work_dir'], "benchmark.log"))
     fl.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     fl.setFormatter(formatter)
@@ -578,5 +655,5 @@ if __name__ == "__main__":
 
     # Create the ensembles & save them
     analyse(amoptd)
-    ample_util.saveAmoptd(amoptd)
+    ample_util.save_amoptd(amoptd)
 

@@ -1,36 +1,32 @@
-#!/usr/bin/env ccp4-python
+"""Ensembler module for single model structures"""
 
-"""
-16.02.2016
+__author__ = "Felix Simkovic, and Jens Thomas"
+__date__ = "16 Feb 2016"
+__version__ = "1.0"
 
-@author: hlfsimko
-"""
-
-# System
-import copy
 import csv
 import logging
 import os
 
-# Custom
-from ample.ensembler import _ensembler
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
+import _ensembler
+import truncation_util
+from constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util
 from ample.util import pdb_edit
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
-class Ensembler(_ensembler.Ensembler):
+class SingleModelEnsembler(_ensembler.Ensembler):
     """Ensemble creator using on a single input structure and a corresponding
        score file with per residue scores for truncation
     """
         
-    def __init__(self):
+    def __init__(self, **kwargs):
         # Inherit all functions from Parent Ensembler
-        _ensembler.Ensembler.__init__(self)
+        super(SingleModelEnsembler, self).__init__(**kwargs)
         
-        # Set Ensembler_Single specific parameters
+        # Set SingleModelEnsembler specific parameters
         self.truncation_scorefile = None
         
         return
@@ -44,14 +40,9 @@ class Ensembler(_ensembler.Ensembler):
                            truncation_method=None,
                            truncation_pruning=None,
                            truncation_scorefile=None,
-                           truncation_scorefile_header=None,
-                           work_dir=None):
+                           truncation_scorefile_header=None):
         """Method to generate ensembles from a single structure based on 
         residue scores"""
-        
-        # Work dir set each time
-        if not work_dir: raise RuntimeError, "Need to set work_dir!"
-        self.work_dir = work_dir
         
         if not truncation_method:
             truncation_method = self.truncation_method
@@ -59,29 +50,25 @@ class Ensembler(_ensembler.Ensembler):
             truncation_pruning = self.truncation_pruning
         if not truncation_scorefile:
             truncation_scorefile = self.truncation_scorefile
-        if not ensembles_directory:
-            self.ensembles_directory = os.path.join(work_dir, "ensembles")
-        else:
-            self.ensembles_directory = ensembles_directory
 
         if len(models) > 1:
             msg = "More than 1 structure provided"
-            _logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
         
         if len(truncation_scorefile_header) < 2:
             msg = "At least two header options for scorefile are required"
-            _logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
 
         # standardise the structure
-        std_models_dir = os.path.join(work_dir, "std_models")
+        std_models_dir = os.path.join(self.work_dir, "std_models")
         os.mkdir(std_models_dir)
         
         std_model = ample_util.filename_append(models[0], 'std', std_models_dir)
         pdb_edit.standardise(pdbin=models[0], pdbout=std_model, del_hetatm=True)
         std_models = [std_model]
-        _logger.info('Standardised input model: {0}'.format(std_models[0]))
+        logger.info('Standardised input model: {0}'.format(std_models[0]))
               
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
@@ -97,8 +84,6 @@ class Ensembler(_ensembler.Ensembler):
                 "Not all column labels are in your CSV file"
         
         self.ensembles = []
-        self.ensembles_data = []
-        
         for score_key in truncation_scorefile_header:
             score_key = score_key.lower()
             zipped_scores = self._generate_residue_scorelist(residue_key, 
@@ -107,28 +92,49 @@ class Ensembler(_ensembler.Ensembler):
 
             score_truncate_dir = os.path.join(truncate_dir, "{0}".format(score_key))
             if not os.path.isdir(score_truncate_dir): os.mkdir(score_truncate_dir)
-            
-            for truncated_model, truncated_model_data, truncated_model_dir in zip(*self.truncate_models(std_models,
-                                                                                                        truncation_pruning=truncation_pruning,
-                                                                                                        truncation_method=truncation_method,
-                                                                                                        percent_truncation=percent_truncation,
-                                                                                                        residue_scores=zipped_scores,
-                                                                                                        work_dir=score_truncate_dir)):
-                pre_ensemble = truncated_model[0]
-                pre_ensemble_data = copy.copy(truncated_model_data)
-                pre_ensemble_data['truncation_score_key'] = score_key.lower()
+
+            self.truncator = truncation_util.Truncator(work_dir=score_truncate_dir)
+            self.truncator.theseus_exe = self.theseus_exe
+            for truncation in self.truncator.truncate_models(models=std_models,
+                                                             truncation_method=truncation_method,
+                                                             percent_truncation=percent_truncation,
+                                                             truncation_pruning=truncation_pruning,
+                                                             residue_scores=zipped_scores):
+
+                # Create Ensemble object
+                pre_ensemble = _ensembler.Ensemble()
+                pre_ensemble.num_residues = truncation.num_residues
+                pre_ensemble.truncation_dir = truncation.directory
+                pre_ensemble.truncation_level = truncation.level
+                pre_ensemble.truncation_method = truncation.method
+                pre_ensemble.truncation_percent = truncation.percent
+                pre_ensemble.truncation_residues = truncation.residues
+                pre_ensemble.truncation_variance = truncation.variances
+                pre_ensemble.truncation_score_key = score_key.lower()
+                pre_ensemble.pdb = truncation.models[0]
                 
-                for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble,
-                                                                          pre_ensemble_data,
-                                                                          side_chain_treatments,
-                                                                          self.ensembles_directory,
-                                                                          single_structure=True)):
+                for ensemble in self.edit_side_chains(pre_ensemble,
+                                                      side_chain_treatments,
+                                                      single_structure=True):
                     self.ensembles.append(ensemble)
-                    self.ensembles_data.append(ensemble_data)
-    
+
         return self.ensembles
-    
-    def _generate_residue_scorelist(self, residue_key, score_key, scores):
+
+    def generate_ensembles_from_amoptd(self, models, amoptd):
+        """Generate ensembles from data in supplied ample data dictionary."""
+        kwargs = {'percent_truncation' : amoptd['percent'],
+                  'side_chain_treatments' : amoptd['side_chain_treatments'],
+                  'truncation_method' : amoptd['truncation_method'],
+                  'truncation_pruning' : amoptd['truncation_pruning'],
+                  'truncation_scorefile' : amoptd['truncation_scorefile'],
+                  'truncation_scorefile_header' : amoptd['truncation_scorefile_header']}
+        # strip out any that are None
+        kwargs = { k : v for k, v in kwargs.iteritems() if v is not None }
+        return self.generate_ensembles(models, **kwargs)
+
+    # staticmethod so that we can test without instantiating an Ensembler
+    @staticmethod
+    def _generate_residue_scorelist(residue_key, score_key, scores):
         """Generate a zipped list of residue indexes and corresponding scores
         
         :residue_key: residue column header keyword
@@ -142,7 +148,9 @@ class Ensembler(_ensembler.Ensembler):
         assert scores[0].has_key(score_key), "Cannot find score key in scoresfile"
         return [(i[residue_key], i[score_key]) for i in scores]
     
-    def _read_scorefile(self, scorefile):
+    # staticmethod so that we can test without instantiating an Ensembler
+    @staticmethod
+    def _read_scorefile(scorefile):
         """
         :scorefile: CSV score file INCLUDING header line
         

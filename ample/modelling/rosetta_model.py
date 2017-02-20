@@ -434,7 +434,7 @@ class RosettaModel(object):
             f.write(" ".join(self.fragment_cmd())+"\n")
         os.chmod(script, 0o777)
         
-        success = self.run_scripts([script], job_time=21600, monitor=None, chdir=True)
+        success = self.run_scripts([script], job_time=21600, monitor=None)
         logfile="{0}.log".format(os.path.splitext(script)[0])
         if not success:
                 logfile="{0}.log".format(os.path.splitext(os.path.basename(script))[0])
@@ -716,14 +716,13 @@ class RosettaModel(object):
                         # number of jobs that will be created on each processor
         return proc_map
 
-    def run_scripts(self, job_scripts, job_time=None, job_name=None, monitor=None, chdir=True):
+    def run_scripts(self, job_scripts, job_time=None, job_name=None, monitor=None):
         # We need absolute paths to the scripts
         #job_scripts=[os.path.abspath(j) for j in job_scripts]
         return workers_util.run_scripts(job_scripts=job_scripts, 
                                         monitor=monitor,
                                         check_success=None,
                                         early_terminate=None,
-                                        chdir=chdir,
                                         nproc=self.nproc,
                                         job_time=job_time,
                                         job_name=job_name,

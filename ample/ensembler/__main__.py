@@ -1,40 +1,26 @@
+#!/usr/bin/env ccp4-python
+
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "01 Oct 2016"
+__version__ = "1.0"
+
 import argparse
-import cPickle
-import logging
 import os
 import sys
 
-from ample.util import ample_util, config_util, exit_util
-from ample.ensembler import ensembler_argparse
-from ample.ensembler.ensembler_util import create_ensembles
+from ample import ensembler
+from ample.util import ample_util, config_util, exit_util, logging_util
+from ample.util import argparse_util
 
 ENSEMBLE_DIRNAME = 'ample_ensemble'
-
-def setup_console_logging():
-    """Set up file and console logging"""
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    try:
-        cl = logging.StreamHandler(stream=sys.stdout)
-    except TypeError:
-        cl = logging.StreamHandler(strm=sys.stdout)
-    cl.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(message)s\n') # Always add a blank line after every print
-    cl.setFormatter(formatter)
-    logger.addHandler(cl)
-    
-def setup_file_logging(logfile):
-    """Set up file and console logging"""
-    logger = logging.getLogger()
-    fl = logging.FileHandler(logfile)
-    fl.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    fl.setFormatter(formatter)
-    logger.addHandler(fl)
     
 # Set up the command-line parsing
 parser = argparse.ArgumentParser(description="AMPLE Ensembling Module")
-ensembler_argparse.add_ensembler_options(parser, standalone=True)
+# Add options for running as a standalone module
+argparse_util.add_general_options(parser)
+argparse_util.add_cluster_submit_options(parser)
+# Ensemble options
+ensembler.add_argparse_options(parser)
 
 # Get command-line arguments and see if we have a restart_pkl option as this
 # is how we pass in an existing ample dictionary when we are running the ensembling
@@ -49,7 +35,7 @@ if 'restart_pkl' in optd and optd['restart_pkl']:
         msg = 'Cannot find ensemble pkl file: {0}'.format(optd['restart_pkl'])
         exit_util.exit_error(msg)
     try:
-        with open(optd['restart_pkl'], "r") as f: optd = cPickle.load(f)
+        optd = ample_util.read_amoptd(optd['restart_pkl'])
     except Exception as e:
         msg = "Error unpickling ensemble pkl: {0}".format(e.message)
         exit_util.exit_error(msg, sys.exc_info()[2])
@@ -60,8 +46,8 @@ else:
     amopt.populate(args)  
     optd = amopt.d 
 
-    
-setup_console_logging()
+# Start logging to the console
+logging_util.setup_console_logging()
 
 # Make sure we have models if in standalone mode
 if not restart and not ('models' in optd and optd['models'] and os.path.exists(optd['models'])):
@@ -71,25 +57,32 @@ if not restart and not ('models' in optd and optd['models'] and os.path.exists(o
 # Set up the working directory if one doesn't already exist
 if not ('work_dir' in optd and optd['work_dir']):
     optd['work_dir'] = os.path.join(os.path.abspath(os.path.curdir),ENSEMBLE_DIRNAME)
+if not os.path.isdir(optd['work_dir']):
     try:
         os.mkdir(optd['work_dir'])
     except OSError as e:
         msg = 'Error making ensemble workdir {0} : {1}'.format(optd['work_dir'],e)
         exit_util.exit_error(msg, sys.exc_info()[2])
+
 assert os.path.isdir(optd['work_dir'])
 
-setup_file_logging(os.path.join(optd['work_dir'],"ensemble.log"))
+# Start logging to a file
+logging_util.setup_file_logging(os.path.join(optd['work_dir'],"ensemble.log"))
 try:
     if not restart:
         ample_util.extract_models(optd)
-        # Hack - we'll be using gesamt to subcluster so it's not worth wiring in the stuff to
-        # find maxcluster so we just assume it's there
-        optd['maxcluster_exe'] = ample_util.find_exe('maxcluster')
+        if optd['subcluster_program'] == 'gesamt':
+            optd['gesamt_exe'] = ample_util.find_exe('gesamt')
+        elif optd['subcluster_program'] == 'maxcluster':
+            optd['maxcluster_exe'] = ample_util.find_exe('maxcluster')
+        else:
+            raise RuntimeError("Unknown subcluster_program: {0}".format(optd['subcluster_program']))
+        optd['theseus_exe'] = ample_util.find_exe('theseus')
         optd['ensemble_ok'] = os.path.join(optd['work_dir'],'ensemble.ok')
         optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
-    create_ensembles(optd)
-    ample_util.saveAmoptd(optd)
+    ensembler.create_ensembles(optd)
+    ample_util.save_amoptd(optd)
 except Exception as e:
     msg = "Error running ensembling: {0}".format(e.message)
     exit_util.exit_error(msg, sys.exc_info()[2])
-    
+

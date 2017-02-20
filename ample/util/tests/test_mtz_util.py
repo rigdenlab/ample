@@ -52,7 +52,6 @@ class Test(unittest.TestCase):
 
         self.assertEqual( 'F', d['F'], "Correct F")
         self.assertEqual( 'SIGF', d['SIGF'], "Correct SIGF")
-        print "GOT ",d['FREE']
         self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
         
         os.unlink('uniqueify.log')
@@ -107,7 +106,13 @@ class Test(unittest.TestCase):
         FP,SIGFP,FREE=mtz_util.get_labels(mtz)
         self.assertEqual(FP,'FP')
         self.assertEqual(SIGFP,'SIGFP')
-        self.assertEqual(FREE,'FreeR_flag')  
+        self.assertEqual(FREE,'FreeR_flag')
+        
+    def test_max_min_resolution(self):
+        mtz = os.path.join( self.ample_share, "examples", "toxd-example" , "input", "1dtx.mtz" )
+        maxr, minr = mtz_util.max_min_resolution( mtz )
+        self.assertAlmostEqual(maxr, 36.765, 3, "Wrong max resolution: {0}".format(maxr))
+        self.assertAlmostEqual(minr, 2.201, 3, "Wrong min resolution: {0}".format(minr))
 
 if __name__ == "__main__":
     unittest.main()

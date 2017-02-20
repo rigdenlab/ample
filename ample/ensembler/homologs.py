@@ -1,28 +1,29 @@
-"""
-17.02.2016
+"""Ensembler module for homolog structures"""
 
-@author: jmht
-"""
+__author__ = "Jens Thomas, and Felix Simkovic"
+__date__ = "17 Nov 2016"
+__version__ = "1.0"
 
-import copy
 import logging
 import os
 import shutil
 import sys
 
-from ample.ensembler import _ensembler
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
+import _ensembler
+import truncation_util
+from constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util
 from ample.util import pdb_edit
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def align_mustang(models, mustang_exe=None, work_dir=None):
     if not ample_util.is_exe(mustang_exe):
         raise RuntimeError, "Cannot find mustang executable: {0}".format(mustang_exe)
     
-    if not work_dir: work_dir = os.getcwd()
+    owd = os.getcwd()
+    if not work_dir: work_dir = owd
     work_dir = os.path.abspath(work_dir)
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
     os.chdir(work_dir)
@@ -35,14 +36,17 @@ def align_mustang(models, mustang_exe=None, work_dir=None):
         raise RuntimeError, "Error running mustang. Check logfile: {0}".format(logfile)
     
     alignment_file = os.path.join(work_dir, basename + ".afasta")
-    if not os.path.isfile(alignment_file): raise RuntimeError, "Could not find alignment file: {0} after running mustang!".format(alignment_file)
+    if not os.path.isfile(alignment_file): raise RuntimeError("Could not find alignment file: {0} after running mustang!".format(alignment_file))
+    os.chdir(owd) # always need to go back to original directory
     return alignment_file
+
 
 def align_gesamt(models, gesamt_exe=None, work_dir=None):
     if not ample_util.is_exe(gesamt_exe):
         raise RuntimeError, "Cannot find gesamt executable: {0}".format(gesamt_exe)
     
-    if not work_dir: work_dir = os.getcwd()
+    owd = os.getcwd()
+    if not work_dir: work_dir = owd
     work_dir = os.path.abspath(work_dir)
     if not os.path.isdir(work_dir): os.mkdir(work_dir)
     os.chdir(work_dir)
@@ -73,8 +77,10 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
     if sys.platform.startswith("win"):
         alignment_file = _gesamt_aln_windows_fix(alignment_file)
     
+    os.chdir(owd) # always need to go back to original directory
     return alignment_file
  
+
 ## BUG: reported to Eugene - 22/03/2016 by hlfsimko
 def _gesamt_aln_windows_fix(alnf):
     """fix for MSA to be readable by Theseus"""
@@ -86,13 +92,15 @@ def _gesamt_aln_windows_fix(alnf):
             outfh.write(line)
     return alnf
 
-class Ensembler(_ensembler.Ensembler):
+
+class HomologEnsembler(_ensembler.Ensembler):
     """Ensemble creator using on multiple distant homologous structures
     """
     
-    def __init__(self):
+    def __init__(self, **kwargs):
+
         # Inherit all functions from Parent Ensembler
-        _ensembler.Ensembler.__init__(self)
+        super(HomologEnsembler, self).__init__(**kwargs)
         
         return
     
@@ -100,40 +108,29 @@ class Ensembler(_ensembler.Ensembler):
                            models,
                            alignment_file=None,
                            ensembles_directory=None,
-                           gesamt_exe=None,
                            homolog_aligner=None,
-                           mustang_exe=None,
                            nproc=None,
                            percent_truncation=None,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS,
-                           truncation_method=None,
-                           work_dir=None):
-        
-        # Work dir set each time
-        if not work_dir: raise RuntimeError, "Need to set work_dir!"
-        self.work_dir = work_dir
+                           truncation_method=None):
         
         if not percent_truncation:
             percent_truncation = self.percent_truncation
         if not truncation_method:
             truncation_method = self.truncation_method
-        if not ensembles_directory:
-            self.ensembles_directory = os.path.join(work_dir, "ensembles")
-        else:
-            self.ensembles_directory = ensembles_directory
         
         if not len(models):
             raise RuntimeError, "Cannot find any models for ensembling!" 
         if not all([os.path.isfile(m) for m in models]):
             raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
         
-        _logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
+        logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
     
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
         
         # standardise all the models
-        std_models_dir = os.path.join(work_dir, "std_models")
+        std_models_dir = os.path.join(self.work_dir, "std_models")
         os.mkdir(std_models_dir)
         std_models = []
         for m in models:
@@ -144,16 +141,16 @@ class Ensembler(_ensembler.Ensembler):
         # Get a structural alignment between the different models
         if not alignment_file:
             if homolog_aligner == 'mustang':
-                _logger.info("Generating alignment file with mustang_exe: {0}".format(mustang_exe))
-                alignment_file = align_mustang(std_models, mustang_exe=mustang_exe, work_dir=self.work_dir)
+                logger.info("Generating alignment file with mustang_exe: {0}".format(self.mustang_exe))
+                alignment_file = align_mustang(std_models, mustang_exe=self.mustang_exe, work_dir=self.work_dir)
             elif homolog_aligner == 'gesamt':
-                _logger.info("Generating alignment file with gesamt_exe: {0}".format(gesamt_exe))
-                alignment_file = align_gesamt(std_models, gesamt_exe=gesamt_exe, work_dir=self.work_dir)
+                logger.info("Generating alignment file with gesamt_exe: {0}".format(self.gesamt_exe))
+                alignment_file = align_gesamt(std_models, gesamt_exe=self.gesamt_exe, work_dir=self.work_dir)
             else:
                 raise RuntimeError, "Unknown homolog_aligner: {0}".format(homolog_aligner)
-            _logger.info("Generated alignment file: {0}".format(alignment_file))
+            logger.info("Generated alignment file: {0}".format(alignment_file))
         else:
-            _logger.info("Using alignment file: {0}".format(alignment_file))
+            logger.info("Using alignment file: {0}".format(alignment_file))
             
         
         truncate_dir = os.path.join(self.work_dir,"homolog_truncate")
@@ -161,34 +158,50 @@ class Ensembler(_ensembler.Ensembler):
             
         # Now truncate and create ensembles - as standard ample, but with no subclustering
         self.ensembles = []
-        self.ensembles_data = []
-        for truncated_models, truncated_models_data, truncated_model_dir in zip(*self.truncate_models(std_models,
-                                                                                                      truncation_method=truncation_method,
-                                                                                                      truncation_pruning=None,
-                                                                                                      percent_truncation=percent_truncation,
-                                                                                                      homologs=True,
-                                                                                                      alignment_file=alignment_file,
-                                                                                                      work_dir=truncate_dir)):
-            tlevel = truncated_models_data['truncation_level']
-            ensemble_dir = os.path.join(truncated_model_dir, "ensemble_{0}".format(tlevel))
+        self.truncator = truncation_util.Truncator(work_dir=truncate_dir)
+        self.truncator.theseus_exe = self.theseus_exe
+        for truncation in self.truncator.truncate_models(models=std_models,
+                                                         truncation_method=truncation_method,
+                                                         percent_truncation=percent_truncation,
+                                                         truncation_pruning=None,
+                                                         homologs=True,
+                                                         alignment_file=alignment_file):
+            ensemble_dir = os.path.join(truncation.directory, "ensemble_{0}".format(truncation.level))
             os.mkdir(ensemble_dir)
             os.chdir(ensemble_dir)
              
             # Need to create an alignment file for theseus
-            basename = "e{0}".format(tlevel)
-            pre_ensemble = self.superpose_models(truncated_models, basename=basename, work_dir=ensemble_dir, homologs=True)
-            if not pre_ensemble:
-                _logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
+            basename = "e{0}".format(truncation.level)
+            superposed_models = self.superpose_models(truncation.models, basename=basename, work_dir=ensemble_dir, homologs=True)
+            if not superposed_models:
+                logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
                 continue
-            pre_ensemble_data = copy.copy(truncated_models_data)
-             
-            for ensemble, ensemble_data in zip(*self.edit_side_chains(pre_ensemble,
-                                                                      pre_ensemble_data,
-                                                                      side_chain_treatments,
-                                                                      self.ensembles_directory,
-                                                                      homologs=True)):
+            
+            # Create Ensemble object
+            pre_ensemble = _ensembler.Ensemble()
+            pre_ensemble.num_residues = truncation.num_residues
+            pre_ensemble.truncation_dir = truncation.directory
+            pre_ensemble.truncation_level = truncation.level
+            pre_ensemble.truncation_method = truncation.method
+            pre_ensemble.truncation_percent = truncation.percent
+            pre_ensemble.truncation_residues = truncation.residues
+            pre_ensemble.truncation_variance = truncation.variances
+            pre_ensemble.pdb = superposed_models
+
+            for ensemble in self.edit_side_chains(pre_ensemble,
+                                                  side_chain_treatments,
+                                                  homologs=True):
                 self.ensembles.append(ensemble)
-                self.ensembles_data.append(ensemble_data)
-        
+                
         return self.ensembles
+
+    def generate_ensembles_from_amoptd(self, models, amoptd):
+        kwargs = {'percent_truncation' : amoptd['percent'],
+                  'side_chain_treatments' : amoptd['side_chain_treatments'],
+                  'truncation_method' : amoptd['truncation_method'],
+                  'alignment_file' : amoptd['alignment_file'],
+                  'homolog_aligner' : amoptd['homolog_aligner']}
+        # strip out any that are None
+        kwargs = { k : v for k, v in kwargs.iteritems() if v is not None }
+        return self.generate_ensembles(models, **kwargs)
 

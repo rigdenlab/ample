@@ -6,10 +6,11 @@
 '''
 
 import logging
+import multiprocessing
 import os
 
 from ample.constants import AMPLE_CONFIG_FILE
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
+from ample.ensembler.constants import POLYALA, RELIABLE, ALLATOM
 from ample.util import version
 
 # Python 3.x --> ConfigParser renamed to configparser
@@ -18,7 +19,7 @@ try:
 except ImportError:
     import ConfigParser 
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 ##############################################################
 # The sections and options within need to be stored
@@ -67,6 +68,7 @@ _SECTIONS_REFERENCE = {"AMPLE_info" : ["ample_version",
                                   'mr_sequence',
                                   'mtz',
                                   'native_pdb',
+                                  'native_mtz',
                                   'nmr_model_in',
                                   'nmr_remodel_fasta',
                                   'out_config_file',
@@ -101,19 +103,19 @@ class AMPLEConfigOptions(object):
     def __init__(self):
         
         self.d = {} # store all options here
+        
+        
         self.cmdline_opts = {}
         self.debug = False
-        
-        self.quick_mode = {
-                           'max_ensemble_models' : 10,
-                           'nmodels' : 200,
-                           'percent' : 20,
-                           'shelx_cycles' : 5,
-                           'use_arpwarp' : False,
-                           'use_buccaneer' : False,
-                           'phaser_kill' : 15
-        }
 
+        # The original AMPLE clustering/truncation mode used in all work prior to January 2017
+        self.classic_mode = {
+                              'percent' : 5,
+                              'num_clusters' : 1,
+                              'subcluster_radius_thresholds' : [1,2,3],
+                              'side_chain_treatments' : [POLYALA, RELIABLE, ALLATOM],
+        }
+        
         # Test use scrwl
         self.devel_mode = {
                            'benchmark_mode': True,
@@ -126,9 +128,22 @@ class AMPLEConfigOptions(object):
                            #'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
         }
         
+        self.quick_mode = {
+                           'ensemble_max_models' : 10,
+                           'nmodels' : 200,
+                           'percent' : 20,
+                           'shelx_cycles' : 5,
+                           'use_arpwarp' : False,
+                           'use_buccaneer' : False,
+                           'phaser_kill' : 15
+        }
+        
         self.webserver_uri = {
-                               'purge': True,
+                               'shelxe_rebuild_arpwarp' : False, # Need to sort out the ArpWarp licence details
                                'shelxe_rebuild_buccaneer': True,
+                               'cluster_method' : 'spicker_tm',
+                               'nproc' : 1,
+                               'purge': True,
                                'submit_cluster' : True,
                                'submit_max_array' : 10,
                                'submit_qtype' : "SGE",
@@ -157,12 +172,24 @@ class AMPLEConfigOptions(object):
         config_file = os.path.abspath(cmd_file) if cmd_file else AMPLE_CONFIG_FILE
         if not os.path.isfile(config_file):
             msg = "Cannot find configuration file: {0} - terminating...".format(config_file)
-            LOGGER.critical(msg)
+            logger.critical(msg)
             raise RuntimeError(msg)
-        LOGGER.debug("Using configuration file: {0}".format(config_file))
+        logger.debug("Using configuration file: {0}".format(config_file))
         return config_file
      
     def _process_options(self):
+        """
+        Handle any top-level options that affect the overall running of AMPLE.
+
+        Notes
+        -----
+        Any specific processing of options should be handled in ample/util/options_processor.py/process_options
+        
+        See Also
+        --------
+        options_processor
+
+        """
         
         self.d['ample_version'] = version.__version__
         
@@ -171,49 +198,50 @@ class AMPLEConfigOptions(object):
         
         if "run_dir" in self.d and not self.d["run_dir"]:
             self.d["run_dir"] = os.getcwd()
-            
-        if "side_chain_treatments" in self.d and not self.d["side_chain_treatments"]:
-            self.d["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
         
         # Set full file paths
         for k, v in self.d.iteritems():
             if k in _SECTIONS_REFERENCE["Files"] and v:
                 self.d[k] = os.path.abspath(v)
-        
-        # Any changes here
-        if self.d['submit_qtype']:
-            self.d['submit_qtype'] = self.d['submit_qtype'].upper()
-        
-        if self.d['shelxe_rebuild']:
-            self.d['shelxe_rebuild_arpwap']=True
-            self.d['shelxe_rebuild_buccaneer']=True
-        
+                
+        # Use the maximum number of processors unless overridden by the user
+        if self.d['nproc'] is None:
+            if self.d['submit_cluster']:
+                self.d['nproc'] = 1
+            else:
+                self.d['nproc'] = multiprocessing.cpu_count()
+            
         # Check if using any preset options
+        if self.d['classic_mode']: self._preset_options('classic_mode')
         if self.d['devel_mode']: self._preset_options('devel_mode')
         if self.d['quick_mode']: self._preset_options('quick_mode')
+        if self.d['thin_clusters']: self._preset_options('thin_clusters')
         if self.d['webserver_uri']: self._preset_options('webserver_uri')
         
         return
     
     def _preset_options(self, mode):
         assert hasattr(self, mode),"Unknown mode: {0}".format(mode)
+        logger.info("Using preset mode: {0}".format(mode))
         for k, v in getattr(self, mode).iteritems():
             if 'cmdline_flags' in self.d and k in self.d['cmdline_flags']:
                 if self.d[k] == v:
-                    msg = 'WARNING! {0} flag {1} => {2} was duplicated on the command line!'.format(mode,k, v)
+                    msg = 'WARNING! {0} flag {1} => {2} was duplicated on the command line!'.format(mode, v, k)
                 else:
-                    msg = "WARNING! Overriding {0} setting: {1} => {2} with {3}".format(mode, k, self.d[k], v)
-                LOGGER.critical(msg)
+                    msg = "WARNING! Overriding {0} setting: {1} => {2} with {3}".format(mode, k, v, self.d[k])
+                logger.critical(msg)
             elif k in self.d:
-                    LOGGER.debug("{0} overriding default setting: {1} => {2} with {3}".format(mode, k, self.d[k], v))
+                logger.debug("{0} overriding default setting: {1} => {2} with {3}".format(mode, k, v, self.d[k]))
+                self.d[k] = v
             else:
-                LOGGER.debug("{0} setting: {1} => {2}".format(mode, k, v))
-                
-            self.d[k] = v
+                logger.debug("{0} setting: {1} => {2}".format(mode, k, v))
+                self.d[k] = v
         return
         
     def _read_config_file(self, config_file):
         config = ConfigParser.SafeConfigParser()
+        # We need to make sure that the keys aren't converted to lower case on reading
+        config.optionxform = str
         config.read(config_file)
         
         for section in config.sections():
@@ -259,22 +287,19 @@ class AMPLEConfigOptions(object):
         
         for k, v in cmdline_opts.iteritems():
             if v is not None: cmdline_flags.append(k)
-            
-            tmpv = v[0] if isinstance(v, list) else v
-                        
-            if isinstance(tmpv, str):
-                if tmpv.lower() == "true":
-                    tmpv = True
-                elif tmpv.lower() == "false":
-                    tmpv = False
-                elif tmpv.lower() == "none":
-                    tmpv = None
+            if isinstance(v, str):
+                if v.lower() == "true":
+                    v = True
+                elif v.lower() == "false":
+                    v = False
+                elif v.lower() == "none":
+                    v = None
 
             if k not in self.d:
-                self.d[k] = tmpv
-            elif tmpv != None: 
-                LOGGER.debug("Cmdline setting {0}: {1} => {2}".format(k, self.d[k], tmpv))
-                self.d[k] = tmpv
+                self.d[k] = v
+            elif v != None: 
+                logger.debug("Cmdline setting {0}: {1} => {2}".format(k, self.d[k], v))
+                self.d[k] = v
             
         self.d['cmdline_flags'] = cmdline_flags
         return
@@ -294,17 +319,21 @@ class AMPLEConfigOptions(object):
             pstr += "{0} : {1}\n".format(k, v)
         return pstr
     
-    def write_config_file(self):
+    def write_config_file(self, config_file=None):
         config = ConfigParser.SafeConfigParser()
-        self._write_config_file(config)
+        # We need to make sure that the keys aren't converted to lower case on writing
+        config.optionxform = str
+        self._update_config(config)
+        if config_file is None:
+            # Can be None for testing
+            config_file = os.path.join(self.d['work_dir'], self.d['name']+".ini")
         # Write config to job specific directory
-        self.d["out_config_file"] = f = os.path.join(self.d['work_dir'], 
-                                                     self.d['name']+".ini")
-        LOGGER.info("AMPLE configuration written to: {0}".format(f))
-        with open(f, "w") as out: config.write(out)
+        self.d["out_config_file"] = config_file
+        logger.info("AMPLE configuration written to: {0}".format(config_file))
+        with open(config_file, "w") as out: config.write(out)
         return
     
-    def _write_config_file(self, config_parser):
+    def _update_config(self, config_parser):
         # Add all sections to the configparser
         for section in sorted(_SECTIONS_REFERENCE.keys()):
             if section.lower() == "no_config": continue
