@@ -10,7 +10,7 @@ install(
 
 install(
     DIRECTORY
-        doc examples include scripts testfiles
+        docs examples include scripts testfiles
     DESTINATION
         share/ample
 )
