@@ -16,7 +16,7 @@ import os
 import sys
 
 # Required by autosummary
-sys.path.insert(0, os.path.abspath("../ample"))
+sys.path.insert(0, os.path.abspath(".."))
 
 # -- General configuration ------------------------------------------------
 
