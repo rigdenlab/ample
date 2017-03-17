@@ -6,6 +6,10 @@ AMPLE
 
 **AMPLE is a pipeline for unconventional Molecular Replacement**
 
+.. image:: https://readthedocs.org/projects/ample/badge/?version=latest
+   :target: http://ample.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
+
 Key Features
 ++++++++++++
 
