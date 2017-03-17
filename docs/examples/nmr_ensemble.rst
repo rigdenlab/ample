@@ -60,7 +60,7 @@ Summary tab
 -----------
 This is divided into two sections that display a summary of the results of the ensembling process and the results of the Molecular Replacement with MrBUMP respectively:
 
-.. image:: ../_static/summary_nmr.png
+.. image:: images/summary_nmr.png
 
 Ensembling Results
 ^^^^^^^^^^^^^^^^^^
@@ -104,7 +104,7 @@ Results
 -------
 The Results tab displays the final results of AMPLE after running MrBUMP on the ensembles.
 
-.. image:: ../_static/results_nmr.png
+.. image:: images/results_nmr.png
 
 The tab is split into two sections. The upper section shows the top three results as ranked by their SHELXE CC score. The lower section shows the top three results as ranked by their PHASER TFZ score. These may or may not be different. Within each section, the left-hand menu displays a list of ensemble names – these match the names from the Ensembles section in the Summary tab. Clicking on any item will display the results for that ensemble in the central pane. At the top is a table that matches the MrBUMP entry from the Summary tab, and there are then sections for the files output by each program run by MrBUMP. The files can either be displayed directly or opened directly with COOT or CCP4MG using the displayed buttons.
 
@@ -115,7 +115,7 @@ Log File
 --------
 This displays the text output by AMPLE as it is running. Any problems or errors will be displayed here.
 
-.. image:: ../_static/log_nmr.png
+.. image:: images/log_nmr.png
 
 ------------------------------------------------------------------
 

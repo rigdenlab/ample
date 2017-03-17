@@ -95,7 +95,7 @@ MrBUMP Results
 ^^^^^^^^^^^^^^
 This section displays a table with the results of running MrBUMP on each of the ensembles, for this example you will have information for the following headings.
 
-.. image:: ../_static/summary_toxd.png
+.. image:: images/summary_toxd.png
 
 * **ensemble_name:** this matches the name from the ensemble section.
 * **MR_program:** the program used for Molecular Replacement.
@@ -118,7 +118,7 @@ Results
 -------
 The Results tab displays the final results of AMPLE after running MrBUMP on the ensembles.
 
-.. image:: ../_static/results_toxd.png
+.. image:: images/results_toxd.png
 
 The tab is split into two sections. The upper section shows the top three results as ranked by their SHELXE CC score. The lower section shows the top three results as ranked by their PHASER TFZ score. These may or may not be different. Within each section, the left-hand menu displays a list of ensemble names – these match the names from the Ensembles section in the Summary tab. Clicking on any item will display the results for that ensemble in the central pane. At the top is a table that matches the MrBUMP entry from the Summary tab, and there are then sections for the files output by each program run by MrBUMP. The files can either be displayed directly or opened directly with COOT or CCP4MG using the displayed buttons.
 
@@ -132,7 +132,7 @@ Log File
 --------
 This displays the text output by AMPLE as it is running. Any problems or errors will be displayed here.
 
-.. image:: ../_static/log_toxd.png
+.. image:: images/log_toxd.png
 
 ------------------------------------------------------------------
 
