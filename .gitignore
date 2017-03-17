@@ -3,6 +3,7 @@
 .eggs
 .gitignore
 .idea
+task.tsk
 
 # Sphinx/Jupyter files
 _build

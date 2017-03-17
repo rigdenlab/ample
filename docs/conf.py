@@ -149,6 +149,7 @@ html_theme_options = {
         ('Home', 'index'),
         ('Description', 'description'),
         ('Examples', 'examples'),
+        ('References', 'references'),
     ],
     # Render the next and previous page links in navbar. 
     'navbar_sidebarrel': False,
