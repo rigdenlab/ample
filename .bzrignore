@@ -1,6 +1,0 @@
-docs/_build
-docs/generated/*.rst
-parent
-.idea
-.project
-.pydevproject
