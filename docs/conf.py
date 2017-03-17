@@ -52,7 +52,6 @@ except ImportError:
     raise ImportError(msg)
 
 try:
-    import ample
     import ample.util.version
 except ImportError:
     msg = "Error: AMPLE must be installed before generating its documentation"
