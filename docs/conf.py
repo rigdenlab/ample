@@ -28,16 +28,16 @@ needs_sphinx = '1.5.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [ 
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosectionlabel',
-    'sphinx.ext.autosummary', 
+    #'sphinx.ext.autodoc',
+    #'sphinx.ext.autosectionlabel',
+    #'sphinx.ext.autosummary', 
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinxext.math_symbol_table',
-    'numpydoc.numpydoc'
+    #'numpydoc.numpydoc'
 ]
 
 try:
@@ -129,8 +129,8 @@ pygments_style = 'sphinx'
 todo_include_todos = True
 
 # If true, create autosummary automatically
-autosummary_generate = True
-autodoc_docstring_signature = True
+#autosummary_generate = True
+#autodoc_docstring_signature = True
 
 # -- Options for HTML output ----------------------------------------------
 
