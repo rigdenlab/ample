@@ -10,6 +10,7 @@ import logging
 import os
 import subprocess
 import shlex
+import shutil
 import time
 
 if not "CCP4" in sorted(os.environ.keys()):
@@ -61,7 +62,10 @@ class ClusterRun:
                 
             if os.path.isfile(oldLog):
                 logger.debug("Moving {0} to {1}".format(oldLog, newLog))
-                os.rename(oldLog, newLog ) 
+                # WARNING: problems with os.rename() call on BADB
+                # os.rename docs -->> The operation may fail on some Unix
+                # flavors if src and dst are on different filesystems.
+                shutil.move(oldLog, newLog)
             else:
                 logger.critical("Cannot find logfile {0} to copy to {1}".format(oldLog, newLog))
         
