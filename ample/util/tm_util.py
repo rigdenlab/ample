@@ -13,11 +13,13 @@ import os
 import random
 import string
 import sys
+import tempfile
 
 from ample.parsers import alignment_parser
 from ample.parsers import tm_parser
 from ample.util import ample_util
 from ample.util import pdb_edit
+from ample.util import workers_util
 
 try:
     from Bio import PDB
@@ -83,7 +85,7 @@ class TMapps(object):
 
     """
 
-    def __init__(self, executable, method, wdir=None):
+    def __init__(self, executable, method, wdir=None, **kwargs):
         """
         Parameters
         ----------
@@ -100,16 +102,13 @@ class TMapps(object):
         self.method = method.lower()
         self.work_dir = wdir if wdir else os.getcwd()
 
-        # # Quick check if the executable exists
-        # if ample_util.is_exe(executable):
-        #     self.executable = executable
-        # else:
-        #     try:
-        #         self.executable = ample_util.find_exe(executable)
-        #     except:
-        #         msg = "Cannot find provided executable: {0}".format(executable)
-        #         logger.critical(msg)
-        #         raise RuntimeError(msg)
+        # Cluster submission options
+        self._nproc = kwargs['nproc'] if 'nproc' in kwargs else 1
+        self._submit_cluster = kwargs['submit_cluster'] if 'submit_cluster' in kwargs else False
+        self._submit_qtype = kwargs['submit_qtype'] if 'submit_qtype' in kwargs else None
+        self._submit_queue = kwargs['submit_queue'] if 'submit_queue' in kwargs else None
+        self._submit_array = kwargs['submit_array'] if 'submit_array' in kwargs else True
+        self._submit_max_array = kwargs['submit_max_array'] if 'submit_max_array' in kwargs else None
 
     def comparison(self, models, structures):
         """
@@ -159,28 +158,65 @@ class TMapps(object):
         # =======================================================================
 
         logger.info('Using algorithm: {0}'.format(self.method))
-        logger.info('-------Evaluating decoys/models-------')
-        entries = []
+        logger.info('------- Evaluating decoys -------')
 
+        # Construct the job scripts
+        data_entries = []   # Store some data
+        job_scripts = []    # Hold job scripts
+        log_files = []      # Hold paths to log files
         for model_pdb, structure_pdb in zip(models, structures):
-
+            # Some file names
             model_name = os.path.splitext(os.path.basename(model_pdb))[0]
             structure_name = os.path.splitext(os.path.basename(structure_pdb))[0]
-
-            logger.debug("Working on: {0} - {1}".format(model_name, structure_name))
-
+            prefix = '{0}_{1}_{2}'.format(model_name, structure_name, self.method)
             if not os.path.isfile(model_pdb):
                 logger.warning("Cannot find: {0}".format(model_pdb))
                 continue
             elif not os.path.isfile(structure_pdb):
                 logger.warning("Cannot find: {0}".format(structure_pdb))
                 continue
+            # Create the run scripts
+            script = tempfile.NamedTemporaryFile(prefix=prefix, suffix=ample_util.SCRIPT_EXT, delete=False)
+            script.write(ample_util.SCRIPT_HEADER + os.linesep * 2)
+            script.write('{exe} {model} {reference} {sep}{sep}'.format(
+                exe=self.executable,
+                model=model_pdb,
+                reference=structure_pdb,
+                sep=os.linesep,
+            ))
+            script.close()
+            os.chmod(script.name, 0o777)
+            job_scripts.append(script.name)
+            # Save some more information
+            data_entries.append([model_name, structure_name, model_pdb, structure_pdb])
+            log_files.append(os.path.splitext(script.name)[0] + ".log")
 
-            # TODO: Spawn the jobs across a number of CPUs. ample_util.workers_util.run_scripts() maybe?
-            log_name = "{0}_{1}_{2}.log".format(model_name, structure_name, self.method)
-            log = os.path.join(self.work_dir, log_name)
-            cmd = [self.executable, model_pdb, structure_pdb]
-            ample_util.run_command(cmd, logfile=log, directory=self.work_dir)
+        # Execute the scripts
+        logger.info('Executing TManalysis scripts')
+        logger.disabled = True
+        success = workers_util.run_scripts(
+            job_scripts=job_scripts,
+            monitor=None,
+            check_success=None,
+            early_terminate=None,
+            nproc=self._nproc,
+            job_time=7200,              # Might be too long/short, taken from Rosetta modelling
+            job_name='tm_analysis',
+            submit_cluster=self._submit_cluster,
+            submit_qtype=self._submit_qtype,
+            submit_queue=self._submit_queue,
+            submit_array=self._submit_array,
+            submit_max_array=self._submit_max_array
+        )
+        logger.disabled = False
+
+        if not success:
+            msg = "Error running TManalysis"
+            raise RuntimeError(msg)
+
+        # Extract the data
+        entries = []
+        for entry, log, script in zip(data_entries, log_files, job_scripts):
 
             try:
                 # Reset the TM log parser to default values
@@ -188,12 +224,15 @@ class TMapps(object):
                 # Parse the TM method logfile to extract the data
                 pt.parse(log)
             except Exception:
-                msg = "Issues processing the {0} log file: {1}".format(self.method, log)
+                msg = "Error processing the {0} log file: {1}".format(self.method, log)
                 logger.critical(msg)
                 log = "None"
 
+            model_name, structure_name, model_pdb, structure_pdb = entry
             _entry = self._store(model_name, structure_name, model_pdb, structure_pdb, log, pt)
             entries.append(_entry)
+
+            os.unlink(script)
 
         self.entries = entries
         return entries
@@ -275,12 +314,12 @@ class TMalign(TMapps):
     >>> models = ["<MODEL_1>", "<MODEL_2>", "<MODEL_3>"]
     >>> references = ["<REFERENCE_1>", "<REFERENCE>", "<REFERENCE>"]
     >>> tm = TMalign("<PATH_TO_EXE>")
-    >>> entries = tm.compare_to_structure(models, references)
+    >>> entries = tm.compare_structures(models, references)
 
     """
 
-    def __init__(self, executable, wdir=None):
-        super(TMalign, self).__init__(executable, "TMalign", wdir=wdir)
+    def __init__(self, executable, wdir=None, **kwargs):
+        super(TMalign, self).__init__(executable, "TMalign", wdir=wdir, **kwargs)
 
     def compare_structures(self, models, structures, all_vs_all=False):
         """
@@ -325,12 +364,12 @@ class TMscore(TMapps):
     >>> models = ["<MODEL_1>", "<MODEL_2>", "<MODEL_3>"]
     >>> references = ["<REFERENCE_1>", "<REFERENCE>", "<REFERENCE>"]
     >>> tm = TMscore("<PATH_TO_EXE>")
-    >>> entries = tm.compare_to_structure(models, references)
+    >>> entries = tm.compare_structures(models, references)
 
     """
 
-    def __init__(self, executable, wdir=None):
-        super(TMscore, self).__init__(executable, "TMscore", wdir=wdir)
+    def __init__(self, executable, wdir=None, **kwargs):
+        super(TMscore, self).__init__(executable, "TMscore", wdir=wdir, **kwargs)
 
     def compare_structures(self, models, structures, fastas=None, all_vs_all=False):
         """
@@ -358,7 +397,8 @@ class TMscore(TMapps):
         there is also an option to run the comparison without it. This might work just fine for larger models.
 
         """
-        if not BIOPYTHON_AVAILABLE: raise RuntimeError("Biopython is not available")
+        if not BIOPYTHON_AVAILABLE:
+            raise RuntimeError("Biopython is not available")
         # Check what we are comparing
         if structures and len(structures) == 1:
             logger.info('Using single structure provided for all model comparisons')
@@ -375,7 +415,7 @@ class TMscore(TMapps):
         if fastas:
 
             # Determine the iterator and create the combinations to be compared
-            for index, (model, structure, fasta) in enumerate(combination_iterator(models, structures, fastas)):
+            for (model, structure, fasta) in combination_iterator(models, structures, fastas):
 
                 # Extract the FASTA sequence
                 fasta_record = list(SeqIO.parse(open(fasta, 'r'), 'fasta'))[0]
@@ -387,7 +427,7 @@ class TMscore(TMapps):
 
                 # Align the model sequence to the FASTA sequence
                 for fasta_pos in fasta_data:
-                    if not fasta_pos in model_data:
+                    if fasta_pos not in model_data:
                         model_data.append((fasta_pos[0], "-"))
                 model_data.sort(key=operator.itemgetter(0))
 
@@ -399,9 +439,9 @@ class TMscore(TMapps):
                 # Remove parts of the alignment that are gaps in both sequences
                 to_remove = []
                 _alignment = zip("".join(zip(*model_data)[1]), fasta_structure_aln[1])
-                for index, (model_res, structure_res) in enumerate(_alignment):
+                for i, (model_res, structure_res) in enumerate(_alignment):
                     if model_res == "-" and structure_res == "-":
-                        to_remove.append(index)
+                        to_remove.append(i)
                 for i in reversed(to_remove):
                     _alignment.pop(i)
 
@@ -422,7 +462,7 @@ class TMscore(TMapps):
 
         else:
             # No FASTA processing etc, pure comparisons of sequences
-            for index, (model, structure) in enumerate(combination_iterator(models, structures)):
+            for (model, structure) in combination_iterator(models, structures):
 
                 # Extract some information from each PDB structure file
                 model_data = list(self._pdb_info(model))
@@ -484,7 +524,7 @@ class TMscore(TMapps):
             os.mkdir(work_dir_mod)
 
         # Create a random file suffix to avoid overwriting file names if duplicate
-        # Taken from http://stackoverflow.com/questions/2257441/random-string-generation-with-upper-case-letters-and-digits-in-python
+        # Taken from http://stackoverflow.com/a/2257449
         random_suffix = ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(10))
 
         # File names and output files
@@ -589,8 +629,9 @@ class TMscore(TMapps):
         # Weird problem with get_...() methods if MODEL is not explicitly stated in
         # PDB file. Thus, just iterate over everything return when top chain completed
         for model in structure:
-            for index, chain in enumerate(model):
-                if index > 0: return
+            for i, chain in enumerate(model):
+                if i > 0:
+                    return
                 for residue in chain:
                     hetero, res_seq, _ = residue.get_id()
 
@@ -628,7 +669,8 @@ class TMscore(TMapps):
 
 def main():
     import argparse
-    import shutil
+    import csv
+
     parser = argparse.ArgumentParser()
     parser.add_argument('--allvall', action="store_true", help="All vs all comparison")
     parser.add_argument('--log', default='info', choices=['debug', 'info', 'warning', 'error'],
@@ -658,28 +700,9 @@ def main():
         entries = TMscore(args.tmscore, wdir=args.rundir).compare_structures(args.models, args.structures, fastas=args.fastas, all_vs_all=args.allvall)
     else:
         entries = None
-    
-    # Remove run directory if required
-    # if args.purge:
-    #     shutil.rmtree(os.path.join(args.rundir))
 
-    # Do a much fancier table print statement if pandas is installed
-    # TODO: Print statement from entries dictionary if we don't have pandas
-    try:
-        import pandas
-        PANDAS_AVAILABLE = True
-    except ImportError:
-        import csv
-        PANDAS_AVAILABLE = False
-    
-    csv_file = os.path.join(args.rundir, 'tm_results.csv')
-    if PANDAS_AVAILABLE and entries:
-        df = pandas.pandas.DataFrame(data=entries)
-        df.sort_values("tmscore", inplace=True, ascending=False)
-        df.reset_index(drop=True)
-        logger.info("Results table:\n{0}".format(df[["model_name", "structure_name", "tmscore"]].to_string()))
-        df.to_csv(csv_file)
-    elif entries:
+    if entries:
+        csv_file = os.path.join(args.rundir, 'tm_results.csv')
         with open(csv_file, 'wb') as f_out:
             w = csv.DictWriter(f_out, entries[0].keys())
             w.writeheader()
