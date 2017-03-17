@@ -1,3 +1,0 @@
-matplotlib
-numpydoc
-sphinx_rtd_bootstrap

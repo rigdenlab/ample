@@ -1,0 +1,5 @@
+sphinx
+sphinx-autobuild
+matplotlib
+numpydoc
+sphinx_bootstrap_theme

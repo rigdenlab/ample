@@ -8,9 +8,8 @@ A number of examples are provided with AMPLE that may be useful in getting famil
 
 .. toctree::
    :maxdepth: 1
+   :glob:
 
-   abinitio
-   homologs
-   nmr_ensemble
+   examples/*
 
 ------------------------------------------------------------------
