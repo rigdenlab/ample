@@ -1,6 +1,5 @@
 #!/usr/bin/env ccp4-python
 
-from collections import namedtuple
 import datetime
 import logging
 import os
