@@ -27,6 +27,9 @@ print parser.parse_args('-d false'.split())
 
 from ample.util import version
 
+import argparse
+
+
 def add_core_options(parser):
     """Function to add any arguments required by all runtypes"""
     
@@ -56,6 +59,9 @@ def add_cluster_submit_options(parser):
 
     submit_group.add_argument('-submit_max_array', type=int,
                               help='The maximum number of jobs to run concurrently with SGE array job submission' )
+    
+    submit_group.add_argument('-submit_num_array_jobs', type=int,
+                              help='The number of jobs to run concurrently with SGE array job submission' )
     
     submit_group.add_argument('-submit_pe_lsf',
                               help='Cluster submission: string to set number of processors for LSF queueing system')
@@ -220,7 +226,10 @@ def add_contact_options(parser):
                        help='Additional bbcontacts file. Requires normal contactfile')
     
     contact_group.add_argument('-contact_file',
-                       help='Residue contact file in CASP RR format')
+                       help='Residue contact file')
+
+    contact_group.add_argument('-contact_format',
+                       help='Residue contact file format. For available formats refer to the AMPLE documentation')
     
     contact_group.add_argument('-disulfide_constraints_file',
                        help='Disulfide residue constraints for ab initio modelling')
@@ -239,9 +248,13 @@ def add_contact_options(parser):
     
     contact_group.add_argument('-restraints_file',
                        help='Residue restraints for ab initio modelling')
-    
+
     contact_group.add_argument('-restraints_weight', type=float,
                        help="Additional energy weighting of restraints in Rosetta")
+
+    contact_group.add_argument('-subselect_mode',
+                       help=argparse.SUPPRESS)
+
     return
 
 def add_mr_options(parser): 

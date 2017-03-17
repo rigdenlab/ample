@@ -13,13 +13,13 @@ from ample.ensembler._ensembler import Cluster
 
 logger = logging.getLogger(__name__)
 
-def import_cluster(cluster_dir):
+def import_cluster(cluster_models):
     """Import a cluster
     
     Parameters
     ----------
-    cluster_dir : str
-       The directory to store the cluster data in
+    cluster_models : list, tuple 
+       A list of models in a single cluster
 
     Returns
     -------
@@ -34,12 +34,12 @@ def import_cluster(cluster_dir):
        Cannot find pdbs in directory
 
     """
-    logger.info('Importing cluster models from: {0}'.format(cluster_dir))
-    
-    cluster_models = glob.glob(os.path.join(cluster_dir, "*.pdb"))
-    if not cluster_models: 
-        raise RuntimeError("Cannot find pdbs in directory: {0}".format(cluster_dir))
-    
+    # logger.info('Importing cluster models from: {0}'.format(cluster_dir))
+    #
+    # cluster_models = glob.glob(os.path.join(cluster_dir, "*.pdb"))
+    # if not cluster_models:
+    #     raise RuntimeError("Cannot find pdbs in directory: {0}".format(cluster_dir))
+    #
     # Data on the cluster
     cluster = Cluster()
     cluster.method = "import"

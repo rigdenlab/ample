@@ -106,6 +106,22 @@ class Maxcluster(object):
         self.parseLogDirectory( logfile=logfile )
 
         return
+
+    def compareModelList(self, nativePdbInfo=None, resSeqMap=None, models=None, workdir=None):
+
+        self.data = []
+        self.workdir = workdir
+        if not self.workdir:
+            self.workdir = os.getcwd()
+
+        #refModel = os.path.join( modelsDirectory, "S_00000001.pdb" )
+        nativePdb = self.prepareNative(nativePdbInfo=nativePdbInfo, resSeqMap=resSeqMap)
+
+        logfile = os.path.join(self.workdir, "maxclusterD.log")
+        self.run_compare_model_list(nativePdb=nativePdb, models=models, logfile=logfile)
+        self.parseLogDirectory(logfile=logfile)
+
+        return
     
     def compareSingle(self, nativePdb=None, modelPdb=None, sequenceIndependant=True, rmsd=False, workdir=None ):
 
@@ -353,9 +369,25 @@ class Maxcluster(object):
         
         if retcode != 0:
             msg = "non-zero return code for maxcluster in runMaxcluster!"
-            #logging.critical( msg )
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
     
+        return
+
+    def run_compare_model_list(self, nativePdb=None, models=None, logfile=None):
+
+        # Generate the list of models
+        pdblist = os.path.join(self.workdir, "models.list")
+        with open(pdblist, 'w') as f:
+            f.write(os.linesep.join(models))
+
+        # Run Maxcluster
+        cmd = [self.maxclusterExe, "-e", nativePdb, "-l", pdblist]
+        retcode = ample_util.run_command(cmd, logfile=logfile, dolog=True)
+
+        if retcode != 0:
+            msg = "non-zero return code for maxcluster in runMaxcluster!"
+            raise RuntimeError(msg)
+
         return
      
     def tmSorted(self, reverse=True ):

@@ -17,7 +17,7 @@ from ample.util import ample_util
 from ample.util import argparse_util
 from ample.util import benchmark_util
 from ample.util import config_util
-from ample.util import contacts_util
+from ample.util import contact_util
 from ample.util import exit_util
 from ample.util import logging_util
 from ample.util import mrbump_util
@@ -134,7 +134,7 @@ class Ample(object):
             workers_util.run_scripts(job_scripts=[script],
                                      monitor=monitor,
                                      nproc=optd['nproc'],
-                                     job_time=7200,
+                                     job_time=43200,
                                      job_name='benchmark',
                                      submit_cluster=optd['submit_cluster'],
                                      submit_qtype=optd['submit_qtype'],
@@ -157,13 +157,18 @@ class Ample(object):
             ample_util.ideal_helices(optd)
             logger.info("*** Using ideal helices to solve structure ***")
         else:
+            # Import the models here instead of cluster_util.
+            if optd['cluster_method'] is 'import':
+                # HACK - this is certainly not how we want to do it. One flag for all (-models) in future
+                optd['models'] = optd['cluster_dir']
+                optd['models'] = ample_util.extract_models(optd)
+
             # Check we have some models to work with
-            if not (optd['cluster_method'] is 'import' or optd['single_model_mode']) and \
-               not glob.glob(os.path.join(optd['models_dir'], "*.pdb")):
+            if not (optd['single_model_mode'] or optd['models']):
                 ample_util.save_amoptd(optd)
                 msg = "ERROR! Cannot find any pdb files in: {0}".format(optd['models_dir'])
                 exit_util.exit_error(msg)
-            optd['ensemble_ok'] = os.path.join(optd['work_dir'],'ensemble.ok')
+            optd['ensemble_ok'] = os.path.join(optd['work_dir'], 'ensemble.ok')
             if optd['submit_cluster']:
                 # Pickle dictionary so it can be opened by the job to get the parameters
                 ample_util.save_amoptd(optd)
@@ -184,12 +189,12 @@ class Ample(object):
                 optd.update(ample_util.read_amoptd(optd['results_path']))
             else:
                 try: ensembler.create_ensembles(optd)
-                except Exception, e:
+                except Exception as e:
                     msg = "Error creating ensembles: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
                     
             # Check we have something to work with
-            if not os.path.isfile(optd['ensemble_ok']) or not 'ensembles' in optd.keys() or not len(optd['ensembles']):
+            if not os.path.isfile(optd['ensemble_ok']) or 'ensembles' not in optd.keys() or not len(optd['ensembles']):
                 msg = "Problem generating ensembles!"
                 exit_util.exit_error(msg)
                 
@@ -222,54 +227,55 @@ class Ample(object):
     
         # In case file created above we need to tell the rosetta_modeller where it is
         # otherwise not used as not created before object initialised    
-        if optd['make_models'] and (optd['use_contacts'] or optd['restraints_file']):
-            cm = contacts_util.Contacter(optd=optd)
-            
-            cm.process_restraintsfile() if not optd['use_contacts'] and optd['restraints_file'] \
-                else cm.process_contactfile()
-    
-            optd['restraints_file'] = cm.restraints_file
-            optd['contact_map'] = cm.contact_map
-            optd['contact_ppv'] = cm.contact_ppv 
-        
-        if optd['make_models'] and optd['restraints_file']: 
+        if optd['use_contacts'] and not optd['restraints_file']:
+
+            con_util = contact_util.ContactUtil(optd)
+            con_util.summarise()
+            con_util.create_restraints()
+
+            optd['restraints_file'] = con_util.restraint_file
+            optd['contact_map'] = con_util.plot_file
+            optd['contact_ppv'] = con_util.precision
+
+        if optd['make_models'] and optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
-        
+
         # if NMR process models first
         # break here for NMR (frags needed but not modelling
         if optd['nmr_model_in'] and not optd['nmr_remodel']:
-            pdb_edit.prepare_nmr_model(optd['nmr_model_in'], optd['models_dir'])
+            optd['models'] = pdb_edit.prepare_nmr_model(optd['nmr_model_in'], optd['models_dir'])
         elif optd['make_models']:
             # Make the models
             logger.info('----- making Rosetta models--------')
             if optd['nmr_remodel']:
                 try:
-                    rosetta_modeller.nmr_remodel(nmr_model_in=optd['nmr_model_in'],
-                                                 ntimes=optd['nmr_process'],
-                                                 alignment_file=optd['alignment_file'],
-                                                 remodel_fasta=optd['nmr_remodel_fasta'],
-                                                 monitor=monitor)
-                except Exception, e:
+                    optd['models'] = rosetta_modeller.nmr_remodel(nmr_model_in=optd['nmr_model_in'],
+                                                                  ntimes=optd['nmr_process'],
+                                                                  alignment_file=optd['alignment_file'],
+                                                                  remodel_fasta=optd['nmr_remodel_fasta'],
+                                                                  monitor=monitor)
+                except Exception as e:
                     msg = "Error remodelling NMR ensemble: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
             else:
                 logger.info('making {0} models...'.format(optd['nmodels']))
                 try:
-                    rosetta_modeller.ab_initio_model(monitor=monitor)
-                except Exception, e:
+                    optd['models'] = rosetta_modeller.ab_initio_model(monitor=monitor)
+                except Exception as e:
                     msg = "Error running ROSETTA to create models: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
                 if not pdb_edit.check_pdb_directory(optd['models_dir'], sequence=optd['sequence']):
                     msg = "Problem with rosetta pdb files - please check the log for more information"
                     exit_util.exit_error(msg)
                 msg = 'Modelling complete - models stored in: {0}\n'.format(optd['models_dir'])
-            
+                logger.info(msg)
+
         elif optd['import_models']:
             logger.info('Importing models from directory: {0}\n'.format(optd['models_dir']))
             if optd['homologs']:
-                ample_util.extract_models(optd, sequence=None, single=True, allsame=False)
+                optd['models'] = ample_util.extract_models(optd, sequence=None, single=True, allsame=False)
             else:
-                ample_util.extract_models(optd)
+                optd['models'] = ample_util.extract_models(optd)
                 # Need to check if Quark and handle things accordingly
                 if optd['quark_models']:
                     # We always add sidechains to QUARK models if SCWRL is installed
@@ -277,9 +283,16 @@ class Ample(object):
                         optd['use_scwrl'] = True
                     else:
                         # No SCWRL so don't do owt with the side chains
-                        logger.info('Using QUARK models but SCWRL is not installed so only using {0} sidechains'.format(UNMODIFIED))
-                        optd['side_chain_treatments'] = [ UNMODIFIED ]
-    
+                        logger.info('Using QUARK models but SCWRL is not installed '
+                                    'so only using {0} sidechains'.format(UNMODIFIED))
+                        optd['side_chain_treatments'] = [UNMODIFIED]
+
+        # Sub-select the decoys using contact information
+        if optd['use_contacts'] and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
+            logger.info('Subselecting models from directory using provided contact information')
+            con_util = contact_util.ContactUtil(optd)
+            optd['models'] = con_util.subselect_decoys(optd['models'], mode=optd['subselect_mode'], **optd)
+
         # Save the results
         ample_util.save_amoptd(optd)
         

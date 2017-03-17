@@ -25,11 +25,12 @@ from ample.util import rio
 from ample.util import shelxe
 from ample.util import tm_util
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 _oldroot = None
 _newroot = None
 _MAXCLUSTERER = None
+
 
 def analyse(amoptd, newroot=None):
     if newroot:
@@ -39,9 +40,9 @@ def analyse(amoptd, newroot=None):
         _newroot=newroot
         _oldroot=amoptd['work_dir']
         # hack
-        amoptd['maxcluster_exe']="/opt/maxcluster/maxcluster"
-        amoptd['native_pdb']=os.path.join("/media/data/shared/testset/data",os.path.basename(amoptd['native_pdb']))
-        amoptd['models_dir']=os.path.join("/media/data/shared/testset/models",amoptd['native_pdb_code'],"models")
+        amoptd['maxcluster_exe'] = "/opt/maxcluster/maxcluster"
+        amoptd['native_pdb'] = os.path.join("/media/data/shared/testset/data",os.path.basename(amoptd['native_pdb']))
+        amoptd['models_dir'] = os.path.join("/media/data/shared/testset/models",amoptd['native_pdb_code'],"models")
     
     if not os.path.isdir(fixpath(amoptd['benchmark_dir'])):
         os.mkdir(fixpath(amoptd['benchmark_dir']))
@@ -52,11 +53,11 @@ def analyse(amoptd, newroot=None):
         analysePdb(amoptd)
 
     if amoptd['native_pdb'] and \
-       not (amoptd['homologs'] or amoptd['ideal_helices'] or \
-            amoptd['import_ensembles'] or amoptd['single_model_mode']):
+       not (amoptd['homologs'] or amoptd['ideal_helices']
+            or amoptd['import_ensembles'] or amoptd['single_model_mode']):
         analyseModels(amoptd)
     
-#     logger.info("Benchmark: generating naitive density map")
+#     logger.info("Benchmark: generating native density map")
 #     # Generate map so that we can do origin searching
 #     amoptd['native_density_map']=phenixer.generateMap(amoptd['mtz'],
 #                                                      amoptd['native_pdb'],
@@ -81,14 +82,16 @@ def analyse(amoptd, newroot=None):
         return
 
     # Get dict of ensemble name -> ensemble result
-    ensemble_results = { e['name'] : e for e in amoptd['ensembles_data'] }
+    ensemble_results = {
+        e['name']: e for e in amoptd['ensembles_data']
+    }
                     
     # Get mrbump_results for cluster
     if 'mrbump_results' not in amoptd or not len(amoptd['mrbump_results']):
         logger.critical("Benchmark cannot find any mrbump results!")
         return
     
-    data=[]
+    data = []
     for result in amoptd['mrbump_results']:
         
         # use mrbump dict as basis for result object
@@ -125,23 +128,23 @@ def analyse(amoptd, newroot=None):
             # Calculation of TMscores for subcluster centroid models
             if amoptd['have_tmscore']:
                 try:
-                    tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']))
+                    tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']), **amoptd)
                     logger.info("Analysing subcluster centroid model with TMscore")
-                    tm_results = tm.compare_structures([d['subcluster_centroid_model']],
-                                                                              [amoptd['native_pdb_std']],
-                                                                              fastas=[amoptd['fasta']])
+                    tm_results = tm.compare_structures(
+                        [d['subcluster_centroid_model']], [amoptd['native_pdb_std']], fastas=[amoptd['fasta']]
+                    )
                     d['subcluster_centroid_model_TM'] = tm_results[0]['tmscore']
                     d['subcluster_centroid_model_RMSD'] = tm_results[0]['rmsd']
-                    
-                except:
-                    msg = "Unable to run TMscores. See debug.log."
+
+                except Exception as e:
+                    msg = "Unable to run TMscore analysis: {0}".format(e)
                     logger.critical(msg)
             else:
                 # Use maxcluster
                 # Need to get the subcluster_centroid_model and then get the path to the original model
                 n = os.path.splitext(os.path.basename(d['subcluster_centroid_model']))[0]
                 cm = None
-                for pdb in glob.glob(os.path.join(amoptd['models_dir'],"*.pdb")):
+                for pdb in amoptd['models']:
                     if n.startswith(os.path.splitext(os.path.basename(pdb))[0]):
                         cm = pdb
                         break
@@ -451,23 +454,25 @@ def analyseModels(amoptd):
 #         print e
     if amoptd['have_tmscore']:
         try:
-            tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']))
-            # Calculation of TMscores for all models
-            logger.info("Analysing Rosetta models with TMscore")
-            model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
-            structure_list = [amoptd['native_pdb_std']]
-            amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fastas=[amoptd['fasta']])
-        except:
-            msg = "Unable to run TMscores. See debug.log."
+            tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']), **amoptd)
+            logger.info("Analysing ab initio decoys with TMscore")
+            amoptd['tmComp'] = tm.compare_structures(
+                amoptd['models'], [amoptd['native_pdb_std']], fastas=[amoptd['fasta']]
+            )
+        except Exception as e:
+            msg = "Unable to run TMscore analysis: {0}".format(e)
             logger.critical(msg)
     else:
         global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
         _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
         logger.info("Analysing Rosetta models with Maxcluster")
-        _MAXCLUSTERER.compareDirectory(nativePdbInfo=nativePdbInfo,
-                                       resSeqMap=resSeqMap,
-                                        modelsDirectory=amoptd['models_dir'],
-                                        workdir=fixpath(amoptd['benchmark_dir']))
+        # _MAXCLUSTERER.compareDirectory(nativePdbInfo=nativePdbInfo,
+        #                                resSeqMap=resSeqMap,
+        #                                modelsDirectory=amoptd['models_dir'],
+        #                                workdir=fixpath(amoptd['benchmark_dir']))
+        _MAXCLUSTERER.compareModelList(nativePdbInfo=nativePdbInfo, resSeqMap=resSeqMap,
+                                       models=amoptd['models'], workdir=fixpath(amoptd['benchmark_dir'])
+        )
     return
 
 
