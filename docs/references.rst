@@ -1,3 +1,4 @@
+.. _references:
 
 References
 ++++++++++
