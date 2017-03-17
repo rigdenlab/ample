@@ -16,7 +16,8 @@ import os
 import sys
 
 # Required by autosummary
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("."))    # for sphinxext directory
+sys.path.insert(0, os.path.abspath(".."))   # for ample directory
 
 # -- General configuration ------------------------------------------------
 
@@ -149,6 +150,7 @@ html_theme_options = {
         ('Description', 'description'),
         ('Examples', 'examples'),
         ('References', 'references'),
+        ('Server', 'server'),
     ],
     # Render the next and previous page links in navbar. 
     'navbar_sidebarrel': False,
