@@ -3,11 +3,15 @@
 References
 ++++++++++
 
-.. list-table::
+.. list-table:: If you use AMPLE, please cite:
    :widths: 1200, 10
 
    * - Bibby J, Keegan RM, Mayans O, Winn MD & Rigden DJ (2012). AMPLE: a cluster-and-truncate approach to solve the crystal structures of small proteins using rapidly computed ab initio models. *Acta Cryst. D* **68**, 1622-1631.
      - `PubMed <http://www.ncbi.nlm.nih.gov/pubmed/23151627>`_
+
+
+.. list-table:: Depending on the features you use, please also cite some or all of the following:
+   :widths: 1200, 10
 
    * - Bibby J, Keegan RM, Mayans O, Winn MD & Rigden DJ (2013). Application of the AMPLE cluster-and-truncate approach to NMR structures for molecular replacement. *Acta Cryst. D* **69**, 2194-2201.
      - `PubMed <http://www.ncbi.nlm.nih.gov/pubmed/23151627>`_
