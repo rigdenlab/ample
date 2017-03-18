@@ -229,13 +229,29 @@ class Ample(object):
         # otherwise not used as not created before object initialised    
         if optd['use_contacts'] and not optd['restraints_file']:
 
-            con_util = contact_util.ContactUtil(optd)
-            con_util.summarise()
-            con_util.create_restraints()
+            # Create a container to manipulate the data
+            con_util = contact_util.ContactUtil(
+                optd['contact_file'], optd['contact_format'], optd['fasta'], 'fasta',
+                optd['bbcontacts_file'], optd['restraints_factor'], optd['distance_to_neighbour']
+            )
 
-            optd['restraints_file'] = con_util.restraint_file
-            optd['contact_map'] = con_util.plot_file
-            optd['contact_ppv'] = con_util.precision
+            # Analyse and summarize the contact data
+            plot_file = os.path.join(optd['work_dir'], optd['name'] + ".cm.png")
+            if optd['native_pdb'] and optd['native_pdb_std']:
+                structure_file = optd['native_pdb_std']
+            elif optd['native_pdb']:
+                structure_file = optd['native_std']
+            else:
+                structure_file = None
+            optd['contact_map'], optd['contact_ppv'] = con_util.summarize(plot_file, structure_file, 'pdb', optd['native_cutoff'])
+
+            # Write some restraints
+            restraints_file = os.path.join(optd['work_dir'], optd['name'] + ".cst")
+            optd['restraints_file'] = con_util.create_restraints(
+                restraints_file, optd['restraints_format'], optd['energy_function']
+            )
+        else:
+            con_util = None
 
         if optd['make_models'] and optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
@@ -288,10 +304,9 @@ class Ample(object):
                         optd['side_chain_treatments'] = [UNMODIFIED]
 
         # Sub-select the decoys using contact information
-        if optd['use_contacts'] and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
+        if con_util and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
             logger.info('Subselecting models from directory using provided contact information')
-            con_util = contact_util.ContactUtil(optd)
-            optd['models'] = con_util.subselect_decoys(optd['models'], mode=optd['subselect_mode'], **optd)
+            optd['models'] = con_util.subselect_decoys(optd['models'], 'pdb', mode=optd['subselect_mode'], **optd)
 
         # Save the results
         ample_util.save_amoptd(optd)
