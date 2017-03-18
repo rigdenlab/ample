@@ -470,8 +470,7 @@ class ContactUtil(object):
         # Construct the job scripts
         job_scripts = []    # Hold job scripts
         log_files = []      # Hold paths to log files
-        # TODO: Figure out how to do this better
-        executable = 'ccp4-python ' + os.path.join(os.environ['CCP4'], 'bin', 'conkit.precision')
+        executable = 'conkit-precision.bat' if sys.platform.startswith('win') else 'conkit-precision')
         for decoy in decoys:
             # Some file names
             decoy_name = os.path.splitext(os.path.basename(decoy))[0]
@@ -552,6 +551,7 @@ class ContactUtil(object):
         self.structure_format = org_structure_format
         self.structure_map = org_structure_map
 
+        # TODO: return the scores so we can store them in AMPLE dict
         # Return the list of decoys to keep
         return tuple([decoys[i] for i in to_keep])
 
