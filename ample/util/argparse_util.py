@@ -90,7 +90,7 @@ def add_general_options(parser):
     parser.add_argument('-blast_dir',
                        help='Directory where ncbi blast is installed (binaries in expected in bin subdirectory)')
     
-    parser.add_argument('-classic_mode', metavar='devel_mode',
+    parser.add_argument('-classic_mode', metavar='True/False',
                        help='Preset options to run the original AMPLE clustering/truncation options (1 cluster, 3 subclustering radii, 3 sidechains)')
     
     parser.add_argument('-ccp4_jobid', type=int,
