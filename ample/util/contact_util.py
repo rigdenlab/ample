@@ -176,7 +176,7 @@ class ContactUtil(object):
     @property
     def sequence_file(self):
         """The path to ``sequence_file``"""
-        return self._contact_file
+        return self._sequence_file
 
     @sequence_file.setter
     def sequence_file(self, file):
@@ -189,7 +189,7 @@ class ContactUtil(object):
     @property
     def sequence_format(self):
         """The format of ``sequence_file``"""
-        return self.sequence_format
+        return self._sequence_format
 
     @sequence_format.setter
     def sequence_format(self, value):
