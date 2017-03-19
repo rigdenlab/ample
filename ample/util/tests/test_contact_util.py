@@ -29,88 +29,92 @@ class Test(unittest.TestCase):
         'work_dir': '.',
     }
 
-    def test_bbcontacts_format(self):
-        cutil = contact_util.ContactUtil(Test._OPTD)
-        cutil.bbcontacts_format = 'bbcontacts'
-        self.assertEqual('bbcontacts', cutil.bbcontacts_format)
-        with self.assertRaises(ValueError):
-            cutil.bbcontacts_format = 'pconsc2'
+    def test__select_linear_1(self):
+        data = [1.0, 0.6, 0.5, 0.4, 0.4, 0.3, 0.2, 0.1]
+        keep, throw = contact_util.ContactUtil._select_linear(data)
+        self.assertEqual((0, 1, 2, 3), keep)
+        self.assertEqual((4, 5, 6, 7), throw)
 
-    def test_contact_format(self):
-        cutil = contact_util.ContactUtil(Test._OPTD)
-        cutil.contact_format = 'pconsc2'
-        self.assertEqual('pconsc2', cutil.contact_format)
-        cutil.contact_format = 'casprr'
-        self.assertEqual('casprr', cutil.contact_format)
-        cutil.contact_format = 'pdb'
-        self.assertEqual('pdb', cutil.contact_format)
-        with self.assertRaises(ValueError):
-            cutil.contact_format = 'fasta'
+    def test__select_linear_2(self):
+        data = [0.1, 0.2, 0.3, 0.4, 0.4, 0.5, 0.6, 1.0]
+        keep, throw = contact_util.ContactUtil._select_linear(data)
+        self.assertEqual((7, 6, 5, 3), keep)
+        self.assertEqual((4, 2, 1, 0), throw)
 
-    def test_energy_function(self):
-        cutil = contact_util.ContactUtil(Test._OPTD)
-        cutil.restraint_format = 'rosetta'
-        cutil.energy_function = 'FADE'
-        self.assertEqual('FADE', cutil.energy_function)
-        cutil.energy_function = 'SIGMOID_gremlin'
-        self.assertEqual('SIGMOID_gremlin', cutil.energy_function)
-        with self.assertRaises(ValueError):
-            cutil.energy_function = 'DEFAULT'
-        cutil.restraint_format = 'saint2'
-        cutil.energy_function = 'DEFAULT'
-        self.assertEqual('DEFAULT', cutil.energy_function)
-        with self.assertRaises(ValueError):
-            cutil.energy_function = 'FADE'
+    def test__select_linear_3(self):
+        data = [1.0, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
+        keep, throw = contact_util.ContactUtil._select_linear(data)
+        self.assertEqual((0, 1, 2, 3), keep)
+        self.assertEqual((4, 5, 6), throw)
 
-    def test_restraint_format(self):
-        cutil = contact_util.ContactUtil(Test._OPTD)
-        cutil.restraint_format = 'rosetta'
-        self.assertEqual('rosetta', cutil.restraint_format)
-        cutil.restraint_format = 'saint2'
-        self.assertEqual('saint2', cutil.restraint_format)
-        with self.assertRaises(ValueError):
-            cutil.restraint_format = 'saint'
+    def test__select_linear_4(self):
+        data = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 1.0]
+        keep, throw = contact_util.ContactUtil._select_linear(data)
+        self.assertEqual((6, 5, 4, 3), keep)
+        self.assertEqual((2, 1, 0), throw)
 
-    def test_sequence_format(self):
-        cutil = contact_util.ContactUtil(Test._OPTD)
-        cutil.sequence_format = 'fasta'
-        self.assertEqual('fasta', cutil.sequence_format)
-        with self.assertRaises(ValueError):
-            cutil.sequence_format = 'a3m'
+    def test__select_linear_5(self):
+        data = [1.0, 0.2, 0.4, 0.6, 0.5, 0.3, 0.1, 0.2]
+        keep, throw = contact_util.ContactUtil._select_linear(data)
+        self.assertEqual((0, 3, 4, 2), keep)
+        self.assertEqual((5, 1, 7, 6), throw)
 
-    def test_structure_format(self):
-        cutil = contact_util.ContactUtil(Test._OPTD)
-        cutil.structure_format = 'pdb'
-        self.assertEqual('pdb', cutil.structure_format)
-        with self.assertRaises(ValueError):
-            cutil.structure_format = 'mol'
+    def test__select_scaled_1(self):
+        data = [1.0, 0.6, 0.5, 0.4, 0.4, 0.3, 0.2, 0.1]
+        keep, throw = contact_util.ContactUtil._select_scaled(data)
+        self.assertEqual((0, 1, 2, 3, 4, 5), keep)
+        self.assertEqual((6, 7), throw)
 
-    def test_check_options(self):
+    def test__select_scaled_2(self):
+        data = [1.0, 1.0, 1.0, 1.0]
+        keep, throw = contact_util.ContactUtil._select_scaled(data)
+        self.assertEqual((0, 1, 2, 3), keep)
+        self.assertEqual((), throw)
+
+    def test__select_scaled_3(self):
+        data = [100.0, 1.0, 1.0, 1.0]
+        keep, throw = contact_util.ContactUtil._select_scaled(data)
+        self.assertEqual((0,), keep)
+        self.assertEqual((1, 2, 3), throw)
+
+    def test_check_options_1(self):
         with self.assertRaises(ValueError):
             x = Test._OPTD.copy()
             x['contact_file'] = None
             contact_util.ContactUtil.check_options(x)
+
+    def test_check_options_2(self):
         with self.assertRaises(ValueError):
             x = Test._OPTD.copy()
             x['contact_file'] = 'foo.bar'
             contact_util.ContactUtil.check_options(x)
+
+    def test_check_options_3(self):
         with self.assertRaises(ValueError):
             x = Test._OPTD.copy()
             x['bbcontacts_file'] = 'foo.bar'
             contact_util.ContactUtil.check_options(x)
+
+    def test_check_options_4(self):
         with self.assertRaises(ValueError):
             x = Test._OPTD.copy()
             x['contact_format'] = None
             contact_util.ContactUtil.check_options(x)
+
+    def test_check_options_5(self):
         with self.assertRaises(ValueError):
             x = Test._OPTD.copy()
             x['contact_format'] = 'foo'
             contact_util.ContactUtil.check_options(x)
+
+    def test_check_options_6(self):
         with self.assertRaises(ValueError):
             x = Test._OPTD.copy()
             x['energy_function'] = 'DEFAULT'
             x['restraints_format'] = 'rosetta'
             contact_util.ContactUtil.check_options(x)
+
+    def test_check_options_7(self):
         with self.assertRaises(ValueError):
             x = Test._OPTD.copy()
             x['energy_function'] = 'FADE'

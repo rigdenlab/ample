@@ -1,5 +1,7 @@
 """Wrapper module for the ConKit package"""
 
+from __future__ import division
+
 __author__ = "Felix Simkovic"
 __date__ = "18 Mar 2017"
 __version__ = "2.1"
@@ -354,7 +356,7 @@ class ContactUtil(object):
             msg = "Error running decoy subselection"
             raise RuntimeError(msg)
 
-        # Evaluate the scores
+        # Collate the scores
         scores = numpy.zeros(len(decoys))
         for i, (decoy, log, script) in enumerate(zip(decoys, log_files, job_scripts)):
             for line in open(log, 'r'):
@@ -366,28 +368,24 @@ class ContactUtil(object):
         # Subselect the decoys
         logger.info('Model selection mode: {0}'.format(mode))
         if mode == 'scaled':
-            scores_scaled = scores / numpy.mean(scores)
-            to_keep = numpy.where(scores_scaled >= 0.5)[0].tolist()
-            to_throw = numpy.where(scores_scaled < 0.5)[0].tolist()
+            keep, throw = ContactUtil._select_scaled(scores)
         elif mode == 'linear':
-            scores_sorted = sorted(list(enumerate(scores)), key=lambda x: x[1], reverse=True)
-            to_keep = zip(*scores_sorted[:len(scores_sorted) / 2])[0]
-            to_throw = zip(*scores_sorted[len(scores_sorted) / 2:])[0]
+            keep, throw = ContactUtil._select_linear(scores)
         else:
             msg = "Unknown sub-selection mode: {0}".format(mode)
             logger.critical(msg)
             raise ValueError(msg)
 
         # Some checks
-        if len(to_keep) < 1:
+        if len(keep) < 1:
             msg = "Number of decoys to keep is 0"
             raise RuntimeError(msg)
 
-        logger.info('Excluding {0} decoy(s) from ensembling'.format(len(to_throw)))
+        logger.info('Excluding {0} decoy(s) from ensembling'.format(len(throw)))
 
         # TODO: return the scores so we can store them in AMPLE dict
         # Return the list of decoys to keep
-        return tuple([decoys[i] for i in to_keep])
+        return tuple([decoys[i] for i in keep])
 
     def summarize(self, plot_file, structure_file=None, structure_format=None):
         """Process the contact file etc
@@ -572,3 +570,18 @@ class ContactUtil(object):
             msg = "Subselection mode not valid"
             logger.critical(msg)
             raise ValueError(msg)
+
+    @staticmethod
+    def _select_linear(data):
+        data_sorted = sorted(list(enumerate(data)), key=lambda x: x[1], reverse=True)
+        midpoint = int(round(len(data_sorted) / 2.))
+        keep = zip(*data_sorted[:midpoint])[0]
+        throw = zip(*data_sorted[midpoint:])[0]
+        return keep, throw
+
+    @staticmethod
+    def _select_scaled(data):
+        data_scaled = data / numpy.mean(data)
+        keep = numpy.where(data_scaled >= 0.5)[0]
+        throw = numpy.where(data_scaled < 0.5)[0]
+        return tuple(keep), tuple(throw)
