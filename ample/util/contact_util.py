@@ -322,7 +322,8 @@ class ContactUtil(object):
 
             # Construct the command
             # TODO: Get the log file business working properly
-            cmd = [executable, '-d', subdistance_to_neighbor, decoy,
+            cmd = [executable, '-d', subdistance_to_neighbor, 
+                   decoy, decoy_format, 
                    self.sequence_file, self.sequence_format,
                    tmp_contact_file.name, 'casprr']
 
@@ -342,14 +343,14 @@ class ContactUtil(object):
             monitor=None,
             check_success=None,
             early_terminate=None,
-            nproc=kwargs['nproc'],
+            nproc=kwargs['nproc'] if 'nproc' in kwargs else 1,
             job_time=7200,          # Might be too long/short, taken from Rosetta modelling
             job_name='subselect',
-            submit_cluster=kwargs['submit_cluster'],
-            submit_qtype=kwargs['submit_qtype'],
-            submit_queue=kwargs['submit_queue'],
-            submit_array=kwargs['submit_array'],
-            submit_max_array=kwargs['submit_max_array'],
+            submit_cluster=kwargs['submit_cluster'] if 'submit_cluster' in kwargs else False,
+            submit_qtype=kwargs['submit_qtype'] if 'submit_qtype' in kwargs else None,
+            submit_queue=kwargs['submit_queue'] if 'submit_queue' in kwargs else False,
+            submit_array=kwargs['submit_array'] if 'submit_array' in kwargs else None,
+            submit_max_array=kwargs['submit_max_array'] if 'submit_max_array' in kwargs else None,
         )
 
         if not success:
@@ -421,14 +422,15 @@ class ContactUtil(object):
         # Process the contact map according to the parameters defined here
         contact_map = self._preprocess()
 
+        logger.debug(structure_file)
+        logger.debug(structure_format)
         if structure_file and not structure_format:
             msg = "A structure file also needs a structure format"
-            raise ValueError(msg)
-        elif structure_format and not structure_file:
-            msg = "A structure format also needs structure file"
+            logger.critical(msg)
             raise ValueError(msg)
         elif structure_file and structure_format and structure_format not in conkit.io.CONTACT_FILE_PARSERS.keys():
             msg = "Unknown structure format"
+            logger.critical(msg)
             raise ValueError(msg)
         elif structure_file and structure_format:
             logger.info(

@@ -247,7 +247,7 @@ class Ample(object):
 
             # Write some restraints
             restraints_file = os.path.join(optd['work_dir'], optd['name'] + ".cst")
-            optd['restraints_file'] = con_util.create_restraints(
+            optd['restraints_file'] = con_util.write_restraints(
                 restraints_file, optd['restraints_format'], optd['energy_function']
             )
         else:
