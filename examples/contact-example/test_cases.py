@@ -84,7 +84,7 @@ if not sys.platform.startswith('win'):
     #
     ###############################################################################
 
-    args_rosetta_contacts = args_vanilla + [
+    args_rosetta_contacts_subselect = args_vanilla + [
         ['-contact_file', os.path.join(INPUT_DIR, 'toxd_.mat')],
         ['-contact_format', 'ccmpred'],
         ['-energy_function', 'FADE_default'],
@@ -102,7 +102,7 @@ if not sys.platform.startswith('win'):
             self.assertEqual(nmodels_sub, 15, "Only {0} models produced".format(nmodels))
 
     TEST_DICT['rosetta_contacts_subselect'] = {
-        'args': args_rosetta_contacts,
+        'args': args_rosetta_contacts_subselect,
         'test':  AMPLETest,
     }
     
