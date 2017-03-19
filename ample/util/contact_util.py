@@ -387,7 +387,7 @@ class ContactUtil(object):
         # Return the list of decoys to keep
         return tuple([decoys[i] for i in keep])
 
-    def summarize(self, plot_file, structure_file=None, structure_format=None):
+    def summarize(self, plot_file, structure_file=None, structure_format=None, native_cutoff=8):
         """Process the contact file etc
 
         Parameters
@@ -398,6 +398,8 @@ class ContactUtil(object):
            A reference structure file
         structure_format : str
            The format of ``structure_file``
+        native_cutoff : int
+           The distance cutoff for contact extraction from ``structure_file``
 
         Returns
         -------
