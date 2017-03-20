@@ -50,15 +50,10 @@ class ModelData(object):
         self.gdtha = 0.0
         self.maxsub = 0.0
         self.seq_id = 0
-        
-    def _to_dict(self):
+
+    def _asdict(self):
         """Convert the object to a dictionary"""
-        dictionary = {'model_name': self.model_name, 'structure_name': self.structure_name,
-                      'model_fname': self.model_fname, 'structure_fname': self.structure_fname,
-                      'log_fname': self.log_fname, 'tmscore': self.tmscore, 'rmsd': self.rmsd,
-                      'nr_residues_common': self.nr_residues_common, 'gdtts': self.gdtts,
-                      'gdtha': self.gdtha, 'maxsub': self.maxsub, 'seq_id': self.seq_id}
-        return dictionary
+        return {k: getattr(self, k) for k in self.__slots__}
 
 
 class TMapps(object):
@@ -270,7 +265,7 @@ class TMapps(object):
             model.maxsub = pt.maxsub
         if hasattr(pt, 'seq_id'):
             model.seq_id = pt.seq_id
-        return model._to_dict()
+        return model._asdict()
 
     @staticmethod
     def binary_avail(binary):
