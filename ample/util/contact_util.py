@@ -489,7 +489,7 @@ class ContactUtil(object):
 
         with open(restraint_file, 'w') as f_out:
 
-            if format == 'rosetta':
+            if restraint_format == 'rosetta':
                 construct = getattr(
                     energy_functions.RosettaFunctionConstructs, energy_function
                 ).fget(energy_functions.RosettaFunctionConstructs)
@@ -504,7 +504,7 @@ class ContactUtil(object):
                     contact_dict['sigmoid_slope'] = energy_functions.DynamicDistances.percentile(contact.res1, contact.res2)
                     f_out.write(construct.format(**contact_dict) + os.linesep)
 
-            elif format == 'saint2':
+            elif restraint_format == 'saint2':
                 construct = getattr(
                     energy_functions.Saint2FunctionConstructs, 'DEFAULT'
                 ).fget(energy_functions.Saint2FunctionConstructs)
