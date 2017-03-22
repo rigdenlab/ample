@@ -14,6 +14,7 @@ import collections
 import glob
 import iotbx.pdb
 import logging
+import operator
 import os
 import shutil
 import sys
@@ -456,15 +457,17 @@ def set_phaser_rms_from_subcluster_score(optd):
     return
 
 
-def sort_ensembles(ensemble_pdbs, ensembles_data=None, prioritise=True):
+def sort_ensembles(ensemble_pdbs, ensembles_data=None, keys=None, prioritise=True):
     """Sort AMPLE ensemble data.
     
     Parameters
     ----------
-    ensemble_pdbs: list 
+    ensemble_pdbs: list, tuple
        A list of ensemble file paths
     ensembles_data : list, tuple, optional
        A list of ensembles' data dictionaries
+    keys : list, tuple, optional
+       A list of keys in ensembles_data by which we sort. The key order must be high > middle > low!
     prioritise : bool, optional
        Favour ensembles in truncation level 20-50% [default: True]
     
@@ -483,90 +486,106 @@ def sort_ensembles(ensemble_pdbs, ensembles_data=None, prioritise=True):
         raise RuntimeError("Not enough ensembles")
     # Sort with out method only if we have data which contains our generated data
     if ensembles_data:
-        ensemble_pdbs_sorted = _sort_ensembles(ensemble_pdbs, ensembles_data, prioritise)    
+        ensemble_pdbs_sorted = _sort_ensembles(ensemble_pdbs, ensembles_data, keys, prioritise)
     else:
         ensemble_pdbs_sorted = sorted(ensemble_pdbs)
     return ensemble_pdbs_sorted
 
 
-def _sort_ensembles(ensemble_pdbs, ensembles_data, prioritise):
-    """Sort ensembles based on
+def _sort_ensembles(ensemble_pdbs, ensemble_data, keys, prioritise):
+    """Sort ensembles based on ``keys`` or the following order
         1) Cluster
         2) Truncation level - favoured region of 20-50% first
         3) Subcluster radius threshold
         4) Side chain treatment
     """
-    assert len(ensemble_pdbs) == len(ensembles_data), "Unequal ensembles data for sorting"
-
-    # Determine which keys we can sort our data with
-    def _get_keys(ensemble):
-        _criteria = ['cluster_num',
-                     'truncation_score_key',
-                     'truncation_level',
-                     'subcluster_radius_threshold',
-                     'side_chain_treatment']
-
-        for crit in _criteria:
-            if ensemble.has_key(crit) and ensemble[crit]:
-                yield crit
+    assert len(ensemble_pdbs) == len(ensemble_data), "Unequal ensembles data for sorting"
 
     # Keys we want to sort data by - differs for different source of ensembles
-    keys_to_sort = list(_get_keys(ensembles_data[0]))
-    if keys_to_sort:
+    if keys is None:
+        keys = ['cluster_num', 'truncation_score_key', 'truncation_level',
+                'subcluster_radius_threshold', 'side_chain_treatment']
+    else:
+        keys = [key for key in keys
+                if key in ensemble_data[0] and ensemble_data[0][key]]
+
+    if keys:
         # Zip the data so order remains identical between pdbs and data
-        ensembles_zipped = zip(ensemble_pdbs, ensembles_data)
-        if "truncation_level" in keys_to_sort and prioritise:
-            ensembles_zipped_ordered = _sort_ensembles_prioritise(ensembles_zipped, keys_to_sort)
-        else:
-            ensembles_zipped_ordered = _sort_ensembles_parameters(ensembles_zipped, keys_to_sort)
+        ensembles_zipped = zip(ensemble_pdbs, ensemble_data)
+
+        # The sorting itself
+        ensembles_zipped_ordered = sorted(ensembles_zipped, key=lambda e: [e[1][k] for k in keys])
+
+        # Sort the ensembles further if we want to prioritise the "sweet spot"
+        # between 20-50% truncation level
+        if "truncation_level" in keys and prioritise:
+            ensembles_zipped_ordered = _sweet_spotting(ensembles_zipped_ordered, keys)
+
         # We need to `unzip` the data to get a list of ordered pdbs
         ensemble_pdbs_sorted, _ = zip(*ensembles_zipped_ordered)
     else:
         ensemble_pdbs_sorted = sorted(ensemble_pdbs)
 
-    return ensemble_pdbs_sorted
+    return list(ensemble_pdbs_sorted)
 
 
-def _sort_ensembles_prioritise(ensembles_zipped, keys_to_sort):
-    """Sort our ensembles based on the data in order of the keys provided"""
-    # Group the ensembles either by cluster ... or by truncation score ...
-    # ... otherwise throw them all in one pot
-    tmp_data = collections.defaultdict(list)
-    if "cluster_num" in keys_to_sort:
-        for ensemble in ensembles_zipped:
-            tmp_data[ensemble[1]['cluster_num']].append(ensemble)
-        iterator_keys = sorted(tmp_data.keys(), key=int)
+def _sweet_spotting(ensembles_zipped_ordered, keys):
+    """Sort the ensembles further if we want to prioritise the "sweet spot"
+    between 20-50% truncation level
 
-    elif "truncation_score_key" in keys_to_sort:
-        for ensemble in ensembles_zipped:
-            tmp_data[ensemble[1]['truncation_score_key']].append(ensemble)
-        iterator_keys = sorted(tmp_data.keys())
+    Parameters
+    ----------
+    ensembles_zipped_ordered : list, tuple
+       Zipped and __sorted__ data
+    keys : list, tuple
+       Sorting keys
+
+    Returns
+    -------
+    list
+       Sweet-spotted data
+
+    """
+
+    class Eimer(object):
+        """Container unit for binnable data"""
+
+        def __init__(self):
+            self.low = []
+            self.mid = []
+            self.high = []
+
+        def add(self, e):
+            if e[1]['truncation_level'] > 50:
+                self.high.append(e)
+            elif e[1]['truncation_level'] < 20:
+                self.low.append(e)
+            else:
+                self.mid.append(e)
+
+    def magic(key, data):
+        """Magic binning happening here"""
+        container = {k[key]: [] for k in zip(*data)[1]}
+        for e in data:
+            container[e[1][key]].append(e)
+        mulleimer = []
+        for c in sorted(list(container)):
+            bin = Eimer()
+            for e in container[c]:
+                bin.add(e)
+            mulleimer.extend(bin.mid + bin.low + bin.high)
+        return mulleimer
+
+    # We need to bin the data here in case we want the cluster number or truncation score key to take priority
+    # over the truncation level. The binning will, thus, respect the cluster number by binning it accordingly.
+    if "cluster_num" in keys and keys.index("cluster_num") < keys.index("truncation_level"):
+        return magic("cluster_num", ensembles_zipped_ordered)
+
+    elif "truncation_score_key" in keys and keys.index("truncation_score_key") < keys.index("truncation_level"):
+        return magic("truncation_score_key", ensembles_zipped_ordered)
 
     else:
-        for ensemble in ensembles_zipped:
-            tmp_data["all"].append(ensemble)
-        iterator_keys = sorted(tmp_data.keys())
-
-    # Iterate through clusters and group based on truncation level
-    ensembles_zipped_ordered = []
-    for sbin in iterator_keys:
-        low, mid, high = [], [], []
-        for ensemble in _sort_ensembles_parameters(tmp_data[sbin], keys_to_sort):
-            if ensemble[1]['truncation_level'] > 50:
-                high.append(ensemble)
-            elif ensemble[1]['truncation_level'] < 20:
-                low.append(ensemble)
-            else:
-                mid.append(ensemble)
-        ensembles_zipped_ordered += mid + low + high
-
-    return ensembles_zipped_ordered
-
-
-def _sort_ensembles_parameters(ensembles_zipped, keys_to_sort):
-    """Tiny wrapper function to sort ensembles data based on keys provided
-    """
-    def _extract(ens):
-        return [ens[1][crit] for crit in keys_to_sort]
-    return sorted(ensembles_zipped, key=_extract)
-
+        bin = Eimer()
+        for ens in ensembles_zipped_ordered:
+            bin.add(ens)
+        return bin.mid + bin.low + bin.high

@@ -310,8 +310,10 @@ class Ample(object):
             
             # Sort the ensembles in a favourable way
             logger.info("Sorting ensembles")
-            ensemble_pdbs_sorted = ensembler.sort_ensembles(optd['ensembles'],
-                                                           optd['ensembles_data'])
+            sort_keys = ['cluster_num', 'truncation_level', 'subcluster_radius_threshold', 'side_chain_treatment']
+            ensemble_pdbs_sorted = ensembler.sort_ensembles(optd['ensembles'], optd['ensembles_data'],
+                                                            keys=sort_keys, prioritise=True)
+
             # Create job scripts
             logger.info("Generating MRBUMP runscripts")
             optd['mrbump_scripts'] = mrbump_util.write_mrbump_files(ensemble_pdbs_sorted,
