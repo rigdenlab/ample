@@ -462,6 +462,11 @@ class ContactUtil(object):
         energy_function : str
            The energy function
 
+        Returns
+        -------
+        str
+           The file the restraints were written to
+
         Raises
         ------
         ValueError
@@ -512,6 +517,8 @@ class ContactUtil(object):
                 for contact in contact_map:
                     contact_dict = contact._to_dict()
                     f_out.write(construct.format(**contact_dict) + os.linesep)
+
+        return restraint_file
 
     @staticmethod
     def check_options(optd):
