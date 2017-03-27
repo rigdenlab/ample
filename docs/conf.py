@@ -15,6 +15,9 @@
 import os
 import sys
 
+# Make AMPLE believe we are running it as part of CCP4
+os.environ['CCP4'] = "/empty/path"
+
 # Required by autosummary
 sys.path.insert(0, os.path.abspath("."))    # for sphinxext directory
 sys.path.insert(0, os.path.abspath(".."))   # for ample directory
@@ -28,16 +31,17 @@ needs_sphinx = '1.5.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [ 
-    #'sphinx.ext.autodoc',
-    #'sphinx.ext.autosectionlabel',
-    #'sphinx.ext.autosummary', 
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosectionlabel',
+    'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
     'sphinxext.math_symbol_table',
-    #'numpydoc.numpydoc'
+    'sphinxarg.ext',
+    'numpydoc.numpydoc'
 ]
 
 try:
@@ -132,6 +136,13 @@ todo_include_todos = True
 #autosummary_generate = True
 #autodoc_docstring_signature = True
 
+# If set, mock the import system to have external dependencies
+autodoc_mock_imports = [
+    'Bio', 'conkit', 'iotbx.cif', 'iotbx.file_reader', 'iotbx.mtz', 'iotbx.pdb',
+    'matplotlib', 'mmtbx.superpose', 'parse_arpwarp', 'parse_buccaneer', 
+    'parse_phaser', 'parse_shelxe', 'phaser',
+]
+
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -149,8 +160,9 @@ html_theme_options = {
         ('Home', 'index'),
         ('Description', 'description'),
         ('Examples', 'examples'),
-        ('References', 'references'),
         ('Server', 'server'),
+        ('Documentation', 'contents'),
+        ('References', 'references'),
     ],
     # Render the next and previous page links in navbar. 
     'navbar_sidebarrel': False,
