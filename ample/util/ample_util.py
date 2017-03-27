@@ -5,6 +5,7 @@ __date__ = "01 Jan 2016"
 __version__ = "1.0"
 
 import cPickle
+import glob
 import logging
 import os
 import subprocess
@@ -201,7 +202,7 @@ def construct_references(optd):
         article['author'] = article['author'].split(" and ")[0].split(",")[0] + " et al."
         # Display page separator as single dash
         article['pages'] = article['pages'].replace("--", "-")
-    template_msg = "* {label}: {author} ({year}). {title}. {journal} {volume}({number}), {pages}. [doi:{doi}]"
+    template_msg = "* {author} ({year}). {title}. {journal} {volume}({number}), {pages}. [doi:{doi}]"
     references_msg = [template_msg.format(**article) for article in articles]
 
     return (os.linesep*2).join(references_msg)
@@ -215,48 +216,51 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
     Check a directory of pdbs or extract pdb files from a given tar/zip file or directory of pdbs
     and set the amoptd['models_dir'] entry with the directory of unpacked/validated pdbs
     """
-    
+
     filename = amoptd['models']
     models_dir = amoptd['models_dir']
-    
-    # If it's already a models_dir, just check it's valid   
+
+    # If it's already a models_dir, just check it's valid
     if os.path.isdir(filename):
         models_dir = filename
     else:
         # Here we are extracting from a file
         if not os.path.isfile(filename):
-            msg="Cannot find models file: {0}".format(filename)
+            msg = "Cannot find models file: {0}".format(filename)
             exit_util.exit_error(msg)
             
         # we need a models_dir to extract into
-        assert models_dir,"extractModels needs a models_dir path!"
+        assert models_dir, "extract_models() needs a models_dir path!"
         if not os.path.isdir(models_dir):
             os.mkdir(models_dir)
         models_dir = models_dir
         
         # See what sort of file this is:
-        f,suffix=os.path.splitext(filename)
-        if suffix in ['.gz','.bz']:
-            f,s2=os.path.splitext(f)
-            if s2 == '.tar': suffix=s2+suffix
+        f, suffix = os.path.splitext(filename)
+        if suffix in ['.gz', '.bz']:
+            f, s2 = os.path.splitext(f)
+            if s2 == '.tar':
+                suffix = s2 + suffix
         
-        tsuffixes=['.tar.gz','.tgz','.tar.bz','.tbz']
-        suffixes=tsuffixes + ['.zip']
+        tar_suffixes = ['.tar.gz', '.tgz', '.tar.bz', '.tbz']
+        suffixes = tar_suffixes + ['.zip']
         if suffix not in suffixes:
-            msg="Do not know how to extract files from file: {0}\n Acceptable file types are: {1}".format(filename,suffixes)
+            msg = "Do not know how to extract files from file: {0}\n " \
+                  "Acceptable file types are: {1}".format(filename, suffixes)
             exit_util.exit_error(msg)
-        if suffix in tsuffixes:
+        if suffix in tar_suffixes:
             files = extract_tar(filename, models_dir)
         else:
             files = extract_zip(filename, models_dir)
-        
+
         # Assume anything with one member is quark decoys
         if len(files) == 1:
-            quark_filename='alldecoy.pdb'
+            quark_filename = 'alldecoy.pdb'
             f = os.path.basename(files[0])
-            if not f == quark_filename:
-                msg="Only found one member ({0}) in file: {1} and the name was not {2}\n".format(f, filename, quark_filename)
-                msg+="If this file contains valid QUARK decoys, please email: ccp4@stfc.ac.uk"
+            if f != quark_filename:
+                msg = "Only found one member ({0}) in file: {1} " \
+                      "and the name was not {2}\n".format(f, filename, quark_filename)
+                msg += "If this file contains valid QUARK decoys, please email: ccp4@stfc.ac.uk"
                 exit_util.exit_error(msg)
             # Now extract the quark pdb files from the monolithic file
             split_quark(files[0], models_dir)
@@ -268,11 +272,11 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
             amoptd['quark_models'] = True
     
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
-        msg="Problem importing pdb files - please check the log for more information"
+        msg = "Problem importing pdb files - please check the log for more information"
         exit_util.exit_error(msg)
     
     amoptd['models_dir'] = models_dir
-    return
+    return glob.glob(os.path.join(models_dir, "*.pdb"))
 
 
 def extract_tar(filename, directory, suffixes=['.pdb']):

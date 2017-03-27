@@ -85,7 +85,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                                                               score_type=SCORE_TYPE,
                                                               work_dir=cluster_dir)
         elif cluster_method_type == 'import':
-            clusters = cluster_util.import_cluster(cluster_dir)
+            clusters = cluster_util.import_cluster(models)
         elif cluster_method_type == 'random':
             clusters = cluster_util.random_cluster(cluster_method_type,
                                                    max_cluster_size,

@@ -111,11 +111,7 @@ class SubClusterer(object):
             row = cluster[0]
             rmsds = [self.distance_matrix[row][j] for j in cluster[1:]]
 
-        #print "rmsds: ",rmsds
-        #print "mean: ",statistics_util.mean(rmsds)
-        #print "max: ",max(rmsds)
         return max(rmsds)
-        #return statistics_util.mean(rmsds)
     
     def dump_raw_matrix(self,file_name):
         with open(file_name,'w') as f:

@@ -1,15 +1,10 @@
 .. _ample_examples:
 
-********
-Examples
-********
+AMPLE Usage Examples
+====================
 
-A number of examples are provided with AMPLE that may be useful in getting familiar with the program's functions.
+.. note::
 
-.. toctree::
-   :maxdepth: 1
-   :glob:
+   Please download the example data `here <https://github.com/rigdenlab/ample-examples/archive/master.zip>`_. This data will be used throughout all examples.
 
-   examples/*
-
-------------------------------------------------------------------
+.. include:: examples/generic.rst

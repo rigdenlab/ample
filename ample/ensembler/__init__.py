@@ -156,18 +156,17 @@ def create_ensembles(amoptd):
 
     ############################################################################
     # For a single model we don't need to use glob 
-    if not (amoptd['single_model'] or amoptd['models_dir']):
-        msg = 'AMPLE ensembler needs either a single_model or a models_dir argument'
+    if not (amoptd['single_model'] or amoptd['models']):
+        msg = 'AMPLE ensembler needs either a single_model or a list of models'
         exit_util.exit_error(msg, sys.exc_info()[2])
         if amoptd['single_model'] and not os.path.isfile(amoptd['single_model']):
             msg = 'Cannot find single_model pdb: {0}'.format(amoptd['single_model'])
             exit_util.exit_error(msg, sys.exc_info()[2])
-        elif amoptd['models_dir'] and not os.path.isfile(amoptd['models_dir']):
-            msg = 'Cannot find models_dir: {0}'.format(amoptd['models_dir'])
+        elif amoptd['models'] and len(amoptd['models'] < 2):
+            msg = 'Not enough models provided for ensembling - use single_model_mode instead'
             exit_util.exit_error(msg, sys.exc_info()[2])
-            
-    models = list([amoptd['single_model']]) if amoptd['single_model_mode'] else \
-        glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))
+
+    models = list([amoptd['single_model']]) if amoptd['single_model_mode'] else amoptd['models']
 
     #if amoptd['cluster_method'] == 'spicker_tmscore':
     #    models = reorder_models(models, amoptd['score_matrix_file_list'])

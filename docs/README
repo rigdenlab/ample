@@ -27,7 +27,7 @@ $ ccp4-python -m pip install -r doc-requirements.txt
 Then, you are ready to go. Generate the documentation from
 within the docs folder of AMPLE by using the following command:
 
-$ ccp4-python -m sphinx.apidoc -e -f -l -o generated ../ample ../ample/*/tests
+$ ccp4-python -m sphinx.apidoc -e -f -l -o -M api/generated ../ample ../ample/*/tests
 $ ccp4-python -m sphinx -b html . _build/html
 
 This will generate an HTML version of the documentation, 

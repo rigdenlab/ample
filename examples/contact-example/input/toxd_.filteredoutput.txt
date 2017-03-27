@@ -1,0 +1,8 @@
+#identifier diversity     direction viterbiscore indexpred        state  res1  res2
+      toxd_     1.98   Antiparallel       9.0000         1        first    36    21 
+      toxd_     1.98   Antiparallel       9.0000         1     internal    35    22 
+      toxd_     1.98   Antiparallel       9.0000         1     internal    34    23 
+      toxd_     1.98   Antiparallel       9.0000         1     internal    33    24 
+      toxd_     1.98   Antiparallel       9.0000         1     internal    32    25 
+      toxd_     1.98   Antiparallel       9.0000         1     internal    31    26 
+      toxd_     1.98   Antiparallel       9.0000         1         last    30    27 

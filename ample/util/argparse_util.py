@@ -27,13 +27,18 @@ print parser.parse_args('-d false'.split())
 
 from ample.util import version
 
-def add_core_options(parser):
+import argparse
+
+
+def add_core_options(parser=None):
     """Function to add any arguments required by all runtypes"""
-    
+    if parser is None:
+        parser = argparse.ArgumentParser()
+
     parser.add_argument('-config_file', help="user configuration file")
         
     parser.add_argument('-debug', metavar='True/False',
-                       help='Run in debug mode (CURRENTLY UNUSED)')
+                       help=argparse.SUPPRESS)
     
     parser.add_argument('-nproc', type=int,
                        help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors." + \
@@ -41,10 +46,13 @@ def add_core_options(parser):
 
     parser.add_argument('-work_dir',
                        help='Path to the directory where the job will run (will be created if it doesn\'t exist)')
-    return
+    return parser
 
-def add_cluster_submit_options(parser):
+
+def add_cluster_submit_options(parser=None):
     """Add the options for submission to a cluster queuing system"""
+    if parser is None:
+        parser = argparse.ArgumentParser()
     
     submit_group = parser.add_argument_group('Cluster queue submission options')
 
@@ -57,6 +65,9 @@ def add_cluster_submit_options(parser):
     submit_group.add_argument('-submit_max_array', type=int,
                               help='The maximum number of jobs to run concurrently with SGE array job submission' )
     
+    submit_group.add_argument('-submit_num_array_jobs', type=int,
+                              help='The number of jobs to run concurrently with SGE array job submission' )
+    
     submit_group.add_argument('-submit_pe_lsf',
                               help='Cluster submission: string to set number of processors for LSF queueing system')
 
@@ -68,10 +79,14 @@ def add_cluster_submit_options(parser):
     
     submit_group.add_argument('-submit_qtype',
                               help='Cluster submission queue type - currently support SGE and LSF')
-    return
-    
-def add_general_options(parser):
-    
+    return parser
+
+
+def add_general_options(parser=None):
+
+    if parser is None:
+        parser = argparse.ArgumentParser()
+
     # Always add the core option
     add_core_options(parser)
     
@@ -121,7 +136,7 @@ def add_general_options(parser):
                        help='Path to a template to improve - NMR, homolog')
     
     parser.add_argument('-LGA', metavar='path_to_LGA dir',
-                       help='pathway to LGA folder (not the exe) will use the \'lga\' executable. UNUSED')
+                       help=argparse.SUPPRESS) #help='pathway to LGA folder (not the exe) will use the \'lga\' executable. UNUSED')
 
     parser.add_argument('-make_models', metavar='True/False',
                        help='run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
@@ -210,17 +225,24 @@ def add_general_options(parser):
     
     parser.add_argument('-webserver_uri',
                        help='URI of the webserver directory - also indicates we are running as a webserver')
-    return
+    return parser
 
-def add_contact_options(parser):
-    
+
+def add_contact_options(parser=None):
+    """Contact prediction related options"""
+    if parser is None:
+        parser = argparse.ArgumentParser()
+
     contact_group = parser.add_argument_group("Contact Restraints Options")
     
     contact_group.add_argument('-bbcontacts_file',
                        help='Additional bbcontacts file. Requires normal contactfile')
     
     contact_group.add_argument('-contact_file',
-                       help='Residue contact file in CASP RR format')
+                       help='Residue contact file')
+
+    contact_group.add_argument('-contact_format',
+                       help='Residue contact file format. For available formats refer to the AMPLE documentation')
     
     contact_group.add_argument('-disulfide_constraints_file',
                        help='Disulfide residue constraints for ab initio modelling')
@@ -239,13 +261,21 @@ def add_contact_options(parser):
     
     contact_group.add_argument('-restraints_file',
                        help='Residue restraints for ab initio modelling')
-    
+
     contact_group.add_argument('-restraints_weight', type=float,
                        help="Additional energy weighting of restraints in Rosetta")
-    return
 
-def add_mr_options(parser): 
-    
+    contact_group.add_argument('-subselect_mode',
+                       help=argparse.SUPPRESS)
+
+    return parser
+
+
+def add_mr_options(parser=None):
+
+    if parser is None:
+        parser = argparse.ArgumentParser()
+
     mr_group = parser.add_argument_group('MRBUMP/Molecular Replacement Options')
     
     mr_group.add_argument('-arpwarp_cycles', type=int,
@@ -313,10 +343,14 @@ def add_mr_options(parser):
     
     mr_group.add_argument('-use_shelxe', metavar='True/False',
                        help='True to use shelxe')
-    return
+    return parser
 
-def add_rosetta_options(parser):
-    
+
+def add_rosetta_options(parser=None):
+
+    if parser is None:
+        parser = argparse.ArgumentParser()
+
     rosetta_group = parser.add_argument_group('ROSETTA Modelling Options')
 
     rosetta_group.add_argument('-all_atom', metavar='True/False',
@@ -368,5 +402,5 @@ def add_rosetta_options(parser):
                        help='Lips4 file for modelling transmembrane proteins')
 
     rosetta_group.add_argument('-use_homs', metavar='True/False',
-                       help='Select ROSETTA fragments from homologous models')
-    return
+                       help="Select ROSETTA fragments from homologous models")
+    return parser

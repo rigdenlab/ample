@@ -1,9 +1,8 @@
 #!/usr/bin/env ccp4-python
-'''
-Created on 29 Dec 2015
 
-@author: jmht
-'''
+__author__ = "Jens Thomas"
+__date__ = "29 Dec 2015"
+__version__ = "0.1"
 
 import glob
 import os
@@ -51,11 +50,11 @@ if not sys.platform.startswith('win'):
             self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
             self.assertTrue(self.AMPLE_DICT['success'])
             self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
-            return
-            
-    TEST_DICT['rosetta_modelling'] = { 'args' : args_rosetta_modelling,
-                                       'test' :  AMPLETest,
-                                        }
+
+    TEST_DICT['rosetta_modelling'] = {
+        'args': args_rosetta_modelling,
+        'test':  AMPLETest,
+    }
 
 ###############################################################################
 #
@@ -72,7 +71,7 @@ class AMPLETest(AMPLEBaseTest):
     def test_from_existing_models(self):
 
         nclusters = 10
-        radii = set([1,3])
+        radii = set([1, 3])
         sidechains = set(['polyAla'])
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertEqual(nclusters, self.AMPLE_DICT['num_clusters'])
@@ -101,11 +100,11 @@ class AMPLETest(AMPLEBaseTest):
         self.assertTrue(result['MR_program'], 'PHASER')
         self.assertTrue(result['native_pdb_solvent_content'], 47.67)
         self.assertGreater(result['PHASER_TFZ'], 5.0, "Low PHASER_TFZ: {0}".format(result['PHASER_TFZ']))
-        return
-        
-TEST_DICT['from_existing_models'] = { 'args' : args_from_existing_models,
-                                     'test' :  AMPLETest,
-                                      }
+
+TEST_DICT['from_existing_models'] = {
+    'args': args_from_existing_models,
+    'test':  AMPLETest,
+}
 
 ###############################################################################
 #
@@ -129,11 +128,11 @@ class AMPLETest(AMPLEBaseTest):
         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
         self.assertTrue(self.AMPLE_DICT['success'],"Job did not succeed")
         self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
-        return
-        
-TEST_DICT['from_existing_models_classic'] = { 'args' : args_from_existing_models_classic,
-                                             'test' :  AMPLETest,
-                                             }
+
+TEST_DICT['from_existing_models_classic'] = {
+    'args': args_from_existing_models_classic,
+    'test':  AMPLETest,
+}
 
 ###############################################################################
 #
@@ -149,17 +148,20 @@ args_from_quark_models = args_vanilla + [
 class AMPLETest(AMPLEBaseTest):
     def test_from_quark_models(self):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
-        nmodels = len(glob.glob(self.AMPLE_DICT['models_dir']+"/*.pdb"))
+        nmodels = len(glob.glob(
+            os.path.join(self.AMPLE_DICT['models_dir'], "*.pdb")
+        ))
         self.assertEqual(nmodels, 200, "Only {0} models produced".format(nmodels))
         self.assertIn('ensembles', self.AMPLE_DICT)
         nensembles = len(self.AMPLE_DICT['ensembles'])
         ref_nensembles = 18 if self.AMPLE_DICT["use_scwrl"] else 35 # unmod ensembles without side-chains - Scwrl4 required
-        self.assertEqual(nensembles, ref_nensembles, "Incorrect number of ensembles produced: {0} vs {1}".format(nensembles,ref_nensembles))
-        return
-         
-TEST_DICT['from_quark_models'] = { 'args' : args_from_quark_models,
-                                   'test' :  AMPLETest,
-                                 }
+        msg = "Incorrect number of ensembles produced: {0} vs {1}".format(nensembles, ref_nensembles)
+        self.assertEqual(nensembles, ref_nensembles, msg)
+
+TEST_DICT['from_quark_models'] = {
+    'args': args_from_quark_models,
+    'test':  AMPLETest,
+}
 
 ###############################################################################
 #

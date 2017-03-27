@@ -180,106 +180,112 @@ class RosettaModel(object):
 
         # Set executable
         if self.transmembrane:
-            cmd = [ self.transmembrane_exe ]
+            cmd = [self.transmembrane_exe]
         else:
-            cmd = [ self.rosetta_AbinitioRelax ]
+            cmd = [self.rosetta_AbinitioRelax]
 
-        cmd += ['-database', self.rosetta_db,
-                '-in::file::fasta', self.fasta,
-                '-in:file:frag3', self.frags_3mers,
-                '-in:file:frag9', self.frags_9mers,
-                '-out:path', wdir,
-                '-out:pdb',
-                '-out:nstruct', str(nstruct),
-                '-out:file:silent', os.path.join( wdir, 'silent.out'),
-                '-run:constant_seed',
-                '-run:jran', str(seed),
-                '-abinitio:relax', 
-                '-relax::fast'
-                ]
+        cmd += [
+            '-database', self.rosetta_db,
+            '-in::file::fasta', self.fasta,
+            '-in:file:frag3', self.frags_3mers,
+            '-in:file:frag9', self.frags_9mers,
+            '-out:path', wdir,
+            '-out:pdb',
+            '-out:nstruct', str(nstruct),
+            '-out:file:silent', os.path.join(wdir, 'silent.out'),
+            '-run:constant_seed',
+            '-run:jran', str(seed),
+            '-abinitio:relax',
+            '-relax::fast'
+        ]
 
         if self.rosetta_version >= 3.4:
             # Recommended default paramenters - see also Radius of gyration reweight
             # we omit the -use_filters true option as we want to continue with refinement
             # even for 'failed' models as the failed models will be used anyway
-            cmd += [ "-abinitio::increase_cycles", "10", 
-                     "-abinitio::rsd_wt_helix", "0.5",
-                     "-abinitio::rsd_wt_loop", "0.5" ]
+            cmd += [
+                "-abinitio::increase_cycles", "10",
+                "-abinitio::rsd_wt_helix", "0.5",
+                "-abinitio::rsd_wt_loop", "0.5"
+            ]
 
             if self.psipred_ss2: # not sure if this works < 3.4
-                cmd += [ "-psipred_ss2", self.psipred_ss2 ]
+                cmd += ["-psipred_ss2", self.psipred_ss2]
 
         if self.all_atom:
-            cmd += [ '-return_full_atom true', ]
+            cmd += ['-return_full_atom true']
         else:
-            cmd += [ '-return_full_atom false' ]
+            cmd += ['-return_full_atom false']
 
         if self.transmembrane:
-            cmd += [ '-in:file:spanfile', self.spanfile,
-                     '-in:file:lipofile', self.lipofile,
-                     '-abinitio:membrane',
-                     '-membrane:no_interpolate_Mpair',
-                     '-membrane:Menv_penalties',
-                     '-score:find_neighbors_3dgrid',
-                     '-membrane:normal_cycles', '40',
-                     '-membrane:normal_mag', '15',
-                     '-membrane:center_mag', '2',
-                     '-mute core.io.database',
-                     '-mute core.scoring.MembranePotential'
-                    ]
+            cmd += [
+                '-in:file:spanfile', self.spanfile,
+                '-in:file:lipofile', self.lipofile,
+                '-abinitio:membrane',
+                '-membrane:no_interpolate_Mpair',
+                '-membrane:Menv_penalties',
+                '-score:find_neighbors_3dgrid',
+                '-membrane:normal_cycles', '40',
+                '-membrane:normal_mag', '15',
+                '-membrane:center_mag', '2',
+                '-mute core.io.database',
+                '-mute core.scoring.MembranePotential'
+            ]
         elif self.transmembrane2:
             cmd += [ '-score:patch', self.tm_patch_file ]
             self.restraints_weight = 3
             if not self.restraints_file and os.path.isfile(self.restraints_file):
-                raise RuntimeError,"transmembrane2 requires a restraints file"
+                msg = "transmembrane2 requires a restraints file"
+                raise RuntimeError(msg)
     
         # Radius of gyration reweight
         if self.rad_gyr_reweight is not None:
-            cmd+= [ '-rg_reweight', str(self.rad_gyr_reweight) ]
+            cmd += ['-rg_reweight', str(self.rad_gyr_reweight)]
         else:
-            cmd+= [ '-rg_reweight', "0.5" ]
+            cmd += ['-rg_reweight', "0.5"]
 
         # Restraints file or domain restraints
-        if self.restraints_file or self.domain_termini_distance  > 0:
-            if self.domain_termini_distance  > 0:
+        if self.restraints_file or self.domain_termini_distance > 0:
+            if self.domain_termini_distance > 0:
                 restraints_file = self.setup_domain_restraints()
             else:
                 restraints_file = self.restraints_file
             if not os.path.isfile(restraints_file):
-                msg="Cannot find restraints file: {0}".format(restraints_file)
+                msg = "Cannot find restraints file: {0}".format(restraints_file)
                 self.logger.critical(msg)
-                raise RuntimeError,msg
-            cmd+=[ '-constraints:cst_file', restraints_file,
-                   '-constraints:cst_fa_file', restraints_file ]
+                raise RuntimeError(msg)
+            cmd += [
+                '-constraints:cst_file', restraints_file,
+                '-constraints:cst_fa_file', restraints_file
+            ]
             if self.restraints_weight is not None:
-                cmd+=[ '-constraints:cst_weight', str(self.restraints_weight),
-                       '-constraints:cst_fa_weight', str(self.restraints_weight) ]
+                cmd += [
+                    '-constraints:cst_weight', str(self.restraints_weight),
+                    '-constraints:cst_fa_weight', str(self.restraints_weight)
+                ]
         
         # Add compatibility for extra disulfide restraints
         if self.disulfide_constraints_file and os.path.isfile(self.disulfide_constraints_file):
-            cmd+=[ '-in::fix_disulf', str(self.disulfide_constraints_file) ]    
+            cmd += ['-in::fix_disulf', str(self.disulfide_constraints_file)]
         elif self.disulfide_constraints_file:
-            msg="Cannot find disulfide constraints file: {0}".format(self.disulfide_constraints_file)
+            msg = "Cannot find disulfide constraints file: {0}".format(self.disulfide_constraints_file)
             self.logger.critical(msg)
-            raise RuntimeError,msg
+            raise RuntimeError(msg)
                 
         # Improve Template
         if self.improve_template:
-            cmd += ['-in:file:native',
-                    self.improve_template,
-                    '-abinitio:steal_3mers',
-                    'True',
-                    '-abinitio:steal9mers',
-                    'True',
-                    '-abinitio:start_native',
-                    'True',
-                    '-templates:force_native_topology',
-                    'True' ]
+            cmd += [
+                '-in:file:native', self.improve_template,
+                '-abinitio:steal_3mers', 'True',
+                '-abinitio:steal9mers', 'True',
+                '-abinitio:start_native', 'True',
+                '-templates:force_native_topology', 'True'
+            ]
             
         #if self.benchmark: cmd += ['-in:file:native', self.native_pdb]
         return cmd
 
-    def ab_initio_model(self,monitor):
+    def ab_initio_model(self, monitor):
         # Remember starting directory
         owd = os.getcwd()
         
@@ -289,39 +295,46 @@ class RosettaModel(object):
         os.chdir(self.run_dir)
         
         # Add submit_cluster, submit_queue, submit_qtype
-        if not os.path.isdir(self.models_dir): os.mkdir(self.models_dir)
-        if self.transmembrane: self.tm_make_files()
-        elif self.transmembrane2: self.tm2_make_patch(self.run_dir) 
+        if not os.path.isdir(self.models_dir):
+            os.mkdir(self.models_dir)
+        if self.transmembrane:
+            self.tm_make_files()
+        elif self.transmembrane2:
+            self.tm2_make_patch(self.run_dir)
     
         # Split jobs onto separate processors - 1 for cluster, as many as will fit for desktop
         if self.submit_cluster:
-            jobs_per_proc=[1] * self.nmodels
+            jobs_per_proc = [1] * self.nmodels
         else:
-            jobs_per_proc=self.split_jobs(self.nmodels,self.nproc)
+            jobs_per_proc = self.split_jobs(self.nmodels,self.nproc)
         
         # Generate seeds
         seeds = self.generate_seeds(len(jobs_per_proc))
         
-        job_scripts=[]
+        job_scripts = []
         dir_list = []
-        job_time=43200
+        job_time = 43200
         for i, njobs in enumerate(jobs_per_proc):
-            d=os.path.join(self.run_dir,"job_{0}".format(i))
+            d = os.path.join(self.run_dir, "job_{0}".format(i))
             os.mkdir(d)
             dir_list.append(d)
             
             # job script
-            script="#!/bin/bash\n"
+            script = "#!/bin/bash" + os.linesep
             cmd = " ".join(self.ab_initio_cmd(d, njobs, seeds[i]))
-            script += cmd + "\n"
-            sname=os.path.join(d,"model_{0}.sh".format(i))
-            with open(sname,'w') as w: w.write(script)
+            script += cmd + os.linesep
+            sname = os.path.join(d, "model_{0}.sh".format(i))
+            with open(sname, 'w') as w:
+                w.write(script)
             os.chmod(sname, 0o777)
             job_scripts.append(sname)
             
         success = self.run_scripts(job_scripts, job_time=job_time, job_name='abinitio', monitor=None)
         if not success:
-            raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(self.run_dir)
+            msg = "Error running ROSETTA in directory: {0}." + os.linesep \
+                  + "Please check the log files for more information.".format(self.run_dir)
+            raise RuntimeError(msg)
+
         # Copy the models into the models directory - need to rename them accordingly
         pdbs = []
         for d in dir_list:
@@ -329,21 +342,26 @@ class RosettaModel(object):
             pdbs += ps
         
         if not pdbs:
-            raise RuntimeError, \
-                "No models created after modelling!\nPlease check the log files in the directory {0} for more information.".format(self.run_dir)
-                
-        if len(pdbs) != self.nmodels:
-            raise RuntimeError, \
-                "Expected to create {0} models but found {1}\nPlease check the log files in the directory {2} for more information.".format(self.nmodels,
-                                                                                                                                            len(pdbs),
-                                                                                                                                            self.run_dir)
-        # Copy files into the models directory
-        for i, pdbin in enumerate(pdbs):
-            pdbout=os.path.join(self.models_dir,"model_{0}.pdb".format(i))
-            shutil.copyfile(pdbin, pdbout)
+            msg = "No models created after modelling!" + os.linesep \
+                  + "Please check the log files in the directory {0} " \
+                    "for more information.".format(self.run_dir)
+            raise RuntimeError(msg)
 
-        os.chdir(owd) # Go back to where we came from
-        return
+        if len(pdbs) != self.nmodels:
+            msg = "Expected to create {0} models but found {1}." + os.linesep \
+                  + "Please check the log files in the directory {2} " \
+                    "for more information.".format(self.nmodels, len(pdbs), self.run_dir)
+            raise RuntimeError(msg)
+
+        # Copy files into the models directory
+        pdbs_moved = []
+        for i, pdbin in enumerate(pdbs):
+            pdbout = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
+            shutil.copyfile(pdbin, pdbout)
+            pdbs_moved.append(pdbout)
+
+        os.chdir(owd)   # Go back to where we came from
+        return pdbs_moved
 
     def find_binary(self, name):
         """
@@ -352,28 +370,37 @@ class RosettaModel(object):
 
         """
         assert self.rosetta_bin and os.path.isdir(self.rosetta_bin)
-        binaries = glob.glob(self.rosetta_bin + "/{0}.*".format(name))
-        if not len(binaries): return False
+        binaries = glob.glob(os.path.join(self.rosetta_bin, "{0}.*".format(name)))
+        if not len(binaries):
+            return False
 
         # Could check for shortest - for now just return the first
         binary = os.path.abspath(binaries[0])
-        if os.path.isfile(binary): return binary
+        if os.path.isfile(binary):
+            return binary
         return False
 
     def generate_seeds(self, nseeds):
+        """Generate a list of nseed seeds
+
+        Parameters
+        ----------
+        nseeds : int
+           The number of seeds required
+
         """
-        Generate a list of nseed seeds
-        """
-        start=1000000
-        end=4000000
-        assert nseeds > 0 and nseeds < end-start,"Invalid seed count: {0}".format(nseeds)
+        start = 1000000
+        end = 4000000
+        assert 0 < nseeds < end-start, "Invalid seed count: {0}".format(nseeds)
         seed_list = set()
         # Generate the list of random seeds
-        while len(seed_list) < nseeds: seed_list.add(random.randint(start, end))
+        while len(seed_list) < nseeds:
+            seed_list.add(random.randint(start, end))
         # Keep a log of the seeds
-        with open(os.path.join(self.work_dir,'seedlist'), "w") as seedlog:
-            for seed in seed_list: seedlog.write(str(seed) + '\n')
-        seed_list=list(seed_list)
+        with open(os.path.join(self.work_dir, 'seedlist'), "w") as f_out:
+            for seed in seed_list:
+                f_out.write(str(seed) + os.linesep)
+        seed_list = list(seed_list)
         self.seeds = seed_list
         return seed_list
 
@@ -458,7 +485,7 @@ class RosettaModel(object):
 
         psipred_ss2 = os.path.join(self.fragments_directory, self.name + '.psipred_ss2')
         if os.path.exists(psipred_ss2):
-            psipred_parser.PsipredSs2Parser(psipred_ss2).checkContent()
+            psipred_parser.PsipredSs2Parser(psipred_ss2).check_content()
             self.psipred_ss2 = psipred_ss2
 
         return
@@ -598,17 +625,21 @@ class RosettaModel(object):
         return cmd
     
     def nmr_remodel(self, nmr_model_in=None, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
-        assert os.path.isfile(nmr_model_in),"Cannot find nmr_model_in: {0}".format(nmr_model_in)
-        if remodel_fasta: assert os.path.isfile(remodel_fasta),"Cannot find remodel_fasta: {0}".format(remodel_fasta)
-        if ntimes: assert type(ntimes) is int, "ntimes is not an int: {0}".format(ntimes)
+
+        assert os.path.isfile(nmr_model_in), "Cannot find nmr_model_in: {0}".format(nmr_model_in)
+        if remodel_fasta:
+            assert os.path.isfile(remodel_fasta), "Cannot find remodel_fasta: {0}".format(remodel_fasta)
+        if ntimes:
+            assert type(ntimes) is int, "ntimes is not an int: {0}".format(ntimes)
         
         # Strip HETATM and H atoms from PDB
-        nmr_nohet = ample_util.filename_append(nmr_model_in,astr='nohet',directory=self.work_dir)
+        nmr_nohet = ample_util.filename_append(nmr_model_in, astr='nohet', directory=self.work_dir)
         pdb_edit.strip(nmr_model_in, nmr_nohet, hetatm=True)
         nmr_model_in = nmr_nohet
         self.logger.info('using NMR model: {0}'.format(nmr_model_in))
     
-        if not os.path.isdir(self.models_dir): os.mkdir(self.models_dir)
+        if not os.path.isdir(self.models_dir):
+            os.mkdir(self.models_dir)
         nmr_models_dir = os.path.join(self.work_dir, 'nmr_models')
         os.mkdir(nmr_models_dir)
     
@@ -617,7 +648,8 @@ class RosettaModel(object):
         num_nmr_models = len(nmr_models)
         self.logger.info('you have {0} models in your nmr'.format(num_nmr_models))
     
-        if not ntimes: ntimes = 1000 / num_nmr_models
+        if not ntimes:
+            ntimes = 1000 / num_nmr_models
         nmr_process = int(ntimes)
         self.logger.info('processing each model {0} times'.format(nmr_process))
         num_models = nmr_process * num_nmr_models
@@ -628,7 +660,7 @@ class RosettaModel(object):
         self.logger.info('{0} models were successfully idealized'.format(len(id_pdbs)))
         #id_pdbs = glob.glob(os.path.join(amopt.d['models'],"*.pdb"))
     
-        owd=os.getcwd()
+        owd = os.getcwd()
         remodel_dir = os.path.join(self.work_dir, 'remodelling')
         os.mkdir(remodel_dir)
         os.chdir(remodel_dir)
@@ -640,40 +672,43 @@ class RosettaModel(object):
         if not alignment_file:
             # fasta sequence of first model
             remodel_seq = sequence_util.Sequence(fasta=remodel_fasta)
-            alignment_file = align_mafft(remodel_seq,id_seq,self.logger)
+            alignment_file = align_mafft(remodel_seq, id_seq, self.logger)
         
         # Remodel each idealized model nmr_process times
-        self.remodel(id_pdbs, ntimes, alignment_file, monitor=monitor)
+        pdbs_to_return = self.remodel(id_pdbs, ntimes, alignment_file, monitor=monitor)
         
         os.chdir(owd)
-        return
+        return pdbs_to_return
 
     def remodel(self, id_pdbs, ntimes, alignment_file, monitor=None):
-        remodel_dir=os.getcwd()
+        remodel_dir = os.getcwd()
         proc_map = self. remodel_proc_map(id_pdbs, ntimes)
         seeds = self.generate_seeds(len(proc_map))
         job_scripts = []
         dir_list = []
-        job_time=7200
+        job_time = 7200
         for i, (id_model, nstruct) in enumerate(proc_map):
             name = "job_{0}".format(i)
             d = os.path.join(remodel_dir, name)
             os.mkdir(d)
             dir_list.append(d) # job script
-            script = "#!/bin/bash\n"
+            script = "#!/bin/bash" + os.linesep
             cmd = self.mr_cmd(template=id_model, 
                               alignment=alignment_file, 
                               nstruct=nstruct, 
                               seed=seeds[i])
-            script += " \\\n".join(cmd) + "\n"
+            script += " \\\n".join(cmd) + os.linesep
             sname = os.path.join(d, "{0}.sh".format(name))
-            with open(sname, 'w') as w: w.write(script)
+            with open(sname, 'w') as w:
+                w.write(script)
             os.chmod(sname, 0o777)
             job_scripts.append(sname)
         
         success = self.run_scripts(job_scripts=job_scripts, job_time=job_time, job_name='remodel', monitor=None)
         if not success:
-            raise RuntimeError, "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(remodel_dir)
+            msg = "Error running ROSETTA in directory: {0}." + os.linesep \
+                  + "Please check the log files for more information.".format(remodel_dir)
+            raise RuntimeError(msg)
     
         # Copy the models into the models directory - need to rename them accordingly
         pdbs = []
@@ -682,15 +717,20 @@ class RosettaModel(object):
             pdbs += ps
         
         if not len(pdbs):
-            raise RuntimeError, "No pdbs after remodelling in directory: {0}\nPlease check the log files for more information.".format(remodel_dir)
+            msg = "No pdbs after remodelling in directory: {0}." + os.linesep \
+                  + "Please check the log files for more information.".format(remodel_dir)
+            raise RuntimeError(msg)
+
         # We also need to strip the H atoms as the remodelling occasionally fails to model an H atom, 
         # which leads to pdbs with differing numbers of atoms, which causes theseus to fail. However
         # H-atoms are unlikely to be useful for our purposes.
+        pdbs_moved = []
         for i, remodelled_pdb in enumerate(pdbs):
             final_pdb = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
             self.logger.debug("Stripping H atoms from remodelled pdb {0} to create final model: {1}".format(remodelled_pdb, final_pdb))
             pdb_edit.strip(remodelled_pdb, final_pdb, hydrogen=True)
-        return
+            pdbs_moved.append(final_pdb)
+        return pdbs_moved
     
     def remodel_proc_map(self, id_pdbs, ntimes):
         if self.submit_cluster: # For clusters we saturate the queue with single model jobs (ideally in batch mode) so that cluster

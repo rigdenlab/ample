@@ -13,7 +13,7 @@ import sys
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, ALLOWED_SIDE_CHAIN_TREATMENTS, SUBCLUSTER_RADIUS_THRESHOLDS
 from ample.modelling import rosetta_model
 from ample.util import ample_util
-from ample.util import contacts_util
+from ample.util import contact_util
 from ample.util import exit_util
 from ample.util import maxcluster
 from ample.util import mrbump_util
@@ -112,7 +112,7 @@ def process_options(optd):
     ###############################################################################
     
     if optd['contact_file'] or optd['bbcontacts_file']:
-        contacts_util.checkOptions(optd)
+        contact_util.ContactUtil.check_options(optd)
         optd['use_contacts'] = True
     ###############################################################################
     #
@@ -537,7 +537,7 @@ def process_restart_options(optd):
         elif 'ensembles' in optd and optd['ensembles'] and len(optd['ensembles']):
             # Rerun from ensembles - check for data/ensembles are ok?
             logger.info('Restarting from existing ensembles: {0}'.format(optd['ensembles']))
-        elif optd['models_dir'] and optd['models_dir'] and os.path.isdir(optd['models_dir']):
+        elif 'models_dir' in optd and optd['models_dir'] and os.path.isdir(optd['models_dir']):
             logger.info('Restarting from existing models: {0}'.format(optd['models_dir']))
             # Check the models
             allsame = False if optd['homologs'] else True 
