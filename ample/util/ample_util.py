@@ -240,24 +240,24 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
         if suffix in ['.gz', '.bz']:
             f, s2 = os.path.splitext(f)
             if s2 == '.tar':
-                suffix = s2+suffix
+                suffix = s2 + suffix
         
-        tsuffixes = ['.tar.gz', '.tgz', '.tar.bz', '.tbz']
-        suffixes = tsuffixes + ['.zip']
+        tar_suffixes = ['.tar.gz', '.tgz', '.tar.bz', '.tbz']
+        suffixes = tar_suffixes + ['.zip']
         if suffix not in suffixes:
             msg = "Do not know how to extract files from file: {0}\n " \
                   "Acceptable file types are: {1}".format(filename, suffixes)
             exit_util.exit_error(msg)
-        if suffix in tsuffixes:
+        if suffix in tar_suffixes:
             files = extract_tar(filename, models_dir)
         else:
             files = extract_zip(filename, models_dir)
-        
+
         # Assume anything with one member is quark decoys
         if len(files) == 1:
             quark_filename = 'alldecoy.pdb'
             f = os.path.basename(files[0])
-            if not f == quark_filename:
+            if f != quark_filename:
                 msg = "Only found one member ({0}) in file: {1} " \
                       "and the name was not {2}\n".format(f, filename, quark_filename)
                 msg += "If this file contains valid QUARK decoys, please email: ccp4@stfc.ac.uk"
