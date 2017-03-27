@@ -4,14 +4,10 @@ __author__ = "Jens Thomas, and Felix Simkovic"
 __date__ = "23 Feb 2016"
 __version__ = "1.0"
 
-import glob
-import logging
-import os
 import random
 
 from ample.ensembler._ensembler import Cluster
 
-logger = logging.getLogger(__name__)
 
 def import_cluster(cluster_models):
     """Import a cluster
@@ -26,28 +22,14 @@ def import_cluster(cluster_models):
     list
        A list containing the cluster information
 
-    Raises
-    ------
-    RuntimeError
-       Cannot find directory
-    RuntimeError
-       Cannot find pdbs in directory
-
     """
-    # logger.info('Importing cluster models from: {0}'.format(cluster_dir))
-    #
-    # cluster_models = glob.glob(os.path.join(cluster_dir, "*.pdb"))
-    # if not cluster_models:
-    #     raise RuntimeError("Cannot find pdbs in directory: {0}".format(cluster_dir))
-    #
-    # Data on the cluster
     cluster = Cluster()
     cluster.method = "import"
     cluster.num_clusters = 1
     cluster.index = 1
     cluster.models = cluster_models
-    
     return [cluster]
+
 
 def random_cluster(cluster_method, max_cluster_size, models, num_clusters):
     """Cluster decoys using madness
@@ -74,6 +56,7 @@ def random_cluster(cluster_method, max_cluster_size, models, num_clusters):
        Cannot ramdonly cluster so few decoys
     RuntimeError
        Cannot find random clusters
+
     """
     if len(models) <= max_cluster_size + 50: # completely arbitary number
         raise RuntimeError('Cannot randomly cluster so few models')
@@ -99,4 +82,3 @@ def random_cluster(cluster_method, max_cluster_size, models, num_clusters):
         i += 1
         
     return clusters
-
