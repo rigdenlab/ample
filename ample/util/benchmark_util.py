@@ -46,7 +46,7 @@ def analyse(amoptd, newroot=None):
     if not os.path.isdir(fixpath(amoptd['benchmark_dir'])):
         os.mkdir(fixpath(amoptd['benchmark_dir']))
     os.chdir(fixpath(amoptd['benchmark_dir']))
-
+    
     # AnalysePdb may have already been called from the main script
     if amoptd['native_pdb'] and not amoptd.has_key('native_pdb_std'):
         analysePdb(amoptd)
@@ -105,6 +105,7 @@ def analyse(amoptd, newroot=None):
             
         # General stuff
         d['ample_version'] = amoptd['ample_version']
+        d['fasta_length'] = amoptd['fasta_length']
         
         # Add in stuff we've cleaned from the pdb
         if amoptd['native_pdb']:
@@ -160,22 +161,115 @@ def analyse(amoptd, newroot=None):
     amoptd['benchmark_results'] = data
     return
 
-def cluster_script(amoptd, python_path="ccp4-python"):
-    """Create the script for benchmarking on a cluster"""
-    # write out script
-    work_dir = amoptd['work_dir']
-    script_path = os.path.join(work_dir, "submit_benchmark.sh")
-    with open(script_path, "w") as job_script:
-        job_script.write("#!/bin/sh\n")
-        # Find path to this directory to get path to python ensemble.py script
-        pydir = os.path.abspath(os.path.dirname(__file__))
-        benchmark_script = os.path.join(pydir, "benchmark_util.py")
-        job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", benchmark_script, amoptd['results_path']))
-
-    # Make executable
-    os.chmod(script_path, 0o777)
-    return script_path
+def analyseModels(amoptd):
     
+    # Get hold of a full model so we can do the mapping of residues
+    refModelPdb = glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))[0]
+    
+    nativePdbInfo=amoptd['native_pdb_info']
+    
+    resSeqMap = residue_map.residueSequenceMap()
+    refModelPdbInfo = pdb_edit.get_info(refModelPdb)
+    resSeqMap.fromInfo( refInfo=refModelPdbInfo,
+                        refChainID=refModelPdbInfo.models[0].chains[0], # Only 1 chain in model
+                        targetInfo=nativePdbInfo,
+                        targetChainID=nativePdbInfo.models[0].chains[0]
+                      )
+    amoptd['res_seq_map']=resSeqMap
+    amoptd['ref_model_pdb_info']=refModelPdbInfo
+    
+    # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
+    # requires a separate run to generate total RMSD
+    #if False:
+#     logger.info("Analysing RMSD scores for Rosetta models")
+#     try:
+#         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
+#     except RuntimeError,e:
+#         print e
+    if amoptd['have_tmscore']:
+        try:
+            tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']))
+            # Calculation of TMscores for all models
+            logger.info("Analysing Rosetta models with TMscore")
+            model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
+            structure_list = [amoptd['native_pdb_std']]
+            amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fastas=[amoptd['fasta']])
+        except:
+            msg = "Unable to run TMscores. See debug.log."
+            logger.critical(msg)
+    else:
+        global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
+        _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
+        logger.info("Analysing Rosetta models with Maxcluster")
+        _MAXCLUSTERER.compareDirectory(nativePdbInfo=nativePdbInfo,
+                                       resSeqMap=resSeqMap,
+                                        modelsDirectory=amoptd['models_dir'],
+                                        workdir=fixpath(amoptd['benchmark_dir']))
+    return
+
+def analysePdb(amoptd):
+    """Collect data on the native pdb structure"""
+    
+    nativePdb = amoptd['native_pdb']
+    nativePdbInfo = pdb_edit.get_info(nativePdb)
+    
+    # number atoms/residues
+    natoms, nresidues = pdb_edit.num_atoms_and_residues(nativePdb)
+
+    # Get information on the origins for this spaceGroup
+    try:
+        originInfo = pdb_model.OriginInfo(spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup)
+    except:
+        originInfo = None
+
+    # Do this here as a bug in pdbcur can knacker the CRYST1 data
+    amoptd['native_pdb_code'] = nativePdbInfo.pdbCode
+    amoptd['native_pdb_title'] = nativePdbInfo.title
+    amoptd['native_pdb_resolution'] = nativePdbInfo.resolution
+    amoptd['native_pdb_solvent_content'] = nativePdbInfo.solventContent
+    amoptd['native_pdb_matthews_coefficient'] = nativePdbInfo.matthewsCoefficient
+    if not originInfo:
+        space_group = "P1"
+    else:
+        space_group = originInfo.spaceGroup()
+    amoptd['native_pdb_space_group'] = space_group
+    amoptd['native_pdb_num_atoms'] = natoms
+    amoptd['native_pdb_num_residues'] = nresidues
+    
+    # First check if the native has > 1 model and extract the first if so
+    if len( nativePdbInfo.models ) > 1:
+        logger.info("nativePdb has > 1 model - using first")
+        nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=fixpath(amoptd['work_dir']))
+        pdb_edit.extract_model( nativePdb, nativePdb1, modelID=nativePdbInfo.models[0].serial )
+        nativePdb = nativePdb1
+        
+    # Standardise the PDB to rename any non-standard AA, remove solvent etc
+    nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std", directory=fixpath(amoptd['work_dir']))
+    pdb_edit.standardise(nativePdb, nativePdbStd, del_hetatm=True)
+    nativePdb = nativePdbStd
+    
+    # Get the new Info about the native
+    nativePdbInfo = pdb_edit.get_info( nativePdb )
+    
+    # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
+    if len( nativePdbInfo.models[0].chains ) > 1:
+        chainID = nativePdbInfo.models[0].chains[0]
+        nativeChain1  = ample_util.filename_append( filename=nativePdbInfo.pdb,
+                                                       astr="chain1".format( chainID ), 
+                                                       directory=fixpath(amoptd['work_dir']))
+        pdb_edit.to_single_chain( nativePdbInfo.pdb, nativeChain1 )
+    else:
+        nativeChain1 = nativePdbInfo.pdb
+    
+    # Additional data
+    amoptd['native_pdb_num_chains'] = len( nativePdbInfo.models[0].chains )
+    amoptd['native_pdb_info'] = nativePdbInfo
+    amoptd['native_pdb_std'] = nativePdbStd
+    amoptd['native_pdb_1chain'] = nativeChain1
+    amoptd['native_pdb_origin_info'] = originInfo
+    
+    return
+
 def analyseSolution(amoptd, d, origin_finder='shelxe'):
 
     logger.info("Benchmark: analysing result: {0}".format(d['ensemble_name']))
@@ -361,116 +455,6 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
 
     return
 
-def analysePdb(amoptd):
-    """Collect data on the native pdb structure"""
-    
-    nativePdb = amoptd['native_pdb']
-    nativePdbInfo = pdb_edit.get_info(nativePdb)
-    
-    # number atoms/residues
-    natoms, nresidues = pdb_edit.num_atoms_and_residues(nativePdb)
-
-    # Get information on the origins for this spaceGroup
-    try:
-        originInfo = pdb_model.OriginInfo(spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup)
-    except:
-        originInfo = None
-
-    # Do this here as a bug in pdbcur can knacker the CRYST1 data
-    amoptd['native_pdb_code'] = nativePdbInfo.pdbCode
-    amoptd['native_pdb_title'] = nativePdbInfo.title
-    amoptd['native_pdb_resolution'] = nativePdbInfo.resolution
-    amoptd['native_pdb_solvent_content'] = nativePdbInfo.solventContent
-    amoptd['native_pdb_matthews_coefficient'] = nativePdbInfo.matthewsCoefficient
-    if not originInfo:
-        space_group = "P1"
-    else:
-        space_group = originInfo.spaceGroup()
-    amoptd['native_pdb_space_group'] = space_group
-    amoptd['native_pdb_num_atoms'] = natoms
-    amoptd['native_pdb_num_residues'] = nresidues
-    
-    # First check if the native has > 1 model and extract the first if so
-    if len( nativePdbInfo.models ) > 1:
-        logger.info("nativePdb has > 1 model - using first")
-        nativePdb1 = ample_util.filename_append( filename=nativePdb, astr="model1", directory=fixpath(amoptd['work_dir']))
-        pdb_edit.extract_model( nativePdb, nativePdb1, modelID=nativePdbInfo.models[0].serial )
-        nativePdb = nativePdb1
-        
-    # Standardise the PDB to rename any non-standard AA, remove solvent etc
-    nativePdbStd = ample_util.filename_append( filename=nativePdb, astr="std", directory=fixpath(amoptd['work_dir']))
-    pdb_edit.standardise(nativePdb, nativePdbStd, del_hetatm=True)
-    nativePdb = nativePdbStd
-    
-    # Get the new Info about the native
-    nativePdbInfo = pdb_edit.get_info( nativePdb )
-    
-    # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
-    if len( nativePdbInfo.models[0].chains ) > 1:
-        chainID = nativePdbInfo.models[0].chains[0]
-        nativeChain1  = ample_util.filename_append( filename=nativePdbInfo.pdb,
-                                                       astr="chain1".format( chainID ), 
-                                                       directory=fixpath(amoptd['work_dir']))
-        pdb_edit.to_single_chain( nativePdbInfo.pdb, nativeChain1 )
-    else:
-        nativeChain1 = nativePdbInfo.pdb
-    
-    # Additional data
-    amoptd['native_pdb_num_chains'] = len( nativePdbInfo.models[0].chains )
-    amoptd['native_pdb_info'] = nativePdbInfo
-    amoptd['native_pdb_std'] = nativePdbStd
-    amoptd['native_pdb_1chain'] = nativeChain1
-    amoptd['native_pdb_origin_info'] = originInfo
-    
-    return
-
-def analyseModels(amoptd):
-    
-    # Get hold of a full model so we can do the mapping of residues
-    refModelPdb = glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))[0]
-    
-    nativePdbInfo=amoptd['native_pdb_info']
-    
-    resSeqMap = residue_map.residueSequenceMap()
-    refModelPdbInfo = pdb_edit.get_info(refModelPdb)
-    resSeqMap.fromInfo( refInfo=refModelPdbInfo,
-                        refChainID=refModelPdbInfo.models[0].chains[0], # Only 1 chain in model
-                        targetInfo=nativePdbInfo,
-                        targetChainID=nativePdbInfo.models[0].chains[0]
-                      )
-    amoptd['res_seq_map']=resSeqMap
-    amoptd['ref_model_pdb_info']=refModelPdbInfo
-    
-    # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
-    # requires a separate run to generate total RMSD
-    #if False:
-#     logger.info("Analysing RMSD scores for Rosetta models")
-#     try:
-#         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
-#     except RuntimeError,e:
-#         print e
-    if amoptd['have_tmscore']:
-        try:
-            tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']))
-            # Calculation of TMscores for all models
-            logger.info("Analysing Rosetta models with TMscore")
-            model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
-            structure_list = [amoptd['native_pdb_std']]
-            amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fastas=[amoptd['fasta']])
-        except:
-            msg = "Unable to run TMscores. See debug.log."
-            logger.critical(msg)
-    else:
-        global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
-        _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
-        logger.info("Analysing Rosetta models with Maxcluster")
-        _MAXCLUSTERER.compareDirectory(nativePdbInfo=nativePdbInfo,
-                                       resSeqMap=resSeqMap,
-                                        modelsDirectory=amoptd['models_dir'],
-                                        workdir=fixpath(amoptd['benchmark_dir']))
-    return
-
-
 # def analyseSS(amoptd):
 #     from ample.parsers import dssp_parser
 #     from ample.parsers import psipred_parser
@@ -480,6 +464,22 @@ def analyseModels(amoptd):
 #     dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode ) )
 #     dsspP = dssp_parser.DsspParser( dsspLog )
 #     return
+
+def cluster_script(amoptd, python_path="ccp4-python"):
+    """Create the script for benchmarking on a cluster"""
+    # write out script
+    work_dir = amoptd['work_dir']
+    script_path = os.path.join(work_dir, "submit_benchmark.sh")
+    with open(script_path, "w") as job_script:
+        job_script.write("#!/bin/sh\n")
+        # Find path to this directory to get path to python ensemble.py script
+        pydir = os.path.abspath(os.path.dirname(__file__))
+        benchmark_script = os.path.join(pydir, "benchmark_util.py")
+        job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", benchmark_script, amoptd['results_path']))
+
+    # Make executable
+    os.chmod(script_path, 0o777)
+    return script_path
 
 def fixpath(path):
     # fix for analysing on a different machine
@@ -503,6 +503,9 @@ def writeCsv(fileName,resultList):
                 'native_pdb_num_atoms',
                 'native_pdb_num_residues',
                 'native_pdb_num_chains',
+                
+                # The modelled sequence
+                'fasta_length',
                 
                 # Get the ensemble data and add to the MRBUMP data
                 'ensemble_name',
