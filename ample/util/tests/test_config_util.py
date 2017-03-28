@@ -106,6 +106,7 @@ class Test(unittest.TestCase):
                      'cluster_method' : 'spicker',
                      'nproc': None,
                      'shelxe_rebuild_buccaneer': None,
+                     'shelxe_rebuild_arpwarp': None,
                      'submit_cluster' : False,
                      'submit_max_array' : 20,
                      'submit_qtype' : None,
@@ -113,8 +114,9 @@ class Test(unittest.TestCase):
         options.cmdline_opts = {}
         expected = {'purge': True,
                     'cluster_method' : 'spicker_tm',
-                    'nproc': 8,
+                    'nproc': 1,
                     'shelxe_rebuild_buccaneer': True,
+                    'shelxe_rebuild_arpwarp': False,
                     'submit_cluster' : True,
                     'submit_max_array' : 10,
                     'submit_qtype' : "SGE",
