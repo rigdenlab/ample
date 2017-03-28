@@ -27,8 +27,8 @@ PACKAGES = ['from_existing_models', 'from_quark_models', 'from_single_model',
             'homologs', 'ideal_helices',  'import_cluster', 'import_ensembles', 
             'import_models', 'missing_domain', 'nmr_truncate']
 if not sys.platform.startswith("win"):
-    PACKAGES += ['nmr_remodel', 'rosetta_contacts', 'rosetta_modelling', 
-                 'rosetta_restraints']
+    PACKAGES += ['nmr_remodel', 'rosetta_contacts', 'rosetta_contacts_subselect',
+                 'rosetta_modelling', 'rosetta_restraints']
 
     
 def add_cmd_options(parser):
@@ -74,12 +74,6 @@ class AMPLEIntegrationFramework(object):
         if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
     
     def get_run_dir(self):
-#         # OS X has problems with relative paths - symlink in root messes
-#         # up the search in theseus - therefore default set to $HOME directory
-#         if "darwin" in sys.platform.lower():
-#             return os.environ["HOME"]
-#         else:
-#             return tempfile.gettempdir()
         return os.getcwd()
     
     def clean(self, clean_all=True, clean_dir=False):
@@ -117,13 +111,15 @@ class AMPLEIntegrationFramework(object):
         """
         logger.info("Writing files to: {0}".format(self.run_dir))
         
-        if dry_run: clean_up = False
+        if dry_run:
+            clean_up = False
         
         if rosetta_dir and not os.path.isdir(rosetta_dir):
             print("Cannot find rosetta_dir: {0}".format(rosetta_dir))
             sys.exit(1)
         
-        if clean_up: self.clean()
+        if clean_up:
+            self.clean()
             
         scripts = self._create_scripts(rosetta_dir, **kwargs)
         if not len(scripts):
