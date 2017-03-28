@@ -322,11 +322,17 @@ class ContactUtil(object):
 
             # Construct the command
             # TODO: Get the log file business working properly
-            cmd = [executable, '-d', subdistance_to_neighbor, 
-                   decoy, decoy_format, 
-                   self.sequence_file, self.sequence_format,
-                   tmp_contact_file.name, 'casprr']
-
+            cmd = [executable, '-d', subdistance_to_neighbor]
+            # Decoy file and format - version dependent
+            if conkit._version.__version_info__ <= (0, 6, 3):
+                cmd += [decoy]
+            else:
+                cmd += [decoy, decoy_format]
+            # Sequence file and format
+            cmd += [self.sequence_file, self.sequence_format]
+            # Contact file and format
+            cmd += [tmp_contact_file.name, 'casprr']
+            # Write the command to the script
             script.write(
                 ample_util.SCRIPT_HEADER + os.linesep
                 + " ".join(map(str, cmd)) + os.linesep
