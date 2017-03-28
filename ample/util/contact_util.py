@@ -20,6 +20,107 @@ from ample.util import workers_util
 logger = logging.getLogger(__name__)
 
 
+class SubselectionAlgorithm(object):
+    """A class to collect all subselection algorithms"""
+    @staticmethod
+    def _numpify(data):
+        """Convert a Python array to a Numpy array"""
+        if type(data).__module__ == numpy.__name__:
+            return data
+        else:
+            return numpy.asarray(data)
+
+    @staticmethod
+    def cutoff(data, cutoff=0.287):
+        """A cutoff-defined subselection algorithm
+
+        Description
+        -----------
+        This algorithm removes a decoy, if its score is l
+        ess than the cutoff.
+
+        Parameters
+        ----------
+        data : list, tuple
+           A 1D array of scores
+        cutoff : float, optional
+           The cutoff of keeping decoys
+
+        Returns
+        -------
+        list
+           The decoy indices to keep
+        list
+           The decoy indices to throw
+
+        """
+        data = SubselectionAlgorithm._numpify(data)
+        keep = numpy.where(data >= cutoff)[0]
+        throw = numpy.where(data < cutoff)[0]
+        return keep.tolist(), throw.tolist()
+
+    @staticmethod
+    def linear(data, cutoff=0.5):
+        """A linearly-defined subselection algorithm
+
+        Description
+        -----------
+        This algorithm removes the worst 500 decoys.
+
+        Parameters
+        ----------
+        data : list, tuple
+           A 1D array of scores
+        cutoff : float, optional
+           The porportion of the total number of decoys to keep
+
+        Returns
+        -------
+        list
+           The decoy indices to keep
+        list
+           The decoy indices to throw
+
+        """
+        sorted_indices = SubselectionAlgorithm._numpify(data).argsort()[::-1]
+        point = numpy.ceil(sorted_indices.shape[0] * cutoff)
+        keep = sorted_indices[:point]
+        throw = sorted_indices[point:]
+        return keep.tolist(), throw.tolist()
+
+    @staticmethod
+    def scaled(data, cutoff=0.5):
+        """A scaling-defined subselection algorithm
+
+        Description
+        -----------
+        This algorithm removes a decoy, if its scaled score
+        is less than 0.5. The scaled score is calculated by
+        dividing the satisfaction score by the average of the
+        set.
+
+        Parameters
+        ----------
+        data : list, tuple
+           A 1D array of scores
+        cutoff : float, optional
+           The cutoff of keeping decoys
+
+        Returns
+        -------
+        list
+           The decoy indices to keep
+        list
+           The decoy indices to throw
+
+        """
+        data = SubselectionAlgorithm._numpify(data)
+        data_scaled = data / numpy.mean(data)
+        keep = numpy.where(data_scaled >= cutoff)[0]
+        throw = numpy.where(data_scaled < cutoff)[0]
+        return keep.tolist(), throw.tolist()
+
+
 class ContactUtil(object):
     """
 
@@ -286,6 +387,7 @@ class ContactUtil(object):
            The subselection mode to use
             * scaled: keep the decoys with scaled scores of >= 0.5
             * linear: keep the top half of decoys
+            * cutoff: Keep all decoys with satisfaction scores of >= 0.287
         subdistance_to_neighbor : int, optional
            The minimum distance between neighboring residues in the subselection [default: 25]
         **kwargs
@@ -375,9 +477,11 @@ class ContactUtil(object):
         # Subselect the decoys
         logger.info('Model selection mode: {0}'.format(mode))
         if mode == 'scaled':
-            keep, throw = ContactUtil._select_scaled(scores)
+            keep, throw = SubselectionAlgorithm.scaled(scores)
         elif mode == 'linear':
-            keep, throw = ContactUtil._select_linear(scores)
+            keep, throw = SubselectionAlgorithm.linear(scores)
+        elif mode == 'cutoff':
+            keep, throw = SubselectionAlgorithm.cutoff(scores)
         else:
             msg = "Unknown sub-selection mode: {0}".format(mode)
             logger.critical(msg)
@@ -587,18 +691,3 @@ class ContactUtil(object):
             msg = "Subselection mode not valid"
             logger.critical(msg)
             raise ValueError(msg)
-
-    @staticmethod
-    def _select_linear(data):
-        data_sorted = sorted(list(enumerate(data)), key=lambda x: x[1], reverse=True)
-        midpoint = int(round(len(data_sorted) / 2.))
-        keep = zip(*data_sorted[:midpoint])[0]
-        throw = zip(*data_sorted[midpoint:])[0]
-        return keep, throw
-
-    @staticmethod
-    def _select_scaled(data):
-        data_scaled = data / numpy.mean(data)
-        keep = numpy.where(data_scaled >= 0.5)[0]
-        throw = numpy.where(data_scaled < 0.5)[0]
-        return tuple(keep), tuple(throw)
