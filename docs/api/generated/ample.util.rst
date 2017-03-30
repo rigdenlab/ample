@@ -32,7 +32,6 @@ Submodules
    ample.util.pdb_edit
    ample.util.pdb_model
    ample.util.phenixer
-   ample.util.plot_util
    ample.util.printTable
    ample.util.pyrvapi_results
    ample.util.reforigin

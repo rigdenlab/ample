@@ -14,6 +14,5 @@ Submodules
    ample.parsers.alignment_parser
    ample.parsers.dssp_parser
    ample.parsers.psipred_parser
-   ample.parsers.sequence_parser
    ample.parsers.tm_parser
 
