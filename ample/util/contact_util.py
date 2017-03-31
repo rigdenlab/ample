@@ -489,8 +489,9 @@ class ContactUtil(object):
 
         # Some checks
         if len(keep) < 1:
-            msg = "Number of decoys to keep is 0"
-            raise RuntimeError(msg)
+            msg = "Number of decoys to keep is 0 - defaulting to keeping all"
+            logger.warning(msg)
+            keep, throw = range(len(decoys)), []
 
         logger.info('Excluding {0} decoy(s) from ensembling'.format(len(throw)))
 
@@ -687,7 +688,7 @@ class ContactUtil(object):
                 logger.critical(msg)
                 raise ValueError(msg)
 
-        if optd['subselect_mode'] and optd['subselect_mode'].lower() not in ['linear', 'scaled']:
+        if optd['subselect_mode'] and optd['subselect_mode'].lower() not in ['cutoff', 'linear', 'scaled']:
             msg = "Subselection mode not valid"
             logger.critical(msg)
             raise ValueError(msg)
