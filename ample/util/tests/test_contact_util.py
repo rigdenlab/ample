@@ -92,6 +92,7 @@ class TestContactUtil(unittest.TestCase):
         'sequence_format': 'fasta',
         'structure_format': 'pdb',
         'energy_function': 'FADE',
+        'subselection_mode': None,
         'bbcontacts_file': tempfile.NamedTemporaryFile(delete=False).name,
         'contact_file': tempfile.NamedTemporaryFile(delete=False).name,
         'fasta': tempfile.NamedTemporaryFile(delete=False).name,
@@ -146,6 +147,17 @@ class TestContactUtil(unittest.TestCase):
             x = TestContactUtil._OPTD.copy()
             x['energy_function'] = 'FADE'
             x['restraints_format'] = 'saint2'
+            contact_util.ContactUtil.check_options(x)
+
+    def test_check_options_8(self):
+        x = TestContactUtil._OPTD.copy()
+        x['subselect_mode'] = 'linear'
+        contact_util.ContactUtil.check_options(x)
+
+    def test_check_options_9(self):
+        with self.assertRaises(ValueError):
+            x = TestContactUtil._OPTD.copy()
+            x['subselect_mode'] = 'test'
             contact_util.ContactUtil.check_options(x)
 
 

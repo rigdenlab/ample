@@ -1,7 +1,4 @@
 """
-@author: jmht, hlfsimko
-
-
 Below is code for creating a boolean argument parser with a default, and a range of choices
 
 class BoolAction(argparse.Action):
@@ -19,15 +16,19 @@ class BoolAction(argparse.Action):
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-d', '--debug', action=BoolAction, default=True, metavar='True/False', nargs='?', help="debug")
-#print parser.parse_args('-d 2'.split())
-print parser.parse_args('-d false'.split())
-
+# print(parser.parse_args('-d 2'.split()))
+print(parser.parse_args('-d false'.split()))
 
 """
 
-from ample.util import version
+__author__ = "Jens Thomas & Felix Simkovic"
+__date__ = "03 Apr 2016"
+__version__ = "1.0"
 
 import argparse
+
+from ample.util import version
+from ample.util.contact_util import SUBSELECTION_MODES
 
 
 def add_core_options(parser=None):
@@ -266,7 +267,7 @@ def add_contact_options(parser=None):
                        help="Additional energy weighting of restraints in Rosetta")
 
     contact_group.add_argument('-subselect_mode',
-                       help=argparse.SUPPRESS)
+                       help="Long-range decoy satisfaction subselection mode - one of [{0}]".format(" | ".join(SUBSELECTION_MODES)))
 
     return parser
 

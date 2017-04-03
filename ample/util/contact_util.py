@@ -7,6 +7,7 @@ __date__ = "18 Mar 2017"
 __version__ = "2.1"
 
 import conkit
+import inspect
 import logging
 import numpy
 import os
@@ -119,6 +120,11 @@ class SubselectionAlgorithm(object):
         keep = numpy.where(data_scaled >= cutoff)[0]
         throw = numpy.where(data_scaled < cutoff)[0]
         return keep.tolist(), throw.tolist()
+
+
+# Populate the available subselection modes into a list
+SUBSELECTION_MODES = [func_name for func_name, _ in inspect.getmembers(SubselectionAlgorithm)
+                      if not func_name.startswith('_')]
 
 
 class ContactUtil(object):
@@ -688,7 +694,7 @@ class ContactUtil(object):
                 logger.critical(msg)
                 raise ValueError(msg)
 
-        if optd['subselect_mode'] and optd['subselect_mode'].lower() not in ['cutoff', 'linear', 'scaled']:
+        if optd['subselect_mode'] and optd['subselect_mode'].lower() not in SUBSELECTION_MODES:
             msg = "Subselection mode not valid"
             logger.critical(msg)
             raise ValueError(msg)
