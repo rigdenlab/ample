@@ -9,6 +9,7 @@ import copy
 import glob
 import logging
 import os
+import pandas as pd
 import shutil
 import sys
 
@@ -31,25 +32,133 @@ _oldroot = None
 _newroot = None
 _MAXCLUSTERER = None
 
+_CSV_KEYLIST = [
+    'ample_version',
+
+    # Native info
+    'native_pdb_code',
+    'native_pdb_title',
+    'native_pdb_resolution',
+    'native_pdb_solvent_content',
+    'native_pdb_space_group',
+    'native_pdb_num_atoms',
+    'native_pdb_num_residues',
+    'native_pdb_num_chains',
+
+    # The modelled sequence
+    'fasta_length',
+
+    # Get the ensemble data and add to the MRBUMP data
+    'ensemble_name',
+    'ensemble_percent_model',
+
+    # cluster info
+    'cluster_method',
+    'num_clusters',
+    'cluster_num',
+    'cluster_centroid',
+    'cluster_num_models',
+
+    # truncation info
+    'truncation_level',
+    'percent_truncation',
+    'truncation_method',
+    'truncation_pruning',
+    'truncation_variance',
+    'num_residues',
+    'pruned_residues',
+
+    # subclustering info
+    'subcluster_num_models',
+    'subcluster_radius_threshold',
+    'subcluster_centroid_model',
+    'subcluster_centroid_model_RMSD',
+    'subcluster_centroid_model_TM',
+
+    # ensemble info
+    # 'name',
+    'side_chain_treatment',
+    'ensemble_num_atoms',
+
+    # MR result info
+    # 'name',
+    'MR_program',
+    'Solution_Type',
+
+    'PHASER_LLG',
+    'PHASER_TFZ',
+    'PHASER_RFZ',
+    'PHASER_time',
+    'PHASER_killed',
+    'PHASER_version',
+    'PHASER_errors',
+
+    'MOLREP_score',
+    'MOLREP_time',
+    'MOLREP_version',
+
+    'MR_phase_error',
+
+    'REFMAC_Rfact',
+    'REFMAC_Rfree',
+    'REFMAC_version',
+
+    'BUCC_final_Rfact',
+    'BUCC_final_Rfree',
+    'BUCC_version',
+
+    'ARP_final_Rfact',
+    'ARP_final_Rfree',
+    'ARP_version',
+
+    'SHELXE_CC',
+    'SHELXE_ACL',
+    'SHELXE_MCL',
+    'SHELXE_NC',
+    'SHELXE_wMPE',
+    'SHELXE_os',
+    'SHELXE_time',
+    'SHELXE_version',
+    # 'SHELXE_phase_error',
+
+    'SXRBUCC_version',
+    'SXRBUCC_final_Rfact',
+    'SXRBUCC_final_Rfree',
+    # 'SXRBUCC_phase_error',
+
+    'SXRARP_version',
+    'SXRARP_final_Rfact',
+    'SXRARP_final_Rfree',
+    # 'SXRARP_phase_error',
+
+    'num_placed_chains',
+    'num_placed_atoms',
+    'reforigin_RMSD',
+
+    'AA_num_contacts',
+    'RIO_num_contacts',
+    'RIO_in_register',
+    'RIO_oo_register',
+    'RIO_backwards',
+    'RIO',
+    'RIO_no_cat',
+    'RIO_norm'
+]
+
 
 def analyse(amoptd, newroot=None):
     if newroot:
-        #if newroot.endswith("/"): newroot=newroot[:-1]
         assert os.path.isdir(newroot)
         global _oldroot,_newroot
         _newroot=newroot
         _oldroot=amoptd['work_dir']
-        # hack
-        amoptd['maxcluster_exe'] = "/opt/maxcluster/maxcluster"
-        amoptd['native_pdb'] = os.path.join("/media/data/shared/testset/data",os.path.basename(amoptd['native_pdb']))
-        amoptd['models_dir'] = os.path.join("/media/data/shared/testset/models",amoptd['native_pdb_code'],"models")
-    
+
     if not os.path.isdir(fixpath(amoptd['benchmark_dir'])):
         os.mkdir(fixpath(amoptd['benchmark_dir']))
     os.chdir(fixpath(amoptd['benchmark_dir']))
     
     # AnalysePdb may have already been called from the main script
-    if amoptd['native_pdb'] and not amoptd.has_key('native_pdb_std'):
+    if amoptd['native_pdb'] and 'native_pdb_std' not in amoptd:
         analysePdb(amoptd)
 
     if amoptd['native_pdb'] and \
@@ -99,70 +208,81 @@ def analyse(amoptd, newroot=None):
         
         # Add in the data from the ensemble
         d.update(ensemble_results[d['ensemble_name']])
-        assert d['ensemble_name'] == d['name'],d
+        assert d['ensemble_name'] == d['name'], d
         
         # Hack for old results
         if 'truncation_num_residues' in d:
             d['num_residues'] = d['truncation_num_residues']
             del d['truncation_num_residues']
-            
-        # General stuff
-        d['ample_version'] = amoptd['ample_version']
-        d['fasta_length'] = amoptd['fasta_length']
-        
-        # Add in stuff we've cleaned from the pdb
-        if amoptd['native_pdb']:
-            d['native_pdb_code'] = amoptd['native_pdb_code']
-            d['native_pdb_title'] = amoptd['native_pdb_title']
-            d['native_pdb_resolution'] = amoptd['native_pdb_resolution']
-            d['native_pdb_solvent_content'] = amoptd['native_pdb_solvent_content']
-            d['native_pdb_space_group'] = amoptd['native_pdb_space_group']
-            d['native_pdb_num_chains'] = amoptd['native_pdb_num_chains']
-            d['native_pdb_num_atoms'] = amoptd['native_pdb_num_atoms']
-            d['native_pdb_num_residues'] = amoptd['native_pdb_num_residues']
- 
+
         # Get the ensemble data and add to the MRBUMP data
         d['ensemble_percent_model'] = int((float(d['num_residues']) / float(amoptd['fasta_length'])) * 100)
         #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
-        
-        if 'subcluster_centroid_model' in d and amoptd['native_pdb']:
-            # Calculation of TMscores for subcluster centroid models
-            if amoptd['have_tmscore']:
-                try:
-                    tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']), **amoptd)
-                    logger.info("Analysing subcluster centroid model with TMscore")
-                    tm_results = tm.compare_structures(
-                        [d['subcluster_centroid_model']], [amoptd['native_pdb_std']], fastas=[amoptd['fasta']]
-                    )
-                    d['subcluster_centroid_model_TM'] = tm_results[0]['tmscore']
-                    d['subcluster_centroid_model_RMSD'] = tm_results[0]['rmsd']
 
-                except Exception as e:
-                    msg = "Unable to run TMscore analysis: {0}".format(e)
-                    logger.critical(msg)
-            else:
-                # Use maxcluster
-                # Need to get the subcluster_centroid_model and then get the path to the original model
-                n = os.path.splitext(os.path.basename(d['subcluster_centroid_model']))[0]
+        if amoptd['native_pdb']:
+            # Add in stuff we've cleaned from the pdb
+            native_keys = [
+                'native_pdb_code', 'native_pdb_title', 'native_pdb_resolution', 'native_pdb_solvent_content',
+                'native_pdb_space_group', 'native_pdb_num_chains', 'native_pdb_num_atoms', 'native_pdb_num_residues'
+            ]
+            d.update({key: amoptd[key] for key in native_keys})
+            # Analyse the solution
+            analyseSolution(amoptd, d)
+        data.append(d)
+
+    # Put everything in a pandas DataFrame
+    dframe = pd.DataFrame(data)
+
+    # General stuff
+    dframe['ample_version'] = amoptd['ample_version']
+    dframe['fasta_length'] = amoptd['fasta_length']
+
+    # Analyse subcluster centroid models
+    if 'subcluster_centroid_model' in dframe.columns and amoptd['native_pdb']:
+        centroid_index = dframe.index
+        centroid_models = [fixpath(f) for f in dframe.subcluster_centroid_model]
+        native_pdb_std = fixpath(amoptd['native_pdb_std'])
+        fasta = fixpath(amoptd['fasta'])
+
+        # Calculation of TMscores for subcluster centroid models
+        if amoptd['have_tmscore']:
+            tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']), **amoptd)
+            tm_results = tm.compare_structures(centroid_models, [native_pdb_std], [fasta])
+            centroid_tmscores = [r['tmscore'] for r in tm_results]
+            centroid_rmsds = [r['rmsd'] for r in tm_results]
+
+        else:
+            # Use maxcluster
+            centroid_tmscores = []
+            for centroid_model in centroid_models:
+                n = os.path.splitext(os.path.basename(centroid_model))[0]
                 cm = None
                 for pdb in amoptd['models']:
                     if n.startswith(os.path.splitext(os.path.basename(pdb))[0]):
                         cm = pdb
                         break
-                if not cm:
-                    raise RuntimeError,"Cannot find model for subcluster_centroid_model {0}".format(d['subcluster_centroid_model'])
-                d['subcluster_centroid_model_TM'] = _MAXCLUSTERER.tm(cm)
-                # There is an issue here as this is the RMSD over the TM-aligned residues - NOT the global RMSD, which it is for the tm_util results
-                #d['subcluster_centroid_model_RMSD'] = _MAXCLUSTERER.rmsd(cm)
-                d['subcluster_centroid_model_RMSD'] = None
+                if cm:
+                    centroid_tmscores.append(_MAXCLUSTERER.tm(cm))
+                else:
+                    msg = "Cannot find model for subcluster_centroid_model {0}".format(
+                        dframe[0, 'subcluster_centroid_model']
+                    )
+                    raise RuntimeError(msg)
 
-        if amoptd['native_pdb']: analyseSolution(amoptd,d)
-        data.append(d)
+            # There is an issue here as this is the RMSD over the TM-aligned residues
+            # NOT the global RMSD, which it is for the tm_util results
+            centroid_rmsds = [None for _ in centroid_index]
 
-    fileName = os.path.join(fixpath(amoptd['benchmark_dir']), 'results.csv' )
-    writeCsv(fileName, data)
-    amoptd['benchmark_results'] = data
+        dframe['subcluster_centroid_model_TM'] = pd.Series(centroid_tmscores, index=centroid_index)
+        dframe['subcluster_centroid_model_RMSD'] = pd.Series(centroid_rmsds, index=centroid_index)
+
+    # Save the data
+    file_name = os.path.join(fixpath(amoptd['benchmark_dir']), 'results.csv')
+    dframe.to_csv(file_name, columns=_CSV_KEYLIST, index=False, na_rep="N/A")
+    amoptd['benchmark_results'] = dframe.to_dict('records')
+
     return
+
 
 def analyseModels(amoptd):
     
@@ -180,15 +300,7 @@ def analyseModels(amoptd):
                       )
     amoptd['res_seq_map']=resSeqMap
     amoptd['ref_model_pdb_info']=refModelPdbInfo
-    
-    # Get the scores for the models - we use both the rosetta and maxcluster methods as maxcluster
-    # requires a separate run to generate total RMSD
-    #if False:
-#     logger.info("Analysing RMSD scores for Rosetta models")
-#     try:
-#         amoptd['rosettaSP'] = rosetta_model.RosettaScoreParser(amoptd['models_dir'])
-#     except RuntimeError,e:
-#         print e
+
     if amoptd['have_tmscore']:
         try:
             tm = tm_util.TMscore(amoptd['tmscore_exe'], wdir=fixpath(amoptd['benchmark_dir']))
@@ -209,6 +321,7 @@ def analyseModels(amoptd):
                                         modelsDirectory=amoptd['models_dir'],
                                         workdir=fixpath(amoptd['benchmark_dir']))
     return
+
 
 def analysePdb(amoptd):
     """Collect data on the native pdb structure"""
@@ -272,6 +385,7 @@ def analysePdb(amoptd):
     amoptd['native_pdb_origin_info'] = originInfo
     
     return
+
 
 def analyseSolution(amoptd, d, origin_finder='shelxe'):
 
@@ -458,15 +572,6 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
 
     return
 
-# def analyseSS(amoptd):
-#     from ample.parsers import dssp_parser
-#     from ample.parsers import psipred_parser
-#     # Secondary Structure assignments
-#     psipred_file = os.path.join( dataDir, "{0}.psipred_ss2".format(pdbCode)  )
-#     psipredP = psipred_parser.PsipredParser( psipred_file )
-#     dsspLog = os.path.join( dataDir, "{0}.dssp".format( pdbCode ) )
-#     dsspP = dssp_parser.DsspParser( dsspLog )
-#     return
 
 def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for benchmarking on a cluster"""
@@ -484,159 +589,14 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     os.chmod(script_path, 0o777)
     return script_path
 
+
 def fixpath(path):
     # fix for analysing on a different machine
     if _oldroot and _newroot:
-        return os.path.join(_newroot,path[len(_oldroot)+1:])
+        return os.path.join(_newroot, path[len(_oldroot)+1:])
     else:
         return path
 
-def writeCsv(fileName,resultList):
-    
-    # List of all the keys we want to write out in order
-    keylist= [
-                'ample_version',
-                
-                # Native info
-                'native_pdb_code',
-                'native_pdb_title',
-                'native_pdb_resolution',
-                'native_pdb_solvent_content',
-                'native_pdb_space_group',
-                'native_pdb_num_atoms',
-                'native_pdb_num_residues',
-                'native_pdb_num_chains',
-                
-                # The modelled sequence
-                'fasta_length',
-                
-                # Get the ensemble data and add to the MRBUMP data
-                'ensemble_name',
-                'ensemble_percent_model',
-                
-                # cluster info
-                'cluster_method',
-                'num_clusters',
-                'cluster_num',
-                'cluster_centroid',
-                'cluster_num_models',
-                
-                # truncation info
-                'truncation_level',
-                'percent_truncation',
-                'truncation_method',
-                'truncation_pruning',
-                'truncation_variance',
-                'num_residues',
-                'pruned_residues',
-                
-                # subclustering info
-                'subcluster_num_models',
-                'subcluster_radius_threshold',
-                'subcluster_centroid_model',
-                'subcluster_centroid_model_RMSD',
-                'subcluster_centroid_model_TM',
-                
-                # ensemble info
-                #'name',
-                'side_chain_treatment',
-                'ensemble_num_atoms',
-                
-                # MR result info
-                #'name',
-                'MR_program',
-                'Solution_Type',
-                
-                'PHASER_LLG',
-                'PHASER_TFZ',
-                'PHASER_RFZ',
-                'PHASER_time',
-                'PHASER_killed',
-                'PHASER_version',
-                'PHASER_errors',
-                
-                'MOLREP_score',
-                'MOLREP_time',
-                'MOLREP_version',
-                
-                'MR_phase_error',
-                
-                'REFMAC_Rfact',
-                'REFMAC_Rfree',
-                'REFMAC_version',
-                
-                'BUCC_final_Rfact',
-                'BUCC_final_Rfree',
-                'BUCC_version',
-                
-                'ARP_final_Rfact',
-                'ARP_final_Rfree',
-                'ARP_version',
-                
-                'SHELXE_CC',
-                'SHELXE_ACL',
-                'SHELXE_MCL',
-                'SHELXE_NC',
-                'SHELXE_wMPE',
-                'SHELXE_os',
-                'SHELXE_time',
-                'SHELXE_version',
-#                 'SHELXE_phase_error',
-                
-                'SXRBUCC_version',
-                'SXRBUCC_final_Rfact',
-                'SXRBUCC_final_Rfree',
-#                 'SXRBUCC_phase_error',
-                
-                'SXRARP_version',
-                'SXRARP_final_Rfact',
-                'SXRARP_final_Rfree',
-#                 'SXRARP_phase_error',
-                
-                'num_placed_chains',
-                'num_placed_atoms',
-                'reforigin_RMSD',
-                
-                'AA_num_contacts',
-                'RIO_num_contacts',
-                'RIO_in_register',
-                'RIO_oo_register',
-                'RIO_backwards',
-                'RIO',
-                'RIO_no_cat',
-                'RIO_norm'
-    
-    ]
-    
-#     for d in resultList:
-#         for k in sorted(d.keys()):
-#             print "GOT ",k,d[k]
-    
-    with open(fileName,'wb') as csvfile:
-        csvfile.write(",".join(keylist)+"\n")
-        for d in resultList:
-            #csvfile.write(",".join([d[k] for k in keylist]+"\n"))
-            values=[]
-            for k in keylist:
-                if k in d and d[k] is not None:
-                    # Remove any commas that might mess with the csv file
-                    values.append(str(d[k]).replace(",","^"))
-                else:
-                    values.append("N/A")
-            csvfile.write(",".join(values)+"\n")
-        csvfile.write("\n")
-
-# Doesnt' seem to work       
-#         csvwriter=csv.DictWriter(csvfile,
-#                                  fieldnames=keylist,
-#                                  extrasaction='ignore',
-#                                  restval='N/A',
-#                                  delimiter=',',
-#                                  quotechar='"',
-#                                  quoting=csv.QUOTE_MINIMAL)
-#         csvwriter.writeheader()
-#         csvwriter.writerows(resultList)
-    return
 
 # Run unit tests
 if __name__ == "__main__":
@@ -644,7 +604,7 @@ if __name__ == "__main__":
     # This runs the benchmarking starting from a pickled file containing an amopt dictionary.
     # - used when submitting the modelling jobs to a cluster
     if len(sys.argv) != 2 or not os.path.isfile(sys.argv[1]):
-        print "benchmark script requires the path to a pickled amopt dictionary!"
+        print("benchmark script requires the path to a pickled amopt dictionary!")
         sys.exit(1)
 
     # Get the amopt dictionary
@@ -662,4 +622,3 @@ if __name__ == "__main__":
     # Create the ensembles & save them
     analyse(amoptd)
     ample_util.save_amoptd(amoptd)
-
