@@ -150,8 +150,8 @@ def analyse(amoptd, newroot=None):
     if newroot:
         assert os.path.isdir(newroot)
         global _oldroot,_newroot
-        _newroot=newroot
-        _oldroot=amoptd['work_dir']
+        _newroot = newroot
+        _oldroot = amoptd['work_dir']
 
     if not os.path.isdir(fixpath(amoptd['benchmark_dir'])):
         os.mkdir(fixpath(amoptd['benchmark_dir']))
@@ -214,10 +214,13 @@ def analyse(amoptd, newroot=None):
         if 'truncation_num_residues' in d:
             d['num_residues'] = d['truncation_num_residues']
             del d['truncation_num_residues']
+            
+        # Hack for ideal helices where num_residues are missing
+        if amoptd['ideal_helices'] and ('num_residues' not in d or d['num_residues'] is None):
+            d['num_residues'] = int(d['ensemble_name'].lstrip('polyala'))
 
         # Get the ensemble data and add to the MRBUMP data
         d['ensemble_percent_model'] = int((float(d['num_residues']) / float(amoptd['fasta_length'])) * 100)
-        #ar.ensembleNativeRMSD = scoreP.rms( eP.centroidModelName )
 
         if amoptd['native_pdb']:
             # Add in stuff we've cleaned from the pdb
@@ -326,7 +329,7 @@ def analyseModels(amoptd):
 def analysePdb(amoptd):
     """Collect data on the native pdb structure"""
     
-    nativePdb = amoptd['native_pdb']
+    nativePdb = fixpath(amoptd['native_pdb'])
     nativePdbInfo = pdb_edit.get_info(nativePdb)
     
     # number atoms/residues
@@ -593,7 +596,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
 def fixpath(path):
     # fix for analysing on a different machine
     if _oldroot and _newroot:
-        return os.path.join(_newroot, path[len(_oldroot)+1:])
+        return path.replace(_oldroot,_newroot)
     else:
         return path
 
@@ -619,6 +622,5 @@ if __name__ == "__main__":
     fl.setFormatter(formatter)
     logger.addHandler(fl)
 
-    # Create the ensembles & save them
     analyse(amoptd)
     ample_util.save_amoptd(amoptd)
