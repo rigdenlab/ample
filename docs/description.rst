@@ -10,7 +10,7 @@ AMPLE originated as a means to process rapidly obtained, low-resolution ab initi
 
 The key elements of AMPLE’s workings are clustering and truncation. Clustering identifies the most likely correct fold predictions from among large sets of ab initio models. Structural variance within these clusters is indicative of likely error – the most diverse regions tend to be the least reliably modelled – and is used to drive truncation of cluster-derived structure ensembles. Alternative side chain treatments and sub-clustering at different levels of structural homogeneity are applied resulting in a potentially large number of search models to trial from each cluster sampled.
 
-.. figure:: _static/pipeline.png
+.. figure:: _static/pipeline.svg
    :align: center
 
 Benchmarking of this approach on a large set of small globular proteins (<120 residues) solved around half, with success much more frequent for all-α proteins than for all-β targets, with mixed folds intermediate. In favourable cases where the target is a member of a large family of sequences, allowing for prediction of residue contacts, we have solved targets, treated as novel folds, of up to around 220 residues. We have also shown that this approach solves 80% of coiled-coil proteins, independent of their architecture.
