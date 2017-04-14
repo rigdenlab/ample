@@ -6,7 +6,8 @@ __author__ = "Felix Simkovic"
 __date__ = "18 Mar 2017"
 __version__ = "2.1"
 
-import conkit
+from distutils.version import StrictVersion
+
 import inspect
 import logging
 import numpy
@@ -17,6 +18,9 @@ import tempfile
 from ample.modelling import energy_functions
 from ample.util import ample_util
 from ample.util import workers_util
+
+import conkit.io
+import conkit._version
 
 logger = logging.getLogger(__name__)
 
@@ -432,7 +436,7 @@ class ContactUtil(object):
             # TODO: Get the log file business working properly
             cmd = [executable, '-d', subdistance_to_neighbor]
             # Decoy file and format - version dependent
-            if conkit._version.__version_info__ <= (0, 6, 3):
+            if StrictVersion(conkit._version.__version__) <= StrictVersion('0.6.3'):
                 cmd += [decoy]
             else:
                 cmd += [decoy, decoy_format]
