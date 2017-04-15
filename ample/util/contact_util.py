@@ -20,6 +20,7 @@ from ample.util import ample_util
 from ample.util import workers_util
 
 import conkit.io
+import conkit.plot
 import conkit._version
 
 logger = logging.getLogger(__name__)
@@ -567,7 +568,7 @@ class ContactUtil(object):
             precision = 0.0
 
         # Draw a contact map plot
-        contact_map.plot_map(reference=structure_map, file_name=plot_file)
+        conkit.plot.ContactMapFigure(contact_map, reference=structure_map, file_name=plot_file)
 
         return plot_file, precision
 
