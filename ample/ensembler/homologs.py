@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 def align_mustang(models, mustang_exe=None, work_dir=None):
     if not ample_util.is_exe(mustang_exe):
-        raise RuntimeError, "Cannot find mustang executable: {0}".format(mustang_exe)
+        msg = "Cannot find mustang executable: {0}".format(mustang_exe)
+        raise RuntimeError(msg)
     
     owd = os.getcwd()
     if not work_dir: work_dir = owd
@@ -33,17 +34,21 @@ def align_mustang(models, mustang_exe=None, work_dir=None):
     cmd = [mustang_exe, '-F', 'fasta', '-o', basename, '-i' ] + models
     rtn = ample_util.run_command(cmd, logfile=logfile, directory=work_dir)
     if not rtn == 0:
-        raise RuntimeError, "Error running mustang. Check logfile: {0}".format(logfile)
+        msg = "Error running mustang. Check logfile: {0}".format(logfile)
+        raise RuntimeError(msg)
     
     alignment_file = os.path.join(work_dir, basename + ".afasta")
-    if not os.path.isfile(alignment_file): raise RuntimeError("Could not find alignment file: {0} after running mustang!".format(alignment_file))
+    if not os.path.isfile(alignment_file): 
+        msg = "Could not find alignment file: {0} after running mustang!".format(alignment_file)
+        raise RuntimeError(msg)
     os.chdir(owd) # always need to go back to original directory
     return alignment_file
 
 
 def align_gesamt(models, gesamt_exe=None, work_dir=None):
     if not ample_util.is_exe(gesamt_exe):
-        raise RuntimeError, "Cannot find gesamt executable: {0}".format(gesamt_exe)
+        msg = "Cannot find gesamt executable: {0}".format(gesamt_exe)
+        raise RuntimeError(msg)
     
     owd = os.getcwd()
     if not work_dir: work_dir = owd
@@ -55,7 +60,9 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
     model2chain = {}
     for m in models:
         seqd = pdb_edit.sequence(m)
-        if len(seqd) != 1: raise RuntimeError, "Model {0} does not contain a single chain, got: {1}".format(seqd.keys())
+        if len(seqd) != 1: 
+            msg = "Model {0} does not contain a single chain, got: {1}".format(*seqd.keys())
+            raise RuntimeError(msg)
         model2chain[m] = seqd.keys()[0]
     
     basename = 'gesamt'
@@ -70,9 +77,12 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
     
     rtn = ample_util.run_command(cmd, logfile=logfile, directory=work_dir)
     if not rtn == 0:
-        raise RuntimeError, "Error running gesamt. Check logfile: {0}".format(logfile)
+        msg = "Error running gesamt. Check logfile: {0}".format(logfile)
+        raise RuntimeError(msg)
     
-    if not os.path.isfile(alignment_file): raise RuntimeError, "Gesamt did not generate an alignment file.\nPlease check the logfile: {0}".format(logfile)
+    if not os.path.isfile(alignment_file): 
+        msg = "Gesamt did not generate an alignment file.\nPlease check the logfile: {0}".format(logfile)
+        raise RuntimeError(msg)
     
     if sys.platform.startswith("win"):
         alignment_file = _gesamt_aln_windows_fix(alignment_file)
@@ -120,11 +130,13 @@ class HomologEnsembler(_ensembler.Ensembler):
             truncation_method = self.truncation_method
         
         if not len(models):
-            raise RuntimeError, "Cannot find any models for ensembling!" 
+            msg = "Cannot find any models for ensembling!"
+            raise RuntimeError(msg) 
         if not all([os.path.isfile(m) for m in models]):
-            raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
+            msg = "Problem reading models given to Ensembler: {0}".format(models)
+            raise RuntimeError(msg)
         
-        logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
+        logger.info('Ensembling models in directory: %s', self.work_dir)
     
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
@@ -141,17 +153,17 @@ class HomologEnsembler(_ensembler.Ensembler):
         # Get a structural alignment between the different models
         if not alignment_file:
             if homolog_aligner == 'mustang':
-                logger.info("Generating alignment file with mustang_exe: {0}".format(self.mustang_exe))
+                logger.info("Generating alignment file with mustang_exe: %s", self.mustang_exe)
                 alignment_file = align_mustang(std_models, mustang_exe=self.mustang_exe, work_dir=self.work_dir)
             elif homolog_aligner == 'gesamt':
-                logger.info("Generating alignment file with gesamt_exe: {0}".format(self.gesamt_exe))
+                logger.info("Generating alignment file with gesamt_exe: %s", self.gesamt_exe)
                 alignment_file = align_gesamt(std_models, gesamt_exe=self.gesamt_exe, work_dir=self.work_dir)
             else:
-                raise RuntimeError, "Unknown homolog_aligner: {0}".format(homolog_aligner)
-            logger.info("Generated alignment file: {0}".format(alignment_file))
+                msg = "Unknown homolog_aligner: {0}".format(homolog_aligner)
+                raise RuntimeError(msg)
+            logger.info("Generated alignment file: %s", alignment_file)
         else:
-            logger.info("Using alignment file: {0}".format(alignment_file))
-            
+            logger.info("Using alignment file: %s", alignment_file)
         
         truncate_dir = os.path.join(self.work_dir,"homolog_truncate")
         if not os.path.isdir(truncate_dir): os.mkdir(truncate_dir)
@@ -174,7 +186,7 @@ class HomologEnsembler(_ensembler.Ensembler):
             basename = "e{0}".format(truncation.level)
             superposed_models = self.superpose_models(truncation.models, basename=basename, work_dir=ensemble_dir, homologs=True)
             if not superposed_models:
-                logger.critical("Skipping ensemble {0} due to error with Theseus".format(basename))
+                logger.critical("Skipping ensemble %s due to error with Theseus", basename)
                 continue
             
             # Create Ensemble object

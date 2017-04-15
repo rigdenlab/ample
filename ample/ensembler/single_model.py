@@ -68,7 +68,7 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         std_model = ample_util.filename_append(models[0], 'std', std_models_dir)
         pdb_edit.standardise(pdbin=models[0], pdbout=std_model, del_hetatm=True)
         std_models = [std_model]
-        logger.info('Standardised input model: {0}'.format(std_models[0]))
+        logger.info('Standardised input model: %s', std_models[0])
               
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
@@ -80,7 +80,7 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         assert len(truncation_scorefile_header) > 1, "At least two column labels are required"
         residue_scores = self._read_scorefile(truncation_scorefile)
         residue_key = truncation_scorefile_header.pop(0).lower()
-        assert all(i.lower() in residue_scores[0].keys() for i in truncation_scorefile_header), \
+        assert all(i.lower() in residue_scores[0] for i in truncation_scorefile_header), \
                 "Not all column labels are in your CSV file"
         
         self.ensembles = []
@@ -144,8 +144,8 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         :returns: zipped list of residue index plus score
         """
         
-        assert scores[0].has_key(residue_key), "Cannot find residue key in scoresfile"
-        assert scores[0].has_key(score_key), "Cannot find score key in scoresfile"
+        assert scores[0] in residue_key, "Cannot find residue key in scoresfile"
+        assert scores[0] in score_key, "Cannot find score key in scoresfile"
         return [(i[residue_key], i[score_key]) for i in scores]
     
     # staticmethod so that we can test without instantiating an Ensembler

@@ -55,7 +55,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         """
         
         # Cluster our protein structures
-        logger.info('Generating {0} clusters using method: {1}'.format(num_clusters, cluster_method))
+        logger.info('Generating %d clusters using method: %s', num_clusters, cluster_method)
 
         if cluster_method != 'import' and not len(models):
             raise RuntimeError, "Cannot find any models for ensembling!" 
@@ -75,7 +75,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         if cluster_method_type == 'fast_protein_cluster':
             SCORE_TYPE = 'rmsd'
             CLUSTER_METHOD = 'kmeans'
-            logger.info('Running fast_protein_cluster with: score_type: {0} cluster_method: {1}'.format(SCORE_TYPE, CLUSTER_METHOD))
+            logger.info('Running fast_protein_cluster with: score_type: %s and cluster_method: %s', SCORE_TYPE, CLUSTER_METHOD)
             clusters = fast_protein_cluster.FPC().fpc.cluster(cluster_method=CLUSTER_METHOD,
                                                               fpc_exe=cluster_exe,
                                                               max_cluster_size=max_cluster_size,
@@ -188,9 +188,10 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         if not truncation_pruning:
             truncation_pruning = self.truncation_pruning
         
-        logger.info('Ensembling models in directory: {0}'.format(self.work_dir))
+        logger.info('Ensembling models in directory: %', self.work_dir)
         if not all([os.path.isfile(m) for m in models]):
-            raise RuntimeError, "Problem reading models given to Ensembler: {0}".format(models) 
+            msg = "Problem reading models given to Ensembler: {0}".format(models)
+            raise RuntimeError(msg)
         
         self.ensembles = []
         for cluster in self.cluster_models(models=models,
@@ -198,9 +199,9 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                                            num_clusters=num_clusters,
                                            cluster_dir=cluster_dir):
             if len(cluster) < 2:
-                logger.info("Cannot truncate cluster {0} as < 2 models!".format(cluster.index))
+                logger.info("Cannot truncate cluster %d as < 2 models!", cluster.index)
                 continue
-            logger.info('Processing cluster: {0}'.format(cluster.index))
+            logger.info('Processing cluster: %d', cluster.index)
             
             truncate_dir = os.path.join(self.work_dir, "cluster_{0}".format(cluster.index))
             if not os.path.isdir(truncate_dir): os.mkdir(truncate_dir)
@@ -273,7 +274,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         else:
             msg = "Unrecognised cluster_method: {0}".format(cluster_method)
             raise RuntimeError(msg)
-        logger.debug('cluster_method_type: {0} cluster_score_type: {1} cluster_exe {2}'.format(cluster_method_type, cluster_score_type, cluster_exe))
+        logger.debug('cluster_method_type: %s cluster_score_type: %s cluster_exe %s', cluster_method_type, cluster_score_type, cluster_exe)
         return cluster_method_type, cluster_score_type, cluster_exe
     
     def scwrl_models(self, models, work_dir, scwrl_exe):
@@ -340,22 +341,22 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         ensembles = []
         previous_clusters = []
         for radius in radius_thresholds:
-            logger.debug("subclustering models under radius: {0}".format(radius))
+            logger.debug("subclustering models under radius: %.2f", radius)
 
             # Get list of pdbs clustered according to radius threshold
             cluster_files = clusterer.cluster_by_radius(radius)
             if not cluster_files:
-                logger.debug("Skipping radius {0} as no files clustered in directory {1}".format(radius, truncation.directory))
+                logger.debug("Skipping radius %.2f as no files clustered in directory %s", radius, truncation.directory)
                 continue
                 
-            logger.debug("Clustered {0} files".format(len(cluster_files)))
+            logger.debug("Clustered %d files", len(cluster_files))
             cluster_files = subcluster_util.slice_subcluster(cluster_files,
                                                              previous_clusters,
                                                              ensemble_max_models,
                                                              radius,
                                                              radius_thresholds)
             if not cluster_files:
-                logger.debug('Could not create different cluster for radius {0} in directory: {1}'.format(radius, truncation.directory))
+                logger.debug('Could not create different cluster for radius %.2f in directory: %s', radius, truncation.directory)
                 continue
             
             # Remember this cluster so we don't create duplicate clusters
@@ -414,17 +415,17 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                 # Randomly pick ensemble_max_models
                 cluster_files = subcluster_util.pick_nmodels(cluster_files, clusters, ensemble_max_models)
                 if not cluster_files:
-                    logger.debug('Could not cluster files under radius: {0} - could not find different models'.format(radius))
+                    logger.debug('Could not cluster files under radius: %.2f - could not find different models', radius)
                     break
             
             # Need to check in case we couldn't cluster under this radius
             if cluster_size == 0 or radius in radii:
-                logger.debug('Could not cluster files under radius: {0} - got {1} files'.format(radius, len(cluster_files)))
+                logger.debug('Could not cluster files under radius: %.2f - got %d files', radius, len(cluster_files))
                 break
-            logger.debug('Subclustering {0} files under radius {1}'.format(cluster_size, radius))
+            logger.debug('Subclustering %d files under radius %.2f', cluster_size, radius)
             cluster_ensemble = self.ensemble_from_subcluster(list(cluster_files), radius, truncation, cluster_score=clusterer.cluster_score)
             if cluster_ensemble is None:
-                logger.debug('Could not cluster files under radius: {0}'.format(radius))
+                logger.debug('Could not cluster files under radius: %.2f', radius)
                 break
             
             subclusters.append(cluster_ensemble)

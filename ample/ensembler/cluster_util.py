@@ -4,9 +4,12 @@ __author__ = "Jens Thomas, and Felix Simkovic"
 __date__ = "23 Feb 2016"
 __version__ = "1.0"
 
+import logging
 import random
 
 from ample.ensembler._ensembler import Cluster
+
+logger = logging.getLogger(__name__)
 
 
 def import_cluster(cluster_models):
