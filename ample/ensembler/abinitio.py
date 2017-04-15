@@ -188,7 +188,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         if not truncation_pruning:
             truncation_pruning = self.truncation_pruning
         
-        logger.info('Ensembling models in directory: %', self.work_dir)
+        logger.info('Ensembling models in directory: %s', self.work_dir)
         if not all([os.path.isfile(m) for m in models]):
             msg = "Problem reading models given to Ensembler: {0}".format(models)
             raise RuntimeError(msg)
