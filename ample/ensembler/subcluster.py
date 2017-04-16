@@ -31,7 +31,8 @@ class SubClusterer(object):
     
     def __init__(self,executable=None, nproc=1):
         if executable and not os.path.exists(executable) and os.access(executable, os.X_OK):
-            raise RuntimeError,"Cannot find subclusterer executable: {0}".format(executable) 
+            msg = "Cannot find subclusterer executable: {0}".format(executable)
+            raise RuntimeError(msg)
         self.executable = executable
         self.nproc = nproc
         self.distance_matrix = None
@@ -39,7 +40,7 @@ class SubClusterer(object):
         self.cluster_score = None
         return
     
-    def generate_distance_matrix(self,pdb_list):
+    def generate_distance_matrix(self, *args, **kwargs):
         assert False
 
     def cluster_by_radius(self, radius):
@@ -96,15 +97,15 @@ class SubClusterer(object):
         """
         ALL_BY_ALL = True
         if ALL_BY_ALL:
-            # Calculate all the rmsds of all decoys in the cluster with each other
-#             rmsds = []
-#             lenc = len(cluster)
-#             for i in range(lenc):
-#                 for j in range(i+1,lenc):
-#                     i1 = cluster[i]
-#                     i2 = cluster[j]
-#                     rmsds.append(self.distance_matrix[i1][i2])
-            rmsds = [ self.distance_matrix[i] for i in itertools.combinations(cluster,2) ]
+            # # Calculate all the rmsds of all decoys in the cluster with each other
+            # rmsds = []
+            # lenc = len(cluster)
+            # for i in range(lenc):
+            #     for j in range(i+1,lenc):
+            #         i1 = cluster[i]
+            #         i2 = cluster[j]
+            #         rmsds.append(self.distance_matrix[i1][i2])
+            rmsds = [ self.distance_matrix[i] for i in itertools.combinations(cluster, 2) ]
         else:
             # Just use the rmsds of the decoys to the the cluster centroid - assumes
             # the centroid approximates the native
@@ -140,27 +141,33 @@ class CctbxClusterer(SubClusterer):
         if not num_models:
             msg = "generate_distance_matrix got empty pdb_list!"
             logging.critical(msg)
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
  
         # Index is just the order of the pdb in the file
-        self.index2pdb=pdb_list
+        self.index2pdb = pdb_list
      
-        # Create a square distance_matrix num_models in size filled with None
+        # Create a square matrix storing the rmsd distances between models 
         self.distance_matrix = numpy.zeros([num_models, num_models])
-        # Set zeros diagonal
-         
-        for i, m1 in enumerate(pdb_list):
+        for m1, m2 in itertools.combinations(pdb_list, 2):
+            i, j = pdb_list.index(m1), pdb_list.index(m2)
             fixed = mmtbx.superpose.SuperposePDB(m1, preset='ca', log=None, quiet=True)
-            for j, m2 in enumerate(pdb_list):
-                if j <= i: continue
-                moving = mmtbx.superpose.SuperposePDB(m2, preset='ca', log=None, quiet=True)
-                rmsd, lsq = moving.superpose(fixed)
-                self.distance_matrix[i][j]=float(rmsd)
+            moving = mmtbx.superpose.SuperposePDB(m2, preset='ca', log=None, quiet=True)
+            rmsd, _ = moving.superpose(fixed)
+            self.distance_matrix[i, j] = self.distance_matrix[j, i] = float(rmsd)
+        
+        # # Might be deleted when confirmed that above code works
+        # for i, m1 in enumerate(pdb_list):
+        #     fixed = mmtbx.superpose.SuperposePDB(m1, preset='ca', log=None, quiet=True)
+        #     for j, m2 in enumerate(pdb_list):
+        #         if j <= i: continue
+        #         moving = mmtbx.superpose.SuperposePDB(m2, preset='ca', log=None, quiet=True)
+        #         rmsd, _ = moving.superpose(fixed)
+        #         self.distance_matrix[i][j] = float(rmsd)
          
-        # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
-        for x in range(len(self.distance_matrix)):
-            for y in range(len(self.distance_matrix)):
-                self.distance_matrix[y][x] = self.distance_matrix[x][y]
+        # # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
+        # for x in range(len(self.distance_matrix)):
+        #     for y in range(len(self.distance_matrix)):
+        #         self.distance_matrix[y][x] = self.distance_matrix[x][y]
         return
 
 
@@ -190,8 +197,8 @@ class FpcClusterer(SubClusterer):
         retcode = ample_util.run_command( cmd, logfile=log_name )
         if retcode != 0:
             msg = "non-zero return code for fast_protein_cluster in generate_distance_matrix!\nCheck logfile:{0}".format(log_name)
-            logging.critical( msg )
-            raise RuntimeError, msg
+            logging.critical(msg)
+            raise RuntimeError(msg)
 
         mlen=0
         data=[]
@@ -269,7 +276,8 @@ where inp_list.dat  contains:
 
         logfile = os.path.abspath('gesamt_archive.log')
         rtn = ample_util.run_command(cmd, logfile)
-        if rtn != 0: raise RuntimeError("Error running gesamt - check logfile: {0}".format(logfile))
+        if rtn != 0: 
+            raise RuntimeError("Error running gesamt - check logfile: {0}".format(logfile))
         
         # Create a square distance_matrix no_models in size filled with None
         num_models = len(models)
@@ -307,7 +315,8 @@ where inp_list.dat  contains:
                     found = True
                     break
         
-        if not found: raise RuntimeError("Could not generate distance matrix with gesamt")
+        if not found: 
+            raise RuntimeError("Could not generate distance matrix with gesamt")
         return
         
     def _generate_distance_matrix_generic(self, models, purge=True, purge_all=False, metric='qscore'):
@@ -325,7 +334,7 @@ where inp_list.dat  contains:
         nmodels = len(models)
         
         # Make the archive
-        logger.debug("Generating gesamt archive from models in directory {0}".format(mdir))
+        logger.debug("Generating gesamt archive from models in directory %s", mdir)
         garchive = 'gesamt.archive'
         if not os.path.isdir(garchive): os.mkdir(garchive)
         logfile = os.path.abspath('gesamt_archive.log')
@@ -336,7 +345,8 @@ where inp_list.dat  contains:
         env = None
         #env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4-devtools/install/lib'}
         rtn = ample_util.run_command(cmd, logfile,env = env )
-        if rtn != 0: raise RuntimeError("Error running gesamt - check logfile: {0}".format(logfile))
+        if rtn != 0: 
+            raise RuntimeError("Error running gesamt - check logfile: {0}".format(logfile))
         
         if purge_all: os.unlink(logfile)
         
@@ -345,7 +355,8 @@ where inp_list.dat  contains:
             parity = 0.0
         elif metric == 'qscore':
             parity = 1
-        else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
+        else: 
+            raise RuntimeError("Unrecognised metric: {0}".format(metric))
         
         #m = [[parity for _ in range(nmodels)] for _ in range(nmodels)]
         m = numpy.full([nmodels, nmodels], parity)
@@ -357,7 +368,8 @@ where inp_list.dat  contains:
             cmd = [ self.executable, model, '-archive', garchive, '-o', gesamt_out ]
             cmd += [ '-nthreads={0}'.format(self.nproc) ]
             rtn = ample_util.run_command(cmd, logfile)
-            if rtn != 0: raise RuntimeError("Error running gesamt!")
+            if rtn != 0: 
+                raise RuntimeError("Error running gesamt!")
             else:
                 if purge: os.unlink(logfile)
                 
@@ -379,7 +391,8 @@ where inp_list.dat  contains:
                     score = rmsd
                 elif metric == 'qscore':
                     score = qscore
-                else: raise RuntimeError("Unrecognised metric: {0}".format(metric))
+                else: 
+                    raise RuntimeError("Unrecognised metric: {0}".format(metric))
                 
                 m[i][j] = score
                 
@@ -503,8 +516,8 @@ class MaxClusterer(SubClusterer):
         num_models = len( pdb_list )
         if not num_models:
             msg = "generate_distance_matrix got empty pdb_list!"
-            logging.critical( msg )
-            raise RuntimeError, msg
+            logging.critical(msg)
+            raise RuntimeError(msg)
         
         self.index2pdb=[0]*num_models
     
@@ -530,8 +543,8 @@ class MaxClusterer(SubClusterer):
         
         if retcode != 0:
             msg = "non-zero return code for maxcluster in generate_distance_matrix!\nSee logfile: {0}".format(log_name)
-            logging.critical( msg )
-            raise RuntimeError, msg
+            logging.critical(msg)
+            raise RuntimeError(msg)
         
         # Create a square distance_matrix no_models in size filled with None
         parity = 0.0

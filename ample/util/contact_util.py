@@ -204,9 +204,9 @@ class ContactUtil(object):
         return self._bbcontacts_file
 
     @bbcontacts_file.setter
-    def bbcontacts_file(self, file):
+    def bbcontacts_file(self, fname):
         """Define the path to the ``bbcontacts_file``"""
-        self._bbcontacts_file = file
+        self._bbcontacts_file = fname
 
     @property
     def bbcontacts_format(self):
@@ -233,11 +233,8 @@ class ContactUtil(object):
         return self._contact_file
 
     @contacts_file.setter
-    def contacts_file(self, file):
+    def contacts_file(self, fname):
         """Define the path to the ``contacts_file``"""
-        if not os.path.isfile(file):
-            msg = "contact file does not exist: {0}".format(file)
-            raise ValueError(msg)
         self._contact_file = file
 
     @property
@@ -291,12 +288,9 @@ class ContactUtil(object):
         return self._sequence_file
 
     @sequence_file.setter
-    def sequence_file(self, file):
+    def sequence_file(self, fname):
         """Define the path to the ``sequence_file``"""
-        if not os.path.isfile(file):
-            msg = "sequence file does not exist: {0}".format(file)
-            raise ValueError(msg)
-        self._sequence_file = file
+        self._sequence_file = fname
 
     @property
     def sequence_format(self):
@@ -331,10 +325,10 @@ class ContactUtil(object):
            The modified and processed contact map
 
         """
-        logger.info('Provided contact file and format are: {0} - {1}'.format(self.contact_file, self.contact_format))
+        logger.info('Provided contact file and format are: %s - %s', self.contact_file, self.contact_format)
         contact_map = conkit.io.read(self.contact_file, self.contact_format).top_map
 
-        logger.info('Provided sequence file and format are: {0} - {1}'.format(self.sequence_file, self.sequence_format))
+        logger.info('Provided sequence file and format are: %s - %s', self.sequence_file, self.sequence_format)
         sequence = conkit.io.read(self.sequence_file, self.sequence_format).top_sequence
         contact_map.sequence = sequence
         contact_map.assign_sequence_register()
@@ -343,21 +337,19 @@ class ContactUtil(object):
         contact_map.calculate_scalar_score()
 
         dtn = self.distance_to_neighbor
-        logger.info('Removing neighboring residues to distance of {0} residues'.format(dtn))
+        logger.info('Removing neighboring residues to distance of %d residues', dtn)
         contact_map.remove_neighbors(min_distance=dtn, inplace=True)
 
         sort_key = 'raw_score'
-        logger.info('Sorting the contact map based on {0}'.format(sort_key))
+        logger.info('Sorting the contact map based on %s', sort_key)
         contact_map.sort(sort_key, reverse=True, inplace=True)
 
         ncontacts = int(contact_map.sequence.seq_len * self.cutoff_factor)
-        logger.info('Slicing contact map to contain top {0} contacts only'.format(ncontacts))
+        logger.info('Slicing contact map to contain top %d contacts only', ncontacts)
         contact_map = contact_map[:ncontacts]
 
         if self.bbcontacts_file:
-            logger.info(
-                'Provided contact file and format are: {0} - {1}'.format(self.bbcontacts_file, self.bbcontacts_format)
-            )
+            logger.info('Provided contact file and format are: %s - %s', self.bbcontacts_file, self.bbcontacts_format)
             bbcontact_map = conkit.io.read(self.bbcontacts_file, self.bbcontacts_format).top_map
             bbcontact_map.sequence = sequence
             bbcontact_map.assign_sequence_register()
@@ -486,7 +478,7 @@ class ContactUtil(object):
             os.unlink(script)
 
         # Subselect the decoys
-        logger.info('Model selection mode: {0}'.format(mode))
+        logger.info('Model selection mode: %s', mode)
         if mode == 'scaled':
             keep, throw = SubselectionAlgorithm.scaled(scores)
         elif mode == 'linear':
@@ -504,7 +496,7 @@ class ContactUtil(object):
             logger.warning(msg)
             keep, throw = range(len(decoys)), []
 
-        logger.info('Excluding {0} decoy(s) from ensembling'.format(len(throw)))
+        logger.info('Excluding %d decoy(s) from ensembling', len(throw))
 
         # TODO: return the scores so we can store them in AMPLE dict
         # Return the list of decoys to keep

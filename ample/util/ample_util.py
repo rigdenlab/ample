@@ -25,7 +25,8 @@ SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
 EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
 SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
 
-class FileNotFoundError(Exception): pass
+class FileNotFoundError(Exception): 
+    pass
 
 # ample_util is used before anything else so there is no logger available
 # and we need to a Null handler
@@ -42,7 +43,6 @@ def ccp4_version():
        Major, minor, and revision number
 
     """
-    global CCP4_VERSION
     if CCP4_VERSION is None:
         # Currently there seems no sensible way of doing this other then running a program and grepping the output
         pdbcur = 'pdbcur' + EXE_EXT
@@ -188,7 +188,7 @@ def construct_references(optd):
     template_bib = "@article{{{unique_id},{sep}author = {{{author}}},{sep}doi = {{{doi}}},{sep}" \
                    "journal = {{{journal}}},{sep}number = {{{number}}},{sep}pages = {{{pages}}},{sep}" \
                    "title = {{{{{title}}}}},{sep}volume = {{{volume}}},{sep}year = {{{year}}},{sep}}}{sep}"
-    references_bib = [template_bib.format(sep=os.linesep, **article) for article in articles]
+    references_bib = [template_bib.format(sep=os.linesep, **a) for a in articles]
 
     ref_fname = os.path.join(optd['work_dir'], optd['name']+".bib")
     with open(ref_fname, "w") as fhout:
@@ -268,7 +268,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
             os.unlink(files[0])
             # If we've got quark models we don't want to modify the side chains as we only have polyalanine so we
             # set this here - horribly untidy as we should have one place to decide on side chains
-            logger.info('Found QUARK models in file: {0}'.format(filename))
+            logger.info('Found QUARK models in file: %s', filename)
             amoptd['quark_models'] = True
     
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
@@ -281,7 +281,7 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
 
 def extract_tar(filename, directory, suffixes=['.pdb']):
     # Extracting tarfile
-    logger.info('Extracting files from tarfile: {0}'.format(filename) )
+    logger.info('Extracting files from tarfile: %s', filename)
     files = []
     with tarfile.open(filename,'r:*') as tf:
         memb = tf.getmembers()
@@ -302,10 +302,10 @@ def extract_tar(filename, directory, suffixes=['.pdb']):
 
 def extract_zip(filename, directory, suffixes=['.pdb']):
     # zip file extraction
-    logger.info('Extracting files from zipfile: {0}'.format(filename) )
+    logger.info('Extracting files from zipfile: %s', filename)
     if not zipfile.is_zipfile(filename):
-            msg='File is not a valid zip archive: {0}'.format(filename)
-            exit_util.exit_error(msg)
+        msg='File is not a valid zip archive: {0}'.format(filename)
+        exit_util.exit_error(msg)
     zipf = zipfile.ZipFile(filename)
     zif = zipf.infolist()
     if not len(zif):
@@ -334,7 +334,7 @@ def find_exe(executable, dirs=None):
     dirs : list, tuple, optional
        Additional directories to search for the location
     """
-    logger.debug('Looking for executable: {0}'.format(executable) )
+    logger.debug('Looking for executable: %s', executable)
     
     exe_file=None
     found=False
@@ -351,19 +351,19 @@ def find_exe(executable, dirs=None):
         paths = os.environ["PATH"].split(os.pathsep)
         if dirs:
             paths += dirs
-        logger.debug('Checking paths: {0}'.format(paths))
+        logger.debug('Checking paths: %s', paths)
         
         for path in paths:
             exe_file = os.path.abspath(os.path.join(path, executable))   
             if is_exe(exe_file):
-                logger.debug( 'Found executable {0} in directory {1}'.format(executable,path) )
+                logger.debug('Found executable %s in directory %s', executable, path)
                 found=True
                 break
     
     if not found:
         raise FileNotFoundError("Cannot find executable: {0}".format(executable))
     
-    logger.debug('find_exe found executable: {0}'.format(exe_file) )
+    logger.debug('find_exe found executable: %s', exe_file)
     return exe_file
 
 
@@ -523,10 +523,10 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         directory = os.getcwd()
 
     if dolog:
-        logger.debug("In directory {0}".format(directory))
-        logger.debug("Running command: {0}".format(" ".join(cmd)))
+        logger.debug("In directory %s", directory)
+        logger.debug("Running command: %s", " ".join(cmd))
         if kwargs:
-            logger.debug("kwargs are: {0}".format(kwargs))
+            logger.debug("kwargs are: %s", str(kwargs))
 
     file_handle = False
     if logfile:
@@ -537,11 +537,11 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         else:
             logfile = os.path.abspath(logfile)
             logf = open(logfile, "w")
-        if dolog: logger.debug("Logfile is: {0}".format(logfile))
+        if dolog: logger.debug("Logfile is: %s", logfile)
     else:
         logf = tmp_file_name()
         
-    if stdin != None:
+    if stdin is not None:
         stdinstr = stdin
         stdin = subprocess.PIPE
 
@@ -550,10 +550,10 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         kwargs.update({'bufsize': 0, 'shell' : "False"})
     p = subprocess.Popen(cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs)
 
-    if stdin != None:
+    if stdin is not None:
         p.stdin.write(stdinstr)
         p.stdin.close()
-        if dolog: logger.debug("stdin for cmd was: {0}".format(stdinstr))
+        if dolog: logger.debug("stdin for cmd was: %s", stdinstr)
 
     p.wait()
     if not file_handle:
@@ -581,7 +581,7 @@ def read_amoptd(amoptd_fname):
 
     with open(amoptd_fname, 'r') as f:
         amoptd = cPickle.load(f)
-        logger.info("Loaded state from file: {0}\n".format(amoptd['results_path']))
+        logger.info("Loaded state from file: %s\n", amoptd['results_path'])
     return amoptd
 
 
@@ -615,7 +615,7 @@ def save_amoptd(amoptd):
     # Save results
     with open(amoptd['results_path'], 'w') as f:
         cPickle.dump(amoptd, f)
-        logger.info("Saved state as file: {0}\n".format(amoptd['results_path']))
+        logger.info("Saved state as file: %s\n", amoptd['results_path'])
     return
 
 
@@ -650,7 +650,7 @@ def split_models(dfile, directory):
     * Use the CCTBX library to perform this step
 
     """
-    logger.info("Extracting decoys from: {0} into {1}".format(dfile, directory))
+    logger.info("Extracting decoys from: %s into %s", dfile, directory)
     smodels = []
     with open(dfile, 'r') as f:
         m = []
@@ -676,7 +676,7 @@ def split_models(dfile, directory):
                     l = l[:54]+"  1.00  0.00              \n"
                 f.write(l)
             extracted_models.append(fpath)
-            logger.debug("Wrote: {0}".format(fpath))
+            logger.debug("Wrote: %s", fpath)
         
     return extracted_models
 
