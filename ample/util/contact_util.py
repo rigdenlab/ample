@@ -235,7 +235,7 @@ class ContactUtil(object):
     @contacts_file.setter
     def contacts_file(self, fname):
         """Define the path to the ``contacts_file``"""
-        self._contact_file = file
+        self._contact_file = fname
 
     @property
     def contact_format(self):
