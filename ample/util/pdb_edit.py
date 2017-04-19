@@ -9,19 +9,45 @@ import logging
 import os
 import re
 import sys
+import tempfile
 import unittest
 
 import iotbx.file_reader
 import iotbx.pdb
 import iotbx.pdb.amino_acid_codes
+from cctbx.array_family import flex
 
 import ample_util
 import pdb_model
 import residue_map
 import sequence_util
+from ample import constants
 
 three2one = iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 one2three = iotbx.pdb.amino_acid_codes.three_letter_given_one_letter
+
+hydrogen_atom_number = {
+    'ALA': 5.0,
+    'ARG': 12.0,
+    'ASN': 6.0,
+    'ASP': 5.0,
+    'CYS': 5.0,
+    'GLU': 6.0,
+    'GLN': 8.0,
+    'GLY': 3.0,
+    'HIS': 7.0,
+    'ILE': 11.0,
+    'LEU': 11.0,
+    'LYS': 13.0,
+    'MET': 9.0,
+    'PHE': 9.0,
+    'PRO': 7.0,
+    'SER': 5.0,
+    'THR': 7.0,
+    'TRP': 10.0,
+    'TYR': 9.0,
+    'VAL': 9.0,
+}
 
 _logger = logging.getLogger()
 
@@ -95,6 +121,52 @@ _logger = logging.getLogger()
 #         raise RuntimeError, "Error extracting chain {0}".format(chainID)
 #
 #     return
+#
+# def extract_model(inpdb, outpdb, modelID):
+#     """Extract modelID from inpdb into outpdb"""
+#
+#     assert modelID > 0
+#
+#     logfile = outpdb + ".log"
+#     cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
+#
+#     # Build up stdin
+#     stdin = "lvmodel /{0}\n".format(modelID)
+#     # stdin += "sernum\n"
+#
+#     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
+#
+#     if retcode != 0:
+#         raise RuntimeError, "Problem extracting model with cmd: {0}".format
+#
+#     # remove temporary files
+#     os.unlink(logfile)
+#
+#     return
+#
+# def num_atoms_and_residues(pdbin, first=False):
+#     """"Return number of atoms and residues in a pdb file.
+#     If all is True, return all atoms and residues, else just for the first chain in the first model'
+#     """
+#     # pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
+#     # model = pdb_obj.hierarchy.models()[0]
+#     # return sum(  [ len( chain.residues() ) for chain in model.chains() ]  )
+#
+#     if not first:
+#         logfile = "rwcontents.log"
+#         _run_rwcontents(pdbin, logfile)
+#         natoms, nresidues, _ = _parse_rwcontents(logfile)
+#         # os.unlink(logfile)
+#     else:
+#         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
+#         model = pdb_obj.hierarchy.models()[0]
+#         nresidues = len(model.chains()[0].conformers()[0].residues())
+#         natoms = len(model.chains()[0].atoms())
+#
+#     assert natoms > 0 and nresidues > 0
+#
+#     return (natoms, nresidues)
+
 
 def backbone(inpath=None, outpath=None):
     """Only output backbone atoms."""
@@ -146,13 +218,7 @@ def _prune_atoms(hierarchy, leave_atoms):
 
 
 def extract_chain(pdbin, pdbout, chainID=None, newChainID=None, cAlphaOnly=False, renumber=False):
-    """Extract chainID from input PDB and renumber. If cAlphaOnly is set, strip down to c-alpha atoms
-
-    Note: slight difference to original function, renumber renumbers the residue number only, the atom
-    sequence from the original pdb is retained. The previous function also renumbers the atom sequence.
-    This has proved to be harder to implement in iotbx than expected. If this functionality is needed we
-    can explore implementing it or just revert to the original function.
-    """
+    """Extract chainID from input PDB and renumber. If cAlphaOnly is set, strip down to c-alpha atoms"""
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     crystal_symmetry = pdb_input.crystal_symmetry()
     hierarchy = pdb_input.construct_hierarchy()
@@ -193,7 +259,28 @@ def _extract_chain(hierarchy, chain_id, new_chain_id=None, c_alpha_only=None, re
 
     if renumber:
         _renumber(hierarchy, 0)
+        hierarchy.atoms().reset_serial()
     return
+
+
+def extract_model(pdbin, pdbout, modelID):
+    """Extract modelID from input pdb into output pdb"""
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    hierarchy = pdb_input.construct_hierarchy()
+    hierarchy = _extract_model(hierarchy, modelID)
+
+    with open(pdbout, 'w') as f:
+        f.write("REMARK Original file:" + os.linesep)
+        f.write("REMARK   {0}".format(pdbin) + os.linesep)
+        f.write(hierarchy.as_pdb_string(anisou=False))
+
+
+def _extract_model(hierarchy, model_id):
+    assert model_id > 0
+    for model in hierarchy.models():
+        if model.id != None and int(model.id) != model_id:
+            hierarchy.remove_model(model)
+    return hierarchy
 
 
 def renumber_residues(pdbin, pdbout, start=1):
@@ -215,11 +302,71 @@ def renumber_residues(pdbin, pdbout, start=1):
 
 
 def _renumber(hierarchy, start):
+    # Renumber the residue sequence
     for model in hierarchy.models():
         for chain in model.chains():
             for idx, residue_group in enumerate(chain.residue_groups()):
                 residue_group.resseq = idx + start
     return
+
+
+def extract_resSeq(pdbin):
+    """Returns the residue numbers of the input pdb as a list"""
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    hierarchy = pdb_input.construct_hierarchy()
+
+    resSeq_data = []
+    for model in hierarchy.models():
+        for rg in model.chains()[0].residue_groups():
+            resSeq_data.append(rg.resseq_as_int())
+
+    return resSeq_data
+
+
+def keep_residues(pdbin, pdbout, residue_range, chainID):
+    """Given a range relative to the first residue for a specific chain ID,
+    keeps only the residues in that given range
+
+    args:
+    pdbin
+    pdbout
+    residue_range e.g. [20, 40]
+    chainID"""
+
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    crystal_symmetry = pdb_input.crystal_symmetry()
+    hierarchy = pdb_input.construct_hierarchy()
+
+    # Only keep the specified chain ID
+    for model in hierarchy.models():
+        for chain in model.chains():
+            if chain.id != chainID:
+                model.remove_chain(chain=chain)
+
+    # Renumber the chain
+    _renumber(hierarchy, start=1)
+
+    # Remove residues outside the desired range
+    residues_to_keep = range(residue_range[0], residue_range[1] + 1)
+    for model in hierarchy.models():
+        for chain in model.chains():
+            for rg in chain.residue_groups():
+                if rg.resseq_as_int() not in residues_to_keep:
+                    chain.remove_residue_group(rg)
+
+    # remove hetatms
+    _strip(hierarchy, hetatm=True)
+
+    # Write to file
+    with open(pdbout, 'w') as f:
+        f.write("REMARK Original file:" + os.linesep)
+        f.write("REMARK   {0}".format(pdbin) + os.linesep)
+        if crystal_symmetry is not None:
+            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
+                                                              write_scale_records=True) + os.linesep)
+        f.write(hierarchy.as_pdb_string(anisou=False))
+    return
+
 
 def check_pdb_directory(directory, single=True, allsame=True, sequence=None):
     _logger.info("Checking pdbs in directory: {0}".format(directory))
@@ -298,28 +445,6 @@ def check_pdbs(models, single=True, allsame=True, sequence=None):
     _logger.critical(s)
     return False
 
-def extract_model(inpdb, outpdb, modelID):
-    """Extract modelID from inpdb into outpdb"""
-
-    assert modelID > 0
-
-    logfile = outpdb + ".log"
-    cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
-
-    # Build up stdin
-    stdin = "lvmodel /{0}\n".format(modelID)
-    # stdin += "sernum\n"
-
-    retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-
-    if retcode != 0:
-        raise RuntimeError, "Problem extracting model with cmd: {0}".format
-
-    # remove temporary files
-    os.unlink(logfile)
-
-    return
-
 
 def extract_header_pdb_code(pdb_input):
     for line in pdb_input.title_section():
@@ -377,7 +502,7 @@ def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
 def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
     """Create a new pdb file that only contains that atoms in targetpdb that are
     also in refpdb. It only considers ATOM lines and discards HETATM lines in the target.
-    
+
     Args:
     refpdb: path to pdb that contains the minimal set of atoms we want to keep
     targetpdb: path to the pdb that will be stripped of non-matching atoms
@@ -586,7 +711,7 @@ def get_info(inpath):
                         # RESOLUTION. NOT APPLICABLE.
                         info.resolution = -1
 
-            # Get solvent content                
+            # Get solvent content
             if numRemark == 280:
 
                 maxread = 5
@@ -620,7 +745,7 @@ def get_info(inpath):
             if currentModel:
                 # Need to make sure that we have an id if only 1 chain and none given
                 if len(currentModel.chains) <= 1:
-                    if currentModel.chains[0] == None:
+                    if currentModel.chains[0] is None:
                         currentModel.chains[0] = 'A'
 
                 info.models.append(currentModel)
@@ -727,7 +852,7 @@ def get_info(inpath):
 
 def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None):
     """
-    
+
     """
 
     assert sourcePdb or resMap
@@ -809,37 +934,57 @@ def merge(pdb1=None, pdb2=None, pdbout=None):
     return
 
 
+def most_prob(hierarchy, always_keep_one_conformer=True):
+    """
+    Remove all alternate conformers from the hierarchy.  Depending on the
+    value of always_keep_one_conformer, this will either remove any atom_group
+    with altloc other than blank or 'A', or it will remove any atom_group
+    beyond the first conformer found.
+    """
+
+    # Taken from
+    # ftp://ftp.ccp4.ac.uk/ccp4/6.4.0/unpacked/lib/cctbx/cctbx_sources/cctbx_project/mmtbx/pdbtools.py
+
+    for model in hierarchy.models():
+        for chain in model.chains():
+            for residue_group in chain.residue_groups():
+                atom_groups = residue_group.atom_groups()
+                assert (len(atom_groups) > 0)
+                if always_keep_one_conformer:
+                    if (len(atom_groups) == 1) and (atom_groups[0].altloc == ''):
+                        continue
+                    atom_groups_and_occupancies = []
+                    for atom_group in atom_groups:
+                        if '' == atom_group.altloc:
+                            continue
+                        mean_occ = flex.mean(atom_group.atoms().extract_occ())
+                        atom_groups_and_occupancies.append((atom_group, mean_occ))
+                    atom_groups_and_occupancies.sort(lambda a, b: cmp(b[1], a[1]))
+                    for atom_group, occ in atom_groups_and_occupancies[1:]:
+                        residue_group.remove_atom_group(atom_group=atom_group)
+                    single_conf, occ = atom_groups_and_occupancies[0]
+                    single_conf.altloc = ''
+                else:
+                    for atom_group in atom_groups:
+                        if not atom_group.altloc in ["", "A"]:
+                            residue_group.remove_atom_group(atom_group=atom_group)
+                        else:
+                            atom_group.altloc = ""
+                    if len(residue_group.atom_groups()) == 0:
+                        chain.remove_residue_group(residue_group=residue_group)
+            if len(chain.residue_groups()) == 0:
+                model.remove_chain(chain=chain)
+    atoms = hierarchy.atoms()
+    new_occ = flex.double(atoms.size(), 1.0)
+    atoms.set_occ(new_occ)
+
+
 def molecular_weight(pdbin):
     logfile = "rwcontents.log"
     _run_rwcontents(pdbin, logfile)
     _, _, mw = _parse_rwcontents(logfile)
     os.unlink(logfile)
     return mw
-
-
-def num_atoms_and_residues(pdbin, first=False):
-    """"Return number of atoms and residues in a pdb file.
-    If all is True, return all atoms and residues, else just for the first chain in the first model'
-    """
-    # pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
-    # model = pdb_obj.hierarchy.models()[0]
-    # return sum(  [ len( chain.residues() ) for chain in model.chains() ]  )
-
-    if not first:
-        logfile = "rwcontents.log"
-        _run_rwcontents(pdbin, logfile)
-        natoms, nresidues, _ = _parse_rwcontents(logfile)
-        os.unlink(logfile)
-    else:
-        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
-        model = pdb_obj.hierarchy.models()[0]
-        nresidues = len(model.chains()[0].residues())
-        natoms = len(model.chains()[0].atoms())
-
-    assert natoms > 0 and nresidues > 0
-
-    return (natoms, nresidues)
-
 
 def _parse_rwcontents(logfile):
     natoms = 0
@@ -869,6 +1014,94 @@ def _run_rwcontents(pdbin, logfile):
         raise RuntimeError, "Error running cmd {0}\nSee logfile: {1}".format(cmd, logfile)
     return
 
+
+def num_atoms_and_residues(pdbin, first=False):
+    """Return number of atoms and residues in a pdb file.
+    If all is True, return all atoms and residues, else just for the first chain in the first model
+
+    Note: the method to take the number of atoms and residues for just the first chain has been copied directly from
+    the old function and so works with the test case, however, this methods is different from the one applied by
+    rwcontent and the code for the entire protein copies. rwcontent reports the hydrogen atoms too and considers
+    the occupancy. Our current code doesn't do this. I've added code below (commented out) that will do this.
+    """
+
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    hierarchy = pdb_input.construct_hierarchy()
+    atoms_count = 0.0
+    hydrogen_atom_count = 0.0
+    residues = []
+    aa_resnames = three2one
+
+    if first:
+        model=hierarchy.models()[0]
+
+        nresidues=len(model.chains()[0].conformers()[0].residues())
+        natoms=len(model.chains()[0].atoms())
+
+        # for rg in model.chains()[0].residue_groups():
+        #     resseq = None
+        #     def have_amino_acid():
+        #         for ag in rg.atom_groups():
+        #             if ag.resname in aa_resnames:
+        #                 return True
+        #             return False
+        #
+        #     for ag in rg.atom_groups():
+        #         if have_amino_acid():
+        #             if resseq != rg.resseq:
+        #                 residues.append(ag.resname)
+        #                 resseq = rg.resseq
+        #                 hydrogen_atom_count += hydrogen_atom_number[ag.resname]
+        #
+        #         for atom in ag.atoms():
+        #             if atom.occ == 1.0:
+        #                 atoms_count += 1.0
+        #             elif atom.occ == 0.5:
+        #                 atoms_count += 0.5
+        #             if atom.hetero and ag.resname.strip() == 'HOH':
+        #                 if atom.occ == 1.0:
+        #                     hydrogen_atom_count += 2.0
+        #                 elif atom.occ == 0.5:
+        #                     hydrogen_atom_count += 1.0
+        # natoms = int(atoms_count + hydrogen_atom_count - 0.5)
+        # nresidues = len(residues)
+
+    else:
+        for model in hierarchy.models():
+            for chain in model.chains():
+                for rg in chain.residue_groups():
+                    resseq = None
+
+                    def have_amino_acid():
+                        for ag in rg.atom_groups():
+                            if ag.resname in aa_resnames:
+                                return True
+                            return False
+
+                    for ag in rg.atom_groups():
+                        if have_amino_acid():
+                            if resseq != rg.resseq:
+                                residues.append(ag.resname)
+                                resseq = rg.resseq
+                                hydrogen_atom_count += hydrogen_atom_number[ag.resname]
+
+                        for atom in ag.atoms():
+                            if atom.occ == 1.0:
+                                atoms_count += 1.0
+                            elif atom.occ == 0.5:
+                                atoms_count += 0.5
+                            if atom.hetero and ag.resname.strip() == 'HOH':
+                                if atom.occ == 1.0:
+                                    hydrogen_atom_count += 2.0
+                                elif atom.occ == 0.5:
+                                    hydrogen_atom_count += 1.0
+
+            natoms = int(atoms_count + hydrogen_atom_count - 0.5)
+            nresidues = len(residues)
+
+    assert natoms > 0 and nresidues > 0
+
+    return (natoms, nresidues)
 
 def _parse_modres(modres_text):
     """
@@ -1085,12 +1318,12 @@ def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
 def Xselect_residues(inpath=None, outpath=None, residues=None):
     """Create a new pdb by selecting only the numbered residues from the list.
     This only keeps ATOM lines - everything else gets discarded.
-    
+
     Args:
     infile: path to input pdb
     outfile: path to output pdb
     residues: list of integers of the residues to keep
-    
+
     Return:
     Number of residues written
     """
@@ -1463,9 +1696,9 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
     with open(pdbout, 'w') as f:
         f.write("REMARK Original file:\n")
         f.write("REMARK   {0}\n".format(pdbin))
-        if (crystal_symmetry is not None):
+        if crystal_symmetry is not None:
             f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + "\n")
+                                                              write_scale_records=True) + os.linesep)
         f.write(hierachy.as_pdb_string(anisou=False))
     return
 
@@ -1482,9 +1715,9 @@ def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
     with open(pdbout, 'w') as f:
         f.write("REMARK Original file:\n")
         f.write("REMARK   {0}\n".format(pdbin))
-        if (crystal_symmetry is not None):
+        if crystal_symmetry is not None:
             f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + "\n")
+                                                              write_scale_records=True) + os.linesep)
         f.write(hierachy.as_pdb_string(anisou=False))
     return
 
@@ -1670,6 +1903,7 @@ class Test(unittest.TestCase):
         cls.thisd = os.path.abspath(os.path.dirname(__file__))
         paths = cls.thisd.split(os.sep)
         cls.ample_dir = os.sep.join(paths[: -1])
+        cls.ample_share = constants.SHARE_DIR
         cls.testfiles_dir = os.path.join(os.sep.join(paths[: -2]), 'testfiles')
         return
 
@@ -1787,13 +2021,13 @@ class Test(unittest.TestCase):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
         pdbout = "tmp_4DZN.pdb"
 
-        reference_data = ["CA  GLY A   1      22.806  12.124  -9.698  1.00 18.13           C",
-                          "CA  GLU A   2      20.675   9.156  -8.637  1.00 11.97           C",
-                          "CA  ILE A   3      23.668   6.824  -8.067  1.00 14.88           C",
-                          "CA  ALA A   4      25.130   9.427  -5.671  1.00 16.59           C",
-                          "CA  ALA A   5      21.738   9.690  -3.986  1.00 12.84           C",
-                          "CA  LEU A   6      21.616   5.898  -3.440  1.00 10.59           C",
-                          "CA  LYS A   7      25.138   6.027  -1.978  1.00 11.22           C"
+        reference_data = ["ATOM      1  CA  GLY A   1      22.806  12.124  -9.698  1.00 18.13           C",
+                          "ATOM      2  CA  GLU A   2      20.675   9.156  -8.637  1.00 11.97           C",
+                          "ATOM      3  CA  ILE A   3      23.668   6.824  -8.067  1.00 14.88           C",
+                          "ATOM      4  CA  ALA A   4      25.130   9.427  -5.671  1.00 16.59           C",
+                          "ATOM      5  CA  ALA A   5      21.738   9.690  -3.986  1.00 12.84           C",
+                          "ATOM      6  CA  LEU A   6      21.616   5.898  -3.440  1.00 10.59           C",
+                          "ATOM      7  CA  LYS A   7      25.138   6.027  -1.978  1.00 11.22           C"
                           ]
 
         extract_chain(pdbin, pdbout, chainID='A', newChainID=None, cAlphaOnly=True, renumber=True)
@@ -1804,12 +2038,239 @@ class Test(unittest.TestCase):
             for line in f:
                 if count < 7:
                     if line.startswith("ATOM"):
-                        data.append(line[13:78])
+                        data.append(line[0:78])
                         count += 1
                     else:
                         continue
         os.unlink(pdbout)
         self.assertEqual(data, reference_data)
+        return
+
+    def test_extract_model(self):
+        # Extract modelID from input pdb into output pdb
+        pdbin = os.path.join(self.ample_share, "examples", "import-data", "input",
+                             "ensembles", "ensemble_1.pdb")
+        pdbout = "tmp_ensemble_1.pdb"
+        modelID = 1
+
+        reference_data = ["ATOM      1  N   GLY A  15       9.003  -8.476  -2.672  1.00  0.00           N",
+                          "ATOM      2  CA  GLY A  15       7.637  -8.931  -2.443  1.00  0.00           C",
+                          "ATOM      3  C   GLY A  15       6.920  -8.037  -1.440  1.00  0.00           C",
+                          "ATOM      4  O   GLY A  15       5.871  -7.469  -1.740  1.00  0.00           O",
+                          "ATOM      5  H   GLY A  15       9.692  -9.043  -2.553  1.00  0.00           H",
+                          "ATOM      6  N   PRO A  16       7.494  -7.916  -0.247  1.00  0.00           N",
+                          "ATOM      7  CA  PRO A  16       6.889  -7.124   0.817  1.00  0.00           C",
+                          "ATOM      8  C   PRO A  16       6.560  -5.717   0.337  1.00  0.00           C",
+                          "ATOM      9  O   PRO A  16       5.559  -5.128   0.749  1.00  0.00           O",
+                          "ATOM     10  CB  PRO A  16       7.953  -7.106   1.917  1.00  0.00           C"
+                          ]
+
+        extract_model(pdbin, pdbout, modelID)
+
+        count = 0
+        data = []
+        with open(pdbout) as f:
+            for line in f:
+                if count < 10:
+                    if line.startswith("ATOM"):
+                        data.append(line[0:78])
+                        count += 1
+                    else:
+                        continue
+        os.unlink(pdbout)
+        self.assertEqual(data, reference_data)
+        return
+
+    def test_extract_resSeq(self):
+        # Test that the residue numbers are extracted
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        data = extract_resSeq(pdbin)
+        ref_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                    20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+                    30, 31, 32]
+        self.assertEqual(data, ref_data)
+        return
+
+    def test_keep_residues(self):
+        # test the keep_residues function
+
+        #######################################################################
+        # Test case 1
+        #######################################################################
+
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        pdbout = "tmp_4DZN.pdb"
+        residue_range = [5, 10]
+        chainID = "A"
+
+        reference_data = ["ATOM     27  N   ALA A   5      24.623   8.709  -6.856  1.00 14.20           N",
+                          "ATOM     28  CA  ALA A   5      25.130   9.427  -5.671  1.00 16.59           C",
+                          "ATOM     29  C   ALA A   5      24.079   9.482  -4.565  1.00 13.45           C",
+                          "ATOM     30  O   ALA A   5      24.399   9.349  -3.366  1.00 14.72           O",
+                          "ATOM     31  CB  ALA A   5      25.599  10.846  -6.036  1.00 18.01           C",
+                          "ATOM     32  N   ALA A   6      22.825   9.671  -4.958  1.00 11.84           N",
+                          "ATOM     33  CA  ALA A   6      21.738   9.690  -3.986  1.00 12.84           C",
+                          "ATOM     34  C   ALA A   6      21.566   8.342  -3.261  1.00 15.19           C",
+                          "ATOM     35  O   ALA A   6      21.356   8.313  -2.061  1.00 13.05           O",
+                          "ATOM     36  CB  ALA A   6      20.430  10.143  -4.644  1.00 14.15           C",
+                          "ATOM     37  N   LEU A   7      21.667   7.244  -4.001  1.00 12.44           N",
+                          "ATOM     38  CA  LEU A   7      21.616   5.898  -3.440  1.00 10.59           C",
+                          "ATOM     39  C   LEU A   7      22.784   5.647  -2.489  1.00 11.89           C",
+                          "ATOM     40  O   LEU A   7      22.601   5.077  -1.428  1.00 12.64           O",
+                          "ATOM     41  CB  LEU A   7      21.570   4.834  -4.538  1.00 13.99           C",
+                          "ATOM     42  CG  LEU A   7      20.240   4.827  -5.307  1.00 14.68           C",
+                          "ATOM     43  CD1 LEU A   7      20.342   4.020  -6.589  1.00 20.23           C",
+                          "ATOM     44  CD2 LEU A   7      19.130   4.307  -4.425  1.00 21.58           C",
+                          "ATOM     45  N   LYS A   8      23.970   6.104  -2.865  1.00  8.95           N",
+                          "ATOM     46  CA  LYS A   8      25.138   6.027  -1.978  1.00 11.22           C",
+                          "ATOM     47  C   LYS A   8      24.909   6.801  -0.665  1.00 13.03           C",
+                          "ATOM     48  O   LYS A   8      25.275   6.317   0.399  1.00 13.72           O",
+                          "ATOM     49  CB  LYS A   8      26.376   6.546  -2.680  1.00 14.45           C",
+                          "ATOM     50  CG  LYS A   8      26.897   5.631  -3.763  1.00 16.58           C",
+                          "ATOM     51  CD  LYS A   8      28.122   6.277  -4.424  1.00 21.80           C",
+                          "ATOM     52  CE  LYS A   8      28.803   5.351  -5.369  0.50 24.13           C",
+                          "ATOM     53  NZ  LYS A   8      29.986   6.016  -5.957  0.50 18.04           N",
+                          "ATOM     54  N   GLN A   9      24.313   7.988  -0.754  1.00 12.77           N",
+                          "ATOM     55  CA  GLN A   9      23.934   8.766   0.443  1.00 12.72           C",
+                          "ATOM     56  C   GLN A   9      22.917   8.009   1.310  1.00 12.01           C",
+                          "ATOM     57  O   GLN A   9      22.998   8.034   2.553  1.00 14.90           O",
+                          "ATOM     58  CB  GLN A   9      23.402  10.160   0.080  1.00 22.08           C",
+                          "ATOM     59  CG  GLN A   9      23.223  11.191   0.978  0.00 34.62           C",
+                          "ATOM     60  CD  GLN A   9      22.739  12.519   0.396  0.00 45.70           C",
+                          "ATOM     61  OE1 GLN A   9      22.841  12.760  -0.810  0.00 49.00           O",
+                          "ATOM     62  NE2 GLN A   9      22.210  13.385   1.258  0.00 44.32           N",
+                          "ATOM     63  N   GLU A  10      21.979   7.310   0.671  1.00 11.84           N",
+                          "ATOM     64  CA  GLU A  10      21.017   6.487   1.401  1.00 12.29           C",
+                          "ATOM     65  C   GLU A  10      21.717   5.383   2.184  1.00 10.63           C",
+                          "ATOM     66  O   GLU A  10      21.390   5.142   3.344  1.00 13.04           O",
+                          "ATOM     67  CB  GLU A  10      19.974   5.843   0.475  1.00 17.18           C",
+                          "ATOM     68  CG  GLU A  10      19.043   6.797  -0.218  1.00 21.50           C",
+                          "ATOM     69  CD  GLU A  10      17.852   7.252   0.598  0.50 26.52           C",
+                          "ATOM     70  OE1 GLU A  10      17.710   6.852   1.763  0.50 21.11           O",
+                          "ATOM     71  OE2 GLU A  10      17.047   8.032   0.047  0.50 28.78           O"
+                          ]
+        keep_residues(pdbin, pdbout, residue_range, chainID)
+
+        lines_to_read = range(6, 51)
+        data = []
+        with open(pdbout) as f:
+            for i, line in enumerate(f):
+                if i in lines_to_read:
+                    data.append(line[0:78])
+                else:
+                    continue
+        os.unlink(pdbout)
+        self.assertEqual(data, reference_data)
+        return
+
+    def test_merge(self):
+        pdb1 = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        pdb2 = os.path.join(self.testfiles_dir, "1BYZ.pdb")
+        pdbout = "tmp_merge.pdb"
+        merge(pdb1, pdb2, pdbout)
+        reference_data_1 = [
+            "HETATM    1  C   ACE A   0      25.199  11.913  -9.250  1.00 27.72           C",
+            "ANISOU    1  C   ACE A   0     2933   4198   3402     29   -251    297       C",
+            "HETATM    2  O   ACE A   0      25.201  10.666  -9.372  1.00 23.97           O",
+            "ANISOU    2  O   ACE A   0     2587   4332   2189   -515   -230    104       O",
+            "HETATM    3  CH3 ACE A   0      26.454  12.702  -9.001  1.00 32.42           C",
+            "ANISOU    3  CH3 ACE A   0     3564   4758   3995   -239  -1016     28       C",
+            "ATOM      4  N   GLY A   1      24.076  12.643  -9.179  1.00 23.32           N",
+            "ANISOU    4  N   GLY A   1     2998   3289   2573   -157   -425    199       N",
+            "ATOM      5  CA  GLY A   1      22.806  12.124  -9.698  1.00 18.13           C",
+            "ANISOU    5  CA  GLY A   1     2466   2494   1928    -66    -40    660       C",
+            "ATOM      6  C   GLY A   1      22.170  11.067  -8.799  1.00 15.67           C",
+            "ANISOU    6  C   GLY A   1     2501   1562   1889   -506   -480    259       C",
+            "ATOM      7  O   GLY A   1      22.404  11.024  -7.580  1.00 16.52           O",
+            "ANISOU    7  O   GLY A   1     2581   2124   1571   -470   -178    -48       O",
+            "ATOM      8  N   GLU A   2      21.377  10.190  -9.397  1.00 13.90           N",
+        ]
+
+        reference_data_2 = [
+            "ANISOU  576  CB  ILE C   3     2180   1836   1869   -499   -391    255       C",
+            "ATOM    577  CG1 ILE C   3      19.687   0.791 -11.270  1.00 16.36           C",
+            "ANISOU  577  CG1 ILE C   3     2342   1902   1970    708   -222    402       C",
+            "ATOM    578  CG2 ILE C   3      17.926   2.092 -10.024  1.00 16.72           C",
+            "ANISOU  578  CG2 ILE C   3     2270   2100   1980    393    314    -53       C",
+            "ATOM    579  CD1 ILE C   3      19.861   1.505 -12.619  1.00 19.26           C",
+            "ANISOU  579  CD1 ILE C   3     2386   2732   2196     94   -787   1035       C",
+            "ATOM    580  N   ALA C   4      15.647  -0.630  -9.580  1.00 13.96           N",
+            "ANISOU  580  N   ALA C   4     1637   2255   1413   -554    -86    436       N",
+            "ATOM    581  CA  ALA C   4      14.367  -0.707  -8.884  1.00 12.18           C",
+            "ANISOU  581  CA  ALA C   4     1278   1976   1372   -216   -201   -146       C",
+            "ATOM    582  C   ALA C   4      14.424  -1.670  -7.682  1.00 14.16           C",
+            "ANISOU  582  C   ALA C   4     1516   1953   1911   -420   -221    -33       C",
+            "ATOM    583  O   ALA C   4      13.931  -1.344  -6.603  1.00 15.41           O",
+            "ANISOU  583  O   ALA C   4     1669   2382   1804   -498   -191   -137       O"
+        ]
+
+        lines_to_read_1 = range(351, 366)
+        lines_to_read_2 = range(1500, 1515)
+        data_1 = []
+        data_2 = []
+        with open(pdbout) as f:
+            for i, line in enumerate(f):
+                if i in lines_to_read_1:
+                    data_1.append(line[0:78])
+                elif i in lines_to_read_2:
+                    data_2.append(line[0:78])
+                else:
+                    continue
+        os.unlink(pdbout)
+        self.assertEqual(data_1, reference_data_1)
+        self.assertEqual(data_2, reference_data_2)
+        return
+
+    def test_most_prob(self):
+        # Keep the most probably conformer
+        pdbin = os.path.join(self.testfiles_dir, "2UUI.pdb")
+        pdb_input = iotbx.pdb.pdb_input(pdbin)
+        hierarchy = pdb_input.construct_hierarchy()
+
+        most_prob(hierarchy)
+
+        # Residues which are conformers
+        residues_to_check = [62, 82, 84]
+        data = []
+
+        # extract atom names for residues which were conformers
+        for model in hierarchy.models():
+            for chain in model.chains():
+                for residue_group in chain.residue_groups():
+                    if residue_group.resseq_as_int() in residues_to_check:
+                        for atom_group in residue_group.atom_groups():
+                            for atom in atom_group.atoms():
+                                data.append(atom.name.strip())
+
+        # Only one set of atoms returned if function works correctly
+        reference_data = ['N', 'C', 'O', 'CA', 'CB', 'CG', 'CD1', 'CD2',
+                          'N', 'C', 'O', 'CA', 'CB', 'SG',
+                          'N', 'C', 'O', 'CA', 'CB', 'CG', 'CD1', 'CD2']
+
+        self.assertEqual(data, reference_data)
+        return
+
+    def test_num_atoms_and_residues(self):
+        # Extract the number of residues and atoms in a pdb
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        ref_natoms = 1711
+        ref_nresidues = 93
+
+        natoms, nresidues = num_atoms_and_residues(pdbin)
+
+        self.assertEqual(natoms, ref_natoms)
+        self.assertEqual(nresidues, ref_nresidues)
+
+        # Second test with first flag
+        ref_natoms = 252
+        ref_nresidues = 33
+
+        natoms, nresidues = num_atoms_and_residues(pdbin, first=True)
+
+        self.assertEqual(natoms, ref_natoms)
+        self.assertEqual(nresidues, ref_nresidues)
+
         return
 
     def testGetInfo1(self):
