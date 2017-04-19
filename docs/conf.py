@@ -139,8 +139,8 @@ todo_include_todos = True
 # If set, mock the import system to have external dependencies
 autodoc_mock_imports = [
     'Bio', 'conkit.io', 'conkit.plot', 'conkit._version', 'iotbx.cif', 'iotbx.file_reader', 
-    'iotbx.mtz', 'iotbx.pdb', 'matplotlib', 'mmtbx.superpose', 'numpy', 'parse_arpwarp', 
-    'parse_buccaneer', 'parse_phaser', 'parse_shelxe', 'phaser',
+    'iotbx.mtz', 'iotbx.pdb', 'matplotlib', 'mmtbx.superpose', 'numpy', 'pandas', 
+    'parse_arpwarp', 'parse_buccaneer', 'parse_phaser', 'parse_shelxe', 'phaser',
 ]
 
 # -- Options for HTML output ----------------------------------------------
