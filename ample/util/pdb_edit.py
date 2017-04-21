@@ -1,8 +1,11 @@
-'''
-Useful manipulations on PDB files
-'''
+"""Useful manipulations on PDB files"""
 
-# Python imports
+from __future__ import division, print_function
+
+__author__ = "Adam Simpkin, Jens Thomas & Felix Simkovic"
+__date__ = "21 Apr 2017"
+__version__ = "2.0"
+
 import copy
 import glob
 import logging
@@ -12,16 +15,18 @@ import sys
 import tempfile
 import unittest
 
+from cctbx.array_family import flex
+
 import iotbx.file_reader
 import iotbx.pdb
 import iotbx.pdb.amino_acid_codes
-from cctbx.array_family import flex
+
+from ample import constants
 
 import ample_util
 import pdb_model
 import residue_map
 import sequence_util
-from ample import constants
 
 three2one = iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 one2three = iotbx.pdb.amino_acid_codes.three_letter_given_one_letter
@@ -49,7 +54,7 @@ hydrogen_atom_number = {
     'VAL': 9.0,
 }
 
-_logger = logging.getLogger()
+logger = logging.getLogger()
 
 
 #  OLD CODE
@@ -543,13 +548,13 @@ def keep_residues(pdbin, pdbout, residue_range, chainID):
 
 
 def check_pdb_directory(directory, single=True, allsame=True, sequence=None):
-    _logger.info("Checking pdbs in directory: {0}".format(directory))
+    logger.info("Checking pdbs in directory: %s", directory)
     if not os.path.isdir(directory):
-        _logger.critical("Cannot find directory: {0}".format(directory))
+        logger.critical("Cannot find directory: %s", directory)
         return False
     models = glob.glob(os.path.join(directory, "*.pdb"))
     if not len(models):
-        _logger.critical("Cannot find any pdb files in directory: {0}".format(directory))
+        logger.critical("Cannot find any pdb files in directory: %s", directory)
         return False
     if not (single or sequence or allsame): return True
     return check_pdbs(models, sequence=sequence, single=single, allsame=allsame)
@@ -562,7 +567,7 @@ def check_pdbs(models, single=True, allsame=True, sequence=None):
             h = iotbx.pdb.pdb_input(models[0]).construct_hierarchy()
         except Exception, e:
             s = "*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0], e)
-            _logger.critical(s)
+            logger.critical(s)
             return False
         sequence = _sequence1(h)  # only one model/chain
     errors = []
@@ -588,7 +593,7 @@ def check_pdbs(models, single=True, allsame=True, sequence=None):
             if not s == sequence: sequence_err.append((pdb, s))
 
     if not (len(errors) or len(multi) or len(sequence_err) or len(no_protein)):
-        _logger.info("check_pdb_directory - pdb files all seem valid")
+        logger.info("check_pdb_directory - pdb files all seem valid")
         return True
 
     s = "\n"
@@ -616,7 +621,7 @@ def check_pdbs(models, single=True, allsame=True, sequence=None):
         for pdb, seq in sequence_err:
             s += "PDB: {0}\n{1}\n".format(pdb, seq)
 
-    _logger.critical(s)
+    logger.critical(s)
     return False
 
 
@@ -644,15 +649,15 @@ def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
         refinfo = get_info(refpdb)
         targetinfo = get_info(targetpdb)
         if len(refinfo.models) > 1 or len(targetinfo.models) > 1:
-            raise RuntimeError, "PDBS contain more than 1 model!"
+            raise RuntimeError("PDBS contain more than 1 model!")
 
         if refinfo.models[0].chains != targetinfo.models[0].chains:
-            raise RuntimeError, "Different numbers/names of chains {0}->{1} between {2} and {3}!".format(
+            raise RuntimeError("Different numbers/names of chains {0}->{1} between {2} and {3}!".format(
                 refinfo.models[0].chains,
                 targetinfo.models[0].chains,
                 refpdb,
                 targetpdb
-            )
+            ))
             # Now we do our keep matching
     tmp1 = ample_util.tmp_file_name() + ".pdb"  # pdbcur insists names have a .pdb suffix
 
@@ -710,7 +715,7 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
                 rnames,
                 [x.name for x in targetAtomList]
             )
-            raise RuntimeError, s
+            raise RuntimeError(s)
 
         # Remove any not matching in the target
         alist = []
@@ -748,7 +753,7 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
     for line in open(refpdb, 'r'):
 
         if line.startswith("MODEL"):
-            raise RuntimeError, "Multi-model file!"
+            raise RuntimeError("Multi-model file!")
 
         if line.startswith("TER"):
             break
@@ -761,7 +766,7 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
                 chain = a.chainID
 
             if a.chainID != chain:
-                raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format(line)
+                raise RuntimeError("ENCOUNTERED ANOTHER CHAIN! {0}".format(line))
 
             if a.resSeq != last:
                 last = a.resSeq
@@ -784,10 +789,10 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
     for line in t:
 
         if line.startswith("MODEL"):
-            raise RuntimeError, "Multi-model file!"
+            raise RuntimeError("Multi-model file!")
 
         if line.startswith("ANISOU"):
-            raise RuntimeError, "I cannot cope with ANISOU! {0}".format(line)
+            raise RuntimeError("I cannot cope with ANISOU! {0}".format(line))
 
         # Stop at TER
         if line.startswith("TER"):
@@ -805,7 +810,7 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
                 chain = atom.chainID
 
             if atom.chainID != chain:
-                raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format(line)
+                raise RuntimeError("ENCOUNTERED ANOTHER CHAIN! {0}".format(line))
 
             if atom.resSeq in targetResSeq:
 
@@ -1044,10 +1049,10 @@ def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None):
     for line in target:
 
         if line.startswith("MODEL"):
-            raise RuntimeError, "Multi-model file!"
+            raise RuntimeError("Multi-model file!")
 
         if line.startswith("ANISOU"):
-            raise RuntimeError, "I cannot cope with ANISOU! {0}".format(line)
+            raise RuntimeError("I cannot cope with ANISOU! {0}".format(line))
 
         # Stop at TER
         if line.startswith("TER"):
@@ -1103,7 +1108,7 @@ def merge(pdb1=None, pdb2=None, pdbout=None):
         # remove temporary files
         os.unlink(logfile)
     else:
-        raise RuntimeError, "Error merging pdbs: {0} {1}".format(pdb1, pdb2)
+        raise RuntimeError("Error merging pdbs: {0} {1}".format(pdb1, pdb2))
 
     return
 
@@ -1186,7 +1191,7 @@ def _run_rwcontents(pdbin, logfile):
                                      logfile=logfile,
                                      stdin=stdin)
     if retcode != 0:
-        raise RuntimeError, "Error running cmd {0}\nSee logfile: {1}".format(cmd, logfile)
+        raise RuntimeError("Error running cmd {0}\nSee logfile: {1}".format(cmd, logfile))
     return
 
 
@@ -1333,7 +1338,7 @@ def prepare_nmr_model(nmr_model_in, models_dir):
     if len(lengths) > 1:
         # The pdbs were of different lengths
         to_keep = lengths[lmax]
-        _logger.info('All NMR models were not of the same length, only {0} will be kept.'.format(len(to_keep)))
+        logger.info('All NMR models were not of the same length, only %d will be kept.', len(to_keep))
         # Delete any that are not of most numerous length
         for p in [p for p in split_pdbs if p not in to_keep]: os.unlink(p)
         split_pdbs = to_keep
@@ -1726,7 +1731,7 @@ def split_pdb(pdbin, directory=None):
     # Nothing to do
     n_models = hierarchy.models_size()
     if n_models == 1:
-        raise RuntimeError, "split_pdb {0} only contained 1 model!".format(pdbin)
+        raise RuntimeError("split_pdb {0} only contained 1 model!".format(pdbin))
 
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
 
@@ -1770,7 +1775,8 @@ def split_into_chains(pdbin, chain=None, directory=None):
 
     # Nothing to do
     n_models = hierarchy.models_size()
-    if n_models != 1: raise RuntimeError, "split_into_chains only works with single-mdoel pdbs!"
+    if n_models != 1: 
+        raise RuntimeError("split_into_chains only works with single-mdoel pdbs!")
 
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
 
@@ -1797,7 +1803,8 @@ def split_into_chains(pdbin, chain=None, directory=None):
 
         output_files.append(output_file)
 
-    if not len(output_files): raise RuntimeError, "split_into_chains could not find any chains to split"
+    if not len(output_files): 
+        raise RuntimeError("split_into_chains could not find any chains to split")
 
     return output_files
 
@@ -2986,13 +2993,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.test:
-        print unittest.TestLoader().loadTestsFromModule(sys.modules[__name__])
+        print(unittest.TestLoader().loadTestsFromModule(sys.modules[__name__]))
         sys.exit(unittest.TextTestRunner().run(unittest.TestLoader().loadTestsFromModule(sys.modules[__name__])))
 
     # Get full paths to all files
     args.input_file = os.path.abspath(args.input_file)
     if not os.path.isfile(args.input_file):
-        raise RuntimeError, "Cannot find input file: {0}".format(args.input_file)
+        raise RuntimeError("Cannot find input file: {0}".format(args.input_file))
 
     if args.output_file:
         args.output_file = os.path.abspath(args.output_file)
@@ -3005,8 +3012,9 @@ if __name__ == "__main__":
     elif args.std:
         standardise(args.input_file, args.output_file, del_hetatm=True, chain=args.chain)
     elif args.seq:
-        print sequence_util.Sequence(pdb=args.input_file).fasta_str()
+        print(sequence_util.Sequence(pdb=args.input_file).fasta_str())
     elif args.split_models:
-        print split_pdb(args.input_file)
+        print(split_pdb(args.input_file))
     elif args.split_chains:
-        print split_into_chains(args.input_file, chain=args.chain)
+        print(split_into_chains(args.input_file, chain=args.chain))
+
