@@ -28,14 +28,14 @@ one2three = iotbx.pdb.amino_acid_codes.three_letter_given_one_letter
 
 hydrogen_atom_number = {
     'ALA': 5.0,
-    'ARG': 12.0,
+    'ARG': 13.0,
     'ASN': 6.0,
-    'ASP': 5.0,
-    'CYS': 5.0,
+    'ASP': 4.0,
+    'CYS': 4.0,
     'GLU': 6.0,
     'GLN': 8.0,
     'GLY': 3.0,
-    'HIS': 7.0,
+    'HIS': 8.0,
     'ILE': 11.0,
     'LEU': 11.0,
     'LYS': 13.0,
