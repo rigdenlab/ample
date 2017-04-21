@@ -374,22 +374,19 @@ logger = logging.getLogger()
 #
 #     return
 
-def backbone(inpath=None, outpath=None):
+def backbone(pdbin, pdbout):
     """Only output backbone atoms."""
-    pdb_input = iotbx.pdb.pdb_input(file_name=inpath)
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     crystal_symmetry = pdb_input.crystal_symmetry()
     hierarchy = pdb_input.construct_hierarchy()
-    atom_names = {'N', 'CA', 'C', 'O', 'CB'}
-    hierarchy = _prune_atoms(hierarchy, atom_names)
-
-    with open(outpath, 'w') as f:
+    backbone_sel = hierarchy.atom_selection_cache().selection("name n or name ca or name c or name o or name cb")
+    hierarchy_new = hierarchy.select(backbone_sel)
+    with open(pdbout, 'w') as f:
         f.write("REMARK Original file:" + os.linesep)
-        f.write("REMARK   {0}".format(inpath) + os.linesep)
-        if crystal_symmetry:
-            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + os.linesep)
-        f.write(hierarchy.as_pdb_string(anisou=False))
-    return
+        f.write("REMARK   {0}".format(pdbin) + os.linesep)
+        f.write(hierarchy_new.as_pdb_string(
+            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
+        ))
 
 
 def calpha_only(pdbin, pdbout):
@@ -397,30 +394,14 @@ def calpha_only(pdbin, pdbout):
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     crystal_symmetry = pdb_input.crystal_symmetry()
     hierarchy = pdb_input.construct_hierarchy()
-    atom_names = {'CA'}
-    hierarchy = _prune_atoms(hierarchy, atom_names)
-
+    ca_sel = hierarchy.atom_selection_cache().selection("name ca")
+    hierarchy_new = hierarchy.select(ca_sel)
     with open(pdbout, 'w') as f:
         f.write("REMARK Original file:" + os.linesep)
         f.write("REMARK   {0}".format(pdbin) + os.linesep)
-        if (crystal_symmetry is not None):
-            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + os.linesep)
-        f.write(hierarchy.as_pdb_string(anisou=False))
-    return
-
-
-def _prune_atoms(hierarchy, leave_atoms):
-    """Given a iotbx hierarchy, will remove any atoms not present in leave_atoms set"""
-    assert type(leave_atoms) is set and len(leave_atoms) > 0
-    for model in hierarchy.models():
-        for chain in model.chains():
-            for rg in chain.residue_groups():
-                for ag in rg.atom_groups():
-                    for atom in ag.atoms():
-                        if atom.name.strip() not in leave_atoms:
-                            ag.remove_atom(atom=atom)
-    return hierarchy
+        f.write(hierarchy_new.as_pdb_string(
+            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
+        ))
 
 
 def extract_chain(pdbin, pdbout, chainID=None, newChainID=None, cAlphaOnly=False, renumber=False):
@@ -917,7 +898,7 @@ def get_info(inpath):
                 info.crystalInfo = pdb_model.CrystalInfo(line)
             except ValueError, e:
                 # Bug in pdbset nukes the CRYST1 line so we need to catch this
-                print "ERROR READING CRYST1 LINE in file {0}\":{1}\"\n{2}".format(inpath, line.rstrip(), e)
+                print("ERROR READING CRYST1 LINE in file {0}\":{1}\"\n{2}".format(inpath, line.rstrip(), e))
                 info.crystalInfo = None
 
         if line.startswith("MODEL"):
@@ -1607,7 +1588,7 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
 
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
-        print "pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin)
+        print("pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin))
 
     if len(hierarchy.models()) > 1:
         for i, m in enumerate(hierarchy.models()):
@@ -2142,9 +2123,8 @@ class Test(unittest.TestCase):
                         count += 1
                     else:
                         continue
-        os.unlink(pdbout)
-
         self.assertEqual(data, reference_data)
+        os.unlink(pdbout)
         return
 
     def test_calpha_only(self):
@@ -2180,8 +2160,8 @@ class Test(unittest.TestCase):
                         count += 1
                     else:
                         continue
-        os.unlink(pdbout)
         self.assertEqual(data, reference_data)
+        os.unlink(pdbout)
         return
 
     def test_extract_chain(self):
