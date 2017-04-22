@@ -53,28 +53,6 @@ logger = logging.getLogger()
 
 
 #  OLD CODE
-# def extract_model(inpdb, outpdb, modelID):
-#     """Extract modelID from inpdb into outpdb"""
-#
-#     assert modelID > 0
-#
-#     logfile = outpdb + ".log"
-#     cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
-#
-#     # Build up stdin
-#     stdin = "lvmodel /{0}\n".format(modelID)
-#     # stdin += "sernum\n"
-#
-#     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-#
-#     if retcode != 0:
-#         raise RuntimeError, "Problem extracting model with cmd: {0}".format
-#
-#     # remove temporary files
-#     os.unlink(logfile)
-#
-#     return
-#
 # def num_atoms_and_residues(pdbin, first=False):
 #     """"Return number of atoms and residues in a pdb file.
 #     If all is True, return all atoms and residues, else just for the first chain in the first model'
@@ -396,24 +374,29 @@ def extract_chain(pdbin, pdbout, chain_id, new_chain_id=None, c_alpha=False, ren
         ))
 
 
-def extract_model(pdbin, pdbout, modelID):
-    """Extract modelID from input pdb into output pdb"""
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    hierarchy = pdb_input.construct_hierarchy()
-    hierarchy = _extract_model(hierarchy, modelID)
+def extract_model(pdbin, pdbout, model_id):
+    """Extract a model from the input PDB
 
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+    model_id : str
+       The model to extract
+
+    """
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    crystal_symmetry = pdb_input.crystal_symmetry()
+    hierarchy = pdb_input.construct_hierarchy()
+    hierarchy_new = _select(hierarchy, "model {0}".format(model_id))
     with open(pdbout, 'w') as f:
         f.write("REMARK Original file:" + os.linesep)
         f.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f.write(hierarchy.as_pdb_string(anisou=False))
-
-
-def _extract_model(hierarchy, model_id):
-    assert model_id > 0
-    for model in hierarchy.models():
-        if model.id != None and int(model.id) != model_id:
-            hierarchy.remove_model(model)
-    return hierarchy
+        f.write(hierarchy_new.as_pdb_string(
+            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
+        ))
 
 
 def extract_resSeq(pdbin):
