@@ -590,7 +590,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
 
         return
 
-    def _testCheckPdbs(self):
+    def testCheckPdbs(self):
         logging.basicConfig()
         logging.getLogger().setLevel(logging.DEBUG)
 
@@ -604,7 +604,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
 
         return
 
-    def _testSelectResidues(self):
+    def testSelectResidues(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
         pdbout = "testSelectResidues1.pdb"
         to_delete = [5, 10, 15, 20]
