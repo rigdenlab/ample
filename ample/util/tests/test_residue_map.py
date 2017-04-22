@@ -74,7 +74,7 @@ class Test(unittest.TestCase):
         modelPdb = os.path.join(self.testfiles_dir,"2UUI_S_00000001.pdb")
         
         chainA = "2UUI_A.pdb"
-        pdb_edit.extract_chain( nativePdb, chainA, chainID='A' )
+        pdb_edit.extract_chain( nativePdb, chainA, 'A' )
         chainAstd = "2UUI_A_std.pdb"
         pdb_edit.standardise(chainA, chainAstd)
         

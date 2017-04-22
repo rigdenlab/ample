@@ -133,7 +133,7 @@ class ReforiginRmsd(object):
                 # Extract the chain from the pdb
                 astr = "chain{0}".format( nativeChainID )
                 nativeChainPdb = ample_util.filename_append( filename=nativePdbInfo.pdb, astr=astr, directory=self.workdir )
-                pdb_edit.extract_chain( nativePdbInfo.pdb, nativeChainPdb, chainID=nativeChainID )
+                pdb_edit.extract_chain( nativePdbInfo.pdb, nativeChainPdb, nativeChainID )
                 
             # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
             # The second chain may be a different composition to the first, so we only generate a traceback if we fail
