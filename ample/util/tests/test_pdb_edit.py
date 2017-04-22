@@ -5,7 +5,6 @@ __date__ = "22 Apr 2017"
 
 import glob
 import iotbx.pdb
-import logging
 import os
 import tempfile
 import unittest
@@ -599,19 +598,18 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
 
         return
 
-    def testCheckPdbs(self):
-        logging.basicConfig()
-        logging.getLogger().setLevel(logging.DEBUG)
-
+    def test_check_pdbs_1(self):
         pdbs = glob.glob(os.path.join(self.testfiles_dir, "models", "*.pdb"))
         self.assertTrue(pdb_edit.check_pdbs(pdbs))
 
+    def test_check_pdbs_2(self):
+        pdbs = glob.glob(os.path.join(self.testfiles_dir, "models", "*.pdb"))
         self.assertFalse(pdb_edit.check_pdbs(pdbs, single=True, sequence="AABBCC"))
 
+    def test_check_pdbs_3(self):
+        pdbs = glob.glob(os.path.join(self.testfiles_dir, "models", "*.pdb"))
         pdbs += [os.path.join(self.testfiles_dir, "1GU8.pdb")]
         self.assertFalse(pdb_edit.check_pdbs(pdbs, single=True, sequence="AABBCC"))
-
-        return
 
     def testSelectResidues(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
