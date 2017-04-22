@@ -134,6 +134,15 @@ class Test(unittest.TestCase):
                     30, 31, 32]
         self.assertEqual(data, ref_data)
 
+    def test_extract_resSeq_2(self):
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        data = pdb_edit.extract_resSeq(pdbin, chain_id='B')
+        ref_data = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                    10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                    20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+                    30, 31, 32]
+        self.assertEqual(data, ref_data)
+
     def test_keep_residues_1(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
         pdbout = "tmp_4DZN.pdb"

@@ -399,17 +399,36 @@ def extract_model(pdbin, pdbout, model_id):
         ))
 
 
-def extract_resSeq(pdbin):
-    """Returns the residue numbers of the input pdb as a list"""
+def extract_resSeq(pdbin, chain_id=None):
+    """Extract a residue numbers of the input PDB
+
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    chain_id : str, optional
+       The chain to extract
+
+    Returns
+    -------
+    list
+       A list of the residue numbers
+
+    """
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     hierarchy = pdb_input.construct_hierarchy()
 
-    resSeq_data = []
-    for model in hierarchy.models():
-        for rg in model.chains()[0].residue_groups():
-            resSeq_data.append(rg.resseq_as_int())
+    # We only consider chains from the first model in the hierarchy
+    chains = {}
+    for chain in hierarchy.models()[0].chains():
+        # Check required to avoid overwriting ATOM chain with HETATM one
+        if chain.id not in chains:
+            chains[chain.id] = chain
 
-    return resSeq_data
+    if chain_id is None:
+        chain_id = hierarchy.models()[0].chains()[0].id
+
+    return [rg.resseq_as_int() for rg in chains[chain_id].residue_groups()]
 
 
 def keep_residues(pdbin, pdbout, residue_range, chainID):
