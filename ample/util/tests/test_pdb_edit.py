@@ -259,10 +259,9 @@ class Test(unittest.TestCase):
                     data_2.append(line[0:78])
                 else:
                     continue
-        os.unlink(pdbout)
         self.assertEqual(data_1, reference_data_1)
         self.assertEqual(data_2, reference_data_2)
-        return
+        os.unlink(pdbout)
 
     def test_most_prob(self):
         # Keep the most probably conformer
@@ -342,9 +341,8 @@ class Test(unittest.TestCase):
                         count += 1
                     else:
                         continue
-        os.unlink(pdbout)
         self.assertEqual(data, reference_data)
-        return
+        os.unlink(pdbout)
 
     def test_renumber(self):
         # Test the function to renumber residues
@@ -371,9 +369,8 @@ class Test(unittest.TestCase):
                         count += 1
                     else:
                         continue
-        os.unlink(pdbout)
         self.assertEqual(data, reference_data)
-        return
+        os.unlink(pdbout)
 
     def test_standardise(self):
         # Test standardisation of a pdb file
@@ -464,8 +461,8 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                         count += 1
                     else:
                         continue
-        os.unlink(pdbout)
         self.assertEqual(data, reference_data)
+        os.unlink(pdbout)
 
     def test_std_Residues(self):
 
@@ -483,10 +480,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                'LYS', 'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
                'LYS', 'GLN', 'GLY', 'TYR', 'TYR']
         self.assertEqual(resnames, ref)
-
         os.unlink(pdbout)
-
-        return
 
     def testGetInfo1(self):
         """"""
@@ -611,7 +605,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
         pdbs += [os.path.join(self.testfiles_dir, "1GU8.pdb")]
         self.assertFalse(pdb_edit.check_pdbs(pdbs, single=True, sequence="AABBCC"))
 
-    def testSelectResidues(self):
+    def test_select_residues_1(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
         pdbout = "testSelectResidues1.pdb"
         to_delete = [5, 10, 15, 20]
@@ -622,10 +616,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
 
         after = set(pdb_edit.resseq(pdbout)['A'])
         self.assertEqual(after, b4.difference(set(to_delete)))
-
         os.unlink(pdbout)
-
-        return
 
     def testSequence1(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
@@ -634,13 +625,13 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                'C': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY'}
         s = pdb_edit.sequence(pdbin)
         self.assertEqual(ref, s, "Bad _sequecne: {0}".format(s))
-        return
 
-    def XtestSplit(self):
+    def test_split_pdb_1(self):
         pdbin = os.path.join(self.testfiles_dir, "1GU8.pdb")
-        pdb_edit.Xsplit(pdbin)
-        # os.unlink(pdbout)
-        return
+        pdbouts = pdb_edit.split_pdb(pdbin)
+        self.assertTrue(all(os.path.isfile(f) for f in pdbouts))
+        for f in pdbouts:
+            os.unlink(f)
 
     def testStripHetatm(self):
         pdbin = os.path.join(self.testfiles_dir, "1BYZ.pdb")
@@ -678,16 +669,11 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
         os.unlink(pdbout)
         return
 
-    def testReliableSidechains(self):
+    def test_reliable_sidechains_1(self):
         pdbin = os.path.join(self.testfiles_dir, "1GU8.pdb")
         pdbout = "std.pdb"
-
         pdb_edit.reliable_sidechains(pdbin, pdbout)
-
-        # Check it's valid
         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
-
-        # Get list of all the residue names in chain 1
         resnames = [g.unique_resnames()[0] for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
         ref = ['VAL', 'GLY', 'LEU', 'THR', 'THR', 'LEU', 'PHE', 'TRP', 'LEU', 'GLY', 'ALA', 'ILE', 'GLY', 'MET',
                'LEU', 'VAL', 'GLY', 'THR', 'LEU', 'ALA', 'PHE', 'ALA', 'TRP', 'ALA', 'GLY', 'ARG', 'ASP', 'ALA',
@@ -705,15 +691,8 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                'GLY', 'VAL', 'ALA', 'LEU', 'LEU', 'THR', 'PRO', 'THR', 'VAL', 'ASP', 'VAL', 'ALA', 'LEU', 'ILE',
                'VAL', 'TYR', 'LEU', 'ASP', 'LEU', 'VAL', 'THR', 'LYS', 'VAL', 'GLY', 'PHE', 'GLY', 'PHE', 'ILE',
                'ALA', 'LEU', 'ASP', 'ALA', 'ALA', 'ALA', 'THR', 'LEU']
-
         self.assertEqual(resnames, ref)
-
-        pdb_edit.reliable_sidechains_cctbx(pdbin, pdbout)
-        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
-        self.assertEqual(resnames, ref)
-        os.unlink(pdbout)
-
-        return
+        #os.unlink(pdbout)
 
     def test_translate(self):
         # Test a translation function on a pdb file
@@ -753,50 +732,6 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
         os.unlink(pdbout)
         self.assertEqual(data, reference_data)
         return
-
-    def testXyzCoordinates(self):
-        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
-        test_hierarchy = iotbx.pdb.pdb_input(file_name=pdbin).construct_hierarchy()
-        xyz_lst = pdb_edit._xyz_coordinates(test_hierarchy)
-
-        ref_data_start = [(0, [(25.199, 11.913, -9.25),
-                               (25.201, 10.666, -9.372),
-                               (26.454, 12.702, -9.001)]),
-                          (1, [(24.076, 12.643, -9.179),
-                               (22.806, 12.124, -9.698),
-                               (22.170, 11.067, -8.799),
-                               (22.404, 11.024, -7.580)]),
-                          (2, [(21.377, 10.190, -9.397),
-                               (20.675, 9.156, -8.637),
-                               (21.614, 8.106, -7.996),
-                               (21.337, 7.619, -6.898),
-                               (19.625, 8.485, -9.531),
-                               (18.637, 7.595, -8.790),
-                               (17.652, 8.361, -7.951),
-                               (17.724, 9.603, -7.887),
-                               (16.786, 7.706, -7.365)])]
-
-        for idx in xrange(len(ref_data_start)):  # Stuff that needs to be true
-            self.assertEqual(ref_data_start[idx][0], xyz_lst[idx][0])
-            self.assertSequenceEqual(ref_data_start[idx][1], xyz_lst[idx][1])
-        nr_atoms = sum(len(i[1]) for i in xyz_lst)
-        self.assertEqual(252, nr_atoms)
-        self.assertEqual(35, len(xyz_lst))
-
-    def testXyzCbCoordinates(self):
-        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
-        test_hierarchy = iotbx.pdb.pdb_input(file_name=pdbin).construct_hierarchy()
-        xyz_cb_lst = pdb_edit._xyz_cb_coordinates(test_hierarchy)
-
-        ref_data_start = [(0, (float('inf'), float('inf'), float('inf'))),
-                          (1, (22.806, 12.124, -9.698)),
-                          (2, (19.625, 8.485, -9.531)),
-                          (3, (24.783, 6.398, -9.051)),
-                          (4, (25.599, 10.846, -6.036)),
-                          (5, (20.430, 10.143, -4.644))]
-
-        self.assertSequenceEqual(ref_data_start[1], xyz_cb_lst[1][:6])
-        self.assertEqual(35, len(xyz_cb_lst))
 
 
 if __name__ == "__main__":
