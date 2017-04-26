@@ -18,151 +18,14 @@ import iotbx.file_reader
 import iotbx.pdb
 import iotbx.pdb.amino_acid_codes
 
-from Bio.SeqUtils import molecular_weight as bio_mw
-
-
 import ample_util
+import chemistry
 import pdb_model
 import residue_map
 import sequence_util
 
 three2one = iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 one2three = iotbx.pdb.amino_acid_codes.three_letter_given_one_letter
-
-hydrogen_atom_number = {
-    'ALA': 5.0,
-    'ARG': 13.0,
-    'ASN': 6.0,
-    'ASP': 4.0,
-    'CYS': 4.0,
-    'GLU': 6.0,
-    'GLN': 8.0,
-    'GLY': 3.0,
-    'HIS': 8.0,
-    'ILE': 11.0,
-    'LEU': 11.0,
-    'LYS': 13.0,
-    'MET': 9.0,
-    'PHE': 9.0,
-    'PRO': 7.0,
-    'SER': 5.0,
-    'THR': 7.0,
-    'TRP': 10.0,
-    'TYR': 9.0,
-    'VAL': 9.0,
-}
-
-atom_masses = {
-    'H': 1.00794,
-    'He': 4.002602,
-    'Li': 6.941,
-    'Be': 9.012182,
-    'B': 10.811,
-    'C': 12.0107,
-    'N': 14.0067,
-    'O': 15.9994,
-    'F': 18.9984032,
-    'Ne': 20.1797,
-    'Na': 22.98977,
-    'Mg': 24.305,
-    'Al': 26.981538,
-    'Si': 28.0855,
-    'P': 30.973761,
-    'S': 32.065,
-    'Cl': 35.453,
-    'Ar': 39.948,
-    'K': 39.0983,
-    'Ca': 40.078,
-    'Sc': 44.95591,
-    'Ti': 47.867,
-    'V': 50.9415,
-    'Cr': 51.9961,
-    'Mn': 54.938049,
-    'Fe': 55.845,
-    'Co': 58.9332,
-    'Ni': 58.6934,
-    'Cu': 63.546,
-    'Zn': 65.409,
-    'Ga': 69.723,
-    'Ge': 72.64,
-    'As': 74.9216,
-    'Se': 78.96,
-    'Br': 79.904,
-    'Kr': 83.798,
-    'Rb': 85.4678,
-    'Sr': 87.62,
-    'Y': 88.90585,
-    'Zr': 91.224,
-    'Nb': 92.90638,
-    'Mo': 95.94,
-    'Tc': 97.907216,
-    'Ru': 101.07,
-    'Rh': 102.9055,
-    'Pd': 106.42,
-    'Ag': 107.8682,
-    'Cd': 112.411,
-    'In': 114.818,
-    'Sn': 118.71,
-    'Sb': 121.76,
-    'Te': 127.6,
-    'I': 126.90447,
-    'Xe': 131.293,
-    'Cs': 132.90545,
-    'Ba': 137.327,
-    'La': 137.327,
-    'Ce': 140.116,
-    'Pr': 140.90765,
-    'Nd': 144.24,
-    'Pm': 144.912744,
-    'Sm': 150.36,
-    'Eu': 151.964,
-    'Gd': 157.25,
-    'Tb': 158.92534,
-    'Dy': 162.5,
-    'Ho': 164.93032,
-    'Er': 167.259,
-    'Tm': 168.93421,
-    'Yb': 173.04,
-    'Lu': 174.967,
-    'Hf': 178.49,
-    'Ta': 180.9479,
-    'W': 183.84,
-    'Re': 186.207,
-    'Os': 190.23,
-    'Ir': 192.217,
-    'Pt': 195.078,
-    'Au': 196.96655,
-    'Hg': 200.59,
-    'Tl': 204.3833,
-    'Pb': 207.2,
-    'Bi': 208.98038,
-    'Po': 208.982416,
-    'At': 209.9871,
-    'Rn': 222.0176,
-    'Fr': 223.0197307,
-    'Ra': 226.025403,
-    'Ac': 227.027747,
-    'Th': 232.0381,
-    'Pa': 231.03588,
-    'U': 238.02891,
-    'Np': 237.048167,
-    'Pu': 244.064198,
-    'Am': 243.061373,
-    'Cm': 247.070347,
-    'Bk': 247.070299,
-    'Cf': 251.07958,
-    'Es': 252.08297,
-    'Fm': 257.095099,
-    'Md': 258.098425,
-    'No': 259.10102,
-    'Lr': 262.10969,
-    'Rf': 261.10875,
-    'Db': 262.11415,
-    'Sg': 266.12193,
-    'Bh': 264.12473,
-    'Hs': 269.13411,
-    'Mt': 268.13882,
-}
 
 logger = logging.getLogger()
 
@@ -1219,7 +1082,7 @@ def _num_atoms_residues_mw(pdbin, first=False):
                     if resseq != rg.resseq:
                         residues.append(ag.resname)
                         resseq = rg.resseq
-                        hydrogen_atoms += hydrogen_atom_number[ag.resname]
+                        hydrogen_atoms += chemistry.atomic_composition[ag.resname].H
 
                 for atom in ag.atoms():
                     elements.append((atom.element.strip(), atom.occ))
@@ -1245,7 +1108,7 @@ def _num_atoms_residues_mw(pdbin, first=False):
                             if resseq != rg.resseq:
                                 residues.append(ag.resname)
                                 resseq = rg.resseq
-                                hydrogen_atoms += hydrogen_atom_number[ag.resname]
+                                hydrogen_atoms += chemistry.atomic_composition[ag.resname].H 
 
                         for atom in ag.atoms():
                             if atom.hetero and ag.resname.strip() == 'HOH':
@@ -1253,12 +1116,12 @@ def _num_atoms_residues_mw(pdbin, first=False):
                                     water_atoms += (1.0 * atom.occ)
                             else:
                                 elements.append((atom.element.strip(), atom.occ))
-
-    for element in elements:
-        other_atoms += element[1]
-        mw += (atom_masses[element[0]] * element[1])
-
-    mw += hydrogen_atoms * 1.00794
+    
+    # Compute the molecular weight with respect to the occupancy
+    for element, occ in elements:
+        other_atoms += occ
+        mw += chemistry.periodic_table(element).weight() * occ
+    mw += hydrogen_atoms * chemistry.periodic_table('H').weight() 
 
     natoms = int(other_atoms + hydrogen_atoms + water_atoms + water_hydrogen_atoms - 0.5)
     nresidues = len(residues)

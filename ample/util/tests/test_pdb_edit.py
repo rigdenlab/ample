@@ -265,12 +265,9 @@ class Test(unittest.TestCase):
 
     def test_molecular_weight(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
-        reference_data = 10279.689829999996
-
+        reference_data = 10279.861305117607
         molecular_weight = pdb_edit.molecular_weight(pdbin)
-
-        self.assertEqual(molecular_weight, reference_data)
-        return
+        self.assertEqual(reference_data, molecular_weight)
 
     def test_most_prob(self):
         # Keep the most probably conformer
