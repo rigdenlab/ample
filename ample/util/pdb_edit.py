@@ -1248,11 +1248,36 @@ def _num_atoms_residues_mw(pdbin, first=False):
                                 hydrogen_atoms += hydrogen_atom_number[ag.resname]
 
                         for atom in ag.atoms():
-                            if atom.hetero and ag.resname.strip() == 'HOH':
+                            if ag.resname.strip() == 'HOH' or ag.resname.strip() == 'WAT':
                                     water_hydrogen_atoms += (2.0 * atom.occ)
                                     water_atoms += (1.0 * atom.occ)
                             else:
                                 elements.append((atom.element.strip(), atom.occ))
+
+    # Testing
+    # carbons = 0
+    # nitrogens = 0
+    # oxygens = 0
+    # sulphurs = 0
+    # others = 0
+    #
+    # for element in elements:
+    #     if element[0] == 'C':
+    #         carbons += (1 * element[1])
+    #     elif element[0] == 'N':
+    #         nitrogens += (1 * element[1])
+    #     elif element[0] == 'O':
+    #         oxygens += (1 * element[1])
+    #     elif element[0] == 'S':
+    #         sulphurs += (1 * element[1])
+    #     else:
+    #         others += (1 * element[1])
+    #
+    #
+    # print ("Carbons = {0}, Nitrogens = {1}, Oxygens = {2}, Sulphurs = {3}, "
+    #        "Others = {4}. Waters = {5}, hydrogens= {6}".format(carbons, nitrogens, oxygens,
+    #                                                            sulphurs, others, water_atoms, hydrogen_atoms))
+
 
     for element in elements:
         other_atoms += element[1]
