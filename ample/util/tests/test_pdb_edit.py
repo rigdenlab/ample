@@ -263,6 +263,15 @@ class Test(unittest.TestCase):
         self.assertEqual(data_2, reference_data_2)
         os.unlink(pdbout)
 
+    def test_molecular_weight(self):
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        reference_data = 10279.689829999996
+
+        molecular_weight = pdb_edit.molecular_weight(pdbin)
+
+        self.assertEqual(molecular_weight, reference_data)
+        return
+
     def test_most_prob(self):
         # Keep the most probably conformer
         pdbin = os.path.join(self.testfiles_dir, "2UUI.pdb")
@@ -304,8 +313,8 @@ class Test(unittest.TestCase):
         self.assertEqual(nresidues, ref_nresidues)
 
         # Second test with first flag
-        ref_natoms = 252
-        ref_nresidues = 33
+        ref_natoms = 497
+        ref_nresidues = 31
 
         natoms, nresidues = pdb_edit.num_atoms_and_residues(pdbin, first=True)
 
