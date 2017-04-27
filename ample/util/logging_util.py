@@ -25,7 +25,7 @@ def setup_console_logging(level=logging.INFO,
     try:
         cl = logging.StreamHandler(stream=sys.stdout)
     except TypeError:
-        cl = logging.StreamHandler(strm=sys.stdout)
+        cl = logging.StreamHandler(stream=sys.stdout)
     cl.setLevel(level)
     formatter = logging.Formatter(formatstr) 
     cl.setFormatter(formatter)

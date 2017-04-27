@@ -374,7 +374,7 @@ def analysePdb(amoptd):
     if len( nativePdbInfo.models[0].chains ) > 1:
         chainID = nativePdbInfo.models[0].chains[0]
         nativeChain1  = ample_util.filename_append( filename=nativePdbInfo.pdb,
-                                                       astr="chain1".format( chainID ), 
+                                                       astr="chain1", 
                                                        directory=fixpath(amoptd['work_dir']))
         pdb_edit.to_single_chain( nativePdbInfo.pdb, nativeChain1 )
     else:

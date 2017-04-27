@@ -27,14 +27,16 @@ class FPC(object):
         # FPC default if 5 clusters - we just run with this for the time being
         FPC_NUM_CLUSTERS=5
         if num_clusters is None or num_clusters > FPC_NUM_CLUSTERS:
-            raise RuntimeError,"Cannot work with more than {0)} clusters, got: {1}.".format(FPC_NUM_CLUSTERS,num_clusters)
+            msg = "Cannot work with more than {0} clusters, got: {1}.".format(FPC_NUM_CLUSTERS,num_clusters)
+            raise RuntimeError(msg)
   
         owd=os.getcwd()
         if not os.path.isdir(work_dir): os.mkdir(work_dir)
         os.chdir(work_dir)
         
         if not len(models) or not all([os.path.isfile(m) for m in models]):
-            raise RuntimeError,"Missing models: {0}".format(models)
+            msg = "Missing models: {0}".format(models)
+            raise RuntimeError(msg)
         
         # Create list of files
         flist='files.list'
@@ -43,7 +45,8 @@ class FPC(object):
                 f.write("{0}\n".format(os.path.abspath(m)))
         
         if not os.path.isfile(fpc_exe):
-            raise RuntimeError,"Cannot find fast_protein_cluster executable: {0}".format(fpc_exe)
+            msg = "Cannot find fast_protein_cluster executable: {0}".format(fpc_exe)
+            raise RuntimeError(msg)
         
         # Build up the command-line
         cmd=[fpc_exe]
@@ -52,14 +55,16 @@ class FPC(object):
         elif score_type=="tm":
             cmd += ['--tmscore']
         else:
-            raise RuntimeError,"Unrecognised score_type: {0}".format(score_type)
+            msg = "Unrecognised score_type: {0}".format(score_type)
+            raise RuntimeError(msg)
         
         if cluster_method=="kmeans":
             cmd += ['--cluster_kmeans']
         elif cluster_method=="hcomplete":
             cmd += ['--cluster_hcomplete']
         else:
-            raise RuntimeError,"Unrecognised cluster_method: {0}".format(cluster_method)
+            msg = "Unrecognised cluster_method: {0}".format(cluster_method)
+            raise RuntimeError(msg)
         
         if nproc > 1: cmd += ['--nthreads',str(nproc)]
         
@@ -76,13 +81,13 @@ class FPC(object):
         retcode = ample_util.run_command(cmd,logfile=logfile)
         if retcode != 0:
             msg = "non-zero return code for fast_protein_cluster in cluster!\nCheck logfile:{0}".format(logfile)
-            #logging.critical(msg)
-            raise RuntimeError, msg
+            raise RuntimeError(msg)
     
         cluster_list='cluster_output.clusters'
         cluster_stats='cluster_output.cluster.stats'
         if not os.path.isfile(cluster_list) or not os.path.isfile(cluster_stats):
-            raise RuntimeError,"Cannot find files: {0} and {1}".format(cluster_list,cluster_stats)
+            msg = "Cannot find files: {0} and {1}".format(cluster_list,cluster_stats)
+            raise RuntimeError(msg)
         
         # Check stats and get centroids
         csizes=[]
@@ -95,7 +100,8 @@ class FPC(object):
                     centroids.append(fields[7])
         
         if len(csizes) != FPC_NUM_CLUSTERS:
-            raise RuntimeError,"Found {0} clusters in {1} but was expecting {2}".format(len(csizes),cluster_stats,FPC_NUM_CLUSTERS)
+            msg = "Found {0} clusters in {1} but was expecting {2}".format(len(csizes),cluster_stats,FPC_NUM_CLUSTERS)
+            raise RuntimeError(msg)
         
         all_clusters=[[] for i in range(FPC_NUM_CLUSTERS)]
         # Read in the clusters
@@ -112,11 +118,14 @@ class FPC(object):
             maxc=None
             for i,cs in enumerate(csizes):
                 if not cs == len(all_clusters[i]):
-                    raise RuntimeError,"Cluster {0} size {1} does not match stats size {2}".format(i,len(all_clusters[i]),cs)
+                    msg = "Cluster {0} size {1} does not match stats size {2}".format(i,len(all_clusters[i]),cs)
+                    raise RuntimeError(msg)
                 if i==0:
                     maxc=cs
                 else:
-                    if cs > maxc: raise RuntimeError,"Clusters do not appear to be in size order!"
+                    if cs > maxc:
+                        msg = "Clusters do not appear to be in size order!"
+                        raise RuntimeError(msg)
                     
         # make sure all clusters are < max_cluster_size
         for i, c in enumerate(all_clusters):

@@ -283,7 +283,7 @@ class SuiteLoader(object):
         try:
             mfile, pathname, desc = imp.find_module(mod_name, paths)
         except ImportError:
-            logger.critical("Cannot find test module in {1}".format(mod_name, paths))
+            logger.critical("Cannot find test module in {0}".format(mod_name))
             return None
         try:
             test_module = imp.load_module(mod_name, mfile, pathname, desc)
