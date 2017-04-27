@@ -1120,7 +1120,7 @@ def _natm_nres_mw(pdbin, first=False):
                         resseq = rg.resseq
                         hydrogen_atoms += chemistry.atomic_composition[ag.resname].H
                     for atom in ag.atoms():
-                        if atom.hetero and ag.resname.strip() == "HOH":
+                        if ag.resname.strip() == 'HOH' or ag.resname.strip() == 'WAT':
                             water_hydrogen_atoms += (2.0 * atom.occ)
                             water_atoms += (1.0 * atom.occ)
                         else:
@@ -1131,7 +1131,8 @@ def _natm_nres_mw(pdbin, first=False):
         other_atoms += occ
         mw += chemistry.periodic_table(element).weight() * occ
     mw += hydrogen_atoms * chemistry.periodic_table('H').weight() 
-
+    
+    # Compute the number of atoms and number of residues
     natoms = int(other_atoms + hydrogen_atoms + water_atoms + water_hydrogen_atoms - 0.5)
     nresidues = len(residues)
 
