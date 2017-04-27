@@ -269,32 +269,18 @@ class Test(unittest.TestCase):
         molecular_weight = pdb_edit.molecular_weight(pdbin)
         self.assertEqual(reference_data, molecular_weight)
 
-    def test_most_prob_1(self):
+    def test__most_prob_1(self):
         # Keep the most probably conformer
         pdbin = os.path.join(self.testfiles_dir, "2UUI.pdb")
-        pdb_input = iotbx.pdb.pdb_input(pdbin)
-        hierarchy = pdb_input.construct_hierarchy()
-
-        pdb_edit.most_prob(hierarchy)
-
+        hierarchy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+        pdb_edit._most_prob(hierarchy, True)
         # Residues which are conformers
-        residues_to_check = [62, 82, 84]
-        data = []
-
-        # extract atom names for residues which were conformers
-        for model in hierarchy.models():
-            for chain in model.chains():
-                for residue_group in chain.residue_groups():
-                    if residue_group.resseq_as_int() in residues_to_check:
-                        for atom_group in residue_group.atom_groups():
-                            for atom in atom_group.atoms():
-                                data.append(atom.name.strip())
-
+        data = [atom.name.strip() for atom in hierarchy.atoms()
+                if atom.parent().parent().resseq_as_int() in [62, 82, 84]]
         # Only one set of atoms returned if function works correctly
         reference_data = ['N', 'C', 'O', 'CA', 'CB', 'CG', 'CD1', 'CD2',
                           'N', 'C', 'O', 'CA', 'CB', 'SG',
                           'N', 'C', 'O', 'CA', 'CB', 'CG', 'CD1', 'CD2']
-
         self.assertEqual(data, reference_data)
 
     def test_num_atoms_and_residues_1(self):

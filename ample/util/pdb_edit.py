@@ -14,7 +14,6 @@ import tempfile
 
 from cctbx.array_family import flex
 
-import iotbx.file_reader
 import iotbx.pdb
 import iotbx.pdb.amino_acid_codes
 
@@ -899,22 +898,53 @@ def merge(pdb1=None, pdb2=None, pdbout=None):
     return
 
 
-def most_prob(hierarchy, always_keep_one_conformer=True):
-    """
-    Remove all alternate conformers from the hierarchy.  Depending on the
-    value of always_keep_one_conformer, this will either remove any atom_group
-    with altloc other than blank or 'A', or it will remove any atom_group
-    beyond the first conformer found.
-    """
+def most_prob(pdbin, pdbout, always_keep_one_conformer=True):
+    """Remove alternate conforms from the structure file
+    
+    Depending on the value of always_keep_one_conformer, this will either 
+    remove any atom_group with altloc other than blank or 'A', or it will 
+    remove any atom_group beyond the first conformer found.
 
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+    always_keep_one_conformer : bool, optional
+       Keep at least a single conformer [default: True]
+
+    """
     # Taken from
     # ftp://ftp.ccp4.ac.uk/ccp4/6.4.0/unpacked/lib/cctbx/cctbx_sources/cctbx_project/mmtbx/pdbtools.py
 
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    crystal_symmetry = pdb_input.crystal_symmetry()
+    hierarchy = pdb_input.construct_hierarchy()
+
+    _most_prob(hierarchy, always_keep_one_conformer)
+
+    # Assign occupancies of 1.0 to all remaining atoms
+    new_occ = flex.double(hierarchy.atoms().size(), 1.0)
+    hierarchy.atoms().set_occ(new_occ)
+
+    with open(pdbout, 'w') as f_out:
+        f_out.write("REMARK Original file:" + os.linesep)
+        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
+        f_out.write(hierarchy.as_pdb_string(
+            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
+        ))
+
+
+
+def _most_prob(hierarchy, always_keep_one_conformer):
+    """Remove alternate conforms from a hierarchy"""
+    # Taken from
+    # ftp://ftp.ccp4.ac.uk/ccp4/6.4.0/unpacked/lib/cctbx/cctbx_sources/cctbx_project/mmtbx/pdbtools.py
     for model in hierarchy.models():
         for chain in model.chains():
             for residue_group in chain.residue_groups():
                 atom_groups = residue_group.atom_groups()
-                assert (len(atom_groups) > 0)
                 if always_keep_one_conformer:
                     if (len(atom_groups) == 1) and (atom_groups[0].altloc == ''):
                         continue
@@ -931,7 +961,7 @@ def most_prob(hierarchy, always_keep_one_conformer=True):
                     single_conf.altloc = ''
                 else:
                     for atom_group in atom_groups:
-                        if not atom_group.altloc in ["", "A"]:
+                        if atom_group.altloc not in ["", "A"]:
                             residue_group.remove_atom_group(atom_group=atom_group)
                         else:
                             atom_group.altloc = ""
@@ -939,9 +969,9 @@ def most_prob(hierarchy, always_keep_one_conformer=True):
                         chain.remove_residue_group(residue_group=residue_group)
             if len(chain.residue_groups()) == 0:
                 model.remove_chain(chain=chain)
-    atoms = hierarchy.atoms()
-    new_occ = flex.double(atoms.size(), 1.0)
-    atoms.set_occ(new_occ)
+    # Assign occupancies of 1.0 to all remaining atoms
+    new_occ = flex.double(hierarchy.atoms().size(), 1.0)
+    hierarchy.atoms().set_occ(new_occ)
 
 
 def molecular_weight(pdbin, first=False):
@@ -1191,25 +1221,34 @@ def _resseq(hierarchy):
 
 
 def renumber_residues(pdbin, pdbout, start=1):
-    """ Renumber the residues in the chain """
+    """Renumber the residues in a structure file
+    
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+    start : int, optional
+       The starting number [default: 1]
+    
+    """
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     crystal_symmetry = pdb_input.crystal_symmetry()
     hierarchy = pdb_input.construct_hierarchy()
 
     _renumber(hierarchy, start)
 
-    with open(pdbout, 'w') as f:
-        f.write("REMARK Original file:" + os.linesep)
-        f.write("REMARK   {0}".format(pdbin) + os.linesep)
-        if crystal_symmetry is not None:
-            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + os.linesep)
-        f.write(hierarchy.as_pdb_string(anisou=False))
-    return
+    with open(pdbout, 'w') as f_out:
+        f_out.write("REMARK Original file:" + os.linesep)
+        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
+        f_out.write(hierarchy.as_pdb_string(
+            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
+        ))
 
 
 def _renumber(hierarchy, start):
-    # Renumber the residue sequence
+    """Renumber the residue sequence"""
     for model in hierarchy.models():
         for chain in model.chains():
             for idx, residue_group in enumerate(chain.residue_groups()):
@@ -1529,7 +1568,7 @@ def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
                     c.remove_residue_group(rg)
 
     # Keep the most probably conformer
-    most_prob(hierarchy)
+    _most_prob(hierarchy, True)
 
     # Extract one of the chains
     if chain:
