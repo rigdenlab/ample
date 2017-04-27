@@ -29,7 +29,16 @@ one2three = iotbx.pdb.amino_acid_codes.three_letter_given_one_letter
 logger = logging.getLogger()
 
 
+def _cache(pdbin):
+    """Cache the PDB input file"""
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
+    crystal_symmetry = pdb_input.crystal_symmetry()
+    hierarchy = pdb_input.construct_hierarchy()
+    return hierarchy, crystal_symmetry
+
+
 def _first_chain_only(h):
+    """Remove everything from hierarchy but the first chain"""
     for i, m in enumerate(h.models()):
         if i != 0:
             h.remove_model(m)
@@ -39,9 +48,156 @@ def _first_chain_only(h):
             m.remove_chain(c)
 
 
-def _select(h, sel):
-    sel_cache = h.atom_selection_cache().selection(sel)
-    return h.select(sel_cache)
+def _most_prob(hierarchy, always_keep_one):
+    """Remove alternate conforms from a hierarchy"""
+    # Taken from
+    # ftp://ftp.ccp4.ac.uk/ccp4/6.4.0/unpacked/lib/cctbx/cctbx_sources/cctbx_project/mmtbx/pdbtools.py
+    for model in hierarchy.models():
+        for chain in model.chains():
+            for residue_group in chain.residue_groups():
+                atom_groups = residue_group.atom_groups()
+                if always_keep_one:
+                    if (len(atom_groups) == 1) and (atom_groups[0].altloc == ''):
+                        continue
+                    atom_groups_and_occupancies = []
+                    for atom_group in atom_groups:
+                        if '' == atom_group.altloc:
+                            continue
+                        mean_occ = flex.mean(atom_group.atoms().extract_occ())
+                        atom_groups_and_occupancies.append((atom_group, mean_occ))
+                    atom_groups_and_occupancies.sort(lambda a, b: cmp(b[1], a[1]))
+                    for atom_group, occ in atom_groups_and_occupancies[1:]:
+                        residue_group.remove_atom_group(atom_group=atom_group)
+                    single_conf, occ = atom_groups_and_occupancies[0]
+                    single_conf.altloc = ''
+                else:
+                    for atom_group in atom_groups:
+                        if atom_group.altloc not in ["", "A"]:
+                            residue_group.remove_atom_group(atom_group=atom_group)
+                        else:
+                            atom_group.altloc = ""
+                    if len(residue_group.atom_groups()) == 0:
+                        chain.remove_residue_group(residue_group=residue_group)
+            if len(chain.residue_groups()) == 0:
+                model.remove_chain(chain=chain)
+    # Assign occupancies of 1.0 to all remaining atoms
+    new_occ = flex.double(hierarchy.atoms().size(), 1.0)
+    hierarchy.atoms().set_occ(new_occ)
+
+
+def _natm_nres_mw(hierarchy, first=False):
+    """Function to extract the number of atoms, number of residues and molecular weight
+    from a PDB structure
+    """
+    # Define storage variables
+    elements, residues = [], []
+    hydrogen_atoms, other_atoms = 0, 0
+    water_atoms, water_hydrogen_atoms = 0, 0
+    mw = 0
+
+    # Pick chain
+    if first:
+        _first_chain_only(hierarchy)
+
+    # Collect all the data using the hierarchy
+    for m in hierarchy.models():
+        for c in m.chains():
+            for rg in c.residue_groups():
+                resseq = None
+                for ag in rg.atom_groups():
+                    if ag.resname in three2one and resseq != rg.resseq:
+                        residues.append(ag.resname)
+                        resseq = rg.resseq
+                        hydrogen_atoms += chemistry.atomic_composition[ag.resname].H
+                    for atom in ag.atoms():
+                        if ag.resname.strip() == 'HOH' or ag.resname.strip() == 'WAT':
+                            water_hydrogen_atoms += (2.0 * atom.occ)
+                            water_atoms += (1.0 * atom.occ)
+                        else:
+                            elements.append((atom.element.strip(), atom.occ))
+
+    # Compute the molecular weight with respect to the occupancy
+    for element, occ in elements:
+        other_atoms += occ
+        mw += chemistry.periodic_table(element).weight() * occ
+    mw += hydrogen_atoms * chemistry.periodic_table('H').weight()
+
+    # Compute the number of atoms and number of residues
+    natoms = int(other_atoms + hydrogen_atoms + water_atoms + water_hydrogen_atoms - 0.5)
+    nresidues = len(residues)
+
+    return natoms, nresidues, mw
+
+
+def _rename_chains(hierarchy, table):
+    """Rename all chains in a hierarchy using the provided conversion table"""
+    for chain in hierarchy.chains():
+        if chain.id in table:
+            chain.id = table[chain.id]
+
+
+def _renumber(hierarchy, start):
+    """Renumber the residue sequence"""
+    for model in hierarchy.models():
+        for chain in model.chains():
+            for idx, residue_group in enumerate(chain.residue_groups()):
+                residue_group.resseq = idx + start
+
+
+def _renumber_residues_gaps(hierarchy, gaps, start):
+    """Renumber the residue sequence respecting gaps"""
+    for model in hierarchy.models():
+        for chain in model.chains():
+            resseq = 0
+            for idx, is_gap in enumerate(gaps):
+                if is_gap:
+                    continue
+                residue_group = chain.residue_groups()[resseq]
+                residue_group.resseq = idx + start
+                resseq += 1
+
+
+def _resseq(hierarchy):
+    """Extract the sequence of residues from a pdb file"""
+    chain2data = _sequence_data(hierarchy)
+    return dict((k, chain2data[k][1]) for k in chain2data.keys())
+
+
+def _save(pdbout, hierarchy, crystal_symmetry=None, remarks=[]):
+    """Save the CCTBX hierarchy to a file"""
+    with open(pdbout, 'w') as f_out:
+        for remark in remarks:
+            f_out.write("REMARK %s" % remark + os.linesep)
+        f_out.write(hierarchy.as_pdb_string(
+            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
+        ))
+
+
+def _select(hierarchy, construct):
+    """Select atoms from hierarchy using a selection string"""
+    selection = hierarchy.atom_selection_cache().selection(construct)
+    return hierarchy.select(selection)
+
+
+def _strip(hierachy, hetatm=False, hydrogen=False, atom_types=[]):
+    """Remove all hetatoms from pdbfile"""
+    def remove_atom(atom, hetatm=False, hydrogen=False, atom_types=[]):
+        return (hetatm and atom.hetero) or (hydrogen and atom.element_is_hydrogen()) or atom.name.strip() in atom_types
+
+    for model in hierachy.models():
+        for chain in model.chains():
+            for residue_group in chain.residue_groups():
+                for atom_group in residue_group.atom_groups():
+                    to_del = [a for a in atom_group.atoms() if
+                              remove_atom(a, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)]
+                    for atom in to_del:
+                        atom_group.remove_atom(atom)
+
+
+def _translate(hierarchy, vector):
+    """Translate all atoms in the hierarchy by the provided vector"""
+    for atom in hierarchy.atoms():
+        atom.set_xyz(np.asarray(atom.xyz) + vector)
         
 
 def backbone(pdbin, pdbout):
@@ -55,16 +211,9 @@ def backbone(pdbin, pdbout):
        The path to the output PDB
     
     """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
-    hierarchy_new = _select(hierarchy, "name n or name ca or name c or name o or name cb")
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy_new.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
+    hierarchy, symmetry = _cache(pdbin)
+    hierarchy = _select(hierarchy, "name n or name ca or name c or name o or name cb")
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def calpha_only(pdbin, pdbout):
@@ -78,16 +227,37 @@ def calpha_only(pdbin, pdbout):
        The path to the output PDB
     
     """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
-    hierarchy_new = _select(hierarchy, "name ca")
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy_new.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
+    hierarchy, symmetry = _cache(pdbin)
+    hierarchy = _select(hierarchy, "name ca")
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
+
+
+def reliable_sidechains(pdbin, pdbout):
+    """Only output non-backbone atoms for certain residues
+    
+    This function strips side chain atoms of residues not defined in the
+    following list:
+       ['MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
+
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+    
+    """
+    hierarchy, symmetry = _cache(pdbin)
+    
+    # Remove sidechains that are in res_names where the atom name is not in atom_names
+    res_names = ['MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
+    atom_names = ['N', 'CA', 'C', 'O', 'CB']
+    select_string = "({residues}) or not ({residues}) and ({atoms})".format(
+        atoms=" or ".join(['name %s' % atm.lower() for atm in atom_names]),
+        residues=" or ".join(['resname %s' % res.upper() for res in res_names]),
+    )
+    hierarchy = _select(hierarchy, select_string)
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def check_pdb_directory(directory, single=True, allsame=True, sequence=None):
@@ -147,7 +317,7 @@ def check_pdbs(models, single=True, allsame=True, sequence=None):
     # Get sequence from first model
     if allsame and not sequence:
         try:
-            h = iotbx.pdb.pdb_input(models[0]).construct_hierarchy()
+            h, _ = _cache(models[0])
         except Exception as e:
             s = "*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0], e)
             logger.critical(s)
@@ -160,7 +330,7 @@ def check_pdbs(models, single=True, allsame=True, sequence=None):
         entry = np.zeros((1, 5), dtype=np.uint8)
         entry[0][0] = idx
         try:
-            h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
+            h, _ = _cache(models[0])
         except Exception:
             entry[0][1] = 1
             continue
@@ -218,30 +388,23 @@ def extract_chain(pdbin, pdbout, chain_id, new_chain_id=None, c_alpha=False, ren
        Renumber the chain [default: False]
     
     """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
+    hierarchy, symmetry = _cache(pdbin)
 
     sel_string = "chain %s and not hetatm" % chain_id
     if c_alpha:
         sel_string += " and name ca" 
-    hierarchy_new = _select(hierarchy, sel_string)
+    hierarchy = _select(hierarchy, sel_string)
 
     if new_chain_id:
-        for model in hierarchy_new.models():
+        for model in hierarchy.models():
             for chain in model.chains():
                 chain.id = new_chain_id
 
     if renumber:
-        _renumber(hierarchy_new, 1)
-        hierarchy_new.atoms().reset_serial()
+        _renumber(hierarchy, 1)
+        hierarchy.atoms().reset_serial()
 
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy_new.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=["Original file: %s" % pdbin])
 
 
 def extract_model(pdbin, pdbout, model_id):
@@ -257,16 +420,9 @@ def extract_model(pdbin, pdbout, model_id):
        The model to extract
 
     """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
-    hierarchy_new = _select(hierarchy, "model {0}".format(model_id))
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy_new.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
+    hierarchy, symmetry = _cache(pdbin)
+    hierarchy = _select(hierarchy, "model {0}".format(model_id))
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def extract_resSeq(pdbin, chain_id=None):
@@ -285,6 +441,7 @@ def extract_resSeq(pdbin, chain_id=None):
        A list of the residue numbers
 
     """
+    hierarchy, _ = _cache(pdbin)
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     hierarchy = pdb_input.construct_hierarchy()
 
@@ -317,9 +474,7 @@ def keep_residues(pdbin, pdbout, residue_range, chain_id):
        The chain to extract
     
     """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
+    hierarchy, symmetry = _cache(pdbin)
 
     # Only keep the specified chain ID
     for model in hierarchy.models():
@@ -341,13 +496,7 @@ def keep_residues(pdbin, pdbout, residue_range, chain_id):
     # remove hetatms
     _strip(hierarchy, hetatm=True)
 
-    # Write to file
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
@@ -840,63 +989,9 @@ def most_prob(pdbin, pdbout, always_keep_one_conformer=True):
        Keep at least a single conformer [default: True]
 
     """
-    # Taken from
-    # ftp://ftp.ccp4.ac.uk/ccp4/6.4.0/unpacked/lib/cctbx/cctbx_sources/cctbx_project/mmtbx/pdbtools.py
-
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
-
+    hierarchy, symmetry = _cache(pdbin)
     _most_prob(hierarchy, always_keep_one_conformer)
-
-    # Assign occupancies of 1.0 to all remaining atoms
-    new_occ = flex.double(hierarchy.atoms().size(), 1.0)
-    hierarchy.atoms().set_occ(new_occ)
-
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
-
-
-
-def _most_prob(hierarchy, always_keep_one_conformer):
-    """Remove alternate conforms from a hierarchy"""
-    # Taken from
-    # ftp://ftp.ccp4.ac.uk/ccp4/6.4.0/unpacked/lib/cctbx/cctbx_sources/cctbx_project/mmtbx/pdbtools.py
-    for model in hierarchy.models():
-        for chain in model.chains():
-            for residue_group in chain.residue_groups():
-                atom_groups = residue_group.atom_groups()
-                if always_keep_one_conformer:
-                    if (len(atom_groups) == 1) and (atom_groups[0].altloc == ''):
-                        continue
-                    atom_groups_and_occupancies = []
-                    for atom_group in atom_groups:
-                        if '' == atom_group.altloc:
-                            continue
-                        mean_occ = flex.mean(atom_group.atoms().extract_occ())
-                        atom_groups_and_occupancies.append((atom_group, mean_occ))
-                    atom_groups_and_occupancies.sort(lambda a, b: cmp(b[1], a[1]))
-                    for atom_group, occ in atom_groups_and_occupancies[1:]:
-                        residue_group.remove_atom_group(atom_group=atom_group)
-                    single_conf, occ = atom_groups_and_occupancies[0]
-                    single_conf.altloc = ''
-                else:
-                    for atom_group in atom_groups:
-                        if atom_group.altloc not in ["", "A"]:
-                            residue_group.remove_atom_group(atom_group=atom_group)
-                        else:
-                            atom_group.altloc = ""
-                    if len(residue_group.atom_groups()) == 0:
-                        chain.remove_residue_group(residue_group=residue_group)
-            if len(chain.residue_groups()) == 0:
-                model.remove_chain(chain=chain)
-    # Assign occupancies of 1.0 to all remaining atoms
-    new_occ = flex.double(hierarchy.atoms().size(), 1.0)
-    hierarchy.atoms().set_occ(new_occ)
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def molecular_weight(pdbin, first=False):
@@ -919,7 +1014,8 @@ def molecular_weight(pdbin, first=False):
     This function ignores water molecules.
     
     """
-    _, _, mw = _natm_nres_mw(pdbin, first)
+    hierarchy, _ = _cache(pdbin)
+    _, _, mw = _natm_nres_mw(hierarchy, first)
     return mw
 
 
@@ -943,56 +1039,9 @@ def num_atoms_and_residues(pdbin, first=False):
        The number of residues
 
     """
-    natoms, nresidues, _ = _natm_nres_mw(pdbin, first)
-    assert natoms > 0 and nresidues > 0
+    hierarchy, _ = _cache(pdbin)
+    natoms, nresidues, _ = _natm_nres_mw(hierarchy, first)
     return natoms, nresidues
-
-
-def _natm_nres_mw(pdbin, first=False):
-    """Function to extract the number of atoms, number of residues and molecular weight
-    from a PDB structure
-    """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    hierarchy = pdb_input.construct_hierarchy()
-
-    # Define storage variables
-    elements, residues = [], []
-    hydrogen_atoms, other_atoms = 0, 0
-    water_atoms, water_hydrogen_atoms = 0, 0
-    mw = 0
-    
-    # Pick chain
-    if first:
-        _first_chain_only(hierarchy)
-    
-    # Collect all the data using the hierarchy
-    for m in hierarchy.models():
-        for c in m.chains():
-            for rg in c.residue_groups():
-                resseq = None
-                for ag in rg.atom_groups():
-                    if ag.resname in three2one and resseq != rg.resseq:
-                        residues.append(ag.resname)
-                        resseq = rg.resseq
-                        hydrogen_atoms += chemistry.atomic_composition[ag.resname].H
-                    for atom in ag.atoms():
-                        if ag.resname.strip() == 'HOH' or ag.resname.strip() == 'WAT':
-                            water_hydrogen_atoms += (2.0 * atom.occ)
-                            water_atoms += (1.0 * atom.occ)
-                        else:
-                            elements.append((atom.element.strip(), atom.occ))
-
-    # Compute the molecular weight with respect to the occupancy
-    for element, occ in elements:
-        other_atoms += occ
-        mw += chemistry.periodic_table(element).weight() * occ
-    mw += hydrogen_atoms * chemistry.periodic_table('H').weight() 
-    
-    # Compute the number of atoms and number of residues
-    natoms = int(other_atoms + hydrogen_atoms + water_atoms + water_hydrogen_atoms - 0.5)
-    nresidues = len(residues)
-
-    return natoms, nresidues, mw
 
 
 def _parse_modres(modres_text):
@@ -1057,92 +1106,50 @@ def prepare_nmr_model(nmr_model_in, models_dir):
     return split_pdbs
 
 
-def reliable_sidechains(pdbin, pdbout):
-    """Only output non-backbone atoms for certain residues
+def rename_chains(pdbin, pdbout, fromChain, toChain):
+    """Rename chains
     
-    This function strips side chain atoms of residues not defined in the
-    following list:
-       ['MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
-
     Parameters
     ----------
     pdbin : str
        The path to the input PDB
     pdbout : str
        The path to the output PDB
+    from_chain : list, tuple
+       A list of reference chain names
+    to_chain : list, tuple
+       A list of target chain names
+    
+    Raises
+    ------
+    ValueError
+       Renaming lists need to be of equal shape
     
     """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
-    
-    # Remove sidechains that are in res_names where the atom name is not in atom_names
-    res_names = ['MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
-    atom_names = ['N', 'CA', 'C', 'O', 'CB']
-    select_string = "({residues}) or not ({residues}) and ({atoms})".format(
-        atoms=" or ".join(['name %s' % atm.lower() for atm in atom_names]),
-        residues=" or ".join(['resname %s' % res.upper() for res in res_names]),
-    )
-    hierarchy_new = _select(hierarchy, select_string)
-    
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy_new.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
-
-
-def rename_chains(pdbin=None, pdbout=None, fromChain=None, toChain=None):
-    """Rename Chains"""
-
-    assert len(fromChain) == len(toChain)
-
-    counter = 0
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
-
-    for model in hierarchy.models():
-        if toChain:
-            for chain in model.chains():
-                if counter < len(fromChain):
-                    if fromChain[0 + counter] == chain.id:
-                        chain.id = toChain[0 + counter]
-                        counter += 1
-
-    with open(pdbout, 'w') as f:
-        f.write("REMARK Original file:" + os.linesep)
-        f.write("REMARK   {0}".format(pdbin) + os.linesep)
-        if crystal_symmetry is not None:
-            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + os.linesep)
-        f.write(hierarchy.as_pdb_string(anisou=False))
-
-
-def remove_unwanted(hierarchy, residue_list):
-    """Remove any residues from the a hierarchy that can't be compared to a
-    list of residues"""
-
-    if len(residue_list) != 0:
-        # Remove residue groups that are in the NoNative list
-        for model in hierarchy.models():
-            for chain in model.chains():
-                for rg in chain.residue_groups():
-                    if rg.resseq_as_int() in residue_list:
-                        chain.remove_residue_group(rg)
-
-    return hierarchy
+    if len(fromChain) != len(toChain):
+        raise ValueError("Renaming lists need to be of equal shape")
+    hierarchy, symmetry = _cache(pdbin)
+    table = dict(zip(fromChain, toChain))
+    _rename_chains(hierarchy, table)
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def resseq(pdbin):
-    return _resseq(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
-
-
-def _resseq(hierarchy):
-    """Extract the sequence of residues from a pdb file."""
-    chain2data = _sequence_data(hierarchy)
-    return dict((k, chain2data[k][1]) for k in chain2data.keys())
+    """Get the residue sequence
+    
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    
+    Returns
+    -------
+    dict
+       A dictionary of chains and the corresponding sequences
+    
+    """
+    hierarchy, _ = _cache(pdbin)
+    return _resseq(hierarchy)
 
 
 def renumber_residues(pdbin, pdbout, start=1):
@@ -1158,27 +1165,9 @@ def renumber_residues(pdbin, pdbout, start=1):
        The starting number [default: 1]
     
     """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
-
+    hierarchy, symmetry = _cache(pdbin)
     _renumber(hierarchy, start)
-
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
-
-
-def _renumber(hierarchy, start):
-    """Renumber the residue sequence"""
-    for model in hierarchy.models():
-        for chain in model.chains():
-            for idx, residue_group in enumerate(chain.residue_groups()):
-                residue_group.resseq = idx + start
-    return
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
@@ -1193,53 +1182,23 @@ def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
        The path to the output PDB
     gaps : list
         List containing True/False for gaps
+    start : int, optional
+       The starting number [default: 1]
 
     """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
-
-    for model in hierarchy.models():
-        for chain in model.chains():
-            resseq = 0
-            for idx, is_gap in enumerate(gaps):
-                if is_gap:
-                    continue
-                residue_group = chain.residue_groups()[resseq]
-                residue_group.resseq = idx + start
-                resseq += 1
-    
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
+    hierarchy, symmetry = _cache(pdbin)
+    _renumber_residues_gaps(hierarchy,  gaps, start)
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def rog_side_chain_treatment(pdbin=None, pdbout=None, rog_data=None, del_orange=False):
     """Takes the ROG score from the input file and uses this to remove side chains
     from the corresponding pdb file"""
-
     resSeq_data = extract_resSeq(pdbin)
-
-    # Match the ROG data to the resSeq data
     scores = zip(resSeq_data, rog_data)
-
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
+    hierarchy, symmetry = _cache(pdbin)
     _rog_side_chain_treatment(hierarchy, scores, del_orange)
-
-    # Finally, write to pdbout
-    with open(pdbout, 'w') as f:
-        f.write("REMARK Original file:" + os.linesep)
-        f.write("REMARK   {0}".format(pdbin) + os.linesep)
-        if (crystal_symmetry is not None):
-            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + os.linesep)
-        f.write(hierarchy.as_pdb_string(anisou=False))
-    return
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def _rog_side_chain_treatment(hierarchy, scores, del_orange):
@@ -1282,9 +1241,7 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
        A list of residues to keep
 
     """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
+    hierarchy, symmetry = _cache(pdbin)
 
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
         print("pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin))
@@ -1311,12 +1268,7 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
         
         chain.remove_residue_group(residue_group)
 
-    with open(pdbout, 'w') as f:
-        f.write("REMARK Original file:" + os.linesep)
-        f.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f.write(hierarchy.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def sequence(pdbin):
@@ -1383,9 +1335,7 @@ def split_pdb(pdbin, directory=None):
     if directory is None: 
         directory = os.path.dirname(pdbin)
 
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
+    hierarchy, symmetry = _cache(pdbin)
 
     # Nothing to do
     n_models = hierarchy.models_size()
@@ -1395,21 +1345,16 @@ def split_pdb(pdbin, directory=None):
     output_files = []
     for k, model in enumerate(hierarchy.models()):
         k += 1
-        hierarchy_new = iotbx.pdb.hierarchy.root()
-        hierarchy_new.append_model(model.detached_copy())
+        hierarchy = iotbx.pdb.hierarchy.root()
+        hierarchy.append_model(model.detached_copy())
         if model.id == "":
             model_id = str(k)
         else:
             model_id = model.id.strip()
 
         output_file = ample_util.filename_append(pdbin, model_id, directory)
-        with open(output_file, 'w') as f_out:
-            f_out.write("REMARK Model %d of %d" % (k, n_models) + os.linesep)
-            f_out.write("REMARK Original file:" + os.linesep)
-            f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-            f_out.write(hierarchy_new.as_pdb_string(
-                anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-            ))
+        _save(output_file, hierarchy, crystal_symmetry=symmetry,
+              remarks=['Model %d of %d' % (k, n_models), 'Original file: %s' % pdbin])
         output_files.append(output_file)
 
     return output_files
@@ -1442,9 +1387,7 @@ def split_into_chains(pdbin, chain=None, directory=None):
     if directory is None: 
         directory = os.path.dirname(pdbin)
 
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
+    hierarchy, symmetry = _cache(pdbin)
     
     # Nothing to do
     n_models = hierarchy.models_size()
@@ -1457,20 +1400,14 @@ def split_into_chains(pdbin, chain=None, directory=None):
             continue
         if chain and not hchain.id == chain: 
             continue
-        hierarchy_new = iotbx.pdb.hierarchy.root()
-        model_new = iotbx.pdb.hierarchy.model()
-        hierarchy_new.append_model((model_new))
-        model_new.append_chain(hchain.detached_copy())
+        hierarchy = iotbx.pdb.hierarchy.root()
+        model = iotbx.pdb.hierarchy.model()
+        hierarchy.append_model((model))
+        model.append_chain(hchain.detached_copy())
 
         output_file = ample_util.filename_append(pdbin, hchain.id, directory)
-        with open(output_file, 'w') as f_out:
-            f_out.write("REMARK Original file:" + os.linesep)
-            f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-            f_out.write("REMARK Chain {0}".format(hchain.id) + os.linesep)
-            f_out.write(hierarchy_new.as_pdb_string(
-                anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-            ))
-        output_files.append(output_file)
+        _save(output_file, hierarchy, crystal_symmetry=symmetry,
+              remarks=['Original file: %s' % pdbin, 'Chain' % hchain.id])
 
     if not len(output_files): 
         raise RuntimeError("split_into_chains could not find any chains to split")
@@ -1481,8 +1418,7 @@ def split_into_chains(pdbin, chain=None, directory=None):
 def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
     """Rename any non-standard AA, remove solvent and only keep most probable conformation."""
 
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    hierarchy = pdb_input.construct_hierarchy()
+    hierarchy, symmetry = _cache(pdbin)
 
     # Remove solvents defined below
     solvents = {'ADE', 'CYT', 'GUA', 'INO', 'THY', 'URA', 'WAT', 'HOH', 'TIP', 'H2O', 'DOD', 'MOH'}
@@ -1508,8 +1444,6 @@ def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
 
     # Standardise AA names and then remove any remaining HETATMS
     std_residues(f.name, pdbout, del_hetatm=del_hetatm)
-
-    return
 
 
 def std_residues(pdbin, pdbout, del_hetatm=False):
@@ -1546,13 +1480,8 @@ def std_residues(pdbin, pdbout, del_hetatm=False):
 
     if del_hetatm: _strip(hierarchy, hetatm=True)
 
-    with open(pdbout, 'w') as f:
-        f.write("REMARK Original file:" + os.linesep)
-        f.write("REMARK   {0}".format(pdbin) + os.linesep)
-        if crystal_symmetry is not None:
-            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + os.linesep)
-        f.write(hierarchy.as_pdb_string(anisou=False))
+    _save(pdbout, hierarchy, crystal_symmetry=crystal_symmetry,
+          remarks=['Original file: %s' % pdbin])
     return
 
 
@@ -1576,34 +1505,9 @@ def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
         msg = "Define which atoms to strip"
         raise ValueError(msg)
 
-    pdb_input = iotbx.pdb.pdb_input(pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
-
+    hierarchy, symmetry = _cache(pdbin)
     _strip(hierarchy, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)
-
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
-
-
-def _strip(hierachy, hetatm=False, hydrogen=False, atom_types=[]):
-    """Remove all hetatoms from pdbfile"""
-    def remove_atom(atom, hetatm=False, hydrogen=False, atom_types=[]):
-        return (hetatm and atom.hetero) or (hydrogen and atom.element_is_hydrogen()) or atom.name.strip() in atom_types
-
-    for model in hierachy.models():
-        for chain in model.chains():
-            for residue_group in chain.residue_groups():
-                for atom_group in residue_group.atom_groups():
-                    to_del = [a for a in atom_group.atoms() if
-                              remove_atom(a, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)]
-                    for atom in to_del:
-                        atom_group.remove_atom(atom)
-    return
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: %s' % pdbin])
 
 
 def to_single_chain(inpath, outpath):
@@ -1682,23 +1586,14 @@ def translate(pdbin, pdbout, ftranslate):
        The vector of fractional coordinates to shift by
     
     """
-    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
-    crystal_symmetry = pdb_input.crystal_symmetry()
-    hierarchy = pdb_input.construct_hierarchy()
+    hierarchy, symmetry = _cache(pdbin)
 
     # Obtain information about the fractional coordinates
     crystal_info = get_info(pdbin).crystalInfo
-
     ftranslate = np.asarray([crystal_info.a, crystal_info.b, crystal_info.c]) * np.asarray(ftranslate)
-    for atom in hierarchy.atoms():
-        atom.set_xyz(np.asarray(atom.xyz) + ftranslate)
-
-    with open(pdbout, 'w') as f_out:
-        f_out.write("REMARK Original file:" + os.linesep)
-        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy.as_pdb_string(
-            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
-        ))
+    _translate(hierarchy, ftranslate)
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry,
+          remarks=['Original file: %s' % pdbin, 'Translated using: [%s]' % ", ".join(map(str, ftranslate))])
 
 
 if __name__ == "__main__":

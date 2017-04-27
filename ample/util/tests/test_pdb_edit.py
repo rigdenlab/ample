@@ -192,10 +192,10 @@ class Test(unittest.TestCase):
             "ATOM     68  CG  GLU A  10      19.043   6.797  -0.218  1.00 21.50           C",
             "ATOM     69  CD  GLU A  10      17.852   7.252   0.598  0.50 26.52           C",
             "ATOM     70  OE1 GLU A  10      17.710   6.852   1.763  0.50 21.11           O",
-            "ATOM     71  OE2 GLU A  10      17.047   8.032   0.047  0.50 28.78           O"
+            "ATOM     71  OE2 GLU A  10      17.047   8.032   0.047  0.50 28.78           O",
         ]
         pdb_edit.keep_residues(pdbin, pdbout, residue_range, chain_id)
-        lines_to_read = range(6, 51)
+        lines_to_read = range(5, 50)
         data = []
         with open(pdbout) as f:
             for i, line in enumerate(f):
