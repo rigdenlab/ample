@@ -227,6 +227,16 @@ logger = logging.getLogger()
 #
 #     return
 
+def _first_chain_only(h):
+    for i, m in enumerate(h.models()):
+        if i != 0:
+            h.remove_model(m)
+    m = h.models()[0]
+    for i, c in enumerate(m.chains()):
+        if i != 0:
+            m.remove_chain(c)
+
+
 def _select(h, sel):
     sel_cache = h.atom_selection_cache().selection(sel)
     return h.select(sel_cache)
@@ -1034,89 +1044,88 @@ def most_prob(hierarchy, always_keep_one_conformer=True):
 
 
 def molecular_weight(pdbin, first=False):
-    """Returns molecular weight of a pdb
-    Ignores water molecules.
+    """Determine the molecular weight of a pdb
+    
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    first : bool
+       Consider the first chain in the first model only [default: False]
+
+    Returns
+    -------
+    float
+       The molecular weight of the extracted atoms
+
+    Notes
+    -----
+    This function ignores water molecules.
+    
     """
-    _, _, mw = _num_atoms_residues_mw(pdbin, first)
+    _, _, mw = _natm_nres_mw(pdbin, first)
     return mw
 
 
 def num_atoms_and_residues(pdbin, first=False):
-    """Return number of atoms and residues in a pdb file.
+    """Determine the number of atoms and residues in a pdb file.
+    
     If all is True, return all atoms and residues, else just for the first chain in the first model
+
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    first : bool
+       Consider the first chain in the first model only [default: False]
+
+    Returns
+    -------
+    int
+       The number of atoms
+    int
+       The number of residues
+
     """
-
-    natoms, nresidues, _ = _num_atoms_residues_mw(pdbin, first)
-
+    natoms, nresidues, _ = _natm_nres_mw(pdbin, first)
     assert natoms > 0 and nresidues > 0
+    return natoms, nresidues
 
-    return (natoms, nresidues)
 
-
-def _num_atoms_residues_mw(pdbin, first=False):
-
+def _natm_nres_mw(pdbin, first=False):
+    """Function to extract the number of atoms, number of residues and molecular weight
+    from a PDB structure
+    """
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     hierarchy = pdb_input.construct_hierarchy()
 
-    elements = []
-    residues = []
-    hydrogen_atoms = 0
-    other_atoms = 0
-    water_hydrogen_atoms = 0
-    water_atoms = 0
+    # Define storage variables
+    elements, residues = [], []
+    hydrogen_atoms, other_atoms = 0, 0
+    water_atoms, water_hydrogen_atoms = 0, 0
     mw = 0
-
+    
+    # Pick chain
     if first:
-        model = hierarchy.models()[0]
-        for rg in model.chains()[0].residue_groups():
-            resseq = None
-
-            def have_amino_acid():
+        _first_chain_only(hierarchy)
+    
+    # Collect all the data using the hierarchy
+    for m in hierarchy.models():
+        for c in m.chains():
+            for rg in c.residue_groups():
+                resseq = None
                 for ag in rg.atom_groups():
-                    if ag.resname in three2one:
-                        return True
-                    return False
-
-            for ag in rg.atom_groups():
-                if have_amino_acid():
-                    if resseq != rg.resseq:
+                    if ag.resname in three2one and resseq != rg.resseq:
                         residues.append(ag.resname)
                         resseq = rg.resseq
                         hydrogen_atoms += chemistry.atomic_composition[ag.resname].H
+                    for atom in ag.atoms():
+                        if atom.hetero and ag.resname.strip() == "HOH":
+                            water_hydrogen_atoms += (2.0 * atom.occ)
+                            water_atoms += (1.0 * atom.occ)
+                        else:
+                            elements.append((atom.element.strip(), atom.occ))
 
-                for atom in ag.atoms():
-                    elements.append((atom.element.strip(), atom.occ))
-
-                    if atom.hetero and ag.resname.strip() == 'HOH':
-                        water_hydrogen_atoms += (2.0 * atom.occ)
-                        water_atoms += (1.0 * atom.occ)
-
-    else:
-        for model in hierarchy.models():
-            for chain in model.chains():
-                for rg in chain.residue_groups():
-                    resseq = None
-
-                    def have_amino_acid():
-                        for ag in rg.atom_groups():
-                            if ag.resname in three2one:
-                                return True
-                            return False
-
-                    for ag in rg.atom_groups():
-                        if have_amino_acid():
-                            if resseq != rg.resseq:
-                                residues.append(ag.resname)
-                                resseq = rg.resseq
-                                hydrogen_atoms += chemistry.atomic_composition[ag.resname].H 
-
-                        for atom in ag.atoms():
-                            if atom.hetero and ag.resname.strip() == 'HOH':
-                                    water_hydrogen_atoms += (2.0 * atom.occ)
-                                    water_atoms += (1.0 * atom.occ)
-                            else:
-                                elements.append((atom.element.strip(), atom.occ))
-    
     # Compute the molecular weight with respect to the occupancy
     for element, occ in elements:
         other_atoms += occ
@@ -1413,15 +1422,7 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
 
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
         print("pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin))
-
-        for i, m in enumerate(hierarchy.models()):
-            if i != 0:
-                hierarchy.remove_model(m)
-        
-        model = hierarchy.models()[0]
-        for i, c in enumerate(model.chains()):
-            if i != 0:
-                model.remove_chain(c)
+        _first_chain_only(hierarchy)
     
     chain = hierarchy.models()[0].chains()[0]
 

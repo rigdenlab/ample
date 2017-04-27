@@ -263,13 +263,13 @@ class Test(unittest.TestCase):
         self.assertEqual(data_2, reference_data_2)
         os.unlink(pdbout)
 
-    def test_molecular_weight(self):
+    def test_molecular_weight_1(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
         reference_data = 10279.861305117607
         molecular_weight = pdb_edit.molecular_weight(pdbin)
         self.assertEqual(reference_data, molecular_weight)
 
-    def test_most_prob(self):
+    def test_most_prob_1(self):
         # Keep the most probably conformer
         pdbin = os.path.join(self.testfiles_dir, "2UUI.pdb")
         pdb_input = iotbx.pdb.pdb_input(pdbin)
@@ -296,29 +296,22 @@ class Test(unittest.TestCase):
                           'N', 'C', 'O', 'CA', 'CB', 'CG', 'CD1', 'CD2']
 
         self.assertEqual(data, reference_data)
-        return
 
-    def test_num_atoms_and_residues(self):
-        # Extract the number of residues and atoms in a pdb
+    def test_num_atoms_and_residues_1(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
         ref_natoms = 1711
         ref_nresidues = 93
-
         natoms, nresidues = pdb_edit.num_atoms_and_residues(pdbin)
-
         self.assertEqual(natoms, ref_natoms)
         self.assertEqual(nresidues, ref_nresidues)
 
-        # Second test with first flag
+    def test_num_atoms_and_residues_2(self):
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
         ref_natoms = 497
         ref_nresidues = 31
-
         natoms, nresidues = pdb_edit.num_atoms_and_residues(pdbin, first=True)
-
         self.assertEqual(natoms, ref_natoms)
         self.assertEqual(nresidues, ref_nresidues)
-
-        return
 
     def test_rename_chains(self):
         # Test the function to rename chains
