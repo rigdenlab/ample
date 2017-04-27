@@ -8,8 +8,8 @@ __version__ = "2.0"
 
 import glob
 import logging
+import numpy as np
 import os
-import re
 import tempfile
 
 from cctbx.array_family import flex
@@ -31,29 +31,6 @@ logger = logging.getLogger()
 
 
 #  OLD CODE
-# def num_atoms_and_residues(pdbin, first=False):
-#     """"Return number of atoms and residues in a pdb file.
-#     If all is True, return all atoms and residues, else just for the first chain in the first model'
-#     """
-#     # pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
-#     # model = pdb_obj.hierarchy.models()[0]
-#     # return sum(  [ len( chain.residues() ) for chain in model.chains() ]  )
-#
-#     if not first:
-#         logfile = "rwcontents.log"
-#         _run_rwcontents(pdbin, logfile)
-#         natoms, nresidues, _ = _parse_rwcontents(logfile)
-#         # os.unlink(logfile)
-#     else:
-#         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
-#         model = pdb_obj.hierarchy.models()[0]
-#         nresidues = len(model.chains()[0].conformers()[0].residues())
-#         natoms = len(model.chains()[0].atoms())
-#
-#     assert natoms > 0 and nresidues > 0
-#
-#     return (natoms, nresidues)
-#
 # def rename_chains(inpdb=None, outpdb=None, fromChain=None, toChain=None):
 #     """Rename Chains
 #     """
@@ -126,106 +103,7 @@ logger = logging.getLogger()
 #     os.unlink(tmp1)
 #
 #     return retcode
-#
-# def Xstd_residues(pdbin, pdbout):
-#     """Switch any non-standard AA's to their standard names.
-#     We also remove any ANISOU lines.
-#     """
-#
-#     modres = []  # List of modres objects
-#     modres_names = {}  # list of names of the modified residues keyed by chainID
-#     gotModel = False  # to make sure we only take the first model
-#     reading = False  # If reading structure
-#
-#     pdbinf = open(pdbin, 'r')
-#     pdboutf = open(pdbout, 'w')
-#
-#     line = True  # Just for the first line
-#     while line:
-#
-#         # Read in the line
-#         line = pdbinf.readline()
-#
-#         # Skip any ANISOU lines
-#         if line.startswith("ANISOU"):
-#             continue
-#
-#         # Extract all MODRES DATA
-#         if line.startswith("MODRES"):
-#             modres.append(pdb_model.PdbModres(line))
-#
-#         # Only extract the first model
-#         if line.startswith("MODEL"):
-#             if gotModel:
-#                 raise RuntimeError, "Found additional model! {0}".format(line)
-#             else:
-#                 gotModel = True
-#
-#         # First time we hit coordinates we set up our data structures
-#         if not reading and (line.startswith("HETATM") or line.startswith("ATOM")):
-#             # There is a clever way to do this with list comprehensions but this is not it...
-#             for m in modres:
-#                 chainID = copy.copy(m.chainID)
-#                 if not modres_names.has_key(chainID):
-#                     modres_names[chainID] = []
-#                 if m.resName not in modres_names[chainID]:
-#                     modres_names[chainID].append(m.resName)
-#
-#             # Now we're reading
-#             reading = True
-#
-#         # Switch any residue names
-#         if len(modres):
-#             if line.startswith("HETATM"):
-#
-#                 hetatm = pdb_model.PdbHetatm(line)
-#
-#                 # See if this HETATM is in the chain we are reading and one of the residues to change
-#                 if hetatm.resName in modres_names[hetatm.chainID]:
-#                     for m in modres:
-#                         if hetatm.resName == m.resName and hetatm.chainID == m.chainID:
-#                             # Change this HETATM to an ATOM
-#                             atom = pdb_model.PdbAtom().fromHetatm(hetatm)
-#                             # Switch residue name
-#                             atom.resName = m.stdRes
-#                             # Convert to a line
-#                             line = atom.toLine() + "\n"
-#                             break
-#
-#         # Any HETATM have been dealt with so just process as usual
-#         if line.startswith("ATOM"):
-#             atom = pdb_model.PdbAtom(line)
-#
-#             if atom.resName not in three2one:
-#                 raise RuntimeError, "Unrecognised residue! {0}".format(line)
-#
-#         # Output everything else
-#         pdboutf.write(line)
-#
-#         # END reading loop
-#
-#     return
-#
-# def translate(inpdb=None, outpdb=None, ftranslate=None):
-#     """translate pdb
-#     args:
-#     ftranslate -- vector of fractional coordinates to shift by
-#     """
-#
-#     logfile = outpdb + ".log"
-#     cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
-#
-#     # Build up stdin
-#     stdin = 'translate * frac {0:F} {1:F} {2:F}'.format(ftranslate[0], ftranslate[1], ftranslate[2])
-#     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-#
-#     if retcode == 0:
-#         # remove temporary files
-#         os.unlink(logfile)
-#     else:
-#         raise RuntimeError, "Error translating PDB"
-#
-#     return
+
 
 def _first_chain_only(h):
     for i, m in enumerate(h.models()):
@@ -286,6 +164,115 @@ def calpha_only(pdbin, pdbout):
         f_out.write(hierarchy_new.as_pdb_string(
             anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
         ))
+
+
+def check_pdb_directory(directory, single=True, allsame=True, sequence=None):
+    """Check a directory of structure files
+
+    Parameters
+    ----------
+    directory : str
+       The path to the structure file directory
+    single : bool, optional
+       Each file contains a single model [default: True]
+    allsame : bool, optional
+       All structures contain the same sequence [default: True]
+    sequence : str, optional
+       The sequence of all models
+
+    Returns
+    -------
+    bool
+       A status describing if all structure files are okay
+
+    """
+    logger.info("Checking pdbs in directory: %s", directory)
+    if os.path.isdir(directory):
+        models = glob.glob(os.path.join(directory, "*.pdb"))
+        if len(models) > 0 and not (single or sequence or allsame):
+            return True
+        elif len(models) > 0:
+            return check_pdbs(models, sequence=sequence, single=single, allsame=allsame)
+        else:
+            logger.critical("Cannot find any pdb files in directory: %s", directory)
+    else:
+        logger.critical("Cannot find directory: %s", directory)
+    return False
+
+
+def check_pdbs(models, single=True, allsame=True, sequence=None):
+    """Check a set of structure files
+
+    Parameters
+    ----------
+    models : list
+       A list of paths to structure files
+    single : bool, optional
+       Each file contains a single model [default: True]
+    allsame : bool, optional
+       All structures contain the same sequence [default: True]
+    sequence : str, optional
+       The sequence of all models
+
+    Returns
+    -------
+    bool
+       A status describing if all structure files are okay
+
+    """
+    # Get sequence from first model
+    if allsame and not sequence:
+        try:
+            h = iotbx.pdb.pdb_input(models[0]).construct_hierarchy()
+        except Exception as e:
+            s = "*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0], e)
+            logger.critical(s)
+            return False
+        sequence = _sequence1(h)  # only one model/chain
+
+    # Store info as simple array - errors, multi, no_protein, sequence_err
+    summary = np.zeros((0, 5), dtype=np.uint8)
+    for idx, pdb in enumerate(models):
+        entry = np.zeros((1, 5), dtype=np.uint8)
+        entry[0][0] = idx
+        try:
+            h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
+        except Exception:
+            entry[0][1] = 1
+            continue
+        if single and h.models_size() != 1 and h.models()[0].chains_size() != 1:
+            entry[0][2] = 1
+        elif single and not h.models()[0].chains()[0].is_protein():
+            entry[0][3] = 1
+        elif sequence and sequence != _sequence(h).values()[0]:
+            entry[0][4] = 1
+        summary = np.concatenate((summary, entry), axis=0)
+
+    # The summary table has no error messages (indicated by 0s)
+    if np.count_nonzero(summary[:, 1:]) == 0:
+        logger.info("check_pdb_directory - pdb files all seem valid")
+        return True
+    # The summary table has error messages (indicated by non-0s)
+    else:
+        s = "\n*** ERROR ***\n"
+        if np.count_nonzero(summary[:, 1]) != 0:
+            s += "The following pdb files have errors:\n\n"
+            for idx in np.nonzero(summary[:, 1])[0]:
+                s += "\t{0}\n".format(models[idx])
+        elif np.count_nonzero(summary[:, 2]) != 0:
+            s += "The following pdb files have more than one chain:\n\n"
+            for idx in np.nonzero(summary[:, 2])[0]:
+                s += "\t{0}\n".format(models[idx])
+        elif np.count_nonzero(summary[:, 3]) != 0:
+            s += "The following pdb files do not appear to contain any protein:\n\n"
+            for idx in np.nonzero(summary[:, 3])[0]:
+                s += "\t{0}\n".format(models[idx])
+        elif np.count_nonzero(summary[:, 4]) != 0:
+            s += "The following pdb files have diff sequences from the ref sequence: {0}\n\n".format(sequence)
+            for idx in np.nonzero(summary[:, 4])[0]:
+                s += "\t{0}\n".format(models[idx])
+        logger.critical(s)
+        return False
 
 
 def extract_chain(pdbin, pdbout, chain_id, new_chain_id=None, c_alpha=False, renumber=False):
@@ -390,16 +377,22 @@ def extract_resSeq(pdbin, chain_id=None):
     return [rg.resseq_as_int() for rg in chains[chain_id].residue_groups()]
 
 
-def keep_residues(pdbin, pdbout, residue_range, chainID):
+def keep_residues(pdbin, pdbout, residue_range, chain_id):
     """Given a range relative to the first residue for a specific chain ID,
     keeps only the residues in that given range
 
-    args:
-    pdbin
-    pdbout
-    residue_range e.g. [20, 40]
-    chainID"""
-
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+    residue_range : list, tuple
+       The range of residues to keep
+    chain_id : str
+       The chain to extract
+    
+    """
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     crystal_symmetry = pdb_input.crystal_symmetry()
     hierarchy = pdb_input.construct_hierarchy()
@@ -407,7 +400,7 @@ def keep_residues(pdbin, pdbout, residue_range, chainID):
     # Only keep the specified chain ID
     for model in hierarchy.models():
         for chain in model.chains():
-            if chain.id != chainID:
+            if chain.id != chain_id:
                 model.remove_chain(chain=chain)
 
     # Renumber the chain
@@ -425,104 +418,12 @@ def keep_residues(pdbin, pdbout, residue_range, chainID):
     _strip(hierarchy, hetatm=True)
 
     # Write to file
-    with open(pdbout, 'w') as f:
-        f.write("REMARK Original file:" + os.linesep)
-        f.write("REMARK   {0}".format(pdbin) + os.linesep)
-        if crystal_symmetry is not None:
-            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + os.linesep)
-        f.write(hierarchy.as_pdb_string(anisou=False))
-    return
-
-
-def check_pdb_directory(directory, single=True, allsame=True, sequence=None):
-    logger.info("Checking pdbs in directory: %s", directory)
-    if not os.path.isdir(directory):
-        logger.critical("Cannot find directory: %s", directory)
-        return False
-    models = glob.glob(os.path.join(directory, "*.pdb"))
-    if not len(models):
-        logger.critical("Cannot find any pdb files in directory: %s", directory)
-        return False
-    if not (single or sequence or allsame): return True
-    return check_pdbs(models, sequence=sequence, single=single, allsame=allsame)
-
-
-def check_pdbs(models, single=True, allsame=True, sequence=None):
-    if allsame and not sequence:
-        # Get sequence from first model
-        try:
-            h = iotbx.pdb.pdb_input(models[0]).construct_hierarchy()
-        except Exception, e:
-            s = "*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0], e)
-            logger.critical(s)
-            return False
-        sequence = _sequence1(h)  # only one model/chain
-    errors = []
-    multi = []
-    no_protein = []
-    sequence_err = []
-    for pdb in models:
-        try:
-            h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
-        except Exception, e:
-            errors.append((pdb, e))
-            continue
-        if not single: continue
-        if not (h.models_size() == 1 and h.models()[0].chains_size() == 1):
-            multi.append(pdb)
-            continue
-        # single chain from one model so check is protein
-        if not h.models()[0].chains()[0].is_protein():
-            no_protein.append(pdb)
-            continue
-        if sequence:
-            s = _sequence1(h)  # only one chain/model
-            if not s == sequence: sequence_err.append((pdb, s))
-
-    if not (len(errors) or len(multi) or len(sequence_err) or len(no_protein)):
-        logger.info("check_pdb_directory - pdb files all seem valid")
-        return True
-
-    s = "\n"
-    if len(errors):
-        s = "*** ERROR ***\n"
-        s += "The following pdb files have errors:\n\n"
-        for pdb, e in errors:
-            s += "{0}: {1}\n".format(pdb, e)
-
-    if len(multi):
-        s += "\n"
-        s += "The following pdb files have more than one chain:\n\n"
-        for pdb in multi:
-            s += "{0}\n".format(pdb)
-
-    if len(no_protein):
-        s += "\n"
-        s += "The following pdb files do not appear to contain any protein:\n\n"
-        for pdb in no_protein:
-            s += "{0}\n".format(pdb)
-
-    if len(sequence_err):
-        s += "\n"
-        s += "The following pdb files have differing sequences from the reference sequence:\n\n{0}\n\n".format(sequence)
-        for pdb, seq in sequence_err:
-            s += "PDB: {0}\n{1}\n".format(pdb, seq)
-
-    logger.critical(s)
-    return False
-
-
-def extract_header_pdb_code(pdb_input):
-    for line in pdb_input.title_section():
-        if line.startswith("HEADER ") and len(line) >= 65: return line[62:66]
-    return None
-
-
-def extract_header_title(pdb_input):
-    for line in pdb_input.title_section():
-        if line.startswith('TITLE'): return line[10:-1].strip()
-    return None
+    with open(pdbout, 'w') as f_out:
+        f_out.write("REMARK Original file:" + os.linesep)
+        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
+        f_out.write(hierarchy.as_pdb_string(
+            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
+        ))
 
 
 def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
@@ -1347,7 +1248,7 @@ def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
     with open(pdbout, 'w') as f_out:
         f_out.write("REMARK Original file:" + os.linesep)
         f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
-        f_out.write(hierarchy_new.as_pdb_string(
+        f_out.write(hierarchy.as_pdb_string(
             anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
         ))
 
@@ -1587,7 +1488,6 @@ def split_into_chains(pdbin, chain=None, directory=None):
         raise RuntimeError("split_into_chains only works with single-model pdbs!")
 
     output_files = []
-    n_chains = len(hierarchy.models()[0].chains())
     for i, hchain in enumerate(hierarchy.models()[0].chains()):
         if not hchain.is_protein():
             continue
@@ -1656,7 +1556,7 @@ def std_residues(pdbin, pdbout, del_hetatm=False):
     crystal_symmetry = pdb_input.crystal_symmetry()
 
     # Get MODRES Section & build up dict mapping the changes
-    modres_text = [l.strip() for l in pdb_input.primary_structure_section() \
+    modres_text = [l.strip() for l in pdb_input.primary_structure_section()
                    if l.startswith("MODRES")]
     modres = {}
     for id, resname, chain, resseq, icode, stdres, comment in _parse_modres(modres_text):
@@ -1693,27 +1593,41 @@ def std_residues(pdbin, pdbout, del_hetatm=False):
 
 
 def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
-    assert hetatm or hydrogen or atom_types, "Need to set what to strip!"
+    """Remove atom types from a structure file
+    
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+       
+    Raises
+    ------
+    ValueError
+       Define which atoms to strip
+    
+    """
+    if not (hetatm or hydrogen or atom_types):
+        msg = "Define which atoms to strip"
+        raise ValueError(msg)
 
     pdb_input = iotbx.pdb.pdb_input(pdbin)
     crystal_symmetry = pdb_input.crystal_symmetry()
+    hierarchy = pdb_input.construct_hierarchy()
 
-    hierachy = pdb_input.construct_hierarchy()
-    _strip(hierachy, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)
+    _strip(hierarchy, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)
 
-    with open(pdbout, 'w') as f:
-        f.write("REMARK Original file:\n")
-        f.write("REMARK   {0}\n".format(pdbin))
-        if crystal_symmetry is not None:
-            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + os.linesep)
-        f.write(hierachy.as_pdb_string(anisou=False))
-    return
+    with open(pdbout, 'w') as f_out:
+        f_out.write("REMARK Original file:" + os.linesep)
+        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
+        f_out.write(hierarchy.as_pdb_string(
+            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
+        ))
 
 
 def _strip(hierachy, hetatm=False, hydrogen=False, atom_types=[]):
     """Remove all hetatoms from pdbfile"""
-
     def remove_atom(atom, hetatm=False, hydrogen=False, atom_types=[]):
         return (hetatm and atom.hetero) or (hydrogen and atom.element_is_hydrogen()) or atom.name.strip() in atom_types
 
@@ -1790,48 +1704,37 @@ def to_single_chain(inpath, outpath):
 
     o.close()
 
-    return
 
-
-def translate(pdbin=None, pdbout=None, ftranslate=None):
-    """translate PDB
-    args:
-    ftranslate -- vector of fractional coordinates to shift by"""
-
+def translate(pdbin, pdbout, ftranslate):
+    """Translate all atoms in a structure file by the provided vector
+    
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+    ftranslate : list, tuple
+       The vector of fractional coordinates to shift by
+    
+    """
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     crystal_symmetry = pdb_input.crystal_symmetry()
     hierarchy = pdb_input.construct_hierarchy()
 
     # Obtain information about the fractional coordinates
-    info = get_info(pdbin)
-    crystal_info = info.crystalInfo
+    crystal_info = get_info(pdbin).crystalInfo
 
-    _translate(hierarchy, ftranslate, crystal_info)
+    ftranslate = np.asarray([crystal_info.a, crystal_info.b, crystal_info.c]) * np.asarray(ftranslate)
+    for atom in hierarchy.atoms():
+        atom.set_xyz(np.asarray(atom.xyz) + ftranslate)
 
-    with open(pdbout, 'w') as f:
-        f.write("REMARK Original file:" + os.linesep)
-        f.write("REMARK   {0}".format(pdbin) + os.linesep)
-        if crystal_symmetry is not None:
-            f.write(iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                              write_scale_records=True) + os.linesep)
-        f.write(hierarchy.as_pdb_string(anisou=False))
-
-    return
-
-
-def _translate(hierarchy, ftranslate, crystal_info):
-    # mulitplies frac by ftranslate
-    frac = [crystal_info.a, crystal_info.b, crystal_info.c]
-    ftranslate = [(i * j) for (i, j) in zip(frac, ftranslate)]
-
-    for model in hierarchy.models():
-        for chain in model.chains():
-            for rg in chain.residue_groups():
-                for ag in rg.atom_groups():
-                    for atom in ag.atoms():
-                        new_set = [(i + j) for (i, j) in zip(atom.xyz, ftranslate)]
-                        atom.set_xyz(new_set)
-    return
+    with open(pdbout, 'w') as f_out:
+        f_out.write("REMARK Original file:" + os.linesep)
+        f_out.write("REMARK   {0}".format(pdbin) + os.linesep)
+        f_out.write(hierarchy.as_pdb_string(
+            anisou=False, write_scale_records=True, crystal_symmetry=crystal_symmetry
+        ))
 
 
 if __name__ == "__main__":

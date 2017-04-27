@@ -693,16 +693,10 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
         self.assertEqual(resnames, ref)
         #os.unlink(pdbout)
 
-    def test_translate(self):
-        # Test a translation function on a pdb file
-
-        #######################################################################
-        # Test case 1
-        #######################################################################
+    def test_translate_1(self):
         ftranslate = [1, 2, -1]
         pdbin = os.path.join(self.testfiles_dir, "2UUI.pdb")
         pdbout = "tmp_2UUI.pdb"
-
         reference_data = ["ATOM      1  N   MET A  -5     212.925 283.416-201.620  1.00 60.47           N",
                           "ATOM      2  CA  MET A  -5     214.345 283.308-201.183  1.00 60.38           C",
                           "ATOM      3  C   MET A  -5     215.036 284.648-201.449  1.00 59.70           C",
@@ -716,7 +710,6 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                           ]
 
         pdb_edit.translate(pdbin, pdbout, ftranslate)
-
         count = 0
         data = []
         with open(pdbout) as f:
@@ -728,9 +721,8 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                         count += 1
                     else:
                         continue
-        os.unlink(pdbout)
         self.assertEqual(data, reference_data)
-        return
+        os.unlink(pdbout)
 
 
 if __name__ == "__main__":
