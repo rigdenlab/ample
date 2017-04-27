@@ -90,7 +90,7 @@ def _natm_nres_mw(hierarchy, first=False):
     from a PDB structure
     """
     # Define storage variables
-    elements, residues = [], []
+    natm, nres, mw = 0, 0, 0
     hydrogen_atoms, other_atoms = 0, 0
     water_atoms, water_hydrogen_atoms = 0, 0
     mw = 0
@@ -106,7 +106,7 @@ def _natm_nres_mw(hierarchy, first=False):
                 resseq = None
                 for ag in rg.atom_groups():
                     if ag.resname in three2one and resseq != rg.resseq:
-                        residues.append(ag.resname)
+                        nres += 1
                         resseq = rg.resseq
                         hydrogen_atoms += chemistry.atomic_composition[ag.resname].H
                     for atom in ag.atoms():
@@ -114,19 +114,15 @@ def _natm_nres_mw(hierarchy, first=False):
                             water_hydrogen_atoms += (2.0 * atom.occ)
                             water_atoms += (1.0 * atom.occ)
                         else:
-                            elements.append((atom.element.strip(), atom.occ))
+                            other_atoms += atom.occ
+                            mw += chemistry.periodic_table(atom.element.strip()).weight() * atom.occ
 
-    # Compute the molecular weight with respect to the occupancy
-    for element, occ in elements:
-        other_atoms += occ
-        mw += chemistry.periodic_table(element).weight() * occ
     mw += hydrogen_atoms * chemistry.periodic_table('H').weight()
 
     # Compute the number of atoms and number of residues
-    natoms = int(other_atoms + hydrogen_atoms + water_atoms + water_hydrogen_atoms - 0.5)
-    nresidues = len(residues)
+    natm = int(other_atoms + hydrogen_atoms + water_atoms + water_hydrogen_atoms - 0.5)
 
-    return natoms, nresidues, mw
+    return natm, nres, mw
 
 
 def _rename_chains(hierarchy, table):
