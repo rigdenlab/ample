@@ -10,7 +10,7 @@ import glob
 import logging
 import numpy as np
 import os
-import tempfile
+import warnings
 
 from cctbx.array_family import flex
 
@@ -517,7 +517,7 @@ def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
                 targetpdb
             ))
             # Now we do our keep matching
-    tmp1 = ample_util.tmp_file_name() + ".pdb"  # pdbcur insists names have a .pdb suffix
+    tmp1 = ample_util.tmp_file_name(suffix=".pdb")  # pdbcur insists names have a .pdb suffix
 
     _keep_matching(refpdb, targetpdb, tmp1, resSeqMap=resSeqMap)
 
@@ -1356,14 +1356,14 @@ def split_pdb(pdbin, directory=None):
     return output_files
 
 
-def split_into_chains(pdbin, chain=None, directory=None):
+def split_into_chains(pdbin, chain=None, chain_id=None, directory=None):
     """Split a pdb file into its separate chains
     
     Parameters
     ----------
     pdbin : str
        The path to the input PDB
-    chain : str, optional
+    chain_id : str, optional
        Specify a single chain to extract 
     directory : str, optional
        A path to a directory to store models in
@@ -1383,6 +1383,10 @@ def split_into_chains(pdbin, chain=None, directory=None):
     if directory is None: 
         directory = os.path.dirname(pdbin)
 
+    if chain:
+        warnings.warn("Keyword deprecated - please use chain_id instead")
+        chain_id = chain
+
     hierarchy, symmetry = _cache(pdbin)
     
     # Nothing to do
@@ -1394,11 +1398,11 @@ def split_into_chains(pdbin, chain=None, directory=None):
     for i, hchain in enumerate(hierarchy.models()[0].chains()):
         if not hchain.is_protein():
             continue
-        if chain and not hchain.id == chain: 
+        if chain_id and chain_id != hchain.id:
             continue
         hierarchy = iotbx.pdb.hierarchy.root()
         model = iotbx.pdb.hierarchy.model()
-        hierarchy.append_model((model))
+        hierarchy.append_model(model)
         model.append_chain(hchain.detached_copy())
 
         output_file = ample_util.filename_append(pdbin, hchain.id, directory)
@@ -1411,42 +1415,62 @@ def split_into_chains(pdbin, chain=None, directory=None):
     return output_files
 
 
-def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
-    """Rename any non-standard AA, remove solvent and only keep most probable conformation."""
+def standardise(pdbin, pdbout, chain=None, chain_id=None, del_hetatm=False):
+    """Standardize a PDB input structure
+    
+    Standarization includes:
+        - renaming of any non-standard AA
+        - removal of solvent
+        - deletion of less probable rotamer conformations
+    
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+    chain_id : str
+       The chain to extract
+    del_hetatm : bool
+       Remove HETATM entries
+    
+    """
+    if chain:
+        warnings.warn("Keyword deprecated - please use chain_id instead")
+        chain_id = chain
 
     hierarchy, symmetry = _cache(pdbin)
 
     # Remove solvents defined below
-    solvents = {'ADE', 'CYT', 'GUA', 'INO', 'THY', 'URA', 'WAT', 'HOH', 'TIP', 'H2O', 'DOD', 'MOH'}
-    for model in hierarchy.models():
-        for c in model.chains():
-            for rg in c.residue_groups():
-                if rg.unique_resnames()[0] in solvents:
-                    c.remove_residue_group(rg)
+    sol_select = " or ".join(
+        ["resname {0}".format(sol) for sol in
+        {'ADE', 'CYT', 'GUA', 'INO', 'THY', 'URA', 'WAT', 'HOH', 'TIP', 'H2O', 'DOD', 'MOH'}
+    ])
+    sol_exclude = "not ({0})".format(sol_select)
+    hierarchy = _select(hierarchy, sol_exclude)
 
     # Keep the most probably conformer
     _most_prob(hierarchy, True)
 
     # Extract one of the chains
-    if chain:
-        for model in hierarchy.models():
-            for c in model.chains():
-                if c.id != chain:
-                    model.remove_chain(c)
+    if chain_id:
+        hierarchy = _select(hierarchy, "chain {0}".format(chain))
 
-    f = tempfile.NamedTemporaryFile("w", delete=False)
-    f.write(hierarchy.as_pdb_string(anisou=False))
-    f.close()
+    tmpf = ample_util.tmp_file_name(delete=False, suffix=".pdb")
+    _save(tmpf, hierarchy)
 
     # Standardise AA names and then remove any remaining HETATMS
-    std_residues(f.name, pdbout, del_hetatm=del_hetatm)
+    std_residues(tmpf, pdbout, del_hetatm=del_hetatm)
+    os.unlink(tmpf)
 
 
 def std_residues(pdbin, pdbout, del_hetatm=False):
     """Map all residues in MODRES section to their standard counterparts
     optionally delete all other HETATMS"""
 
+    # TODO: Update _cache() to return pdb_input
     pdb_input = iotbx.pdb.pdb_input(pdbin)
+    hierarchy = pdb_input.construct_hierarchy()
     crystal_symmetry = pdb_input.crystal_symmetry()
 
     # Get MODRES Section & build up dict mapping the changes
@@ -1458,7 +1482,6 @@ def std_residues(pdbin, pdbout, del_hetatm=False):
             modres[chain] = {}
             modres[chain][int(resseq)] = (resname, stdres)
 
-    hierarchy = pdb_input.construct_hierarchy()
     for model in hierarchy.models():
         for chain in model.chains():
             for residue_group in chain.residue_groups():
@@ -1467,18 +1490,17 @@ def std_residues(pdbin, pdbout, del_hetatm=False):
                     resname = atom_group.resname
                     if chain.id in modres and resseq in modres[chain.id] and modres[chain.id][resseq][0] == resname:
                         # Change modified name to std name
-                        # assert modres[chain.id][resseq][0]==resname,\
-                        # "Unmatched names: {0} : {1}".format(modres[chain.id][resseq][0],resname)
                         atom_group.resname = modres[chain.id][resseq][1]
                         # If any of the atoms are hetatms, set them to be atoms
                         for atom in atom_group.atoms():
-                            if atom.hetero: atom.hetero = False
+                            if atom.hetero:
+                                atom.hetero = False
 
-    if del_hetatm: _strip(hierarchy, hetatm=True)
+    if del_hetatm:
+        _strip(hierarchy, hetatm=True)
 
     _save(pdbout, hierarchy, crystal_symmetry=crystal_symmetry,
           remarks=['Original file: %s' % pdbin])
-    return
 
 
 def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
