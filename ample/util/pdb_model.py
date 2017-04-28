@@ -427,47 +427,93 @@ class OriginInfo( object ):
         return
 
 
-
 class CrystalInfo(object):
+    """Object to store crystal info"""
+
     def __init__(self, line=None):
-        """foo"""
-        
-        self._reset()
-        
+        """Instantiate a new :obj:`CrystalInfo` object"""
+        self._unit_cell = None
+        self._space_group = None
+        self._z = None
         if line:
-            self.fromLine( line )
-        
-        return
-    
-    def _reset( self ):
-        
-        self.a = None
-        self.b = None
-        self.c = None
-        self.alpha = None
-        self.beta = None
-        self.gamma = None
-        self.spaceGroup = None
-        self.z = None
-        
-        return
-    
-    def fromLine(self, line ):
-        
-        self.a = float(line[6:15].strip())
-        self.b = float( line[15:24].strip() )
-        self.c = float( line[24:33].strip() )
-        self.alpha = float( line[33:40] )
-        self.beta = float( line[40:47] )
-        self.gamma = float( line[47:54] )
+            self.fromLine(line)
+
+    @property
+    def unit_cell(self):
+        """The unit cell parameters"""
+        return self._unit_cell
+
+    @unit_cell.setter
+    def unit_cell(self, uc):
+        """Define the unit cell parameters"""
+        self._unit_cell = uc
+
+    @property
+    def a(self):
+        """The unit cell a parameter"""
+        return self._unit_cell[0]
+
+    @property
+    def b(self):
+        """The unit cell b parameter"""
+        return self._unit_cell[1]
+
+    @property
+    def c(self):
+        """The unit cell c parameter"""
+        return self._unit_cell[2]
+
+    @property
+    def alpha(self):
+        """The unit cell alpha-angle parameter"""
+        return self._unit_cell[3]
+
+    @property
+    def beta(self):
+        """The unit cell beta-angle parameter"""
+        return self._unit_cell[4]
+
+    @property
+    def gamma(self):
+        """The unit cell gamma-angle parameter"""
+        return self._unit_cell[5]
+
+    @property
+    def spaceGroup(self):
+        """The space group"""
+        return self._space_group
+
+    @spaceGroup.setter
+    def spaceGroup(self, sg):
+        """Define the space group"""
+        self._space_group = sg
+
+    @property
+    def z(self):
+        """The z parameter"""
+        return self._z
+
+    @z.setter
+    def z(self, v):
+        """Define the z parameter"""
+        if isinstance(v, int):
+            self._z = v
+        elif isinstance(v, str):
+            self._z = int(v.strip())
+
+    def fromLine(self, line):
+        """Create a :obj:`CrystalInfo` object from a line"""
+        self.unit_cell = [
+            float(line[6:15].strip()), float(line[15:24].strip()), float(line[24:33].strip()),
+            float(line[33:40]), float(line[40:47]), float(line[47:54]),
+        ]
         self.spaceGroup = line[55:66].strip()
         try:
-            self.z = int( line[66:70] )
+            self.z = line[66:]
         except ValueError:
             # Z-info could be missing (shelxe output pdb)
             pass
-        
-        return
+
 
 class PdbInfo(object):
     """A class to hold information extracted from a PDB file"""
