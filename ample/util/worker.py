@@ -1,8 +1,10 @@
-'''
-Created on Feb 28, 2013
+"""Worker functions for job execution"""
 
-@author: jmht
-'''
+from __future__ import print_function
+
+__author__ = "Jens Thomas"
+__date__ = "28 Feb 2013"
+__version__ = "1.0"
 
 import multiprocessing
 import os
@@ -10,38 +12,44 @@ import sys
 
 from ample.util import ample_util
 
+
 def worker(inqueue, early_terminate=False, check_success=None):
-    """
-    Worker process to run MrBump jobs until no more left.
+    """Worker process to run MrBump jobs until no more left.
 
-    Args:
-    inqueue -- a python Queue object
-    early_terminate -- bool - terminate on first success or continue running
+    This function keeps looping over the inqueue, removing jobs from the 
+    inqueue until there are no more left. It checks if a jobs has succeeded
+    and if so it will terminate.
 
-    Returns:
-    0 if molecular replacement worked
-    1 if nothing found
-
-    We keep looping, removing jobs from the inqueue until there are no more left.
-
-    REM: This needs to import the main module that it lives in so maybe this should
+    Parameters
+    ----------
+    inqueue : :obj:`Queue`
+       A Python Queue object
+    early_terminate : bool
+       Terminate on first success or continue running
+    check_success : callable
+       A callable to check the success status of a job
+    
+    Warnings
+    --------
+    This needs to import the main module that it lives in so maybe this should
     live in a separate module?
+
     """
+    if early_terminate:
+        assert callable(check_success)
 
-    if early_terminate: assert callable(check_success)
-
-    success=True
+    success = True
     while True:
         if inqueue.empty():
-            print "worker {0} got empty inqueue".format(multiprocessing.current_process().name)
-            if success: sys.exit(0)
-            else: sys.exit(1)
+            print("worker {0} got empty inqueue".format(multiprocessing.current_process().name))
+            rcode = 0 if success else 1
+            sys.exit(rcode)
 
         # Got a script so run
         job = inqueue.get()
 
         # Get name from script
-        print "Worker {0} running job {1}".format (multiprocessing.current_process().name, job)
+        print("Worker {0} running job {1}".format(multiprocessing.current_process().name, job))
         directory, sname = os.path.split(job)
         jobname = os.path.splitext(sname)[0]
         
@@ -52,21 +60,15 @@ def worker(inqueue, early_terminate=False, check_success=None):
         # Can we use the retcode to check?
         # REM - is retcode object
         if retcode != 0:
-            print "WARNING! Worker {0} got retcode {1}".format(multiprocessing.current_process().name, retcode)
-            success=False
-#         else:
-#             print "Worker {0} got successful retcode {1}".format( multiprocessing.current_process().name, retcode )
+            print("WARNING! Worker {0} got retcode {1}".format(multiprocessing.current_process().name, retcode))
+            success = False
 
         # Now check the result if early terminate
         if early_terminate:
-            if check_success( job ):
-                print "Worker {0} job succeeded".format(multiprocessing.current_process().name)
-                #return 0
+            if check_success(job):
+                print("Worker {0} job succeeded".format(multiprocessing.current_process().name))
                 sys.exit(0)
 
-    print "worker {0} FAILED!".format(multiprocessing.current_process().name)
-    #return 1
+    print("worker {0} FAILED!".format(multiprocessing.current_process().name))
     sys.exit(1)
-##End worker
 
-# No tests here as the main module needs to be importable
