@@ -234,6 +234,39 @@ def _select(hierarchy, construct):
     return hierarchy.select(selection)
 
 
+def _sequence(hierarchy):
+    """Extract the sequence of residues from a pdb file."""
+    chain2data = _sequence_data(hierarchy)
+    return dict((k, chain2data[k][0]) for k in chain2data.keys())
+
+
+def _sequence1(hierarchy):
+    """Return sequence of the first chain"""
+    d = _sequence(hierarchy)
+    return d[sorted(d.keys())[0]]
+
+
+def _sequence_data(hierarchy):
+    """Extract the sequence of residues and resseqs from a pdb file."""
+    chain2data = {}
+    for chain in set(hierarchy.models()[0].chains()):  # only the first model
+        if not chain.is_protein():
+            continue
+        got = False
+        seq = ""
+        resseq = []
+        for residue in chain.conformers()[0].residues():  # Just look at the first conformer
+            # See if any of the atoms are non-hetero - if so we add this residue
+            if any([not atom.hetero for atom in residue.atoms()]):
+                got = True
+                seq += three2one[residue.resname]
+                # resseq.append(int(residue.resseq.strip()))
+                resseq.append(residue.resseq_as_int())
+        if got:
+            chain2data[chain.id] = (seq, resseq)
+    return chain2data
+
+
 def _strip(hierarchy, reset_i_seq=True, hetatm=False, hydrogen=False, atom_types=[]):
     """Remove all hetatoms from pdbfile"""
     for m in hierarchy.models():
@@ -1243,42 +1276,37 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
 
 
 def sequence(pdbin):
+    """Get the residue sequence
+    
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    
+    Returns
+    -------
+    dict
+       A dictionary of chains and the corresponding sequences
+
+    """
     return _sequence(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
 
 
-def _sequence(hierarchy):
-    """Extract the sequence of residues from a pdb file."""
-    chain2data = _sequence_data(hierarchy)
-    return dict((k, chain2data[k][0]) for k in chain2data.keys())
-
-
-def _sequence1(hierarchy):
-    """Return sequence of the first chain"""
-    d = _sequence(hierarchy)
-    return d[sorted(d.keys())[0]]
-
-
 def sequence_data(pdbin):
+    """Get the residue sequence data
+
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+
+    Returns
+    -------
+    dict
+       A dictionary of chains and the corresponding sequences
+
+    """
     return _sequence_data(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
-
-
-def _sequence_data(hierarchy):
-    """Extract the sequence of residues and resseqs from a pdb file."""
-    chain2data = {}
-    for chain in set(hierarchy.models()[0].chains()):  # only the first model
-        if not chain.is_protein(): continue
-        got = False
-        seq = ""
-        resseq = []
-        for residue in chain.conformers()[0].residues():  # Just look at the first conformer
-            # See if any of the atoms are non-hetero - if so we add this residue
-            if any([not atom.hetero for atom in residue.atoms()]):
-                got = True
-                seq += three2one[residue.resname]
-                # resseq.append(int(residue.resseq.strip()))
-                resseq.append(residue.resseq_as_int())
-        if got: chain2data[chain.id] = (seq, resseq)
-    return chain2data
 
 
 def split_pdb(pdbin, directory=None):
