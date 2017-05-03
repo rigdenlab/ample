@@ -1435,6 +1435,12 @@ def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
        The path to the input PDB
     pdbout : str
        The path to the output PDB
+    hetatm : bool, optional
+       Strip the PDB structure of any HETATM entries
+    hydrogen : bool, optional
+       Strip the PDB structure of all hydrogen elements
+    atom_types : list, tuple, optional
+       Strip the PDB structure of any specified elements
        
     Raises
     ------
@@ -1451,67 +1457,20 @@ def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: %s' % pdbin])
 
 
-def to_single_chain(inpath, outpath):
-    """Condense a single-model multi-chain pdb to a single-chain pdb"""
-
-    o = open(outpath, 'w')
-
-    firstChainID = None
-    currentResSeq = None  # current residue we are reading - assume it always starts from 1
-    globalResSeq = None
-    globalSerial = -1
-    for line in open(inpath):
-
-        # Remove any HETATOM lines and following ANISOU lines
-        if line.startswith("HETATM") or line.startswith("MODEL") or line.startswith("ANISOU"):
-            raise RuntimeError("Cant cope with the line: {0}".format(line))
-
-        # Skip any TER lines
-        if line.startswith("TER"):
-            continue
-
-        if line.startswith("ATOM"):
-            changed = False
-
-            atom = pdb_model.PdbAtom(line)
-
-            # First atom/residue
-            if globalSerial == -1:
-                globalSerial = atom.serial
-                firstChainID = atom.chainID
-                globalResSeq = atom.resSeq
-                currentResSeq = atom.resSeq
-            else:
-                # Change residue numbering and chainID
-                if atom.chainID != firstChainID:
-                    atom.chainID = firstChainID
-                    changed = True
-
-                # Catch each change in residue
-                if atom.resSeq != currentResSeq:
-                    # Change of residue
-                    currentResSeq = atom.resSeq
-                    globalResSeq += 1
-
-                # Only change if don't match global
-                if atom.resSeq != globalResSeq:
-                    atom.resSeq = globalResSeq
-                    changed = True
-
-                # Catch each change in numbering
-                if atom.serial != globalSerial + 1:
-                    atom.serial = globalSerial + 1
-                    changed = True
-
-                if changed:
-                    line = atom.toLine() + os.linesep
-
-                # Increment counter for all atoms
-                globalSerial += 1
-
-        o.write(line)
-
-    o.close()
+def to_single_chain(pdbin, pdbout):
+    """Condense a single-model multi-chain pdb to a single-chain pdb
+    
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+    
+    """
+    hierarchy, symmetry = _cache(pdbin)
+    _first_chain_only(hierarchy)
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry)
 
 
 def translate(pdbin, pdbout, ftranslate):

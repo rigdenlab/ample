@@ -542,7 +542,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
         self.assertEqual(m1.sequences[0],
                          'MHHHHHHKDEVALLAAVTLLGVLLQAYFSLQVISARRAFRVSPPLTTGPPEFERVYRAQVNCSEYFPLFLATLWVAGIFF'
                          'HEGAAALCGLVYLFARLRYFQGYARSAQLRLAPLYASARALWLLVALAALGLLAHFLPAALRAALLGRLRTLLPWA'
-        )
+                         )
         self.assertEqual(m1.caMask[0], [False] * 155 + [True])
         self.assertEqual(m1.bbMask[0],
                          [False, False, False, False, False, False, False, False, False, False, False, False, False,
@@ -656,6 +656,15 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                'VAL', 'TYR', 'LEU', 'ASP', 'LEU', 'VAL', 'THR', 'LYS', 'VAL', 'GLY', 'PHE', 'GLY', 'PHE', 'ILE',
                'ALA', 'LEU', 'ASP', 'ALA', 'ALA', 'ALA', 'THR', 'LEU']
         self.assertEqual(resnames, ref)
+        os.unlink(pdbout)
+
+    def test_to_single_chain_1(self):
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        pdbout = "tmp_4DZN.pdb"
+        pdb_edit.to_single_chain(pdbin, pdbout)
+        hierachy = iotbx.pdb.pdb_input(pdbout).construct_hierarchy()
+        self.assertEqual(1, hierachy.models_size())
+        self.assertEqual(1, hierachy.only_model().chains_size())
         os.unlink(pdbout)
 
     def test_translate_1(self):
