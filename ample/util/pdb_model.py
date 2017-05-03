@@ -1,21 +1,17 @@
-'''
-Created on 7 Aug 2013
+"""Classes for holding data from PDB files"""
 
-@author: jmht
-
-Classes for holding data from PDB files
-'''
+__author__ = "Jens Thomas & Felix Simkovic"
+__date__ = "03 May 2017"
+__version__ = "1.0"
 
 import copy
 import os
 import types
 
 
-class OriginInfo( object ):
-    
+class OriginInfo(object):
+
     def __init__(self, spaceGroupLabel=None ):
-        
-        
         # These are reset on each call
         self._spaceGroup = None
         self._redundantSet = None
@@ -26,9 +22,7 @@ class OriginInfo( object ):
         
         if spaceGroupLabel:
             self._getAlternateOrigins(spaceGroupLabel)
-        
-        return
-    
+
     def _setData(self):
         # Non-redundant origins from:
         # http://www.ccp4.ac.uk/dist/html/alternate_origins.html
@@ -423,8 +417,7 @@ class OriginInfo( object ):
                 if spaceGroup == sg:
                     return line.split()[ 3 ]
     
-        raise KeyError, spaceGroup
-        return
+        raise KeyError(spaceGroup)
 
 
 class CrystalInfo(object):
@@ -518,22 +511,16 @@ class CrystalInfo(object):
 class PdbInfo(object):
     """A class to hold information extracted from a PDB file"""
     
-    def __init__(self ):
-        
+    def __init__(self):
         self.models = [] # List of PdbModel objects
-        
         self.pdbCode=None
         self.title = None # First line of the title
         self.resolution = None
-        
         # http://www.wwpdb.org/documentation/format33/remarks1.html#REMARK%20280
         self.solventContent = None
         self.matthewsCoefficient = None
-        
         self.crystalInfo = None
-        
-        return
-    
+
     def getSequence(self):
         """Return the sequence for the first model/chain"""
         
@@ -570,23 +557,20 @@ class PdbInfo(object):
                     ncalpha += 1
             
         return ncalpha
-    
+
+
 class PdbModel(object):
     """A class to hold information on a single model in a PDB file"""
-    
     def __init__(self ):
-        
         self.pdb = None
         self.serial = None
-        self.chains = [] # Ordered list of chain IDs
-        self.atoms = [] # List of atoms in each chain
-        
-        self.resSeqs = [] # Ordered list of list of resSeqs for each chain - matches order in self.chains
+        self.chains = []    # Ordered list of chain IDs
+        self.atoms = []     # List of atoms in each chain
+        self.resSeqs = []   # Ordered list of list of resSeqs for each chain - matches order in self.chains
         self.sequences = [] # Ordered list of list of sequences for each chain - matches order in self.chains
-        self.caMask = [] # Ordered list of list of booleans of residues with no CA atoms - matches order in self.chains
-        self.bbMask = [] # Ordered list of list of boleans of residues with no backbone atoms - matches order in self.chains
-        
-        return
+        self.caMask = []    # Ordered list of list of booleans of residues with no CA atoms - matches order in self.chains
+        self.bbMask = []    # Ordered list of list of boleans of residues with no backbone atoms - matches order in self.chains
+
 
 class PdbAtom(object):
     """
@@ -655,18 +639,21 @@ class PdbAtom(object):
         elif s[1] in signs:
             sign = s[1]
             val = s[0]
-        else: raise RuntimeError, "Error getting charge sign ({0}) from line: {1}".format(line[78:80], line)
-        if sign == minus: mult = -1
+        else:
+            msg = "Error getting charge sign ({0}) from line: {1}".format(line[78:80], line)
+            raise RuntimeError(msg)
+        if sign == minus:
+            mult = -1
         try:
             return int(val) * mult
         except:
-            raise RuntimeError, "Error getting charge ({0}) from line: {1}".format(line[78:80], line)
+            msg = "Error getting charge ({0}) from line: {1}".format(line[78:80], line)
+            raise RuntimeError(msg)
     
-    def _sanityCheck( self, line ):
-        assert line[0:6] == self._atomType,"Line did not begin with an {0} record!: {1}".format( self._atomType, line )
-        assert len(line) >= 54,"Line length was: {0}\n{1}".format(len(line),line)
-        return
-        
+    def _sanityCheck(self, line):
+        assert line[0:6] == self._atomType, "Line did not begin with an {0} record!: {1}".format(self._atomType, line)
+        assert len(line) >= 54, "Line length was: {0}\n{1}".format(len(line), line)
+
     def fromLine(self,line):
         """Initialise from the line from a PDB"""
         
@@ -783,12 +770,12 @@ class PdbAtom(object):
                 me[slot] = attr
         return "{0} : {1}".format(self.__repr__(),str(me))
 
-class PdbHetatm( PdbAtom ):
+
+class PdbHetatm(PdbAtom):
     """Identical to PdbAtom but just with a different _atomType"""
-    
     def _setAtomType(self):
         self._atomType = "HETATM"
-        return
+
 
 class PdbModres(object):
     """
@@ -806,11 +793,9 @@ COLUMNS        DATA TYPE     FIELD       DEFINITION
     def __init__(self, line):
         """Set up attributes"""
         
-        self.fromLine( line )
-        
-    
+        self.fromLine(line)
+
     def _reset(self):
-        
         self.idCode = None
         self.resName = None
         self.chainID = None
@@ -818,13 +803,11 @@ COLUMNS        DATA TYPE     FIELD       DEFINITION
         self.iCode = None
         self.stdRes = None
         self.comment = None
-        
-        return
-        
+
     def fromLine(self,line):
         """Initialise from the line from a PDB"""
         
-        assert line[0:6] == "MODRES","Line did not begin with an MODRES record!: {0}".format(line)
+        assert line[0:6] == "MODRES", "Line did not begin with an MODRES record!: {0}".format(line)
         
         self._reset()
         
@@ -874,8 +857,8 @@ COLUMNS        DATA TYPE     FIELD       DEFINITION
         me = {}
         for slot in dir(self):
             attr = getattr(self, slot)
-            if not slot.startswith("__") and not ( isinstance(attr, types.MethodType) or
-              isinstance(attr, types.FunctionType) ):
+            if not slot.startswith("__") and not (isinstance(attr, types.MethodType) or
+              isinstance(attr, types.FunctionType)):
                 me[slot] = attr
             
         return "{0} : {1}".format(self.__repr__(),str(me))

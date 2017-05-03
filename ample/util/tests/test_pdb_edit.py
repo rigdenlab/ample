@@ -467,16 +467,11 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
         self.assertEqual(resnames, ref)
         os.unlink(pdbout)
 
-    def testGetInfo1(self):
-        """"""
-
+    def test_get_info_1(self):
         pdbfile = os.path.join(self.testfiles_dir, "1GU8.pdb")
-
         info = pdb_edit.get_info(pdbfile)
-
         self.assertEqual(info.pdbCode, "1GU8")
         self.assertEqual(len(info.models), 2)
-
         m1 = info.models[0]
         self.assertEqual(m1.chains[0], 'A')
         self.assertEqual(m1.resSeqs[0],
@@ -495,7 +490,6 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                          'VGLTTLFWLGAIGMLVGTLAFAWAGRDAGSGERRYYVTLVGISGIAAVAYVVMALGVGWVPVAERTVFAPRYIDWILTTPLIVYFLGLLAGLD'
                          'SREFGIVITLNTVVMLAGFAGAMVPGIERYALFGMGAVAFLGLVYYLVGPMTESASQRSSGIKSLYVRLRNLTVILWAIYPFIWLLGPPGVAL'
                          'LTPTVDVALIVYLDLVTKVGFGFIALDAAATL')
-
         self.assertEqual(m1.caMask[0], [False] * 218)
         self.assertEqual(m1.bbMask[0],
                          [False, True, False, False, False, False, False, False, False, True, False, False, True, False,
@@ -514,11 +508,9 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                           False, False, False, False, False, False, False, True, False, False, True, False, False,
                           False, False, False, False, False, False, False, False, False, False, False, False, False,
                           False, False, False, False, False, False, False, True, False, True, False, False, False,
-                          False, False, False, False, False, False, True])
-
+                          False, False, False, False, False, False, False])
         self.assertEqual(info.numAtoms(modelIdx=0), 1621)
         self.assertEqual(info.numCalpha(modelIdx=0), 218)
-
         m2 = info.models[1]
         self.assertEqual(m2.chains[0], 'A')
         self.assertEqual(m2.resSeqs[0],
@@ -537,28 +529,21 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                          'VGLTTLFWLGAIGMLVGTLAFAWAGRDAGSGERRYYVTLVGISGIAAVAYVVMALGVGWVPVAERTVFAPRYIDWILTTPLIVYFLGLLAGLD'
                          'SREFGIVITLNTVVMLAGFAGAMVPGIERYALFGMGAVAFLGLVYYLVGPMTESASQRSSGIKSLYVRLRNLTVILWAIYPFIWLLGPPGVAL'
                          'LTPTVDVALIVYLDLVTKVGFGFIALDAAATL')
-
         self.assertEqual(info.numAtoms(modelIdx=1), 1621)
         self.assertEqual(info.numCalpha(modelIdx=1), 218)
 
-        return
-
-    def testGetInfo2(self):
-        """"""
-
+    def test_get_info_2(self):
         pdbfile = os.path.join(self.testfiles_dir, "2UUI.pdb")
-
         info = pdb_edit.get_info(pdbfile)
-
         self.assertEqual(len(info.models), 1)
-
         m1 = info.models[0]
         self.assertEqual(m1.chains[0], 'A')
-        self.assertEqual(m1.resSeqs[0], [i for i in range(-5, 150)])
+        self.assertEqual(m1.resSeqs[0], range(-5, 151))
         self.assertEqual(m1.sequences[0],
-                         'MHHHHHHKDEVALLAAVTLLGVLLQAYFSLQVISARRAFRVSPPLTTGPPEFERVYRAQVNCSEYFPLFLATLWVAGIFFHEGAAALCGLVYL'
-                         'FARLRYFQGYARSAQLRLAPLYASARALWLLVALAALGLLAHFLPAALRAALLGRLRTLLPW')
-        self.assertEqual(m1.caMask[0], [False] * 154 + [True])
+                         'MHHHHHHKDEVALLAAVTLLGVLLQAYFSLQVISARRAFRVSPPLTTGPPEFERVYRAQVNCSEYFPLFLATLWVAGIFF'
+                         'HEGAAALCGLVYLFARLRYFQGYARSAQLRLAPLYASARALWLLVALAALGLLAHFLPAALRAALLGRLRTLLPWA'
+        )
+        self.assertEqual(m1.caMask[0], [False] * 155 + [True])
         self.assertEqual(m1.bbMask[0],
                          [False, False, False, False, False, False, False, False, False, False, False, False, False,
                           False, False, False, False, False, False, False, True, False, False, False, False, False,
@@ -571,11 +556,8 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                           False, False, False, False, False, False, False, False, False, False, False, False, False,
                           False, False, False, False, False, False, False, False, False, False, False, False, False,
                           True, False, False, False, False, False, False, False, False, False, False, False, False,
-                          False, False, False, True, False, False, False, False, True, True, True, True])
-
-        self.assertEqual(info.numAtoms(modelIdx=0), 1263)
-
-        return
+                          False, False, False, True, False, False, False, False, True, True, True, False, True])
+        self.assertEqual(info.numAtoms(modelIdx=0), 1208)
 
     def test_check_pdbs_1(self):
         pdbs = glob.glob(os.path.join(self.testfiles_dir, "models", "*.pdb"))
@@ -618,7 +600,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
         for f in pdbouts:
             os.unlink(f)
 
-    def testStripHetatm(self):
+    def test_strip_hetatm_1(self):
         pdbin = os.path.join(self.testfiles_dir, "1BYZ.pdb")
         pdbout = 'strip_het.pdb'
         hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
@@ -628,9 +610,8 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
             got = any([True for l in f.readlines() if l.startswith('HETATM')])
         self.assertFalse(got, "Found HETATMS")
         os.unlink(pdbout)
-        return
 
-    def testStripHydrogen(self):
+    def test_strip_hydrogen_1(self):
         pdbin = os.path.join(self.testfiles_dir, "1BYZ.pdb")
         pdbout = 'strip_H.pdb'
         hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
@@ -640,9 +621,8 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
             got = any([True for l in f.readlines() if l.startswith('ATOM') and l[13] == 'H'])
         self.assertFalse(got, "Found Hydrogens")
         os.unlink(pdbout)
-        return
 
-    def testStripAtomTypes(self):
+    def test_strip_atom_types_1(self):
         pdbin = os.path.join(self.testfiles_dir, "1BYZ.pdb")
         pdbout = 'strip_types.pdb'
         hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
@@ -652,7 +632,6 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
             got = any([True for l in f.readlines() if l.startswith('ATOM') and l[12:15].strip() == 'CB'])
         self.assertFalse(got, "Found Atom Types")
         os.unlink(pdbout)
-        return
 
     def test_reliable_sidechains_1(self):
         pdbin = os.path.join(self.testfiles_dir, "1GU8.pdb")
@@ -677,7 +656,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                'VAL', 'TYR', 'LEU', 'ASP', 'LEU', 'VAL', 'THR', 'LYS', 'VAL', 'GLY', 'PHE', 'GLY', 'PHE', 'ILE',
                'ALA', 'LEU', 'ASP', 'ALA', 'ALA', 'ALA', 'THR', 'LEU']
         self.assertEqual(resnames, ref)
-        #os.unlink(pdbout)
+        os.unlink(pdbout)
 
     def test_translate_1(self):
         ftranslate = [1, 2, -1]

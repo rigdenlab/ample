@@ -48,41 +48,47 @@ def _first_chain_only(h):
             m.remove_chain(c)
 
 
-def _most_prob(hierarchy, always_keep_one):
+def _most_prob(hierarchy, always_keep_one=True, reset_i_seq=True):
     """Remove alternate conforms from a hierarchy"""
-    # Taken from
-    # ftp://ftp.ccp4.ac.uk/ccp4/6.4.0/unpacked/lib/cctbx/cctbx_sources/cctbx_project/mmtbx/pdbtools.py
-    for model in hierarchy.models():
-        for chain in model.chains():
-            for residue_group in chain.residue_groups():
-                atom_groups = residue_group.atom_groups()
-                if always_keep_one:
-                    if (len(atom_groups) == 1) and (atom_groups[0].altloc == ''):
-                        continue
-                    atom_groups_and_occupancies = []
-                    for atom_group in atom_groups:
-                        if '' == atom_group.altloc:
+    for m in hierarchy.models():
+        for c in m.chains():
+            for rg in c.residue_groups():
+                if rg.have_conformers():
+                    atom_groups = rg.atom_groups()
+                    if always_keep_one:
+                        if len(atom_groups) == 1 and atom_groups[0].altloc == '':
                             continue
-                        mean_occ = flex.mean(atom_group.atoms().extract_occ())
-                        atom_groups_and_occupancies.append((atom_group, mean_occ))
-                    atom_groups_and_occupancies.sort(lambda a, b: cmp(b[1], a[1]))
-                    for atom_group, occ in atom_groups_and_occupancies[1:]:
-                        residue_group.remove_atom_group(atom_group=atom_group)
-                    single_conf, occ = atom_groups_and_occupancies[0]
-                    single_conf.altloc = ''
-                else:
-                    for atom_group in atom_groups:
-                        if atom_group.altloc not in ["", "A"]:
-                            residue_group.remove_atom_group(atom_group=atom_group)
-                        else:
-                            atom_group.altloc = ""
-                    if len(residue_group.atom_groups()) == 0:
-                        chain.remove_residue_group(residue_group=residue_group)
-            if len(chain.residue_groups()) == 0:
-                model.remove_chain(chain=chain)
+                        atom_groups_and_occupancies = []
+                        for ag in atom_groups:
+                            if ag.altloc == '':
+                                continue
+                            mean_occ = flex.mean(ag.atoms().extract_occ())
+                            atom_groups_and_occupancies.append((ag, mean_occ))
+                        atom_groups_and_occupancies.sort(lambda a, b: cmp(b[1], a[1]))
+                        for atom_group, occ in atom_groups_and_occupancies[1:]:
+                            rg.remove_atom_group(atom_group=atom_group)
+                        single_conf, occ = atom_groups_and_occupancies[0]
+                        single_conf.altloc = ''
+                    elif rg.have_conformers():
+                        for ag in atom_groups:
+                            if ag.altloc not in ["", "A"]:
+                                rg.remove_atom_group(atom_group=ag)
+                            else:
+                                atom_group.altloc = ""
+                    # Essential so we don't split residue groups by atom groups
+                    rg.merge_atom_groups(atom_groups[0], atom_groups[1])
+                if rg.atom_groups_size() == 0:
+                    c.remove_residue_group(rg)
+            if c.residue_groups_size() == 0:
+                m.remove_chain(c)
+        if m.chains_size() == 0:
+            hierarchy.remove_model(m)
     # Assign occupancies of 1.0 to all remaining atoms
     new_occ = flex.double(hierarchy.atoms().size(), 1.0)
     hierarchy.atoms().set_occ(new_occ)
+    # Reset the atom i_seq entry
+    if reset_i_seq:
+        hierarchy.atoms().reset_i_seq()
 
 
 def _natm_nres_mw(hierarchy, first=False):
@@ -175,19 +181,29 @@ def _select(hierarchy, construct):
     return hierarchy.select(selection)
 
 
-def _strip(hierachy, hetatm=False, hydrogen=False, atom_types=[]):
+def _strip(hierarchy, reset_i_seq=True, hetatm=False, hydrogen=False, atom_types=[]):
     """Remove all hetatoms from pdbfile"""
-    def remove_atom(atom, hetatm=False, hydrogen=False, atom_types=[]):
-        return (hetatm and atom.hetero) or (hydrogen and atom.element_is_hydrogen()) or atom.name.strip() in atom_types
-
-    for model in hierachy.models():
-        for chain in model.chains():
-            for residue_group in chain.residue_groups():
-                for atom_group in residue_group.atom_groups():
-                    to_del = [a for a in atom_group.atoms() if
-                              remove_atom(a, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)]
-                    for atom in to_del:
-                        atom_group.remove_atom(atom)
+    for m in hierarchy.models():
+        for c in m.chains():
+            for rg in c.residue_groups():
+                for ag in rg.atom_groups():
+                    for a in ag.atoms():
+                        if hydrogen and a.element.strip().upper() in ["H"]:
+                            ag.remove_atom(a)
+                        elif len(atom_types) > 0 and a.name.strip().upper() in atom_types:
+                            ag.remove_atom(a)
+                        elif hetatm and a.hetero:
+                            ag.remove_atom(a)
+                    if ag.atoms_size() == 0:
+                        rg.remove_atom_group(ag)
+                if rg.atom_groups_size() == 0:
+                    c.remove_residue_group(rg)
+            if c.residue_groups_size() == 0:
+                m.remove_chain(c)
+        if m.chains_size() == 0:
+            hierarchy.remove_model(m)
+    if reset_i_seq:
+      hierarchy.atoms().reset_i_seq()
 
 
 def _translate(hierarchy, vector):
@@ -386,7 +402,7 @@ def extract_chain(pdbin, pdbout, chain_id, new_chain_id=None, c_alpha=False, ren
     """
     hierarchy, symmetry = _cache(pdbin)
 
-    sel_string = "chain %s and not hetatm" % chain_id
+    sel_string = "chain %s and not hetero" % chain_id
     if c_alpha:
         sel_string += " and name ca" 
     hierarchy = _select(hierarchy, sel_string)
@@ -702,184 +718,91 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
     return
 
 
-def get_info(inpath):
+def get_info(pdbin):
     """Read a PDB and extract as much information as possible into a PdbInfo object
+    
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    
+    Returns
+    -------
+    :obj:`PdbInfo <ample.util.pdb_model.PdbInfo>`
+       A :obj:`PdbInfo <ample.util.pdb_model.PdbInfo>` object
+    
     """
+    pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
 
+    # Create a new PdbInfo object
     info = pdb_model.PdbInfo()
-    info.pdb = inpath
+    info.pdb = pdbin
 
-    currentModel = None
-    currentChain = -1
+    # HEADER & TITLE
+    for title in pdb_input.title_section():
+        if title.startswith("HEADER"):
+            info.pdbCode = title[62:66].strip()
+        elif title.startswith('TITLE') and not info.title:
+            info.title = title[10:-1].strip()
 
-    modelAtoms = []  # list of models, each of which is a list of chains with the list of atoms
+    # CRYST1
+    info.crystalInfo = pdb_model.CrystalInfo()
+    cryst1 = pdb_input.crystal_symmetry_from_cryst1()
+    info.crystalInfo.spaceGroup = cryst1.space_group_info()
+    info.crystalInfo.unit_cell = cryst1.unit_cell().parameters()
+    info.crystalInfo.z = pdb_input.extract_cryst1_z_columns()
 
-    # Go through refpdb and find which ref_residues are present
-    f = open(inpath, 'r')
-    line = f.readline()
-    while line:
+    # REMARK   2
+    info.resolution = -1
+    for remark in pdb_input.extract_remark_iii_records(2):
+        if "RESOLUTION" in remark:
+            info.resolution = float(remark.split()[3])
 
-        # First line of title
-        if line.startswith('HEADER'):
-            info.pdbCode = line[62:66].strip()
+    # REMARK 2809
+    info.solventContent = pdb_input.get_solvent_content()
+    info.matthewsCoefficient = pdb_input.get_matthews_coeff()
 
-        # First line of title
-        if line.startswith('TITLE') and not info.title:
-            info.title = line[10:-1].strip()
+    # MODEL & ATOM
+    hierarchy = pdb_input.construct_hierarchy()
+    _most_prob(hierarchy, always_keep_one=True)
+    _strip(hierarchy, hetatm=True, hydrogen=True)
 
-        if line.startswith("REMARK"):
+    for m in hierarchy.models():
+        model = pdb_model.PdbModel()
+        model.serial = m.id
 
-            try:
-                numRemark = int(line[7:10])
-            except ValueError:
-                line = f.readline()
-                continue
+        for c in m.chains():
+            chain_atoms = [pdb_model.PdbAtom(a.format_atom_record()) for a in c.atoms() if not a.hetero]
 
-            # Resolution
-            if numRemark == 2:
-                line = f.readline()
-                if line.find("RESOLUTION") != -1:
-                    try:
-                        info.resolution = float(line[25:30])
-                    except ValueError:
-                        # RESOLUTION. NOT APPLICABLE.
-                        info.resolution = -1
+            if len(chain_atoms) > 0:
+                chain_resseq = [rg.resseq_as_int() for rg in c.residue_groups()]
+                chain_sequence = "".join([three2one[ag.resname.strip()] for ag in c.atom_groups()])
 
-            # Get solvent content
-            if numRemark == 280:
+                model.chains.append(c.id)
+                model.atoms.append(chain_atoms)
+                model.resSeqs.append(chain_resseq)
+                model.sequences.append(chain_sequence)
 
-                maxread = 5
-                # Clunky - read up to maxread lines to see if we can get the information we're after
-                # We assume the floats are at the end of the lines
-                for _ in range(maxread):
-                    line = f.readline()
-                    if line.find("SOLVENT CONTENT") != -1:
-                        try:
-                            info.solventContent = float(line.split()[-1])
-                        except ValueError:
-                            # Leave as None
-                            pass
-                    if line.find("MATTHEWS COEFFICIENT") != -1:
-                        try:
-                            info.matthewsCoefficient = float(line.split()[-1])
-                        except ValueError:
-                            # Leave as None
-                            pass
-        # End REMARK
+                model.caMask.append([])
+                model.bbMask.append([])
 
-        if line.startswith("CRYST1"):
-            try:
-                info.crystalInfo = pdb_model.CrystalInfo(line)
-            except ValueError, e:
-                # Bug in pdbset nukes the CRYST1 line so we need to catch this
-                print("ERROR READING CRYST1 LINE in file {0}\":{1}\"\n{2}".format(inpath, line.rstrip(), e))
-                info.crystalInfo = None
+                for ag in c.atom_groups():
+                    atoms = [a.name.strip() for a in ag.atoms()]
 
-        if line.startswith("MODEL"):
-            if currentModel:
-                # Need to make sure that we have an id if only 1 chain and none given
-                if len(currentModel.chains) <= 1:
-                    if currentModel.chains[0] is None:
-                        currentModel.chains[0] = 'A'
-
-                info.models.append(currentModel)
-
-            # New/first model
-            currentModel = pdb_model.PdbModel()
-            # Get serial
-            currentModel.serial = int(line.split()[1])
-
-            currentChain = None
-            modelAtoms.append([])
-
-        # Count chains (could also check against the COMPND line if present?)
-        if line.startswith('ATOM'):
-
-            # Create atom object
-            atom = pdb_model.PdbAtom(line)
-
-            # Check for the first model
-            if not currentModel:
-                # This must be the first model and there should only be one
-                currentModel = pdb_model.PdbModel()
-                modelAtoms.append([])
-
-            if atom.chainID != currentChain:
-                currentChain = atom.chainID
-                currentModel.chains.append(currentChain)
-                modelAtoms[-1].append([])
-
-            modelAtoms[-1][-1].append(atom)
-
-        # Can ignore TER and ENDMDL for time being as we'll pick up changing chains anyway,
-        # and new models get picked up by the models line
-
-        line = f.readline()
-        # End while loop
-
-    # End of reading loop so add the last model to the list
-    info.models.append(currentModel)
-
-    f.close()
-
-    bbatoms = ['N', 'CA', 'C', 'O', 'CB']
-
-    # Now process the atoms
-    for modelIdx, model in enumerate(info.models):
-
-        chainList = modelAtoms[modelIdx]
-
-        for chainIdx, atomList in enumerate(chainList):
-
-            # Paranoid check
-            assert model.chains[chainIdx] == atomList[0].chainID
-
-            # Add list of atoms to model
-            model.atoms.append(atomList)
-
-            # Initialise new chain
-            currentResSeq = atomList[0].resSeq
-            currentResName = atomList[0].resName
-            model.resSeqs.append([])
-            model.sequences.append("")
-            model.caMask.append([])
-            model.bbMask.append([])
-
-            atomTypes = []
-            for i, atom in enumerate(atomList):
-
-                aname = atom.name.strip()
-                if atom.resSeq != currentResSeq and i == len(atomList) - 1:
-                    # Edge case - last residue containing one atom
-                    atomTypes = [aname]
-                else:
-                    if aname not in atomTypes:
-                        atomTypes.append(aname)
-
-                if atom.resSeq != currentResSeq or i == len(atomList) - 1:
-                    # End of reading the atoms for a residue
-                    model.resSeqs[chainIdx].append(currentResSeq)
-                    model.sequences[chainIdx] += three2one[currentResName]
-
-                    if 'CA' not in atomTypes:
-                        model.caMask[chainIdx].append(True)
+                    # If    all backbone atoms present
+                    # Elif  some backbone atoms missing but C-alpha is there
+                    # Else  some backbone atoms and C-alpha missing
+                    if all(a in atoms for a in ['N', 'CA', 'C', 'O', 'CB']):
+                        foo, bar = False, False
+                    elif "CA" in atoms:
+                        foo, bar = True, False
                     else:
-                        model.caMask[chainIdx].append(False)
+                        foo, bar = True, True
 
-                    missing = False
-                    for bb in bbatoms:
-                        if bb not in atomTypes:
-                            missing = True
-                            break
+                    model.bbMask[-1].append(foo)
+                    model.caMask[-1].append(bar)
 
-                    if missing:
-                        model.bbMask[chainIdx].append(True)
-                    else:
-                        model.bbMask[chainIdx].append(False)
-
-                    currentResSeq = atom.resSeq
-                    currentResName = atom.resName
-                    atomTypes = []
+        info.models.append(model)
 
     return info
 
@@ -986,7 +909,7 @@ def most_prob(pdbin, pdbout, always_keep_one_conformer=True):
 
     """
     hierarchy, symmetry = _cache(pdbin)
-    _most_prob(hierarchy, always_keep_one_conformer)
+    _most_prob(hierarchy, always_keep_one=always_keep_one_conformer)
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
@@ -1450,7 +1373,7 @@ def standardise(pdbin, pdbout, chain=None, chain_id=None, del_hetatm=False):
     hierarchy = _select(hierarchy, sol_exclude)
 
     # Keep the most probably conformer
-    _most_prob(hierarchy, True)
+    _most_prob(hierarchy, always_keep_one=True)
 
     # Extract one of the chains
     if chain_id:
