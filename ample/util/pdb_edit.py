@@ -193,6 +193,31 @@ def _resseq(hierarchy):
     return dict((k, chain2data[k][1]) for k in chain2data.keys())
 
 
+def _rog_side_chain_treatment(hierarchy, scores, del_orange):
+    """Remove side chains based on the Red/Orange/Green system"""
+    def _remove(rg):
+        for ag in rg.atom_groups():
+            for atom in ag.atoms():
+                if atom.name.strip() not in ['N', 'CA', 'C', 'O', 'CB']:
+                    ag.remove_atom(atom=atom)
+
+    for model in hierarchy.models():
+        for chain in model.chains():
+            for rg in chain.residue_groups():
+                if not del_orange:
+                    # Remove just the red scoring side chains
+                    res = rg.resseq_as_int()
+                    for i, j in scores:
+                        if i == res and j == 'red':
+                            _remove(rg)
+                else:
+                    # Only keep the green scoring side chains
+                    res = rg.resseq_as_int()
+                    for i, j in scores:
+                        if i == res and j != 'green':
+                            _remove(rg)
+
+
 def _save(pdbout, hierarchy, crystal_symmetry=None, remarks=[]):
     """Save the CCTBX hierarchy to a file"""
     with open(pdbout, 'w') as f_out:
@@ -917,7 +942,8 @@ def merge(pdbin1, pdbin2, pdbout):
 
     # Reset the atom sequence
     h1.atoms().reset_i_seq()
-    _save(pdbout, h1)
+    _save(pdbout, h1, remarks=['Merge between {0} and {1}'.format(pdbin1, pdbin2),
+                               'Chains renamed for {0}'.format(pdbin2)])
 
 
 def most_prob(pdbin, pdbout, always_keep_one_conformer=True):
@@ -993,8 +1019,23 @@ def num_atoms_and_residues(pdbin, first=False):
 
 
 def prepare_nmr_model(nmr_model_in, models_dir):
-    """Split an nmr pdb into its constituent parts and standardise the lengths"""
-    if not os.path.isdir(models_dir): os.mkdir(models_dir)
+    """Split an nmr pdb into its constituent parts and standardise the lengths
+    
+    Parameters
+    ----------
+    nmr_model_in : str
+       The path to the input NMR ensemble
+    models_dir : str
+       The path to the directory for individual NMR model storage
+       
+    Returns
+    -------
+    list
+       A list of paths to each individual model
+    
+    """
+    if not os.path.isdir(models_dir):
+        os.mkdir(models_dir)
     split_pdbs = split_pdb(nmr_model_in, models_dir)
 
     # We can only work with equally sized PDBS so we pick the most numerous if there are different sizes
@@ -1014,7 +1055,8 @@ def prepare_nmr_model(nmr_model_in, models_dir):
         to_keep = lengths[lmax]
         logger.info('All NMR models were not of the same length, only %d will be kept.', len(to_keep))
         # Delete any that are not of most numerous length
-        for p in [p for p in split_pdbs if p not in to_keep]: os.unlink(p)
+        for p in [p for p in split_pdbs if p not in to_keep]:
+            os.unlink(p)
         split_pdbs = to_keep
 
     return split_pdbs
@@ -1133,39 +1175,26 @@ def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
-def rog_side_chain_treatment(pdbin=None, pdbout=None, rog_data=None, del_orange=False):
-    """Takes the ROG score from the input file and uses this to remove side chains
-    from the corresponding pdb file"""
+def rog_side_chain_treatment(pdbin, pdbout, rog_data, del_orange=False):
+    """Remove side chains using the ROG scores
+        
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+    rog_data : list, tuple
+       The per-residue ROG data
+    del_orange : bool, optional
+       Delete residue groups with an orange label [default: False]
+       
+    """
     resSeq_data = extract_resSeq(pdbin)
     scores = zip(resSeq_data, rog_data)
     _, hierarchy, symmetry = _cache(pdbin)
     _rog_side_chain_treatment(hierarchy, scores, del_orange)
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
-
-
-def _rog_side_chain_treatment(hierarchy, scores, del_orange):
-    def _remove(rg):
-        atom_names = ['N', 'CA', 'C', 'O', 'CB']
-        for ag in rg.atom_groups():
-            for atom in ag.atoms():
-                if (atom.name.strip() not in atom_names):
-                    ag.remove_atom(atom=atom)
-
-    for model in hierarchy.models():
-        for chain in model.chains():
-            for rg in chain.residue_groups():
-                if not del_orange:
-                    # Remove just the red scoring side chains
-                    res = rg.resseq_as_int()
-                    for i, j in scores:
-                        if i == res and j == 'red':
-                            _remove(rg)
-                else:
-                    # Only keep the green scoring side chains
-                    res = rg.resseq_as_int()
-                    for i, j in scores:
-                        if i == res and j != 'green':
-                            _remove(rg)
 
 
 def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, tokeep_idx=None):

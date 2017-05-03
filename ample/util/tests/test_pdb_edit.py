@@ -231,8 +231,8 @@ class Test(unittest.TestCase):
             "ATOM    531  C   ALA C   4      14.424  -1.670  -7.682  1.00 14.16           C",
             "ATOM    532  O   ALA C   4      13.931  -1.344  -6.603  1.00 15.41           O",
         ]
-        lines_to_read_1 = range(0, 8)
-        lines_to_read_2 = range(527, 534)
+        lines_to_read_1 = range(2, 10)
+        lines_to_read_2 = range(529, 536)
         data_1 = []
         data_2 = []
         with open(pdbout) as f:
