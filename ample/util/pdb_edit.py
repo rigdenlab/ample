@@ -34,7 +34,7 @@ def _cache(pdbin):
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     crystal_symmetry = pdb_input.crystal_symmetry()
     hierarchy = pdb_input.construct_hierarchy()
-    return hierarchy, crystal_symmetry
+    return pdb_input, hierarchy, crystal_symmetry
 
 
 def _first_chain_only(h):
@@ -131,6 +131,34 @@ def _natm_nres_mw(hierarchy, first=False):
     return natm, nres, mw
 
 
+def _parse_modres(modres_text):
+    """
+COLUMNS        DATA TYPE     FIELD       DEFINITION
+--------------------------------------------------------------------------------
+ 1 -  6        Record name   "MODRES"
+ 8 - 11        IDcode        idCode      ID code of this entry.
+13 - 15        Residue name  resName     Residue name used in this entry.
+17             Character     chainID     Chain identifier.
+19 - 22        Integer       seqNum      Sequence number.
+23             AChar         iCode       Insertion code.
+25 - 27        Residue name  stdRes      Standard residue name.
+30 - 70        String        comment     Description of the residue modification.
+    """
+    modres = []
+    for line in modres_text:
+        assert line[0:6] == "MODRES", "Line did not begin with an MODRES record!: {0}".format(line)
+        id_code = line[7:11]
+        resname = line[12:15].strip()
+        # Use for all so None means an empty field
+        chain_id = line[16] if line[16].strip() else ""
+        seq_num = int(line[18:22])
+        i_code = line[22] if line[22].strip() else ""
+        std_res = line[24:27].strip()
+        comment = line[29:70].strip() if line[29:70].strip() else ""
+        modres.append([id_code, resname, chain_id, seq_num, i_code, std_res, comment])
+    return modres
+
+
 def _rename_chains(hierarchy, table):
     """Rename all chains in a hierarchy using the provided conversion table"""
     for chain in hierarchy.chains():
@@ -223,7 +251,7 @@ def backbone(pdbin, pdbout):
        The path to the output PDB
     
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     hierarchy = _select(hierarchy, "name n or name ca or name c or name o or name cb")
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
@@ -239,7 +267,7 @@ def calpha_only(pdbin, pdbout):
        The path to the output PDB
     
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     hierarchy = _select(hierarchy, "name ca")
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
@@ -259,7 +287,7 @@ def reliable_sidechains(pdbin, pdbout):
        The path to the output PDB
     
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     
     # Remove sidechains that are in res_names where the atom name is not in atom_names
     res_names = ['MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
@@ -329,7 +357,7 @@ def check_pdbs(models, single=True, allsame=True, sequence=None):
     # Get sequence from first model
     if allsame and not sequence:
         try:
-            h, _ = _cache(models[0])
+            _, h, _ = _cache(models[0])
         except Exception as e:
             s = "*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0], e)
             logger.critical(s)
@@ -342,7 +370,7 @@ def check_pdbs(models, single=True, allsame=True, sequence=None):
         entry = np.zeros((1, 5), dtype=np.uint8)
         entry[0][0] = idx
         try:
-            h, _ = _cache(models[0])
+            _, h, _ = _cache(models[0])
         except Exception:
             entry[0][1] = 1
             continue
@@ -400,7 +428,7 @@ def extract_chain(pdbin, pdbout, chain_id, new_chain_id=None, c_alpha=False, ren
        Renumber the chain [default: False]
     
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
 
     sel_string = "chain %s and not hetero" % chain_id
     if c_alpha:
@@ -432,7 +460,7 @@ def extract_model(pdbin, pdbout, model_id):
        The model to extract
 
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     hierarchy = _select(hierarchy, "model {0}".format(model_id))
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
@@ -453,7 +481,7 @@ def extract_resSeq(pdbin, chain_id=None):
        A list of the residue numbers
 
     """
-    hierarchy, _ = _cache(pdbin)
+    _, hierarchy, _ = _cache(pdbin)
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     hierarchy = pdb_input.construct_hierarchy()
 
@@ -486,7 +514,7 @@ def keep_residues(pdbin, pdbout, residue_range, chain_id):
        The chain to extract
     
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
 
     # Only keep the specified chain ID
     for model in hierarchy.models():
@@ -908,7 +936,7 @@ def most_prob(pdbin, pdbout, always_keep_one_conformer=True):
        Keep at least a single conformer [default: True]
 
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     _most_prob(hierarchy, always_keep_one=always_keep_one_conformer)
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
@@ -933,7 +961,7 @@ def molecular_weight(pdbin, first=False):
     This function ignores water molecules.
     
     """
-    hierarchy, _ = _cache(pdbin)
+    _, hierarchy, _ = _cache(pdbin)
     _, _, mw = _natm_nres_mw(hierarchy, first)
     return mw
 
@@ -958,43 +986,9 @@ def num_atoms_and_residues(pdbin, first=False):
        The number of residues
 
     """
-    hierarchy, _ = _cache(pdbin)
+    _, hierarchy, _ = _cache(pdbin)
     natoms, nresidues, _ = _natm_nres_mw(hierarchy, first)
     return natoms, nresidues
-
-
-def _parse_modres(modres_text):
-    """
-COLUMNS        DATA TYPE     FIELD       DEFINITION
---------------------------------------------------------------------------------
- 1 -  6        Record name   "MODRES"
- 8 - 11        IDcode        idCode      ID code of this entry.
-13 - 15        Residue name  resName     Residue name used in this entry.
-17             Character     chainID     Chain identifier.
-19 - 22        Integer       seqNum      Sequence number.
-23             AChar         iCode       Insertion code.
-25 - 27        Residue name  stdRes      Standard residue name.
-30 - 70        String        comment     Description of the residue modification.
-"""
-
-    modres = []
-    for line in modres_text:
-        assert line[0:6] == "MODRES", "Line did not begin with an MODRES record!: {0}".format(line)
-
-        idCode = line[7:11]
-        resName = line[12:15].strip()
-        # Use for all so None means an empty field
-        if line[16].strip(): chainID = line[16]
-        seqNum = int(line[18:22])
-        iCode = ""
-        if line[22].strip(): iCode = line[22]
-        stdRes = line[24:27].strip()
-        comment = ""
-        if line[29:70].strip(): comment = line[29:70].strip()
-
-        modres.append([idCode, resName, chainID, seqNum, iCode, stdRes, comment])
-
-    return modres
 
 
 def prepare_nmr_model(nmr_model_in, models_dir):
@@ -1047,7 +1041,7 @@ def rename_chains(pdbin, pdbout, fromChain, toChain):
     """
     if len(fromChain) != len(toChain):
         raise ValueError("Renaming lists need to be of equal shape")
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     table = dict(zip(fromChain, toChain))
     _rename_chains(hierarchy, table)
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
@@ -1067,7 +1061,7 @@ def resseq(pdbin):
        A dictionary of chains and the corresponding sequences
     
     """
-    hierarchy, _ = _cache(pdbin)
+    _, hierarchy, _ = _cache(pdbin)
     return _resseq(hierarchy)
 
 
@@ -1084,7 +1078,7 @@ def renumber_residues(pdbin, pdbout, start=1):
        The starting number [default: 1]
     
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     _renumber(hierarchy, start)
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
@@ -1105,7 +1099,7 @@ def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
        The starting number [default: 1]
 
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     _renumber_residues_gaps(hierarchy,  gaps, start)
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
@@ -1115,7 +1109,7 @@ def rog_side_chain_treatment(pdbin=None, pdbout=None, rog_data=None, del_orange=
     from the corresponding pdb file"""
     resSeq_data = extract_resSeq(pdbin)
     scores = zip(resSeq_data, rog_data)
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     _rog_side_chain_treatment(hierarchy, scores, del_orange)
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
@@ -1160,7 +1154,7 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
        A list of residues to keep
 
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
 
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
         print("pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin))
@@ -1254,7 +1248,7 @@ def split_pdb(pdbin, directory=None):
     if directory is None: 
         directory = os.path.dirname(pdbin)
 
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
 
     # Nothing to do
     n_models = hierarchy.models_size()
@@ -1310,7 +1304,7 @@ def split_into_chains(pdbin, chain=None, chain_id=None, directory=None):
         warnings.warn("Keyword deprecated - please use chain_id instead")
         chain_id = chain
 
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     
     # Nothing to do
     n_models = hierarchy.models_size()
@@ -1352,17 +1346,17 @@ def standardise(pdbin, pdbout, chain=None, chain_id=None, del_hetatm=False):
        The path to the input PDB
     pdbout : str
        The path to the output PDB
-    chain_id : str
+    chain_id : str, optional
        The chain to extract
-    del_hetatm : bool
-       Remove HETATM entries
+    del_hetatm : bool, optional
+       Remove HETATM entries [default: False]
     
     """
     if chain:
         warnings.warn("Keyword deprecated - please use chain_id instead")
         chain_id = chain
 
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
 
     # Remove solvents defined below
     sol_select = " or ".join(
@@ -1389,12 +1383,18 @@ def standardise(pdbin, pdbout, chain=None, chain_id=None, del_hetatm=False):
 
 def std_residues(pdbin, pdbout, del_hetatm=False):
     """Map all residues in MODRES section to their standard counterparts
-    optionally delete all other HETATMS"""
-
-    # TODO: Update _cache() to return pdb_input
-    pdb_input = iotbx.pdb.pdb_input(pdbin)
-    hierarchy = pdb_input.construct_hierarchy()
-    crystal_symmetry = pdb_input.crystal_symmetry()
+    
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+    del_hetatm : bool, optional
+       Remove HETATM entries [default: False]
+    
+    """
+    pdb_input, hierarchy, symmetry = _cache(pdbin)
 
     # Get MODRES Section & build up dict mapping the changes
     modres_text = [l.strip() for l in pdb_input.primary_structure_section()
@@ -1405,6 +1405,7 @@ def std_residues(pdbin, pdbout, del_hetatm=False):
             modres[chain] = {}
             modres[chain][int(resseq)] = (resname, stdres)
 
+    # TODO: move this to its own function
     for model in hierarchy.models():
         for chain in model.chains():
             for residue_group in chain.residue_groups():
@@ -1422,7 +1423,7 @@ def std_residues(pdbin, pdbout, del_hetatm=False):
     if del_hetatm:
         _strip(hierarchy, hetatm=True)
 
-    _save(pdbout, hierarchy, crystal_symmetry=crystal_symmetry,
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry,
           remarks=['Original file: %s' % pdbin])
 
 
@@ -1468,7 +1469,7 @@ def to_single_chain(pdbin, pdbout):
        The path to the output PDB
     
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     _first_chain_only(hierarchy)
     _save(pdbout, hierarchy, crystal_symmetry=symmetry)
 
@@ -1486,7 +1487,7 @@ def translate(pdbin, pdbout, ftranslate):
        The vector of fractional coordinates to shift by
     
     """
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
 
     # Obtain information about the fractional coordinates
     crystal_info = get_info(pdbin).crystalInfo

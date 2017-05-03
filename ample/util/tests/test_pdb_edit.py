@@ -449,7 +449,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
         self.assertEqual(data, reference_data)
         os.unlink(pdbout)
 
-    def test_std_Residues(self):
+    def test_std_residues_1(self):
 
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
         pdbout = "std.pdb"
