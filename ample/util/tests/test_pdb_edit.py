@@ -206,49 +206,33 @@ class Test(unittest.TestCase):
         self.assertEqual(data, reference_data)
         os.unlink(pdbout)
 
-    def test_merge(self):
+    def test_merge_1(self):
         pdb1 = os.path.join(self.testfiles_dir, "4DZN.pdb")
         pdb2 = os.path.join(self.testfiles_dir, "1BYZ.pdb")
         pdbout = "tmp_merge.pdb"
         pdb_edit.merge(pdb1, pdb2, pdbout)
         reference_data_1 = [
             "HETATM    1  C   ACE A   0      25.199  11.913  -9.250  1.00 27.72           C",
-            "ANISOU    1  C   ACE A   0     2933   4198   3402     29   -251    297       C",
             "HETATM    2  O   ACE A   0      25.201  10.666  -9.372  1.00 23.97           O",
-            "ANISOU    2  O   ACE A   0     2587   4332   2189   -515   -230    104       O",
             "HETATM    3  CH3 ACE A   0      26.454  12.702  -9.001  1.00 32.42           C",
-            "ANISOU    3  CH3 ACE A   0     3564   4758   3995   -239  -1016     28       C",
             "ATOM      4  N   GLY A   1      24.076  12.643  -9.179  1.00 23.32           N",
-            "ANISOU    4  N   GLY A   1     2998   3289   2573   -157   -425    199       N",
             "ATOM      5  CA  GLY A   1      22.806  12.124  -9.698  1.00 18.13           C",
-            "ANISOU    5  CA  GLY A   1     2466   2494   1928    -66    -40    660       C",
             "ATOM      6  C   GLY A   1      22.170  11.067  -8.799  1.00 15.67           C",
-            "ANISOU    6  C   GLY A   1     2501   1562   1889   -506   -480    259       C",
             "ATOM      7  O   GLY A   1      22.404  11.024  -7.580  1.00 16.52           O",
-            "ANISOU    7  O   GLY A   1     2581   2124   1571   -470   -178    -48       O",
             "ATOM      8  N   GLU A   2      21.377  10.190  -9.397  1.00 13.90           N",
         ]
 
         reference_data_2 = [
-            "ANISOU  576  CB  ILE C   3     2180   1836   1869   -499   -391    255       C",
-            "ATOM    577  CG1 ILE C   3      19.687   0.791 -11.270  1.00 16.36           C",
-            "ANISOU  577  CG1 ILE C   3     2342   1902   1970    708   -222    402       C",
-            "ATOM    578  CG2 ILE C   3      17.926   2.092 -10.024  1.00 16.72           C",
-            "ANISOU  578  CG2 ILE C   3     2270   2100   1980    393    314    -53       C",
-            "ATOM    579  CD1 ILE C   3      19.861   1.505 -12.619  1.00 19.26           C",
-            "ANISOU  579  CD1 ILE C   3     2386   2732   2196     94   -787   1035       C",
-            "ATOM    580  N   ALA C   4      15.647  -0.630  -9.580  1.00 13.96           N",
-            "ANISOU  580  N   ALA C   4     1637   2255   1413   -554    -86    436       N",
-            "ATOM    581  CA  ALA C   4      14.367  -0.707  -8.884  1.00 12.18           C",
-            "ANISOU  581  CA  ALA C   4     1278   1976   1372   -216   -201   -146       C",
-            "ATOM    582  C   ALA C   4      14.424  -1.670  -7.682  1.00 14.16           C",
-            "ANISOU  582  C   ALA C   4     1516   1953   1911   -420   -221    -33       C",
-            "ATOM    583  O   ALA C   4      13.931  -1.344  -6.603  1.00 15.41           O",
-            "ANISOU  583  O   ALA C   4     1669   2382   1804   -498   -191   -137       O"
+            "ATOM    526  CG1 ILE C   3      19.687   0.791 -11.270  1.00 16.36           C",
+            "ATOM    527  CG2 ILE C   3      17.926   2.092 -10.024  1.00 16.72           C",
+            "ATOM    528  CD1 ILE C   3      19.861   1.505 -12.619  1.00 19.26           C",
+            "ATOM    529  N   ALA C   4      15.647  -0.630  -9.580  1.00 13.96           N",
+            "ATOM    530  CA  ALA C   4      14.367  -0.707  -8.884  1.00 12.18           C",
+            "ATOM    531  C   ALA C   4      14.424  -1.670  -7.682  1.00 14.16           C",
+            "ATOM    532  O   ALA C   4      13.931  -1.344  -6.603  1.00 15.41           O",
         ]
-
-        lines_to_read_1 = range(351, 366)
-        lines_to_read_2 = range(1500, 1515)
+        lines_to_read_1 = range(0, 8)
+        lines_to_read_2 = range(527, 534)
         data_1 = []
         data_2 = []
         with open(pdbout) as f:

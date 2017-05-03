@@ -272,34 +272,6 @@ def calpha_only(pdbin, pdbout):
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
-def reliable_sidechains(pdbin, pdbout):
-    """Only output non-backbone atoms for certain residues
-    
-    This function strips side chain atoms of residues not defined in the
-    following list:
-       ['MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
-
-    Parameters
-    ----------
-    pdbin : str
-       The path to the input PDB
-    pdbout : str
-       The path to the output PDB
-    
-    """
-    _, hierarchy, symmetry = _cache(pdbin)
-    
-    # Remove sidechains that are in res_names where the atom name is not in atom_names
-    res_names = ['MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
-    atom_names = ['N', 'CA', 'C', 'O', 'CB']
-    select_string = "({residues}) or not ({residues}) and ({atoms})".format(
-        atoms=" or ".join(['name %s' % atm.lower() for atm in atom_names]),
-        residues=" or ".join(['resname %s' % res.upper() for res in res_names]),
-    )
-    hierarchy = _select(hierarchy, select_string)
-    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
-
-
 def check_pdb_directory(directory, single=True, allsame=True, sequence=None):
     """Check a directory of structure files
 
@@ -900,23 +872,52 @@ def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None):
     return
 
 
-def merge(pdb1=None, pdb2=None, pdbout=None):
-    """Merge two pdb files into one"""
+def merge(pdbin1, pdbin2, pdbout):
+    """Merge two pdb files into one
+    
+    The chains of ``pdbin2`` are appended to ``pdbin1`` corresponding to the models
+    
+    Parameters
+    ----------
+    pdbin1 : str
+       The path to the first input PDB    
+    pdbin2 : str
+       The path to the second input PDB
+    pdbout : str
+       The path to the output PDB
+    
+    Raises
+    ------
+    ValueError
+       Cannot handle multiple models yet
+    
+    """
+    # Don't save symmetry or anything otherwise header only applicable to one
+    _, h1, _ = _cache(pdbin1)
+    _, h2, _ = _cache(pdbin2)
 
-    logfile = pdbout + ".log"
-    cmd = ['pdb_merge', 'xyzin1', pdb1, 'xyzin2', pdb2, 'xyzout', pdbout]
+    if h1.models_size() > 1 or h2.models_size() > 1:
+        msg = "Cannot handle multiple models yet"
+        raise ValueError(msg)
 
-    # Build up stdin
-    stdin = 'nomerge'
-    retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
+    alphabet = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+    chains_in_first = {c.id for c in h1.only_model().chains()}
+    chain_mapping = {}
+    for c, l in zip(h2.only_model().chains(), alphabet[len(chains_in_first):h2.only_model().chains_size()]):
+        if all(a.hetero for a in c.atoms()):
+            continue
+        else:
+            chain_mapping[c.id] = l
 
-    if retcode == 0:
-        # remove temporary files
-        os.unlink(logfile)
-    else:
-        raise RuntimeError("Error merging pdbs: {0} {1}".format(pdb1, pdb2))
+    m = h1.only_model()
+    for c in h2.only_model().chains():
+        addable = c.detached_copy()
+        addable.id = chain_mapping[addable.id]
+        m.append_chain(addable)
 
-    return
+    # Reset the atom sequence
+    h1.atoms().reset_i_seq()
+    _save(pdbout, h1)
 
 
 def most_prob(pdbin, pdbout, always_keep_one_conformer=True):
@@ -1017,6 +1018,34 @@ def prepare_nmr_model(nmr_model_in, models_dir):
         split_pdbs = to_keep
 
     return split_pdbs
+
+
+def reliable_sidechains(pdbin, pdbout):
+    """Only output non-backbone atoms for certain residues
+
+    This function strips side chain atoms of residues not defined in the
+    following list:
+       ['MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
+
+    Parameters
+    ----------
+    pdbin : str
+       The path to the input PDB
+    pdbout : str
+       The path to the output PDB
+
+    """
+    _, hierarchy, symmetry = _cache(pdbin)
+
+    # Remove sidechains that are in res_names where the atom name is not in atom_names
+    res_names = ['MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
+    atom_names = ['N', 'CA', 'C', 'O', 'CB']
+    select_string = "({residues}) or not ({residues}) and ({atoms})".format(
+        atoms=" or ".join(['name %s' % atm.lower() for atm in atom_names]),
+        residues=" or ".join(['resname %s' % res.upper() for res in res_names]),
+    )
+    hierarchy = _select(hierarchy, select_string)
+    _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: {0}'.format(pdbin)])
 
 
 def rename_chains(pdbin, pdbout, fromChain, toChain):
