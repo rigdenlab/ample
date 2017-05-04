@@ -8,11 +8,12 @@ import csv
 import logging
 import os
 
-import _ensembler
-import truncation_util
 from constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util
 from ample.util import pdb_edit
+
+import _ensembler
+import truncation_util
 
 logger = logging.getLogger(__name__)
 
@@ -132,29 +133,52 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         kwargs = { k : v for k, v in kwargs.iteritems() if v is not None }
         return self.generate_ensembles(models, **kwargs)
 
-    # staticmethod so that we can test without instantiating an Ensembler
     @staticmethod
     def _generate_residue_scorelist(residue_key, score_key, scores):
         """Generate a zipped list of residue indexes and corresponding scores
         
-        :residue_key: residue column header keyword
-        :score_key: score column header keyword
-        :scores: list of dictionaries for each residue
+        Parameters
+        ----------
+        residue_key : str
+           Residue column header keyword
+        score_key : str
+           Score column header keyword
+        scores : list, tuple
+           A list of dictionaries for each residue
         
-        :returns: zipped list of residue index plus score
+        Returns
+        -------
+        list
+           A zipped list of residue index - score pairs
+
+        Raises
+        ------
+        KeyError
+           Cannot find residue key in scoresfile
+        KeyError
+           Cannot find score key in scoresfile
+
         """
-        
-        assert scores[0] in residue_key, "Cannot find residue key in scoresfile"
-        assert scores[0] in score_key, "Cannot find score key in scoresfile"
+        if residue_key not in scores[0]:
+            raise KeyError("Cannot find residue key in scoresfile")
+        if score_key not in scores[0]:
+            raise KeyError("Cannot find score key in scoresfile")
         return [(i[residue_key], i[score_key]) for i in scores]
     
-    # staticmethod so that we can test without instantiating an Ensembler
     @staticmethod
     def _read_scorefile(scorefile):
-        """
-        :scorefile: CSV score file INCLUDING header line
+        """Read the provided score file in CSV format
+
+        Parameters
+        ----------
+        scorefile : str
+           THe path to the CSV score file INCLUDING header line
         
-        :returns: list of per residue dictionaries containing column data
+        Returns
+        -------
+        list
+           A list of per residue dictionaries containing column data
+
         """
         scores = []
         with open(scorefile, 'r') as csvfile:

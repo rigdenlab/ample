@@ -10,6 +10,7 @@ import glob
 import logging
 import numpy as np
 import os
+import string
 import warnings
 
 from cctbx.array_family import flex
@@ -121,7 +122,13 @@ def _natm_nres_mw(hierarchy, first=False):
                             water_atoms += (1.0 * atom.occ)
                         else:
                             other_atoms += atom.occ
-                            mw += chemistry.periodic_table(atom.element.strip()).weight() * atom.occ
+                            # Be carful, models might not have the last element column
+                            if atom.element.strip():
+                                aname = atom.element.strip()
+                            else:
+                                aname = atom.name.strip()
+                                aname = aname.translate(None, string.digits)[0]
+                            mw += chemistry.periodic_table(aname).weight() * atom.occ
 
     mw += hydrogen_atoms * chemistry.periodic_table('H').weight()
 
@@ -798,10 +805,11 @@ def get_info(pdbin):
 
     # CRYST1
     info.crystalInfo = pdb_model.CrystalInfo()
-    cryst1 = pdb_input.crystal_symmetry_from_cryst1()
-    info.crystalInfo.spaceGroup = cryst1.space_group_info()
-    info.crystalInfo.unit_cell = cryst1.unit_cell().parameters()
     info.crystalInfo.z = pdb_input.extract_cryst1_z_columns()
+    cryst1 = pdb_input.crystal_symmetry_from_cryst1()
+    if cryst1:
+        info.crystalInfo.spaceGroup = cryst1.space_group_info()
+        info.crystalInfo.unit_cell = cryst1.unit_cell().parameters()
 
     # REMARK   2
     info.resolution = -1

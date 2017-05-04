@@ -16,16 +16,9 @@ from ample.util import pdb_edit
 class Test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        """
-        Set up paths. Need to do this with setUpClass, as otherwise the __file__
-        variable is updated whenever the cwd is changed in a test and the next test
-        gets the wrong paths.
-        """
-        cls.thisd = os.path.abspath(os.path.dirname(__file__))
-        paths = cls.thisd.split(os.sep)
-        cls.ample_dir = os.sep.join(paths[:-2])
+        cls.thisd =  os.path.abspath(os.path.dirname(__file__)) 
         cls.ample_share = constants.SHARE_DIR
-        cls.testfiles_dir = os.path.join(os.sep.join(paths[:-3]), 'testfiles')
+        cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
 
     def test_backbone_1(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
