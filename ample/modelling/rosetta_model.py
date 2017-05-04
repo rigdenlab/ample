@@ -332,8 +332,8 @@ class RosettaModel(object):
         success = self.run_scripts(job_scripts, job_time=job_time, job_name='abinitio', monitor=None)
         if not success:
             msg = "Error running ROSETTA in directory: {0}." + os.linesep \
-                  + "Please check the log files for more information.".format(self.run_dir)
-            raise RuntimeError(msg)
+                  + "Please check the log files for more information."
+            raise RuntimeError(msg.format(self.run_dir))
 
         # Copy the models into the models directory - need to rename them accordingly
         pdbs = []
@@ -344,14 +344,14 @@ class RosettaModel(object):
         if not pdbs:
             msg = "No models created after modelling!" + os.linesep \
                   + "Please check the log files in the directory {0} " \
-                    "for more information.".format(self.run_dir)
-            raise RuntimeError(msg)
+                  + "for more information."
+            raise RuntimeError(msg.format(self.run_dir))
 
         if len(pdbs) != self.nmodels:
             msg = "Expected to create {0} models but found {1}." + os.linesep \
                   + "Please check the log files in the directory {2} " \
-                    "for more information.".format(self.nmodels, len(pdbs), self.run_dir)
-            raise RuntimeError(msg)
+                    "for more information."
+            raise RuntimeError(msg.format(self.nmodels, len(pdbs), self.run_dir))
 
         # Copy files into the models directory
         pdbs_moved = []
@@ -707,8 +707,8 @@ class RosettaModel(object):
         success = self.run_scripts(job_scripts=job_scripts, job_time=job_time, job_name='remodel', monitor=None)
         if not success:
             msg = "Error running ROSETTA in directory: {0}." + os.linesep \
-                  + "Please check the log files for more information.".format(remodel_dir)
-            raise RuntimeError(msg)
+                  + "Please check the log files for more information."
+            raise RuntimeError(msg.format(remodel_dir))
     
         # Copy the models into the models directory - need to rename them accordingly
         pdbs = []
@@ -718,8 +718,8 @@ class RosettaModel(object):
         
         if not len(pdbs):
             msg = "No pdbs after remodelling in directory: {0}." + os.linesep \
-                  + "Please check the log files for more information.".format(remodel_dir)
-            raise RuntimeError(msg)
+                  + "Please check the log files for more information."
+            raise RuntimeError(msg.format(remodel_dir))
 
         # We also need to strip the H atoms as the remodelling occasionally fails to model an H atom, 
         # which leads to pdbs with differing numbers of atoms, which causes theseus to fail. However

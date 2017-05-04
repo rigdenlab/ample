@@ -188,7 +188,7 @@ class Maxcluster(object):
             
             # We need to create a copy of the native with numbering matching the model
             nativeRenumber = ample_util.filename_append( filename=nativePdb,
-                                                         astr="ren".format(chainID) )
+                                                         astr="ren" )
             pdb_edit.match_resseq( targetPdb=nativePdb, outPdb=nativeRenumber, resMap=resSeqMap )
             nativePdb = nativeRenumber
         
