@@ -283,8 +283,7 @@ class Test(unittest.TestCase):
         self.assertEqual(natoms, ref_natoms)
         self.assertEqual(nresidues, ref_nresidues)
 
-    def test_rename_chains(self):
-        # Test the function to rename chains
+    def test_rename_chains_1(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
         pdbout = "tmp.pdb"
         reference_data = ["ATOM      4  N   GLY Z   1      24.076  12.643  -9.179  1.00 23.32           N",
@@ -299,7 +298,6 @@ class Test(unittest.TestCase):
                           "ATOM     13  CG  GLU Z   2      18.637   7.595  -8.790  1.00 10.75           C"
                           ]
         pdb_edit.rename_chains(pdbin, pdbout, fromChain=['A', 'B'], toChain=['Z', 'Y'])
-
         count = 0
         data = []
         with open(pdbout) as f:
@@ -313,8 +311,7 @@ class Test(unittest.TestCase):
         self.assertEqual(data, reference_data)
         os.unlink(pdbout)
 
-    def test_renumber(self):
-        # Test the function to renumber residues
+    def test_renumber_1(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
         pdbout = "tmp.pdb"
 
@@ -341,15 +338,8 @@ class Test(unittest.TestCase):
         self.assertEqual(data, reference_data)
         os.unlink(pdbout)
 
-    def test_standardise(self):
-        # Test standardisation of a pdb file
-
-        #######################################################################
-        # Test case 1 - Testing standardisation
-        #######################################################################
-
+    def test_standardise_1(self):
         pdbin = tempfile.NamedTemporaryFile("w", suffix='.pdb', delete=False)
-
         pdbin.write("""HETATM    1  O   HOH A   0      25.199  11.913  -9.250  1.00 27.72           O
 ANISOU    1  O   HOH A   0     2933   4198   3402     29   -251    297       O
 HETATM    2  O   HOH A   0      25.201  10.666  -9.372  1.00 23.97           O

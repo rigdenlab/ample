@@ -547,21 +547,14 @@ def keep_residues(pdbin, pdbout, residue_range, chain_id):
     _, hierarchy, symmetry = _cache(pdbin)
 
     # Only keep the specified chain ID
-    for model in hierarchy.models():
-        for chain in model.chains():
-            if chain.id != chain_id:
-                model.remove_chain(chain=chain)
-
+    hierarchy = _select(hierarchy, "chain %s" % chain_id)
+    
     # Renumber the chain
     _renumber(hierarchy, start=1)
 
-    # Remove residues outside the desired range
-    residues_to_keep = range(residue_range[0], residue_range[1] + 1)
-    for model in hierarchy.models():
-        for chain in model.chains():
-            for rg in chain.residue_groups():
-                if rg.resseq_as_int() not in residues_to_keep:
-                    chain.remove_residue_group(rg)
+    # Select only residues in the desired range
+    residues_to_keep_string = " or ".join(["resseq %d" % r for r in range(residue_range[0], residue_range[1] + 1)])
+    hierarchy = _select(hierarchy, residues_to_keep_string)
 
     # remove hetatms
     _strip(hierarchy, hetatm=True)
