@@ -1541,7 +1541,7 @@ def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
         msg = "Define which atoms to strip"
         raise ValueError(msg)
 
-    hierarchy, symmetry = _cache(pdbin)
+    _, hierarchy, symmetry = _cache(pdbin)
     _strip(hierarchy, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)
     _save(pdbout, hierarchy, crystal_symmetry=symmetry, remarks=['Original file: %s' % pdbin])
 

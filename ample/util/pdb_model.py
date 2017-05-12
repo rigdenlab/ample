@@ -489,9 +489,9 @@ class CrystalInfo(object):
     @z.setter
     def z(self, v):
         """Define the z parameter"""
-        if isinstance(v, int):
+        if v is not None and v.strip() and isinstance(v, int):
             self._z = v
-        elif isinstance(v, str):
+        elif v is not None and v.strip() and isinstance(v, str):
             self._z = int(v.strip())
 
     def fromLine(self, line):

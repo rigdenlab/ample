@@ -239,9 +239,9 @@ class Rio(object):
  
         # Make a copy of mrPdb with chains renamed to lower case
         ucChains = mrPdbInfo.models[0].chains
-        toChains = [ c.lower() for c in ucChains ]
-        placedAaPdb = ample_util.filename_append( filename=mrPdb, astr="ren", directory=self.workdir )
-        pdb_edit.rename_chains( inpdb=mrPdb, outpdb=placedAaPdb, fromChain=ucChains, toChain=toChains )
+        toChains = [c.lower() for c in ucChains]
+        placedAaPdb = ample_util.filename_append(filename=mrPdb, astr="ren", directory=self.workdir)
+        pdb_edit.rename_chains(mrPdb, placedAaPdb, ucChains, toChains )
 
         # The list of chains in the native that we will be checking contacts from
         fromChains = nativePdbInfo.models[0].chains
@@ -256,13 +256,13 @@ class Rio(object):
             if origin != [ 0.0, 0.0, 0.0 ]:
                 # Move pdb to new origin
                 #ostr="origin{0}".format(i)
-                ostr="o{0}".format( origin ).replace(" ","" )
-                placedOriginPdb = ample_util.filename_append( filename=placedAaPdb, astr=ostr, directory=self.workdir )
-                pdb_edit.translate( inpdb=placedAaPdb, outpdb=placedOriginPdb, ftranslate=origin )
+                ostr="o{0}".format( origin ).replace(" ", "") 
+                placedOriginPdb = ample_util.filename_append(filename=placedAaPdb, astr=ostr, directory=self.workdir)
+                pdb_edit.translate(placedAaPdb, placedOriginPdb, origin)
             
             # Concatenate into one file
             joinedPdb = ample_util.filename_append( filename=placedOriginPdb, astr="joined", directory=self.workdir )
-            pdb_edit.merge( pdb1=nativePdbInfo.pdb, pdb2=placedOriginPdb, pdbout=joinedPdb )
+            pdb_edit.merge(nativePdbInfo.pdb, placedOriginPdb, joinedPdb)
             
             # Set up object to hold data
             data            = RioData()
@@ -621,9 +621,9 @@ class Rio(object):
  
         # Make a copy of mrPdb with chains renamed to lower case
         ucChains = mrPdbInfo.models[0].chains
-        toChains = [ c.lower() for c in ucChains ]
-        mrAaPdb = ample_util.filename_append( filename=mrPdb, astr="ren", directory=self.workdir )
-        pdb_edit.rename_chains( inpdb=mrPdb, outpdb=mrAaPdb, fromChain=ucChains, toChain=toChains )
+        toChains = [c.lower() for c in ucChains]
+        mrAaPdb = ample_util.filename_append(filename=mrPdb, astr="ren", directory=self.workdir)
+        pdb_edit.rename_chains(mrPdb, mrAaPdb, ucChains, toChains)
 
         # The list of chains in the native that we will be checking contacts from
         fromChains = nativePdbInfo.models[0].chains
@@ -634,11 +634,11 @@ class Rio(object):
             #ostr="origin{0}".format(i)
             ostr="o{0}".format( origin ).replace(" ","" )
             mrOriginPdb = ample_util.filename_append( filename=mrAaPdb, astr=ostr, directory=self.workdir )
-            pdb_edit.translate( inpdb=mrAaPdb, outpdb=mrOriginPdb, ftranslate=origin )
+            pdb_edit.translate(mrAaPdb, mrOriginPdb, origin)
         
         # Concatenate into one file
         joinedPdb = ample_util.filename_append( filename=mrOriginPdb, astr="joined", directory=self.workdir )
-        pdb_edit.merge( pdb1=nativePdbInfo.pdb, pdb2=mrOriginPdb, pdbout=joinedPdb )
+        pdb_edit.merge(nativePdbInfo.pdb, mrOriginPdb, joinedPdb)
             
         # Run ncont
         data = RioData()
