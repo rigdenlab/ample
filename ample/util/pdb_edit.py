@@ -962,7 +962,8 @@ def merge(pdbin1, pdbin2, pdbout):
     alphabet = list('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
     chains_in_first = {c.id for c in h1.only_model().chains()}
     chain_mapping = {}
-    for c, l in zip(h2.only_model().chains(), alphabet[len(chains_in_first):h2.only_model().chains_size()]):
+    new_chain_letters = alphabet[len(chains_in_first) : h2.only_model().chains_size() + len(chains_in_first)]
+    for c, l in zip(h2.only_model().chains(), new_chain_letters):
         if all(a.hetero for a in c.atoms()):
             continue
         else:
