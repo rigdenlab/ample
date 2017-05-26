@@ -290,35 +290,29 @@ where inp_list.dat  contains:
             os.unlink(glist)
             os.unlink(logfile)
         return
-    
+
     def _parse_gesamt_rmsd_log(self, logfile, num_models):
-        found = False
+        reading = -1
+        nmodel = 0
         with open(logfile) as f:
-            while True:
-                line = f.readline()
-                if line.startswith(' ===== CROSS-RMSDs'):
-                    line = f.readline() # skip blank line
-                    for i in range(num_models):
-                        line = f.readline().strip()
-                        fields = line.split('|')
-                        
-                        # paranoid check
-                        nmodel = int(fields[0])
-                        assert nmodel ==  i+1,"Error parsing gesamt logfile: {0}".format(logfile)
-                        
-                        rmsd_txt = fields[2].strip()
-                        # poke into distance matrix
-                        rmsds = [ float(r) for r in rmsd_txt.split() ]
-                        for j in range(len(rmsds)):
-                            if j == i: continue
-                            self.distance_matrix[i][j] = rmsds[j]
-                    found = True
-                    break
-        
-        if not found: 
-            raise RuntimeError("Could not generate distance matrix with gesamt")
+            for line in f:
+                if line.startswith(' ===== CROSS-RMSDs') or reading == 0:
+                    # find start of RMSDS and skip blank line
+                    reading += 1
+                    continue
+                if reading == 1:
+                    fields = line.strip().split('|')
+                    nmodel = int(fields[0])
+                    rmsd_txt = fields[2].strip()
+                    # poke into distance matrix
+                    rmsds = [ float(r) for r in rmsd_txt.split() ]
+                    for j in range(len(rmsds)):
+                        if j == nmodel: continue
+                        self.distance_matrix[nmodel-1][j] = rmsds[j]
+                    if nmodel == num_models: reading = -1
+        if nmodel != num_models: raise RuntimeError("Could not generate distance matrix with gesamt")
         return
-        
+
     def _generate_distance_matrix_generic(self, models, purge=True, purge_all=False, metric='qscore'):
         # Make sure all the files are in the same directory otherwise we wont' work
         mdir = os.path.dirname(models[0])
