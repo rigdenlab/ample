@@ -161,10 +161,11 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
     errors = []
     multi = []
     no_protein = []
-    sequence_err=[]
+    sequence_err = []
+    unnamed_chain = []
     for pdb in models:
         try:
-            h=iotbx.pdb.pdb_input(pdb).construct_hierarchy()
+            h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
         except Exception,e:
             errors.append((pdb,e))
             continue
@@ -176,11 +177,14 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
         if not h.models()[0].chains()[0].is_protein():
             no_protein.append(pdb)
             continue
+        if not h.models()[0].chains()[0].id.strip(): # Check we have a named chain
+            unnamed_chain.append(pdb)
+            continue
         if sequence:
             s=_sequence1(h) # only one chain/model
             if not s == sequence: sequence_err.append((pdb,s))
     
-    if not (len(errors) or len(multi) or len(sequence_err) or len(no_protein)):
+    if not (len(errors) or len(multi) or len(sequence_err) or len(no_protein) or len(unnamed_chain)):
         _logger.info("check_pdb_directory - pdb files all seem valid")
         return True
     
@@ -201,6 +205,12 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
         s+="\n"
         s+="The following pdb files do not appear to contain any protein:\n\n"
         for pdb in no_protein:
+            s+="{0}\n".format(pdb)
+            
+    if len(unnamed_chain):
+        s+="\n"
+        s+="The following pdb files do not have named chains:\n\n"
+        for pdb in unnamed_chain:
             s+="{0}\n".format(pdb)
             
     if len(sequence_err):
