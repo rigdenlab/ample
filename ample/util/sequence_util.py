@@ -152,6 +152,28 @@ class Sequence(object):
     def length(self,seq_no=0):
         return len(self.sequences[seq_no])
     
+    def mutate_residue(self, from_aa, res_seq, to_aa, seq_id=0):
+        """Change residue type from_aa at position res_seq to be of type to_aa
+        
+        Note: res_seq positions start from 1 not zero!
+
+        Parameters
+        ----------
+        from_aa : str
+           Single-letter amino acid
+        res_seq : int
+           Residue sequence number
+        to_aa : str
+           Single-letter amino acid
+        seq_id : int
+           The index of the sequence to operate on (counting from zero)
+        
+        """
+        seq = self.sequences[seq_id]
+        assert seq[res_seq - 1] == from_aa, "Amino acid at position {0} is {1} not {2}".format(res_seq, seq[res_seq - 1], from_aa)
+        self.sequences[seq_id] = seq[:res_seq - 1] + to_aa +  seq[res_seq:]
+        return
+    
     def numSequences(self):
         return len(self.sequences)
     
