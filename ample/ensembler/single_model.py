@@ -7,6 +7,7 @@ __version__ = "1.0"
 import csv
 import logging
 import os
+import pandas as pd
 
 import _ensembler
 import truncation_util
@@ -155,14 +156,5 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         
         :returns: list of per residue dictionaries containing column data
         """
-        scores = []
-        with open(scorefile, 'r') as csvfile:
-            reader = csv.reader(csvfile)
-            header = reader.next()
-            # Require this to make sure we have scores matching headers
-            for row in reader:
-                res = {}
-                for h, e in zip(header, row):
-                    res[h.lower()] = float(e)
-                scores.append(res)
-        return scores
+        return pd.read_csv(scorefile).T.to_dict().values()
+
