@@ -143,9 +143,8 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         
         :returns: zipped list of residue index plus score
         """
-        
-        assert scores[0] in residue_key, "Cannot find residue key in scoresfile"
-        assert scores[0] in score_key, "Cannot find score key in scoresfile"
+        assert residue_key in scores[0], "Cannot find residue key in scoresfile"
+        assert score_key in scores[0], "Cannot find score key in scoresfile"
         return [(i[residue_key], i[score_key]) for i in scores]
     
     # staticmethod so that we can test without instantiating an Ensembler
