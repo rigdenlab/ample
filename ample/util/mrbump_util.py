@@ -534,13 +534,14 @@ class ResultsSummary(object):
         r += summary
 
         # Hack need to think of a better way to do this when there are no valid results
-        if self.results[0]["MR_directory"]:
+        top = self.results[0]
+        k = None
+        for p in ['Search_directory','MR_directory']:
+            if p in top.keys(): k = p
+        assert k,"Missing search directory key in results dictionary"
+        if top[k]:
             r += '\nBest Molecular Replacement results so far are in:\n\n'
             r += self.results[0]["MR_directory"]
-
-#         if self.results[0].pdb and os.path.isfile(self.results[0].pdb):
-#             r += '\n\nFinal PDB is:\n\n'
-#             r +=  self.results[0].pdb
         r += '\n\n'
 
         return r
