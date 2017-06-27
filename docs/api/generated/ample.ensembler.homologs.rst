@@ -1,5 +1,5 @@
-ample.ensembler.homologs module
-===============================
+ample\.ensembler\.homologs module
+=================================
 
 .. automodule:: ample.ensembler.homologs
     :members:

@@ -1,5 +1,5 @@
-ample.parsers package
-=====================
+ample\.parsers package
+======================
 
 .. automodule:: ample.parsers
     :members:

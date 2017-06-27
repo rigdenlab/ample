@@ -1,5 +1,5 @@
-ample.testing package
-=====================
+ample\.testing package
+======================
 
 .. automodule:: ample.testing
     :members:

@@ -1,5 +1,5 @@
-ample.ensembler.subcluster module
-=================================
+ample\.ensembler\.subcluster module
+===================================
 
 .. automodule:: ample.ensembler.subcluster
     :members:

@@ -1,5 +1,5 @@
-ample.ensembler.cluster_util module
-===================================
+ample\.ensembler\.cluster\_util module
+======================================
 
 .. automodule:: ample.ensembler.cluster_util
     :members:

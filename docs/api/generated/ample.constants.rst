@@ -1,5 +1,5 @@
-ample.constants module
-======================
+ample\.constants module
+=======================
 
 .. automodule:: ample.constants
     :members:

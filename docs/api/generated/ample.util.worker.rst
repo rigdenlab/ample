@@ -1,5 +1,5 @@
-ample.util.worker module
-========================
+ample\.util\.worker module
+==========================
 
 .. automodule:: ample.util.worker
     :members:

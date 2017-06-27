@@ -1,5 +1,5 @@
-ample.ensembler package
-=======================
+ample\.ensembler package
+========================
 
 .. automodule:: ample.ensembler
     :members:

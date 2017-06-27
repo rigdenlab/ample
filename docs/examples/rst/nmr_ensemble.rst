@@ -7,7 +7,8 @@ Using an NMR ensemble
 AMPLE can attempt molecular replacement with ensembles created from NMR ensembles. In the simplest case, AMPLE will split an NMR ensemble into its constituent models and carry out its standard truncation/clustering algorithm to generate the ensembles. When used in this way, ROSETTA is not required to be installed. 
 
 .. note::
-   To use AMPLE in this way, just supply the NMR model with the -nmr_model_in flag and set the -nmr_remodel flag to False.
+
+   To use AMPLE in this way, just supply the NMR model with the ``-nmr_model_in flag`` and set the ``-nmr_remodel`` flag to ``False``.
 
 ------------------------------------------------------------------
 
@@ -29,12 +30,14 @@ UNIX (Linux|Mac)
 
 .. literalinclude:: /../examples/nmr-truncate/run.sh
    :language: bash
+   :lines: 11-16
 
 Windows
 ^^^^^^^
 
 .. literalinclude:: /../examples/nmr-truncate/run.bat
    :language: batch
+   :lines: 9-14
 
 We need to provide the locations of our input files, this is done using the following flag:
 
@@ -48,7 +51,7 @@ Next we can specify a few run options for AMPLE:
 * ``-nmr_remodel`` – specifies whether to remodel the NMR structures.
 * ``-quick_mode`` – Preset options to run quickly, but less thoroughly.
 
-For a full list of options see :ref:`AMPLE options <ample_options>`.
+For a full list of options see :ref:`AMPLE options <cl_options>`.
 
 ------------------------------------------------------------------
 

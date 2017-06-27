@@ -1,5 +1,5 @@
-ample.util.shelxe module
-========================
+ample\.util\.shelxe module
+==========================
 
 .. automodule:: ample.util.shelxe
     :members:

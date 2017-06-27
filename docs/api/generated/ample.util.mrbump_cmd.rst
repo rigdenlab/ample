@@ -1,5 +1,5 @@
-ample.util.mrbump_cmd module
-============================
+ample\.util\.mrbump\_cmd module
+===============================
 
 .. automodule:: ample.util.mrbump_cmd
     :members:

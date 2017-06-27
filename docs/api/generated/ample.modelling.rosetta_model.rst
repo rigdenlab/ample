@@ -1,5 +1,5 @@
-ample.modelling.rosetta_model module
-====================================
+ample\.modelling\.rosetta\_model module
+=======================================
 
 .. automodule:: ample.modelling.rosetta_model
     :members:

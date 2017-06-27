@@ -1,5 +1,5 @@
-ample.util.sequence_util module
-===============================
+ample\.util\.sequence\_util module
+==================================
 
 .. automodule:: ample.util.sequence_util
     :members:

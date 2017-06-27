@@ -1,5 +1,5 @@
-ample.parsers.dssp_parser module
-================================
+ample\.parsers\.dssp\_parser module
+===================================
 
 .. automodule:: ample.parsers.dssp_parser
     :members:

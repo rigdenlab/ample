@@ -1,5 +1,5 @@
-ample.util.exit_util module
-===========================
+ample\.util\.exit\_util module
+==============================
 
 .. automodule:: ample.util.exit_util
     :members:

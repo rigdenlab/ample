@@ -19,9 +19,9 @@ from ample.modelling import energy_functions
 from ample.util import ample_util
 from ample.util import workers_util
 
+import conkit
 import conkit.io
 import conkit.plot
-import conkit._version
 
 logger = logging.getLogger(__name__)
 
@@ -429,7 +429,7 @@ class ContactUtil(object):
             # TODO: Get the log file business working properly
             cmd = [executable, '-d', subdistance_to_neighbor]
             # Decoy file and format - version dependent
-            if StrictVersion(conkit._version.__version__) <= StrictVersion('0.6.3'):
+            if StrictVersion(conkit.__version__) <= StrictVersion('0.6.3'):
                 cmd += [decoy]
             else:
                 cmd += [decoy, decoy_format]

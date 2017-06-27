@@ -1,5 +1,5 @@
-ample.util.cluster_entropy module
-=================================
+ample\.util\.cluster\_entropy module
+====================================
 
 .. automodule:: ample.util.cluster_entropy
     :members:

@@ -1,5 +1,5 @@
-ample.util.tm_util module
-=========================
+ample\.util\.tm\_util module
+============================
 
 .. automodule:: ample.util.tm_util
     :members:

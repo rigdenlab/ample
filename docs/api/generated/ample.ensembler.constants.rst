@@ -1,5 +1,5 @@
-ample.ensembler.constants module
-================================
+ample\.ensembler\.constants module
+==================================
 
 .. automodule:: ample.ensembler.constants
     :members:

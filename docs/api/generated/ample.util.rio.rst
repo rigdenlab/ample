@@ -1,5 +1,5 @@
-ample.util.rio module
-=====================
+ample\.util\.rio module
+=======================
 
 .. automodule:: ample.util.rio
     :members:

@@ -1,5 +1,5 @@
-ample.modelling.energy_functions module
-=======================================
+ample\.modelling\.energy\_functions module
+==========================================
 
 .. automodule:: ample.modelling.energy_functions
     :members:

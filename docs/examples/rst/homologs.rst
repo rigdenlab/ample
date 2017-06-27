@@ -23,12 +23,14 @@ UNIX (Linux|Mac)
 
 .. literalinclude:: /../examples/homologs/run.sh
    :language: bash
+   :lines: 12-17
 
 Windows
 ^^^^^^^
 
 .. literalinclude:: /../examples/homologs/run.bat
    :language: batch
+   :lines: 6-11
 
 We need to provide the locations of our input files, this is done using the following flag:
 
@@ -44,7 +46,7 @@ Next we can specify a few run options for AMPLE:
 .. warning::
    Although the ``-nproc`` flag is optional, the ``-homologs`` is **essential** for AMPLE to recognise that your models are homologs and not *ab initio* predictions.
 
-For a full list of options see :ref:`AMPLE options <ample_options>`.
+For a full list of options see :ref:`AMPLE options <cl_options>`.
 
 ------------------------------------------------------------------
 

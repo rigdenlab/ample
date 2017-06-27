@@ -1,5 +1,5 @@
-ample.ensembler.truncation_util module
-======================================
+ample\.ensembler\.truncation\_util module
+=========================================
 
 .. automodule:: ample.ensembler.truncation_util
     :members:

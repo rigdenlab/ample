@@ -1,5 +1,5 @@
-ample.util.reforigin module
-===========================
+ample\.util\.reforigin module
+=============================
 
 .. automodule:: ample.util.reforigin
     :members:

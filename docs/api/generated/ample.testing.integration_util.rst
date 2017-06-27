@@ -1,5 +1,5 @@
-ample.testing.integration_util module
-=====================================
+ample\.testing\.integration\_util module
+========================================
 
 .. automodule:: ample.testing.integration_util
     :members:

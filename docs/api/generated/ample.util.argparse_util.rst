@@ -1,5 +1,5 @@
-ample.util.argparse_util module
-===============================
+ample\.util\.argparse\_util module
+==================================
 
 .. automodule:: ample.util.argparse_util
     :members:

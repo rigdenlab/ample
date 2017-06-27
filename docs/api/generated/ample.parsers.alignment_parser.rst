@@ -1,5 +1,5 @@
-ample.parsers.alignment_parser module
-=====================================
+ample\.parsers\.alignment\_parser module
+========================================
 
 .. automodule:: ample.parsers.alignment_parser
     :members:

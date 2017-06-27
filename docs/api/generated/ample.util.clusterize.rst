@@ -1,5 +1,5 @@
-ample.util.clusterize module
-============================
+ample\.util\.clusterize module
+==============================
 
 .. automodule:: ample.util.clusterize
     :members:

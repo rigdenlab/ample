@@ -1,5 +1,5 @@
-ample.testing.constants module
-==============================
+ample\.testing\.constants module
+================================
 
 .. automodule:: ample.testing.constants
     :members:

@@ -1,5 +1,5 @@
-ample.modelling package
-=======================
+ample\.modelling package
+========================
 
 .. automodule:: ample.modelling
     :members:

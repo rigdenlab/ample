@@ -1,5 +1,5 @@
-ample.util.benchmark_util module
-================================
+ample\.util\.benchmark\_util module
+===================================
 
 .. automodule:: ample.util.benchmark_util
     :members:

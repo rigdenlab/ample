@@ -1,5 +1,5 @@
-ample.testing.test_funcs module
-===============================
+ample\.testing\.test\_funcs module
+==================================
 
 .. automodule:: ample.testing.test_funcs
     :members:

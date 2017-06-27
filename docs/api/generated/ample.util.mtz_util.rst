@@ -1,5 +1,5 @@
-ample.util.mtz_util module
-==========================
+ample\.util\.mtz\_util module
+=============================
 
 .. automodule:: ample.util.mtz_util
     :members:

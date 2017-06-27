@@ -1,5 +1,5 @@
-ample.util.csymmatch module
-===========================
+ample\.util\.csymmatch module
+=============================
 
 .. automodule:: ample.util.csymmatch
     :members:

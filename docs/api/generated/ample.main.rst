@@ -1,5 +1,5 @@
-ample.main module
-=================
+ample\.main module
+==================
 
 .. automodule:: ample.main
     :members:

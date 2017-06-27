@@ -1,5 +1,5 @@
-ample.util.phenixer module
-==========================
+ample\.util\.phenixer module
+============================
 
 .. automodule:: ample.util.phenixer
     :members:

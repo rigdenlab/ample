@@ -1,5 +1,5 @@
-ample.util.printTable module
-============================
+ample\.util\.printTable module
+==============================
 
 .. automodule:: ample.util.printTable
     :members:

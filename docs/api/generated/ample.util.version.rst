@@ -1,5 +1,5 @@
-ample.util.version module
-=========================
+ample\.util\.version module
+===========================
 
 .. automodule:: ample.util.version
     :members:

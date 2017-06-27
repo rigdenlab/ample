@@ -1,5 +1,5 @@
-ample.util.cphasematch module
-=============================
+ample\.util\.cphasematch module
+===============================
 
 .. automodule:: ample.util.cphasematch
     :members:

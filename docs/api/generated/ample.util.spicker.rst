@@ -1,5 +1,5 @@
-ample.util.spicker module
-=========================
+ample\.util\.spicker module
+===========================
 
 .. automodule:: ample.util.spicker
     :members:

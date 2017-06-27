@@ -1,5 +1,5 @@
-ample.testing.unittest_util module
-==================================
+ample\.testing\.unittest\_util module
+=====================================
 
 .. automodule:: ample.testing.unittest_util
     :members:

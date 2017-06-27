@@ -1,5 +1,5 @@
-ample.util.config_util module
-=============================
+ample\.util\.config\_util module
+================================
 
 .. automodule:: ample.util.config_util
     :members:

@@ -1,5 +1,5 @@
-ample.util package
-==================
+ample\.util package
+===================
 
 .. automodule:: ample.util
     :members:

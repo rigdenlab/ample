@@ -1,5 +1,5 @@
-ample.util.pdb_edit module
-==========================
+ample\.util\.pdb\_edit module
+=============================
 
 .. automodule:: ample.util.pdb_edit
     :members:

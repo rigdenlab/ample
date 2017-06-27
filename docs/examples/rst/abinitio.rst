@@ -35,12 +35,14 @@ UNIX (Linux|Mac)
 
 .. literalinclude:: /../examples/toxd-example/run.sh
    :language: bash
+   :lines: 15-24
 
 Windows
 ^^^^^^^
 
 .. literalinclude:: /../examples/toxd-example/run.bat
    :language: batch
+   :lines: 3-9
 
 First we set the path to the location where ROSETTA is installed. This is then input into ample using the ``-rosetta_dir`` flag.
 
@@ -65,7 +67,7 @@ Finally we can specify some options about how AMPLE will run. Here we use:
 * ``-use_shelxe`` – specifies whether we should use shelxe or not.
 * ``-nproc`` – lets you specify how many processors you want to use.
 
-For a full list possible options see :ref:`AMPLE options <ample_options>`.
+For a full list possible options see :ref:`AMPLE options <cl_options>`.
 
 ------------------------------------------------------------------
 

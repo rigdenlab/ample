@@ -1,5 +1,5 @@
-ample.util.options_processor module
-===================================
+ample\.util\.options\_processor module
+======================================
 
 .. automodule:: ample.util.options_processor
     :members:

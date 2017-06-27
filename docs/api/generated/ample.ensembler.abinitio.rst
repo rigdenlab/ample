@@ -1,5 +1,5 @@
-ample.ensembler.abinitio module
-===============================
+ample\.ensembler\.abinitio module
+=================================
 
 .. automodule:: ample.ensembler.abinitio
     :members:

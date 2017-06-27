@@ -1,5 +1,5 @@
-ample.parsers.psipred_parser module
-===================================
+ample\.parsers\.psipred\_parser module
+======================================
 
 .. automodule:: ample.parsers.psipred_parser
     :members:

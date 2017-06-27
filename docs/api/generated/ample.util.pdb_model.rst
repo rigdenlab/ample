@@ -1,5 +1,5 @@
-ample.util.pdb_model module
-===========================
+ample\.util\.pdb\_model module
+==============================
 
 .. automodule:: ample.util.pdb_model
     :members:
