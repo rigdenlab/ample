@@ -29,17 +29,12 @@ Key Features
 
 Documentation & Usage
 +++++++++++++++++++++
+
 Please refer to `AMPLE's documentation <http://ample.readthedocs.io/en/latest/>`_.
-
-Contributing
-++++++++++++
-There are two ways by which you can contribute to AMPLE:
-
-1. Submit any suggestions to the `GitHub Issue Tracker <https://github.com/rigdenlab/ample/issues>`_, or
-2. Fork this repository, commit your changes and submit a pull request.
 
 Found a Bug?
 ++++++++++++
+
 Please report all bugs to `CCP4 Help Desk <ccp4@stfc.ac.uk>`_.
 
 Contributors
