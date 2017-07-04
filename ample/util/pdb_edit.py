@@ -1,3 +1,4 @@
+#!/usr/bin/env ccp4-python
 '''
 Useful manipulations on PDB files
 '''
