@@ -541,7 +541,7 @@ class ResultsSummary(object):
         assert k,"Missing search directory key in results dictionary"
         if top[k]:
             r += '\nBest Molecular Replacement results so far are in:\n\n'
-            r += self.results[0]["MR_directory"]
+            r += top[k]
         r += '\n\n'
 
         return r
