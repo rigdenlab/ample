@@ -1,0 +1,172 @@
+<?xml version='1.0' encoding='ASCII'?>
+<ccp4i2>
+    <ccp4i2_header>
+        <function>DEF</function>
+        <userId>jmht</userId>
+        <creationTime>2017-03-22T11:32:25.035413</creationTime>
+        <pluginVersion></pluginVersion>
+        <ccp4iVersion>0.0.1</ccp4iVersion>
+        <pluginName>AMPLE</pluginName>
+        <pluginTitle>Brief title For plugin</pluginTitle>
+        <jobId/>
+    </ccp4i2_header>
+    <ccp4i2_body id="AMPLE">
+<!--You must provide an inputData container, although it can be empty-->
+        <container id="inputData">
+<!--             <content id="XYZIN">
+                <className>CPdbDataFile</className>
+                <qualifiers>
+                    <ifAtomSelection>True</ifAtomSelection>
+                    <allowUndefined>False</allowUndefined>
+                    <mustExist>True</mustExist>
+                    <requiredSubType>4,3,2,1,0</requiredSubType>
+                </qualifiers>
+            </content> -->
+			<content id="AMPLE_SEQIN">
+			  <className>CSeqDataFile</className>
+			  <qualifiers>
+			    <mustExist>True</mustExist>
+			    <allowUndefined>False</allowUndefined>
+			  </qualifiers>
+			</content>
+            <content id="AMPLE_F_SIGF">
+                <className>CObsDataFile</className>
+                <qualifiers>
+                    <allowUndefined>False</allowUndefined>
+                    <mustExist>True</mustExist>
+                </qualifiers>
+            </content>
+            <content id="AMPLE_MODELS_DIR">
+                <className>CDataFile</className>
+                <qualifiers>
+				    <guiLabel>Models directory</guiLabel>
+                    <allowUndefined>True</allowUndefined>
+                    <isDirectory>True</isDirectory>
+                    <mustExist>True</mustExist>
+                </qualifiers>
+            </content>
+            <content id="AMPLE_MODELS_FILE">
+                <className>CDataFile</className>
+                <qualifiers>
+				    <guiLabel>Models file/archive</guiLabel>
+                    <allowUndefined>True</allowUndefined>
+                    <mustExist>True</mustExist>
+                </qualifiers>
+            </content>
+			<content id="AMPLE_RUN_MODE">
+			  <className>CString</className>
+			  <qualifiers>
+			    <onlyEnumerators>True</onlyEnumerators>
+			    <guiLabel>AMPLE Run Mode</guiLabel>
+			    <menuText>From existing models,Rosetta ab initio Modelling,NMR ensemble,Ideal helices</menuText>
+			    <enumerators>existing_models,rosetta,nmr_ensemble,ideal_helices</enumerators>
+			    <default>existing_models</default>
+	            <toolTip>The type of AMPLE run to undertake</toolTip>
+            </qualifiers>
+			</content>
+			<content id="AMPLE_MODELS_SOURCE">
+			  <className>CString</className>
+			  <qualifiers>
+			    <guiLabel>Models source</guiLabel>
+			    <onlyEnumerators>True</onlyEnumerators>
+			    <menuText>A directory of models,A file/archive containing models</menuText>
+			    <enumerators>directory,file</enumerators>
+			    <default>directory</default>
+			  </qualifiers>
+			</content>
+            <content id="AMPLE_ROSETTA_DIR">
+                <className>CDataFile</className>
+                <qualifiers>
+			        <guiLabel>Path to Rosetta installation</guiLabel>
+                    <allowUndefined>True</allowUndefined>
+                    <isDirectory>True</isDirectory>
+                    <mustExist>True</mustExist>
+                </qualifiers>
+            </content>
+            <content id="AMPLE_ROSETTA_FRAGS3">
+                <className>CDataFile</className>
+                <qualifiers>
+			        <guiLabel>Rosetta 3-fragments</guiLabel>
+                    <allowUndefined>True</allowUndefined>
+                    <mustExist>True</mustExist>
+                </qualifiers>
+            </content>
+            <content id="AMPLE_ROSETTA_FRAGS9">
+                <className>CDataFile</className>
+                <qualifiers>
+			        <guiLabel>Rosetta 9-fragments</guiLabel>
+                    <allowUndefined>True</allowUndefined>
+                    <mustExist>True</mustExist>
+                </qualifiers>
+            </content>
+            <content id="AMPLE_CONTACT_FILE">
+                <className>CDataFile</className>
+                <qualifiers>
+			        <guiLabel>Contact File</guiLabel>
+                    <allowUndefined>True</allowUndefined>
+                    <mustExist>True</mustExist>
+                </qualifiers>
+            </content>
+ 			<content id="AMPLE_NPROC">
+	            <className>CInt</className>
+	            <qualifiers>
+		              <guiLabel>Number of processors</guiLabel>
+		<!--               <guiDefinition>
+		                <expertLevel>1</expertLevel>
+		              </guiDefinition> -->
+		              <toolTip>Number of processors to run on</toolTip>
+		              <min>1</min>
+	            </qualifiers>
+            </content>
+			<content id="AMPLE_ENSEMBLING_TYPE">
+	            <className>CBoolean</className>
+	            <qualifiers>
+	              <guiLabel>Better but slower ensembling</guiLabel>
+	              <toolTip>Use a slower but more effective algorithm for generating the ensembles</toolTip>
+	            </qualifiers>
+            </content>
+			<content id="AMPLE_USE_SHELXE">
+	            <className>CBoolean</className>
+	            <qualifiers>
+		          <default>True</default>
+	              <guiLabel>Run SHELXE after MR</guiLabel>
+	              <toolTip>Subject all solutions to autotracing and density modification with SHELXE</toolTip>
+	            </qualifiers>
+            </content>
+        </container>
+<!--generally we put control parameters into a container called "controlParameters"...although the-->
+<!--existence and name of this container are both optional-->
+        <container id="controlParameters">
+
+        </container>
+<!--You must provide an outputData container, although it can be empty-->
+        <container id="outputData">
+<!--             <content id="XYZOUT">
+                <className>CPdbDataFile</className>
+                <qualifiers>
+                    <default><subType>1</subType></default>
+                </qualifiers>
+            </content> -->
+<!--Further example output classes below
+            <content id="DIFFPHIOUT">
+                <className>CMapCoeffsDataFile</className>
+                <qualifiers><default><subType>2</subType><contentFlag>1</contentFlag></default>
+                    <saveToDb>True</saveToDb>
+                </qualifiers>
+            </content>
+            <content id="FPHIOUT">
+                <className>CMapCoeffsDataFile</className>
+                <qualifiers>
+                    <default><subType>1</subType><contentFlag>1</contentFlag></default>
+                    <saveToDb>True</saveToDb>
+                </qualifiers>
+            </content>
+ -->
+<!--Here specify what sort of data constitutes a PERFORMANCEinDICATOR  for this task
+            <content id="PERFORMANCEINDICATOR">
+                <className>CRefinementPerformance</className>
+            </content>
+-->
+        </container>
+    </ccp4i2_body>
+</ccp4i2>
