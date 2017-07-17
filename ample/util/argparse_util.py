@@ -28,7 +28,6 @@ __version__ = "1.0"
 import argparse
 
 from ample.util import version
-from ample.util.contact_util import SUBSELECTION_MODES
 
 
 def add_core_options(parser=None):
@@ -267,7 +266,7 @@ def add_contact_options(parser=None):
                        help="Additional energy weighting of restraints in Rosetta")
 
     contact_group.add_argument('-subselect_mode',
-                       help="Long-range decoy satisfaction subselection mode - one of [{0}]".format(" | ".join(SUBSELECTION_MODES)))
+                       help="Long-range decoy satisfaction subselection mode - one of [{0}]".format(" | ".join(["linear", "scaled", "cutoff"])))
 
     return parser
 
