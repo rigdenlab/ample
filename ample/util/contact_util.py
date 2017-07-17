@@ -16,8 +16,6 @@ import sys
 import tempfile
 
 from ample.modelling import energy_functions
-from ample.util import ample_util
-from ample.util import workers_util
 
 import conkit
 import conkit.io
@@ -402,6 +400,8 @@ class ContactUtil(object):
            A list of paths to the sub-selected decoys
 
         """
+        from ample.util import ample_util
+        from ample.util import workers_util
 
         # Compute the long range contact satisfaction on a per-decoy basis
         logger.info('Long-range contacts are defined with sequence separation of 25+')
