@@ -11,9 +11,28 @@ Documentation
 
 .. toctree::
    :maxdepth: 2
-   :glob:
 
-   api/*
+   api/cloptions
+
+.. toctree::
+   :maxdepth: 2
+
+   api/modelling
+
+.. toctree::
+   :maxdepth: 2
+
+   api/ensembler
+
+.. toctree::
+   :maxdepth: 2
+
+   api/util
+
+.. toctree::
+   :maxdepth: 2
+   
+   api/testing
 
 
 .. only:: html
