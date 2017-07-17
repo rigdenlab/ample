@@ -375,7 +375,7 @@ class ContactUtil(object):
 
         return contact_map
 
-    def subselect_decoys(self, decoys, decoy_format, mode='linear', subdistance_to_neighbor=25, **kwargs):
+    def subselect_decoys(self, decoys, decoy_format, mode='linear', subdistance_to_neighbor=24, **kwargs):
         """Subselect decoys excluding those not satisfying long-distance restraints
 
         Parameters
@@ -390,7 +390,7 @@ class ContactUtil(object):
             * linear: keep the top half of decoys
             * cutoff: Keep all decoys with satisfaction scores of >= 0.287
         subdistance_to_neighbor : int, optional
-           The minimum distance between neighboring residues in the subselection [default: 25]
+           The minimum distance between neighboring residues in the subselection [default: 24]
         **kwargs
            Job submission related keyword arguments
 
@@ -404,7 +404,7 @@ class ContactUtil(object):
         from ample.util import workers_util
 
         # Compute the long range contact satisfaction on a per-decoy basis
-        logger.info('Long-range contacts are defined with sequence separation of 25+')
+        logger.info('Long-range contacts are defined with sequence separation of 24+')
 
         # Hack a custom copy of the contact map together that we can use with the script
         # All decoys should be sequence identical and thus we can just match it to the top
