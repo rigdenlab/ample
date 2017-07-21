@@ -10,7 +10,7 @@ import os
 import shutil
 import sys
 
-from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, ALLOWED_SIDE_CHAIN_TREATMENTS, SUBCLUSTER_RADIUS_THRESHOLDS
+from ample.ensembler.constants import *
 from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import contact_util
@@ -156,7 +156,7 @@ def process_options(optd):
     elif optd['homologs']:
         optd['make_frags'] = False
         optd['make_models'] = False
-        if not  os.path.isfile(str(optd['alignment_file'])):
+        if not os.path.isfile(str(optd['alignment_file'])):
             # We need to use gesamt or mustang to do the alignment
             if optd['homolog_aligner'] == 'gesamt':
                 if not ample_util.is_exe(str(optd['gesamt_exe'])):
@@ -373,10 +373,15 @@ def process_options(optd):
     if "subcluster_radius_thresholds" in optd and not optd["subcluster_radius_thresholds"]:
         optd["subcluster_radius_thresholds"] = SUBCLUSTER_RADIUS_THRESHOLDS
         
+    # REM: This should really be disentangled and moved up to definition of all homologs options
+    # REM: but could cause confusion with defaults down here.
     if "side_chain_treatments" in optd and not optd["side_chain_treatments"]:
-        optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
+        if optd["homologs"]:
+            optd["side_chain_treatments"] = [POLYALA, RELIABLE, ALLATOM]
+        else:
+            optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
     
-    unrecognised_sidechains = set(optd["side_chain_treatments"]).difference(set(ALLOWED_SIDE_CHAIN_TREATMENTS))
+    unrecognised_sidechains = set(optd["side_chain_treatments"]) - set(ALLOWED_SIDE_CHAIN_TREATMENTS)
     if unrecognised_sidechains:
         msg = "Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains)
         logger.critical(msg)
