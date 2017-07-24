@@ -98,10 +98,11 @@ class Sequence(object):
         if resseq:
             # Add automatically calculated ressegs starting from 1
             #assert len(self.resseqs) == 0,"Altering existing resseqs!"
-            for seq in self.sequences:
-                self.resseqs.append([])
-                for i in range(len(seq)):
-                    self.resseqs[-1].append(i+1)
+            for i, seq in enumerate(self.sequences):
+                if len(self.resseqs) >= i+1 and self.resseqs[i] is None:
+                    self.resseqs[i] = []
+                    for j in range(len(seq)):
+                        self.resseqs[-1].append(j+1)
         return
     
     def from_pdb(self, pdbin):
