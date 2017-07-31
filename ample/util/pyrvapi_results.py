@@ -534,8 +534,8 @@ class AmpleOutput(object):
         return
             
 if __name__ == "__main__":
-    import copy, time
-    pklfile = "resultsd.pkl"
+    import copy, sys, time
+    pklfile = sys.argv[1]
     ample_dict = ample_util.read_amoptd(pklfile)
     
     ample_dict['no_gui'] = False
