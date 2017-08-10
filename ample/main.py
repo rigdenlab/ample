@@ -124,6 +124,7 @@ class Ample(object):
         
         # Finally update pyrvapi results
         if self.output_gui: self.output_gui.display_results(amopt.d)
+
         return
    
     def benchmarking(self, optd):
@@ -434,7 +435,8 @@ class Ample(object):
                 exit_util.exit_error(msg, sys.exc_info()[2])
             logger.info('Making a run directory: checking for previous runs...')
             optd['work_dir'] = ample_util.make_workdir(optd['run_dir'], 
-                                                       ccp4_jobid=optd['ccp4_jobid'])
+                                                       ccp4_jobid=optd['ccp4_jobid'],
+                                                       ccp4i2=optd['ccp4i2'])
         # Go to the work directory
         os.chdir(optd['work_dir'])
         

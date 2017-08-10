@@ -20,10 +20,12 @@ import pdb_edit
 
 from ample.constants import SHARE_DIR
 
-CCP4_VERSION=None
+CCP4_VERSION = None
 SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
 EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
 SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
+AMPLEDIR = 'AMPLE_'
+I2DIR = 'AMPLEI2'
 
 class FileNotFoundError(Exception): 
     pass
@@ -451,13 +453,13 @@ def is_file(fpath):
            os.access(fpath, os.R_OK) and os.stat(fpath).st_size > 0
 
 
-def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
+def make_workdir(run_dir, ccp4_jobid=None, ccp4i2=False):
     """Make a work directory rooted at work_dir and return its path
 
     Parameters
     ----------
-    work_dir : str
-       The path to a working directory
+    run_dir : str
+       The path to a run directory where the job was started
     ccp4_jobid : int, optional
        CCP4-assigned job identifier
     rootname : str, optional
@@ -469,25 +471,23 @@ def make_workdir(work_dir, ccp4_jobid=None, rootname='AMPLE_'):
        The path to the working directory
 
     """
-
-    if ccp4_jobid:
-        dname = os.path.join(work_dir, rootname + str(ccp4_jobid))
-        if os.path.exists(dname):
+    if ccp4_jobid or ccp4i2:
+        if ccp4_jobid:
+            work_dir = os.path.join(run_dir, AMPLEDIR + str(ccp4_jobid))
+        elif ccp4i2:
+            work_dir = os.path.join(run_dir, I2DIR)
+        if os.path.exists(work_dir):
             raise RuntimeError("There is an existing AMPLE CCP4 work directory: {0}\n"
                                "Please delete/move it aside.")
-        os.mkdir(dname)
-        return dname
-
-    run_inc = 0
-    run_making_done = False
-    while not run_making_done:
-        if not os.path.exists(work_dir + os.sep + rootname + str(run_inc)):
-            run_making_done = True
-            os.mkdir(work_dir + os.sep + rootname + str(run_inc))
-        run_inc += 1
-    work_dir = work_dir + os.sep + rootname + str(run_inc - 1)
+    else:
+        run_inc = 0
+        while True:
+            work_dir = os.path.join(run_dir, AMPLEDIR + str(run_inc))
+            if not os.path.exists(work_dir): break
+            run_inc += 1
+            if run_inc > 100: raise RuntimeError("Too many work directories! {0}".format(work_dir)) # To stop endless while loops...
+    os.mkdir(work_dir)
     return work_dir
-
 
 def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False, **kwargs):
     """Execute a command and return the exit code.
