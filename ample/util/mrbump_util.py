@@ -42,13 +42,26 @@ class ResultsSummary(object):
     Summarise the results for a series of MRBUMP runs
     """
 
-    def __init__(self):
+    def __init__(self, results_pkl=None):
+        """
+        Parameters
+        ----------
+        results_pkl : file
+           A pickled AMPLE results dictionary
+        """ 
         self.results = []
         # Add Null logger so we can be used without requiring a logger
         LOGGER.addHandler(NullHandler())
         self.pname = "archive"
         self.pdir = None
         self.success = False
+        
+        # Extract mrbump results from a pickled results file if given one.
+        if results_pkl and os.path.isfile(results_pkl):
+            with open(results_pkl) as f: resd = cPickle.load(f)#
+            mkey = 'mrbump_results'
+            if mkey in resd and len(resd[mkey]):
+                self.results = resd[mkey]
         return
 
     def analyseResult(self, result):
@@ -192,20 +205,17 @@ class ResultsSummary(object):
         return old_results
 
     def extractResults(self, mrbump_dir, purge=False):
-        if not mrbump_dir or not os.path.isdir(mrbump_dir):
-            raise RuntimeError,"Cannot find mrbump_dir: {0}".format(mrbump_dir)
+        if not mrbump_dir or not os.path.isdir(mrbump_dir): raise RuntimeError,"Cannot find mrbump_dir: {0}".format(mrbump_dir)
         old_results = {}
         if purge: old_results = self._extractOld(mrbump_dir)
-        results = self._extractResults(mrbump_dir, archived_ensembles=old_results.keys())
+        self._extractResults(mrbump_dir, archived_ensembles=old_results.keys())
         
         if purge:
-            self._purgeFailed(results)
-            results += old_results.values()
+            self._purgeFailed()
+            self.results += old_results.values()
             
-        results = self.sortResults(results)
-        
-        self.success = any([jobSucceeded(r) for r in results])
-        self.results = results
+        self.sortResults()
+        self.success = any([jobSucceeded(r) for r in self.results])
         return self.results
 
     def _extractResults(self, mrbump_dir, archived_ensembles=None):
@@ -257,7 +267,7 @@ class ResultsSummary(object):
             resultsDict = os.path.join(jobDir, "results", "resultsTable.pkl")
             resultsTable = os.path.join(jobDir, "results", "resultsTable.dat")
             if os.path.isfile(resultsDict):
-                results += self.processResultsPkl(resultsDict)
+                results += self.processMrbumpPkl(resultsDict)
             elif os.path.isfile(resultsTable):
                 results += self.parseTableDat(resultsTable)
             else:
@@ -268,7 +278,8 @@ class ResultsSummary(object):
         # Process the failed results
         if failed: results += self._processFailed(mrbump_dir, failed)
         if not len(results): LOGGER.warn("Could not extract any results from directory: {0}".format(mrbump_dir))
-        return results
+        self.results = results
+        return
     
     def parseTableDat(self, tfile):
         """Read a resultsTable file and return a list of MrBump results objects"""
@@ -381,7 +392,7 @@ class ResultsSummary(object):
 
         return results
 
-    def processResultsPkl(self, resultsPkl):
+    def processMrbumpPkl(self, resultsPkl):
         """Process dictionary
         """
         with open(resultsPkl) as f:
@@ -431,10 +442,10 @@ class ResultsSummary(object):
         LOGGER.debug("Added {0} MRBUMP result failures".format(len(failed)))
         return results
     
-    def _purgeFailed(self, results):
-        """Remove any jobs that don't pass the keep criteria and archive their job dictionaries"""
+    def _purgeFailed(self):
+        """Remove the MRBUMP directories of any jobs that don't pass the keep criteria and archive their job dictionaries"""
         # Skip any that are unfinished
-        completed = [ r for r in results if not(job_unfinished(r)) ]
+        completed = [ r for r in self.results if not(job_unfinished(r)) ]
         if completed:
             # Keep the top TOP_KEEP SHELXE_CC and PHASER_TFZ - these could be the same jobs and we may not even
             # have TOP_KEEP completed
@@ -464,12 +475,11 @@ class ResultsSummary(object):
         resultsTable = []
         keys = ['ensemble_name', 'MR_program', 'Solution_Type']
         keys += _resultsKeys(results)
-        
         resultsTable.append(keys)
         for r in results: resultsTable.append([r[k] for k in keys])
         return resultsTable
 
-    def sortResults(self, results, prioritise=None):
+    def sortResults(self, prioritise=None):
         """
         Sort the results
         """
@@ -480,7 +490,7 @@ class ResultsSummary(object):
         ARP = False
         REFMAC = False
         PHASER = False
-        for r in results:
+        for r in self.results:
             if 'SHELXE_CC' in r and r['SHELXE_CC'] and float(r['SHELXE_CC']) > 0.0:
                 SHELXE = True
             if 'BUCC_final_Rfact' in r and r['BUCC_final_Rfact'] and float(r['BUCC_final_Rfact']) < 1.0:
@@ -509,8 +519,8 @@ class ResultsSummary(object):
             
         if sortf:
             # Now sort by the key
-            results.sort(key=sortf, reverse=reverse)
-        return results
+            self.results.sort(key=sortf, reverse=reverse)
+        return
 
     def summariseResults(self, mrbump_dir):
         """Return a string summarising the results"""
@@ -545,7 +555,38 @@ class ResultsSummary(object):
         r += '\n\n'
 
         return r
-
+    
+    def topFiles(self, num_results=3):
+        """Return a list of dictionaries listing the top num_results PDB and MTZ files
+        
+        Parameters
+        ----------
+        num_results : int
+           How many of the top results to return
+    
+        Returns
+        -------
+        topf : list
+           A list of dictionaries, one per result, with xyz, mtz and info keys
+        
+        """
+        topf = []
+        # list of PDB, MTZ, Explanation of file type
+        poss = [ ('SXRARP_pdbout','SXRARP_mtzout', 'ARPWARP following SHELXE trace of MR result'),
+                 ('SXRBUCC_pdbout','SXRBUCC_mtzout', 'BUCCANEER following SHELXE trace of MR result'),
+                 ('SHELXE_pdbout','SHELXE_mtzout', 'SHELXE trace of MR result'),
+                 ('ARP_pdbout','ARP_mtzout', 'ARPWARP rebuild of MR result'),
+                 ('BUCC_pdbout','BUCC_mtzout', 'BUCCANEER rebuild of MR result'),
+                 ('REFMAC_pdbout','REFMAC_mtzout', 'REFMAC-refined MR result') ]
+        for result in self.results[0 : min(num_results, len(self.results)+1) ]:
+            for pdb, mtz, info in poss:
+                if pdb in result and result[pdb] and os.path.isfile(result[pdb]) and mtz in result and result[mtz] and os.path.isfile(result[mtz]):
+                    topf.append({'xyz' : result[pdb],
+                                 'hkl' : result[mtz],
+                                 'info' : info })
+                    break
+        if len(topf): return topf
+            
 def _resultsKeys(results):
     keys = []
     # Build up list of keys we want to print based on what we find in the results
@@ -598,7 +639,7 @@ def checkSuccess(script_path):
     mrbR = ResultsSummary()
     
     # Put into order and take top one
-    results = mrbR.processResultsPkl(rfile)
+    results = mrbR.processMrbumpPkl(rfile)
     mrbR.sortResults(results)
     return jobSucceeded(results[0])
 
