@@ -40,8 +40,8 @@ class AMPLE_gui(CTaskWidget):
     TASKVERSION = 0.1
     TASKMODULE = [ 'molecular_replacement' ] #Section in the task list where this task will be listed e.g. 'refinement','model_building' for full list see MODULE_ORDER in core/CCP4TaskManager.py
     SHORTTASKTITLE='AMPLE Molecular Replacement Pipeline'
-    TASKTITLE='AMPLE Molecular Replacement Pipeline LONG'
-    DESCRIPTION = '''This task is for running Molecular Replacment with unconventional models'''
+    TASKTITLE='Molecular Replacement with unconventional models - AMPLE'
+    DESCRIPTION = '''This task is for running Molecular Replacement with unconventional models'''
     MGDISPLAYFILES = ['XYZIN']
     WHATNEXT = ['coot_rebuild']
     
@@ -103,9 +103,10 @@ class AMPLE_gui(CTaskWidget):
     def drawControlParameters(self):
         #self.container.controlParameters.AMPLE_NPROC = cpu_count()
         self.container.inputData.AMPLE_NPROC = cpu_count()
-        self.createLine(['subtitle', 'Simple options' ])
+        self.createLine(['subtitle', 'Basic options' ])
         self.openSubFrame(frame=True)
-        self.createLine(['widget', 'AMPLE_NPROC'])
+        x = self.container.inputData.AMPLE_NPROC.qualifiers()['guiLabel']
+        self.createLine(['label',x , 'widget','AMPLE_NPROC'])
         self.closeSubFrame()
         self.openSubFrame(frame=True)
         x = self.container.inputData.AMPLE_ENSEMBLING_TYPE.qualifiers()['guiLabel']

@@ -16,9 +16,14 @@
     GNU Lesser General Public License for more details.
     """
 
+import cPickle
 import os
 from CCP4PluginScript import CPluginScript
 from lxml import etree
+
+# AMPLE imports
+from ample.util import mrbump_util
+from ample.util.ample_util import I2DIR
 
 AMPLE_ROOT_NODE = 'AMPLE'
 AMPLE_LOG_NODE = 'LogText'
@@ -88,17 +93,19 @@ class AMPLE(CPluginScript):
         self.appendCommandLine( self.columnsAsArray[0])
         self.appendCommandLine('-SIGF')
         self.appendCommandLine( self.columnsAsArray[1])
-        self.appendCommandLine('-ideal_helices')
-        self.appendCommandLine('True')
-        self.appendCommandLine('-nproc')
+        #self.appendCommandLine('-ideal_helices')
+        #self.appendCommandLine('True')
+        self.appendCommandLine('-models')
+        self.appendCommandLine('/opt/ample.git/testfiles/models')
+        #self.appendCommandLine('-nproc')
         #self.appendCommandLine(str(self.container.controlParameters.AMPLE_NPROC))
-        self.appendCommandLine(str(self.container.inputData.AMPLE_NPROC))
+        #self.appendCommandLine(str(self.container.inputData.AMPLE_NPROC))
         self.appendCommandLine('-do_mr')
         self.appendCommandLine(False)
 
         self.xmlroot = etree.Element(AMPLE_ROOT_NODE)
         logFile = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)
-        self.watchFile(logFile,self.handleLogChanged)
+        #self.watchFile(logFile,self.handleLogChanged)
                 
         return CPluginScript.SUCCEEDED
 
@@ -148,7 +155,16 @@ class AMPLE(CPluginScript):
 #             with open(logfilePath,"r") as logFile:
 #                 logText.text = etree.CDATA(logFile.read())
 #             programXMLFile.write(etree.tostring(xmlStructure))
-    
+        
+        # results_summary.sortResults(mrb_results, prioritise="SHELXE_CC")[0:min(len(mrb_results),mrbump_util.TOP_KEEP)],
+        top_files = mrbump_util.ResultsSummary(results_pkl=os.path.join(self.getWorkDirectory(), I2DIR, 'resultsd.pkl')).topFiles()
+        if top_files:
+            for d in top_files:
+                self.container.outputData.XYZOUT.append(d['xyz'])
+                self.container.outputData.XYZOUT[-1].annotation = 'PDB file of ' + d['info']
+                self.container.outputData.HKLOUT.append(d['hkl'])
+                self.container.outputData.HKLOUT[-1].annotation = 'MTZ file of ' + d['info']
+
         logPath = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)
         if os.path.isfile(logPath):
             with open(logPath, 'r') as logFile:

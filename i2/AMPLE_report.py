@@ -16,21 +16,31 @@
     GNU Lesser General Public License for more details.
     """
 
-from CCP4ReportParser import Report
-import sys
-from lxml import etree
+from CCP4RvapiParser import RvapiReport
 
-class AMPLE_report(Report):
-    # Specify which gui task and/or pluginscript this applies to
-    TASKNAME = 'AMPLE'
-    RUNNING = False
-    def __init__(self,xmlnode=None,jobInfo={},jobStatus=None,**kw):
-        Report. __init__(self,xmlnode=xmlnode,jobInfo=jobInfo, jobStatus=jobStatus, **kw)
-        clearingDiv = self.addDiv(style="clear:both;")
-        self.addDefaultReport(self)
-        
-    def addDefaultReport(self, parent=None):
-        if parent is None: parent=self
-        if len(self.xmlnode.xpath("LogText")) > 0:
-            newFold = parent.addFold(label="Log text", initiallyOpen=True)
-            newFold.addPre(text = self.xmlnode.xpath("LogText")[0].text)
+#from CCP4ReportParser import Report
+# class AMPLE_report(Report):
+#     # Specify which gui task and/or pluginscript this applies to
+#     TASKNAME = 'AMPLE'
+#     RUNNING = False
+#     def __init__(self,xmlnode=None,jobInfo={},jobStatus=None,**kw):
+#         Report. __init__(self,xmlnode=xmlnode,jobInfo=jobInfo, jobStatus=jobStatus, **kw)
+#         clearingDiv = self.addDiv(style="clear:both;")
+#         self.addDefaultReport(self)
+#         
+#     def addDefaultReport(self, parent=None):
+#         if parent is None: parent=self
+#         if len(self.xmlnode.xpath("LogText")) > 0:
+#             newFold = parent.addFold(label="Log text", initiallyOpen=True)
+#             newFold.addPre(text = self.xmlnode.xpath("LogText")[0].text)
+
+class AMPLE_report(RvapiReport):
+#class crank2_report(Report):
+  TASKNAME="AMPLE"
+  RUNNING = True
+  SEPARATEDATA = True
+  WATCHED_FILE = 'i2.xml'
+  def __init__(self,xmlnode=None,jobInfo={},jobStatus=None,**kw):
+      print "JMHT GOT RUNDIR ", jobInfo['fileroot']
+      RvapiReport.__init__(self,xmlnode=xmlnode,jobInfo=jobInfo,jobStatus=jobStatus,**kw)
+

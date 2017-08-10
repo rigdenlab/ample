@@ -141,6 +141,24 @@
         </container>
 <!--You must provide an outputData container, although it can be empty-->
         <container id="outputData">
+            <content id="XYZOUT">
+                <className>CList</className>
+                <subItem>
+                    <className>CPdbDataFile</className>
+                    <qualifiers>
+                        <saveToDb>True</saveToDb>
+                    </qualifiers>
+                </subItem>
+            </content>
+            <content id="HKLOUT">
+                <className>CList</className>
+                <subItem>
+                    <className>CMtzDataFile</className>
+                    <qualifiers>
+                        <saveToDb>True</saveToDb>
+                    </qualifiers>
+                </subItem>
+            </content>
 <!--             <content id="XYZOUT">
                 <className>CPdbDataFile</className>
                 <qualifiers>
