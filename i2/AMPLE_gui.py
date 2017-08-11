@@ -31,7 +31,7 @@ from phil2etree import debug_console
 from PyQt4 import QtCore
 from multiprocessing import cpu_count
 
-#-------------------------------------------------------------------
+#----------------------------------------------------------git sta---------
 class AMPLE_gui(CTaskWidget):
     #-------------------------------------------------------------------
 
@@ -60,7 +60,7 @@ class AMPLE_gui(CTaskWidget):
 
         self.createLine(['subtitle','Input sequence'])
         self.openSubFrame(frame=True)
-        self.createLine ( [ 'tip','Input seqence','widget','AMPLE_SEQIN' ] )
+        self.createLine ( [ 'tip','Input sequence','widget','AMPLE_SEQIN' ] )
         self.closeSubFrame()
         
         self.createLine(['subtitle','Input reflections'])
@@ -98,16 +98,18 @@ class AMPLE_gui(CTaskWidget):
         x = self.container.inputData.AMPLE_USE_SHELXE.qualifiers()['guiLabel']
         self.createLine( ['label', x, 'widget', 'AMPLE_USE_SHELXE'])
 
-        folder = self.openFolder(folderFunction='controlParameters',title='Options', drawFolder=self.drawControlParameters)
+        self.drawOptions()
     
-    def drawControlParameters(self):
-        #self.container.controlParameters.AMPLE_NPROC = cpu_count()
-        self.container.inputData.AMPLE_NPROC = cpu_count()
+    def drawOptions(self):
+        folder = self.openFolder(folderFunction='inputData',title='Options')
         self.createLine(['subtitle', 'Basic options' ])
+        
         self.openSubFrame(frame=True)
+        self.container.inputData.AMPLE_NPROC = cpu_count()
         x = self.container.inputData.AMPLE_NPROC.qualifiers()['guiLabel']
-        self.createLine(['label',x , 'widget','AMPLE_NPROC'])
+        self.createLine(['label', x, 'widget','AMPLE_NPROC'])
         self.closeSubFrame()
+
         self.openSubFrame(frame=True)
         x = self.container.inputData.AMPLE_ENSEMBLING_TYPE.qualifiers()['guiLabel']
         self.createLine(['label', x, 'widget', 'AMPLE_ENSEMBLING_TYPE'])

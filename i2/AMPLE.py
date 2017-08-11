@@ -16,10 +16,12 @@
     GNU Lesser General Public License for more details.
     """
 
-import cPickle
-import os
-from CCP4PluginScript import CPluginScript
 from lxml import etree
+import os
+import shutil
+
+# CCP4 imports
+from CCP4PluginScript import CPluginScript
 
 # AMPLE imports
 from ample.util import mrbump_util
@@ -28,7 +30,7 @@ from ample.util.ample_util import I2DIR
 AMPLE_ROOT_NODE = 'AMPLE'
 AMPLE_LOG_NODE = 'LogText'
 LOGFILE_NAME = 'log.txt'
-LOGFILE_NAME = os.path.join('AMPLE_0','AMPLE.log')
+#LOGFILE_NAME = os.path.join('AMPLE_0','AMPLE.log')
 
 class AMPLE(CPluginScript):
     TASKNAME = 'AMPLE'   # Task name - should be same as class name and match pluginTitle in the .def.xml file
@@ -83,6 +85,7 @@ class AMPLE(CPluginScript):
         return CPluginScript.SUCCEEDED
 
     def makeCommandAndScript(self):
+        params = self.container.inputData
         #self.appendCommandLine(self.getWorkDirectory())
         self.appendCommandLine('-fasta')
         self.appendCommandLine( self.fasta)
@@ -93,19 +96,42 @@ class AMPLE(CPluginScript):
         self.appendCommandLine( self.columnsAsArray[0])
         self.appendCommandLine('-SIGF')
         self.appendCommandLine( self.columnsAsArray[1])
-        #self.appendCommandLine('-ideal_helices')
-        #self.appendCommandLine('True')
-        self.appendCommandLine('-models')
-        self.appendCommandLine('/opt/ample.git/testfiles/models')
-        #self.appendCommandLine('-nproc')
+        
+        # Runtype parameters
+        if params.AMPLE_RUN_MODE == 'existing_models':
+            if params.AMPLE_MODELS_SOURCE == 'directory':
+                mfile = params.AMPLE_MODELS_DIR
+            elif params.AMPLE_MODELS_SOURCE == 'file':
+                mfile = params.AMPLE_MODELS_FILE
+            self.appendCommandLine('-models')
+            self.appendCommandLine(mfile)
+        elif params.AMPLE_RUN_MODE == 'rosetta':
+            self.appendCommandLine('-rosetta_dir')
+            self.appendCommandLine(params.AMPLE_ROSETTA_DIR)
+            self.appendCommandLine('-frags_3mers')
+            self.appendCommandLine(params.AMPLE_ROSETTA_FRAGS3)
+            self.appendCommandLine('-frags_9mers')
+            self.appendCommandLine(params.AMPLE_ROSETTA_FRAGS9)
+        elif params.AMPLE_RUN_MODE == 'nmr_ensemble':
+            self.appendCommandLine('-nmr_model_in')
+            self.appendCommandLine(params.AMPLE_MODELS_FILE)
+        elif params.AMPLE_RUN_MODE == 'ideal_helices':
+            self.appendCommandLine('-ideal_helices')
+            self.appendCommandLine('True')
+             
+        self.appendCommandLine('-nproc')
+        self.appendCommandLine(str(params.AMPLE_NPROC))
         #self.appendCommandLine(str(self.container.controlParameters.AMPLE_NPROC))
-        #self.appendCommandLine(str(self.container.inputData.AMPLE_NPROC))
-        self.appendCommandLine('-do_mr')
-        self.appendCommandLine(False)
+        
+        #self.appendCommandLine('-do_mr')
+        #self.appendCommandLine(False)
+        
+        self.appendCommandLine('-ccp4i2')
+        self.appendCommandLine('True')
 
         self.xmlroot = etree.Element(AMPLE_ROOT_NODE)
         logFile = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)
-        #self.watchFile(logFile,self.handleLogChanged)
+        self.watchFile(logFile,self.handleLogChanged)
                 
         return CPluginScript.SUCCEEDED
 
@@ -159,11 +185,16 @@ class AMPLE(CPluginScript):
         # results_summary.sortResults(mrb_results, prioritise="SHELXE_CC")[0:min(len(mrb_results),mrbump_util.TOP_KEEP)],
         top_files = mrbump_util.ResultsSummary(results_pkl=os.path.join(self.getWorkDirectory(), I2DIR, 'resultsd.pkl')).topFiles()
         if top_files:
-            for d in top_files:
-                self.container.outputData.XYZOUT.append(d['xyz'])
-                self.container.outputData.XYZOUT[-1].annotation = 'PDB file of ' + d['info']
-                self.container.outputData.HKLOUT.append(d['hkl'])
-                self.container.outputData.HKLOUT[-1].annotation = 'MTZ file of ' + d['info']
+            for i, d in enumerate(top_files):
+                # Need to copy the files into the actual project directory - cannot be a sub-directory. Not entirely sure why but...
+                xyz = os.path.join(self.getWorkDirectory(),os.path.basename(d['xyz']))
+                mtz = os.path.join(self.getWorkDirectory(),os.path.basename(d['mtz']))
+                shutil.copy2(d['xyz'], xyz)
+                shutil.copy2(d['mtz'], mtz)
+                self.container.outputData.XYZOUT.append(xyz)
+                self.container.outputData.XYZOUT[-1].annotation = 'PDB file of {0} #{1}'.format(d['info'], i+1)
+                self.container.outputData.HKLOUT.append(mtz)
+                self.container.outputData.HKLOUT[-1].annotation = 'MTZ file of {0} #{1}'.format(d['info'], i+1)
 
         logPath = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)
         if os.path.isfile(logPath):
