@@ -42,7 +42,7 @@ class ResultsSummary(object):
     Summarise the results for a series of MRBUMP runs
     """
 
-    def __init__(self, results_pkl=None):
+    def __init__(self, results = None, results_pkl=None):
         """
         Parameters
         ----------
@@ -62,6 +62,8 @@ class ResultsSummary(object):
             mkey = 'mrbump_results'
             if mkey in resd and len(resd[mkey]):
                 self.results = resd[mkey]
+        elif results:
+            self.results = results
         return
 
     def analyseResult(self, result):
@@ -582,7 +584,7 @@ class ResultsSummary(object):
             for pdb, mtz, info in poss:
                 if pdb in result and result[pdb] and os.path.isfile(result[pdb]) and mtz in result and result[mtz] and os.path.isfile(result[mtz]):
                     topf.append({'xyz' : result[pdb],
-                                 'hkl' : result[mtz],
+                                 'mtz' : result[mtz],
                                  'info' : info })
                     break
         if len(topf): return topf
