@@ -137,17 +137,18 @@ class AmpleOutput(object):
         ensemble_results = None
         if self._got_ensemble_data(ample_dict):
             ensemble_results = ample_dict['ensembles_data']
-        
+            
+        mrbsum = mrbump_util.ResultsSummary(results=mrb_results[0:min(len(mrb_results),mrbump_util.TOP_KEEP)])
+        mrbsum.sortResults(prioritise="SHELXE_CC")
         self.results_section(self.results_tab_id,
-                        mrbump_util.ResultsSummary().sortResults(mrb_results,
-                                                                 prioritise="SHELXE_CC")[0:min(len(mrb_results),mrbump_util.TOP_KEEP)],
-                        ensemble_results,
-                        "Top {0} SHELXE Results".format(mrbump_util.TOP_KEEP))
+                             mrbsum.results,
+                             ensemble_results,
+                             "Top {0} SHELXE Results".format(mrbump_util.TOP_KEEP))
+        mrbsum.sortResults(prioritise="PHASER_TFZ")
         self.results_section(self.results_tab_id,
-                        mrbump_util.ResultsSummary().sortResults(mrb_results,
-                                                                 prioritise="PHASER_TFZ")[0:min(len(mrb_results),mrbump_util.TOP_KEEP)],
-                        ensemble_results,
-                        "Top {0} PHASER Results".format(mrbump_util.TOP_KEEP))
+                             mrbsum.results,
+                             ensemble_results,
+                             "Top {0} PHASER Results".format(mrbump_util.TOP_KEEP))
         
         return self.results_tab_id
     
