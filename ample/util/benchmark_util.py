@@ -443,6 +443,7 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
         
         # Move pdb onto new origin
         originPdb = ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
+        #print(mrPdb, originPdb, mrOrigin)
         pdb_edit.translate(mrPdb, originPdb, mrOrigin)
         
         # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
