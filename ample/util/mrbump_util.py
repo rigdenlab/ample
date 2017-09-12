@@ -700,7 +700,7 @@ def jobSucceeded(job_dict):
     if 'SHELXE_CC' in job_dict and job_dict['SHELXE_CC'] and float(job_dict['SHELXE_CC']) >= SHELXE_CC and \
        'SHELXE_ACL' in job_dict and job_dict['SHELXE_ACL'] and float(job_dict['SHELXE_ACL']) >= SHELXE_ACL:
         success = True
-    elif 'BUCC_final_Rfact' in job_dict and job_dict['BUCC_final_Rfact'] and float(job_dict['BUCC_final_Rfact']) <= RFREE:
+    elif 'BUCC_final_Rfree' in job_dict and job_dict['BUCC_final_Rfree'] and float(job_dict['BUCC_final_Rfree']) <= RFREE:
         success = True
     elif 'ARP_final_Rfree' in job_dict and job_dict['ARP_final_Rfree'] and float(job_dict['ARP_final_Rfree']) <= RFREE:
         success = True
