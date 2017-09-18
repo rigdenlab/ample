@@ -43,6 +43,7 @@ def add_argparse_options(parser=None):
 
     """
     if parser is None:
+        import argparse
         parser = argparse.ArgumentParser()
 
     parser = parser.add_argument_group('Ensemble Options')

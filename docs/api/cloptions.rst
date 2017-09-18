@@ -11,17 +11,17 @@ Command Line Options
 
 ----
 
+.. include:: options/conpred.rst
+
+----
+
 .. include:: options/modelling.rst
+
+----
+
+.. include:: options/ensembler.rst
 
 ----
 
 .. include:: options/molrep.rst
 
-----
-
-.. include:: options/conpred.rst
-
-
-.. Problems with the ensembler import exist so need
-   to fix that first before including it here
-.. .. include:: options/ensembler.rst
