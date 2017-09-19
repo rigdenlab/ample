@@ -1,7 +1,7 @@
 .. _ensembler_options:
 
-Ensembler Options
------------------
+Structure Ensembler Options
+---------------------------
 
 .. argparse::
    :module: ample.ensembler

@@ -1,7 +1,7 @@
 .. _modelling_options:
 
-Modelling Options
------------------
+Structure Prediction Options
+----------------------------
 
 .. argparse::
    :module: ample.util.argparse_util
