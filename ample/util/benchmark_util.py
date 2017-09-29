@@ -433,15 +433,12 @@ def analyseSolution(amoptd, d, mrinfo):
         os.unlink(originPdb)
         
         # Calculate phase error for the MR PDB
-        mrinfo.analyse(mrPdb)
-        d['MR_MPE'] = mrinfo.MPE
-        d['MR_wMPE'] = mrinfo.wMPE
-        
-        # And for the REFMAC PDB
-        mrinfo.analyse(mrPdb)
-        d['MR_MPE'] = mrinfo.MPE
-        d['MR_wMPE'] = mrinfo.wMPE
-        
+        try:
+            mrinfo.analyse(mrPdb)
+            d['MR_MPE'] = mrinfo.MPE
+            d['MR_wMPE'] = mrinfo.wMPE
+        except Exception as e:
+            logger.critical("Error analysing mrPdb: {0}\n{1}".format(mrPdb,e))         
     
         # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
         # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
@@ -513,10 +510,13 @@ def analyseSolution(amoptd, d, mrinfo):
                                                      workdir=fixpath(amoptd['benchmark_dir']))
 
         if not('SHELXE_wMPE' in d and d['SHELXE_wMPE']):
-            mrinfo.analyse(d['SHELXE_pdbout'])
-            d['SHELXE_MPE'] = mrinfo.MPE
-            d['SHELXE_wMPE'] = mrinfo.wMPE
-    
+            try:
+                mrinfo.analyse(d['SHELXE_pdbout'])
+                d['SHELXE_MPE'] = mrinfo.MPE
+                d['SHELXE_wMPE'] = mrinfo.wMPE
+            except Exception as e:
+                logger.critical("Error analysing SHELXE_pdbout: {0}\n{1}".format(d['SHELXE_pdbout'],e))    
+                
         # Wrap parse_buccaneer model onto native
         if d['SXRBUCC_pdbout'] and os.path.isfile(fixpath(d['SXRBUCC_pdbout'])):
             # Need to rename Pdb as is just called buccSX_output.pdb
@@ -528,10 +528,13 @@ def analyseSolution(amoptd, d, mrinfo):
                                                      csymmatchPdb=csymmatchPdb,
                                                      workdir=fixpath(amoptd['benchmark_dir']))
             # Calculate phase error
-            mrinfo.analyse(d['SXRBUCC_pdbout'])
-            d['SXRBUCC_MPE'] = mrinfo.MPE
-            d['SXRBUCC_wMPE'] = mrinfo.wMPE
-            
+            try:
+                mrinfo.analyse(d['SXRBUCC_pdbout'])
+                d['SXRBUCC_MPE'] = mrinfo.MPE
+                d['SXRBUCC_wMPE'] = mrinfo.wMPE
+            except Exception as e:
+                logger.critical("Error analysing SXRBUCC_pdbout: {0}\n{1}".format(d['SXRBUCC_pdbout'],e))
+                            
         # Wrap parse_buccaneer model onto native
         if d['SXRARP_pdbout'] and os.path.isfile(fixpath(d['SXRARP_pdbout'])):
             # Need to rename Pdb as is just called buccSX_output.pdb
@@ -543,10 +546,12 @@ def analyseSolution(amoptd, d, mrinfo):
                                                      csymmatchPdb=csymmatchPdb,
                                                      workdir=fixpath(amoptd['benchmark_dir']))
             # Calculate phase error
-            mrinfo.analyse(d['SXARP_pdbout'])
-            d['SXRARP_MPE'] = mrinfo.MPE
-            d['SXRARP_wMPE'] = mrinfo.wMPE
-
+            try:
+                mrinfo.analyse(d['SXRARP_pdbout'])
+                d['SXRARP_MPE'] = mrinfo.MPE
+                d['SXRARP_wMPE'] = mrinfo.wMPE
+            except Exception as e:
+                logger.critical("Error analysing SXRARP_pdbout: {0}\n{1}".format(d['SXRARP_pdbout'],e))
     return
 
 def cluster_script(amoptd, python_path="ccp4-python"):
