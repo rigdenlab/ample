@@ -311,7 +311,7 @@ def process_options(optd):
     #
     ###############################################################################
     if optd['shelxe_rebuild']:
-        optd['shelxe_rebuild_arpwap'] = True
+        optd['shelxe_rebuild_arpwarp'] = True
         optd['shelxe_rebuild_buccaneer'] = True
     
     # Model building programs
