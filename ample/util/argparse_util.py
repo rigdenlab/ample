@@ -106,9 +106,6 @@ def add_general_options(parser=None):
     parser.add_argument('-ccp4i2', metavar='True/False',
                         help='Indicate AMPLE is running from the CCP4I2 GUI')
 
-    parser.add_argument('-ccp4_jobid', type=int,
-                        help='Set the CCP4 job id - only needed when running from the CCP4 I1 GUI')
-
     parser.add_argument('-devel_mode', metavar='devel_mode',
                         help='Preset options to run in development mode - takes longer')
 

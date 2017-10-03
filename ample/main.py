@@ -434,9 +434,7 @@ class Ample(object):
                 msg = 'Cannot find run directory: {0}'.format(optd['run_dir'])
                 exit_util.exit_error(msg, sys.exc_info()[2])
             logger.info('Making a run directory: checking for previous runs...')
-            optd['work_dir'] = ample_util.make_workdir(optd['run_dir'], 
-                                                       ccp4_jobid=optd['ccp4_jobid'],
-                                                       ccp4i2=optd['ccp4i2'])
+            optd['work_dir'] = ample_util.make_workdir(optd['run_dir'], ccp4i2=optd['ccp4i2'])
         # Go to the work directory
         os.chdir(optd['work_dir'])
         
@@ -465,7 +463,7 @@ class Ample(object):
         
         # Display pyrvapi results
         if pyrvapi_results.pyrvapi:
-            self.output_gui = pyrvapi_results.AmpleOutput()
+            self.output_gui = pyrvapi_results.AmpleOutput(optd)
             self.output_gui.display_results(optd)
         
         # Check mandatory/exclusive options

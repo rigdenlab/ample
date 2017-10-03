@@ -48,6 +48,11 @@ from ample.util import mrbump_util
 try: import pyrvapi
 except: pyrvapi = None
 
+# Hack to use Andre's pyrvapi API
+import pyrvapi_ext as API
+
+logger = logging.getLogger(__name__)
+
 class AmpleOutput(object):
     """Display the output of an AMPLE job
     
@@ -85,21 +90,60 @@ class AmpleOutput(object):
                "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
                }
     
-    def __init__(self):
-        self.running = None
-        self.webserver_uri = None
-        self.wbeserver_start = None
+    def __init__(self, amopt, report_dir=None, xml=None, own_gui=False):
+        self.header = False
         self.log_tab_id = None
+        self.old_mrbump_results = None
         self.results_tab_id = None
         self.results_tab_sections = []
         self.summary_tab_id = None
         self.summary_tab_ensemble_sec_id = None
         self.summary_tab_results_sec_id = None
         self.summary_tab_survey_sec_id = None
+        self.webserver_uri = None
+        self.wbeserver_start = None
         
-        self.old_mrbump_results = None
+        self.setup(amopt, report_dir=report_dir, own_gui=own_gui)
         return
 
+    def setup(self, amopt, report_dir=None, document=None, xml=None, own_gui=False):
+        if not pyrvapi or ('no_gui' in amopt and amopt['no_gui']): return
+        
+        # Infrastructure to run
+        if not report_dir: report_dir = os.path.join(amopt['work_dir'], "jsrview")
+        if not os.path.isdir(report_dir): os.mkdir(report_dir)
+        
+        docid = "AMPLE_results"
+        title = "AMPLE Results"
+        if False:
+            share_jsrview = os.path.join(os.environ["CCP4"], "share", "jsrview")
+            pyrvapi.rvapi_init_document (docid, report_dir, title, 1, 7, share_jsrview, None, None, None, None)
+        else:
+            # Quick hack to init with Andre's stuff
+            if document:
+                API.document.fromfile(document)
+            else:
+                kwargs = dict(
+                  wintitle = title,
+                  reportdir = report_dir,
+                  xml = xml,
+                  abspaths = False,
+                # bug in jsrview:
+                # layout = 4 if i1 else 7,
+                )
+                API.document.newdoc(**kwargs)
+
+        if 'webserver_uri' in amopt and amopt['webserver_uri']:
+            # don't start browser and setup variables for the path on the webserver
+            self._webserver_start = len(amopt['run_dir']) + 1
+            self.webserver_uri = amopt['webserver_uri']
+            
+        if own_gui:
+            # We start our own browser
+            jsrview = os.path.join(os.environ["CCP4"], "libexec", "jsrview")
+            subprocess.Popen([jsrview, os.path.join(report_dir, "index.html")])
+        return
+    
     def create_log_tab(self, ample_dict):
         if self.log_tab_id: return
         logfile = ample_dict['ample_log']
@@ -241,44 +285,13 @@ class AmpleOutput(object):
         return self.summary_tab_id
 
     def display_results(self, ample_dict, run_dir=None):
-        if 'no_gui' in ample_dict and ample_dict['no_gui']: return
-        
-        logger = logging.getLogger()
-        if not pyrvapi:
-            msg = "Cannot display results using pyrvapi!"
-            logger.debug(msg)
-            return False
-        
-        if not self.running:        
-            # Infrastructure to run
-            ccp4 = os.environ["CCP4"]
-            share_jsrview = os.path.join(ccp4, "share", "jsrview")
-            if not run_dir: run_dir = os.path.join(ample_dict['work_dir'], "jsrview")
-            if not os.path.isdir(run_dir): os.mkdir(run_dir)
-            
-            major,_,_ = ample_dict['ccp4_version']
-            if major <= 6:
-                pyrvapi.rvapi_init_document ("AMPLE_results", run_dir, "AMPLE Results", 1, 7, share_jsrview, None, None, None)
-            else:
-                # Later versions of the api require an additional xmli2FName argument
-                # Tried a try/except with the TypeError bit this doesn't work as the TypeEror doesn't seem to get propogated back, so need to work out CCP4 version
-                pyrvapi.rvapi_init_document ("AMPLE_results", run_dir, "AMPLE Results", 1, 7, share_jsrview, None, None, None, None)
-            if 'webserver_uri' in ample_dict and ample_dict['webserver_uri']:
-                # don't start browser and setup variables for the path on the webserver
-                self._webserver_start = len(ample_dict['run_dir']) + 1
-                self.webserver_uri = ample_dict['webserver_uri']
-            else:
-                # We start our own browser
-                jsrview = os.path.join(ccp4, "libexec", "jsrview")
-                subprocess.Popen([jsrview, os.path.join(run_dir, "index.html")])
+        if not pyrvapi or ('no_gui' in ample_dict and ample_dict['no_gui']): return
+        if not self.header:
             pyrvapi.rvapi_add_header("AMPLE Results")
-            # print "RUNNING display_results ",len(ample_dict['mrbump_results']) if 'mrbump_results' in ample_dict else "NO RESULTS"
-            self.running = True
-        
+            self.header = True
         self.create_log_tab(ample_dict)
         self.create_summary_tab(ample_dict)
         self.create_results_tab(ample_dict)
-        
         pyrvapi.rvapi_flush()
         return True
 
@@ -546,16 +559,16 @@ if __name__ == "__main__":
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
     
-    SLEEP = 5
+    SLEEP = 1
     
-    AR = AmpleOutput()
-    run_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
-    AR.display_results(view1_dict,run_dir=run_dir)
+    report_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
+    AR = AmpleOutput(view1_dict, report_dir=report_dir, own_gui=True)
+    AR.display_results(view1_dict)
     time.sleep(SLEEP)
     
     #for i in range(10):
     view1_dict['ensembles_data'] = ample_dict['ensembles_data']
-    AR.display_results(view1_dict,run_dir=run_dir)
+    AR.display_results(view1_dict)
     time.sleep(SLEEP)
     
     mrbump_results = []
@@ -564,12 +577,12 @@ if __name__ == "__main__":
         r['SHELXE_ACL'] = None
         mrbump_results.append(r)
     view1_dict['mrbump_results'] = mrbump_results
-    AR.display_results(view1_dict,run_dir=run_dir)
+    AR.display_results(view1_dict)
     time.sleep(SLEEP)
     
     view1_dict['mrbump_results'] = ample_dict['mrbump_results'][0:5]
-    AR.display_results(view1_dict,run_dir=run_dir)  
+    AR.display_results(view1_dict)  
     time.sleep(SLEEP)
     
     view1_dict['mrbump_results'] = ample_dict['mrbump_results']
-    AR.display_results(view1_dict,run_dir=run_dir)  
+    AR.display_results(view1_dict)  

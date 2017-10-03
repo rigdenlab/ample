@@ -485,15 +485,13 @@ def is_file(fpath):
            os.access(fpath, os.R_OK) and os.stat(fpath).st_size > 0
 
 
-def make_workdir(run_dir, ccp4_jobid=None, ccp4i2=False):
-    """Make a work directory rooted at work_dir and return its path
+def make_workdir(run_dir, ccp4i2=False):
+    """Make a work directory rooted at run_dir and return its path
 
     Parameters
     ----------
     run_dir : str
        The path to a run directory where the job was started
-    ccp4_jobid : int, optional
-       CCP4-assigned job identifier
     rootname : str, optional
         Base name of the AMPLE directory [default: \'AMPLE_\']
 
@@ -503,11 +501,8 @@ def make_workdir(run_dir, ccp4_jobid=None, ccp4i2=False):
        The path to the working directory
 
     """
-    if ccp4_jobid or ccp4i2:
-        if ccp4_jobid:
-            work_dir = os.path.join(run_dir, AMPLEDIR + str(ccp4_jobid))
-        elif ccp4i2:
-            work_dir = os.path.join(run_dir, I2DIR)
+    if ccp4i2:
+        work_dir = os.path.join(run_dir, I2DIR)
         if os.path.exists(work_dir):
             raise RuntimeError("There is an existing AMPLE CCP4 work directory: {0}\n"
                                "Please delete/move it aside.")
