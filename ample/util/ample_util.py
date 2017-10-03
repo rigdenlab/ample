@@ -35,6 +35,38 @@ class FileNotFoundError(Exception):
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+def amoptd_fix_path(optd, newroot):
+    """Update all the paths in an AMPLE results dictionary to be rooted at newroot
+    
+    Parameters
+    ----------
+    optd: dict
+      AMPLE results dictionary
+    newroot: str
+       Path to the AMPLE root directory (topdir containing MRBUMP dir etc.)
+    """
+    
+    oldroot = os.sep.join(optd['work_dir'].split(os.sep)[:-1])
+    for k in [ 'benchmark_dir',
+              'native_pdb',
+              'native_pdb_std',
+              'fasta',
+              'work_dir']:
+        if k in optd and isinstance(optd[k],str):
+            optd[k] = optd[k].replace(oldroot,newroot)
+   
+    if 'mrbump_results' in optd:
+        for r in optd['mrbump_results']:
+            for k in [ 'PHASER_logfile', 'PHASER_pdbout', 'PHASER_mtzout',
+                      'REFMAC_logfile', 'REFMAC_pdbout', 'REFMAC_mtzout',
+                      'BUCC_logfile','BUCC_pdbout', 'BUCC_mtzout',
+                      'ARP_logfile', 'ARP_pdbout', 'ARP_mtzout',
+                      'SHELXE_logfile', 'SHELXE_pdbout', 'SHELXE_mtzout',
+                      'SXRBUCC_logfile','SXRBUCC_pdbout','SXRBUCC_mtzout',
+                      'SXRARP_logfile', 'SXRARP_pdbout', 'SXRARP_mtzout']:
+                if k in r and isinstance(r[k], str):
+                    r[k] = r[k].replace(oldroot,newroot)
+    return optd
 
 def ccp4_version():
     """Get CCP4 version as a tuple
@@ -716,7 +748,7 @@ def tmp_file_name(delete=True, directory=None, suffix=""):
     tmp1 = t.name
     t.close()
     return tmp1
-
+        
 # ======================================================================
 # Some default string messages that we need during the program to inform
 # the user of certain information
