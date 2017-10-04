@@ -8,6 +8,7 @@ import cPickle
 import glob
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -27,6 +28,7 @@ SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
 AMPLEDIR = 'AMPLE_'
 I2DIR = 'AMPLEI2'
 
+
 class FileNotFoundError(Exception): 
     pass
 
@@ -35,7 +37,7 @@ class FileNotFoundError(Exception):
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-def amoptd_fix_path(optd, newroot):
+def amoptd_fix_path(optd, newroot, i2mock=False):
     """Update all the paths in an AMPLE results dictionary to be rooted at newroot
     
     Parameters
@@ -46,6 +48,7 @@ def amoptd_fix_path(optd, newroot):
        Path to the AMPLE root directory (topdir containing MRBUMP dir etc.)
     """
     
+    import warnings
     oldroot = os.sep.join(optd['work_dir'].split(os.sep)[:-1])
     for k in [ 'benchmark_dir',
               'native_pdb',
@@ -53,19 +56,27 @@ def amoptd_fix_path(optd, newroot):
               'fasta',
               'work_dir']:
         if k in optd and isinstance(optd[k],str):
-            optd[k] = optd[k].replace(oldroot,newroot)
-   
+            optd[k] = optd[k].replace(oldroot, newroot)
+
+    MRBUMP_FILE_KEYS = [ 'PHASER_logfile', 'PHASER_pdbout', 'PHASER_mtzout',
+                          'REFMAC_logfile', 'REFMAC_pdbout', 'REFMAC_mtzout',
+                          'BUCC_logfile','BUCC_pdbout', 'BUCC_mtzout',
+                          'ARP_logfile', 'ARP_pdbout', 'ARP_mtzout',
+                          'SHELXE_logfile', 'SHELXE_pdbout', 'SHELXE_mtzout',
+                          'SXRBUCC_logfile','SXRBUCC_pdbout','SXRBUCC_mtzout',
+                          'SXRARP_logfile', 'SXRARP_pdbout', 'SXRARP_mtzout']
     if 'mrbump_results' in optd:
         for r in optd['mrbump_results']:
-            for k in [ 'PHASER_logfile', 'PHASER_pdbout', 'PHASER_mtzout',
-                      'REFMAC_logfile', 'REFMAC_pdbout', 'REFMAC_mtzout',
-                      'BUCC_logfile','BUCC_pdbout', 'BUCC_mtzout',
-                      'ARP_logfile', 'ARP_pdbout', 'ARP_mtzout',
-                      'SHELXE_logfile', 'SHELXE_pdbout', 'SHELXE_mtzout',
-                      'SXRBUCC_logfile','SXRBUCC_pdbout','SXRBUCC_mtzout',
-                      'SXRARP_logfile', 'SXRARP_pdbout', 'SXRARP_mtzout']:
+            for k in MRBUMP_FILE_KEYS:
                 if k in r and isinstance(r[k], str):
-                    r[k] = r[k].replace(oldroot,newroot)
+                    old = r[k]
+                    warnings.warn("FIX MRBUMP BUG buccaneer refine.pdb vs refined.pdb")
+                    if i2mock:
+                        new = os.path.join(newroot,os.path.basename(old))
+                        if os.path.isfile(old): shutil.copy(old,new)
+                    else:
+                        new = r[k].replace(oldroot,newroot)
+                    r[k] = new
     return optd
 
 def ccp4_version():
@@ -492,8 +503,8 @@ def make_workdir(run_dir, ccp4i2=False):
     ----------
     run_dir : str
        The path to a run directory where the job was started
-    rootname : str, optional
-        Base name of the AMPLE directory [default: \'AMPLE_\']
+    ccp4i2 : bool, optional
+        Indicate if we are running under CCP4I2
 
     Returns
     -------
@@ -503,9 +514,6 @@ def make_workdir(run_dir, ccp4i2=False):
     """
     if ccp4i2:
         work_dir = os.path.join(run_dir, I2DIR)
-        if os.path.exists(work_dir):
-            raise RuntimeError("There is an existing AMPLE CCP4 work directory: {0}\n"
-                               "Please delete/move it aside.")
     else:
         run_inc = 0
         while True:
@@ -513,6 +521,9 @@ def make_workdir(run_dir, ccp4i2=False):
             if not os.path.exists(work_dir): break
             run_inc += 1
             if run_inc > 100: raise RuntimeError("Too many work directories! {0}".format(work_dir)) # To stop endless while loops...
+    if os.path.exists(work_dir):
+        raise RuntimeError("There is an existing AMPLE work directory: {0}\n"
+                           "Please delete/move it aside.")
     os.mkdir(work_dir)
     return work_dir
 
