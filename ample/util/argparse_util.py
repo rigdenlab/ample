@@ -103,8 +103,8 @@ def add_general_options(parser=None):
     parser.add_argument('-classic_mode', metavar='True/False',
                         help='Preset options to run the original AMPLE clustering/truncation options (1 cluster, 3 subclustering radii, 3 sidechains)')
 
-    parser.add_argument('-ccp4i2', metavar='True/False',
-                        help='Indicate AMPLE is running from the CCP4I2 GUI')
+    parser.add_argument('-ccp4i2_xml',
+                        help='Path to CCP4I2 XML file - if not None indicates we are running under CCP4I2')
 
     parser.add_argument('-devel_mode', metavar='devel_mode',
                         help='Preset options to run in development mode - takes longer')

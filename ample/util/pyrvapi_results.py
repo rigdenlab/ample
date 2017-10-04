@@ -90,7 +90,7 @@ class AmpleOutput(object):
                "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
                }
     
-    def __init__(self, amopt, report_dir=None, xml=None, own_gui=False):
+    def __init__(self, amopt):
         self.header = False
         self.log_tab_id = None
         self.old_mrbump_results = None
@@ -103,30 +103,30 @@ class AmpleOutput(object):
         self.webserver_uri = None
         self.wbeserver_start = None
         
-        self.setup(amopt, report_dir=report_dir, xml=xml, own_gui=own_gui)
+        self.setup(amopt)
         return
 
-    def setup(self, amopt, report_dir=None, document=None, xml=None, own_gui=False):
-        if not pyrvapi or ('no_gui' in amopt and amopt['no_gui']): return
+    def setup(self, amopt, own_gui=False):
+        if not (pyrvapi or ('no_gui' in amopt and amopt['no_gui'])): return
         
-        # Infrastructure to run
-        if not report_dir: report_dir = os.path.join(amopt['work_dir'], "jsrview")
+        report_dir = os.path.join(amopt['work_dir'], "jsrview")
         if not os.path.isdir(report_dir): os.mkdir(report_dir)
         
         docid = "AMPLE_results"
         title = "AMPLE Results"
-        if True:
+        if False:
             share_jsrview = os.path.join(os.environ["CCP4"], "share", "jsrview")
-            pyrvapi.rvapi_init_document (docid, report_dir, title, 1, 7, share_jsrview, None, None, None, None)
+            pyrvapi.rvapi_init_document(docid, report_dir, title, 1, 7, share_jsrview, None, None, None, None)
         else:
             # Quick hack to init with Andre's stuff
+            document = False
             if document:
                 API.document.fromfile(document)
             else:
                 kwargs = dict(
                   wintitle = title,
                   reportdir = report_dir,
-                  xml = xml,
+                  xml = amopt['ccp4i2_xml'],
                   abspaths = False,
                 # bug in jsrview:
                 # layout = 4 if i1 else 7,
@@ -285,7 +285,7 @@ class AmpleOutput(object):
         return self.summary_tab_id
 
     def display_results(self, ample_dict, run_dir=None):
-        if not pyrvapi or ('no_gui' in ample_dict and ample_dict['no_gui']): return
+        if not (pyrvapi or ('no_gui' in ample_dict and ample_dict['no_gui'])): return
         if not self.header:
             pyrvapi.rvapi_add_header("AMPLE Results")
             self.header = True
@@ -333,7 +333,8 @@ class AmpleOutput(object):
                 0,  # column
                 "",  # tooltip
                 "",  # cell_css
-                "table-blue-vh",  # cell_style
+#                "table-blue-vh",  # cell_style
+                "table-blue",  # cell_style
                 1,  # rowSpan
                 1)  # colSpan
         return
@@ -561,19 +562,17 @@ if __name__ == "__main__":
     view1_dict = copy.copy(ample_dict)
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
-     
+      
     SLEEP = 5
-     
-    report_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
-    AR = AmpleOutput(view1_dict, report_dir=report_dir, own_gui=True, xml='jens.xml')
+      
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
-     
+      
     #for i in range(10):
     view1_dict['ensembles_data'] = ample_dict['ensembles_data']
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
-     
+      
     mrbump_results = []
     for r in ample_dict['mrbump_results'][0:3]:
         r['SHELXE_CC'] = None
@@ -582,10 +581,10 @@ if __name__ == "__main__":
     view1_dict['mrbump_results'] = mrbump_results
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
-     
+      
     view1_dict['mrbump_results'] = ample_dict['mrbump_results'][0:5]
     AR.display_results(view1_dict)  
     time.sleep(SLEEP)
-     
+      
     view1_dict['mrbump_results'] = ample_dict['mrbump_results']
     AR.display_results(view1_dict)  

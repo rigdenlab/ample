@@ -42,6 +42,10 @@ class AMPLE(CPluginScript):
                        ['log_mtzjoin.txt', 0]
                        ]
     TASKCOMMAND="ample"
+
+# Andre's stuff for a clean shutdown - a file caled INTERUPT will be created.
+#     INTERRUPTABLE = True
+#     INTERRUPTLABEL = 'Stop and keep current best solution'
     
     def __init__(self, *args, **kws):
         super(AMPLE, self).__init__(*args, **kws)
@@ -116,22 +120,18 @@ class AMPLE(CPluginScript):
             self.appendCommandLine('-nmr_model_in')
             self.appendCommandLine(params.AMPLE_MODELS_FILE)
         elif params.AMPLE_RUN_MODE == 'ideal_helices':
-            self.appendCommandLine('-ideal_helices')
-            self.appendCommandLine('True')
+            self.appendCommandLine(['-ideal_helices', 'True'])
              
-        self.appendCommandLine('-nproc')
-        self.appendCommandLine(str(params.AMPLE_NPROC))
+        self.appendCommandLine(['-nproc', str(params.AMPLE_NPROC)])
         #self.appendCommandLine(str(self.container.controlParameters.AMPLE_NPROC))
         
-        #self.appendCommandLine('-do_mr')
-        #self.appendCommandLine(False)
+        #self.appendCommandLine(['-do_mr', False])
         
-        self.appendCommandLine('-ccp4i2')
-        self.appendCommandLine('True')
+        self.appendCommandLine(['-ccp4i2_xml', self.makeFileName('PROGRAMXML')])
 
-        self.xmlroot = etree.Element(AMPLE_ROOT_NODE)
-        logFile = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)
-        self.watchFile(logFile,self.handleLogChanged)
+#         self.xmlroot = etree.Element(AMPLE_ROOT_NODE)
+#         logFile = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)
+#         self.watchFile(logFile,self.handleLogChanged)
                 
         return CPluginScript.SUCCEEDED
 
@@ -171,7 +171,7 @@ class AMPLE(CPluginScript):
         if error.maxSeverity()>CCP4ErrorHandling.SEVERITY_WARNING:
             return CPluginScript.FAILED
         '''
-        
+        return
         #Create (dummy) PROGRAMXML, which basically contains only the log text of the job
         #without this, a report will not be generated
 #         logfilePath = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)

@@ -3,7 +3,6 @@
 This is AMPLE
 """
 import argparse
-import glob
 import logging
 import os
 import platform
@@ -434,7 +433,7 @@ class Ample(object):
                 msg = 'Cannot find run directory: {0}'.format(optd['run_dir'])
                 exit_util.exit_error(msg, sys.exc_info()[2])
             logger.info('Making a run directory: checking for previous runs...')
-            optd['work_dir'] = ample_util.make_workdir(optd['run_dir'], ccp4i2=optd['ccp4i2'])
+            optd['work_dir'] = ample_util.make_workdir(optd['run_dir'], ccp4i2=bool(optd['ccp4i2_xml']))
         # Go to the work directory
         os.chdir(optd['work_dir'])
         
