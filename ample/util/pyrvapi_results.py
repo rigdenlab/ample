@@ -103,7 +103,7 @@ class AmpleOutput(object):
         self.webserver_uri = None
         self.wbeserver_start = None
         
-        self.setup(amopt, report_dir=report_dir, own_gui=own_gui)
+        self.setup(amopt, report_dir=report_dir, xml=xml, own_gui=own_gui)
         return
 
     def setup(self, amopt, report_dir=None, document=None, xml=None, own_gui=False):
@@ -115,7 +115,7 @@ class AmpleOutput(object):
         
         docid = "AMPLE_results"
         title = "AMPLE Results"
-        if False:
+        if True:
             share_jsrview = os.path.join(os.environ["CCP4"], "share", "jsrview")
             pyrvapi.rvapi_init_document (docid, report_dir, title, 1, 7, share_jsrview, None, None, None, None)
         else:
@@ -279,7 +279,7 @@ class AmpleOutput(object):
             # Only create the table once
             self.summary_tab_survey_sec_id = "survey"
             pyrvapi.rvapi_add_section(self.summary_tab_survey_sec_id, "Feedback", self.summary_tab_id, 0, 0, 1, 1, True)
-            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a></span>".format(ample_util.survey_url)
+            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(ample_util.survey_url)
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_survey_sec_id, 0, 0, 1, 1)
             
         return self.summary_tab_id
@@ -322,8 +322,7 @@ class AmpleOutput(object):
             tt = tooltips[h] if h in tooltips else ""
             pyrvapi.rvapi_put_horz_theader(table_id, h.encode('utf-8'), tt, i)  # Add table data
         
-        ir = len(tdata) - 1 if len(tdata) > 2 else 2
-        for i in range(1, ir):
+        for i in range(1, len(tdata)):
             for j in range(len(tdata[i])):
                 pyrvapi.rvapi_put_table_string(table_id, str(tdata[i][j]), i - 1, j)
         
@@ -554,23 +553,27 @@ if __name__ == "__main__":
     
     ample_dict['no_gui'] = False
     ample_dict['ample_log'] = os.path.abspath(__file__)
-    
+
+    report_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
+    AR = AmpleOutput(ample_dict, report_dir=report_dir, own_gui=True, xml=None)
+    #AR.display_results(ample_dict)
+     
     view1_dict = copy.copy(ample_dict)
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
-    
-    SLEEP = 1
-    
+     
+    SLEEP = 5
+     
     report_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
-    AR = AmpleOutput(view1_dict, report_dir=report_dir, own_gui=True)
+    AR = AmpleOutput(view1_dict, report_dir=report_dir, own_gui=True, xml='jens.xml')
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
-    
+     
     #for i in range(10):
     view1_dict['ensembles_data'] = ample_dict['ensembles_data']
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
-    
+     
     mrbump_results = []
     for r in ample_dict['mrbump_results'][0:3]:
         r['SHELXE_CC'] = None
@@ -579,10 +582,10 @@ if __name__ == "__main__":
     view1_dict['mrbump_results'] = mrbump_results
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
-    
+     
     view1_dict['mrbump_results'] = ample_dict['mrbump_results'][0:5]
     AR.display_results(view1_dict)  
     time.sleep(SLEEP)
-    
+     
     view1_dict['mrbump_results'] = ample_dict['mrbump_results']
     AR.display_results(view1_dict)  
