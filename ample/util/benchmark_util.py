@@ -16,8 +16,8 @@ import sys
 # Our imports
 from ample.util import ample_util
 from ample.util import csymmatch
-from ample.util import cphasematch
 from ample.util import maxcluster
+from ample.util import mtz_util
 from ample.util import pdb_edit
 from ample.util import pdb_model
 from ample.util import reforigin
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 _oldroot = None
 _newroot = None
 _MAXCLUSTERER = None
+SHELXE_STEM = 'shelxe'
 
 _CSV_KEYLIST = [
     'ample_version',
@@ -97,10 +98,13 @@ _CSV_KEYLIST = [
     'MOLREP_time',
     'MOLREP_version',
 
-    'MR_phase_error',
+    'MR_MPE',
+    'MR_wMPE',
 
     'REFMAC_Rfact',
     'REFMAC_Rfree',
+#     'REFMAC_MPE',
+#     'REFMAC_wMPE',
     'REFMAC_version',
 
     'BUCC_final_Rfact',
@@ -115,21 +119,23 @@ _CSV_KEYLIST = [
     'SHELXE_ACL',
     'SHELXE_MCL',
     'SHELXE_NC',
+    'SHELXE_wPE',
     'SHELXE_wMPE',
     'SHELXE_os',
     'SHELXE_time',
     'SHELXE_version',
-    # 'SHELXE_phase_error',
 
     'SXRBUCC_version',
     'SXRBUCC_final_Rfact',
     'SXRBUCC_final_Rfree',
-    # 'SXRBUCC_phase_error',
+    'SXRBUCC_MPE',
+    'SXRBUCC_wMPE',
 
     'SXRARP_version',
     'SXRARP_final_Rfact',
     'SXRARP_final_Rfree',
-    # 'SXRARP_phase_error',
+    'SXRARP_MPE',
+    'SXRARP_wMPE',
 
     'num_placed_chains',
     'num_placed_atoms',
@@ -161,29 +167,15 @@ def analyse(amoptd, newroot=None):
     if amoptd['native_pdb'] and 'native_pdb_std' not in amoptd:
         analysePdb(amoptd)
 
+    if amoptd['native_pdb_std']:
+        # Generate an SHELXE HKL and ENT file so that we can calculate phase errors
+        mtz_util.to_hkl(amoptd['mtz'], hkl_file=os.path.join(amoptd['benchmark_dir'], SHELXE_STEM + ".hkl"))
+        shutil.copyfile(amoptd['native_pdb_std'], os.path.join(amoptd['benchmark_dir'], SHELXE_STEM + ".ent"))
+        
     if amoptd['native_pdb'] and \
        not (amoptd['homologs'] or amoptd['ideal_helices']
             or amoptd['import_ensembles'] or amoptd['single_model_mode']):
         analyseModels(amoptd)
-    
-#     logger.info("Benchmark: generating native density map")
-#     # Generate map so that we can do origin searching
-#     amoptd['native_density_map']=phenixer.generateMap(amoptd['mtz'],
-#                                                      amoptd['native_pdb'],
-#                                                      FP=amoptd['F'],
-#                                                      SIGFP=amoptd['SIGF'],
-#                                                      FREE=amoptd['FREE'],
-#                                                      directory=amoptd['benchmark_dir'])
-
-    # Generate a mtz with phases from the native_pdb so that we can calculate phase errors
-    if amoptd['native_pdb']:
-        try:
-            amoptd['native_mtz_phased'] = cphasematch.place_native_pdb(amoptd['native_pdb'],
-                                                                       amoptd['mtz'],
-                                                                       amoptd['F'],
-                                                                       amoptd['SIGF'])
-        except Exception as e:
-            logger.critical("Error phasing native pdb: {0}".format(e))
     
     # Get the ensembling data
     if 'ensembles_data' not in amoptd or not len(amoptd['ensembles_data']):
@@ -201,6 +193,7 @@ def analyse(amoptd, newroot=None):
         return
     
     data = []
+    mrinfo = shelxe.MRinfo(amoptd['shelxe_exe'], amoptd['native_pdb_info'].pdb, amoptd['mtz'])
     for result in amoptd['mrbump_results']:
         
         # use mrbump dict as basis for result object
@@ -230,7 +223,7 @@ def analyse(amoptd, newroot=None):
             ]
             d.update({key: amoptd[key] for key in native_keys})
             # Analyse the solution
-            analyseSolution(amoptd, d)
+            analyseSolution(amoptd, d, mrinfo)
         data.append(d)
 
     # Put everything in a pandas DataFrame
@@ -312,8 +305,8 @@ def analyseModels(amoptd):
             model_list = sorted(glob.glob(os.path.join(amoptd['models_dir'], "*pdb")))
             structure_list = [amoptd['native_pdb_std']]
             amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fastas=[amoptd['fasta']])
-        except:
-            msg = "Unable to run TMscores. See debug.log."
+        except Exception as e:
+            msg = "Unable to run TMscores: {0}".format(e)
             logger.critical(msg)
     else:
         global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
@@ -390,7 +383,7 @@ def analysePdb(amoptd):
     return
 
 
-def analyseSolution(amoptd, d, origin_finder='shelxe'):
+def analyseSolution(amoptd, d, mrinfo):
 
     logger.info("Benchmark: analysing result: {0}".format(d['ensemble_name']))
 
@@ -417,29 +410,14 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
     d['num_placed_CA'] = mrPdbInfo.numCalpha()
     
     if amoptd['native_pdb']:
-        # Find the MR origin wrt to the native
-        #mrOrigin=phenixer.ccmtzOrigin(nativeMap=amoptd['native_density_map'], mrPdb=mrPdb)
-        # There is a bug in SHELXE with the spacegroup F23. Luckily this is a non-polar spacegroup,
-        # so we can use csymmatch to determine the origin for this case. This clause can be removed
-        # once the SHELXE bug has been fixed. The bug was present as of 25/5/16
-        if 'native_pdb_space_group' in amoptd and amoptd['native_pdb_space_group'] is 'F 2 3':
-            origin_finder = 'csymmatch'
-        if origin_finder == 'shelxe':
-            if not d['SHELXE_os']:
-                logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
-                mrOrigin = shelxe.shelxe_origin(amoptd['shelxe_exe'], amoptd['native_pdb_info'].pdb, amoptd['mtz'], mrPdb)
-            else:
-                mrOrigin=[c*-1 for c in d['SHELXE_os']]
-        elif origin_finder == 'csymmatch':
-            CS = csymmatch.Csymmatch()
-            csout = ample_util.filename_append(filename=mrPdb, astr='csymmatch_origin', directory=amoptd['benchmark_dir'] )
-            CS.run(refPdb=amoptd['native_pdb_info'].pdb,
-                   inPdb=mrPdb,
-                   outPdb=csout,
-                   originHand=True,
-                   cleanup=False)
-            CS.parseLog()
-            mrOrigin = CS.changeOfOrigin
+        if not d['SHELXE_os']:
+            logger.critical("mrPdb {0} has no SHELXE_os origin shift. Calculating...".format(mrPdb))
+            mrinfo.analyse(mrPdb)
+            mrOrigin = mrinfo.originShift
+            d['SHELXE_MPE'] = mrinfo.MPE
+            d['SHELXE_wMPE'] = mrinfo.wMPE
+        else:
+            mrOrigin=[c*-1 for c in d['SHELXE_os']]
         
         # Move pdb onto new origin
         originPdb = ample_util.filename_append(mrPdb, astr='offset',directory=fixpath(amoptd['benchmark_dir']))
@@ -454,14 +432,13 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
         # can now delete origin pdb
         os.unlink(originPdb)
         
+        # Calculate phase error for the MR PDB
         try:
-            # Calculate phase error between mr_pdb and native
-            _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
-                                                                                       mrMTZ,
-                                                                                       origin=mrOrigin)
-            d['MR_phase_error'] = phase_error_after_origin_shift
+            mrinfo.analyse(mrPdb)
+            d['MR_MPE'] = mrinfo.MPE
+            d['MR_wMPE'] = mrinfo.wMPE
         except Exception as e:
-            logger.critical("Error calculating phase_error from: {0}\n{1}".format(mrMTZ,e))
+            logger.critical("Error analysing mrPdb: {0}\n{1}".format(mrPdb,e))         
     
         # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
         # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
@@ -531,15 +508,15 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
                                                      amoptd['native_pdb'],
                                                      origin=mrOrigin,
                                                      workdir=fixpath(amoptd['benchmark_dir']))
-#         # Calculate phase error from mtz file
-#         if not d['SHELXE_mtzout'] is None and os.path.isfile(fixpath(d['SHELXE_mtzout'])):
-#             _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
-#                                                                                        fixpath(d['SHELXE_mtzout']),
-#                                                                                        fc_label='PHI_SHELXE',
-#                                                                                        origin=mrOrigin)
-#             amoptd['SHELXE_phase_error'] = phase_error_after_origin_shift
 
-    
+        if not('SHELXE_wMPE' in d and d['SHELXE_wMPE']):
+            try:
+                mrinfo.analyse(d['SHELXE_pdbout'])
+                d['SHELXE_MPE'] = mrinfo.MPE
+                d['SHELXE_wMPE'] = mrinfo.wMPE
+            except Exception as e:
+                logger.critical("Error analysing SHELXE_pdbout: {0}\n{1}".format(d['SHELXE_pdbout'],e))    
+                
         # Wrap parse_buccaneer model onto native
         if d['SXRBUCC_pdbout'] and os.path.isfile(fixpath(d['SXRBUCC_pdbout'])):
             # Need to rename Pdb as is just called buccSX_output.pdb
@@ -550,13 +527,14 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
                                                      origin=mrOrigin,
                                                      csymmatchPdb=csymmatchPdb,
                                                      workdir=fixpath(amoptd['benchmark_dir']))
-#         # Calculate phase error from mtz file
-#         if not d['SXRBUCC_mtzout'] is None and os.path.isfile(fixpath(d['SXRBUCC_mtzout'])):
-#             _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
-#                                                                                        fixpath(d['SXRBUCC_mtzout']),
-#                                                                                        origin=mrOrigin)
-#             amoptd['SXRBUCC_phase_error'] = phase_error_after_origin_shift
-            
+            # Calculate phase error
+            try:
+                mrinfo.analyse(d['SXRBUCC_pdbout'])
+                d['SXRBUCC_MPE'] = mrinfo.MPE
+                d['SXRBUCC_wMPE'] = mrinfo.wMPE
+            except Exception as e:
+                logger.critical("Error analysing SXRBUCC_pdbout: {0}\n{1}".format(d['SXRBUCC_pdbout'],e))
+                            
         # Wrap parse_buccaneer model onto native
         if d['SXRARP_pdbout'] and os.path.isfile(fixpath(d['SXRARP_pdbout'])):
             # Need to rename Pdb as is just called buccSX_output.pdb
@@ -567,15 +545,14 @@ def analyseSolution(amoptd, d, origin_finder='shelxe'):
                                                      origin=mrOrigin,
                                                      csymmatchPdb=csymmatchPdb,
                                                      workdir=fixpath(amoptd['benchmark_dir']))
-#         # Calculate phase error from mtz file
-#         if not d['SXRARP_mtzout'] is None and os.path.isfile(fixpath(d['SXRARP_mtzout'])):
-#             _, phase_error_after_origin_shift, _, _ = cphasematch.calc_phase_error_mtz(amoptd['native_mtz_phased'],
-#                                                                                        fixpath(d['SXRARP_mtzout']),
-#                                                                                        origin=mrOrigin)
-#             amoptd['SXRARP_phase_error'] = phase_error_after_origin_shift
-
+            # Calculate phase error
+            try:
+                mrinfo.analyse(d['SXRARP_pdbout'])
+                d['SXRARP_MPE'] = mrinfo.MPE
+                d['SXRARP_wMPE'] = mrinfo.wMPE
+            except Exception as e:
+                logger.critical("Error analysing SXRARP_pdbout: {0}\n{1}".format(d['SXRARP_pdbout'],e))
     return
-
 
 def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for benchmarking on a cluster"""
@@ -592,7 +569,6 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     # Make executable
     os.chmod(script_path, 0o777)
     return script_path
-
 
 def fixpath(path):
     # fix for analysing on a different machine

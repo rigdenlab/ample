@@ -36,6 +36,7 @@ __date__ = "03 Mar 2015"
 __version__ = "1.0"
 
 import logging
+import json
 import os
 import subprocess
 import urlparse
@@ -48,10 +49,15 @@ from ample.util import mrbump_util
 try: import pyrvapi
 except: pyrvapi = None
 
+# Hack to use Andre's pyrvapi API
+try: import pyrvapi_ext as API
+except ImportError: API = None
+
+logger = logging.getLogger(__name__)
+
+
 class AmpleOutput(object):
-    """Display the output of an AMPLE job
-    
-    """
+    """Display the output of an AMPLE job."""
     
     _ensemble_tooltips = {
                "Name" : "Ensemble name - used to name the pdb file and the directory where mrbump carries out molecular replacement.",
@@ -85,21 +91,63 @@ class AmpleOutput(object):
                "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
                }
     
-    def __init__(self):
-        self.running = None
-        self.webserver_uri = None
-        self.wbeserver_start = None
+    def __init__(self, amopt, own_gui=False):
+        self.header = False
         self.log_tab_id = None
+        self.old_mrbump_results = None
         self.results_tab_id = None
         self.results_tab_sections = []
         self.summary_tab_id = None
         self.summary_tab_ensemble_sec_id = None
         self.summary_tab_results_sec_id = None
         self.summary_tab_survey_sec_id = None
+        self.webserver_uri = None
+        self.wbeserver_start = None
+        self.ccp4i2 = False
         
-        self.old_mrbump_results = None
+        self.setup(amopt, own_gui=own_gui)
         return
 
+    def setup(self, amopt, rvapi_document=None, own_gui=False):
+        if not (pyrvapi or ('no_gui' in amopt and amopt['no_gui'])): return
+        
+        report_dir = os.path.join(amopt['work_dir'], "jsrview")
+        if not os.path.isdir(report_dir): os.mkdir(report_dir)
+        
+        self.ccp4i2 = bool(amopt['ccp4i2_xml'])
+        docid = "AMPLE_results"
+        title = "AMPLE Results"
+        logger.debug("Using Andre's Pyrvapi" if API else "COULD NOT FIND Andre's API!")
+        if API is None:
+            share_jsrview = os.path.join(os.environ["CCP4"], "share", "jsrview")
+            pyrvapi.rvapi_init_document(docid, report_dir, title, 1, 7, share_jsrview, None, None, None, None)
+        else:
+            if 'rvapi_document' in amopt and amopt['rvapi_document']:
+                #API.document.fromfile(amopt['rvapi_document'])
+                pyrvapi.rvapi_restore_document2(amopt['rvapi_document'])
+            else:
+                # Quick hack to init with Andre's stuff - can switch out for Felix's API when done
+                kwargs = dict(
+                  wintitle = title,
+                  reportdir = report_dir,
+                  xml = amopt['ccp4i2_xml'],
+                  abspaths = False,
+                # bug in jsrview:
+                # layout = 4 if i1 else 7,
+                )
+                API.document.newdoc(**kwargs)
+
+        if 'webserver_uri' in amopt and amopt['webserver_uri']:
+            # don't start browser and setup variables for the path on the webserver
+            self._webserver_start = len(amopt['run_dir']) + 1
+            self.webserver_uri = amopt['webserver_uri']
+            
+        if own_gui:
+            # We start our own browser
+            jsrview = os.path.join(os.environ["CCP4"], "libexec", "jsrview")
+            subprocess.Popen([jsrview, os.path.join(report_dir, "index.html")])
+        return
+    
     def create_log_tab(self, ample_dict):
         if self.log_tab_id: return
         logfile = ample_dict['ample_log']
@@ -115,7 +163,7 @@ class AmpleOutput(object):
         return self.log_tab_id
     
     def create_results_tab(self, ample_dict):
-        if not self.summary_tab_id: return
+        if self.ccp4i2 or not self.summary_tab_id: return
         if not self._got_mrbump_results(ample_dict): return
         
         mrb_results = ample_dict['mrbump_results']
@@ -155,15 +203,20 @@ class AmpleOutput(object):
     def _create_summary_tab(self):
         if not self.summary_tab_id:
             self.summary_tab_id = "summary_tab"
-            # Insert summary tab before log tab
-            pyrvapi.rvapi_insert_tab(self.summary_tab_id, "Summary", self.log_tab_id, False)  # Last arg is "open" - i.e. show or hide
-        return
+            title = "Summary"
+            if self.ccp4i2:
+                # Create summary tab
+                pyrvapi.rvapi_add_tab(self.summary_tab_id, title, True)  # Last arg is "open" - i.e. show or hide
+            else:
+                # Insert summary tab before log tab
+                pyrvapi.rvapi_insert_tab(self.summary_tab_id, title, self.log_tab_id, False)  # Last arg is "open" - i.e. show or hide
+            return
 
     def create_summary_tab(self, ample_dict):
         #
         # Summary Tab
         #
-        if not self.log_tab_id: return
+        #if not self.log_tab_id: return
         if not (ample_dict['single_model_mode'] or ample_dict['homologs'] or not self._got_ensemble_data(ample_dict)):
             ensembles_data = ample_dict['ensembles_data']
             
@@ -231,54 +284,22 @@ class AmpleOutput(object):
         #
         # Survey section
         #
-        if not self.summary_tab_survey_sec_id:
+        if not self.summary_tab_survey_sec_id and not self.ccp4i2:
             # Only create the table once
             self.summary_tab_survey_sec_id = "survey"
             pyrvapi.rvapi_add_section(self.summary_tab_survey_sec_id, "Feedback", self.summary_tab_id, 0, 0, 1, 1, True)
-            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a></span>".format(ample_util.survey_url)
+            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(ample_util.survey_url)
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_survey_sec_id, 0, 0, 1, 1)
-            
         return self.summary_tab_id
 
     def display_results(self, ample_dict, run_dir=None):
-        if 'no_gui' in ample_dict and ample_dict['no_gui']: return
-        
-        logger = logging.getLogger()
-        if not pyrvapi:
-            msg = "Cannot display results using pyrvapi!"
-            logger.debug(msg)
-            return False
-        
-        if not self.running:        
-            # Infrastructure to run
-            ccp4 = os.environ["CCP4"]
-            share_jsrview = os.path.join(ccp4, "share", "jsrview")
-            if not run_dir: run_dir = os.path.join(ample_dict['work_dir'], "jsrview")
-            if not os.path.isdir(run_dir): os.mkdir(run_dir)
-            
-            major,_,_ = ample_dict['ccp4_version']
-            if major <= 6:
-                pyrvapi.rvapi_init_document ("AMPLE_results", run_dir, "AMPLE Results", 1, 7, share_jsrview, None, None, None)
-            else:
-                # Later versions of the api require an additional xmli2FName argument
-                # Tried a try/except with the TypeError bit this doesn't work as the TypeEror doesn't seem to get propogated back, so need to work out CCP4 version
-                pyrvapi.rvapi_init_document ("AMPLE_results", run_dir, "AMPLE Results", 1, 7, share_jsrview, None, None, None, None)
-            if 'webserver_uri' in ample_dict and ample_dict['webserver_uri']:
-                # don't start browser and setup variables for the path on the webserver
-                self._webserver_start = len(ample_dict['run_dir']) + 1
-                self.webserver_uri = ample_dict['webserver_uri']
-            else:
-                # We start our own browser
-                jsrview = os.path.join(ccp4, "libexec", "jsrview")
-                subprocess.Popen([jsrview, os.path.join(run_dir, "index.html")])
+        if not (pyrvapi or ('no_gui' in ample_dict and ample_dict['no_gui'])): return
+        if not self.header:
             pyrvapi.rvapi_add_header("AMPLE Results")
-            # print "RUNNING display_results ",len(ample_dict['mrbump_results']) if 'mrbump_results' in ample_dict else "NO RESULTS"
-            self.running = True
-        
-        self.create_log_tab(ample_dict)
+            self.header = True
+        if not self.ccp4i2: self.create_log_tab(ample_dict)
         self.create_summary_tab(ample_dict)
         self.create_results_tab(ample_dict)
-        
         pyrvapi.rvapi_flush()
         return True
 
@@ -309,8 +330,7 @@ class AmpleOutput(object):
             tt = tooltips[h] if h in tooltips else ""
             pyrvapi.rvapi_put_horz_theader(table_id, h.encode('utf-8'), tt, i)  # Add table data
         
-        ir = len(tdata) - 1 if len(tdata) > 2 else 2
-        for i in range(1, ir):
+        for i in range(1, len(tdata)):
             for j in range(len(tdata[i])):
                 pyrvapi.rvapi_put_table_string(table_id, str(tdata[i][j]), i - 1, j)
         
@@ -321,7 +341,8 @@ class AmpleOutput(object):
                 0,  # column
                 "",  # tooltip
                 "",  # cell_css
-                "table-blue-vh",  # cell_style
+#                "table-blue-vh",  # cell_style
+                "table-blue",  # cell_style
                 1,  # rowSpan
                 1)  # colSpan
         return
@@ -533,6 +554,46 @@ class AmpleOutput(object):
             
             pyrvapi.rvapi_set_tree_node(results_tree, container_id, "{0}".format(name), "auto", "")
         return
+
+    def rvapi_shutdown(self, amopt):
+        """Return any results to jscofe
+        
+        Parameters
+        ----------
+        amopt : dict
+            AMPLE results dictionary with all information
+        """
+        k = 'rvapi_document'
+        if not (k in amopt and amopt[k]): return
+        rvdoc = amopt[k]
+        work_dir = amopt['work_dir']
+
+        # Create dictionary we're going to return
+        meta = { 'first_tab_id' : self.log_tab_id,
+                'root' : work_dir
+                }
+        
+        nresults = 0
+        if 'mrbump_results' in amopt and amopt['mrbump_results']:
+            mrb_results = amopt['mrbump_results']
+            nresults = min(3, len(mrb_results))
+        if nresults > 0:
+            meta['n_entries'] = nresults
+            meta['xyz'] = {}
+            meta['hkl'] = {}
+            for i, fdata in enumerate(mrbump_util.ResultsSummary(mrb_results[:nresults]).topFiles(nresults)):
+                ftype = '{0}_{1}'.format(fdata['xyz']['type'], i)
+                meta['xyz'][ftype] = os.path.relpath(work_dir,fdata['xyz']['path'])
+                ftype = '{0}_{1}'.format(fdata['mtz']['type'], i)
+                meta['hkl'][ftype] = os.path.relpath(work_dir,fdata['mtz']['path'])
+        else:
+            meta['n_entries'] = 0
+        
+        # Commit to file
+        logger.debug("Exporting pyrvapi metadata:\n{0}".format(meta))
+        pyrvapi.rvapi_put_meta(json.dumps(meta))
+        pyrvapi.rvapi_store_document2(rvdoc)
+        return   
             
 if __name__ == "__main__":
     import copy, sys, time
@@ -541,35 +602,37 @@ if __name__ == "__main__":
     
     ample_dict['no_gui'] = False
     ample_dict['ample_log'] = os.path.abspath(__file__)
-    
+
+    report_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
+    AR = AmpleOutput(ample_dict, report_dir=report_dir, own_gui=True, xml=None)
+    #AR.display_results(ample_dict)
+     
     view1_dict = copy.copy(ample_dict)
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
-    
+      
     SLEEP = 5
-    
-    AR = AmpleOutput()
-    run_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
-    AR.display_results(view1_dict,run_dir=run_dir)
+      
+    AR.display_results(view1_dict)
     time.sleep(SLEEP)
-    
+      
     #for i in range(10):
     view1_dict['ensembles_data'] = ample_dict['ensembles_data']
-    AR.display_results(view1_dict,run_dir=run_dir)
+    AR.display_results(view1_dict)
     time.sleep(SLEEP)
-    
+      
     mrbump_results = []
     for r in ample_dict['mrbump_results'][0:3]:
         r['SHELXE_CC'] = None
         r['SHELXE_ACL'] = None
         mrbump_results.append(r)
     view1_dict['mrbump_results'] = mrbump_results
-    AR.display_results(view1_dict,run_dir=run_dir)
+    AR.display_results(view1_dict)
     time.sleep(SLEEP)
-    
+      
     view1_dict['mrbump_results'] = ample_dict['mrbump_results'][0:5]
-    AR.display_results(view1_dict,run_dir=run_dir)  
+    AR.display_results(view1_dict)  
     time.sleep(SLEEP)
-    
+      
     view1_dict['mrbump_results'] = ample_dict['mrbump_results']
-    AR.display_results(view1_dict,run_dir=run_dir)  
+    AR.display_results(view1_dict)  

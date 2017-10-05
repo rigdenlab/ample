@@ -10,6 +10,7 @@ import os
 import shutil
 import sys
 
+from ample.constants import AMPLE_PKL
 from ample.ensembler.constants import *
 from ample.modelling import rosetta_model
 from ample.util import ample_util
@@ -77,7 +78,7 @@ def process_options(optd):
     options required based on that runtype. All the major 
     """
     # Path for pickling results
-    optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
+    optd['results_path'] = os.path.join(optd['work_dir'], AMPLE_PKL)
     
     ###############################################################################
     #
@@ -311,7 +312,7 @@ def process_options(optd):
     #
     ###############################################################################
     if optd['shelxe_rebuild']:
-        optd['shelxe_rebuild_arpwap'] = True
+        optd['shelxe_rebuild_arpwarp'] = True
         optd['shelxe_rebuild_buccaneer'] = True
     
     # Model building programs

@@ -1,4 +1,3 @@
-
 import os
 
 if "CCP4" not in os.environ.keys(): 
@@ -15,3 +14,8 @@ SHARE_DIR = os.path.join(os.environ["CCP4"], "share", "ample")
 
 # AMPLE configuration file
 AMPLE_CONFIG_FILE = os.path.join(SHARE_DIR, "include", "ample.ini")
+
+# Named files/directories
+AMPLE_PKL = 'resultsd.pkl'
+AMPLEDIR = 'AMPLE_'
+I2DIR = 'AMPLEI2'

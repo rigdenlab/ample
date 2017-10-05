@@ -46,7 +46,10 @@ def run(nativePdb, nativeMtz=None, nativeMap=None, mrPdbs=None, outDir=None):
             offsetPdb = "offset.pdb"
             logging.debug("Found origin: {0}\nOffset pdb is: {1}".format(origin, offsetPdb))
         else:
-            originShift = shelxe.shelxe_origin(shelxeExe, nativePdb, nativeMtz, mrPdb)
+            
+            mrinfo = shelxe.MRinfo(shelxeExe, nativePdb, nativeMtz)
+            mrinfo.analyse(mrPdb)
+            originShift = mrinfo.originShift
             logging.debug("Found origin: {0}".format(originShift))
             offsetPdb = ample_util.filename_append(mrPdb, astr='offset', directory=os.getcwd())
             pdb_edit.translate(mrPdb, offsetPdb, originShift)
