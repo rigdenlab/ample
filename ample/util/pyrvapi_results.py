@@ -36,6 +36,7 @@ __date__ = "03 Mar 2015"
 __version__ = "1.0"
 
 import logging
+import json
 import os
 import subprocess
 import urlparse
@@ -53,6 +54,7 @@ try: import pyrvapi_ext as API
 except ImportError: API = None
 
 logger = logging.getLogger(__name__)
+
 
 class AmpleOutput(object):
     """Display the output of an AMPLE job."""
@@ -115,14 +117,16 @@ class AmpleOutput(object):
         self.ccp4i2 = bool(amopt['ccp4i2_xml'])
         docid = "AMPLE_results"
         title = "AMPLE Results"
+        logger.debug("Using Andre's Pyrvapi" if API else "COULD NOT FIND Andre's API!")
         if API is None:
             share_jsrview = os.path.join(os.environ["CCP4"], "share", "jsrview")
             pyrvapi.rvapi_init_document(docid, report_dir, title, 1, 7, share_jsrview, None, None, None, None)
         else:
-            # Quick hack to init with Andre's stuff - can switch out for Felix's API when done
             if 'rvapi_document' in amopt and amopt['rvapi_document']:
-                API.document.fromfile(amopt['rvapi_document'])
+                #API.document.fromfile(amopt['rvapi_document'])
+                pyrvapi.rvapi_restore_document2(amopt['rvapi_document'])
             else:
+                # Quick hack to init with Andre's stuff - can switch out for Felix's API when done
                 kwargs = dict(
                   wintitle = title,
                   reportdir = report_dir,
@@ -566,11 +570,13 @@ class AmpleOutput(object):
 
         # Create dictionary we're going to return
         meta = { 'first_tab_id' : self.log_tab_id,
-                'root' : work_dir,
+                'root' : work_dir
                 }
         
-        mrb_results = amopt['mrbump_results']
-        nresults = min(3, len(mrb_results))
+        nresults = 0
+        if 'mrbump_results' in amopt and amopt['mrbump_results']:
+            mrb_results = amopt['mrbump_results']
+            nresults = min(3, len(mrb_results))
         if nresults > 0:
             meta['n_entries'] = nresults
             meta['xyz'] = {}
@@ -584,7 +590,8 @@ class AmpleOutput(object):
             meta['n_entries'] = 0
         
         # Commit to file
-        pyrvapi.rvapi_put_meta(meta)
+        logger.debug("Exporting pyrvapi metadata:\n{0}".format(meta))
+        pyrvapi.rvapi_put_meta(json.dumps(meta))
         pyrvapi.rvapi_store_document2(rvdoc)
         return   
             
