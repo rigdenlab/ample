@@ -155,7 +155,7 @@ class ContactUtil(object):
     """
 
     def __init__(self, contact_file, contact_format, sequence_file, sequence_format, bbcontacts_file=None,
-                 cutoff_factor=1.0, distance_to_neighbor=5):
+                 bbcontacts_format="bbcontacts", cutoff_factor=1.0, distance_to_neighbor=5):
         """Initialise a new :obj:`ContactUtil` instance
 
         Parameters
@@ -170,6 +170,8 @@ class ContactUtil(object):
            The format of the ``sequence_file``
         bbcontacts_file : str, optional
            The path to the bbcontacts contact file
+        bbcontacts_format : str
+           The format of the ``bbcontacts_file``
         cutoff_factor : float, optional
            The contact list truncation factor [default: 1.0]
         distance_to_neighbor : int, optional
@@ -185,7 +187,7 @@ class ContactUtil(object):
         self._sequence_file = None
         self._sequence_format = None
 
-        self.bbcontacts_format = 'bbcontacts'
+        self.bbcontacts_format = bbcontacts_format
         self.contact_format = contact_format
         self.sequence_format = sequence_format
 
@@ -213,7 +215,7 @@ class ContactUtil(object):
 
     @bbcontacts_format.setter
     def bbcontacts_format(self, value):
-        """Define the format of ``bbcontacts_file``
+        """Define the format of ``contact_file``
 
         Raises
         ------
@@ -221,7 +223,7 @@ class ContactUtil(object):
            Unknown contact file format
 
         """
-        if value != 'bbcontacts':
+        if value not in conkit.io.CONTACT_FILE_PARSERS.keys():
             raise ValueError('Unknown contact file format: {0}'.format(value))
         self._bbcontacts_format = value
 
@@ -323,11 +325,15 @@ class ContactUtil(object):
            The modified and processed contact map
 
         """
-        logger.info('Provided contact file and format are: %s - %s', self.contact_file, self.contact_format)
-        contact_map = conkit.io.read(self.contact_file, self.contact_format).top_map
+        logger.info('Provided contact file and format are: %s - %s',
+                    self.contact_file, self.contact_format)
+        contact_map = conkit.io.read(
+            self.contact_file, self.contact_format).top_map
 
-        logger.info('Provided sequence file and format are: %s - %s', self.sequence_file, self.sequence_format)
-        sequence = conkit.io.read(self.sequence_file, self.sequence_format).top_sequence
+        logger.info('Provided sequence file and format are: %s - %s',
+                    self.sequence_file, self.sequence_format)
+        sequence = conkit.io.read(
+            self.sequence_file, self.sequence_format).top_sequence
         contact_map.sequence = sequence
         contact_map.assign_sequence_register()
 
@@ -335,7 +341,8 @@ class ContactUtil(object):
         contact_map.calculate_scalar_score()
 
         dtn = self.distance_to_neighbor
-        logger.info('Removing neighboring residues to distance of %d residues', dtn)
+        logger.info(
+            'Removing neighboring residues to distance of %d residues', dtn)
         contact_map.remove_neighbors(min_distance=dtn, inplace=True)
 
         sort_key = 'raw_score'
@@ -343,12 +350,15 @@ class ContactUtil(object):
         contact_map.sort(sort_key, reverse=True, inplace=True)
 
         ncontacts = int(contact_map.sequence.seq_len * self.cutoff_factor)
-        logger.info('Slicing contact map to contain top %d contacts only', ncontacts)
+        logger.info(
+            'Slicing contact map to contain top %d contacts only', ncontacts)
         contact_map = contact_map[:ncontacts]
 
         if self.bbcontacts_file:
-            logger.info('Provided contact file and format are: %s - %s', self.bbcontacts_file, self.bbcontacts_format)
-            bbcontact_map = conkit.io.read(self.bbcontacts_file, self.bbcontacts_format).top_map
+            logger.info('Provided contact file and format are: %s - %s',
+                        self.bbcontacts_file, self.bbcontacts_format)
+            bbcontact_map = conkit.io.read(
+                self.bbcontacts_file, self.bbcontacts_format).top_map
             bbcontact_map.sequence = sequence
             bbcontact_map.assign_sequence_register()
             bbcontact_map.rescale(inplace=True)
@@ -404,26 +414,31 @@ class ContactUtil(object):
         from ample.util import workers_util
 
         # Compute the long range contact satisfaction on a per-decoy basis
-        logger.info('Long-range contacts are defined with sequence separation of 24+')
+        logger.info(
+            'Long-range contacts are defined with sequence separation of 24+')
 
         # Hack a custom copy of the contact map together that we can use with the script
         # All decoys should be sequence identical and thus we can just match it to the top
         contact_map = self._preprocess()
-        contact_map.match(conkit.io.read(decoys[0], decoy_format).top_map, inplace=True)
+        contact_map.match(conkit.io.read(
+            decoys[0], decoy_format).top_map, inplace=True)
         tmp_contact_file = tempfile.NamedTemporaryFile(delete=False)
         conkit.io.write(tmp_contact_file.name, 'casprr', contact_map)
 
         # Construct the job scripts
         job_scripts = []    # Hold job scripts
         log_files = []      # Hold paths to log files
-        executable = 'conkit-precision.bat' if sys.platform.startswith('win') else 'conkit-precision'
+        executable = 'conkit-precision.bat' if sys.platform.startswith(
+            'win') else 'conkit-precision'
         for decoy in decoys:
             # Some file names
             decoy_name = os.path.splitext(os.path.basename(decoy))[0]
-            contact_name = os.path.splitext(os.path.basename(self.contact_file))[0]
+            contact_name = os.path.splitext(
+                os.path.basename(self.contact_file))[0]
             prefix = '{0}_{1}_'.format(contact_name, decoy_name)
             # Create the run scripts
-            script = tempfile.NamedTemporaryFile(prefix=prefix, suffix=ample_util.SCRIPT_EXT, delete=False)
+            script = tempfile.NamedTemporaryFile(
+                prefix=prefix, suffix=ample_util.SCRIPT_EXT, delete=False)
 
             # Construct the command
             # TODO: Get the log file business working properly
@@ -548,9 +563,11 @@ class ContactUtil(object):
             raise ValueError(msg)
         elif structure_file and structure_format:
             logger.info(
-                'Provided structure file and format are: {0} - {1}'.format(structure_file, structure_format)
+                'Provided structure file and format are: {0} - {1}'.format(
+                    structure_file, structure_format)
             )
-            structure_map = conkit.io.read(structure_file, structure_format).top_map
+            structure_map = conkit.io.read(
+                structure_file, structure_format).top_map
             contact_map.match(structure_map, inplace=True)
 
             # Calculate the precision score
@@ -560,7 +577,8 @@ class ContactUtil(object):
             precision = 0.0
 
         # Draw a contact map plot
-        conkit.plot.ContactMapFigure(contact_map, reference=structure_map, file_name=plot_file)
+        conkit.plot.ContactMapFigure(
+            contact_map, reference=structure_map, file_name=plot_file)
 
         return plot_file, precision
 
@@ -598,11 +616,13 @@ class ContactUtil(object):
             logger.critical(msg)
             raise ValueError(msg)
         elif restraint_format == 'rosetta' and not hasattr(energy_functions.RosettaFunctionConstructs, energy_function):
-            msg = 'Unknown Rosetta energy function: {0} for {1}'.format(energy_function, restraint_format)
+            msg = 'Unknown Rosetta energy function: {0} for {1}'.format(
+                energy_function, restraint_format)
             logger.critical(msg)
             raise ValueError(msg)
         elif restraint_format == 'saint2' and not hasattr(energy_functions.Saint2FunctionConstructs, energy_function):
-            msg = 'Unknown SAINT2 energy function: {0} for {1}'.format(energy_function, restraint_format)
+            msg = 'Unknown SAINT2 energy function: {0} for {1}'.format(
+                energy_function, restraint_format)
             logger.critical(msg)
             raise ValueError(msg)
 
@@ -618,9 +638,12 @@ class ContactUtil(object):
                     contact_dict['atom1'] = 'CA' if contact.res1 == 'G' else 'CB'
                     contact_dict['atom2'] = 'CA' if contact.res2 == 'G' else 'CB'
                     contact_dict['energy_bonus'] = contact.weight * 15.00
-                    contact_dict['scalar_score'] = contact.scalar_score * contact.weight
-                    contact_dict['sigmoid_cutoff'] = energy_functions.DynamicDistances.cutoff(contact.res1, contact.res2)
-                    contact_dict['sigmoid_slope'] = energy_functions.DynamicDistances.percentile(contact.res1, contact.res2)
+                    contact_dict['scalar_score'] = contact.scalar_score * \
+                        contact.weight
+                    contact_dict['sigmoid_cutoff'] = energy_functions.DynamicDistances.cutoff(
+                        contact.res1, contact.res2)
+                    contact_dict['sigmoid_slope'] = 1.0 / energy_functions.DynamicDistances.percentile(
+                        contact.res1, contact.res2)
                     f_out.write(construct.format(**contact_dict) + os.linesep)
 
             elif restraint_format == 'saint2':
@@ -681,13 +704,15 @@ class ContactUtil(object):
         # Make sure user selected energy function is pre-defined
         if optd['restraints_format'] == 'rosetta' and optd['energy_function']:
             if not hasattr(energy_functions.RosettaFunctionConstructs, optd['energy_function']):
-                msg = "Rosetta energy function {0} unavailable".format(optd['energy_function'])
+                msg = "Rosetta energy function {0} unavailable".format(
+                    optd['energy_function'])
                 logger.critical(msg)
                 raise ValueError(msg)
 
         if optd['restraints_format'] == 'saint2' and optd['energy_function']:
             if not hasattr(energy_functions.Saint2FunctionConstructs, optd['energy_function']):
-                msg = "SAINT2 energy function {0} unavailable".format(optd['energy_function'])
+                msg = "SAINT2 energy function {0} unavailable".format(
+                    optd['energy_function'])
                 logger.critical(msg)
                 raise ValueError(msg)
 
@@ -695,3 +720,27 @@ class ContactUtil(object):
             msg = "Subselection mode not valid"
             logger.critical(msg)
             raise ValueError(msg)
+
+    @staticmethod
+    def predict_contacts_from_sequence(fas, wdir=".", min_neff=200):
+        from conkit.applications import CCMpredCommandLine, HHblitsCommandline
+        tag = os.path.basename(fas).rsplit(".", 1)[0]
+        a3m = os.path.join(wdir, tag + ".a3m")
+        jon = os.path.join(wdir, tag + ".jon")
+        hhblitsdb = os.environ["HHBLITSDB"]
+        conkit.applications.HHblitsCommandline(
+            cmd="hhblits", database=hhblitsdb, input=fas,
+            output=os.devnull, oa3m=a3m, niterations=3, id=99,
+            show_all=True, cov=60, diff='inf', maxfilt=500000
+        )()
+        if conkit.io.read(a3m, "a3m").neff >= min_neff:
+            conkit.io.convert(a3m, "a3m", jon, "jones")
+            mat = os.path.join(wdir, tag + ".mat")
+            rr = os.path.join(wdir, tag + ".rr")
+            conkit.applications.CCMpredCommandline(
+                cmd="ccmpred", alnfile=jon, matfile=mat, renormalize=True
+            )()
+            conkit.io.convert(mat, "ccmpred", rr, "casp")
+            return rr
+        else:
+            return None

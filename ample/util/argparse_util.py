@@ -244,6 +244,9 @@ def add_contact_options(parser=None):
     contact_group.add_argument('-bbcontacts_file',
                                help='Additional bbcontacts file. Requires normal contactfile')
 
+    contact_group.add_argument('-bbcontacts_format',
+                               help='Residue contact file format. For available formats refer to the AMPLE documentation')
+
     contact_group.add_argument('-contact_file',
                                help='Residue contact file')
 
