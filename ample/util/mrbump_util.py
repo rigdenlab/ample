@@ -35,14 +35,16 @@ class NullHandler(logging.Handler):
     def emit(self, record):
         pass
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+logger.addHandler(NullHandler())
+#logger.basicConfig()
 
 class ResultsSummary(object):
     """
     Summarise the results for a series of MRBUMP runs
     """
 
-    def __init__(self, results = None, results_pkl=None):
+    def __init__(self, results=None, results_pkl=None):
         """
         Parameters
         ----------
@@ -51,14 +53,13 @@ class ResultsSummary(object):
         """ 
         self.results = []
         # Add Null logger so we can be used without requiring a logger
-        LOGGER.addHandler(NullHandler())
         self.pname = "archive"
         self.pdir = None
         self.success = False
         
         # Extract mrbump results from a pickled results file if given one.
         if results_pkl and os.path.isfile(results_pkl):
-            with open(results_pkl) as f: resd = cPickle.load(f)#
+            with open(results_pkl) as f: resd = cPickle.load(f)
             mkey = 'mrbump_results'
             if mkey in resd and len(resd[mkey]):
                 self.results = resd[mkey]
@@ -226,7 +227,7 @@ class ResultsSummary(object):
         """
         mrbump_dir = os.path.abspath(mrbump_dir)
         if not os.path.isdir(mrbump_dir):
-            LOGGER.warn("extractResults - is not a valid directory: {0}".format(mrbump_dir))
+            logger.warn("extractResults - is not a valid directory: {0}".format(mrbump_dir))
             return []
                 
         # Get a list of the ensembles (could get this from the amopt dictionary)
@@ -239,7 +240,7 @@ class ResultsSummary(object):
             # legacy - try .sub
             ensembles = [ os.path.splitext(os.path.basename(e))[0] for e in glob.glob(os.path.join(mrbump_dir, "*.sub"))]
         if not len(ensembles):
-            LOGGER.warn("Could not extract any results from directory: {0}".format(mrbump_dir))
+            logger.warn("Could not extract any results from directory: {0}".format(mrbump_dir))
             return []
         
         # reset any results
@@ -254,14 +255,14 @@ class ResultsSummary(object):
             if not os.path.isdir(jobDir): jobDir = os.path.join( mrbump_dir, 'search_'+ensemble )
             if not os.path.isdir(jobDir):
                 # As we call this every time we monitor a job running, we don't want to print this out all the time
-                # LOGGER.debug("Missing job directory: {0}".format(jobDir))
+                # logger.debug("Missing job directory: {0}".format(jobDir))
                 failed[ ensemble ] = "no_job_directory"
                 continue
 
-            LOGGER.debug(" -- checking directory for results: {0}".format(jobDir))
+            logger.debug(" -- checking directory for results: {0}".format(jobDir))
             # Check if finished
             if not os.path.exists(os.path.join(jobDir, "results", "finished.txt")):
-                LOGGER.debug("Found unfinished job: {0}".format(jobDir))
+                logger.debug("Found unfinished job: {0}".format(jobDir))
                 failed[ ensemble ] = "unfinished"
                 continue
 
@@ -273,13 +274,13 @@ class ResultsSummary(object):
             elif os.path.isfile(resultsTable):
                 results += self.parseTableDat(resultsTable)
             else:
-                LOGGER.debug(" -- Could not find results files: {0} or {1}".format(resultsDict, resultsTable))
+                logger.debug(" -- Could not find results files: {0} or {1}".format(resultsDict, resultsTable))
                 failed[ ensemble ] = "missing-results-file"
                 continue
 
         # Process the failed results
         if failed: results += self._processFailed(mrbump_dir, failed)
-        if not len(results): LOGGER.warn("Could not extract any results from directory: {0}".format(mrbump_dir))
+        if not len(results): logger.warn("Could not extract any results from directory: {0}".format(mrbump_dir))
         self.results = results
         return
     
@@ -327,7 +328,7 @@ class ResultsSummary(object):
                 for f in header:
                     # Map the data fields to their titles
                     if f not in title2key.keys():
-                        LOGGER.critical("jobDir {0}: Problem with field {1} in headerline: {2}".format(jobDir, f, line))
+                        logger.critical("jobDir {0}: Problem with field {1} in headerline: {2}".format(jobDir, f, line))
                         result['Solution_Type'] = "problem-header-file.dat"
                         self._getUnfinishedResult(result)
                         results.append(result)
@@ -338,7 +339,7 @@ class ResultsSummary(object):
             fields = line.split()
             if len(fields) != nfields:
                 msg = "jobDir {0}: Problem getting dataline: {1}".format(jobDir, line)
-                LOGGER.debug(msg)
+                logger.debug(msg)
                 result['Solution_Type'] = "corrupted-data-tfile.dat"
                 self._getUnfinishedResult(result)
                 results.append(result)
@@ -441,7 +442,7 @@ class ResultsSummary(object):
             d['Solution_Type'] = reason
             results.append(d)
             
-        LOGGER.debug("Added {0} MRBUMP result failures".format(len(failed)))
+        logger.debug("Added {0} MRBUMP result failures".format(len(failed)))
         return results
     
     def _purgeFailed(self):
@@ -791,7 +792,7 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
         
     # Make executable
     os.chmod(script_path, 0o777)
-    LOGGER.debug("Wrote MRBUMP script: {0}".format(script_path))
+    logger.debug("Wrote MRBUMP script: {0}".format(script_path))
 
     return script_path
 
