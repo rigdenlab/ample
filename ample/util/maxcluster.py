@@ -12,7 +12,7 @@ from ample.util import ample_util
 from ample.util import exit_util
 from ample.util import pdb_edit
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 def find_maxcluster(amoptd):
     """Return path to maxcluster binary.
@@ -34,9 +34,9 @@ def find_maxcluster(amoptd):
     except ample_util.FileNotFoundError:
         # Cannot find so we need to try and download it
         rcdir = amoptd['rcdir']
-        LOGGER.info("Cannot find maxcluster binary in path so attempting to download it directory: {0}".format( rcdir )  )
+        logger.info("Cannot find maxcluster binary in path so attempting to download it directory: {0}".format( rcdir )  )
         if not os.path.isdir( rcdir ):
-            LOGGER.info("No ample rcdir found so creating in: {0}".format( rcdir ) )
+            logger.info("No ample rcdir found so creating in: {0}".format( rcdir ) )
             os.mkdir( rcdir )
         url = None
         maxcluster_exe = os.path.join( rcdir, 'maxcluster' )
@@ -58,7 +58,7 @@ def find_maxcluster(amoptd):
         else:
             msg="Unrecognised system type: {0}".format( sys.platform )
             exit_util.exit_error(msg)
-        LOGGER.info("Attempting to download maxcluster binary from: {0}".format( url ) )
+        logger.info("Attempting to download maxcluster binary from: {0}".format( url ) )
         try:
             urllib.urlretrieve( url, maxcluster_exe )
         except Exception, e:

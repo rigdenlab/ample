@@ -102,7 +102,7 @@ class MRinfo(object):
         if ret != 0: raise RuntimeError,"Error running shelxe - see log: {0}".format(logfile)
          
         sp = parse_shelxe.ShelxeLogParser(logfile)
-        self.MPE = sp.MPE
+        if hasattr(sp, 'MPE'): self.MPE = sp.MPE # Only added in later version of MRBUMP shelxe parser
         self.wMPE = sp.wMPE
         self.originShift = [ o*-1 for o in sp.originShift ]
         

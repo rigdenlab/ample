@@ -1,13 +1,15 @@
+import logging
 import os
 
 from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import residue_map
 
+logger = logging.getLogger(__name__)
+
 class ReforiginRmsd(object):
     """Class to use reforigin to determine how well the model was placed.
     """
-    
     def __init__( self, workdir=None, cAlphaOnly=True ):
         
         self.workdir = workdir
@@ -36,7 +38,7 @@ class ReforiginRmsd(object):
         
         retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False)
         if retcode != 0:
-            raise RuntimeError, "Error running command: {0}".format( " ".join(cmd) )
+            raise RuntimeError("Error running command: {0}".format( " ".join(cmd) ))
         
         # Parse logfile to get RMSD
         rms = None
@@ -46,7 +48,7 @@ class ReforiginRmsd(object):
                 break
         
         if not rms:
-            raise RuntimeError, "Error extracting RMS from logfile: {0}".format( logfile )
+            raise RuntimeError("Error extracting RMS from logfile: {0}".format( logfile ))
         else:
             os.unlink(logfile)
         
@@ -94,7 +96,7 @@ class ReforiginRmsd(object):
         logfile = "{0}.log".format( placedChainPdb )
         retcode = ample_util.run_command( cmd=cmd, logfile=logfile, directory=self.workdir, dolog=False, stdin=stdin)
         if retcode != 0:
-            raise RuntimeError,"Error extracting chain from placed PDB {0} in directory {1}".format( placedPdb, self.workdir )
+            raise RuntimeError("Error extracting chain from placed PDB {0} in directory {1}".format( placedPdb, self.workdir ))
         else:
             os.unlink(logfile)
         return placedChainPdb
@@ -169,19 +171,14 @@ class ReforiginRmsd(object):
                 try:
                     rms = self.calculate( refpdb=nativePdbMatch, targetpdb=placedChainPdb, outpdb=reforiginOut )
                 except RuntimeError, e:
-                    print "GOT REFORIGIN ERROR for {0},{1},{2}".format( placedChainPdb, nativeChainPdb, nativeChainID )
-                    print e
+                    logger.critical("GOT REFORIGIN ERROR for {0},{1},{2}\n{3}".format( placedChainPdb, nativeChainPdb, nativeChainID, e))
                     rms = 99999
-                 
                 rmsds[ rms ] = ( nativeChainID, placedChainID, reforiginOut )
-                
                 # Clean up
                 os.unlink(placedChainPdb)
                 os.unlink(nativePdbMatch)
         # End loop over chains
-        
         # Clean up
-        
         # Now pick the best...
         rmsd = sorted( rmsds.keys() )[ 0 ]
         #print "Got rmsds over chains: {0}".format( rmsds )
@@ -197,5 +194,4 @@ class ReforiginRmsd(object):
                 try: os.unlink(rmsds[k][2])
                 except: pass
         #print "best chain rmsd is {0} for nativeChain {1} vs refinedChain {2}".format( self.rmsd, self.bestChains[0], self.bestChains[1] )
-            
         return

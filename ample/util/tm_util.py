@@ -14,6 +14,8 @@ import random
 import string
 import sys
 import tempfile
+import warnings
+
 
 from ample.parsers import alignment_parser
 from ample.parsers import tm_parser
@@ -29,7 +31,6 @@ except ImportError:
     BIOPYTHON_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
-
 
 class ModelData(object):
     """Class to store model data"""
@@ -619,7 +620,10 @@ class TMscore(TMapps):
 
         """
         if not BIOPYTHON_AVAILABLE: raise RuntimeError("Biopython is not available")
-        structure = PDB.PDBParser().get_structure("pdb", pdb)
+        with warnings.catch_warnings():
+            logger.debug("Suppressing BIOPYTHON warnings for PDBParser")
+            warnings.simplefilter("ignore")
+            structure = PDB.PDBParser().get_structure("pdb", pdb)
 
         # Weird problem with get_...() methods if MODEL is not explicitly stated in
         # PDB file. Thus, just iterate over everything return when top chain completed
