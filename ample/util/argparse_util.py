@@ -187,9 +187,6 @@ def add_general_options(parser=None):
     parser.add_argument('-no_gui', metavar='True/False',
                         help='Do not display the AMPLE gui.')
 
-    parser.add_argument('-output_pdb',
-                        help='Name of the final result pdb to output [ample_output.pdb]')
-
     parser.add_argument('-purge', metavar='True/False',
                         help='Delete all intermediate files and failed MRBUMP results')
 
@@ -199,11 +196,13 @@ def add_general_options(parser=None):
     parser.add_argument('-quick_mode', metavar='True/False',
                         help='Preset options to run quickly, but less thoroughly')
 
-    parser.add_argument(
-        '-restart_pkl', help='Rerun a job using the pickled ample dictionary')
+    parser.add_argument('-restart_pkl', help='Rerun a job using the pickled ample dictionary')
 
     parser.add_argument('-run_dir', metavar='run_directory',
                         help='Directory where the AMPLE work directory will be created [current dir]')
+    
+    parser.add_argument('-rvapi_document',
+                        help='Path to an existing rvapi document (for running under jscofe)')
 
     parser.add_argument('-scwrl_exe', metavar='path to scwrl',
                         help='Path to Scwrl4 executable')

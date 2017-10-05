@@ -54,9 +54,7 @@ import pyrvapi_ext as API
 logger = logging.getLogger(__name__)
 
 class AmpleOutput(object):
-    """Display the output of an AMPLE job
-    
-    """
+    """Display the output of an AMPLE job."""
     
     _ensemble_tooltips = {
                "Name" : "Ensemble name - used to name the pdb file and the directory where mrbump carries out molecular replacement.",
@@ -107,7 +105,7 @@ class AmpleOutput(object):
         self.setup(amopt, own_gui=own_gui)
         return
 
-    def setup(self, amopt, own_gui=False):
+    def setup(self, amopt, rvapi_document=None, own_gui=False):
         if not (pyrvapi or ('no_gui' in amopt and amopt['no_gui'])): return
         
         report_dir = os.path.join(amopt['work_dir'], "jsrview")
@@ -120,10 +118,9 @@ class AmpleOutput(object):
             share_jsrview = os.path.join(os.environ["CCP4"], "share", "jsrview")
             pyrvapi.rvapi_init_document(docid, report_dir, title, 1, 7, share_jsrview, None, None, None, None)
         else:
-            # Quick hack to init with Andre's stuff
-            document = False
-            if document:
-                API.document.fromfile(document)
+            # Quick hack to init with Andre's stuff - can switch out for Felix's API when done
+            if 'rvapi_document' in amopt and amopt['rvapi_document']:
+                API.document.fromfile(amopt['rvapi_document'])
             else:
                 kwargs = dict(
                   wintitle = title,
@@ -552,6 +549,43 @@ class AmpleOutput(object):
             
             pyrvapi.rvapi_set_tree_node(results_tree, container_id, "{0}".format(name), "auto", "")
         return
+
+    def rvapi_shutdown(self, amopt):
+        """Return any results to jscofe
+        
+        Parameters
+        ----------
+        amopt : dict
+            AMPLE results dictionary with all information
+        """
+        k = 'rvapi_document'
+        if not (k in amopt and amopt[k]): return
+        rvdoc = amopt[k]
+        work_dir = amopt['work_dir']
+
+        # Create dictionary we're going to return
+        meta = { 'first_tab_id' : self.log_tab_id,
+                'root' : work_dir,
+                }
+        
+        mrb_results = amopt['mrbump_results']
+        nresults = min(3, len(mrb_results))
+        if nresults > 0:
+            meta['n_entries'] = nresults
+            meta['xyz'] = {}
+            meta['hkl'] = {}
+            for i, fdata in enumerate(mrbump_util.ResultsSummary(mrb_results[:nresults]).topFiles(nresults)):
+                ftype = '{0}_{1}'.format(fdata['xyz']['type'], i)
+                meta['xyz'][ftype] = os.path.relpath(work_dir,fdata['xyz']['path'])
+                ftype = '{0}_{1}'.format(fdata['mtz']['type'], i)
+                meta['hkl'][ftype] = os.path.relpath(work_dir,fdata['mtz']['path'])
+        else:
+            meta['n_entries'] = 0
+        
+        # Commit to file
+        pyrvapi.rvapi_put_meta(meta)
+        pyrvapi.rvapi_store_document2(rvdoc)
+        return   
             
 if __name__ == "__main__":
     import copy, sys, time

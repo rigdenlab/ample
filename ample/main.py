@@ -40,7 +40,7 @@ class Ample(object):
     """
     def __init__(self):
         self.amopt = None
-        self.output_gui = None
+        self.ample_output = None
         return
                 
     def main(self, args=None):
@@ -72,9 +72,9 @@ class Ample(object):
         time_start = time.time()
     
         # Create function for monitoring jobs - static function decorator?
-        if self.output_gui:
+        if self.ample_output:
             def monitor():
-                return self.output_gui.display_results(amopt.d)
+                return self.ample_output.display_results(amopt.d)
         else:
             monitor = None
 
@@ -122,7 +122,10 @@ class Ample(object):
         logger.info(ample_util.footer)
         
         # Finally update pyrvapi results
-        if self.output_gui: self.output_gui.display_results(amopt.d)
+        if self.ample_output: self.ample_output.display_results(amopt.d)
+        
+        # Finally, finally clean up for jscofe
+        if self.ample_output: self.ample_output.rvapi_shutdown(amopt.d)
 
         return
    
@@ -211,7 +214,7 @@ class Ample(object):
             exit_util.exit_error(msg)
         
         # Update results view
-        if self.output_gui: self.output_gui.display_results(optd)
+        if self.ample_output: self.ample_output.display_results(optd)
         
         return
         
@@ -351,12 +354,12 @@ class Ample(object):
                                                                     directory=bump_dir )
 
         # Create function for monitoring jobs - static function decorator?
-        if self.output_gui:
+        if self.ample_output:
             def monitor():
                 r = mrbump_util.ResultsSummary()
                 r.extractResults(optd['mrbump_dir'], purge=optd['purge'])
                 optd['mrbump_results'] = r.results
-                return self.output_gui.display_results(optd)
+                return self.ample_output.display_results(optd)
         else:
             monitor = None
             
@@ -462,8 +465,8 @@ class Ample(object):
         
         # Display pyrvapi results
         if pyrvapi_results.pyrvapi:
-            self.output_gui = pyrvapi_results.AmpleOutput(optd)
-            self.output_gui.display_results(optd)
+            self.ample_output = pyrvapi_results.AmpleOutput(optd)
+            self.ample_output.display_results(optd)
         
         # Check mandatory/exclusive options
         options_processor.check_mandatory_options(optd)

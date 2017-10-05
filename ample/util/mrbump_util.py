@@ -586,8 +586,8 @@ class ResultsSummary(object):
                 if pdb in result and result[pdb] and mtz in result and result[mtz]:
                     # Don't check paths for now as it screws up unittests as files don't actually exist
                     #if os.path.isfile(result[pdb]) and os.path.isfile(result[mtz]):
-                    topf.append({'xyz' : result[pdb],
-                                 'mtz' : result[mtz],
+                    topf.append({'xyz' : {'type' : pdb, 'path' : result[pdb]},
+                                 'mtz' : {'type' : mtz, 'path' : result[mtz]},
                                  'info' : info })
                     break
         if len(topf): return topf
