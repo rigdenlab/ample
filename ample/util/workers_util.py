@@ -13,14 +13,14 @@ from ample.util import ample_util
 from ample.util import clusterize
 from ample.util import worker
 
-# LOGGER = logging.getLogger(__name__)
-LOGGER = logging.getLogger()
+# logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 class JobServer(object):
     def __init__(self):
         self.inqueue = None
         self.outqueue = None
-        LOGGER.info("Running jobs on a local machine")
+        logger.info("Running jobs on a local machine")
     
     def setJobs(self, jobs):
         """Add the list of jobs we are to run"""
@@ -70,24 +70,24 @@ class JobServer(object):
                 # Join process for timeout seconds and if we haven't finished by then move onto the next process
                 process.join(timeout)
                 if not process.is_alive():
-                    LOGGER.debug("Checking completed process {0} with exitcode {1}".format(process,process.exitcode))
+                    logger.debug("Checking completed process {0} with exitcode {1}".format(process,process.exitcode))
                     
                     # Set failed if any job failed
                     if process.exitcode != 0:
-                        LOGGER.critical("Process {0} failed with exitcode {1}".format(process,process.exitcode))
+                        logger.critical("Process {0} failed with exitcode {1}".format(process,process.exitcode))
                         success=False
                     
                     # Finished so see what happened
                     if process.exitcode == 0 and early_terminate:
                         if not self.inqueue.empty():
                             print "Process {0} was successful so removing remaining jobs from inqueue".format(process.name) 
-                            LOGGER.info( "Process {0} was successful so removing remaining jobs from inqueue".format(process.name) )
+                            logger.info( "Process {0} was successful so removing remaining jobs from inqueue".format(process.name) )
                             # Remove all remaining processes from the inqueue. We do this rather than terminate the processes
                             # as terminating leaves the MRBUMP processes running. This way we hang around until all our
                             # running processes have finished
                             while not self.inqueue.empty():
                                 job = self.inqueue.get()
-                                LOGGER.debug( "Removed job [{0}] from inqueue".format(job))
+                                logger.debug( "Removed job [{0}] from inqueue".format(job))
                         else:
                             print "Got empty queue - all jobs done"
                             
