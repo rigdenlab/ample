@@ -49,7 +49,8 @@ try: import pyrvapi
 except: pyrvapi = None
 
 # Hack to use Andre's pyrvapi API
-import pyrvapi_ext as API
+try: import pyrvapi_ext as API
+except ImportError: API = None
 
 logger = logging.getLogger(__name__)
 
@@ -114,7 +115,7 @@ class AmpleOutput(object):
         self.ccp4i2 = bool(amopt['ccp4i2_xml'])
         docid = "AMPLE_results"
         title = "AMPLE Results"
-        if False:
+        if API is None:
             share_jsrview = os.path.join(os.environ["CCP4"], "share", "jsrview")
             pyrvapi.rvapi_init_document(docid, report_dir, title, 1, 7, share_jsrview, None, None, None, None)
         else:
