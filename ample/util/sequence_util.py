@@ -102,7 +102,7 @@ class Sequence(object):
                 if len(self.resseqs) >= i+1 and self.resseqs[i] is None:
                     self.resseqs[i] = []
                     for j in range(len(seq)):
-                        self.resseqs[-1].append(j+1)
+                        self.resseqs[i].append(j+1)
         return
     
     def from_pdb(self, pdbin):
