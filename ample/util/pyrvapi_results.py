@@ -90,7 +90,7 @@ class AmpleOutput(object):
                "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
                }
     
-    def __init__(self, amopt):
+    def __init__(self, amopt, own_gui=False):
         self.header = False
         self.log_tab_id = None
         self.old_mrbump_results = None
@@ -102,8 +102,9 @@ class AmpleOutput(object):
         self.summary_tab_survey_sec_id = None
         self.webserver_uri = None
         self.wbeserver_start = None
+        self.ccp4i2 = False
         
-        self.setup(amopt)
+        self.setup(amopt, own_gui=own_gui)
         return
 
     def setup(self, amopt, own_gui=False):
@@ -112,6 +113,7 @@ class AmpleOutput(object):
         report_dir = os.path.join(amopt['work_dir'], "jsrview")
         if not os.path.isdir(report_dir): os.mkdir(report_dir)
         
+        self.ccp4i2 = bool(amopt['ccp4i2_xml'])
         docid = "AMPLE_results"
         title = "AMPLE Results"
         if False:
@@ -159,7 +161,7 @@ class AmpleOutput(object):
         return self.log_tab_id
     
     def create_results_tab(self, ample_dict):
-        if not self.summary_tab_id: return
+        if self.ccp4i2 or not self.summary_tab_id: return
         if not self._got_mrbump_results(ample_dict): return
         
         mrb_results = ample_dict['mrbump_results']
@@ -199,15 +201,20 @@ class AmpleOutput(object):
     def _create_summary_tab(self):
         if not self.summary_tab_id:
             self.summary_tab_id = "summary_tab"
-            # Insert summary tab before log tab
-            pyrvapi.rvapi_insert_tab(self.summary_tab_id, "Summary", self.log_tab_id, False)  # Last arg is "open" - i.e. show or hide
-        return
+            title = "Summary"
+            if self.ccp4i2:
+                # Create summary tab
+                pyrvapi.rvapi_add_tab(self.summary_tab_id, title, True)  # Last arg is "open" - i.e. show or hide
+            else:
+                # Insert summary tab before log tab
+                pyrvapi.rvapi_insert_tab(self.summary_tab_id, title, self.log_tab_id, False)  # Last arg is "open" - i.e. show or hide
+            return
 
     def create_summary_tab(self, ample_dict):
         #
         # Summary Tab
         #
-        if not self.log_tab_id: return
+        #if not self.log_tab_id: return
         if not (ample_dict['single_model_mode'] or ample_dict['homologs'] or not self._got_ensemble_data(ample_dict)):
             ensembles_data = ample_dict['ensembles_data']
             
@@ -275,13 +282,12 @@ class AmpleOutput(object):
         #
         # Survey section
         #
-        if not self.summary_tab_survey_sec_id:
+        if not self.summary_tab_survey_sec_id and not self.ccp4i2:
             # Only create the table once
             self.summary_tab_survey_sec_id = "survey"
             pyrvapi.rvapi_add_section(self.summary_tab_survey_sec_id, "Feedback", self.summary_tab_id, 0, 0, 1, 1, True)
             rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(ample_util.survey_url)
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_survey_sec_id, 0, 0, 1, 1)
-            
         return self.summary_tab_id
 
     def display_results(self, ample_dict, run_dir=None):
@@ -289,7 +295,7 @@ class AmpleOutput(object):
         if not self.header:
             pyrvapi.rvapi_add_header("AMPLE Results")
             self.header = True
-        self.create_log_tab(ample_dict)
+        if not self.ccp4i2: self.create_log_tab(ample_dict)
         self.create_summary_tab(ample_dict)
         self.create_results_tab(ample_dict)
         pyrvapi.rvapi_flush()
