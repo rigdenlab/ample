@@ -4,7 +4,7 @@ import cPickle
 import os
 import unittest
 from ample.util import ample_util
-from ample import constants
+from ample.constants import AMPLE_PKL, SHARE_DIR
 
 class Test(unittest.TestCase):
 
@@ -21,7 +21,7 @@ class Test(unittest.TestCase):
         self.assertTrue("theseus", theseus_exe)
         
     def test_resultsd_fix_path(self):
-        with open(os.path.join(constants.SHARE_DIR,'testfiles','resultsd.pkl')) as f: optd = cPickle.load(f)
+        with open(os.path.join(SHARE_DIR,'testfiles',AMPLE_PKL) as f: optd = cPickle.load(f)
         d = ample_util.resultsd_fix_path(optd, newroot='/foo/bar')
         self.assertEqual(d['fasta'],'/foo/bar/AMPLE_0/ampl_.fasta')
         self.assertEqual(d['mrbump_results'][0]['PHASER_logfile'],'/foo/bar/AMPLE_0/MRBUMP/search_c1_t69_r3_polyAla_mrbump/data/loc0_ALL_c1_t69_r3_polyAla/unmod/mr/phaser/phaser_loc0_ALL_c1_t69_r3_polyAla_UNMOD.log')

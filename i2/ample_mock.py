@@ -10,6 +10,7 @@ import sys
 #from ample.util import ample_util
 from ample.util.ample_util import I2DIR, amoptd_fix_path
 from ample.util.pyrvapi_results import AmpleOutput
+from ample.constants import AMPLE_PKL
 
 logging.basicConfig()
 
@@ -34,6 +35,8 @@ amoptd_fix_path(od, newroot=work_dir, i2mock=True)
 # Need to add these
 od['work_dir'] = work_dir
 od['ccp4i2_xml'] = opt.ccp4i2_xml
+
+with open(os.path.join(work_dir,AMPLE_PKL), 'w') as w: cPickle.dump(od, w)
 
 # Run gui and create jsrview files from dict
 AR = AmpleOutput(od, own_gui=opt.own_gui)

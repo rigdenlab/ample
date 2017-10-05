@@ -14,7 +14,7 @@ import os
 import shutil
 import sys
 
-from ample.constants import SHARE_DIR
+from ample.constants import SHARE_DIR, AMPLE_PKL
 from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
 from ample.util import ample_util
 from ample.util import workers_util
@@ -172,7 +172,7 @@ class AMPLEIntegrationFramework(object):
             script = self.write_script(work_dir,  args + [['-work_dir', work_dir]], ensembler=ensembler)
             scripts.append(script)
             # Set path to the results pkl file we will use to run the tests
-            self.test_dict[name]['resultsd'] = os.path.join(work_dir,'resultsd.pkl')
+            self.test_dict[name]['resultsd'] = os.path.join(work_dir, AMPLE_PKL)
             os.chdir(owd)            # Back to where we started
         return scripts
     

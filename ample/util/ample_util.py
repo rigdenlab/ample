@@ -19,18 +19,14 @@ import zipfile
 import exit_util
 import pdb_edit
 
-from ample.constants import SHARE_DIR
+from ample.constants import SHARE_DIR, AMPLEDIR, I2DIR
 
 CCP4_VERSION = None
 SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
 EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
 SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
-AMPLEDIR = 'AMPLE_'
-I2DIR = 'AMPLEI2'
 
-
-class FileNotFoundError(Exception): 
-    pass
+class FileNotFoundError(Exception): pass
 
 # ample_util is used before anything else so there is no logger available
 # and we need to a Null handler
@@ -47,8 +43,6 @@ def amoptd_fix_path(optd, newroot, i2mock=False):
     newroot: str
        Path to the AMPLE root directory (topdir containing MRBUMP dir etc.)
     """
-    
-    import warnings
     oldroot = os.sep.join(optd['work_dir'].split(os.sep)[:-1])
     for k in [ 'benchmark_dir',
               'native_pdb',
@@ -139,7 +133,6 @@ def construct_references(optd):
     -------
     str
         A string containing the references
-
     """
     # ========================================
     # Get the filename and check we can use it
