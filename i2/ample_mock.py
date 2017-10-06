@@ -31,10 +31,13 @@ if os.path.isdir(work_dir): shutil.rmtree(work_dir)
 os.mkdir(work_dir)
 
 # Copy in amopt pkl
-with open(opt.ample_pkl) as f: od = cPickle.load(f)
+mroot='/home/jscofe/data'
+ample_pkl =  os.path.join(mroot,'from_existing_models','resultsd.pkl')
+with open(ample_pkl) as f: od = cPickle.load(f)
+#with open(opt.ample_pkl) as f: od = cPickle.load(f)
 
 # update paths and copy across old files
-amoptd_fix_path(od, newroot='/home/ccp4/tmp/ample',i2mock=False)
+amoptd_fix_path(od, newroot=mroot,i2mock=False)
 #amoptd_fix_path(od, newroot=work_dir, i2mock=True)
 
 # Need to add these
