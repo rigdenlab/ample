@@ -144,9 +144,11 @@ class AmpleOutput(object):
             pyrvapi.rvapi_init_document(docid, report_dir, title, 1, 7, share_jsrview, None, None, None, None)
         else:
             if rvapi_document:
+                logger.debug("Restoring document: {0}".format(rvapi_document))
                 pyrvapi.rvapi_restore_document2(rvapi_document)
             else:
                 # Quick hack to init with Andre's stuff - can switch out for Felix's API when done
+                logger.debug("Starting with xml {0}".format(ccp4i2_xml))
                 kwargs = dict(
                   wintitle = title,
                   reportdir = report_dir,
@@ -588,25 +590,19 @@ class AmpleOutput(object):
 
         # Create dictionary we're going to return
         meta = { 'first_tab_id' : self.summary_tab_id,
-                'root' : work_dir }
+                'results' : [] }
         
         nresults = 0
         if 'mrbump_results' in amopt and amopt['mrbump_results']:
             mrb_results = amopt['mrbump_results']
             nresults = min(3, len(mrb_results))
         if nresults > 0:
-            meta['n_entries'] = nresults
-            meta['xyz'] = {}
-            meta['hkl'] = {}
-            rpath = os.path.join(work_dir,"..")
-            for i, fdata in enumerate(mrbump_util.ResultsSummary(mrb_results[:nresults]).topFiles(nresults)):
-                ftype = '{0}_{1}'.format(fdata['xyz']['type'], i)
-                meta['xyz'][ftype] = os.path.relpath(rpath,fdata['xyz']['path'])
-                ftype = '{0}_{1}'.format(fdata['mtz']['type'], i)
-                meta['hkl'][ftype] = os.path.relpath(rpath,fdata['mtz']['path'])
-        else:
-            meta['n_entries'] = 0
-        
+            root = os.path.join(work_dir,"..")
+            for fdata in mrbump_util.ResultsSummary(mrb_results[:nresults]).topFiles(nresults):
+                # Mangle paths
+                fdata['pdb'] = os.path.relpath(root,fdata['pdb'])
+                fdata['mtz'] = os.path.relpath(root,fdata['mtz'])
+                meta['results'].append(fdata)
         # Commit to file
         logger.debug("Exporting pyrvapi metadata:\n{0}".format(meta))
         pyrvapi.rvapi_put_meta(json.dumps(meta))

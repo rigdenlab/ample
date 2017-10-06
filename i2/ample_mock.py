@@ -5,7 +5,6 @@ import copy
 import cPickle
 import logging
 import os
-import pyrvapi
 import shutil
 import sys
 import time
@@ -15,11 +14,11 @@ from ample.util.ample_util import I2DIR, amoptd_fix_path
 from ample.util.pyrvapi_results import AmpleOutput
 from ample.constants import AMPLE_PKL
 
-logging.basicConfig()
+logging.basicConfig(level=logging.DEBUG)
 
 # Get the path to program.xml
 parser = argparse.ArgumentParser()
-parser.add_argument('-ample_pkl')
+parser.add_argument('-pkl')
 parser.add_argument('-ccp4i2_xml')
 parser.add_argument('-rvapi_document', default=None)
 parser.add_argument('-own_gui', default=False, action='store_true')
@@ -28,17 +27,24 @@ opt, _ = parser.parse_known_args()
 # Create working directory
 work_dir = os.path.abspath(I2DIR)
 if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+logging.info("Making work directory: {0}".format(work_dir))
 os.mkdir(work_dir)
 
 # Copy in amopt pkl
-mroot='/home/jscofe/data'
-ample_pkl =  os.path.join(mroot,'from_existing_models','resultsd.pkl')
-with open(ample_pkl) as f: od = cPickle.load(f)
-#with open(opt.ample_pkl) as f: od = cPickle.load(f)
+ample_pkl = opt.pkl
+if opt.rvapi_document:
+    mroot='/home/jscofe/data'
+    mroot = '/opt/ample.git/ample_testing'
+    ample_pkl =  os.path.join(mroot,'from_existing_models','resultsd.pkl')
 
-# update paths and copy across old files
-amoptd_fix_path(od, newroot=mroot,i2mock=False)
-#amoptd_fix_path(od, newroot=work_dir, i2mock=True)
+# Load AMPLE dictionary
+with open(ample_pkl) as f: od = cPickle.load(f)
+
+if opt.rvapi_document:
+    amoptd_fix_path(od, newroot=mroot, i2mock=False)
+else:
+    # update paths and copy files into run directory
+    amoptd_fix_path(od, newroot=work_dir, i2mock=True)
 
 # Need to add these
 od['no_gui'] = False
@@ -50,7 +56,7 @@ with open(os.path.join(work_dir,AMPLE_PKL), 'w') as w: cPickle.dump(od, w)
 
 # Run gui and create jsrview files from dict
 AR = AmpleOutput(od, own_gui=opt.own_gui)
-if True:    
+if True:
     AR.display_results(od)
 else:
     SLEEP = 2
