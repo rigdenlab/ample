@@ -21,6 +21,7 @@ logging.basicConfig()
 parser = argparse.ArgumentParser()
 parser.add_argument('-ample_pkl')
 parser.add_argument('-ccp4i2_xml')
+parser.add_argument('-rvapi_document', default=None)
 parser.add_argument('-own_gui', default=False, action='store_true')
 opt, _ = parser.parse_known_args()
 
@@ -33,9 +34,12 @@ os.mkdir(work_dir)
 with open(opt.ample_pkl) as f: od = cPickle.load(f)
 
 # update paths and copy across old files
-amoptd_fix_path(od, newroot=work_dir, i2mock=True)
+amoptd_fix_path(od, newroot='/home/ccp4/tmp/ample',i2mock=False)
+#amoptd_fix_path(od, newroot=work_dir, i2mock=True)
 
 # Need to add these
+od['no_gui'] = False
+if opt.rvapi_document: od['rvapi_document'] = opt.rvapi_document
 od['work_dir'] = work_dir
 od['ccp4i2_xml'] = opt.ccp4i2_xml
 
@@ -43,10 +47,10 @@ with open(os.path.join(work_dir,AMPLE_PKL), 'w') as w: cPickle.dump(od, w)
 
 # Run gui and create jsrview files from dict
 AR = AmpleOutput(od, own_gui=opt.own_gui)
-if False:    
+if True:    
     AR.display_results(od)
 else:
-    SLEEP = 10
+    SLEEP = 2
     
     newd = copy.copy(od)
     newd['ensembles_data'] = None
