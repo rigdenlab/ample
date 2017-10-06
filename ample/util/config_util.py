@@ -4,7 +4,7 @@
 
 @author: hlfsimko
 '''
-
+from collections import defaultdict
 import logging
 import multiprocessing
 import os
@@ -102,8 +102,7 @@ class AMPLEConfigOptions(object):
     
     def __init__(self):
         
-        self.d = {} # store all options here
-        
+        self.d = defaultdict(None) # store all options here
         
         self.cmdline_opts = {}
         self.debug = False
