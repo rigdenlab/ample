@@ -13,15 +13,6 @@
     <ccp4i2_body id="AMPLE">
 <!--You must provide an inputData container, although it can be empty-->
         <container id="inputData">
-<!--             <content id="XYZIN">
-                <className>CPdbDataFile</className>
-                <qualifiers>
-                    <ifAtomSelection>True</ifAtomSelection>
-                    <allowUndefined>False</allowUndefined>
-                    <mustExist>True</mustExist>
-                    <requiredSubType>4,3,2,1,0</requiredSubType>
-                </qualifiers>
-            </content> -->
 			<content id="AMPLE_SEQIN">
 			  <className>CSeqDataFile</className>
 			  <qualifiers>
@@ -69,11 +60,47 @@
 			  <qualifiers>
 			    <guiLabel>Models source</guiLabel>
 			    <onlyEnumerators>True</onlyEnumerators>
-			    <menuText>A directory of models,A file/archive containing models</menuText>
+			    <menuText>a directory of pdb files,a file/archive containing pdb files</menuText>
 			    <enumerators>directory,file</enumerators>
 			    <default>directory</default>
 			  </qualifiers>
 			</content>
+<!--  New Stuff -->
+ 			<content id="AMPLE_EXISTING_MODELS">
+ 			  <className>CString</className>
+			  <qualifiers>
+			    <guiLabel>Use existing models or create new.</guiLabel>
+ 			    <onlyEnumerators>True</onlyEnumerators>
+			    <menuText>models already exist,models need to be generated</menuText>
+			    <enumerators>True,False</enumerators>
+			    <default>True</default>
+			  </qualifiers>
+			</content>
+			<content id="AMPLE_PROTEIN_CLASS">
+			  <className>CString</className>
+			  <qualifiers>
+			    <onlyEnumerators>True</onlyEnumerators>
+			    <guiLabel>Protein class</guiLabel>
+			    <menuText>Globular,Transmembrane</menuText>
+			    <enumerators>globular,transmembrane</enumerators>
+			    <default>globular</default>
+	            <toolTip>The class of the protein (Globular or Transmembrane).</toolTip>
+            </qualifiers>
+			</content>
+ 			<content id="AMPLE_MODEL_TYPE">
+			  <className>CString</className>
+			  <qualifiers>
+			    <title>Model Type.</title>
+			    <guiLabel>The type of models being processed.</guiLabel>
+			    <onlyEnumerators>True</onlyEnumerators>
+			    <menuText>Ab Initio, Multiple Homologs, Single Homolog, NMR Ensemble</menuText>
+			    <enumerators>abinitio, multiple_homologs, single_homolog, nmr_ensemble</enumerators>
+			    <default>abinitio</default>
+			  </qualifiers>
+			</content>
+	
+			
+<!-- End New Stuff -->
             <content id="AMPLE_ROSETTA_DIR">
                 <className>CDataFile</className>
                 <qualifiers>
@@ -107,13 +134,18 @@
                     <mustExist>True</mustExist>
                 </qualifiers>
             </content>
+            <content id="AMPLE_SCORE_FILE">
+                <className>CDataFile</className>
+                <qualifiers>
+			        <guiLabel>Score File</guiLabel>
+                    <allowUndefined>True</allowUndefined>
+                    <mustExist>True</mustExist>
+                </qualifiers>
+            </content>
  			<content id="AMPLE_NPROC">
 	            <className>CInt</className>
 	            <qualifiers>
 		              <guiLabel>Number of processors</guiLabel>
-		<!--               <guiDefinition>
-		                <expertLevel>1</expertLevel>
-		              </guiDefinition> -->
 		              <toolTip>Number of processors to run on</toolTip>
 		              <min>1</min>
 	            </qualifiers>
