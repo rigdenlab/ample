@@ -27,7 +27,7 @@ opt, _ = parser.parse_known_args()
 # Copy in amopt pkl
 ample_pkl = opt.pkl
 if opt.rvapi_document:
-    mroot='/home/jscofe/data'
+    mroot='/home/jscofe/tmp/ample'
     #mroot = '/opt/ample.git/ample_testing'
     ample_pkl =  os.path.join(mroot,'from_existing_models','resultsd.pkl')
 
