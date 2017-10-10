@@ -574,22 +574,23 @@ class ResultsSummary(object):
         
         """
         topf = []
-        # list of PDB, MTZ, Explanation of file type
-        poss = [ ('SXRARP_pdbout','SXRARP_mtzout', 'ARPWARP following SHELXE trace of MR result'),
-                 ('SXRBUCC_pdbout','SXRBUCC_mtzout', 'BUCCANEER following SHELXE trace of MR result'),
-                 ('SHELXE_pdbout','SHELXE_mtzout', 'SHELXE trace of MR result'),
-                 ('ARP_pdbout','ARP_mtzout', 'ARPWARP rebuild of MR result'),
-                 ('BUCC_pdbout','BUCC_mtzout', 'BUCCANEER rebuild of MR result'),
-                 ('REFMAC_pdbout','REFMAC_mtzout', 'REFMAC-refined MR result') ]
+        # list of PDB, MTZ, Explanation of file type - ordered by their desirability
+        poss = [ ('SXRARP', 'SXRARP_pdbout','SXRARP_mtzout', 'ARPWARP rebuild of SHELXE trace of MR result'),
+                 ('SXRBUCC', 'SXRBUCC_pdbout','SXRBUCC_mtzout', 'BUCCANEER rebuild of SHELXE trace of MR result'),
+                 ('SHELXE', 'SHELXE_pdbout','SHELXE_mtzout', 'SHELXE trace of MR result'),
+                 ('ARP', 'ARP_pdbout','ARP_mtzout', 'ARPWARP rebuild of MR result'),
+                 ('BUCC', 'BUCC_pdbout','BUCC_mtzout', 'BUCCANEER rebuild of MR result'),
+                 ('REFMAC,', 'REFMAC_pdbout','REFMAC_mtzout', 'REFMAC-refined MR result') ]
         for result in self.results[0 : min(num_results, len(self.results)+1) ]:
-            for pdb, mtz, info in poss:
-                if pdb in result and result[pdb] and mtz in result and result[mtz]:
+            for name, pdb_key, mtz_key, source in poss:
+                if pdb_key in result and result[pdb_key] and mtz_key in result and result[mtz_key]:
                     # Don't check paths for now as it screws up unittests as files don't actually exist
-                    #if os.path.isfile(result[pdb]) and os.path.isfile(result[mtz]):
-                    topf.append({'xyz' : {'type' : pdb, 'path' : result[pdb]},
-                                 'mtz' : {'type' : mtz, 'path' : result[mtz]},
-                                 'info' : info })
-                    break
+                    #if not (os.path.isfile(result[pdb_key]) and os.path.isfile(result[mtz_key])): continue
+                    topf.append({ 'name' : name,
+                                  'source' : source,
+                                  'pdb' : result[pdb_key],
+                                  'mtz' : result[mtz_key] })
+                    break # Stop as soon as we find one
         if len(topf): return topf
             
 def _resultsKeys(results):
