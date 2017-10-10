@@ -51,7 +51,7 @@ od['no_gui'] = False
 if opt.rvapi_document:
     # JSCOFE HACK
     od['rvapi_document'] = opt.rvapi_document
-    od['work_dir'] = os.getcwd()
+    work_dir = os.getcwd()
 od['work_dir'] = work_dir
 od['ccp4i2_xml'] = opt.ccp4i2_xml
 
