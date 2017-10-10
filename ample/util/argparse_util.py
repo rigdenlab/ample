@@ -265,6 +265,9 @@ def add_contact_options(parser=None):
     contact_group.add_argument('-native_cutoff', type=float,
                                help='Distance cutoff for reference contacts in native structure (default=8A)')
 
+    contact_group.add_argument('--no-contact-prediction', default=False, action="store_true",
+                               help="Do not predict contacts")
+
     contact_group.add_argument('-restraints_factor', type=float,
                                help='Factor (* Sequence length) determining number of contact restraints to use (default=1.0)')
 
