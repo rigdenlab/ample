@@ -8,6 +8,7 @@ import argparse
 import os
 import sys
 
+from ample.constants import AMPLE_PKL
 from ample import ensembler
 from ample.util import ample_util, config_util, exit_util, logging_util
 from ample.util import argparse_util
@@ -82,7 +83,7 @@ try:
                 optd['subcluster_program']))
         optd['theseus_exe'] = ample_util.find_exe('theseus')
         optd['ensemble_ok'] = os.path.join(optd['work_dir'], 'ensemble.ok')
-        optd['results_path'] = os.path.join(optd['work_dir'], "resultsd.pkl")
+        optd['results_path'] = os.path.join(optd['work_dir'], AMPLE_PKL)
     ensembler.create_ensembles(optd)
     ample_util.save_amoptd(optd)
 except Exception as e:

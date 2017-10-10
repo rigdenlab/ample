@@ -3,7 +3,6 @@
 This is AMPLE
 """
 import argparse
-import glob
 import logging
 import os
 import platform
@@ -43,7 +42,7 @@ class Ample(object):
 
     def __init__(self):
         self.amopt = None
-        self.output_gui = None
+        self.ample_output = None
         return
 
     def main(self, args=None):
@@ -75,9 +74,9 @@ class Ample(object):
         time_start = time.time()
 
         # Create function for monitoring jobs - static function decorator?
-        if self.output_gui:
+        if self.ample_output:
             def monitor():
-                return self.output_gui.display_results(amopt.d)
+                return self.ample_output.display_results(amopt.d)
         else:
             monitor = None
 
@@ -129,9 +128,10 @@ class Ample(object):
         logger.info(ample_util.footer)
 
         # Finally update pyrvapi results
-        if self.output_gui:
-            self.output_gui.display_results(amopt.d)
-
+        if self.ample_output:
+            self.ample_output.display_results(amopt.d)
+        if self.ample_output:
+            self.ample_output.rvapi_shutdown(amopt.d)
         return
 
     def benchmarking(self, optd):
@@ -222,9 +222,8 @@ class Ample(object):
             exit_util.exit_error(msg)
 
         # Update results view
-        if self.output_gui:
-            self.output_gui.display_results(optd)
-
+        if self.ample_output:
+            self.ample_output.display_results(optd)
         return
 
     def modelling(self, optd, rosetta_modeller=None):
@@ -389,12 +388,12 @@ class Ample(object):
                                                                     directory=bump_dir)
 
         # Create function for monitoring jobs - static function decorator?
-        if self.output_gui:
+        if self.ample_output:
             def monitor():
                 r = mrbump_util.ResultsSummary()
                 r.extractResults(optd['mrbump_dir'], purge=optd['purge'])
                 optd['mrbump_results'] = r.results
-                return self.output_gui.display_results(optd)
+                return self.ample_output.display_results(optd)
         else:
             monitor = None
 
@@ -479,9 +478,8 @@ class Ample(object):
                 exit_util.exit_error(msg, sys.exc_info()[2])
             logger.info(
                 'Making a run directory: checking for previous runs...')
-            optd['work_dir'] = ample_util.make_workdir(optd['run_dir'],
-                                                       ccp4_jobid=optd['ccp4_jobid'],
-                                                       ccp4i2=optd['ccp4i2'])
+            optd['work_dir'] = ample_util.make_workdir(
+                optd['run_dir'], ccp4i2=bool(optd['ccp4i2_xml']))
         # Go to the work directory
         os.chdir(optd['work_dir'])
 
@@ -513,8 +511,8 @@ class Ample(object):
 
         # Display pyrvapi results
         if pyrvapi_results.pyrvapi:
-            self.output_gui = pyrvapi_results.AmpleOutput()
-            self.output_gui.display_results(optd)
+            self.ample_output = pyrvapi_results.AmpleOutput(optd)
+            self.ample_output.display_results(optd)
 
         # Check mandatory/exclusive options
         options_processor.check_mandatory_options(optd)
