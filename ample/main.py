@@ -280,12 +280,6 @@ class Ample(object):
         else:
             con_util = None
 
-        print("=====")
-        print(con_util)
-        print(optd["restraints_file"])
-        print("=====")
-        raise
-
         if optd['make_models'] and optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
 
