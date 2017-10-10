@@ -44,17 +44,6 @@
                     <mustExist>True</mustExist>
                 </qualifiers>
             </content>
-			<content id="AMPLE_RUN_MODE">
-			  <className>CString</className>
-			  <qualifiers>
-			    <onlyEnumerators>True</onlyEnumerators>
-			    <guiLabel>AMPLE Run Mode</guiLabel>
-			    <menuText>From existing models,Rosetta ab initio Modelling,NMR ensemble,Ideal helices</menuText>
-			    <enumerators>existing_models,rosetta,nmr_ensemble,ideal_helices</enumerators>
-			    <default>existing_models</default>
-	            <toolTip>The type of AMPLE run to undertake</toolTip>
-            </qualifiers>
-			</content>
 			<content id="AMPLE_MODELS_SOURCE">
 			  <className>CString</className>
 			  <qualifiers>
@@ -69,9 +58,8 @@
  			<content id="AMPLE_EXISTING_MODELS">
  			  <className>CString</className>
 			  <qualifiers>
-			    <guiLabel>Use existing models or create new.</guiLabel>
  			    <onlyEnumerators>True</onlyEnumerators>
-			    <menuText>models already exist,models need to be generated</menuText>
+			    <menuText>Yes,No</menuText>
 			    <enumerators>True,False</enumerators>
 			    <default>True</default>
 			  </qualifiers>
@@ -87,18 +75,40 @@
 	            <toolTip>The class of the protein (Globular or Transmembrane).</toolTip>
             </qualifiers>
 			</content>
+			<content id="AMPLE_MODEL_GENERATION">
+			  <className>CString</className>
+			  <qualifiers>
+			    <onlyEnumerators>True</onlyEnumerators>
+			    <guiLabel>Model Generation</guiLabel>
+			    <menuText>Ideal Helices,ROSETTA</menuText>
+			    <enumerators>ideal_helices,rosetta</enumerators>
+			    <default>ideal_helices</default>
+	            <toolTip>Use ideal heilces or generate models with ROSETTA.</toolTip>
+            </qualifiers>
+			</content>
  			<content id="AMPLE_MODEL_TYPE">
 			  <className>CString</className>
 			  <qualifiers>
 			    <title>Model Type.</title>
 			    <guiLabel>The type of models being processed.</guiLabel>
 			    <onlyEnumerators>True</onlyEnumerators>
-			    <menuText>Ab Initio, Multiple Homologs, Single Homolog, NMR Ensemble</menuText>
-			    <enumerators>abinitio, multiple_homologs, single_homolog, nmr_ensemble</enumerators>
+			    <menuText>Sequence Identical,Multiple Homologs,NMR Ensemble</menuText>
+			    <enumerators>abinitio,multiple_homologs,nmr_ensemble</enumerators>
 			    <default>abinitio</default>
 			  </qualifiers>
 			</content>
-	
+ 			<content id="AMPLE_NMR_REMODEL">
+			  <className>CString</className>
+			  <qualifiers>
+			    <title>NMR Remodelling</title>
+			    <guiLabel>Remodel NMR Ensenble</guiLabel>
+			    <onlyEnumerators>True</onlyEnumerators>
+			    <menuText>Use ensemble models as is,Remodel using ROSETTA</menuText>
+			    <enumerators>nmr_remodel_false,nmr_remodel_true</enumerators>
+			    <default>nmr_remodel_false</default>
+	            <toolTip>Use the models from the NMR ensemble as is or use ROSETTA to remodel them.</toolTip>
+			  </qualifiers>
+			</content>
 			
 <!-- End New Stuff -->
             <content id="AMPLE_ROSETTA_DIR">
@@ -108,6 +118,7 @@
                     <allowUndefined>True</allowUndefined>
                     <isDirectory>True</isDirectory>
                     <mustExist>True</mustExist>
+		            <toolTip>The path to the top-level directory of the local ROSETTA installation.</toolTip>
                 </qualifiers>
             </content>
             <content id="AMPLE_ROSETTA_FRAGS3">
@@ -116,6 +127,7 @@
 			        <guiLabel>Rosetta 3-fragments</guiLabel>
                     <allowUndefined>True</allowUndefined>
                     <mustExist>True</mustExist>
+		            <toolTip>The file containing the database of 3-length ROSETTA fragments.</toolTip>
                 </qualifiers>
             </content>
             <content id="AMPLE_ROSETTA_FRAGS9">
@@ -124,22 +136,16 @@
 			        <guiLabel>Rosetta 9-fragments</guiLabel>
                     <allowUndefined>True</allowUndefined>
                     <mustExist>True</mustExist>
+		            <toolTip>The file containing the database of 9-length ROSETTA fragments.</toolTip>
                 </qualifiers>
             </content>
-            <content id="AMPLE_CONTACT_FILE">
+            <content id="AMPLE_RESTRAINTS_FILE">
                 <className>CDataFile</className>
                 <qualifiers>
-			        <guiLabel>Contact File</guiLabel>
+			        <guiLabel>Restraints File (CASP format)</guiLabel>
                     <allowUndefined>True</allowUndefined>
                     <mustExist>True</mustExist>
-                </qualifiers>
-            </content>
-            <content id="AMPLE_SCORE_FILE">
-                <className>CDataFile</className>
-                <qualifiers>
-			        <guiLabel>Score File</guiLabel>
-                    <allowUndefined>True</allowUndefined>
-                    <mustExist>True</mustExist>
+	              	<toolTip>A file of inter-residue restraints to be used when modelling.</toolTip>
                 </qualifiers>
             </content>
  			<content id="AMPLE_NPROC">

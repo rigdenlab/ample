@@ -50,13 +50,13 @@ class AMPLE_gui(CTaskWidget):
     IF SINGLE MODEL:
     * SCORE FILE
     ELIF NMR ENSEMBLE:
-    * CONTACT FILE  (OPT)
+    * RESTRAINTS FILE  (OPT)
     =============================================
     NO MODELS - subFrane
     * ROSETTA_DIR
     * FRAGS 3
     * FRAGS 9
-    * CONTACT FILE (OPT)
+    * RESTRAINTS FILE (OPT)
     =============================================
     
     
@@ -67,7 +67,7 @@ class AMPLE_gui(CTaskWidget):
     AMPLE_PROTEIN_TYPE: Globular/Transmembrane
     AMPLE_EXISTING_MODELS: T/F
     AMPLE_MODEL_TYPE: abinitio, multiple_homologs, single_homolog, nmr_ensemble
-    #GOT AMPLE_CONTACT_FILE: PATH
+    #GOT AMPLE_RESTRAINTS_FILE: PATH
     AMPLE_SCORE_FILE: PATH
     
     """
@@ -81,20 +81,16 @@ class AMPLE_gui(CTaskWidget):
     DESCRIPTION = '''This task is for running Molecular Replacement with unconventional models'''
     MGDISPLAYFILES = ['XYZIN']
     WHATNEXT = ['coot_rebuild']
-    
-    def toggleIsFile(self):
-        return self.container.inputData.AMPLE_RUN_MODE == 'nmr_ensemble' or \
-            self.container.inputData.AMPLE_MODELS_SOURCE == 'file'
-    def toggleIsDir(self):
-        return self.container.inputData.AMPLE_MODELS_SOURCE == 'directory' and not \
-            self.container.inputData.AMPLE_RUN_MODE == 'nmr_ensemble' 
 
     def __init__(self,parent):
         CTaskWidget.__init__(self,parent)
 
     def drawContents(self):
-        self.openFolder(folderFunction='inputData',followFrom=False)
+#         self.createLine(['subtitle','Use SHELXE'])
+#         x = self.container.inputData.AMPLE_USE_SHELXE.qualifiers()['guiLabel']
+#         self.createLine( ['label', x, 'widget', 'AMPLE_USE_SHELXE'])
 
+        self.openFolder(folderFunction='inputData',followFrom=False)
         self.createLine(['subtitle','Input sequence'])
         self.openSubFrame(frame=True)
         self.createLine ( [ 'tip','Input sequence','widget','AMPLE_SEQIN' ] )
@@ -105,73 +101,43 @@ class AMPLE_gui(CTaskWidget):
         self.createLine ( [ 'tip','Input reflections','widget','AMPLE_F_SIGF' ] )
         self.closeSubFrame()
 
-
         self.createLine(['subtitle','Class of protein:', 'widget', '-guiMode', 'radio', 'AMPLE_PROTEIN_CLASS'])
 
-
-#         # AMPLE Run Mode
-#         self.createLine(['subtitle','AMPLE Run Mode'])
-#         self.openSubFrame(frame=True)
-#         self.createLine( ['widget' ,'AMPLE_RUN_MODE' ] )
-#         self.closeSubFrame()
-
-#         # Model Selection
-#         self.openSubFrame(frame=[True], toggle=['AMPLE_RUN_MODE', 'close', ['rosetta','ideal_helices'] ])
-#         self.createLine(['subtitle','Model selection'])
-#         self.createLine( ['widget', '-guiMode', 'radio', 'AMPLE_MODELS_SOURCE' ],
-#                          toggle=['AMPLE_RUN_MODE', 'close', 'nmr_ensemble'] )
-#         self.createLine( ['widget', 'AMPLE_MODELS_DIR'],
-#                          toggleFunction=[self.toggleIsDir, ['AMPLE_RUN_MODE','AMPLE_MODELS_SOURCE']])
-#         self.createLine( ['widget', 'AMPLE_MODELS_FILE'],
-#                          toggleFunction=[self.toggleIsFile, ['AMPLE_RUN_MODE','AMPLE_MODELS_SOURCE']])
-#         self.closeSubFrame()
-#         
-#         self.openSubFrame(frame=[True], toggle=['AMPLE_RUN_MODE', 'open', ['rosetta'] ])
-#         self.createLine(['subtitle','Rosetta paths'])
-#         self.createLine( ['widget', 'AMPLE_ROSETTA_DIR'])
-#         self.createLine( ['widget', 'AMPLE_ROSETTA_FRAGS3'])
-#         self.createLine( ['widget', 'AMPLE_ROSETTA_FRAGS9'])
-#         self.createLine( ['widget', 'AMPLE_CONTACT_FILE'])
-#         # Depending on the AMPLE_RUN_MODE we need to set certain files as required or not
-#         self.connect(self.container.inputData.AMPLE_RUN_MODE,QtCore.SIGNAL('dataChanged'),self.AMPLE_RUN_MODEchanged)
-#         self.AMPLE_RUN_MODEchanged()
-#         self.closeSubFrame()
-        
-#         self.createLine(['subtitle','Use SHELXE'])
-#         x = self.container.inputData.AMPLE_USE_SHELXE.qualifiers()['guiLabel']
-#         self.createLine( ['label', x, 'widget', 'AMPLE_USE_SHELXE'])
-        
+        # Existing Models
         self.openSubFrame(frame=False)
-        #self.createLine(['subtitle','Source of models:'])
-        self.createLine(['subtitle','Model generation:', 'widget', 'AMPLE_EXISTING_MODELS'])
-        #self.createLine(['widget', '-guiMode', 'radio', 'AMPLE_EXISTING_MODELS'])
-        #self.createLine(['widget', '-guiLabel', 'LABEL', '-title', 'TITLE', 'AMPLE_EXISTING_MODELS'])
-        #self.createLine(['widget', 'AMPLE_EXISTING_MODELS'])
-        self.closeSubFrame() # Existing Models    
+        self.createLine(['subtitle','Do you have existing models?', 'widget', 'AMPLE_EXISTING_MODELS'])
+        self.closeSubFrame()     
 
         # Model Selection
-        #self.openSubFrame(frame=True, title='Models are from:', toggle=['AMPLE_EXISTING_MODELS', 'open', ['True'] ])
         self.openSubFrame(frame=True, toggle=['AMPLE_EXISTING_MODELS', 'open', ['True'] ])
-        #self.createLine(['subtitle','Models are from:'])
-        self.createLine( ['subtitle', 'Models are from:', 'widget', '-guiMode', 'radio', 'AMPLE_MODELS_SOURCE' ],
-                         toggle=['AMPLE_RUN_MODE', 'close', 'nmr_ensemble'] )
-        self.createLine( ['widget', 'AMPLE_MODELS_DIR'],
-                         toggleFunction=[self.toggleIsDir, ['AMPLE_RUN_MODE','AMPLE_MODELS_SOURCE']])
-        self.createLine( ['widget', 'AMPLE_MODELS_FILE'],
-                         toggleFunction=[self.toggleIsFile, ['AMPLE_RUN_MODE','AMPLE_MODELS_SOURCE']])
-        self.createLine( ['label' ,'Type of models:', 'widget', 'AMPLE_MODEL_TYPE' ] )
+        self.createLine( ['subtitle', 'Models are from:', 'widget', '-guiMode', 'radio', 'AMPLE_MODELS_SOURCE' ])
+        self.createLine( ['widget', 'AMPLE_MODELS_DIR'], toggle=['AMPLE_MODELS_SOURCE', 'open', ['directory']])
+        self.createLine( ['widget', 'AMPLE_MODELS_FILE'], toggle=['AMPLE_MODELS_SOURCE', 'open', ['file']])
+        self.createLine( ['subtitle' ,'Type of models:', 'widget', 'AMPLE_MODEL_TYPE' ] )
+        self.createLine(['subtitle','NMR remodelling:', 'widget', '-guiMode', 'radio', 'AMPLE_NMR_REMODEL'],
+                        toggle=['AMPLE_MODEL_TYPE', 'open', ['nmr_ensemble'] ])
         self.closeSubFrame()
 
-        self.openSubFrame(frame=True, title='Rosetta paths', toggle=['AMPLE_EXISTING_MODELS', 'close', ['True'] ])
+        self.openSubFrame(frame=True, toggle=['AMPLE_EXISTING_MODELS', 'close', ['True'] ])
+        self.createLine(['subtitle','Model source:', 'widget', '-guiMode', 'radio', 'AMPLE_MODEL_GENERATION'])
+        self.closeSubFrame() # Model Generation
+
+        # Rosetta Paths
+        self.openSubFrame(frame=True,
+                          toggleFunction=[self.toggleRosettaFiles, ['AMPLE_EXISTING_MODELS','AMPLE_MODEL_GENERATION','AMPLE_NMR_REMODEL', 'AMPLE_MODEL_TYPE']])
+        self.createLine(['subtitle', 'ROSETTA paths'])
+        self.createLine(['advice', 'ROSETTA can be downloaded from: <a href="https://www.rosettacommons.org">https://www.rosettacommons.org</a>'])
         self.createLine( ['widget', 'AMPLE_ROSETTA_DIR'])
+        self.createLine(['advice', 'Fragments should be created on the ROBETTA SERVER: <a href="http://robetta.bakerlab.org">http://robetta.bakerlab.org</a>'])
         self.createLine( ['widget', 'AMPLE_ROSETTA_FRAGS3'])
         self.createLine( ['widget', 'AMPLE_ROSETTA_FRAGS9'])
-        self.createLine( ['widget', 'AMPLE_CONTACT_FILE'])
+        self.createLine( ['widget', 'AMPLE_RESTRAINTS_FILE'])
+        self.closeSubFrame()
+        
         # Depending on the AMPLE_RUN_MODE we need to set certain files as required or not
         #self.connect(self.container.inputData.AMPLE_RUN_MODE,QtCore.SIGNAL('dataChanged'),self.AMPLE_RUN_MODEchanged)
         #self.AMPLE_RUN_MODEchanged()
-        self.closeSubFrame() # Model Selection
-
+        
         self.drawOptions()
     
     def drawOptions(self):
@@ -188,17 +154,24 @@ class AMPLE_gui(CTaskWidget):
         x = self.container.inputData.AMPLE_ENSEMBLING_TYPE.qualifiers()['guiLabel']
         self.createLine(['label', x, 'widget', 'AMPLE_ENSEMBLING_TYPE'])
         self.closeSubFrame()
-
-    def AMPLE_RUN_MODEchanged(self):
-        if self.container.inputData.AMPLE_RUN_MODE == 'rosetta':
+            
+    def toggleRosettaFiles(self):
+        if self.container.inputData.AMPLE_EXISTING_MODELS == 'False'  and self.container.inputData.AMPLE_MODEL_GENERATION == 'rosetta' or \
+            self.container.inputData.AMPLE_EXISTING_MODELS == 'True'  and self.container.inputData.AMPLE_MODEL_TYPE == 'nmr_ensemble' and self.container.inputData.AMPLE_NMR_REMODEL == 'nmr_remodel_true':
             self.container.inputData.AMPLE_ROSETTA_DIR.setQualifiers({'allowUndefined':False,'mustExist':True})
             self.container.inputData.AMPLE_ROSETTA_FRAGS3.setQualifiers({'allowUndefined':False,'mustExist':True})
             self.container.inputData.AMPLE_ROSETTA_FRAGS9.setQualifiers({'allowUndefined':False,'mustExist':True})
+            self.getWidget('AMPLE_ROSETTA_DIR').validate()
+            self.getWidget('AMPLE_ROSETTA_FRAGS3').validate()
+            self.getWidget('AMPLE_ROSETTA_FRAGS9').validate()
+            return True
         else:
             self.container.inputData.AMPLE_ROSETTA_DIR.setQualifiers({'allowUndefined':True,'mustExist':False})
             self.container.inputData.AMPLE_ROSETTA_FRAGS3.setQualifiers({'allowUndefined':True,'mustExist':False})
             self.container.inputData.AMPLE_ROSETTA_FRAGS9.setQualifiers({'allowUndefined':True,'mustExist':False})
-        self.getWidget('AMPLE_ROSETTA_DIR').validate()
-        self.getWidget('AMPLE_ROSETTA_FRAGS3').validate()
-        self.getWidget('AMPLE_ROSETTA_FRAGS9').validate()
-
+            self.getWidget('AMPLE_ROSETTA_DIR').validate()
+            self.getWidget('AMPLE_ROSETTA_FRAGS3').validate()
+            self.getWidget('AMPLE_ROSETTA_FRAGS9').validate()
+            return False
+        
+        
