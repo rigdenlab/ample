@@ -1,14 +1,5 @@
 #!/bin/bash
 
-# 
-# Script to run toxd test case
-#
-
-# Set path to include where shelxe is located
-export PATH=\
-/opt/shelx:\
-$PATH
-
 # Path to the rosetta directory
 rosetta_dir=/opt/rosetta-3.5
 
