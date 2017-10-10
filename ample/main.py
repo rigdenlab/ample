@@ -237,48 +237,54 @@ class Ample(object):
             optd['frags_9mers'] = rosetta_modeller.frags_9mers
             optd['psipred_ss2'] = rosetta_modeller.psipred_ss2
 
-        # Predict contacts if the right dependencies are found
-        if not optd["contact_file"] and "HHBLITSDB" in os.environ \
-                and ample_util.is_exe("hhblits") and ample_util.is_exe("ccmpred"):
-            optd["contacts_dir"] = os.path.join(optd["work_dir"], "contacts")
-            optd['contact_file'] = contact_util.ContactUtil.predict_contacts_from_sequence(
-                optd["fasta"], wdir=optd["contacts_dir"])
-            optd['contact_format'] = "casprr"
-        else:
-            optd["contacts_dir"] = optd["work_dir"]
-
-        # In case file created above we need to tell the rosetta_modeller where it is
-        # otherwise not used as not created before object initialised
-        if optd['use_contacts'] and not optd['restraints_file']:
-
-            # Create a container to manipulate the data
+        if optd["use_contacts"] and not optd['restraints_file']:
             con_util = contact_util.ContactUtil(
-                optd['contact_file'], optd['contact_format'],
                 optd['fasta'], 'fasta',
-                bbcontacts_file=optd['bbcontacts_file'], bbcontacts_format=optd["bbcontacts_format"],
-                cutoff_factor=optd['restraints_factor'], distance_to_neighbor=optd['distance_to_neighbour']
+                contact_file=optd['contact_file'],
+                contact_format=optd['contact_format'],
+                bbcontacts_file=optd['bbcontacts_file'],
+                bbcontacts_format=optd["bbcontacts_format"],
+                cutoff_factor=optd['restraints_factor'],
+                distance_to_neighbor=optd['distance_to_neighbour']
             )
 
-            # Analyse and summarize the contact data
-            plot_file = os.path.join(
-                optd['contacts_dir'], optd['name'] + ".cm.png")
-            if optd['native_pdb'] and optd['native_pdb_std']:
-                structure_file = optd['native_pdb_std']
-            elif optd['native_pdb']:
-                structure_file = optd['native_std']
+            optd["contacts_dir"] = os.path.join(optd["work_dir"], "contacts")
+            if not os.path.isdir(optd["contacts_dir"]):
+                os.mkdir(optd["contacts_dir"])
+            if con_util.require_contact_prediction:
+                if con_util.found_ccmpred_contact_prediction_deps:
+                    con_util.predict_contacts_from_sequence(
+                        wdir=optd["contacts_dir"])
+                    optd["contact_file"] = con_util.contact_file
+                    optd["contact_format"] = con_util.contact_format
+
+            if con_util.do_contact_analysis:
+                plot_file = os.path.join(
+                    optd['contacts_dir'], optd['name'] + ".cm.png")
+                if optd['native_pdb'] and optd['native_pdb_std']:
+                    structure_file = optd['native_pdb_std']
+                elif optd["native_pdb"]:
+                    structure_file = optd['native_std']
+                else:
+                    structure_file = None
+                optd['contact_map'], optd['contact_ppv'] = con_util.summarize(
+                    plot_file, structure_file, 'pdb', optd['native_cutoff'])
+
+                restraints_file = os.path.join(
+                    optd['contacts_dir'], optd['name'] + ".cst")
+                optd['restraints_file'] = con_util.write_restraints(
+                    restraints_file, optd['restraints_format'], optd['energy_function']
+                )
             else:
-                structure_file = None
-            optd['contact_map'], optd['contact_ppv'] = con_util.summarize(
-                plot_file, structure_file, 'pdb', optd['native_cutoff'])
-
-            # Write some restraints
-            restraints_file = os.path.join(
-                optd['contacts_dir'], optd['name'] + ".cst")
-            optd['restraints_file'] = con_util.write_restraints(
-                restraints_file, optd['restraints_format'], optd['energy_function']
-            )
+                con_util = None
         else:
             con_util = None
+
+        print("=====")
+        print(con_util)
+        print(optd["restraints_file"])
+        print("=====")
+        raise
 
         if optd['make_models'] and optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
