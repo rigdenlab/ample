@@ -24,17 +24,11 @@ parser.add_argument('-rvapi_document', default=None)
 parser.add_argument('-own_gui', default=False, action='store_true')
 opt, _ = parser.parse_known_args()
 
-# Create working directory
-work_dir = os.path.abspath(I2DIR)
-if os.path.isdir(work_dir): shutil.rmtree(work_dir)
-logging.info("Making work directory: {0}".format(work_dir))
-os.mkdir(work_dir)
-
 # Copy in amopt pkl
 ample_pkl = opt.pkl
 if opt.rvapi_document:
-    mroot='/home/jscofe/data'
-    mroot = '/opt/ample.git/ample_testing'
+    mroot='/home/jscofe/tmp/ample'
+    #mroot = '/opt/ample.git/ample_testing'
     ample_pkl =  os.path.join(mroot,'from_existing_models','resultsd.pkl')
 
 # Load AMPLE dictionary
@@ -43,12 +37,21 @@ with open(ample_pkl) as f: od = cPickle.load(f)
 if opt.rvapi_document:
     amoptd_fix_path(od, newroot=mroot, i2mock=False)
 else:
+    # Create working directory
+    work_dir = os.path.abspath(I2DIR)
+    if os.path.isdir(work_dir): shutil.rmtree(work_dir)
+    logging.info("Making work directory: {0}".format(work_dir))
+    os.mkdir(work_dir)
+    
     # update paths and copy files into run directory
     amoptd_fix_path(od, newroot=work_dir, i2mock=True)
 
 # Need to add these
 od['no_gui'] = False
-if opt.rvapi_document: od['rvapi_document'] = opt.rvapi_document
+if opt.rvapi_document:
+    # JSCOFE HACK
+    od['rvapi_document'] = opt.rvapi_document
+    work_dir = os.getcwd()
 od['work_dir'] = work_dir
 od['ccp4i2_xml'] = opt.ccp4i2_xml
 
