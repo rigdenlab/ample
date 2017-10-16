@@ -674,10 +674,18 @@ class ContactUtil(object):
 
     @property
     def found_ccmpred_contact_prediction_deps(self):
-        ccmpred_exe = ample_util.find_exe("ccmpred")
-        hhblits_exe = ample_util.find_exe("hhblits")
+        from ample.util.ample_util import FileNotFoundError
+        found_ccmpred_exe = False
+        found_hhblits_exe = False
+        try:
+            ample_util.find_exe("ccmpred")
+            found_ccmpred_exe = True
+            ample_util.find_exe("hhblits")
+            found_hhblits_exe = True
+        except FileNotFoundError:
+            pass
         found_hhblitsdb = "HHBLITSDB" in os.environ
-        return ccmpred_exe and hhblits_exe and found_hhblitsdb
+        return found_ccmpred_exe and found_hhblits_exe and found_hhblitsdb
 
     @property
     def require_contact_prediction(self):
