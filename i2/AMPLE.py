@@ -186,14 +186,15 @@ class AMPLE(CPluginScript):
         if top_files:
             for i, d in enumerate(top_files):
                 # Need to copy the files into the actual project directory - cannot be a sub-directory. Not entirely sure why but...
-                xyz = os.path.join(self.getWorkDirectory(),os.path.basename(d['xyz']['path']))
-                mtz = os.path.join(self.getWorkDirectory(),os.path.basename(d['mtz']['path']))
-                shutil.copy2(d['xyz']['path'], xyz)
-                shutil.copy2(d['mtz']['path'], mtz)
+                xyz = os.path.join(self.getWorkDirectory(),os.path.basename(d['pdb']))
+                mtz = os.path.join(self.getWorkDirectory(),os.path.basename(d['mtz']))
+                # REMOVE CHECK AS FILES SHOULD EXIST
+                if os.path.isfile(d['pdb']): shutil.copy2(d['pdb'], xyz)
+                if os.path.isfile(d['mtz']): shutil.copy2(d['mtz'], mtz)
                 self.container.outputData.XYZOUT.append(xyz)
-                self.container.outputData.XYZOUT[-1].annotation = 'PDB file of {0} #{1}'.format(d['info'], i + 1)
+                self.container.outputData.XYZOUT[-1].annotation = 'PDB file of {0} #{1}'.format(d['source'], i + 1)
                 self.container.outputData.HKLOUT.append(mtz)
-                self.container.outputData.HKLOUT[-1].annotation = 'MTZ file of {0} #{1}'.format(d['info'], i + 1)
+                self.container.outputData.HKLOUT[-1].annotation = 'MTZ file of {0} #{1}'.format(d['source'], i + 1)
 
 #         logPath = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)
 #         if os.path.isfile(logPath):
