@@ -239,7 +239,7 @@ class AmpleOutput(object):
         self._create_summary_tab()
         
         if not (ample_dict['single_model_mode'] or ample_dict['homologs'] or ample_dict['ideal_helices']) and \
-            bool(ample_dict['ensembles_data']) and not self.summary_tab_ensemble_sec_id:
+            bool(ample_dict.get('ensembles_data')) and not self.summary_tab_ensemble_sec_id:
             
             self.rm_pending_section()
 
