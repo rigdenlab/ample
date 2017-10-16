@@ -34,7 +34,6 @@ __version__ = version.__version__
 logger = logging_util.setup_console_logging()
 monitor = None
 
-
 class Ample(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
     
@@ -83,10 +82,18 @@ class Ample(object):
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
             benchmark_util.analysePdb(amopt.d)
+            
+        # Create constituent models from an NMR ensemble
+        if amopt.d['nmr_model_in']:
+            logger.info('Splitting NMR ensemble into constituent models')
+            amopt.d['models'] = pdb_edit.split_pdb(amopt.d['nmr_model_in'],
+                                                   directory=amopt.d['models_dir'],
+                                                   strip_hetatm=True,
+                                                   same_size=True)
+            logger.info('NMR ensemble contained {0} models'.format(len(amopt.d['models'])))
 
         # Modelling business happens here
-        if (amopt.d['import_models'] or amopt.d['make_frags'] or amopt.d['make_models'] or
-                (amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel'])):
+        if amopt.d['make_frags'] or amopt.d['make_models']:
             self.modelling(amopt.d, rosetta_modeller)
             amopt.write_config_file()
 
@@ -282,17 +289,12 @@ class Ample(object):
         if optd['make_models'] and optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
 
-        # if NMR process models first
-        # break here for NMR (frags needed but not modelling
-        if optd['nmr_model_in'] and not optd['nmr_remodel']:
-            optd['models'] = pdb_edit.prepare_nmr_model(
-                optd['nmr_model_in'], optd['models_dir'])
-        elif optd['make_models']:
+        if optd['make_models']:
             # Make the models
             logger.info('----- making Rosetta models--------')
             if optd['nmr_remodel']:
                 try:
-                    optd['models'] = rosetta_modeller.nmr_remodel(nmr_model_in=optd['nmr_model_in'],
+                    optd['models'] = rosetta_modeller.nmr_remodel(models=optd['models'],
                                                                   ntimes=optd['nmr_process'],
                                                                   alignment_file=optd['alignment_file'],
                                                                   remodel_fasta=optd['nmr_remodel_fasta'],

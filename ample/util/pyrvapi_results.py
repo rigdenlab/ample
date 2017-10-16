@@ -183,7 +183,7 @@ class AmpleOutput(object):
         if self.ccp4i2 or not self.summary_tab_id: return
         if not self._got_mrbump_results(ample_dict): return
         
-        mrb_results = ample_dict['mrbump_results']
+        mrb_results = ample_dict.get('mrbump_results')
         if mrb_results == self.old_mrbump_results: return
         self.old_mrbump_results = mrb_results
         
@@ -237,9 +237,8 @@ class AmpleOutput(object):
         # Summary Tab
         #
         self._create_summary_tab()
-        
         if not (ample_dict['single_model_mode'] or ample_dict['homologs'] or ample_dict['ideal_helices']) and \
-            bool(ample_dict['ensembles_data']) and not self.summary_tab_ensemble_sec_id:
+            bool(ample_dict.get('ensembles_data')) and not self.summary_tab_ensemble_sec_id:
             
             self.rm_pending_section()
 
@@ -290,7 +289,7 @@ class AmpleOutput(object):
             self.summary_tab_results_sec_table_id = "mrbump_table"
             pyrvapi.rvapi_add_table1(self.summary_tab_results_sec_id + "/" + self.summary_tab_results_sec_table_id, "MRBUMP Results", 1, 0, 1, 1, True)
         
-        mrb_results = ample_dict['mrbump_results']
+        mrb_results = ample_dict.get('mrbump_results')
         if not mrb_results == self.old_mrbump_results:
             # We set old_mrbump_results when we create the results_tab
             self.fill_table(self.summary_tab_results_sec_table_id,
@@ -323,7 +322,7 @@ class AmpleOutput(object):
         try:
             ensemble_dict = None
             for e in ensembles_data:
-                if e['name'] == mrbump_result['ensemble_name']:
+                if e['name'] == mrbump_result.get('ensemble_name'):
                     ensemble_dict = e
                     break
             if os.path.isfile(ensemble_dict['ensemble_pdb']):
@@ -364,7 +363,7 @@ class AmpleOutput(object):
         return
     
     def _got_mrbump_results(self, ample_dict):
-        return 'mrbump_results' in ample_dict and ample_dict['mrbump_results'] and len(ample_dict['mrbump_results'])
+        return ample_dict.get('mrbump_results') and len(ample_dict['mrbump_results'])
 
     def results_section(self, results_tab_id, mrb_results, ensemble_results, section_title):
         #
@@ -593,7 +592,7 @@ class AmpleOutput(object):
                 'results' : [] }
         
         nresults = 0
-        if 'mrbump_results' in amopt and amopt['mrbump_results']:
+        if bool(amopt.get('mrbump_results')):
             mrb_results = amopt['mrbump_results']
             nresults = min(3, len(mrb_results))
         if nresults > 0:

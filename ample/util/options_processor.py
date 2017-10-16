@@ -113,6 +113,7 @@ def process_options(optd):
     #
     ###############################################################################
 
+    #if False:
     if optd['contact_file'] or optd['bbcontacts_file'] or not optd["no_contact_prediction"]:
         contact_util.ContactUtil.check_options(optd)
         optd['use_contacts'] = True
@@ -205,8 +206,7 @@ def process_options(optd):
 
     # NMR Checks
     if optd['nmr_model_in']:
-        msg = "Using nmr_model_in file: {0}".format(optd['nmr_model_in'])
-        logger.info(msg)
+        logger.info("Using nmr_model_in file: {0}".format(optd['nmr_model_in']))
         if not os.path.isfile(optd['nmr_model_in']):
             msg = "nmr_model_in flag given, but cannot find file: {0}".format(
                 optd['nmr_model_in'])
@@ -223,18 +223,16 @@ def process_options(optd):
             msg = "NMR model will be remodelled with ROSETTA using the sequence from: {0}".format(
                 optd['nmr_remodel_fasta'])
             logger.info(msg)
-
-            if not optd['frags_3mers'] and optd['frags_9mers']:
+            if not (optd['frags_3mers'] and optd['frags_9mers']):
                 optd['make_frags'] = True
                 msg = "nmr_remodel - will be making our own fragment files"
                 logger.info(msg)
             else:
-                if not os.path.isfile(optd['frags_3mers']) or not os.path.isfile(optd['frags_9mers']):
+                if not (os.path.isfile(optd['frags_3mers']) and os.path.isfile(optd['frags_9mers'])):
                     msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(
                         optd['frags_3mers'], optd['frags_9mers'])
                     exit_util.exit_error(msg)
                 optd['make_frags'] = False
-
         else:
             optd['make_frags'] = False
             optd['make_models'] = False

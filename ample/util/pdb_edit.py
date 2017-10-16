@@ -4,6 +4,7 @@ Useful manipulations on PDB files
 '''
 
 # Python imports
+from collections import defaultdict
 import copy
 import glob
 import logging
@@ -49,7 +50,7 @@ three2one = {
 #aaDict.update( dict((v, k) for (k, v) in aaDict.items()) )
 one2three =  dict((v, k) for (k, v) in three2one.items())
 
-_logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 def backbone(inpath=None, outpath=None):
     """Only output backbone atoms.
@@ -138,13 +139,13 @@ def calpha_only(inpdb, outpdb):
 #         return
 
 def check_pdb_directory(directory,single=True,allsame=True,sequence=None):
-    _logger.info("Checking pdbs in directory: {0}".format(directory))
+    logger.info("Checking pdbs in directory: {0}".format(directory))
     if not os.path.isdir(directory):
-        _logger.critical("Cannot find directory: {0}".format(directory))
+        logger.critical("Cannot find directory: {0}".format(directory))
         return False
     models=glob.glob(os.path.join(directory,"*.pdb"))
     if not len(models):
-        _logger.critical("Cannot find any pdb files in directory: {0}".format(directory))
+        logger.critical("Cannot find any pdb files in directory: {0}".format(directory))
         return False
     if not (single or sequence or allsame): return True
     return check_pdbs(models,sequence=sequence,single=single,allsame=allsame)
@@ -156,7 +157,7 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
             h=iotbx.pdb.pdb_input(models[0]).construct_hierarchy()
         except Exception,e:
             s="*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0],e)
-            _logger.critical(s)
+            logger.critical(s)
             return False
         sequence = _sequence1(h) # only one model/chain
     errors = []
@@ -186,7 +187,7 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
             if not s == sequence: sequence_err.append((pdb,s))
     
     if not (len(errors) or len(multi) or len(sequence_err) or len(no_protein) or len(unnamed_chain)):
-        _logger.info("check_pdb_directory - pdb files all seem valid")
+        logger.info("check_pdb_directory - pdb files all seem valid")
         return True
     
     s="\n"
@@ -220,7 +221,7 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
         for pdb,seq in sequence_err:
             s+="PDB: {0}\n{1}\n".format(pdb,seq)
 
-    _logger.critical(s)
+    logger.critical(s)
     return False
 
 def extract_chain(inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False, renumber=True ):
@@ -1158,6 +1159,24 @@ def num_atoms_and_residues(pdbin,first=False):
     
     return (natoms, nresidues)
 
+def _only_equal_sizes(hierarchy):
+    """If a hiearchy contains different size models, only keep models of the most numerous size"""
+    lengths = defaultdict(list)
+    lmax = 0
+    for i, model in enumerate(hierarchy.models()):
+        l = model.chains()[0].residue_groups_size()
+        lengths[l].append(i)
+        lmax = max(lmax,l)
+    
+    if len(lengths) > 1:
+        # The pdbs were of different lengths
+        to_keep = lengths[lmax]
+        logger.debug('All models were not of the same length, only {0} will be kept.'.format(len(to_keep)))
+        # Delete any that are not of most numerous length
+        for i, model in enumerate(hierarchy.models()):
+            if i not in to_keep: hierarchy.remove_model(model)
+    return hierarchy
+
 def _parse_rwcontents(logfile):
     natoms = 0
     nresidues = 0
@@ -1217,33 +1236,6 @@ COLUMNS        DATA TYPE     FIELD       DEFINITION
         modres.append([idCode, resName, chainID, seqNum, iCode, stdRes,comment])
         
     return modres
-
-def prepare_nmr_model(nmr_model_in,models_dir):
-    """Split an nmr pdb into its constituent parts and standardise the lengths"""
-    if not os.path.isdir(models_dir): os.mkdir(models_dir)
-    split_pdbs = split_pdb(nmr_model_in, models_dir)
-    
-    # We can only work with equally sized PDBS so we pick the most numerous if there are different sizes
-    lengths = {}
-    lmax = 0
-    for pdb in split_pdbs:
-        h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
-        l = h.models()[0].chains()[0].residue_groups_size()
-        if l not in lengths:
-            lengths[l] = [pdb]
-        else:
-            lengths[l].append(pdb)
-        lmax = max(lmax,l)
-    
-    if len(lengths) > 1:
-        # The pdbs were of different lengths
-        to_keep = lengths[lmax]
-        _logger.info('All NMR models were not of the same length, only {0} will be kept.'.format(len(to_keep)))
-        # Delete any that are not of most numerous length
-        for p in [p for p in split_pdbs if p not in to_keep]: os.unlink(p)
-        split_pdbs = to_keep
-
-    return split_pdbs
 
 def reliable_sidechains(inpath=None, outpath=None ):
     """Only output non-backbone atoms for residues in the res_names list.
@@ -1525,10 +1517,23 @@ def Xsplit(pdbin):
         h.write_pdb_file(pdbout,crystal_symmetry=crystal_symmetry,anisou=False)
     return
 
-def split_pdb(pdbin, directory=None):
-    """Split a pdb file into its separate models"""
+def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
+    """Split a pdb file into its separate models
+    
+    Parameters
+    ----------
+    pdbin : str
+      path to input pdbf file
+    directory : str
+      path to directory where pdb files will be created
+    strip_hetatm : bool
+        remove HETATMS if true
+    same_size : bool
+      Only output models of equal length (the most numerous length is selected)
+    """
 
     if directory is None: directory = os.path.dirname(pdbin)
+    if not os.path.isdir(directory): os.mkdir(directory)
     
     # Largely stolen from pdb_split_models.py in phenix
     #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
@@ -1541,32 +1546,29 @@ def split_pdb(pdbin, directory=None):
     n_models = hierarchy.models_size()
     if n_models == 1: raise RuntimeError,"split_pdb {0} only contained 1 model!".format( pdbin )
     
-    crystal_symmetry=pdbf.file_object.crystal_symmetry()
-    
+    if same_size: _only_equal_sizes(hierarchy)
+    crystal_symmetry = pdbf.file_object.crystal_symmetry()
     output_files = []
     for k, model in enumerate(hierarchy.models()) :
         k += 1
         new_hierarchy = iotbx.pdb.hierarchy.root()
         new_hierarchy.append_model(model.detached_copy())
+        if strip_hetatm: _strip(new_hierarchy, hetatm=True,)
         if (model.id == "") :
             model_id = str(k)
         else:
             model_id = model.id.strip()
-            
         output_file = ample_util.filename_append(pdbin, model_id, directory)
         with open(output_file, "w") as f:
             if (crystal_symmetry is not None) :
-                print >> f, iotbx.pdb.format_cryst1_and_scale_records(
-                                                                      crystal_symmetry=crystal_symmetry,
+                print >> f, iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
                                                                       write_scale_records=True)
             print >> f, "REMARK Model %d of %d" % (k, n_models)
             if (pdbin is not None) :
                 print >> f, "REMARK Original file:"
                 print >> f, "REMARK   %s" % pdbin
             f.write(new_hierarchy.as_pdb_string())
-    
         output_files.append(output_file)
-        
     return output_files
 
 def split_into_chains(pdbin, chain=None, directory=None):

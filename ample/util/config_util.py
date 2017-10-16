@@ -3,7 +3,6 @@
 
 @author: hlfsimko
 '''
-from collections import defaultdict
 import logging
 import multiprocessing
 import os
@@ -101,7 +100,7 @@ class AMPLEConfigOptions(object):
 
     def __init__(self):
         
-        self.d = defaultdict(None) # store all options here
+        self.d = {} # Can't use defaultdict as need lambda function to return None, which won't pickle
         self.cmdline_opts = {}
         self.debug = False
 

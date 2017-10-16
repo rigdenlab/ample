@@ -12,7 +12,6 @@ import os
 import random
 import re
 import shutil
-import unittest
 
 # Our modules
 from ample.modelling import octopus_predict
@@ -21,6 +20,8 @@ from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import sequence_util
 from ample.util import workers_util
+
+logger = logging.getLogger(__name__)
 
 def align_mafft(query_seq, template_seq, logger, mafft_exe=None):
     if not mafft_exe:
@@ -163,12 +164,9 @@ class RosettaModel(object):
         self.restraints_file = None
         self.restraints_weight = None
         self.disulfide_constraints_file = None
-
-        self.logger = logging.getLogger()
-
+        
         self.set_paths(optd=optd, rosetta_dir=rosetta_dir)
-        if optd:
-            self.set_from_dict(optd)
+        if optd: self.set_from_dict(optd)
         return
 
     def ab_initio_cmd(self, wdir, nstruct, seed):
@@ -242,33 +240,11 @@ class RosettaModel(object):
         else:
             cmd += ['-rg_reweight', "0.5"]
 
-        # Restraints file or domain restraints
-        if self.restraints_file or self.domain_termini_distance > 0:
-            if self.domain_termini_distance > 0:
-                restraints_file = self.setup_domain_restraints()
-            else:
-                restraints_file = self.restraints_file
-            if not os.path.isfile(restraints_file):
-                msg = "Cannot find restraints file: {0}".format(restraints_file)
-                self.logger.critical(msg)
-                raise RuntimeError(msg)
-            cmd += [
-                '-constraints:cst_file', restraints_file,
-                '-constraints:cst_fa_file', restraints_file
-            ]
-            if self.restraints_weight is not None:
-                cmd += [
-                    '-constraints:cst_weight', str(self.restraints_weight),
-                    '-constraints:cst_fa_weight', str(self.restraints_weight)
-                ]
+        # Domain restraints
+        if self.domain_termini_distance > 0: self.restraints_file = self.setup_domain_restraints()
         
-        # Add compatibility for extra disulfide restraints
-        if self.disulfide_constraints_file and os.path.isfile(self.disulfide_constraints_file):
-            cmd += ['-in::fix_disulf', str(self.disulfide_constraints_file)]
-        elif self.disulfide_constraints_file:
-            msg = "Cannot find disulfide constraints file: {0}".format(self.disulfide_constraints_file)
-            self.logger.critical(msg)
-            raise RuntimeError(msg)
+        # Add any restraints
+        cmd = self.cmd_add_restraints(cmd)
                 
         # Improve Template
         if self.improve_template:
@@ -360,6 +336,24 @@ class RosettaModel(object):
 
         os.chdir(owd)   # Go back to where we came from
         return pdbs_moved
+    
+    def cmd_add_restraints(self, cmd):
+        """Add any restraints and files to the ROSETTA command-line options"""
+        if self.restraints_file:
+            cmd += [
+                '-constraints:cst_file', self.restraints_file,
+                '-constraints:cst_fa_file', self.restraints_file
+            ]
+            if self.restraints_weight is not None:
+                cmd += [
+                    '-constraints:cst_weight', str(self.restraints_weight),
+                    '-constraints:cst_fa_weight', str(self.restraints_weight)
+                ]
+        
+        # Add compatibility for extra disulfide restraints
+        if self.disulfide_constraints_file and os.path.isfile(self.disulfide_constraints_file):
+            cmd += ['-in::fix_disulf', str(self.disulfide_constraints_file)]
+        return cmd
 
     def find_binary(self, name):
         """
@@ -444,7 +438,7 @@ class RosettaModel(object):
         """
         Run the script to generate the fragments
         """
-        self.logger.info('----- making fragments--------')
+        logger.info('----- making fragments--------')
         if not os.path.exists(self.fragments_directory):
             os.mkdir(self.fragments_directory )
 
@@ -462,10 +456,10 @@ class RosettaModel(object):
         success = self.run_scripts([script], job_time=21600, monitor=None)
         logfile="{0}.log".format(os.path.splitext(script)[0])
         if not success:
-                logfile="{0}.log".format(os.path.splitext(os.path.basename(script))[0])
-                msg = "Error generating fragments!\nPlease check the logfile {0}".format(logfile)
-                self.logger.critical(msg)
-                raise RuntimeError, msg
+            logfile="{0}.log".format(os.path.abspath(os.path.splitext(os.path.basename(script))[0]))
+            msg = "Error generating fragments!\nPlease check the logfile {0}".format(logfile)
+            logger.critical(msg)
+            raise RuntimeError(msg)
 
         if self.rosetta_version >= 3.4:
             # new name format: $options{runid}.$options{n_frags}.$size" . "mers
@@ -479,7 +473,7 @@ class RosettaModel(object):
         if not os.path.exists(self.frags_3mers) or not os.path.exists(self.frags_9mers):
             raise RuntimeError, "Error making fragments - could not find fragment files:\n{0}\n{1}\nPlease check logfile {2} for details.".format(self.frags_3mers,self.frags_9mers,logfile)
 
-        self.logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
+        logger.info('Fragments Done\n3mers at: ' + self.frags_3mers + '\n9mers at: ' + self.frags_9mers + '\n\n')
 
         psipred_ss2 = os.path.join(self.fragments_directory, self.name + '.psipred_ss2')
         if os.path.exists(psipred_ss2):
@@ -501,13 +495,13 @@ class RosettaModel(object):
                         tversion = line.split()[1].strip()
                         # version can be 3 digits - e.g. 3.2.4 - we only care about 2
                         version = float( ".".join(tversion.split(".")[0:2]) )
-                #self.logger.info( 'Your Rosetta version is: {0}'.format( version ) )
+                #logger.info( 'Your Rosetta version is: {0}'.format( version ) )
             except Exception,e:
-                self.logger.critical("Error determining rosetta version from file: {0}\n{1}".format(version_file,e))
+                logger.critical("Error determining rosetta version from file: {0}\n{1}".format(version_file,e))
                 return False
         else:
             # Version file is absent in 3.5, so we need to use the directory name
-            self.logger.debug('Version file for Rosetta not found - checking to see if its 3.5 or 3.6')
+            logger.debug('Version file for Rosetta not found - checking to see if its 3.5 or 3.6')
             if self.rosetta_dir.endswith(os.sep): self.rosetta_dir = self.rosetta_dir[:-1]
             if self.rosetta_dir.endswith("3.5"):
                 version=3.5
@@ -517,9 +511,9 @@ class RosettaModel(object):
             elif self._chk36(self.rosetta_dir):
                 version=3.6
             else:
-                self.logger.debug("Cannot determine rosetta version in directory: {0}".format(self.rosetta_dir))
+                logger.debug("Cannot determine rosetta version in directory: {0}".format(self.rosetta_dir))
                 return False
-        self.logger.info('Rosetta version is: {0}'.format(version))
+        logger.info('Rosetta version is: {0}'.format(version))
         return version
 
     def _chk36(self,rosetta_dir):
@@ -551,7 +545,7 @@ class RosettaModel(object):
         idealise_dir = os.path.join(self.work_dir, 'idealised_models')
         os.mkdir(idealise_dir)
         os.chdir(idealise_dir)
-        self.logger.info("Idealising {0} models in directory: {1}".format(len(models),idealise_dir))
+        logger.info("Idealising {0} models in directory: {1}".format(len(models),idealise_dir))
         id_scripts=[]
         id_pdbs=[]
         job_time=7200
@@ -611,51 +605,23 @@ class RosettaModel(object):
                '-overwrite',
                '-run:constant_seed',
                '-run:jran', str(seed) ]
-        # Not actually sure if the restraints are used - they weren't on the test I tried but it doesn't seem to hurt to add them
-        if self.restraints_file:
-            cmd += [ '-constraints:cst_file', self.restraints_file, '-constraints:cst_fa_file', self.restraints_file ]
-            if self.restraints_weight is not None:
-                cmd+=[ '-constraints:cst_weight', str(self.restraints_weight), '-constraints:cst_fa_weight', str(self.restraints_weight) ]
 
-        if self.disulfide_constraints_file:
-            cmd+=[ '-in::fix_disulf', str(self.disulfide_constraints_file) ]    
-    
+        cmd = self.cmd_add_restraints(cmd)
         return cmd
     
-    def nmr_remodel(self, nmr_model_in=None, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
-
-        assert os.path.isfile(nmr_model_in), "Cannot find nmr_model_in: {0}".format(nmr_model_in)
-        if remodel_fasta:
-            assert os.path.isfile(remodel_fasta), "Cannot find remodel_fasta: {0}".format(remodel_fasta)
-        if ntimes:
-            assert type(ntimes) is int, "ntimes is not an int: {0}".format(ntimes)
-        
-        # Strip HETATM and H atoms from PDB
-        nmr_nohet = ample_util.filename_append(nmr_model_in, astr='nohet', directory=self.work_dir)
-        pdb_edit.strip(nmr_model_in, nmr_nohet, hetatm=True)
-        nmr_model_in = nmr_nohet
-        self.logger.info('using NMR model: {0}'.format(nmr_model_in))
-    
-        if not os.path.isdir(self.models_dir):
-            os.mkdir(self.models_dir)
-        nmr_models_dir = os.path.join(self.work_dir, 'nmr_models')
-        os.mkdir(nmr_models_dir)
-    
-        # Split NMR PDB into separate models
-        nmr_models = pdb_edit.split_pdb(nmr_model_in, nmr_models_dir)
-        num_nmr_models = len(nmr_models)
-        self.logger.info('you have {0} models in your nmr'.format(num_nmr_models))
-    
-        if not ntimes:
-            ntimes = 1000 / num_nmr_models
+    def nmr_remodel(self, models, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
+        if remodel_fasta: assert os.path.isfile(remodel_fasta), "Cannot find remodel_fasta: {0}".format(remodel_fasta)
+        if ntimes: assert type(ntimes) is int, "ntimes is not an int: {0}".format(ntimes)
+        num_nmr_models = len(models)
+        if not ntimes: ntimes = 1000 / num_nmr_models
         nmr_process = int(ntimes)
-        self.logger.info('processing each model {0} times'.format(nmr_process))
+        logger.info('processing each model {0} times'.format(nmr_process))
         num_models = nmr_process * num_nmr_models
-        self.logger.info('{0} models will be made'.format(num_models))
+        logger.info('{0} models will be made'.format(num_models))
         
         # Idealize all the nmr models to have standard bond lengths, angles etc
-        id_pdbs = self.idealize_models(nmr_models, monitor=monitor)
-        self.logger.info('{0} models were successfully idealized'.format(len(id_pdbs)))
+        id_pdbs = self.idealize_models(models, monitor=monitor)
+        logger.info('{0} models were successfully idealized'.format(len(id_pdbs)))
         #id_pdbs = glob.glob(os.path.join(amopt.d['models'],"*.pdb"))
     
         owd = os.getcwd()
@@ -670,7 +636,7 @@ class RosettaModel(object):
         if not alignment_file:
             # fasta sequence of first model
             remodel_seq = sequence_util.Sequence(fasta=remodel_fasta)
-            alignment_file = align_mafft(remodel_seq, id_seq, self.logger)
+            alignment_file = align_mafft(remodel_seq, id_seq, logger)
         
         # Remodel each idealized model nmr_process times
         pdbs_to_return = self.remodel(id_pdbs, ntimes, alignment_file, monitor=monitor)
@@ -680,7 +646,7 @@ class RosettaModel(object):
 
     def remodel(self, id_pdbs, ntimes, alignment_file, monitor=None):
         remodel_dir = os.getcwd()
-        proc_map = self. remodel_proc_map(id_pdbs, ntimes)
+        proc_map = self.remodel_proc_map(id_pdbs, ntimes)
         seeds = self.generate_seeds(len(proc_map))
         job_scripts = []
         dir_list = []
@@ -725,7 +691,7 @@ class RosettaModel(object):
         pdbs_moved = []
         for i, remodelled_pdb in enumerate(pdbs):
             final_pdb = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
-            self.logger.debug("Stripping H atoms from remodelled pdb {0} to create final model: {1}".format(remodelled_pdb, final_pdb))
+            logger.debug("Stripping H atoms from remodelled pdb {0} to create final model: {1}".format(remodelled_pdb, final_pdb))
             pdb_edit.strip(remodelled_pdb, final_pdb, hydrogen=True)
             pdbs_moved.append(final_pdb)
         return pdbs_moved
@@ -774,7 +740,7 @@ class RosettaModel(object):
         """
         Create the file for restricting the domain termini and return the path to the file
         """
-        self.logger.info('restricting termini distance: {0}'.format( self.domain_termini_distance ))
+        logger.info('restricting termini distance: {0}'.format( self.domain_termini_distance ))
         fas = open(self.fasta)
         seq = ''
         for line in fas:
@@ -815,18 +781,18 @@ class RosettaModel(object):
                 blastpgp = os.path.join(optd['blast_dir'],"bin/blastpgp")
                 self.blastpgp = ample_util.find_exe(blastpgp)
                 if self.blastpgp:
-                    self.logger.debug("Using user-supplied blast_dir for blastpgp executable: {0}".format(self.blastpgp))
+                    logger.debug("Using user-supplied blast_dir for blastpgp executable: {0}".format(self.blastpgp))
 
             # nr database
             if optd['nr']:
                 if not os.path.exists(optd['nr']+".pal"):
                     msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format(optd['nr'])
-                    self.logger.critical(msg)
+                    logger.critical(msg)
                     raise RuntimeError, msg
                 else:
                     self.nr = optd['nr']
                     if self.nr:
-                        self.logger.debug("Using user-supplied nr database: {0}".format(self.nr))
+                        logger.debug("Using user-supplied nr database: {0}".format(self.nr))
 
             self.spanfile = optd['transmembrane_spanfile']
             self.lipofile = optd['transmembrane_lipofile']
@@ -835,22 +801,22 @@ class RosettaModel(object):
             # Check if we've been given files
             if  self.octopusTopology and not (os.path.isfile(self.octopusTopology)):
                 msg = "Cannot find provided transmembrane octopus topology prediction: {0}".format(self.octopusTopology)
-                self.logger.critical(msg)
+                logger.critical(msg)
                 raise RuntimeError, msg
 
             if  self.spanfile and not (os.path.isfile(self.spanfile)):
                 msg = "Cannot find provided transmembrane spanfile: {0}".format(self.spanfile)
-                self.logger.critical(msg)
+                logger.critical(msg)
                 raise RuntimeError, msg
 
             if self.lipofile and not (os.path.isfile(self.lipofile)):
                 msg = "Cannot find provided transmembrane lipofile: {0}".format(self.lipofile)
-                self.logger.critical(msg)
+                logger.critical(msg)
                 raise RuntimeError, msg
 
             if (self.spanfile and not self.lipofile) or (self.lipofile and not self.spanfile):
                 msg="You need to provide both a spanfile and a lipofile"
-                self.logger.critical(msg)
+                logger.critical(msg)
                 raise RuntimeError, msg
         elif optd['transmembrane2']:
             self.transmembrane2 = True
@@ -863,7 +829,7 @@ class RosettaModel(object):
                 self.frags_9mers = optd['frags_9mers']
                 if not os.path.exists(self.frags_3mers) or not os.path.exists(self.frags_9mers):
                     msg = "Cannot find both fragment files:\n{0}\n{1}\n".format(self.frags_3mers,self.frags_9mers)
-                    self.logger.critical(msg)
+                    logger.critical(msg)
                     raise RuntimeError,msg
 
             self.nproc = optd['nproc']
@@ -881,20 +847,20 @@ class RosettaModel(object):
 
             if optd['improve_template'] and not os.path.exists( optd['improve_template'] ):
                 msg = 'cant find template to improve'
-                self.logger.critical( msg)
+                logger.critical( msg)
                 raise RuntimeError(msg)
             self.improve_template = optd['improve_template']
             if optd['restraints_file']:
                 if not os.path.exists(optd['restraints_file']):
                     msg = "Cannot find restraints file: {0}".format(optd['restraints_file'])
-                    self.logger.critical(msg)
+                    logger.critical(msg)
                     raise RuntimeError, msg
                 self.restraints_file=optd['restraints_file']
             self.restraints_weight = optd['restraints_weight']
             if optd['disulfide_constraints_file']:
                 if not os.path.exists(optd['disulfide_constraints_file']):
                     msg="Cannot find disulfide constraints file: {0}".format(optd['disulfide_constraints_file'])
-                    self.logger.critical(msg)
+                    logger.critical(msg)
                     raise RuntimeError(msg)
                 self.disulfide_constraints_file = optd["disulfide_constraints_file"]
             
@@ -918,13 +884,13 @@ class RosettaModel(object):
 
         # Determine version
         if optd and 'rosetta_version' in optd and optd['rosetta_version'] is not None:
-            self.logger.debug( 'Using user-supplied Rosetta version: {0}'.format(optd['rosetta_version']))
+            logger.debug( 'Using user-supplied Rosetta version: {0}'.format(optd['rosetta_version']))
             version = optd['rosetta_version']
         else:
             version = self.get_version()
             if not version:
                 msg = 'Cannot determine Rosetta version in directory: {0}'.format(self.rosetta_dir)
-                self.logger.critical( msg )
+                logger.critical( msg )
                 raise RuntimeError,msg
 
         self.rosetta_version = version
@@ -945,7 +911,7 @@ class RosettaModel(object):
 
         if not os.path.exists(self.rosetta_db):
             msg = 'cannot find Rosetta DB: {0}'.format(self.rosetta_db)
-            self.logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError,msg
 
         # relax
@@ -955,7 +921,7 @@ class RosettaModel(object):
             self.rosetta_AbinitioRelax = self.find_binary('AbinitioRelax')
         if not self.rosetta_AbinitioRelax:
             msg = "Cannot find ROSETTA AbinitioRelax binary in: {0}".format(self.rosetta_bin)
-            self.logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError, msg
 
         # Set path to script
@@ -1003,7 +969,7 @@ class RosettaModel(object):
 
         # Files have already been created
         if os.path.isfile(str(self.spanfile)) and os.path.isfile(str(self.lipofile)):
-            self.logger.debug("Using given span file: {0}\n and given lipo file: {1}".format(self.spanfile, self.lipofile))
+            logger.debug("Using given span file: {0}\n and given lipo file: {1}".format(self.spanfile, self.lipofile))
             return
          
         owd=os.getcwd() # Remember where we started
@@ -1018,30 +984,30 @@ class RosettaModel(object):
 
         # See if we need to query the octopus server
         if os.path.isfile(str(self.octopusTopology)):
-            self.logger.info("Using user-supplied topology prediction file: {0}".format(self.octopusTopology))
+            logger.info("Using user-supplied topology prediction file: {0}".format(self.octopusTopology))
         else:
             # Query octopus server for prediction
             octo = octopus_predict.OctopusPredict()
-            self.logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
+            logger.info("Generating predictions for transmembrane regions using octopus server: {0}".format(octo.octopus_url))
             #fastaseq = octo.getFasta(self.fasta)
             # Problem with 3LBW prediction when remove X
             fastaseq = octo.getFasta(self.fasta)
             octo.getPredict(self.name,fastaseq, directory=tm_dir)
             self.octopusTopology = octo.topo
-            self.logger.debug("Got topology prediction file: {0}".format(self.octopusTopology))
+            logger.debug("Got topology prediction file: {0}".format(self.octopusTopology))
 
         # Generate span file from predict
         self.spanfile = os.path.join(tm_dir, self.name + ".span")
-        self.logger.debug( 'Generating span file {0}'.format(self.spanfile))
+        logger.debug( 'Generating span file {0}'.format(self.spanfile))
         cmd = [self.octopus2span, self.octopusTopology]
         retcode = ample_util.run_command(cmd, logfile=self.spanfile, directory=tm_dir)
         if retcode != 0:
             msg = "Error generating span file. Please check the log in {0}".format(self.spanfile)
-            self.logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError,msg
 
         # Now generate lips file
-        self.logger.debug('Generating lips file from span')
+        logger.debug('Generating lips file from span')
         script = os.path.join(tm_dir,"run_lips.sh")
         cmd = [self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast]
         with open(script,'w') as f:
@@ -1055,7 +1021,7 @@ class RosettaModel(object):
         if not success or not os.path.exists(lipofile):
             logfile ="{0}.log".format(os.path.splitext((script))[0])
             msg = "Error generating lips file {0}. Please check the logfile {1}".format(lipofile,logfile)
-            self.logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError,msg
 
         # Set the variable
@@ -1079,7 +1045,7 @@ fa_sol = 0.0
         self.transmembrane_exe = self.find_binary(mem_bin)
         if not self.transmembrane_exe:
             msg = "Cannot find ROSETTA {0} binary in: {1}".format(mem_bin,self.rosetta_bin)
-            self.logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError, msg
 
         if self.rosetta_version < 3.6:
@@ -1098,22 +1064,22 @@ fa_sol = 0.0
         # Check if we've been given files
         if  self.octopusTopology and not (os.path.isfile(self.octopusTopology)):
             msg = "Cannot find provided transmembrane octopus topology prediction: {0}".format(self.octopusTopology)
-            self.logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError, msg
 
         if  self.spanfile and not (os.path.isfile(self.spanfile)):
             msg = "Cannot find provided transmembrane spanfile: {0}".format(self.spanfile)
-            self.logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError, msg
 
         if self.lipofile and not (os.path.isfile(self.lipofile)):
             msg = "Cannot find provided transmembrane lipofile: {0}".format(self.lipofile)
-            self.logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError, msg
 
         if (self.spanfile and not self.lipofile) or (self.lipofile and not self.spanfile):
             msg="You need to provide both a spanfile and a lipofile"
-            self.logger.critical(msg)
+            logger.critical(msg)
             raise RuntimeError, msg
         
         if not (self.spanfile and self.lipofile):
@@ -1122,25 +1088,25 @@ fa_sol = 0.0
             if not os.path.exists(self.octopus2span) or not os.path.exists(self.run_lips) or not os.path.exists(self.align_blast):
                 msg = "Cannot find the required executables: octopus2span.pl ,run_lips.pl and align_blast.pl in the directory\n" +\
                 "{0}\nPlease check these files are in place".format(tm_script_dir)
-                self.logger.critical(msg)
+                logger.critical(msg)
                 raise RuntimeError, msg
 
             if optd['blast_dir']:
                 blastpgp = os.path.join(optd['blast_dir'],"bin/blastpgp")
                 self.blastpgp = ample_util.find_exe(blastpgp)
                 if self.blastpgp:
-                    self.logger.debug("Using user-supplied blast_dir for blastpgp executable: {0}".format(self.blastpgp))
+                    logger.debug("Using user-supplied blast_dir for blastpgp executable: {0}".format(self.blastpgp))
     
             # nr database
             if optd['nr']:
                 if not os.path.exists(optd['nr']+".pal"):
                     msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format(optd['nr'])
-                    self.logger.critical(msg)
+                    logger.critical(msg)
                     raise RuntimeError, msg
                 else:
                     self.nr = optd['nr']
                     if self.nr:
-                        self.logger.debug("Using user-supplied nr database: {0}".format(self.nr))
+                        logger.debug("Using user-supplied nr database: {0}".format(self.nr))
     
             if not (self.nr and self.blastpgp):
                 if self.rosetta_version > 3.5:
@@ -1149,17 +1115,17 @@ fa_sol = 0.0
                     if not (os.path.exists(blastpgp) and os.path.exists(nr+'.pal')):
                         msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
                               "Please try running the {0} script to download these for rosetta.".format(os.path.join(self.rosetta_dir,'tools','fragment_tools','install_dependencies.pl'))
-                        self.logger.critical(msg)
+                        logger.critical(msg)
                         raise RuntimeError, msg
                     else:
                         self.blastpgp = blastpgp
                         self.nr = nr
-                        if self.blastpgp: self.logger.debug("Using blastpgp executable: {0}".format(self.blastpgp))
-                        if self.nr: self.logger.debug("Using nr database: {0}".format(self.nr))
+                        if self.blastpgp: logger.debug("Using blastpgp executable: {0}".format(self.blastpgp))
+                        if self.nr: logger.debug("Using nr database: {0}".format(self.nr))
                 else:
                     msg = "Cannot find blastpgp executable and nr database requried for transmembrane modelling\n" + \
                           "Please install blast and the nr database and use the -blast_dir and -nr_dir options to ample."
-                    self.logger.critical(msg)
+                    logger.critical(msg)
                     raise RuntimeError, msg
         return
 
