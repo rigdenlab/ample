@@ -25,7 +25,7 @@ class Test(unittest.TestCase):
     def test_topfiles(self):
         topf = mrbump_util.ResultsSummary(results_pkl=os.path.join(self.testfiles_dir, AMPLE_PKL)).topFiles()
         self.assertEqual(len(topf),3)
-        self.assertIn('info',topf[2])
+        self.assertEqual(topf[2]['source'],'SHELXE trace of MR result')
 
 if __name__ == "__main__":
     unittest.main()
