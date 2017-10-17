@@ -25,7 +25,7 @@ fi
 echo "** Symlinking into CCP4 directories $ccp4_topdir and $ccp4_srcdir **"
 if [ -L $ccp4_topdir ]; then
     rm $ccp4_topdir
-elif [ -d $ccp4_topdir ]; then
+elif [ -d $ccp4_topdir ] && [ ! -d  ${ccp4_topdir}.bak ]; then
     mv $ccp4_topdir ${ccp4_topdir}.bak
 fi
 ln -s $ample_topdir $ccp4_topdir
@@ -33,7 +33,8 @@ ln -s $ample_topdir $ccp4_topdir
 
 if [ -L $ccp4_srcdir ]; then
     rm $ccp4_srcdir
-elif [ -d $ccp4_srcdir ]; then
+elif [ -d $ccp4_srcdir ] && [ ! -d  ${ccp4_srcdir}.bak ]; then
     mv $ccp4_srcdir ${ccp4_srcdir}.bak
 fi
 ln -s $ample_srcdir $ccp4_srcdir
+
