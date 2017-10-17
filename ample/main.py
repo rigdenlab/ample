@@ -93,9 +93,8 @@ class Ample(object):
             logger.info('NMR ensemble contained {0} models'.format(len(amopt.d['models'])))
 
         # Modelling business happens here
-        if amopt.d['make_frags'] or amopt.d['make_models']:
-            self.modelling(amopt.d, rosetta_modeller)
-            amopt.write_config_file()
+        self.modelling(amopt.d, rosetta_modeller)
+        amopt.write_config_file()
 
         # Ensembling business next
         if amopt.d['make_ensembles']:
@@ -234,6 +233,7 @@ class Ample(object):
         return
 
     def modelling(self, optd, rosetta_modeller=None):
+        if not (optd['import_models'] or optd['make_frags'] or optd['make_models'] or optd['nmr_remodel']): return
         if not rosetta_modeller:
             rosetta_modeller = options_processor.process_rosetta_options(optd)
         # Make Rosetta fragments
