@@ -85,9 +85,10 @@ class Ample(object):
             
         # Create constituent models from an NMR ensemble
         if amopt.d['nmr_model_in']:
-            logger.info('Splitting NMR ensemble into constituent models')
+            nmr_mdir = os.path.join(amopt.d['work_dir'],'nmr_models')
+            logger.info('Splitting NMR ensemble into constituent models in directory: {0}'.format(nmr_mdir))
             amopt.d['models'] = pdb_edit.split_pdb(amopt.d['nmr_model_in'],
-                                                   directory=amopt.d['models_dir'],
+                                                   directory=nmr_mdir,
                                                    strip_hetatm=True,
                                                    same_size=True)
             logger.info('NMR ensemble contained {0} models'.format(len(amopt.d['models'])))
@@ -233,6 +234,9 @@ class Ample(object):
 
     def modelling(self, optd, rosetta_modeller=None):
         if not (optd['import_models'] or optd['make_frags'] or optd['make_models'] or optd['nmr_remodel']): return
+        # Set the direcotry where the final models will end up
+        optd['models_dir'] = os.path.join(optd['work_dir'],'models')
+        if not os.path.isdir(optd['models_dir']): os.mkdir(optd['models_dir'])
         if not rosetta_modeller:
             rosetta_modeller = options_processor.process_rosetta_options(optd)
         # Make Rosetta fragments

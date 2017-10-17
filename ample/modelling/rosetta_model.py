@@ -622,7 +622,6 @@ class RosettaModel(object):
         # Idealize all the nmr models to have standard bond lengths, angles etc
         id_pdbs = self.idealize_models(models, monitor=monitor)
         logger.info('{0} models were successfully idealized'.format(len(id_pdbs)))
-        #id_pdbs = glob.glob(os.path.join(amopt.d['models'],"*.pdb"))
     
         owd = os.getcwd()
         remodel_dir = os.path.join(self.work_dir, 'remodelling')
