@@ -22,11 +22,22 @@ def _debug_logfile(logger):
                 debug_log=getattr(d, n)
     return debug_log
 
-def exit_error(msg, ample_tb=None):
+def exit_error(*args, **kwargs):
     """Exit on error collecting as much information as we can.
     
-    args:
-    ample_tb - this can be got from sys.exc_info()[2]
+    Parameters
+    ----------
+    message : str, optional
+      A error message to print
+    
+    Notes
+    -----
+    This previously accepted two arguments of a string to print as an error message and
+    an exception traceback.
+    We now just use sys.exch_info() so the messsage argument is no longer required but optional.
+    While we refactor the code, we'll use *args to get any argument parameters passed in
+    as the first argument.
+
     """
     # Get the root logger 
     logger = logging.getLogger()
@@ -35,7 +46,16 @@ def exit_error(msg, ample_tb=None):
     if not logger.handlers:
         logging.basicConfig(format='%(message)s\n', level=logging.DEBUG)
         logger = logging.getLogger()
+
     
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    msg = kwargs.get('message')
+    if msg is None:
+        if len(args) >= 1: # Fix for old cases
+            msg = args[0]
+        else:
+            msg = "{0}: {1}".format(exc_type.__name__, exc_value.message)
+
     #header="**** AMPLE ERROR ****\n\n"
     header="*"*70 + "\n"
     header+="*"*20 + " "*10 + "AMPLE ERROR" + " "*10 +"*"*19 + "\n" 
@@ -58,13 +78,9 @@ def exit_error(msg, ample_tb=None):
     # Print out main message
     logger.critical(msg)
     
-    # Get traceback of where we failed for the log file
-    if not ample_tb:
-        ample_tb = traceback.extract_stack()
-    else:
-        ample_tb = traceback.extract_tb(ample_tb)
-    
-    msg = "AMPLE EXITING AT..." + os.linesep + "".join(traceback.format_list(ample_tb))
+    # If we were called without an exception being raised, we just print the current stack
+    if exc_traceback is None: exc_traceback = traceback.extract_stack()
+    msg = "AMPLE EXITING AT..." + os.linesep + "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
     if debug_log:
         logger.debug(msg)
     else:
