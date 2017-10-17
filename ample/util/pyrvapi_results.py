@@ -90,7 +90,7 @@ class AmpleOutput(object):
                "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
                }
     
-    def __init__(self, amopt, own_gui=False):
+    def __init__(self, amopt, own_gui=True):
         self.header = False
         self.log_tab_id = None
         self.old_mrbump_results = None
@@ -158,7 +158,6 @@ class AmpleOutput(object):
                 # layout = 4 if i1 else 7,
                 )
                 API.document.newdoc(**kwargs)
-            
         if own_gui:
             # We start our own browser
             jsrview = os.path.join(os.environ["CCP4"], "libexec", "jsrview")
@@ -246,36 +245,40 @@ class AmpleOutput(object):
             self.summary_tab_ensemble_sec_id = "ensembles"
             pyrvapi.rvapi_add_section(self.summary_tab_ensemble_sec_id, "Ensembles", self.summary_tab_id, 0, 0, 1, 1, True)
             
-            # Get the ensembling data
-            d = ensembler.collate_cluster_data(ensembles_data)
-            clusters = d['clusters']
-            
-            rstr = ""
-            rstr += "Ensemble Results<br/>"
-            rstr += "----------------<br/><br/>"
-            rstr += "Cluster method: {0}<br/>".format(d['cluster_method'])
-            rstr += "Cluster score type: {0}<br/>".format(d['cluster_score_type'])
-            rstr += "Truncation method: {0}<br/>".format(d['truncation_method'])
-            rstr += "Percent truncation: {0}<br/>".format(d['percent_truncation'])
-            rstr += "Side-chain treatments: {0}<br/>".format(d['side_chain_treatments'])
-            rstr += "Number of clusters: {0}<br/><br/>".format(len(clusters.keys()))
-            rstr += "Generated {0} ensembles<br/><br/>".format(len(ensembles_data))
-            pyrvapi.rvapi_add_text(rstr, self.summary_tab_ensemble_sec_id, 0, 0, 1, 1)
-            
-            ensemble_table = "ensemble_table"
-            pyrvapi.rvapi_add_table1(self.summary_tab_ensemble_sec_id + "/" + ensemble_table, "Ensembling Results", 1, 0, 1, 1, True)
-            # for cluster_num in sorted(clusters.keys()):
-            #     rstr += "\n"
-            #     rstr += "Cluster {0}\n".format(cluster_num)
-            #     rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
-            #     rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
-            #     rstr += "\n"
-            #     tdata = cluster_table_data(clusters, cluster_num)
-            #     rstr += tableFormat.pprint_table(tdata)        
-            # 
-            cluster_num = 1
-            tdata = ensembler.cluster_table_data(clusters, cluster_num, d['side_chain_treatments'])
-            self.fill_table(ensemble_table, tdata, tooltips=self._ensemble_tooltips)
+            if ample_dict['import_ensembles']:
+                rstr = 'Imported {0} ensembles.'.format(len(ensembles_data))
+                pyrvapi.rvapi_add_text(rstr, self.summary_tab_ensemble_sec_id, 0, 0, 1, 1)
+            else:
+                # Get the ensembling data
+                d = ensembler.collate_cluster_data(ensembles_data)
+                clusters = d['clusters']
+                
+                rstr = ""
+                rstr += "Ensemble Results<br/>"
+                rstr += "----------------<br/><br/>"
+                rstr += "Cluster method: {0}<br/>".format(d['cluster_method'])
+                rstr += "Cluster score type: {0}<br/>".format(d['cluster_score_type'])
+                rstr += "Truncation method: {0}<br/>".format(d['truncation_method'])
+                rstr += "Percent truncation: {0}<br/>".format(d['percent_truncation'])
+                rstr += "Side-chain treatments: {0}<br/>".format(d['side_chain_treatments'])
+                rstr += "Number of clusters: {0}<br/><br/>".format(len(clusters.keys()))
+                rstr += "Generated {0} ensembles<br/><br/>".format(len(ensembles_data))
+                pyrvapi.rvapi_add_text(rstr, self.summary_tab_ensemble_sec_id, 0, 0, 1, 1)
+                
+                ensemble_table = "ensemble_table"
+                pyrvapi.rvapi_add_table1(self.summary_tab_ensemble_sec_id + "/" + ensemble_table, "Ensembling Results", 1, 0, 1, 1, True)
+                # for cluster_num in sorted(clusters.keys()):
+                #     rstr += "\n"
+                #     rstr += "Cluster {0}\n".format(cluster_num)
+                #     rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
+                #     rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
+                #     rstr += "\n"
+                #     tdata = cluster_table_data(clusters, cluster_num)
+                #     rstr += tableFormat.pprint_table(tdata)        
+                # 
+                cluster_num = 1
+                tdata = ensembler.cluster_table_data(clusters, cluster_num, d['side_chain_treatments'])
+                self.fill_table(ensemble_table, tdata, tooltips=self._ensemble_tooltips)
         
         #
         # MRBUMP Results

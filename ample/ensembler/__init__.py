@@ -255,6 +255,7 @@ def collate_cluster_data(ensembles_data):
     A dictionary with the collated data
     
     """
+    
     clusters = {}  # Loop through all ensemble data objects and build up a data tree
     cluster_method = None
     cluster_score_type = None

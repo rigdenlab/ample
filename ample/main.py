@@ -164,7 +164,6 @@ class Ample(object):
         return
 
     def ensembling(self, optd):
-
         if optd['import_ensembles']:
             ensembler.import_ensembles(optd)
         elif optd['ideal_helices']:
