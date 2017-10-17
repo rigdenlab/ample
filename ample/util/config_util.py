@@ -6,6 +6,7 @@
 import logging
 import multiprocessing
 import os
+import traceback
 
 from ample.constants import AMPLE_CONFIG_FILE
 from ample.ensembler.constants import POLYALA, RELIABLE, ALLATOM
@@ -95,12 +96,35 @@ _SECTIONS_REFERENCE = {"AMPLE_info": ["ample_version",
                        "Unspecified": [],
                        }
 
+class DebugDict(dict):
+    """A Dictionary class that prints when watched items are set or accessed"""
+    def __init__(self, *args, **kwargs):
+        dict.__init__(self, args)
+        self.watchkeys = []
+        if 'watchkeys' in kwargs:
+            watchkeys = kwargs['watchkeys']
+            if not isinstance(watchkeys, list): list(watchkeys)
+            self.watchkeys = watchkeys
+
+    def __getitem__(self, key):
+        val = dict.__getitem__(self, key)
+        if key in self.watchkeys:
+            logger.info("AMOPT GET {0}['{1}'] = {2}".format(dict.get(self, 'name_label'), key, val))
+            logger.info("AMOPT STACK:\n{0}".format(os.linesep.join(traceback.format_list(traceback.extract_stack())[:-1])))
+        return val
+
+    def __setitem__(self, key, val):
+        if key in self.watchkeys:
+            logger.info("AMOPT SET {0}['{1}'] = {2}".format(dict.get(self, 'name_label'), key, val))
+            logger.info("AMOPT STACK:\n{0}".format(os.linesep.join(traceback.format_list(traceback.extract_stack())[:-1])))
+        dict.__setitem__(self, key, val)
 
 class AMPLEConfigOptions(object):
 
     def __init__(self):
         
         self.d = {} # Can't use defaultdict as need lambda function to return None, which won't pickle
+        #self.d = DebugDict(watchkeys=['models'])
         self.cmdline_opts = {}
         self.debug = False
 
