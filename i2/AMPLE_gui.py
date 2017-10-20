@@ -136,7 +136,9 @@ class AMPLE_gui(CTaskWidget):
         
         # Depending on the AMPLE_RUN_MODE we need to set certain files as required or not
         #self.connect(self.container.inputData.AMPLE_RUN_MODE,QtCore.SIGNAL('dataChanged'),self.AMPLE_RUN_MODEchanged)
-        #self.AMPLE_RUN_MODEchanged()
+        self.connect(self.container.inputData.AMPLE_EXISTING_MODELS,QtCore.SIGNAL('dataChanged'),self.setModelsRequired)
+        self.connect(self.container.inputData.AMPLE_MODELS_SOURCE,QtCore.SIGNAL('dataChanged'),self.setModelsRequired)
+        self.setModelsRequired()
         
         self.drawOptions()
     
@@ -174,4 +176,17 @@ class AMPLE_gui(CTaskWidget):
             self.getWidget('AMPLE_ROSETTA_FRAGS9').validate()
             return False
         
-        
+    def setModelsRequired(self):
+        if self.container.inputData.AMPLE_EXISTING_MODELS == 'True':
+            if self.container.inputData.AMPLE_MODELS_SOURCE == 'file':
+                self.container.inputData.AMPLE_MODELS_FILE.setQualifiers({'allowUndefined':False,'mustExist':True})
+                self.container.inputData.AMPLE_MODELS_DIR.setQualifiers({'allowUndefined':True,'mustExist':False})
+            elif self.container.inputData.AMPLE_MODELS_SOURCE == 'directory':
+                self.container.inputData.AMPLE_MODELS_DIR.setQualifiers({'allowUndefined':False,'mustExist':True})
+                self.container.inputData.AMPLE_MODELS_FILE.setQualifiers({'allowUndefined':True,'mustExist':False})
+            else: assert False,"Unrecognised Parameter: {0}".format(self.container.inputData.AMPLE_MODELS_SOURCE)
+        else:
+            self.container.inputData.AMPLE_MODELS_FILE.setQualifiers({'allowUndefined':True,'mustExist':False})
+            self.container.inputData.AMPLE_MODELS_DIR.setQualifiers({'allowUndefined':True,'mustExist':False})
+        self.getWidget('AMPLE_MODELS_DIR').validate()
+        self.getWidget('AMPLE_MODELS_FILE').validate()

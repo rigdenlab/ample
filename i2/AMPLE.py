@@ -66,17 +66,17 @@ class AMPLE(CPluginScript):
         #                       3) A CCP4 Error object       
         ''' 
         import CCP4XtalData
-        self.hklin, self.columns, error = self.makeHklin0([
-            ['AMPLE_F_SIGF',CCP4XtalData.CObsDataFile.CONTENT_FLAG_FMEAN]
-        ])
-        self.columnsAsArray = self.columns.split(",")
-
-        self.fasta = self.container.inputData.AMPLE_SEQIN
-        self.mtz = self.container.inputData.AMPLE_F_SIGF
-        
         import CCP4ErrorHandling
+        # No idea why we need the 'AMPLE_F_SIGF' bit...
+        self.hklin, self.columns, error = self.makeHklin0([
+                                                           ['AMPLE_F_SIGF',CCP4XtalData.CObsDataFile.CONTENT_FLAG_FMEAN]
+        ])
         if error.maxSeverity()>CCP4ErrorHandling.SEVERITY_WARNING:
             return CPluginScript.FAILED
+        if self.hklin is None: return CPluginScript.FAILED
+        
+        self.F, self.SIGF = self.columns.split(',')
+        self.fasta = self.container.inputData.AMPLE_SEQIN
         
         #Preprocess coordinates to extract a subset
         '''
@@ -138,14 +138,17 @@ class AMPLE(CPluginScript):
 
         # Add modelling parameters shared by all run_types
         #self.appendCommandLine(self.getWorkDirectory())
-        self.appendCommandLine('-fasta')
-        self.appendCommandLine( params.AMPLE_SEQIN)
-        self.appendCommandLine('-mtz')
-        self.appendCommandLine(params.AMPLE_F_SIGF)
-        self.appendCommandLine('-F')
-        self.appendCommandLine( self.columnsAsArray[0])
-        self.appendCommandLine('-SIGF')
-        self.appendCommandLine( self.columnsAsArray[1])
+        self.appendCommandLine(['-fasta', self.fasta])
+#         self.appendCommandLine( params.AMPLE_SEQIN)
+#         self.appendCommandLine('-mtz')
+#         self.appendCommandLine(params.AMPLE_F_SIGF)
+#         self.appendCommandLine('-F')
+#         self.appendCommandLine( self.columnsAsArray[0])
+#         self.appendCommandLine('-SIGF')
+#         self.appendCommandLine( self.columnsAsArray[1])
+        self.appendCommandLine(['-mtz', self.hklin])
+        self.appendCommandLine(['-F', self.F])
+        self.appendCommandLine(['-SIGF', self.SIGF])
 
         # Model source if using existing models        
         if run_type in [IMPORT_MODELS, IMPORT_HOMOLOGS]:

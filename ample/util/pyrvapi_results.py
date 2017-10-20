@@ -90,7 +90,7 @@ class AmpleOutput(object):
                "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
                }
     
-    def __init__(self, amopt, own_gui=True):
+    def __init__(self, amopt, own_gui=False):
         self.header = False
         self.log_tab_id = None
         self.old_mrbump_results = None
@@ -227,7 +227,7 @@ class AmpleOutput(object):
             # Create pending section until we have data to show
             self.summary_tab_pending_sec_id = 'summary_tab_pending'
             pyrvapi.rvapi_add_section(self.summary_tab_pending_sec_id, "Processing...", self.summary_tab_id, 0, 0, 1, 1, True)
-            rstr = "<p>No results are currently available. Please check back later. when your structure will have been solved. Honest.</p>"
+            rstr = "<p>No results are currently available. Please check back later.</p>"
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_pending_sec_id, 0, 0, 1, 1)
         return
 
