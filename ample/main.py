@@ -37,7 +37,7 @@ monitor = None
 
 class Ample(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
-    
+
     """
 
     def __init__(self):
@@ -47,13 +47,13 @@ class Ample(object):
 
     def main(self, args=None):
         """Main AMPLE routine.
-        
-        We require this as the multiprocessing module (only on **!!*%$$!! Windoze) 
-        requires that the main module can be imported. We there need ample to be 
-        a python script that can be imported, hence the main routine with its 
+
+        We require this as the multiprocessing module (only on **!!*%$$!! Windoze)
+        requires that the main module can be imported. We there need ample to be
+        a python script that can be imported, hence the main routine with its
         calling protected by the if __name__=="__main__":...
-        
-        args is an option argument that can contain the command-line arguments 
+
+        args is an option argument that can contain the command-line arguments
         for the program - required for testing.
         """
         argso = self.process_command_line(args=args)
@@ -121,10 +121,13 @@ class Ample(object):
         amopt.d['AMPLE_finished'] = True
         ample_util.save_amoptd(amopt.d)
 
-        logger.info("AMPLE finished at: {0}".format(
-            time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
-        logger.info(ample_util.reference.format(
-            refs=ample_util.construct_references(amopt.d)))
+        logger.info("AMPLE finished at: %s", time.strftime("%a, %d %b %Y %H:%M:%S",
+                                                           time.gmtime()))
+        logger.info(
+            ample_util.reference.format(
+                refs=ample_util.construct_references(amopt.d)
+            )
+        )
         logger.info(ample_util.footer)
 
         # Finally update pyrvapi results
@@ -301,7 +304,7 @@ class Ample(object):
                     msg = "Error remodelling NMR ensemble: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
             else:
-                logger.info('making {0} models...'.format(optd['nmodels']))
+                logger.info('making %s models...', optd['nmodels'])
                 try:
                     optd['models'] = rosetta_modeller.ab_initio_model(
                         monitor=monitor)
@@ -312,16 +315,15 @@ class Ample(object):
                 if not pdb_edit.check_pdb_directory(optd['models_dir'], sequence=optd['sequence']):
                     msg = "Problem with rosetta pdb files - please check the log for more information"
                     exit_util.exit_error(msg)
-                msg = 'Modelling complete - models stored in: {0}\n'.format(
-                    optd['models_dir'])
-                logger.info(msg)
+                logger.info('Modelling complete - models stored in: %s\n',
+                            optd['models_dir'])
 
         elif optd['import_models']:
-            logger.info('Importing models from directory: {0}\n'.format(
-                optd['models_dir']))
+            logger.info('Importing models from directory: %s\n',
+                        optd['models_dir'])
             if optd['homologs']:
-                optd['models'] = ample_util.extract_models(
-                    optd, sequence=None, single=True, allsame=False)
+                optd['models'] = ample_util.extract_models(optd, sequence=None,
+                                                           single=True, allsame=False)
             else:
                 optd['models'] = ample_util.extract_models(optd)
                 # Need to check if Quark and handle things accordingly
@@ -332,20 +334,21 @@ class Ample(object):
                     else:
                         # No SCWRL so don't do owt with the side chains
                         logger.info('Using QUARK models but SCWRL is not installed '
-                                    'so only using {0} sidechains'.format(UNMODIFIED))
+                                    'so only using %s sidechains', UNMODIFIED)
                         optd['side_chain_treatments'] = [UNMODIFIED]
 
         # Sub-select the decoys using contact information
         if con_util and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
-            logger.info(
-                'Subselecting models from directory using provided contact information')
-            optd['models'] = con_util.subselect_decoys(
-                optd['models'], 'pdb', mode=optd['subselect_mode'], **optd)
+            logger.info('Subselecting models from directory using '
+                        'provided contact information')
+            subselect_data = con_util.subselect_decoys(
+                optd['models'], 'pdb', mode=optd['subselect_mode'], **optd
+            )
+            optd['models'] = zip(*subselect_data)[0]
+            optd['subselect_data'] = dict(subselect_data)
 
         # Save the results
         ample_util.save_amoptd(optd)
-
-        return
 
     def molecular_replacement(self, optd):
 
@@ -365,8 +368,7 @@ class Ample(object):
                 os.mkdir(bump_dir)
 
             optd['mrbump_results'] = []
-            logger.info(
-                "Running MRBUMP jobs in directory: {0}".format(bump_dir))
+            logger.info("Running MRBUMP jobs in directory: %s", bump_dir)
 
             # Set an ensemble-specific phaser_rms if required
             if optd['phaser_rms'] == 'auto':
@@ -463,8 +465,7 @@ class Ample(object):
 
         # Make a work directory - this way all output goes into this directory
         if optd['work_dir'] and not optd['restart_pkl']:
-            logger.info(
-                'Making a named work directory: {0}'.format(optd['work_dir']))
+            logger.info('Making a named work directory: %s', optd['work_dir'])
             try:
                 os.mkdir(optd['work_dir'])
             except Exception as e:
@@ -481,7 +482,8 @@ class Ample(object):
                 # With JSCOFE we run in the run directory
                 optd['work_dir'] = optd['run_dir']
             else:
-                logger.info('Making a run directory: checking for previous runs...')
+                logger.info('Making a run directory: '
+                            'checking for previous runs...')
                 optd['work_dir'] = ample_util.make_workdir(optd['run_dir'],
                                                            ccp4i2=bool(optd['ccp4i2_xml']))
         # Go to the work directory
@@ -502,16 +504,15 @@ class Ample(object):
 
         # Print out Version and invocation
         logger.info(ample_util.header)
-        logger.info("AMPLE version: {0}".format(version.__version__))
-        logger.info("Running with CCP4 version: {0} from directory: {1}".format(
-            ccp4_version, ccp4_home))
-        logger.info("Running on host: {0}".format(platform.node()))
-        logger.info("Running on platform: {0}".format(platform.platform()))
-        logger.info("Job started at: {0}".format(
-            time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime())))
-        logger.info(
-            "Invoked with command-line:\n{0}\n".format(" ".join(sys.argv)))
-        logger.info("Running in directory: {0}\n".format(optd['work_dir']))
+        logger.info("AMPLE version: %s", str(version.__version__))
+        logger.info("Running with CCP4 version: %s from directory: %s",
+                    str(ccp4_version), ccp4_home)
+        logger.info("Running on host: %s", platform.node())
+        logger.info("Running on platform: %s", platform.platform())
+        logger.info("Job started at: %s", time.strftime("%a, %d %b %Y %H:%M:%S",
+                                                        time.gmtime()))
+        logger.info("Invoked with command-line:\n%s\n", " ".join(sys.argv))
+        logger.info("Running in directory: %s\n", optd['work_dir'])
 
         # Display pyrvapi results
         if pyrvapi_results.pyrvapi:
