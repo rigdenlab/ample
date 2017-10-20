@@ -71,7 +71,7 @@ class AMPLE(CPluginScript):
         ])
         self.columnsAsArray = self.columns.split(",")
 
-        self.fasta = 
+        self.fasta = self.container.inputData.AMPLE_SEQIN
         self.mtz = self.container.inputData.AMPLE_F_SIGF
         
         import CCP4ErrorHandling
@@ -92,7 +92,8 @@ class AMPLE(CPluginScript):
     def makeCommandAndScript(self):
         params = self.container.inputData
         
-        run_mode = None
+        run_type = None
+        # Switch for run_type
         ABINITIO = 0
         IMPORT_MODELS = 1
         IMPORT_HOMOLOGS = 2
@@ -102,40 +103,40 @@ class AMPLE(CPluginScript):
         ROSETTA_TM = 6
         ROSETTA = 7
         
-        # Calculate the run mode
+        # Calculate the run_type
+        run_type = None
         if params.AMPLE_EXISTING_MODELS == 'True':
             if params.AMPLE_MODEL_TYPE == 'abinitio':
-                run_mode = IMPORT_MODELS
+                run_type = IMPORT_MODELS
             elif params.AMPLE_MODEL_TYPE == 'multiple_homologs':
-                run_mode = IMPORT_HOMOLOGS
+                run_type = IMPORT_HOMOLOGS
             elif params.AMPLE_MODEL_TYPE == 'nmr_ensemble':
                 if params.AMPLE_NMR_REMODEL == 'nmr_remodel_true':
-                    run_mode = NMR_REMODEL
+                    run_type = NMR_REMODEL
                 elif params.AMPLE_NMR_REMODEL == 'nmr_remodel_false':
-                    run_mode = NMR_IMPORT
-                else: assert False,"Unrecognised Parameter: {0}",format(params.AMPLE_NMR_REMODEL)
-            else: assert False,"Unrecognised Parameter: {0}",format(params.AMPLE_MODEL_TYPE)
+                    run_type = NMR_IMPORT
+                else: assert False,"Unrecognised Parameter: {0}".format(params.AMPLE_NMR_REMODEL)
+            else: assert False,"Unrecognised Parameter: {0}".format(params.AMPLE_MODEL_TYPE)
         else:
             # No models
             if params.AMPLE_MODEL_GENERATION == 'ideal_helices':
-                run_mode = IDEAL_HELICES
+                run_type = IDEAL_HELICES
             elif params.AMPLE_MODEL_GENERATION == 'rosetta':
                 if params.AMPLE_PROTEIN_CLASS == 'transmembrane':
-                    run_mode = ROSETTA_TM
+                    run_type = ROSETTA_TM
                 elif params.AMPLE_PROTEIN_CLASS == 'globular':
-                    run_mode = ROSETTA
-                else: assert False,"Unrecognised Parameter: {0}",format(params.AMPLE_PROTEIN_CLASS)
-            else: assert False,"Unrecognised Parameter: {0}",format(params.AMPLE_MODEL_GENERATION)
+                    run_type = ROSETTA
+                else: assert False,"Unrecognised Parameter: {0}".format(params.AMPLE_PROTEIN_CLASS)
+            else: assert False,"Unrecognised Parameter: {0}".format(params.AMPLE_MODEL_GENERATION)
         
         # Sort out the model file
         if params.AMPLE_MODELS_SOURCE == 'directory':
             models_file = params.AMPLE_MODELS_DIR
         elif params.AMPLE_MODELS_SOURCE == 'file':
             models_file = params.AMPLE_MODELS_FILE
-        else: assert False,"Unrecognised Parameter: {0}",format(params.AMPLE_MODELS_FILE)
+        else: assert False,"Unrecognised Parameter: {0}".format(params.AMPLE_MODELS_FILE)
 
-
-        # Add parameters shared by all run types
+        # Add modelling parameters shared by all run_types
         #self.appendCommandLine(self.getWorkDirectory())
         self.appendCommandLine('-fasta')
         self.appendCommandLine( params.AMPLE_SEQIN)
@@ -146,31 +147,34 @@ class AMPLE(CPluginScript):
         self.appendCommandLine('-SIGF')
         self.appendCommandLine( self.columnsAsArray[1])
 
-        # Using existing models        
-        if run_type in [IMPORT_MODELS, IMPORT_HOMOLOGS, NMR_REMODEL, NMR_IMPORT]:
+        # Model source if using existing models        
+        if run_type in [IMPORT_MODELS, IMPORT_HOMOLOGS]:
             self.appendCommandLine(['-models', models_file])
+        elif run_type in [NMR_REMODEL, NMR_IMPORT]:
+            self.appendCommandLine(['-nmr_model_in', models_file])
         
         # Generating models with rosetta
         if run_type in [ROSETTA, ROSETTA_TM, NMR_REMODEL]:
             self.appendCommandLine(['-rosetta_dir', params.AMPLE_ROSETTA_DIR])
             self.appendCommandLine(['-frags_3mers', params.AMPLE_ROSETTA_FRAGS3])
             self.appendCommandLine(['-frags_9mers', params.AMPLE_ROSETTA_FRAGS9])
-            
-        if run_type in [NMR_REMODEL, NMR_IMPORT]:
-            to implement
-            self.appendCommandLine(['-nmr_model','True'])
-            
+        
+        # Runtype-specific flags
         if run_type == IDEAL_HELICES:
             self.appendCommandLine(['-ideal_helices','True'])
-        elif run_type == NMR_REMODEL:
-            pass
+        elif run_type == ROSETTA:
+            pass # Nothing to do currently
         elif run_type == ROSETTA_TM:
-            pass            
-             
+            self.appendCommandLine(['-transmembrane','True'])
+        elif run_type == IMPORT_HOMOLOGS:
+            self.appendCommandLine(['-homologs','True'])
+        elif run_type == NMR_REMODEL:
+            self.appendCommandLine(['-nmr_remodel','True'])
+            
+        # General flags
         self.appendCommandLine(['-nproc', str(params.AMPLE_NPROC)])
-        #self.appendCommandLine(['-do_mr', False])
-        
         self.appendCommandLine(['-ccp4i2_xml', self.makeFileName('PROGRAMXML')])
+        self.appendCommandLine(['-do_mr', False])
 
 #         self.xmlroot = etree.Element(AMPLE_ROOT_NODE)
 #         logFile = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)

@@ -113,7 +113,7 @@ class AMPLE_gui(CTaskWidget):
         self.createLine( ['subtitle', 'Models are from:', 'widget', '-guiMode', 'radio', 'AMPLE_MODELS_SOURCE' ])
         self.createLine( ['widget', 'AMPLE_MODELS_DIR'], toggle=['AMPLE_MODELS_SOURCE', 'open', ['directory']])
         self.createLine( ['widget', 'AMPLE_MODELS_FILE'], toggle=['AMPLE_MODELS_SOURCE', 'open', ['file']])
-        self.createLine( ['subtitle' ,'Type of models:', 'widget', 'AMPLE_MODEL_TYPE' ] )
+        self.createLine( ['subtitle' ,'What sort of models are these?', 'widget', 'AMPLE_MODEL_TYPE' ] )
         self.createLine(['subtitle','NMR remodelling:', 'widget', '-guiMode', 'radio', 'AMPLE_NMR_REMODEL'],
                         toggle=['AMPLE_MODEL_TYPE', 'open', ['nmr_ensemble'] ])
         self.closeSubFrame()

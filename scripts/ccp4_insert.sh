@@ -20,8 +20,6 @@ if [ ! -d $ccp4_topdir ] || [ ! -d $ccp4_srcdir ]; then
     exit
 fi
 
-
-
 echo "** Symlinking into CCP4 directories $ccp4_topdir and $ccp4_srcdir **"
 if [ -L $ccp4_topdir ]; then
     rm $ccp4_topdir
@@ -38,3 +36,12 @@ elif [ -d $ccp4_srcdir ] && [ ! -d  ${ccp4_srcdir}.bak ]; then
 fi
 ln -s $ample_srcdir $ccp4_srcdir
 
+# GUI2
+gui2dir=$CCP4/share/ccp4i2/wrappers/AMPLE
+if [ ! -d $gui2dir ]; then
+	mkdir -p $gui2dir
+else
+	mv $gui2dir/script ${gui2dir}/script.bak
+fi
+ln -s $ample_topdir/i2 $gui2dir/script
+cp $ample_topdir/i2/AMPLE-icon.svg   $CCP4/share/ccp4i2/qticons/AMPLE.svg
