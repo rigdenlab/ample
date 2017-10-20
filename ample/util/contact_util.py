@@ -297,19 +297,16 @@ class ContactUtil(object):
         tmp_contact_file = tempfile.NamedTemporaryFile(delete=False)
         conkit.io.write(tmp_contact_file.name, 'casprr', contact_map)
 
-        # Construct the job scripts
-        job_scripts = []
-        log_files = []
         executable = 'conkit-precision.bat' \
             if sys.platform.startswith('win') \
             else 'conkit-precision'
+
+        job_scripts, log_files = [], []
         for decoy in decoys:
             decoy_name = os.path.splitext(os.path.basename(decoy))[0]
             contact_name = os.path.splitext(
-                os.path.basename(self.contact_file))[0]
-            prefix = '{0}_{1}_'.format(contact_name, decoy_name)
-            script = tempfile.NamedTemporaryFile(
-                prefix=prefix, suffix=ample_util.SCRIPT_EXT, delete=False)
+                os.path.basename(self.contact_file)
+            )[0]
 
             # TODO: Get the log file business working properly
             cmd = [executable, '-d', subdistance_to_neighbor]
@@ -319,11 +316,16 @@ class ContactUtil(object):
                 cmd += [decoy, decoy_format]
             cmd += [self.sequence_file, self.sequence_format]
             cmd += [tmp_contact_file.name, 'casprr']
+
+            prefix = '{0}_{1}_'.format(contact_name, decoy_name)
+            script = tempfile.NamedTemporaryFile(prefix=prefix, suffix=ample_util.SCRIPT_EXT,
+                                                 delete=False)
             script.write(
                 ample_util.SCRIPT_HEADER + os.linesep
                 + " ".join(map(str, cmd)) + os.linesep
             )
             script.close()
+
             os.chmod(script.name, 0o777)
             job_scripts.append(script.name)
             log_files.append(os.path.splitext(script.name)[0] + ".log")
