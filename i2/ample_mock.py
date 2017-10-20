@@ -31,6 +31,10 @@ if opt.rvapi_document:
     #mroot = '/opt/ample.git/ample_testing'
     ample_pkl =  os.path.join(mroot,'from_existing_models','resultsd.pkl')
 
+if not os.path.isfile(ample_pkl):
+    sys.stderr.write("Cannot find AMPLE pkl file: {0}\n".format(ample_pkl))
+    sys.exit(1)
+
 # Load AMPLE dictionary
 with open(ample_pkl) as f: od = cPickle.load(f)
 
