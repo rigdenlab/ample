@@ -79,8 +79,12 @@ def exit_error(*args, **kwargs):
     logger.critical(msg)
     
     # If we were called without an exception being raised, we just print the current stack
-    if exc_traceback is None: exc_traceback = traceback.extract_stack()
-    msg = "AMPLE EXITING AT..." + os.linesep + "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    if exc_traceback is None:
+        traceback_str = "".join(traceback.format_stack())
+    else:
+        traceback_str =     "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+
+    msg = "AMPLE EXITING AT2..." + os.linesep + traceback_str
     if debug_log:
         logger.debug(msg)
     else:
