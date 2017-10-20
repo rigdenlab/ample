@@ -39,6 +39,7 @@ import logging
 import json
 import os
 import subprocess
+import traceback
 import urlparse
 import uuid
 
@@ -103,8 +104,8 @@ class AmpleOutput(object):
         
         
         # Process variables from amopt
-        ccp4i2_xml = amopt['ccp4i2_xml']
-        rvapi_document = amopt['rvapi_document'] if 'rvapi_document' in amopt and amopt['rvapi_document'] else None
+        ccp4i2_xml = amopt.get('ccp4i2_xml')
+        rvapi_document = amopt.get('rvapi_document')
         work_dir = amopt['work_dir']
         run_dir = amopt['run_dir']
         no_gui = amopt['no_gui']
@@ -267,19 +268,11 @@ class AmpleOutput(object):
                 
                 ensemble_table = "ensemble_table"
                 pyrvapi.rvapi_add_table1(self.summary_tab_ensemble_sec_id + "/" + ensemble_table, "Ensembling Results", 1, 0, 1, 1, True)
-                # for cluster_num in sorted(clusters.keys()):
-                #     rstr += "\n"
-                #     rstr += "Cluster {0}\n".format(cluster_num)
-                #     rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
-                #     rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
-                #     rstr += "\n"
-                #     tdata = cluster_table_data(clusters, cluster_num)
-                #     rstr += tableFormat.pprint_table(tdata)        
-                # 
-                cluster_num = 1
-                tdata = ensembler.cluster_table_data(clusters, cluster_num, d['side_chain_treatments'])
+                tdata = []
+                for i, cluster_num in enumerate(sorted(d['clusters'].keys())):
+                    header = True if i == 0 else False
+                    tdata += ensembler.cluster_table_data(clusters, cluster_num, d['side_chain_treatments'], header=header)
                 self.fill_table(ensemble_table, tdata, tooltips=self._ensemble_tooltips)
-        
         #
         # MRBUMP Results
         #
@@ -311,14 +304,25 @@ class AmpleOutput(object):
         return self.summary_tab_id
 
     def display_results(self, ample_dict):
+        """Display the results of an AMPLE run using pyrvapi
+        
+        Parameters
+        ----------
+        ample_dict : dict
+          An AMPLE job dictionary
+          
+        """
         if not (pyrvapi or ('no_gui' in ample_dict and ample_dict['no_gui'])): return
-        if not self.header:
-            pyrvapi.rvapi_add_header("AMPLE Results")
-            self.header = True
-        if not self.ccp4i2: self.create_log_tab(ample_dict)
-        self.create_summary_tab(ample_dict)
-        self.create_results_tab(ample_dict)
-        pyrvapi.rvapi_flush()
+        try:
+            if not self.header:
+                pyrvapi.rvapi_add_header("AMPLE Results")
+                self.header = True
+            if not self.ccp4i2: self.create_log_tab(ample_dict)
+            self.create_summary_tab(ample_dict)
+            self.create_results_tab(ample_dict)
+            pyrvapi.rvapi_flush()
+        except Exception as e:
+            logger.critical("Error displaying results!\n{0}".format(traceback.format_exc()))
         return True
 
     def ensemble_pdb(self, mrbump_result, ensembles_data):
@@ -613,6 +617,8 @@ class AmpleOutput(object):
             
 if __name__ == "__main__":
     import copy, sys, time
+    logging.basicConfig(level=logging.DEBUG)
+    
     pklfile = sys.argv[1]
     ample_dict = ample_util.read_amoptd(pklfile)
     
@@ -620,9 +626,9 @@ if __name__ == "__main__":
     ample_dict['ample_log'] = os.path.abspath(__file__)
 
     report_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
-    AR = AmpleOutput(ample_dict, report_dir=report_dir, own_gui=True, xml=None)
-    #AR.display_results(ample_dict)
-     
+    AR = AmpleOutput(ample_dict, own_gui=True)
+    AR.display_results(ample_dict)
+    
     view1_dict = copy.copy(ample_dict)
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']

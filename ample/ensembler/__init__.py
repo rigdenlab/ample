@@ -304,7 +304,7 @@ def collate_cluster_data(ensembles_data):
     }
 
 
-def cluster_table_data(clusters, cluster_num, side_chain_treatments):
+def cluster_table_data(clusters, cluster_num, side_chain_treatments, header=True):
     """Generate a table containing the cluster data
     
     Parameters
@@ -315,6 +315,8 @@ def cluster_table_data(clusters, cluster_num, side_chain_treatments):
        The cluster number of interest
     side_chain_treatments : list, tuple
        A list of side chain treatments
+    header: bool
+      Return a header line
 
     Returns
     -------
@@ -324,8 +326,11 @@ def cluster_table_data(clusters, cluster_num, side_chain_treatments):
     """
     # FIX TO IGNORE side_chain_treatments
     # tdata = [("Name", "Truncation Level", u"Variance Threshold (\u212B^2)", "No. Residues", u"Radius Threshold (\u212B)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
-    tdata = [("Name", "Cluster", "Truncation Level", "Variance Threshold (A^2)", "No. Residues",
-              "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
+    if header:
+        tdata = [("Name", "Cluster", "Truncation Level", "Variance Threshold (A^2)", "No. Residues",
+                  "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
+    else:
+        tdata = []
     for tl in sorted(clusters[cluster_num]['tlevels']):
         tvar = clusters[cluster_num]['tlevels'][tl]['truncation_variance']
         nresidues = clusters[cluster_num]['tlevels'][tl]['num_residues']
