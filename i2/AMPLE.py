@@ -252,11 +252,10 @@ class AMPLE(CPluginScript):
                 if os.path.isfile(d['pdb']): shutil.copy2(d['pdb'], xyz)
                 if os.path.isfile(d['mtz']): shutil.copy2(d['mtz'], mtz)
                 self.container.outputData.XYZOUT.append(xyz)
-                self.container.outputData.XYZOUT[-1].annotation = 'PDB file of {0} #{1}'.format(d['source'], i + 1)
+                self.container.outputData.XYZOUT[-1].annotation = '{0}: PDB file of {1}'.format( d['name'], d['info'])
                 self.container.outputData.HKLOUT.append(mtz)
-                self.container.outputData.HKLOUT[-1].annotation = 'MTZ file of {0} #{1}'.format(d['source'], i + 1)
+                self.container.outputData.HKLOUT[-1].annotation = '{0}: MTZ file of {1}'.format(d['name'], d['info'])
 
-#         logPath = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)
 #         if os.path.isfile(logPath):
 #             with open(logPath, 'r') as logFile:
 #                 element = etree.SubElement(self.xmlroot,AMPLE_LOG_NODE)
