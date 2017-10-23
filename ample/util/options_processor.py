@@ -95,7 +95,7 @@ def process_options(optd):
         optd['mr_sequence'] = optd['fasta']
 
     # Process the fasta file and run all the checks on the sequence
-    sequence_util.process_fasta(optd)
+    sequence_util.process_fasta(optd, canonicalise=True)
 
     #
     # Not sure if name actually required - see make_fragments.pl
