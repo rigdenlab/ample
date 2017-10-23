@@ -140,22 +140,32 @@ class AMPLE_gui(CTaskWidget):
         self.connect(self.container.inputData.AMPLE_MODELS_SOURCE,QtCore.SIGNAL('dataChanged'),self.setModelsRequired)
         self.setModelsRequired()
         
-        self.drawOptions()
-    
-    def drawOptions(self):
-        folder = self.openFolder(folderFunction='inputData',title='Options')
-        self.createLine(['subtitle', 'Basic options' ])
-        
+        # Number of processors
         self.openSubFrame(frame=True)
         self.container.inputData.AMPLE_NPROC = cpu_count()
         x = self.container.inputData.AMPLE_NPROC.qualifiers()['guiLabel']
-        self.createLine(['label', x, 'widget','AMPLE_NPROC'])
+        self.createLine(['subtitle', x, 'widget','AMPLE_NPROC'])
         self.closeSubFrame()
-
+        
+        self.drawOptions()
+    
+    def drawOptions(self):
+        folder = self.openFolder(folderFunction='inputData',title='Advanced Options')
+        self.createLine(['subtitle', 'Rebuilding options' ])
         self.openSubFrame(frame=True)
-        x = self.container.inputData.AMPLE_ENSEMBLING_TYPE.qualifiers()['guiLabel']
-        self.createLine(['label', x, 'widget', 'AMPLE_ENSEMBLING_TYPE'])
+        #x = self.container.inputData.AMPLE_ENSEMBLING_TYPE.qualifiers()['guiLabel']
+        #self.createLine(['label', x, 'widget', 'AMPLE_ENSEMBLING_TYPE'])
+        x = self.container.inputData.AMPLE_REFINE_REBUILD.qualifiers()['guiLabel']
+        self.createLine(['label', x, 'widget', 'AMPLE_REFINE_REBUILD'])
+        x = self.container.inputData.AMPLE_USE_SHELXE.qualifiers()['guiLabel']
+        self.createLine(['label', x, 'widget', 'AMPLE_USE_SHELXE'])
+        x = self.container.inputData.AMPLE_SHELXE_REBUILD.qualifiers()['guiLabel']
+        self.createLine(['label', x, 'widget', 'AMPLE_SHELXE_REBUILD'])
         self.closeSubFrame()
+        
+        x = self.container.inputData.AMPLE_EXTRA_FLAGS.qualifiers()['guiLabel']
+        self.createLine(['subtitle', x, 'widget', 'AMPLE_EXTRA_FLAGS' ])
+        
             
     def toggleRosettaFiles(self):
         if self.container.inputData.AMPLE_EXISTING_MODELS == 'False'  and self.container.inputData.AMPLE_MODEL_GENERATION == 'rosetta' or \

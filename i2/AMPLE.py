@@ -173,11 +173,20 @@ class AMPLE(CPluginScript):
             self.appendCommandLine(['-homologs','True'])
         elif run_type == NMR_REMODEL:
             self.appendCommandLine(['-nmr_remodel','True'])
+        
+        # Stuff that applies to all runtypes
+        self.appendCommandLine(['-use_shelxe', str(params.AMPLE_USE_SHELXE)])
+        if params.AMPLE_REFINE_REBUILD is True:
+            self.appendCommandLine(['-refine_rebuild_arpwarp', 'True'])
+            self.appendCommandLine(['-refine_rebuild_buccaneer', 'True'])
+        self.appendCommandLine(['-shelxe_rebuild', str(params.AMPLE_SHELXE_REBUILD)])
+        if len(params.AMPLE_EXTRA_FLAGS):
+            self.appendCommandLine([params.AMPLE_EXTRA_FLAGS])
             
         # General flags
         self.appendCommandLine(['-nproc', str(params.AMPLE_NPROC)])
         self.appendCommandLine(['-ccp4i2_xml', self.makeFileName('PROGRAMXML')])
-        self.appendCommandLine(['-do_mr', False])
+        #self.appendCommandLine(['-do_mr', False])
 
 #         self.xmlroot = etree.Element(AMPLE_ROOT_NODE)
 #         logFile = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)

@@ -54,7 +54,6 @@
 			    <default>directory</default>
 			  </qualifiers>
 			</content>
-<!--  New Stuff -->
  			<content id="AMPLE_EXISTING_MODELS">
  			  <className>CString</className>
 			  <qualifiers>
@@ -109,8 +108,6 @@
 	            <toolTip>Use the models from the NMR ensemble as is or use ROSETTA to remodel them.</toolTip>
 			  </qualifiers>
 			</content>
-			
-<!-- End New Stuff -->
             <content id="AMPLE_ROSETTA_DIR">
                 <className>CDataFile</className>
                 <qualifiers>
@@ -156,6 +153,8 @@
 		              <min>1</min>
 	            </qualifiers>
             </content>
+            
+<!-- Advanced Options -->
 			<content id="AMPLE_ENSEMBLING_TYPE">
 	            <className>CBoolean</className>
 	            <qualifiers>
@@ -169,6 +168,30 @@
 		          <default>True</default>
 	              <guiLabel>Run SHELXE after MR</guiLabel>
 	              <toolTip>Subject all solutions to autotracing and density modification with SHELXE</toolTip>
+	            </qualifiers>
+            </content>
+ 			<content id="AMPLE_REFINE_REBUILD">
+	            <className>CBoolean</className>
+	            <qualifiers>
+		          <default>False</default>
+	              <guiLabel>Rebuild REFMAC-refined MR result</guiLabel>
+	              <toolTip>>Rebuild REFMAC-refined MR result with BUCCANEER or ARPWARP</toolTip>
+	            </qualifiers>
+            </content>
+  			<content id="AMPLE_SHELXE_REBUILD">
+	            <className>CBoolean</className>
+	            <qualifiers>
+		          <default>False</default>
+	              <guiLabel>Rebuild SHELXE traces</guiLabel>
+	              <toolTip>>Rebuild SHELXE C-alpha traces with BUCCANEER or ARPWARP</toolTip>
+	            </qualifiers>
+            </content>
+   			<content id="AMPLE_EXTRA_FLAGS">
+	            <className>CString</className>
+	            <qualifiers>
+		          <default></default>
+	              <guiLabel>Extra command-line arguments</guiLabel>
+		          <toolTip>A whitespace-separated line with any extra command-line arguments</toolTip>
 	            </qualifiers>
             </content>
         </container>
