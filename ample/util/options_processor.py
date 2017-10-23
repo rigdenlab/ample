@@ -333,11 +333,12 @@ def process_options(optd):
         optd['shelxe_rebuild_buccaneer'] = True
 
     # Model building programs
-    if optd['use_arpwarp']:
+    if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
         if not (os.environ.has_key('warpbin') and os.path.isfile(os.path.join(os.environ['warpbin'], "auto_tracing.sh"))):
             logger.warn(
                 'Cannot find arpwarp script! Disabling use of arpwarp.')
-            optd['use_arpwarp'] = False
+            optd['refine_rebuild_arpwarp'] = False
+            optd['shelxe_rebuild_arpwarp'] = False
         else:
             logger.info('Using arpwarp script: {0}'.format(
                 os.path.join(os.environ['warpbin'], "auto_tracing.sh")))
@@ -467,12 +468,12 @@ def process_options(optd):
         logger.info('NOT making Rosetta Models')
 
         # Print out what is being done
-    if optd['use_buccaneer']:
+    if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
         logger.info('Rebuilding in Bucaneer')
     else:
         logger.info('Not rebuilding in Bucaneer')
 
-    if optd['use_arpwarp']:
+    if optd['refine_rebuild_buccaneer'] or optd['shelxe_rebuild_buccaneer']:
         logger.info('Rebuilding in ARP/wARP')
     else:
         logger.info('Not rebuilding in ARP/wARP')

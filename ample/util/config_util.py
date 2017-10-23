@@ -143,8 +143,8 @@ class AMPLEConfigOptions(object):
             'shelxe_rebuild': True,
             'shelxe_rebuild_arpwarp': True,
             'shelxe_rebuild_buccaneer': True,
-            'use_arpwarp': False,
-            'use_buccaneer': False,
+            'refine_rebuild_arpwarp': False,
+            'refine_rebuild_buccaneer': False,
             #'mr_keys' : [ [ 'PKEY', 'KILL','TIME','360'  ] ],
         }
 
@@ -153,8 +153,8 @@ class AMPLEConfigOptions(object):
             'nmodels': 200,
             'percent': 20,
             'shelx_cycles': 5,
-            'use_arpwarp': False,
-            'use_buccaneer': False,
+            'refine_rebuild_arpwarp': False,
+            'refine_rebuild_buccaneer': False,
             'phaser_kill': 15
         }
 

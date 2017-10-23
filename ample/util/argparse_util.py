@@ -326,6 +326,12 @@ def add_mr_options(parser=None):
     mr_group.add_argument('-phaser_rms', metavar='phaser_rms',
                           help='RMS value for phaser')
 
+    mr_group.add_argument('-refine_rebuild_arpwarp', metavar='True/False',
+                          help='True to use ARPWARP to rebuild the REFMAC-refined MR result.')
+
+    mr_group.add_argument('-refine_rebuild_buccaneer', metavar='True/False',
+                          help='True to use Buccaneer to rebuild the REFMAC-refined MR result.')
+    
     mr_group.add_argument('-shelx_cycles',
                           help='The number of shelx cycles to run when rebuilding.')
 
@@ -341,11 +347,6 @@ def add_mr_options(parser=None):
     mr_group.add_argument('-shelxe_rebuild_buccaneer', metavar='True/False',
                           help='Rebuild shelxe traced pdb with buccaneer')
 
-    mr_group.add_argument('-use_arpwarp', metavar='True/False',
-                          help='True to use arpwarp to rebuild.')
-
-    mr_group.add_argument('-use_buccaneer', metavar='True/False',
-                          help='True to use Buccaneer')
 
     mr_group.add_argument('-use_scwrl', metavar='True/False',
                           help='Remodel sidechains of the decoy models using Scwrl4')
@@ -396,10 +397,10 @@ def add_rosetta_options(parser=None):
                                help='The version number of Rosetta')
 
     rosetta_group.add_argument('-transmembrane', metavar='True/False',
-                               help='Do Rosetta modelling for transmembrane proteins')
+                               help='Do Rosetta modelling for transmembrane proteins (Ovchinnikov protocol)')
 
-    rosetta_group.add_argument('-transmembrane2', metavar='True/False',
-                               help='Do Rosetta modelling for transmembrane proteins (NEW PROTOCOL)')
+    rosetta_group.add_argument('-transmembrane_old', metavar='True/False',
+                               help='Do Rosetta modelling for transmembrane proteins (Yarov-Yarovoy protocol)')
 
     rosetta_group.add_argument('-transmembrane_octopusfile',
                                help='Octopus transmembrane topology predicition file')

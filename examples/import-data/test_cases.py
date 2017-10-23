@@ -94,8 +94,8 @@ args_import_ensembles = args_universal + [
         [ '-ensembles', os.path.join(INPUT_DIR, 'ensembles') ],
         [ '-native_pdb', os.path.join(INPUT_DIR, '1aba.pdb') ],
         [ '-shelx_cycles', '1' ],
-        [ '-use_arpwarp', 'False' ],
-        [ '-use_buccaneer', 'False' ],
+        [ '-refine_rebuild_arpwarp', 'False' ],
+        [ '-refine_rebuild_buccaneer', 'False' ],
 ]
 
 class AMPLETest(AMPLEBaseTest):

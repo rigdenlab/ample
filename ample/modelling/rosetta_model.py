@@ -141,7 +141,7 @@ class RosettaModel(object):
 
         # Transmembrane variables
         self.transmembrane = None
-        self.transmembrane2 = None
+        self.transmembrane_old = None
         self.tm_patch_file = None
         self.octopus2span = None
         self.run_lips = None
@@ -177,7 +177,7 @@ class RosettaModel(object):
         seed: seed for this processor"""
 
         # Set executable
-        if self.transmembrane:
+        if self.transmembrane_old:
             cmd = [self.transmembrane_exe]
         else:
             cmd = [self.rosetta_AbinitioRelax]
@@ -215,7 +215,7 @@ class RosettaModel(object):
         else:
             cmd += ['-return_full_atom false']
 
-        if self.transmembrane:
+        if self.transmembrane_old:
             cmd += [
                 '-in:file:spanfile', self.spanfile,
                 '-in:file:lipofile', self.lipofile,
@@ -229,7 +229,7 @@ class RosettaModel(object):
                 '-mute core.io.database',
                 '-mute core.scoring.MembranePotential'
             ]
-        elif self.transmembrane2:
+        elif self.transmembrane:
             cmd += [ '-score:patch', self.tm_patch_file ]
             if self.restraints_file and os.path.isfile(self.restraints_file):
                 self.restraints_weight = 3
@@ -271,9 +271,9 @@ class RosettaModel(object):
         # Add submit_cluster, submit_queue, submit_qtype
         if not os.path.isdir(self.models_dir):
             os.mkdir(self.models_dir)
-        if self.transmembrane:
+        if self.transmembrane_old:
             self.tm_make_files()
-        elif self.transmembrane2:
+        elif self.transmembrane:
             self.tm2_make_patch(self.run_dir)
     
         # Split jobs onto separate processors - 1 for cluster, as many as will fit for desktop
@@ -410,7 +410,7 @@ class RosettaModel(object):
                '-id', self.name,
                 fasta ]
 
-        if self.transmembrane:
+        if self.transmembrane_old:
             #cmd += [ '-noporter', '-nopsipred','-sam']
             pass
         else:
@@ -774,8 +774,8 @@ class RosettaModel(object):
         self.use_homs = optd['use_homs']
         self.fragments_directory = os.path.join(optd['work_dir'],"rosetta_fragments")
 
-        if optd['transmembrane']:
-            self.transmembrane = True
+        if optd['transmembrane_old']:
+            self.transmembrane_old = True
             if optd['blast_dir']:
                 blastpgp = os.path.join(optd['blast_dir'],"bin/blastpgp")
                 self.blastpgp = ample_util.find_exe(blastpgp)
@@ -817,8 +817,8 @@ class RosettaModel(object):
                 msg="You need to provide both a spanfile and a lipofile"
                 logger.critical(msg)
                 raise RuntimeError, msg
-        elif optd['transmembrane2']:
-            self.transmembrane2 = True
+        elif optd['transmembrane']:
+            self.transmembrane = True
         # End transmembrane checks
 
         # Modelling variables
@@ -939,7 +939,7 @@ class RosettaModel(object):
         self.rosetta_mr_protocols = self.find_binary('mr_protocols')
         self.rosetta_idealize_jd2 = self.find_binary('idealize_jd2')
         
-        if optd['transmembrane']: self.tm_set_paths(optd)
+        if optd['transmembrane_old']: self.tm_set_paths(optd)
         return
 
     def split_jobs(self,njobs,nproc):

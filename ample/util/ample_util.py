@@ -200,9 +200,9 @@ def construct_references(optd):
         # Flags related to Molecular Replacement
         elif optd['do_mr']:
             labels += ['MrBUMP']
-            if optd['use_arpwarp']:
+            if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
                 labels += ['Arp_Warp']
-            elif optd['use_buccaneer']:
+            elif optd['refine_rebuild_buccaneer'] or optd['shelxe_rebuild_buccaneer']:
                 labels += ['Buccaneer']
             elif optd['use_shelxe']:
                 labels += ['SHELXE']
