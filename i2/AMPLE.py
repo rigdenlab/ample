@@ -39,6 +39,7 @@ class AMPLE(CPluginScript):
     MAINTAINER = 'jens.thomas@liv.ac.uk'
     ERROR_CODES = { 1 : {'description' : 'Something not very good has happened.' },
                     }
+    WHATNEXT = ['prosmart_refmac','buccaneer_build_refine','coot_rebuild']
 #     PURGESEARCHLIST = [ [ 'hklin.mtz' , 0 ],
 #                        ['log_mtzjoin.txt', 0]
 #                        ]
@@ -181,7 +182,7 @@ class AMPLE(CPluginScript):
             self.appendCommandLine(['-refine_rebuild_buccaneer', 'True'])
         self.appendCommandLine(['-shelxe_rebuild', str(params.AMPLE_SHELXE_REBUILD)])
         if len(params.AMPLE_EXTRA_FLAGS):
-            self.appendCommandLine([params.AMPLE_EXTRA_FLAGS])
+            self.appendCommandLine([" ".join(params.AMPLE_EXTRA_FLAGS.split("\n"))])
             
         # General flags
         self.appendCommandLine(['-nproc', str(params.AMPLE_NPROC)])

@@ -191,7 +191,7 @@
 	            <qualifiers>
 		          <default></default>
 	              <guiLabel>Extra command-line arguments</guiLabel>
-		          <toolTip>A whitespace-separated line with any extra command-line arguments</toolTip>
+		          <toolTip>Extra command-line arguments: can be white-space or new-line separated.</toolTip>
 	            </qualifiers>
             </content>
         </container>

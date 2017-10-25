@@ -164,7 +164,7 @@ class AMPLE_gui(CTaskWidget):
         self.closeSubFrame()
         
         x = self.container.inputData.AMPLE_EXTRA_FLAGS.qualifiers()['guiLabel']
-        self.createLine(['subtitle', x, 'widget', 'AMPLE_EXTRA_FLAGS' ])
+        self.createLine(['subtitle', x, 'widget', '-guiMode','multiLine', 'AMPLE_EXTRA_FLAGS' ])
         
             
     def toggleRosettaFiles(self):
