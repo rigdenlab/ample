@@ -88,7 +88,7 @@ class SubselectionAlgorithm(object):
 
         """
         sorted_indices = SubselectionAlgorithm._numpify(data).argsort()[::-1]
-        point = numpy.ceil(sorted_indices.shape[0] * cutoff)
+        point = numpy.ceil(sorted_indices.shape[0] * cutoff).astype(numpy.int)
         keep = sorted_indices[:point]
         throw = sorted_indices[point:]
         return keep.tolist(), throw.tolist()
