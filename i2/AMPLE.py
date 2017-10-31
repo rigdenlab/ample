@@ -39,6 +39,7 @@ class AMPLE(CPluginScript):
     MAINTAINER = 'jens.thomas@liv.ac.uk'
     ERROR_CODES = { 1 : {'description' : 'Something not very good has happened.' },
                     }
+    WHATNEXT = ['prosmart_refmac','buccaneer_build_refine','coot_rebuild']
 #     PURGESEARCHLIST = [ [ 'hklin.mtz' , 0 ],
 #                        ['log_mtzjoin.txt', 0]
 #                        ]
@@ -66,17 +67,17 @@ class AMPLE(CPluginScript):
         #                       3) A CCP4 Error object       
         ''' 
         import CCP4XtalData
-        self.hklin, self.columns, error = self.makeHklin0([
-            ['AMPLE_F_SIGF',CCP4XtalData.CObsDataFile.CONTENT_FLAG_FMEAN]
-        ])
-        self.columnsAsArray = self.columns.split(",")
-
-        self.fasta = self.container.inputData.AMPLE_SEQIN
-        self.mtz = self.container.inputData.AMPLE_F_SIGF
-        
         import CCP4ErrorHandling
+        # No idea why we need the 'AMPLE_F_SIGF' bit...
+        self.hklin, self.columns, error = self.makeHklin0([
+                                                           ['AMPLE_F_SIGF',CCP4XtalData.CObsDataFile.CONTENT_FLAG_FMEAN]
+        ])
         if error.maxSeverity()>CCP4ErrorHandling.SEVERITY_WARNING:
             return CPluginScript.FAILED
+        if self.hklin is None: return CPluginScript.FAILED
+        
+        self.F, self.SIGF = self.columns.split(',')
+        self.fasta = self.container.inputData.AMPLE_SEQIN
         
         #Preprocess coordinates to extract a subset
         '''
@@ -91,42 +92,102 @@ class AMPLE(CPluginScript):
 
     def makeCommandAndScript(self):
         params = self.container.inputData
+        
+        run_type = None
+        # Switch for run_type
+        ABINITIO = 0
+        IMPORT_MODELS = 1
+        IMPORT_HOMOLOGS = 2
+        NMR_REMODEL = 3
+        NMR_IMPORT = 4
+        IDEAL_HELICES = 5
+        ROSETTA_TM = 6
+        ROSETTA = 7
+        
+        # Calculate the run_type
+        run_type = None
+        if params.AMPLE_EXISTING_MODELS == 'True':
+            if params.AMPLE_MODEL_TYPE == 'abinitio':
+                run_type = IMPORT_MODELS
+            elif params.AMPLE_MODEL_TYPE == 'multiple_homologs':
+                run_type = IMPORT_HOMOLOGS
+            elif params.AMPLE_MODEL_TYPE == 'nmr_ensemble':
+                if params.AMPLE_NMR_REMODEL == 'nmr_remodel_true':
+                    run_type = NMR_REMODEL
+                elif params.AMPLE_NMR_REMODEL == 'nmr_remodel_false':
+                    run_type = NMR_IMPORT
+                else: assert False,"Unrecognised Parameter: {0}".format(params.AMPLE_NMR_REMODEL)
+            else: assert False,"Unrecognised Parameter: {0}".format(params.AMPLE_MODEL_TYPE)
+        else:
+            # No models
+            if params.AMPLE_MODEL_GENERATION == 'ideal_helices':
+                run_type = IDEAL_HELICES
+            elif params.AMPLE_MODEL_GENERATION == 'rosetta':
+                if params.AMPLE_PROTEIN_CLASS == 'transmembrane':
+                    run_type = ROSETTA_TM
+                elif params.AMPLE_PROTEIN_CLASS == 'globular':
+                    run_type = ROSETTA
+                else: assert False,"Unrecognised Parameter: {0}".format(params.AMPLE_PROTEIN_CLASS)
+            else: assert False,"Unrecognised Parameter: {0}".format(params.AMPLE_MODEL_GENERATION)
+        
+        # Sort out the model file
+        if params.AMPLE_MODELS_SOURCE == 'directory':
+            models_file = params.AMPLE_MODELS_DIR
+        elif params.AMPLE_MODELS_SOURCE == 'file':
+            models_file = params.AMPLE_MODELS_FILE
+        else: assert False,"Unrecognised Parameter: {0}".format(params.AMPLE_MODELS_FILE)
+
+        # Add modelling parameters shared by all run_types
         #self.appendCommandLine(self.getWorkDirectory())
-        self.appendCommandLine('-fasta')
-        self.appendCommandLine( self.fasta)
-        self.appendCommandLine('-mtz')
-        self.appendCommandLine( self.hklin)
-        #self.appendCommandLine( self.mtz)
-        self.appendCommandLine('-F')
-        self.appendCommandLine( self.columnsAsArray[0])
-        self.appendCommandLine('-SIGF')
-        self.appendCommandLine( self.columnsAsArray[1])
+        self.appendCommandLine(['-fasta', self.fasta])
+#         self.appendCommandLine( params.AMPLE_SEQIN)
+#         self.appendCommandLine('-mtz')
+#         self.appendCommandLine(params.AMPLE_F_SIGF)
+#         self.appendCommandLine('-F')
+#         self.appendCommandLine( self.columnsAsArray[0])
+#         self.appendCommandLine('-SIGF')
+#         self.appendCommandLine( self.columnsAsArray[1])
+        self.appendCommandLine(['-mtz', self.hklin])
+        self.appendCommandLine(['-F', self.F])
+        self.appendCommandLine(['-SIGF', self.SIGF])
+
+        # Model source if using existing models        
+        if run_type in [IMPORT_MODELS, IMPORT_HOMOLOGS]:
+            self.appendCommandLine(['-models', models_file])
+        elif run_type in [NMR_REMODEL, NMR_IMPORT]:
+            self.appendCommandLine(['-nmr_model_in', models_file])
         
-        # Runtype parameters
-        if params.AMPLE_RUN_MODE == 'existing_models':
-            if params.AMPLE_MODELS_SOURCE == 'directory':
-                mfile = params.AMPLE_MODELS_DIR
-            elif params.AMPLE_MODELS_SOURCE == 'file':
-                mfile = params.AMPLE_MODELS_FILE
-            self.appendCommandLine('-models')
-            self.appendCommandLine(mfile)
-        elif params.AMPLE_RUN_MODE == 'rosetta':
-            self.appendCommandLine('-rosetta_dir')
-            self.appendCommandLine(params.AMPLE_ROSETTA_DIR)
-            self.appendCommandLine('-frags_3mers')
-            self.appendCommandLine(params.AMPLE_ROSETTA_FRAGS3)
-            self.appendCommandLine('-frags_9mers')
-            self.appendCommandLine(params.AMPLE_ROSETTA_FRAGS9)
-        elif params.AMPLE_RUN_MODE == 'nmr_ensemble':
-            self.appendCommandLine('-nmr_model_in')
-            self.appendCommandLine(params.AMPLE_MODELS_FILE)
-        elif params.AMPLE_RUN_MODE == 'ideal_helices':
-            self.appendCommandLine(['-ideal_helices', 'True'])
-             
+        # Generating models with rosetta
+        if run_type in [ROSETTA, ROSETTA_TM, NMR_REMODEL]:
+            self.appendCommandLine(['-rosetta_dir', params.AMPLE_ROSETTA_DIR])
+            self.appendCommandLine(['-frags_3mers', params.AMPLE_ROSETTA_FRAGS3])
+            self.appendCommandLine(['-frags_9mers', params.AMPLE_ROSETTA_FRAGS9])
+        
+        # Runtype-specific flags
+        if run_type == IDEAL_HELICES:
+            self.appendCommandLine(['-ideal_helices','True'])
+        elif run_type == ROSETTA:
+            pass # Nothing to do currently
+        elif run_type == ROSETTA_TM:
+            self.appendCommandLine(['-transmembrane','True'])
+        elif run_type == IMPORT_HOMOLOGS:
+            self.appendCommandLine(['-homologs','True'])
+        elif run_type == NMR_REMODEL:
+            self.appendCommandLine(['-nmr_remodel','True'])
+        
+        # Stuff that applies to all runtypes
+        self.appendCommandLine(['-use_shelxe', str(params.AMPLE_USE_SHELXE)])
+        if params.AMPLE_REFINE_REBUILD is True:
+            self.appendCommandLine(['-refine_rebuild_arpwarp', 'True'])
+            self.appendCommandLine(['-refine_rebuild_buccaneer', 'True'])
+        self.appendCommandLine(['-shelxe_rebuild', str(params.AMPLE_SHELXE_REBUILD)])
+        if len(params.AMPLE_EXTRA_FLAGS):
+            self.appendCommandLine([" ".join(params.AMPLE_EXTRA_FLAGS.split("\n"))])
+            
+        # General flags
         self.appendCommandLine(['-nproc', str(params.AMPLE_NPROC)])
-        #self.appendCommandLine(['-do_mr', False])
-        
         self.appendCommandLine(['-ccp4i2_xml', self.makeFileName('PROGRAMXML')])
+        #self.appendCommandLine(['-do_mr', False])
 
 #         self.xmlroot = etree.Element(AMPLE_ROOT_NODE)
 #         logFile = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)
@@ -192,11 +253,10 @@ class AMPLE(CPluginScript):
                 if os.path.isfile(d['pdb']): shutil.copy2(d['pdb'], xyz)
                 if os.path.isfile(d['mtz']): shutil.copy2(d['mtz'], mtz)
                 self.container.outputData.XYZOUT.append(xyz)
-                self.container.outputData.XYZOUT[-1].annotation = 'PDB file of {0} #{1}'.format(d['source'], i + 1)
+                self.container.outputData.XYZOUT[-1].annotation = '{0}: PDB file of {1}'.format( d['name'], d['info'])
                 self.container.outputData.HKLOUT.append(mtz)
-                self.container.outputData.HKLOUT[-1].annotation = 'MTZ file of {0} #{1}'.format(d['source'], i + 1)
+                self.container.outputData.HKLOUT[-1].annotation = '{0}: MTZ file of {1}'.format(d['name'], d['info'])
 
-#         logPath = os.path.join(self.getWorkDirectory(),LOGFILE_NAME)
 #         if os.path.isfile(logPath):
 #             with open(logPath, 'r') as logFile:
 #                 element = etree.SubElement(self.xmlroot,AMPLE_LOG_NODE)

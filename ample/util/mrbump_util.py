@@ -582,12 +582,13 @@ class ResultsSummary(object):
                  ('BUCC', 'BUCC_pdbout','BUCC_mtzout', 'BUCCANEER rebuild of MR result'),
                  ('REFMAC,', 'REFMAC_pdbout','REFMAC_mtzout', 'REFMAC-refined MR result') ]
         for result in self.results[0 : min(num_results, len(self.results)+1) ]:
-            for name, pdb_key, mtz_key, source in poss:
+            for stype, pdb_key, mtz_key, source in poss:
                 if pdb_key in result and result[pdb_key] and mtz_key in result and result[mtz_key]:
                     # Don't check paths for now as it screws up unittests as files don't actually exist
                     #if not (os.path.isfile(result[pdb_key]) and os.path.isfile(result[mtz_key])): continue
-                    topf.append({ 'name' : name,
-                                  'source' : source,
+                    topf.append({ 'name' : result['ensemble_name'], 
+                                  'type' : stype,
+                                  'info' : source,
                                   'pdb' : result[pdb_key],
                                   'mtz' : result[mtz_key] })
                     break # Stop as soon as we find one

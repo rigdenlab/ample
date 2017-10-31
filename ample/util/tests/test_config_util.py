@@ -60,8 +60,8 @@ class Test(unittest.TestCase):
                      'nmodels' : 1000,
                      'percent' : 5,
                      'shelx_cycles' : 15,
-                     'use_arpwarp' : True,
-                     'use_buccaneer' : True,
+                     'refine_rebuild_arpwarp' : True,
+                     'refine_rebuild_buccaneer' : True,
                      'phaser_kill' : 360,
         }
         options.cmdline_opts = {}
@@ -69,8 +69,8 @@ class Test(unittest.TestCase):
                     'nmodels' : 200,
                     'percent' : 20,
                     'shelx_cycles' : 5,
-                    'use_arpwarp' : False,
-                    'use_buccaneer' : False,
+                    'refine_rebuild_arpwarp' : False,
+                    'refine_rebuild_buccaneer' : False,
                     'phaser_kill' : 15,
         }
         options._preset_options("quick_mode")
@@ -84,8 +84,8 @@ class Test(unittest.TestCase):
                      'shelxe_rebuild' : None,
                      'shelxe_rebuild_arpwarp' : False,
                      'shelxe_rebuild_buccaneer' : False,
-                     'use_arpwarp' : None,
-                     'use_buccaneer' : False,
+                     'refine_rebuild_arpwarp' : None,
+                     'refine_rebuild_buccaneer' : False,
         }
         options.cmdline_opts = {}
         expected = {'just_to_check' : True,
@@ -94,8 +94,8 @@ class Test(unittest.TestCase):
                     'shelxe_rebuild' : True,
                     'shelxe_rebuild_arpwarp' : True,
                     'shelxe_rebuild_buccaneer' : True,
-                    'use_arpwarp' : False,
-                    'use_buccaneer' : False,
+                    'refine_rebuild_arpwarp' : False,
+                    'refine_rebuild_buccaneer' : False,
         }
         options._preset_options("devel_mode")
         self.assertEqual(options.d, expected)
@@ -262,8 +262,8 @@ ensemble_options = None
                        'shelxe_rebuild' : True,
                        'shelxe_rebuild_arpwarp' : None,
                        'shelxe_rebuild_buccaneer' : True,
-                       'use_arpwarp' : False,
-                       'use_buccaneer' : False,
+                       'refine_rebuild_arpwarp' : False,
+                       'refine_rebuild_buccaneer' : False,
         }
         
         options.d = {
@@ -271,8 +271,8 @@ ensemble_options = None
                      'nmodels' : 400,
                      'percent' : 35,
                      'shelx_cycles' : 5,
-                     'use_arpwarp' : True,
-                     'use_buccaneer' : None,
+                     'refine_rebuild_arpwarp' : True,
+                     'refine_rebuild_buccaneer' : None,
                      'phaser_kill' : 15
         }
         
@@ -283,8 +283,8 @@ ensemble_options = None
                                                'benchmark_mode',
                                                'shelxe_rebuild',
                                                'shelxe_rebuild_buccaneer',
-                                               'use_arpwarp',
-                                               'use_buccaneer']),
+                                               'refine_rebuild_arpwarp',
+                                               'refine_rebuild_buccaneer']),
                      'percent' : 35,
                      'shelx_cycles' : 5,    
                      'phaser_kill' : 15,
@@ -294,8 +294,8 @@ ensemble_options = None
                      'ensemble_max_models' : 10,
                      'shelxe_rebuild_arpwarp' : None,
                      'shelxe_rebuild_buccaneer' : True,
-                     'use_arpwarp' : False,
-                     'use_buccaneer' : False,
+                     'refine_rebuild_arpwarp' : False,
+                     'refine_rebuild_buccaneer' : False,
         }
         
         options._read_cmdline_opts(config_opts)

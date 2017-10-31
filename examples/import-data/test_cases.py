@@ -40,11 +40,12 @@ class AMPLETest(AMPLEBaseTest):
         self.assertEqual(3, self.AMPLE_DICT['num_clusters'])
         self.assertIn('ensembles', self.AMPLE_DICT)
         ensembles_data = self.AMPLE_DICT['ensembles_data']
-        self.assertEqual(72, len(ensembles_data))
+        self.assertEqual(69, len(ensembles_data)) # was 72 changed 19/10/17 with CCP4 7.0.44 linux
         for i in xrange(1, 4):
             cluster_ensembles = [ens for ens in ensembles_data if ens['cluster_num']==i]
             cluster_num_models = cluster_ensembles[0]['cluster_num_models']
-            switch = {1: (6, 25), 2: (4, 24), 3: (3, 23)}
+            #switch = {1: (6, 25), 2: (4, 22), 3: (3, 23)}
+            switch = {1: (6, 25), 2: (4, 22), 3: (3, 22)} # changed 19/10/17 with CCP4 7.0.44 linux
             num_models, num_ensembles = switch[i]
             self.assertEqual(num_ensembles, len(cluster_ensembles))
             self.assertEqual(num_models, cluster_num_models)
@@ -93,8 +94,8 @@ args_import_ensembles = args_universal + [
         [ '-ensembles', os.path.join(INPUT_DIR, 'ensembles') ],
         [ '-native_pdb', os.path.join(INPUT_DIR, '1aba.pdb') ],
         [ '-shelx_cycles', '1' ],
-        [ '-use_arpwarp', 'False' ],
-        [ '-use_buccaneer', 'False' ],
+        [ '-refine_rebuild_arpwarp', 'False' ],
+        [ '-refine_rebuild_buccaneer', 'False' ],
 ]
 
 class AMPLETest(AMPLEBaseTest):

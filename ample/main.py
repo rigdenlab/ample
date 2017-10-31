@@ -34,7 +34,6 @@ __version__ = version.__version__
 logger = logging_util.setup_console_logging()
 monitor = None
 
-
 class Ample(object):
     """Class to generate ensembles from ab inito models (all models must have same sequence)
 
@@ -83,12 +82,20 @@ class Ample(object):
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
             benchmark_util.analysePdb(amopt.d)
+            
+        # Create constituent models from an NMR ensemble
+        if amopt.d['nmr_model_in']:
+            nmr_mdir = os.path.join(amopt.d['work_dir'],'nmr_models')
+            logger.info('Splitting NMR ensemble into constituent models in directory: {0}'.format(nmr_mdir))
+            amopt.d['models'] = pdb_edit.split_pdb(amopt.d['nmr_model_in'],
+                                                   directory=nmr_mdir,
+                                                   strip_hetatm=True,
+                                                   same_size=True)
+            logger.info('NMR ensemble contained {0} models'.format(len(amopt.d['models'])))
 
         # Modelling business happens here
-        if (amopt.d['import_models'] or amopt.d['make_frags'] or amopt.d['make_models'] or
-                (amopt.d['nmr_model_in'] and not amopt.d['nmr_remodel'])):
-            self.modelling(amopt.d, rosetta_modeller)
-            amopt.write_config_file()
+        self.modelling(amopt.d, rosetta_modeller)
+        amopt.write_config_file()
 
         # Ensembling business next
         if amopt.d['make_ensembles']:
@@ -161,7 +168,6 @@ class Ample(object):
         return
 
     def ensembling(self, optd):
-
         if optd['import_ensembles']:
             ensembler.import_ensembles(optd)
         elif optd['ideal_helices']:
@@ -230,6 +236,10 @@ class Ample(object):
         return
 
     def modelling(self, optd, rosetta_modeller=None):
+        if not (optd['import_models'] or optd['make_frags'] or optd['make_models'] or optd['nmr_remodel']): return
+        # Set the direcotry where the final models will end up
+        optd['models_dir'] = os.path.join(optd['work_dir'],'models')
+        if not os.path.isdir(optd['models_dir']): os.mkdir(optd['models_dir'])
         if not rosetta_modeller:
             rosetta_modeller = options_processor.process_rosetta_options(optd)
         # Make Rosetta fragments
@@ -285,17 +295,12 @@ class Ample(object):
         if optd['make_models'] and optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
 
-        # if NMR process models first
-        # break here for NMR (frags needed but not modelling
-        if optd['nmr_model_in'] and not optd['nmr_remodel']:
-            optd['models'] = pdb_edit.prepare_nmr_model(
-                optd['nmr_model_in'], optd['models_dir'])
-        elif optd['make_models']:
+        if optd['make_models']:
             # Make the models
             logger.info('----- making Rosetta models--------')
             if optd['nmr_remodel']:
                 try:
-                    optd['models'] = rosetta_modeller.nmr_remodel(nmr_model_in=optd['nmr_model_in'],
+                    optd['models'] = rosetta_modeller.nmr_remodel(models=optd['models'],
                                                                   ntimes=optd['nmr_process'],
                                                                   alignment_file=optd['alignment_file'],
                                                                   remodel_fasta=optd['nmr_remodel_fasta'],

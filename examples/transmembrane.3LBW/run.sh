@@ -4,29 +4,20 @@
 # Script to run Transmembrane test case
 #
 
-# Set path to include where shelxe is located
-export PATH=\
-/opt/shelx:\
-$PATH
-
 # Need to specify where rosetta is located
 rosetta_dir=/opt/rosetta_2014.35.57232_bundle
 
-# If you are using rosetta <= 3.5 then you need to specify the
-# location of the blast root directory and the nr database directory.
-# (later versions of rosetta will install these for you)
-# If so, add the following flags to the script
-# -blast_dir /Applications/Blast/blast-2.2.26 \
-# -nr /opt/nr/nr \
-
 $CCP4/bin/ample \
 -name 3LBW \
--mtz 3LBW.sf.mtz   \
--fasta 3LBW.fasta  \
+-mtz input/3LBW.sf.mtz   \
+-fasta input/3LBW.fasta  \
 -rosetta_dir $rosetta_dir \
+-frags_3mers input/3LBW.200.3mers  \
+-frags_9mers input/3LBW.200.9mers  \
 -transmembrane True \
--use_homs False \
--frags_3mers 3LBW.200.3mers  \
--frags_9mers 3LBW.200.9mers  \
+-contact_file input/c5313da6-ce36-47ea-81ee-79925b2fa836.metapsicov.stage1.txt \
+-nmodels 20 \
+-contact_format metapsicov \
 -nproc 5 \
+-do_mr False
 
