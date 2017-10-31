@@ -46,8 +46,8 @@ def keyword_dict(ensemble_pdb, name, amoptd, extra_options={}):
                 'shelxe_rebuild_arpwarp',
                 'shelxe_rebuild_buccaneer',
                 'SIGF',
-                'use_arpwarp',
-                'use_buccaneer',
+                'refine_rebuild_arpwarp',
+                'refine_rebuild_buccaneer',
                 'use_shelxe',
                 ]
     
@@ -95,9 +95,9 @@ def mrbump_keyword_file(odict, fixed_iden=0.6):
     mrs += 'MDLS False\n'
     mrs += 'MDLU True\n'
     mrs += 'UPDATE False\n'
-    mrs += 'BUCC  {0}\n'.format(odict['use_buccaneer'])
+    mrs += 'BUCC  {0}\n'.format(odict['refine_rebuild_buccaneer'])
     mrs += 'BCYCLES  {0}\n'.format(odict['buccaneer_cycles'])
-    mrs += 'ARPWARP  {0}\n'.format(odict['use_arpwarp'])
+    mrs += 'ARPWARP  {0}\n'.format(odict['refine_rebuild_arpwarp'])
     mrs += 'ACYCLES  {0}\n'.format(odict['arpwarp_cycles'])
     mrs += 'SHELXE  {0}\n'.format(odict['use_shelxe'])
     mrs += 'SHLXEXE  {0}\n'.format(odict['shelxe_exe'])

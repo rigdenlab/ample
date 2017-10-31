@@ -95,7 +95,7 @@ def process_options(optd):
         optd['mr_sequence'] = optd['fasta']
 
     # Process the fasta file and run all the checks on the sequence
-    sequence_util.process_fasta(optd)
+    sequence_util.process_fasta(optd, canonicalise=True)
 
     #
     # Not sure if name actually required - see make_fragments.pl
@@ -113,6 +113,7 @@ def process_options(optd):
     #
     ###############################################################################
 
+    #if False:
     if optd['contact_file'] or optd['bbcontacts_file'] or not optd["no_contact_prediction"]:
         contact_util.ContactUtil.check_options(optd)
         optd['use_contacts'] = True
@@ -205,8 +206,7 @@ def process_options(optd):
 
     # NMR Checks
     if optd['nmr_model_in']:
-        msg = "Using nmr_model_in file: {0}".format(optd['nmr_model_in'])
-        logger.info(msg)
+        logger.info("Using nmr_model_in file: {0}".format(optd['nmr_model_in']))
         if not os.path.isfile(optd['nmr_model_in']):
             msg = "nmr_model_in flag given, but cannot find file: {0}".format(
                 optd['nmr_model_in'])
@@ -223,18 +223,16 @@ def process_options(optd):
             msg = "NMR model will be remodelled with ROSETTA using the sequence from: {0}".format(
                 optd['nmr_remodel_fasta'])
             logger.info(msg)
-
-            if not optd['frags_3mers'] and optd['frags_9mers']:
+            if not (optd['frags_3mers'] and optd['frags_9mers']):
                 optd['make_frags'] = True
                 msg = "nmr_remodel - will be making our own fragment files"
                 logger.info(msg)
             else:
-                if not os.path.isfile(optd['frags_3mers']) or not os.path.isfile(optd['frags_9mers']):
+                if not (os.path.isfile(optd['frags_3mers']) and os.path.isfile(optd['frags_9mers'])):
                     msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(
                         optd['frags_3mers'], optd['frags_9mers'])
                     exit_util.exit_error(msg)
                 optd['make_frags'] = False
-
         else:
             optd['make_frags'] = False
             optd['make_models'] = False
@@ -335,11 +333,12 @@ def process_options(optd):
         optd['shelxe_rebuild_buccaneer'] = True
 
     # Model building programs
-    if optd['use_arpwarp']:
+    if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
         if not (os.environ.has_key('warpbin') and os.path.isfile(os.path.join(os.environ['warpbin'], "auto_tracing.sh"))):
             logger.warn(
                 'Cannot find arpwarp script! Disabling use of arpwarp.')
-            optd['use_arpwarp'] = False
+            optd['refine_rebuild_arpwarp'] = False
+            optd['shelxe_rebuild_arpwarp'] = False
         else:
             logger.info('Using arpwarp script: {0}'.format(
                 os.path.join(os.environ['warpbin'], "auto_tracing.sh")))
@@ -469,12 +468,12 @@ def process_options(optd):
         logger.info('NOT making Rosetta Models')
 
         # Print out what is being done
-    if optd['use_buccaneer']:
+    if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
         logger.info('Rebuilding in Bucaneer')
     else:
         logger.info('Not rebuilding in Bucaneer')
 
-    if optd['use_arpwarp']:
+    if optd['refine_rebuild_buccaneer'] or optd['shelxe_rebuild_buccaneer']:
         logger.info('Rebuilding in ARP/wARP')
     else:
         logger.info('Not rebuilding in ARP/wARP')

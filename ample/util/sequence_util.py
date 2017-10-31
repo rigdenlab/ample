@@ -271,7 +271,7 @@ class Sequence(object):
     def __str__(self):
         return self.__repr__() + os.linesep + self.fasta_str()
 
-def process_fasta(amoptd):
+def process_fasta(amoptd, canonicalise=False):
     # Check we can find the input fasta
     if not os.path.exists(str(amoptd['fasta'])):
         msg = 'Cannot find fasta file: {0}'.format(amoptd['fasta'])
@@ -279,7 +279,7 @@ def process_fasta(amoptd):
     
     # Reformat to what we need
     logging.debug('Parsing FASTA file')
-    try: fp = Sequence(fasta=amoptd['fasta'])
+    try: fp = Sequence(fasta=amoptd['fasta'], canonicalise=canonicalise)
     except Exception as e:
         msg = "Error parsing FASTA file: {0}\n\n{1}".format(amoptd['fasta'],e.message)
         exit_util.exit_error(msg)

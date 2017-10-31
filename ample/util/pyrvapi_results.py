@@ -39,6 +39,7 @@ import logging
 import json
 import os
 import subprocess
+import traceback
 import urlparse
 import uuid
 
@@ -103,8 +104,8 @@ class AmpleOutput(object):
         
         
         # Process variables from amopt
-        ccp4i2_xml = amopt['ccp4i2_xml']
-        rvapi_document = amopt['rvapi_document'] if 'rvapi_document' in amopt and amopt['rvapi_document'] else None
+        ccp4i2_xml = amopt.get('ccp4i2_xml')
+        rvapi_document = amopt.get('rvapi_document')
         work_dir = amopt['work_dir']
         run_dir = amopt['run_dir']
         no_gui = amopt['no_gui']
@@ -158,7 +159,6 @@ class AmpleOutput(object):
                 # layout = 4 if i1 else 7,
                 )
                 API.document.newdoc(**kwargs)
-            
         if own_gui:
             # We start our own browser
             jsrview = os.path.join(os.environ["CCP4"], "libexec", "jsrview")
@@ -183,7 +183,7 @@ class AmpleOutput(object):
         if self.ccp4i2 or not self.summary_tab_id: return
         if not self._got_mrbump_results(ample_dict): return
         
-        mrb_results = ample_dict['mrbump_results']
+        mrb_results = ample_dict.get('mrbump_results')
         if mrb_results == self.old_mrbump_results: return
         self.old_mrbump_results = mrb_results
         
@@ -228,7 +228,7 @@ class AmpleOutput(object):
             # Create pending section until we have data to show
             self.summary_tab_pending_sec_id = 'summary_tab_pending'
             pyrvapi.rvapi_add_section(self.summary_tab_pending_sec_id, "Processing...", self.summary_tab_id, 0, 0, 1, 1, True)
-            rstr = "<p>No results are currently available. Please check back later. when your structure will have been solved. Honest.</p>"
+            rstr = "<p>No results are currently available. Please check back later.</p>"
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_pending_sec_id, 0, 0, 1, 1)
         return
 
@@ -237,9 +237,8 @@ class AmpleOutput(object):
         # Summary Tab
         #
         self._create_summary_tab()
-        
         if not (ample_dict['single_model_mode'] or ample_dict['homologs'] or ample_dict['ideal_helices']) and \
-            bool(ample_dict['ensembles_data']) and not self.summary_tab_ensemble_sec_id:
+            bool(ample_dict.get('ensembles_data')) and not self.summary_tab_ensemble_sec_id:
             
             self.rm_pending_section()
 
@@ -247,37 +246,33 @@ class AmpleOutput(object):
             self.summary_tab_ensemble_sec_id = "ensembles"
             pyrvapi.rvapi_add_section(self.summary_tab_ensemble_sec_id, "Ensembles", self.summary_tab_id, 0, 0, 1, 1, True)
             
-            # Get the ensembling data
-            d = ensembler.collate_cluster_data(ensembles_data)
-            clusters = d['clusters']
-            
-            rstr = ""
-            rstr += "Ensemble Results<br/>"
-            rstr += "----------------<br/><br/>"
-            rstr += "Cluster method: {0}<br/>".format(d['cluster_method'])
-            rstr += "Cluster score type: {0}<br/>".format(d['cluster_score_type'])
-            rstr += "Truncation method: {0}<br/>".format(d['truncation_method'])
-            rstr += "Percent truncation: {0}<br/>".format(d['percent_truncation'])
-            rstr += "Side-chain treatments: {0}<br/>".format(d['side_chain_treatments'])
-            rstr += "Number of clusters: {0}<br/><br/>".format(len(clusters.keys()))
-            rstr += "Generated {0} ensembles<br/><br/>".format(len(ensembles_data))
-            pyrvapi.rvapi_add_text(rstr, self.summary_tab_ensemble_sec_id, 0, 0, 1, 1)
-            
-            ensemble_table = "ensemble_table"
-            pyrvapi.rvapi_add_table1(self.summary_tab_ensemble_sec_id + "/" + ensemble_table, "Ensembling Results", 1, 0, 1, 1, True)
-            # for cluster_num in sorted(clusters.keys()):
-            #     rstr += "\n"
-            #     rstr += "Cluster {0}\n".format(cluster_num)
-            #     rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
-            #     rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
-            #     rstr += "\n"
-            #     tdata = cluster_table_data(clusters, cluster_num)
-            #     rstr += tableFormat.pprint_table(tdata)        
-            # 
-            cluster_num = 1
-            tdata = ensembler.cluster_table_data(clusters, cluster_num, d['side_chain_treatments'])
-            self.fill_table(ensemble_table, tdata, tooltips=self._ensemble_tooltips)
-        
+            if ample_dict['import_ensembles']:
+                rstr = 'Imported {0} ensembles.'.format(len(ensembles_data))
+                pyrvapi.rvapi_add_text(rstr, self.summary_tab_ensemble_sec_id, 0, 0, 1, 1)
+            else:
+                # Get the ensembling data
+                d = ensembler.collate_cluster_data(ensembles_data)
+                clusters = d['clusters']
+                
+                rstr = ""
+                rstr += "Ensemble Results<br/>"
+                rstr += "----------------<br/><br/>"
+                rstr += "Cluster method: {0}<br/>".format(d['cluster_method'])
+                rstr += "Cluster score type: {0}<br/>".format(d['cluster_score_type'])
+                rstr += "Truncation method: {0}<br/>".format(d['truncation_method'])
+                rstr += "Percent truncation: {0}<br/>".format(d['percent_truncation'])
+                rstr += "Side-chain treatments: {0}<br/>".format(d['side_chain_treatments'])
+                rstr += "Number of clusters: {0}<br/><br/>".format(len(clusters.keys()))
+                rstr += "Generated {0} ensembles<br/><br/>".format(len(ensembles_data))
+                pyrvapi.rvapi_add_text(rstr, self.summary_tab_ensemble_sec_id, 0, 0, 1, 1)
+                
+                ensemble_table = "ensemble_table"
+                pyrvapi.rvapi_add_table1(self.summary_tab_ensemble_sec_id + "/" + ensemble_table, "Ensembling Results", 1, 0, 1, 1, True)
+                tdata = []
+                for i, cluster_num in enumerate(sorted(d['clusters'].keys())):
+                    header = True if i == 0 else False
+                    tdata += ensembler.cluster_table_data(clusters, cluster_num, d['side_chain_treatments'], header=header)
+                self.fill_table(ensemble_table, tdata, tooltips=self._ensemble_tooltips)
         #
         # MRBUMP Results
         #
@@ -290,7 +285,7 @@ class AmpleOutput(object):
             self.summary_tab_results_sec_table_id = "mrbump_table"
             pyrvapi.rvapi_add_table1(self.summary_tab_results_sec_id + "/" + self.summary_tab_results_sec_table_id, "MRBUMP Results", 1, 0, 1, 1, True)
         
-        mrb_results = ample_dict['mrbump_results']
+        mrb_results = ample_dict.get('mrbump_results')
         if not mrb_results == self.old_mrbump_results:
             # We set old_mrbump_results when we create the results_tab
             self.fill_table(self.summary_tab_results_sec_table_id,
@@ -309,21 +304,32 @@ class AmpleOutput(object):
         return self.summary_tab_id
 
     def display_results(self, ample_dict):
+        """Display the results of an AMPLE run using pyrvapi
+        
+        Parameters
+        ----------
+        ample_dict : dict
+          An AMPLE job dictionary
+          
+        """
         if not (pyrvapi or ('no_gui' in ample_dict and ample_dict['no_gui'])): return
-        if not self.header:
-            pyrvapi.rvapi_add_header("AMPLE Results")
-            self.header = True
-        if not self.ccp4i2: self.create_log_tab(ample_dict)
-        self.create_summary_tab(ample_dict)
-        self.create_results_tab(ample_dict)
-        pyrvapi.rvapi_flush()
+        try:
+            if not self.header:
+                pyrvapi.rvapi_add_header("AMPLE Results")
+                self.header = True
+            if not self.ccp4i2: self.create_log_tab(ample_dict)
+            self.create_summary_tab(ample_dict)
+            self.create_results_tab(ample_dict)
+            pyrvapi.rvapi_flush()
+        except Exception as e:
+            logger.critical("Error displaying results!\n{0}".format(traceback.format_exc()))
         return True
 
     def ensemble_pdb(self, mrbump_result, ensembles_data):
         try:
             ensemble_dict = None
             for e in ensembles_data:
-                if e['name'] == mrbump_result['ensemble_name']:
+                if e['name'] == mrbump_result.get('ensemble_name'):
                     ensemble_dict = e
                     break
             if os.path.isfile(ensemble_dict['ensemble_pdb']):
@@ -364,7 +370,7 @@ class AmpleOutput(object):
         return
     
     def _got_mrbump_results(self, ample_dict):
-        return 'mrbump_results' in ample_dict and ample_dict['mrbump_results'] and len(ample_dict['mrbump_results'])
+        return ample_dict.get('mrbump_results') and len(ample_dict['mrbump_results'])
 
     def results_section(self, results_tab_id, mrb_results, ensemble_results, section_title):
         #
@@ -593,7 +599,7 @@ class AmpleOutput(object):
                 'results' : [] }
         
         nresults = 0
-        if 'mrbump_results' in amopt and amopt['mrbump_results']:
+        if bool(amopt.get('mrbump_results')):
             mrb_results = amopt['mrbump_results']
             nresults = min(3, len(mrb_results))
         if nresults > 0:
@@ -611,6 +617,8 @@ class AmpleOutput(object):
             
 if __name__ == "__main__":
     import copy, sys, time
+    logging.basicConfig(level=logging.DEBUG)
+    
     pklfile = sys.argv[1]
     ample_dict = ample_util.read_amoptd(pklfile)
     
@@ -618,9 +626,9 @@ if __name__ == "__main__":
     ample_dict['ample_log'] = os.path.abspath(__file__)
 
     report_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
-    AR = AmpleOutput(ample_dict, report_dir=report_dir, own_gui=True, xml=None)
-    #AR.display_results(ample_dict)
-     
+    AR = AmpleOutput(ample_dict, own_gui=True)
+    AR.display_results(ample_dict)
+    
     view1_dict = copy.copy(ample_dict)
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
