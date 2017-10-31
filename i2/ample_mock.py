@@ -22,7 +22,8 @@ parser.add_argument('-pkl')
 parser.add_argument('-ccp4i2_xml')
 parser.add_argument('-rvapi_document', default=None)
 parser.add_argument('-own_gui', default=False, action='store_true')
-opt, _ = parser.parse_known_args()
+opt, other = parser.parse_known_args()
+logging.debug("Script {0} got known arguments: {1} unknown {2}".format(sys.argv[0], opt, other))
 
 # Copy in amopt pkl
 ample_pkl = opt.pkl
@@ -57,6 +58,7 @@ if opt.rvapi_document:
     od['rvapi_document'] = opt.rvapi_document
     work_dir = os.getcwd()
 od['work_dir'] = work_dir
+if opt.ccp4i2_xml: logging.info("Setting ccp4i2_xml: {0}".format(opt.ccp4i2_xml))
 od['ccp4i2_xml'] = opt.ccp4i2_xml
 
 with open(os.path.join(work_dir,AMPLE_PKL), 'w') as w: cPickle.dump(od, w)
