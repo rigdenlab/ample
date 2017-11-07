@@ -88,7 +88,7 @@ class SubselectionAlgorithm(object):
 
         """
         sorted_indices = SubselectionAlgorithm._numpify(data).argsort()[::-1]
-        point = numpy.ceil(sorted_indices.shape[0] * cutoff)
+        point = numpy.ceil(sorted_indices.shape[0] * cutoff).astype(numpy.int)
         keep = sorted_indices[:point]
         throw = sorted_indices[point:]
         return keep.tolist(), throw.tolist()
@@ -123,6 +123,34 @@ class SubselectionAlgorithm(object):
         data_scaled = data / numpy.mean(data)
         keep = numpy.where(data_scaled >= cutoff)[0]
         throw = numpy.where(data_scaled < cutoff)[0]
+        return keep.tolist(), throw.tolist()
+
+    @staticmethod
+    def ignore(data):
+        """"A subselection algorithm to keep all
+
+        Description
+        -----------
+        This algorithm doesn't do anything except mimic others.
+
+        It will not discard any decoys and keep all!!
+
+        Parameters
+        ----------
+        data : list, tuple
+           A 1D array of scores
+
+        Returns
+        -------
+        list
+           The decoy indices to keep
+        list
+           The decoy indices to throw
+
+        """
+        data = SubselectionAlgorithm._numpify(data)
+        keep = numpy.where(data >= 0)[0]
+        throw = numpy.where(data < 0)[0]
         return keep.tolist(), throw.tolist()
 
 
@@ -237,7 +265,8 @@ class ContactUtil(object):
            The subselection mode to use
             * scaled: keep the decoys with scaled scores of >= 0.5
             * linear: keep the top half of decoys
-            * cutoff: Keep all decoys with satisfaction scores of >= 0.287
+            * cutoff: keep all decoys with satisfaction scores of >= 0.287
+            * ignore: keep all decoys
         subdistance_to_neighbor : int, optional
            The minimum distance between neighboring residues in the subselection [default: 24]
         **kwargs
@@ -246,7 +275,7 @@ class ContactUtil(object):
         Returns
         -------
         list
-           A list of paths to the sub-selected decoys
+           A 2-D list of paths and scores of all sub-selected decoys
 
         """
         from ample.util import ample_util
@@ -268,19 +297,16 @@ class ContactUtil(object):
         tmp_contact_file = tempfile.NamedTemporaryFile(delete=False)
         conkit.io.write(tmp_contact_file.name, 'casprr', contact_map)
 
-        # Construct the job scripts
-        job_scripts = []
-        log_files = []
         executable = 'conkit-precision.bat' \
             if sys.platform.startswith('win') \
             else 'conkit-precision'
+
+        job_scripts, log_files = [], []
         for decoy in decoys:
             decoy_name = os.path.splitext(os.path.basename(decoy))[0]
             contact_name = os.path.splitext(
-                os.path.basename(self.contact_file))[0]
-            prefix = '{0}_{1}_'.format(contact_name, decoy_name)
-            script = tempfile.NamedTemporaryFile(
-                prefix=prefix, suffix=ample_util.SCRIPT_EXT, delete=False)
+                os.path.basename(self.contact_file)
+            )[0]
 
             # TODO: Get the log file business working properly
             cmd = [executable, '-d', subdistance_to_neighbor]
@@ -290,11 +316,16 @@ class ContactUtil(object):
                 cmd += [decoy, decoy_format]
             cmd += [self.sequence_file, self.sequence_format]
             cmd += [tmp_contact_file.name, 'casprr']
+
+            prefix = '{0}_{1}_'.format(contact_name, decoy_name)
+            script = tempfile.NamedTemporaryFile(prefix=prefix, suffix=ample_util.SCRIPT_EXT,
+                                                 delete=False)
             script.write(
                 ample_util.SCRIPT_HEADER + os.linesep
                 + " ".join(map(str, cmd)) + os.linesep
             )
             script.close()
+
             os.chmod(script.name, 0o777)
             job_scripts.append(script.name)
             log_files.append(os.path.splitext(script.name)[0] + ".log")
@@ -319,12 +350,12 @@ class ContactUtil(object):
             raise RuntimeError(msg)
 
         scores = numpy.zeros(len(decoys))
-        for i, (decoy, log, script) in enumerate(zip(decoys, log_files, job_scripts)):
+        data = zip(decoys, log_files, job_scripts)
+        for i, (decoy, log, script) in enumerate(data):
             for line in open(log, 'r'):
                 if line.startswith('Precision score'):
                     scores[i] = float(line.strip().split()[-1])
-            os.unlink(log)
-            os.unlink(script)
+            map(os.remove, [script, log])
 
         logger.info('Model selection mode: %s', mode)
         if mode == 'scaled':
@@ -332,6 +363,8 @@ class ContactUtil(object):
         elif mode == 'linear':
             keep, throw = SubselectionAlgorithm.linear(scores)
         elif mode == 'cutoff':
+            keep, throw = SubselectionAlgorithm.cutoff(scores)
+        elif mode == 'ignore':
             keep, throw = SubselectionAlgorithm.cutoff(scores)
         else:
             msg = "Unknown sub-selection mode: {0}".format(mode)
@@ -345,8 +378,7 @@ class ContactUtil(object):
 
         logger.info('Excluding %d decoy(s) from ensembling', len(throw))
 
-        # TODO: return the scores so we can store them in AMPLE dict
-        return tuple([decoys[i] for i in keep])
+        return [(decoys[i], scores[i]) for i in keep]
 
     def summarize(self, plot_file, structure_file=None, structure_format=None, native_cutoff=8):
         """Process the contact file etc
@@ -694,3 +726,14 @@ class ContactUtil(object):
     @property
     def do_contact_analysis(self):
         return not self.require_contact_prediction
+
+
+def _create_parsers():
+    DISABLE = ["casprr", "flib", "genericstructure"]
+    parsers = conkit.io.CONTACT_FILE_PARSERS.keys()
+    for d in DISABLE:
+        parsers.pop(parsers.index(d))
+    return sorted(parsers)
+
+
+CONTACT_FILE_PARSERS = _create_parsers()

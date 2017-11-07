@@ -83,6 +83,24 @@ class TestSubselectionAlgorithm(unittest.TestCase):
         self.assertEqual([0], keep)
         self.assertEqual([1, 2, 3], throw)
 
+    def test_ignore_1(self):
+        data = [1.0, 0.6, 0.5, 0.45, 0.4, 0.3, 0.2, 0.1]
+        keep, throw = contact_util.SubselectionAlgorithm.ignore(data)
+        self.assertEqual([0, 1, 2, 3, 4, 5, 6, 7], keep)
+        self.assertEqual([], throw)
+
+    def test_ignore_2(self):
+        data = [1.0, 1.0, 1.0, 1.0]
+        keep, throw = contact_util.SubselectionAlgorithm.ignore(data)
+        self.assertEqual([0, 1, 2, 3], keep)
+        self.assertEqual([], throw)
+
+    def test_ignore_3(self):
+        data = [100.0, 1.0, 1.0, 1.0]
+        keep, throw = contact_util.SubselectionAlgorithm.ignore(data)
+        self.assertEqual([0, 1, 2, 3], keep)
+        self.assertEqual([], throw)
+
 
 class TestContactUtil(unittest.TestCase):
 
