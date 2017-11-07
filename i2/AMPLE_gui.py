@@ -33,43 +33,7 @@ from multiprocessing import cpu_count
 
 class AMPLE_gui(CTaskWidget):
     """
-    
-    FASTA
-    MTZ
-    PROTEIN TYPE
-    HAVE MODELS? YES/NO
-    
-    ============================================
-    YES MODELS - subFrame
-    * MODEL TYPE
-    ** AB INITIO
-    ** HOMOLOGS
-    ** SINGLE MODEL
-    ** NMR ENSEMBLE
-    
-    IF SINGLE MODEL:
-    * SCORE FILE
-    ELIF NMR ENSEMBLE:
-    * RESTRAINTS FILE  (OPT)
-    =============================================
-    NO MODELS - subFrane
-    * ROSETTA_DIR
-    * FRAGS 3
-    * FRAGS 9
-    * RESTRAINTS FILE (OPT)
-    =============================================
-    
-    
-    ADVANCED OPTIONS
-    
-    Need code to determine what type of models we've been given.
-    Variables:
-    AMPLE_PROTEIN_TYPE: Globular/Transmembrane
-    AMPLE_EXISTING_MODELS: T/F
-    AMPLE_MODEL_TYPE: abinitio, multiple_homologs, single_homolog, nmr_ensemble
-    #GOT AMPLE_RESTRAINTS_FILE: PATH
-    AMPLE_SCORE_FILE: PATH
-    
+    Draw the AMPLE gui
     """
 
     # Subclass CTaskWidget to give specific task window
@@ -81,7 +45,6 @@ class AMPLE_gui(CTaskWidget):
     DESCRIPTION = '''This task is for running Molecular Replacement with unconventional models'''
     MGDISPLAYFILES = ['XYZIN']
     WHATNEXT = ['coot_rebuild']
-
     def __init__(self,parent):
         CTaskWidget.__init__(self,parent)
 
@@ -131,7 +94,9 @@ class AMPLE_gui(CTaskWidget):
         self.createLine(['advice', 'Fragments should be created on the ROBETTA SERVER: <a href="http://robetta.bakerlab.org">http://robetta.bakerlab.org</a>'])
         self.createLine( ['widget', 'AMPLE_ROSETTA_FRAGS3'])
         self.createLine( ['widget', 'AMPLE_ROSETTA_FRAGS9'])
-        self.createLine( ['widget', 'AMPLE_RESTRAINTS_FILE'])
+        self.setContactFileOptions()
+        self.createLine( ['widget', 'AMPLE_CONTACT_FILE'])
+        self.createLine( ['subtitle' ,'What is the format of the contact file?', 'widget', 'AMPLE_CONTACT_FORMAT'])
         self.closeSubFrame()
         
         # Depending on the AMPLE_RUN_MODE we need to set certain files as required or not
@@ -148,6 +113,15 @@ class AMPLE_gui(CTaskWidget):
         self.closeSubFrame()
         
         self.drawOptions()
+        
+    def setContactFileOptions(self):
+        import conkit.io
+        parsers = sorted(conkit.io.CONTACT_FILE_PARSERS.keys())
+        self.container.inputData.AMPLE_CONTACT_FORMAT.setQualifiers({'enumerators' : parsers,
+                                                                     'menuText' : parsers} )
+        # Below doesn't seem to work
+        self.container.inputData.AMPLE_CONTACT_FORMAT.setDefault(parsers[0])
+        return
     
     def drawOptions(self):
         folder = self.openFolder(folderFunction='inputData',title='Advanced Options')
@@ -165,7 +139,6 @@ class AMPLE_gui(CTaskWidget):
         
         x = self.container.inputData.AMPLE_EXTRA_FLAGS.qualifiers()['guiLabel']
         self.createLine(['subtitle', x, 'widget', '-guiMode','multiLine', 'AMPLE_EXTRA_FLAGS' ])
-        
             
     def toggleRosettaFiles(self):
         if self.container.inputData.AMPLE_EXISTING_MODELS == 'False'  and self.container.inputData.AMPLE_MODEL_GENERATION == 'rosetta' or \
