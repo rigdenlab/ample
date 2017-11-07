@@ -732,7 +732,8 @@ def _create_parsers():
     DISABLE = ["casprr", "flib", "genericstructure"]
     parsers = conkit.io.CONTACT_FILE_PARSERS.keys()
     for d in DISABLE:
-        parsers.pop(parsers.index(d))
+        if d in parsers:
+            parsers.pop(parsers.index(d))
     return sorted(parsers)
 
 
