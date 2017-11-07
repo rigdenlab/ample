@@ -726,3 +726,14 @@ class ContactUtil(object):
     @property
     def do_contact_analysis(self):
         return not self.require_contact_prediction
+
+
+def _create_parsers():
+    DISABLE = ["casprr", "flib", "genericstructure"]
+    parsers = conkit.io.CONTACT_FILE_PARSERS.keys()
+    for d in DISABLE:
+        parsers.pop(parsers.index(d))
+    return sorted(parsers)
+
+
+CONTACT_FILE_PARSERS = _create_parsers()
