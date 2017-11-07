@@ -66,10 +66,10 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         std_models_dir = os.path.join(self.work_dir, "std_models")
         os.mkdir(std_models_dir)
 
-        std_model = ample_util.filename_append(
-            models[0], 'std', std_models_dir)
-        pdb_edit.standardise(
-            pdbin=models[0], pdbout=std_model, del_hetatm=True)
+        std_model = ample_util.filename_append(models[0], 'std',
+                                               std_models_dir)
+        pdb_edit.standardise(pdbin=models[0], pdbout=std_model,
+                             del_hetatm=True)
         std_models = [std_model]
         logger.info('Standardised input model: %s', std_models[0])
 
@@ -82,10 +82,12 @@ class SingleModelEnsembler(_ensembler.Ensembler):
             os.mkdir(truncate_dir)
 
         # Read all the scores into a per residue dictionary
-        assert len(
-            truncation_scorefile_header) > 1, "At least two column labels are required"
+        assert len(truncation_scorefile_header) > 1, \
+            "At least two column labels are required"
         residue_scores = self._read_scorefile(truncation_scorefile)
         residue_key = truncation_scorefile_header.pop(0).lower()
+        truncation_scorefile_header = map(str.strip,
+                                          truncation_scorefile_header)
         assert all(h in residue_scores[0] for h in truncation_scorefile_header), \
             "Not all column labels are in your CSV file"
 
@@ -95,8 +97,8 @@ class SingleModelEnsembler(_ensembler.Ensembler):
                                                              score_key,
                                                              residue_scores)
 
-            score_truncate_dir = os.path.join(
-                truncate_dir, "{0}".format(score_key))
+            score_truncate_dir = os.path.join(truncate_dir,
+                                              "{}".format(score_key))
             if not os.path.isdir(score_truncate_dir):
                 os.mkdir(score_truncate_dir)
 
@@ -109,7 +111,6 @@ class SingleModelEnsembler(_ensembler.Ensembler):
                                                              truncation_pruning=truncation_pruning,
                                                              residue_scores=zipped_scores):
 
-                # Create Ensemble object
                 pre_ensemble = _ensembler.Ensemble()
                 pre_ensemble.num_residues = truncation.num_residues
                 pre_ensemble.truncation_dir = truncation.directory
@@ -136,11 +137,9 @@ class SingleModelEnsembler(_ensembler.Ensembler):
                   'truncation_pruning': amoptd['truncation_pruning'],
                   'truncation_scorefile': amoptd['truncation_scorefile'],
                   'truncation_scorefile_header': amoptd['truncation_scorefile_header']}
-        # strip out any that are None
         kwargs = {k: v for k, v in kwargs.iteritems() if v is not None}
         return self.generate_ensembles(models, **kwargs)
 
-    # staticmethod so that we can test without instantiating an Ensembler
     @staticmethod
     def _generate_residue_scorelist(residue_key, score_key, scores):
         """Generate a zipped list of residue indexes and corresponding scores
@@ -155,7 +154,6 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         assert score_key in scores[0], "Cannot find score key in scoresfile"
         return [(i[residue_key], i[score_key]) for i in scores]
 
-    # staticmethod so that we can test without instantiating an Ensembler
     @staticmethod
     def _read_scorefile(scorefile):
         """
@@ -163,4 +161,6 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         
         :returns: list of per residue dictionaries containing column data
         """
-        return pd.read_csv(scorefile).T.to_dict().values()
+        df = pd.read_csv(scorefile)
+        df.rename(columns=lambda x: x.strip(), inplace=True)
+        return df.T.to_dict().values()
