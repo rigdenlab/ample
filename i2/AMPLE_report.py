@@ -87,7 +87,7 @@ class AMPLE_report(Report):
             print "EXCEPTION: {0}".format(e)
             return
 
-    def report_section(self, e1, r0):
+    def report_section(self, e1, r0, sort=False):
         """
         
         """
@@ -97,13 +97,13 @@ class AMPLE_report(Report):
         cou = 0
         #print("Processing tag %s id %s\n%s" % (e1.tag, e1.get('id'),ET.tostring(e1)))
         for e2 in e1:
-#             row = e2.get('row', '_')
-#             col = e2.get('col', '_')
+            row = e2.get('row', '_')
+            col = e2.get('col', '_')
+            if row.isdigit() : row = int(row)
+            if col.isdigit() : col = int(col)
 #             if e2.get('id') and row.isdigit() and col.isdigit():
-#             if e2.get('id') and (row.isdigit() and col.isdigit()):
             if e2.get('id')  or e2.tag == 'text':
-                #grid.append((int(row), int(col), e2))
-                elems.append(e2)
+                elems.append([row, column, e2])
                 if e2.tag == 'table':
                     cou += 1
             elif e2.tag == 'name':
@@ -114,19 +114,22 @@ class AMPLE_report(Report):
             #print "GOT ELEMS ",[g.get('id') for g in elems],title
             r1 = r0.addFold(label=title, initiallyOpen=state)
             #for row, col, e2 in sorted(grid):
-            #for row, col, e2 in grid:
+            if sorted: elems = sorted(elems)
             for e2 in elems:
+                id2 = e2.get('id')
                 if e2.tag == 'section':
                     self.report_section(e2, r1)
                 elif e2.tag == 'table':
-                    id2 = e2.get('id')
                     if id2 and id2 in self.e1_dict:
+                        if id2 == 'mrbump_table':
+                            r1.append("The table below details the Molecular Replacement results from MrBUMP")
                         if cou > 1:
                             r1.append(e2.findtext('legend').strip())
                         r1.append(ET.tostring(self.e1_dict[id2]))
-                # jmht
-                elif False and e2.tag == 'text':
-                    for t in e2.itertext(): r1.append(t)
+                # jmht - quick hack to get ensembles text
+                elif e2.tag == 'text' and e2.get('id') == 'ensembles':
+                    for i, t in enumerate(e2.itertext()):
+                        if i > 1: r1.append(t)
 
 if __name__ == '__main__':
 

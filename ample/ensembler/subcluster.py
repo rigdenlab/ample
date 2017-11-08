@@ -353,8 +353,7 @@ where inp_list.dat  contains:
             raise RuntimeError("Unrecognised metric: {0}".format(metric))
         
         #m = [[parity for _ in range(nmodels)] for _ in range(nmodels)]
-        m = numpy.full([nmodels, nmodels], parity)
-        
+        m = numpy.full([nmodels, nmodels], parity, dtype=numpy.float)
         for i, model in enumerate(models):
             mname = os.path.basename(model)
             gesamt_out = '{0}_gesamt.out'.format(mname)
@@ -380,26 +379,20 @@ where inp_list.dat  contains:
                 except KeyError:
                     rmsd = RMSD_MAX
                     qscore = QSCORE_MIN
-                
                 if metric == 'rmsd':
                     score = rmsd
                 elif metric == 'qscore':
                     score = qscore
                 else: 
                     raise RuntimeError("Unrecognised metric: {0}".format(metric))
-                
-                m[i][j] = score
-                
+                m[i,j] = score
             if purge_all: os.unlink(gesamt_out)
-                    
+        
         # Copy upper half of matrix to lower
-        for x in range(nmodels):
-            for y in range(nmodels):
-                if x == y: continue
-                m[y][x] = m[x][y]
-                
+        i_lower = numpy.tril_indices(nmodels, -1)
+        m[i_lower] = m.T[i_lower]  # make the matrix symmetric
         self.distance_matrix = m
-
+        
         # Remove the gesamt archive
         if purge: shutil.rmtree(garchive)
         

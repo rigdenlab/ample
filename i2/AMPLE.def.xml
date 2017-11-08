@@ -136,10 +136,24 @@
 		            <toolTip>The file containing the database of 9-length ROSETTA fragments.</toolTip>
                 </qualifiers>
             </content>
-            <content id="AMPLE_RESTRAINTS_FILE">
+            <content id="AMPLE_CONTACT_FORMAT">
+			  	<className>CString</className>
+			  	<qualifiers>
+			    	<title>Contact Format</title>
+			    	<guiLabel>The format of the contact file</guiLabel>
+			    	<onlyEnumerators>True</onlyEnumerators>
+			    	<menuText>one.two</menuText>
+			    	<enumerators>one,two</enumerators>
+<!-- 			    	<menuText>bbcontacts,bclcontact,casprr,ccmpred,comsat,epcmap,evfold,freecontact,gremlin,membrain,metapsicov,pconsc,pconsc2,pconsc3,pdb,plmdca,psicov</menuText>
+			    	<enumerators>bbcontacts,bclcontact,casprr,ccmpred,comsat,epcmap,evfold,freecontact,gremlin,membrain,metapsicov,pconsc,pconsc2,pconsc3,pdb,plmdca,psicov</enumerators> -->
+			    	<!--  Need default as setting it dynamically in the gui doesn't seem to work -->
+			    	<default>casp</default>
+			  </qualifiers>
+            </content>
+            <content id="AMPLE_CONTACT_FILE">
                 <className>CDataFile</className>
                 <qualifiers>
-			        <guiLabel>Restraints File (CASP format)</guiLabel>
+			        <guiLabel>Contact File</guiLabel>
                     <allowUndefined>True</allowUndefined>
                     <mustExist>True</mustExist>
 	              	<toolTip>A file of inter-residue restraints to be used when modelling.</toolTip>

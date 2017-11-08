@@ -37,10 +37,10 @@ if not os.path.isfile(ample_pkl):
     sys.exit(1)
 
 # Load AMPLE dictionary
-with open(ample_pkl) as f: od = cPickle.load(f)
+with open(ample_pkl) as f: old_dict = cPickle.load(f)
 
 if opt.rvapi_document:
-    amoptd_fix_path(od, newroot=mroot, i2mock=False)
+    amoptd_fix_path(old_dict, newroot=mroot, i2mock=False)
 else:
     # Create working directory
     work_dir = os.path.abspath(I2DIR)
@@ -49,28 +49,28 @@ else:
     os.mkdir(work_dir)
     
     # update paths and copy files into run directory
-    amoptd_fix_path(od, newroot=work_dir, i2mock=True)
+    amoptd_fix_path(old_dict, newroot=work_dir, i2mock=True)
 
 # Need to add these
-od['no_gui'] = False
+old_dict['no_gui'] = False
 if opt.rvapi_document:
     # JSCOFE HACK
-    od['rvapi_document'] = opt.rvapi_document
+    old_dict['rvapi_document'] = opt.rvapi_document
     work_dir = os.getcwd()
-od['work_dir'] = work_dir
+old_dict['work_dir'] = work_dir
 if opt.ccp4i2_xml: logging.info("Setting ccp4i2_xml: {0}".format(opt.ccp4i2_xml))
-od['ccp4i2_xml'] = opt.ccp4i2_xml
+old_dict['ccp4i2_xml'] = opt.ccp4i2_xml
 
-with open(os.path.join(work_dir,AMPLE_PKL), 'w') as w: cPickle.dump(od, w)
+with open(os.path.join(work_dir,AMPLE_PKL), 'w') as w: cPickle.dump(old_dict, w)
 
 # Run gui and create jsrview files from dict
-AR = AmpleOutput(od, own_gui=opt.own_gui)
+AR = AmpleOutput(old_dict, own_gui=opt.own_gui)
 if True:
-    AR.display_results(od)
+    AR.display_results(old_dict)
 else:
     SLEEP = 2
     
-    newd = copy.copy(od)
+    newd = copy.copy(old_dict)
     newd['ensembles_data'] = None
     newd['mrbump_results'] = None
        
@@ -78,7 +78,7 @@ else:
     time.sleep(SLEEP)
        
     #for i in range(10):
-    newd['ensembles_data'] = od['ensembles_data']
+    newd['ensembles_data'] = old_dict['ensembles_data']
     AR.display_results(newd)
     time.sleep(SLEEP)
     sys.exit()
