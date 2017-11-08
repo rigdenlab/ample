@@ -147,7 +147,7 @@
 <!-- 			    	<menuText>bbcontacts,bclcontact,casprr,ccmpred,comsat,epcmap,evfold,freecontact,gremlin,membrain,metapsicov,pconsc,pconsc2,pconsc3,pdb,plmdca,psicov</menuText>
 			    	<enumerators>bbcontacts,bclcontact,casprr,ccmpred,comsat,epcmap,evfold,freecontact,gremlin,membrain,metapsicov,pconsc,pconsc2,pconsc3,pdb,plmdca,psicov</enumerators> -->
 			    	<!--  Need default as setting it dynamically in the gui doesn't seem to work -->
-			    	<default>casprr</default>
+			    	<default>casp</default>
 			  </qualifiers>
             </content>
             <content id="AMPLE_CONTACT_FILE">

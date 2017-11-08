@@ -115,12 +115,11 @@ class AMPLE_gui(CTaskWidget):
         self.drawOptions()
         
     def setContactFileOptions(self):
-        import conkit.io
-        parsers = sorted(conkit.io.CONTACT_FILE_PARSERS.keys())
-        self.container.inputData.AMPLE_CONTACT_FORMAT.setQualifiers({'enumerators' : parsers,
-                                                                     'menuText' : parsers} )
+        from ample.util.contact_util import CONTACT_FILE_PARSERS
+        self.container.inputData.AMPLE_CONTACT_FORMAT.setQualifiers({'enumerators' : CONTACT_FILE_PARSERS,
+                                                                     'menuText' : CONTACT_FILE_PARSERS} )
         # Below doesn't seem to work
-        self.container.inputData.AMPLE_CONTACT_FORMAT.setDefault(parsers[0])
+        self.container.inputData.AMPLE_CONTACT_FORMAT.setDefault(CONTACT_FILE_PARSERS[0])
         return
     
     def drawOptions(self):
