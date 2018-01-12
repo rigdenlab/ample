@@ -141,6 +141,7 @@ autodoc_mock_imports = [
     'Bio', 'conkit.io', 'conkit.plot', 'conkit._version', 'iotbx.cif', 'iotbx.file_reader', 
     'iotbx.mtz', 'iotbx.pdb', 'matplotlib', 'mmtbx.superpose', 'numpy', 'pandas', 
     'parse_arpwarp', 'parse_buccaneer', 'parse_phaser', 'parse_shelxe', 'phaser',
+    'conkit.io'
 ]
 
 # -- Options for HTML output ----------------------------------------------
@@ -212,7 +213,7 @@ def setup(app):
     app.add_stylesheet("custom.css")
 
 #html_style = 'custom.css'
-#html_static_path = ['_static']
+html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
