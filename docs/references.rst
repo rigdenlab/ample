@@ -77,6 +77,21 @@ Reference List
 
           `BibTex`__
 
+   * - Thomas JMH, Simkovic F, Keegan R, Mayans O, Zhang C, Zhang Y & Rigden DJ (2017). Approaches to ab initio
+     molecular replacement of α-helical transmembrane proteins. *Acta Cryst. D* **73**, 985-996.
+     - .. cssclass:: btn btn-primary btn-sm btn-reference
+          
+          `CrossRef`__
+
+     - .. cssclass:: btn btn-default btn-sm btn-reference
+          
+          `PubMed`__
+
+     - .. cssclass:: btn btn-primary btn-sm btn-reference
+
+          `BibTex`__
+
+
 
 .. KEEP ALL LINKS AT THE BOTTOM, TABLE IS ALREADY MESSY ENOUGH
    PLEASE ALSO KEEP EVERYTHING IN ORDER, THE ANONYMOUS LINKS
@@ -100,6 +115,10 @@ __ https://www.ncbi.nlm.nih.gov/pubmed/27437113
 __ _static/simkovic2016.bib
 ..     Thomas et al, 2015
 __ https://doi.org/10.1107/s2052252515002080
-__ http://www.ncbi.nlm.nih.gov/pubmed/25866657
+__ https://www.ncbi.nlm.nih.gov/pubmed/25866657
 __ _static/thomas2015.bib
+..     Thomas et al, 2017
+__ https://doi.org/10.1107/S2059798317016436
+__ https://www.ncbi.nlm.nih.gov/pubmed/29199978
+__ _static/thomas2017.bib
 
