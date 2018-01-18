@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 class SubselectionAlgorithm(object):
     """A class to collect all subselection algorithms"""
+
     @staticmethod
     def _numpify(data):
         """Convert a Python array to a Numpy array"""
@@ -155,8 +156,9 @@ class SubselectionAlgorithm(object):
 
 
 # Populate the available subselection modes into a list
-SUBSELECTION_MODES = [func_name for func_name, _ in inspect.getmembers(SubselectionAlgorithm)
-                      if not func_name.startswith('_')]
+SUBSELECTION_MODES = [
+    func_name for func_name, _ in inspect.getmembers(SubselectionAlgorithm) if not func_name.startswith('_')
+]
 
 
 class ContactUtil(object):
@@ -183,7 +185,15 @@ class ContactUtil(object):
 
     """
 
-    def __init__(self, sequence_file, sequence_format, contact_file=None, contact_format=None, bbcontacts_file=None, bbcontacts_format="bbcontacts", cutoff_factor=1.0, distance_to_neighbor=5):
+    def __init__(self,
+                 sequence_file,
+                 sequence_format,
+                 contact_file=None,
+                 contact_format=None,
+                 bbcontacts_file=None,
+                 bbcontacts_format="bbcontacts",
+                 cutoff_factor=1.0,
+                 distance_to_neighbor=5):
         """Initialise a new :obj:`ContactUtil` instance
 
         Parameters
@@ -232,27 +242,63 @@ class ContactUtil(object):
         jon = os.path.join(wdir, tag + ".jon")
         hhblitsdb = os.environ["HHBLITSDB"]
         conkit.applications.HHblitsCommandline(
-            cmd="hhblits", database=hhblitsdb, input=self.sequence_file,
-            output=os.devnull, oa3m=a3m, niterations=3, id=99,
-            show_all=True, cov=60, diff='inf', maxfilt=500000
-        )()
+            cmd="hhblits",
+            database=hhblitsdb,
+            input=self.sequence_file,
+            output=os.devnull,
+            oa3m=a3m,
+            niterations=3,
+            id=99,
+            show_all=True,
+            cov=60,
+            diff='inf',
+            maxfilt=500000)()
         if conkit.io.read(a3m, "a3m").neff >= min_neff:
-            logger.info("More than 200 effective sequences in alignment, "
-                        + "predicting contacts ...")
+            logger.info("More than 200 effective sequences in alignment, " + "predicting contacts ...")
             conkit.io.convert(a3m, "a3m", jon, "jones")
             mat = os.path.join(wdir, tag + ".mat")
             rr = os.path.join(wdir, tag + ".rr")
-            conkit.applications.CCMpredCommandline(
-                cmd="ccmpred", alnfile=jon, matfile=mat, renormalize=True
-            )()
+            conkit.applications.CCMpredCommandline(cmd="ccmpred", alnfile=jon, matfile=mat, renormalize=True)()
             conkit.io.convert(mat, "ccmpred", rr, "casprr")
             self.contact_file = rr
             self.contact_format = "casprr"
         else:
-            logger.info("Less than 200 effective sequences in alignment, "
-                        + "not predicting contacts ...")
+            logger.info("Less than 200 effective sequences in alignment, " + "not predicting contacts ...")
 
-    def subselect_decoys(self, decoys, decoy_format, mode='linear', subdistance_to_neighbor=24, **kwargs):
+    def compute_long_range_satisfaction(self, decoys, decoy_format, **kwargs):
+        """Compute long-distance restraint satisfaction score 
+
+        Parameters
+        ----------
+        decoys : list, tuple
+           A list containing paths to decoy files
+        decoy_format : str
+           The file format of ``decoys``
+        **kwargs
+           Job submission related keyword arguments
+
+        Returns
+        -------
+        list
+           A list of scores of all decoys
+
+        TODO
+        ----
+        * Replace loop with :obj:`multiprocessing.Pool`
+
+        """
+        logger.info('Long-range contacts are defined with sequence separation of 24+')
+        contact_map = self.contact_map.deepcopy()
+        scores = []
+        for decoy in decoys:
+            logger.info("Computing long-range satisfaction score for: %s", decoy)
+            cmap = contact_map.deepcopy()
+            dmap = conkit.io.read(decoy, decoy_format).top_map
+            cmap.match(dmap, inplace=True)
+            scores.append(cmap.long_range_contacts.precision)
+        return scores
+
+    def subselect_decoys(self, decoys, decoy_format, mode='linear', **kwargs):
         """Subselect decoys excluding those not satisfying long-distance restraints
 
         Parameters
@@ -267,8 +313,6 @@ class ContactUtil(object):
             * linear: keep the top half of decoys
             * cutoff: keep all decoys with satisfaction scores of >= 0.287
             * ignore: keep all decoys
-        subdistance_to_neighbor : int, optional
-           The minimum distance between neighboring residues in the subselection [default: 24]
         **kwargs
            Job submission related keyword arguments
 
@@ -278,84 +322,7 @@ class ContactUtil(object):
            A 2-D list of paths and scores of all sub-selected decoys
 
         """
-        from ample.util import ample_util
-        from ample.util import workers_util
-
-        # Compute the long range contact satisfaction on a per-decoy basis
-        logger.info(
-            'Long-range contacts are defined with sequence separation of 24+')
-
-        # Hack a custom copy of the contact map together that we can use with the script
-        # All decoys should be sequence identical and thus we can just match it to the top
-        contact_map = self.contact_map
-
-        contact_map.match(
-            conkit.io.read(
-                decoys[0], decoy_format
-            ).top_map, inplace=True
-        )
-        tmp_contact_file = tempfile.NamedTemporaryFile(delete=False)
-        conkit.io.write(tmp_contact_file.name, 'casprr', contact_map)
-
-        executable = 'conkit-precision.bat' \
-            if sys.platform.startswith('win') \
-            else 'conkit-precision'
-
-        job_scripts, log_files = [], []
-        for decoy in decoys:
-            decoy_name = os.path.splitext(os.path.basename(decoy))[0]
-            contact_name = os.path.splitext(
-                os.path.basename(self.contact_file)
-            )[0]
-
-            # TODO: Get the log file business working properly
-            cmd = [executable, '-d', subdistance_to_neighbor]
-            if StrictVersion(conkit.__version__) <= StrictVersion('0.6.3'):
-                cmd += [decoy]
-            else:
-                cmd += [decoy, decoy_format]
-            cmd += [self.sequence_file, self.sequence_format]
-            cmd += [tmp_contact_file.name, 'casprr']
-
-            prefix = '{0}_{1}_'.format(contact_name, decoy_name)
-            script = tempfile.NamedTemporaryFile(prefix=prefix, suffix=ample_util.SCRIPT_EXT,
-                                                 delete=False)
-            script.write(
-                ample_util.SCRIPT_HEADER + os.linesep
-                + " ".join(map(str, cmd)) + os.linesep
-            )
-            script.close()
-
-            os.chmod(script.name, 0o777)
-            job_scripts.append(script.name)
-            log_files.append(os.path.splitext(script.name)[0] + ".log")
-
-        success = workers_util.run_scripts(
-            job_scripts=job_scripts,
-            monitor=None,
-            check_success=None,
-            early_terminate=None,
-            nproc=kwargs['nproc'] if 'nproc' in kwargs else 1,
-            job_time=7200,          # Might be too long/short, taken from Rosetta modelling
-            job_name='subselect',
-            submit_cluster=kwargs['submit_cluster'] if 'submit_cluster' in kwargs else False,
-            submit_qtype=kwargs['submit_qtype'] if 'submit_qtype' in kwargs else None,
-            submit_queue=kwargs['submit_queue'] if 'submit_queue' in kwargs else False,
-            submit_array=kwargs['submit_array'] if 'submit_array' in kwargs else None,
-            submit_max_array=kwargs['submit_max_array'] if 'submit_max_array' in kwargs else None,
-        )
-
-        if not success:
-            msg = "Error running decoy subselection"
-            raise RuntimeError(msg)
-
-        scores = numpy.zeros(len(decoys))
-        data = zip(decoys, log_files, job_scripts)
-        for i, (decoy, log, script) in enumerate(data):
-            for line in open(log, 'r'):
-                if line.startswith('Precision score'):
-                    scores[i] = float(line.strip().split()[-1])
-            map(os.remove, [script, log])
+        scores = self.compute_long_range_satisfaction(decoys, decoy_format, **kwargs)
 
         logger.info('Model selection mode: %s', mode)
         if mode == 'scaled':
@@ -424,12 +391,8 @@ class ContactUtil(object):
             logger.critical(msg)
             raise ValueError(msg)
         elif structure_file and structure_format:
-            logger.info(
-                'Provided structure file and format are: {0} - {1}'.format(
-                    structure_file, structure_format)
-            )
-            structure_map = conkit.io.read(
-                structure_file, structure_format).top_map
+            logger.info('Provided structure file and format are: {0} - {1}'.format(structure_file, structure_format))
+            structure_map = conkit.io.read(structure_file, structure_format).top_map
             contact_map.match(structure_map, inplace=True)
 
             # Calculate the precision score
@@ -438,8 +401,7 @@ class ContactUtil(object):
             structure_map = None
             precision = 0.0
 
-        conkit.plot.ContactMapFigure(contact_map, reference=structure_map,
-                                     file_name=plot_file)
+        conkit.plot.ContactMapFigure(contact_map, reference=structure_map)
 
         return plot_file, precision
 
@@ -476,22 +438,19 @@ class ContactUtil(object):
             logger.critical(msg)
             raise ValueError(msg)
         elif restraint_format == 'rosetta' and not hasattr(energy_functions.RosettaFunctionConstructs, energy_function):
-            msg = 'Unknown Rosetta energy function: {0} for {1}'.format(
-                energy_function, restraint_format)
+            msg = 'Unknown Rosetta energy function: {0} for {1}'.format(energy_function, restraint_format)
             logger.critical(msg)
             raise ValueError(msg)
         elif restraint_format == 'saint2' and not hasattr(energy_functions.Saint2FunctionConstructs, energy_function):
-            msg = 'Unknown SAINT2 energy function: {0} for {1}'.format(
-                energy_function, restraint_format)
+            msg = 'Unknown SAINT2 energy function: {0} for {1}'.format(energy_function, restraint_format)
             logger.critical(msg)
             raise ValueError(msg)
 
         with open(restraint_file, 'w') as f_out:
 
             if restraint_format == 'rosetta':
-                construct = getattr(
-                    energy_functions.RosettaFunctionConstructs, energy_function
-                ).fget(energy_functions.RosettaFunctionConstructs)
+                construct = getattr(energy_functions.RosettaFunctionConstructs, energy_function).fget(
+                    energy_functions.RosettaFunctionConstructs)
 
                 for contact in contact_map:
                     contact_dict = contact._to_dict()
@@ -507,9 +466,8 @@ class ContactUtil(object):
                     f_out.write(construct.format(**contact_dict) + os.linesep)
 
             elif restraint_format == 'saint2':
-                construct = getattr(
-                    energy_functions.Saint2FunctionConstructs, 'DEFAULT'
-                ).fget(energy_functions.Saint2FunctionConstructs)
+                construct = getattr(energy_functions.Saint2FunctionConstructs, 'DEFAULT').fget(
+                    energy_functions.Saint2FunctionConstructs)
 
                 for contact in contact_map:
                     contact_dict = contact._to_dict()
@@ -547,15 +505,13 @@ class ContactUtil(object):
 
         if optd['restraints_format'] == 'rosetta' and optd['energy_function']:
             if not hasattr(energy_functions.RosettaFunctionConstructs, optd['energy_function']):
-                msg = "Rosetta energy function {0} unavailable".format(
-                    optd['energy_function'])
+                msg = "Rosetta energy function {0} unavailable".format(optd['energy_function'])
                 logger.critical(msg)
                 raise ValueError(msg)
 
         if optd['restraints_format'] == 'saint2' and optd['energy_function']:
             if not hasattr(energy_functions.Saint2FunctionConstructs, optd['energy_function']):
-                msg = "SAINT2 energy function {0} unavailable".format(
-                    optd['energy_function'])
+                msg = "SAINT2 energy function {0} unavailable".format(optd['energy_function'])
                 logger.critical(msg)
                 raise ValueError(msg)
 
@@ -645,15 +601,11 @@ class ContactUtil(object):
         if self.contact_file is None:
             raise ValueError("No contact file provded!")
 
-        logger.info('Provided contact file and format are: %s - %s',
-                    self.contact_file, self.contact_format)
-        contact_map = conkit.io.read(
-            self.contact_file, self.contact_format).top_map
+        logger.info('Provided contact file and format are: %s - %s', self.contact_file, self.contact_format)
+        contact_map = conkit.io.read(self.contact_file, self.contact_format).top_map
 
-        logger.info('Provided sequence file and format are: %s - %s',
-                    self.sequence_file, self.sequence_format)
-        sequence = conkit.io.read(
-            self.sequence_file, self.sequence_format).top_sequence
+        logger.info('Provided sequence file and format are: %s - %s', self.sequence_file, self.sequence_format)
+        sequence = conkit.io.read(self.sequence_file, self.sequence_format).top_sequence
         contact_map.sequence = sequence
         contact_map.assign_sequence_register()
 
@@ -661,8 +613,7 @@ class ContactUtil(object):
         contact_map.calculate_scalar_score()
 
         dtn = self.distance_to_neighbor
-        logger.info(
-            'Removing neighboring residues to distance of %d residues', dtn)
+        logger.info('Removing neighboring residues to distance of %d residues', dtn)
         contact_map.remove_neighbors(min_distance=dtn, inplace=True)
 
         sort_key = 'raw_score'
@@ -670,15 +621,12 @@ class ContactUtil(object):
         contact_map.sort(sort_key, reverse=True, inplace=True)
 
         ncontacts = int(contact_map.sequence.seq_len * self.cutoff_factor)
-        logger.info(
-            'Slicing contact map to contain top %d contacts only', ncontacts)
+        logger.info('Slicing contact map to contain top %d contacts only', ncontacts)
         contact_map = contact_map[:ncontacts]
 
         if self.bbcontacts_file:
-            logger.info('Provided contact file and format are: %s - %s',
-                        self.bbcontacts_file, self.bbcontacts_format)
-            bbcontact_map = conkit.io.read(
-                self.bbcontacts_file, self.bbcontacts_format).top_map
+            logger.info('Provided contact file and format are: %s - %s', self.bbcontacts_file, self.bbcontacts_format)
+            bbcontact_map = conkit.io.read(self.bbcontacts_file, self.bbcontacts_format).top_map
             bbcontact_map.sequence = sequence
             bbcontact_map.assign_sequence_register()
             bbcontact_map.rescale(inplace=True)
