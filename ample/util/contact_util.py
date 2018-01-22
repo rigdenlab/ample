@@ -8,6 +8,7 @@ __version__ = "2.1"
 
 from distutils.version import StrictVersion
 
+
 import inspect
 import logging
 import numpy
@@ -155,7 +156,6 @@ class SubselectionAlgorithm(object):
         return keep.tolist(), throw.tolist()
 
 
-# Populate the available subselection modes into a list
 SUBSELECTION_MODES = [
     func_name for func_name, _ in inspect.getmembers(SubselectionAlgorithm) if not func_name.startswith('_')
 ]
@@ -379,7 +379,6 @@ class ContactUtil(object):
 
         """
         contact_map = self.contact_map
-
         logger.debug(structure_file)
         logger.debug(structure_format)
         if structure_file and not structure_format:
@@ -394,14 +393,16 @@ class ContactUtil(object):
             logger.info('Provided structure file and format are: {0} - {1}'.format(structure_file, structure_format))
             structure_map = conkit.io.read(structure_file, structure_format).top_map
             contact_map.match(structure_map, inplace=True)
-
-            # Calculate the precision score
             precision = contact_map.precision
         else:
             structure_map = None
             precision = 0.0
-
-        conkit.plot.ContactMapFigure(contact_map, reference=structure_map)
+        
+        fname = "ample.conkit.cmap.png"
+        if StrictVersion(conkit.__version__) < StrictVersion("0.9.0"):
+            conkit.plot.ContactMapFigure(contact_map, reference=structure_map, file_name=fname)
+        else:
+            conkit.plot.ContactMapFigure(contact_map, reference=structure_map).savefig(fname, dpi=600)
 
         return plot_file, precision
 
