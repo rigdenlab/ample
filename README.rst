@@ -40,9 +40,11 @@ Please report all bugs to `CCP4 Help Desk <ccp4@stfc.ac.uk>`_.
 Contributors
 ++++++++++++
 
-- Jens Thomas
-- Felix Simkovic
-- Ronan Keegan
-- Adam Simpkin
-- Jaclyn Bibby
-- Daniel Rigden
+.. table::
+   :widths: auto
+
+   =============================  =============================  =============================  =============================
+   Jens Thomas                    Felix Simkovic                 Ronan Keegan                   Adam Simpkin
+   Daniel Rigden                  Olga Mayans                    Jaclyn Bibby
+   =============================  =============================  =============================  =============================
+

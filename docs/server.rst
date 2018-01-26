@@ -8,7 +8,7 @@ A server implementation of AMPLE is available through CCP4 on-line.
 .. raw:: html
 
    <br>
-   <div align="center">
+   <div>
        <a href="https://www.ccp4.ac.uk/ccp4online/" class="btn btn-primary btn-lg">Go to CCP4 Online Server</a>
    </div>
    </br>
