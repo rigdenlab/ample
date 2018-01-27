@@ -184,9 +184,6 @@ def add_general_options(parser=None):
     parser.add_argument('-nmr_remodel_fasta',
                         help='The FASTA sequence to be used for remodelling the NMR ensemble if different from the default FASTA sequence')
 
-    parser.add_argument('-no_gui', metavar='True/False',
-                        help='Do not display the AMPLE gui.')
-
     parser.add_argument('-purge', metavar='True/False',
                         help='Delete all intermediate files and failed MRBUMP results')
 
@@ -206,6 +203,9 @@ def add_general_options(parser=None):
 
     parser.add_argument('-scwrl_exe', metavar='path to scwrl',
                         help='Path to Scwrl4 executable')
+
+    parser.add_argument('-show_gui', metavar='True/False',
+                        help='Pop up and display a stand-alone GUI')
 
     parser.add_argument('-single_model',
                         help='Single structure model to be used to create ensembles')
