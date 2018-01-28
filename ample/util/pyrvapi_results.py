@@ -91,7 +91,7 @@ class AmpleOutput(object):
                "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
                }
     
-    def __init__(self, amopt, own_gui=False):
+    def __init__(self, amopt):
         self.header = False
         self.log_tab_id = None
         self.old_mrbump_results = None
@@ -102,18 +102,19 @@ class AmpleOutput(object):
         self.summary_tab_results_sec_id = None
         self.summary_tab_survey_sec_id = None
         
-        
         # Process variables from amopt
         ccp4i2_xml = amopt.get('ccp4i2_xml')
         rvapi_document = amopt.get('rvapi_document')
         work_dir = amopt['work_dir']
         run_dir = amopt['run_dir']
-        no_gui = amopt['no_gui']
+        show_gui = amopt['show_gui']
         webserver_uri = amopt['webserver_uri']
         
         # Process modes and set flags
         self.ccp4i2 = bool(ccp4i2_xml) # Indicate we are running under CCP4I2
         self.jscofe = bool(rvapi_document) #Indicate we are running under jscofe
+        # Show the gui if we are under ccp4i2, jscofe or show_gui has been specified (e.g. ccp4i)
+        self.generate_output = self.ccp4i2 | self.jscofe | show_gui
         # No log tab with jscofe or ccp4i2
         self.do_log_tab = not(self.ccp4i2 or self.jscofe)
 
@@ -129,12 +130,11 @@ class AmpleOutput(object):
         self.setup(work_dir=work_dir,
                    ccp4i2_xml=ccp4i2_xml,
                    rvapi_document=rvapi_document,
-                   no_gui=no_gui,
-                   own_gui=own_gui)
+                   show_gui=show_gui)
         return
 
-    def setup(self, work_dir=None, ccp4i2_xml=None, rvapi_document=None, no_gui=None, own_gui=False):
-        if not pyrvapi or no_gui: return
+    def setup(self, work_dir=None, ccp4i2_xml=None, rvapi_document=None, show_gui=False):
+        if not pyrvapi or not self.generate_output: return
         report_dir = os.path.join(work_dir, "jsrview")
         if not os.path.isdir(report_dir): os.mkdir(report_dir)
         docid = "AMPLE_results"
@@ -159,7 +159,7 @@ class AmpleOutput(object):
                 # layout = 4 if i1 else 7,
                 )
                 API.document.newdoc(**kwargs)
-        if own_gui:
+        if show_gui:
             # We start our own browser
             jsrview = os.path.join(os.environ["CCP4"], "libexec", "jsrview")
             subprocess.Popen([jsrview, os.path.join(report_dir, "index.html")])
@@ -312,7 +312,7 @@ class AmpleOutput(object):
           An AMPLE job dictionary
           
         """
-        if not (pyrvapi or ('no_gui' in ample_dict and ample_dict['no_gui'])): return
+        if not (pyrvapi or self.generate_output): return
         try:
             if not self.header:
                 pyrvapi.rvapi_add_header("AMPLE Results")
@@ -626,7 +626,7 @@ if __name__ == "__main__":
     ample_dict['ample_log'] = os.path.abspath(__file__)
 
     report_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
-    AR = AmpleOutput(ample_dict, own_gui=True)
+    AR = AmpleOutput(ample_dict, show_gui=True)
     AR.display_results(ample_dict)
     
     view1_dict = copy.copy(ample_dict)
