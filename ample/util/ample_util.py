@@ -16,12 +16,13 @@ import tempfile
 import warnings
 import zipfile
 
+import ccp4
 import exit_util
 import pdb_edit
 
 from ample.constants import SHARE_DIR, AMPLEDIR, I2DIR
 
-CCP4_VERSION = None
+CCP4 = ccp4.CCP4()
 SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
 EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
 SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
@@ -72,46 +73,6 @@ def amoptd_fix_path(optd, newroot, i2mock=False):
                         new = r[k].replace(oldroot,newroot)
                     r[k] = new
     return optd
-
-def ccp4_version():
-    """Get CCP4 version as a tuple
-
-    Returns
-    -------
-    version : tuple
-       Major, minor, and revision number
-
-    """
-    if CCP4_VERSION is None:
-        # Currently there seems no sensible way of doing this other then running a program and grepping the output
-        pdbcur = 'pdbcur' + EXE_EXT
-        log_fname = tmp_file_name(delete=False)
-        run_command([pdbcur], stdin="", logfile=log_fname)
-        tversion = None
-
-        with open(log_fname, 'r') as logfh:
-            for i, line in enumerate(logfh.readlines()):
-                if i > 20:
-                    break
-                if line.startswith(' ### CCP4'):
-                    tversion = line.split()[2].rstrip(':')
-                    break
-
-        if not tversion:
-            raise RuntimeError("Cannot determine CCP4 version")
-        vsplit = tversion.split('.')
-        if len(vsplit) == 2:
-            major = int(vsplit[0])
-            minor = int(vsplit[1])
-            rev = '-1'
-        elif len(vsplit) == 3:
-            major = int(vsplit[0])
-            minor = int(vsplit[1])
-            rev = int(vsplit[2])
-        else:
-            raise RuntimeError("Cannot split CCP4 version: {0}".format(tversion))
-    os.unlink(log_fname)
-    return (major,minor,rev)
 
 
 def construct_references(optd):

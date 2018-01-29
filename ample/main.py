@@ -503,19 +503,14 @@ class Ample(object):
         logging_util.setup_file_logging(ample_log, level=logging.INFO)
         logging_util.setup_file_logging(debug_log, level=logging.DEBUG)
 
-        # Make sure the CCP4 environment is set up properly
-        ccp4_home = self.setup_ccp4(optd)
-        ccp4_version = ".".join([str(x) for x in optd['ccp4_version']])
+        amoptd['ccp4_version'] = ample_util.CCP4.version.version
 
-        # Print out Version and invocation
         logger.info(ample_util.header)
         logger.info("AMPLE version: %s", str(version.__version__))
-        logger.info("Running with CCP4 version: %s from directory: %s",
-                    str(ccp4_version), ccp4_home)
+        logger.info("Running with CCP4 version: %s from directory: %s", ample_util.CCP4.version, ample_util.CCP4.root)
         logger.info("Running on host: %s", platform.node())
         logger.info("Running on platform: %s", platform.platform())
-        logger.info("Job started at: %s", time.strftime("%a, %d %b %Y %H:%M:%S",
-                                                        time.gmtime()))
+        logger.info("Job started at: %s", time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()))
         logger.info("Invoked with command-line:\n%s\n", " ".join(sys.argv))
         logger.info("Running in directory: %s\n", optd['work_dir'])
 
@@ -544,32 +539,6 @@ class Ample(object):
         logger.info('All needed programs are found, continuing...')
 
         return optd
-
-    def setup_ccp4(self, amoptd):
-        """Check CCP4 is available and return the top CCP4 directory"""
-        # Make sure CCP4 is around
-        if not "CCP4" in os.environ:
-            msg = "Cannot find CCP4 installation - please make sure CCP4 is installed and the setup scripts have been run!"
-            exit_util.exit_error(msg)
-
-        if not "CCP4_SCR" in os.environ:
-            msg = "$CCP4_SCR environement variable not set - please make sure CCP4 is installed and the setup scripts have been run!"
-            exit_util.exit_error(msg)
-
-        if not os.path.isdir(os.environ['CCP4_SCR']):
-            msg = "*** WARNING ***\n"
-            msg += "Cannot find the $CCP4_SCR directory: {0}\n".format(
-                os.environ['CCP4_SCR'])
-            msg += "The directory will be created, but it should have already been created by the CCP4 startup scripts\n"
-            msg += "Please make sure CCP4 is installed and the setup scripts have been run."
-            logger.critical(msg)
-            os.mkdir(os.environ['CCP4_SCR'])
-            #exit_util.exit_error(msg)
-
-        # Record the CCP4 version we're running with  - also required in pyrvapi_results
-        amoptd['ccp4_version'] = ample_util.ccp4_version()
-
-        return os.environ['CCP4']
 
 
 if __name__ == "__main__":

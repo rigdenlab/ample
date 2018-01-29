@@ -97,18 +97,6 @@ def get_rfree(file_name):
     
     return _get_rfree(reflection_file.file_content())
 
-# def get_resolution(file_name):
-#     if int(CCP4_VERSION[0]) >= 7:
-#         hkl_info=clipper.HKL_info()
-#         mtz_file=clipper.CCP4MTZfile()
-#         mtz_file.open_read(file_name)
-#         mtz_file.import_hkl_info(hkl_info)
-# 
-#         resolution =  "%.2lf" % hkl_info.resolution().limit()
-#     else:
-#         resolution = None
-#     return resolution
-
 def _get_rfree(content):
     rfree_label = None
     #print "GOT ",content.column_labels()
