@@ -103,7 +103,7 @@ class AMPLE_report(Report):
             if col.isdigit() : col = int(col)
 #             if e2.get('id') and row.isdigit() and col.isdigit():
             if e2.get('id')  or e2.tag == 'text':
-                elems.append([row, column, e2])
+                elems.append([row, col, e2])
                 if e2.tag == 'table':
                     cou += 1
             elif e2.tag == 'name':
@@ -115,7 +115,7 @@ class AMPLE_report(Report):
             r1 = r0.addFold(label=title, initiallyOpen=state)
             #for row, col, e2 in sorted(grid):
             if sorted: elems = sorted(elems)
-            for e2 in elems:
+            for _,_,e2 in elems:
                 id2 = e2.get('id')
                 if e2.tag == 'section':
                     self.report_section(e2, r1)

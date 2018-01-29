@@ -516,7 +516,7 @@ def make_workdir(run_dir, ccp4i2=False):
             if run_inc > 100: raise RuntimeError("Too many work directories! {0}".format(work_dir)) # To stop endless while loops...
     if os.path.exists(work_dir):
         raise RuntimeError("There is an existing AMPLE work directory: {0}\n"
-                           "Please delete/move it aside.")
+                           "Please delete/move it aside.".format(work_dir))
     os.mkdir(work_dir)
     return work_dir
 
