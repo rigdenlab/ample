@@ -107,7 +107,7 @@ class AmpleOutput(object):
         rvapi_document = amopt.get('rvapi_document')
         work_dir = amopt['work_dir']
         run_dir = amopt['run_dir']
-        show_gui = amopt['show_gui']
+        show_gui = bool(amopt['show_gui'])
         webserver_uri = amopt['webserver_uri']
         
         # Process modes and set flags
