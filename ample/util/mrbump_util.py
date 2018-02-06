@@ -447,33 +447,25 @@ class ResultsSummary(object):
     
     def _purgeFailed(self):
         """Remove the MRBUMP directories of any jobs that don't pass the keep criteria and archive their job dictionaries"""
-        # Skip any that are unfinished
         completed = [ r for r in self.results if not(job_unfinished(r)) ]
         if completed:
-            # Keep the top TOP_KEEP SHELXE_CC and PHASER_TFZ - these could be the same jobs and we may not even
-            # have TOP_KEEP completed
             to_keep = []
-            for r in self.sortResults(completed, prioritise='SHELXE_CC')[0:min(len(completed),TOP_KEEP)]:
-                if r not in to_keep: to_keep.append(r)
-            for r in self.sortResults(completed, prioritise='PHASER_TFZ')[0:min(len(completed),TOP_KEEP)]:
-                if r not in to_keep: to_keep.append(r)
+            min_len = min(len(completed), TOP_KEEP)
+            for r in ResultsSummary.sortResultsStatic(completed, prioritise='SHELXE_CC')[:min_len]:
+                if r not in to_keep:
+                    to_keep.append(r)
 
-            # Remove the directories and archive the dictionaries
+            for r in ResultsSummary.sortResultsStatic(completed, prioritise='PHASER_TFZ')[:min_len]:
+                if r not in to_keep:
+                    to_keep.append(r)
+
             for r in completed:
                 if r not in to_keep:
                     pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
-                    with open(pkl, 'w') as f: cPickle.dump(r, f)
+                    with open(pkl, 'w') as f:
+                        cPickle.dump(r, f)
                     shutil.rmtree(r['Search_directory'])
         
-#         for r in results:
-#             if r['Solution_Type'] == "unfinished" or r['Solution_Type'] == "no_job_directory": continue
-#             to_keep.append(r)
-#             if not (jobSucceeded(r) or r['Solution_Type'] is "MARGINAL") :
-#                 pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
-#                 with open(pkl, 'w') as f: cPickle.dump(r, f)
-#                 shutil.rmtree(r['Search_directory'])
-        return
-
     def results_table(self, results):
         resultsTable = []
         keys = ['ensemble_name', 'MR_program', 'Solution_Type']
@@ -482,18 +474,19 @@ class ResultsSummary(object):
         for r in results: resultsTable.append([r[k] for k in keys])
         return resultsTable
 
-    def sortResults(self, prioritise=None):
-        """
-        Sort the results
-        """
-        # Check each result to see what attributes are set and use this to work out how we rate this run
-        
+    def sortResults(self, prioritise=False):
+        """Wrapper function to allow calls with self"""
+        self.results = ResultsSummary.sortResultsStatic(self.results)
+
+    @staticmethod
+    def sortResultsStatic(results, prioritise=False):
+        """Sort the results"""
         SHELXE = False
         BUCC = False
         ARP = False
         REFMAC = False
         PHASER = False
-        for r in self.results:
+        for r in results:
             if 'SHELXE_CC' in r and r['SHELXE_CC'] and float(r['SHELXE_CC']) > 0.0:
                 SHELXE = True
             if 'BUCC_final_Rfact' in r and r['BUCC_final_Rfact'] and float(r['BUCC_final_Rfact']) < 1.0:
@@ -507,7 +500,7 @@ class ResultsSummary(object):
             
         reverse = False
         sortf = False
-        if SHELXE and not prioritise == "PHASER_TFZ":
+        if SHELXE and prioritise != "PHASER_TFZ":
             reverse = True
             sortf = lambda x: float(0) if x['SHELXE_CC']  is None else float(x['SHELXE_CC'])
         elif BUCC and not prioritise == "PHASER_TFZ":
@@ -521,9 +514,8 @@ class ResultsSummary(object):
             sortf = lambda x: float(0) if x['PHASER_TFZ']  is None else float(x['PHASER_TFZ'])
             
         if sortf:
-            # Now sort by the key
-            self.results.sort(key=sortf, reverse=reverse)
-        return
+            results.sort(key=sortf, reverse=reverse)
+        return results
 
     def summariseResults(self, mrbump_dir):
         """Return a string summarising the results"""
@@ -635,20 +627,13 @@ def checkSuccess(script_path):
     """
     directory, script = os.path.split(script_path)
     scriptname = os.path.splitext(script)[0]
-    rfile = os.path.join(directory, 'search_' + scriptname + '_mrbump', 
-                         'results', 'resultsTable.pkl')
-    # print "{0} checking for file: {1}".format(multiprocessing.current_process().name,rfile)
-    if not os.path.isfile(rfile):
-        # print "{0} cannot find results file: {1}".format(multiprocessing.current_process().name,rfile)
+    rfile = os.path.join(directory, 'search_' + scriptname + '_mrbump', 'results', 'resultsTable.pkl')
+    if os.path.isfile(rfile):
+        results = ResultsSummary().processMrbumpPkl(rfile)
+        best = ResultsSummary.sortResultsStatic(results)[0]
+        return jobSucceeded(best)
+    else:
         return False
-    
-    # Results summary object to parse table file
-    mrbR = ResultsSummary()
-    
-    # Put into order and take top one
-    results = mrbR.processMrbumpPkl(rfile)
-    mrbR.sortResults(results)
-    return jobSucceeded(results[0])
 
 def finalSummary(amoptd):
     """Print a final summary of the job"""
