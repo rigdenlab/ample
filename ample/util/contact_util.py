@@ -8,7 +8,6 @@ __version__ = "2.1"
 
 from distutils.version import StrictVersion
 
-
 import inspect
 import logging
 import numpy
@@ -288,14 +287,13 @@ class ContactUtil(object):
 
         """
         logger.info('Long-range contacts are defined with sequence separation of 24+')
-        contact_map = self.contact_map.deepcopy()
-        scores = []
-        for decoy in decoys:
-            logger.info("Computing long-range satisfaction score for: %s", decoy)
-            cmap = contact_map.deepcopy()
-            dmap = conkit.io.read(decoy, decoy_format).top_map
-            cmap.match(dmap, inplace=True)
-            scores.append(cmap.long_range_contacts.precision)
+        N = len(decoys)
+        long_range_contacts = self.contact_map.long_range_contacts.deepcopy()
+        scores = [0.] * N
+        for i in range(N):
+            logger.info("Computing long-range satisfaction score for: %s", decoys)
+            dmap = conkit.io.read(decoys[i], decoy_format).top_map
+            scores[i] = long_range_contacts.match(dmap).precision
         return scores
 
     def subselect_decoys(self, decoys, decoy_format, mode='linear', **kwargs):
@@ -397,7 +395,7 @@ class ContactUtil(object):
         else:
             structure_map = None
             precision = 0.0
-        
+
         fname = "ample.conkit.cmap.png"
         if StrictVersion(conkit.__version__) < StrictVersion("0.9.0"):
             conkit.plot.ContactMapFigure(contact_map, reference=structure_map, file_name=fname)
