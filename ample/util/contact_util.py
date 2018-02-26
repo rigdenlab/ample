@@ -10,7 +10,7 @@ from distutils.version import StrictVersion
 
 import inspect
 import logging
-import numpy
+import numpy as np
 import os
 import sys
 import tempfile
@@ -31,10 +31,10 @@ class SubselectionAlgorithm(object):
     @staticmethod
     def _numpify(data):
         """Convert a Python array to a Numpy array"""
-        if type(data).__module__ == numpy.__name__:
+        if type(data).__module__ == np.__name__:
             return data
         else:
-            return numpy.asarray(data)
+            return np.asarray(data)
 
     @staticmethod
     def cutoff(data, cutoff=0.287):
@@ -61,8 +61,8 @@ class SubselectionAlgorithm(object):
 
         """
         data = SubselectionAlgorithm._numpify(data)
-        keep = numpy.where(data >= cutoff)[0]
-        throw = numpy.where(data < cutoff)[0]
+        keep = np.where(data >= cutoff)[0]
+        throw = np.where(data < cutoff)[0]
         return keep.tolist(), throw.tolist()
 
     @staticmethod
@@ -89,7 +89,7 @@ class SubselectionAlgorithm(object):
 
         """
         sorted_indices = SubselectionAlgorithm._numpify(data).argsort()[::-1]
-        point = numpy.ceil(sorted_indices.shape[0] * cutoff).astype(numpy.int)
+        point = np.ceil(sorted_indices.shape[0] * cutoff).astype(np.int)
         keep = sorted_indices[:point]
         throw = sorted_indices[point:]
         return keep.tolist(), throw.tolist()
@@ -102,7 +102,7 @@ class SubselectionAlgorithm(object):
         -----------
         This algorithm removes a decoy, if its scaled score
         is less than 0.5. The scaled score is calculated by
-        dividing the satisfaction score by the average of the
+        dividing the precision score by the average of the
         set.
 
         Parameters
@@ -121,9 +121,9 @@ class SubselectionAlgorithm(object):
 
         """
         data = SubselectionAlgorithm._numpify(data)
-        data_scaled = data / numpy.mean(data)
-        keep = numpy.where(data_scaled >= cutoff)[0]
-        throw = numpy.where(data_scaled < cutoff)[0]
+        data_scaled = data / np.mean(data)
+        keep = np.where(data_scaled >= cutoff)[0]
+        throw = np.where(data_scaled < cutoff)[0]
         return keep.tolist(), throw.tolist()
 
     @staticmethod
@@ -150,8 +150,8 @@ class SubselectionAlgorithm(object):
 
         """
         data = SubselectionAlgorithm._numpify(data)
-        keep = numpy.where(data >= 0)[0]
-        throw = numpy.where(data < 0)[0]
+        keep = np.where(data >= 0)[0]
+        throw = np.where(data < 0)[0]
         return keep.tolist(), throw.tolist()
 
 
@@ -264,8 +264,8 @@ class ContactUtil(object):
         else:
             logger.info("Less than 200 effective sequences in alignment, " + "not predicting contacts ...")
 
-    def compute_long_range_satisfaction(self, decoys, decoy_format, **kwargs):
-        """Compute long-distance restraint satisfaction score 
+    def compute_precision_by_range(self, test, decoys, decoy_format, **kwargs):
+        """Compute restraint precision score by sequence separation range
 
         Parameters
         ----------
@@ -279,22 +279,38 @@ class ContactUtil(object):
         Returns
         -------
         list
-           A list of scores of all decoys
+           A list of short-range scores of all decoys
+        list
+           A list of medium-range scores of all decoys
+        list
+           A list of long-range scores of all decoys
 
         TODO
         ----
         * Replace loop with :obj:`multiprocessing.Pool`
 
         """
-        logger.info('Long-range contacts are defined with sequence separation of 24+')
         N = len(decoys)
-        long_range_contacts = self.contact_map.long_range_contacts.deepcopy()
-        scores = [0.] * N
+
+        shortrange = [0.] * N
+        mediumrange = [0.] * N
+        longrange = [0.] * N
+
+        contact_map = self.contact_map
+        shortrange_contacts = contact_map.short_range_contacts.deepcopy()
+        mediumrange_contacts = contact_map.medium_range_contacts.deepcopy()
+        longrange_contacts = contact_map.long_range_contacts.deepcopy()
+
         for i in range(N):
-            logger.info("Computing long-range satisfaction score for: %s", decoys)
             dmap = conkit.io.read(decoys[i], decoy_format).top_map
-            scores[i] = long_range_contacts.match(dmap).precision
-        return scores
+            if shortrange_contacts.ncontacts > 0:
+                shortrange[i] = shortrange_contacts.match(dmap).precision
+            if mediumrange_contacts.ncontacts > 0:
+                mediumrange[i] = mediumrange_contacts.match(dmap).precision
+            if longrange_contacts.ncontacts > 0:
+                longrange[i] = longrange_contacts.match(dmap).precision
+
+        return shortrange, mediumrange, longrange
 
     def subselect_decoys(self, decoys, decoy_format, mode='linear', **kwargs):
         """Subselect decoys excluding those not satisfying long-distance restraints
@@ -309,7 +325,7 @@ class ContactUtil(object):
            The subselection mode to use
             * scaled: keep the decoys with scaled scores of >= 0.5
             * linear: keep the top half of decoys
-            * cutoff: keep all decoys with satisfaction scores of >= 0.287
+            * cutoff: keep all decoys with precision scores of >= 0.287
             * ignore: keep all decoys
         **kwargs
            Job submission related keyword arguments
@@ -320,7 +336,7 @@ class ContactUtil(object):
            A 2-D list of paths and scores of all sub-selected decoys
 
         """
-        scores = self.compute_long_range_satisfaction(decoys, decoy_format, **kwargs)
+        _, _, scores = self.compute_precision_by_range(decoys, decoy_format, **kwargs)
 
         logger.info('Model selection mode: %s', mode)
         if mode == 'scaled':
