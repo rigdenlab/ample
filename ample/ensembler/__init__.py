@@ -19,7 +19,6 @@ import os
 import shutil
 import sys
 
-from constants import SIDE_CHAIN_TREATMENTS
 from abinitio import AbinitioEnsembler
 from homologs import HomologEnsembler
 from single_model import SingleModelEnsembler
@@ -30,92 +29,6 @@ from ample.util import pdb_edit
 from ample.util import printTable
 
 logger = logging.getLogger(__name__)
-
-
-def add_argparse_options(parser=None):
-    """Function to add the ensemble-specific options
-    
-    Parameters
-    ----------
-    parser : :obj:`argparse.ArgumentParser`
-    standalone : bool, optional
-       Define if the parser is standalone [default: False]
-
-    """
-    if parser is None:
-        import argparse
-        parser = argparse.ArgumentParser()
-
-    parser = parser.add_argument_group('Ensemble Options')
-
-    # Ensenble-specific options here
-    parser.add_argument('-cluster_dir',
-                        help='Path to directory of pre-clustered models to import')
-
-    parser.add_argument('-cluster_method',
-                        help='How to cluster the models for ensembling (spicker|fast_protein_cluster')
-
-    parser.add_argument('-ensembler_timeout', type=int,
-                        help='Time in seconds before timing out ensembling')
-
-    parser.add_argument('-gesamt_exe', metavar='gesamt_exe',
-                        help='Path to the gesamt executable')
-
-    parser.add_argument('-homologs', metavar='True/False',
-                        help='Generate ensembles from homologs models (requires -alignment_file)')
-
-    parser.add_argument('-homolog_aligner', metavar='homolog_aligner',
-                        help='Program to use for structural alignment of homologs (gesamt|mustang)')
-
-    parser.add_argument('-ensemble_max_models',
-                        help='Maximum number of models permitted in an ensemble')
-
-    parser.add_argument('-maxcluster_exe',
-                        help='Path to Maxcluster executable')
-
-    parser.add_argument('-mustang_exe', metavar='mustang_exe',
-                        help='Path to the mustang executable')
-
-    parser.add_argument('-num_clusters', type=int,
-                        help='The number of Spicker clusters of the original decoys that will be sampled [1]')
-
-    parser.add_argument('-percent', metavar='percent_truncation',
-                        help='percent interval for truncation')
-
-    parser.add_argument('-score_matrix',
-                        help='Path to score matrix for spicker')
-
-    parser.add_argument('-score_matrix_file_list',
-                        help='File with list of ordered model names for the score_matrix')
-
-    parser.add_argument('-side_chain_treatments', type=str, nargs='+',
-                        help='The side chain treatments to use. Default: {0}'.format(SIDE_CHAIN_TREATMENTS))
-
-    parser.add_argument('-subcluster_radius_thresholds', type=float, nargs='+',
-                        help='The radii to use for subclustering the truncated ensembles')
-
-    parser.add_argument('-subcluster_program',
-                        help='Program for subclustering models [maxcluster]')
-
-    parser.add_argument('-theseus_exe', metavar='Theseus exe (required)',
-                        help='Path to theseus executable')
-
-    parser.add_argument('-thin_clusters', metavar='True/False',
-                        help='Create ensembles from 10 clusters with 1 + 3A subclustering and polyAlanine sidechains')
-
-    parser.add_argument('-truncation_method',
-                        help='How to truncate the models for ensembling percent|thresh|focussed|scores')
-
-    parser.add_argument('-truncation_pruning',
-                        help='Whether to remove isolated residues (single)')
-
-    parser.add_argument('-truncation_scorefile',
-                        help="CSV file containing per residue scores - COLUMN ONE MUST BE RESIDUE INDEX STARTING FROM 1")
-
-    parser.add_argument('-truncation_scorefile_header', nargs='+',
-                        help="column headers to be used to create ensembles")
-
-    return parser
 
 
 def cluster_script(amoptd, python_path="ccp4-python"):
@@ -139,8 +52,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     script_path = os.path.join(work_dir, "submit_ensemble.sh")
     with open(script_path, "w") as job_script:
         job_script.write(ample_util.SCRIPT_HEADER + os.linesep)
-        job_script.write(
-            "ccp4-python -m ample.ensembler -restart_pkl {0}".format(amoptd['results_path']) + os.linesep)
+        job_script.write("ccp4-python -m ample.ensembler -restart_pkl {0}".format(amoptd['results_path']) + os.linesep)
 
     # Make executable
     os.chmod(script_path, 0o777)
@@ -165,15 +77,13 @@ def create_ensembles(amoptd):
         msg = 'AMPLE ensembler needs either a single_model or a list of models'
         exit_util.exit_error(msg, sys.exc_info()[2])
         if amoptd['single_model'] and not os.path.isfile(amoptd['single_model']):
-            msg = 'Cannot find single_model pdb: {0}'.format(
-                amoptd['single_model'])
+            msg = 'Cannot find single_model pdb: {0}'.format(amoptd['single_model'])
             exit_util.exit_error(msg, sys.exc_info()[2])
         elif amoptd['models'] and len(amoptd['models'] < 2):
             msg = 'Not enough models provided for ensembling - use single_model_mode instead'
             exit_util.exit_error(msg, sys.exc_info()[2])
 
-    models = list([amoptd['single_model']]
-                  ) if amoptd['single_model_mode'] else amoptd['models']
+    models = list([amoptd['single_model']]) if amoptd['single_model_mode'] else amoptd['models']
 
     #if amoptd['cluster_method'] == 'spicker_tmscore':
     #    models = reorder_models(models, amoptd['score_matrix_file_list'])
@@ -255,7 +165,7 @@ def collate_cluster_data(ensembles_data):
     A dictionary with the collated data
     
     """
-    
+
     clusters = {}  # Loop through all ensemble data objects and build up a data tree
     cluster_method = None
     cluster_score_type = None
@@ -336,20 +246,16 @@ def cluster_table_data(clusters, cluster_num, side_chain_treatments, header=True
         nresidues = clusters[cluster_num]['tlevels'][tl]['num_residues']
         for i, rt in enumerate(sorted(clusters[cluster_num]['tlevels'][tl]['radius_thresholds'])):
             nmodels = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['num_models']
-            side_chain_treatments = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'].keys(
-            )
+            side_chain_treatments = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'].keys()
             for j, sct in enumerate(side_chain_treatments):
                 name = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['name']
                 num_atoms = clusters[cluster_num]['tlevels'][tl]['radius_thresholds'][rt]['sct'][sct]['num_atoms']
                 if i == 0 and j == 0:  # change of radius
-                    tdata.append((name, cluster_num, tl, tvar,
-                                  nresidues, rt, nmodels, num_atoms, sct))
+                    tdata.append((name, cluster_num, tl, tvar, nresidues, rt, nmodels, num_atoms, sct))
                 elif i > 0 and j == 0:  # change of side_chain
-                    tdata.append((name, "", "", "", "", rt,
-                                  nmodels, num_atoms, sct))
+                    tdata.append((name, "", "", "", "", rt, nmodels, num_atoms, sct))
                 else:
-                    tdata.append(
-                        (name, "", "", "", "", "", "", num_atoms, sct))
+                    tdata.append((name, "", "", "", "", "", "", num_atoms, sct))
     return tdata
 
 
@@ -386,13 +292,10 @@ def ensemble_summary(ensembles_data):
     for cluster_num in sorted(clusters.keys()):
         rstr += "\n"
         rstr += "Cluster {0}\n".format(cluster_num)
-        rstr += "Number of models: {0}\n".format(
-            clusters[cluster_num]['cluster_num_models'])
-        rstr += "Cluster centroid: {0}\n".format(
-            clusters[cluster_num]['cluster_centroid'])
+        rstr += "Number of models: {0}\n".format(clusters[cluster_num]['cluster_num_models'])
+        rstr += "Cluster centroid: {0}\n".format(clusters[cluster_num]['cluster_centroid'])
         rstr += "\n"
-        tdata = cluster_table_data(
-            clusters, cluster_num, d['side_chain_treatments'])
+        tdata = cluster_table_data(clusters, cluster_num, d['side_chain_treatments'])
         rstr += tableFormat.pprint_table(tdata)
 
     rstr += "\nGenerated {0} ensembles\n\n".format(len(ensembles_data))
@@ -415,12 +318,10 @@ def import_ensembles(amoptd):
 
     """
     if not pdb_edit.check_pdb_directory(amoptd['ensembles'], single=False):
-        msg = "Cannot import ensembles from the directory: {0}".format(
-            amoptd['ensembles'])
+        msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles'])
         exit_util.exit_error(msg)
 
-    logger.info("Importing ensembles from directory: {0}".format(
-        amoptd['ensembles']))
+    logger.info("Importing ensembles from directory: {0}".format(amoptd['ensembles']))
 
     ensembles = glob.glob(os.path.join(amoptd['ensembles'], '*.pdb'))
     amoptd['ensembles'] = ensembles
@@ -435,8 +336,7 @@ def import_ensembles(amoptd):
         # Get data on the models
         hierarchy = iotbx.pdb.pdb_input(file_name=e).construct_hierarchy()
         d['subcluster_num_models'] = len(hierarchy.models())
-        d['num_residues'] = len(
-            hierarchy.models()[0].chains()[0].residue_groups())
+        d['num_residues'] = len(hierarchy.models()[0].chains()[0].residue_groups())
         d['ensemble_num_atoms'] = len(hierarchy.models()[0].atoms())
 
         ensembles_data.append(d)
@@ -469,8 +369,7 @@ def reorder_models(models, ordered_list_file):
     reordered_models = []
     for tm_model in ordered_list:
         name = os.path.basename(tm_model)
-        assert name in model_names, "TM model {0} is not in models!".format(
-            name)
+        assert name in model_names, "TM model {0} is not in models!".format(name)
         reordered_models.append(os.path.join(mdir, name))
     return reordered_models
 
@@ -516,8 +415,7 @@ def sort_ensembles(ensemble_pdbs, ensembles_data=None, keys=None, prioritise=Tru
         raise RuntimeError("Not enough ensembles")
     # Sort with out method only if we have data which contains our generated data
     if ensembles_data:
-        ensemble_pdbs_sorted = _sort_ensembles(
-            ensemble_pdbs, ensembles_data, keys, prioritise)
+        ensemble_pdbs_sorted = _sort_ensembles(ensemble_pdbs, ensembles_data, keys, prioritise)
     else:
         ensemble_pdbs_sorted = sorted(ensemble_pdbs)
     return ensemble_pdbs_sorted
@@ -530,30 +428,28 @@ def _sort_ensembles(ensemble_pdbs, ensemble_data, keys, prioritise):
         3) Subcluster radius threshold
         4) Side chain treatment
     """
-    assert len(ensemble_pdbs) == len(
-        ensemble_data), "Unequal ensembles data for sorting"
+    assert len(ensemble_pdbs) == len(ensemble_data), "Unequal ensembles data for sorting"
 
     # Keys we want to sort data by - differs for different source of ensembles
     if keys is None:
-        keys = ['cluster_num', 'truncation_score_key', 'truncation_level',
-                'subcluster_radius_threshold', 'side_chain_treatment']
+        keys = [
+            'cluster_num', 'truncation_score_key', 'truncation_level', 'subcluster_radius_threshold',
+            'side_chain_treatment'
+        ]
     else:
-        keys = [key for key in keys
-                if key in ensemble_data[0] and ensemble_data[0][key]]
+        keys = [key for key in keys if key in ensemble_data[0] and ensemble_data[0][key]]
 
     if keys:
         # Zip the data so order remains identical between pdbs and data
         ensembles_zipped = zip(ensemble_pdbs, ensemble_data)
 
         # The sorting itself
-        ensembles_zipped_ordered = sorted(
-            ensembles_zipped, key=lambda e: [e[1][k] for k in keys])
+        ensembles_zipped_ordered = sorted(ensembles_zipped, key=lambda e: [e[1][k] for k in keys])
 
         # Sort the ensembles further if we want to prioritise the "sweet spot"
         # between 20-50% truncation level
         if "truncation_level" in keys and prioritise:
-            ensembles_zipped_ordered = _sweet_spotting(
-                ensembles_zipped_ordered, keys)
+            ensembles_zipped_ordered = _sweet_spotting(ensembles_zipped_ordered, keys)
 
         # We need to `unzip` the data to get a list of ordered pdbs
         ensemble_pdbs_sorted, _ = zip(*ensembles_zipped_ordered)

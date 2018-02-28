@@ -155,11 +155,6 @@ class SubselectionAlgorithm(object):
         return keep.tolist(), throw.tolist()
 
 
-SUBSELECTION_MODES = [
-    func_name for func_name, _ in inspect.getmembers(SubselectionAlgorithm) if not func_name.startswith('_')
-]
-
-
 class ContactUtil(object):
     """
 
@@ -337,7 +332,6 @@ class ContactUtil(object):
 
         """
         _, _, scores = self.compute_precision_by_range(decoys, decoy_format, **kwargs)
-
         logger.info('Model selection mode: %s', mode)
         if mode == 'scaled':
             keep, throw = SubselectionAlgorithm.scaled(scores)
@@ -697,7 +691,8 @@ def _create_parsers():
     for d in DISABLE:
         if d in parsers:
             parsers.pop(parsers.index(d))
-    return sorted(parsers)
+    parsers.sort()
+    return parsers
 
 
 CONTACT_FILE_PARSERS = _create_parsers()
