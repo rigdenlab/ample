@@ -7,6 +7,7 @@ import logging
 import os
 import shutil
 import sys
+import uuid
 
 from iotbx import reflection_file_reader
 
@@ -25,7 +26,7 @@ def del_column(file_name, column, overwrite=True):
     mtzDel = ample_util.filename_append(file_name, "d{0}".format(column) )
     cmd = [ "mtzutils", "hklin1", file_name, "hklout", mtzDel ]
     stdin = "EXCLUDE 1 {0}".format( column )
-    logfile = os.path.join( os.getcwd(), "mtzutils.log" )
+    logfile = os.path.join(os.getcwd(), "mtzutils_{}.log".format(str(uuid.uuid1())))
     retcode = ample_util.run_command(cmd, stdin=stdin, logfile=logfile)
     if retcode != 0:
         msg = "Error running mtzutils. Check the logfile: {0}".format(logfile)
@@ -43,7 +44,7 @@ def add_rfree(file_name,directory=None,overwrite=True):
     mtzUnique = ample_util.filename_append(file_name, "uniqueify", directory=directory)
 
     cmd = ['uniqueify', file_name, mtzUnique]
-    logfile = os.path.join( os.getcwd(), "uniqueify.log" )
+    logfile = os.path.join(os.getcwd(), "uniqueify_{}.log".format(str(uuid.uuid1())))
     retcode = ample_util.run_command(cmd, logfile=logfile)
     if retcode != 0:
         msg = "Error running command: {0}. Check the logfile: {1}".format(" ".join(cmd),logfile)
@@ -138,7 +139,7 @@ def to_hkl(mtz_file,hkl_file=None,directory=None,F=None,SIGF=None,FREE=None):
         F,SIGF,FREE=get_labels(mtz_file)
         
     cmd=['mtz2various','HKLIN',mtz_file,'HKLOUT', hkl_file]
-    logfile="mtz2various.log"
+    logfile = "mtz2various_{}.log".format(str(uuid.uuid1()))
     stdin  = """LABIN FP={0} SIGFP={1} FREE={2}
 OUTPUT SHELX
 FSQUARED
