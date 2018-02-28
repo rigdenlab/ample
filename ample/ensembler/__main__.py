@@ -15,13 +15,10 @@ from ample.util import argparse_util
 
 ENSEMBLE_DIRNAME = 'ample_ensemble'
 
-# Set up the command-line parsing
 parser = argparse.ArgumentParser(description="AMPLE Ensembling Module")
-# Add options for running as a standalone module
 argparse_util.add_general_options(parser)
 argparse_util.add_cluster_submit_options(parser)
-# Ensemble options
-ensembler.add_argparse_options(parser)
+arpgarse_util.add_ensembler_options(parser)
 
 # Get command-line arguments and see if we have a restart_pkl option as this
 # is how we pass in an existing ample dictionary when we are running the ensembling
@@ -57,14 +54,12 @@ if not restart and not ('models' in optd and optd['models'] and os.path.exists(o
 
 # Set up the working directory if one doesn't already exist
 if not ('work_dir' in optd and optd['work_dir']):
-    optd['work_dir'] = os.path.join(
-        os.path.abspath(os.path.curdir), ENSEMBLE_DIRNAME)
+    optd['work_dir'] = os.path.join(os.path.abspath(os.path.curdir), ENSEMBLE_DIRNAME)
 if not os.path.isdir(optd['work_dir']):
     try:
         os.mkdir(optd['work_dir'])
     except OSError as e:
-        msg = 'Error making ensemble workdir {0} : {1}'.format(
-            optd['work_dir'], e)
+        msg = 'Error making ensemble workdir {0} : {1}'.format(optd['work_dir'], e)
         exit_util.exit_error(msg, sys.exc_info()[2])
 
 assert os.path.isdir(optd['work_dir'])
@@ -79,8 +74,7 @@ try:
         elif optd['subcluster_program'] == 'maxcluster':
             optd['maxcluster_exe'] = ample_util.find_exe('maxcluster')
         else:
-            raise RuntimeError("Unknown subcluster_program: {0}".format(
-                optd['subcluster_program']))
+            raise RuntimeError("Unknown subcluster_program: {0}".format(optd['subcluster_program']))
         optd['theseus_exe'] = ample_util.find_exe('theseus')
         optd['ensemble_ok'] = os.path.join(optd['work_dir'], 'ensemble.ok')
         optd['results_path'] = os.path.join(optd['work_dir'], AMPLE_PKL)
