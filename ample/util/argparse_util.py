@@ -303,49 +303,51 @@ def add_ensembler_options(parser=None):
     if parser is None:
         import argparse
         parser = argparse.ArgumentParser()
-    parser = parser.add_argument_group('Ensemble Options')
-    parser.add_argument('-cluster_dir', help='Path to directory of pre-clustered models to import')
-    parser.add_argument(
+    ensembler_group = parser.add_argument_group('Ensemble Options')
+    ensembler_group.add_argument('-cluster_dir', help='Path to directory of pre-clustered models to import')
+    ensembler_group.add_argument(
         '-cluster_method', help='How to cluster the models for ensembling (spicker|fast_protein_cluster')
-    parser.add_argument('-ensembler_timeout', type=int, help='Time in seconds before timing out ensembling')
-    parser.add_argument('-gesamt_exe', metavar='gesamt_exe', help='Path to the gesamt executable')
-    parser.add_argument(
+    ensembler_group.add_argument('-ensembler_timeout', type=int, help='Time in seconds before timing out ensembling')
+    ensembler_group.add_argument('-gesamt_exe', metavar='gesamt_exe', help='Path to the gesamt executable')
+    ensembler_group.add_argument(
         '-homologs', metavar='True/False', help='Generate ensembles from homologs models (requires -alignment_file)')
-    parser.add_argument(
+    ensembler_group.add_argument(
         '-homolog_aligner',
         metavar='homolog_aligner',
         help='Program to use for structural alignment of homologs (gesamt|mustang)')
-    parser.add_argument('-ensemble_max_models', help='Maximum number of models permitted in an ensemble')
-    parser.add_argument('-maxcluster_exe', help='Path to Maxcluster executable')
-    parser.add_argument('-mustang_exe', metavar='mustang_exe', help='Path to the mustang executable')
-    parser.add_argument(
+    ensembler_group.add_argument('-ensemble_max_models', help='Maximum number of models permitted in an ensemble')
+    ensembler_group.add_argument('-maxcluster_exe', help='Path to Maxcluster executable')
+    ensembler_group.add_argument('-mustang_exe', metavar='mustang_exe', help='Path to the mustang executable')
+    ensembler_group.add_argument(
         '-num_clusters',
         type=int,
         help='The number of Spicker clusters of the original decoys that will be sampled [1]')
-    parser.add_argument('-percent', metavar='percent_truncation', help='percent interval for truncation')
-    parser.add_argument('-score_matrix', help='Path to score matrix for spicker')
-    parser.add_argument('-score_matrix_file_list', help='File with list of ordered model names for the score_matrix')
-    parser.add_argument(
+    ensembler_group.add_argument('-percent', metavar='percent_truncation', help='percent interval for truncation')
+    ensembler_group.add_argument('-score_matrix', help='Path to score matrix for spicker')
+    ensembler_group.add_argument(
+        '-score_matrix_file_list', help='File with list of ordered model names for the score_matrix')
+    ensembler_group.add_argument(
         '-side_chain_treatments',
         type=str,
         nargs='+',
         help='The side chain treatments to use. Default: {0}'.format(SIDE_CHAIN_TREATMENTS))
-    parser.add_argument(
+    ensembler_group.add_argument(
         '-subcluster_radius_thresholds',
         type=float,
         nargs='+',
         help='The radii to use for subclustering the truncated ensembles')
-    parser.add_argument('-subcluster_program', help='Program for subclustering models [maxcluster]')
-    parser.add_argument('-theseus_exe', metavar='Theseus exe (required)', help='Path to theseus executable')
-    parser.add_argument(
+    ensembler_group.add_argument('-subcluster_program', help='Program for subclustering models [maxcluster]')
+    ensembler_group.add_argument('-theseus_exe', metavar='Theseus exe (required)', help='Path to theseus executable')
+    ensembler_group.add_argument(
         '-thin_clusters',
         metavar='True/False',
         help='Create ensembles from 10 clusters with 1 + 3A subclustering and polyAlanine sidechains')
-    parser.add_argument(
+    ensembler_group.add_argument(
         '-truncation_method', help='How to truncate the models for ensembling percent|thresh|focussed|scores')
-    parser.add_argument('-truncation_pruning', help='Whether to remove isolated residues (single)')
-    parser.add_argument(
+    ensembler_group.add_argument('-truncation_pruning', help='Whether to remove isolated residues (single)')
+    ensembler_group.add_argument(
         '-truncation_scorefile',
         help="CSV file containing per residue scores - COLUMN ONE MUST BE RESIDUE INDEX STARTING FROM 1")
-    parser.add_argument('-truncation_scorefile_header', nargs='+', help="column headers to be used to create ensembles")
+    ensembler_group.add_argument(
+        '-truncation_scorefile_header', nargs='+', help="column headers to be used to create ensembles")
     return parser
