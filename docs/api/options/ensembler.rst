@@ -4,6 +4,6 @@ Structure Ensembler Options
 ---------------------------
 
 .. argparse::
-   :module: ample.ensembler
-   :func: add_argparse_options
+   :module: ample.util.argparse_util
+   :func: add_ensembler_options
    :prog: ample
