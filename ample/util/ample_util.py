@@ -35,7 +35,7 @@ logger.addHandler(logging.NullHandler())
 
 def amoptd_fix_path(optd, newroot, i2mock=False):
     """Update all the paths in an AMPLE results dictionary to be rooted at newroot
-    
+
     Parameters
     ----------
     optd: dict
@@ -70,6 +70,7 @@ def amoptd_fix_path(optd, newroot, i2mock=False):
                         if os.path.isfile(old): shutil.copy(old,new)
                     else:
                         new = r[k].replace(oldroot,newroot)
+                    logger.debug('Changing amopt entry %s from: %s to: %s' % (k, old, new))
                     r[k] = new
     return optd
 
@@ -248,7 +249,7 @@ def construct_references(optd):
 
 def extract_models(amoptd, sequence=None, single=True, allsame=True):
     """Extract some models
-    
+
     Description
     -----------
     Check a directory of pdbs or extract pdb files from a given tar/zip file or directory of pdbs
@@ -266,20 +267,20 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
         if not os.path.isfile(filename):
             msg = "Cannot find models file: {0}".format(filename)
             exit_util.exit_error(msg)
-            
+
         # we need a models_dir to extract into
         assert models_dir, "extract_models() needs a models_dir path!"
         if not os.path.isdir(models_dir):
             os.mkdir(models_dir)
         models_dir = models_dir
-        
+
         # See what sort of file this is:
         f, suffix = os.path.splitext(filename)
         if suffix in ['.gz', '.bz']:
             f, s2 = os.path.splitext(f)
             if s2 == '.tar':
                 suffix = s2 + suffix
-        
+
         tar_suffixes = ['.tar.gz', '.tgz', '.tar.bz', '.tbz']
         suffixes = tar_suffixes + ['.zip']
         if suffix not in suffixes:
@@ -308,11 +309,11 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
             # set this here - horribly untidy as we should have one place to decide on side chains
             logger.info('Found QUARK models in file: %s', filename)
             amoptd['quark_models'] = True
-    
+
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
         msg = "Problem importing pdb files - please check the log for more information"
         exit_util.exit_error(msg)
-    
+
     amoptd['models_dir'] = models_dir
     return glob.glob(os.path.join(models_dir, "*.pdb"))
 
@@ -352,7 +353,7 @@ def extract_zip(filename, directory, suffixes=['.pdb']):
     files = []
     for f in zif:
         if os.path.splitext(f.filename)[1] in suffixes:
-            # Hack to rewrite name 
+            # Hack to rewrite name
             f.filename = os.path.basename(f.filename)
             zipf.extract(f, path=directory)
             files.append(os.path.join(directory, f.filename))
@@ -364,7 +365,7 @@ def extract_zip(filename, directory, suffixes=['.pdb']):
 
 def find_exe(executable, dirs=None):
     """Find the executable exename.
-    
+
     Parameters
     ----------
     executable : str
@@ -373,7 +374,7 @@ def find_exe(executable, dirs=None):
        Additional directories to search for the location
     """
     logger.debug('Looking for executable: %s', executable)
-    
+
     exe_file=None
     found=False
     if is_exe(executable):
@@ -384,23 +385,23 @@ def find_exe(executable, dirs=None):
         _, fname = os.path.split(executable)
         if fname:
             executable=fname
-            
+
         # By default we search in the system PATH and add any additional user given paths here
         paths = os.environ["PATH"].split(os.pathsep)
         if dirs:
             paths += dirs
         logger.debug('Checking paths: %s', paths)
-        
+
         for path in paths:
-            exe_file = os.path.abspath(os.path.join(path, executable))   
+            exe_file = os.path.abspath(os.path.join(path, executable))
             if is_exe(exe_file):
                 logger.debug('Found executable %s in directory %s', executable, path)
                 found=True
                 break
-    
+
     if not found:
         raise FileNotFoundError("Cannot find executable: {0}".format(executable))
-    
+
     logger.debug('find_exe found executable: %s', exe_file)
     return exe_file
 
@@ -434,7 +435,7 @@ def ideal_helices(optd):
     names = ['polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25',
              'polyala30', 'polyala35', 'polyala40']
     polya_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
-    
+
     ensemble_options = {}
     ensembles_data = []
     pdbs = []
@@ -449,7 +450,7 @@ def ideal_helices(optd):
                                'num_residues': nres,
                                 })
         pdbs.append(pdb)
-        
+
     optd['ensembles'] = pdbs
     optd['ensemble_options'] = ensemble_options
     optd['ensembles_data'] = ensembles_data
@@ -463,7 +464,7 @@ def is_exe(fpath):
     ----------
     fpath : str
        The path to the executable
-    
+
     Returns
     -------
     bool
@@ -571,7 +572,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         if dolog: logger.debug("Logfile is: %s", logfile)
     else:
         logf = tmp_file_name()
-        
+
     if stdin is not None:
         stdinstr = stdin
         stdin = subprocess.PIPE
@@ -708,7 +709,7 @@ def split_models(dfile, directory):
                 f.write(l)
             extracted_models.append(fpath)
             logger.debug("Wrote: %s", fpath)
-        
+
     return extracted_models
 
 
@@ -747,7 +748,7 @@ def tmp_file_name(delete=True, directory=None, suffix=""):
     tmp1 = t.name
     t.close()
     return tmp1
-        
+
 # ======================================================================
 # Some default string messages that we need during the program to inform
 # the user of certain information
