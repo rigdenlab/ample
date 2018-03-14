@@ -23,8 +23,8 @@ parser.add_argument('-rvapi_document')
 opt, other = parser.parse_known_args()
 logging.debug("Script {0} got known arguments: {1} unknown {2}".format(sys.argv[0], opt, other))
 
-ample_pkl = '/opt/ample.git/from_existing_models/resultsd.pkl'
-show_gui = True
+ample_pkl = '/Users/jmht/Documents/work/from_existing_models/resultsd.pkl'
+show_gui = False
 work_dir = os.getcwd()
 new_root = os.sep.join(os.path.dirname(ample_pkl).split(os.sep)[:-1])
 i2mock = False
@@ -59,6 +59,7 @@ with open(os.path.join(work_dir, AMPLE_PKL), 'w') as w: cPickle.dump(old_dict, w
 AR = AmpleOutput(old_dict)
 if True:
     AR.display_results(old_dict)
+    AR.rvapi_shutdown(old_dict)
 else:
     SLEEP = 2
 

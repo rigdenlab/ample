@@ -117,7 +117,6 @@ class AmpleOutput(object):
         self.generate_output = self.ccp4i2 | self.jscofe | show_gui
         # No log tab with jscofe or ccp4i2
         self.do_log_tab = not(self.ccp4i2 or self.jscofe)
-        if self.jscofe: self.log_tab_id = pyrvapi.rvapi_get_meta()
 
         # For running under old CCP4online
         if webserver_uri:
@@ -160,6 +159,11 @@ class AmpleOutput(object):
                 # layout = 4 if i1 else 7,
                 )
                 API.document.newdoc(**kwargs)
+
+        if self.jscofe: self.log_tab_id = pyrvapi.rvapi_get_meta()
+        logger.critical("GOT self.log_tab_id: %s" % self.log_tab_id)
+        logger.critical("WORKDIR IS : %s" % work_dir)
+
         if show_gui:
             # We start our own browser
             jsrview = os.path.join(os.environ["CCP4"], "libexec", "jsrview")
@@ -558,19 +562,19 @@ class AmpleOutput(object):
                 if os.path.isfile(str(r['SXRARP_pdbout'])) and os.path.isfile(str(r['SXRARP_mtzout'])):
                     data_sxrarp = "data_sxrarp_out_{0}".format(name) + uid
                     pyrvapi.rvapi_add_data(data_sxrarp,
-                                            "SXRARP PDB",
-                                            os.path.splitext(self.fix_path(r['SXRARP_pdbout']))[0],
-                                            "xyz:map",
-                                            sec_sxrarp,
-                                            2, 0, 1, 1, True)
+                                           "SXRARP PDB",
+                                           os.path.splitext(self.fix_path(r['SXRARP_pdbout']))[0],
+                                           "xyz:map",
+                                           sec_sxrarp,
+                                           2, 0, 1, 1, True)
                     pyrvapi.rvapi_append_to_data(data_sxrarp, self.fix_path(r['SXRARP_mtzout']), "xyz:map")
                 if os.path.isfile(str(r['SXRARP_logfile'])):
                     pyrvapi.rvapi_add_data("data_sxrarp_logfile_{0}".format(name),
-                                            "SXRARP Logfile",
-                                            self.fix_path(r['SXRARP_logfile']),
-                                            "text",
-                                            sec_sxrarp,
-                                            2, 0, 1, 1, True)
+                                           "SXRARP Logfile",
+                                           self.fix_path(r['SXRARP_logfile']),
+                                           "text",
+                                           sec_sxrarp,
+                                           2, 0, 1, 1, True)
 
             pyrvapi.rvapi_set_tree_node(results_tree, container_id, "{0}".format(name), "auto", "")
         return
@@ -596,18 +600,16 @@ class AmpleOutput(object):
         work_dir = amopt['work_dir']
 
         # Create dictionary we're going to return
-        meta = { 'results' : [] }
-
+        meta = {'results' : []}
         nresults = 0
         if bool(amopt.get('mrbump_results')):
             mrb_results = amopt['mrbump_results']
             nresults = min(3, len(mrb_results))
         if nresults > 0:
-            root = os.path.join(work_dir, "..")
             for fdata in mrbump_util.ResultsSummary(mrb_results[:nresults]).topFiles(nresults):
-                # Mangle paths
-                fdata['pdb'] = os.path.relpath(fdata['pdb'],root)
-                fdata['mtz'] = os.path.relpath(fdata['mtz'],root)
+                # Mangle paths. relpath assumes args are directories so need to add ..
+                fdata['pdb'] = os.path.join('..', os.path.relpath(fdata['pdb']))
+                fdata['mtz'] = os.path.join('..', os.path.relpath(fdata['mtz']))
                 meta['results'].append(fdata)
 
         # Commit to file
@@ -627,7 +629,7 @@ if __name__ == "__main__":
     ample_dict['ample_log'] = os.path.abspath(__file__)
 
     report_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
-    AR = AmpleOutput(ample_dict, show_gui=True)
+    AR = AmpleOutput(ample_dict)
     AR.display_results(ample_dict)
 
     view1_dict = copy.copy(ample_dict)
