@@ -82,7 +82,7 @@ class Ample(object):
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
             benchmark_util.analysePdb(amopt.d)
-            
+
         # Create constituent models from an NMR ensemble
         if amopt.d['nmr_model_in']:
             nmr_mdir = os.path.join(amopt.d['work_dir'],'nmr_models')
@@ -140,7 +140,6 @@ class Ample(object):
         # Finally update pyrvapi results
         if self.ample_output:
             self.ample_output.display_results(amopt.d)
-        if self.ample_output:
             self.ample_output.rvapi_shutdown(amopt.d)
         return
 
@@ -443,7 +442,7 @@ class Ample(object):
 
     def process_command_line(self, args=None, contacts=True, modelling=True, mol_rep=True):
         """Process the command-line.
-        :args: optional argument that can hold the command-line arguments if we 
+        :args: optional argument that can hold the command-line arguments if we
         have been called from within python for testing
         """
         parser = argparse.ArgumentParser(description="AMPLE: Ab initio Modelling of Proteins for moLEcular replacement",
