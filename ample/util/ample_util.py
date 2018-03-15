@@ -43,12 +43,12 @@ def amoptd_fix_path(optd, newroot, i2mock=False):
     newroot: str
        Path to the AMPLE root directory (topdir containing MRBUMP dir etc.)
     """
-    oldroot = os.sep.join(optd['work_dir'].split(os.sep)[:-1])
+    #oldroot = os.sep.join(optd['work_dir'].split(os.sep)[:-1])
+    oldroot = optd['work_dir']
     for k in ['benchmark_dir',
               'native_pdb',
               'native_pdb_std',
-              'fasta',
-              'work_dir']:
+              'fasta']:
         if k in optd and isinstance(optd[k], str):
             optd[k] = optd[k].replace(oldroot, newroot)
 

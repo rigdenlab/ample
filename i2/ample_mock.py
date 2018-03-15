@@ -9,12 +9,19 @@ import shutil
 import sys
 import time
 
+# https://stackoverflow.com/questions/15034151/copy-directory-contents-into-a-directory-with-python
+from distutils.dir_util import copy_tree
+#from shutil import copytree
+
 #from ample.util import ample_util
 from ample.util.ample_util import I2DIR, amoptd_fix_path
 from ample.util.pyrvapi_results import AmpleOutput
 from ample.constants import AMPLE_PKL
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
+
+# Location of the old AMPLE run containing the data we will present
+mock_data_dir = '/Users/jmht/Documents/work/from_existing_models'
 
 # Get the path to program.xml
 parser = argparse.ArgumentParser()
@@ -23,19 +30,18 @@ parser.add_argument('-rvapi_document')
 opt, other = parser.parse_known_args()
 logging.debug("Script {0} got known arguments: {1} unknown {2}".format(sys.argv[0], opt, other))
 
-ample_pkl = '/Users/jmht/Documents/work/from_existing_models/resultsd.pkl'
 show_gui = False
-work_dir = os.getcwd()
-new_root = os.sep.join(os.path.dirname(ample_pkl).split(os.sep)[:-1])
 i2mock = False
-
+work_dir = os.getcwd()
+new_root = os.path.join(work_dir, os.path.basename(mock_data_dir))
+copy_tree(mock_data_dir, new_root, preserve_symlinks=1)
+ample_pkl = os.path.join(new_root, AMPLE_PKL)
 if not (ample_pkl and os.path.isfile(ample_pkl)):
     sys.stderr.write("Cannot find AMPLE pkl file: {0}\n".format(ample_pkl))
     sys.exit(1)
 
 # Load AMPLE dictionary
 with open(ample_pkl) as f: old_dict = cPickle.load(f)
-
 if opt.rvapi_document:
     old_dict['rvapi_document'] = opt.rvapi_document
 elif opt.ccp4i2_xml:
@@ -52,8 +58,8 @@ elif opt.ccp4i2_xml:
 amoptd_fix_path(old_dict, newroot=new_root, i2mock=i2mock)
 # Need to add these
 old_dict['show_gui'] = show_gui
-old_dict['work_dir'] = work_dir
-with open(os.path.join(work_dir, AMPLE_PKL), 'w') as w: cPickle.dump(old_dict, w)
+old_dict['work_dir'] = new_root
+with open(ample_pkl, 'w') as w: cPickle.dump(old_dict, w)
 
 # Run gui and create jsrview files from dict
 AR = AmpleOutput(old_dict)

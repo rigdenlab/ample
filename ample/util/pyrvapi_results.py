@@ -60,39 +60,40 @@ class AmpleOutput(object):
     """Display the output of an AMPLE job."""
 
     _ensemble_tooltips = {
-               "Name" : "Ensemble name - used to name the pdb file and the directory where mrbump carries out molecular replacement.",
-               "Cluster" : "The SPICKER cluster that this ensemble was derived from.",
-               "Truncation Level" : "Percentage of the model remaining after the varying residues were pruned away",
-               "Variance Threshold (A^2)" : "THESEUS variance score for the most variable residue that remains in this ensemble",
-               "No. Residues" : "Number of residues for each model in the ensemble",
-               "Radius Threshold (A)" : "Radius threshold (1,2 or 3 A) used for subclustering the models in a truncation level",
-               "No. Decoys" : "Number of models within this ensemble",
-               "Number of Atoms" : "Number of atoms for each model in the ensemble",
-               "Sidechain Treatment" : "allatom - all sidechains were retained, reliable - MET, ASP, PRO, GLN, LYS, ARG, GLU, SER were retained, polyAla - all sidechains were stripped back to polyalanine",
-               }
+        "Name" : "Ensemble name - used to name the pdb file and the directory where mrbump carries out molecular replacement.",
+        "Cluster" : "The SPICKER cluster that this ensemble was derived from.",
+        "Truncation Level" : "Percentage of the model remaining after the varying residues were pruned away",
+        "Variance Threshold (A^2)" : "THESEUS variance score for the most variable residue that remains in this ensemble",
+        "No. Residues" : "Number of residues for each model in the ensemble",
+        "Radius Threshold (A)" : "Radius threshold (1,2 or 3 A) used for subclustering the models in a truncation level",
+        "No. Decoys" : "Number of models within this ensemble",
+        "Number of Atoms" : "Number of atoms for each model in the ensemble",
+        "Sidechain Treatment" : "allatom - all sidechains were retained, reliable - MET, ASP, PRO, GLN, LYS, ARG, GLU, SER were retained, polyAla - all sidechains were stripped back to polyalanine",
+        }
 
     _mrbump_tooltips = {
-               "ensemble_name" : "The identifier of the AMPLE ensemble search model",
-               "MR_program" : "Molecular replacement program",
-               "Solution_Type" : "MRBUMP categorisation of the solution",
-               "PHASER_LLG" : "PHASER Log-likelihood gain for the Molecular Replacement solution",
-               "PHASER_TFZ" : "PHASER Translation Function Z-score for the Molecular Replacement solution",
-               "REFMAC_Rfact" : "Rfact score for REFMAC refinement of the Molecular Replacement solution",
-               "REFMAC_Rfree" : "Rfree score for REFMAC refinement of the Molecular Replacement solution",
-               "BUCC_final_Rfact" : "Rfact score for BUCCANEER rebuild of the Molecular Replacement solution",
-               "BUCC_final_Rfree" : "Rfree score for BUCCANEER rebuild of the Molecular Replacement solution",
-               "ARP_final_Rfact" : "Rfact score for ARPWARP rebuild of the Molecular Replacement solution",
-               "ARP_final_Rfree" : "Rfree score for ARPWARP rebuild of the Molecular Replacement solution",
-               "SHELXE_CC" : "SHELXE Correlation Coefficient score after C-alpha trace",
-               "SHELXE_ACL" : "Average Chain Length of the fragments of the SHELXE C-alpha trace",
-               "SXRBUCC_final_Rfact" : "Rfact score for BUCCANEER rebuild of the SHELXE C-alpha trace",
-               "SXRBUCC_final_Rfree" : "Rfree score for BUCCANEER rebuild of the SHELXE C-alpha trace",
-               "SXRARP_final_Rfact" : "Rfact score for ARPWARP rebuild of the SHELXE C-alpha trace",
-               "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
-               }
+        "ensemble_name" : "The identifier of the AMPLE ensemble search model",
+        "MR_program" : "Molecular replacement program",
+        "Solution_Type" : "MRBUMP categorisation of the solution",
+        "PHASER_LLG" : "PHASER Log-likelihood gain for the Molecular Replacement solution",
+        "PHASER_TFZ" : "PHASER Translation Function Z-score for the Molecular Replacement solution",
+        "REFMAC_Rfact" : "Rfact score for REFMAC refinement of the Molecular Replacement solution",
+        "REFMAC_Rfree" : "Rfree score for REFMAC refinement of the Molecular Replacement solution",
+        "BUCC_final_Rfact" : "Rfact score for BUCCANEER rebuild of the Molecular Replacement solution",
+        "BUCC_final_Rfree" : "Rfree score for BUCCANEER rebuild of the Molecular Replacement solution",
+        "ARP_final_Rfact" : "Rfact score for ARPWARP rebuild of the Molecular Replacement solution",
+        "ARP_final_Rfree" : "Rfree score for ARPWARP rebuild of the Molecular Replacement solution",
+        "SHELXE_CC" : "SHELXE Correlation Coefficient score after C-alpha trace",
+        "SHELXE_ACL" : "Average Chain Length of the fragments of the SHELXE C-alpha trace",
+        "SXRBUCC_final_Rfact" : "Rfact score for BUCCANEER rebuild of the SHELXE C-alpha trace",
+        "SXRBUCC_final_Rfree" : "Rfree score for BUCCANEER rebuild of the SHELXE C-alpha trace",
+        "SXRARP_final_Rfact" : "Rfact score for ARPWARP rebuild of the SHELXE C-alpha trace",
+        "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
+    }
 
     def __init__(self, amopt):
         self.header = False
+        self.jsrview_dir = None
         self.log_tab_id = None
         self.old_mrbump_results = None
         self.results_tab_id = None
@@ -136,36 +137,34 @@ class AmpleOutput(object):
         return
 
     def setup(self, work_dir=None, ccp4i2_xml=None, rvapi_document=None, show_gui=False):
-        if not pyrvapi or not self.generate_output: return
-        report_dir = os.path.join(work_dir, "jsrview")
-        if not os.path.isdir(report_dir): os.mkdir(report_dir)
-        docid = "AMPLE_results"
+        if not pyrvapi or not self.generate_output:
+            return
         title = "AMPLE Results"
         logger.debug("Using Andre's Pyrvapi" if API else "COULD NOT FIND Andre's API!")
-        if API is None:
-            share_jsrview = os.path.join(os.environ["CCP4"], "share", "jsrview")
-            pyrvapi.rvapi_init_document(docid, report_dir, title, 1, 7, share_jsrview, None, None, None, None)
+        if rvapi_document:
+            logger.debug("Restoring document: %s", rvapi_document)
+            pyrvapi.rvapi_restore_document2(rvapi_document)
+            self.jsrview_dir = os.path.dirname(rvapi_document)
         else:
-            if rvapi_document:
-                logger.debug("Restoring document: %s", rvapi_document)
-                pyrvapi.rvapi_restore_document2(rvapi_document)
-            else:
-                # Quick hack to init with Andre's stuff - can switch out for Felix's API when done
-                logger.debug("Starting with xml %s", ccp4i2_xml)
-                kwargs = dict(wintitle=title,
-                              reportdir=report_dir,
-                              xml=ccp4i2_xml,
-                              abspaths=False,
-                              # bug in jsrview:
-                              # layout = 4 if i1 else 7,
-                             )
-                API.document.newdoc(**kwargs)
+            # Quick hack to init with Andre's stuff - can switch out for Felix's API when done
+            logger.debug("Starting with xml %s", ccp4i2_xml)
+            self.jsrview_dir = os.path.join(work_dir, "jsrview")
+            if not os.path.isdir(self.jsrview_dir):
+                os.mkdir(self.jsrview_dir)
+            kwargs = dict(wintitle=title,
+                          reportdir=self.jsrview_dir,
+                          xml=ccp4i2_xml,
+                          abspaths=False,
+                          # bug in jsrview:
+                          # layout = 4 if i1 else 7,
+                         )
+            API.document.newdoc(**kwargs)
         if not self.own_log_tab:
             self.log_tab_id = pyrvapi.rvapi_get_meta()
         if show_gui:
             # We start our own browser
             jsrview = os.path.join(os.environ["CCP4"], "libexec", "jsrview")
-            subprocess.Popen([jsrview, os.path.join(report_dir, "index.html")])
+            subprocess.Popen([jsrview, os.path.join(self.jsrview_dir, "index.html")])
         return
 
     def create_log_tab(self, ample_dict):
@@ -329,9 +328,11 @@ class AmpleOutput(object):
             return False
 
     def fix_path(self, path):
-        """Ammend path so it's suitable for the webserver"""
+        """Ammend path so it's suitable for the webserver or jscofe/standalone"""
         if self.webserver_uri:
             return urlparse.urljoin(self.webserver_uri, path[self._webserver_start:])
+        elif self.jscofe:
+            return os.path.join("..", os.path.relpath(path, self.jsrview_dir))
         return path
 
     def fill_table(self, table_id, tdata, tooltips={}):
@@ -562,8 +563,8 @@ class AmpleOutput(object):
             AMPLE results dictionary with all information
         """
         rvdoc = amopt['rvapi_document']
-        if not rvdoc: return
-        work_dir = amopt['work_dir']
+        if not rvdoc:
+            return
 
         # Create dictionary we're going to return
         meta = {'results' : []}
@@ -574,8 +575,8 @@ class AmpleOutput(object):
         if nresults > 0:
             for fdata in mrbump_util.ResultsSummary(mrb_results[:nresults]).topFiles(nresults):
                 # Mangle paths. relpath assumes args are directories so need to add ..
-                fdata['pdb'] = os.path.join('..', os.path.relpath(fdata['pdb']))
-                fdata['mtz'] = os.path.join('..', os.path.relpath(fdata['mtz']))
+                fdata['pdb'] = self.fix_path(fdata['pdb'])
+                fdata['mtz'] = self.fix_path(fdata['mtz'])
                 meta['results'].append(fdata)
 
         # Commit to file
