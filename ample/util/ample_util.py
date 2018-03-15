@@ -44,21 +44,21 @@ def amoptd_fix_path(optd, newroot, i2mock=False):
        Path to the AMPLE root directory (topdir containing MRBUMP dir etc.)
     """
     oldroot = os.sep.join(optd['work_dir'].split(os.sep)[:-1])
-    for k in [ 'benchmark_dir',
+    for k in ['benchmark_dir',
               'native_pdb',
               'native_pdb_std',
               'fasta',
               'work_dir']:
-        if k in optd and isinstance(optd[k],str):
+        if k in optd and isinstance(optd[k], str):
             optd[k] = optd[k].replace(oldroot, newroot)
 
-    MRBUMP_FILE_KEYS = [ 'PHASER_logfile', 'PHASER_pdbout', 'PHASER_mtzout',
-                          'REFMAC_logfile', 'REFMAC_pdbout', 'REFMAC_mtzout',
-                          'BUCC_logfile','BUCC_pdbout', 'BUCC_mtzout',
-                          'ARP_logfile', 'ARP_pdbout', 'ARP_mtzout',
-                          'SHELXE_logfile', 'SHELXE_pdbout', 'SHELXE_mtzout',
-                          'SXRBUCC_logfile','SXRBUCC_pdbout','SXRBUCC_mtzout',
-                          'SXRARP_logfile', 'SXRARP_pdbout', 'SXRARP_mtzout']
+    MRBUMP_FILE_KEYS = ['PHASER_logfile', 'PHASER_pdbout', 'PHASER_mtzout',
+                        'REFMAC_logfile', 'REFMAC_pdbout', 'REFMAC_mtzout',
+                        'BUCC_logfile', 'BUCC_pdbout', 'BUCC_mtzout',
+                        'ARP_logfile', 'ARP_pdbout', 'ARP_mtzout',
+                        'SHELXE_logfile', 'SHELXE_pdbout', 'SHELXE_mtzout',
+                        'SXRBUCC_logfile', 'SXRBUCC_pdbout','SXRBUCC_mtzout',
+                        'SXRARP_logfile', 'SXRARP_pdbout', 'SXRARP_mtzout']
     if 'mrbump_results' in optd:
         for r in optd['mrbump_results']:
             for k in MRBUMP_FILE_KEYS:
@@ -66,11 +66,12 @@ def amoptd_fix_path(optd, newroot, i2mock=False):
                     old = r[k]
                     warnings.warn("FIX MRBUMP BUG buccaneer refine.pdb vs refined.pdb")
                     if i2mock:
-                        new = os.path.join(newroot,os.path.basename(old))
-                        if os.path.isfile(old): shutil.copy(old,new)
+                        new = os.path.join(newroot, os.path.basename(old))
+                        if os.path.isfile(old):
+                            shutil.copy(old, new)
                     else:
-                        new = r[k].replace(oldroot,newroot)
-                    logger.debug('Changing amopt entry %s from: %s to: %s' % (k, old, new))
+                        new = r[k].replace(oldroot, newroot)
+                    #logger.debug('Changing amopt entry %s from: %s to: %s', k, old, new)
                     r[k] = new
     return optd
 
@@ -84,12 +85,12 @@ def ccp4_version():
 
     """
     if CCP4_VERSION is None:
-        # Currently there seems no sensible way of doing this other then running a program and grepping the output
+        # Currently there seems no sensible way of doing this other then running a program
+        # and grepping the output
         pdbcur = 'pdbcur' + EXE_EXT
         log_fname = tmp_file_name(delete=False)
         run_command([pdbcur], stdin="", logfile=log_fname)
         tversion = None
-
         with open(log_fname, 'r') as logfh:
             for i, line in enumerate(logfh.readlines()):
                 if i > 20:
@@ -97,7 +98,6 @@ def ccp4_version():
                 if line.startswith(' ### CCP4'):
                     tversion = line.split()[2].rstrip(':')
                     break
-
         if not tversion:
             raise RuntimeError("Cannot determine CCP4 version")
         vsplit = tversion.split('.')
