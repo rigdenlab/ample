@@ -59,8 +59,6 @@ def add_cluster_submit_options(parser=None):
         type=int,
         help='The maximum number of jobs to run concurrently with SGE array job submission')
     submit_group.add_argument(
-        '-submit_num_array_jobs', type=int, help='The number of jobs to run concurrently with SGE array job submission')
-    submit_group.add_argument(
         '-submit_pe_lsf', help='Cluster submission: string to set number of processors for LSF queueing system')
     submit_group.add_argument(
         '-submit_pe_sge', help='Cluster submission: string to set number of processors for SGE queueing system')
