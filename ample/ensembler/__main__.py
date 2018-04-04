@@ -18,7 +18,7 @@ ENSEMBLE_DIRNAME = 'ample_ensemble'
 parser = argparse.ArgumentParser(description="AMPLE Ensembling Module")
 argparse_util.add_general_options(parser)
 argparse_util.add_cluster_submit_options(parser)
-arpgarse_util.add_ensembler_options(parser)
+argparse_util.add_ensembler_options(parser)
 
 # Get command-line arguments and see if we have a restart_pkl option as this
 # is how we pass in an existing ample dictionary when we are running the ensembling
