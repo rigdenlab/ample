@@ -35,6 +35,7 @@ def check_mandatory_options(optd):
     required and mutually exclusive options
 
     """
+
     def _exit(msg, wdir):
         exit_util.exit_error(msg)
 
@@ -88,8 +89,7 @@ def process_options(optd):
     # Check to see if mr_sequence was given and if not mr_sequence defaults to fasta
     if optd['mr_sequence'] != None:
         if not (os.path.exists(str(optd['mr_sequence']))):
-            msg = 'Cannot find mr sequence file: {0}'.format(
-                optd['mr_sequence'])
+            msg = 'Cannot find mr sequence file: {0}'.format(optd['mr_sequence'])
             exit_util.exit_error(msg)
     else:
         optd['mr_sequence'] = optd['fasta']
@@ -145,15 +145,12 @@ def process_options(optd):
         optd['make_models'] = False
     elif optd['cluster_dir']:
         if not os.path.isdir(optd['cluster_dir']):
-            msg = "Import cluster cannot find directory: {0}".format(
-                optd['cluster_dir'])
+            msg = "Import cluster cannot find directory: {0}".format(optd['cluster_dir'])
             exit_util.exit_error(msg)
         if not glob.glob(os.path.join(optd['cluster_dir'], "*.pdb")):
-            msg = "Import cluster cannot find pdbs in directory: {0}".format(
-                optd['cluster_dir'])
+            msg = "Import cluster cannot find pdbs in directory: {0}".format(optd['cluster_dir'])
             exit_util.exit_error(msg)
-        logger.info(
-            "Importing pre-clustered models from directory: {0}\n".format(optd['cluster_dir']))
+        logger.info("Importing pre-clustered models from directory: {0}\n".format(optd['cluster_dir']))
         optd['cluster_method'] = 'import'
         optd['make_frags'] = False
         optd['make_models'] = False
@@ -167,8 +164,7 @@ def process_options(optd):
             # We need to use gesamt or mustang to do the alignment
             if optd['homolog_aligner'] == 'gesamt':
                 if not ample_util.is_exe(str(optd['gesamt_exe'])):
-                    optd['gesamt_exe'] = os.path.join(
-                        os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
+                    optd['gesamt_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
                 if not ample_util.is_exe(str(optd['gesamt_exe'])):
                     msg = 'Using homologs without an alignment file and cannot find gesamt_exe: {0}'.format(
                         optd['gesamt_exe'])
@@ -179,8 +175,7 @@ def process_options(optd):
                         optd['mustang_exe'])
                     exit_util.exit_error(msg)
             else:
-                msg = 'Unknown homolog_aligner: {0}'.format(
-                    optd['homolog_aligner'])
+                msg = 'Unknown homolog_aligner: {0}'.format(optd['homolog_aligner'])
                 exit_util.exit_error(msg)
         if not os.path.isdir(str(optd['models'])):
             msg = "Homologs option requires a directory of pdb models to be supplied\n" + \
@@ -201,22 +196,20 @@ def process_options(optd):
 
     # Check import flags
     if optd['import_ensembles'] and (optd['import_models']):
-            msg = "Cannot import both models and ensembles/clusters!"
-            exit_util.exit_error(msg)
+        msg = "Cannot import both models and ensembles/clusters!"
+        exit_util.exit_error(msg)
 
     # NMR Checks
     if optd['nmr_model_in']:
         logger.info("Using nmr_model_in file: {0}".format(optd['nmr_model_in']))
         if not os.path.isfile(optd['nmr_model_in']):
-            msg = "nmr_model_in flag given, but cannot find file: {0}".format(
-                optd['nmr_model_in'])
+            msg = "nmr_model_in flag given, but cannot find file: {0}".format(optd['nmr_model_in'])
             exit_util.exit_error(msg)
         if optd['nmr_remodel']:
             optd['make_models'] = True
             if optd['nmr_remodel_fasta']:
                 if not os.path.isfile(optd['nmr_remodel_fasta']):
-                    msg = "Cannot find nmr_remodel_fasta file: {0}".format(
-                        optd['nmr_remodel_fasta'])
+                    msg = "Cannot find nmr_remodel_fasta file: {0}".format(optd['nmr_remodel_fasta'])
                     exit_util.exit_error(msg)
             else:
                 optd['nmr_remodel_fasta'] = optd['fasta']
@@ -270,15 +263,14 @@ def process_options(optd):
     if optd['missing_domain']:
         logger.info('Processing missing domain\n')
         if not os.path.exists(optd['domain_all_chains_pdb']):
-            msg = 'Cannot find file domain_all_chains_pdb: {0}'.format(
-                optd['domain_all_chains_pdb'])
+            msg = 'Cannot find file domain_all_chains_pdb: {0}'.format(optd['domain_all_chains_pdb'])
             exit_util.exit_error(msg)
 
     # Molecular Replacement Options
     if optd['molrep_only']:
-            optd['phaser_only'] = False
-            #msg = 'you say you want molrep only AND phaser only, choose one or both'
-            #exit_util.exit_error(msg)
+        optd['phaser_only'] = False
+        #msg = 'you say you want molrep only AND phaser only, choose one or both'
+        #exit_util.exit_error(msg)
 
     if optd['molrep_only']:
         optd['mrbump_programs'] = ['molrep']
@@ -292,8 +284,7 @@ def process_options(optd):
             phaser_rms = float(optd['phaser_rms'])
             optd['phaser_rms'] = phaser_rms
         except ValueError as e:
-            msg = "Error converting phaser_rms '{0}' to floating point: {1}".format(
-                optd['phaser_rms'], e)
+            msg = "Error converting phaser_rms '{0}' to floating point: {1}".format(optd['phaser_rms'], e)
             exit_util.exit_error(msg)
 
     ###############################################################################
@@ -303,8 +294,7 @@ def process_options(optd):
     ###############################################################################
     if optd['native_pdb'] or optd['benchmark_mode']:
         if optd['native_pdb'] and not os.path.isfile(optd['native_pdb']):
-            msg = "Cannot find crystal structure PDB: {0}".format(
-                optd['native_pdb'])
+            msg = "Cannot find crystal structure PDB: {0}".format(optd['native_pdb'])
             exit_util.exit_error(msg)
         optd['benchmark_mode'] = True
         optd['benchmark_dir'] = os.path.join(optd['work_dir'], "benchmark")
@@ -316,8 +306,7 @@ def process_options(optd):
             optd['tmscore_exe'] = ample_util.find_exe(optd['tmscore_exe'])
             optd['have_tmscore'] = True
         except ample_util.FileNotFoundError:
-            logger.debug("Cannot find TMScore executable: {0}".format(
-                optd['tmscore_exe']))
+            logger.debug("Cannot find TMScore executable: {0}".format(optd['tmscore_exe']))
             # No TMscore so try and find Maxcluster
             optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
             optd['have_tmscore'] = False
@@ -334,14 +323,13 @@ def process_options(optd):
 
     # Model building programs
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
-        if not (os.environ.has_key('warpbin') and os.path.isfile(os.path.join(os.environ['warpbin'], "auto_tracing.sh"))):
-            logger.warn(
-                'Cannot find arpwarp script! Disabling use of arpwarp.')
+        if not (os.environ.has_key('warpbin')
+                and os.path.isfile(os.path.join(os.environ['warpbin'], "auto_tracing.sh"))):
+            logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
             optd['refine_rebuild_arpwarp'] = False
             optd['shelxe_rebuild_arpwarp'] = False
         else:
-            logger.info('Using arpwarp script: {0}'.format(
-                os.path.join(os.environ['warpbin'], "auto_tracing.sh")))
+            logger.info('Using arpwarp script: {0}'.format(os.path.join(os.environ['warpbin'], "auto_tracing.sh")))
     #
     # Check we can find all the required programs
     #
@@ -350,14 +338,12 @@ def process_options(optd):
         optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
     elif optd['subcluster_program'] == 'gesamt':
         if not optd['gesamt_exe']:
-            optd['gesamt_exe'] = os.path.join(
-                os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
+            optd['gesamt_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
         try:
             optd['gesamt_exe'] = ample_util.find_exe(optd['gesamt_exe'])
         except ample_util.FileNotFoundError as e:
-            logger.info("Cannot find Gesamt executable: {0}".format(
-                optd['gesamt_exe']))
-            raise(e)
+            logger.info("Cannot find Gesamt executable: {0}".format(optd['gesamt_exe']))
+            raise (e)
     #
     # Ensemble options
     #
@@ -371,18 +357,15 @@ def process_options(optd):
         try:
             optd['spicker_exe'] = ample_util.find_exe(optd['spicker_exe'])
         except ample_util.FileNotFoundError:
-            msg = "Cannot find spicker executable: {0}".format(
-                optd['spicker_exe'])
+            msg = "Cannot find spicker executable: {0}".format(optd['spicker_exe'])
             exit_util.exit_error(msg)
     elif optd['cluster_method'] in ['fast_protein_cluster']:
         if not optd['fast_protein_cluster_exe']:
             optd['fast_protein_cluster_exe'] = 'fast_protein_cluster'
         try:
-            optd['fast_protein_cluster_exe'] = ample_util.find_exe(
-                optd['fast_protein_cluster_exe'])
+            optd['fast_protein_cluster_exe'] = ample_util.find_exe(optd['fast_protein_cluster_exe'])
         except ample_util.FileNotFoundError:
-            msg = "Cannot find fast_protein_cluster executable: {0}".format(
-                optd['fast_protein_cluster_exe'])
+            msg = "Cannot find fast_protein_cluster executable: {0}".format(optd['fast_protein_cluster_exe'])
             exit_util.exit_error(msg)
     elif optd['cluster_method'] in ['import', 'random', 'skip']:
         pass
@@ -407,12 +390,13 @@ def process_options(optd):
             optd["side_chain_treatments"] = [POLYALA, RELIABLE, ALLATOM]
         else:
             optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
+    else:
+        optd["side_chain_treatments"] = map(str.lower, optd["side_chain_treatments"])
+    print(optd["side_chain_treatments"])
 
-    unrecognised_sidechains = set(
-        optd["side_chain_treatments"]) - set(ALLOWED_SIDE_CHAIN_TREATMENTS)
+    unrecognised_sidechains = set(optd["side_chain_treatments"]) - set(ALLOWED_SIDE_CHAIN_TREATMENTS)
     if unrecognised_sidechains:
-        msg = "Unrecognised side_chain_treatments: {0}".format(
-            unrecognised_sidechains)
+        msg = "Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains)
         logger.critical(msg)
         exit_util.exit_error(msg)
     #
@@ -424,10 +408,9 @@ def process_options(optd):
     try:
         optd['scwrl_exe'] = ample_util.find_exe(optd['scwrl_exe'])
     except ample_util.FileNotFoundError as e:
-        logger.info("Cannot find Scwrl executable: {0}".format(
-            optd['scwrl_exe']))
+        logger.info("Cannot find Scwrl executable: {0}".format(optd['scwrl_exe']))
         if optd['use_scwrl']:
-            raise(e)
+            raise (e)
     #
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     #
@@ -486,8 +469,7 @@ def process_options(optd):
         exit_util.exit_error(msg)
 
     if optd['purge']:
-        logger.info(
-            '*** Purge mode specified - all intermediate files will be deleted ***')
+        logger.info('*** Purge mode specified - all intermediate files will be deleted ***')
 
     return
 
@@ -534,8 +516,7 @@ def process_restart_options(optd):
     """
     if not optd['restart_pkl']:
         return optd
-    logger.info('Restarting from existing pkl file: {0}'.format(
-        optd['restart_pkl']))
+    logger.info('Restarting from existing pkl file: {0}'.format(optd['restart_pkl']))
 
     # Go through and see what we need to do
     # Reset all variables for doing stuff - otherwise we will always restart from the earliest point
@@ -564,8 +545,7 @@ def process_restart_options(optd):
 
     if optd['do_mr']:
         if len(optd['mrbump_scripts']):
-            logger.info('Restarting from unfinished mrbump scripts: {0}'.format(
-                optd['mrbump_scripts']))
+            logger.info('Restarting from unfinished mrbump scripts: {0}'.format(optd['mrbump_scripts']))
             # Purge unfinished jobs
             for spath in optd['mrbump_scripts']:
                 directory, script = os.path.split(spath)
@@ -579,21 +559,17 @@ def process_restart_options(optd):
                     shutil.rmtree(jobdir)
         elif 'ensembles' in optd and optd['ensembles'] and len(optd['ensembles']):
             # Rerun from ensembles - check for data/ensembles are ok?
-            logger.info('Restarting from existing ensembles: {0}'.format(
-                optd['ensembles']))
+            logger.info('Restarting from existing ensembles: {0}'.format(optd['ensembles']))
         elif 'models_dir' in optd and optd['models_dir'] and os.path.isdir(optd['models_dir']):
-            logger.info('Restarting from existing models: {0}'.format(
-                optd['models_dir']))
+            logger.info('Restarting from existing models: {0}'.format(optd['models_dir']))
             # Check the models
             allsame = False if optd['homologs'] else True
             if not pdb_edit.check_pdb_directory(optd['models_dir'], sequence=None, single=True, allsame=allsame):
-                msg = "Error importing restart models: {0}".format(
-                    optd['models_dir'])
+                msg = "Error importing restart models: {0}".format(optd['models_dir'])
                 exit_util.exit_error(msg)
             optd['make_ensembles'] = True
         elif optd['frags_3mers'] and optd['frags_9mers']:
-            logger.info('Restarting from existing fragments: {0}, {1}'.format(
-                optd['frags_3mers'], optd['frags_9mers']))
+            logger.info('Restarting from existing fragments: {0}, {1}'.format(optd['frags_3mers'], optd['frags_9mers']))
             optd['make_models'] = True
 
     return optd
@@ -628,15 +604,13 @@ def restart_amoptd(optd):
     """
     if not optd['restart_pkl']:
         return optd
-    logger.info('Restarting from existing pkl file: {0}'.format(
-        optd['restart_pkl']))
+    logger.info('Restarting from existing pkl file: {0}'.format(optd['restart_pkl']))
     # We use the old dictionary, but udpate it with any new values
     optd_old = ample_util.read_amoptd(optd['restart_pkl'])
 
     # Now update any variables that were given on the command-line
     for k in optd['cmdline_flags']:
-        logger.debug(
-            "Restart updating amopt variable: {0} : {1}".format(k, optd[k]))
+        logger.debug("Restart updating amopt variable: {0} : {1}".format(k, optd[k]))
         optd_old[k] = optd[k]
 
     # We can now replace the old dictionary with this new one
