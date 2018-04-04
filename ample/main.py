@@ -285,9 +285,9 @@ class Ample(object):
 
         if optd['make_models'] and optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
-
+        
+        sys.exit(0)
         if optd['make_models']:
-            # Make the models
             logger.info('----- making Rosetta models--------')
             if optd['nmr_remodel']:
                 try:
@@ -419,11 +419,8 @@ class Ample(object):
 
         ample_util.save_amoptd(optd)
 
-        # Now print out the final summary
         summary = mrbump_util.finalSummary(optd)
         logger.info(summary)
-
-        return
 
     def process_command_line(self, args=None, contacts=True, modelling=True, mol_rep=True):
         """Process the command-line.
@@ -446,10 +443,13 @@ class Ample(object):
         return parser.parse_args(args)
 
     def setup(self, optd):
-        """We take and return an ample dictionary as an argument. This is required because options_processor.process_restart_options
-        Changes what optd points at, and this means that if we just use the reference, we end up pointing at the old, obselete dictionary"""
-
-        # Update the ample dictionary in case we are restarting
+        """We take and return an ample dictionary as an argument. 
+        
+        This is required because options_processor.process_restart_options Changes what 
+        optd points at, and this means that if we just use the reference, we end up 
+        pointing at the old, obselete dictionary
+        
+        """
         optd = options_processor.restart_amoptd(optd)
 
         # Make a work directory - this way all output goes into this directory
@@ -472,19 +472,17 @@ class Ample(object):
             else:
                 logger.info('Making a run directory: ' 'checking for previous runs...')
                 optd['work_dir'] = ample_util.make_workdir(optd['run_dir'], ccp4i2=bool(optd['ccp4i2_xml']))
-        # Go to the work directory
+
         os.chdir(optd['work_dir'])
 
-        # Set up logging
         ample_log = os.path.join(optd['work_dir'], 'AMPLE.log')
         debug_log = os.path.join(optd['work_dir'], 'debug.log')
         optd['ample_log'] = ample_log
 
-        # Set up ample output file and debug log file.
         logging_util.setup_file_logging(ample_log, level=logging.INFO)
         logging_util.setup_file_logging(debug_log, level=logging.DEBUG)
 
-        amoptd['ccp4_version'] = ample_util.CCP4.version.version
+        optd['ccp4_version'] = ample_util.CCP4.version.version
 
         logger.info(ample_util.header)
         logger.info("AMPLE version: %s", str(version.__version__))
@@ -495,22 +493,16 @@ class Ample(object):
         logger.info("Invoked with command-line:\n%s\n", " ".join(sys.argv))
         logger.info("Running in directory: %s\n", optd['work_dir'])
 
-        # Display pyrvapi results
         if pyrvapi_results.pyrvapi:
             self.ample_output = pyrvapi_results.AmpleOutput(optd)
             self.ample_output.display_results(optd)
 
-        # Check mandatory/exclusive options
         options_processor.check_mandatory_options(optd)
 
-        # Check if we are restarting from an existing pkl file - we don't process the options from this
-        # run if so
         optd = options_processor.process_restart_options(optd)
         if not optd['restart_pkl']:
-            # Only process the remaining options if we aren't in restart mode
             options_processor.process_options(optd)
 
-        # Bail and clean up if we were only checking the options
         if optd['dry_run']:
             logger.info('Dry run finished checking options - cleaning up...')
             os.chdir(optd['run_dir'])
