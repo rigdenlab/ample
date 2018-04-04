@@ -405,13 +405,10 @@ class ContactUtil(object):
         else:
             structure_map = None
             precision = 0.0
-
-        fname = "ample.conkit.cmap.png"
         if StrictVersion(conkit.__version__) < StrictVersion("0.9.0"):
-            conkit.plot.ContactMapFigure(contact_map, reference=structure_map, file_name=fname)
+            conkit.plot.ContactMapFigure(contact_map, reference=structure_map, file_name=plot_file)
         else:
-            conkit.plot.ContactMapFigure(contact_map, reference=structure_map).savefig(fname, dpi=600)
-
+            conkit.plot.ContactMapFigure(contact_map, reference=structure_map).savefig(plot_file, dpi=600)
         return plot_file, precision
 
     def write_restraints(self, restraint_file, restraint_format, energy_function):
