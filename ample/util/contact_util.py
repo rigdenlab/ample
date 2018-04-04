@@ -155,6 +155,11 @@ class SubselectionAlgorithm(object):
         return keep.tolist(), throw.tolist()
 
 
+SUBSELECTION_MODES = [
+    func_name for func_name, _ in inspect.getmembers(SubselectionAlgorithm) if not func_name.startswith('_')
+]
+
+
 class ContactUtil(object):
     """
 
