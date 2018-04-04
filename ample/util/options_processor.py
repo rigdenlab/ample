@@ -392,7 +392,6 @@ def process_options(optd):
             optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
     else:
         optd["side_chain_treatments"] = map(str.lower, optd["side_chain_treatments"])
-    print(optd["side_chain_treatments"])
 
     unrecognised_sidechains = set(optd["side_chain_treatments"]) - set(ALLOWED_SIDE_CHAIN_TREATMENTS)
     if unrecognised_sidechains:
