@@ -55,5 +55,3 @@ class CCP4Version(StrictVersion):
             if tversion is None:
                 raise RuntimeError("Cannot determine CCP4 version")
         self.parse(tversion)
-
-
