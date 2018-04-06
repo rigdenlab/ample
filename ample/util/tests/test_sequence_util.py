@@ -5,6 +5,7 @@ import unittest
 from ample import constants
 from ample.util import sequence_util
 
+
 class Test(unittest.TestCase):
     
     @classmethod
@@ -24,8 +25,6 @@ class Test(unittest.TestCase):
         self.assertTrue(len(s1.pdbs),2)
         self.assertTrue(len(s1.chains),2)
         self.assertTrue(len(s1.fasta_files),2)
-        
-        return
 
     def test_addPdb_data(self):
         fasta1 = os.path.join(self.testfiles_dir,'1ujb_2a6pA_3c7tA.afasta')
@@ -76,15 +75,29 @@ class Test(unittest.TestCase):
         self.assertEqual(s1.resseqs[1], p2r)
         self.assertEqual(s1.resseqs[2], p3r)
 
-    def test_fail_char(self):
+    def test_canonicalise_1(self):
         fp = sequence_util.Sequence()
-        # Test case 1 - expected to work
         fp.sequences = ["YFLVKGMGVSDPDAKKFYAITTLVYAIAFTMYLSMLLGYGLTMVP"]
-        try: fp.canonicalise()
-        except RuntimeError as msg: self.assertTrue(False, msg)
-        # Test case 2 - expected to fail
+        fp.canonicalise()
+        self.assertTrue(True)
+
+    def test_canonicalise_2(self):
+        fp = sequence_util.Sequence()
         fp.sequences = ["YFLVKGMGVSDPDAKKFYAITTLVXAIAFTMYLSMLLGYGLTMVP"]
-        self.assertRaises(RuntimeError, fp.canonicalise)    
+        with self.assertRaises(RuntimeError):
+            fp.canonicalise()
+
+    def test_canonicalise_3(self):
+        fp = sequence_util.Sequence()
+        fp.sequences = ["YFLVKGMG VSDPDAKKFY AITTLVXA IAFTMYLS MLLGYGLTMVP"]
+        with self.assertRaises(RuntimeError):
+            fp.canonicalise()
+            
+    def test_canonicalise_4(self):
+        fp = sequence_util.Sequence()
+        fp.sequences = ["YFLVKGMGVSDPDAKKFYAITTLVXAIAFTMYLSMLLGYGLTMVP*"]
+        with self.assertRaises(RuntimeError):
+            fp.canonicalise()
     
     def test_OK(self):
         infasta = ">3HAP:A|PDBID|CHAIN|SEQUENCE" + os.linesep
@@ -95,7 +108,7 @@ class Test(unittest.TestCase):
         infasta+= "RNVTVVLWSAYPVVWLIGSEGAGIVPLNIETLLFMVLDVSAKVGFGLILL" + os.linesep
         infasta+= "RSRAIFGEAEAPEPSAGDGAAATSD"
         
-        fp =sequence_util.Sequence()
+        fp = sequence_util.Sequence()
         fp._parse_fasta(infasta.split(os.linesep))
         
         outfasta = ">3HAP:A|PDBID|CHAIN|SEQUENCE" + os.linesep
@@ -163,5 +176,40 @@ class Test(unittest.TestCase):
         
         self.assertEqual(s1.fasta_str(pdbname=True),ref)
 
+    def test__parse_fasta_1(self):
+        fasta = [">foo"]
+        fasta+= ["AAAAAAA"]
+        s = sequence_util.Sequence()
+        s._parse_fasta(fasta)
+        self.assertListEqual(s.headers, [">foo"])
+        self.assertListEqual(s.sequences, ["AAAAAAA"])
+
+    def test__parse_fasta_2(self):
+        fasta = [">foo"]
+        fasta+= ["AAAAA AA"]
+        s = sequence_util.Sequence()
+        s._parse_fasta(fasta)
+        self.assertListEqual(s.headers, [">foo"])
+        self.assertListEqual(s.sequences, ["AAAAAAA"])
+
+    def test__parse_fasta_3(self):
+        fasta = [">foo"]
+        fasta+= ["AAAAAAA*"]
+        s = sequence_util.Sequence()
+        s._parse_fasta(fasta)
+        self.assertListEqual(s.headers, [">foo"])
+        self.assertListEqual(s.sequences, ["AAAAAAA"])
+       
+    def test__parse_fasta_4(self):
+        fasta = [">foo"]
+        fasta+= ["AAAA AAA"]
+        fasta+= [">bar"]
+        fasta+= ["CCCCCCC*"]
+        s = sequence_util.Sequence()
+        s._parse_fasta(fasta)
+        self.assertListEqual(s.headers, [">foo", ">bar"])
+        self.assertListEqual(s.sequences, ["AAAAAAA", "CCCCCCC"])
+       
+
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(verbosity=2)
