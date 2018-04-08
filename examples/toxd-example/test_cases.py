@@ -72,7 +72,7 @@ class AMPLETest(AMPLEBaseTest):
 
         nclusters = 10
         radii = set([1, 3])
-        sidechains = set(['polyAla'])
+        sidechains = set(['polyala'])
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertEqual(nclusters, self.AMPLE_DICT['num_clusters'])
         self.assertEqual(list(radii), self.AMPLE_DICT['subcluster_radius_thresholds'])
