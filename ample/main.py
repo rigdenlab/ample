@@ -286,7 +286,6 @@ class Ample(object):
         if optd['make_models'] and optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
         
-        sys.exit(0)
         if optd['make_models']:
             logger.info('----- making Rosetta models--------')
             if optd['nmr_remodel']:
