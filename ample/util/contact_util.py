@@ -264,7 +264,7 @@ class ContactUtil(object):
         else:
             logger.info("Less than 200 effective sequences in alignment, " + "not predicting contacts ...")
 
-    def compute_precision_by_range(self, test, decoys, decoy_format, **kwargs):
+    def compute_precision_by_range(self, decoys, decoy_format, **kwargs):
         """Compute restraint precision score by sequence separation range
 
         Parameters
