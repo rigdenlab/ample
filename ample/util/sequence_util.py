@@ -31,37 +31,39 @@ class Sequence(object):
         We assume that there will be gaps (-) in the sequence and the letters may be upper or lower case
         Currently this only supports adding data for single-chain pdbs
         """
-        assert len(self.headers) and len(self.sequences)
+        if not os.path.isfile(pdbin):
+            raise RuntimeError("Cannot find provided pdb file: {}".format(pdbin))
+
+        if len(self.headers) < 1 and len(self.sequences) < 1:
+            raise ValueError("Require at least one one sequence.")
         
-        assert os.path.isfile(pdbin),"Cannot find pdb file: {0}".format(pdbin)
-        
-        # Assume the name of the pdb is the first part of the header
         fname = os.path.basename(pdbin)
         name, ext = os.path.splitext(fname)
-        assert ext == '.pdb', "PDB files must have extension .pdb"
+        if ext != ".pdb":
+            raise TypeError("PDB files must have extension .pdb")
         
-        # Find where in the list of data this sequence is
-        got=False
+        got = False
         for idx, h in enumerate(self.headers):
             n = h[1:].split('.')[0]
             if n == name:
-                got=True
+                got = True
                 break
         
-        if not got: raise RuntimeError,"Could not find matching pdb name for {0} in headers {1}".format(fname,self.headers)
+        if not got: 
+            raise RuntimeError("Could not find matching pdb name for {0} in headers {1}".format(fname,self.headers))
         seqd = pdb_edit.sequence_data(pdbin)
-        assert len(seqd) == 1,'Currently only support adding data for single chain pdbs'
+        if len(seqd) > 1:
+            raise RuntimeError("Currently only support adding data for single chain pdbs")
         
         chain = seqd.keys()[0]
         
-        # Add the pdb and chain data
         self.pdbs[idx] = fname
         self.chains[idx] = chain
         
-        self.resseqs[idx] = [] # Clear out any existing resseqs
+        self.resseqs[idx] = []
         sequence = seqd[chain][0]
         resseqs = seqd[chain][1]
-        # Loop through both sequences
+
         needle = 0
         GAP='-'
         for res1 in self.sequences[idx]:
@@ -74,20 +76,21 @@ class Sequence(object):
         return True
 
     def fasta_str(self,pdbname=False):
-        if not len(self.sequences): raise RuntimeError,"No sequences have been read!"
-        headers=[]
+        if len(self.sequences) < 1: 
+            raise RuntimeError("No sequences have been read!")
+        headers = []
         for i, header in enumerate(self.headers):
-            #if pdbname: header = os.path.basename(self.pdbs[i])
-            if pdbname: header = ">{0}".format(os.path.basename(self.pdbs[i]))
+            if pdbname: 
+                header = ">{0}".format(os.path.basename(self.pdbs[i]))
             headers.append(header)
         return self._fasta_str(headers, self.sequences)
     
     def _fasta_str(self,headers,sequences):
-        s=""
+        s = ""
         for i, seq in enumerate(sequences):
             s += headers[i] + os.linesep
             for chunk in range(0, len(seq), self.MAXWIDTH):
-                s += seq[chunk:chunk+self.MAXWIDTH] + os.linesep
+                s += seq[chunk:chunk + self.MAXWIDTH] + os.linesep
             s += os.linesep
         return s
    
@@ -96,20 +99,18 @@ class Sequence(object):
         with open(fasta_file, "r") as f:
             self._parse_fasta(f, fasta_file=fasta_file, canonicalise=canonicalise)
         if resseq:
-            # Add automatically calculated ressegs starting from 1
-            #assert len(self.resseqs) == 0,"Altering existing resseqs!"
             for i, seq in enumerate(self.sequences):
                 if len(self.resseqs) >= i+1 and self.resseqs[i] is None:
                     self.resseqs[i] = []
                     for j in range(len(seq)):
                         self.resseqs[i].append(j+1)
-        return
     
     def from_pdb(self, pdbin):
         pdbin_name = os.path.basename(pdbin)
         self.name = os.path.splitext(pdbin_name)[0]
         chain2data = pdb_edit.sequence_data(pdbin)
-        assert len(chain2data),"Could not read sequence from pdb: {0}".format(pdbin)
+        if len(chain2data) < 1:
+            raise RuntimeError("Could not read sequence from pdb: {0}".format(pdbin))
         self.headers = []
         self.sequences = []
         self.pdbs = []
@@ -123,8 +124,7 @@ class Sequence(object):
             self.resseqs.append(resseq)
             self.pdbs.append(pdbin_name)
             self.chains.append(chain)
-            self.fasta_files.append(None) # Need to make sure pdb abd fasta arrays have same length
-        return
+            self.fasta_files.append(None)
 
     def canonicalise(self):
         """Reformat the fasta file
@@ -139,16 +139,17 @@ class Sequence(object):
         Rosetta has a lot of problems with fastas so we put in this script to deal with it.
 
         """
-        aa = ['A','R','N','D','C','Q','E','G','H','I','L','K','M','F','P','S','T','W','Y','V']
-        for i,seq in enumerate(self.sequences):
-            cs=""
+        aa = list("ACDEFGHIKLMNPQRSTVWY")
+        for i, seq in enumerate(self.sequences):
+            cs = ""
             for char in seq:
                 char = char.upper()
-                if char not in aa:
-                    raise RuntimeError,"There appear to be non-standard AA in your sequence: '{0}'\nPlease format to only use standard AA.".format(char)
-                cs+=char
-            self.sequences[i]=cs
-        return
+                if char in aa:
+                    cs += char
+                else:
+                    msg = "Non-standard amino acid in your sequence: '{}'. Please format to standard amino acids!"
+                    raise RuntimeError(msg.format(char))
+            self.sequences[i] = cs
 
     def length(self,seq_no=0):
         return len(self.sequences[seq_no])
@@ -186,14 +187,16 @@ class Sequence(object):
         header = None
         for line in fasta:
             line = line.strip().rstrip(os.linesep)
-            if not line: continue # skip blank lines
-            
-            if not header:
-                if not line.startswith(">"):
-                    raise RuntimeError,"FASTA sequencs must be prefixed with a > character: {0}".format(line)
-                header = line
-                continue
-            
+            if not line: 
+                continue 
+             
+            if header is None:
+                if line.startswith(">"):
+                    header = line
+                    continue
+                else:
+                    raise RuntimeError("FASTA sequencs must be prefixed with a > character: {}".format(line))
+
             if header and line.startswith(">"):
                 headers.append(header)
                 sequences.append(sequence)
@@ -201,19 +204,20 @@ class Sequence(object):
                 sequence = ""
             else:
                 sequence += line
-        
-        # Add the last header and sequence
+
         headers.append(header)
         sequences.append(sequence)
-        
-        # Now add all the collected data        
-        self.headers = []
-        self.sequences = []
-        self.resseqs = []
-        self.fasta_files = []
-        self.pdbs = []
-        self.chains = []
-        for h, s in zip(headers,sequences):
+
+        logging.debug("Stripping whitespace characters from sequence")
+        logging.debug("Stripping '*' character of end of sequence")
+        for i in range(len(sequences)):
+            seq = sequences[i].replace(" ", "")
+            if seq.endswith('*'):
+                seq = seq[:-1]
+            sequences[i] = seq
+
+        self.headers, self.sequences, self.resseqs, self.fasta_files, self.pdbs, self.chains = [], [], [], [], [], []
+        for h, s in zip(headers, sequences):
             self.headers.append(h)
             self.sequences.append(s)
             self.fasta_files.append(fasta_file)
@@ -221,21 +225,15 @@ class Sequence(object):
             self.pdbs.append(None)
             self.chains.append(None)
             
-        if canonicalise: self.canonicalise()
-        return
+        if canonicalise: 
+            self.canonicalise()
 
     def pirStr(self,seqNo=0):
         """Return a canonical MAXWIDTH PIR representation of the file as a line-separated string"""
-    
-        pirStr = [ self.title + os.linesep + os.linesep ] # Title plus the obligatory blank line
-        
-        # Now reformat to MAXWIDTH chars
+        pirStr = [self.title + os.linesep + os.linesep] 
         for chunk in range(0, len(self.sequances[seqNo]), self.MAXWIDTH):
             pirStr.append(self.sequences[seqNo][ chunk:chunk+self.MAXWIDTH ]+os.linesep)
-            
-        # Add last newline
         pirStr.append(os.linesep)
-        
         return pirStr
 
     def sequence(self,seq_no=0):

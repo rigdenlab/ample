@@ -10,7 +10,7 @@ from distutils.version import StrictVersion
 
 import inspect
 import logging
-import numpy
+import numpy as np
 import os
 import sys
 import tempfile
@@ -31,10 +31,10 @@ class SubselectionAlgorithm(object):
     @staticmethod
     def _numpify(data):
         """Convert a Python array to a Numpy array"""
-        if type(data).__module__ == numpy.__name__:
+        if type(data).__module__ == np.__name__:
             return data
         else:
-            return numpy.asarray(data)
+            return np.asarray(data)
 
     @staticmethod
     def cutoff(data, cutoff=0.287):
@@ -61,8 +61,8 @@ class SubselectionAlgorithm(object):
 
         """
         data = SubselectionAlgorithm._numpify(data)
-        keep = numpy.where(data >= cutoff)[0]
-        throw = numpy.where(data < cutoff)[0]
+        keep = np.where(data >= cutoff)[0]
+        throw = np.where(data < cutoff)[0]
         return keep.tolist(), throw.tolist()
 
     @staticmethod
@@ -89,7 +89,7 @@ class SubselectionAlgorithm(object):
 
         """
         sorted_indices = SubselectionAlgorithm._numpify(data).argsort()[::-1]
-        point = numpy.ceil(sorted_indices.shape[0] * cutoff).astype(numpy.int)
+        point = np.ceil(sorted_indices.shape[0] * cutoff).astype(np.int)
         keep = sorted_indices[:point]
         throw = sorted_indices[point:]
         return keep.tolist(), throw.tolist()
@@ -102,7 +102,7 @@ class SubselectionAlgorithm(object):
         -----------
         This algorithm removes a decoy, if its scaled score
         is less than 0.5. The scaled score is calculated by
-        dividing the satisfaction score by the average of the
+        dividing the precision score by the average of the
         set.
 
         Parameters
@@ -121,9 +121,9 @@ class SubselectionAlgorithm(object):
 
         """
         data = SubselectionAlgorithm._numpify(data)
-        data_scaled = data / numpy.mean(data)
-        keep = numpy.where(data_scaled >= cutoff)[0]
-        throw = numpy.where(data_scaled < cutoff)[0]
+        data_scaled = data / np.mean(data)
+        keep = np.where(data_scaled >= cutoff)[0]
+        throw = np.where(data_scaled < cutoff)[0]
         return keep.tolist(), throw.tolist()
 
     @staticmethod
@@ -150,12 +150,11 @@ class SubselectionAlgorithm(object):
 
         """
         data = SubselectionAlgorithm._numpify(data)
-        keep = numpy.where(data >= 0)[0]
-        throw = numpy.where(data < 0)[0]
+        keep = np.where(data >= 0)[0]
+        throw = np.where(data < 0)[0]
         return keep.tolist(), throw.tolist()
 
 
-# Populate the available subselection modes into a list
 SUBSELECTION_MODES = [
     func_name for func_name, _ in inspect.getmembers(SubselectionAlgorithm) if not func_name.startswith('_')
 ]
@@ -265,7 +264,55 @@ class ContactUtil(object):
         else:
             logger.info("Less than 200 effective sequences in alignment, " + "not predicting contacts ...")
 
-    def subselect_decoys(self, decoys, decoy_format, mode='linear', subdistance_to_neighbor=24, **kwargs):
+    def compute_precision_by_range(self, decoys, decoy_format, **kwargs):
+        """Compute restraint precision score by sequence separation range
+
+        Parameters
+        ----------
+        decoys : list, tuple
+           A list containing paths to decoy files
+        decoy_format : str
+           The file format of ``decoys``
+        **kwargs
+           Job submission related keyword arguments
+
+        Returns
+        -------
+        list
+           A list of short-range scores of all decoys
+        list
+           A list of medium-range scores of all decoys
+        list
+           A list of long-range scores of all decoys
+
+        TODO
+        ----
+        * Replace loop with :obj:`multiprocessing.Pool`
+
+        """
+        contact_map = self.contact_map
+        M = len(decoys)
+        shortrange, mediumrange, longrange = [0.] * M, [0.] * M, [0.] * M
+        for i in range(M):
+            logger.debug("Computing satisfaction for model %d out of %d", i, M)
+
+            dmap = conkit.io.read(decoys[i], decoy_format).top_map
+            matched = contact_map.match(dmap)
+
+            shortrange_contacts = matched.short_range_contacts
+            mediumrange_contacts = matched.medium_range_contacts
+            longrange_contacts = matched.long_range_contacts
+
+            if shortrange_contacts.ncontacts > 0:
+                shortrange[i] = shortrange_contacts.precision
+            if mediumrange_contacts.ncontacts > 0:
+                mediumrange[i] = mediumrange_contacts.precision
+            if longrange_contacts.ncontacts > 0:
+                longrange[i] = longrange_contacts.precision
+
+        return shortrange, mediumrange, longrange
+
+    def subselect_decoys(self, decoys, decoy_format, mode='linear', **kwargs):
         """Subselect decoys excluding those not satisfying long-distance restraints
 
         Parameters
@@ -278,10 +325,8 @@ class ContactUtil(object):
            The subselection mode to use
             * scaled: keep the decoys with scaled scores of >= 0.5
             * linear: keep the top half of decoys
-            * cutoff: keep all decoys with satisfaction scores of >= 0.287
+            * cutoff: keep all decoys with precision scores of >= 0.287
             * ignore: keep all decoys
-        subdistance_to_neighbor : int, optional
-           The minimum distance between neighboring residues in the subselection [default: 24]
         **kwargs
            Job submission related keyword arguments
 
@@ -291,74 +336,7 @@ class ContactUtil(object):
            A 2-D list of paths and scores of all sub-selected decoys
 
         """
-        from ample.util import ample_util
-        from ample.util import workers_util
-
-        # Compute the long range contact satisfaction on a per-decoy basis
-        logger.info('Long-range contacts are defined with sequence separation of 24+')
-
-        # Hack a custom copy of the contact map together that we can use with the script
-        # All decoys should be sequence identical and thus we can just match it to the top
-        contact_map = self.contact_map
-
-        contact_map.match(conkit.io.read(decoys[0], decoy_format).top_map, inplace=True)
-        tmp_contact_file = tempfile.NamedTemporaryFile(delete=False)
-        conkit.io.write(tmp_contact_file.name, 'casprr', contact_map)
-
-        executable = 'conkit-precision.bat' \
-            if sys.platform.startswith('win') \
-            else 'conkit-precision'
-
-        job_scripts, log_files = [], []
-        for decoy in decoys:
-            decoy_name = os.path.splitext(os.path.basename(decoy))[0]
-            contact_name = os.path.splitext(os.path.basename(self.contact_file))[0]
-
-            # TODO: Get the log file business working properly
-            cmd = [executable, '-d', subdistance_to_neighbor]
-            if StrictVersion(conkit.__version__) <= StrictVersion('0.6.3'):
-                cmd += [decoy]
-            else:
-                cmd += [decoy, decoy_format]
-            cmd += [self.sequence_file, self.sequence_format]
-            cmd += [tmp_contact_file.name, 'casprr']
-
-            prefix = '{0}_{1}_'.format(contact_name, decoy_name)
-            script = tempfile.NamedTemporaryFile(prefix=prefix, suffix=ample_util.SCRIPT_EXT, delete=False)
-            script.write(ample_util.SCRIPT_HEADER + os.linesep + " ".join(map(str, cmd)) + os.linesep)
-            script.close()
-
-            os.chmod(script.name, 0o777)
-            job_scripts.append(script.name)
-            log_files.append(os.path.splitext(script.name)[0] + ".log")
-
-        success = workers_util.run_scripts(
-            job_scripts=job_scripts,
-            monitor=None,
-            check_success=None,
-            early_terminate=None,
-            nproc=kwargs['nproc'] if 'nproc' in kwargs else 1,
-            job_time=7200,  # Might be too long/short, taken from Rosetta modelling
-            job_name='subselect',
-            submit_cluster=kwargs['submit_cluster'] if 'submit_cluster' in kwargs else False,
-            submit_qtype=kwargs['submit_qtype'] if 'submit_qtype' in kwargs else None,
-            submit_queue=kwargs['submit_queue'] if 'submit_queue' in kwargs else False,
-            submit_array=kwargs['submit_array'] if 'submit_array' in kwargs else None,
-            submit_max_array=kwargs['submit_max_array'] if 'submit_max_array' in kwargs else None,
-        )
-
-        if not success:
-            msg = "Error running decoy subselection"
-            raise RuntimeError(msg)
-
-        scores = numpy.zeros(len(decoys))
-        data = zip(decoys, log_files, job_scripts)
-        for i, (decoy, log, script) in enumerate(data):
-            for line in open(log, 'r'):
-                if line.startswith('Precision score'):
-                    scores[i] = float(line.strip().split()[-1])
-            map(os.remove, [script, log])
-
+        _, _, scores = self.compute_precision_by_range(decoys, decoy_format, **kwargs)
         logger.info('Model selection mode: %s', mode)
         if mode == 'scaled':
             keep, throw = SubselectionAlgorithm.scaled(scores)
@@ -414,7 +392,6 @@ class ContactUtil(object):
 
         """
         contact_map = self.contact_map
-
         logger.debug(structure_file)
         logger.debug(structure_format)
         if structure_file and not structure_format:
@@ -429,15 +406,14 @@ class ContactUtil(object):
             logger.info('Provided structure file and format are: {0} - {1}'.format(structure_file, structure_format))
             structure_map = conkit.io.read(structure_file, structure_format).top_map
             contact_map.match(structure_map, inplace=True)
-
-            # Calculate the precision score
             precision = contact_map.precision
         else:
             structure_map = None
             precision = 0.0
-
-        conkit.plot.ContactMapFigure(contact_map, reference=structure_map, file_name=plot_file)
-
+        if StrictVersion(conkit.__version__) < StrictVersion("0.9.0"):
+            conkit.plot.ContactMapFigure(contact_map, reference=structure_map, file_name=plot_file)
+        else:
+            conkit.plot.ContactMapFigure(contact_map, reference=structure_map).savefig(plot_file, dpi=600)
         return plot_file, precision
 
     def write_restraints(self, restraint_file, restraint_format, energy_function):

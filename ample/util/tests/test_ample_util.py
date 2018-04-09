@@ -8,10 +8,6 @@ from ample.constants import AMPLE_PKL, SHARE_DIR
 
 class Test(unittest.TestCase):
 
-    def test_ccp4_version(self):
-        i, j, k = ample_util.ccp4_version()
-        self.assertEqual((i, j, 0),(7, 0, 0))
-    
     def test_find_exe(self):
         gesamt_exe = os.path.basename(ample_util.find_exe("gesamt" + ample_util.EXE_EXT))
         self.assertTrue("gesamt.exe", gesamt_exe)

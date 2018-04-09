@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-
 import os
+import uuid
 
 from ample.util import ample_util
 from ample.util import pdb_edit
@@ -26,7 +26,7 @@ class Csymmatch( object ):
         """
         self._reset()
         
-        self.logfile = outPdb +".log"
+        self.logfile = outPdb +"_{}.log".format(str(uuid.uuid1()))
         cmd= [ 'csymmatch',
               "-pdbin-ref",
               refPdb,
@@ -52,7 +52,8 @@ class Csymmatch( object ):
     def parseLog(self,  logfile=None, cleanup=True):
         """Parse the log"""
         
-        if logfile is None: logfile = self.logfile
+        if logfile is None: 
+            logfile = self.logfile
         assert logfile
         
         capturing=0
@@ -134,31 +135,29 @@ class Csymmatch( object ):
         """Take a pdb and wrap it onto the nativePdb using csymmatch.
         If origin is not [0.0,0.0,0.0] we also move the structure onto the new origin before wrapping"""
         
-        if workdir is None: workdir = os.getcwd()
+        if workdir is None: 
+            workdir = os.getcwd()
         
         assert os.path.isfile(mrPdb) and os.path.isfile(nativePdb),"Cannot find: {0} or {1}".format(mrPdb,nativePdb)
         
         originMrPdb = None
         if origin != [ 0.0, 0.0, 0.0 ]:
-            # Move pdb to new origin
-            #ostr="origin{0}".format(i)
-            ostr="o{0}".format( origin ).replace(" ","" )
-            originMrPdb = ample_util.filename_append(filename=mrPdb, astr=ostr, directory=workdir )
+            ostr="o{}_{}".format(origin, str(uuid.uuid1())).replace(" ","" )
+            originMrPdb = ample_util.filename_append(filename=mrPdb, astr=ostr, directory=workdir)
             pdb_edit.translate(inpdb=mrPdb, outpdb=originMrPdb, ftranslate=origin)
             mrPdb = originMrPdb
         
         if csymmatchPdb is None:
-            csymmatchPdb = ample_util.filename_append(filename=mrPdb, astr="csymmatch", directory=workdir)
+            csymmatchPdb = ample_util.filename_append(filename=mrPdb, astr="csymmatch_{}".format(str(uuid.uuid1())), 
+                                                      directory=workdir)
         
-        self.run(refPdb=nativePdb,
-                 inPdb=mrPdb,
-                 outPdb=csymmatchPdb,
-                 originHand=False,
-                 cleanup=cleanup)
+        self.run(refPdb=nativePdb, inPdb=mrPdb, outPdb=csymmatchPdb, originHand=False, cleanup=cleanup)
         
-        if not os.path.isfile( csymmatchPdb ): raise RuntimeError,"Error generating csymmatchPdb"
+        if not os.path.isfile( csymmatchPdb ): 
+            raise RuntimeError("Error generating csymmatchPdb")
         
-        if cleanup and originMrPdb: os.unlink(originMrPdb)
+        if cleanup and originMrPdb: 
+            os.unlink(originMrPdb)
                
         return csymmatchPdb
 

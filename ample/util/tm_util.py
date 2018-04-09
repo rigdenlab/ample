@@ -190,25 +190,30 @@ class TMapps(object):
         # Execute the scripts
         logger.info('Executing TManalysis scripts')
         logger.disabled = True
-        success = workers_util.run_scripts(
-            job_scripts=job_scripts,
-            monitor=None,
-            check_success=None,
-            early_terminate=None,
-            nproc=self._nproc,
-            job_time=7200,              # Might be too long/short, taken from Rosetta modelling
-            job_name='tm_analysis',
-            submit_cluster=self._submit_cluster,
-            submit_qtype=self._submit_qtype,
-            submit_queue=self._submit_queue,
-            submit_array=self._submit_array,
-            submit_max_array=self._submit_max_array
-        )
+        from pyjob import Job
+        j = Job("local")
+        j.submit(job_scripts, nproc=self._nproc)
+        j.wait(interval=1)
+
+        #  success = workers_util.run_scripts(
+        #      job_scripts=job_scripts,
+        #      monitor=None,
+        #      check_success=None,
+        #      early_terminate=None,
+        #      nproc=self._nproc,
+        #      job_time=7200,              # Might be too long/short, taken from Rosetta modelling
+        #      job_name='tm_analysis',
+        #      submit_cluster=self._submit_cluster,
+        #      submit_qtype=self._submit_qtype,
+        #      submit_queue=self._submit_queue,
+        #      submit_array=self._submit_array,
+        #      submit_max_array=self._submit_max_array
+        #  )
         logger.disabled = False
 
-        if not success:
-            msg = "Error running TManalysis"
-            raise RuntimeError(msg)
+        #  if not success:
+        #      msg = "Error running TManalysis"
+        #      raise RuntimeError(msg)
 
         # Extract the data
         entries = []
@@ -662,8 +667,7 @@ class TMscore(TMapps):
         """
         for line in open(pdb, 'r'):
             if line.startswith("ATOM"):
-                line = line.split()
-                return int(line[5])
+                return int(line.split()[5])
 
 
 def main():
@@ -674,29 +678,31 @@ def main():
     parser.add_argument('--allvall', action="store_true", help="All vs all comparison")
     parser.add_argument('--log', default='info', choices=['debug', 'info', 'warning', 'error'],
                         help="logging level (defaults to 'warning')")
-    # parser.add_argument('--purge', action="store_true", help="Remove the run directory")
-    parser.add_argument('--rundir', default=os.getcwd(), help="Run directory")
-    parser.add_argument('-f', '-fasta', dest="fastas", nargs="+", default=None)
-    parser.add_argument('-m', '-models', dest="models", nargs="+", required=True)
-    parser.add_argument('-s', '-structures', dest="structures", nargs="+", required=True)
-    tmapp = parser.add_mutually_exclusive_group()
-    tmapp.add_argument('-tm', '-tmscore', dest="tmscore", type=str)
-    tmapp.add_argument('-ta', '-tmalign', dest="tmalign", type=str)
+    #  parser.add_argument('--purge', action="store_true", help="Remove the run directory")
+    parser.add_argument('--rundir', default='.', help="Run directory")
+    parser.add_argument('-f', '--fasta', dest="fastas", nargs="+", default=None)
+    parser.add_argument('-m', '--models', dest="models", nargs="+", required=True)
+    parser.add_argument('-s', '--structures', dest="structures", nargs="+", required=True)
+    parser.add_argument('-t', '--threads', default=1, type=int)
+    tmapp = parser.add_mutually_exclusive_group(required=True)
+    tmapp.add_argument('-tm', '--tmscore', dest="tmscore", type=str)
+    tmapp.add_argument('-ta', '--tmalign', dest="tmalign", type=str)
     args = parser.parse_args()
 
-    # Set up some very basic logging - Logging taken from
-    # http://stackoverflow.com/questions/30824981/do-i-need-to-explicitly-check-for-name-main-before-calling-getlogge
     logging.basicConfig(level=getattr(logging, args.log.upper(), None), format='%(levelname)s: %(message)s')
     
-    # Make the run directory if it doesn't exist
     if not os.path.isdir(args.rundir):
         os.mkdir(args.rundir)
+
+    if args.fastas:
+        args.fastas = [os.path.abspath(m) for m in args.fastas]
+    args.models = [os.path.abspath(m) for m in args.models]
+    args.structures = [os.path.abspath(m) for m in args.structures]
     
-    # Perform the comparison
     if args.tmalign:
-        entries = TMalign(args.tmalign, wdir=args.rundir).compare_structures(args.models, args.structures, all_vs_all=args.allvall)
+        entries = TMalign(args.tmalign, wdir=args.rundir, nproc=args.threads).compare_structures(args.models, args.structures, all_vs_all=args.allvall)
     elif args.tmscore:
-        entries = TMscore(args.tmscore, wdir=args.rundir).compare_structures(args.models, args.structures, fastas=args.fastas, all_vs_all=args.allvall)
+        entries = TMscore(args.tmscore, wdir=args.rundir, nproc=args.threads).compare_structures(args.models, args.structures, fastas=args.fastas, all_vs_all=args.allvall)
     else:
         entries = None
 
