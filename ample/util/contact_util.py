@@ -290,25 +290,25 @@ class ContactUtil(object):
         * Replace loop with :obj:`multiprocessing.Pool`
 
         """
-        N = len(decoys)
-
-        shortrange = [0.] * N
-        mediumrange = [0.] * N
-        longrange = [0.] * N
-
         contact_map = self.contact_map
-        shortrange_contacts = contact_map.short_range_contacts.deepcopy()
-        mediumrange_contacts = contact_map.medium_range_contacts.deepcopy()
-        longrange_contacts = contact_map.long_range_contacts.deepcopy()
+        M = len(decoys)
+        shortrange, mediumrange, longrange = [0.] * M, [0.] * M, [0.] * M
+        for i in range(M):
+            logger.debug("Computing satisfaction for model %d out of %d", i, M)
 
-        for i in range(N):
             dmap = conkit.io.read(decoys[i], decoy_format).top_map
+            matched = contact_map.match(dmap)
+
+            shortrange_contacts = matched.short_range_contacts
+            mediumrange_contacts = matched.medium_range_contacts
+            longrange_contacts = matched.long_range_contacts
+
             if shortrange_contacts.ncontacts > 0:
-                shortrange[i] = shortrange_contacts.match(dmap).precision
+                shortrange[i] = shortrange_contacts.precision
             if mediumrange_contacts.ncontacts > 0:
-                mediumrange[i] = mediumrange_contacts.match(dmap).precision
+                mediumrange[i] = mediumrange_contacts.precision
             if longrange_contacts.ncontacts > 0:
-                longrange[i] = longrange_contacts.match(dmap).precision
+                longrange[i] = longrange_contacts.precision
 
         return shortrange, mediumrange, longrange
 
