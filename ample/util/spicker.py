@@ -212,9 +212,12 @@ class Spickerer(object):
         Run spicker to cluster the models
         """
         owd = os.getcwd()
-        if run_dir: self.run_dir = os.path.abspath(run_dir)
-        if not self.run_dir: self.run_dir = os.path.join(owd, 'spicker')
-        if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
+        if run_dir: 
+            self.run_dir = os.path.abspath(run_dir)
+        if not self.run_dir: 
+            self.run_dir = os.path.join(owd, 'spicker')
+        if not os.path.isdir(self.run_dir): 
+            os.mkdir(self.run_dir)
         os.chdir(self.run_dir)
 
         logger.debug("Running spicker with score_type {0} in directory: {1}".format(score_type, self.run_dir))
@@ -335,19 +338,19 @@ class Spickerer(object):
 
         return rstr
 
+
 if __name__ == "__main__":
     import argparse
-    #
-    # Run Spicker on a directory of PDB files
-    #
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--executable', help="spicker executable to use")
     parser.add_argument('-m', '--models', required=True, help="Models to cluster")
     parser.add_argument('-s', '--score_type', default='rmsd', help="Use TM score")
+    parser.add_argument('-t', '--threads', default=1, type=int, help="Threads")
     args = parser.parse_args()
 
     models = args.models
-    if not os.path.exists(models): raise RuntimeError("Cannot find models: {0}".format(models))
+    if not os.path.exists(models): 
+        raise RuntimeError("Cannot find models: {0}".format(models))
 
     if os.path.isdir(models):
         models = [os.path.abspath(m) for m in glob.glob(os.path.join(models, "*.pdb"))]
@@ -355,8 +358,8 @@ if __name__ == "__main__":
         with open(models) as f:
             models = [l.strip() for l in f.readlines() if l.strip()]
 
-    if not len(models):
-        print "Cannot find any pdbs in: {0}".format(models)
+    if len(models) < 1:
+        print("Cannot find any pdbs in: {0}".format(models))
         sys.exit(1)
 
     spicker_exe = os.path.abspath(args.executable) if args.executable else None
@@ -365,5 +368,5 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
 
     spicker = Spickerer(spicker_exe=spicker_exe)
-    spicker.cluster(models, score_type=args.score_type)
-    print spicker.results_summary()
+    spicker.cluster(models, score_type=args.score_type, nproc=args.threads)
+    print(spicker.results_summary())
