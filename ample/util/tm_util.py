@@ -173,7 +173,8 @@ class TMapps(object):
             
         logger.info('Executing TManalysis scripts')
         j = Job(self._qtype)
-        j.submit(job_scripts, nproc=self._nproc, max_array_jobs=self._max_array_jobs, queue=self._queue)
+        j.submit(job_scripts, nproc=self._nproc, max_array_jobs=self._max_array_jobs, 
+                 queue=self._queue, name="tmscore")
         j.wait(interval=1)
 
         self.entries = []
