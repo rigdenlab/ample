@@ -281,7 +281,7 @@ class RosettaModel(object):
             jobs_per_proc = [1] * self.nmodels
         else:
             jobs_per_proc = self.split_jobs(self.nmodels,self.nproc)
-        
+
         # Generate seeds
         seeds = self.generate_seeds(len(jobs_per_proc))
         
@@ -289,11 +289,12 @@ class RosettaModel(object):
         dir_list = []
         job_time = 43200
         for i, njobs in enumerate(jobs_per_proc):
+            if njobs < 1:
+                continue
             d = os.path.join(self.run_dir, "job_{0}".format(i))
             os.mkdir(d)
             dir_list.append(d)
             
-            # job script
             script = "#!/bin/bash" + os.linesep
             cmd = " ".join(self.ab_initio_cmd(d, njobs, seeds[i]))
             script += cmd + os.linesep
@@ -939,8 +940,8 @@ class RosettaModel(object):
         self.rosetta_mr_protocols = self.find_binary('mr_protocols')
         self.rosetta_idealize_jd2 = self.find_binary('idealize_jd2')
         
-        if optd['transmembrane_old']: self.tm_set_paths(optd)
-        return
+        if optd and optd['transmembrane_old']: 
+            self.tm_set_paths(optd)
 
     def split_jobs(self,njobs,nproc):
         """

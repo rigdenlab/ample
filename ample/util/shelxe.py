@@ -8,6 +8,7 @@ import logging
 import os
 import shutil
 import sys
+import uuid
 
 # our imports
 from ample.util import ample_util
@@ -55,9 +56,8 @@ class MRinfo(object):
         if work_dir is None: work_dir = os.getcwd()
         self.work_dir = work_dir
         self.shelxe_exe = shelxe_exe
-        self.stem = 'shelxe-input'
+        self.stem = 'shelxe-input-{}'.format(str(uuid.uuid1()))
         
-        # Data to be calculated
         self.MPE = None
         self.wMPE = None
         self.originShift = None
@@ -78,7 +78,6 @@ class MRinfo(object):
         """
         mtz_util.to_hkl(native_mtz, hkl_file=os.path.join(self.work_dir, self.stem + ".hkl"))
         shutil.copyfile(native_pdb, os.path.join(self.work_dir, self.stem + ".ent"))
-        return
 
     def analyse(self, mr_pdb):
         """Use SHELXE to analyse an MR pdb file to determine the origin shift and phase error
@@ -97,21 +96,23 @@ class MRinfo(object):
         shutil.copyfile(mr_pdb, os.path.join(self.work_dir, input_pdb))
  
         cmd = [self.shelxe_exe, input_pdb, '-a0', '-q', '-s0.5', '-o', '-n', '-t0', '-m0', '-x']
-        logfile = os.path.abspath('shelxe.log')
+        logfile = os.path.abspath('shelxe_{}.log'.format( str(uuid.uuid1())))
         ret = ample_util.run_command(cmd=cmd, logfile=logfile, directory=None, dolog=False, stdin=None)
         if ret != 0: raise RuntimeError,"Error running shelxe - see log: {0}".format(logfile)
          
         sp = parse_shelxe.ShelxeLogParser(logfile)
-        if hasattr(sp, 'MPE'): self.MPE = sp.MPE # Only added in later version of MRBUMP shelxe parser
+        # Only added in later version of MRBUMP shelxe parser
+        if hasattr(sp, 'MPE'): 
+            self.MPE = sp.MPE 
         self.wMPE = sp.wMPE
         self.originShift = [ o*-1 for o in sp.originShift ]
         
-        # Clean up
         for ext in ['.pda','.pdo','.phs','.lst','_trace.ps']:
-            try: os.unlink(self.stem + ext)
-            except: pass
+            try:
+                os.unlink(self.stem + ext)
+            except:
+                pass
         os.unlink(logfile)
-        return
 
 if __name__ == "__main__":
 
