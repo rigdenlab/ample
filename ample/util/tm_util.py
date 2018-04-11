@@ -2,9 +2,9 @@
 
 from __future__ import division
 
-__author__ = "Felix Simkovic"
-__date__ = "28 Jul 2016"
-__version__ = 1.0
+__author__ = "Felix Simkovic & Jens Thomas"
+__date__ = "11 Apr 2018"
+__version__ = 1.1
 
 import itertools
 import logging
