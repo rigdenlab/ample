@@ -166,9 +166,9 @@ class TMapps(object):
                 log_files.append(os.path.splitext(script)[0] + ".log")
             else:
                 if not os.path.isfile(model_pdb):
-                    logger.warning("Cannot find: {0}".format(model_pdb))
+                    logger.warning("Cannot find: %s", model_pdb)
                 if not os.path.isfile(structure_pdb):
-                    logger.warning("Cannot find: {0}".format(structure_pdb))
+                    logger.warning("Cannot find: %s", structure_pdb))
                 continue
             
         logger.info('Executing TManalysis scripts')
@@ -183,8 +183,7 @@ class TMapps(object):
                 pt.reset()
                 pt.parse(log)
             except Exception:
-                msg = "Error processing the {} log file: {}".format(self.method, log)
-                logger.critical(msg)
+                logger.critical("Error processing the %s log file: %s", self.method, log)
                 log = "None"
             model_name, structure_name, model_pdb, structure_pdb = entry
             _entry = self._store(model_name, structure_name, model_pdb, structure_pdb, log, pt)
