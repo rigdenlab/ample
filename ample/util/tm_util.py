@@ -545,8 +545,12 @@ class TMscore(TMapps):
                 for residue in chain:
                     hetero, res_seq, _ = residue.get_id()
 
-                    if hetero.strip():
-                        raise TypeError("Hetero atom detected in {} in residue {} --- please rename to ATOM or remove!".format(pdb, res_seq))
+                    hetero = hetero.strip().lower()
+                    if hetero == "w":
+                        continue
+                    elif hetero:
+                        msg = "Hetero atom {} detected in {} in residue {} --- please rename to ATOM or remove!"
+                        raise TypeError(msg.format(hetero, pdb, res_seq))
 
                     resname_three = residue.resname
                     if resname_three == "MSE":
