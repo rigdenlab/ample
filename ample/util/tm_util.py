@@ -168,7 +168,7 @@ class TMapps(object):
                 if not os.path.isfile(model_pdb):
                     logger.warning("Cannot find: %s", model_pdb)
                 if not os.path.isfile(structure_pdb):
-                    logger.warning("Cannot find: %s", structure_pdb))
+                    logger.warning("Cannot find: %s", structure_pdb)
                 continue
             
         logger.info('Executing TManalysis scripts')
@@ -475,11 +475,11 @@ class TMscore(TMapps):
         pdb_edit.renumber_residues_gaps(model_pdb, _model_pdb_tmp_stage1, model_gaps)
         pdb_edit.renumber_residues_gaps(structure_pdb, _structure_pdb_tmp_stage1, structure_gaps)
 
-        model_gaps_indeces = [i+1 for i, is_gap in enumerate(model_gaps) if is_gap]
-        structure_gaps_indeces = [i + 1 for i, is_gap in enumerate(structure_gaps) if is_gap]
+        model_gaps_indices = [i+1 for i, is_gap in enumerate(model_gaps) if is_gap]
+        structure_gaps_indices = [i + 1 for i, is_gap in enumerate(structure_gaps) if is_gap]
 
-        pdb_edit.select_residues(_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, delete=structure_gaps_indeces)
-        pdb_edit.select_residues(_structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2, delete=model_gaps_indeces)
+        pdb_edit.select_residues(_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, delete=structure_gaps_indices)
+        pdb_edit.select_residues(_structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2, delete=model_gaps_indices)
 
         pdb_edit.renumber_residues(_model_pdb_tmp_stage2, model_pdb_ret)
         pdb_edit.renumber_residues(_structure_pdb_tmp_stage2, structure_pdb_ret)
@@ -513,7 +513,7 @@ class TMscore(TMapps):
            List of booleans that contain gaps
 
         """
-        return [True if char == "-" else False for char in seq]
+        return [char == "-" for char in seq]
 
     def _pdb_info(self, pdb):
         """
@@ -546,8 +546,7 @@ class TMscore(TMapps):
                     hetero, res_seq, _ = residue.get_id()
 
                     if hetero.strip():
-                        logger.debug("Hetero atom detected in {0}: {1}".format(pdb, res_seq))
-                        continue
+                        raise TypeError("Hetero atom detected in {} in residue {} --- please rename to ATOM or remove!".format(pdb, res_seq))
 
                     resname_three = residue.resname
                     if resname_three == "MSE":
@@ -582,8 +581,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--allvall', action="store_true", help="All vs all comparison")
-    parser.add_argument('--log', default='info', choices=['debug', 'info', 'warning', 'error'],
-                        help="logging level (defaults to 'warning')")
+    parser.add_argument('--debug', action="store_true")
     parser.add_argument('--purge', action="store_true", help="Remove all temporary files")
     parser.add_argument('--rundir', default='.', help="Run directory")
     parser.add_argument('-f', '--fasta', dest="fastas", nargs="+", default=None)
@@ -595,7 +593,10 @@ def main():
     tmapp.add_argument('-ta', '--tmalign', dest="tmalign", type=str)
     args = parser.parse_args()
 
-    logging.basicConfig(level=getattr(logging, args.log.upper(), None), format='%(levelname)s: %(message)s')
+    loglevel = logging.INFO
+    if args.debug:
+        loglevel = logging.DEBUG
+    logging.basicConfig(level=loglevel, format="%(levelname)s: %(message)s")
     
     if not os.path.isdir(args.rundir):
         os.mkdir(args.rundir)
