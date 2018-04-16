@@ -550,6 +550,7 @@ class TMscore(TMapps):
 
                     resname_three = residue.resname
                     if resname_three == "MSE":
+                        logger.warning("Treating MSE as MET!")
                         resname_three = "MET"
                     resname_one = PDB.Polypeptide.three_to_one(resname_three)
 
