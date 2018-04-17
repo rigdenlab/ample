@@ -2,9 +2,9 @@
 
 from __future__ import division
 
-__author__ = "Felix Simkovic"
-__date__ = "28 Jul 2016"
-__version__ = 1.0
+__author__ = "Felix Simkovic & Jens Thomas"
+__date__ = "11 Apr 2018"
+__version__ = 1.1
 
 import itertools
 import logging
@@ -16,12 +16,13 @@ import sys
 import tempfile
 import warnings
 
-
 from ample.parsers import alignment_parser
 from ample.parsers import tm_parser
 from ample.util import ample_util
 from ample.util import pdb_edit
-from ample.util import workers_util
+
+from pyjob import Job
+from pyjob.misc import make_script
 
 try:
     from Bio import PDB
@@ -31,6 +32,7 @@ except ImportError:
     BIOPYTHON_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
 
 class ModelData(object):
     """Class to store model data"""
@@ -81,7 +83,7 @@ class TMapps(object):
 
     """
 
-    def __init__(self, executable, method, wdir=None, **kwargs):
+    def __init__(self, executable, method, wdir=".", **kwargs):
         """
         Parameters
         ----------
@@ -96,15 +98,16 @@ class TMapps(object):
         self.entries = []
         self.executable = executable
         self.method = method.lower()
-        self.work_dir = wdir if wdir else os.getcwd()
+        self.tmp_dir = None
+        self.work_dir = os.path.abspath(wdir)
 
-        # Cluster submission options
+        if 'submit_cluster' in kwargs and kwargs['submit_cluster']:
+            self._qtype = kwargs['submit_qtype']
+        else:
+            self._qtype = "local"
+        self._queue = kwargs['submit_queue'] if 'submit_queue' in kwargs else None
         self._nproc = kwargs['nproc'] if 'nproc' in kwargs else 1
-        self._submit_cluster = kwargs['submit_cluster'] if 'submit_cluster' in kwargs else False
-        self._submit_qtype = kwargs['submit_qtype'] if 'submit_qtype' in kwargs else None
-        self._submit_queue = kwargs['submit_queue'] if 'submit_queue' in kwargs else None
-        self._submit_array = kwargs['submit_array'] if 'submit_array' in kwargs else True
-        self._submit_max_array = kwargs['submit_max_array'] if 'submit_max_array' in kwargs else None
+        self._max_array_jobs = kwargs['submit_max_array'] if 'submit_max_array' in kwargs else None
 
     def comparison(self, models, structures):
         """
@@ -135,108 +138,59 @@ class TMapps(object):
             structures = [structures[0] for _ in xrange(len(models))]
 
         elif len(models) != len(structures):
-            msg = "Unequal number of models and structures"
+            msg = "Unequal number of models and structures!"
             logger.critical(msg)
             raise RuntimeError(msg)
 
-        # Create a logfile parser
         if self.method == "tmalign":
             pt = tm_parser.TMalignLogParser()
         elif self.method == "tmscore":
             pt = tm_parser.TMscoreLogParser()
         else:
-            msg = "Invalid method selected: ", self.method
+            msg = "Invalid method selected: %s", self.method
             logger.critical(msg)
             raise RuntimeError(msg)
 
-        # =======================================================================
-        # Iterate through the structure files and execute the TMscore comparisons
-        # =======================================================================
-
         logger.info('Using algorithm: {0}'.format(self.method))
         logger.info('------- Evaluating decoys -------')
-
-        # Construct the job scripts
-        data_entries = []   # Store some data
-        job_scripts = []    # Hold job scripts
-        log_files = []      # Hold paths to log files
+        data_entries, job_scripts, log_files = [], [], []
         for model_pdb, structure_pdb in zip(models, structures):
-            # Some file names
             model_name = os.path.splitext(os.path.basename(model_pdb))[0]
             structure_name = os.path.splitext(os.path.basename(structure_pdb))[0]
-            prefix = '{0}_{1}_{2}'.format(model_name, structure_name, self.method)
-            if not os.path.isfile(model_pdb):
-                logger.warning("Cannot find: {0}".format(model_pdb))
-                continue
-            elif not os.path.isfile(structure_pdb):
-                logger.warning("Cannot find: {0}".format(structure_pdb))
-                continue
-            # Create the run scripts
-            script = tempfile.NamedTemporaryFile(prefix=prefix, suffix=ample_util.SCRIPT_EXT, delete=False)
-            script.write(ample_util.SCRIPT_HEADER + os.linesep * 2)
-            script.write('{exe} {model} {reference} {sep}{sep}'.format(
-                exe=self.executable,
-                model=model_pdb,
-                reference=structure_pdb,
-                sep=os.linesep,
-            ))
-            script.close()
-            os.chmod(script.name, 0o777)
-            job_scripts.append(script.name)
-            # Save some more information
-            data_entries.append([model_name, structure_name, model_pdb, structure_pdb])
-            log_files.append(os.path.splitext(script.name)[0] + ".log")
+            stem = "_".join([model_name, structure_name, self.method])
 
-        # Execute the scripts
+            if os.path.isfile(model_pdb) and os.path.isfile(structure_pdb):
+                data_entries.append([model_name, structure_name, model_pdb, structure_pdb])
+                script = make_script([self.executable, model_pdb, structure_pdb], prefix="tmscore_", stem=stem)
+                job_scripts.append(script)
+                log_files.append(os.path.splitext(script)[0] + ".log")
+            else:
+                if not os.path.isfile(model_pdb):
+                    logger.warning("Cannot find: %s", model_pdb)
+                if not os.path.isfile(structure_pdb):
+                    logger.warning("Cannot find: %s", structure_pdb)
+                continue
+            
         logger.info('Executing TManalysis scripts')
-        logger.disabled = True
-        from pyjob import Job
-        j = Job("local")
-        j.submit(job_scripts, nproc=self._nproc)
+        j = Job(self._qtype)
+        j.submit(job_scripts, nproc=self._nproc, max_array_jobs=self._max_array_jobs, 
+                 queue=self._queue, name="tmscore")
         j.wait(interval=1)
 
-        #  success = workers_util.run_scripts(
-        #      job_scripts=job_scripts,
-        #      monitor=None,
-        #      check_success=None,
-        #      early_terminate=None,
-        #      nproc=self._nproc,
-        #      job_time=7200,              # Might be too long/short, taken from Rosetta modelling
-        #      job_name='tm_analysis',
-        #      submit_cluster=self._submit_cluster,
-        #      submit_qtype=self._submit_qtype,
-        #      submit_queue=self._submit_queue,
-        #      submit_array=self._submit_array,
-        #      submit_max_array=self._submit_max_array
-        #  )
-        logger.disabled = False
-
-        #  if not success:
-        #      msg = "Error running TManalysis"
-        #      raise RuntimeError(msg)
-
-        # Extract the data
-        entries = []
+        self.entries = []
         for entry, log, script in zip(data_entries, log_files, job_scripts):
-
             try:
-                # Reset the TM log parser to default values
                 pt.reset()
-                # Parse the TM method logfile to extract the data
                 pt.parse(log)
             except Exception:
-                msg = "Error processing the {0} log file: {1}".format(self.method, log)
-                logger.critical(msg)
+                logger.critical("Error processing the %s log file: %s", self.method, log)
                 log = "None"
-
             model_name, structure_name, model_pdb, structure_pdb = entry
             _entry = self._store(model_name, structure_name, model_pdb, structure_pdb, log, pt)
-            entries.append(_entry)
-
+            self.entries.append(_entry)
             os.unlink(script)
 
-        self.entries = entries
-        return entries
+        return self.entries
 
     def _get_iterator(self, all_vs_all):
         """
@@ -250,19 +204,18 @@ class TMapps(object):
         function
 
         """
-        # Use different itertools functions depending on the comparison type
         if all_vs_all:
             logger.info("All-vs-all comparison of models and structures")
-            iterator = itertools.product     # yields an iterator of all unique combinations
+            return itertools.product
         else:
             logger.info("Direct comparison of models and structures")
-            iterator = itertools.izip        # yields a zipped iterator
-        return iterator
+            return itertools.izip
 
     def _store(self, model_name, structure_name, model_pdb, structure_pdb, logfile, pt):
-        # Generic data that either both parsers have or are defined independently of the parser
-        model = ModelData(model_name, structure_name, model_pdb, structure_pdb, logfile, pt.tm, pt.rmsd, pt.nr_residues_common)
-        # Specific attributes that either but not both parsers have
+        model = ModelData(
+            model_name, structure_name, model_pdb, structure_pdb, 
+            logfile, pt.tm, pt.rmsd, pt.nr_residues_common
+        )
         if hasattr(pt, 'gdtts'):
             model.gdtts = pt.gdtts
         if hasattr(pt, 'gdtha'):
@@ -298,7 +251,6 @@ class TMapps(object):
             exe_name = "TMscore" + ample_util.EXE_EXT
         else:
             raise ValueError('Provide one of TMalign or TMscore')
-
         try:
             ample_util.find_exe(exe_name)
         except:
@@ -340,12 +292,10 @@ class TMalign(TMapps):
         entries : list
 
         """
-        # Check what we are comparing
         if len(structures) == 1:
             logger.info('Using single structure provided for all model comparisons')
             structures = [structures[0] for _ in xrange(len(models))]
 
-        # The models parsed forward to the comparison
         models_to_compare, structures_to_compare = [], []
         combination_iterator = self._get_iterator(all_vs_all)
 
@@ -371,6 +321,9 @@ class TMscore(TMapps):
 
     def __init__(self, executable, wdir=None, **kwargs):
         super(TMscore, self).__init__(executable, "TMscore", wdir=wdir, **kwargs)
+        self.tmp_dir = os.path.join(self.work_dir, "tm_util_pdbs")
+        if not os.path.isdir(self.tmp_dir):
+            os.mkdir(self.tmp_dir)
 
     def compare_structures(self, models, structures, fastas=None, all_vs_all=False):
         """
@@ -400,7 +353,6 @@ class TMscore(TMapps):
         """
         if not BIOPYTHON_AVAILABLE:
             raise RuntimeError("Biopython is not available")
-        # Check what we are comparing
         if structures and len(structures) == 1:
             logger.info('Using single structure provided for all model comparisons')
             structures = [structures[0] for _ in xrange(len(models))]
@@ -409,35 +361,27 @@ class TMscore(TMapps):
             logger.info('Using single FASTA provided for all model comparisons')
             fastas = [fastas[0] for _ in xrange(len(models))]
 
-        # The models parsed forward to the comparison
         models_to_compare, structures_to_compare = [], []
         combination_iterator = self._get_iterator(all_vs_all)
 
         if fastas:
 
-            # Determine the iterator and create the combinations to be compared
             for (model, structure, fasta) in combination_iterator(models, structures, fastas):
-
-                # Extract the FASTA sequence
                 fasta_record = list(SeqIO.parse(open(fasta, 'r'), 'fasta'))[0]
                 fasta_data = [(i + 1, j) for i, j in enumerate(str(fasta_record.seq))]
 
-                # Extract some information from each PDB structure file
                 model_data = list(self._pdb_info(model))
                 structure_data = list(self._pdb_info(structure))
 
-                # Align the model sequence to the FASTA sequence
                 for fasta_pos in fasta_data:
                     if fasta_pos not in model_data:
                         model_data.append((fasta_pos[0], "-"))
                 model_data.sort(key=operator.itemgetter(0))
 
-                # Align the structure_sequence to the model sequence
                 aln_parser = alignment_parser.AlignmentParser()
                 fasta_structure_aln = aln_parser.align_sequences("".join(zip(*fasta_data)[1]),
                                                                  "".join(zip(*structure_data)[1]))
 
-                # Remove parts of the alignment that are gaps in both sequences
                 to_remove = []
                 _alignment = zip("".join(zip(*model_data)[1]), fasta_structure_aln[1])
                 for i, (model_res, structure_res) in enumerate(_alignment):
@@ -454,25 +398,19 @@ class TMscore(TMapps):
                     logger.critical(msg)
                     raise RuntimeError(msg)
 
-                # Modify the structures based on the aligned sequences
                 pdb_combo = self._mod_structures(model_aln, structure_aln, model, structure)
 
-                # Save the models
                 models_to_compare.append(pdb_combo[0])
                 structures_to_compare.append(pdb_combo[1])
 
         else:
-            # No FASTA processing etc, pure comparisons of sequences
             for (model, structure) in combination_iterator(models, structures):
 
-                # Extract some information from each PDB structure file
                 model_data = list(self._pdb_info(model))
                 structure_data = list(self._pdb_info(structure))
 
-                # Align the sequences to see how much of the predicted decoys are in the xtal
                 alignment = alignment_parser.AlignmentParser().align_sequences("".join(zip(*model_data)[1]),
                                                                                "".join(zip(*structure_data)[1]))
-                # Redundant but identical to if
                 alignment = zip(alignment[0], alignment[1])
 
                 model_aln = "".join(zip(*alignment)[0])
@@ -483,10 +421,8 @@ class TMscore(TMapps):
                     logger.critical(msg)
                     raise RuntimeError(msg)
 
-                # Modify the structures based on the aligned sequences
                 pdb_combo = self._mod_structures(model_aln, structure_aln, model, structure)
 
-                # Save the models9
                 models_to_compare.append(pdb_combo[0])
                 structures_to_compare.append(pdb_combo[1])
 
@@ -514,81 +450,51 @@ class TMscore(TMapps):
            The path to the modified structure pdb file
 
         """
-
-        # ================================
-        # File definitions
-        # ================================
-
-        # Create a storage for the files
-        work_dir_mod = os.path.join(self.work_dir, "tm_util_pdbs")
-        if not os.path.isdir(work_dir_mod):
-            os.mkdir(work_dir_mod)
-
-        # Create a random file suffix to avoid overwriting file names if duplicate
-        # Taken from http://stackoverflow.com/a/2257449
         random_suffix = ''.join(random.SystemRandom().choice(string.ascii_lowercase + string.digits) for _ in range(10))
 
-        # File names and output files
         model_name = os.path.basename(model_pdb).rsplit(".", 1)[0]
-        model_pdb_ret = os.path.join(work_dir_mod, "_".join([model_name, random_suffix, "mod.pdb"]))
+        model_pdb_ret = os.path.join(self.tmp_dir, "_".join([model_name, random_suffix, "mod.pdb"]))
 
         structure_name = os.path.basename(structure_pdb).rsplit(".", 1)[0]
-        structure_pdb_ret = os.path.join(work_dir_mod, "_".join([structure_name, random_suffix, "mod.pdb"]))
+        structure_pdb_ret = os.path.join(self.tmp_dir, "_".join([structure_name, random_suffix, "mod.pdb"]))
 
-        # Check if the files we are to create for comparison do not exist
         if os.path.isfile(model_pdb_ret) or os.path.isfile(structure_pdb_ret):
             msg = "Comparison structures exist. Move, delete or rename before continuing"
             logger.critical(msg)
             raise RuntimeError(msg)
 
-        # Create temporary files
-        _model_pdb_tmp_stage1 = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
-        _model_pdb_tmp_stage2 = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+        _model_pdb_tmp_stage1 = ample_util.tmp_file_name(delete=False, directory=self.tmp_dir, suffix=".pdb")
+        _model_pdb_tmp_stage2 = ample_util.tmp_file_name(delete=False, directory=self.tmp_dir, suffix=".pdb")
 
-        _structure_pdb_tmp_stage1 = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
-        _structure_pdb_tmp_stage2 = ample_util.tmp_file_name(delete=False, directory=work_dir_mod, suffix=".pdb")
+        _structure_pdb_tmp_stage1 = ample_util.tmp_file_name(delete=False, directory=self.tmp_dir, suffix=".pdb")
+        _structure_pdb_tmp_stage2 = ample_util.tmp_file_name(delete=False, directory=self.tmp_dir, suffix=".pdb")
 
-        # ==================================
-        # File manipulation and modification
-        # ==================================
-
-        # Get the gap positions in both sequences
         model_gaps = self._find_gaps(model_aln)
         structure_gaps = self._find_gaps(structure_aln)
 
-        # Renumber the pdb files - required in case there are any gaps
         pdb_edit.renumber_residues_gaps(model_pdb, _model_pdb_tmp_stage1, model_gaps)
         pdb_edit.renumber_residues_gaps(structure_pdb, _structure_pdb_tmp_stage1, structure_gaps)
 
-        # Determine the gap indeces
-        model_gaps_indeces = [i+1 for i, is_gap in enumerate(model_gaps) if is_gap]
-        structure_gaps_indeces = [i + 1 for i, is_gap in enumerate(structure_gaps) if is_gap]
+        model_gaps_indices = [i+1 for i, is_gap in enumerate(model_gaps) if is_gap]
+        structure_gaps_indices = [i + 1 for i, is_gap in enumerate(structure_gaps) if is_gap]
 
-        # Use gaps of other sequence to even out
-        pdb_edit.select_residues(_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, delete=structure_gaps_indeces)
-        pdb_edit.select_residues(_structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2, delete=model_gaps_indeces)
+        pdb_edit.select_residues(_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, delete=structure_gaps_indices)
+        pdb_edit.select_residues(_structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2, delete=model_gaps_indices)
 
-        # Renumber the pdb files - required by TMscore binary
         pdb_edit.renumber_residues(_model_pdb_tmp_stage2, model_pdb_ret)
         pdb_edit.renumber_residues(_structure_pdb_tmp_stage2, structure_pdb_ret)
 
-        # ==================================
-        # Checks and validations
-        # ==================================
-
-        # Extract some information from each PDB structure file
         _model_data = list(self._pdb_info(model_pdb_ret))
         _structure_data = list(self._pdb_info(structure_pdb_ret))
 
-        # Make sure our structures contain the same residues with correct indeces
         if set(_model_data) != set(_structure_data):
             msg = "Residues in model and structure non-identical. Affected PDBs {0} - {1}".format(model_name, structure_name)
             logger.critical(msg)
             raise RuntimeError(msg)
 
-        # Remove the temporary files
-        for f in [_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, _structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2]:
-            os.unlink(f)
+        map(os.unlink, [
+            _model_pdb_tmp_stage1, _model_pdb_tmp_stage2, _structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2
+        ])
 
         return model_pdb_ret, structure_pdb_ret
 
@@ -607,7 +513,7 @@ class TMscore(TMapps):
            List of booleans that contain gaps
 
         """
-        return [True if char == "-" else False for char in seq]
+        return [char == "-" for char in seq]
 
     def _pdb_info(self, pdb):
         """
@@ -639,12 +545,16 @@ class TMscore(TMapps):
                 for residue in chain:
                     hetero, res_seq, _ = residue.get_id()
 
-                    if hetero.strip():
-                        logger.debug("Hetero atom detected in {0}: {1}".format(pdb, res_seq))
+                    hetero = hetero.strip().lower()
+                    if hetero == "w":
                         continue
+                    elif hetero:
+                        msg = "Hetero atom {} detected in {} in residue {} --- please rename to ATOM or remove!"
+                        raise TypeError(msg.format(hetero, pdb, res_seq))
 
                     resname_three = residue.resname
                     if resname_three == "MSE":
+                        logger.warning("Treating MSE as MET!")
                         resname_three = "MET"
                     resname_one = PDB.Polypeptide.three_to_one(resname_three)
 
@@ -672,13 +582,12 @@ class TMscore(TMapps):
 
 def main():
     import argparse
-    import csv
+    import pandas as pd
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--allvall', action="store_true", help="All vs all comparison")
-    parser.add_argument('--log', default='info', choices=['debug', 'info', 'warning', 'error'],
-                        help="logging level (defaults to 'warning')")
-    #  parser.add_argument('--purge', action="store_true", help="Remove the run directory")
+    parser.add_argument('--debug', action="store_true")
+    parser.add_argument('--purge', action="store_true", help="Remove all temporary files")
     parser.add_argument('--rundir', default='.', help="Run directory")
     parser.add_argument('-f', '--fasta', dest="fastas", nargs="+", default=None)
     parser.add_argument('-m', '--models', dest="models", nargs="+", required=True)
@@ -689,7 +598,10 @@ def main():
     tmapp.add_argument('-ta', '--tmalign', dest="tmalign", type=str)
     args = parser.parse_args()
 
-    logging.basicConfig(level=getattr(logging, args.log.upper(), None), format='%(levelname)s: %(message)s')
+    loglevel = logging.INFO
+    if args.debug:
+        loglevel = logging.DEBUG
+    logging.basicConfig(level=loglevel, format="%(levelname)s: %(message)s")
     
     if not os.path.isdir(args.rundir):
         os.mkdir(args.rundir)
@@ -699,22 +611,25 @@ def main():
     args.models = [os.path.abspath(m) for m in args.models]
     args.structures = [os.path.abspath(m) for m in args.structures]
     
+    kwargs = dict(wdir=args.rundir, nproc=args.threads)
     if args.tmalign:
-        entries = TMalign(args.tmalign, wdir=args.rundir, nproc=args.threads).compare_structures(args.models, args.structures, all_vs_all=args.allvall)
+        tmapp = TMalign(args.tmalign, **kwargs)
+        tmapp.compare_structures(args.models, args.structures, all_vs_all=args.allvall)
     elif args.tmscore:
-        entries = TMscore(args.tmscore, wdir=args.rundir, nproc=args.threads).compare_structures(args.models, args.structures, fastas=args.fastas, all_vs_all=args.allvall)
+        tmapp = TMscore(args.tmscore, **kwargs)
+        tmapp.compare_structures(args.models, args.structures, fastas=args.fastas, all_vs_all=args.allvall)
     else:
-        entries = None
+        raise RuntimeError("You're doomed if you get here!")
 
-    if entries:
-        csv_file = os.path.join(args.rundir, 'tm_results.csv')
-        with open(csv_file, 'wb') as f_out:
-            w = csv.DictWriter(f_out, entries[0].keys())
-            w.writeheader()
-            for entry in entries:
-                w.writerow(entry)
+    df = pd.DataFrame(tmapp.entries) 
+    df.to_csv(os.path.join(args.rundir, 'tm_results.csv'), index=False)
+    logger.info("Final TMscore table:\n\n" + df.to_string(index=False) + "\n")
 
-    return entries
+    if args.purge and tmapp.tmp_dir:
+        from shutil import rmtree
+        rmtree(tmapp.tmp_dir)
+
+    return tmapp.entries
 
 if __name__ == "__main__":
     main()
