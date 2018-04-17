@@ -14,6 +14,7 @@ Submodules
    ample.util.ample_util
    ample.util.argparse_util
    ample.util.benchmark_util
+   ample.util.ccp4
    ample.util.cif_parser
    ample.util.cluster_entropy
    ample.util.clusterize
