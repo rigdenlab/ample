@@ -37,9 +37,17 @@ img {
     a[href]:after {content: none !important;}
 }
 
-.navbar-collapse {
-    padding-right: 0px;
-    padding-left: 0px;
+@media (min-width: 768px) {
+    .navbar-collapse {
+        padding-left: 0;
+        padding-right: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar-collapse li {
+        padding-left: 20px;
+    }
 }
 
 .nav > li > a {
