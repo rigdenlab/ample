@@ -51,6 +51,20 @@ Reference List
 
           `BibTex <_static/keegan2015.bib>`_
 
+   * - Rigden DJ, Thomas JMH, Simkovic F, Simpkin A, Winn MD, Mayans O & Keegan RM(2018). Ensembles generated from crystal structures of single distant homologues solve challenging molecular-replacement cases in AMPLE. *Acta Cryst. D* **74**, 183-193.
+     - .. cssclass:: btn btn-primary btn-sm btn-reference
+          
+          `CrossRef <https://doi.org/10.1107/S2059798318002310>`_
+
+     - .. cssclass:: btn btn-default btn-sm btn-reference
+          
+          `PubMed <https://www.ncbi.nlm.nih.gov/pubmed/29533226>`_
+
+     - .. cssclass:: btn btn-primary btn-sm btn-reference
+
+          `BibTex <_static/rigden2018.bib>`_
+
+
    * - Simkovic F, Thomas JMH, Keegan RM, Winn MD, Mayans O & Rigden DJ (2016). Residue contacts predicted by evolutionary covariance extend the application of ab initio Molecular Replacement to larger and more challenging protein folds. *IUCrJ* **4**, 259-270.
      - .. cssclass:: btn btn-primary btn-sm btn-reference
           
