@@ -42,16 +42,9 @@ class CCP4Version(StrictVersion):
     """The CCP4 version class"""
     def __init__(self):
         StrictVersion.__init__(self)
+        tversion = '0.0.0'
         ccp4_major_minor = os.path.join(os.environ["CCP4"], "lib", "ccp4", "MAJOR_MINOR")
         if os.path.isfile(ccp4_major_minor):
             with open(ccp4_major_minor, "r") as f_in:
                 tversion = f_in.read().strip()
-        else:
-            stdout = cexec(['pdbcur' + EXE_EXT], permit_nonzero=True)
-            tversion = None
-            for line in stdout.split(os.linesep):
-                if line.startswith(' ### CCP4'):
-                    tversion = line.split()[2].rstrip(':')
-            if tversion is None:
-                raise RuntimeError("Cannot determine CCP4 version")
         self.parse(tversion)

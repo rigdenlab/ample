@@ -16,7 +16,7 @@ import os
 import sys
 
 # Make AMPLE believe we are running it as part of CCP4
-os.environ['CCP4'] = "/empty/path"
+os.environ['CCP4'] = os.environ['CCP4_SCR'] = "."
 
 # Required by autosummary
 sys.path.insert(0, os.path.abspath("."))    # for sphinxext directory
@@ -68,8 +68,7 @@ templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-# source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
 source_encoding = 'utf-8'
@@ -138,10 +137,10 @@ todo_include_todos = True
 
 # If set, mock the import system to have external dependencies
 autodoc_mock_imports = [
-    'Bio', 'conkit.io', 'conkit.plot', 'conkit._version', 'iotbx.cif', 'iotbx.file_reader', 
+    'Bio', 'conkit', 'conkit.io', 'conkit.plot', 'iotbx.cif', 'iotbx.file_reader', 
     'iotbx.mtz', 'iotbx.pdb', 'matplotlib', 'mmtbx.superpose', 'numpy', 'pandas', 
     'parse_arpwarp', 'parse_buccaneer', 'parse_phaser', 'parse_shelxe', 'phaser',
-    'conkit.io'
+    'pyjob'
 ]
 
 # -- Options for HTML output ----------------------------------------------
