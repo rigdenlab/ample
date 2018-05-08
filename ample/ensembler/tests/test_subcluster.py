@@ -34,7 +34,7 @@ class Test_1(unittest.TestCase):
         # Test we can reproduce the original thresholds
         gesamt_exe = ample_util.find_exe("gesamt" + ample_util.EXE_EXT)
         clusterer = subcluster.GesamtClusterer(executable=gesamt_exe)
-        pdb_list = glob.glob(os.path.join(self.testfiles_dir, "models",'*.pdb'))
+        pdb_list = sorted(glob.glob(os.path.join(self.testfiles_dir, "models",'*.pdb')))
         clusterer._generate_distance_matrix_generic(pdb_list, purge_all=True)
         # Test two files manually
         index1 = 2
