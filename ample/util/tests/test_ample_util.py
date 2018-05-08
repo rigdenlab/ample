@@ -15,12 +15,12 @@ class Test(unittest.TestCase):
         self.assertTrue("spicker.exe", spicker_exe)
         theseus_exe = os.path.basename(ample_util.find_exe("theseus" + ample_util.EXE_EXT))
         self.assertTrue("theseus", theseus_exe)
-        
+
     def test_resultsd_fix_path(self):
         with open(os.path.join(SHARE_DIR,'testfiles', AMPLE_PKL)) as f: optd = cPickle.load(f)
         d = ample_util.amoptd_fix_path(optd, newroot='/foo/bar')
-        self.assertEqual(d['fasta'],'/foo/bar/AMPLE_0/ampl_.fasta')
-        self.assertEqual(d['mrbump_results'][0]['PHASER_logfile'],'/foo/bar/AMPLE_0/MRBUMP/search_c1_t69_r3_polyAla_mrbump/data/loc0_ALL_c1_t69_r3_polyAla/unmod/mr/phaser/phaser_loc0_ALL_c1_t69_r3_polyAla_UNMOD.log')
+        self.assertEqual(d['fasta'],'/foo/bar/ampl_.fasta')
+        self.assertEqual(d['mrbump_results'][0]['PHASER_logfile'],'/foo/bar/MRBUMP/search_c1_t69_r3_polyAla_mrbump/data/loc0_ALL_c1_t69_r3_polyAla/unmod/mr/phaser/phaser_loc0_ALL_c1_t69_r3_polyAla_UNMOD.log')
         
 if __name__ == "__main__":
     unittest.main()
