@@ -29,7 +29,7 @@ class SubClusterer(object):
     Sub-classes just need to provide a generate_distance_matrix class
     """
 
-    def __init__(self,executable=None, nproc=1):
+    def __init__(self, executable=None, nproc=1):
         if executable and not os.path.exists(executable) and os.access(executable, os.X_OK):
             msg = "Cannot find subclusterer executable: {0}".format(executable)
             raise RuntimeError(msg)
@@ -41,7 +41,7 @@ class SubClusterer(object):
         return
 
     def generate_distance_matrix(self, *args, **kwargs):
-        assert False
+        raise NotImplementedError
 
     def cluster_by_radius(self, radius):
         """Return a list of pdbs clustered by the given radius"""
@@ -50,7 +50,7 @@ class SubClusterer(object):
         cluster_indices, cluster_score = self._cluster_indices(radius)
         self.cluster_score = cluster_score
         if cluster_indices:
-            return [ self.index2pdb[i] for i in cluster_indices ]
+            return [self.index2pdb[i] for i in cluster_indices]
         else:
             return None
 
@@ -67,24 +67,16 @@ class SubClusterer(object):
         # ensemble. This means we would also exclude models that had an rmsd of zero to the centroid, but
         # as these are likely to be identical (and this occurrence rare), this should be ok
         condition = numpy.logical_and(self.distance_matrix <= thresh, self.distance_matrix != 0.0)
+
         # Array of sums of each row - largest number is a row where most items satisfy condition
         condition_sum =  sum(condition)
+
         # Find all rows that have the maximum of the condition true and then select the first one
         row_index = numpy.where(condition_sum == numpy.max(condition_sum))[0][0]
+
         # Select all values from that row where the condition is true and insert the first index so that
         # it becomes the centroid of that cluster
         max_cluster = numpy.insert(numpy.where(condition[row_index])[0], 0, row_index)
-
-#             max_cluster = []
-#             len_matrix = len(self.distance_matrix)
-#             for i in range(len_matrix):
-#                 cluster = [i]
-#                 for j in range(len_matrix):
-#                     if self.distance_matrix[i][j] is None or j==i: continue
-#                     if float(self.distance_matrix[i][j]) < thresh:
-#                         cluster.append(j)
-#                 if len(cluster) > len(max_cluster):
-#                     max_cluster = copy.copy(cluster)
 
         if len(max_cluster) == 1:
             return None, None
@@ -97,15 +89,7 @@ class SubClusterer(object):
         """
         ALL_BY_ALL = True
         if ALL_BY_ALL:
-            # # Calculate all the rmsds of all decoys in the cluster with each other
-            # rmsds = []
-            # lenc = len(cluster)
-            # for i in range(lenc):
-            #     for j in range(i+1,lenc):
-            #         i1 = cluster[i]
-            #         i2 = cluster[j]
-            #         rmsds.append(self.distance_matrix[i1][i2])
-            rmsds = [ self.distance_matrix[i] for i in itertools.combinations(cluster, 2) ]
+            rmsds = [self.distance_matrix[i] for i in itertools.combinations(cluster, 2)]
         else:
             # Just use the rmsds of the decoys to the the cluster centroid - assumes
             # the centroid approximates the native
@@ -144,7 +128,7 @@ class CctbxClusterer(SubClusterer):
             raise RuntimeError(msg)
 
         # Index is just the order of the pdb in the file
-        self.index2pdb = pdb_list
+        self.index2pdb = sorted(pdb_list)
 
         # Create a square matrix storing the rmsd distances between models
         self.distance_matrix = numpy.zeros([num_models, num_models])
@@ -181,7 +165,7 @@ class FpcClusterer(SubClusterer):
         with open( fname, 'w' ) as f: f.write( "\n".join( pdb_list )+"\n" )
 
         # Index is just the order of the pdb in the file
-        self.index2pdb = pdb_list
+        self.index2pdb = sorted(pdb_list)
 
         # Run fast_protein_cluster - this is just to generate the distance matrix, but there
         # doesn't seem to be a way to stop it clustering as well - not a problem as it just
@@ -262,13 +246,14 @@ where inp_list.dat  contains:
 
         """
 
-        # Index is just the order of the pdb in the file
+        # Index is just the order of the pdbs
+        models = sorted(models)
         self.index2pdb = models
 
         # Create file with list of pdbs and model/chain
         glist = 'gesamt_models.dat'
         with open(glist, 'w') as w:
-            for m in sorted(models):
+            for m in models:
                 w.write("{0} -s /1/A \n".format(m))
             w.write('\n')
 
@@ -322,13 +307,13 @@ where inp_list.dat  contains:
         if not all([ os.path.dirname(p) == mdir for p in models ]):
             raise RuntimeError("All pdb files are not in the same directory!")
 
-        # Create list of pdb files
-        fname = os.path.join(os.getcwd(), FILE_LIST_NAME)
-        with open(fname, 'w') as f: f.write("\n".join(sorted(models))+"\n")
-
-        # Index is just the order of the pdb in the file
+        models = sorted(models)
         self.index2pdb = models
         nmodels = len(models)
+
+        # Create list of pdb files
+        fname = os.path.join(os.getcwd(), FILE_LIST_NAME)
+        with open(fname, 'w') as f: f.write("\n".join(models) + "\n")
 
         # Make the archive
         logger.debug("Generating gesamt archive from models in directory %s", mdir)
@@ -389,8 +374,9 @@ where inp_list.dat  contains:
                     score = qscore
                 else:
                     raise RuntimeError("Unrecognised metric: {0}".format(metric))
-                m[i,j] = score
-            if purge_all: os.unlink(gesamt_out)
+                m[i, j] = score
+            if purge_all:
+                os.unlink(gesamt_out)
 
         # Copy upper half of matrix to lower
         i_lower = numpy.tril_indices(nmodels, -1)
@@ -398,7 +384,8 @@ where inp_list.dat  contains:
         self.distance_matrix = m
 
         # Remove the gesamt archive
-        if purge: shutil.rmtree(garchive)
+        if purge:
+            shutil.rmtree(garchive)
 
         # Write out the matrix in a form spicker can use
         self.dump_pdb_matrix(SCORE_MATRIX_NAME)
@@ -406,7 +393,8 @@ where inp_list.dat  contains:
 
     def _parse_gesamt_out(self, out_file):
         # Assumption is there are no pdb_codes
-        GesamtData = namedtuple('GesamtData', ['count', 'chain_id', 'q_score', 'rmsd', 'seq_id', 'nalign', 'nres', 'file_name'])
+        GesamtData = namedtuple('GesamtData',
+                                ['count', 'chain_id', 'q_score', 'rmsd', 'seq_id', 'nalign', 'nres', 'file_name'])
         data = []
         with open(out_file) as f:
             for i, line in enumerate(f):
@@ -460,7 +448,7 @@ end""".format(nresidues, 'A')
     def generate_distance_matrix(self, models):
 
         # Index is just the order of the pdb in the file
-        self.index2pdb = models
+        self.index2pdb = sorted(models)
         num_models = len(models)
 
         # Assume all models are the same size and only have a single chain
@@ -512,7 +500,7 @@ class MaxClusterer(SubClusterer):
             logging.critical(msg)
             raise RuntimeError(msg)
 
-        self.index2pdb=[0]*num_models
+        self.index2pdb=[0] * num_models
 
         # Maxcluster arguments
         # -l [file]   File containing a list of PDB model fragments
