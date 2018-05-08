@@ -76,13 +76,13 @@ class Test_1(unittest.TestCase):
         pdb_list = glob.glob(os.path.join(self.testfiles_dir, "models",'*.pdb'))
 
         radius = 4
-        clusterer.generate_distance_matrix(pdb_list, purge=True)
-        cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius(radius)]
-        ref = ['1_S_00000002.pdb', '1_S_00000004.pdb', '1_S_00000005.pdb', '2_S_00000001.pdb',
+        clusterer.generate_distance_matrix(pdb_list, purge=False)
+        cluster_files1 = set([os.path.basename(x) for x in clusterer.cluster_by_radius(radius)])
+        ref = set(['1_S_00000002.pdb', '1_S_00000004.pdb', '1_S_00000005.pdb', '2_S_00000001.pdb',
               '2_S_00000005.pdb', '3_S_00000003.pdb', '3_S_00000004.pdb', '3_S_00000006.pdb',
-              '4_S_00000002.pdb', '4_S_00000005.pdb', '5_S_00000004.pdb', '5_S_00000005.pdb']
-        self.assertItemsEqual(ref,cluster_files1)
+              '4_S_00000002.pdb', '4_S_00000005.pdb', '5_S_00000004.pdb', '5_S_00000005.pdb'])
         #clusterer.dump_pdb_matrix('foo')
+        self.assertEqual(0, len(ref - cluster_files1))
         return
 
     def test_radius_lsqkab(self):
