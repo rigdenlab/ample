@@ -54,7 +54,6 @@ class Test(unittest.TestCase):
         self.assertEqual( 'SIGF', d['SIGF'], "Correct SIGF")
         self.assertEqual( 'FreeR_flag', d['FREE'], "Correct FREE")
 
-        os.unlink('uniqueify.log')
         os.unlink('2uui_sigmaa_uniqueify.mtz')
         os.unlink('2uui_sigmaa_uniqueify.log')
 
