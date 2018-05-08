@@ -6,9 +6,6 @@ import unittest
 from ample import constants
 from ample.util import mtz_util
 
-import logging
-logging.basicConfig(level=logging.DEBUG)
-
 class Test(unittest.TestCase):
 
     @classmethod
