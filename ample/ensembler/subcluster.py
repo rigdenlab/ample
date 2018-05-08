@@ -69,7 +69,7 @@ class SubClusterer(object):
         condition = numpy.logical_and(self.distance_matrix <= thresh, self.distance_matrix != 0.0)
 
         # Array of sums of each row - largest number is a row where most items satisfy condition
-        condition_sum =  sum(condition)
+        condition_sum =  condition.sum(axis=1)
 
         # Find all rows that have the maximum of the condition true and then select the first one
         row_index = numpy.where(condition_sum == numpy.max(condition_sum))[0][0]
