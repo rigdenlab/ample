@@ -280,24 +280,52 @@ def extract_models(amoptd, sequence=None, single=True, allsame=True):
     return glob.glob(os.path.join(models_dir, "*.pdb"))
 
 
-def extract_tar(filename, directory, suffixes=['.pdb']):
-    # Extracting tarfile
-    logger.info('Extracting files from tarfile: %s', filename)
+def extract_tar(archive, directory=None, filenames=None, suffixes=None):
+    """Extract one or more files from a tar file into a specified directory
+
+    Parameters
+    ----------
+    archive : str
+       tar archive to extract from
+    directory : str
+       directory to extract files into
+    filenames : list
+       a list of files to extract from the archive
+    suffixes : list
+       only extract a file if the suffix is in the list
+
+
+    Returns
+    -------
+    list
+        A list of the extracted files
+    """
+
+    def extract_me(member, filenames, suffixes):
+        return suffixes and os.path.splitext(member.name)[1] in suffixes or \
+          filenames and os.path.basename(member.name) in filenames
+
+    if not directory:
+        directory = os.getcwd()
+    if not os.path.isdir(directory):
+        os.mkdir(directory)
+
+    logger.info('Extracting files from tarfile: %s into directory: %s', (archive, directory))
     files = []
-    with tarfile.open(filename,'r:*') as tf:
-        memb = tf.getmembers()
-        if not len(memb):
-            msg='Empty archive: {0}'.format(filename)
-            exit_util.exit_error(msg)
-        for m in memb:
-            if os.path.splitext(m.name)[1] in suffixes:
-                # Hack to remove any paths
-                m.name = os.path.basename(m.name)
-                tf.extract(m, path=directory)
-                files.append(os.path.join(directory, m.name))
+    with tarfile.open(archive, 'r:*') as tf:
+        members = tf.getmembers()
+        if len(members):
+            for member in members:
+                if extract_me(member, filenames, suffixes):
+                    member.name = os.path.basename(member.name)  # Hack to remove any paths
+                    tf.extract(member, path=directory)
+                    files.append(os.path.abspath(os.path.join(directory, member.name)))
+        else:
+            logger.critical('Empty archive: %s', archive)
+
     if not len(files):
-        msg='Could not find any files with suffixes {0} in archive: {1}'.format(suffixes, filename)
-        exit_util.exit_error(msg)
+        msg = 'Could not find any suitable files in archive: {0}'.format(archive)
+        raise RuntimeError(msg)
     return files
 
 
@@ -305,7 +333,7 @@ def extract_zip(filename, directory, suffixes=['.pdb']):
     # zip file extraction
     logger.info('Extracting files from zipfile: %s', filename)
     if not zipfile.is_zipfile(filename):
-        msg='File is not a valid zip archive: {0}'.format(filename)
+        msg = 'File is not a valid zip archive: {0}'.format(filename)
         exit_util.exit_error(msg)
     zipf = zipfile.ZipFile(filename)
     zif = zipf.infolist()
