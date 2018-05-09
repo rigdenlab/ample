@@ -17,31 +17,31 @@ import iotbx.file_reader
 import iotbx.pdb
 #iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 
-import ample_util  
+import ample_util
 import pdb_model
 import residue_map
 import sequence_util
 
 three2one = {
-    'ALA' : 'A',    
-    'ARG' : 'R',    
-    'ASN' : 'N',    
-    'ASP' : 'D',    
-    'CYS' : 'C',    
-    'GLU' : 'E',    
-    'GLN' : 'Q',    
-    'GLY' : 'G',    
-    'HIS' : 'H',    
-    'ILE' : 'I',    
-    'LEU' : 'L',    
-    'LYS' : 'K',    
-    'MET' : 'M',    
-    'PHE' : 'F',    
-    'PRO' : 'P',    
-    'SER' : 'S',    
-    'THR' : 'T',    
-    'TRP' : 'W',    
-    'TYR' : 'Y',   
+    'ALA' : 'A',
+    'ARG' : 'R',
+    'ASN' : 'N',
+    'ASP' : 'D',
+    'CYS' : 'C',
+    'GLU' : 'E',
+    'GLN' : 'Q',
+    'GLY' : 'G',
+    'HIS' : 'H',
+    'ILE' : 'I',
+    'LEU' : 'L',
+    'LYS' : 'K',
+    'MET' : 'M',
+    'PHE' : 'F',
+    'PRO' : 'P',
+    'SER' : 'S',
+    'THR' : 'T',
+    'TRP' : 'W',
+    'TYR' : 'Y',
     'VAL' : 'V',
     'UNK' : 'X'
 }
@@ -54,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 def backbone(inpath=None, outpath=None):
     """Only output backbone atoms.
-    """        
+    """
 
     # pdbcur segfaults with long pathnames
     inpath=os.path.relpath(inpath)
@@ -62,104 +62,99 @@ def backbone(inpath=None, outpath=None):
 
     logfile = outpath+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( inpath, outpath ).split()
-    
+
     # Build up stdin
     stdin='lvatom "N,CA,C,O,CB[N,C,O]"'
     #stdin='lvatom "N,CA,C,O[N,C,O]"'
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    
+
     if retcode == 0:
         # remove temporary files
         os.unlink(logfile)
     else:
         raise RuntimeError,"Error stripping PDB to backbone atoms. See log:{0}".format(logfile)
-    
+
     return
 
 def calpha_only(inpdb, outpdb):
     """Strip PDB to c-alphas only"""
-    
-    
+
     logfile = outpdb+".log"
-    cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
-    
+    cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
+
     # Build up stdin
-    stdin='lvatom "CA[C]:*"'
+    stdin = 'lvatom "CA[C]:*"'
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    
+
     if retcode == 0:
         # remove temporary files
         os.unlink(logfile)
     else:
-        raise RuntimeError,"Error stripping PDB to c-alpha atoms"
-        
+        raise RuntimeError("Error stripping PDB to c-alpha atoms")
     return
 
-#     def cat_pdbs( pdb1=None, pdb2=None, pdbout=None ):
-#         """Concatenate 2 pdbs into a single file. The header from the first is kept and
-#         the chains from the second added to the end of the first
-#         """
-# 
-#         one = open( pdb1, 'r' )
-#         lines = []
-#         
-#         needTer=True
-#         for line in one:
-#             lines.append( line )
-#             if line.startswith("TER"):
-#                 needTer=False
-#                 break
-#         one.close()
-#         
-#         if needTer:
-#             lines.append( "TER\n" )
-#         
-#         needTer=True
-#         two = open( pdb2, 'r' )
-#         for line in two:
-#             if line.startswith("ATOM"):
-#                 lines.append( line )
-#                 continue
-# 
-#             if line.startswith("TER"):
-#                 lines.append( line )
-#                 needTer=False
-#                 break
-#         two.close()
-# 
-#         if needTer:
-#             lines.append( "TER\n" )
-#         
-#         lines.append("END\n")
-#         
-#         # Now write 'em out
-#         with open( pdbout, 'w') as o:
-#             o.writelines( lines )
-#         
-#         return
 
-def check_pdb_directory(directory,single=True,allsame=True,sequence=None):
+def check_pdb_directory(directory, single=True, allsame=True, sequence=None):
+    """Check a directory of pdb files to ensure they are valid
+
+    Parameters
+    ----------
+    direcotry : str
+       Path to a directory containing PDB files
+    sequence : str
+       single-letter protein sequence - if given a check will be made that all
+       models are of this sequence
+    single : bool
+       if True check each pdb only contains a single model
+    allsame : bool
+       only extract a file if the suffix is in the list
+
+    Returns
+    -------
+    bool
+        True if models all validated
+    """
     logger.info("Checking pdbs in directory: {0}".format(directory))
     if not os.path.isdir(directory):
         logger.critical("Cannot find directory: {0}".format(directory))
         return False
-    models=glob.glob(os.path.join(directory,"*.pdb"))
+    models = glob.glob(os.path.join(directory, "*.pdb"))
     if not len(models):
         logger.critical("Cannot find any pdb files in directory: {0}".format(directory))
         return False
-    if not (single or sequence or allsame): return True
-    return check_pdbs(models,sequence=sequence,single=single,allsame=allsame)
+    if not (single or sequence or allsame):
+        return True
+    return check_pdbs(models, sequence=sequence, single=single, allsame=allsame)
 
-def check_pdbs(models,single=True,allsame=True,sequence=None):
+def check_pdbs(models, single=True, allsame=True, sequence=None):
+    """Check a list of PDB files to ensure they are valid
+
+    Parameters
+    ----------
+    models : list
+       A list of PDB files
+    sequence : str
+       single-letter protein sequence - if given a check will be made that all
+       models are of this sequence
+    single : bool
+       if True check each pdb only contains a single model
+    allsame : bool
+       only extract a file if the suffix is in the list
+
+    Returns
+    -------
+    bool
+        True if models all validated
+    """
     if allsame and not sequence:
         # Get sequence from first model
         try:
-            h=iotbx.pdb.pdb_input(models[0]).construct_hierarchy()
-        except Exception,e:
-            s="*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0],e)
+            h = iotbx.pdb.pdb_input(models[0]).construct_hierarchy()
+        except Exception as e:
+            s = "*** ERROR reading sequence from first pdb: {0}\n{1}".format(models[0], e)
             logger.critical(s)
             return False
-        sequence = _sequence1(h) # only one model/chain
+        sequence = _sequence1(h)  # only one model/chain
     errors = []
     multi = []
     no_protein = []
@@ -168,58 +163,60 @@ def check_pdbs(models,single=True,allsame=True,sequence=None):
     for pdb in models:
         try:
             h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
-        except Exception,e:
-            errors.append((pdb,e))
+        except Exception as e:
+            errors.append((pdb, e))
             continue
-        if not single: continue
-        if not (h.models_size()==1 and h.models()[0].chains_size()==1):
+        if not single:
+            continue
+        if not (h.models_size() == 1 and h.models()[0].chains_size() == 1):
             multi.append(pdb)
             continue
         # single chain from one model so check is protein
         if not h.models()[0].chains()[0].is_protein():
             no_protein.append(pdb)
             continue
-        if not h.models()[0].chains()[0].id.strip(): # Check we have a named chain
+        if not h.models()[0].chains()[0].id.strip():  # Check we have a named chain
             unnamed_chain.append(pdb)
             continue
         if sequence:
-            s=_sequence1(h) # only one chain/model
-            if not s == sequence: sequence_err.append((pdb,s))
-    
+            s = _sequence1(h)  # only one chain/model
+            if not s == sequence:
+                sequence_err.append((pdb, s))
+
     if not (len(errors) or len(multi) or len(sequence_err) or len(no_protein) or len(unnamed_chain)):
         logger.info("check_pdb_directory - pdb files all seem valid")
         return True
-    
-    s="\n"
+
+    s = "\n"
     if len(errors):
-        s="*** ERROR ***\n"
-        s+="The following pdb files have errors:\n\n"
-        for pdb,e in errors:
-            s+="{0}: {1}\n".format(pdb,e)
-    
+        s = "*** ERROR ***\n"
+        s += "The following pdb files have errors:\n\n"
+        for pdb, e in errors:
+            s += "{0}: {1}\n".format(pdb, e)
+
     if len(multi):
-        s+="\n"
-        s+="The following pdb files have more than one chain:\n\n"
+        s += "\n"
+        s += "The following pdb files have more than one chain:\n\n"
         for pdb in multi:
-            s+="{0}\n".format(pdb)
-            
+            s += "{0}\n".format(pdb)
+
     if len(no_protein):
-        s+="\n"
-        s+="The following pdb files do not appear to contain any protein:\n\n"
+        s += "\n"
+        s += "The following pdb files do not appear to contain any protein:\n\n"
         for pdb in no_protein:
-            s+="{0}\n".format(pdb)
-            
+            s += "{0}\n".format(pdb)
+
     if len(unnamed_chain):
-        s+="\n"
-        s+="The following pdb files do not have named chains:\n\n"
+        s += "\n"
+        s += "The following pdb files do not have named chains:\n\n"
         for pdb in unnamed_chain:
-            s+="{0}\n".format(pdb)
-            
+            s += "{0}\n".format(pdb)
+
     if len(sequence_err):
-        s+="\n"
-        s+="The following pdb files have differing sequences from the reference sequence:\n\n{0}\n\n".format(sequence)
-        for pdb,seq in sequence_err:
-            s+="PDB: {0}\n{1}\n".format(pdb,seq)
+        s += "\n"
+        s += "The following pdb files have differing sequences from the reference sequence:\n\n{0}\n\n".format(sequence)
+        for pdb, seq in sequence_err:
+            s += "PDB: {0}\n{1}\n".format(pdb, seq)
 
     logger.critical(s)
     return False
@@ -230,7 +227,7 @@ def extract_chain(inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False
     """
     logfile = outpdb+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
-    
+
     # Build up stdin
     stdin="lvchain {0}\n".format( chainID )
     if newChainID:
@@ -239,37 +236,37 @@ def extract_chain(inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False
         stdin += 'lvatom "CA[C]:*"\n'
     if renumber:
         stdin += "sernum\n"
-    
+
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    
+
     if retcode == 0:
         # remove temporary files
         os.unlink(logfile)
     else:
         raise RuntimeError,"Error extracting chain {0}".format( chainID )
-        
+
     return
 
 def extract_model(inpdb, outpdb, modelID ):
     """Extract modelID from inpdb into outpdb"""
-    
+
     assert modelID>0
-    
+
     logfile = outpdb+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
-    
+
     # Build up stdin
     stdin="lvmodel /{0}\n".format( modelID )
     #stdin += "sernum\n"
-    
+
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    
+
     if retcode != 0:
         raise RuntimeError,"Problem extracting model with cmd: {0}".format
 
     # remove temporary files
     os.unlink(logfile)
-        
+
     return
 
 def extract_header_pdb_code(pdb_input):
@@ -287,70 +284,70 @@ def extract_header_title(pdb_input):
 #         """Return a ResSeqMap mapping the index of a residue in the model to the corresponding residue in the native.
 #         Only works if 1 chain in either file and with standard residues
 #         """
-#         
+#
 #         def _get_indices( pdb ):
 #             """Get fastaSequence as string of 1AA
 #             get list of matching resSeq
 #             """
-#             
-#             
+#
+#
 #             print "GETTING INDICES ",pdb
-#             
+#
 #             fastaSequence = ""
 #             resSeq = []
-#             
+#
 #             atomTypes = [] # For checking we have all required atom types
 #             backbone = [ 'N', 'CA', 'C', 'O','CB' ]
-#             
+#
 #             backboneMask = []
 #             cAlphaMask = []
-#             
+#
 #             chain=None
 #             readingResSeq=None
 #             readingResName=None
 #             for line in open( pdb ):
-#                 
+#
 #                 if line.startswith("MODEL"):
 #                     raise RuntimeError,"FOUND MULTI_MODEL FILE!"
-#                 
+#
 #                 if line.startswith("ATOM"):
-#                     
+#
 #                     atom = pdb_model.PdbAtom( line )
-#                     
+#
 #                     if not chain:
 #                         chain = atom.chainID
-#                     
+#
 #                     if atom.chainID != chain:
 #                         raise RuntimeError," FOUND ADDITIONAL CHAIN"
 #                         break
-#                     
+#
 #                     if atom.name not in atomTypes:
 #                         atomTypes.append( atom.name.strip() )
-#                         
+#
 #                     # First atom in first residue
 #                     if readingResSeq == None:
 #                         readingResSeq = atom.resSeq
 #                         readingResName = atom.resName
 #                         continue
-#                     
+#
 #                     if readingResSeq != atom.resSeq:
 #                         # Adding a new residue
-#                         
-#                         
-# 
-#                         
+#
+#
+#
+#
 #                         # Add the atom we've just finished reading
 #                         fastaSequence += three2one[ readingResName ]
 #                         resSeq.append( readingResSeq )
-#                         
+#
 #                         got=False
 #                         if 'CA' not in atomTypes:
 #                             cAlphaMask.append( True )
 #                             got=True
 #                         else:
 #                             cAlphaMask.append( False )
-#                             
-#                         
+#
+#
 #                         if not got: # If we haven't got CA we don't need to check
 #                             for at in backbone: # If we need to mask this residue for backbone atoms
 #                                 if at not in atomTypes:
@@ -358,36 +355,36 @@ def extract_header_title(pdb_input):
 #                                     break
 #                                     #s = "Atom type {0} is not present in atom types for residue {1} - only got atomTypes: {2}".format( at, readingResSeq, atomTypes )
 #                                     #print s
-#                                     
+#
 #                         if got:
 #                             backboneMask.append( True )
 #                         else:
 #                             backboneMask.append( False )
-#                             
-#                         
+#
+#
 #                         readingResSeq = atom.resSeq
 #                         readingResName = atom.resName
 #                         atomTypes = []
-#                         
+#
 #             return ( fastaSequence, resSeq, cAlphaMask, backboneMask )
-#       
+#
 #         native_seq, native_idx = _get_indices( nativePdb )
 #         model_seq, model_idx = _get_indices( modelPdb )
-#         
-#         # The window of AA we used to check for a match    
+#
+#         # The window of AA we used to check for a match
 #         PROBE_LEN = 10
-#         
+#
 #         if len(native_seq) < 20 or len(model_seq) < 20:
 #             raise RuntimeError,"Very short sequences - this will not work!"
-#         
+#
 #         # MAXINSET is the max number of AA into the sequence that we will go searching for a match - i.e. if more
-#         # then MAXINSET AA are non-matching, we won't find the match 
+#         # then MAXINSET AA are non-matching, we won't find the match
 #         #MAXINSET=30 if len( model_seq ) > 30 else len( model_seq ) - ( PROBE_LEN + 2)
 #         if len( model_seq ) > 30:
 #             MAXINSET=30
 #         else:
 #             MAXINSET = len( model_seq ) - ( PROBE_LEN + 2)
-# 
+#
 #         got=False
 #         for model_i in range( MAXINSET ):
 #             probe = model_seq[ model_i : model_i+PROBE_LEN-1 ]
@@ -395,40 +392,40 @@ def extract_header_title(pdb_input):
 #                 if native_seq[ native_i:native_i+PROBE_LEN-1 ] == probe:
 #                     got=True
 #                     break
-#             
+#
 #             if got:
 #                 #print "GOT MODEL MATCH AT i,j ",model_i,native_i
 #                 break
-#         
+#
 #         # Now we know where they start we can sort out the indicies
 #         # map goes from the model -> native. For any in model that are not in native we set them to None
 #         resMap = residueSequenceMap()
 #         resMap._modelResSeqMap = model_idx
-#         
+#
 #         for i in range( len( model_seq ) ):
-#             
+#
 #             if i < model_i:
 #                 # These are residues that are present in the model but not in the native
 #                 resMap._nativeResSeqMap.append( None )
 #                 continue
-#             
+#
 #             pos = i - model_i + native_i
 #             if pos >= len( native_idx ):
 #                 resMap._nativeResSeqMap.append(  None  )
 #             else:
 #                 resMap._nativeResSeqMap.append(  native_idx[ pos ]  )
-#                 
-#         
+#
+#
 #         if resMap._nativeResSeqMap != resMap._modelResSeqMap:
-#             raise RuntimeError, "Mismatching maps: {0}".format( resMap ) 
-#             
+#             raise RuntimeError, "Mismatching maps: {0}".format( resMap )
+#
 #         return resMap
 
 def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
     """Only keep those atoms in targetpdb that are in refpdb and write the result to outpdb.
     We also take care of renaming any chains.
     """
-    
+
     assert refpdb and targetpdb and outpdb and resSeqMap
 
     # Paranoid check
@@ -437,63 +434,63 @@ def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
         targetinfo = get_info( targetpdb )
         if len(refinfo.models) > 1 or len(targetinfo.models) > 1:
             raise RuntimeError, "PDBS contain more than 1 model!"
-        
+
         if refinfo.models[0].chains != targetinfo.models[0].chains:
             raise RuntimeError, "Different numbers/names of chains {0}->{1} between {2} and {3}!".format( refinfo.models[0].chains,
                                                                                                         targetinfo.models[0].chains,
                                                                                                         refpdb,
                                                                                                         targetpdb
                                                                                                         )
-        # Now we do our keep matching    
+        # Now we do our keep matching
     tmp1 = ample_util.tmp_file_name()+".pdb" # pdbcur insists names have a .pdb suffix
-    
+
     _keep_matching( refpdb, targetpdb, tmp1, resSeqMap=resSeqMap )
-    
+
     # now renumber with pdbcur
     logfile = tmp1+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( tmp1, outpdb ).split()
     stdint="""sernum
 """
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdint)
-    
+
     if retcode == 0:
         # remove temporary files
         os.unlink(tmp1)
         os.unlink(logfile)
-    
+
     return retcode
 
 def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
     """Create a new pdb file that only contains that atoms in targetpdb that are
     also in refpdb. It only considers ATOM lines and discards HETATM lines in the target.
-    
+
     Args:
     refpdb: path to pdb that contains the minimal set of atoms we want to keep
     targetpdb: path to the pdb that will be stripped of non-matching atoms
     outpdb: output path for the stripped pdb
     """
-    
+
     assert refpdb and targetpdb and outpdb and resSeqMap
-    
+
     def _output_residue(refResidues, targetAtomList, resSeqMap, outfh):
-        """Output a single residue only outputting matching atoms, shuffling the atom order and changing the resSeq num""" 
-        
+        """Output a single residue only outputting matching atoms, shuffling the atom order and changing the resSeq num"""
+
         # Get the matching list of atoms
         targetResSeq = targetAtomList[0].resSeq
-        
+
         refResSeq = resSeqMap.ref2target( targetResSeq )
-        
+
         # Get the atomlist for the reference
         for ( rid, alist ) in refResidues:
             if rid == refResSeq:
                 refAtomList = alist
                 break
-            
+
         # Get ordered list of the ref atom names for this residue
         rnames = [ x.name for x in refAtomList ]
         #print "got rnames ",rnames
         #print "got anames ", [ x.name for x in targetAtomList ]
-        
+
         if len( refAtomList ) > len( targetAtomList ):
             s = "Cannot keep matching as refAtomList is > targetAtomList for residue {0}\nRef: {1}\nTrg: {2}".format( targetResSeq,
                                                                                                                       rnames,
@@ -506,7 +503,7 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
         for atom in targetAtomList:
             if atom.name in rnames:
                 alist.append( atom )
-        
+
         # List now only contains matching atoms
         targetAtomList = alist
         #print "tnames ",[ x.name for x in targetAtomList ]
@@ -516,145 +513,145 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
             for i,atom in enumerate( targetAtomList ):
                 if atom.name == refname:
                     # Found the matching atom
-                    
+
                     # Change resSeq and write out
                     atom.resSeq = refResSeq
                     outfh.write( atom.toLine()+"\n" )
-                    
+
                     # now delete both this atom and the line
                     targetAtomList.pop(i)
-                    
+
                     # jump out of inner loop
-                    break   
+                    break
         return
-    
+
     # Go through refpdb and find which refResidues are present
     refResidues = []
     targetResSeq = [] # ordered list of tuples - ( resSeq, [ list_of_atoms_for_that_residue ] )
-    
+
     last = None
     chain = -1
     for line in open(refpdb, 'r'):
-        
+
         if line.startswith("MODEL"):
             raise RuntimeError, "Multi-model file!"
-        
+
         if line.startswith("TER"):
             break
-        
+
         if line.startswith("ATOM"):
             a = pdb_model.PdbAtom( line )
-            
+
             # First atom/chain
             if chain == -1:
                 chain = a.chainID
-            
+
             if a.chainID != chain:
                 raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
 
             if a.resSeq != last:
                 last = a.resSeq
-                
+
                 # Add the corresponding resSeq in the target
                 targetResSeq.append( resSeqMap.target2ref( a.resSeq ) )
                 refResidues.append( ( a.resSeq, [ a ] ) )
             else:
                 refResidues[ -1 ][ 1 ].append( a )
-                
+
     # Now read in target pdb and output everything bar the atoms in this file that
     # don't match those in the refpdb
     t = open(targetpdb,'r')
     out = open(outpdb,'w')
-    
+
     chain=None # The chain we're reading
     residue=None # the residue we're reading
     targetAtomList = []
-    
+
     for line in t:
-        
+
         if line.startswith("MODEL"):
             raise RuntimeError, "Multi-model file!"
 
         if line.startswith("ANISOU"):
             raise RuntimeError, "I cannot cope with ANISOU! {0}".format(line)
-        
+
         # Stop at TER
         if line.startswith("TER"):
             _output_residue( refResidues, targetAtomList, resSeqMap, out )
             # we write out our own TER
             out.write("TER\n")
             continue
-        
+
         if line.startswith("ATOM"):
-            
+
             atom = pdb_model.PdbAtom( line )
 
             # First atom/chain
             if chain == None:
                 chain = atom.chainID
-            
+
             if atom.chainID != chain:
                 raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
-            
+
             if atom.resSeq in targetResSeq:
-                
+
                 # If this is the first one add the empty tuple and reset residue
                 if atom.resSeq != residue:
                     if residue != None: # Dont' write out owt for first atom
                         _output_residue( refResidues, targetAtomList, resSeqMap, out )
                     targetAtomList = []
                     residue = atom.resSeq
-                
+
                 # If not first keep adding
                 targetAtomList.append( atom )
-                
+
                 # We don't write these out as we write them with _output_residue
                 continue
-                
+
             else:
                 # discard this line as not a matching atom
                 continue
-        
+
         # For time being exclude all HETATM lines
         elif line.startswith("HETATM"):
             continue
         #Endif line.startswith("ATOM")
-        
+
         # Output everything else
         out.write(line)
-        
+
     # End reading loop
-    
+
     t.close()
     out.close()
-    
+
     return
 
 # OLD STUFF FOR MULTIPLE CHAINS AND WITHOUT THE residueSequenceMap
 #     def _keep_matching(refpdb=None, targetpdb=None, outpdb=None ):
 #         """Create a new pdb file that only contains that atoms in targetpdb that are
 #         also in refpdb. It only considers ATOM lines and discards HETATM lines in the target.
-#         
+#
 #         Args:
 #         refpdb: path to pdb that contains the minimal set of atoms we want to keep
 #         targetpdb: path to the pdb that will be stripped of non-matching atoms
 #         outpdb: output path for the stripped pdb
 #         """
-#     
+#
 #         assert refpdb and targetpdb and outpdb
-#         
+#
 #         def _write_matching_residues( chain, refResidues, target_residues, outfh ):
-#             
+#
 #             #print "got target_residues: {0}".format(target_residues)
-#             
+#
 #             # Loop over each residue in turn
 #             for idx, atoms_and_lines  in sorted( target_residues[ chain ].items() ):
-#                 
+#
 #                 # Get ordered list of the ref atom names for this residue
 #                 rnames = [ x.name for x in refResidues[ chain ][ idx ] ]
-#                 
+#
 #                 #print "rnames ",rnames
-#                 
+#
 #                 # Remove any not matching
 #                 atoms = []
 #                 atom_lines = []
@@ -662,8 +659,8 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
 #                     if a.name in rnames:
 #                         atoms.append( atoms_and_lines[0][i] )
 #                         atom_lines.append( atoms_and_lines[1][i] )
-#                 
-#                 
+#
+#
 #                 # Now just have matching so output in the correct order
 #                 for refname in rnames:
 #                     for i, atom in enumerate( atoms ):
@@ -675,37 +672,37 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
 #                             atom_lines.pop(i)
 #                             # jump out of inner loop
 #                             break
-#                         
+#
 #             # We delete the chain we've written out so that we don't write it out again at the
 #             # end by mistake
 #             del refResidues[ chainIdx ]
 #             del target_residues[ chainIdx ]
 #             return
-#     
+#
 #         # Go through refpdb and find which refResidues are present
 #         f = open(refpdb, 'r')
-#         
+#
 #         # map of resSeq to list of PdbAtom objects for the reference residues
 #         refResidues = {}
-#         
+#
 #         last = None
 #         chain = -1
-#         chainIdx=-1 # For the time being we key by the chain index so we can deal with 
+#         chainIdx=-1 # For the time being we key by the chain index so we can deal with
 #                     # proteins that have different chain IDs
 #         for line in f:
 #             if line.startswith("MODEL"):
 #                 raise RuntimeError, "Multi-model file!"
-#             
+#
 #             if line.startswith("ATOM"):
 #                 a = pdb_model.PdbAtom( line )
-#                 
+#
 #                 if a.chainID != chain:
 #                     chain = a.chainID
 #                     chainIdx+=1
 #                     if chainIdx in refResidues:
 #                         raise RuntimeError, "ENCOUNTERED CHAIN AGAIN! {0}".format( line )
 #                     refResidues[ chainIdx ] = {}
-#                 
+#
 #                 if a.resSeq != last:
 #                     #if a.resSeq in refResidues:
 #                     #    raise RuntimeError,"Multiple chains in pdb - found residue #: {0} again.".format(a.resSeq)
@@ -715,42 +712,42 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
 #                 else:
 #                     #refResidues[ last ].append( a )
 #                     refResidues[ chainIdx ][ last ].append( a )
-#                     
+#
 #         f.close()
-#         
+#
 #         #print "got refResidues: {0}".format(refResidues)
-#         
+#
 #         # Now read in target pdb and output everything bar the atoms in this file that
 #         # don't match those in the refpdb
 #         t = open(targetpdb,'r')
 #         out = open(outpdb,'w')
-#         
+#
 #         reading=-1 # The residue we are reading - set to -1 when we are not reading
 #         chain=-1 # The chain we're reading
 #         chainIdx=-1 # see above
-#         
+#
 #         target_residues = {} # dict mapping residue index to a a tuple of (atoms, lines), where atoms is a list of the atom
 #         # objects and lines is a list of the lines used to create the atom objects
-#         
+#
 #         for line in t:
-#             
+#
 #             if line.startswith("MODEL"):
 #                 raise RuntimeError, "Multi-model file!"
-# 
+#
 #             if line.startswith("ANISOU"):
 #                 raise RuntimeError, "I cannot cope with ANISOU! {0}".format(line)
-#             
+#
 #             # Stop at TER
 #             if line.startswith("TER"):
 #                 # we write out our own TER
 #                 _write_matching_residues( chainIdx, refResidues, target_residues, out )
 #                 out.write("TER\n")
 #                 continue
-#             
+#
 #             if line.startswith("ATOM"):
-#                 
+#
 #                 atom = pdb_model.PdbAtom( line )
-#                 
+#
 #                 # different/first chain
 #                 if atom.chainID != chain:
 #                     chain = atom.chainID
@@ -758,79 +755,79 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
 #                     if chainIdx in target_residues:
 #                         raise RuntimeError, "ENCOUNTERED CHAIN IN TARGET AGAIN! {0}".format( line )
 #                     target_residues[ chainIdx ] = {}
-#                     
+#
 #                 # We copy resSeq to make sure we don't use a reference for our index
 #                 resSeq = copy.copy( atom.resSeq )
-#                 
+#
 #                 # Skip any refResidues that don't match
 #                 if resSeq in refResidues[ chainIdx ]:
-#                 
+#
 #                     # If this is the first one add the empty tuple and reset reading
 #                     if reading != resSeq:
 #                         # each tuple is a list of atom objects and lines
 #                         target_residues[ chainIdx ][ resSeq ] = ( [], [] )
 #                         reading = resSeq
-#                         
+#
 #                     target_residues[ chainIdx ][ resSeq ][0].append( atom )
 #                     target_residues[ chainIdx ][ resSeq ][1].append( line )
-#                     
-#                 # we don't write out any atom lines as they are either not matching or 
+#
+#                 # we don't write out any atom lines as they are either not matching or
 #                 # we write out matching at the end
 #                 continue
-#             
+#
 #             # For time being exclude all HETATM lines
 #             elif line.startswith("HETATM"):
 #                 continue
 #             #Endif line.startswith("ATOM")
-#             
+#
 #             # Output everything else
 #             out.write(line)
-#             
+#
 #         # End reading loop
-#         
+#
 #         # For some PDBS there is no ending TER so we need to check if we've written this out yet or not
 #         if target_residues.has_key( chainIdx ):
 #             _write_matching_residues( chainIdx, refResidues, target_residues, out )
 #             out.write("TER\n\n")
-#         
+#
 #         t.close()
 #         out.close()
-#         
+#
 #         return
 
 def get_info(inpath):
     """Read a PDB and extract as much information as possible into a PdbInfo object
     """
-    
+
     info = pdb_model.PdbInfo()
     info.pdb = inpath
-    
+
     currentModel = None
     currentChain = -1
-    
+
     modelAtoms = [] # list of models, each of which is a list of chains with the list of atoms
-    
+
     # Go through refpdb and find which ref_residues are present
     f = open(inpath, 'r')
     line = f.readline()
     while line:
-        
+
         # First line of title
         if line.startswith('HEADER'):
             info.pdbCode = line[62:66].strip()
-        
+
         # First line of title
         if line.startswith('TITLE') and not info.title:
             info.title = line[10:-1].strip()
-        
+
         if line.startswith("REMARK"):
-            
+
             try:
                 numRemark = int(line[7:10])
             except ValueError:
                 line=f.readline()
                 continue
-            
+
             # Resolution
             if numRemark == 2:
                 line = f.readline()
@@ -840,10 +837,10 @@ def get_info(inpath):
                     except ValueError:
                         # RESOLUTION. NOT APPLICABLE.
                         info.resolution=-1
-            
-            # Get solvent content                
+
+            # Get solvent content
             if numRemark == 280:
-                
+
                 maxread = 5
                 # Clunky - read up to maxread lines to see if we can get the information we're after
                 # We assume the floats are at the end of the lines
@@ -862,7 +859,7 @@ def get_info(inpath):
                             # Leave as None
                             pass
         #End REMARK
-        
+
         if line.startswith("CRYST1"):
             try:
                 info.crystalInfo = pdb_model.CrystalInfo( line )
@@ -870,70 +867,70 @@ def get_info(inpath):
                 # Bug in pdbset nukes the CRYST1 line so we need to catch this
                 print "ERROR READING CRYST1 LINE in file {0}\":{1}\"\n{2}".format(inpath,line.rstrip(),e)
                 info.crystalInfo=None
-            
+
         if line.startswith("MODEL"):
             if currentModel:
                 # Need to make sure that we have an id if only 1 chain and none given
                 if len( currentModel.chains ) <= 1:
                     if currentModel.chains[0] == None:
                         currentModel.chains[0] = 'A'
-                        
+
                 info.models.append( currentModel )
-                
+
             # New/first model
             currentModel = pdb_model.PdbModel()
             # Get serial
             currentModel.serial = int(line.split()[1])
-            
+
             currentChain = None
             modelAtoms.append( [] )
-        
+
         # Count chains (could also check against the COMPND line if present?)
         if line.startswith('ATOM'):
-            
+
             # Create atom object
             atom = pdb_model.PdbAtom(line)
-            
+
             # Check for the first model
             if not currentModel:
                 # This must be the first model and there should only be one
                 currentModel = pdb_model.PdbModel()
                 modelAtoms.append( [] )
-        
+
             if atom.chainID != currentChain:
                 currentChain = atom.chainID
                 currentModel.chains.append( currentChain )
                 modelAtoms[ -1 ].append( [] )
-            
+
             modelAtoms[ -1 ][-1].append( atom )
-            
+
         # Can ignore TER and ENDMDL for time being as we'll pick up changing chains anyway,
         # and new models get picked up by the models line
 
         line = f.readline()
         # End while loop
-    
+
     # End of reading loop so add the last model to the list
     info.models.append( currentModel )
-    
+
     f.close()
-    
-    
+
+
     bbatoms = [ 'N','CA','C','O','CB' ]
-    
+
     # Now process the atoms
     for modelIdx, model in enumerate( info.models ):
-        
+
         chainList = modelAtoms[ modelIdx ]
-        
+
         for chainIdx, atomList in enumerate( chainList ):
-            
+
             # Paranoid check
             assert model.chains[ chainIdx ] == atomList[0].chainID
-            
+
             # Add list of atoms to model
             model.atoms.append( atomList )
-            
+
             # Initialise new chain
             currentResSeq = atomList[0].resSeq
             currentResName = atomList[0].resName
@@ -941,10 +938,10 @@ def get_info(inpath):
             model.sequences.append( "" )
             model.caMask.append( [] )
             model.bbMask.append( [] )
-            
+
             atomTypes = []
             for i, atom in enumerate( atomList ):
-                
+
                 aname = atom.name.strip()
                 if atom.resSeq != currentResSeq and i == len(atomList) -1 :
                     # Edge case - last residue containing one atom
@@ -952,78 +949,78 @@ def get_info(inpath):
                 else:
                     if aname not in atomTypes:
                         atomTypes.append( aname )
-                
+
                 if atom.resSeq != currentResSeq or i == len(atomList) -1 :
                     # End of reading the atoms for a residue
                     model.resSeqs[ chainIdx ].append( currentResSeq  )
                     model.sequences[ chainIdx ] += three2one[ currentResName ]
-                    
+
                     if 'CA' not in atomTypes:
                         model.caMask[ chainIdx ].append( True )
                     else:
                         model.caMask[ chainIdx ].append( False )
-                    
+
                     missing=False
                     for bb in bbatoms:
                         if bb not in atomTypes:
                             missing=True
                             break
-                        
+
                     if missing:
                         model.bbMask[ chainIdx ].append( True )
                     else:
                         model.bbMask[ chainIdx ].append( False )
-                    
+
                     currentResSeq = atom.resSeq
                     currentResName = atom.resName
                     atomTypes = []
-    
+
     return info
 
 def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None ):
     """
-    
+
     """
-    
+
     assert sourcePdb or resMap
     assert not ( sourcePdb and resMap )
-    
+
     if not resMap:
         resMap = residue_map.residueSequenceMap( targetPdb, sourcePdb )
-    
+
     target = open(targetPdb,'r')
     out = open(outPdb,'w')
-    
+
     chain=None # The chain we're reading
     residue=None # the residue we're reading
-    
+
     for line in target:
-        
+
         if line.startswith("MODEL"):
             raise RuntimeError, "Multi-model file!"
 
         if line.startswith("ANISOU"):
             raise RuntimeError, "I cannot cope with ANISOU! {0}".format(line)
-        
+
         # Stop at TER
         if line.startswith("TER"):
             # we write out our own TER
             #out.write("TER\n")
             #break
             pass
-        
+
         if line.startswith("ATOM"):
-            
+
             atom = pdb_model.PdbAtom( line )
 
             # First atom/chain
             if chain == None:
                 chain = atom.chainID
-            
+
             if atom.chainID != chain:
                 pass
                 #raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
-            
+
             # Get the matching resSeq for the model
             modelResSeq = resMap.ref2target( atom.resSeq )
             if modelResSeq == atom.resSeq:
@@ -1033,60 +1030,60 @@ def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None ):
                 out.write( atom.toLine()+"\n" )
             continue
         #Endif line.startswith("ATOM")
-        
+
         # Output everything else
         out.write(line)
-        
+
     # End reading loop
-    
+
     target.close()
     out.close()
-    
+
     return
 
 #     def match_resseq(self, targetPdb, sourcePdb, keepAtoms="all", workdir=None, resSeqMap=None ):
 #         """Given a native pdb file and a model pdb file, create a copy of the native that can be directly compared with the model
-#         
+#
 #         args:
-#         targetPdb: 
+#         targetPdb:
 #         sourcePdb:
 #         keepAtoms: all, backbone or calpha - the atoms which are to be kept for the comparision
-#         
+#
 #         """
-#         
+#
 #         if not workdir:
 #             workdir = os.curdir()
-#         
+#
 #         if not resSeqMap:
 #             # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
 #             resSeqMap = residue_map.residueSequenceMap( targetPdb, sourcePdb )
-#         
+#
 #         # Find out if there are atoms in the model that we need to remove
 #         modelIncomparable = resSeqMap.modelIncomparable()
 #         if len( modelIncomparable ):
-#             
+#
 #             n = os.path.splitext( os.path.basename( targetPdb ) )[0]
 #             nativePdbCut = os.path.join( workdir, n+"_cut.pdb" )
-#             
+#
 #             logfile = "{0}.log".format( nativePdbCut )
 #             cmd="pdbcur xyzin {0} xyzout {1}".format( targetPdb, nativePdbCut ).split()
-#             
+#
 #             # Build up stdin - I'm too thick to work out the selection syntax for a discrete list
 #             stdin = ""
 #             for e in modelIncomparable:
 #                 stdin += "delresidue {0}\n".format( e )
-#             
+#
 #             retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=workdir, dolog=False, stdin=stdin)
-#             
+#
 #             if retcode == 0:
 #                 # remove temporary files
 #                 os.unlink(logfile)
 #             else:
 #                 raise RuntimeError,"Error deleting residues {0}".format( modelIncomparable )
-#             
+#
 #             targetPdb = nativePdbCut
-#             
-#         
+#
+#
 #         if keepAtoms == "calpha":
 #             # If only alpha atoms are required, we create a copy of the model with only alpha atoms
 #             n = os.path.splitext( os.path.basename( targetPdb ) )[0]
@@ -1103,30 +1100,30 @@ def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None ):
 #             pass
 #         else:
 #             raise RuntimeError,"Unrecognised keepAtoms: {0}".format( keepAtoms )
-# 
+#
 #         # Now create a PDB with the matching atoms from native that are in refined
 #         n = os.path.splitext( os.path.basename( targetPdb ) )[0]
 #         nativePdbMatch = os.path.join( workdir, n+"_matched.pdb" )
 #         keep_matching( refpdb=refinedPdb, targetpdb=targetPdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
-#         
+#
 #         return
 
 def merge(pdb1=None, pdb2=None, pdbout=None  ):
     """Merge two pdb files into one"""
-    
+
     logfile = pdbout+".log"
     cmd=[ 'pdb_merge', 'xyzin1', pdb1, 'xyzin2', pdb2, 'xyzout', pdbout ]
-    
+
     # Build up stdin
     stdin='nomerge'
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    
+
     if retcode == 0:
         # remove temporary files
         os.unlink(logfile)
     else:
         raise RuntimeError,"Error merging pdbs: {0} {1}".format( pdb1, pdb2  )
-        
+
     return
 
 def molecular_weight(pdbin):
@@ -1154,9 +1151,9 @@ def num_atoms_and_residues(pdbin,first=False):
         model=pdb_obj.hierarchy.models()[0]
         nresidues=len(model.chains()[0].residues())
         natoms=len(model.chains()[0].atoms())
-        
+
     assert natoms > 0 and nresidues > 0
-    
+
     return (natoms, nresidues)
 
 def _only_equal_sizes(hierarchy):
@@ -1167,7 +1164,7 @@ def _only_equal_sizes(hierarchy):
         l = model.chains()[0].residue_groups_size()
         lengths[l].append(i)
         lmax = max(lmax,l)
-    
+
     if len(lengths) > 1:
         # The pdbs were of different lengths
         to_keep = lengths[lmax]
@@ -1221,7 +1218,7 @@ COLUMNS        DATA TYPE     FIELD       DEFINITION
     modres = []
     for line in modres_text:
         assert line[0:6] == "MODRES","Line did not begin with an MODRES record!: {0}".format(line)
-    
+
         idCode = line[7:11]
         resName = line[12:15].strip()
         # Use for all so None means an empty field
@@ -1232,15 +1229,15 @@ COLUMNS        DATA TYPE     FIELD       DEFINITION
         stdRes = line[24:27].strip()
         comment = ""
         if line[29:70].strip(): comment = line[29:70].strip()
-        
+
         modres.append([idCode, resName, chainID, seqNum, iCode, stdRes,comment])
-        
+
     return modres
 
 def reliable_sidechains(inpath=None, outpath=None ):
     """Only output non-backbone atoms for residues in the res_names list.
     """
-    
+
     # Remove sidechains that are in res_names where the atom name is not in atom_names
     res_names = [ 'MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
     atom_names = [ 'N', 'CA', 'C', 'O', 'CB' ]
@@ -1248,30 +1245,30 @@ def reliable_sidechains(inpath=None, outpath=None ):
     #   print 'Found ',each_file
     pdb_in = open( inpath, "r" )
     pdb_out = open( outpath, "w" )
-    
+
     for pdbline in pdb_in:
         pdb_pattern = re.compile('^ATOM\s*(\d*)\s*(\w*)\s*(\w*)\s*(\w)\s*(\d*)\s')
         pdb_result = pdb_pattern.match(pdbline)
-        
+
         # Check ATOM line and for residues in res_name, skip any that are not in atom names
         if pdb_result:
             pdb_result2 = re.split(pdb_pattern, pdbline)
             if pdb_result2[3] in res_names and not pdb_result2[2] in atom_names:
                 continue
-        
+
         # Write out everything else
         pdb_out.write(pdbline)
-    
+
     #End for
     pdb_out.close()
     pdb_in.close()
-    
+
     return
 
 def reliable_sidechains_cctbx(pdbin=None, pdbout=None ):
     """Only output non-backbone atoms for residues in the res_names list.
     """
-    
+
     # Remove sidechains that are in res_names where the atom name is not in atom_names
     res_names = [ 'MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
     atom_names = [ 'N', 'CA', 'C', 'O', 'CB' ]
@@ -1291,8 +1288,8 @@ def reliable_sidechains_cctbx(pdbin=None, pdbout=None ):
                     # Can't use below as it uses indexes which change as we remove atoms
                     # ag.atoms().extract_hetero()]
                     todel=[a for a in atom_group.atoms() if a.name.strip() in atom_names ]
-                    for a in todel: atom_group.remove_atom(a) 
-    
+                    for a in todel: atom_group.remove_atom(a)
+
     # Need to get crystal info and include
     hierachy.write_pdb_file(pdbout,anisou=False)
     return
@@ -1300,25 +1297,25 @@ def reliable_sidechains_cctbx(pdbin=None, pdbout=None ):
 def rename_chains(inpdb=None, outpdb=None, fromChain=None, toChain=None ):
     """Rename Chains
     """
-    
+
     assert len(fromChain) == len(toChain)
-    
+
     logfile = outpdb+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
-    
+
     # Build up stdin
     stdin = ""
     for i in range( len( fromChain ) ):
         stdin += "renchain {0} {1}\n".format( fromChain[ i ], toChain[ i ] )
-    
+
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    
+
     if retcode == 0:
         # remove temporary files
         os.unlink(logfile)
     else:
         raise RuntimeError,"Error renaming chains {0}".format( fromChain )
-        
+
     return
 
 def resseq(pdbin):
@@ -1333,7 +1330,7 @@ def renumber_residues(pdbin, pdbout, start=1):
     """ Renumber the residues in the chain """
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     hierarchy = pdb_input.construct_hierarchy()
-    
+
     _renumber(hierarchy, start)
 
     with open(pdbout,'w') as f:
@@ -1382,12 +1379,12 @@ def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
 def Xselect_residues(inpath=None, outpath=None, residues=None):
     """Create a new pdb by selecting only the numbered residues from the list.
     This only keeps ATOM lines - everything else gets discarded.
-    
+
     Args:
     infile: path to input pdb
     outfile: path to output pdb
     residues: list of integers of the residues to keep
-    
+
     Return:
     Number of residues written
     """
@@ -1407,33 +1404,33 @@ def Xselect_residues(inpath=None, outpath=None, residues=None):
     return count
 
 def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, tokeep_idx=None):
-    
+
     pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
     pdbf.check_file_type("pdb")
     hierarchy = pdbf.file_object.construct_hierarchy()
-    
+
     crystal_symmetry=pdbf.file_object.crystal_symmetry()
-    
+
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
         print "pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin)
-    
+
     if len(hierarchy.models()) > 1:
         for i, m in enumerate(hierarchy.models()):
             if i != 0: hierarchy.remove_model(m)
     model = hierarchy.models()[0]
-    
+
     if len(model.chains()) > 1:
         for i, c in enumerate(model.chains()):
             if i != 0: model.remove_chain(c)
     chain = model.chains()[0]
-    
+
     idx=-1
     for residue_group in chain.residue_groups():
         # We ignore hetatms when indexing as we are concerned with residue indexes
         if delete_idx or tokeep_idx:
             if any([atom.hetero for atom in residue_group.atoms()]): continue
         idx += 1
-            
+
         remove=False
         if delete:
             if residue_group.resseq_as_int() in delete: remove = True
@@ -1443,7 +1440,7 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
             if residue_group.resseq_as_int() not in tokeep: remove = True
         elif tokeep_idx:
             if idx not in tokeep_idx: remove = True
-                
+
         if remove:
             chain.remove_residue_group(residue_group)
 
@@ -1493,12 +1490,12 @@ def _sequence_data(hierarchy):
 
 def Xsplit(pdbin):
     """Split a pdb into separate models"""
-    
+
     name=os.path.splitext(os.path.basename(pdbin))[0]
     pdb_input=iotbx.pdb.pdb_input(pdbin)
     hierachy=pdb_input.construct_hierarchy()
-    
-    # Test code for getting info 
+
+    # Test code for getting info
 #     print "GOT ",[ x for x in pdb_input.title_section()]
 #     print "GOT2 ",pdb_input.extract_header_year()
 #     print "GOT3 ",pdb_input.get_solvent_content()
@@ -1507,7 +1504,7 @@ def Xsplit(pdbin):
 #     print "RES ",extract_best_resolution(pdb_input.remark_section())
 #     print "CODE ",extract_header_pdb_code(pdb_input)
 #     print "TITLE ",extract_header_title(pdb_input)
-    
+
     crystal_symmetry=pdb_input.crystal_symmetry()
     for i,model in enumerate(hierachy.models()):
         m=model.detached_copy()
@@ -1519,7 +1516,7 @@ def Xsplit(pdbin):
 
 def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
     """Split a pdb file into its separate models
-    
+
     Parameters
     ----------
     pdbin : str
@@ -1534,18 +1531,18 @@ def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
 
     if directory is None: directory = os.path.dirname(pdbin)
     if not os.path.isdir(directory): os.mkdir(directory)
-    
+
     # Largely stolen from pdb_split_models.py in phenix
     #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
-    
+
     pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
     pdbf.check_file_type("pdb")
     hierarchy = pdbf.file_object.construct_hierarchy()
-    
+
     # Nothing to do
     n_models = hierarchy.models_size()
     if n_models == 1: raise RuntimeError,"split_pdb {0} only contained 1 model!".format( pdbin )
-    
+
     if same_size: _only_equal_sizes(hierarchy)
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
     output_files = []
@@ -1575,19 +1572,19 @@ def split_into_chains(pdbin, chain=None, directory=None):
     """Split a pdb file into its separate chains"""
 
     if directory is None: directory = os.path.dirname(pdbin)
-    
+
     # Largely stolen from pdb_split_models.py in phenix
     #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
     pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
     pdbf.check_file_type("pdb")
     hierarchy = pdbf.file_object.construct_hierarchy()
-    
+
     # Nothing to do
     n_models = hierarchy.models_size()
     if n_models != 1: raise RuntimeError,"split_into_chains only works with single-mdoel pdbs!"
-    
+
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
-    
+
     output_files = []
     n_chains = len(hierarchy.models()[0].chains())
     for i, hchain in enumerate(hierarchy.models()[0].chains()):
@@ -1608,11 +1605,11 @@ def split_into_chains(pdbin, chain=None, directory=None):
                 print >> f, "REMARK Original file:"
                 print >> f, "REMARK   %s" % pdbin
             f.write(new_hierarchy.as_pdb_string())
-    
+
         output_files.append(output_file)
-    
+
     if not len(output_files): raise RuntimeError,"split_into_chains could not find any chains to split"
-        
+
     return output_files
 
 def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
@@ -1620,7 +1617,7 @@ def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
     """
 
     tmp1 = ample_util.tmp_file_name() + ".pdb" # pdbcur insists names have a .pdb suffix
-    
+
     # Now clean up with pdbcur
     logfile = tmp1+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format(pdbin, tmp1).split()
@@ -1634,47 +1631,47 @@ mostprob
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
     if retcode == 0: os.unlink(logfile) # remove temporary files
     else: raise RuntimeError,"Error standardising pdb!"
-    
+
     # Standardise AA names and then remove any remaining HETATMs
     std_residues_cctbx(tmp1, pdbout, del_hetatm=del_hetatm)
     os.unlink(tmp1)
-    
+
     return retcode
 
 def Xstd_residues(pdbin, pdbout ):
     """Switch any non-standard AA's to their standard names.
     We also remove any ANISOU lines.
     """
-    
+
     modres = [] # List of modres objects
     modres_names = {} # list of names of the modified residues keyed by chainID
     gotModel=False # to make sure we only take the first model
     reading=False # If reading structure
-    
+
     pdbinf = open(pdbin,'r')
     pdboutf = open(pdbout,'w')
-    
+
     line = True # Just for the first line
     while line:
 
         # Read in the line
         line = pdbinf.readline()
-                
+
         # Skip any ANISOU lines
         if line.startswith("ANISOU"):
             continue
-        
+
         # Extract all MODRES DATA
         if line.startswith("MODRES"):
             modres.append( pdb_model.PdbModres( line ) )
-            
+
         # Only extract the first model
         if line.startswith("MODEL"):
             if gotModel:
                 raise RuntimeError,"Found additional model! {0}".format( line )
             else:
                 gotModel=True
-        
+
         # First time we hit coordinates we set up our data structures
         if not reading and ( line.startswith("HETATM") or line.startswith("ATOM") ):
             # There is a clever way to do this with list comprehensions but this is not it...
@@ -1684,16 +1681,16 @@ def Xstd_residues(pdbin, pdbout ):
                     modres_names[ chainID ] = []
                 if m.resName not in modres_names[ chainID ]:
                     modres_names[ chainID ].append( m.resName )
-                    
+
             # Now we're reading
             reading=True
-                
+
         # Switch any residue names
         if len( modres):
             if line.startswith("HETATM"):
-                
+
                 hetatm = pdb_model.PdbHetatm( line )
-                
+
                 # See if this HETATM is in the chain we are reading and one of the residues to change
                 if hetatm.resName in modres_names[ hetatm.chainID ]:
                     for m in modres:
@@ -1705,28 +1702,28 @@ def Xstd_residues(pdbin, pdbout ):
                             # Convert to a line
                             line = atom.toLine()+"\n"
                             break
-        
+
         # Any HETATM have been dealt with so just process as usual
         if line.startswith("ATOM"):
             atom = pdb_model.PdbAtom( line )
-            
+
             if atom.resName not in three2one:
                 raise RuntimeError, "Unrecognised residue! {0}".format(line)
-                
+
         # Output everything else
         pdboutf.write( line )
 
         # END reading loop
-        
+
     return
 
 def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
     """Map all residues in MODRES section to their standard counterparts
     optionally delete all other HETATMS"""
-    
+
     pdb_input = iotbx.pdb.pdb_input(pdbin)
     crystal_symmetry = pdb_input.crystal_symmetry()
-    
+
     # Get MODRES Section & build up dict mapping the changes
     modres_text = [ l.strip() for l in pdb_input.primary_structure_section() \
                     if l.startswith("MODRES")]
@@ -1735,7 +1732,7 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
         if not chain in modres:
             modres[chain] = {}
         modres[chain][int(resseq)] = (resname,stdres)
-   
+
     hierachy = pdb_input.construct_hierarchy()
     for model in hierachy.models():
         for chain in model.chains():
@@ -1751,7 +1748,7 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
                         # If any of the atoms are hetatms, set them to be atoms
                         for atom in atom_group.atoms():
                             if atom.hetero: atom.hetero=False
-                                
+
     if del_hetatm: _strip(hierachy, hetatm=True)
 
     with open(pdbout,'w') as f:
@@ -1765,13 +1762,13 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
 
 def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
     assert hetatm or hydrogen or atom_types,"Need to set what to strip!"
-    
+
     pdb_input = iotbx.pdb.pdb_input(pdbin)
     crystal_symmetry = pdb_input.crystal_symmetry()
-    
+
     hierachy = pdb_input.construct_hierarchy()
     _strip(hierachy, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)
-    
+
     with open(pdbout,'w') as f:
         f.write("REMARK Original file:\n")
         f.write("REMARK   {0}\n".format(pdbin))
@@ -1783,10 +1780,10 @@ def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
 
 def _strip(hierachy, hetatm=False, hydrogen=False, atom_types=[]):
     """Remove all hetatoms from pdbfile"""
-    
+
     def remove_atom(atom, hetatm=False, hydrogen=False, atom_types=[]):
         return (hetatm and atom.hetero) or (hydrogen and atom.element_is_hydrogen()) or atom.name.strip() in atom_types
-    
+
     for model in hierachy.models():
         for chain in model.chains():
             for residue_group in chain.residue_groups():
@@ -1798,28 +1795,28 @@ def _strip(hierachy, hetatm=False, hydrogen=False, atom_types=[]):
 
 def to_single_chain(inpath, outpath):
     """Condense a single-model multi-chain pdb to a single-chain pdb"""
-    
+
     o = open( outpath, 'w' )
-    
+
     firstChainID  = None
     currentResSeq = None # current residue we are reading - assume it always starts from 1
     globalResSeq  = None
     globalSerial  = -1
     for line in open(inpath):
-        
+
         # Remove any HETATOM lines and following ANISOU lines
         if line.startswith("HETATM") or line.startswith("MODEL") or line.startswith("ANISOU"):
             raise RuntimeError,"Cant cope with the line: {0}".format( line )
-        
+
         # Skip any TER lines
         if line.startswith("TER"):
             continue
-        
+
         if line.startswith("ATOM"):
             changed=False
-            
+
             atom = pdb_model.PdbAtom( line )
-            
+
             # First atom/residue
             if globalSerial == -1:
                 globalSerial = atom.serial
@@ -1831,33 +1828,33 @@ def to_single_chain(inpath, outpath):
                 if atom.chainID != firstChainID:
                     atom.chainID = firstChainID
                     changed=True
-                
+
                 # Catch each change in residue
                 if atom.resSeq != currentResSeq:
                     # Change of residue
                     currentResSeq = atom.resSeq
                     globalResSeq += 1
-                
+
                 # Only change if don't match global
                 if atom.resSeq != globalResSeq:
                     atom.resSeq = globalResSeq
                     changed=True
-                    
+
                 # Catch each change in numbering
                 if atom.serial != globalSerial + 1:
                     atom.serial = globalSerial + 1
                     changed=True
-                    
+
                 if changed:
                     line = atom.toLine()+"\n"
-            
+
                 # Increment counter for all atoms
                 globalSerial += 1
-        
+
         o.write( line )
-        
+
     o.close()
-    
+
     return
 
 def translate(inpdb=None, outpdb=None, ftranslate=None):
@@ -1865,20 +1862,20 @@ def translate(inpdb=None, outpdb=None, ftranslate=None):
     args:
     ftranslate -- vector of fractional coordinates to shift by
     """
-    
+
     logfile = outpdb+".log"
     cmd="pdbcur xyzin {0} xyzout {1}".format( inpdb, outpdb ).split()
-    
+
     # Build up stdin
     stdin='translate * frac {0:F} {1:F} {2:F}'.format( ftranslate[0], ftranslate[1], ftranslate[2] )
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    
+
     if retcode == 0:
         # remove temporary files
         os.unlink(logfile)
     else:
         raise RuntimeError,"Error translating PDB"
-        
+
     return
 
 def xyz_coordinates(pdbin):
@@ -1918,7 +1915,7 @@ def xyz_cb_coordinates(pdbin):
 def _xyz_cb_coordinates(hierarchy):
     res_lst = []
 
-    for residue_group in hierarchy.models()[0].chains()[0].residue_groups():        
+    for residue_group in hierarchy.models()[0].chains()[0].residue_groups():
         for atom_group in residue_group.atom_groups():
             xyz_lst = _xyz_atom_coords(atom_group)
             res_lst.append([residue_group.resseq_as_int(), xyz_lst])
@@ -1934,7 +1931,7 @@ def _xyz_atom_coords(atom_group):
     for atom in atom_group.atoms():
         if atom.name.strip() in set(["CA", "CB"]):
             tmp_dict[atom.name.strip()] = atom.xyz
-        
+
     if 'CB' in tmp_dict: return tmp_dict['CB']
     elif 'CA' in tmp_dict: return tmp_dict['CA']
     else: return (float('inf'), float('inf'), float('inf'))
@@ -1960,101 +1957,101 @@ class Test(unittest.TestCase):
         """"""
 
         pdbfile = os.path.join(self.testfiles_dir,"1GU8.pdb")
-        
+
         info = get_info( pdbfile )
-        
+
         self.assertEqual( info.pdbCode, "1GU8" )
         self.assertEqual( len(info.models), 2 )
-        
+
         m1 = info.models[0]
         self.assertEqual( m1.chains[0], 'A' )
         self.assertEqual( m1.resSeqs[0], [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219] )
         self.assertEqual( m1.sequences[0], 'VGLTTLFWLGAIGMLVGTLAFAWAGRDAGSGERRYYVTLVGISGIAAVAYVVMALGVGWVPVAERTVFAPRYIDWILTTPLIVYFLGLLAGLDSREFGIVITLNTVVMLAGFAGAMVPGIERYALFGMGAVAFLGLVYYLVGPMTESASQRSSGIKSLYVRLRNLTVILWAIYPFIWLLGPPGVALLTPTVDVALIVYLDLVTKVGFGFIALDAAATL' )
-        
+
         self.assertEqual( m1.caMask[0], [ False ] * 218 )
         self.assertEqual( m1.bbMask[0], [False, True, False, False, False, False, False, False, False, True, False, False, True, False, False, False, True, False, False, False, False, False, False, False, True, False, False, False, True, False, True, False, False, False, False, False, False, False, False, False, True, False, False, True, False, False, False, False, False, False, False, False, False, False, False, True, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, True, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, True, False, False, False, False, True, False, False, False, False, False, False, False, True, False, True, False, False, False, False, False, True, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, True, False, False, False, False, False, False, False, False, False, True] )
-        
+
         self.assertEqual( info.numAtoms( modelIdx=0 ), 1621 )
         self.assertEqual( info.numCalpha( modelIdx=0 ), 218 )
-        
+
         m2 = info.models[1]
         self.assertEqual( m2.chains[0], 'A' )
         self.assertEqual( m2.resSeqs[0], [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219] )
         self.assertEqual( m2.sequences[0], 'VGLTTLFWLGAIGMLVGTLAFAWAGRDAGSGERRYYVTLVGISGIAAVAYVVMALGVGWVPVAERTVFAPRYIDWILTTPLIVYFLGLLAGLDSREFGIVITLNTVVMLAGFAGAMVPGIERYALFGMGAVAFLGLVYYLVGPMTESASQRSSGIKSLYVRLRNLTVILWAIYPFIWLLGPPGVALLTPTVDVALIVYLDLVTKVGFGFIALDAAATL' )
-        
+
         self.assertEqual( info.numAtoms( modelIdx=1 ), 1621 )
         self.assertEqual( info.numCalpha( modelIdx=1 ), 218 )
-        
+
         return
-    
+
     def testGetInfo2(self):
         """"""
 
         pdbfile = os.path.join(self.testfiles_dir,"2UUI.pdb")
-        
+
         info = get_info( pdbfile )
-        
+
         self.assertEqual( len(info.models), 1 )
-        
+
         m1 = info.models[0]
         self.assertEqual( m1.chains[0], 'A' )
         self.assertEqual( m1.resSeqs[0], [ i for i in range(-5,150) ] )
         self.assertEqual( m1.sequences[0], 'MHHHHHHKDEVALLAAVTLLGVLLQAYFSLQVISARRAFRVSPPLTTGPPEFERVYRAQVNCSEYFPLFLATLWVAGIFFHEGAAALCGLVYLFARLRYFQGYARSAQLRLAPLYASARALWLLVALAALGLLAHFLPAALRAALLGRLRTLLPW' )
         self.assertEqual( m1.caMask[0], [ False ] * 154 + [ True ] )
         self.assertEqual( m1.bbMask[0], [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, True, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, True, True, True, True] )
-        
+
         self.assertEqual( info.numAtoms( modelIdx=0 ), 1263 )
-        
+
         return
 
     def testCheckPdbs(self):
         logging.basicConfig()
         logging.getLogger().setLevel(logging.DEBUG)
-        
+
         pdbs=glob.glob(os.path.join(self.testfiles_dir,"models","*.pdb"))
         self.assertTrue(check_pdbs(pdbs))
-        
+
         self.assertFalse(check_pdbs(pdbs, single=True,sequence="AABBCC"))
-        
+
         pdbs += [ os.path.join(self.testfiles_dir,"1GU8.pdb") ]
         self.assertFalse(check_pdbs(pdbs,single=True,sequence="AABBCC"))
-        
+
         return
-    
+
     def testSelectResidues(self):
         pdbin = os.path.join(self.testfiles_dir,"4DZN.pdb")
         pdbout = "testSelectResidues1.pdb"
         to_delete = [5,10,15,20]
-        
+
         b4 = set(resseq(pdbin)['A'])
-        
+
         select_residues(pdbin=pdbin, pdbout=pdbout, delete=to_delete)
-        
+
         after = set(resseq(pdbout)['A'])
         self.assertEqual(after,b4.difference(set(to_delete)))
-        
+
         os.unlink(pdbout)
-        
+
         return
-    
+
     def testSelectResiduesKeepIdxs(self):
         pdbin = os.path.join(self.testfiles_dir,"4DZN.pdb")
         pdbout = "testSelectResidues2.pdb"
         tokeep_idx = [0,5,10,15,20]
-        
+
         b4 = [ r for i,r in enumerate(resseq(pdbin)['A']) if i in tokeep_idx ]
         select_residues(pdbin=pdbin, pdbout=pdbout, tokeep_idx=tokeep_idx)
-        
+
         #hierachy=iotbx.pdb.pdb_input(pdbout).construct_hierarchy()
         #print [a.name for a in hierachy.models()[0].chains()[0].atoms() ]
         #print "GOT ",resseq(pdbout)
         after = resseq(pdbout)['A']
         self.assertEqual(after,b4)
-        
+
         os.unlink(pdbout)
-        
+
         return
-    
+
     def testSequence1(self):
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
         ref={ 'A' :'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
@@ -2063,7 +2060,7 @@ class Test(unittest.TestCase):
         s=sequence(pdbin)
         self.assertEqual(ref, s, "Bad _sequecne: {0}".format(s))
         return
-    
+
     def XtestSplit(self):
         pdbin=os.path.join(self.testfiles_dir,"1GU8.pdb")
         Xsplit(pdbin)
@@ -2074,44 +2071,44 @@ class Test(unittest.TestCase):
 
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
         pdbout="std.pdb"
-        
+
         std_residues_cctbx(pdbin, pdbout)
-        
+
         # Check it's valid
         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
-        
+
         #Get list of all the residue names in chain 1
         resnames=[g.unique_resnames()[0]  for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
         ref=['ACE', 'GLY', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
              'LYS', 'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
              'LYS', 'GLN', 'GLY', 'TYR', 'TYR']
         self.assertEqual(resnames,ref)
-        
+
         os.unlink(pdbout)
-        
+
         return
-    
+
     def testStdResiduesCctbx(self):
 
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
         pdbout="std.pdb"
-        
+
         std_residues_cctbx(pdbin, pdbout)
-        
+
         # Check it's valid
         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
-        
+
         #Get list of all the residue names in chain 1
         resnames=[g.unique_resnames()[0]  for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
         ref=['ACE', 'GLY', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
              'LYS', 'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU',
              'LYS', 'GLN', 'GLY', 'TYR', 'TYR']
         self.assertEqual(resnames,ref)
-        
+
         os.unlink(pdbout)
-        
+
         return
-    
+
     def testStripHetatm(self):
         pdbin = os.path.join(self.testfiles_dir,"1BYZ.pdb")
         pdbout='strip_het.pdb'
@@ -2135,7 +2132,7 @@ class Test(unittest.TestCase):
         self.assertFalse(got, "Found Hydrogens")
         os.unlink(pdbout)
         return
-    
+
     def testStripAtomTypes(self):
         pdbin = os.path.join(self.testfiles_dir,"1BYZ.pdb")
         pdbout='strip_types.pdb'
@@ -2147,17 +2144,17 @@ class Test(unittest.TestCase):
         self.assertFalse(got, "Found Atom Types")
         os.unlink(pdbout)
         return
-    
+
     def testReliableSidechains(self):
 
         pdbin=os.path.join(self.testfiles_dir,"1GU8.pdb")
         pdbout="std.pdb"
-        
+
         reliable_sidechains(pdbin, pdbout)
-        
+
         # Check it's valid
         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
-        
+
         #Get list of all the residue names in chain 1
         resnames=[g.unique_resnames()[0]  for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
         ref=['VAL', 'GLY', 'LEU', 'THR', 'THR', 'LEU', 'PHE', 'TRP', 'LEU', 'GLY', 'ALA', 'ILE', 'GLY', 'MET',
@@ -2178,14 +2175,14 @@ class Test(unittest.TestCase):
              'ALA', 'LEU', 'ASP', 'ALA', 'ALA', 'ALA', 'THR', 'LEU']
 
         self.assertEqual(resnames,ref)
-        
+
         reliable_sidechains_cctbx(pdbin, pdbout)
         pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
         self.assertEqual(resnames,ref)
         os.unlink(pdbout)
-        
+
         return
-    
+
     def testXyzCoordinates(self):
         pdbin=os.path.join(self.testfiles_dir,"4DZN.pdb")
         test_hierarchy = iotbx.pdb.pdb_input( file_name=pdbin ).construct_hierarchy()
@@ -2239,7 +2236,7 @@ if __name__ == "__main__":
     #unittest.TextTestRunner(verbosity=2).run(testSuite())
     import argparse
     parser = argparse.ArgumentParser(description='Manipulate PDB files', prefix_chars="-")
-    
+
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-ren', action='store_true',
                        help="Renumber the PDB")
@@ -2258,18 +2255,18 @@ if __name__ == "__main__":
     parser.add_argument('-chain', help='The chain to use')
     parser.add_argument('-test', action='store_true',
                        help='Run unittests')
-    
+
     args = parser.parse_args()
-    
+
     if args.test:
         print unittest.TestLoader().loadTestsFromModule(sys.modules[__name__])
         sys.exit(unittest.TextTestRunner().run(unittest.TestLoader().loadTestsFromModule(sys.modules[__name__])))
-    
+
     # Get full paths to all files
     args.input_file = os.path.abspath(args.input_file)
     if not os.path.isfile(args.input_file):
         raise RuntimeError, "Cannot find input file: {0}".format(args.input_file)
-    
+
     if args.output_file:
         args.output_file = os.path.abspath(args.output_file)
     else:
@@ -2286,4 +2283,3 @@ if __name__ == "__main__":
         print split_pdb(args.input_file)
     elif args.split_chains:
         print split_into_chains(args.input_file, chain=args.chain)
-        
