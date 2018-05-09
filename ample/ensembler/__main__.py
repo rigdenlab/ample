@@ -68,7 +68,7 @@ assert os.path.isdir(optd['work_dir'])
 logging_util.setup_file_logging(os.path.join(optd['work_dir'], "ensemble.log"))
 try:
     if not restart:
-        optd['models'] = ample_util.extract_models(optd)
+        optd['models'] = ample_util.extract_and_validate_models(optd)
         if optd['subcluster_program'] == 'gesamt':
             optd['gesamt_exe'] = ample_util.find_exe('gesamt')
         elif optd['subcluster_program'] == 'maxcluster':
