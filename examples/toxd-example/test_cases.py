@@ -79,7 +79,9 @@ class AMPLETest(AMPLEBaseTest):
         self.assertEqual(list(sidechains), self.AMPLE_DICT['side_chain_treatments'])
         self.assertIn('ensembles', self.AMPLE_DICT)
         nensembles = len(self.AMPLE_DICT['ensembles'])
-        self.assertEqual(nensembles, 3, "Incorrect number of ensembles produced: {0}".format(nensembles)) # Was 4 changed 19/10/17 on linux CCP4 7.0.44
+        # Was 4 changed 19/10/17 on linux CCP4 7.0.44
+        # Was 3 changed 10/5/18 on linux CCP4 7.0.55
+        self.assertEqual(nensembles, 4, "Incorrect number of ensembles produced: {0}".format(nensembles))
         ensembles_data = self.AMPLE_DICT['ensembles_data']
         # We need to make sure that only the set sidechains and radii are present in the ensembles, so we need to check that what we
         # find is a subset of the allowed values

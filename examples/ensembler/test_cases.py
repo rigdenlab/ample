@@ -30,13 +30,15 @@ class AMPLETest(AMPLEBaseTest):
         self.assertEqual(3, self.AMPLE_DICT['num_clusters'])
         self.assertIn('ensembles', self.AMPLE_DICT)
         ensembles_data = self.AMPLE_DICT['ensembles_data']
-        #self.assertEqual(72, len(ensembles_data))
-        self.assertEqual(69, len(ensembles_data)) # Was 72, not sure if change due to underlying software or our algorithm 19/10/17 CCP4 7.0.44 linux
+        # Was 72, not sure if change due to underlying software or our algorithm 19/10/17 CCP4 7.0.44 linux
+        # Was 69 - changed 10/5/18 CCP4 7.0.55 linux
+        self.assertEqual(72, len(ensembles_data))
         for i in xrange(1, 4):
             cluster_ensembles = [ens for ens in ensembles_data if ens['cluster_num']==i]
             cluster_num_models = cluster_ensembles[0]['cluster_num_models']
-            #switch = {1: (6, 25), 2: (4, 24), 3: (3, 23)}
-            switch = {1: (6, 25), 2: (4, 22), 3: (3, 22)} # jmht changed 20/10/17 CCP4 7.0.44 on linux 
+            # switch = {1: (6, 25), 2: (4, 24), 3: (3, 23)} # jmht changed 20/10/17 CCP4 7.0.44 on linux 
+            # switch = {1: (6, 25), 2: (4, 22), 3: (3, 22)} # jmht changed 10/5/18 CCP4 7.0.55 on linux 
+            switch = {1: (6, 25), 2: (4, 24), 3: (3, 23)}
             num_models, num_ensembles = switch[i]
             self.assertEqual(num_ensembles, len(cluster_ensembles))
             self.assertEqual(num_models, cluster_num_models)
