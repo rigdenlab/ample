@@ -140,7 +140,7 @@ TEST_DICT['from_existing_models_classic'] = {
 #
 ###############################################################################
 args_from_quark_models = args_vanilla + [
-    [ '-models', os.path.join(TESTFILES_DIR, 'decoys_200.tar.gz') ],
+    [ '-models', os.path.join(TESTFILES_DIR, 'decoys.tar.gz') ],
     [ '-do_mr', 'False' ]                                         
 ]
 
@@ -155,7 +155,8 @@ class AMPLETest(AMPLEBaseTest):
         self.assertIn('ensembles', self.AMPLE_DICT)
         nensembles = len(self.AMPLE_DICT['ensembles'])
         # number was 35 - changed 19/10/17 with CCP4 7.0.44 linux
-        ref_nensembles = 18 if self.AMPLE_DICT["use_scwrl"] else 30 # unmod ensembles without side-chains - Scwrl4 required # Was 33 changed 19/10/17 on linux CCP4 7.0.44
+        # number was 30 - changed 10/5/18 with CCP4 7.0.55 linux
+        ref_nensembles = 18 if self.AMPLE_DICT["use_scwrl"] else 35 # unmod ensembles without side-chains - Scwrl4 required
         msg = "Incorrect number of ensembles produced: {0} vs {1}".format(nensembles, ref_nensembles)
         self.assertEqual(nensembles, ref_nensembles, msg) 
 
