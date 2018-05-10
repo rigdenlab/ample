@@ -232,13 +232,13 @@ def extract_and_validate_models(amoptd, sequence=None, single=True, allsame=True
 
     filenames = None
     quark_models = False
-    basename = os.path.basename(filepath)
-    if basename in ['result.tar.bz2', 'decoys.tar.gz']:
-        logger.info('Assuming QUARK models in file: %s', filepath)
-        quark_models = True
-        filenames = ['alldecoy.pdb']
 
     if os.path.isfile(filepath):
+        basename = os.path.basename(filepath)
+        if basename in ['result.tar.bz2', 'decoys.tar.gz']:
+            logger.info('Assuming QUARK models in file: %s', filepath)
+            quark_models = True
+            filenames = ['alldecoy.pdb']
         try:
             extract_models_from_archive(filepath,
                                         models_dir,
@@ -286,11 +286,11 @@ def extract_models_from_archive(archive, models_dir, suffixes=None, filenames=No
         os.mkdir(models_dir)
 
     # See what sort of file this is:
-    f, suffix = os.path.splitext(archive)
+    name, suffix = os.path.splitext(archive)
     if suffix in ['.gz', '.bz', '.bz2']:
-        f, s2 = os.path.splitext(f)
-        if s2 == '.tar':
-            suffix = s2 + suffix
+        name, suffix2 = os.path.splitext(name)
+        if suffix2 == '.tar':
+            suffix = suffix2  + suffix
 
     tar_suffixes = ['.tar.gz', '.tgz', '.tar.bz', '.tar.bz2', '.tbz']
     ar_suffixes = tar_suffixes + ['.zip']
@@ -303,7 +303,7 @@ def extract_models_from_archive(archive, models_dir, suffixes=None, filenames=No
         files = extract_tar(archive, models_dir, filenames=filenames, suffixes=suffixes)
     else:
         files = extract_zip(archive, models_dir)
-    if not len(files):
+    if not files:
         raise RuntimeError("Could not extract any files from archive: %s" % archive)
     return
 
@@ -352,7 +352,7 @@ def extract_tar(archive, directory=None, filenames=None, suffixes=None):
     files = []
     with tarfile.open(archive, 'r:*') as tf:
         members = tf.getmembers()
-        if len(members):
+        if members:
             for member in members:
                 if extract_me(member, filenames, suffixes):
                     member.name = os.path.basename(member.name)  # Hack to remove any paths
@@ -371,7 +371,7 @@ def extract_zip(filename, directory, suffixes=['.pdb']):
         exit_util.exit_error(msg)
     zipf = zipfile.ZipFile(filename)
     zif = zipf.infolist()
-    if not len(zif):
+    if not zif:
         msg = 'Empty zip file: {0}'.format(filename)
         exit_util.exit_error(msg)
     files = []
@@ -381,8 +381,8 @@ def extract_zip(filename, directory, suffixes=['.pdb']):
             f.filename = os.path.basename(f.filename)
             zipf.extract(f, path=directory)
             files.append(os.path.join(directory, f.filename))
-    if not len(files):
-        msg = 'Could not find any files with suffixes {0} in zipfile: {1}'.format(suffixes,filename)
+    if not files:
+        msg = 'Could not find any files with suffixes {0} in zipfile: {1}'.format(suffixes, filename)
         exit_util.exit_error(msg)
     return files
 
@@ -399,16 +399,16 @@ def find_exe(executable, dirs=None):
     """
     logger.debug('Looking for executable: %s', executable)
 
-    exe_file=None
-    found=False
+    exe_file = None
+    found = False
     if is_exe(executable):
-        exe_file=os.path.abspath(executable)
-        found=True
+        exe_file = os.path.abspath(executable)
+        found = True
     else:
         # If the user has given a path we just take the name part
         _, fname = os.path.split(executable)
         if fname:
-            executable=fname
+            executable = fname
 
         # By default we search in the system PATH and add any additional user given paths here
         paths = os.environ["PATH"].split(os.pathsep)
@@ -420,7 +420,7 @@ def find_exe(executable, dirs=None):
             exe_file = os.path.abspath(os.path.join(path, executable))
             if is_exe(exe_file):
                 logger.debug('Found executable %s in directory %s', executable, path)
-                found=True
+                found = True
                 break
 
     if not found:
@@ -430,14 +430,14 @@ def find_exe(executable, dirs=None):
     return exe_file
 
 
-def filename_append(filename=None, astr=None,directory=None, separator="_"):
+def filename_append(filename=None, astr=None, directory=None, separator="_"):
     """Append astr to filename, before the suffix, and return the new filename."""
-    dirname, fname = os.path.split( filename )
-    name, suffix = os.path.splitext( fname )
-    name  =  name + separator + astr + suffix
+    dirname, fname = os.path.split(filename)
+    name, suffix = os.path.splitext(fname)
+    name = name + separator + astr + suffix
     if directory is None:
         directory = dirname
-    return os.path.join( directory, name )
+    return os.path.join(directory, name)
 
 
 def ideal_helices(optd):
