@@ -135,7 +135,6 @@ class Ample(object):
         # Finally update pyrvapi results
         if self.ample_output:
             self.ample_output.display_results(amopt.d)
-        if self.ample_output:
             self.ample_output.rvapi_shutdown(amopt.d)
         return
 
@@ -174,7 +173,7 @@ class Ample(object):
             if optd['cluster_method'] is 'import':
                 # HACK - this is certainly not how we want to do it. One flag for all (-models) in future
                 optd['models'] = optd['cluster_dir']
-                optd['models'] = ample_util.extract_models(optd)
+                optd['models'] = ample_util.extract_and_validate_models(optd)
 
             # Check we have some models to work with
             if not (optd['single_model_mode'] or optd['models']):
@@ -285,7 +284,7 @@ class Ample(object):
 
         if optd['make_models'] and optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
-        
+
         if optd['make_models']:
             logger.info('----- making Rosetta models--------')
             if optd['nmr_remodel']:
@@ -314,9 +313,9 @@ class Ample(object):
         elif optd['import_models']:
             logger.info('Importing models from directory: %s\n', optd['models_dir'])
             if optd['homologs']:
-                optd['models'] = ample_util.extract_models(optd, sequence=None, single=True, allsame=False)
+                optd['models'] = ample_util.extract_and_validate_models(optd, sequence=None, single=True, allsame=False)
             else:
-                optd['models'] = ample_util.extract_models(optd)
+                optd['models'] = ample_util.extract_and_validate_models(optd)
                 # Need to check if Quark and handle things accordingly
                 if optd['quark_models']:
                     # We always add sidechains to QUARK models if SCWRL is installed
@@ -423,7 +422,7 @@ class Ample(object):
 
     def process_command_line(self, args=None, contacts=True, modelling=True, mol_rep=True):
         """Process the command-line.
-        :args: optional argument that can hold the command-line arguments if we 
+        :args: optional argument that can hold the command-line arguments if we
         have been called from within python for testing
         """
         parser = argparse.ArgumentParser(
@@ -442,12 +441,12 @@ class Ample(object):
         return parser.parse_args(args)
 
     def setup(self, optd):
-        """We take and return an ample dictionary as an argument. 
-        
-        This is required because options_processor.process_restart_options Changes what 
-        optd points at, and this means that if we just use the reference, we end up 
+        """We take and return an ample dictionary as an argument.
+
+        This is required because options_processor.process_restart_options Changes what
+        optd points at, and this means that if we just use the reference, we end up
         pointing at the old, obselete dictionary
-        
+
         """
         optd = options_processor.restart_amoptd(optd)
 

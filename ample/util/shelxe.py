@@ -4,7 +4,6 @@ Created on 2 Feb 2015
 
 @author: jmht
 '''
-import logging
 import os
 import shutil
 import sys
@@ -14,8 +13,6 @@ import uuid
 from ample.util import ample_util
 from ample.util import mtz_util
 
-_logger = logging.getLogger(__name__)
-
 if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
 mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
 sys.path.insert(0,mrbumpd)
@@ -23,7 +20,7 @@ import parse_shelxe
 
 class MRinfo(object):
     """An object to analyse Molecular Replacement solutions
-    
+
     Attributes
     ----------
     work_dir : str
@@ -38,7 +35,7 @@ class MRinfo(object):
       The Mean Phase Error of the MR pdb to the native pdb
     wMPE : float
       The weighted Mean Phase Error of the MR pdb to the native pdb
-       
+
     """
     def __init__(self, shelxe_exe, native_pdb, native_mtz, work_dir=None):
         """Intialise from native pdb and mtz so that analyse only requires a MR pdb
@@ -51,20 +48,20 @@ class MRinfo(object):
           Path to the native PDB file
         native_mtz : str
           Path to the native MTZ file
-          
+
         """
         if work_dir is None: work_dir = os.getcwd()
         self.work_dir = work_dir
         self.shelxe_exe = shelxe_exe
         self.stem = 'shelxe-input-{}'.format(str(uuid.uuid1()))
-        
+
         self.MPE = None
         self.wMPE = None
         self.originShift = None
-        
+
         self.mk_native_files(native_pdb, native_mtz)
         return
-    
+
     def mk_native_files(self, native_pdb, native_mtz):
         """Create the files required by SHELXE from the native structure
 
@@ -74,40 +71,40 @@ class MRinfo(object):
           Path to the native PDB file
         native_mtz : str
           Path to the native MTZ file
-          
+
         """
         mtz_util.to_hkl(native_mtz, hkl_file=os.path.join(self.work_dir, self.stem + ".hkl"))
         shutil.copyfile(native_pdb, os.path.join(self.work_dir, self.stem + ".ent"))
 
     def analyse(self, mr_pdb):
         """Use SHELXE to analyse an MR pdb file to determine the origin shift and phase error
-        
+
         This function sets the ``MPE``, ``wMPE`` and ``originShift`` attributes.
-        
+
         Parameters
         ----------
         mr_pdb : str
           Path to the Molecular Replacement PDB file
-        
+
         """
-        
+
         os.chdir(self.work_dir)
         input_pdb = self.stem + ".pda"
         shutil.copyfile(mr_pdb, os.path.join(self.work_dir, input_pdb))
- 
+
         cmd = [self.shelxe_exe, input_pdb, '-a0', '-q', '-s0.5', '-o', '-n', '-t0', '-m0', '-x']
         logfile = os.path.abspath('shelxe_{}.log'.format( str(uuid.uuid1())))
         ret = ample_util.run_command(cmd=cmd, logfile=logfile, directory=None, dolog=False, stdin=None)
         if ret != 0: raise RuntimeError,"Error running shelxe - see log: {0}".format(logfile)
-         
+
         sp = parse_shelxe.ShelxeLogParser(logfile)
         # Only added in later version of MRBUMP shelxe parser
-        if hasattr(sp, 'MPE'): 
-            self.MPE = sp.MPE 
+        if hasattr(sp, 'MPE'):
+            self.MPE = sp.MPE
         self.wMPE = sp.wMPE
         self.originShift = [ o*-1 for o in sp.originShift ]
-        
-        for ext in ['.pda','.pdo','.phs','.lst','_trace.ps']:
+
+        for ext in ['.hkl', '.ent', '.pda','.pdo','.phs','.lst','_trace.ps']:
             try:
                 os.unlink(self.stem + ext)
             except:
@@ -121,7 +118,7 @@ if __name__ == "__main__":
 
     import argparse
     parser = argparse.ArgumentParser(description='Determine origin using SHELXE', prefix_chars="-")
-    
+
     parser.add_argument('--native_mtz',
                        help='Native MTZ', required=True)
     parser.add_argument('--native_pdb',
@@ -132,13 +129,13 @@ if __name__ == "__main__":
                        help="Path to SHELXE executable")
 
     args = parser.parse_args()
-    
+
     executable = None
     if args.executable:
         executable = args.executable
     else:
         executable = os.path.join(os.environ['CCP4'],"bin","shelxe" + ample_util.EXE_EXT)
-    
+
     # Get full paths to all files
     native_mtz = os.path.abspath(args.native_mtz)
     if not os.path.isfile(native_mtz):
@@ -149,10 +146,9 @@ if __name__ == "__main__":
     mr_pdb = os.path.abspath(args.mr_pdb)
     if not os.path.isfile(mr_pdb):
         raise RuntimeError, "Cannot find input file: {0}".format(mr_pdb)
-    
+
     mrinfo = MRinfo(executable, native_pdb, native_mtz)
     mrinfo.analyse(mr_pdb)
     os.unlink('shelxe-input.hkl')
     os.unlink('shelxe-input.ent')
     print "Origin shift is: {0}".format(mrinfo.originShift)
-        

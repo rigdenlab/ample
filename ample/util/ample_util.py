@@ -36,7 +36,7 @@ logger.addHandler(logging.NullHandler())
 
 def amoptd_fix_path(optd, newroot, i2mock=False):
     """Update all the paths in an AMPLE results dictionary to be rooted at newroot
-    
+
     Parameters
     ----------
     optd: dict
@@ -44,22 +44,22 @@ def amoptd_fix_path(optd, newroot, i2mock=False):
     newroot: str
        Path to the AMPLE root directory (topdir containing MRBUMP dir etc.)
     """
-    oldroot = os.sep.join(optd['work_dir'].split(os.sep)[:-1])
-    for k in [ 'benchmark_dir',
+    #oldroot = os.sep.join(optd['work_dir'].split(os.sep)[:-1])
+    oldroot = optd['work_dir']
+    for k in ['benchmark_dir',
               'native_pdb',
               'native_pdb_std',
-              'fasta',
-              'work_dir']:
-        if k in optd and isinstance(optd[k],str):
+              'fasta']:
+        if k in optd and isinstance(optd[k], str):
             optd[k] = optd[k].replace(oldroot, newroot)
 
-    MRBUMP_FILE_KEYS = [ 'PHASER_logfile', 'PHASER_pdbout', 'PHASER_mtzout',
-                          'REFMAC_logfile', 'REFMAC_pdbout', 'REFMAC_mtzout',
-                          'BUCC_logfile','BUCC_pdbout', 'BUCC_mtzout',
-                          'ARP_logfile', 'ARP_pdbout', 'ARP_mtzout',
-                          'SHELXE_logfile', 'SHELXE_pdbout', 'SHELXE_mtzout',
-                          'SXRBUCC_logfile','SXRBUCC_pdbout','SXRBUCC_mtzout',
-                          'SXRARP_logfile', 'SXRARP_pdbout', 'SXRARP_mtzout']
+    MRBUMP_FILE_KEYS = ['PHASER_logfile', 'PHASER_pdbout', 'PHASER_mtzout',
+                        'REFMAC_logfile', 'REFMAC_pdbout', 'REFMAC_mtzout',
+                        'BUCC_logfile', 'BUCC_pdbout', 'BUCC_mtzout',
+                        'ARP_logfile', 'ARP_pdbout', 'ARP_mtzout',
+                        'SHELXE_logfile', 'SHELXE_pdbout', 'SHELXE_mtzout',
+                        'SXRBUCC_logfile', 'SXRBUCC_pdbout','SXRBUCC_mtzout',
+                        'SXRARP_logfile', 'SXRARP_pdbout', 'SXRARP_mtzout']
     if 'mrbump_results' in optd:
         for r in optd['mrbump_results']:
             for k in MRBUMP_FILE_KEYS:
@@ -67,10 +67,12 @@ def amoptd_fix_path(optd, newroot, i2mock=False):
                     old = r[k]
                     warnings.warn("FIX MRBUMP BUG buccaneer refine.pdb vs refined.pdb")
                     if i2mock:
-                        new = os.path.join(newroot,os.path.basename(old))
-                        if os.path.isfile(old): shutil.copy(old,new)
+                        new = os.path.join(newroot, os.path.basename(old))
+                        if os.path.isfile(old):
+                            shutil.copy(old, new)
                     else:
-                        new = r[k].replace(oldroot,newroot)
+                        new = r[k].replace(oldroot, newroot)
+                    #logger.debug('Changing amopt entry %s from: %s to: %s', k, old, new)
                     r[k] = new
     return optd
 
@@ -207,95 +209,157 @@ def construct_references(optd):
     return (os.linesep*2).join(references_msg)
 
 
-def extract_models(amoptd, sequence=None, single=True, allsame=True):
-    """Extract some models
-    
-    Description
-    -----------
-    Check a directory of pdbs or extract pdb files from a given tar/zip file or directory of pdbs
-    and set the amoptd['models_dir'] entry with the directory of unpacked/validated pdbs
+def extract_and_validate_models(amoptd, sequence=None, single=True, allsame=True):
+    """Extract models given to AMPLE from arguments in the amoptd and validate
+    that they are suitable
+
+    Parameters
+    ----------
+    amoptd : dict
+       AMPLE options dictionary
+    sequence : str
+       single-letter protein sequence - if given a check will be made that all
+       models are of this sequence
+    single : bool
+       if True check each pdb only contains a single model
+    allsame : bool
+       only extract a file if the suffix is in the list
+
     """
 
-    filename = amoptd['models']
+    filepath = amoptd['models']
     models_dir = amoptd['models_dir']
 
-    # If it's already a models_dir, just check it's valid
-    if os.path.isdir(filename):
-        models_dir = filename
-    else:
-        # Here we are extracting from a file
-        if not os.path.isfile(filename):
-            msg = "Cannot find models file: {0}".format(filename)
-            exit_util.exit_error(msg)
-            
-        # we need a models_dir to extract into
-        assert models_dir, "extract_models() needs a models_dir path!"
-        if not os.path.isdir(models_dir):
-            os.mkdir(models_dir)
-        models_dir = models_dir
-        
-        # See what sort of file this is:
-        f, suffix = os.path.splitext(filename)
-        if suffix in ['.gz', '.bz']:
-            f, s2 = os.path.splitext(f)
-            if s2 == '.tar':
-                suffix = s2 + suffix
-        
-        tar_suffixes = ['.tar.gz', '.tgz', '.tar.bz', '.tbz']
-        suffixes = tar_suffixes + ['.zip']
-        if suffix not in suffixes:
-            msg = "Do not know how to extract files from file: {0}\n " \
-                  "Acceptable file types are: {1}".format(filename, suffixes)
-            exit_util.exit_error(msg)
-        if suffix in tar_suffixes:
-            files = extract_tar(filename, models_dir)
-        else:
-            files = extract_zip(filename, models_dir)
+    filenames = None
+    quark_models = False
 
-        # Assume anything with one member is quark decoys
-        if len(files) == 1:
-            quark_filename = 'alldecoy.pdb'
-            f = os.path.basename(files[0])
-            if f != quark_filename:
-                msg = "Only found one member ({0}) in file: {1} " \
-                      "and the name was not {2}\n".format(f, filename, quark_filename)
-                msg += "If this file contains valid QUARK decoys, please email: ccp4@stfc.ac.uk"
-                exit_util.exit_error(msg)
-            # Now extract the quark pdb files from the monolithic file
-            split_quark(files[0], models_dir)
-            # We delete the quark_name file as otherwise we'll try and model it
-            os.unlink(files[0])
-            # If we've got quark models we don't want to modify the side chains as we only have polyalanine so we
-            # set this here - horribly untidy as we should have one place to decide on side chains
-            logger.info('Found QUARK models in file: %s', filename)
-            amoptd['quark_models'] = True
-    
+    if os.path.isfile(filepath):
+        basename = os.path.basename(filepath)
+        if basename in ['result.tar.bz2', 'decoys.tar.gz']:
+            logger.info('Assuming QUARK models in file: %s', filepath)
+            quark_models = True
+            filenames = ['alldecoy.pdb']
+        try:
+            extract_models_from_archive(filepath,
+                                        models_dir,
+                                        suffixes=['.pdb', '.PDB'],
+                                        filenames=filenames)
+        except Exception as e:
+            exit_util.exit_error("Error extracting models from file: {0}\n{1}".format(filepath, e))
+    elif os.path.isdir(filepath):
+        models_dir = filepath
+
+    if quark_models:
+        try:
+            split_quark(models_dir)
+        except Exception as e:
+            exit_util.exit_error("Error splitting QUARK models from file: {0}\n{1}".format(filepath, e))
+        amoptd['quark_models'] = True
+
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
         msg = "Problem importing pdb files - please check the log for more information"
         exit_util.exit_error(msg)
-    
+
     amoptd['models_dir'] = models_dir
     return glob.glob(os.path.join(models_dir, "*.pdb"))
 
 
-def extract_tar(filename, directory, suffixes=['.pdb']):
-    # Extracting tarfile
-    logger.info('Extracting files from tarfile: %s', filename)
+def extract_models_from_archive(archive, models_dir, suffixes=None, filenames=None):
+    """Extract models from file archive into directory models_dir
+
+    Parameters
+    ----------
+    archive : str
+       tar archive to extract from
+    models_dir : str
+       directory to extract files into
+    filenames : list
+       a list of files to extract from the archive
+    suffixes : list
+       only extract a file if the suffix is in the list
+    """
+    if not os.path.isfile(archive):
+        raise RuntimeError("Cannot find models file: {0}".format(archive))
+
+    # we need a models_dir to extract into
+    if not os.path.isdir(models_dir):
+        os.mkdir(models_dir)
+
+    # See what sort of file this is:
+    name, suffix = os.path.splitext(archive)
+    if suffix in ['.gz', '.bz', '.bz2']:
+        name, suffix2 = os.path.splitext(name)
+        if suffix2 == '.tar':
+            suffix = suffix2  + suffix
+
+    tar_suffixes = ['.tar.gz', '.tgz', '.tar.bz', '.tar.bz2', '.tbz']
+    ar_suffixes = tar_suffixes + ['.zip']
+    if suffix not in ar_suffixes:
+        msg = "Do not know how to extract files from file: {0}\n " \
+              "Acceptable file types are: {1}".format(archive, ar_suffixes)
+        raise RuntimeError(msg)
+
+    if suffix in tar_suffixes:
+        files = extract_tar(archive, models_dir, filenames=filenames, suffixes=suffixes)
+    else:
+        files = extract_zip(archive, models_dir)
+    if not files:
+        raise RuntimeError("Could not extract any files from archive: %s" % archive)
+    return
+
+
+def extract_tar(archive, directory=None, filenames=None, suffixes=None):
+    """Extract one or more files from a tar file into a specified directory
+
+    Parameters
+    ----------
+    archive : str
+       tar archive to extract from
+    directory : str
+       directory to extract files into
+    filenames : list
+       a list of files to extract from the archive
+    suffixes : list
+       only extract a file if the suffix is in the list
+
+
+    Returns
+    -------
+    list
+        A list of the extracted files
+    """
+
+    def extract_me(member, filenames, suffixes):
+        """If filenames is given, only extract files in filenames
+        Otherwise, only extract those with given suffixes"""
+        if filenames:
+            if os.path.basename(member.name) in filenames:
+                return True
+        else:
+            if suffixes:
+                if os.path.splitext(member.name)[1] in suffixes:
+                    return True
+            else:
+                return True
+        return False
+
+    if not directory:
+        directory = os.getcwd()
+    if not os.path.isdir(directory):
+        os.mkdir(directory)
+
+    logger.info('Extracting files from tarfile: %s into directory: %s', archive, directory)
     files = []
-    with tarfile.open(filename,'r:*') as tf:
-        memb = tf.getmembers()
-        if not len(memb):
-            msg='Empty archive: {0}'.format(filename)
-            exit_util.exit_error(msg)
-        for m in memb:
-            if os.path.splitext(m.name)[1] in suffixes:
-                # Hack to remove any paths
-                m.name = os.path.basename(m.name)
-                tf.extract(m, path=directory)
-                files.append(os.path.join(directory, m.name))
-    if not len(files):
-        msg='Could not find any files with suffixes {0} in archive: {1}'.format(suffixes, filename)
-        exit_util.exit_error(msg)
+    with tarfile.open(archive, 'r:*') as tf:
+        members = tf.getmembers()
+        if members:
+            for member in members:
+                if extract_me(member, filenames, suffixes):
+                    member.name = os.path.basename(member.name)  # Hack to remove any paths
+                    tf.extract(member, path=directory)
+                    files.append(os.path.abspath(os.path.join(directory, member.name)))
+        else:
+            logger.critical('Empty archive: %s', archive)
     return files
 
 
@@ -303,29 +367,29 @@ def extract_zip(filename, directory, suffixes=['.pdb']):
     # zip file extraction
     logger.info('Extracting files from zipfile: %s', filename)
     if not zipfile.is_zipfile(filename):
-        msg='File is not a valid zip archive: {0}'.format(filename)
+        msg = 'File is not a valid zip archive: {0}'.format(filename)
         exit_util.exit_error(msg)
     zipf = zipfile.ZipFile(filename)
     zif = zipf.infolist()
-    if not len(zif):
+    if not zif:
         msg = 'Empty zip file: {0}'.format(filename)
         exit_util.exit_error(msg)
     files = []
     for f in zif:
         if os.path.splitext(f.filename)[1] in suffixes:
-            # Hack to rewrite name 
+            # Hack to rewrite name
             f.filename = os.path.basename(f.filename)
             zipf.extract(f, path=directory)
             files.append(os.path.join(directory, f.filename))
-    if not len(files):
-        msg = 'Could not find any files with suffixes {0} in zipfile: {1}'.format(suffixes,filename)
+    if not files:
+        msg = 'Could not find any files with suffixes {0} in zipfile: {1}'.format(suffixes, filename)
         exit_util.exit_error(msg)
     return files
 
 
 def find_exe(executable, dirs=None):
     """Find the executable exename.
-    
+
     Parameters
     ----------
     executable : str
@@ -334,46 +398,46 @@ def find_exe(executable, dirs=None):
        Additional directories to search for the location
     """
     logger.debug('Looking for executable: %s', executable)
-    
-    exe_file=None
-    found=False
+
+    exe_file = None
+    found = False
     if is_exe(executable):
-        exe_file=os.path.abspath(executable)
-        found=True
+        exe_file = os.path.abspath(executable)
+        found = True
     else:
         # If the user has given a path we just take the name part
         _, fname = os.path.split(executable)
         if fname:
-            executable=fname
-            
+            executable = fname
+
         # By default we search in the system PATH and add any additional user given paths here
         paths = os.environ["PATH"].split(os.pathsep)
         if dirs:
             paths += dirs
         logger.debug('Checking paths: %s', paths)
-        
+
         for path in paths:
-            exe_file = os.path.abspath(os.path.join(path, executable))   
+            exe_file = os.path.abspath(os.path.join(path, executable))
             if is_exe(exe_file):
                 logger.debug('Found executable %s in directory %s', executable, path)
-                found=True
+                found = True
                 break
-    
+
     if not found:
         raise FileNotFoundError("Cannot find executable: {0}".format(executable))
-    
+
     logger.debug('find_exe found executable: %s', exe_file)
     return exe_file
 
 
-def filename_append(filename=None, astr=None,directory=None, separator="_"):
+def filename_append(filename=None, astr=None, directory=None, separator="_"):
     """Append astr to filename, before the suffix, and return the new filename."""
-    dirname, fname = os.path.split( filename )
-    name, suffix = os.path.splitext( fname )
-    name  =  name + separator + astr + suffix
+    dirname, fname = os.path.split(filename)
+    name, suffix = os.path.splitext(fname)
+    name = name + separator + astr + suffix
     if directory is None:
         directory = dirname
-    return os.path.join( directory, name )
+    return os.path.join(directory, name)
 
 
 def ideal_helices(optd):
@@ -395,7 +459,7 @@ def ideal_helices(optd):
     names = ['polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25',
              'polyala30', 'polyala35', 'polyala40']
     polya_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
-    
+
     ensemble_options = {}
     ensembles_data = []
     pdbs = []
@@ -410,7 +474,7 @@ def ideal_helices(optd):
                                'num_residues': nres,
                                 })
         pdbs.append(pdb)
-        
+
     optd['ensembles'] = pdbs
     optd['ensemble_options'] = ensemble_options
     optd['ensembles_data'] = ensembles_data
@@ -424,7 +488,7 @@ def is_exe(fpath):
     ----------
     fpath : str
        The path to the executable
-    
+
     Returns
     -------
     bool
@@ -532,7 +596,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         if dolog: logger.debug("Logfile is: %s", logfile)
     else:
         logf = tmp_file_name()
-        
+
     if stdin is not None:
         stdinstr = stdin
         stdin = subprocess.PIPE
@@ -611,15 +675,24 @@ def save_amoptd(amoptd):
     return
 
 
-def split_quark(*args):
-    """Split a single PDB with multiple models in individual PDB files
-
-    See Also
-    --------
-    split_models
-
+def split_quark(models_dir):
+    """Given a models_dir containing a single QUARK PDB, split the PDB into constituent
+    models and then delete the original QUARK PDB
     """
-    return split_models(*args)
+    pdbs = glob.glob(os.path.join(models_dir, "*.pdb"))
+    if not len(pdbs) == 1:
+        raise RuntimeError('More then one PDB file was found in QUARK models_dir: {0}'.format(models_dir))
+
+    filepath = pdbs[0]
+    basename = os.path.basename(filepath)
+    quark_filename = 'alldecoy.pdb'
+    if basename != quark_filename:
+        raise RuntimeError('Filename {0} did not match expected QUARK filename: {1}'.format(basename, quark_filename))
+
+    models = split_models(filepath, models_dir)
+    os.unlink(filepath)  # We delete the original quark file as otherwise we'll try and model it
+    logger.info('Found %d QUARK models in file: %s', len(models), filepath)
+    return
 
 
 def split_models(dfile, directory):
@@ -659,17 +732,17 @@ def split_models(dfile, directory):
 
     extracted_models = []
     for i, m in enumerate(smodels):
-        # TODO: Maybe change the name from quark to something a little more general
         fpath = os.path.join(directory, "quark_{0}.pdb".format(i))
         with open(fpath, 'w') as f:
-            for l in m:
-                # TODO: Reconstruct something sensible as from the coordinates on it's all quark-specific
-                if l.startswith("ATOM"):
-                    l = l[:54]+"  1.00  0.00              \n"
-                f.write(l)
+            for line in m:
+                #  Reconstruct something sensible as from the coordinates on it's all quark-specific
+                # and there is no chain ID
+                if line.startswith("ATOM"):
+                    line = line[:21] + 'A' + line[22:54] + "  1.00  0.00              \n"
+                f.write(line)
             extracted_models.append(fpath)
             logger.debug("Wrote: %s", fpath)
-        
+
     return extracted_models
 
 
@@ -708,7 +781,7 @@ def tmp_file_name(delete=True, directory=None, suffix=""):
     tmp1 = t.name
     t.close()
     return tmp1
-        
+
 # ======================================================================
 # Some default string messages that we need during the program to inform
 # the user of certain information

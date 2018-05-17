@@ -75,7 +75,7 @@ def add_general_options(parser=None):
     parser.add_argument('-FREE', metavar='flag for FREE', help='Flag for FREE column in the MTZ file')
     parser.add_argument('-ideal_helices', metavar='True/False', help='Use ideal polyalanine helices to solve structure (8 helices: from 5-40 residues)')
     parser.add_argument('-improve_template', metavar='improve_template', help='Path to a template to improve - NMR, homolog')
-    parser.add_argument('-LGA', metavar='path_to_LGA dir', help=argparse.SUPPRESS) 
+    parser.add_argument('-LGA', metavar='path_to_LGA dir', help=argparse.SUPPRESS)
     parser.add_argument('-make_models', metavar='True/False', help= 'run rosetta modeling, set to False to import pre-made models (required if making models locally default True)')
     parser.add_argument('-max_array_jobs', help='Maximum number of array jobs to run')
     parser.add_argument('-missing_domain', metavar='True/False', help='Modelling a missing domain - requires domain_all_chains_pdb argument')

@@ -20,36 +20,32 @@ class Test(unittest.TestCase):
         shelxe_exe = ample_util.find_exe('shelxe' + ample_util.EXE_EXT)
         pdb = os.path.join(self.testfiles_dir, "1BYZ.pdb")
         mtz = os.path.join(self.testfiles_dir, "1BYZ-cad.mtz")
-        mrPdb = os.path.join(self.testfiles_dir, 
+        mrPdb = os.path.join(self.testfiles_dir,
                             "1BYZ_phaser_loc0_ALL_poly_ala_trunc_0.486615_rad_1_UNMOD.1.pdb")
         mrinfo = shelxe.MRinfo(shelxe_exe, pdb, mtz)
         mrinfo.analyse(mrPdb)
-        
+
         self.assertEqual(mrinfo.originShift,[0.326, 0.19, 0.275])
         # Need MRBUMP to be updated
         #self.assertEqual(mrinfo.MPE,78.5)
         self.assertEqual(mrinfo.wMPE,74.5)
-        
-        os.unlink('shelxe-input.hkl')
-        os.unlink('shelxe-input.ent')
-    
+
+
     def test_shelxe_1D7M(self):
         shelxe_exe = ample_util.find_exe('shelxe' + ample_util.EXE_EXT)
         pdb = os.path.join(self.testfiles_dir, "1D7M.pdb")
         mtz = os.path.join(self.testfiles_dir, "1D7M-cad.mtz")
-        mrPdb = os.path.join(self.testfiles_dir, 
+        mrPdb = os.path.join(self.testfiles_dir,
                             "1D7M_phaser_loc0_ALL_SCWRL_reliable_sidechains_trunc_5.241154_rad_1_UNMOD.1.pdb")
-        
+
         mrinfo = shelxe.MRinfo(shelxe_exe, pdb, mtz)
         mrinfo.analyse(mrPdb)
-        
+
         self.assertEqual(mrinfo.originShift,[-0.0, -0.0, 0.5])
         # Need MRBUMP to be updated
         #self.assertEqual(mrinfo.MPE,65.5)
         self.assertEqual(mrinfo.wMPE,57.4)
-        
-        os.unlink('shelxe-input.hkl')
-        os.unlink('shelxe-input.ent')
-             
+
+
 if __name__ == "__main__":
     unittest.main()
