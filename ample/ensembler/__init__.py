@@ -52,6 +52,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     script_path = os.path.join(work_dir, "submit_ensemble.sh")
     with open(script_path, "w") as job_script:
         job_script.write(ample_util.SCRIPT_HEADER + os.linesep)
+        job_script.write("export CCP4_SCR=${TMPDIR}" + os.linesep) #Added by Ronan after issues on CCP4online server
         job_script.write("ccp4-python -m ample.ensembler -restart_pkl {0}".format(amoptd['results_path']) + os.linesep)
 
     # Make executable
