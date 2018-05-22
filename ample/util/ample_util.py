@@ -141,6 +141,7 @@ def construct_references(optd):
     # =====================================================
     def used_apps(optd):
         """determine which applications were used and return their labels"""
+        from ample.util.ample_util import SPIKER_RMSD, SPICKER_TM
 
         # For now print all AMPLE papers
         labels = ['AMPLE', 'AMPLE_MODELLING', 'AMPLE_COILS', 'AMPLE_CONTACTS', 'CCP4']

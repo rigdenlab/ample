@@ -11,8 +11,8 @@ import shutil
 import sys
 
 from ample.constants import AMPLE_PKL
-from ample.ensembler.constants import  SUBCLUSTER_RADIUS_THRESHOLDS, ALLOWED_SIDE_CHAIN_TREATMENTS, \
-     SPICKER_RMSD, SPICKER_TM, POLYALA, RELIABLE, ALLATOM
+from ample.ensembler.constants import  SUBCLUSTER_RADIUS_THRESHOLDS, SIDE_CHAIN_TREATMENTS, \
+    ALLOWED_SIDE_CHAIN_TREATMENTS, SPICKER_RMSD, SPICKER_TM, POLYALA, RELIABLE, ALLATOM
 from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import contact_util
