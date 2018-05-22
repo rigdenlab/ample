@@ -36,11 +36,11 @@ logger = logging.getLogger(__name__)
 
 class ModelData(object):
     """Class to store model data"""
-    __slots__ = ('model_name', 'structure_name', 'model_fname', 'structure_fname', 
-                 'log_fname', 'tmscore', 'rmsd', 'nr_residues_common', 'gdtts', 
-                 'gdtha', 'maxsub', 'seq_id')
-    
-    def __init__(self, model_name, structure_name, model_fname, structure_fname, log_fname, tmscore, rmsd, nr_residues_common):
+    __slots__ = ('model_name', 'structure_name', 'model_fname', 'structure_fname', 'log_fname', 'tmscore', 'rmsd',
+                 'nr_residues_common', 'gdtts', 'gdtha', 'maxsub', 'seq_id')
+
+    def __init__(self, model_name, structure_name, model_fname, structure_fname, log_fname, tmscore, rmsd,
+                 nr_residues_common):
         self.model_name = model_name
         self.structure_name = structure_name
         self.model_fname = model_fname
@@ -101,13 +101,21 @@ class TMapps(object):
         self.tmp_dir = None
         self.work_dir = os.path.abspath(wdir)
 
-        if 'submit_cluster' in kwargs and kwargs['submit_cluster']:
-            self._qtype = kwargs['submit_qtype']
-        else:
-            self._qtype = "local"
-        self._queue = kwargs['submit_queue'] if 'submit_queue' in kwargs else None
-        self._nproc = kwargs['nproc'] if 'nproc' in kwargs else 1
-        self._max_array_jobs = kwargs['submit_max_array'] if 'submit_max_array' in kwargs else None
+        self._nproc = 1
+        self._qtype = 'local'
+        self._queue = None
+        self._max_array_jobs = None
+
+        if 'nproc' in kwargs:
+            self._nproc = kwargs.pop('nproc')
+        #  if 'submit_cluster' in kwargs:
+        #      self._qtype = kwargs.pop('submit_cluster')
+        #  if 'submit_queue' in kwargs:
+        #      self._queue = kwargs.pop('submit_queue')
+        #  if 'submit_max_array' in kwargs:
+        #      self._max_array_jobs = kwargs.pop('submit_max_array')
+        if len(kwargs) > 0:
+            logger.debug('Ignoring keyword arguments: %s', ' '.join(kwargs.keys()))
 
     def comparison(self, models, structures):
         """
@@ -170,11 +178,10 @@ class TMapps(object):
                 if not os.path.isfile(structure_pdb):
                     logger.warning("Cannot find: %s", structure_pdb)
                 continue
-            
+
         logger.info('Executing TManalysis scripts')
         j = Job(self._qtype)
-        j.submit(job_scripts, nproc=self._nproc, max_array_jobs=self._max_array_jobs, 
-                 queue=self._queue, name="tmscore")
+        j.submit(job_scripts, nproc=self._nproc, max_array_jobs=self._max_array_jobs, queue=self._queue, name="tmscore")
         j.wait(interval=1)
 
         self.entries = []
@@ -212,10 +219,8 @@ class TMapps(object):
             return itertools.izip
 
     def _store(self, model_name, structure_name, model_pdb, structure_pdb, logfile, pt):
-        model = ModelData(
-            model_name, structure_name, model_pdb, structure_pdb, 
-            logfile, pt.tm, pt.rmsd, pt.nr_residues_common
-        )
+        model = ModelData(model_name, structure_name, model_pdb, structure_pdb, logfile, pt.tm, pt.rmsd,
+                          pt.nr_residues_common)
         if hasattr(pt, 'gdtts'):
             model.gdtts = pt.gdtts
         if hasattr(pt, 'gdtha'):
@@ -304,7 +309,7 @@ class TMalign(TMapps):
             structures_to_compare.append(structure)
 
         return self.comparison(models_to_compare, structures_to_compare)
-        
+
 
 class TMscore(TMapps):
     """
@@ -379,8 +384,8 @@ class TMscore(TMapps):
                 model_data.sort(key=operator.itemgetter(0))
 
                 aln_parser = alignment_parser.AlignmentParser()
-                fasta_structure_aln = aln_parser.align_sequences("".join(zip(*fasta_data)[1]),
-                                                                 "".join(zip(*structure_data)[1]))
+                fasta_structure_aln = aln_parser.align_sequences("".join(zip(*fasta_data)[1]), "".join(
+                    zip(*structure_data)[1]))
 
                 to_remove = []
                 _alignment = zip("".join(zip(*model_data)[1]), fasta_structure_aln[1])
@@ -409,8 +414,8 @@ class TMscore(TMapps):
                 model_data = list(self._pdb_info(model))
                 structure_data = list(self._pdb_info(structure))
 
-                alignment = alignment_parser.AlignmentParser().align_sequences("".join(zip(*model_data)[1]),
-                                                                               "".join(zip(*structure_data)[1]))
+                alignment = alignment_parser.AlignmentParser().align_sequences("".join(zip(*model_data)[1]), "".join(
+                    zip(*structure_data)[1]))
                 alignment = zip(alignment[0], alignment[1])
 
                 model_aln = "".join(zip(*alignment)[0])
@@ -475,7 +480,7 @@ class TMscore(TMapps):
         pdb_edit.renumber_residues_gaps(model_pdb, _model_pdb_tmp_stage1, model_gaps)
         pdb_edit.renumber_residues_gaps(structure_pdb, _structure_pdb_tmp_stage1, structure_gaps)
 
-        model_gaps_indices = [i+1 for i, is_gap in enumerate(model_gaps) if is_gap]
+        model_gaps_indices = [i + 1 for i, is_gap in enumerate(model_gaps) if is_gap]
         structure_gaps_indices = [i + 1 for i, is_gap in enumerate(structure_gaps) if is_gap]
 
         pdb_edit.select_residues(_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, delete=structure_gaps_indices)
@@ -488,13 +493,13 @@ class TMscore(TMapps):
         _structure_data = list(self._pdb_info(structure_pdb_ret))
 
         if set(_model_data) != set(_structure_data):
-            msg = "Residues in model and structure non-identical. Affected PDBs {0} - {1}".format(model_name, structure_name)
+            msg = "Residues in model and structure non-identical. Affected PDBs {0} - {1}".format(
+                model_name, structure_name)
             logger.critical(msg)
             raise RuntimeError(msg)
 
-        map(os.unlink, [
-            _model_pdb_tmp_stage1, _model_pdb_tmp_stage2, _structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2
-        ])
+        map(os.unlink,
+            [_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, _structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2])
 
         return model_pdb_ret, structure_pdb_ret
 
@@ -602,7 +607,7 @@ def main():
     if args.debug:
         loglevel = logging.DEBUG
     logging.basicConfig(level=loglevel, format="%(levelname)s: %(message)s")
-    
+
     if not os.path.isdir(args.rundir):
         os.mkdir(args.rundir)
 
@@ -610,7 +615,7 @@ def main():
         args.fastas = [os.path.abspath(m) for m in args.fastas]
     args.models = [os.path.abspath(m) for m in args.models]
     args.structures = [os.path.abspath(m) for m in args.structures]
-    
+
     kwargs = dict(wdir=args.rundir, nproc=args.threads)
     if args.tmalign:
         tmapp = TMalign(args.tmalign, **kwargs)
@@ -621,7 +626,7 @@ def main():
     else:
         raise RuntimeError("You're doomed if you get here!")
 
-    df = pd.DataFrame(tmapp.entries) 
+    df = pd.DataFrame(tmapp.entries)
     df.to_csv(os.path.join(args.rundir, 'tm_results.csv'), index=False)
     logger.info("Final TMscore table:\n\n" + df.to_string(index=False) + "\n")
 
@@ -630,6 +635,7 @@ def main():
         rmtree(tmapp.tmp_dir)
 
     return tmapp.entries
+
 
 if __name__ == "__main__":
     main()
