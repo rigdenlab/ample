@@ -11,6 +11,7 @@ import sys
 # our imports
 from ample.util import ample_util
 from ample.ensembler._ensembler import Cluster
+from ample.ensembler.constants import SPICKER_RMSD
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,7 @@ class Spickerer(object):
         self.spicker_exe = spicker_exe
         self.run_dir = run_dir
         self.results = None
-        self.cluster_method = 'spicker'
+        self.cluster_method = SPICKER_RMSD
         self.score_type = 'rmsd'
         return
 
@@ -64,15 +65,6 @@ class Spickerer(object):
                 raise RuntimeError, msg
             logger.debug("Using score_matrix: {0}".format(score_matrix))
             shutil.copy(score_matrix, os.path.join(self.run_dir, 'score.matrix'))
-
-
-#         elif score_type == 'tm':
-#             # Create file so spicker knows to calculate TM scores
-#             with open('TM.score','w') as f: f.write('\n')
-#         elif score_type == 'rmsd':
-#             pass
-#         else:
-#             raise RuntimeError,"Unknown score_type: {0}".format(score_type)
 
 # read_out - Input file for spicker with coordinates of the CA atoms for each of the PDB structures
 #
@@ -147,7 +139,7 @@ class Spickerer(object):
                 score_matrix=None,
                 nproc=1):
         """Cluster decoys using spicker
-    
+
         Parameters
         ----------
         models : list
@@ -168,12 +160,12 @@ class Spickerer(object):
            The number of processors to use
         score_matrix : str, optional
            The path to the score matrix to be used
-    
+
         Returns
         -------
         list
            A list containing the clusters
-    
+
         Raises
         ------
         RuntimeError
@@ -212,11 +204,11 @@ class Spickerer(object):
         Run spicker to cluster the models
         """
         owd = os.getcwd()
-        if run_dir: 
+        if run_dir:
             self.run_dir = os.path.abspath(run_dir)
-        if not self.run_dir: 
+        if not self.run_dir:
             self.run_dir = os.path.join(owd, 'spicker')
-        if not os.path.isdir(self.run_dir): 
+        if not os.path.isdir(self.run_dir):
             os.mkdir(self.run_dir)
         os.chdir(self.run_dir)
 
@@ -256,7 +248,7 @@ class Spickerer(object):
 
     def process_log(self, logfile=None):
         """Read the spicker str.txt file and return a list of SpickerResults for each cluster.
-        
+
         We use the R_nat value to order the files in the cluster
         """
         if not logfile: logfile = os.path.join(self.run_dir, 'str.txt')
@@ -349,7 +341,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     models = args.models
-    if not os.path.exists(models): 
+    if not os.path.exists(models):
         raise RuntimeError("Cannot find models: {0}".format(models))
 
     if os.path.isdir(models):

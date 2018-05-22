@@ -185,11 +185,12 @@ class Ample(object):
                 # Pickle dictionary so it can be opened by the job to get the parameters
                 ample_util.save_amoptd(optd)
                 script = ensembler.cluster_script(optd)
+                ensembler_timeout = ensembler.get_ensembler_timeout(optd)
                 workers_util.run_scripts(
                     job_scripts=[script],
                     monitor=monitor,
                     nproc=optd['nproc'],
-                    job_time=optd['ensembler_timeout'],
+                    job_time=ensembler_timeout,
                     job_name='ensemble',
                     submit_cluster=optd['submit_cluster'],
                     submit_qtype=optd['submit_qtype'],

@@ -9,7 +9,7 @@ import os
 import traceback
 
 from ample.constants import AMPLE_CONFIG_FILE
-from ample.ensembler.constants import POLYALA, RELIABLE, ALLATOM
+from ample.ensembler.constants import POLYALA, RELIABLE, ALLATOM, SPICKER_TM
 from ample.util import version
 
 try:
@@ -122,7 +122,7 @@ class DebugDict(dict):
 class AMPLEConfigOptions(object):
 
     def __init__(self):
-        
+
         self.d = {} # Can't use defaultdict as need lambda function to return None, which won't pickle
         #self.d = DebugDict(watchkeys=['models'])
         self.cmdline_opts = {}
@@ -161,7 +161,7 @@ class AMPLEConfigOptions(object):
         self.webserver_uri = {
             'shelxe_rebuild_arpwarp': False,  # Need to sort out the ArpWarp licence details
             'shelxe_rebuild_buccaneer': True,
-            'cluster_method': 'spicker_tm',
+            'cluster_method': SPICKER_TM,
             'nproc': 1,
             'purge': True,
             'submit_cluster': True,
@@ -206,7 +206,7 @@ class AMPLEConfigOptions(object):
         Notes
         -----
         Any specific processing of options should be handled in ample/util/options_processor.py/process_options
-        
+
         See Also
         --------
         options_processor

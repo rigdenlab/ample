@@ -155,10 +155,10 @@ def construct_references(optd):
             labels += ['THESEUS']
             if optd['use_scwrl']:
                 labels += ['SCWRL4']
-            elif optd['cluster_method'] in ['spicker', 'spicker_qscore', 'spicker_tmscore']:
-                labels = ['FPC']
+            elif optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
+                labels = ['SPICKER']
             elif optd['cluster_method'] in ['fast_protein_cluster']:
-                labels += ['SPICKER']
+                labels += ['FPC']
 
         # Flags related to Molecular Replacement
         elif optd['do_mr']:
