@@ -31,6 +31,8 @@ _SECTIONS_REFERENCE = {"AMPLE_info": ["ample_version",
 
                        "Databases": ['nr',
                                      'rosetta_db'],
+                       
+                       "Ensembling": [],
 
                        "Executables": ['blast_dir',
                                        'cluster_exe',
@@ -83,6 +85,14 @@ _SECTIONS_REFERENCE = {"AMPLE_info": ["ample_version",
                                  'transmembrane_spanfile',
                                  'truncation_scorefile',
                                  'work_dir'],
+                       
+                       "General": [],
+                       
+                       
+                       "Modelling": [],
+                       
+                       "Restraints": [],
+                       
                        # Data stored in amopt.d but not really part of AMPLE's configuration
                        "No_config": ["benchmark_results",
                                      "ensembles_data",
@@ -171,7 +181,7 @@ class AMPLEConfigOptions(object):
         }
 
     def populate(self, cmdline_opts):
-
+        
         # Convert Namespace to Dictionary
         self.cmdline_opts = cmdline_opts = vars(cmdline_opts)
 

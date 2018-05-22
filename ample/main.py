@@ -56,7 +56,7 @@ class Ample(object):
         args is an option argument that can contain the command-line arguments
         for the program - required for testing.
         """
-        argso = self.process_command_line(args=args)
+        argso = argparse_util.process_command_line(args=args)
 
         self.amopt = amopt = config_util.AMPLEConfigOptions()
         amopt.populate(argso)
@@ -421,32 +421,13 @@ class Ample(object):
         summary = mrbump_util.finalSummary(optd)
         logger.info(summary)
 
-    def process_command_line(self, args=None, contacts=True, modelling=True, mol_rep=True):
-        """Process the command-line.
-        :args: optional argument that can hold the command-line arguments if we
-        have been called from within python for testing
-        """
-        parser = argparse.ArgumentParser(
-            description="AMPLE: Ab initio Modelling of Proteins for moLEcular replacement", prefix_chars="-")
-        argparse_util.add_general_options(parser)
-        argparse_util.add_cluster_submit_options(parser)
-        argparse_util.add_ensembler_options(parser)
-
-        if contacts:
-            argparse_util.add_contact_options(parser)
-        if mol_rep:
-            argparse_util.add_mr_options(parser)
-        if modelling:
-            argparse_util.add_rosetta_options(parser)
-
-        return parser.parse_args(args)
 
     def setup(self, optd):
         """We take and return an ample dictionary as an argument.
 
         This is required because options_processor.process_restart_options Changes what
         optd points at, and this means that if we just use the reference, we end up
-        pointing at the old, obselete dictionary
+        pointing at the old, obsolete dictionary
 
         """
         optd = options_processor.restart_amoptd(optd)

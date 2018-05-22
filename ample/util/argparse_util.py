@@ -217,3 +217,23 @@ def add_ensembler_options(parser=None):
     ensembler_group.add_argument('-truncation_scorefile', help="CSV file containing per residue scores - COLUMN ONE MUST BE RESIDUE INDEX STARTING FROM 1")
     ensembler_group.add_argument('-truncation_scorefile_header', nargs='+', help="column headers to be used to create ensembles")
     return parser
+
+def process_command_line(args=None, contacts=True, modelling=True, mol_rep=True):
+    """Process the command-line for the main AMPLE program.
+    :args: optional argument that can hold the command-line arguments if we
+    have been called from within python for testing
+    """
+    parser = argparse.ArgumentParser(
+        description="AMPLE: Ab initio Modelling of Proteins for moLEcular replacement", prefix_chars="-")
+    add_general_options(parser)
+    add_cluster_submit_options(parser)
+    add_ensembler_options(parser)
+
+    if contacts:
+        add_contact_options(parser)
+    if mol_rep:
+        add_mr_options(parser)
+    if modelling:
+        add_rosetta_options(parser)
+
+    return parser.parse_args(args)

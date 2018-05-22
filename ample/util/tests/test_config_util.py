@@ -218,17 +218,25 @@ class Test(unittest.TestCase):
 nr = {nr}
 rosetta_db = {rosetta_db}
 
+[Ensembling]
+
 [Executables]
 blast_dir = {blast_dir}
 fast_protein_cluster_exe = {fast_protein_cluster_exe}
 
 [Files]
 
+[General]
+
+[Modelling]
+
 [Molecular_Replacement]
 F = None
 FREE = None
 arpwarp_cycles = 10
 ensemble_options = None
+
+[Restraints]
 
 [Unspecified]
 
@@ -239,16 +247,18 @@ ensemble_options = None
 
         # Read in the file from disk
         options._read_config_file(f1.name)
-
+        
         f2 = tempfile.NamedTemporaryFile("w", delete=False)
         f2.close()
 
         # Write back out to disk
         options.write_config_file(config_file=f2.name)
+        
 
         # Read in and make sure the strings are the same
-        with open(f2.name) as f2: output_str = f2.read()
-
+        with open(f2.name) as f2:
+            output_str = f2.read()
+        
         self.assertItemsEqual(output_str, input_str)
         os.unlink(f1.name)
         os.unlink(f2.name)
