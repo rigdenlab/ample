@@ -20,7 +20,7 @@ import shutil
 import sys
 
 from abinitio import AbinitioEnsembler
-from constants import SPICKER_TM
+from ample.ensembler.constants import SPICKER_TM
 from homologs import HomologEnsembler
 from single_model import SingleModelEnsembler
 from ample.util import ample_util
@@ -97,8 +97,8 @@ def create_ensembles(amoptd):
 
     # We need to let the main process know that we have succeeded as this module could be run on a cluster node with no link
     # to the parent process, so we create a file here indicating that we got this far and didn't die from an exception
-    with open(amoptd['ensemble_ok'], 'w') as f:
-        f.write('ok\n')
+    with open(amoptd['ensemble_ok'], 'w') as fh:
+        fh.write('ok\n')
 
     # Delete all intermediate files if we're purging
     if amoptd['purge']:
@@ -505,10 +505,10 @@ def _sweet_spotting(ensembles_zipped_ordered, keys):
             container[e[1][key]].append(e)
         mulleimer = []
         for c in sorted(list(container)):
-            bin = Eimer()
+            bin_ = Eimer()
             for e in container[c]:
-                bin.add(e)
-            mulleimer.extend(bin.mid + bin.low + bin.high)
+                bin_.add(e)
+            mulleimer.extend(bin_.mid + bin_.low + bin_.high)
         return mulleimer
 
     # We need to bin the data here in case we want the cluster number or truncation score key to take priority
@@ -520,7 +520,7 @@ def _sweet_spotting(ensembles_zipped_ordered, keys):
         return magic("truncation_score_key", ensembles_zipped_ordered)
 
     else:
-        bin = Eimer()
+        bin_ = Eimer()
         for ens in ensembles_zipped_ordered:
-            bin.add(ens)
-        return bin.mid + bin.low + bin.high
+            bin_.add(ens)
+        return bin_.mid + bin_.low + bin_.high

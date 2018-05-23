@@ -59,7 +59,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         logger.info('Generating %d clusters using method: %s', num_clusters, cluster_method)
 
         if cluster_method != 'import' and not len(models):
-            raise RuntimeError, "Cannot find any models for ensembling!"
+            raise RuntimeError("Cannot find any models for ensembling!")
 
         # Get the cluster_method_type and cluster_score_type from the cluster_method
         cluster_method_type, cluster_score_type, cluster_exe = self.parse_cluster_method(cluster_method)
@@ -120,7 +120,8 @@ class AbinitioEnsembler(_ensembler.Ensembler):
 
         # List of files for reference
         with open(os.path.join(subcluster_dir, "{0}.list".format(basename)), 'w') as f:
-            for m in cluster_files: f.write(m + "\n")
+            for m in cluster_files:
+                f.write(m + "\n")
             f.write("\n")
 
         cluster_file = self.superpose_models(cluster_files, work_dir=subcluster_dir)
@@ -160,7 +161,6 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         ensemble.subcluster_centroid_model =  os.path.abspath(cluster_files[0])
         ensemble.subcluster_radius_threshold = radius
         ensemble.subcluster_score = cluster_score
-
         ensemble.pdb = ensemble_pdb
 
         return ensemble
@@ -205,7 +205,8 @@ class AbinitioEnsembler(_ensembler.Ensembler):
             logger.info('Processing cluster: %d', cluster.index)
 
             truncate_dir = os.path.join(self.work_dir, "cluster_{0}".format(cluster.index))
-            if not os.path.isdir(truncate_dir): os.mkdir(truncate_dir)
+            if not os.path.isdir(truncate_dir):
+                os.mkdir(truncate_dir)
             os.chdir(truncate_dir)
 
             # Add sidechains using SCWRL here so we only add them to the models we actually use
@@ -323,9 +324,11 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                                       radius_thresholds=None):
 
         # Theseus only works with > 3 residues
-        if truncation.num_residues <= 2: return []
+        if truncation.num_residues <= 2:
+            return []
 
-        if not radius_thresholds: radius_thresholds = self.subcluster_radius_thresholds
+        if not radius_thresholds:
+            radius_thresholds = self.subcluster_radius_thresholds
 
         # Make sure everyting happens in the truncation directory
         owd = os.getcwd()
@@ -361,7 +364,8 @@ class AbinitioEnsembler(_ensembler.Ensembler):
             # Remember this cluster so we don't create duplicate clusters
             previous_clusters.append(cluster_files)
             ensemble = self.ensemble_from_subcluster(cluster_files, radius, truncation, cluster_score=clusterer.cluster_score)
-            if ensemble is None: continue
+            if ensemble is None:
+                continue
             ensembles.append(ensemble)
 
         # back to where we started
@@ -430,6 +434,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
             subclusters.append(cluster_ensemble)
             clusters.append(tuple(cluster_files))  # append as tuple so it is hashable
             radii.append(radius)
-            if cluster_size == len_truncated_models: break
+            if cluster_size == len_truncated_models:
+                break
 
         return subclusters
