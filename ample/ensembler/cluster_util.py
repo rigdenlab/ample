@@ -14,10 +14,10 @@ logger = logging.getLogger(__name__)
 
 def import_cluster(cluster_models):
     """Import a cluster
-    
+
     Parameters
     ----------
-    cluster_models : list, tuple 
+    cluster_models : list, tuple
        A list of models in a single cluster
 
     Returns
@@ -36,7 +36,7 @@ def import_cluster(cluster_models):
 
 def random_cluster(cluster_method, max_cluster_size, models, num_clusters):
     """Cluster decoys using madness
-    
+
     Parameters
     ----------
     cluster_method : str
@@ -63,7 +63,7 @@ def random_cluster(cluster_method, max_cluster_size, models, num_clusters):
     """
     if len(models) <= max_cluster_size + 50: # completely arbitary number
         raise RuntimeError('Cannot randomly cluster so few models')
-    
+
     i = 0
     clusters = []
     while len(clusters) < num_clusters:
@@ -73,15 +73,15 @@ def random_cluster(cluster_method, max_cluster_size, models, num_clusters):
         if cmodels in clusters:
             logger.debug('Found duplicate cluster')
             continue
-        
+
         # Data on the models
         cluster = Cluster()
         cluster.method = cluster_method
         cluster.num_clusters = num_clusters
         cluster.index = i + 1
         cluster.models = list(cmodels) # convert list back to set
-        
+
         clusters.append(cluster)
         i += 1
-        
+
     return clusters

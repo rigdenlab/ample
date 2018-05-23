@@ -11,7 +11,8 @@ import shutil
 import sys
 
 from ample.constants import AMPLE_PKL
-from ample.ensembler.constants import *
+from ample.ensembler.constants import  SUBCLUSTER_RADIUS_THRESHOLDS, SIDE_CHAIN_TREATMENTS, \
+    ALLOWED_SIDE_CHAIN_TREATMENTS, SPICKER_RMSD, SPICKER_TM, POLYALA, RELIABLE, ALLATOM
 from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import contact_util
@@ -27,11 +28,11 @@ logger = logging.getLogger(__name__)
 
 def check_mandatory_options(optd):
     """Check the mandatory options for correctness
-    
+
     Description
     -----------
-    We check there here rather then with argparse as there doesn't seem 
-    to be an easy way to get the logic to work of having overlapping 
+    We check there here rather then with argparse as there doesn't seem
+    to be an easy way to get the logic to work of having overlapping
     required and mutually exclusive options
 
     """
@@ -72,11 +73,11 @@ def check_mandatory_options(optd):
 
 def process_options(optd):
     """Process the initial options from the command-line/ample.ini file to set any additional options.
-    
+
     Description
     -----------
-    This is where we take the options determining the type of run we are undertaking and set any additional 
-    options required based on that runtype. All the major 
+    This is where we take the options determining the type of run we are undertaking and set any additional
+    options required based on that runtype. All the major
     """
     # Path for pickling results
     optd['results_path'] = os.path.join(optd['work_dir'], AMPLE_PKL)
@@ -347,9 +348,9 @@ def process_options(optd):
     #
     # Ensemble options
     #
-    if optd['cluster_method'] in ['spicker', 'spicker_qscore', 'spicker_tm']:
+    if optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
         if not optd['spicker_exe']:
-            if optd['cluster_method'] == 'spicker_tm' and optd['nproc'] > 1:
+            if optd['cluster_method'] == SPICKER_TM and optd['nproc'] > 1:
                 # We need to use the multicore version of SPICKER
                 optd['spicker_exe'] = 'spicker_omp' + ample_util.EXE_EXT
             else:
@@ -480,7 +481,7 @@ def process_restart_options(optd):
     -----------
     For any new command-line options, we update the old dictionary with the new values
     We then go through the new dictionary and set ant of the flags corresponding to the data we find:
-    
+
     if restart.pkl
     - if completed mrbump jobs
         make_frags, make_models, make_ensembles = False
@@ -495,18 +496,18 @@ def process_restart_options(optd):
        make_frags, make_models, make_ensembles = False
        make_mr = True
        - create and run the mrbump jobs - see above
-       
+
        # BElow all same as default
     - if models and no ensembles
       - create ensembles from the models
-    
+
     FLAGS
     make_frags
     make_models
     make_ensembles
     make_mr
     make_benchmark
-    
+
     Notes
     -----
     We return the dictionary as we may need to change it and it seems we can't change the external
@@ -594,7 +595,7 @@ def restart_amoptd(optd):
     -----------
     For any new command-line options, we update the old dictionary with the new values
     We then go through the new dictionary and set ant of the flags corresponding to the data we find:
-    
+
     Notes
     -----
     We return the dictionary as we may need to change it and it seems we can't change the external

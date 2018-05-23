@@ -20,6 +20,7 @@ import shutil
 import sys
 
 from abinitio import AbinitioEnsembler
+from ample.ensembler.constants import SPICKER_TM
 from homologs import HomologEnsembler
 from single_model import SingleModelEnsembler
 from ample.util import ample_util
@@ -33,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for ensembling on a cluster
-    
+
     Parameters
     ----------
     amoptd : dict
@@ -62,7 +63,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
 
 def create_ensembles(amoptd):
     """Create the ensembles using the values in the amoptd dictionary
-    
+
     Parameters
     ----------
     amoptd : dict
@@ -86,12 +87,6 @@ def create_ensembles(amoptd):
 
     models = list([amoptd['single_model']]) if amoptd['single_model_mode'] else amoptd['models']
 
-    #if amoptd['cluster_method'] == 'spicker_tmscore':
-    #    models = reorder_models(models, amoptd['score_matrix_file_list'])
-    #    if not (os.path.isfile(amoptd['score_matrix']) and os.path.isfile(amoptd['score_matrix_file_list'])):
-    #        raise RuntimeError("spicker_tmscore needs a score_matrix and score_matrix_file_list")
-    #    ensembler.score_matrix = amoptd['score_matrix']
-
     # Run ensemble creation
     ensembles = ensembler.generate_ensembles_from_amoptd(models, amoptd)
 
@@ -102,8 +97,8 @@ def create_ensembles(amoptd):
 
     # We need to let the main process know that we have succeeded as this module could be run on a cluster node with no link
     # to the parent process, so we create a file here indicating that we got this far and didn't die from an exception
-    with open(amoptd['ensemble_ok'], 'w') as f:
-        f.write('ok\n')
+    with open(amoptd['ensemble_ok'], 'w') as fh:
+        fh.write('ok\n')
 
     # Delete all intermediate files if we're purging
     if amoptd['purge']:
@@ -113,7 +108,7 @@ def create_ensembles(amoptd):
 
 def ensembler_factory(amoptd):
     """Return an ensembler object for the required ensembles
-    
+
     Parameters
     ----------
     amoptd : dict
@@ -164,7 +159,7 @@ def collate_cluster_data(ensembles_data):
     Returns
     -------
     A dictionary with the collated data
-    
+
     """
 
     clusters = {}  # Loop through all ensemble data objects and build up a data tree
@@ -217,10 +212,10 @@ def collate_cluster_data(ensembles_data):
 
 def cluster_table_data(clusters, cluster_num, side_chain_treatments, header=True):
     """Generate a table containing the cluster data
-    
+
     Parameters
     ----------
-    clusters : list, tuple 
+    clusters : list, tuple
        A list of cluster dictionaries
     cluster_num : int
        The cluster number of interest
@@ -262,7 +257,7 @@ def cluster_table_data(clusters, cluster_num, side_chain_treatments, header=True
 
 def ensemble_summary(ensembles_data):
     """Print a summary of the ensembling process
-    
+
     Parameters
     ----------
     ensembles_data : list, tuple
@@ -304,6 +299,15 @@ def ensemble_summary(ensembles_data):
     return rstr
 
 
+def get_ensembler_timeout(optd, tm_timeout=3600*8):
+    """Set how long the ensembling should run based on the type of job being run"""
+    timeout = optd['ensembler_timeout']
+    if optd['cluster_method'] == SPICKER_TM:
+        if int(timeout) < tm_timeout:
+            timeout = tm_timeout
+    return timeout
+
+
 def import_ensembles(amoptd):
     """Import ensembles using their file paths
 
@@ -311,7 +315,7 @@ def import_ensembles(amoptd):
     ----------
     amoptd : dict
        An AMPLE option dictionary
-    
+
     Returns
     -------
     list
@@ -349,7 +353,7 @@ def import_ensembles(amoptd):
 
 def reorder_models(models, ordered_list_file):
     """Reorder the list of models from a list of models (possibly in a different directory)
-    
+
     Parameters
     ----------
     models : list, tuple
@@ -389,7 +393,7 @@ def set_phaser_rms_from_subcluster_score(optd):
 
 def sort_ensembles(ensemble_pdbs, ensembles_data=None, keys=None, prioritise=True):
     """Sort AMPLE ensemble data.
-    
+
     Parameters
     ----------
     ensemble_pdbs: list, tuple
@@ -400,12 +404,12 @@ def sort_ensembles(ensemble_pdbs, ensembles_data=None, keys=None, prioritise=Tru
        A list of keys in ensembles_data by which we sort. The key order must be high > middle > low!
     prioritise : bool, optional
        Favour ensembles in truncation level 20-50% [default: True]
-    
+
     Returns
     -------
     list
        A sorted list of the ensemble pdb file paths
-    
+
     Raises
     ------
     RuntimeError
@@ -501,10 +505,10 @@ def _sweet_spotting(ensembles_zipped_ordered, keys):
             container[e[1][key]].append(e)
         mulleimer = []
         for c in sorted(list(container)):
-            bin = Eimer()
+            bin_ = Eimer()
             for e in container[c]:
-                bin.add(e)
-            mulleimer.extend(bin.mid + bin.low + bin.high)
+                bin_.add(e)
+            mulleimer.extend(bin_.mid + bin_.low + bin_.high)
         return mulleimer
 
     # We need to bin the data here in case we want the cluster number or truncation score key to take priority
@@ -516,7 +520,7 @@ def _sweet_spotting(ensembles_zipped_ordered, keys):
         return magic("truncation_score_key", ensembles_zipped_ordered)
 
     else:
-        bin = Eimer()
+        bin_ = Eimer()
         for ens in ensembles_zipped_ordered:
-            bin.add(ens)
-        return bin.mid + bin.low + bin.high
+            bin_.add(ens)
+        return bin_.mid + bin_.low + bin_.high

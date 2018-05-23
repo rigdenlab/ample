@@ -77,7 +77,7 @@ def amoptd_fix_path(optd, newroot, i2mock=False):
     return optd
 
 
-def construct_references(optd):
+def construct_references(optd, write_file=True):
     """Construct the reference list
 
     Description
@@ -141,6 +141,7 @@ def construct_references(optd):
     # =====================================================
     def used_apps(optd):
         """determine which applications were used and return their labels"""
+        from ample.ensembler.constants import SPICKER_RMSD, SPICKER_TM
 
         # For now print all AMPLE papers
         labels = ['AMPLE', 'AMPLE_MODELLING', 'AMPLE_COILS', 'AMPLE_CONTACTS', 'CCP4']
@@ -155,10 +156,10 @@ def construct_references(optd):
             labels += ['THESEUS']
             if optd['use_scwrl']:
                 labels += ['SCWRL4']
-            elif optd['cluster_method'] in ['spicker', 'spicker_qscore', 'spicker_tmscore']:
-                labels = ['FPC']
+            elif optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
+                labels = ['SPICKER']
             elif optd['cluster_method'] in ['fast_protein_cluster']:
-                labels += ['SPICKER']
+                labels += ['FPC']
 
         # Flags related to Molecular Replacement
         elif optd['do_mr']:
@@ -191,9 +192,10 @@ def construct_references(optd):
                    "title = {{{{{title}}}}},{sep}volume = {{{volume}}},{sep}year = {{{year}}},{sep}}}{sep}"
     references_bib = [template_bib.format(sep=os.linesep, **a) for a in articles]
 
-    ref_fname = os.path.join(optd['work_dir'], optd['name']+".bib")
-    with open(ref_fname, "w") as fhout:
-        fhout.write(os.linesep.join(references_bib))
+    if write_file:
+        ref_fname = os.path.join(optd['work_dir'], optd['name']+".bib")
+        with open(ref_fname, "w") as fhout:
+            fhout.write(os.linesep.join(references_bib))
 
     # ==========================================================
     # Somewhat a template of how we want to display each article
