@@ -99,7 +99,10 @@ class TMapps(object):
         self.executable = executable
         self.method = method.lower()
         self.tmp_dir = None
-        self.work_dir = os.path.abspath(wdir)
+        if wdir:
+            self.work_dir = os.path.abspath(wdir)
+        else:
+            self.work_dir = os.getcwd()
 
         self._nproc = 1
         self._qtype = 'local'
@@ -388,10 +391,11 @@ class TMscore(TMapps):
                     zip(*structure_data)[1]))
 
                 to_remove = []
-                _alignment = zip("".join(zip(*model_data)[1]), fasta_structure_aln[1])
+                _alignment = zip(fasta_structure_aln[0], fasta_structure_aln[1])
                 for i, (model_res, structure_res) in enumerate(_alignment):
                     if model_res == "-" and structure_res == "-":
                         to_remove.append(i)
+
                 for i in reversed(to_remove):
                     _alignment.pop(i)
 
