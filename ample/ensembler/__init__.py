@@ -99,10 +99,6 @@ def create_ensembles(amoptd):
     # to the parent process, so we create a file here indicating that we got this far and didn't die from an exception
     with open(amoptd['ensemble_ok'], 'w') as fh:
         fh.write('ok\n')
-
-    # Delete all intermediate files if we're purging
-    if amoptd['purge'] > 0:
-        shutil.rmtree(ensembler.work_dir)
     return
 
 
