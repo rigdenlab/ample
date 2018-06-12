@@ -9,9 +9,9 @@ import os
 import shutil
 import sys
 
-import _ensembler
-import truncation_util
-from constants import SIDE_CHAIN_TREATMENTS
+from ample.ensembler import _ensembler
+from ample.ensembler import truncation_util
+from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util
 from ample.util import pdb_edit
 
@@ -111,18 +111,18 @@ class HomologEnsembler(_ensembler.Ensembler):
 
         # Inherit all functions from Parent Ensembler
         super(HomologEnsembler, self).__init__(**kwargs)
+        self.truncator = None
         
         return
     
     def generate_ensembles(self,
                            models,
                            alignment_file=None,
-                           ensembles_directory=None,
                            homolog_aligner=None,
-                           nproc=None,
                            percent_truncation=None,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS,
-                           truncation_method=None):
+                           truncation_method=None,
+                           **kwargs):
         
         if not percent_truncation:
             percent_truncation = self.percent_truncation
@@ -139,7 +139,8 @@ class HomologEnsembler(_ensembler.Ensembler):
         logger.info('Ensembling models in directory: %s', self.work_dir)
     
         # Create final ensembles directory
-        if not os.path.isdir(self.ensembles_directory): os.mkdir(self.ensembles_directory)
+        if not os.path.isdir(self.ensembles_directory):
+            os.mkdir(self.ensembles_directory)
         
         # standardise all the models
         std_models_dir = os.path.join(self.work_dir, "std_models")

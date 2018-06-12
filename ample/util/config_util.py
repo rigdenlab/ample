@@ -173,7 +173,7 @@ class AMPLEConfigOptions(object):
             'shelxe_rebuild_buccaneer': True,
             'cluster_method': SPICKER_TM,
             'nproc': 1,
-            'purge': True,
+            'purge': 1,
             'submit_cluster': True,
             'submit_max_array': 10,
             'submit_qtype': "SGE",

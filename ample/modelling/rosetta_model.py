@@ -106,14 +106,14 @@ class RosettaModel(object):
     Class to run Rosetta modelling
     """
 
-    def __init__(self,optd=None,rosetta_dir=None):
-
+    def __init__(self, optd=None, rosetta_dir=None):
+        
         self.debug=None
-
+        
         self.nproc = None
         self.nmodels = None
-        self.run_dir = None # Where the modelling happens
-        self.work_dir = None # Main AMPLE directory
+        self.work_dir = None # Where the modelling happens - can be deleted on exit
+        self.ample_dir = None # Main AMPLE directory
         self.models_dir = None
         self.rosetta_dir = None
         self.rosetta_bin = None
@@ -166,7 +166,10 @@ class RosettaModel(object):
         self.disulfide_constraints_file = None
         
         self.set_paths(optd=optd, rosetta_dir=rosetta_dir)
-        if optd: self.set_from_dict(optd)
+        if optd:
+            self.set_from_dict(optd)
+        if not os.path.isdir(self.work_dir):
+            os.mkdir(self.work_dir)
         return
 
     def ab_initio_cmd(self, wdir, nstruct, seed):
@@ -262,11 +265,7 @@ class RosettaModel(object):
     def ab_initio_model(self, monitor):
         # Remember starting directory
         owd = os.getcwd()
-        
-        # Make the directories and put the run scripts in them
-        self.run_dir = os.path.join(self.work_dir, 'modelling')
-        os.mkdir(self.run_dir)
-        os.chdir(self.run_dir)
+        os.chdir(self.work_dir)
         
         # Add submit_cluster, submit_queue, submit_qtype
         if not os.path.isdir(self.models_dir):
@@ -274,7 +273,7 @@ class RosettaModel(object):
         if self.transmembrane_old:
             self.tm_make_files()
         elif self.transmembrane:
-            self.tm2_make_patch(self.run_dir)
+            self.tm2_make_patch(self.work_dir)
     
         # Split jobs onto separate processors - 1 for cluster, as many as will fit for desktop
         if self.submit_cluster:
@@ -291,7 +290,7 @@ class RosettaModel(object):
         for i, njobs in enumerate(jobs_per_proc):
             if njobs < 1:
                 continue
-            d = os.path.join(self.run_dir, "job_{0}".format(i))
+            d = os.path.join(self.work_dir, "job_{0}".format(i))
             os.mkdir(d)
             dir_list.append(d)
             
@@ -308,7 +307,7 @@ class RosettaModel(object):
         if not success:
             msg = "Error running ROSETTA in directory: {0}." + os.linesep \
                   + "Please check the log files for more information."
-            raise RuntimeError(msg.format(self.run_dir))
+            raise RuntimeError(msg.format(self.work_dir))
 
         # Copy the models into the models directory - need to rename them accordingly
         pdbs = []
@@ -320,13 +319,13 @@ class RosettaModel(object):
             msg = "No models created after modelling!" + os.linesep \
                   + "Please check the log files in the directory {0} " \
                   + "for more information."
-            raise RuntimeError(msg.format(self.run_dir))
+            raise RuntimeError(msg.format(self.work_dir))
 
         if len(pdbs) != self.nmodels:
             msg = "Expected to create {0} models but found {1}." + os.linesep \
                   + "Please check the log files in the directory {2} " \
                     "for more information."
-            raise RuntimeError(msg.format(self.nmodels, len(pdbs), self.run_dir))
+            raise RuntimeError(msg.format(self.nmodels, len(pdbs), self.work_dir))
 
         # Copy files into the models directory
         pdbs_moved = []
@@ -362,11 +361,10 @@ class RosettaModel(object):
         separate from object as it's currently used by the NMR stuff - which is in dire need of refactoring.
 
         """
-        assert self.rosetta_bin and os.path.isdir(self.rosetta_bin)
+        assert(self.rosetta_bin and os.path.isdir(self.rosetta_bin))
         binaries = glob.glob(os.path.join(self.rosetta_bin, "{0}.*".format(name)))
         if not len(binaries):
             return False
-
         # Could check for shortest - for now just return the first
         binary = os.path.abspath(binaries[0])
         if os.path.isfile(binary):
@@ -446,7 +444,7 @@ class RosettaModel(object):
         # It seems that the script can't tolerate "-" in the directory name leading to the fasta file,
         # so we need to copy the fasta file into the fragments directory
         fasta = os.path.split(self.fasta)[1]
-        shutil.copy2(self.fasta, os.path.join(self.fragments_directory,fasta))
+        shutil.copy2(self.fasta, os.path.join(self.fragments_directory, fasta))
         
         script = os.path.join(self.fragments_directory,"mkfrags.sh")
         with open(script,'w') as f:
@@ -611,8 +609,10 @@ class RosettaModel(object):
         return cmd
     
     def nmr_remodel(self, models, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
-        if remodel_fasta: assert os.path.isfile(remodel_fasta), "Cannot find remodel_fasta: {0}".format(remodel_fasta)
-        if ntimes: assert type(ntimes) is int, "ntimes is not an int: {0}".format(ntimes)
+        if remodel_fasta:
+            assert(os.path.isfile(remodel_fasta), "Cannot find remodel_fasta: {0}".format(remodel_fasta))
+        if ntimes:
+            assert(type(ntimes) is int, "ntimes is not an int: {0}".format(ntimes))
         num_nmr_models = len(models)
         if not ntimes: ntimes = 1000 / num_nmr_models
         nmr_process = int(ntimes)
@@ -763,7 +763,8 @@ class RosettaModel(object):
 
         # Common variables
         self.fasta = optd['fasta']
-        self.work_dir = optd['work_dir']
+        self.ample_dir = optd['work_dir']
+        self.work_dir = os.path.join(self.ample_dir, 'modelling')
         self.name = optd['name']
         #self.benchmark=optd['benchmark_mode']
 
@@ -773,7 +774,7 @@ class RosettaModel(object):
 
         # Fragment variables
         self.use_homs = optd['use_homs']
-        self.fragments_directory = os.path.join(optd['work_dir'],"rosetta_fragments")
+        self.fragments_directory = os.path.join(self.work_dir, "rosetta_fragments")
 
         if optd['transmembrane_old']:
             self.transmembrane_old = True
@@ -836,7 +837,7 @@ class RosettaModel(object):
             self.nmodels = optd['nmodels']
             # Set models directory
             if not optd['models_dir']:
-                self.models_dir = os.path.join(optd['work_dir'], "models")
+                self.models_dir = os.path.join(self.ample_dir, "models")
             else:
                 self.models_dir = optd['models_dir']
 
@@ -1030,12 +1031,12 @@ class RosettaModel(object):
         os.chdir(owd)
         return
     
-    def tm2_make_patch(self, run_dir):
+    def tm2_make_patch(self, work_dir):
         wts_str = """fa_atr = 0.8
 fa_rep = 0.8
 fa_sol = 0.0
 """
-        self.tm_patch_file = os.path.abspath(os.path.join(run_dir,'membrane.wts'))
+        self.tm_patch_file = os.path.abspath(os.path.join(work_dir,'membrane.wts'))
         with open(self.tm_patch_file,'w') as w: w.write(wts_str)
         return
 

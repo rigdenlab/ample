@@ -34,5 +34,6 @@ EXAMPLE_DIRS = [
 # Any args that are to be added/updated
 EXTRA_ARGS = [ 
     [ '-nproc',1], # Each test case needs to be run on a single processor
-    #[ '-do_mr','False'],
+    [ '-do_mr','False'],
+    [ '-purge','2'],
 ]

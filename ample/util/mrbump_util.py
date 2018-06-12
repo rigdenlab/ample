@@ -210,7 +210,8 @@ class ResultsSummary(object):
     def extractResults(self, mrbump_dir, purge=False):
         if not mrbump_dir or not os.path.isdir(mrbump_dir): raise RuntimeError,"Cannot find mrbump_dir: {0}".format(mrbump_dir)
         old_results = {}
-        if purge: old_results = self._extractOld(mrbump_dir)
+        if purge:
+            old_results = self._extractOld(mrbump_dir)
         self._extractResults(mrbump_dir, archived_ensembles=old_results.keys())
         
         if purge:

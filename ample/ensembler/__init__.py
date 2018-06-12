@@ -101,7 +101,7 @@ def create_ensembles(amoptd):
         fh.write('ok\n')
 
     # Delete all intermediate files if we're purging
-    if amoptd['purge']:
+    if amoptd['purge'] > 0:
         shutil.rmtree(ensembler.work_dir)
     return
 
