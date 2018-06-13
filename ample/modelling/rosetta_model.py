@@ -113,7 +113,7 @@ class RosettaModel(object):
         self.nproc = None
         self.nmodels = None
         self.work_dir = None # Where the modelling happens - can be deleted on exit
-        self.ample_dir = None # Main AMPLE directory
+        self.ample_dir = None
         self.models_dir = None
         self.rosetta_dir = None
         self.rosetta_bin = None
@@ -612,7 +612,7 @@ class RosettaModel(object):
         if remodel_fasta:
             assert(os.path.isfile(remodel_fasta), "Cannot find remodel_fasta: {0}".format(remodel_fasta))
         if ntimes:
-            assert(type(ntimes) is int, "ntimes is not an int: {0}".format(ntimes))
+            assert(isinstance(ntimes, int), "ntimes is not an int: {0}".format(ntimes))
         num_nmr_models = len(models)
         if not ntimes: ntimes = 1000 / num_nmr_models
         nmr_process = int(ntimes)
