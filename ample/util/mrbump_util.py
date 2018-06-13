@@ -59,7 +59,8 @@ class ResultsSummary(object):
         
         # Extract mrbump results from a pickled results file if given one.
         if results_pkl and os.path.isfile(results_pkl):
-            with open(results_pkl) as f: resd = cPickle.load(f)
+            with open(results_pkl) as f:
+                resd = cPickle.load(f)
             mkey = 'mrbump_results'
             if mkey in resd and len(resd[mkey]):
                 self.results = resd[mkey]
@@ -195,29 +196,30 @@ class ResultsSummary(object):
         
         return d
     
-    def _extractOld(self, mrbump_dir):
+    def _extractPurged(self, mrbump_dir):
         """Recreate a list of the jobs that have been purged"""
-        old_results = {}
+        purged_results = {}
         self.pdir = os.path.join(mrbump_dir, self.pname)
-        if not os.path.isdir(self.pdir): os.mkdir(self.pdir)
+        if not os.path.isdir(self.pdir):
+            os.mkdir(self.pdir)
         pkls = glob.glob(os.path.join(self.pdir, "*.pkl"))
         if pkls:
             for p in pkls:
-                with open(p) as f: d = cPickle.load(f)
-                old_results[d['ensemble_name']] = d   
-        return old_results
+                with open(p) as f:
+                    d = cPickle.load(f)
+                    purged_results[d['ensemble_name']]
+        return purged_results
 
     def extractResults(self, mrbump_dir, purge=False):
-        if not mrbump_dir or not os.path.isdir(mrbump_dir): raise RuntimeError,"Cannot find mrbump_dir: {0}".format(mrbump_dir)
-        old_results = {}
+        if not mrbump_dir or not os.path.isdir(mrbump_dir):
+            raise RuntimeError("Cannot find mrbump_dir: {0}".format(mrbump_dir))
+        purged_results = {}
         if purge:
-            old_results = self._extractOld(mrbump_dir)
-        self._extractResults(mrbump_dir, archived_ensembles=old_results.keys())
-        
+            purged_results = self._extractPurged(mrbump_dir)
+        self._extractResults(mrbump_dir, archived_ensembles=purged_results.keys())
         if purge:
             self._purgeFailed()
-            self.results += old_results.values()
-            
+            self.results += purged_results.values()
         self.sortResults()
         self.success = any([jobSucceeded(r) for r in self.results])
         return self.results
@@ -585,7 +587,8 @@ class ResultsSummary(object):
                                   'pdb' : result[pdb_key],
                                   'mtz' : result[mtz_key] })
                     break # Stop as soon as we find one
-        if len(topf): return topf
+        if len(topf):
+            return topf
             
 def _resultsKeys(results):
     keys = []

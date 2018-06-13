@@ -8,7 +8,6 @@ import cPickle
 import glob
 import logging
 import os
-import shutil
 import subprocess
 import sys
 import tarfile
@@ -34,7 +33,7 @@ class FileNotFoundError(Exception): pass
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-def amoptd_fix_path(optd, newroot, i2mock=False):
+def amoptd_fix_path(optd, newroot):
     """Update all the paths in an AMPLE results dictionary to be rooted at newroot
 
     Parameters
@@ -66,13 +65,8 @@ def amoptd_fix_path(optd, newroot, i2mock=False):
                 if k in r and isinstance(r[k], str):
                     old = r[k]
                     warnings.warn("FIX MRBUMP BUG buccaneer refine.pdb vs refined.pdb")
-                    if i2mock:
-                        new = os.path.join(newroot, os.path.basename(old))
-                        if os.path.isfile(old):
-                            shutil.copy(old, new)
-                    else:
-                        new = r[k].replace(oldroot, newroot)
-                    #logger.debug('Changing amopt entry %s from: %s to: %s', k, old, new)
+                    new = r[k].replace(oldroot, newroot)
+                    #logger.info('Changing amopt entry %s from: %s to: %s', k, old, new)
                     r[k] = new
     return optd
 
