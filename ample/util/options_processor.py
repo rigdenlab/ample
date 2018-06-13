@@ -469,7 +469,18 @@ def process_options(optd):
         exit_util.exit_error(msg)
 
     if optd['purge']:
-        logger.info('*** Purge mode specified - all intermediate files will be deleted ***')
+        purge = optd['purge']
+        # Need to handle ackward compatibility where purge was boolean
+        if purge is True:
+            purge = 1
+        elif purge is False:
+            purge = 0
+        try:
+            optd['purge'] = int(purge)
+        except ValueError:
+            msg = 'Purge must be specified as an integer, got: {}'.format(optd['purge'])
+            exit_util.exit_error(msg)
+        logger.info('*** Purge mode level %d specified - intermediate files will be deleted ***', optd['purge'])
 
     return
 
@@ -585,6 +596,7 @@ def process_rosetta_options(optd):
         except Exception, e:
             msg = "Error setting ROSETTA options: {0}".format(e)
             exit_util.exit_error(msg)
+        optd['modelling_workdir'] = rosetta_modeller.work_dir
     return rosetta_modeller
 
 

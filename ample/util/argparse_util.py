@@ -89,7 +89,7 @@ def add_general_options(parser=None):
     parser.add_argument('-nmr_process', type=int, help='number of times to process the NMR models')
     parser.add_argument('-nmr_remodel', metavar='True/False', help='Remodel the NMR structures')
     parser.add_argument('-nmr_remodel_fasta', help='The FASTA sequence to be used for remodelling the NMR ensemble if different from the default FASTA sequence')
-    parser.add_argument('-purge', metavar='True/False', help='Delete all intermediate files and failed MRBUMP results')
+    parser.add_argument('-purge', metavar='purge_level', choices=[0, 1, 2], help='Delete intermediate files and failed MRBUMP results: 0 - None, 1 - Some, 2 - All possible')
     parser.add_argument('-psipred_ss2', metavar='PSIPRED_FILE', help='Psipred secondary structure prediction file')
     parser.add_argument('-quick_mode', metavar='True/False', help='Preset options to run quickly, but less thoroughly')
     parser.add_argument('-restart_pkl', help='Rerun a job using the pickled ample dictionary')
