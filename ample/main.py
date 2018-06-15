@@ -167,7 +167,7 @@ class Ample(object):
         """Remove directories based on purge level
         """
         purge_level = optd['purge']
-        to_remove = {1 : ['modelling_workdir', 'ensemble_workdir'],
+        to_remove = {1 : ['modelling_workdir', 'ensembles_workdir'],
                      2 : ['models_dir', 'ensembles_directory', 'contacts_dir']}
         for level in to_remove.keys():
             if purge_level >= level:
