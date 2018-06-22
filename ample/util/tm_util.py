@@ -387,8 +387,9 @@ class TMscore(TMapps):
                 model_data.sort(key=operator.itemgetter(0))
 
                 aln_parser = alignment_parser.AlignmentParser()
-                fasta_structure_aln = aln_parser.align_sequences("".join(zip(*fasta_data)[1]), "".join(
-                    zip(*structure_data)[1]))
+                fasta_structure_aln = aln_parser.align_sequences(
+                    "".join(zip(*model_data)[1]), "".join(zip(*structure_data)[1])
+                )
 
                 to_remove = []
                 _alignment = zip(fasta_structure_aln[0], fasta_structure_aln[1])
@@ -418,8 +419,9 @@ class TMscore(TMapps):
                 model_data = list(self._pdb_info(model))
                 structure_data = list(self._pdb_info(structure))
 
-                alignment = alignment_parser.AlignmentParser().align_sequences("".join(zip(*model_data)[1]), "".join(
-                    zip(*structure_data)[1]))
+                alignment = alignment_parser.AlignmentParser().align_sequences(
+                    "".join(zip(*model_data)[1]), "".join(zip(*structure_data)[1])
+                )
                 alignment = zip(alignment[0], alignment[1])
 
                 model_aln = "".join(zip(*alignment)[0])
@@ -480,7 +482,7 @@ class TMscore(TMapps):
 
         model_gaps = self._find_gaps(model_aln)
         structure_gaps = self._find_gaps(structure_aln)
-
+        
         pdb_edit.renumber_residues_gaps(model_pdb, _model_pdb_tmp_stage1, model_gaps)
         pdb_edit.renumber_residues_gaps(structure_pdb, _structure_pdb_tmp_stage1, structure_gaps)
 
@@ -496,14 +498,20 @@ class TMscore(TMapps):
         _model_data = list(self._pdb_info(model_pdb_ret))
         _structure_data = list(self._pdb_info(structure_pdb_ret))
 
-        if set(_model_data) != set(_structure_data):
-            msg = "Residues in model and structure non-identical. Affected PDBs {0} - {1}".format(
-                model_name, structure_name)
-            logger.critical(msg)
-            raise RuntimeError(msg)
+        # Alignment not always identical, let's aim for 90%
+        identical = set(_model_data).intersection(set(_structure_data))
+        if len(identical) / float(len(_model_data)) < 0.90:
+            msg = "Differing residues in model and structure. Affected PDBs %s - %s"
+            raise RuntimeError(msg % (model_name, structure_name))
 
-        map(os.unlink,
-            [_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, _structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2])
+        files = [_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, _structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2]
+        for i in range(4):
+            os.unlink(files[i])
+
+        if not os.path.isfile(model_pdb_ret):
+            raise RuntimeError("Modified model %s does not exist!" % model_pdb_ret)
+        if not os.path.isfile(structure_pdb_ret):
+            raise RuntimeError("Modified reference %s does not exist!" % structure_pdb_ret)
 
         return model_pdb_ret, structure_pdb_ret
 

@@ -1058,9 +1058,14 @@ def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
             for idx, is_gap in enumerate(gaps):
                 if is_gap:
                     continue
-                residue_group = chain.residue_groups()[resseq]
-                residue_group.resseq = idx + start
-                resseq += 1
+                try:
+                    residue_group = chain.residue_groups()[resseq]
+                except:
+                    pass 
+                else:
+                    residue_group.resseq = idx + start
+                finally:
+                    resseq += 1
 
     with open(pdbout, 'w') as f:
         f.write("REMARK Original file:\n")
