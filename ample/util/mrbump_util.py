@@ -29,6 +29,7 @@ import parse_phaser
 
 TOP_KEEP = 3 # How many of the top shelxe/phaser results to keep for the gui
 MRBUMP_RUNTIME = 172800 # allow 48 hours for each mrbump job
+SHELXE_MAX_PERMITTED_RESOLUTION = 3.0
 
 # We need a null logger so that we can be used without requiring a logger
 class NullHandler(logging.Handler):

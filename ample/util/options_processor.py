@@ -70,6 +70,27 @@ def check_mandatory_options(optd):
 
     return
 
+def process_benchmark_options(optd):
+    # Benchmark Mode
+    if optd['native_pdb'] or optd['benchmark_mode']:
+        if optd['native_pdb'] and not os.path.isfile(optd['native_pdb']):
+            msg = "Cannot find crystal structure PDB: {0}".format(optd['native_pdb'])
+            exit_util.exit_error(msg)
+        optd['benchmark_mode'] = True
+        optd['benchmark_dir'] = os.path.join(optd['work_dir'], "benchmark")
+        logger.info("*** AMPLE running in benchmark mode ***")
+        # See if we can find TMscore
+        if not optd['tmscore_exe']:
+            optd['tmscore_exe'] = 'TMscore' + ample_util.EXE_EXT
+        try:
+            optd['tmscore_exe'] = ample_util.find_exe(optd['tmscore_exe'])
+            optd['have_tmscore'] = True
+        except ample_util.FileNotFoundError:
+            logger.debug("Cannot find TMScore executable: {0}".format(optd['tmscore_exe']))
+            # No TMscore so try and find Maxcluster
+            optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
+            optd['have_tmscore'] = False
+            
 
 def process_options(optd):
     """Process the initial options from the command-line/ample.ini file to set any additional options.
@@ -81,12 +102,7 @@ def process_options(optd):
     """
     # Path for pickling results
     optd['results_path'] = os.path.join(optd['work_dir'], AMPLE_PKL)
-
-    ###############################################################################
-    #
     # FASTA processing
-    #
-    ###############################################################################
     # Check to see if mr_sequence was given and if not mr_sequence defaults to fasta
     if optd['mr_sequence'] != None:
         if not (os.path.exists(str(optd['mr_sequence']))):
@@ -94,50 +110,61 @@ def process_options(optd):
             exit_util.exit_error(msg)
     else:
         optd['mr_sequence'] = optd['fasta']
-
     # Process the fasta file and run all the checks on the sequence
     sequence_util.process_fasta(optd, canonicalise=True)
-
-    #
+    
     # Not sure if name actually required - see make_fragments.pl
-    #
     if optd['name'] and len(optd['name']) != 4:
         msg = '-name argument is the wrong length, use 4 chars eg ABCD'
         exit_util.exit_error(msg)
-
     # Underscore required by rosetta make_fragments.pl
     optd['name'] += '_'
-
-    ###############################################################################
-    #
-    # Contact file processing
-    #
-    ###############################################################################
-
-    #if False:
-    if optd['contact_file'] or optd['bbcontacts_file'] or not optd["no_contact_prediction"]:
-        contact_util.ContactUtil.check_options(optd)
-        optd['use_contacts'] = True
-    ###############################################################################
-    #
     # MTZ file processing
-    #
-    ###############################################################################
     try:
         mtz_util.processReflectionFile(optd)
     except Exception, e:
         msg = "Error processing reflection file: {0}".format(e)
         exit_util.exit_error(msg, sys.exc_info()[2])
+    # Contact file processing
+    if optd['contact_file'] or optd['bbcontacts_file'] or not optd["no_contact_prediction"]:
+        contact_util.ContactUtil.check_options(optd)
+        optd['use_contacts'] = True
+    process_modelling_options(optd)
+    # Misc options
+    if optd['missing_domain']:
+        logger.info('Processing missing domain\n')
+        if not os.path.exists(optd['domain_all_chains_pdb']):
+            msg = 'Cannot find file domain_all_chains_pdb: {0}'.format(optd['domain_all_chains_pdb'])
+            exit_util.exit_error(msg)
+    process_mr_options(optd)
+    process_benchmark_options(optd)
 
-    ###############################################################################
-    #
-    # Modelling and ensemble options
-    #
-    ###############################################################################
+    logger.info('Running on %d processors' % optd['nproc'])
+    # cluster queueing
+    if optd['submit_qtype']:
+        optd['submit_qtype'] = optd['submit_qtype'].upper()
+    if optd['submit_cluster'] and not optd['submit_qtype']:
+        msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
+        exit_util.exit_error(msg)
+    if optd['purge']:
+        purge = optd['purge']
+        # Need to handle ackward compatibility where purge was boolean
+        if purge is True:
+            purge = 1
+        elif purge is False:
+            purge = 0
+        try:
+            optd['purge'] = int(purge)
+        except ValueError:
+            msg = 'Purge must be specified as an integer, got: {}'.format(optd['purge'])
+            exit_util.exit_error(msg)
+        logger.info('*** Purge mode level %d specified - intermediate files will be deleted ***', optd['purge'])
+    return
 
+def process_modelling_options(optd):
+    """ Modelling and ensemble options"""
     # Set default name for modelling directory
     optd['models_dir'] = os.path.join(optd['work_dir'], "models")
-
     # Check if importing ensembles
     if optd['ensembles']:
         # checks are made in ensembles.import_ensembles
@@ -194,12 +221,10 @@ def process_options(optd):
         optd['single_model_mode'] = True
         if optd['truncation_scorefile'] and optd['truncation_scorefile_header']:
             optd['truncation_method'] = "scores"
-
     # Check import flags
     if optd['import_ensembles'] and (optd['import_models']):
         msg = "Cannot import both models and ensembles/clusters!"
         exit_util.exit_error(msg)
-
     # NMR Checks
     if optd['nmr_model_in']:
         logger.info("Using nmr_model_in file: {0}".format(optd['nmr_model_in']))
@@ -232,7 +257,6 @@ def process_options(optd):
             optd['make_models'] = False
             msg = "Running in NMR truncate only mode"
             logger.info(msg)
-
     elif optd['make_models']:
         if not os.path.isdir(optd['models_dir']):
             os.mkdir(optd['models_dir'])
@@ -254,86 +278,7 @@ def process_options(optd):
     Please see the AMPLE documentation for further information."""
             exit_util.exit_error(msg)
 
-    ###############################################################################
-    #
-    # Misc options
-    #
-    ###############################################################################
-
-    # Missing domains
-    if optd['missing_domain']:
-        logger.info('Processing missing domain\n')
-        if not os.path.exists(optd['domain_all_chains_pdb']):
-            msg = 'Cannot find file domain_all_chains_pdb: {0}'.format(optd['domain_all_chains_pdb'])
-            exit_util.exit_error(msg)
-
-    # Molecular Replacement Options
-    if optd['molrep_only']:
-        optd['phaser_only'] = False
-        #msg = 'you say you want molrep only AND phaser only, choose one or both'
-        #exit_util.exit_error(msg)
-
-    if optd['molrep_only']:
-        optd['mrbump_programs'] = ['molrep']
-    elif optd['phaser_only']:
-        optd['mrbump_programs'] = ['phaser']
-    else:
-        optd['mrbump_programs'] = ['molrep', 'phaser']
-
-    if optd['phaser_rms'] != 'auto':
-        try:
-            phaser_rms = float(optd['phaser_rms'])
-            optd['phaser_rms'] = phaser_rms
-        except ValueError as e:
-            msg = "Error converting phaser_rms '{0}' to floating point: {1}".format(optd['phaser_rms'], e)
-            exit_util.exit_error(msg)
-
-    ###############################################################################
-    #
-    # Benchmark Mode
-    #
-    ###############################################################################
-    if optd['native_pdb'] or optd['benchmark_mode']:
-        if optd['native_pdb'] and not os.path.isfile(optd['native_pdb']):
-            msg = "Cannot find crystal structure PDB: {0}".format(optd['native_pdb'])
-            exit_util.exit_error(msg)
-        optd['benchmark_mode'] = True
-        optd['benchmark_dir'] = os.path.join(optd['work_dir'], "benchmark")
-        logger.info("*** AMPLE running in benchmark mode ***")
-        # See if we can find TMscore
-        if not optd['tmscore_exe']:
-            optd['tmscore_exe'] = 'TMscore' + ample_util.EXE_EXT
-        try:
-            optd['tmscore_exe'] = ample_util.find_exe(optd['tmscore_exe'])
-            optd['have_tmscore'] = True
-        except ample_util.FileNotFoundError:
-            logger.debug("Cannot find TMScore executable: {0}".format(optd['tmscore_exe']))
-            # No TMscore so try and find Maxcluster
-            optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
-            optd['have_tmscore'] = False
-
-    ###############################################################################
-    #
-    # Program defaults
-    #
-    #
-    ###############################################################################
-    if optd['shelxe_rebuild']:
-        optd['shelxe_rebuild_arpwarp'] = True
-        optd['shelxe_rebuild_buccaneer'] = True
-
-    # Model building programs
-    if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
-        if not (os.environ.has_key('warpbin')
-                and os.path.isfile(os.path.join(os.environ['warpbin'], "auto_tracing.sh"))):
-            logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
-            optd['refine_rebuild_arpwarp'] = False
-            optd['shelxe_rebuild_arpwarp'] = False
-        else:
-            logger.info('Using arpwarp script: {0}'.format(os.path.join(os.environ['warpbin'], "auto_tracing.sh")))
-    #
     # Check we can find all the required programs
-    #
     # Maxcluster handled differently as we may need to download the binary
     if optd['subcluster_program'] == 'maxcluster':
         optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
@@ -345,9 +290,7 @@ def process_options(optd):
         except ample_util.FileNotFoundError as e:
             logger.info("Cannot find Gesamt executable: {0}".format(optd['gesamt_exe']))
             raise (e)
-    #
     # Ensemble options
-    #
     if optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
         if not optd['spicker_exe']:
             if optd['cluster_method'] == SPICKER_TM and optd['nproc'] > 1:
@@ -373,6 +316,7 @@ def process_options(optd):
     else:
         msg = "Unrecognised cluster_method: {0}".format(optd['cluster_method'])
         exit_util.exit_error(msg)
+
     if not optd['theseus_exe']:
         optd['theseus_exe'] = 'theseus' + ample_util.EXE_EXT
     try:
@@ -380,6 +324,16 @@ def process_options(optd):
     except ample_util.FileNotFoundError:
         msg = "Cannot find theseus executable: {0}".format(optd['theseus_exe'])
         exit_util.exit_error(msg)
+
+    # SCRWL - we always check for SCRWL as if we are processing QUARK models we want to add sidechains to them
+    if not optd['scwrl_exe']:
+        optd['scwrl_exe'] = 'Scwrl4' + ample_util.EXE_EXT
+    try:
+        optd['scwrl_exe'] = ample_util.find_exe(optd['scwrl_exe'])
+    except ample_util.FileNotFoundError as e:
+        logger.info("Cannot find Scwrl executable: {0}".format(optd['scwrl_exe']))
+        if optd['use_scwrl']:
+            raise (e)
 
     if "subcluster_radius_thresholds" in optd and not optd["subcluster_radius_thresholds"]:
         optd["subcluster_radius_thresholds"] = SUBCLUSTER_RADIUS_THRESHOLDS
@@ -393,49 +347,11 @@ def process_options(optd):
             optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
     else:
         optd["side_chain_treatments"] = map(str.lower, optd["side_chain_treatments"])
-
     unrecognised_sidechains = set(optd["side_chain_treatments"]) - set(ALLOWED_SIDE_CHAIN_TREATMENTS)
     if unrecognised_sidechains:
         msg = "Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains)
         logger.critical(msg)
         exit_util.exit_error(msg)
-    #
-    # SCRWL - we always check for SCRWL as if we are processing QUARK models we want to add sidechains to them
-    #
-    #if optd['use_scwrl']:
-    if not optd['scwrl_exe']:
-        optd['scwrl_exe'] = 'Scwrl4' + ample_util.EXE_EXT
-    try:
-        optd['scwrl_exe'] = ample_util.find_exe(optd['scwrl_exe'])
-    except ample_util.FileNotFoundError as e:
-        logger.info("Cannot find Scwrl executable: {0}".format(optd['scwrl_exe']))
-        if optd['use_scwrl']:
-            raise (e)
-    #
-    # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
-    #
-    if optd['use_shelxe']:
-        if not optd['shelxe_exe']:
-            optd['shelxe_exe'] = 'shelxe' + ample_util.EXE_EXT
-        try:
-            optd['shelxe_exe'] = ample_util.find_exe(optd['shelxe_exe'])
-        except ample_util.FileNotFoundError:
-            msg = """*** Cannot find shelxe executable in PATH - turning off use of SHELXE. ***
-    SHELXE is recommended for the best chance of success. We recommend you install shelxe from:
-    http://shelx.uni-ac.gwdg.de/SHELX/
-    and install it in your PATH so that AMPLE can use it.
-    """
-            logger.warn(msg)
-            optd['use_shelxe'] = False
-    #
-    # If shelxe_rebuild is set we need use_shelxe to be set
-    #
-    if optd['shelxe_rebuild'] and not optd['use_shelxe']:
-        msg = 'shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.'
-        exit_util.exit_error(msg)
-
-    # Output various information to the user
-    logger.info('Running on %d processors' % optd['nproc'])
 
     if optd['make_frags']:
         if optd['use_homs']:
@@ -450,6 +366,60 @@ def process_options(optd):
     else:
         logger.info('NOT making Rosetta Models')
 
+
+def process_mr_options(optd):
+    # Molecular Replacement Options
+    if optd['molrep_only']:
+        optd['phaser_only'] = False
+    if optd['molrep_only']:
+        optd['mrbump_programs'] = ['molrep']
+    elif optd['phaser_only']:
+        optd['mrbump_programs'] = ['phaser']
+    else:
+        optd['mrbump_programs'] = ['molrep', 'phaser']
+    if optd['phaser_rms'] != 'auto':
+        try:
+            phaser_rms = float(optd['phaser_rms'])
+            optd['phaser_rms'] = phaser_rms
+        except ValueError as e:
+            msg = "Error converting phaser_rms '{0}' to floating point: {1}".format(optd['phaser_rms'], e)
+            exit_util.exit_error(msg)
+
+    # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
+    if optd['use_shelxe']:
+        if optd['mtz_max_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
+            logger.warn("Disabling use of SHELXE as max resolution of {} is < accepted limit of {}".\
+                            format(optd['mtz_max_resolution'],
+                            mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION))
+            optd['use_shelxe'] = False
+            optd['shelxe_rebuild'] = False
+    if optd['use_shelxe']:
+        if not optd['shelxe_exe']:
+            optd['shelxe_exe'] = 'shelxe' + ample_util.EXE_EXT
+        try:
+            optd['shelxe_exe'] = ample_util.find_exe(optd['shelxe_exe'])
+        except ample_util.FileNotFoundError:
+            msg = """*** Cannot find shelxe executable in PATH - turning off use of SHELXE. ***
+    SHELXE is recommended for the best chance of success. We recommend you install shelxe from:
+    http://shelx.uni-ac.gwdg.de/SHELX/
+    and install it in your PATH so that AMPLE can use it.
+    """
+            logger.warn(msg)
+            optd['use_shelxe'] = False
+    if optd['shelxe_rebuild']:
+        optd['shelxe_rebuild_arpwarp'] = True
+        optd['shelxe_rebuild_buccaneer'] = True
+
+    # Model building programs
+    if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
+        if not (os.environ.has_key('warpbin')
+                and os.path.isfile(os.path.join(os.environ['warpbin'], "auto_tracing.sh"))):
+            logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
+            optd['refine_rebuild_arpwarp'] = False
+            optd['shelxe_rebuild_arpwarp'] = False
+        else:
+            logger.info('Using arpwarp script: {0}'.format(os.path.join(os.environ['warpbin'], "auto_tracing.sh")))
+
         # Print out what is being done
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
         logger.info('Rebuilding in Bucaneer')
@@ -460,29 +430,10 @@ def process_options(optd):
         logger.info('Rebuilding in ARP/wARP')
     else:
         logger.info('Not rebuilding in ARP/wARP')
-
-    # cluster queueing
-    if optd['submit_qtype']:
-        optd['submit_qtype'] = optd['submit_qtype'].upper()
-    if optd['submit_cluster'] and not optd['submit_qtype']:
-        msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
+    # If shelxe_rebuild is set we need use_shelxe to be set
+    if optd['shelxe_rebuild'] and not optd['use_shelxe']:
+        msg = 'shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.'
         exit_util.exit_error(msg)
-
-    if optd['purge']:
-        purge = optd['purge']
-        # Need to handle ackward compatibility where purge was boolean
-        if purge is True:
-            purge = 1
-        elif purge is False:
-            purge = 0
-        try:
-            optd['purge'] = int(purge)
-        except ValueError:
-            msg = 'Purge must be specified as an integer, got: {}'.format(optd['purge'])
-            exit_util.exit_error(msg)
-        logger.info('*** Purge mode level %d specified - intermediate files will be deleted ***', optd['purge'])
-
-    return
 
 
 def process_restart_options(optd):
