@@ -120,6 +120,10 @@ class TMapps(object):
         if len(kwargs) > 0:
             logger.debug('Ignoring keyword arguments: %s', ' '.join(kwargs.keys()))
 
+        self.tmp_dir = os.path.join(self.work_dir, "tm_util_pdbs")
+        if not os.path.isdir(self.tmp_dir):
+            os.mkdir(self.tmp_dir)
+
     def comparison(self, models, structures):
         """
         Compare a list of model structures to a second list of reference structures
@@ -172,7 +176,8 @@ class TMapps(object):
 
             if os.path.isfile(model_pdb) and os.path.isfile(structure_pdb):
                 data_entries.append([model_name, structure_name, model_pdb, structure_pdb])
-                script = make_script([self.executable, model_pdb, structure_pdb], prefix="tmscore_", stem=stem)
+                script = make_script(
+                    [self.executable, model_pdb, structure_pdb], prefix="tmscore_", stem=stem, directory=self.tmp_dir)
                 job_scripts.append(script)
                 log_files.append(os.path.splitext(script)[0] + ".log")
             else:
@@ -329,9 +334,6 @@ class TMscore(TMapps):
 
     def __init__(self, executable, wdir=None, **kwargs):
         super(TMscore, self).__init__(executable, "TMscore", wdir=wdir, **kwargs)
-        self.tmp_dir = os.path.join(self.work_dir, "tm_util_pdbs")
-        if not os.path.isdir(self.tmp_dir):
-            os.mkdir(self.tmp_dir)
 
     def compare_structures(self, models, structures, fastas=None, all_vs_all=False):
         """
