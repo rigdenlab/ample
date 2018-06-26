@@ -84,12 +84,12 @@ def process_benchmark_options(optd):
             optd['tmscore_exe'] = 'TMscore' + ample_util.EXE_EXT
         try:
             optd['tmscore_exe'] = ample_util.find_exe(optd['tmscore_exe'])
-            optd['have_tmscore'] = True
         except ample_util.FileNotFoundError:
-            logger.debug("Cannot find TMScore executable: {0}".format(optd['tmscore_exe']))
-            # No TMscore so try and find Maxcluster
+            logger.warning("Cannot find TMScore executable: %s", optd['tmscore_exe'])
             optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
             optd['have_tmscore'] = False
+        else:
+            optd['have_tmscore'] = True
             
 
 def process_options(optd):
@@ -139,26 +139,19 @@ def process_options(optd):
     process_mr_options(optd)
     process_benchmark_options(optd)
 
-    logger.info('Running on %d processors' % optd['nproc'])
+    logger.info('Running on %d processors', optd['nproc'])
     # cluster queueing
     if optd['submit_qtype']:
         optd['submit_qtype'] = optd['submit_qtype'].upper()
     if optd['submit_cluster'] and not optd['submit_qtype']:
         msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
         exit_util.exit_error(msg)
-    if optd['purge']:
-        purge = optd['purge']
-        # Need to handle ackward compatibility where purge was boolean
-        if purge is True:
-            purge = 1
-        elif purge is False:
-            purge = 0
-        try:
-            optd['purge'] = int(purge)
-        except ValueError:
-            msg = 'Purge must be specified as an integer, got: {}'.format(optd['purge'])
-            exit_util.exit_error(msg)
-        logger.info('*** Purge mode level %d specified - intermediate files will be deleted ***', optd['purge'])
+    try:
+        optd['purge'] = int(optd['purge'])
+    except ValueError:
+        msg = 'Purge must be specified as an integer, got: {}'.format(optd['purge'])
+        exit_util.exit_error(msg)
+    logger.info('*** Purge mode level %d specified - intermediate files will be deleted ***', optd['purge'])
     return
 
 def process_modelling_options(optd):
@@ -318,7 +311,8 @@ def process_modelling_options(optd):
         exit_util.exit_error(msg)
 
     if not optd['theseus_exe']:
-        optd['theseus_exe'] = 'theseus' + ample_util.EXE_EXT
+        optd['theseus_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'theseus' + ample_util.EXE_EXT)
+        
     try:
         optd['theseus_exe'] = ample_util.find_exe(optd['theseus_exe'])
     except ample_util.FileNotFoundError:
@@ -327,7 +321,7 @@ def process_modelling_options(optd):
 
     # SCRWL - we always check for SCRWL as if we are processing QUARK models we want to add sidechains to them
     if not optd['scwrl_exe']:
-        optd['scwrl_exe'] = 'Scwrl4' + ample_util.EXE_EXT
+        optd['scwrl_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'Scwrl4' + ample_util.EXE_EXT)
     try:
         optd['scwrl_exe'] = ample_util.find_exe(optd['scwrl_exe'])
     except ample_util.FileNotFoundError as e:
@@ -380,22 +374,22 @@ def process_mr_options(optd):
     if optd['phaser_rms'] != 'auto':
         try:
             phaser_rms = float(optd['phaser_rms'])
-            optd['phaser_rms'] = phaser_rms
         except ValueError as e:
             msg = "Error converting phaser_rms '{0}' to floating point: {1}".format(optd['phaser_rms'], e)
             exit_util.exit_error(msg)
-
+        else:
+            optd['phaser_rms'] = phaser_rms
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     if optd['use_shelxe']:
         if optd['mtz_max_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
-            logger.warn("Disabling use of SHELXE as max resolution of {} is < accepted limit of {}".\
-                            format(optd['mtz_max_resolution'],
-                            mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION))
+            logger.warn("Disabling use of SHELXE as max resolution of %f is < accepted limit of %f",
+                            optd['mtz_max_resolution'],
+                            mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION)
             optd['use_shelxe'] = False
             optd['shelxe_rebuild'] = False
     if optd['use_shelxe']:
         if not optd['shelxe_exe']:
-            optd['shelxe_exe'] = 'shelxe' + ample_util.EXE_EXT
+            optd['shelxe_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'shelxe' + ample_util.EXE_EXT)
         try:
             optd['shelxe_exe'] = ample_util.find_exe(optd['shelxe_exe'])
         except ample_util.FileNotFoundError:
@@ -412,13 +406,12 @@ def process_mr_options(optd):
 
     # Model building programs
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
-        if not (os.environ.has_key('warpbin')
-                and os.path.isfile(os.path.join(os.environ['warpbin'], "auto_tracing.sh"))):
+        if not ('warpbin' in os.environ and os.path.isfile(os.path.join(os.environ['warpbin'], "auto_tracing.sh"))):
             logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
             optd['refine_rebuild_arpwarp'] = False
             optd['shelxe_rebuild_arpwarp'] = False
         else:
-            logger.info('Using arpwarp script: {0}'.format(os.path.join(os.environ['warpbin'], "auto_tracing.sh")))
+            logger.info('Using arpwarp script: %s', os.path.join(os.environ['warpbin'], "auto_tracing.sh"))
 
         # Print out what is being done
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
