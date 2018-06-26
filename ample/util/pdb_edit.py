@@ -347,8 +347,6 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
 
         # Get ordered list of the ref atom names for this residue
         rnames = [ x.name for x in refAtomList ]
-        #print "got rnames ",rnames
-        #print "got anames ", [ x.name for x in targetAtomList ]
 
         if len( refAtomList ) > len( targetAtomList ):
             s = "Cannot keep matching as refAtomList is > targetAtomList for residue {0}\nRef: {1}\nTrg: {2}".format( targetResSeq,
@@ -365,7 +363,6 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None ):
 
         # List now only contains matching atoms
         targetAtomList = alist
-        #print "tnames ",[ x.name for x in targetAtomList ]
 
         # Now just have matching so output in the correct order
         for refname in rnames:
@@ -555,10 +552,9 @@ def get_info(inpath):
         if line.startswith("CRYST1"):
             try:
                 info.crystalInfo = pdb_model.CrystalInfo( line )
-            except ValueError,e:
-                # Bug in pdbset nukes the CRYST1 line so we need to catch this
-                print "ERROR READING CRYST1 LINE in file {0}\":{1}\"\n{2}".format(inpath,line.rstrip(),e)
-                info.crystalInfo=None
+            except ValueError as e:
+                logger.critical("ERROR READING CRYST1 LINE in file %s\":%s\"\n%s", inpath, line.rstrip(), e)
+                info.crystalInfo = None
 
         if line.startswith("MODEL"):
             if currentModel:
@@ -934,7 +930,6 @@ def reliable_sidechains(inpath=None, outpath=None ):
     res_names = [ 'MET', 'ASP', 'PRO', 'GLN', 'LYS', 'ARG', 'GLU', 'SER']
     atom_names = [ 'N', 'CA', 'C', 'O', 'CB' ]
 
-    #   print 'Found ',each_file
     pdb_in = open( inpath, "r" )
     pdb_out = open( outpath, "w" )
 
@@ -1083,7 +1078,7 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
     crystal_symmetry=pdbf.file_object.crystal_symmetry()
 
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
-        print "pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin)
+        logger.debug("pdb {0} has > 1 model or chain - only first model/chain will be kept".format(pdbin))
 
     if len(hierarchy.models()) > 1:
         for i, m in enumerate(hierarchy.models()):
