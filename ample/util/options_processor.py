@@ -162,7 +162,7 @@ def process_modelling_options(optd):
             raise RuntimeError("Import cluster cannot find directory: {0}".format(optd['cluster_dir']))
         if not glob.glob(os.path.join(optd['cluster_dir'], "*.pdb")):
             raise RuntimeError("Import cluster cannot find pdbs in directory: {0}".format(optd['cluster_dir']))
-        logger.info("Importing pre-clustered models from directory: {0}\n".format(optd['cluster_dir']))
+        logger.info("Importing pre-clustered models from directory: %d\n", optd['cluster_dir'])
         optd['cluster_method'] = 'import'
         optd['make_frags'] = False
         optd['make_models'] = False
@@ -206,7 +206,7 @@ def process_modelling_options(optd):
         raise RuntimeError("Cannot import both models and ensembles/clusters!")
     # NMR Checks
     if optd['nmr_model_in']:
-        logger.info("Using nmr_model_in file: {0}".format(optd['nmr_model_in']))
+        logger.info("Using nmr_model_in file: %s", optd['nmr_model_in'])
         if not os.path.isfile(optd['nmr_model_in']):
             msg = "nmr_model_in flag given, but cannot find file: {0}".format(optd['nmr_model_in'])
             exit_util.exit_error(msg)
@@ -300,7 +300,7 @@ def process_modelling_options(optd):
     try:
         optd['scwrl_exe'] = ample_util.find_exe(optd['scwrl_exe'])
     except ample_util.FileNotFoundError as e:
-        logger.info("Cannot find Scwrl executable: {0}".format(optd['scwrl_exe']))
+        logger.info("Cannot find Scwrl executable: %s", optd['scwrl_exe'])
         if optd['use_scwrl']:
             raise (e)
     if "subcluster_radius_thresholds" in optd and not optd["subcluster_radius_thresholds"]:
@@ -373,15 +373,15 @@ def process_mr_options(optd):
         optd['shelxe_rebuild_arpwarp'] = True
         optd['shelxe_rebuild_buccaneer'] = True
 
-    # Model building programs
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
-        if not ('warpbin' in os.environ and os.path.isfile(os.path.join(os.environ['warpbin'], "auto_tracing.sh"))):
-            logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
-            optd['refine_rebuild_arpwarp'] = False
-            optd['shelxe_rebuild_arpwarp'] = False
-        else:
-            logger.info('Using arpwarp script: %s', os.path.join(os.environ['warpbin'], "auto_tracing.sh"))
-        # Print out what is being done
+	auto_tracing_sh = os.path.join(os.environ['warpbin'], "auto_tracing.sh")
+	if 'warpbin' in os.environ and os.path.isfile(auto_tracing_sh):
+	    logger.info('Using arpwarp script: %s', auto_tracing_sh)
+	else:
+	    logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
+	    optd['refine_rebuild_arpwarp'] = False
+	    optd['shelxe_rebuild_arpwarp'] = False
+
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
         logger.info('Rebuilding in Bucaneer')
     else:
@@ -438,7 +438,7 @@ def process_restart_options(optd):
     """
     if not optd['restart_pkl']:
         return optd
-    logger.info('Restarting from existing pkl file: {0}'.format(optd['restart_pkl']))
+    logger.info('Restarting from existing pkl file: %s', optd['restart_pkl'])
 
     # Go through and see what we need to do
     # Reset all variables for doing stuff - otherwise we will always restart from the earliest point
@@ -452,9 +452,7 @@ def process_restart_options(optd):
     # job and we only set benchmark mode on seeing the native_pdb
     if optd['native_pdb']:
         if not os.path.isfile(optd['native_pdb']):
-            msg = "Cannot find native_pdb: {0}".format(optd['native_pdb'])
-            logger.critical(msg)
-            raise RuntimeError(msg)
+            raise RuntimeError("Cannot find native_pdb: {0}".format(optd['native_pdb']))
         optd['benchmark_mode'] = True
         logger.info('Restart using benchmark mode')
 
@@ -467,7 +465,7 @@ def process_restart_options(optd):
 
     if optd['do_mr']:
         if len(optd['mrbump_scripts']):
-            logger.info('Restarting from unfinished mrbump scripts: {0}'.format(optd['mrbump_scripts']))
+            logger.info('Restarting from unfinished mrbump scripts: %s', optd['mrbump_scripts'])
             # Purge unfinished jobs
             for spath in optd['mrbump_scripts']:
                 directory, script = os.path.split(spath)
@@ -481,17 +479,16 @@ def process_restart_options(optd):
                     shutil.rmtree(jobdir)
         elif 'ensembles' in optd and optd['ensembles'] and len(optd['ensembles']):
             # Rerun from ensembles - check for data/ensembles are ok?
-            logger.info('Restarting from existing ensembles: {0}'.format(optd['ensembles']))
+            logger.info('Restarting from existing ensembles: %s', optd['ensembles'])
         elif 'models_dir' in optd and optd['models_dir'] and os.path.isdir(optd['models_dir']):
-            logger.info('Restarting from existing models: {0}'.format(optd['models_dir']))
-            # Check the models
+            logger.info('Restarting from existing models: %s', optd['models_dir'])
             allsame = False if optd['homologs'] else True
             if not pdb_edit.check_pdb_directory(optd['models_dir'], sequence=None, single=True, allsame=allsame):
-                msg = "Error importing restart models: {0}".format(optd['models_dir'])
-                exit_util.exit_error(msg)
+                raise RuntimeError("Error importing restart models: {0}".format(optd['models_dir']))
+
             optd['make_ensembles'] = True
         elif optd['frags_3mers'] and optd['frags_9mers']:
-            logger.info('Restarting from existing fragments: {0}, {1}'.format(optd['frags_3mers'], optd['frags_9mers']))
+            logger.info('Restarting from existing fragments: %s, %s', optd['frags_3mers'], optd['frags_9mers'])
             optd['make_models'] = True
 
     return optd
@@ -527,16 +524,10 @@ def restart_amoptd(optd):
     """
     if not optd['restart_pkl']:
         return optd
-    logger.info('Restarting from existing pkl file: {0}'.format(optd['restart_pkl']))
-    # We use the old dictionary, but udpate it with any new values
+    logger.info('Restarting from existing pkl file: %s', optd['restart_pkl'])
     optd_old = ample_util.read_amoptd(optd['restart_pkl'])
-
-    # Now update any variables that were given on the command-line
     for k in optd['cmdline_flags']:
-        logger.debug("Restart updating amopt variable: {0} : {1}".format(k, optd[k]))
+        logger.debug("Restart updating amopt variable: %s : %s", k, str(optd[k]))
         optd_old[k] = optd[k]
-
-    # We can now replace the old dictionary with this new one
     optd = optd_old
-
     return optd
