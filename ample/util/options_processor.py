@@ -38,7 +38,7 @@ def check_mandatory_options(optd):
     """
 
     def _exit(msg, wdir):
-        exit_util.exit_error(msg)
+        raise RuntimeError(msg)
 
     if not (optd['fasta'] or optd['restart_pkl']):
         msg = "One of -fasta  or -restart_pkl option is required."
@@ -70,6 +70,26 @@ def check_mandatory_options(optd):
 
     return
 
+def process_benchmark_options(optd):
+    # Benchmark Mode
+    if optd['native_pdb'] or optd['benchmark_mode']:
+        if optd['native_pdb'] and not os.path.isfile(optd['native_pdb']):
+            raise RuntimeError("Cannot find crystal structure PDB: {0}".format(optd['native_pdb']))
+        optd['benchmark_mode'] = True
+        optd['benchmark_dir'] = os.path.join(optd['work_dir'], "benchmark")
+        logger.info("*** AMPLE running in benchmark mode ***")
+        # See if we can find TMscore
+        if not optd['tmscore_exe']:
+            optd['tmscore_exe'] = 'TMscore' + ample_util.EXE_EXT
+        try:
+            optd['tmscore_exe'] = ample_util.find_exe(optd['tmscore_exe'])
+        except ample_util.FileNotFoundError:
+            logger.warning("Cannot find TMScore executable: %s", optd['tmscore_exe'])
+            optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
+            optd['have_tmscore'] = False
+        else:
+            optd['have_tmscore'] = True
+            
 
 def process_options(optd):
     """Process the initial options from the command-line/ample.ini file to set any additional options.
@@ -81,63 +101,56 @@ def process_options(optd):
     """
     # Path for pickling results
     optd['results_path'] = os.path.join(optd['work_dir'], AMPLE_PKL)
-
-    ###############################################################################
-    #
     # FASTA processing
-    #
-    ###############################################################################
     # Check to see if mr_sequence was given and if not mr_sequence defaults to fasta
     if optd['mr_sequence'] != None:
         if not (os.path.exists(str(optd['mr_sequence']))):
-            msg = 'Cannot find mr sequence file: {0}'.format(optd['mr_sequence'])
-            exit_util.exit_error(msg)
+            raise RuntimeError('Cannot find mr sequence file: {0}'.format(optd['mr_sequence']))
     else:
         optd['mr_sequence'] = optd['fasta']
-
     # Process the fasta file and run all the checks on the sequence
     sequence_util.process_fasta(optd, canonicalise=True)
-
-    #
+    
     # Not sure if name actually required - see make_fragments.pl
-    #
     if optd['name'] and len(optd['name']) != 4:
-        msg = '-name argument is the wrong length, use 4 chars eg ABCD'
-        exit_util.exit_error(msg)
-
+        raise RuntimeError('-name argument is the wrong length, use 4 chars eg ABCD')
     # Underscore required by rosetta make_fragments.pl
     optd['name'] += '_'
-
-    ###############################################################################
-    #
-    # Contact file processing
-    #
-    ###############################################################################
-
-    #if False:
-    if optd['contact_file'] or optd['bbcontacts_file'] or not optd["no_contact_prediction"]:
-        contact_util.ContactUtil.check_options(optd)
-        optd['use_contacts'] = True
-    ###############################################################################
-    #
     # MTZ file processing
-    #
-    ###############################################################################
     try:
         mtz_util.processReflectionFile(optd)
     except Exception, e:
-        msg = "Error processing reflection file: {0}".format(e)
-        exit_util.exit_error(msg, sys.exc_info()[2])
+        raise RuntimeError("Error processing reflection file: {0}".format(e))
+    # Contact file processing
+    if optd['contact_file'] or optd['bbcontacts_file'] or not optd["no_contact_prediction"]:
+        contact_util.ContactUtil.check_options(optd)
+        optd['use_contacts'] = True
+    process_modelling_options(optd)
+    # Misc options
+    if optd['missing_domain']:
+        logger.info('Processing missing domain\n')
+        if not os.path.exists(optd['domain_all_chains_pdb']):
+            raise RuntimeError('Cannot find file domain_all_chains_pdb: {0}'.format(optd['domain_all_chains_pdb']))
+    process_mr_options(optd)
+    process_benchmark_options(optd)
 
-    ###############################################################################
-    #
-    # Modelling and ensemble options
-    #
-    ###############################################################################
+    logger.info('Running on %d processors', optd['nproc'])
+    # cluster queueing
+    if optd['submit_qtype']:
+        optd['submit_qtype'] = optd['submit_qtype'].upper()
+    if optd['submit_cluster'] and not optd['submit_qtype']:
+        raise RuntimeError('Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.')
+    try:
+        optd['purge'] = int(optd['purge'])
+    except (ValueError, KeyError):
+        raise RuntimeError('Purge must be specified as an integer, got: {}'.format(optd['purge']))
+    logger.info('*** Purge mode level %d specified - intermediate files will be deleted ***', optd['purge'])
+    return
 
+def process_modelling_options(optd):
+    """ Modelling and ensemble options"""
     # Set default name for modelling directory
     optd['models_dir'] = os.path.join(optd['work_dir'], "models")
-
     # Check if importing ensembles
     if optd['ensembles']:
         # checks are made in ensembles.import_ensembles
@@ -146,12 +159,10 @@ def process_options(optd):
         optd['make_models'] = False
     elif optd['cluster_dir']:
         if not os.path.isdir(optd['cluster_dir']):
-            msg = "Import cluster cannot find directory: {0}".format(optd['cluster_dir'])
-            exit_util.exit_error(msg)
+            raise RuntimeError("Import cluster cannot find directory: {0}".format(optd['cluster_dir']))
         if not glob.glob(os.path.join(optd['cluster_dir'], "*.pdb")):
-            msg = "Import cluster cannot find pdbs in directory: {0}".format(optd['cluster_dir'])
-            exit_util.exit_error(msg)
-        logger.info("Importing pre-clustered models from directory: {0}\n".format(optd['cluster_dir']))
+            raise RuntimeError("Import cluster cannot find pdbs in directory: {0}".format(optd['cluster_dir']))
+        logger.info("Importing pre-clustered models from directory: %d\n", optd['cluster_dir'])
         optd['cluster_method'] = 'import'
         optd['make_frags'] = False
         optd['make_models'] = False
@@ -167,21 +178,17 @@ def process_options(optd):
                 if not ample_util.is_exe(str(optd['gesamt_exe'])):
                     optd['gesamt_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
                 if not ample_util.is_exe(str(optd['gesamt_exe'])):
-                    msg = 'Using homologs without an alignment file and cannot find gesamt_exe: {0}'.format(
-                        optd['gesamt_exe'])
-                    exit_util.exit_error(msg)
+                    raise RuntimeError('Using homologs without an alignment file and cannot find gesamt_exe: {0}'.format(
+                        optd['gesamt_exe']))
             elif optd['homolog_aligner'] == 'mustang':
                 if not ample_util.is_exe(str(optd['mustang_exe'])):
-                    msg = 'Using homologs without an alignment file and cannot find mustang_exe: {0}'.format(
-                        optd['mustang_exe'])
-                    exit_util.exit_error(msg)
+                    raise RuntimeError('Using homologs without an alignment file and cannot find mustang_exe: {0}'.format(
+                        optd['mustang_exe']))
             else:
-                msg = 'Unknown homolog_aligner: {0}'.format(optd['homolog_aligner'])
-                exit_util.exit_error(msg)
+                raise RuntimeError('Unknown homolog_aligner: {0}'.format(optd['homolog_aligner']))
         if not os.path.isdir(str(optd['models'])):
-            msg = "Homologs option requires a directory of pdb models to be supplied\n" + \
-                "Please supply the models with the -models flag"
-            exit_util.exit_error(msg)
+            raise RuntimeError("Homologs option requires a directory of pdb models to be supplied\n" + \
+                              "Please supply the models with the -models flag")
         optd['import_models'] = True
     elif optd['models']:
         optd['import_models'] = True
@@ -194,15 +201,12 @@ def process_options(optd):
         optd['single_model_mode'] = True
         if optd['truncation_scorefile'] and optd['truncation_scorefile_header']:
             optd['truncation_method'] = "scores"
-
     # Check import flags
     if optd['import_ensembles'] and (optd['import_models']):
-        msg = "Cannot import both models and ensembles/clusters!"
-        exit_util.exit_error(msg)
-
+        raise RuntimeError("Cannot import both models and ensembles/clusters!")
     # NMR Checks
     if optd['nmr_model_in']:
-        logger.info("Using nmr_model_in file: {0}".format(optd['nmr_model_in']))
+        logger.info("Using nmr_model_in file: %s", optd['nmr_model_in'])
         if not os.path.isfile(optd['nmr_model_in']):
             msg = "nmr_model_in flag given, but cannot find file: {0}".format(optd['nmr_model_in'])
             exit_util.exit_error(msg)
@@ -210,8 +214,7 @@ def process_options(optd):
             optd['make_models'] = True
             if optd['nmr_remodel_fasta']:
                 if not os.path.isfile(optd['nmr_remodel_fasta']):
-                    msg = "Cannot find nmr_remodel_fasta file: {0}".format(optd['nmr_remodel_fasta'])
-                    exit_util.exit_error(msg)
+                    raise RuntimeError("Cannot find nmr_remodel_fasta file: {0}".format(optd['nmr_remodel_fasta']))
             else:
                 optd['nmr_remodel_fasta'] = optd['fasta']
             msg = "NMR model will be remodelled with ROSETTA using the sequence from: {0}".format(
@@ -223,117 +226,33 @@ def process_options(optd):
                 logger.info(msg)
             else:
                 if not (os.path.isfile(optd['frags_3mers']) and os.path.isfile(optd['frags_9mers'])):
-                    msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(
-                        optd['frags_3mers'], optd['frags_9mers'])
-                    exit_util.exit_error(msg)
+                    raise RuntimeError("frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(
+                        optd['frags_3mers'], optd['frags_9mers']))
                 optd['make_frags'] = False
         else:
             optd['make_frags'] = False
             optd['make_models'] = False
             msg = "Running in NMR truncate only mode"
             logger.info(msg)
-
     elif optd['make_models']:
         if not os.path.isdir(optd['models_dir']):
             os.mkdir(optd['models_dir'])
         # If the user has given both fragment files we check they are ok and unset make_frags
         if optd['frags_3mers'] and optd['frags_9mers']:
             if not os.path.isfile(optd['frags_3mers']) or not os.path.isfile(optd['frags_9mers']):
-                msg = "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(
-                    optd['frags_3mers'], optd['frags_9mers'])
-                exit_util.exit_error(msg)
+                raise RuntimeError("frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(
+                    optd['frags_3mers'], optd['frags_9mers']))
             optd['make_frags'] = False
         if optd['make_frags'] and (optd['frags_3mers'] or optd['frags_9mers']):
-            msg = "make_frags set to true, but you have given the path to the frags_3mers or frags_9mers"
-            exit_util.exit_error(msg)
-
+            raise RuntimeError("make_frags set to true, but you have given the path to the frags_3mers or frags_9mers")
         if not optd['make_frags'] and not (optd['frags_3mers'] and optd['frags_9mers']):
             msg = """*** Missing fragment files! ***
     Please supply the paths to the fragment files using the -frags_3mers and -frags_9mers flags.
     These can be generated using the Robetta server: http://robetta.bakerlab.org
     Please see the AMPLE documentation for further information."""
-            exit_util.exit_error(msg)
+            raise RuntimeError(msg)
 
-    ###############################################################################
-    #
-    # Misc options
-    #
-    ###############################################################################
-
-    # Missing domains
-    if optd['missing_domain']:
-        logger.info('Processing missing domain\n')
-        if not os.path.exists(optd['domain_all_chains_pdb']):
-            msg = 'Cannot find file domain_all_chains_pdb: {0}'.format(optd['domain_all_chains_pdb'])
-            exit_util.exit_error(msg)
-
-    # Molecular Replacement Options
-    if optd['molrep_only']:
-        optd['phaser_only'] = False
-        #msg = 'you say you want molrep only AND phaser only, choose one or both'
-        #exit_util.exit_error(msg)
-
-    if optd['molrep_only']:
-        optd['mrbump_programs'] = ['molrep']
-    elif optd['phaser_only']:
-        optd['mrbump_programs'] = ['phaser']
-    else:
-        optd['mrbump_programs'] = ['molrep', 'phaser']
-
-    if optd['phaser_rms'] != 'auto':
-        try:
-            phaser_rms = float(optd['phaser_rms'])
-            optd['phaser_rms'] = phaser_rms
-        except ValueError as e:
-            msg = "Error converting phaser_rms '{0}' to floating point: {1}".format(optd['phaser_rms'], e)
-            exit_util.exit_error(msg)
-
-    ###############################################################################
-    #
-    # Benchmark Mode
-    #
-    ###############################################################################
-    if optd['native_pdb'] or optd['benchmark_mode']:
-        if optd['native_pdb'] and not os.path.isfile(optd['native_pdb']):
-            msg = "Cannot find crystal structure PDB: {0}".format(optd['native_pdb'])
-            exit_util.exit_error(msg)
-        optd['benchmark_mode'] = True
-        optd['benchmark_dir'] = os.path.join(optd['work_dir'], "benchmark")
-        logger.info("*** AMPLE running in benchmark mode ***")
-        # See if we can find TMscore
-        if not optd['tmscore_exe']:
-            optd['tmscore_exe'] = 'TMscore' + ample_util.EXE_EXT
-        try:
-            optd['tmscore_exe'] = ample_util.find_exe(optd['tmscore_exe'])
-            optd['have_tmscore'] = True
-        except ample_util.FileNotFoundError:
-            logger.debug("Cannot find TMScore executable: {0}".format(optd['tmscore_exe']))
-            # No TMscore so try and find Maxcluster
-            optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
-            optd['have_tmscore'] = False
-
-    ###############################################################################
-    #
-    # Program defaults
-    #
-    #
-    ###############################################################################
-    if optd['shelxe_rebuild']:
-        optd['shelxe_rebuild_arpwarp'] = True
-        optd['shelxe_rebuild_buccaneer'] = True
-
-    # Model building programs
-    if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
-        if not (os.environ.has_key('warpbin')
-                and os.path.isfile(os.path.join(os.environ['warpbin'], "auto_tracing.sh"))):
-            logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
-            optd['refine_rebuild_arpwarp'] = False
-            optd['shelxe_rebuild_arpwarp'] = False
-        else:
-            logger.info('Using arpwarp script: {0}'.format(os.path.join(os.environ['warpbin'], "auto_tracing.sh")))
-    #
     # Check we can find all the required programs
-    #
     # Maxcluster handled differently as we may need to download the binary
     if optd['subcluster_program'] == 'maxcluster':
         optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
@@ -343,11 +262,8 @@ def process_options(optd):
         try:
             optd['gesamt_exe'] = ample_util.find_exe(optd['gesamt_exe'])
         except ample_util.FileNotFoundError as e:
-            logger.info("Cannot find Gesamt executable: {0}".format(optd['gesamt_exe']))
-            raise (e)
-    #
+            raise RuntimeError("Cannot find Gesamt executable: {0}".format(optd['gesamt_exe']))
     # Ensemble options
-    #
     if optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
         if not optd['spicker_exe']:
             if optd['cluster_method'] == SPICKER_TM and optd['nproc'] > 1:
@@ -371,19 +287,24 @@ def process_options(optd):
     elif optd['cluster_method'] in ['import', 'random', 'skip']:
         pass
     else:
-        msg = "Unrecognised cluster_method: {0}".format(optd['cluster_method'])
-        exit_util.exit_error(msg)
+        raise RuntimeError("Unrecognised cluster_method: {0}".format(optd['cluster_method']))
     if not optd['theseus_exe']:
-        optd['theseus_exe'] = 'theseus' + ample_util.EXE_EXT
+        optd['theseus_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'theseus' + ample_util.EXE_EXT)
     try:
         optd['theseus_exe'] = ample_util.find_exe(optd['theseus_exe'])
     except ample_util.FileNotFoundError:
-        msg = "Cannot find theseus executable: {0}".format(optd['theseus_exe'])
-        exit_util.exit_error(msg)
-
+        raise RuntimeError("Cannot find theseus executable: {0}".format(optd['theseus_exe']))
+    # SCRWL - we always check for SCRWL as if we are processing QUARK models we want to add sidechains to them
+    if not optd['scwrl_exe']:
+        optd['scwrl_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'Scwrl4' + ample_util.EXE_EXT)
+    try:
+        optd['scwrl_exe'] = ample_util.find_exe(optd['scwrl_exe'])
+    except ample_util.FileNotFoundError as e:
+        logger.info("Cannot find Scwrl executable: %s", optd['scwrl_exe'])
+        if optd['use_scwrl']:
+            raise (e)
     if "subcluster_radius_thresholds" in optd and not optd["subcluster_radius_thresholds"]:
         optd["subcluster_radius_thresholds"] = SUBCLUSTER_RADIUS_THRESHOLDS
-
     # REM: This should really be disentangled and moved up to definition of all homologs options
     # REM: but could cause confusion with defaults down here.
     if "side_chain_treatments" in optd and not optd["side_chain_treatments"]:
@@ -393,30 +314,51 @@ def process_options(optd):
             optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
     else:
         optd["side_chain_treatments"] = map(str.lower, optd["side_chain_treatments"])
-
     unrecognised_sidechains = set(optd["side_chain_treatments"]) - set(ALLOWED_SIDE_CHAIN_TREATMENTS)
     if unrecognised_sidechains:
-        msg = "Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains)
-        logger.critical(msg)
-        exit_util.exit_error(msg)
-    #
-    # SCRWL - we always check for SCRWL as if we are processing QUARK models we want to add sidechains to them
-    #
-    #if optd['use_scwrl']:
-    if not optd['scwrl_exe']:
-        optd['scwrl_exe'] = 'Scwrl4' + ample_util.EXE_EXT
-    try:
-        optd['scwrl_exe'] = ample_util.find_exe(optd['scwrl_exe'])
-    except ample_util.FileNotFoundError as e:
-        logger.info("Cannot find Scwrl executable: {0}".format(optd['scwrl_exe']))
-        if optd['use_scwrl']:
-            raise (e)
-    #
+        raise("Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains))
+    if optd['make_frags']:
+        if optd['use_homs']:
+            logger.info('Making fragments (including homologues)')
+        else:
+            logger.info('Making fragments EXCLUDING HOMOLOGUES')
+    else:
+        logger.info('NOT making Fragments')
+    if optd['make_models']:
+        logger.info('\nMaking Rosetta Models')
+    else:
+        logger.info('NOT making Rosetta Models')
+
+
+def process_mr_options(optd):
+    # Molecular Replacement Options
+    if optd['molrep_only']:
+        optd['phaser_only'] = False
+    if optd['molrep_only']:
+        optd['mrbump_programs'] = ['molrep']
+    elif optd['phaser_only']:
+        optd['mrbump_programs'] = ['phaser']
+    else:
+        optd['mrbump_programs'] = ['molrep', 'phaser']
+    if optd['phaser_rms'] != 'auto':
+        try:
+            phaser_rms = float(optd['phaser_rms'])
+        except ValueError as e:
+            msg = "Error converting phaser_rms '{0}' to floating point: {1}".format(optd['phaser_rms'], e)
+            exit_util.exit_error(msg)
+        else:
+            optd['phaser_rms'] = phaser_rms
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
-    #
+    if optd['use_shelxe']:
+        if optd['mtz_max_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
+            logger.warn("Disabling use of SHELXE as max resolution of %f is < accepted limit of %f",
+                            optd['mtz_max_resolution'],
+                            mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION)
+            optd['use_shelxe'] = False
+            optd['shelxe_rebuild'] = False
     if optd['use_shelxe']:
         if not optd['shelxe_exe']:
-            optd['shelxe_exe'] = 'shelxe' + ample_util.EXE_EXT
+            optd['shelxe_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'shelxe' + ample_util.EXE_EXT)
         try:
             optd['shelxe_exe'] = ample_util.find_exe(optd['shelxe_exe'])
         except ample_util.FileNotFoundError:
@@ -427,30 +369,19 @@ def process_options(optd):
     """
             logger.warn(msg)
             optd['use_shelxe'] = False
-    #
-    # If shelxe_rebuild is set we need use_shelxe to be set
-    #
-    if optd['shelxe_rebuild'] and not optd['use_shelxe']:
-        msg = 'shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.'
-        exit_util.exit_error(msg)
+    if optd['shelxe_rebuild']:
+        optd['shelxe_rebuild_arpwarp'] = True
+        optd['shelxe_rebuild_buccaneer'] = True
 
-    # Output various information to the user
-    logger.info('Running on %d processors' % optd['nproc'])
+    if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
+	auto_tracing_sh = os.path.join(os.environ['warpbin'], "auto_tracing.sh")
+	if 'warpbin' in os.environ and os.path.isfile(auto_tracing_sh):
+	    logger.info('Using arpwarp script: %s', auto_tracing_sh)
+	else:
+	    logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
+	    optd['refine_rebuild_arpwarp'] = False
+	    optd['shelxe_rebuild_arpwarp'] = False
 
-    if optd['make_frags']:
-        if optd['use_homs']:
-            logger.info('Making fragments (including homologues)')
-        else:
-            logger.info('Making fragments EXCLUDING HOMOLOGUES')
-    else:
-        logger.info('NOT making Fragments')
-
-    if optd['make_models']:
-        logger.info('\nMaking Rosetta Models')
-    else:
-        logger.info('NOT making Rosetta Models')
-
-        # Print out what is being done
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
         logger.info('Rebuilding in Bucaneer')
     else:
@@ -460,18 +391,9 @@ def process_options(optd):
         logger.info('Rebuilding in ARP/wARP')
     else:
         logger.info('Not rebuilding in ARP/wARP')
-
-    # cluster queueing
-    if optd['submit_qtype']:
-        optd['submit_qtype'] = optd['submit_qtype'].upper()
-    if optd['submit_cluster'] and not optd['submit_qtype']:
-        msg = 'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
-        exit_util.exit_error(msg)
-
-    if optd['purge']:
-        logger.info('*** Purge mode specified - all intermediate files will be deleted ***')
-
-    return
+    # If shelxe_rebuild is set we need use_shelxe to be set
+    if optd['shelxe_rebuild'] and not optd['use_shelxe']:
+        raise RuntimeError('shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.')
 
 
 def process_restart_options(optd):
@@ -516,7 +438,7 @@ def process_restart_options(optd):
     """
     if not optd['restart_pkl']:
         return optd
-    logger.info('Restarting from existing pkl file: {0}'.format(optd['restart_pkl']))
+    logger.info('Restarting from existing pkl file: %s', optd['restart_pkl'])
 
     # Go through and see what we need to do
     # Reset all variables for doing stuff - otherwise we will always restart from the earliest point
@@ -530,9 +452,7 @@ def process_restart_options(optd):
     # job and we only set benchmark mode on seeing the native_pdb
     if optd['native_pdb']:
         if not os.path.isfile(optd['native_pdb']):
-            msg = "Cannot find native_pdb: {0}".format(optd['native_pdb'])
-            logger.critical(msg)
-            raise RuntimeError(msg)
+            raise RuntimeError("Cannot find native_pdb: {0}".format(optd['native_pdb']))
         optd['benchmark_mode'] = True
         logger.info('Restart using benchmark mode')
 
@@ -545,7 +465,7 @@ def process_restart_options(optd):
 
     if optd['do_mr']:
         if len(optd['mrbump_scripts']):
-            logger.info('Restarting from unfinished mrbump scripts: {0}'.format(optd['mrbump_scripts']))
+            logger.info('Restarting from unfinished mrbump scripts: %s', optd['mrbump_scripts'])
             # Purge unfinished jobs
             for spath in optd['mrbump_scripts']:
                 directory, script = os.path.split(spath)
@@ -559,17 +479,16 @@ def process_restart_options(optd):
                     shutil.rmtree(jobdir)
         elif 'ensembles' in optd and optd['ensembles'] and len(optd['ensembles']):
             # Rerun from ensembles - check for data/ensembles are ok?
-            logger.info('Restarting from existing ensembles: {0}'.format(optd['ensembles']))
+            logger.info('Restarting from existing ensembles: %s', optd['ensembles'])
         elif 'models_dir' in optd and optd['models_dir'] and os.path.isdir(optd['models_dir']):
-            logger.info('Restarting from existing models: {0}'.format(optd['models_dir']))
-            # Check the models
+            logger.info('Restarting from existing models: %s', optd['models_dir'])
             allsame = False if optd['homologs'] else True
             if not pdb_edit.check_pdb_directory(optd['models_dir'], sequence=None, single=True, allsame=allsame):
-                msg = "Error importing restart models: {0}".format(optd['models_dir'])
-                exit_util.exit_error(msg)
+                raise RuntimeError("Error importing restart models: {0}".format(optd['models_dir']))
+
             optd['make_ensembles'] = True
         elif optd['frags_3mers'] and optd['frags_9mers']:
-            logger.info('Restarting from existing fragments: {0}, {1}'.format(optd['frags_3mers'], optd['frags_9mers']))
+            logger.info('Restarting from existing fragments: %s, %s', optd['frags_3mers'], optd['frags_9mers'])
             optd['make_models'] = True
 
     return optd
@@ -585,6 +504,7 @@ def process_rosetta_options(optd):
         except Exception, e:
             msg = "Error setting ROSETTA options: {0}".format(e)
             exit_util.exit_error(msg)
+        optd['modelling_workdir'] = rosetta_modeller.work_dir
     return rosetta_modeller
 
 
@@ -604,16 +524,10 @@ def restart_amoptd(optd):
     """
     if not optd['restart_pkl']:
         return optd
-    logger.info('Restarting from existing pkl file: {0}'.format(optd['restart_pkl']))
-    # We use the old dictionary, but udpate it with any new values
+    logger.info('Restarting from existing pkl file: %s', optd['restart_pkl'])
     optd_old = ample_util.read_amoptd(optd['restart_pkl'])
-
-    # Now update any variables that were given on the command-line
     for k in optd['cmdline_flags']:
-        logger.debug("Restart updating amopt variable: {0} : {1}".format(k, optd[k]))
+        logger.debug("Restart updating amopt variable: %s : %s", k, str(optd[k]))
         optd_old[k] = optd[k]
-
-    # We can now replace the old dictionary with this new one
     optd = optd_old
-
     return optd

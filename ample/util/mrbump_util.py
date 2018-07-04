@@ -29,6 +29,7 @@ import parse_phaser
 
 TOP_KEEP = 3 # How many of the top shelxe/phaser results to keep for the gui
 MRBUMP_RUNTIME = 172800 # allow 48 hours for each mrbump job
+SHELXE_MAX_PERMITTED_RESOLUTION = 3.0
 
 # We need a null logger so that we can be used without requiring a logger
 class NullHandler(logging.Handler):
@@ -52,14 +53,12 @@ class ResultsSummary(object):
            A pickled AMPLE results dictionary
         """ 
         self.results = []
-        # Add Null logger so we can be used without requiring a logger
         self.pname = "archive"
         self.pdir = None
         self.success = False
-        
-        # Extract mrbump results from a pickled results file if given one.
         if results_pkl and os.path.isfile(results_pkl):
-            with open(results_pkl) as f: resd = cPickle.load(f)
+            with open(results_pkl) as f:
+                resd = cPickle.load(f)
             mkey = 'mrbump_results'
             if mkey in resd and len(resd[mkey]):
                 self.results = resd[mkey]
@@ -68,9 +67,7 @@ class ResultsSummary(object):
         return
 
     def analyseResult(self, result):
-        
         mrDir = result["MR_directory"]
-        
         # result.ensembleName = result.name[9:-6]
         if result["MR_program"] == "PHASER":
             if result["PHASER_pdbout"]:
@@ -84,47 +81,31 @@ class ResultsSummary(object):
                 # result.phaserLog    = phaserLog
                 result["PHASER_time"] = phaserP.time
                 result["PHASER_killed"] = phaserP.killed
-            
-        #
-        # SHELXE PROCESSING
-        #
-        #
-        # Buccaneer Rebuild Processing
-        #
         buccaneerLog = os.path.join(mrDir,
                                      "build/shelxe/rebuild/buccaneer",
                                      "buccaneer.log")
-    
         bp = parse_buccaneer.BuccaneerLogParser()
         if os.path.isfile(buccaneerLog):
             bp.parse(buccaneerLog)
             result["SXRBUCC_final_Rfree"] = bp.finalRfree
             result["SXRBUCC_final_Rfact"] = bp.finalRfact
-
-        #
-        # Arpwarp Rebuild Processing
-        #
         arpLog = os.path.join(mrDir,
                               "build/shelxe/rebuild/arpwarp",
                               "arpwarp.log")
         if os.path.isfile(arpLog):
-                        ap = parse_arpwarp.ArpwarpLogParser()
-                        ap.parse(arpLog)
-                        result["SXRARP_final_Rfact"] = ap.finalRfact
-                        result["SXRARP_final_Rfree"] = ap.finalRfree
-        
+            ap = parse_arpwarp.ArpwarpLogParser()
+            ap.parse(arpLog)
+            result["SXRARP_final_Rfact"] = ap.finalRfact
+            result["SXRARP_final_Rfree"] = ap.finalRfree
         return
 
     def createDict(self):
         d = {}
-        
         # our additional keys
         d['ensemble_name'] = None
         d['MR_program'] = None
         d['name'] = None
         d['Search_directory'] = None
-        # END
-        
         d['MR_directory'] = None
         d['Solution_Type'] = None
         
@@ -192,31 +173,32 @@ class ResultsSummary(object):
         d['SXRARP_pdbout'] = None
         d['SXRARP_mtzout'] = None
         d['SXRARP_logfile'] = None
-        
         return d
     
-    def _extractOld(self, mrbump_dir):
+    def _extractPurged(self, mrbump_dir):
         """Recreate a list of the jobs that have been purged"""
-        old_results = {}
+        purged_results = {}
         self.pdir = os.path.join(mrbump_dir, self.pname)
-        if not os.path.isdir(self.pdir): os.mkdir(self.pdir)
+        if not os.path.isdir(self.pdir):
+            os.mkdir(self.pdir)
         pkls = glob.glob(os.path.join(self.pdir, "*.pkl"))
         if pkls:
             for p in pkls:
-                with open(p) as f: d = cPickle.load(f)
-                old_results[d['ensemble_name']] = d   
-        return old_results
+                with open(p) as f:
+                    d = cPickle.load(f)
+                purged_results[d['ensemble_name']] = d
+        return purged_results
 
     def extractResults(self, mrbump_dir, purge=False):
-        if not mrbump_dir or not os.path.isdir(mrbump_dir): raise RuntimeError,"Cannot find mrbump_dir: {0}".format(mrbump_dir)
-        old_results = {}
-        if purge: old_results = self._extractOld(mrbump_dir)
-        self._extractResults(mrbump_dir, archived_ensembles=old_results.keys())
-        
+        if not mrbump_dir or not os.path.isdir(mrbump_dir):
+            raise RuntimeError("Cannot find mrbump_dir: {0}".format(mrbump_dir))
+        purged_results = {}
+        if purge:
+            purged_results = self._extractPurged(mrbump_dir)
+        self._extractResults(mrbump_dir, archived_ensembles=purged_results.keys())
         if purge:
             self._purgeFailed()
-            self.results += old_results.values()
-            
+            self.results += purged_results.values()
         self.sortResults()
         self.success = any([jobSucceeded(r) for r in self.results])
         return self.results
@@ -229,7 +211,6 @@ class ResultsSummary(object):
         if not os.path.isdir(mrbump_dir):
             logger.warn("extractResults - is not a valid directory: {0}".format(mrbump_dir))
             return []
-                
         # Get a list of the ensembles (could get this from the amopt dictionary)
         # For now we just use the submission scripts and assume all have .sh or .sub extension
         ext = '.sh'
@@ -242,172 +223,58 @@ class ResultsSummary(object):
         if not len(ensembles):
             logger.warn("Could not extract any results from directory: {0}".format(mrbump_dir))
             return []
-        
         # reset any results
         results = []
         failed = {}  # dict mapping failures to what went wrong - need to process at the end
         for ensemble in ensembles:
             # Skip ones that we've archived
-            if archived_ensembles and ensemble in archived_ensembles: continue
-            
+            if archived_ensembles and ensemble in archived_ensembles:
+                continue
             # Check job directory
             jobDir = os.path.join(mrbump_dir, 'search_' + ensemble + '_mrbump')
-            if not os.path.isdir(jobDir): jobDir = os.path.join( mrbump_dir, 'search_'+ensemble )
+            if not os.path.isdir(jobDir):
+                jobDir = os.path.join( mrbump_dir, 'search_'+ensemble )
             if not os.path.isdir(jobDir):
                 # As we call this every time we monitor a job running, we don't want to print this out all the time
                 # logger.debug("Missing job directory: {0}".format(jobDir))
-                failed[ ensemble ] = "no_job_directory"
+                failed[ensemble] = "no_job_directory"
                 continue
-
             logger.debug(" -- checking directory for results: {0}".format(jobDir))
             # Check if finished
             if not os.path.exists(os.path.join(jobDir, "results", "finished.txt")):
                 logger.debug("Found unfinished job: {0}".format(jobDir))
-                failed[ ensemble ] = "unfinished"
+                failed[ensemble] = "unfinished"
                 continue
-
             # Check resultsTable.dat
             resultsDict = os.path.join(jobDir, "results", "resultsTable.pkl")
-            resultsTable = os.path.join(jobDir, "results", "resultsTable.dat")
             if os.path.isfile(resultsDict):
                 results += self.processMrbumpPkl(resultsDict)
-            elif os.path.isfile(resultsTable):
-                results += self.parseTableDat(resultsTable)
             else:
-                logger.debug(" -- Could not find results files: {0} or {1}".format(resultsDict, resultsTable))
-                failed[ ensemble ] = "missing-results-file"
+                logger.debug(" -- Could not find results files: {0}".format(resultsDict))
+                failed[ensemble] = "missing-results-file"
                 continue
-
         # Process the failed results
-        if failed: results += self._processFailed(mrbump_dir, failed)
-        if not len(results): logger.warn("Could not extract any results from directory: {0}".format(mrbump_dir))
+        if failed:
+            results += self._processFailed(mrbump_dir, failed)
+        if not len(results):
+            logger.warn("Could not extract any results from directory: {0}".format(mrbump_dir))
         self.results = results
         return
-    
-    def parseTableDat(self, tfile):
-        """Read a resultsTable file and return a list of MrBump results objects"""
-
-        # Extract the various components from the path
-        tfile = os.path.abspath(tfile)
-        paths = tfile.split(os.sep)
-        jobDir = os.path.abspath(os.sep.join(paths[:-2]))
-        if paths[-3].endswith('_mrbump'): ensemble = paths[-3][7:-7]  #  remove search_..._mrbump: 'search_All_atom_trunc_0.005734_rad_1_mrbump'
-        else: ensemble = paths[-3][7:]
-
-        # List of all the possible column titles and their result object attributes
-        title2key = {
-                     'Model_Name'       : 'name',
-                     'MR_Program'       : 'MR_program',
-                     'Solution_Type'    : 'Solution_Type',
-                     'final_Rfact'      : 'final_Rfact',
-                     'final_Rfree'      : 'final_Rfree',
-                     'SHELXE_CC'        : 'SHELXE_CC',
-                     'SHELXE_ACL'       : 'SHELXE_ACL',
-                     'Bucc_final_Rfact' : 'BUCC_final_Rfact',
-                     'Bucc_final_Rfree' : 'BUCC_final_Rfree',
-                     'ARP_final_Rfact'  : 'ARP_final_Rfact',
-                     'ARP_final_Rfree'  : 'ARP_final_Rfree',
-                      }
-
-        results = []
-        header = None
-        nfields = None
-        # Read results table to get the results
-        for line in open(tfile):
-
-            # Create a result object for each line in the output file
-            result = self.createDict()
-            result['ensemble_name'] = ensemble
-            result['Search_directory'] = jobDir
-
-            line = line.strip()
-            if not header:
-                # Processing header
-                header = line.split()
-                nfields = len(header)  # count as check
-                for f in header:
-                    # Map the data fields to their titles
-                    if f not in title2key.keys():
-                        logger.critical("jobDir {0}: Problem with field {1} in headerline: {2}".format(jobDir, f, line))
-                        result['Solution_Type'] = "problem-header-file.dat"
-                        self._getUnfinishedResult(result)
-                        results.append(result)
-                        return results
-                continue
-                # End header processing
-
-            fields = line.split()
-            if len(fields) != nfields:
-                msg = "jobDir {0}: Problem getting dataline: {1}".format(jobDir, line)
-                logger.debug(msg)
-                result['Solution_Type'] = "corrupted-data-tfile.dat"
-                self._getUnfinishedResult(result)
-                results.append(result)
-                continue
-
-            # The headers tell us what attribute is in each column, so we use these and the header2attr dict to
-            # set the results
-            for i, title in enumerate(header):
-                v = fields[i]
-                if v == '--': v = None  # non-valid values in table are indicated by --
-                result[title2key[title]] = v
-
-            dirName = result['name'][:-6]
-            result["MR_directory"] = os.path.join(jobDir, 'data', dirName, 'unmod', 'mr', result["MR_program"].lower())
-            
-            # See which pdb files were created
-            if result["MR_program"] == 'PHASER':
-                phaserPdb = os.path.join(result["MR_directory"],
-                                       "refine",
-                                       "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(), result['ensemble_name']))
-                if os.path.isfile(phaserPdb):
-                    result['PHASER_pdbout'] = phaserPdb
-            elif result.program == 'molrep':
-                molrepPdb = os.path.join(result["MR_directory"],
-                                       "refine",
-                                       "{0}_loc0_ALL_{1}_UNMOD.1.pdb".format(result["MR_program"].lower(), result['ensemble_name']))
-                if os.path.isfile(molrepPdb):
-                    result['MOLREP_pdbout'] = molrepPdb
-
-            refmacPdb = os.path.join(result["MR_directory"],
-                                   'refine',
-                                   "refmac_" + result["MR_program"].lower() + "_loc0_ALL_" + result['ensemble_name'] + "_UNMOD.pdb")
-            if os.path.isfile(refmacPdb):
-                result["REFMAC_pdbout"] = refmacPdb
-                
-            shelxePdb = os.path.join(result["MR_directory"], 'build', 'shelxe',
-                                   "shelxe_" + result["MR_program"].lower() + "_loc0_ALL_" + result['ensemble_name'] + "_UNMOD.pdb")
-            if os.path.isfile(shelxePdb):
-                result["SHELXE_pdbout"] = shelxePdb
-                
-            buccaneerPdb = os.path.join(result["MR_directory"], 'build', 'shelxe', 'rebuild', 'buccaneer',
-                                      "buccSX_output.pdb")
-            if os.path.isfile(buccaneerPdb):
-                result["SXRBUCC_pdbout"] = buccaneerPdb
-                
-            arpWarpPdb = os.path.join(result["MR_directory"], 'build', 'shelxe', 'rebuild', 'arpwarp',
-                                      "refmacSX_output_warpNtrace.pdb")
-            if os.path.isfile(arpWarpPdb):
-                result["SXRARP_pdbout"] = arpWarpPdb
-            
-            self.analyseResult(result)
-            results.append(result)
-
-        return results
 
     def processMrbumpPkl(self, resultsPkl):
         """Process dictionary
         """
         with open(resultsPkl) as f:
             rD = cPickle.load(f)
-        if not rD: return []
-        
+        if not rD:
+            return []
         results = []
         for name, d1 in rD.iteritems():
             for mrprog, d2 in d1.iteritems():
                 # Check if all the entries are None - means job didn't run.
                 # Should probably think of a better way to spot that (Search_directory is always set)
-                if not any([v for k, v in d2.iteritems() if k != 'Search_directory']): continue
+                if not any([v for k, v in d2.iteritems() if k != 'Search_directory']):
+                    continue
                 # Add MR program as dictionary entry
                 d = copy.copy(d2)
                 del d['SearchModel_filename']
@@ -441,24 +308,21 @@ class ResultsSummary(object):
             d['Search_directory'] = os.path.join(mrbump_dir, 'search_' + ensemble + '_mrbump')
             d['Solution_Type'] = reason
             results.append(d)
-            
         logger.debug("Added {0} MRBUMP result failures".format(len(failed)))
         return results
     
     def _purgeFailed(self):
         """Remove the MRBUMP directories of any jobs that don't pass the keep criteria and archive their job dictionaries"""
-        completed = [ r for r in self.results if not(job_unfinished(r)) ]
+        completed = [r for r in self.results if not(job_unfinished(r))]
         if completed:
             to_keep = []
             min_len = min(len(completed), TOP_KEEP)
             for r in ResultsSummary.sortResultsStatic(completed, prioritise='SHELXE_CC')[:min_len]:
                 if r not in to_keep:
                     to_keep.append(r)
-
             for r in ResultsSummary.sortResultsStatic(completed, prioritise='PHASER_TFZ')[:min_len]:
                 if r not in to_keep:
                     to_keep.append(r)
-
             for r in completed:
                 if r not in to_keep:
                     pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
@@ -471,7 +335,8 @@ class ResultsSummary(object):
         keys = ['ensemble_name', 'MR_program', 'Solution_Type']
         keys += _resultsKeys(results)
         resultsTable.append(keys)
-        for r in results: resultsTable.append([r[k] for k in keys])
+        for r in results:
+            resultsTable.append([r[k] for k in keys])
         return resultsTable
 
     def sortResults(self, prioritise=False):
@@ -519,7 +384,6 @@ class ResultsSummary(object):
 
     def summariseResults(self, mrbump_dir):
         """Return a string summarising the results"""
-
         results = self.extractResults(mrbump_dir)
         if len(results):
             return self.summaryString()
@@ -528,27 +392,23 @@ class ResultsSummary(object):
 
     def summaryString(self):
         """Return a string suitable for printing the sorted results"""
-
         resultsTable = self.results_table(self.results)
-
         # Format the results
         table = printTable.Table()
         summary = table.pprint_table(resultsTable)
-
         r = "\n\nOverall Summary:\n\n"
         r += summary
-
         # Hack need to think of a better way to do this when there are no valid results
         top = self.results[0]
         k = None
         for p in ['Search_directory','MR_directory']:
-            if p in top.keys(): k = p
+            if p in top.keys():
+                k = p
         assert k,"Missing search directory key in results dictionary"
         if top[k]:
             r += '\nBest Molecular Replacement results so far are in:\n\n'
             r += top[k]
         r += '\n\n'
-
         return r
     
     def topFiles(self, num_results=3):
@@ -584,8 +444,11 @@ class ResultsSummary(object):
                                   'pdb' : result[pdb_key],
                                   'mtz' : result[mtz_key] })
                     break # Stop as soon as we find one
-        if len(topf): return topf
-            
+        if len(topf):
+            return topf
+#
+# Module functions
+#
 def _resultsKeys(results):
     keys = []
     # Build up list of keys we want to print based on what we find in the results
@@ -606,6 +469,7 @@ def _resultsKeys(results):
     if any([True for r in results if r['SXRARP_final_Rfact']]):
         keys += ['SXRARP_final_Rfact', 'SXRARP_final_Rfree']
     return keys
+
 
 def checkSuccess(script_path):
     """Check if a job ran successfully.
@@ -634,6 +498,7 @@ def checkSuccess(script_path):
         return jobSucceeded(best)
     else:
         return False
+
 
 def finalSummary(amoptd):
     """Print a final summary of the job"""
@@ -680,6 +545,7 @@ def finalSummary(amoptd):
         r += '\n\n'
     return r
 
+
 def jobSucceeded(job_dict):
     PHASER_TFZ = 8.0
     PHASER_LLG = 120
@@ -701,9 +567,11 @@ def jobSucceeded(job_dict):
         success = True
     return success
 
+
 def job_unfinished(job_dict):
     if not 'Solution_Type' in job_dict: return True
     return job_dict['Solution_Type'] == "unfinished" or job_dict['Solution_Type'] == "no_job_directory"
+
 
 def unfinished_scripts(amoptd):
     """See if there are any unfinished mrbump jobs in a mrbump directory and return a list of the scripts"""
@@ -719,6 +587,7 @@ def unfinished_scripts(amoptd):
         #print "DIR2 ", r['Search_directory']
         scripts.append(os.path.join(amoptd['mrbump_dir'], r['ensemble_name']+ample_util.SCRIPT_EXT))
     return scripts
+
 
 def write_mrbump_files(ensemble_pdbs, amoptd, job_time=MRBUMP_RUNTIME, ensemble_options=None, directory=None):
     """Write the MRBUMP job files for all the ensembles.
@@ -760,6 +629,7 @@ def write_mrbump_files(ensemble_pdbs, amoptd, job_time=MRBUMP_RUNTIME, ensemble_
     
     return job_scripts
 
+
 def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, extra_options={}):
     """
     Create the script to run MrBump for this PDB.
@@ -782,9 +652,7 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
     # Make executable
     os.chmod(script_path, 0o777)
     logger.debug("Wrote MRBUMP script: {0}".format(script_path))
-
     return script_path
-
 
 if __name__ == "__main__":
     if not len(sys.argv) == 2: 
@@ -797,4 +665,3 @@ if __name__ == "__main__":
 
     r = ResultsSummary()
     print r.summariseResults(mrbump_dir)
-

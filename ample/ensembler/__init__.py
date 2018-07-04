@@ -94,15 +94,12 @@ def create_ensembles(amoptd):
     # Hack to pull out the data - need to update code to work with ensemble objects rather than dictionaries
     amoptd['ensembles'] = [e.pdb for e in ensembles]
     amoptd['ensembles_data'] = [e.__dict__ for e in ensembles]
+    amoptd['ensembles_workdir'] = ensembler.work_dir
 
     # We need to let the main process know that we have succeeded as this module could be run on a cluster node with no link
     # to the parent process, so we create a file here indicating that we got this far and didn't die from an exception
     with open(amoptd['ensemble_ok'], 'w') as fh:
         fh.write('ok\n')
-
-    # Delete all intermediate files if we're purging
-    if amoptd['purge']:
-        shutil.rmtree(ensembler.work_dir)
     return
 
 

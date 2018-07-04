@@ -2,7 +2,6 @@
 """
 This is AMPLE
 """
-import argparse
 import logging
 import os
 import platform
@@ -75,7 +74,6 @@ class Ample(object):
 
         # Create function for monitoring jobs - static function decorator?
         if self.ample_output:
-
             def monitor():
                 return self.ample_output.display_results(amopt.d)
         else:
@@ -88,6 +86,7 @@ class Ample(object):
         # Create constituent models from an NMR ensemble
         if amopt.d['nmr_model_in']:
             nmr_mdir = os.path.join(amopt.d['work_dir'], 'nmr_models')
+            amopt.d['modelling_workdir'] = nmr_mdir
             logger.info('Splitting NMR ensemble into constituent models in directory: {0}'.format(nmr_mdir))
             amopt.d['models'] = pdb_edit.split_pdb(
                 amopt.d['nmr_model_in'], directory=nmr_mdir, strip_hetatm=True, same_size=True)
@@ -136,6 +135,8 @@ class Ample(object):
         if self.ample_output:
             self.ample_output.display_results(amopt.d)
             self.ample_output.rvapi_shutdown(amopt.d)
+        
+        self.cleanup(amopt.d)
         return
 
     def benchmarking(self, optd):
@@ -159,9 +160,22 @@ class Ample(object):
         else:
             benchmark_util.analyse(optd)
             ample_util.save_amoptd(optd)
-
         return
-
+    
+    @staticmethod
+    def cleanup(optd):
+        """Remove directories based on purge level
+        """
+        purge_level = optd['purge']
+        to_remove = {1 : ['modelling_workdir', 'ensembles_workdir'],
+                     2 : ['models_dir', 'ensembles_directory', 'contacts_dir']}
+        for level in to_remove.keys():
+            if purge_level >= level:
+                for wdir in to_remove[level]:
+                    if wdir in optd and optd[wdir] and os.path.isdir(optd[wdir]):
+                        shutil.rmtree(optd[wdir])
+        return
+        
     def ensembling(self, optd):
         if optd['import_ensembles']:
             ensembler.import_ensembles(optd)
@@ -231,10 +245,12 @@ class Ample(object):
         return
 
     def modelling(self, optd, rosetta_modeller=None):
-        if not (optd['import_models'] or optd['make_frags'] or optd['make_models'] or optd['nmr_remodel']): return
+        if not (optd['import_models'] or optd['make_frags'] or optd['make_models'] or optd['nmr_remodel']):
+            return
         # Set the direcotry where the final models will end up
         optd['models_dir'] = os.path.join(optd['work_dir'], 'models')
-        if not os.path.isdir(optd['models_dir']): os.mkdir(optd['models_dir'])
+        if not os.path.isdir(optd['models_dir']):
+            os.mkdir(optd['models_dir'])
         if not rosetta_modeller:
             rosetta_modeller = options_processor.process_rosetta_options(optd)
         # Make Rosetta fragments
@@ -334,8 +350,7 @@ class Ample(object):
             subselect_data = con_util.subselect_decoys(optd['models'], 'pdb', mode=optd['subselect_mode'], **optd)
             optd['models'] = zip(*subselect_data)[0]
             optd['subselect_data'] = dict(subselect_data)
-
-        # Save the results
+            
         ample_util.save_amoptd(optd)
 
     def molecular_replacement(self, optd):
@@ -379,10 +394,9 @@ class Ample(object):
 
         # Create function for monitoring jobs - static function decorator?
         if self.ample_output:
-
             def monitor():
                 r = mrbump_util.ResultsSummary()
-                r.extractResults(optd['mrbump_dir'], purge=optd['purge'])
+                r.extractResults(optd['mrbump_dir'], purge=bool(optd['purge']))
                 optd['mrbump_results'] = r.results
                 return self.ample_output.display_results(optd)
         else:
@@ -413,14 +427,11 @@ class Ample(object):
 
         # Collect the MRBUMP results
         results_summary = mrbump_util.ResultsSummary()
-        optd['mrbump_results'] = results_summary.extractResults(optd['mrbump_dir'], purge=optd['purge'])
+        optd['mrbump_results'] = results_summary.extractResults(optd['mrbump_dir'], purge=bool(optd['purge']))
         optd['success'] = results_summary.success
-
         ample_util.save_amoptd(optd)
-
         summary = mrbump_util.finalSummary(optd)
         logger.info(summary)
-
 
     def setup(self, optd):
         """We take and return an ample dictionary as an argument.
@@ -488,9 +499,8 @@ class Ample(object):
             os.chdir(optd['run_dir'])
             shutil.rmtree(optd['work_dir'])
             sys.exit(0)
-
+            
         logger.info('All needed programs are found, continuing...')
-
         return optd
 
 

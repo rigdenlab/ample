@@ -103,7 +103,7 @@ class Test(unittest.TestCase):
 
     def test_preset_options_webserver_mode(self):
         options = config_util.AMPLEConfigOptions()
-        options.d = {'purge': False,
+        options.d = {'purge': 0,
                      'cluster_method' : SPICKER_RMSD,
                      'nproc': None,
                      'shelxe_rebuild_buccaneer': None,
@@ -113,7 +113,7 @@ class Test(unittest.TestCase):
                      'submit_qtype' : None,
         }
         options.cmdline_opts = {}
-        expected = {'purge': True,
+        expected = {'purge': 1,
                     'cluster_method' : SPICKER_TM,
                     'nproc': 1,
                     'shelxe_rebuild_buccaneer': True,
