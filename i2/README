@@ -1,9 +1,0 @@
-This is the code for the AMPLE CCP4 I2 GUI
-
-To work on this code, this folder needs to be symlinked to:
-
-$CCP4/share/ccp4i2/wrappers/AMPLE/script
-
-The icon needs to be named AMPLE.<ftype> and be placed in:
-
-$CCP4/share/ccp4i2/qticons
