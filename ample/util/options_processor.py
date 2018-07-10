@@ -374,23 +374,28 @@ def process_mr_options(optd):
         optd['shelxe_rebuild_buccaneer'] = True
 
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
-	auto_tracing_sh = os.path.join(os.environ['warpbin'], "auto_tracing.sh")
-	if 'warpbin' in os.environ and os.path.isfile(auto_tracing_sh):
-	    logger.info('Using arpwarp script: %s', auto_tracing_sh)
-	else:
-	    logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
-	    optd['refine_rebuild_arpwarp'] = False
-	    optd['shelxe_rebuild_arpwarp'] = False
+        auto_tracing_sh = None
+        if 'warpbin' in os.environ:
+            _path = os.path.join(os.environ['warpbin'], "auto_tracing.sh")
+            if os.path.isfile(_path):
+                auto_tracing_sh = _path
+        if auto_tracing_sh:
+            logger.info('Using arpwarp script: %s', auto_tracing_sh)
+        else:
+            logger.warn('Cannot find arpwarp script! Disabling use of arpwarp.')
+            optd['refine_rebuild_arpwarp'] = False
+            optd['shelxe_rebuild_arpwarp'] = False
 
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
+        logger.info('Rebuilding in ARP/wARP')
+    else:
+        logger.info('Not rebuilding in ARP/wARP')
+
+    if optd['refine_rebuild_buccaneer'] or optd['shelxe_rebuild_buccaneer']:
         logger.info('Rebuilding in Bucaneer')
     else:
         logger.info('Not rebuilding in Bucaneer')
 
-    if optd['refine_rebuild_buccaneer'] or optd['shelxe_rebuild_buccaneer']:
-        logger.info('Rebuilding in ARP/wARP')
-    else:
-        logger.info('Not rebuilding in ARP/wARP')
     # If shelxe_rebuild is set we need use_shelxe to be set
     if optd['shelxe_rebuild'] and not optd['use_shelxe']:
         raise RuntimeError('shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.')
