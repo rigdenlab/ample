@@ -144,7 +144,8 @@ def process_options(optd):
         optd['purge'] = int(optd['purge'])
     except (ValueError, KeyError):
         raise RuntimeError('Purge must be specified as an integer, got: {}'.format(optd['purge']))
-    logger.info('*** Purge mode level %d specified - intermediate files will be deleted ***', optd['purge'])
+    if optd['purge'] > 0:
+        logger.info('*** Purge mode level %d specified - intermediate files will be deleted ***', optd['purge'])
     return
 
 def process_modelling_options(optd):
