@@ -350,9 +350,9 @@ def process_mr_options(optd):
             optd['phaser_rms'] = phaser_rms
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     if optd['use_shelxe']:
-        if optd['mtz_max_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
-            logger.warn("Disabling use of SHELXE as max resolution of %f is < accepted limit of %f",
-                            optd['mtz_max_resolution'],
+        if optd['mtz_min_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
+            logger.warn("Disabling use of SHELXE as min resolution of %f is < accepted limit of %f",
+                            optd['mtz_min_resolution'],
                             mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION)
             optd['use_shelxe'] = False
             optd['shelxe_rebuild'] = False
