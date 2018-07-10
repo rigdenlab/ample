@@ -39,62 +39,79 @@ def calculate_residues_focussed(var_by_res):
     For > 80 residues, split < 40 into 10 4-residue chunks, and split the interval 40 -> end into
     10 even chunks.
     """
-    
     length = len(var_by_res)
     if length <= 80:
         # Just split evenly into 20 chunks
         return calculate_residues_percent(var_by_res, 5)
-
-    # Get list of residue indices sorted by variance - from least variable to most
     var_by_res.sort(key=lambda x: x.variance, reverse=False)
-     
     # Split a 40 - length interval into 10 even chunks.
     llen = 40
     lower_start = _split_sequence(llen, 10)
-    
     # Split remaining interval into 10 even chunks. We need to add the start sequence as we have
     # removed llen residues
     ulen = length - llen
     upper_start = [ i + llen for i in _split_sequence(ulen, 10) ]
     start_indexes = upper_start + lower_start 
-    
     # Calculate the percentages for each of these start points
     percentages = [ int(round(float(start + 1) / float(length) * 100)) for start in start_indexes ]
     # print "percentages ", percentages
     truncation_levels = percentages
-
-    # print "var_by_res ",var_by_res
     idxs_all = [ x.idx for x in var_by_res ]
     resseq_all = [ x.resSeq for x in var_by_res ]
     variances = [ x.variance for x in var_by_res ]
-
     truncation_residue_idxs = [ sorted(idxs_all[:i + 1]) for i in start_indexes ]
-    # print "truncation_residue_idxs ",truncation_residue_idxs
     truncation_residues = [ sorted(resseq_all[:i + 1]) for i in start_indexes ]
-    # print "truncation_residues ",truncation_residues
-    
     # We take the variance of the most variable residue
     truncation_variances = [ variances[i] for i in start_indexes ] 
-    # print "truncation_variances ",truncation_variances
     
     return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
 
 
-def calculate_residues_percent(var_by_res, percent_interval):
-    """Calculate the list of residues to keep if we are keeping self.percent residues under
-    each truncation bin. The threshold is just the threshold of the most variable residue"""
+def _calculate_start_indexes_from_fixed_percentages(percent_fixed_intervals, length, all_indexes):
+    "Calculate where in the list of residues each percentage bin starts"
+    def find_closest_index(nresidues_ideal, all_indexes):
+        min_dist = 99999 
+        start = None
+        for idx in all_indexes:
+            rdist = abs(nresidues_ideal - (idx + 1))
+            if  rdist <= min_dist and idx + 1 >= MIN_CHUNK:
+                min_dist = rdist
+                start = idx
+        assert start is not None
+        return start
+
+    indexes = []
+    for interval in percent_fixed_intervals:
+        nresidues_ideal = (length * int(interval)) / 100
+        start = find_closest_index(nresidues_ideal, all_indexes)
+        if start not in indexes:
+            indexes.append(start)
+    return indexes
+
+
+def calculate_residues_by_percent(var_by_res, percent_truncation=None, percent_fixed_intervals=None):
+    """Calculate the list of residues to keep if we are keeping the percentage of residues specified
+    in the list of integers percent_fixed_intervals"""
     
-    length = len(var_by_res)
-    start_idxs = _split_sequence(length, percent_interval, min_chunk=MIN_CHUNK)
-    
+    if percent_fixed_intervals:
+        if not (isinstance(percent_fixed_intervals, list) and \
+               len(percent_fixed_intervals) > 0 and \
+                min(percent_fixed_intervals) > 0 and \
+                max(percent_fixed_intervals) <= 100):
+            raise RuntimeError("Incorrect percent_fixed_intervals argument: {}".format(percent_fixed_intervals))
+
     # Get list of residue indices sorted by variance - from least to most
     var_by_res.sort(key=lambda x: x.variance, reverse=False)
+    all_indexes = [x.idx for x in var_by_res] # indexes correspond to the number of the residue - 1
+    all_resseq = [x.resSeq for x in var_by_res]
+    variances = [x.variance for x in var_by_res]
+    length = len(var_by_res)
 
-    # print "var_by_res ",var_by_res
-    idxs_all = [ x.idx for x in var_by_res ]
-    resseq_all = [ x.resSeq for x in var_by_res ]
-    variances = [ x.variance for x in var_by_res ]
-     
+    if percent_fixed_intervals:
+        start_idxs = _calculate_start_indexes_from_fixed_percentages(percent_fixed_intervals, length, all_indexes)
+    else:    
+        start_idxs = _split_sequence(length, percent_truncation, min_chunk=MIN_CHUNK)
+
     # Get list of residues to keep under the different intevals
     truncation_levels = []
     truncation_variances = []
@@ -102,65 +119,15 @@ def calculate_residues_percent(var_by_res, percent_interval):
     truncation_residue_idxs = []
     for start in start_idxs:
         percent = int(round(float(start + 1) / float(length) * 100))
-        residues = resseq_all[:start + 1]
-        idxs = idxs_all[:start + 1]
-        thresh = variances[start]  # For the threshold we take the threshold of the most variable residue
-        truncation_variances.append(thresh)
-        truncation_levels.append(percent)
-        truncation_residues.append(sorted(residues))
-        truncation_residue_idxs.append(sorted(idxs))
-             
-    return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
-
-
-def calculate_residues_percent_fixed_intervals(var_by_res, percent_fixed_intervals):
-    """Calculate the list of residues to keep if we are keeping the percentage of residues specified
-    in the list of integers percent_fixed_intervals"""
-    
-    if not (isinstance(percent_fixed_intervals, list) and \
-           len(percent_fixed_intervals) > 0 and \
-            min(percent_fixed_intervals) > 0 and \
-            max(percent_fixed_intervals) <= 100):
-        raise RuntimeError("Incorrect percent_fixed_intervals argument: {}".format(percent_fixed_intervals))
-    
-    # Get list of residue indices sorted by variance - from least to most
-    var_by_res.sort(key=lambda x: x.variance, reverse=False)
-    idxs_all = [x.idx for x in var_by_res] # indexes correspond to the number of the residue - 1
-    resseq_all = [x.resSeq for x in var_by_res]
-    variances = [x.variance for x in var_by_res]
-    length = len(var_by_res)
-    
-    def find_closest_index(nresidues_ideal, idxs_all):
-        min_dist = 99999 
-        start = None
-        for idx in idxs_all:
-            rdist = abs(nresidues_ideal - (idx + 1))
-            if  rdist <= min_dist and idx + 1 >= MIN_CHUNK:
-                min_dist = rdist
-                start = idx
-        assert start is not None
-        return start
-    
-    # Get list of residues to keep under the different intevals
-    truncation_levels = []
-    truncation_variances = []
-    truncation_residues = []
-    truncation_residue_idxs = []
-    for interval in percent_fixed_intervals:
-        nresidues_ideal = (length * int(interval)) / 100
-        start = find_closest_index(nresidues_ideal, idxs_all)
-        percent = int(round(float(start + 1) / float(length) * 100))
         if percent in truncation_levels:
             continue
-        residues = resseq_all[:start + 1]
-        idxs = resseq_all[:start + 1]
-        idxs = idxs_all[:start + 1]
+        residues = all_resseq[:start + 1]
+        idxs = all_indexes[:start + 1]
         thresh = variances[start]  # For the threshold we take the threshold of the most variable residue
         truncation_variances.append(thresh)
         truncation_levels.append(percent)
         truncation_residues.append(sorted(residues))
         truncation_residue_idxs.append(sorted(idxs))
-             
     return truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs
 
 
@@ -308,7 +275,7 @@ class Truncator(object):
         
         self.models = models
         # Calculate variances between pdb and align them (we currently only require the aligned models for homologs)
-        if truncation_method != "scores":
+        if truncation_method != TRUNCATION_METHODS.SCORES:
             run_theseus = theseus.Theseus(work_dir=self.work_dir, theseus_exe=self.theseus_exe)
             try:
                 run_theseus.superpose_models(self.models, homologs=homologs, alignment_file=alignment_file)
@@ -341,10 +308,10 @@ class Truncator(object):
         
         logger.info('Using truncation method: %s', truncation_method)
         # Calculate which residues to keep under the different methods
-        if truncation_method in [TRUNCATION_METHODS.PERCENT, TRUNCATION_METHODS.SCORES]:
-            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_percent(var_by_res, percent_truncation)
-        elif truncation_method == TRUNCATION_METHODS.PERCENT_FIXED:
-            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_percent_fixed_intervals(var_by_res, percent_fixed_intervals)
+        if truncation_method in [TRUNCATION_METHODS.PERCENT, TRUNCATION_METHODS.PERCENT_FIXED, TRUNCATION_METHODS.SCORES]:
+            truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_by_percent(var_by_res,
+                                                                                                                                  percent_truncation=percent_truncation,
+                                                                                                                                  percent_fixed_intervals=percent_fixed_intervals)
         elif truncation_method == TRUNCATION_METHODS.FOCUSED:
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_focussed(var_by_res)
         else:
@@ -354,7 +321,6 @@ class Truncator(object):
         self.truncation_levels =  truncation_levels
         self.truncation_variances = truncation_variances
         self.truncation_nresidues =  [len(r) for r in truncation_residues]
-        
         truncations = []
         for tlevel, tvar, tresidues, tresidue_idxs in zip(truncation_levels, 
                                                           truncation_variances, 

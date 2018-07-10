@@ -153,7 +153,7 @@ class Test(unittest.TestCase):
                          [16, 17, 18, 19, 20], 
                          [17, 18, 19, 20], 
                          [18, 19, 20]]
-        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent(var_by_res, percent_interval=5)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res, percent_truncation=5)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -169,7 +169,7 @@ class Test(unittest.TestCase):
                          [16, 17, 18, 19, 20]]
         ref_tvariances = [55.757579, 39.857312, 24.610979, 21.62225, 
                           16.568056, 8.722879]
-        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent(var_by_res, percent_interval=15)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res, percent_truncation=15)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -180,7 +180,7 @@ class Test(unittest.TestCase):
         ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
                          [9, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
         ref_tvariances = [55.757579, 21.187131]
-        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent(var_by_res, percent_interval=50)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res, percent_truncation=50)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -215,8 +215,8 @@ class Test(unittest.TestCase):
         ref_tlevels = [100]
         ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
         ref_tvariances = [55.757579]
-        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent_fixed_intervals(var_by_res,
-                                                                                                       percent_fixed_intervals)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res,
+                                                                                          percent_fixed_intervals=percent_fixed_intervals)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -226,8 +226,8 @@ class Test(unittest.TestCase):
         ref_tlevels = [30]
         ref_tresidues = [[15, 16, 17, 18, 19, 20]]
         ref_tvariances = [13.889743]
-        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent_fixed_intervals(var_by_res,
-                                                                                                       percent_fixed_intervals)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res,
+                                                                                          percent_fixed_intervals=percent_fixed_intervals)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -237,8 +237,8 @@ class Test(unittest.TestCase):
         ref_tlevels = [15]
         ref_tresidues = [[18, 19, 20]]
         ref_tvariances = [4.648089]
-        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent_fixed_intervals(var_by_res,\
-                                                                                                       percent_fixed_intervals)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res,\
+                                                                                          percent_fixed_intervals=percent_fixed_intervals)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -249,21 +249,21 @@ class Test(unittest.TestCase):
         ref_tresidues = [[15, 16, 17, 18, 19, 20],
                          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
         ref_tvariances = [13.889743, 55.757579]
-        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent_fixed_intervals(var_by_res,\
-                                                                                                       percent_fixed_intervals)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res,\
+                                                                                          percent_fixed_intervals=percent_fixed_intervals)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
 
         # Test Case 5
         percent_fixed_intervals = [1000]
-        self.assertRaises(RuntimeError, truncation_util.calculate_residues_percent_fixed_intervals,\
-                          var_by_res, percent_fixed_intervals)
+        self.assertRaises(RuntimeError, truncation_util.calculate_residues_by_percent,\
+                          var_by_res, percent_fixed_intervals=percent_fixed_intervals)
         
         # Test Case 6
         percent_fixed_intervals = [0]
-        self.assertRaises(RuntimeError, truncation_util.calculate_residues_percent_fixed_intervals,\
-                          var_by_res, percent_fixed_intervals)
+        self.assertRaises(RuntimeError, truncation_util.calculate_residues_by_percent,\
+                            var_by_res, percent_fixed_intervals=percent_fixed_intervals)
         return
         
     def test_pruneResidues(self):
