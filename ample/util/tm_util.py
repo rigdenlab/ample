@@ -99,7 +99,10 @@ class TMapps(object):
         self.executable = executable
         self.method = method.lower()
         self.tmp_dir = None
-        self.work_dir = os.path.abspath(wdir)
+        if wdir:
+            self.work_dir = os.path.abspath(wdir)
+        else:
+            self.work_dir = os.getcwd()
 
         self._nproc = 1
         self._qtype = 'local'
@@ -116,6 +119,10 @@ class TMapps(object):
         #      self._max_array_jobs = kwargs.pop('submit_max_array')
         if len(kwargs) > 0:
             logger.debug('Ignoring keyword arguments: %s', ' '.join(kwargs.keys()))
+
+        self.tmp_dir = os.path.join(self.work_dir, "tm_util_pdbs")
+        if not os.path.isdir(self.tmp_dir):
+            os.mkdir(self.tmp_dir)
 
     def comparison(self, models, structures):
         """
@@ -169,7 +176,8 @@ class TMapps(object):
 
             if os.path.isfile(model_pdb) and os.path.isfile(structure_pdb):
                 data_entries.append([model_name, structure_name, model_pdb, structure_pdb])
-                script = make_script([self.executable, model_pdb, structure_pdb], prefix="tmscore_", stem=stem)
+                script = make_script(
+                    [self.executable, model_pdb, structure_pdb], prefix="tmscore_", stem=stem, directory=self.tmp_dir)
                 job_scripts.append(script)
                 log_files.append(os.path.splitext(script)[0] + ".log")
             else:
@@ -326,9 +334,6 @@ class TMscore(TMapps):
 
     def __init__(self, executable, wdir=None, **kwargs):
         super(TMscore, self).__init__(executable, "TMscore", wdir=wdir, **kwargs)
-        self.tmp_dir = os.path.join(self.work_dir, "tm_util_pdbs")
-        if not os.path.isdir(self.tmp_dir):
-            os.mkdir(self.tmp_dir)
 
     def compare_structures(self, models, structures, fastas=None, all_vs_all=False):
         """
@@ -384,14 +389,16 @@ class TMscore(TMapps):
                 model_data.sort(key=operator.itemgetter(0))
 
                 aln_parser = alignment_parser.AlignmentParser()
-                fasta_structure_aln = aln_parser.align_sequences("".join(zip(*fasta_data)[1]), "".join(
-                    zip(*structure_data)[1]))
+                fasta_structure_aln = aln_parser.align_sequences(
+                    "".join(zip(*model_data)[1]), "".join(zip(*structure_data)[1])
+                )
 
                 to_remove = []
-                _alignment = zip("".join(zip(*model_data)[1]), fasta_structure_aln[1])
+                _alignment = zip(fasta_structure_aln[0], fasta_structure_aln[1])
                 for i, (model_res, structure_res) in enumerate(_alignment):
                     if model_res == "-" and structure_res == "-":
                         to_remove.append(i)
+
                 for i in reversed(to_remove):
                     _alignment.pop(i)
 
@@ -414,8 +421,9 @@ class TMscore(TMapps):
                 model_data = list(self._pdb_info(model))
                 structure_data = list(self._pdb_info(structure))
 
-                alignment = alignment_parser.AlignmentParser().align_sequences("".join(zip(*model_data)[1]), "".join(
-                    zip(*structure_data)[1]))
+                alignment = alignment_parser.AlignmentParser().align_sequences(
+                    "".join(zip(*model_data)[1]), "".join(zip(*structure_data)[1])
+                )
                 alignment = zip(alignment[0], alignment[1])
 
                 model_aln = "".join(zip(*alignment)[0])
@@ -476,7 +484,7 @@ class TMscore(TMapps):
 
         model_gaps = self._find_gaps(model_aln)
         structure_gaps = self._find_gaps(structure_aln)
-
+        
         pdb_edit.renumber_residues_gaps(model_pdb, _model_pdb_tmp_stage1, model_gaps)
         pdb_edit.renumber_residues_gaps(structure_pdb, _structure_pdb_tmp_stage1, structure_gaps)
 
@@ -492,14 +500,20 @@ class TMscore(TMapps):
         _model_data = list(self._pdb_info(model_pdb_ret))
         _structure_data = list(self._pdb_info(structure_pdb_ret))
 
-        if set(_model_data) != set(_structure_data):
-            msg = "Residues in model and structure non-identical. Affected PDBs {0} - {1}".format(
-                model_name, structure_name)
-            logger.critical(msg)
-            raise RuntimeError(msg)
+        # Alignment not always identical, let's aim for 90%
+        identical = set(_model_data).intersection(set(_structure_data))
+        if len(identical) / float(len(_model_data)) < 0.90:
+            msg = "Differing residues in model and structure. Affected PDBs %s - %s"
+            raise RuntimeError(msg % (model_name, structure_name))
 
-        map(os.unlink,
-            [_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, _structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2])
+        files = [_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, _structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2]
+        for i in range(4):
+            os.unlink(files[i])
+
+        if not os.path.isfile(model_pdb_ret):
+            raise RuntimeError("Modified model %s does not exist!" % model_pdb_ret)
+        if not os.path.isfile(structure_pdb_ret):
+            raise RuntimeError("Modified reference %s does not exist!" % structure_pdb_ret)
 
         return model_pdb_ret, structure_pdb_ret
 
