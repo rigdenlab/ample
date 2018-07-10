@@ -42,7 +42,7 @@ def calculate_residues_focussed(var_by_res):
     length = len(var_by_res)
     if length <= 80:
         # Just split evenly into 20 chunks
-        return calculate_residues_percent(var_by_res, 5)
+        return calculate_residues_by_percent(var_by_res, percent_truncation=5)
     var_by_res.sort(key=lambda x: x.variance, reverse=False)
     # Split a 40 - length interval into 10 even chunks.
     llen = 40
