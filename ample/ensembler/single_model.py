@@ -37,6 +37,7 @@ class SingleModelEnsembler(_ensembler.Ensembler):
                            ensembles_directory=None,
                            nproc=None,
                            percent_truncation=None,
+                           percent_fixed_intervals=None,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS,
                            truncation_method=None,
                            truncation_pruning=None,
@@ -108,6 +109,7 @@ class SingleModelEnsembler(_ensembler.Ensembler):
             for truncation in self.truncator.truncate_models(models=std_models,
                                                              truncation_method=truncation_method,
                                                              percent_truncation=percent_truncation,
+                                                             percent_fixed_intervals=percent_fixed_intervals,
                                                              truncation_pruning=truncation_pruning,
                                                              residue_scores=zipped_scores):
 
@@ -132,6 +134,7 @@ class SingleModelEnsembler(_ensembler.Ensembler):
     def generate_ensembles_from_amoptd(self, models, amoptd):
         """Generate ensembles from data in supplied ample data dictionary."""
         kwargs = {'percent_truncation': amoptd['percent'],
+                  'percent_fixed_intervals': amoptd['percent_fixed_intervals'],
                   'side_chain_treatments': amoptd['side_chain_treatments'],
                   'truncation_method': amoptd['truncation_method'],
                   'truncation_pruning': amoptd['truncation_pruning'],

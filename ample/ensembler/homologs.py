@@ -119,6 +119,7 @@ class HomologEnsembler(_ensembler.Ensembler):
                            models,
                            alignment_file=None,
                            homolog_aligner=None,
+                           percent_fixed_intervals=None,
                            percent_truncation=None,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS,
                            truncation_method=None,
@@ -175,6 +176,7 @@ class HomologEnsembler(_ensembler.Ensembler):
         self.truncator.theseus_exe = self.theseus_exe
         for truncation in self.truncator.truncate_models(models=std_models,
                                                          truncation_method=truncation_method,
+                                                         percent_fixed_intervals=percent_fixed_intervals,
                                                          percent_truncation=percent_truncation,
                                                          truncation_pruning=None,
                                                          homologs=True,
@@ -210,6 +212,7 @@ class HomologEnsembler(_ensembler.Ensembler):
 
     def generate_ensembles_from_amoptd(self, models, amoptd):
         kwargs = {'percent_truncation' : amoptd['percent'],
+                  'percent_fixed_intervals' : amoptd['percent_fixed_intervals'],
                   'side_chain_treatments' : amoptd['side_chain_treatments'],
                   'truncation_method' : amoptd['truncation_method'],
                   'alignment_file' : amoptd['alignment_file'],
