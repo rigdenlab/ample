@@ -150,6 +150,8 @@ def calculate_residues_percent_fixed_intervals(var_by_res, percent_fixed_interva
         nresidues_ideal = (length * int(interval)) / 100
         start = find_closest_index(nresidues_ideal, idxs_all)
         percent = int(round(float(start + 1) / float(length) * 100))
+        if percent in truncation_levels:
+            continue
         residues = resseq_all[:start + 1]
         idxs = resseq_all[:start + 1]
         idxs = idxs_all[:start + 1]
