@@ -90,6 +90,87 @@ def process_benchmark_options(optd):
         else:
             optd['have_tmscore'] = True
             
+def process_ensemble_options(optd):
+    from ample.ensembler.truncation_util import TRUNCATION_METHODS
+    if optd['single_model_mode'] and optd['truncation_scorefile'] and optd['truncation_scorefile_header']:
+        #optd['truncation_method'] = "scores"
+        optd['truncation_method'] = TRUNCATION_METHODS.SCORES
+    elif optd['percent_fixed_intervals']:
+        optd['truncation_method'] = TRUNCATION_METHODS.PERCENT_FIXED
+    else:
+        try:
+            optd['truncation_method'] = TRUNCATION_METHODS(optd['truncation_method'])
+        except ValueError:
+            raise RuntimeError("{} is not a valid truncation method. Use one of: {}".format(optd['truncation_method'],
+                                                                                            [e.value for e in TRUNCATION_METHODS]))
+        
+    # Check we can find all the required programs
+    # Maxcluster handled differently as we may need to download the binary
+    if optd['subcluster_program'] == 'maxcluster':
+        optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
+    elif optd['subcluster_program'] == 'gesamt':
+        if not optd['gesamt_exe']:
+            optd['gesamt_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
+        try:
+            optd['gesamt_exe'] = ample_util.find_exe(optd['gesamt_exe'])
+        except ample_util.FileNotFoundError as e:
+            raise RuntimeError("Cannot find Gesamt executable: {0}".format(optd['gesamt_exe']))
+    # Ensemble options
+    if optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
+        if not optd['spicker_exe']:
+            if optd['cluster_method'] == SPICKER_TM and optd['nproc'] > 1:
+                # We need to use the multicore version of SPICKER
+                optd['spicker_exe'] = 'spicker_omp' + ample_util.EXE_EXT
+            else:
+                optd['spicker_exe'] = 'spicker' + ample_util.EXE_EXT
+        try:
+            optd['spicker_exe'] = ample_util.find_exe(optd['spicker_exe'])
+        except ample_util.FileNotFoundError:
+            msg = "Cannot find spicker executable: {0}".format(optd['spicker_exe'])
+            exit_util.exit_error(msg)
+    elif optd['cluster_method'] in ['fast_protein_cluster']:
+        if not optd['fast_protein_cluster_exe']:
+            optd['fast_protein_cluster_exe'] = 'fast_protein_cluster'
+        try:
+            optd['fast_protein_cluster_exe'] = ample_util.find_exe(optd['fast_protein_cluster_exe'])
+        except ample_util.FileNotFoundError:
+            msg = "Cannot find fast_protein_cluster executable: {0}".format(optd['fast_protein_cluster_exe'])
+            exit_util.exit_error(msg)
+    elif optd['cluster_method'] in ['import', 'random', 'skip']:
+        pass
+    else:
+        raise RuntimeError("Unrecognised cluster_method: {0}".format(optd['cluster_method']))
+    if not optd['theseus_exe']:
+        optd['theseus_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'theseus' + ample_util.EXE_EXT)
+    try:
+        optd['theseus_exe'] = ample_util.find_exe(optd['theseus_exe'])
+    except ample_util.FileNotFoundError:
+        raise RuntimeError("Cannot find theseus executable: {0}".format(optd['theseus_exe']))
+    # SCRWL - we always check for SCRWL as if we are processing QUARK models we want to add sidechains to them
+    if not optd['scwrl_exe']:
+        optd['scwrl_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'Scwrl4' + ample_util.EXE_EXT)
+    try:
+        optd['scwrl_exe'] = ample_util.find_exe(optd['scwrl_exe'])
+    except ample_util.FileNotFoundError as e:
+        logger.info("Cannot find Scwrl executable: %s", optd['scwrl_exe'])
+        if optd['use_scwrl']:
+            raise (e)
+    if "subcluster_radius_thresholds" in optd and not optd["subcluster_radius_thresholds"]:
+        optd["subcluster_radius_thresholds"] = SUBCLUSTER_RADIUS_THRESHOLDS
+    # REM: This should really be disentangled and moved up to definition of all homologs options
+    # REM: but could cause confusion with defaults down here.
+    if "side_chain_treatments" in optd and not optd["side_chain_treatments"]:
+        if optd["homologs"]:
+            optd["side_chain_treatments"] = [POLYALA, RELIABLE, ALLATOM]
+        else:
+            optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
+    else:
+        optd["side_chain_treatments"] = map(str.lower, optd["side_chain_treatments"])
+    unrecognised_sidechains = set(optd["side_chain_treatments"]) - set(ALLOWED_SIDE_CHAIN_TREATMENTS)
+    if unrecognised_sidechains:
+        raise("Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains))
+    return
+
 
 def process_options(optd):
     """Process the initial options from the command-line/ample.ini file to set any additional options.
@@ -131,6 +212,7 @@ def process_options(optd):
         logger.info('Processing missing domain\n')
         if not os.path.exists(optd['domain_all_chains_pdb']):
             raise RuntimeError('Cannot find file domain_all_chains_pdb: {0}'.format(optd['domain_all_chains_pdb']))
+    process_ensemble_options(optd)
     process_mr_options(optd)
     process_benchmark_options(optd)
 
@@ -200,8 +282,6 @@ def process_modelling_options(optd):
         optd['make_frags'] = False
         optd['make_models'] = False
         optd['single_model_mode'] = True
-        if optd['truncation_scorefile'] and optd['truncation_scorefile_header']:
-            optd['truncation_method'] = "scores"
     # Check import flags
     if optd['import_ensembles'] and (optd['import_models']):
         raise RuntimeError("Cannot import both models and ensembles/clusters!")
@@ -252,72 +332,6 @@ def process_modelling_options(optd):
     These can be generated using the Robetta server: http://robetta.bakerlab.org
     Please see the AMPLE documentation for further information."""
             raise RuntimeError(msg)
-
-    # Check we can find all the required programs
-    # Maxcluster handled differently as we may need to download the binary
-    if optd['subcluster_program'] == 'maxcluster':
-        optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
-    elif optd['subcluster_program'] == 'gesamt':
-        if not optd['gesamt_exe']:
-            optd['gesamt_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
-        try:
-            optd['gesamt_exe'] = ample_util.find_exe(optd['gesamt_exe'])
-        except ample_util.FileNotFoundError as e:
-            raise RuntimeError("Cannot find Gesamt executable: {0}".format(optd['gesamt_exe']))
-    # Ensemble options
-    if optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
-        if not optd['spicker_exe']:
-            if optd['cluster_method'] == SPICKER_TM and optd['nproc'] > 1:
-                # We need to use the multicore version of SPICKER
-                optd['spicker_exe'] = 'spicker_omp' + ample_util.EXE_EXT
-            else:
-                optd['spicker_exe'] = 'spicker' + ample_util.EXE_EXT
-        try:
-            optd['spicker_exe'] = ample_util.find_exe(optd['spicker_exe'])
-        except ample_util.FileNotFoundError:
-            msg = "Cannot find spicker executable: {0}".format(optd['spicker_exe'])
-            exit_util.exit_error(msg)
-    elif optd['cluster_method'] in ['fast_protein_cluster']:
-        if not optd['fast_protein_cluster_exe']:
-            optd['fast_protein_cluster_exe'] = 'fast_protein_cluster'
-        try:
-            optd['fast_protein_cluster_exe'] = ample_util.find_exe(optd['fast_protein_cluster_exe'])
-        except ample_util.FileNotFoundError:
-            msg = "Cannot find fast_protein_cluster executable: {0}".format(optd['fast_protein_cluster_exe'])
-            exit_util.exit_error(msg)
-    elif optd['cluster_method'] in ['import', 'random', 'skip']:
-        pass
-    else:
-        raise RuntimeError("Unrecognised cluster_method: {0}".format(optd['cluster_method']))
-    if not optd['theseus_exe']:
-        optd['theseus_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'theseus' + ample_util.EXE_EXT)
-    try:
-        optd['theseus_exe'] = ample_util.find_exe(optd['theseus_exe'])
-    except ample_util.FileNotFoundError:
-        raise RuntimeError("Cannot find theseus executable: {0}".format(optd['theseus_exe']))
-    # SCRWL - we always check for SCRWL as if we are processing QUARK models we want to add sidechains to them
-    if not optd['scwrl_exe']:
-        optd['scwrl_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'Scwrl4' + ample_util.EXE_EXT)
-    try:
-        optd['scwrl_exe'] = ample_util.find_exe(optd['scwrl_exe'])
-    except ample_util.FileNotFoundError as e:
-        logger.info("Cannot find Scwrl executable: %s", optd['scwrl_exe'])
-        if optd['use_scwrl']:
-            raise (e)
-    if "subcluster_radius_thresholds" in optd and not optd["subcluster_radius_thresholds"]:
-        optd["subcluster_radius_thresholds"] = SUBCLUSTER_RADIUS_THRESHOLDS
-    # REM: This should really be disentangled and moved up to definition of all homologs options
-    # REM: but could cause confusion with defaults down here.
-    if "side_chain_treatments" in optd and not optd["side_chain_treatments"]:
-        if optd["homologs"]:
-            optd["side_chain_treatments"] = [POLYALA, RELIABLE, ALLATOM]
-        else:
-            optd["side_chain_treatments"] = SIDE_CHAIN_TREATMENTS
-    else:
-        optd["side_chain_treatments"] = map(str.lower, optd["side_chain_treatments"])
-    unrecognised_sidechains = set(optd["side_chain_treatments"]) - set(ALLOWED_SIDE_CHAIN_TREATMENTS)
-    if unrecognised_sidechains:
-        raise("Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains))
     if optd['make_frags']:
         if optd['use_homs']:
             logger.info('Making fragments (including homologues)')
@@ -491,12 +505,10 @@ def process_restart_options(optd):
             allsame = False if optd['homologs'] else True
             if not pdb_edit.check_pdb_directory(optd['models_dir'], sequence=None, single=True, allsame=allsame):
                 raise RuntimeError("Error importing restart models: {0}".format(optd['models_dir']))
-
             optd['make_ensembles'] = True
         elif optd['frags_3mers'] and optd['frags_9mers']:
             logger.info('Restarting from existing fragments: %s, %s', optd['frags_3mers'], optd['frags_9mers'])
             optd['make_models'] = True
-
     return optd
 
 
@@ -507,7 +519,7 @@ def process_rosetta_options(optd):
         logger.info('Using ROSETTA so checking options')
         try:
             rosetta_modeller = rosetta_model.RosettaModel(optd=optd)
-        except Exception, e:
+        except Exception as e:
             msg = "Error setting ROSETTA options: {0}".format(e)
             exit_util.exit_error(msg)
         optd['modelling_workdir'] = rosetta_modeller.work_dir

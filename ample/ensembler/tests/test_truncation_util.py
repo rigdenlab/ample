@@ -378,6 +378,7 @@ class Test(unittest.TestCase):
     def test_truncator(self):
         """Test of the Truncator object.
         """
+        from ample.ensembler.truncation_util import TRUNCATION_METHODS
         mdir = os.path.join(self.testfiles_dir, "models")
         models = glob.glob(mdir + os.sep + "*.pdb")
         work_dir = os.path.join(self.tests_dir, "truncator")
@@ -386,7 +387,7 @@ class Test(unittest.TestCase):
 
         truncator = Truncator(work_dir=work_dir)
         truncator.theseus_exe = self.theseus_exe
-        truncation_method = 'percent'
+        truncation_method = TRUNCATION_METHODS.PERCENT
         truncations = truncator.truncate_models(models=models,
                                                 truncation_method=truncation_method,
                                                 percent_truncation='50')

@@ -4,6 +4,7 @@ __date__ = "10 Jul 2018"
 __version__ = "1.0"
 
 import collections
+from enum import Enum
 import logging
 import os
 
@@ -15,6 +16,12 @@ from ample.util import theseus
 logger = logging.getLogger(__name__)
 
 MIN_CHUNK = 3 # Theseus needs at least 3 residues in order to work
+
+class TRUNCATION_METHODS(Enum):
+    FOCUSED = 'focussed'
+    PERCENT = 'percent'
+    PERCENT_FIXED = 'percent_fixed_intervals'
+    SCORES = 'scores'
 
 # Data structure to store residue information
 ScoreVariances = collections.namedtuple("ScoreVariances", ["idx", "resSeq", "variance"])
@@ -332,11 +339,11 @@ class Truncator(object):
         
         logger.info('Using truncation method: %s', truncation_method)
         # Calculate which residues to keep under the different methods
-        if truncation_method == 'percent' or truncation_method == 'scores':
+        if truncation_method in [TRUNCATION_METHODS.PERCENT, TRUNCATION_METHODS.SCORES]:
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_percent(var_by_res, percent_truncation)
-        elif truncation_method == 'percent_fixed_intervals':
+        elif truncation_method == TRUNCATION_METHODS.PERCENT_FIXED:
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_percent_fixed_intervals(var_by_res, percent_fixed_intervals)
-        elif truncation_method == 'focussed':
+        elif truncation_method == TRUNCATION_METHODS.FOCUSED:
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_focussed(var_by_res)
         else:
             raise RuntimeError("Unrecognised ensembling mode: {0}".format(truncation_method))
