@@ -7,6 +7,7 @@ import collections
 from enum import Enum
 import logging
 import os
+import sys
 
 from ample.ensembler._ensembler import model_core_from_fasta 
 from ample.util import ample_util
@@ -70,7 +71,7 @@ def calculate_residues_focussed(var_by_res):
 def _calculate_start_indexes_from_fixed_percentages(percent_fixed_intervals, length, all_indexes):
     "Calculate where in the list of residues each percentage bin starts"
     def find_closest_index(nresidues_ideal, all_indexes):
-        min_dist = 99999 
+        min_dist = sys.maxsize 
         start = None
         for idx in all_indexes:
             rdist = abs(nresidues_ideal - (idx + 1))
@@ -102,9 +103,9 @@ def calculate_residues_by_percent(var_by_res, percent_truncation=None, percent_f
 
     # Get list of residue indices sorted by variance - from least to most
     var_by_res.sort(key=lambda x: x.variance, reverse=False)
-    all_indexes = [x.idx for x in var_by_res] # indexes correspond to the number of the residue - 1
-    all_resseq = [x.resSeq for x in var_by_res]
-    variances = [x.variance for x in var_by_res]
+    # indexes correspond to the number of the residue - 1
+    var_by_res_data = [(x.idx, x.resSeq, x.variance) for x in var_by_res]
+    all_indexes, all_resseq, variances = zip(*var_by_res_data)
     length = len(var_by_res)
 
     if percent_fixed_intervals:
@@ -303,7 +304,7 @@ class Truncator(object):
         # No THESEUS variances required if scores for each residue provided
         var_by_res = run_theseus.var_by_res if truncation_method != "scores" \
             else self._convert_residue_scores(residue_scores)
-        if not len(var_by_res) > 0:
+        if len(var_by_res) <= 0:
             raise RuntimeError("Error reading residue variances!")
         
         logger.info('Using truncation method: %s', truncation_method)

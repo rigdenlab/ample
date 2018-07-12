@@ -8,7 +8,6 @@ import glob
 import logging
 import os
 import shutil
-import sys
 
 from ample.constants import AMPLE_PKL
 from ample.ensembler.constants import  SUBCLUSTER_RADIUS_THRESHOLDS, SIDE_CHAIN_TREATMENTS, \
@@ -113,7 +112,7 @@ def process_ensemble_options(optd):
             optd['gesamt_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
         try:
             optd['gesamt_exe'] = ample_util.find_exe(optd['gesamt_exe'])
-        except ample_util.FileNotFoundError as e:
+        except ample_util.FileNotFoundError:
             raise RuntimeError("Cannot find Gesamt executable: {0}".format(optd['gesamt_exe']))
     # Ensemble options
     if optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
@@ -126,16 +125,14 @@ def process_ensemble_options(optd):
         try:
             optd['spicker_exe'] = ample_util.find_exe(optd['spicker_exe'])
         except ample_util.FileNotFoundError:
-            msg = "Cannot find spicker executable: {0}".format(optd['spicker_exe'])
-            exit_util.exit_error(msg)
+            raise RuntimeError("Cannot find spicker executable: {0}".format(optd['spicker_exe']))
     elif optd['cluster_method'] in ['fast_protein_cluster']:
         if not optd['fast_protein_cluster_exe']:
             optd['fast_protein_cluster_exe'] = 'fast_protein_cluster'
         try:
             optd['fast_protein_cluster_exe'] = ample_util.find_exe(optd['fast_protein_cluster_exe'])
         except ample_util.FileNotFoundError:
-            msg = "Cannot find fast_protein_cluster executable: {0}".format(optd['fast_protein_cluster_exe'])
-            exit_util.exit_error(msg)
+            raise RuntimeError("Cannot find fast_protein_cluster executable: {0}".format(optd['fast_protein_cluster_exe']))
     elif optd['cluster_method'] in ['import', 'random', 'skip']:
         pass
     else:
