@@ -174,6 +174,8 @@ class Ample(object):
                 for wdir in to_remove[level]:
                     if wdir in optd and optd[wdir] and os.path.isdir(optd[wdir]):
                         shutil.rmtree(optd[wdir])
+        if purge_level >= 2:
+            mrbump_util.purge_MRBUMP(optd)
         return
         
     def ensembling(self, optd):
