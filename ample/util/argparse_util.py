@@ -189,6 +189,7 @@ def add_ensembler_options(parser=None):
         from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
     except ImportError:
         SIDE_CHAIN_TREATMENTS = ["polyala"]
+    from ample.ensembler.truncation_util import TRUNCATION_METHODS
     if parser is None:
         import argparse
         parser = argparse.ArgumentParser()
@@ -204,6 +205,7 @@ def add_ensembler_options(parser=None):
     ensembler_group.add_argument('-mustang_exe', metavar='mustang_exe', help='Path to the mustang executable')
     ensembler_group.add_argument('-num_clusters', type=int, help='The number of Spicker clusters of the original decoys that will be sampled [1]')
     ensembler_group.add_argument('-percent', metavar='percent_truncation', help='percent interval for truncation')
+    ensembler_group.add_argument('-percent_fixed_intervals', nargs='+', type=int, help='list of integer percentage intervals for truncation')
     ensembler_group.add_argument('-score_matrix', help='Path to score matrix for spicker')
     ensembler_group.add_argument('-score_matrix_file_list', help='File with list of ordered model names for the score_matrix')
     ensembler_group.add_argument('-side_chain_treatments', type=str, nargs='+', help='The side chain treatments to use. Default: {0}'.format(SIDE_CHAIN_TREATMENTS))
@@ -212,7 +214,7 @@ def add_ensembler_options(parser=None):
     ensembler_group.add_argument('-subcluster_program', help='Program for subclustering models [maxcluster]')
     ensembler_group.add_argument('-theseus_exe', metavar='Theseus exe (required)', help='Path to theseus executable')
     ensembler_group.add_argument('-thin_clusters', metavar='True/False', help='Create ensembles from 10 clusters with 1 + 3A subclustering and polyAlanine sidechains')
-    ensembler_group.add_argument('-truncation_method', help='How to truncate the models for ensembling percent|thresh|focussed|scores')
+    ensembler_group.add_argument('-truncation_method', help='How to truncate the models for ensembling: ' + "|".join([e.value for e in TRUNCATION_METHODS]))
     ensembler_group.add_argument('-truncation_pruning', help='Whether to remove isolated residues (single)')
     ensembler_group.add_argument('-truncation_scorefile', help="CSV file containing per residue scores - COLUMN ONE MUST BE RESIDUE INDEX STARTING FROM 1")
     ensembler_group.add_argument('-truncation_scorefile_header', nargs='+', help="column headers to be used to create ensembles")

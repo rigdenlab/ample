@@ -173,6 +173,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                            ensemble_max_models=None,
                            num_clusters=None,
                            percent_truncation=None,
+                           percent_fixed_intervals=None,
                            side_chain_treatments=SIDE_CHAIN_TREATMENTS,
                            subcluster_radius_thresholds=SUBCLUSTER_RADIUS_THRESHOLDS,
                            subcluster_program=None,
@@ -218,6 +219,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
             for truncation in self.truncator.truncate_models(models=cluster.models,
                                                              truncation_method=truncation_method,
                                                              percent_truncation=percent_truncation,
+                                                             percent_fixed_intervals=percent_fixed_intervals,
                                                              truncation_pruning=truncation_pruning):
                 # Add cluster information
                 truncation.cluster = cluster
@@ -236,6 +238,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                   'cluster_dir' : amoptd['cluster_dir'],
                   'cluster_method' : amoptd['cluster_method'],
                   'num_clusters' : amoptd['num_clusters'],
+                  'percent_fixed_intervals' : amoptd['percent_fixed_intervals'],
                   'percent_truncation' : amoptd['percent'],
                   'side_chain_treatments' : amoptd['side_chain_treatments'],
                   'subcluster_program' : amoptd['subcluster_program'],

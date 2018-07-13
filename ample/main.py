@@ -422,8 +422,9 @@ class Ample(object):
             submit_max_array=optd['submit_max_array'])
 
         if not ok:
-            msg = "Error running MRBUMP on the ensembles!\nCheck logs in directory: {0}".format(optd['mrbump_dir'])
-            exit_util.exit_error(msg)
+            msg = "An error code was returned after running MRBUMP on the ensembles!\n" + \
+                  "For further information check the logs in directory: {0}".format(optd['mrbump_dir'])
+            logger.critical(msg)
 
         # Collect the MRBUMP results
         results_summary = mrbump_util.ResultsSummary()

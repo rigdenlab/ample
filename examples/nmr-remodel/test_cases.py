@@ -29,6 +29,7 @@ if not sys.platform.startswith('win'):
         [ '-rosetta_dir', '/opt/rosetta-3.5' ],
         [ '-nmr_model_in', os.path.join(INPUT_DIR,'2DIZ.pdb') ],
         [ '-nmr_remodel', 'True' ],
+        [ '-percent_fixed_intervals', 20 ],
         [ '-frags_3mers', os.path.join(INPUT_DIR, '1t00.200.3mers') ],
         [ '-frags_9mers', os.path.join(INPUT_DIR, '1t00.200.9mers') ],
         [ '-nmr_process', '1' ]
