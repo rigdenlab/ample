@@ -95,6 +95,7 @@ class AmpleOutput(object):
     def __init__(self, amopt):
         self.header = False
         self.jsrview_dir = None
+        self.citation_tab_id = None
         self.log_tab_id = None
         self.old_mrbump_results = None
         self.results_tab_id = None
@@ -168,6 +169,16 @@ class AmpleOutput(object):
             subprocess.Popen([jsrview, os.path.join(self.jsrview_dir, "index.html")])
         return
 
+    def create_citation_tab(self, ample_dict):
+        if self.citation_tab_id:
+            return
+        self.citation_tab_id = "citation_tab"
+        pyrvapi.rvapi_insert_tab(self.citation_tab_id, "Citation", self.log_tab_id, False)
+        ref_text = reference_util.construct_references(ample_dict)
+        ref_text = "<p>{}</p>".format(ref_text)
+        pyrvapi.rvapi_add_text(ref_text, self.citation_tab_id, 0, 0, 1, 1)
+        return self.citation_tab_id
+
     def create_log_tab(self, ample_dict):
         if not self.own_log_tab or self.log_tab_id:
             return
@@ -215,7 +226,7 @@ class AmpleOutput(object):
         if not self.summary_tab_id:
             self.summary_tab_id = "summary_tab"
             title = "Summary"
-            pyrvapi.rvapi_insert_tab(self.summary_tab_id, title, self.log_tab_id, False)
+            pyrvapi.rvapi_insert_tab(self.summary_tab_id, title, self.citation_tab_id, False)
             # Create pending section until we have data to show
             self.summary_tab_pending_sec_id = 'summary_tab_pending'
             pyrvapi.rvapi_add_section(self.summary_tab_pending_sec_id, "Processing...",
@@ -307,6 +318,7 @@ class AmpleOutput(object):
                 pyrvapi.rvapi_add_header("AMPLE Results")
                 self.header = True
             self.create_log_tab(ample_dict)
+            self.create_citation_tab(ample_dict)
             self.create_summary_tab(ample_dict)
             self.create_results_tab(ample_dict)
             pyrvapi.rvapi_flush()

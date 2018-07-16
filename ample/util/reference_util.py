@@ -100,45 +100,44 @@ def construct_references(optd, write_file=True):
 def used_apps(optd):
     """determine which applications were used and return their labels"""
     from ample.ensembler.constants import SPICKER_RMSD, SPICKER_TM
+    
+    def key_set(key):
+        return key in optd and optd[key]
 
     # Papers that are always listed
     labels = ['AMPLE', 'AMPLE_QUARK', 'AMPLE_COILS', 'AMPLE_CONTACTS', 'CCP4', 'GESAMT']
-
     # This conditional attempts to recognise which programs have run and therefore
     # prints only the relevant references. It is under no circumstance perfect.
-    if optd['nmr_model_in']:
+    if key_set('nmr_model_in'):
         labels += ['AMPLE_NMR']
-    if optd['make_models']:
+    if key_set('make_models'):
         labels += ['ROSETTA']
-    if optd['transmembrane']:
+    if key_set('transmembrane'):
         labels += ['AMPLE_TM']
-    if optd['quark_models']:
+    if key_set('quark_models'):
         labels += ['QUARK']
-        
     # Flags related to cluster-and-truncate approach
-    elif not optd['import_ensembles']:
+    if not key_set('import_ensembles'):
         labels += ['THESEUS']
-        if optd['use_scwrl']:
+        if key_set('use_scwrl'):
             labels += ['SCWRL4']
         elif optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
             labels = ['SPICKER']
         elif optd['cluster_method'] in ['fast_protein_cluster']:
             labels += ['FPC']
-
     # Flags related to Molecular Replacement
-    elif optd['do_mr']:
+    if optd['do_mr']:
         labels += ['MrBUMP']
-        if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
+        if key_set('refine_rebuild_arpwarp') or key_set('shelxe_rebuild_arpwarp'):
             labels += ['Arp_Warp']
-        elif optd['refine_rebuild_buccaneer'] or optd['shelxe_rebuild_buccaneer']:
+        elif key_set('refine_rebuild_buccaneer') or key_set('shelxe_rebuild_buccaneer'):
             labels += ['Buccaneer']
-        elif optd['use_shelxe']:
+        elif key_set('use_shelxe'):
             labels += ['SHELXE']
         elif 'molrep' in optd['mrbump_programs']:
             labels += ['Molrep', 'REFMAC']
         elif 'phaser' in optd['mrbump_programs']:
             labels += ['Phaser', 'REFMAC']
-
     return labels
 
 # ======================================================================
