@@ -154,6 +154,8 @@ class Ample(object):
                 submit_cluster=optd['submit_cluster'],
                 submit_qtype=optd['submit_qtype'],
                 submit_queue=optd['submit_queue'],
+                submit_pe_lsf=optd['submit_pe_lsf'],
+                submit_pe_sge=optd['submit_pe_sge'],
                 submit_array=optd['submit_array'],
                 submit_max_array=optd['submit_max_array'])
             # queue finished so unpickle results
@@ -421,6 +423,8 @@ class Ample(object):
             submit_cluster=optd['submit_cluster'],
             submit_qtype=optd['submit_qtype'],
             submit_queue=optd['submit_queue'],
+            submit_pe_lsf=optd['submit_pe_lsf'],
+            submit_pe_sge=optd['submit_pe_sge'],
             submit_array=optd['submit_array'],
             submit_max_array=optd['submit_max_array'])
 
