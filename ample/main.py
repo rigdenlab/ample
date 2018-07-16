@@ -22,6 +22,7 @@ from ample.util import mrbump_util
 from ample.util import options_processor
 from ample.util import pdb_edit
 from ample.util import pyrvapi_results
+from ample.util import reference_util
 from ample.util import workers_util
 from ample.util import version
 
@@ -128,8 +129,8 @@ class Ample(object):
         ample_util.save_amoptd(amopt.d)
 
         logger.info("AMPLE finished at: %s", time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()))
-        logger.info(ample_util.reference.format(refs=ample_util.construct_references(amopt.d)))
-        logger.info(ample_util.footer)
+        logger.info(reference_util.reference_str_log.format(refs=reference_util.construct_references(amopt.d)))
+        logger.info(reference_util.footer)
 
         # Finally update pyrvapi results
         if self.ample_output:
@@ -478,7 +479,7 @@ class Ample(object):
 
         optd['ccp4_version'] = ample_util.CCP4.version.version
 
-        logger.info(ample_util.header)
+        logger.info(reference_util.header)
         logger.info("AMPLE version: %s", str(version.__version__))
         logger.info("Running with CCP4 version: %s from directory: %s", ample_util.CCP4.version, ample_util.CCP4.root)
         logger.info("Running on host: %s", platform.node())

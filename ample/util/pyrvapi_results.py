@@ -46,6 +46,7 @@ import uuid
 from ample import ensembler
 from ample.util import ample_util
 from ample.util import mrbump_util
+from ample.util import reference_util
 
 try: import pyrvapi
 except: pyrvapi = None
@@ -248,7 +249,7 @@ class AmpleOutput(object):
             # Only create the table once
             self.summary_tab_survey_sec_id = "survey"
             pyrvapi.rvapi_add_section(self.summary_tab_survey_sec_id, "Feedback", self.summary_tab_id, 0, 0, 1, 1, True)
-            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(ample_util.survey_url)
+            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(reference_util.survey_url)
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_survey_sec_id, 0, 0, 1, 1)
         return self.summary_tab_id
 
