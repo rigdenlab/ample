@@ -90,7 +90,7 @@ class ReferenceManager():
             elif section == self.SECTIONS.MODEL_PREP:
                 labels = []
                 if not key_set('import_ensembles'):
-                    labels.append('THESEUS')
+                    labels += ['THESEUS', 'GESAMT']
                     if key_set('use_scwrl'):
                         labels.append('SCWRL4')
                     elif optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
@@ -101,10 +101,11 @@ class ReferenceManager():
             if optd['do_mr']:
                 if section == self.SECTIONS.MR:
                     labels = ['MRBUMP']
-                    if 'molrep' in optd['mrbump_programs']:
-                        labels.append('MOLREP')
-                    if 'phaser' in optd['mrbump_programs']:
-                        labels.append('PHASER')
+                    if key_set('mrbump_programs'):
+                        if 'molrep' in optd['mrbump_programs']:
+                            labels.append('MOLREP')
+                        if 'phaser' in optd['mrbump_programs']:
+                            labels.append('PHASER')
                     self.section_labels[self.SECTIONS.MR] = labels
                 elif section == self.SECTIONS.REFINEMENT:
                     self.section_labels[self.SECTIONS.REFINEMENT] = ['REFMAC']
@@ -125,50 +126,45 @@ class ReferenceManager():
             if section in self.section_labels:
                 self.ordered_labels += self.section_labels[section]
         return
-        
+    
+    @property
     def methods_as_html(self):
-        html = "<p>The following lists the different programs that were used and general references that should be cited." + \
+        html = "<p>The following lists the different programs that were used and general references that should be cited. " + \
                "Numbers in superscript next to program names refer to the number of the program reference in the overall list of references.</p>"
         for section in self.SECTIONS:
             if section == self.SECTIONS.GENERAL:
-                html += '<p>The first {} references are general AMPLE references and should be cited in all cases</p>'.format(len(self.section_labels[self.SECTIONS.GENERAL]))
+                html += '<p>The first {} references are general AMPLE references and should be cited in all cases.</p>'.format(len(self.section_labels[self.SECTIONS.GENERAL]))
             elif section == self.SECTIONS.MODELLING and len(self.section_labels[self.SECTIONS.MODELLING]):
-                html += '<{}>{}</{}>'.format(self.SEC_TAG, self.SECTIONS.MODELLING.value, self.SEC_TAG)
-                html += "<p>The following programs were used for model building:</p>"
-                html += '<ul>'
-                for label in self.section_labels[self.SECTIONS.MODELLING]:
-                    html += "<li>{}<sup>{}</sup></li>".format(label, self.ordered_labels.index(label) + 1)
-                html += "</ul>"
+                standfirst = "<p>The following programs were used for model building:</p>"
+                html += self._methods_section_html(self.SECTIONS.MODELLING, standfirst)
             elif section == self.SECTIONS.MODEL_PREP and len(self.section_labels[self.SECTIONS.MODEL_PREP]):
-                html += '<{}>{}</{}>'.format(self.SEC_TAG, self.SECTIONS.MODEL_PREP.value, self.SEC_TAG)
-                html += '<p>Model analysis and search model preparation was carried out with the following programs:</p>'
-                html += '<ul>'
-                for label in self.section_labels[self.SECTIONS.MODEL_PREP]:
-                    html += "<li>{}<sup>{}</sup></li>".format(label, self.ordered_labels.index(label) + 1)
-                html += "</ul>"
+                standfirst ='<p>Model analysis and search model preparation was carried out with the following programs:</p>'
+                html += self._methods_section_html(self.SECTIONS.MODEL_PREP, standfirst)
             elif section == self.SECTIONS.MR and len(self.section_labels[self.SECTIONS.MR]):
-                html += '<{}>{}</{}>'.format(self.SEC_TAG, self.SECTIONS.MR.value, self.SEC_TAG)
-                html += "<p>Molecular Replacement was undertaken with the following programs:</p>"
-                html += '<ul>'
-                for label in self.section_labels[self.SECTIONS.MR]:
-                    html += "<li>{}<sup>{}</sup></li>".format(label, self.ordered_labels.index(label) + 1)
-                html += "</ul>"
+                standfirst ='<p>Molecular Replacement was undertaken with the following programs:</p>'
+                html += self._methods_section_html(self.SECTIONS.MR, standfirst)
+            elif section == self.SECTIONS.REFINEMENT and len(self.section_labels[self.SECTIONS.REFINEMENT]):
+                standfirst ='<pRefinement of teh MR solutions carried out with the following programs:</p>'
+                html += self._methods_section_html(self.SECTIONS.REFINEMENT, standfirst)
             elif section == self.SECTIONS.DM and len(self.section_labels[self.SECTIONS.DM]):
-                html += '<{}>{}</{}>'.format(self.SEC_TAG, self.SECTIONS.DM.value, self.SEC_TAG)
-                html += "<p>Density modification and main-chain tracing was carried out with the following programs:</p>"
-                html += '<ul>'
-                for label in self.section_labels[self.SECTIONS.DM]:
-                    html += "<li>{}<sup>{}</sup></li>".format(label, self.ordered_labels.index(label) + 1)
-                html += "</ul>"
+                standfirst ='<p>Density modification and main-chain tracing was carried out with the following programs:</p>'
+                html += self._methods_section_html(self.SECTIONS.DM, standfirst)
             elif section == self.SECTIONS.AUTOBUILD and len(self.section_labels[self.SECTIONS.AUTOBUILD]):
-                html += '<{}>{}</{}>'.format(self.SEC_TAG, self.SECTIONS.AUTOBUILD.value, self.SEC_TAG)
-                html += "<p>Autobuilding of the final structure was carried out with the following programs:</p>"
-                html += '<ul>'
-                for label in self.section_labels[self.SECTIONS.AUTOBUILD]:
-                    html += "<li>{}<sup>{}</sup></li>".format(label, self.ordered_labels.index(label) + 1)
-                html += "</ul>"
+                standfirst ='Autobuilding of the final structure was carried out with the following programs:</p>'
+                html += self._methods_section_html(self.SECTIONS.AUTOBUILD, standfirst)
         return html
     
+    def _methods_section_html(self, section, standfirst):
+        mysec = self.SECTIONS(section)
+        html = '<{}>{}</{}>'.format(self.SEC_TAG, mysec.value, self.SEC_TAG)
+        html += standfirst
+        html += '<ul>'
+        for label in self.section_labels[mysec]:
+            html += "<li>{}<sup>{}</sup></li>".format(label, self.ordered_labels.index(label) + 1)
+        html += "</ul>"
+        return html
+
+    @property
     def references_as_html(self):
         html = '<{}>References</{}>'.format(self.SEC_TAG, self.SEC_TAG)
         html += '<ol>'
@@ -181,6 +177,7 @@ class ReferenceManager():
         html += '</ol>'
         return html
     
+    @property
     def references_as_text(self):
         template_txt = "* {author} ({year}). {title}. {journal} {volume}({number}), {pages}. [doi:{doi}]"
         text = ""
@@ -191,7 +188,7 @@ class ReferenceManager():
             text += template_txt.format(**ref) + os.linesep*2
         return text
     
-    def save_references_to_file(self, optd=None):
+    def save_references_to_file(self, optd):
         # =========================================================================
         # Somewhat a template of how we want to write each article in BibTex format
         # =========================================================================
@@ -199,11 +196,11 @@ class ReferenceManager():
                        "journal = {{{journal}}},{sep}number = {{{number}}},{sep}pages = {{{pages}}},{sep}" \
                        "title = {{{{{title}}}}},{sep}volume = {{{volume}}},{sep}year = {{{year}}},{sep}}}{sep}"
         references_bib = [template_bib.format(sep=os.linesep, **self.references[l]) for l in self.ordered_labels]
-        #ref_fname = os.path.join(optd['work_dir'], optd['name']+".bib")
-        ref_fname = 'foo.txt'
+        ref_fname = os.path.join(optd['work_dir'], optd['name']+".bib")
         with open(ref_fname, "w") as fhout:
             fhout.write(os.linesep.join(references_bib))
         return ref_fname
+
 
 # ======================================================================
 # Some default string messages that we need during the program to inform
@@ -225,9 +222,13 @@ header = """
 reference_str_log = """
 #########################################################################
 
-The authors of specific programs should be referenced where applicable:
+The following is a list of citations for this run:
 
 {refs}
+
+A bibtex file with these references has been saved to the following file:
+
+{bibtext_file}
 
 """
 

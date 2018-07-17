@@ -174,9 +174,12 @@ class AmpleOutput(object):
             return
         self.citation_tab_id = "citation_tab"
         pyrvapi.rvapi_insert_tab(self.citation_tab_id, "Citation", self.log_tab_id, False)
-        ref_text = reference_util.construct_references(ample_dict)
-        ref_text = "<p>{}</p>".format(ref_text)
-        pyrvapi.rvapi_add_text(ref_text, self.citation_tab_id, 0, 0, 1, 1)
+        refMgr = reference_util.ReferenceManager(ample_dict)
+        bibtex_file = refMgr.save_references_to_file(ample_dict)
+        html = refMgr.methods_as_html
+        html += refMgr.references_as_html
+        html += '<hr><p>A bibtex file with the relevant citations has been saved to: {}</p>'.format(bibtex_file)
+        pyrvapi.rvapi_add_text(html, self.citation_tab_id, 0, 0, 1, 1)
         return self.citation_tab_id
 
     def create_log_tab(self, ample_dict):
