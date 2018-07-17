@@ -72,10 +72,15 @@ class ReferenceManager():
     def setup_sections(self, optd):
         def key_set(key):
             return key in optd and optd[key]
-        # Build up list of program reference labels, ordered by setions
+        
+        # Create default lists
+        for section in self.SECTIONS:
+             self.section_labels[section] = []
+        
+        # Build up list of program reference labels, ordered by sections
         for section in self.SECTIONS:
             if section == self.SECTIONS.GENERAL:
-                self.section_labels[self.SECTIONS.GENERAL] = ['AMPLE', 'AMPLE_QUARK', 'AMPLE_COILS', 'AMPLE_CONTACTS', 'CCP4']
+                self.section_labels[section] = ['AMPLE', 'AMPLE_QUARK', 'AMPLE_COILS', 'AMPLE_CONTACTS', 'CCP4']
             elif section == self.SECTIONS.MODELLING:
                 labels = []
                 if key_set('nmr_model_in'):
@@ -86,18 +91,18 @@ class ReferenceManager():
                     labels.append('AMPLE_TM')
                 if key_set('quark_models'):
                     labels.append('QUARK')
-                self.section_labels[self.SECTIONS.MODELLING] = labels
+                self.section_labels[section] = labels
             elif section == self.SECTIONS.MODEL_PREP:
                 labels = []
                 if not key_set('import_ensembles'):
-                    labels += ['THESEUS', 'GESAMT']
+                    labels += ['CCTBX', 'THESEUS', 'GESAMT']
                     if key_set('use_scwrl'):
                         labels.append('SCWRL4')
                     elif optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
                         labels.append('SPICKER')
                     elif optd['cluster_method'] in ['fast_protein_cluster']:
                         labels.append('FPC')
-                self.section_labels[self.SECTIONS.MODEL_PREP] = labels
+                self.section_labels[section] = labels
             if optd['do_mr']:
                 if section == self.SECTIONS.MR:
                     labels = ['MRBUMP']
@@ -106,11 +111,10 @@ class ReferenceManager():
                             labels.append('MOLREP')
                         if 'phaser' in optd['mrbump_programs']:
                             labels.append('PHASER')
-                    self.section_labels[self.SECTIONS.MR] = labels
+                    self.section_labels[section] = labels
                 elif section == self.SECTIONS.REFINEMENT:
                     self.section_labels[self.SECTIONS.REFINEMENT] = ['REFMAC']
                 elif section == self.SECTIONS.DM:
-                    self.section_labels[self.SECTIONS.DM] = []
                     if key_set('use_shelxe'):
                         self.section_labels[self.SECTIONS.DM].append('SHELXE')
                 elif section == self.SECTIONS.AUTOBUILD:
@@ -119,7 +123,7 @@ class ReferenceManager():
                         labels += ['ARPWARP']
                     elif key_set('refine_rebuild_buccaneer') or key_set('shelxe_rebuild_buccaneer'):
                         labels += ['BUCCANEER']        
-                    self.section_labels[self.SECTIONS.AUTOBUILD] = labels
+                    self.section_labels[section] = labels
                 
         # Generate ordered list of all relevant reference labels
         for section in self.SECTIONS:

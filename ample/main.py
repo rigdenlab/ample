@@ -129,7 +129,7 @@ class Ample(object):
         ample_util.save_amoptd(amopt.d)
 
         logger.info("AMPLE finished at: %s", time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()))
-        refMgr = reference_util.ReferenceMgr(amopt.d)
+        refMgr = reference_util.ReferenceManager(amopt.d)
         bibtext_file = refMgr.save_references_to_file(amopt.d)
         logger.info(reference_util.reference_str_log.format(refs=refMgr.references_as_text, bibtext_file=bibtext_file))
         logger.info(reference_util.footer)
