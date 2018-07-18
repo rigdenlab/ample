@@ -75,7 +75,7 @@ class ReferenceManager():
         
         # Create default lists
         for section in self.SECTIONS:
-             self.section_labels[section] = []
+            self.section_labels[section] = []
         
         # Build up list of program reference labels, ordered by sections
         for section in self.SECTIONS:
@@ -102,7 +102,7 @@ class ReferenceManager():
                         labels.append('SPICKER')
                     elif optd['cluster_method'] in ['fast_protein_cluster']:
                         labels.append('FPC')
-                self.section_labels[section] = labels
+                    self.section_labels[section] = labels
             if optd['do_mr']:
                 if section == self.SECTIONS.MR:
                     labels = ['MRBUMP']
