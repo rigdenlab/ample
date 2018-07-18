@@ -46,7 +46,7 @@ import uuid
 from ample import ensembler
 from ample.util import ample_util
 from ample.util import mrbump_util
-from ample.util import reference_util
+from ample.util import reference_manager
 
 try: import pyrvapi
 except: pyrvapi = None
@@ -174,12 +174,18 @@ class AmpleOutput(object):
             return
         self.citation_tab_id = "citation_tab"
         pyrvapi.rvapi_insert_tab(self.citation_tab_id, "Citation", self.log_tab_id, False)
-        refMgr = reference_util.ReferenceManager(ample_dict)
+        refMgr = reference_manager.ReferenceManager(ample_dict)
         bibtex_file = refMgr.save_references_to_file(ample_dict)
         html = refMgr.methods_as_html
         html += refMgr.references_as_html
         html += '<hr><p>A bibtex file with the relevant citations has been saved to: {}</p>'.format(bibtex_file)
         pyrvapi.rvapi_add_text(html, self.citation_tab_id, 0, 0, 1, 1)
+        pyrvapi.rvapi_add_data("bibtex_file",
+                               "Citations as BIBTEX",
+                               self.fix_path(bibtex_file),
+                               "text",
+                               self.citation_tab_id,
+                               2, 0, 1, 1, True)
         return self.citation_tab_id
 
     def create_log_tab(self, ample_dict):
@@ -263,7 +269,7 @@ class AmpleOutput(object):
             # Only create the table once
             self.summary_tab_survey_sec_id = "survey"
             pyrvapi.rvapi_add_section(self.summary_tab_survey_sec_id, "Feedback", self.summary_tab_id, 0, 0, 1, 1, True)
-            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(reference_util.survey_url)
+            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(reference_manager.survey_url)
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_survey_sec_id, 0, 0, 1, 1)
         return self.summary_tab_id
 
