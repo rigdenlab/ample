@@ -240,6 +240,11 @@ class Ample(object):
 
         # Save the results
         ample_util.save_amoptd(optd)
+        if False:
+            # Hack to add phaser ENSEMBLE RMS directires to PDB
+            from ample.ensembler.ensemble_rmsds import add_phaser_rmsds
+            for ensemble in optd['ensembles']:
+                add_phaser_rmsds(ensemble, optd['gesamt_exe'])
 
         # Bail here if we didn't create anything
         if not len(optd['ensembles']):
