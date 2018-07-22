@@ -8,6 +8,7 @@ __version__ = "2.1"
 
 from distutils.version import StrictVersion
 
+import collections
 import inspect
 import logging
 import numpy as np
@@ -643,6 +644,16 @@ class ContactUtil(object):
             bbcontact_map.rescale(inplace=True)
             bbcontact_map.calculate_scalar_score()
             bbcontact_map.sort(sort_key, reverse=True, inplace=True)
+
+            def remove_one_two_garbage(cmap):
+                from scipy.cluster.hierarchy import fclusterdata
+                X = [(c.res1_seq, c.res2_seq) for c in cmap]
+                clust = fclusterdata(X, 1.0, metric='euclidean')
+                counter = collections.Counter(clust)
+                for i, cluster in enumerate(clust):
+                    if counter[cluster] < 3:
+                         cmap.remove(X[i])
+            remove_one_two_garbage(bbcontact_map)
 
             for bbcontact in bbcontact_map:
                 if bbcontact.id in contact_map:
