@@ -638,7 +638,7 @@ class ContactUtil(object):
 
         if self.bbcontacts_file:
             logger.info('Provided contact file and format are: %s - %s', self.bbcontacts_file, self.bbcontacts_format)
-            bbcontact_map = conkit.io.read(self.bbcontacts_file, self.bbcontacts_format, del_one_two=True).top_map
+            bbcontact_map = conkit.io.read(self.bbcontacts_file, self.bbcontacts_format).top_map
             bbcontact_map.sequence = sequence
             bbcontact_map.assign_sequence_register()
             bbcontact_map.rescale(inplace=True)
