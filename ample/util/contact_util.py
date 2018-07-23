@@ -638,22 +638,12 @@ class ContactUtil(object):
 
         if self.bbcontacts_file:
             logger.info('Provided contact file and format are: %s - %s', self.bbcontacts_file, self.bbcontacts_format)
-            bbcontact_map = conkit.io.read(self.bbcontacts_file, self.bbcontacts_format).top_map
+            bbcontact_map = conkit.io.read(self.bbcontacts_file, self.bbcontacts_format, del_one_two=True).top_map
             bbcontact_map.sequence = sequence
             bbcontact_map.assign_sequence_register()
             bbcontact_map.rescale(inplace=True)
             bbcontact_map.calculate_scalar_score()
             bbcontact_map.sort(sort_key, reverse=True, inplace=True)
-
-            def remove_one_two_garbage(cmap):
-                from scipy.cluster.hierarchy import fclusterdata
-                X = [(c.res1_seq, c.res2_seq) for c in cmap]
-                clust = fclusterdata(X, 1.0, metric='euclidean')
-                counter = collections.Counter(clust)
-                for i, cluster in enumerate(clust):
-                    if counter[cluster] < 3:
-                         cmap.remove(X[i])
-            remove_one_two_garbage(bbcontact_map)
 
             for bbcontact in bbcontact_map:
                 if bbcontact.id in contact_map:
