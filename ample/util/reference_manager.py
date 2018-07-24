@@ -32,10 +32,10 @@ class ReferenceManager():
         self.references = {}
         self.ordered_labels = []
         self.section_labels = OrderedDict()
-        self.setup_references(optd)
+        self.setup_references()
         self.setup_sections(optd)
         
-    def setup_references(self, optd):
+    def setup_references(self):
         ref_fname = os.path.join(SHARE_DIR, "include", "ample.bib")
         if not is_file(ref_fname):
             msg = "Cannot find BibTex file containing references. " \
@@ -68,11 +68,7 @@ class ReferenceManager():
                     article[key] = value
         return
 
-
     def setup_sections(self, optd):
-        def key_set(key):
-            return key in optd and optd[key]
-        
         # Create default lists
         for section in self.SECTIONS:
             self.section_labels[section] = []
@@ -80,33 +76,36 @@ class ReferenceManager():
         # Build up list of program reference labels, ordered by sections
         for section in self.SECTIONS:
             if section == self.SECTIONS.GENERAL:
-                self.section_labels[section] = ['AMPLE', 'AMPLE_QUARK', 'AMPLE_COILS', 'AMPLE_CONTACTS', 'CCP4']
+                self.section_labels[section] = ['AMPLE', 'CCP4', 'AMPLE_COILED-COILS', 'AMPLE_CONTACTS']
             elif section == self.SECTIONS.MODELLING:
                 labels = []
-                if key_set('nmr_model_in'):
-                    labels.append('AMPLE_NMR')
-                if key_set('make_models'):
+                if optd.get('ideal_helices'):
+                    labels.append('AMPLE_COILED-COILS')
+                if optd.get('make_models'):
                     labels.append('ROSETTA')
-                if key_set('transmembrane'):
-                    labels.append('AMPLE_TM')
-                if key_set('quark_models'):
+                if optd.get('nmr_model_in'):
+                    labels.append('AMPLE_NMR')
+                if optd.get('quark_models'):
                     labels.append('QUARK')
+                    labels.append('AMPLE_QUARK')
+                if optd.get('transmembrane'):
+                    labels.append('AMPLE_TRANSMEMBRANE')
                 self.section_labels[section] = labels
             elif section == self.SECTIONS.MODEL_PREP:
                 labels = []
-                if not key_set('import_ensembles'):
+                if not optd.get('import_ensembles'):
                     labels += ['CCTBX', 'THESEUS', 'GESAMT']
-                    if key_set('use_scwrl'):
+                    if optd.get('use_scwrl'):
                         labels.append('SCWRL4')
                     elif optd['cluster_method'] in [SPICKER_RMSD, SPICKER_TM]:
                         labels.append('SPICKER')
                     elif optd['cluster_method'] in ['fast_protein_cluster']:
                         labels.append('FPC')
                     self.section_labels[section] = labels
-            if optd['do_mr']:
+            if optd.get('do_mr'):
                 if section == self.SECTIONS.MR:
                     labels = ['MRBUMP']
-                    if key_set('mrbump_programs'):
+                    if optd.get('mrbump_programs'):
                         if 'molrep' in optd['mrbump_programs']:
                             labels.append('MOLREP')
                         if 'phaser' in optd['mrbump_programs']:
@@ -115,13 +114,13 @@ class ReferenceManager():
                 elif section == self.SECTIONS.REFINEMENT:
                     self.section_labels[self.SECTIONS.REFINEMENT] = ['REFMAC']
                 elif section == self.SECTIONS.DM:
-                    if key_set('use_shelxe'):
+                    if optd.get('use_shelxe'):
                         self.section_labels[self.SECTIONS.DM].append('SHELXE')
                 elif section == self.SECTIONS.AUTOBUILD:
                     labels = []
-                    if key_set('refine_rebuild_arpwarp') or key_set('shelxe_rebuild_arpwarp'):
+                    if optd.get('refine_rebuild_arpwarp') or optd.get('shelxe_rebuild_arpwarp'):
                         labels += ['ARPWARP']
-                    elif key_set('refine_rebuild_buccaneer') or key_set('shelxe_rebuild_buccaneer'):
+                    elif optd.get('refine_rebuild_buccaneer') or optd.get('shelxe_rebuild_buccaneer'):
                         labels += ['BUCCANEER']        
                     self.section_labels[section] = labels
                 
@@ -133,22 +132,24 @@ class ReferenceManager():
     
     @property
     def methods_as_html(self):
-        html = "<p>The following lists the different programs that were used and general references that should be cited. " + \
-               "Numbers in superscript next to program names refer to the number of the program reference in the overall list of references.</p>"
+        html = "<p>This section lists the programs and algorithms that were used in this job and the references that should be cited. " + \
+               "Numbers in superscript next to program/reference names refer to the number of the program reference in the overall list of references.</p>"
         for section in self.SECTIONS:
             if section == self.SECTIONS.GENERAL:
-                html += '<p>The first {} references are general AMPLE references and should be cited in all cases.</p>'.format(len(self.section_labels[self.SECTIONS.GENERAL]))
+                html += '<p>The first 2 references should be cited in all cases.</p>' + \
+                        '<p>If your protein was a coiled-coil protein, please cite reference number 3.</p>' + \
+                        '<p>If coevolutionary contact information was used in the generation of your models, please cite reference number 4.</p>'
             elif section == self.SECTIONS.MODELLING and len(self.section_labels[self.SECTIONS.MODELLING]):
-                standfirst = "<p>The following programs were used for model building:</p>"
+                standfirst = "<p>The following programs or algorithims were used for model building:</p>"
                 html += self._methods_section_html(self.SECTIONS.MODELLING, standfirst)
             elif section == self.SECTIONS.MODEL_PREP and len(self.section_labels[self.SECTIONS.MODEL_PREP]):
                 standfirst ='<p>Model analysis and search model preparation was carried out with the following programs:</p>'
                 html += self._methods_section_html(self.SECTIONS.MODEL_PREP, standfirst)
             elif section == self.SECTIONS.MR and len(self.section_labels[self.SECTIONS.MR]):
-                standfirst ='<p>Molecular Replacement was undertaken with the following programs:</p>'
+                standfirst ='<p>Molecular Replacement was carried out with the following programs:</p>'
                 html += self._methods_section_html(self.SECTIONS.MR, standfirst)
             elif section == self.SECTIONS.REFINEMENT and len(self.section_labels[self.SECTIONS.REFINEMENT]):
-                standfirst ='<pRefinement of teh MR solutions carried out with the following programs:</p>'
+                standfirst ='<pRefinement of the MR solutions carried out with the following programs:</p>'
                 html += self._methods_section_html(self.SECTIONS.REFINEMENT, standfirst)
             elif section == self.SECTIONS.DM and len(self.section_labels[self.SECTIONS.DM]):
                 standfirst ='<p>Density modification and main-chain tracing was carried out with the following programs:</p>'

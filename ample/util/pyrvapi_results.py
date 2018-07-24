@@ -274,7 +274,7 @@ class AmpleOutput(object):
         return self.summary_tab_id
 
     def do_create_ensembles_section(self, ample_dict):
-        return not (ample_dict['single_model_mode'] or ample_dict['homologs'] or ample_dict['ideal_helices']) \
+        return not (ample_dict.get('single_model_mode') or ample_dict.get('homologs') or ample_dict.get('ideal_helices')) \
         and bool(ample_dict.get('ensembles_data')) and not self.summary_tab_ensemble_sec_id
 
     def create_ensembles_section(self, ample_dict):
@@ -623,7 +623,7 @@ if __name__ == "__main__":
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
 
-    SLEEP = 5
+    SLEEP = 1
 
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
