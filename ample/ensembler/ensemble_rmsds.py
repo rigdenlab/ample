@@ -76,4 +76,5 @@ def add_phaser_rmsds(ensemble, gesamt_exe):
     lines = plines + lines
     with open(ensemble, 'w') as fh:
         fh.writelines(lines)
+    os.unlink(ensemble_bak)
     return

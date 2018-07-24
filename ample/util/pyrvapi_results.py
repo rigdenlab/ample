@@ -623,7 +623,7 @@ if __name__ == "__main__":
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
 
-    SLEEP = 1
+    SLEEP = 5
 
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
