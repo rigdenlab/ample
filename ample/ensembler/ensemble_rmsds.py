@@ -40,7 +40,6 @@ def ensemble_rmsds(ensemble, gesamt_exe):
         return list(np.array(mlist).diagonal())
 
     nmodels = iotbx.pdb.pdb_input(ensemble).construct_hierarchy().models_size()
-    nmodels = 2
      
     cmd = '{} '.format(gesamt_exe)
     for i in range(nmodels):
