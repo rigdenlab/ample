@@ -573,6 +573,21 @@ def job_unfinished(job_dict):
     return job_dict['Solution_Type'] == "unfinished" or job_dict['Solution_Type'] == "no_job_directory"
 
 
+def purge_MRBUMP(amoptd):
+    """Remove as much as possible from a MRBUMP directory whilst keeping valid results"""
+    mkey = 'mrbump_dir'
+    if mkey not in amoptd or amoptd[mkey] is None:
+        return
+    mrbump_dir = amoptd[mkey]
+    suffixes = ['.pdb', '.mtz', '.log', '.sh', '.mrbump']
+    if os.path.isdir(mrbump_dir):
+        for f in os.listdir(mrbump_dir):
+            _, suffix = os.path.splitext(f)
+            if suffix in suffixes:
+                os.remove(os.path.join(mrbump_dir, f))
+    return
+
+
 def unfinished_scripts(amoptd):
     """See if there are any unfinished mrbump jobs in a mrbump directory and return a list of the scripts"""
     

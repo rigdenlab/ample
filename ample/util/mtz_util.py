@@ -231,9 +231,9 @@ def processReflectionFile(amoptd):
     # Output information to user and save to amoptd
     logger.info("Using MTZ file: %s", amoptd['mtz'])
     maxr, minr = content.max_min_resolution()
-    amoptd['mtz_max_resolution'] = maxr
     amoptd['mtz_min_resolution'] = minr
-    msg = "Resolution limits of MTZ file are: {0: > 6.3F} and {1: > 6.3F}".format(maxr, minr)
+    amoptd['mtz_max_resolution'] = maxr
+    msg = "Resolution limits of MTZ file are: {0: > 6.3F} and {1: > 6.3F}".format(minr, maxr)
     logger.info(msg)
 
     return True
