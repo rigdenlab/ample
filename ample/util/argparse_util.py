@@ -184,12 +184,18 @@ def add_rosetta_options(parser=None):
 
 
 def add_ensembler_options(parser=None):
-    # sphinx-argparse ignores Mock imports and thus cannot find iotbx.pdb when generating the docs.
+    # --------------------------------------------------------------------------------------------- #
+    # sphinx-argparse ignores Mock imports and thus cannot find iotbx.pdb when generating the docs. #
     try:
         from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
+        from ample.ensembler.truncation_util import TRUNCATION_METHODS
     except ImportError:
-        SIDE_CHAIN_TREATMENTS = ["polyala"]
-    from ample.ensembler.truncation_util import TRUNCATION_METHODS
+        side_chain_treatments = ['polyala']
+        truncation_methods = ['percent']
+    else:
+        side_chain_treatments = SIDE_CHAIN_TREATMENTS[:]
+        truncation_methods = [t.value for t in TRUNCATION_METHODS]
+    # --------------------------------------------------------------------------------------------- #
     if parser is None:
         import argparse
         parser = argparse.ArgumentParser()
@@ -208,13 +214,13 @@ def add_ensembler_options(parser=None):
     ensembler_group.add_argument('-percent_fixed_intervals', nargs='+', type=int, help='list of integer percentage intervals for truncation')
     ensembler_group.add_argument('-score_matrix', help='Path to score matrix for spicker')
     ensembler_group.add_argument('-score_matrix_file_list', help='File with list of ordered model names for the score_matrix')
-    ensembler_group.add_argument('-side_chain_treatments', type=str, nargs='+', help='The side chain treatments to use. Default: {0}'.format(SIDE_CHAIN_TREATMENTS))
+    ensembler_group.add_argument('-side_chain_treatments', type=str, nargs='+', help='The side chain treatments to use. Default: ' + '|'.join(side_chain_treatments))
     ensembler_group.add_argument('-spicker_exe', help='Path to spicker executable')
     ensembler_group.add_argument('-subcluster_radius_thresholds', type=float, nargs='+', help='The radii to use for subclustering the truncated ensembles')
     ensembler_group.add_argument('-subcluster_program', help='Program for subclustering models [maxcluster]')
     ensembler_group.add_argument('-theseus_exe', metavar='Theseus exe (required)', help='Path to theseus executable')
     ensembler_group.add_argument('-thin_clusters', metavar='True/False', help='Create ensembles from 10 clusters with 1 + 3A subclustering and polyAlanine sidechains')
-    ensembler_group.add_argument('-truncation_method', help='How to truncate the models for ensembling: ' + "|".join([e.value for e in TRUNCATION_METHODS]))
+    ensembler_group.add_argument('-truncation_method', help='How to truncate the models for ensembling: ' + '|'.join(truncation_methods))
     ensembler_group.add_argument('-truncation_pruning', help='Whether to remove isolated residues (single)')
     ensembler_group.add_argument('-truncation_scorefile', help="CSV file containing per residue scores - COLUMN ONE MUST BE RESIDUE INDEX STARTING FROM 1")
     ensembler_group.add_argument('-truncation_scorefile_header', nargs='+', help="column headers to be used to create ensembles")
