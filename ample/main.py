@@ -22,6 +22,7 @@ from ample.util import mrbump_util
 from ample.util import options_processor
 from ample.util import pdb_edit
 from ample.util import pyrvapi_results
+from ample.util import reference_manager
 from ample.util import workers_util
 from ample.util import version
 
@@ -128,8 +129,10 @@ class Ample(object):
         ample_util.save_amoptd(amopt.d)
 
         logger.info("AMPLE finished at: %s", time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()))
-        logger.info(ample_util.reference.format(refs=ample_util.construct_references(amopt.d)))
-        logger.info(ample_util.footer)
+        ref_mgr = reference_manager.ReferenceManager(amopt.d)
+        bibtext_file = ref_mgr.save_references_to_file(amopt.d)
+        logger.info(reference_manager.reference_str_log.format(refs=ref_mgr.references_as_text, bibtext_file=bibtext_file))
+        logger.info(reference_manager.footer)
 
         # Finally update pyrvapi results
         if self.ample_output:
@@ -153,6 +156,8 @@ class Ample(object):
                 submit_cluster=optd['submit_cluster'],
                 submit_qtype=optd['submit_qtype'],
                 submit_queue=optd['submit_queue'],
+                submit_pe_lsf=optd['submit_pe_lsf'],
+                submit_pe_sge=optd['submit_pe_sge'],
                 submit_array=optd['submit_array'],
                 submit_max_array=optd['submit_max_array'])
             # queue finished so unpickle results
@@ -174,6 +179,8 @@ class Ample(object):
                 for wdir in to_remove[level]:
                     if wdir in optd and optd[wdir] and os.path.isdir(optd[wdir]):
                         shutil.rmtree(optd[wdir])
+        if purge_level >= 2:
+            mrbump_util.purge_MRBUMP(optd)
         return
         
     def ensembling(self, optd):
@@ -418,12 +425,15 @@ class Ample(object):
             submit_cluster=optd['submit_cluster'],
             submit_qtype=optd['submit_qtype'],
             submit_queue=optd['submit_queue'],
+            submit_pe_lsf=optd['submit_pe_lsf'],
+            submit_pe_sge=optd['submit_pe_sge'],
             submit_array=optd['submit_array'],
             submit_max_array=optd['submit_max_array'])
 
         if not ok:
-            msg = "Error running MRBUMP on the ensembles!\nCheck logs in directory: {0}".format(optd['mrbump_dir'])
-            exit_util.exit_error(msg)
+            msg = "An error code was returned after running MRBUMP on the ensembles!\n" + \
+                  "For further information check the logs in directory: {0}".format(optd['mrbump_dir'])
+            logger.critical(msg)
 
         # Collect the MRBUMP results
         results_summary = mrbump_util.ResultsSummary()
@@ -475,7 +485,7 @@ class Ample(object):
 
         optd['ccp4_version'] = ample_util.CCP4.version.version
 
-        logger.info(ample_util.header)
+        logger.info(reference_manager.header)
         logger.info("AMPLE version: %s", str(version.__version__))
         logger.info("Running with CCP4 version: %s from directory: %s", ample_util.CCP4.version, ample_util.CCP4.root)
         logger.info("Running on host: %s", platform.node())

@@ -46,6 +46,7 @@ import uuid
 from ample import ensembler
 from ample.util import ample_util
 from ample.util import mrbump_util
+from ample.util import reference_manager
 
 try: import pyrvapi
 except: pyrvapi = None
@@ -94,6 +95,7 @@ class AmpleOutput(object):
     def __init__(self, amopt):
         self.header = False
         self.jsrview_dir = None
+        self.citation_tab_id = None
         self.log_tab_id = None
         self.old_mrbump_results = None
         self.results_tab_id = None
@@ -167,6 +169,25 @@ class AmpleOutput(object):
             subprocess.Popen([jsrview, os.path.join(self.jsrview_dir, "index.html")])
         return
 
+    def create_citation_tab(self, ample_dict):
+        if self.citation_tab_id:
+            return
+        self.citation_tab_id = "citation_tab"
+        pyrvapi.rvapi_insert_tab(self.citation_tab_id, "Citation", self.log_tab_id, False)
+        refMgr = reference_manager.ReferenceManager(ample_dict)
+        bibtex_file = refMgr.save_references_to_file(ample_dict)
+        html = refMgr.methods_as_html
+        html += refMgr.references_as_html
+        html += '<hr><p>A bibtex file with the relevant citations has been saved to: {}</p>'.format(bibtex_file)
+        pyrvapi.rvapi_add_text(html, self.citation_tab_id, 0, 0, 1, 1)
+        pyrvapi.rvapi_add_data("bibtex_file",
+                               "Citations as BIBTEX",
+                               self.fix_path(bibtex_file),
+                               "text",
+                               self.citation_tab_id,
+                               2, 0, 1, 1, True)
+        return self.citation_tab_id
+
     def create_log_tab(self, ample_dict):
         if not self.own_log_tab or self.log_tab_id:
             return
@@ -214,7 +235,7 @@ class AmpleOutput(object):
         if not self.summary_tab_id:
             self.summary_tab_id = "summary_tab"
             title = "Summary"
-            pyrvapi.rvapi_insert_tab(self.summary_tab_id, title, self.log_tab_id, False)
+            pyrvapi.rvapi_insert_tab(self.summary_tab_id, title, self.citation_tab_id, False)
             # Create pending section until we have data to show
             self.summary_tab_pending_sec_id = 'summary_tab_pending'
             pyrvapi.rvapi_add_section(self.summary_tab_pending_sec_id, "Processing...",
@@ -248,12 +269,12 @@ class AmpleOutput(object):
             # Only create the table once
             self.summary_tab_survey_sec_id = "survey"
             pyrvapi.rvapi_add_section(self.summary_tab_survey_sec_id, "Feedback", self.summary_tab_id, 0, 0, 1, 1, True)
-            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(ample_util.survey_url)
+            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(reference_manager.survey_url)
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_survey_sec_id, 0, 0, 1, 1)
         return self.summary_tab_id
 
     def do_create_ensembles_section(self, ample_dict):
-        return not (ample_dict['single_model_mode'] or ample_dict['homologs'] or ample_dict['ideal_helices']) \
+        return not (ample_dict.get('single_model_mode') or ample_dict.get('homologs') or ample_dict.get('ideal_helices')) \
         and bool(ample_dict.get('ensembles_data')) and not self.summary_tab_ensemble_sec_id
 
     def create_ensembles_section(self, ample_dict):
@@ -306,6 +327,7 @@ class AmpleOutput(object):
                 pyrvapi.rvapi_add_header("AMPLE Results")
                 self.header = True
             self.create_log_tab(ample_dict)
+            self.create_citation_tab(ample_dict)
             self.create_summary_tab(ample_dict)
             self.create_results_tab(ample_dict)
             pyrvapi.rvapi_flush()

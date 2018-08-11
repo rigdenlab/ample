@@ -16,25 +16,13 @@ class Test(unittest.TestCase):
         cls.thisd = os.path.abspath(os.path.dirname(__file__))
         cls.testfiles_dir = os.path.join(SHARE_DIR, 'testfiles')
 
-    def test_construct_references(self):
-        #import argparse
-        from ample.util import config_util, argparse_util
-        options = config_util.AMPLEConfigOptions()
-        argso = argparse_util.process_command_line(args=['-mtz', 'foo',
-                                                         '-fasta', 'bar'])
-        options.populate(argso)
-        references = ample_util.construct_references(options.d, write_file=False)
-        ref_references = '* Zhang et al. (2004). SPICKER: A clustering approach to identify near-native protein folds. Journal of Computational Chemistry 25(6), 865-871. [doi:10.1002/jcc.20011]'
-        self.assertEqual(references, ref_references)
-        
-
     def test_find_exe(self):
         gesamt_exe = os.path.basename(ample_util.find_exe("gesamt" + ample_util.EXE_EXT))
-        self.assertTrue("gesamt.exe", gesamt_exe)
+        self.assertEqual("gesamt" + ample_util.EXE_EXT, gesamt_exe)
         spicker_exe = os.path.basename(ample_util.find_exe("spicker" + ample_util.EXE_EXT))
-        self.assertTrue("spicker.exe", spicker_exe)
+        self.assertEqual("spicker" + ample_util.EXE_EXT, spicker_exe)
         theseus_exe = os.path.basename(ample_util.find_exe("theseus" + ample_util.EXE_EXT))
-        self.assertTrue("theseus", theseus_exe)
+        self.assertEqual("theseus" + ample_util.EXE_EXT, theseus_exe)
 
     def test_resultsd_fix_path(self):
         with open(os.path.join(SHARE_DIR, 'testfiles', AMPLE_PKL)) as f:

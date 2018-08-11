@@ -25,7 +25,7 @@ class Test(unittest.TestCase):
         self.assertTrue(options.d['use_shelxe']) # default so should be true
         options.d['shelxe_rebuild'] = True
         # Set resolution below limit
-        options.d['mtz_max_resolution'] = SHELXE_MAX_PERMITTED_RESOLUTION + 1
+        options.d['mtz_min_resolution'] = SHELXE_MAX_PERMITTED_RESOLUTION + 1
         options_processor.process_mr_options(options.d)
         self.assertFalse(options.d['use_shelxe']) 
         self.assertFalse(options.d['shelxe_rebuild']) 
@@ -33,7 +33,7 @@ class Test(unittest.TestCase):
         # Check we don't accidently turn it off if above limit
         options.d['use_shelxe'] = True
         options.d['shelxe_rebuild'] = True
-        options.d['mtz_max_resolution'] = SHELXE_MAX_PERMITTED_RESOLUTION - 1
+        options.d['mtz_min_resolution'] = SHELXE_MAX_PERMITTED_RESOLUTION - 1
         options_processor.process_mr_options(options.d)
         self.assertTrue(options.d['use_shelxe']) 
         self.assertTrue(options.d['shelxe_rebuild']) 

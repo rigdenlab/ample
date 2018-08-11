@@ -2,7 +2,8 @@
 
 import locale
 import sys
-locale.setlocale(locale.LC_NUMERIC, "")
+# Below causes issues in some locales and noone knows why it was included so commenting out for now
+#locale.setlocale(locale.LC_NUMERIC, "")
 
 class Table:
 

@@ -1,6 +1,5 @@
 """Test functions for ensembler.truncation_util.py"""
 
-import collections
 import glob
 import os
 import shutil
@@ -11,6 +10,7 @@ from ample import constants
 from ample.ensembler import truncation_util 
 from ample.ensembler.truncation_util import Truncator
 from ample.util import ample_util
+from ample.util.theseus import TheseusVariances
 
 #import logging
 #logging.basicConfig(level=logging.DEBUG)
@@ -41,10 +41,6 @@ class Test(unittest.TestCase):
         self.assertEqual(ref_score_variances, score_variances)
 
     def test_residuesFocussed(self):
-
-        TheseusVariances = collections.namedtuple('TheseusVariances', 
-                                                  ['idx', 'resName', 'resSeq', 
-                                                   'variance', 'stdDev', 'rmsd', 'core'])
         l = 160
         var_by_res = [ TheseusVariances(idx=i, 
                                         resName='', 
@@ -110,11 +106,6 @@ class Test(unittest.TestCase):
         return
     
     def test_residuesPercent(self):
-
-        TheseusVariances = collections.namedtuple("TheseusVariances", 
-                                                  ["idx", "resName", "resSeq", 
-                                                   "variance", "stdDev", "rmsd", "core"])
-        
         var_by_res = [TheseusVariances(idx=0, resName='GLN', resSeq=1, variance=55.757579, stdDev=7.4671, rmsd=18.603266, core=True), 
                       TheseusVariances(idx=1, resName='PRO', resSeq=2, variance=46.981224, stdDev=6.854285, rmsd=17.076522, core=True), 
                       TheseusVariances(idx=2, resName='ARG', resSeq=3, variance=47.734219, stdDev=6.908996, rmsd=17.212826, core=True), 
@@ -162,7 +153,7 @@ class Test(unittest.TestCase):
                          [16, 17, 18, 19, 20], 
                          [17, 18, 19, 20], 
                          [18, 19, 20]]
-        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent(var_by_res, percent_interval=5)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res, percent_truncation=5)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -178,7 +169,7 @@ class Test(unittest.TestCase):
                          [16, 17, 18, 19, 20]]
         ref_tvariances = [55.757579, 39.857312, 24.610979, 21.62225, 
                           16.568056, 8.722879]
-        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent(var_by_res, percent_interval=15)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res, percent_truncation=15)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
@@ -189,19 +180,14 @@ class Test(unittest.TestCase):
         ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], 
                          [9, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
         ref_tvariances = [55.757579, 21.187131]
-        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_percent(var_by_res, percent_interval=50)
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res, percent_truncation=50)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
         self.assertEqual(ref_tvariances, tvariances)
         
         return
     
-    def test_residuesThresh(self):
-        
-        TheseusVariances = collections.namedtuple("TheseusVariances", 
-                                                  ["idx", "resName", "resSeq", 
-                                                   "variance", "stdDev", "rmsd", "core"])
-        
+    def test_residuesPercentIntervals(self):
         var_by_res = [TheseusVariances(idx=0, resName='GLN', resSeq=1, variance=55.757579, stdDev=7.4671, rmsd=18.603266, core=True), 
                       TheseusVariances(idx=1, resName='PRO', resSeq=2, variance=46.981224, stdDev=6.854285, rmsd=17.076522, core=True), 
                       TheseusVariances(idx=2, resName='ARG', resSeq=3, variance=47.734219, stdDev=6.908996, rmsd=17.212826, core=True), 
@@ -216,125 +202,70 @@ class Test(unittest.TestCase):
                       TheseusVariances(idx=11, resName='ASN', resSeq=12, variance=18.680585, stdDev=4.322104, rmsd=10.767937, core=True), 
                       TheseusVariances(idx=12, resName='PRO', resSeq=13, variance=16.568056, stdDev=4.070388, rmsd=10.140819, core=True), 
                       TheseusVariances(idx=13, resName='GLY', resSeq=14, variance=14.889562, stdDev=3.858699, rmsd=9.613426, core=True),
-                      TheseusVariances(idx=14, resName='ARG', resSeq=15, variance=13.889743, stdDev=3.726895, rmsd=9.285052, core=True)]
+                      TheseusVariances(idx=14, resName='ARG', resSeq=15, variance=13.889743, stdDev=3.726895, rmsd=9.285052, core=True), 
+                      TheseusVariances(idx=15, resName='CYS', resSeq=16, variance=8.722879, stdDev=2.953452, rmsd=7.358125, core=True), 
+                      TheseusVariances(idx=16, resName='TYR', resSeq=17, variance=8.719477, stdDev=2.952876, rmsd=7.35669, core=True), 
+                      TheseusVariances(idx=17, resName='ASP', resSeq=18, variance=4.648089, stdDev=2.155943, rmsd=5.371239, core=True), 
+                      TheseusVariances(idx=18, resName='LYS', resSeq=19, variance=4.263944, stdDev=2.064932, rmsd=5.144498, core=True), 
+                      TheseusVariances(idx=19, resName='ILE', resSeq=20, variance=2.338536, stdDev=1.529227, rmsd=3.809862, core=True)]
+     
 
-        ########################################################################       
-        # Test Case 1
-        ref_tlevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-        ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [7, 9, 10, 11, 12, 13, 14, 15], 
-                         [9, 10, 11, 12, 13, 14, 15], 
-                         [9, 11, 12, 13, 14, 15], 
-                         [9, 12, 13, 14, 15], 
-                         [12, 13, 14, 15], 
-                         [13, 14, 15], 
-                         [14, 15], 
-                         [15]]
-        tlevels, _, tresidues, _ = truncation_util.calculate_residues_thresh(var_by_res, percent_interval=10)
+        # Test 1
+        percent_fixed_intervals = [100]
+        ref_tlevels = [100]
+        ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+        ref_tvariances = [55.757579]
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res,
+                                                                                          percent_fixed_intervals=percent_fixed_intervals)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
+        self.assertEqual(ref_tvariances, tvariances)
         
-        ########################################################################       
-        # Test Case 2
-        ref_tlevels = [1, 2, 3, 4, 5]
-        ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [9, 11, 12, 13, 14, 15], 
-                         [13, 14, 15]]
-        
-        tlevels, _, tresidues, _ = truncation_util.calculate_residues_thresh(var_by_res, percent_interval=20)
+        # Test 2
+        percent_fixed_intervals = [30]
+        ref_tlevels = [30]
+        ref_tresidues = [[15, 16, 17, 18, 19, 20]]
+        ref_tvariances = [13.889743]
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res,
+                                                                                          percent_fixed_intervals=percent_fixed_intervals)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
-        
-        ########################################################################       
-        # Test Case 3
-        ref_tlevels = [1, 2, 3]
-        ref_tresidues = [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], 
-                         [9, 10, 11, 12, 13, 14, 15]]
-        tlevels, _, tresidues, _ = truncation_util.calculate_residues_thresh(var_by_res, percent_interval=50)
+        self.assertEqual(ref_tvariances, tvariances)
+
+        # Test 3
+        percent_fixed_intervals = [1]
+        ref_tlevels = [15]
+        ref_tresidues = [[18, 19, 20]]
+        ref_tvariances = [4.648089]
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res,\
+                                                                                          percent_fixed_intervals=percent_fixed_intervals)
         self.assertEqual(ref_tlevels, tlevels)
         self.assertEqual(ref_tresidues, tresidues)
+        self.assertEqual(ref_tvariances, tvariances)
         
+        # Test Case 4
+        percent_fixed_intervals = [30, 100]
+        ref_tlevels = [30, 100]
+        ref_tresidues = [[15, 16, 17, 18, 19, 20],
+                         [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]]
+        ref_tvariances = [13.889743, 55.757579]
+        tlevels, tvariances, tresidues, _ = truncation_util.calculate_residues_by_percent(var_by_res,\
+                                                                                          percent_fixed_intervals=percent_fixed_intervals)
+        self.assertEqual(ref_tlevels, tlevels)
+        self.assertEqual(ref_tresidues, tresidues)
+        self.assertEqual(ref_tvariances, tvariances)
+
+        # Test Case 5
+        percent_fixed_intervals = [1000]
+        self.assertRaises(RuntimeError, truncation_util.calculate_residues_by_percent,\
+                          var_by_res, percent_fixed_intervals=percent_fixed_intervals)
+        
+        # Test Case 6
+        percent_fixed_intervals = [0]
+        self.assertRaises(RuntimeError, truncation_util.calculate_residues_by_percent,\
+                            var_by_res, percent_fixed_intervals=percent_fixed_intervals)
         return
-   
-    def test_generateThresholds(self):
-
-        var_list = [31.186, 24.104, 16.448, 40.365, 52.0, 11.549999999999999, 
-                    18.252000000000002, 9.324000000000002, 19.551, 46.53, 
-                    21.609, 1.0090000000000001, 14.504, 13.39, 7.259, 33.231, 
-                    29.54, 20.64, 25.325000000000003, 34.947, 7.147, 50.85, 
-                    44.290000000000006, 8.312, 58.254000000000005, 
-                    53.907000000000004, 50.1, 2.028, 31.65, 50.666000000000004]
         
-        # Test Case 1
-        ref_thresholds = [1.0090000000000001, 2.028, 7.147, 7.259, 8.312, 
-                          9.324000000000002, 11.549999999999999, 13.39, 
-                          14.504, 16.448, 18.252000000000002, 19.551, 20.64, 
-                          21.609, 24.104, 25.325000000000003, 29.54, 31.186, 
-                          31.65, 33.231, 34.947, 40.365, 44.290000000000006, 
-                          46.53, 50.1, 50.666000000000004, 50.85, 52.0,
-                          53.907000000000004, 58.254000000000005]
-        chunk_size = int((float(len(var_list)) / 100) * float(5))
-        thresholds = truncation_util._generate_thresholds(var_list, chunk_size)
-        self.assertEqual(ref_thresholds, thresholds)
-        
-        # Test Case 2
-        ref_thresholds = [9.324000000000002, 19.551, 31.186, 46.53, 58.254000000000005]
-        chunk_size = int((float(len(var_list)) / 100) * float(20))
-        thresholds = truncation_util._generate_thresholds(var_list, chunk_size)
-        self.assertEqual(ref_thresholds, thresholds)
-        
-        # Test Case 3
-        ref_thresholds = [24.104, 58.254000000000005]
-        chunk_size = int((float(len(var_list)) / 100) * float(50))
-        thresholds = truncation_util._generate_thresholds(var_list, chunk_size)
-        self.assertEqual(ref_thresholds, thresholds)
-        
-        return
-    
-    def test_generateThresholds2(self):
-
-        var_list = [31.186, 24.104, 16.448, 40.365, 52.0, 11.549999999999999, 
-                    18.252000000000002, 9.324000000000002, 19.551, 46.53, 
-                    21.609, 1.0090000000000001, 14.504, 13.39, 7.259, 33.231, 
-                    29.54, 20.64, 25.325000000000003, 34.947, 7.147, 50.85, 
-                    44.290000000000006, 8.312, 58.254000000000005, 
-                    53.907000000000004, 50.1, 2.028, 31.65, 50.666000000000004]
-        
-        # Test Case 1
-        ref_thresholds = [1.0090000000000001, 2.028, 7.147, 7.259, 8.312, 
-                          9.324000000000002, 11.549999999999999, 13.39, 
-                          14.504, 16.448, 18.252000000000002, 19.551, 20.64, 
-                          21.609, 24.104, 25.325000000000003, 29.54, 31.186, 
-                          31.65, 33.231, 34.947, 40.365, 44.290000000000006, 
-                          46.53, 50.1, 50.666000000000004, 50.85, 52.0, 
-                          53.907000000000004, 58.254000000000005]
-        chunk_size = int((float(len(var_list)) / 100) * float(5))
-        thresholds = truncation_util._generate_thresholds2(var_list, chunk_size)
-        self.assertEqual(ref_thresholds, thresholds)
-
-        # Test Case 2
-        ref_thresholds = [9.324000000000002, 19.551, 31.186, 46.53, 58.254000000000005]
-        chunk_size = int((float(len(var_list)) / 100) * float(20))
-        thresholds = truncation_util._generate_thresholds2(var_list, chunk_size)
-        self.assertEqual(ref_thresholds, thresholds)
-
-        # Test Case 3
-        ref_thresholds = [24.104, 58.254000000000005]
-        chunk_size = int((float(len(var_list)) / 100) * float(50))
-        thresholds = truncation_util._generate_thresholds2(var_list, chunk_size)
-        self.assertEqual(ref_thresholds, thresholds)
-        
-        return  
-    
     def test_pruneResidues(self):
 
         residues = []
@@ -442,12 +373,12 @@ class Test(unittest.TestCase):
         ref_idxs = [99]
         idxs = truncation_util._split_sequence(100, 50, 99)
         self.assertEqual(ref_idxs, idxs)
-                
         return
     
     def test_truncator(self):
         """Test of the Truncator object.
         """
+        from ample.ensembler.truncation_util import TRUNCATION_METHODS
         mdir = os.path.join(self.testfiles_dir, "models")
         models = glob.glob(mdir + os.sep + "*.pdb")
         work_dir = os.path.join(self.tests_dir, "truncator")
@@ -456,7 +387,7 @@ class Test(unittest.TestCase):
 
         truncator = Truncator(work_dir=work_dir)
         truncator.theseus_exe = self.theseus_exe
-        truncation_method = 'percent'
+        truncation_method = TRUNCATION_METHODS.PERCENT
         truncations = truncator.truncate_models(models=models,
                                                 truncation_method=truncation_method,
                                                 percent_truncation='50')

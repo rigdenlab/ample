@@ -313,7 +313,8 @@ where inp_list.dat  contains:
 
         # Create list of pdb files
         fname = os.path.join(os.getcwd(), FILE_LIST_NAME)
-        with open(fname, 'w') as f: f.write("\n".join(models) + "\n")
+        with open(fname, 'w') as f:
+            f.write("\n".join(models) + "\n")
 
         # Make the archive
         logger.debug("Generating gesamt archive from models in directory %s", mdir)
