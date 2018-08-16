@@ -1,7 +1,8 @@
+
+docs/api/generated/*.rst
 *.py[cod]
 
 .eggs
-.gitignore
 .idea
 task.tsk
 

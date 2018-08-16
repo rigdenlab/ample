@@ -8,6 +8,7 @@ __version__ = "2.1"
 
 from distutils.version import StrictVersion
 
+import collections
 import inspect
 import logging
 import numpy as np

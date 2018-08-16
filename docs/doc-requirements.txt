@@ -1,10 +1,2 @@
-# The requirements needed by AMPLE 
-#
-# You can install all dependencies in one go:
-#     pip install -r doc-requirements.txt
-#
-sphinx ==1.6.2
 sphinx-argparse
-sphinx-autobuild
 sphinx_bootstrap_theme ==0.5.3
-numpydoc
