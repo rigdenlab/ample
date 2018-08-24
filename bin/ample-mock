@@ -43,6 +43,8 @@ if opt.ccp4i2_xml:
 elif opt.rvapi_document:
     jscofe = True
     new_root = os.path.join(os.getcwd(), os.path.basename(mock_data_dir))
+else:
+   raise RuntimeError("Mock script only for running under ccp4i2 or with pyrvapi")
 copy_tree(mock_data_dir, new_root, preserve_symlinks=1)
 
 ample_pkl = os.path.join(new_root, AMPLE_PKL)

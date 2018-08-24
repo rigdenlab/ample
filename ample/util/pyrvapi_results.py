@@ -175,17 +175,22 @@ class AmpleOutput(object):
         self.citation_tab_id = "citation_tab"
         pyrvapi.rvapi_insert_tab(self.citation_tab_id, "Citation", self.log_tab_id, False)
         refMgr = reference_manager.ReferenceManager(ample_dict)
-        bibtex_file = refMgr.save_references_to_file(ample_dict)
-        html = refMgr.methods_as_html
-        html += refMgr.references_as_html
-        html += '<hr><p>A bibtex file with the relevant citations has been saved to: {}</p>'.format(bibtex_file)
-        pyrvapi.rvapi_add_text(html, self.citation_tab_id, 0, 0, 1, 1)
-        pyrvapi.rvapi_add_data("bibtex_file",
-                               "Citations as BIBTEX",
-                               self.fix_path(bibtex_file),
-                               "text",
-                               self.citation_tab_id,
-                               2, 0, 1, 1, True)
+        bibtex_file = refMgr.save_citations_to_file(ample_dict)
+        if self.ccp4i2:
+            # The horror of ccp4i2 means that this all gets dumped into xml so we can't use any markup tags
+            tdata = refMgr.citations_as_text
+        else:
+            tdata = refMgr.methods_as_html
+            tdata += refMgr.citations_as_html
+            tdata += '<hr><p>A bibtex file with the relevant citations has been saved to: {}</p>'.format(bibtex_file)
+        pyrvapi.rvapi_add_text(tdata, self.citation_tab_id, 0, 0, 1, 1)
+        if not self.ccp4i2:
+            pyrvapi.rvapi_add_data("bibtex_file",
+                                   "Citations as BIBTEX",
+                                   self.fix_path(bibtex_file),
+                                   "text",
+                                   self.citation_tab_id,
+                                   2, 0, 1, 1, True)
         return self.citation_tab_id
 
     def create_log_tab(self, ample_dict):

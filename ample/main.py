@@ -130,8 +130,8 @@ class Ample(object):
 
         logger.info("AMPLE finished at: %s", time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()))
         ref_mgr = reference_manager.ReferenceManager(amopt.d)
-        bibtext_file = ref_mgr.save_references_to_file(amopt.d)
-        logger.info(reference_manager.reference_str_log.format(refs=ref_mgr.references_as_text, bibtext_file=bibtext_file))
+        ref_mgr.save_citations_to_file(amopt.d)
+        logger.info(ref_mgr.citations_as_text)
         logger.info(reference_manager.footer)
 
         # Finally update pyrvapi results
