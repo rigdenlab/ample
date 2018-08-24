@@ -31,6 +31,7 @@ class ReferenceManager():
     def __init__(self, optd):
         self.references = {}
         self.ordered_labels = []
+        self.citation_file_path = None
         self.section_labels = OrderedDict()
         self.setup_references()
         self.setup_sections(optd)
@@ -170,7 +171,7 @@ class ReferenceManager():
         return html
 
     @property
-    def references_as_html(self):
+    def citations_as_html(self):
         html = '<{}>References</{}>'.format(self.SEC_TAG, self.SEC_TAG)
         html += '<ol>'
         template_txt = "<li> {author} ({year}). {title}. {journal} {volume}({number}), {pages}. [doi:{doi}]</li>"
@@ -183,7 +184,24 @@ class ReferenceManager():
         return html
     
     @property
-    def references_as_text(self):
+    def citations_as_text(self):
+        txt = """A number of programs and algorithms were used within the this run of AMPLE.
+
+The following is a list of citations for this run:
+
+{0}
+""".format(self.citation_list_as_text)
+        if self.citation_file_path:
+            txt += """
+A bibtex file with these references has been saved to the following file:
+
+{0}
+
+""".format(self.citation_file_path)
+            return txt
+    
+    @property
+    def citation_list_as_text(self):
         template_txt = "* {author} ({year}). {title}. {journal} {volume}({number}), {pages}. [doi:{doi}]"
         text = ""
         for label in self.ordered_labels:
@@ -193,7 +211,7 @@ class ReferenceManager():
             text += template_txt.format(**ref) + os.linesep*2
         return text
     
-    def save_references_to_file(self, optd):
+    def save_citations_to_file(self, optd):
         # =========================================================================
         # Somewhat a template of how we want to write each article in BibTex format
         # =========================================================================
@@ -204,6 +222,7 @@ class ReferenceManager():
         ref_fname = os.path.join(optd['work_dir'], optd['name']+".bib")
         with open(ref_fname, "w") as fhout:
             fhout.write(os.linesep.join(references_bib))
+        self.citation_file_path = ref_fname
         return ref_fname
 
 
@@ -218,29 +237,6 @@ header = """
 #########################################################################
 # CCP4: AMPLE - Ab Initio Modelling Molecular Replacement               #
 #########################################################################
-
-"""
-
-# ======================================================================
-# ======================================================================
-
-reference_str_log = """
-#########################################################################
-
-The following is a list of citations for this run:
-
-{refs}
-
-A bibtex file with these references has been saved to the following file:
-
-{bibtext_file}
-
-"""
-
-reference_str_gui = """
-AMPLE is a pipeline that 
-
-{refs}
 
 """
 
