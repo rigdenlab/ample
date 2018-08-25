@@ -503,8 +503,8 @@ class TMscore(TMapps):
         # Alignment not always identical, let's aim for 90%
         identical = set(_model_data).intersection(set(_structure_data))
         if len(identical) / float(len(_model_data)) < 0.90:
-            msg = "Differing residues in model and structure. Affected PDBs %s - %s"
-            raise RuntimeError(msg % (model_name, structure_name))
+            msg = "Differing residues in model and structure. Affected PDBs %s - %s\n%s\n%s"
+            raise RuntimeError(msg % (model_name, structure_name, model_aln, structure_aln))
 
         files = [_model_pdb_tmp_stage1, _model_pdb_tmp_stage2, _structure_pdb_tmp_stage1, _structure_pdb_tmp_stage2]
         for i in range(4):
