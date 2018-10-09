@@ -120,7 +120,7 @@ def mrbump_keyword_file(odict, fixed_iden=0.6):
         # Rebuild SHELXE trace with both Buccaneer and ArpWarp
         mrs += 'SXREBUILD True\n'
         if odict['shelxe_rebuild_buccaneer']: mrs += 'SXRBUCC True\n'
-        if odict['shelxe_rebuild_buccaneer']: mrs += 'SXRARPW True\n'
+        if odict['shelxe_rebuild_arpwarp']: mrs += 'SXRARPW True\n'
     if odict['nmasu'] > 0:
         mrs += 'NMASU  {0}\n'.format(odict['nmasu'])
     if odict['domain_all_chains_pdb']:
