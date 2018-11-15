@@ -24,7 +24,8 @@ class JobServer(object):
     
     def setJobs(self, jobs):
         """Add the list of jobs we are to run"""
-        if self.inqueue: raise RuntimeError,"NOT THOUGHT ABOUT MULTIPLE INVOCATIONS!"
+        if self.inqueue: 
+            raise RuntimeError("NOT THOUGHT ABOUT MULTIPLE INVOCATIONS!")
         
         # Queue to hold the jobs we want to run
         queue = multiprocessing.Queue()
@@ -32,7 +33,8 @@ class JobServer(object):
         # Add jobs to the inqueue
         #logger.info("Generating MRBUMP runscripts in: {0}".format( os.getcwd() ) )
         for job in jobs:
-            if not os.path.isfile(job): raise RuntimeError,"JobServer cannot find job: {0}".format(job)
+            if not os.path.isfile(job): 
+                raise RuntimeError("JobServer cannot find job: {0}".format(job))
             queue.put(job)
             
         self.inqueue = queue
@@ -80,7 +82,7 @@ class JobServer(object):
                     # Finished so see what happened
                     if process.exitcode == 0 and early_terminate:
                         if not self.inqueue.empty():
-                            print "Process {0} was successful so removing remaining jobs from inqueue".format(process.name) 
+                            print("Process {0} was successful so removing remaining jobs from inqueue".format(process.name))
                             logger.info( "Process {0} was successful so removing remaining jobs from inqueue".format(process.name) )
                             # Remove all remaining processes from the inqueue. We do this rather than terminate the processes
                             # as terminating leaves the MRBUMP processes running. This way we hang around until all our
@@ -89,7 +91,7 @@ class JobServer(object):
                                 job = self.inqueue.get()
                                 logger.debug( "Removed job [{0}] from inqueue".format(job))
                         else:
-                            print "Got empty queue - all jobs done"
+                            print("Got empty queue - all jobs done")
                             
                     # Remove from processes to check
                     del processes[i]

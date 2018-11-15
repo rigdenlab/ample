@@ -64,18 +64,13 @@ def backbone(inpath=None, outpath=None):
     logfile = outpath + ".log"
     cmd = "pdbcur xyzin {0} xyzout {1}".format(inpath, outpath).split()
 
-    # Build up stdin
     stdin = 'lvatom "N,CA,C,O,CB[N,C,O]"'
-    #stdin='lvatom "N,CA,C,O[N,C,O]"'
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
 
     if retcode == 0:
-        # remove temporary files
         os.unlink(logfile)
     else:
-        raise RuntimeError, "Error stripping PDB to backbone atoms. See log:{0}".format(logfile)
-
-    return
+        raise RuntimeError("Error stripping PDB to backbone atoms. See log:{0}".format(logfile))
 
 
 def calpha_only(inpdb, outpdb):
@@ -84,16 +79,13 @@ def calpha_only(inpdb, outpdb):
     logfile = outpdb + ".log"
     cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
 
-    # Build up stdin
     stdin = 'lvatom "CA[C]:*"'
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
 
     if retcode == 0:
-        # remove temporary files
         os.unlink(logfile)
     else:
         raise RuntimeError("Error stripping PDB to c-alpha atoms")
-    return
 
 
 def check_pdb_directory(directory, single=True, allsame=True, sequence=None):
@@ -232,7 +224,6 @@ def extract_chain(inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False
     logfile = outpdb + ".log"
     cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
 
-    # Build up stdin
     stdin = "lvchain {0}\n".format(chainID)
     if newChainID:
         stdin += "renchain {0} {1}\n".format(chainID, newChainID)
@@ -244,12 +235,9 @@ def extract_chain(inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
 
     if retcode == 0:
-        # remove temporary files
         os.unlink(logfile)
     else:
-        raise RuntimeError, "Error extracting chain {0}".format(chainID)
-
-    return
+        raise RuntimeError("Error extracting chain {0}".format(chainID))
 
 
 def extract_model(inpdb, outpdb, modelID):
@@ -260,19 +248,14 @@ def extract_model(inpdb, outpdb, modelID):
     logfile = outpdb + ".log"
     cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
 
-    # Build up stdin
     stdin = "lvmodel /{0}\n".format(modelID)
-    #stdin += "sernum\n"
 
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
 
     if retcode != 0:
-        raise RuntimeError, "Problem extracting model with cmd: {0}".format
+        raise RuntimeError("Problem extracting model with cmd: {0}".format)
 
-    # remove temporary files
     os.unlink(logfile)
-
-    return
 
 
 def extract_header_pdb_code(pdb_input):
@@ -294,17 +277,6 @@ def keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
 
     assert refpdb and targetpdb and outpdb and resSeqMap
 
-    # Paranoid check
-    if False:
-        refinfo = get_info(refpdb)
-        targetinfo = get_info(targetpdb)
-        if len(refinfo.models) > 1 or len(targetinfo.models) > 1:
-            raise RuntimeError, "PDBS contain more than 1 model!"
-
-        if refinfo.models[0].chains != targetinfo.models[0].chains:
-            raise RuntimeError, "Different numbers/names of chains {0}->{1} between {2} and {3}!".format(
-                refinfo.models[0].chains, targetinfo.models[0].chains, refpdb, targetpdb)
-        # Now we do our keep matching
     tmp1 = ample_util.tmp_file_name() + ".pdb"  # pdbcur insists names have a .pdb suffix
 
     _keep_matching(refpdb, targetpdb, tmp1, resSeqMap=resSeqMap)
@@ -354,9 +326,9 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
         rnames = [x.name for x in refAtomList]
 
         if len(refAtomList) > len(targetAtomList):
-            s = "Cannot keep matching as refAtomList is > targetAtomList for residue {0}\nRef: {1}\nTrg: {2}".format(
-                targetResSeq, rnames, [x.name for x in targetAtomList])
-            raise RuntimeError, s
+            raise RuntimeError("Cannot keep matching as refAtomList is > targetAtomList for residue {}\nRef: {}\nTrg: {}".format(
+                targetResSeq, rnames, [x.name for x in targetAtomList]
+            ))
 
         # Remove any not matching in the target
         alist = []
@@ -393,7 +365,7 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
     for line in open(refpdb, 'r'):
 
         if line.startswith("MODEL"):
-            raise RuntimeError, "Multi-model file!"
+            raise RuntimeError("Multi-model file!")
 
         if line.startswith("TER"):
             break
@@ -406,7 +378,7 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
                 chain = a.chainID
 
             if a.chainID != chain:
-                raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format(line)
+                raise RuntimeError("ENCOUNTERED ANOTHER CHAIN! {0}".format(line))
 
             if a.resSeq != last:
                 last = a.resSeq
@@ -429,10 +401,10 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
     for line in t:
 
         if line.startswith("MODEL"):
-            raise RuntimeError, "Multi-model file!"
+            raise RuntimeError("Multi-model file!")
 
         if line.startswith("ANISOU"):
-            raise RuntimeError, "I cannot cope with ANISOU! {0}".format(line)
+            raise RuntimeError("I cannot cope with ANISOU! {0}".format(line))
 
         # Stop at TER
         if line.startswith("TER"):
@@ -450,7 +422,7 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
                 chain = atom.chainID
 
             if atom.chainID != chain:
-                raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format(line)
+                raise RuntimeError("ENCOUNTERED ANOTHER CHAIN! {0}".format(line))
 
             if atom.resSeq in targetResSeq:
 
@@ -679,126 +651,42 @@ def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None):
     if not resMap:
         resMap = residue_map.residueSequenceMap(targetPdb, sourcePdb)
 
-    target = open(targetPdb, 'r')
-    out = open(outPdb, 'w')
-
     chain = None  # The chain we're reading
     residue = None  # the residue we're reading
 
-    for line in target:
+    with open(targetPdb, 'r') as target, open(outPdb, 'w') as out:
+        for line in target:
 
-        if line.startswith("MODEL"):
-            raise RuntimeError, "Multi-model file!"
+            if line.startswith("MODEL"):
+                raise RuntimeError("Multi-model file!")
 
-        if line.startswith("ANISOU"):
-            raise RuntimeError, "I cannot cope with ANISOU! {0}".format(line)
+            if line.startswith("ANISOU"):
+                raise RuntimeError("I cannot cope with ANISOU! {0}".format(line))
 
-        # Stop at TER
-        if line.startswith("TER"):
-            # we write out our own TER
-            #out.write("TER\n")
-            #break
-            pass
-
-        if line.startswith("ATOM"):
-
-            atom = pdb_model.PdbAtom(line)
-
-            # First atom/chain
-            if chain == None:
-                chain = atom.chainID
-
-            if atom.chainID != chain:
+            # Stop at TER
+            if line.startswith("TER"):
                 pass
-                #raise RuntimeError, "ENCOUNTERED ANOTHER CHAIN! {0}".format( line )
 
-            # Get the matching resSeq for the model
-            modelResSeq = resMap.ref2target(atom.resSeq)
-            if modelResSeq == atom.resSeq:
-                out.write(line)
-            else:
-                atom.resSeq = modelResSeq
-                out.write(atom.toLine() + "\n")
-            continue
-        #Endif line.startswith("ATOM")
+            if line.startswith("ATOM"):
+                atom = pdb_model.PdbAtom(line)
 
-        # Output everything else
-        out.write(line)
+                # First atom/chain
+                if chain == None:
+                    chain = atom.chainID
 
-    # End reading loop
+                if atom.chainID != chain:
+                    pass
 
-    target.close()
-    out.close()
+                # Get the matching resSeq for the model
+                modelResSeq = resMap.ref2target(atom.resSeq)
+                if modelResSeq == atom.resSeq:
+                    out.write(line)
+                else:
+                    atom.resSeq = modelResSeq
+                    out.write(atom.toLine() + "\n")
+                continue
 
-    return
-
-
-#     def match_resseq(self, targetPdb, sourcePdb, keepAtoms="all", workdir=None, resSeqMap=None ):
-#         """Given a native pdb file and a model pdb file, create a copy of the native that can be directly compared with the model
-#
-#         args:
-#         targetPdb:
-#         sourcePdb:
-#         keepAtoms: all, backbone or calpha - the atoms which are to be kept for the comparision
-#
-#         """
-#
-#         if not workdir:
-#             workdir = os.curdir()
-#
-#         if not resSeqMap:
-#             # Calculate the RefSeqMap - need to do this before we reduce to c-alphas
-#             resSeqMap = residue_map.residueSequenceMap( targetPdb, sourcePdb )
-#
-#         # Find out if there are atoms in the model that we need to remove
-#         modelIncomparable = resSeqMap.modelIncomparable()
-#         if len( modelIncomparable ):
-#
-#             n = os.path.splitext( os.path.basename( targetPdb ) )[0]
-#             nativePdbCut = os.path.join( workdir, n+"_cut.pdb" )
-#
-#             logfile = "{0}.log".format( nativePdbCut )
-#             cmd="pdbcur xyzin {0} xyzout {1}".format( targetPdb, nativePdbCut ).split()
-#
-#             # Build up stdin - I'm too thick to work out the selection syntax for a discrete list
-#             stdin = ""
-#             for e in modelIncomparable:
-#                 stdin += "delresidue {0}\n".format( e )
-#
-#             retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=workdir, dolog=False, stdin=stdin)
-#
-#             if retcode == 0:
-#                 # remove temporary files
-#                 os.unlink(logfile)
-#             else:
-#                 raise RuntimeError,"Error deleting residues {0}".format( modelIncomparable )
-#
-#             targetPdb = nativePdbCut
-#
-#
-#         if keepAtoms == "calpha":
-#             # If only alpha atoms are required, we create a copy of the model with only alpha atoms
-#             n = os.path.splitext( os.path.basename( targetPdb ) )[0]
-#             tmp = os.path.join( workdir, n+"_cAlphaOnly.pdb" )
-#             calpha_only( targetPdb, tmp )
-#             targetPdb = tmp
-#         elif keepAtoms == "backbone":
-#             # Strip down to backbone atoms
-#             n = os.path.splitext( os.path.basename( targetPdb ) )[0]
-#             tmp = os.path.join( workdir, n+"_backbone.pdb" )
-#             backbone( targetPdb, tmp  )
-#             targetPdb = tmp
-#         elif keepAtoms == "all":
-#             pass
-#         else:
-#             raise RuntimeError,"Unrecognised keepAtoms: {0}".format( keepAtoms )
-#
-#         # Now create a PDB with the matching atoms from native that are in refined
-#         n = os.path.splitext( os.path.basename( targetPdb ) )[0]
-#         nativePdbMatch = os.path.join( workdir, n+"_matched.pdb" )
-#         keep_matching( refpdb=refinedPdb, targetpdb=targetPdb, outpdb=nativePdbMatch, resSeqMap=resSeqMap )
-#
-#         return
+            out.write(line)
 
 
 def merge(pdb1=None, pdb2=None, pdbout=None):
@@ -807,17 +695,13 @@ def merge(pdb1=None, pdb2=None, pdbout=None):
     logfile = pdbout + ".log"
     cmd = ['pdb_merge', 'xyzin1', pdb1, 'xyzin2', pdb2, 'xyzout', pdbout]
 
-    # Build up stdin
     stdin = 'nomerge'
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
 
     if retcode == 0:
-        # remove temporary files
         os.unlink(logfile)
     else:
-        raise RuntimeError, "Error merging pdbs: {0} {1}".format(pdb1, pdb2)
-
-    return
+        raise RuntimeError("Error merging pdbs: {0} {1}".format(pdb1, pdb2))
 
 
 def molecular_weight(pdbin):
@@ -893,7 +777,7 @@ def _run_rwcontents(pdbin, logfile):
     stdin = ''  # blank to trigger EOF
     retcode = ample_util.run_command(cmd=cmd, directory=os.getcwd(), logfile=logfile, stdin=stdin)
     if retcode != 0:
-        raise RuntimeError, "Error running cmd {0}\nSee logfile: {1}".format(cmd, logfile)
+        raise RuntimeError("Error running cmd {0}\nSee logfile: {1}".format(cmd, logfile))
     return
 
 
@@ -1002,7 +886,6 @@ def rename_chains(inpdb=None, outpdb=None, fromChain=None, toChain=None):
     logfile = outpdb + ".log"
     cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
 
-    # Build up stdin
     stdin = ""
     for i in range(len(fromChain)):
         stdin += "renchain {0} {1}\n".format(fromChain[i], toChain[i])
@@ -1010,12 +893,9 @@ def rename_chains(inpdb=None, outpdb=None, fromChain=None, toChain=None):
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
 
     if retcode == 0:
-        # remove temporary files
         os.unlink(logfile)
     else:
-        raise RuntimeError, "Error renaming chains {0}".format(fromChain)
-
-    return
+        raise RuntimeError("Error renaming chains {0}".format(fromChain))
 
 
 def resseq(pdbin):
@@ -1205,7 +1085,8 @@ def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
 
     # Nothing to do
     n_models = hierarchy.models_size()
-    if n_models == 1: raise RuntimeError, "split_pdb {0} only contained 1 model!".format(pdbin)
+    if n_models == 1: 
+        raise RuntimeError("split_pdb {0} only contained 1 model!".format(pdbin))
 
     if same_size: _only_equal_sizes(hierarchy)
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
@@ -1225,12 +1106,15 @@ def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
         output_file = ample_util.filename_append(pdbin, model_id, directory)
         with open(output_file, "w") as f:
             if (crystal_symmetry is not None):
-                print >> f, iotbx.pdb.format_cryst1_and_scale_records(
-                    crystal_symmetry=crystal_symmetry, write_scale_records=True)
-            print >> f, "REMARK Model %d of %d" % (k, n_models)
+                f.write(
+                    iotbx.pdb.format_cryst1_and_scale_records(
+                        crystal_symmetry=crystal_symmetry, write_scale_records=True
+                    ) + '\n'
+                )
+            f.write("REMARK Model %d of %d\n" % (k, n_models))
             if (pdbin is not None):
-                print >> f, "REMARK Original file:"
-                print >> f, "REMARK   %s" % pdbin
+                f.write('REMARK Original file:\n')
+                f.write('REMARK   %s\n' % pdbin)
             f.write(new_hierarchy.as_pdb_string())
         output_files.append(output_file)
     return output_files
@@ -1239,7 +1123,8 @@ def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
 def split_into_chains(pdbin, chain=None, directory=None):
     """Split a pdb file into its separate chains"""
 
-    if directory is None: directory = os.path.dirname(pdbin)
+    if directory is None:
+        directory = os.path.dirname(pdbin)
 
     # Largely stolen from pdb_split_models.py in phenix
     #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
@@ -1249,15 +1134,18 @@ def split_into_chains(pdbin, chain=None, directory=None):
 
     # Nothing to do
     n_models = hierarchy.models_size()
-    if n_models != 1: raise RuntimeError, "split_into_chains only works with single-mdoel pdbs!"
+    if n_models != 1: 
+        raise RuntimeError("split_into_chains only works with single-mdoel pdbs!")
 
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
 
     output_files = []
     n_chains = len(hierarchy.models()[0].chains())
     for i, hchain in enumerate(hierarchy.models()[0].chains()):
-        if not hchain.is_protein(): continue
-        if chain and not hchain.id == chain: continue
+        if not hchain.is_protein():
+            continue
+        if chain and not hchain.id == chain:
+            continue
         new_hierarchy = iotbx.pdb.hierarchy.root()
         new_model = iotbx.pdb.hierarchy.model()
         new_hierarchy.append_model((new_model))
@@ -1265,17 +1153,21 @@ def split_into_chains(pdbin, chain=None, directory=None):
         output_file = ample_util.filename_append(pdbin, hchain.id, directory)
         with open(output_file, "w") as f:
             if (crystal_symmetry is not None):
-                print >> f, iotbx.pdb.format_cryst1_and_scale_records(
-                    crystal_symmetry=crystal_symmetry, write_scale_records=True)
-            print >> f, "REMARK Chain %d of %d" % (i, n_chains)
+                f.write(
+                    iotbx.pdb.format_cryst1_and_scale_records(
+                        crystal_symmetry=crystal_symmetry, write_scale_records=True
+                    ) + '\n'
+                )
+            f.write('REMARK Chain %d of %d\n' % (i, n_chains))
             if (pdbin is not None):
-                print >> f, "REMARK Original file:"
-                print >> f, "REMARK   %s" % pdbin
+                f.write('REMARK Original file:\n')
+                f.write('REMARK   %s\n' % pdbin)
             f.write(new_hierarchy.as_pdb_string())
 
         output_files.append(output_file)
 
-    if not len(output_files): raise RuntimeError, "split_into_chains could not find any chains to split"
+    if not len(output_files): 
+        raise RuntimeError("split_into_chains could not find any chains to split")
 
     return output_files
 
@@ -1297,8 +1189,10 @@ mostprob
     if chain: stdin += "lvchain {0}\n".format(chain)
 
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    if retcode == 0: os.unlink(logfile)  # remove temporary files
-    else: raise RuntimeError, "Error standardising pdb!"
+    if retcode == 0: 
+        os.unlink(logfile)
+    else: 
+        raise RuntimeError("Error standardising pdb!")
 
     # Standardise AA names and then remove any remaining HETATMs
     std_residues_cctbx(tmp1, pdbout, del_hetatm=del_hetatm)
@@ -1404,7 +1298,7 @@ def to_single_chain(inpath, outpath):
 
         # Remove any HETATOM lines and following ANISOU lines
         if line.startswith("HETATM") or line.startswith("MODEL") or line.startswith("ANISOU"):
-            raise RuntimeError, "Cant cope with the line: {0}".format(line)
+            raise RuntimeError("Cant cope with the line: {0}".format(line))
 
         # Skip any TER lines
         if line.startswith("TER"):
@@ -1473,9 +1367,7 @@ def translate(inpdb=None, outpdb=None, ftranslate=None):
         # remove temporary files
         os.unlink(logfile)
     else:
-        raise RuntimeError, "Error translating PDB"
-
-    return
+        raise RuntimeError("Error translating PDB")
 
 
 def xyz_coordinates(pdbin):
@@ -1704,15 +1596,10 @@ class Test(unittest.TestCase):
         b4 = [r for i, r in enumerate(resseq(pdbin)['A']) if i in tokeep_idx]
         select_residues(pdbin=pdbin, pdbout=pdbout, tokeep_idx=tokeep_idx)
 
-        #hierachy=iotbx.pdb.pdb_input(pdbout).construct_hierarchy()
-        #print [a.name for a in hierachy.models()[0].chains()[0].atoms() ]
-        #print "GOT ",resseq(pdbout)
         after = resseq(pdbout)['A']
         self.assertEqual(after, b4)
 
         os.unlink(pdbout)
-
-        return
 
     def testSequence1(self):
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
@@ -1899,9 +1786,7 @@ if __name__ == "__main__":
     group.add_argument('-seq', action='store_true', help='Write a fasta of the found AA to stdout')
     group.add_argument('-split_models', action='store_true', help='Split a pdb into constituent models')
     group.add_argument('-split_chains', action='store_true', help='Split a pdb into constituent chains')
-    parser.add_argument(
-        'input_file',  #nargs='?',
-        help='The input file - will not be altered')
+    parser.add_argument('input_file', help='The input file - will not be altered')
     parser.add_argument('-o', dest='output_file', help='The output file - will be created')
     parser.add_argument('-chain', help='The chain to use')
     parser.add_argument('-test', action='store_true', help='Run unittests')
@@ -1909,13 +1794,13 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.test:
-        print unittest.TestLoader().loadTestsFromModule(sys.modules[__name__])
+        print(unittest.TestLoader().loadTestsFromModule(sys.modules[__name__]))
         sys.exit(unittest.TextTestRunner().run(unittest.TestLoader().loadTestsFromModule(sys.modules[__name__])))
 
     # Get full paths to all files
     args.input_file = os.path.abspath(args.input_file)
     if not os.path.isfile(args.input_file):
-        raise RuntimeError, "Cannot find input file: {0}".format(args.input_file)
+        raise RuntimeError("Cannot find input file: {}".format(args.input_file))
 
     if args.output_file:
         args.output_file = os.path.abspath(args.output_file)
@@ -1928,8 +1813,8 @@ if __name__ == "__main__":
     elif args.std:
         standardise(args.input_file, args.output_file, del_hetatm=True, chain=args.chain)
     elif args.seq:
-        print sequence_util.Sequence(pdb=args.input_file).fasta_str()
+        print(sequence_util.Sequence(pdb=args.input_file).fasta_str())
     elif args.split_models:
-        print split_pdb(args.input_file)
+        print(split_pdb(args.input_file))
     elif args.split_chains:
-        print split_into_chains(args.input_file, chain=args.chain)
+        print(split_into_chains(args.input_file, chain=args.chain))

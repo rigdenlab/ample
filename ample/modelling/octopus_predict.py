@@ -6,12 +6,18 @@ Created on 18 Feb 2013
 Query the octopus server http://octopus.cbr.su.se to get transmembrane predictions
 '''
 
-import os
-
-from HTMLParser import HTMLParser
 import logging
+import os
+import sys
 import urllib
-import urllib2
+
+if sys.version_info.major < 3:
+    from HTMLParser import HTMLParser
+    from urllib2 import urlopen, HTTPError
+else:
+    from html.parser import HTMLParser
+    from urllib.error import HTTPError
+    from urllib.request import urlopen
 
 
 class ParseFileUrl(HTMLParser):
@@ -41,12 +47,8 @@ class OctopusPredict(object):
     """
     
     def __init__(self):
-        
-        
         self.logger = logging.getLogger()
-        
         self.octopus_url = "http://octopus.cbr.su.se/"
-        
         # The fasta sequence to query with
         self.fasta = None
         # path to the topo file
@@ -87,16 +89,10 @@ class OctopusPredict(object):
         Sets the urls of the topo and nnprf files
         """
     
-        data = { 'do' : 'Submit OCTOPUS',  'sequence' : fasta }
-        edata = urllib.urlencode( data )
+        data = dict(do='Submit OCTOPUS', sequence=fasta)
+        edata = urllib.urlencode(data)
         
-        #try:
-        req = urllib2.urlopen( self.octopus_url, edata )
-        #except Exception, e:
-        #    # Need to encode to deal with possible dodgy characters 
-        #    print "Error accessing url: %s\n%s" % (url.encode('ascii','replace'),e)
-        #    sys.exit(1)
-        
+        req = urlopen( self.octopus_url, edata )
         
         m = ParseFileUrl()
         # Calls handle_starttag, _data etc.
@@ -104,22 +100,16 @@ class OctopusPredict(object):
         m.feed( html )
         
         if not m.topo:
-            f = open("OCTOPUS_ERROR.html", "w")
-            f.write( html )
-            f.close()
-            msg = "Error getting prediction for fasta:{}\nCheck file: OCTOPUS_ERROR.html".format( fasta.splitlines()[0] )
-            self.logger.critical(msg)
-            raise RuntimeError, msg
+            with open("OCTOPUS_ERROR.html", "w") as f:
+                f.write(html)
+            raise RuntimeError(
+                "Error getting prediction for fasta:{}\nCheck file: OCTOPUS_ERROR.html".format(fasta.splitlines()[0])
+            )
         
-
         self.topo_url = self.octopus_url + m.topo
         self.nnprf_url = self.octopus_url + m.nnprf
-        
-        return
-    ##End octopusFileUrls
     
-    
-    def writeFiles(self, name, directory ):
+    def writeFiles(self, name, directory):
         """
         Write the files on the server to disk
         
@@ -127,40 +117,31 @@ class OctopusPredict(object):
         directory: where to write files
         name: name for files (with suffix .topo and .nnprf)
         """
-        # Get full file path
         try:
-            topo_req = urllib2.urlopen( self.topo_url )
-        except urllib2.HTTPError,e:
-            msg = "Error accessing topo file: {}\n{}".format(self.topo_url,e)
-            self.logger.critical(msg)
-            raise RuntimeError, msg
+            topo_req = urlopen( self.topo_url )
+        except HTTPError as e:
+            raise RuntimeError("Error accessing topo file: {}\n{}".format(self.topo_url, e))
         
         try:
-            nnprf_req = urllib2.urlopen( self.nnprf_url )
-        except urllib2.HTTPError,e:
+            nnprf_req = urlopen( self.nnprf_url )
+        except uHTTPError as e:
             msg ="Error accessing nnprf file: {}\n{}\nTransmembrane prediction may have failed!".format(self.nnprf_url,e)
             self.logger.warn(msg)
         
         fname = os.path.join(directory, name + ".topo")
-        f = open( fname, "w" )
-        f.writelines( topo_req.readlines() )
-        self.logger.debug("Wrote topo file: {}".format( fname ) )
-        f.close()
-        self.topo=fname
+        with open(fname, "w") as f:
+            f.writelines(topo_req.readlines())
+        self.logger.debug("Wrote topo file: {}".format(fname))
+        self.topo = fname
         
         fname = os.path.join(directory, name + ".nnprf")
-        f = open( fname, "w" )
-        f.writelines( nnprf_req.readlines() )
-        self.logger.debug("Wrote nnprf file: {}".format( fname ) )
-        f.close()
+        with open(fname, "w") as f:
+            f.writelines(nnprf_req.readlines())
+        self.logger.debug("Wrote nnprf file: {}".format(fname))
         self.nnprf = fname
         
-        
-    def getFasta(self, fastafile ):
-        """
-        Given a fastafile, extract the first sequence
-        and return it as \n separated string
-        """
+    def getFasta(self, fastafile):
+        """Given a fastafile, extract the first sequence and return it as \n separated string"""
         fasta = []
         header=False
         with open( fastafile, "r" ) as f:

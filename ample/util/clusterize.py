@@ -13,9 +13,6 @@ import shlex
 import shutil
 import time
 
-if not "CCP4" in sorted(os.environ.keys()):
-    raise RuntimeError('CCP4 not found')
-
 logger = logging.getLogger(__name__)
 
 class ClusterRun:
@@ -156,7 +153,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         """ Monitor the Cluster queue to see when all jobs are completed """
 
         if not len(self.qList):
-            raise RuntimeError,"No jobs found in self.qList!"
+            raise RuntimeError("No jobs found in self.qList!")
 
         logger.info("Jobs submitted to cluster queue, awaiting their completion...")
 
@@ -165,7 +162,6 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         newRunningList=[]
 
         while runningList!=[]:
-            #print "runningList is ",runningList
             time.sleep(60)
             self.getRunningJobList(user)
             for job in runningList:
@@ -246,7 +242,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             elif job_name: sh += ['#BSUB -J {0}\n'.format(job_name)]       
             sh += ['\n']
         else:
-            raise RuntimeError,"Unrecognised QTYPE: {0}".format(submit_queue)
+            raise RuntimeError("Unrecognised QTYPE: {0}".format(submit_queue))
         sh += ['\n']
         return sh
     
@@ -277,11 +273,8 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         logger.debug("Submitting job with command: {0}".format(command_line))
         process_args = shlex.split(command_line)
         try:
-            p = subprocess.Popen(process_args,
-                                 stdin = stdin,
-                                 stdout = subprocess.PIPE,
-                                 stderr = subprocess.PIPE)
-        except Exception,e:
+            p = subprocess.Popen(process_args, stdin = stdin, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+        except Exception as e:
             raise RuntimeError("Error submitting job to queue with commmand: {0}\n{1}".format(command_line,e))
 
         child_stdout = p.stdout
@@ -349,7 +342,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             for s in job_scripts:
                 # Check the scripts are of the correct format - abspath and .sh extension
                 if not s.startswith("/") or not s.endswith(".sh"):
-                    raise RuntimeError,"Scripts for array jobs must be absolute paths with a .sh extension: {0}".format(s)
+                    raise RuntimeError("Scripts for array jobs must be absolute paths with a .sh extension: {0}".format(s))
                 f.write(s+"\n")
                 
         # Generate the qsub array script

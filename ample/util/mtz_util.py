@@ -29,9 +29,7 @@ def del_column(file_name, column, overwrite=True):
     logfile = os.path.join(os.getcwd(), "mtzutils_{}.log".format(str(uuid.uuid1())))
     retcode = ample_util.run_command(cmd, stdin=stdin, logfile=logfile)
     if retcode != 0:
-        msg = "Error running mtzutils. Check the logfile: {0}".format(logfile)
-        logger.critical(msg)
-        raise RuntimeError(msg)
+        raise RuntimeError("Error running mtzutils. Check the logfile: {0}".format(logfile))
     else:
         os.unlink(logfile)
 
@@ -49,9 +47,7 @@ def add_rfree(file_name,directory=None,overwrite=True):
     logfile = os.path.join(os.getcwd(), "uniqueify_{}.log".format(str(uuid.uuid1())))
     retcode = ample_util.run_command(cmd, logfile=logfile)
     if retcode != 0:
-        msg = "Error running command: {0}. Check the logfile: {1}".format(" ".join(cmd),logfile)
-        logger.critical(msg)
-        raise RuntimeError(msg)
+        raise RuntimeError("Error running command: {0}. Check the logfile: {1}".format(" ".join(cmd), logfile))
     else:
         os.unlink(logfile)
 
@@ -66,27 +62,22 @@ def get_labels(file_name):
 
     reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
     if not reflection_file.file_type()=="ccp4_mtz":
-        msg = "File is not of type ccp4_mtz: {0}".format(file_name)
-        logging.critical(msg)
-        raise RuntimeError(msg)
+        raise RuntimeError("File is not of type ccp4_mtz: {0}".format(file_name))
 
     content=reflection_file.file_content()
     ctypes=content.column_types()
     clabels=content.column_labels()
     if not COLTYPE_F in ctypes:
-        msg = "Cannot find any structure amplitudes in: {0}".format(file_name)
-        raise RuntimeError(msg)
+        raise RuntimeError("Cannot find any structure amplitudes in: {0}".format(file_name))
     F = clabels[ctypes.index(COLTYPE_F)]
 
     # SIGF derived from F
     SIGF = 'SIG' + F
     if SIGF not in clabels:
-        msg = "Cannot find label {0} in file: {1}".format(SIGF, file_name)
-        raise RuntimeError(msg)
+        raise RuntimeError("Cannot find label {0} in file: {1}".format(SIGF, file_name))
     i = clabels.index(SIGF)
     if ctypes[i] != COLTYPE_SIGF:
-        msg = "SIGF label {0} is not of type: {1}".format(SIGF, COLTYPE_SIGF)
-        raise RuntimeError(msg)
+        raise RuntimeError("SIGF label {0} is not of type: {1}".format(SIGF, COLTYPE_SIGF))
 
     FREE = _get_rfree(content)
     return F,SIGF,FREE
@@ -96,15 +87,12 @@ def get_rfree(file_name):
 
     reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
     if not reflection_file.file_type()=="ccp4_mtz":
-        msg="File is not of type ccp4_mtz: {0}".format(file_name)
-        logging.critical(msg)
-        raise RuntimeError(msg)
+        raise RuntimeError("File is not of type ccp4_mtz: {0}".format(file_name))
 
     return _get_rfree(reflection_file.file_content())
 
 def _get_rfree(content):
     rfree_label = None
-    #print "GOT ",content.column_labels()
     for label in content.column_labels():
         if 'free' in label.lower():
             column = content.get_column(label=label)
@@ -112,12 +100,9 @@ def _get_rfree(content):
             flags = column.extract_values()
             sel_0 = (flags == 0)
             # extract number of work/test reflections
-            n0=( sel_0 & selection_valid).count(True)
-            n1=(~sel_0 & selection_valid).count(True)
-            #print "Number of 0 (work):",n0
-            #print "Number of 1 (test):",n1
-            #print float(n0)/float(n1)*100
-            if n0>0 and n1>0:
+            n0 = ( sel_0 & selection_valid).count(True)
+            n1 = (~sel_0 & selection_valid).count(True)
+            if n0 > 0 and n1 > 0:
                 if rfree_label:
                     logger.warning("FOUND >1 RFREE label in file!")
                 rfree_label=label
@@ -126,7 +111,7 @@ def _get_rfree(content):
 def max_min_resolution(file_name):
     reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
     if not reflection_file.file_type()=="ccp4_mtz":
-        print("File is not of type ccp4_mtz: {0}".format( file_name ) )
+        print("File is not of type ccp4_mtz: {0}".format(file_name))
         sys.exit(1)
     return reflection_file.file_content().max_min_resolution()
 
@@ -151,8 +136,7 @@ END""".format(F,SIGF,FREE)
 
     ret = ample_util.run_command(cmd=cmd, logfile=logfile, directory=None, dolog=False, stdin=stdin)
     if ret != 0:
-        msg = "Error converting {0} to HKL format - see log: {1}".format(mtz_file, logfile)
-        raise RuntimeError(msg)
+        raise RuntimeError("Error converting {0} to HKL format - see log: {1}".format(mtz_file, logfile))
 
     os.unlink(logfile)
     return hkl_file

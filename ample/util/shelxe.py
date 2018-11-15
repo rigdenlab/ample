@@ -9,14 +9,13 @@ import shutil
 import sys
 import uuid
 
-# our imports
 from ample.util import ample_util
 from ample.util import mtz_util
 
-if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
 mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
 sys.path.insert(0,mrbumpd)
 import parse_shelxe
+
 
 class MRinfo(object):
     """An object to analyse Molecular Replacement solutions
@@ -95,7 +94,8 @@ class MRinfo(object):
         cmd = [self.shelxe_exe, input_pdb, '-a0', '-q', '-s0.5', '-o', '-n', '-t0', '-m0', '-x']
         logfile = os.path.abspath('shelxe_{}.log'.format( str(uuid.uuid1())))
         ret = ample_util.run_command(cmd=cmd, logfile=logfile, directory=None, dolog=False, stdin=None)
-        if ret != 0: raise RuntimeError,"Error running shelxe - see log: {0}".format(logfile)
+        if ret != 0: 
+            raise RuntimeError("Error running shelxe - see log: {0}".format(logfile))
 
         sp = parse_shelxe.ShelxeLogParser(logfile)
         # Only added in later version of MRBUMP shelxe parser
@@ -118,16 +118,10 @@ if __name__ == "__main__":
 
     import argparse
     parser = argparse.ArgumentParser(description='Determine origin using SHELXE', prefix_chars="-")
-
-    parser.add_argument('--native_mtz',
-                       help='Native MTZ', required=True)
-    parser.add_argument('--native_pdb',
-                       help='Native PDB', required=True)
-    parser.add_argument('--mr_pdb',
-                       help='Molecular Replacement MTZ', required=True)
-    parser.add_argument('--executable',
-                       help="Path to SHELXE executable")
-
+    parser.add_argument('--native_mtz', help='Native MTZ', required=True)
+    parser.add_argument('--native_pdb', help='Native PDB', required=True)
+    parser.add_argument('--mr_pdb', help='Molecular Replacement MTZ', required=True)
+    parser.add_argument('--executable', help="Path to SHELXE executable")
     args = parser.parse_args()
 
     executable = None
@@ -139,16 +133,16 @@ if __name__ == "__main__":
     # Get full paths to all files
     native_mtz = os.path.abspath(args.native_mtz)
     if not os.path.isfile(native_mtz):
-        raise RuntimeError, "Cannot find input file: {0}".format(native_mtz)
+        raise RuntimeError("Cannot find input file: {0}".format(native_mtz))
     native_pdb = os.path.abspath(args.native_pdb)
     if not os.path.isfile(native_pdb):
-        raise RuntimeError, "Cannot find input file: {0}".format(native_pdb)
+        raise RuntimeError("Cannot find input file: {0}".format(native_pdb))
     mr_pdb = os.path.abspath(args.mr_pdb)
     if not os.path.isfile(mr_pdb):
-        raise RuntimeError, "Cannot find input file: {0}".format(mr_pdb)
+        raise RuntimeError("Cannot find input file: {0}".format(mr_pdb))
 
     mrinfo = MRinfo(executable, native_pdb, native_mtz)
     mrinfo.analyse(mr_pdb)
     os.unlink('shelxe-input.hkl')
     os.unlink('shelxe-input.ent')
-    print "Origin shift is: {0}".format(mrinfo.originShift)
+    print("Origin shift is: {0}".format(mrinfo.originShift))

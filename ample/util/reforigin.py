@@ -118,16 +118,11 @@ class ReforiginRmsd(object):
         native_chains = nativePdbInfo.models[ 0 ].chains
         placed_chains = placedPdbInfo.models[ 0 ].chains
         
-        #print "got native chains ", native_chains
-        #print "got placed chains ", placed_chains
-            
         rmsds = {} # dict of rmsd -> ( chainIDnative, chainIDrefined, reforiginLogfile )
         
         # Match each chain in native against refined and pick the best
         for nativeChainID in native_chains:
             
-            #print "native_chain: {0}".format( nativeChainID )
-                    
             if len( native_chains ) == 1:
                 # Don't need to do owt as we are just using the native as is
                 nativeChainPdb = nativePdbInfo.pdb
@@ -150,7 +145,7 @@ class ReforiginRmsd(object):
                 
             except RuntimeError:
                 if nativeChainID == native_chains[0]:
-                    raise
+                    raise Exception
                 else:
                     # Only compare the first chain
                     break
@@ -170,28 +165,24 @@ class ReforiginRmsd(object):
                 
                 try:
                     rms = self.calculate( refpdb=nativePdbMatch, targetpdb=placedChainPdb, outpdb=reforiginOut )
-                except RuntimeError, e:
+                except RuntimeError as e:
                     logger.critical("GOT REFORIGIN ERROR for {0},{1},{2}\n{3}".format( placedChainPdb, nativeChainPdb, nativeChainID, e))
                     rms = 99999
                 rmsds[ rms ] = ( nativeChainID, placedChainID, reforiginOut )
                 # Clean up
                 os.unlink(placedChainPdb)
                 os.unlink(nativePdbMatch)
-        # End loop over chains
-        # Clean up
         # Now pick the best...
         rmsd = sorted( rmsds.keys() )[ 0 ]
-        #print "Got rmsds over chains: {0}".format( rmsds )
         
         self.rmsd = rmsd
         self.bestNativeChain = rmsds[ rmsd ][0]
         self.bestPlacedChain = rmsds[ rmsd ][1]
         self.bestReforiginPdb = rmsds[ rmsd ][2]
         
-        # Clean up
         for k in rmsds.keys():
             if k != rmsd:
-                try: os.unlink(rmsds[k][2])
-                except: pass
-        #print "best chain rmsd is {0} for nativeChain {1} vs refinedChain {2}".format( self.rmsd, self.bestChains[0], self.bestChains[1] )
-        return
+                try: 
+                    os.unlink(rmsds[k][2])
+                except Exception:
+                    pass

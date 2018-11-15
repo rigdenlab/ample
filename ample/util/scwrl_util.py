@@ -16,9 +16,9 @@ class Scwrl( object ):
     def __init__(self, scwrl_exe=None, workdir=None ):
         self.workdir = workdir
         if self.workdir is None: self.workdir = os.getcwd()
-        if not ample_util.is_exe(scwrl_exe): raise RuntimeError("scwrl_exe {0} cannot be found.".format(scwrl_exe))
+        if not ample_util.is_exe(scwrl_exe): 
+            raise RuntimeError("scwrl_exe {0} cannot be found.".format(scwrl_exe))
         self.scwrl_exe = scwrl_exe
-        return
     
     def add_sidechains(self, pdbin=None, pdbout=None, sequence=None, hydrogens=False, strip_oxt=False):
         """Add the specified sidechains to the pdb"""
@@ -43,7 +43,7 @@ class Scwrl( object ):
         retcode = ample_util.run_command(cmd, logfile=logfile)
         
         if retcode != 0:
-            raise RuntimeError,"Error running Scwrl - please check the logfile: {0}".format(logfile)
+            raise RuntimeError("Error running Scwrl - please check the logfile: {0}".format(logfile))
         else:
             os.unlink(logfile)
             

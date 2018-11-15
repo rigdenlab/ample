@@ -214,56 +214,9 @@ class residueSequenceMap( object ):
         """Return a ResSeqMap mapping the index of a residue in the model to the corresponding residue in the native.
         Only works if 1 chain in either file and with standard residues
         """
-        
-        #if len(self.refSequence) < self.probeLen or len(self.targetSequence) < self.probeLen:
-        #    raise RuntimeError,"Very short sequences - this will not work: {0}  : {1}".format( self.refSequence, self.targetSequence )
-
-        if False:        
-            print "Calculating map for:\n{0}\n{1}\n{2}\n{3}\n".format( self.refSequence,
-                                                                      self.targetSequence,
-                                                                      self.refResSeq,
-                                                                      self.targetResSeq,
-                                                                     )
-        
-        # Find where they match at the start
         self.refOffset, self.targetOffset = self._calcOffset( self.refSequence, self.targetSequence )
-        #print "Got refOffset, ", self.refOffset
-        #print "Got refResSeq ",self.refResSeq[ self.refOffset ]
-        #print "Got targetOffset ", self.targetOffset
-        #print "Got targetResSeq ",self.targetResSeq[ self.targetOffset ]
-        
         self.lenMatch = self._lenMatch()
-        
         self._checkContiguous()
-        
-        return
-    
-    def _XcheckContiguous(self):
-        """UNUSED"""
-        #
-        # Check that there is congiuous resSeq numbering as otherwise the map in current form won't work
-        #
-        # For reference
-        previous=self.refResSeq[ self.refOffset ]
-        for i in range( self.refOffset + 1, self.refOffset + self.lenMatch ):
-            
-            if self.refResSeq[ i ] != previous + 1:
-                raise RuntimeError,"Non-contiguous residue numbering in refSequence for {0} to {1}".format( previous, self.refResSeq[ i ] )
-            
-            previous = self.refResSeq[ i ]
-            #print "GOT i {0}, refResSeq {1}, refSequence {2}".format(  i, self.refResSeq[ i ], self.refSequence[ i ]  )
-        
-        # Now for target
-        previous=self.targetResSeq[ self.targetOffset ]
-        for i in range( self.targetOffset + 1, self.targetOffset + self.lenMatch ):
-            
-            if self.targetResSeq[ i ] != previous + 1:
-                raise RuntimeError,"Non-contiguous residue numbering in refSequence for {0} to {1}".format( previous, self.targetResSeq[ i ] )
-            
-            previous = self.targetResSeq[ i ]
-            #print "GOT i {0}, targetResSeq {1}, targetSequence {2}".format(  i, self.targetResSeq[ i ], self.targetSequence[ i ]  )
-         
-        return
     
     def _checkContiguous(self):
         """
@@ -289,13 +242,11 @@ class residueSequenceMap( object ):
                 
                 # Complain if the residues match but the numbering doesn't
                 if refResSeq != p_refResSeq + 1 or targetResSeq !=  p_targetResSeq + 1:
-                    raise RuntimeError,"Non-contiguous residue numbering: {0}->{1} and {2}->{3}".format( p_refResSeq, refResSeq, p_targetResSeq, targetResSeq  )
-            
+                    raise RuntimeError("Non-contiguous residue numbering: {}->{} and {}->{}".format(
+                        p_refResSeq, refResSeq, p_targetResSeq, targetResSeq
+                    ))
             p_refResSeq = refResSeq
             p_targetResSeq = targetResSeq
-            
-        return
-     
     
     def _calcOffset(self, refSequence, targetSequence, reverse=False ):
         
@@ -314,7 +265,6 @@ class residueSequenceMap( object ):
         else:
             refMaxInset =  len( refSequence ) - probeLen 
 
-        #print "GOT targetMaxInset, refMaxInset, probeLen ",targetMaxInset, refMaxInset, probeLen
 
         # If checking from the end, reverse the strings
         if reverse:
@@ -324,31 +274,26 @@ class residueSequenceMap( object ):
         got=False
         for targetOffset in range( targetMaxInset + 1 ):
             probe = targetSequence[ targetOffset : targetOffset + probeLen ]
-            #print "PROBE ",probe
             for refOffset in range( refMaxInset + 1 ):
-                #print "TEST ",refSequence[ refOffset:refOffset + probeLen ]
                 if refSequence[ refOffset:refOffset + probeLen ] == probe:
                     got=True
                     break
             
             if got:
-#                 print "GOT MODEL MATCH AT i,j ",targetOffset,refOffset
                 break
             
         if not got:
-            raise RuntimeError,"Could not calculate map for:\n{0}\n{1}".format( refSequence, targetSequence )
+            raise RuntimeError("Could not calculate map for:\n{}\n{}".format(refSequence, targetSequence))
         
-        return ( refOffset, targetOffset )
+        return refOffset, targetOffset
     
     def _lenMatch(self):
         refBackOffset, targetBackOffset = self._calcOffset( self.refSequence, self.targetSequence, reverse=True )
-        #print "Got refBackOffset, ", refBackOffset
-        #print "Got targetBackOffset ", targetBackOffset
         # Calculate match from the residue numbers - use reference for now
         length = self.refResSeq[ len(self.refSequence) - 1 - refBackOffset ] - self.refResSeq[ self.refOffset ] + 1
         
         if length > len(self.refResSeq) and length > len(self.targetResSeq):
-            raise RuntimeError, "Match of {0} is longer than both of the sequences!".format( length )
+            raise RuntimeError("Match of {} is longer than both of the sequences!".format(length))
         
         return length
 
@@ -373,19 +318,14 @@ class residueSequenceMap( object ):
         self.targetOffset = None
         self._targetIncomparable = None
         
-        #print "refSequence    ",self.refSequence
-        #print "targetSequence   ", self.targetSequence
-        
         self._calc_map()
-        
-        return
     
     def read_pdb( self, pdb ):
         """Get sequence as string of 1AA
         get list of matching resSeq
         """
          
-        atomTypes = [] # For checking we have all required atom types
+        atomTypes = []
      
         resSeq = []
         resName = []
@@ -395,74 +335,55 @@ class residueSequenceMap( object ):
         chain=None
         readingResSeq=None
         readingResName=None
-        for line in open( pdb ):
+        for line in open(pdb):
              
             if line.startswith("MODEL"):
-                raise RuntimeError,"FOUND MULTI_MODEL FILE!"
+                raise RuntimeError("FOUND MULTI_MODEL FILE!")
              
             if line.startswith("TER"):
                 break
              
             if line.startswith("ATOM"):
                  
-                atom = pdb_model.PdbAtom( line )
+                atom = pdb_model.PdbAtom(line)
                  
                 if not chain:
                     chain = atom.chainID
                  
                 if atom.chainID != chain:
-                    raise RuntimeError," FOUND ADDITIONAL CHAIN"
-                    break
+                    raise RuntimeError("FOUND ADDITIONAL CHAIN")
                      
                 # First atom in first residue
                 if readingResSeq == None:
                     readingResSeq = atom.resSeq
                     readingResName = atom.resName
-                    _atomTypes.append( atom.name.strip() )
+                    _atomTypes.append(atom.name.strip())
                     continue
                  
                 if readingResSeq != atom.resSeq:
-                    # Adding a new residue
+                    resName.append(readingResName)
+                    resSeq.append(readingResSeq)
+                    atomTypesList.append(_atomTypes)
                      
-                    # Add the atom we've just finished reading
-                    resName.append( readingResName )
-                    resSeq.append( readingResSeq )
-                    atomTypesList.append( _atomTypes )
-                     
-                    # Reset
                     readingResSeq = atom.resSeq
                     readingResName = atom.resName
-                    _atomTypes = [ atom.name.strip() ]
+                    _atomTypes = [atom.name.strip()]
                 else:
                     if atom.name not in _atomTypes:
-                        _atomTypes.append( atom.name.strip() )
+                        _atomTypes.append(atom.name.strip())
                          
-        # End reading loop
- 
-        # Add the atom we've just finished reading
-        resName.append( readingResName )
-        resSeq.append( readingResSeq )
-        atomTypesList.append( _atomTypes )
+        resName.append(readingResName)
+        resSeq.append(readingResSeq)
+        atomTypesList.append(_atomTypes)
          
         sequence = ""
-        # Build up the sequence
         for n in resName:
             sequence += pdb_edit.three2one[ n ]
          
-        # Build up the mask
-        cAlphaMask = []
-        for atomTypes in atomTypesList:
-            if 'CA' not in atomTypes:
-                cAlphaMask.append( True )
-            else:
-                cAlphaMask.append( False )
-         
-        return ( sequence, resSeq, cAlphaMask )
+        cAlphaMask = ['CA' not in atomTypes for atomTypes in atomTypesList]
+        return sequence, resSeq, cAlphaMask
     
     def resSeqMatch(self):
         """Return true if the residue numbering between the model and native over the aligned region is the same"""
-        
-        #print self.targetResSeq[ self.targetOffset : self.targetOffset + self.lenMatch ]
-        #print self.refResSeq[ self.refOffset : self.refOffset + self.lenMatch ]
-        return self.targetResSeq[ self.targetOffset : self.targetOffset + self.lenMatch ] == self.refResSeq[ self.refOffset : self.refOffset + self.lenMatch ]
+        return self.targetResSeq[self.targetOffset:self.targetOffset+self.lenMatch] == self.refResSeq[self.refOffset:self.refOffset+self.lenMatch]
 

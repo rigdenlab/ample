@@ -9,9 +9,10 @@ import os
 import sys
 import traceback
 
-# external imports
-try: import pyrvapi
-except: pyrvapi=None
+try: 
+    import pyrvapi
+except Exception: 
+    pyrvapi=None
 
 def _debug_logfile(logger):
     debug_log = None

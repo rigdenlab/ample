@@ -17,8 +17,6 @@ class Test(unittest.TestCase):
     def XtestMakeFragments(self):
         """See we can create fragments"""
 
-        print "testing FragmentGenerator"
-
         optd = {}
         optd['rosetta_dir'] = "/opt/rosetta3.4"
         optd['name'] = "TOXD_"

@@ -57,7 +57,6 @@ def calculate_residues_focussed(var_by_res):
     start_indexes = upper_start + lower_start
     # Calculate the percentages for each of these start points
     percentages = [int(round(float(start + 1) / float(length) * 100)) for start in start_indexes]
-    # print "percentages ", percentages
     truncation_levels = percentages
     idxs_all = [x.idx for x in var_by_res]
     resseq_all = [x.resSeq for x in var_by_res]

@@ -61,7 +61,7 @@ def find_maxcluster(amoptd):
         logger.info("Attempting to download maxcluster binary from: {0}".format( url ) )
         try:
             urllib.urlretrieve( url, maxcluster_exe )
-        except Exception, e:
+        except Exception as e:
             msg="Error downloading maxcluster executable: {0}\n{1}".format(url,e)
             exit_util.exit_error(msg)
 
@@ -147,13 +147,10 @@ class Maxcluster(object):
             logfile = os.path.splitext( logfile )[0] + ".log"
         self.maxclusterLogfile = logfile
         
-        #print "running cmd "," ".join( cmd )
         retcode = ample_util.run_command( cmd, logfile=self.maxclusterLogfile, dolog=False )
         
         if retcode != 0:
-            msg = "non-zero return code for maxcluster in runMaxcluster!"
-            #logging.critical( msg )
-            print msg
+            print("non-zero return code for maxcluster in runMaxcluster!")
         
         if rmsd:
             data = self.parseLogSingleRmsd()
@@ -163,22 +160,20 @@ class Maxcluster(object):
         return data
         
     def prepareNative(self, nativePdbInfo=None, resSeqMap=None ):
-        """do stuff"""
         
         # Find out how many chains and extract the first if > 1
-        if len( nativePdbInfo.models ) > 1:
-            raise RuntimeError,"More than 1 model."
+        if len(nativePdbInfo.models) > 1:
+            raise RuntimeError("More than 1 model.")
         
         # Check if > 1 chain
         chainID=None
-        if len( nativePdbInfo.models[0].chains ) > 1:
+        if len(nativePdbInfo.models[0].chains) > 1:
             
             chainID=nativePdbInfo.models[0].chains[0]
         
             # Assume native is standardised
             # Extract the chain if > 1
-            nativePdbChain = ample_util.filename_append( filename=nativePdbInfo.pdb,
-                                                         astr="chain{0}".format(chainID) )
+            nativePdbChain = ample_util.filename_append(filename=nativePdbInfo.pdb, astr="chain{0}".format(chainID))
             pdb_edit.extract_chain(nativePdbInfo.pdb, nativePdbChain, chainID)
             nativePdb = nativePdbChain
         else:
@@ -335,19 +330,17 @@ class Maxcluster(object):
         return d
 
     def tm(self,model):
-        """"""
         for d in self.data:
-            if d['pdb'] == model: return d['tm']
-        #s = "\n".join(traceback.format_list(traceback.extract_stack()))
-        print "MaxCluster tm failed to find model name: {0}\n{1}".format(model,self.data)
+            if d['pdb'] == model:
+                return d['tm']
+        print("MaxCluster tm failed to find model name: {0}\n{1}".format(model, self.data))
         return None
             
     def rmsd(self,model):
-        """"""
         for d in self.data:
-            if d['pdb'] == model: return d['rmsd']
-        #s = "\n".join(traceback.format_list(traceback.extract_stack()))
-        print "MaxCluster rmsd failed to find model name: {0}\n{1}".format(model,self.data)
+            if d['pdb'] == model:
+                return d['rmsd']
+        print("MaxCluster rmsd failed to find model name: {0}\n{1}".format(model, self.data))
         return None
 
     def maxsubSorted(self, reverse=True):
@@ -360,18 +353,14 @@ class Maxcluster(object):
         with open(pdblist, 'w') as f:
             l = glob.glob(os.path.join(modelsDirectory, '*.pdb'))
             if not len(l) > 0:
-                raise RuntimeError,"Could not find any pdb files in directory: {0}".format(modelsDirectory)
+                raise RuntimeError("Could not find any pdb files in directory: {0}".format(modelsDirectory))
             f.write( os.linesep.join( l ) )
             
-        # Run Maxcluster
         cmd = [self.maxclusterExe, "-e", nativePdb, "-l", pdblist]
         retcode = ample_util.run_command(cmd, logfile=logfile, dolog=True)
         
         if retcode != 0:
-            msg = "non-zero return code for maxcluster in runMaxcluster!"
-            raise RuntimeError(msg)
-    
-        return
+            raise RuntimeError("non-zero return code for maxcluster in runMaxcluster!")
 
     def run_compare_model_list(self, nativePdb=None, models=None, logfile=None):
 
@@ -380,15 +369,11 @@ class Maxcluster(object):
         with open(pdblist, 'w') as f:
             f.write(os.linesep.join(models))
 
-        # Run Maxcluster
         cmd = [self.maxclusterExe, "-e", nativePdb, "-l", pdblist]
         retcode = ample_util.run_command(cmd, logfile=logfile, dolog=True)
 
         if retcode != 0:
-            msg = "non-zero return code for maxcluster in runMaxcluster!"
-            raise RuntimeError(msg)
-
-        return
+            raise RuntimeError("non-zero return code for maxcluster in runMaxcluster!")
      
     def tmSorted(self, reverse=True ):
         return sorted(self.data, key=lambda data: data['tm'], reverse=reverse)

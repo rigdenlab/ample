@@ -21,13 +21,15 @@ class CCP4RootDirectory(object):
     """The CCP4 root directory"""
     def __init__(self):
         if "CCP4" not in os.environ:
-            raise KeyError("Cannot find CCP4 installation - please make sure CCP4 "
-                           + "is installed and the setup scripts have been run!")
+            raise KeyError(
+                "Cannot find CCP4 installation - please make sure CCP4 is installed and the setup scripts have been run!"
+            )
         elif "CCP4_SCR" not in os.environ:
-            raise KeyError("$CCP4_SCR environment variable not set - please make sure "
-                           + "CCP4 is installed and the setup scripts have been run!")
+            raise KeyError(
+                "$CCP4_SCR environment variable not set - please make sure CCP4 is installed and the setup scripts have been run!"
+            )
         elif not os.path.isdir(os.environ['CCP4_SCR']):
-            raise ValueError("Cannot find the $CCP4_SCR directory: {0}".format(os.environ["CCP4_SCR"]))
+            raise ValueError("Cannot find the $CCP4_SCR directory: {}".format(os.environ["CCP4_SCR"]))
         else:
             self._root = os.environ['CCP4']
 

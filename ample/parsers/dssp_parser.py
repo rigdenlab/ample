@@ -44,12 +44,9 @@ class DsspParser(object):
                 if "!" in line:
                     continue
                 
-                #print "\"{0}\"".format(line)
-                #idx = int( line[0:5].strip() )
                 resSeq = int( line[5:10].strip() )
                 chainId = line[10:12].strip()
                 resName = line[12:14].strip()
-                #print "\"{0}\"".format(line[14:17])
                 assign = line[16]
                  
                 if currentChain != chainId:
@@ -64,7 +61,7 @@ class DsspParser(object):
                 self.assignment[-1].append( assign )
                 
         if not len( self.resNames[0] ) or not len( self.assignment[0] ):
-            raise RuntimeError,"Got no assignment!"
+            raise RuntimeError("Got no assignment!")
          
         for chain in range( len( self.chainIds ) ):
             nH = 0
@@ -105,7 +102,11 @@ class DsspParser(object):
             dsspResName = self.resNames[ ci ][ ri ]
             # in dssp cysteine bridges are signified by lower-case letters
             if dsspResName != resName and not dsspResName.islower() and dsspResName != 'X' :
-                raise RuntimeError,"Missmatching residues id {0} chain {1}: {2}: {3}".format( resSeq, chainId, self.resNames[ ci ][ ri ], resName )
+                raise RuntimeError(
+                    "Missmatching residues id {0} chain {1}: {2}: {3}".format(
+                        resSeq, chainId, self.resNames[ ci ][ ri ], resName
+                    )
+                )
             
         return self.assignment[ ci ][ ri ]
 
