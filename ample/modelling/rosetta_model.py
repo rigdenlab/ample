@@ -362,7 +362,7 @@ class RosettaModel(object):
         separate from object as it's currently used by the NMR stuff - which is in dire need of refactoring.
 
         """
-        assert(self.rosetta_bin and os.path.isdir(self.rosetta_bin))
+        assert self.rosetta_bin and os.path.isdir(self.rosetta_bin)
         binaries = glob.glob(os.path.join(self.rosetta_bin, "{0}.*".format(name)))
         if not len(binaries):
             return False
@@ -614,9 +614,9 @@ class RosettaModel(object):
     
     def nmr_remodel(self, models, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
         if remodel_fasta:
-            assert(os.path.isfile(remodel_fasta), "Cannot find remodel_fasta: {0}".format(remodel_fasta))
+            assert os.path.isfile(remodel_fasta), "Cannot find remodel_fasta: {0}".format(remodel_fasta)
         if ntimes:
-            assert(isinstance(ntimes, int), "ntimes is not an int: {0}".format(ntimes))
+            assert isinstance(ntimes, int), "ntimes is not an int: {0}".format(ntimes)
         num_nmr_models = len(models)
         if not ntimes: ntimes = 1000 / num_nmr_models
         nmr_process = int(ntimes)
