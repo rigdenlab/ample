@@ -19,6 +19,7 @@ else:
     from urllib.error import HTTPError
     from urllib.request import urlopen
 
+TIMEOUT=10.0 # in seconds
 
 class ParseFileUrl(HTMLParser):
     """
@@ -92,7 +93,7 @@ class OctopusPredict(object):
         data = dict(do='Submit OCTOPUS', sequence=fasta)
         edata = urllib.urlencode(data)
         
-        req = urlopen( self.octopus_url, edata )
+        req = urlopen(self.octopus_url, edata, timeout=TIMEOUT)
         
         m = ParseFileUrl()
         # Calls handle_starttag, _data etc.
@@ -118,12 +119,12 @@ class OctopusPredict(object):
         name: name for files (with suffix .topo and .nnprf)
         """
         try:
-            topo_req = urlopen( self.topo_url )
+            topo_req = urlopen(self.topo_url, timeout=TIMEOUT)
         except HTTPError as e:
             raise RuntimeError("Error accessing topo file: {}\n{}".format(self.topo_url, e))
         
         try:
-            nnprf_req = urlopen( self.nnprf_url )
+            nnprf_req = urlopen(self.nnprf_url, timeout=TIMEOUT)
         except uHTTPError as e:
             msg ="Error accessing nnprf file: {}\n{}\nTransmembrane prediction may have failed!".format(self.nnprf_url,e)
             self.logger.warn(msg)
