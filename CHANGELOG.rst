@@ -7,6 +7,7 @@ Changelog
 Added
 ~~~~~
 - code should be now both Python 2 and 3 compliant
+- added citation tab to jscofe gui and updated citation tracking and references.
 - '-percent_fixed_intervals' option for truncating so that we can specify a list of percentage intervals for truncating models.
 - '-purge' option now accepts a level of 0, 1 or 2 to select how much data is purged.
 
