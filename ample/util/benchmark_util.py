@@ -306,17 +306,15 @@ def analyseModels(amoptd):
             structure_list = [amoptd['native_pdb_std']]
             amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fastas=[amoptd['fasta']])
         except Exception as e:
-            msg = "Unable to run TMscores: {0}".format(e)
-            logger.critical(msg)
+            logger.critical("Unable to run TMscores: %s", e)
     else:
         global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
         _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
         logger.info("Analysing Rosetta models with Maxcluster")
-        _MAXCLUSTERER.compareDirectory(nativePdbInfo=nativePdbInfo,
-                                       resSeqMap=resSeqMap,
-                                        modelsDirectory=amoptd['models_dir'],
-                                        workdir=fixpath(amoptd['benchmark_dir']))
-    return
+        _MAXCLUSTERER.compareDirectory(
+            nativePdbInfo=nativePdbInfo, resSeqMap=resSeqMap,
+            modelsDirectory=amoptd['models_dir'], workdir=fixpath(amoptd['benchmark_dir'])
+        )
 
 
 def analysePdb(amoptd):
@@ -331,7 +329,7 @@ def analysePdb(amoptd):
     # Get information on the origins for this spaceGroup
     try:
         originInfo = pdb_model.OriginInfo(spaceGroupLabel=nativePdbInfo.crystalInfo.spaceGroup)
-    except:
+    except Exception:
         originInfo = None
 
     # Do this here as a bug in pdbcur can knacker the CRYST1 data
@@ -457,7 +455,7 @@ def analyseSolution(amoptd, d, mrinfo):
                                cAlphaOnly=True,
                                workdir=fixpath(amoptd['benchmark_dir']))
                 d['reforigin_RMSD']=rmsder.rmsd
-            except Exception,e:
+            except Exception as e:
                 logger.critical("Error calculating RMSD: {0}".format(e))
                 d['reforigin_RMSD']=999
     

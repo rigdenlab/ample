@@ -75,42 +75,6 @@ class Rio(object):
         self.best = None
         return
     
-#     def getContacts( self, 
-#                      nativePdbInfo=None,
-#                      placedPdbInfo=None,
-#                      resSeqMap=None,
-#                      origins=None, 
-#                      workdir=None,
-#                      dsspLog=None ):
-#         
-#         if not self.run( nativePdbInfo=nativePdbInfo,
-#                          placedPdbInfo=placedPdbInfo,
-#                          resSeqMap=resSeqMap,
-#                          origins=origins, 
-#                          workdir=workdir ):
-#             return False
-#         
-#         
-#         #print "placedPdb ",placedPdb
-#         #print "nativePdb ",nativePdb
-#         #print "GOT MAP ",resSeqMap
-#         
-#         # We should have contact data to calculate a helix from
-#         assert dsspLog
-#         dsspP = dssp.DsspParser( dsspLog )
-#         sequence = self.helixFromContacts( dsspP=dsspP )
-#         if sequence:
-#             self.best.helix = sequence
-#         
-#         if self.best.pdb:
-#             csym = csymmatch.Csymmatch()
-#             # Just for info - run csymmatch so we can see the alignment
-#             csymmatchPdb = ample_util.filename_append( filename=self.best.pdb, astr="csymmatch_best", directory=self.workdir )
-#             csym.run( refPdb=nativePdbInfo.pdb, inPdb=self.best.pdb, outPdb=csymmatchPdb, originHand=False )
-#             self.best.csymmatchPdb = csymmatchPdb
-#         
-#         return
-
     def analyseRio( self, contactData, dsspP=None ):
         
         # Clear any data
@@ -126,23 +90,18 @@ class Rio(object):
         if not chunks:
             return 0 
         
-        #print "GOT CHUNKS ",chunks
-        
         #for ( start, stop ) in startstop:
         for d in chunks:
             start = d['startIdx']
             stop  = d['stopIdx']
-            #print "NEW CHUNK"
             register    = True
             backwards   = False
             lastResSeq1 = None
             lastResSeq2 = None
             count       = 1
-            #print "LEN ", stop - start + 1
             for i in range( start, stop + 1 ):
                 
                 c = contactData.contacts[ i ]
-                #print "CONTACT: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2']
                 
                 if i != start:
                     if c['resSeq1'] == lastResSeq1 - 1 or c['resSeq2'] == lastResSeq2 - 1:
@@ -228,8 +187,6 @@ class Rio(object):
         
         self.workdir = workdir
         if not resSeqMap.resSeqMatch():
-            #print "NUMBERING DOESN'T MATCH"
-            #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
             mrPdbRes = ample_util.filename_append( filename=mrPdbInfo.pdb, astr="reseq", directory=self.workdir )
             pdb_edit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
@@ -250,8 +207,6 @@ class Rio(object):
         # Object to hold data on best origin
         self.data = None
         for origin in origins:
-            #print "GOT ORIGIN ",i,origin
-            
             placedOriginPdb =  placedAaPdb
             if origin != [ 0.0, 0.0, 0.0 ]:
                 # Move pdb to new origin
@@ -327,12 +282,9 @@ class Rio(object):
         # Get the corresponding AA sequence
         
         """
-        #print "GOT DATA ",contacts
         if contacts is None or not len( contacts ):
             return None
         
-        #print "GOT DSSP ",dsspP.asDict()
-        # Parse the dssp Log
         dsspP = dssp_parser.DsspParser( dsspLog )
         #
         # Loop through the contacts finding the start, stop indices in the list of contacts of contiguous chunks
@@ -344,12 +296,10 @@ class Rio(object):
         # Go through the start-stop chunks in pairs and see if they can be joined, creating
         # extended, which is the list of chunks with gaps filled-in
         #
-        #print "GOT CHUNKS ",chunks
         if len( chunks ) > 1:
             
             # Need to sort the chunks by chain and then startResSeq so that we can join anything on the same chain
             chunks.sort( key = itemgetter( 'chainId1', 'startResSeq' ) ) # By chain
-            #print "SORTED CHUNKS ",chunks
             
             extended = []
             for i, newChunk in enumerate( chunks ):
@@ -367,12 +317,7 @@ class Rio(object):
                 # Last one needs to be handled specially
                 if i == len( chunks ) - 1 and toJoin:
                     extended.append( toJoin )
-                    
-            # End Loop
-            
-            #print "GOT EXTENDED ",extended
-            
-            #
+            # 
             # Find the biggest
             #
             biggest = sorted( extended, lambda x, y: abs( x['stopResSeq'] - x['startResSeq']) - abs(y['stopResSeq'] - y['startResSeq']), reverse = True )[0]
@@ -380,7 +325,6 @@ class Rio(object):
         else:
             biggest = chunks[ 0 ]
             
-        #print "GOT BIGGEST ",biggest
         
         #
         # Get the sequence that the start, stop indices define
@@ -389,20 +333,9 @@ class Rio(object):
         startResSeq = min( biggest['startResSeq'], biggest['stopResSeq'] ) # use min/max as could be running backwards
         stopResSeq  = max( biggest['startResSeq'], biggest['stopResSeq'] )
         sequence = ""
-        #s3 = []
-        #print " s ",startResSeq
-        #print " e ",stopResSeq
         for resSeq in range( startResSeq, stopResSeq + 1):
             resName  = dsspP.getResName( resSeq, chainId )
             sequence += resName
-#             try:
-#                 s3 .append( pdb_edit.one2three[ resName ] )
-#             except KeyError:
-#                 s3.append( "XXX" )
-        #print "s3 "," ".join( s3 )
-        
-        #print "HELIX ",sequence
-                
         return sequence
 
     def _join_chunks( self, chunk1, chunk2, dsspP=None, maxGap=None ):
@@ -416,8 +349,6 @@ class Rio(object):
         
         assert dsspP and maxGap
         
-        #print "CHECKING CHUNK ",chunk1, chunk2
-        
         # See if a suitable gap
         width = abs( chunk2[ 'startResSeq' ] - chunk1[ 'stopResSeq' ] ) - 1
         if width < 1 or width > maxGap or chunk1[ 'chainId1' ] != chunk2[ 'chainId1' ]:
@@ -428,8 +359,6 @@ class Rio(object):
             ss = dsspP.getAssignment( resSeq, chunk1[ 'chainId1' ], resName = None )
             if ss != 'H':
                 return ( chunk1, chunk2 )
-        
-        #print "JOINED CHUNKS", chunk1, chunk2
         
         joinedChunk =  { 'chainId1'    : chunk1[ 'chainId1' ],
                          'startIdx'    : chunk1[ 'startIdx'],
@@ -465,9 +394,8 @@ class Rio(object):
         
         retcode = ample_util.run_command(cmd=cmd, logfile=self.ncontLog, directory=os.getcwd(), dolog=True, stdin=stdin)
         
-        if retcode != 0: raise RuntimeError,"Error running ncont command: {0}\nCheck log: {1}".format(cmd,self.ncontLog)
-        
-        return
+        if retcode != 0: 
+            raise RuntimeError("Error running ncont command: {0}\nCheck log: {1}".format(cmd,self.ncontLog))
     
     def parseNcontLog( self, contactData, logfile=None, clean_up=True):
         """
@@ -506,7 +434,6 @@ class Rio(object):
                     clines.append( line )
             
         assert contactData.numContacts == len(clines)
-        #print "LINES ",clines
 
         contacts = [] 
         # Got data lines so now extract data
@@ -516,7 +443,6 @@ class Rio(object):
             
             # Reconstruct lines with only the second contact using the data from the corresponding last complete line
             if not c[0:29].strip():
-                #print "MATCH ACROSS TWO ATOMS"
                 c = lastSource[0:29] + c[29:]
             else:
                 lastSource = c
@@ -544,40 +470,9 @@ class Rio(object):
             
             contacts.append( d )
     
-    #         # Put in dictionary by chains for easy access
-    #         contacts = {}
-    #         for c in contactsList:
-    #             
-    #             chainId1, resSeq1, aa1, chainId2, resSeq2, aa2, dist, cell, symmetry = c
-    #             
-    #             if not contacts.has_key( chainId1 ):
-    #                 # First entry in first source chain
-    #                 contacts[ chainId1 ] = { chainId2: [ c ] }
-    #                 continue
-    #             
-    #             if not contacts[ chainId1 ].has_key( chainId2 ):
-    #                 # Adding a new target chain
-    #                 contacts[ chainId1 ][ chainId2 ] = [ c ]
-    #                 continue
-    #             
-    #             # Adding to existing source & target chains
-    #             contacts[ chainId1 ][ chainId2 ].append( c )
-    #                 
-    # #         for sc in contacts.keys():
-    # #             for tc in contacts[ sc ]:
-    # #                 for c in contacts[ sc ][ tc ]:
-    # #                     print c
-    # 
-    
-            #print "GOT CONTACTS"
-            #for c in contacts:
-            #    print "chainId1 {0} resSeq1 {1} chainId2 {2} resSeq2 {3}\n".format(  c['chainId1'], c['resSeq1'], c['chainId2'], c['resSeq2']  )
-    
         contactData.contacts = contacts
-        
-        if clean_up: os.unlink(logfile)
-                    
-        return
+        if clean_up: 
+            os.unlink(logfile)
     
     def helixFromPdbs(self, origin, mrPdb, nativePdb, nativeChain, dsspLog, workdir=os.getcwd() ):
         """This is a wrapper to generate the info and resSeqMap objects needed by score Origin"""
@@ -610,8 +505,6 @@ class Rio(object):
         
         self.workdir = workdir
         if not resSeqMap.resSeqMatch():
-            #print "NUMBERING DOESN'T MATCH"
-            #raise RuntimeError,"NUMBERING DOESN'T MATCH"
             # We need to create a copy of the placed pdb with numbering matching the native
             mrPdbRes = ample_util.filename_append( filename=mrPdbInfo.pdb, astr="reseq", directory=self.workdir )
             pdb_edit.match_resseq( targetPdb=mrPdbInfo.pdb, sourcePdb=None, outPdb=mrPdbRes, resMap=resSeqMap )
@@ -690,12 +583,7 @@ class Rio(object):
         backwards = 0
         
         for i, c in enumerate( contacts ):
-            
             ssOK = self.ssIsOK( c, dsspP=dsspP, ssTest=ssTest )
-            
-            #ss = dsspP.getAssignment( c['resSeq1'], c['chainId1'], resName = c['aa1'] )
-            #print "DATA: ",i, c['chainId1'], c['resSeq1'], c['aa1'], c['chainId2'], c['resSeq2'], c['aa2'],ss, ssOK
-            
             if i != 0:
                 # For getting the longest segment we only care it's changing by 1 - we test what matched how later
                 if ( c['resSeq1'] == lastResSeq1 + 1 or c['resSeq1'] == lastResSeq1 - 1 ) and \

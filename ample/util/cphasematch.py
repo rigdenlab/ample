@@ -31,9 +31,11 @@ def _basis_str(origin_shift):
 def _check_mtz(mtz_file, labels=[]):
     """Return an iotbx.mtz object for the mtz_file making sure the file is valid and contains the given labels"""
     mtz = iotbx.mtz.object(file_name=mtz_file)
-    if len(mtz.crystals()) > 2: raise RuntimeError("Cannot deal with multiple crystal in mtz")
+    if len(mtz.crystals()) > 2: 
+        raise RuntimeError("Cannot deal with multiple crystal in mtz")
     # # Assume the first crystal is always the base so we use the second
-    if len(mtz.crystals()[1].datasets()) > 1: raise RuntimeError("Cannot deal with > 1 dataset in mtz")
+    if len(mtz.crystals()[1].datasets()) > 1: 
+        raise RuntimeError("Cannot deal with > 1 dataset in mtz")
     for label in labels:
         if not mtz.has_column(label):
             raise RuntimeError("Cannot find label: {0} in mtz file: {1}".format(label, mtz_file))
@@ -206,8 +208,7 @@ def merge_mtz(mtz1_path, mtz1_labels, mtz2_path, mtz2_labels):
     logfile = os.path.abspath("cad.log")
     retcode = ample_util.run_command(cmd=cmd, stdin=stdin, logfile=logfile)
     if retcode != 0:
-        raise RuntimeError(
-            "Error running command: {0}\nCheck logfile: {1}".format(" ".join(cmd), logfile))
+        raise RuntimeError("Error running command: {0}\nCheck logfile: {1}".format(" ".join(cmd), logfile))
     else:
         os.unlink(logfile)
 
@@ -250,10 +251,6 @@ def place_native_pdb(native_pdb, native_mtz, f_label, sigf_label, cleanup=True):
         raise RuntimeError("PHASER failed: {0} : {1}".format(phaser_run.ErrorName(), phaser_run.ErrorMessage()))
 
     if phaser_run.foundSolutions():
-        #print "Phaser has found MR solutions"
-        #print "Top LLG = %f" % phaser_run.getTopLLG()
-        #print "Top PDB file = %s" % phaser_run.getTopPdbFile()
-        #print "Top MTZ file = %s" % phaser_run.getTopMtzFile()
         native_placed_mtz = phaser_run.getTopMtzFile()
     else:
         raise RuntimeError("PHASER could not place native_pdb")
@@ -317,7 +314,8 @@ resolution-bins {resolution_bins}
           "-stdin" ]
 
     retcode = ample_util.run_command(cmd=cmd, stdin=stdin, logfile=logfile)
-    if retcode != 0: raise RuntimeError, "Error running command: {0}\nCheck logfile: {1}".format( " ".join(cmd), logfile )
+    if retcode != 0: 
+        raise RuntimeError("Error running command: {0}\nCheck logfile: {1}".format(" ".join(cmd), logfile))
 
     before_origin, after_origin, change_of_hand, origin_shift = parse_cphasematch_log(logfile)
 
@@ -332,22 +330,11 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description='Run cphasematch on two mtz files', prefix_chars="-")
 
-    #group = parser.add_argument_group()
-    parser.add_argument('-native_mtz',
-                       help="Input native MTZ file",
-                       required=True)
-    parser.add_argument('-mr_mtz',
-                       help="Input MTZ file from Molecular Replacement",
-                       required=True)
-    parser.add_argument('-native_pdb',
-                       help="Input native PDB file",
-                       required=False)
-    parser.add_argument('-f_label',
-                       help="F label from native MTZ file",
-                       required=False)
-    parser.add_argument('-sigf_label',
-                       help="SIGF label from native MTZ file",
-                       required=False)
+    parser.add_argument('-native_mtz', help="Input native MTZ file", required=True)
+    parser.add_argument('-mr_mtz', help="Input MTZ file from Molecular Replacement", required=True)
+    parser.add_argument('-native_pdb', help="Input native PDB file", required=False)
+    parser.add_argument('-f_label', help="F label from native MTZ file", required=False)
+    parser.add_argument('-sigf_label', help="SIGF label from native MTZ file", required=False)
 
     args = parser.parse_args()
 
@@ -359,16 +346,13 @@ if __name__ == "__main__":
     _logger.info("Using F, SIGF labels from mtz file: {0}, {1} ".format(f_label, sigf_label))
 
     if args.native_pdb:
-        before_origin, after_origin, change_of_hand, origin_shift = calc_phase_error_pdb(args.native_pdb,
-                                                                                         args.native_mtz,
-                                                                                         args.mr_mtz,
-                                                                                         f_label,
-                                                                                         sigf_label)
+        before_origin, after_origin, change_of_hand, origin_shift = calc_phase_error_pdb(
+            args.native_pdb, args.native_mtz, args.mr_mtz, f_label, sigf_label
+        )
     else:
-        before_origin, after_origin, change_of_hand, origin_shift = calc_phase_error_mtz(args.native_mtz,
-                                                                                         args.mr_mtz,
-                                                                                         f_label,
-                                                                                         sigf_label)
+        before_origin, after_origin, change_of_hand, origin_shift = calc_phase_error_mtz(
+            args.native_mtz, args.mr_mtz, f_label, sigf_label
+        )
 
-    print "Calculated phase error: {0}".format(after_origin)
-    print "Calculated origin shift: {0}".format(origin_shift)
+    print("Calculated phase error:", after_origin)
+    print("Calculated origin shift:", origin_shift)

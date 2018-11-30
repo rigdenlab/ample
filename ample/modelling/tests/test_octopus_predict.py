@@ -8,7 +8,8 @@ from ample.testing import test_funcs
 
 INTERNET_AVAIL = test_funcs.internet_on()
 
-@unittest.skipUnless(INTERNET_AVAIL, "No internet connection")
+@unittest.skip("Needs to be rewritten to avoid blocking read, but code is scheduled for removal")
+#@unittest.skipUnless(INTERNET_AVAIL, "No internet connection")
 class Test(unittest.TestCase):
 
     @classmethod

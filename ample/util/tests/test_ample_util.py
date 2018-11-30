@@ -1,6 +1,6 @@
 """Test functions for util.ample_util"""
 
-import cPickle
+import pickle
 import os
 import shutil
 import tempfile
@@ -26,7 +26,7 @@ class Test(unittest.TestCase):
 
     def test_resultsd_fix_path(self):
         with open(os.path.join(SHARE_DIR, 'testfiles', AMPLE_PKL)) as f:
-            optd = cPickle.load(f)
+            optd = pickle.load(f)
         d = ample_util.amoptd_fix_path(optd, newroot='/foo/bar')
         self.assertEqual(d['fasta'], '/foo/bar/ampl_.fasta')
         self.assertEqual(d['mrbump_results'][0]['PHASER_logfile'], '/foo/bar/MRBUMP/search_c1_t69_r3_polyAla_mrbump/data/loc0_ALL_c1_t69_r3_polyAla/unmod/mr/phaser/phaser_loc0_ALL_c1_t69_r3_polyAla_UNMOD.log')

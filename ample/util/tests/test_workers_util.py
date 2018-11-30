@@ -22,7 +22,7 @@ class Test(unittest.TestCase):
     def makeJob(self, name):
         script = """#!/usr/bin/python
 import sys,time
-print "I am job: {0}"
+print("I am job: {0}")
 time.sleep( 3 )
 sys.exit(0)
 """.format( name )

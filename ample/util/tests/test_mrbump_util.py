@@ -1,6 +1,6 @@
 """Test functions for util.mrbump_util"""
 
-import cPickle
+import pickle
 import os
 import unittest
 
@@ -18,7 +18,7 @@ class Test(unittest.TestCase):
     def test_final_summary(self):
         pkl = os.path.join(self.testfiles_dir, AMPLE_PKL)
         if not os.path.isfile(pkl): return
-        with open(pkl) as f: d = cPickle.load(f)
+        with open(pkl) as f: d = pickle.load(f)
         summary = mrbump_util.finalSummary(d)
         self.assertIsNotNone(summary)
         

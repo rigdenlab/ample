@@ -64,11 +64,7 @@ class CifParser(object):
         # Need empty stdin to trigger eof to get program to run
         retcode = ample_util.run_command(cmd, stdin="", logfile=logfile)
         if retcode != 0:
-            msg = "Error running sfcif2mtz. Check the logfile: {0}".format(logfile)
-            self.logger.critical(msg)
-            raise RuntimeError, msg
-        
-        return
+            raise RuntimeError("Error running sfcif2mtz. Check the logfile: {0}".format(logfile))
     
     def sfcif2mtz(self, cifPath ):
         """Convert a CIF containing structure factors to an MTZ file."""
@@ -83,9 +79,7 @@ class CifParser(object):
         # have been set aside for RFree
         self._parseCif( cifPath )
         if not self.hasAmplitudes:
-            msg = "sfcif2mtz: no amplitudes in sf-cif - need to run ctruncate!"
-            self.logger.info( msg )
-            raise RuntimeError,msg
+            raise RuntimeError("sfcif2mtz: no amplitudes in sf-cif - need to run ctruncate!")
         
         # Convert to mtz - this might add a spurious FREE column
         self._sfcif2mtz(cifPath, mtzPath)

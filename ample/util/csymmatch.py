@@ -44,10 +44,11 @@ class Csymmatch( object ):
 
         retcode = ample_util.run_command(cmd=cmd, logfile=self.logfile, dolog=False)
         
-        if retcode != 0: raise RuntimeError, "Error running command: {0}".format( " ".join(cmd) )
+        if retcode != 0: 
+            raise RuntimeError("Error running command: {0}".format(" ".join(cmd)))
         
-        if cleanup: os.unlink(self.logfile)
-        return
+        if cleanup: 
+            os.unlink(self.logfile)
     
     def parseLog(self,  logfile=None, cleanup=True):
         """Parse the log"""

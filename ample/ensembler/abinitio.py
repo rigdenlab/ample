@@ -13,9 +13,10 @@ import cluster_util
 import subcluster
 import subcluster_util
 import truncation_util
-from constants import SIDE_CHAIN_TREATMENTS, SUBCLUSTER_RADIUS_THRESHOLDS, \
-    SPICKER_RMSD, SPICKER_TM
 
+from ample.ensembler.constants import (
+    SIDE_CHAIN_TREATMENTS, SUBCLUSTER_RADIUS_THRESHOLDS, SPICKER_RMSD, SPICKER_TM
+)
 from ample.util import fast_protein_cluster
 from ample.util import scwrl_util
 from ample.util import spicker
@@ -45,17 +46,9 @@ class AbinitioEnsembler(_ensembler.Ensembler):
 
         return
 
-    def cluster_models(self,
-                       models=None,
-                       cluster_method=SPICKER_RMSD,
-                       num_clusters=1,
-                       cluster_dir=None,
-                       max_cluster_size=200,
-                       ):
-        """Wrapper function to run clustering of models dependent on the method
-        """
+    def cluster_models(self, models=None, cluster_method=SPICKER_RMSD, num_clusters=1, cluster_dir=None, max_cluster_size=200):
+        """Wrapper function to run clustering of models dependent on the method"""
 
-        # Cluster our protein structures
         logger.info('Generating %d clusters using method: %s', num_clusters, cluster_method)
 
         if cluster_method != 'import' and not len(models):
@@ -104,8 +97,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                                          nproc=self.nproc)
             logger.debug(spickerer.results_summary())
         else:
-            msg = 'Unrecognised clustering method: {0}'.format(cluster_method_type)
-            raise RuntimeError(msg)
+            raise RuntimeError('Unrecognised clustering method: {}'.format(cluster_method_type))
 
         return clusters
 
@@ -192,8 +184,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
 
         logger.info('Ensembling models in directory: %s', self.work_dir)
         if not all([os.path.isfile(m) for m in models]):
-            msg = "Problem reading models given to Ensembler: {0}".format(models)
-            raise RuntimeError(msg)
+            raise RuntimeError("Problem reading models given to Ensembler: {}".format(models))
 
         self.ensembles = []
         for cluster in self.cluster_models(models=models,
@@ -275,8 +266,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
             cluster_method_type = cluster_method
             cluster_exe = None
         else:
-            msg = "Unrecognised cluster_method: {0}".format(cluster_method)
-            raise RuntimeError(msg)
+            raise RuntimeError("Unrecognised cluster_method: {}".format(cluster_method))
         logger.debug('cluster_method_type: %s cluster_score_type: %s cluster_exe %s', cluster_method_type, cluster_score_type, cluster_exe)
         return cluster_method_type, cluster_score_type, cluster_exe
 

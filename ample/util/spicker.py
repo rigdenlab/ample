@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-# python imports
 import glob
 import logging
 import os
@@ -8,7 +7,6 @@ import re
 import shutil
 import sys
 
-# our imports
 from ample.util import ample_util
 from ample.ensembler._ensembler import Cluster
 from ample.ensembler.constants import SPICKER_RMSD
@@ -21,16 +19,14 @@ class Spickerer(object):
         """Initialise from a dictionary of options"""
 
         if not spicker_exe:
-            if 'CCP4' in os.environ: spicker_exe = os.path.join(os.environ['CCP4'], 'bin', 'spicker')
-            else: raise RuntimeError, "Cannot find a spicker executable!"
+            spicker_exe = os.path.join(os.environ['CCP4'], 'bin', 'spicker')
         if not (os.path.exists(spicker_exe) and os.access(spicker_exe, os.X_OK)):
-            raise RuntimeError, "Cannot find a valid spicker executable: {0}".format(spicker_exe)
+            raise RuntimeError("Cannot find a valid spicker executable: {0}".format(spicker_exe))
         self.spicker_exe = spicker_exe
         self.run_dir = run_dir
         self.results = None
         self.cluster_method = SPICKER_RMSD
         self.score_type = 'rmsd'
-        return
 
     def get_length(self, pdb):
         pdb = open(pdb)
@@ -51,18 +47,14 @@ class Spickerer(object):
         (See notes in spicker.f FORTRAN file for a description of the required files)
         """
         if not len(models):
-            msg = "no models provided!"
-            logger.critical(msg)
-            raise RuntimeError, msg
+            raise RuntimeError("no models provided!")
 
         if score_type: score_type = score_type.lower()
         logger.debug("Using score_type: {0}".format(score_type))
 
         if score_type == 'read_matrix':
             if not (score_matrix and os.path.isfile(score_matrix)):
-                msg = 'Cannot find score_matrix: {0}'.format(score_matrix)
-                logger.critical(msg)
-                raise RuntimeError, msg
+                raise RuntimeError('Cannot find score_matrix: {0}'.format(score_matrix))
             logger.debug("Using score_matrix: {0}".format(score_matrix))
             shutil.copy(score_matrix, os.path.join(self.run_dir, 'score.matrix'))
 
@@ -174,10 +166,10 @@ class Spickerer(object):
         self._cluster(models, run_dir=run_dir, score_type=score_type, score_matrix=score_matrix, nproc=nproc)
 
         ns_clusters = len(self.results)
-        if ns_clusters == 0: raise RuntimeError('No clusters returned by SPICKER')
+        if ns_clusters == 0: 
+            raise RuntimeError('No clusters returned by SPICKER')
         if ns_clusters < int(num_clusters):
-            logger.critical('Requested {0} clusters but SPICKER only found {1} so using {1} clusters'.format(
-                num_clusters, ns_clusters))
+            logger.critical('Requested {0} clusters but SPICKER only found {1} so using {1} clusters'.format(num_clusters, ns_clusters))
             num_clusters = ns_clusters
 
         clusters = []
@@ -237,7 +229,7 @@ class Spickerer(object):
         logfile = os.path.abspath("spicker.log")
         rtn = ample_util.run_command([self.spicker_exe], logfile=logfile, env=env, preexec_fn=preexec_fn)
         if not rtn == 0:
-            raise RuntimeError, "Error running spicker, check logfile: {0}".format(logfile)
+            raise RuntimeError("Error running spicker, check logfile: {0}".format(logfile))
 
         # Read the log and generate the results
         self.results = self.process_log()
@@ -267,7 +259,7 @@ class Spickerer(object):
                 f.readline()
                 line = f.readline().strip()
                 if not line.startswith("Nstr="):
-                    raise RuntimeError, "Problem reading file: {0}".format(logfile)
+                    raise RuntimeError("Problem reading file: {0}".format(logfile))
 
                 ccount = int(line.split()[1])
                 clusterCounts.append(ccount)
@@ -318,7 +310,8 @@ class Spickerer(object):
     def results_summary(self):
         """Summarise the spicker results"""
 
-        if not self.results: raise RuntimeError, "Could not find any results!"
+        if not self.results: 
+            raise RuntimeError("Could not find any results!")
         rstr = "---- Spicker Results ----\n\n"
 
         for i, r in enumerate(self.results):

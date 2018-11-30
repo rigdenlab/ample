@@ -197,7 +197,7 @@ def process_options(optd):
     # MTZ file processing
     try:
         mtz_util.processReflectionFile(optd)
-    except Exception, e:
+    except Exception as e:
         raise RuntimeError("Error processing reflection file: {0}".format(e))
     # Contact file processing
     if optd['contact_file'] or optd['bbcontacts_file'] or not optd["no_contact_prediction"]:

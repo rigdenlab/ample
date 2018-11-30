@@ -453,7 +453,7 @@ class Ensembler(object):
         run_theseus = theseus.Theseus(work_dir=work_dir, theseus_exe=self.theseus_exe)
         try:
             run_theseus.superpose_models(models, basename=basename, homologs=homologs)
-        except Exception, e:
+        except Exception as e:
             logger.critical("Error running theseus: {0}".format(e))
             return False
         return run_theseus.superposed_models

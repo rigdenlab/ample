@@ -1,7 +1,7 @@
 #!/usr/bin/env ccp4-python
 
 import copy
-import cPickle
+import pickle
 import glob
 import logging
 import os
@@ -13,15 +13,12 @@ if __name__ == "__main__":
     root = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-2])
     sys.path.insert(0, os.path.join(root, "scripts"))
 
-# Our imports
 from ample.util import ample_util
 from ample.util import mrbump_cmd
 from ample.util import printTable
 
-# MRBUMP imports
-if not "CCP4" in os.environ.keys(): raise RuntimeError('CCP4 not found')
+# FS [15/11/2018] -> New MRBUMP structure allows direct imports, wait for release then replace
 mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
-#mrbumpd = "/opt/mrbump-trunk/include/parsers"
 sys.path.insert(0, mrbumpd)
 import parse_arpwarp
 import parse_buccaneer
@@ -38,7 +35,7 @@ class NullHandler(logging.Handler):
 
 logger = logging.getLogger(__name__)
 logger.addHandler(NullHandler())
-#logger.basicConfig()
+
 
 class ResultsSummary(object):
     """
@@ -58,7 +55,7 @@ class ResultsSummary(object):
         self.success = False
         if results_pkl and os.path.isfile(results_pkl):
             with open(results_pkl) as f:
-                resd = cPickle.load(f)
+                resd = pickle.load(f)
             mkey = 'mrbump_results'
             if mkey in resd and len(resd[mkey]):
                 self.results = resd[mkey]
@@ -185,7 +182,7 @@ class ResultsSummary(object):
         if pkls:
             for p in pkls:
                 with open(p) as f:
-                    d = cPickle.load(f)
+                    d = pickle.load(f)
                 purged_results[d['ensemble_name']] = d
         return purged_results
 
@@ -265,7 +262,7 @@ class ResultsSummary(object):
         """Process dictionary
         """
         with open(resultsPkl) as f:
-            rD = cPickle.load(f)
+            rD = pickle.load(f)
         if not rD:
             return []
         results = []
@@ -327,7 +324,7 @@ class ResultsSummary(object):
                 if r not in to_keep:
                     pkl = os.path.join(self.pdir, "{0}.pkl".format(r['ensemble_name']))
                     with open(pkl, 'w') as f:
-                        cPickle.dump(r, f)
+                        pickle.dump(r, f)
                     shutil.rmtree(r['Search_directory'])
         
     def results_table(self, results):
@@ -598,8 +595,6 @@ def unfinished_scripts(amoptd):
     
     scripts = []
     for r in [ r for r in amoptd['mrbump_results'] if job_unfinished(r) ]:
-        #print "DIR ", r['MR_directory']
-        #print "DIR2 ", r['Search_directory']
         scripts.append(os.path.join(amoptd['mrbump_dir'], r['ensemble_name']+ample_util.SCRIPT_EXT))
     return scripts
 
@@ -638,9 +633,7 @@ def write_mrbump_files(ensemble_pdbs, amoptd, job_time=MRBUMP_RUNTIME, ensemble_
         job_scripts.append(script)
             
     if not len(job_scripts):
-        msg = "No job scripts created!"
-        logging.critical(msg)
-        raise RuntimeError, msg
+        raise RuntimeError("No job scripts created!")
     
     return job_scripts
 
@@ -679,4 +672,4 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
 
     r = ResultsSummary()
-    print r.summariseResults(mrbump_dir)
+    print(r.summariseResults(mrbump_dir))

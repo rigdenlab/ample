@@ -79,4 +79,4 @@ if __name__ == '__main__':
     mrPdb = "phaser_loc0_ALL_poly_ala_trunc_2.733913_rad_1_UNMOD.1.pdb"
     mtzMap = generateMap( mtz, native )
     
-    print ccmtzOrigin( mtzMap, mrPdb )
+    print(ccmtzOrigin( mtzMap, mrPdb ))

@@ -1,6 +1,12 @@
 
 import argparse
-import urllib2
+import sys
+
+if sys.version_info.major < 3:
+    from urllib2 import urlopen, HTTPError
+else:
+    from urllib.error import URLError
+    from urllib.request import urlopen
 
 from ample.testing import integration_util
 from ample.testing import run_tests
@@ -19,8 +25,8 @@ def found_exe(e):
 def internet_on():
     # Taken from stackoverflow.com/questions/3764291/checking-network-connection
     try:
-        reponse = urllib2.urlopen("http://google.com", timeout=5)
-    except urllib2.URLError:
+        reponse = urlopen("http://google.com", timeout=5)
+    except URLError:
         return False
     return True
 

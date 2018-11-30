@@ -27,7 +27,7 @@ class Theseus(object):
         if theseus_exe is None:
             if 'CCP4' in os.environ: theseus_exe = os.path.join(os.environ['CCP4'], 'bin', 'theseus')
         if theseus_exe is None or not os.path.exists(theseus_exe) and os.access(theseus_exe, os.X_OK):
-            raise RuntimeError,"Cannot find theseus_exe: {0}".format(theseus_exe)
+            raise RuntimeError("Cannot find theseus_exe: {0}".format(theseus_exe))
         self.theseus_exe = theseus_exe
         self.work_dir = None
         self.var_by_res = None
@@ -51,7 +51,7 @@ class Theseus(object):
         all_seq = sequence_util.Sequence(pdb=models[0])
         for model in models[1:]: all_seq += sequence_util.Sequence(pdb=model)
         if not all(map(lambda x: x == len(all_seq.sequences[0]), [ len(s) for s in all_seq.sequences ])):
-            raise RuntimeError,'PDB files are not all of the same length!\n{0}'.format(models)
+            raise RuntimeError('PDB files are not all of the same length!\n{0}'.format(models))
         all_seq.write_fasta(alignment_file,pdbname=True)
         return alignment_file
 
@@ -106,9 +106,7 @@ class Theseus(object):
                                          logfile = self.theseus_log,
                                          directory = self.work_dir)
         if retcode != 0:
-            msg = "non-zero return code for theseus in superpose_models!\n See log: {0}".format(self.theseus_log)
-            _logger.critical(msg)
-            raise RuntimeError, msg
+            raise RuntimeError("non-zero return code for theseus in superpose_models!\n See log: {0}".format(self.theseus_log))
         
         self.variance_log = os.path.join(self.work_dir,'{0}_variances.txt'.format(basename))
         self.superposed_models = os.path.join(self.work_dir,'{0}_sup.pdb'.format(basename))
@@ -133,17 +131,19 @@ class Theseus(object):
         else:
             variance_log = self.variance_log
             
-        if not os.path.isfile(variance_log): raise RuntimeError,"Cannot find theseus variance log: {0}".format(variance_log)
+        if not os.path.isfile(variance_log): 
+            raise RuntimeError("Cannot find theseus variance log: {0}".format(variance_log))
         var_by_res = []
         with open(variance_log) as f:
             for i, line in enumerate(f):
-                # Skip header
-                if i==0: continue
+
+                if i==0:
+                    continue
 
                 line = line.strip()
-                if not line: continue # Skip blank lines
+                if not line: 
+                    continue
 
-                #print line
                 tokens = line.split()
                 # Different versions of theseus may have a RES card first, so need to check
                 if tokens[0]=="RES":

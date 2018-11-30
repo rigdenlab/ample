@@ -4,7 +4,7 @@ __author__ = "Jens Thomas, and Felix Simkovic"
 __date__ = "01 Jan 2016"
 __version__ = "1.0"
 
-import cPickle
+import pickle
 import glob
 import logging
 import os
@@ -497,7 +497,7 @@ def read_amoptd(amoptd_fname):
         raise RuntimeError("Cannot access AMPLE options file: {0}\n".format(amoptd_fname))
 
     with open(amoptd_fname, 'r') as f:
-        amoptd = cPickle.load(f)
+        amoptd = pickle.load(f)
         logger.info("Loaded state from file: %s\n", amoptd['results_path'])
     return amoptd
 
@@ -531,9 +531,8 @@ def save_amoptd(amoptd):
     """
     # Save results
     with open(amoptd['results_path'], 'w') as f:
-        cPickle.dump(amoptd, f)
+        pickle.dump(amoptd, f)
         logger.info("Saved state as file: %s\n", amoptd['results_path'])
-    return
 
 
 def split_quark(models_dir):

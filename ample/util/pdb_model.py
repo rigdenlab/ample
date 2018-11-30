@@ -423,9 +423,7 @@ class OriginInfo( object ):
                 if spaceGroup == sg:
                     return line.split()[ 3 ]
     
-        raise KeyError, spaceGroup
-        return
-
+        raise KeyError(spaceGroup)
 
 
 class CrystalInfo(object):
@@ -609,17 +607,18 @@ class PdbAtom(object):
         elif s[1] in signs:
             sign = s[1]
             val = s[0]
-        else: raise RuntimeError, "Error getting charge sign ({0}) from line: {1}".format(line[78:80], line)
-        if sign == minus: mult = -1
+        else: 
+            raise RuntimeError("Error getting charge sign ({0}) from line: {1}".format(line[78:80], line))
+        if sign == minus: 
+            mult = -1
         try:
             return int(val) * mult
         except:
-            raise RuntimeError, "Error getting charge ({0}) from line: {1}".format(line[78:80], line)
+            raise RuntimeError("Error getting charge ({0}) from line: {1}".format(line[78:80], line))
     
     def _sanityCheck( self, line ):
-        assert line[0:6] == self._atomType,"Line did not begin with an {0} record!: {1}".format( self._atomType, line )
-        assert len(line) >= 54,"Line length was: {0}\n{1}".format(len(line),line)
-        return
+        assert line[0:6] == self._atomType, "Line did not begin with an {0} record!: {1}".format(self._atomType, line)
+        assert len(line) >= 54, "Line length was: {0}\n{1}".format(len(line),line)
         
     def fromLine(self,line):
         """Initialise from the line from a PDB"""
@@ -663,7 +662,7 @@ class PdbAtom(object):
         s += "{0:5d}".format( self.serial ) # 7-11
         s += " " # 12 blank
         if len(self.name) != 4:
-            raise RuntimeError,"Name must be 4 characters long!"
+            raise RuntimeError("Name must be 4 characters long!")
         s += "{0:4}".format( self.name ) # 13-16
         if not self.altLoc: #17
             s += " "

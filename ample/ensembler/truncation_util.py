@@ -57,7 +57,6 @@ def calculate_residues_focussed(var_by_res):
     start_indexes = upper_start + lower_start
     # Calculate the percentages for each of these start points
     percentages = [int(round(float(start + 1) / float(length) * 100)) for start in start_indexes]
-    # print "percentages ", percentages
     truncation_levels = percentages
     idxs_all = [x.idx for x in var_by_res]
     resseq_all = [x.resSeq for x in var_by_res]
@@ -304,21 +303,22 @@ class Truncator(object):
                 logger.critical(e)
                 return []
 
-        # No THESEUS variances required if scores for each residue provided
-        var_by_res = run_theseus.var_by_res if truncation_method != "scores" \
-            else self._convert_residue_scores(residue_scores)
+        if truncation_method == TRUNCATION_METHODS.SCORES:
+            var_by_res = self._convert_residue_scores(residue_scores)
+        else:
+            var_by_res = run_theseus.var_by_res
         if len(var_by_res) <= 0:
             raise RuntimeError("Error reading residue variances!")
 
         logger.info('Using truncation method: %s', truncation_method)
         # Calculate which residues to keep under the different methods
         if truncation_method in [
-                TRUNCATION_METHODS.PERCENT.value, TRUNCATION_METHODS.PERCENT_FIXED.value,
-                TRUNCATION_METHODS.SCORES.value
+                TRUNCATION_METHODS.PERCENT, TRUNCATION_METHODS.PERCENT_FIXED,
+                TRUNCATION_METHODS.SCORES
         ]:
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_by_percent(
                 var_by_res, percent_truncation=percent_truncation, percent_fixed_intervals=percent_fixed_intervals)
-        elif truncation_method == TRUNCATION_METHODS.FOCUSED.value:
+        elif truncation_method == TRUNCATION_METHODS.FOCUSED:
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_focussed(
                 var_by_res)
         else:

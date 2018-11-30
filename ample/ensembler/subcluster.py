@@ -31,14 +31,12 @@ class SubClusterer(object):
 
     def __init__(self, executable=None, nproc=1):
         if executable and not os.path.exists(executable) and os.access(executable, os.X_OK):
-            msg = "Cannot find subclusterer executable: {0}".format(executable)
-            raise RuntimeError(msg)
+            raise RuntimeError("Cannot find subclusterer executable: {0}".format(executable))
         self.executable = executable
         self.nproc = nproc
         self.distance_matrix = None
         self.index2pdb = []
         self.cluster_score = None
-        return
 
     def generate_distance_matrix(self, *args, **kwargs):
         raise NotImplementedError
@@ -123,9 +121,7 @@ class CctbxClusterer(SubClusterer):
 
         num_models = len(pdb_list)
         if not num_models:
-            msg = "generate_distance_matrix got empty pdb_list!"
-            logging.critical(msg)
-            raise RuntimeError(msg)
+            raise RuntimeError("generate_distance_matrix got empty pdb_list!")
 
         # Index is just the order of the pdb in the file
         self.index2pdb = sorted(pdb_list)
@@ -180,9 +176,7 @@ class FpcClusterer(SubClusterer):
 
         retcode = ample_util.run_command( cmd, logfile=log_name )
         if retcode != 0:
-            msg = "non-zero return code for fast_protein_cluster in generate_distance_matrix!\nCheck logfile:{0}".format(log_name)
-            logging.critical(msg)
-            raise RuntimeError(msg)
+            raise RuntimeError("non-zero return code for fast_protein_cluster in generate_distance_matrix!\nCheck logfile:{0}".format(log_name))
 
         mlen=0
         data=[]
@@ -406,18 +400,14 @@ where inp_list.dat  contains:
                 try:
                     tmp = GesamtData(*line.split())
                     # Convert from strings to correct types
-                    data.append(GesamtData(int(tmp.count),
-                                           tmp.chain_id,
-                                           float(tmp.q_score),
-                                           float(tmp.rmsd),
-                                           tmp.seq_id,
-                                           int(tmp.nalign),
-                                           int(tmp.nres),
-                                           os.path.basename(tmp.file_name)))
+                    data.append(
+                        GesamtData(
+                            int(tmp.count), tmp.chain_id, float(tmp.q_score), float(tmp.rmsd), 
+                            tmp.seq_id, int(tmp.nalign), int(tmp.nres), os.path.basename(tmp.file_name)
+                        )
+                    )
                 except Exception as e:
-                    msg = 'Error parsing line {0}: {1}\n{2}'.format(i, line, e.message)
-                    logging.critical(msg)
-                    raise e
+                    raise RuntimeError('Error parsing line {0}: {1}\n{2}'.format(i, line, e.message))
 
         assert len(data),"Failed to read any data!"
         return data
@@ -495,11 +485,9 @@ class MaxClusterer(SubClusterer):
     def generate_distance_matrix(self, pdb_list):
         """Run maxcluster to generate the distance distance_matrix"""
 
-        num_models = len( pdb_list )
+        num_models = len(pdb_list)
         if not num_models:
-            msg = "generate_distance_matrix got empty pdb_list!"
-            logging.critical(msg)
-            raise RuntimeError(msg)
+            raise RuntimeError("generate_distance_matrix got empty pdb_list!")
 
         self.index2pdb=[0] * num_models
 
@@ -510,8 +498,6 @@ class MaxClusterer(SubClusterer):
         # -bb         Perform RMSD fit using backbone atoms
         #     -C [n]      Cluster method: 0 - No clustering
         # -rmsd ???
-        #os.system(MAX + ' -l list  -L 4 -rmsd -d 1000 -bb -C0 >MAX_LOG ')
-        #print 'MAX Done'
 
         # Create the list of files for maxcluster
         fname = os.path.join(os.getcwd(), FILE_LIST_NAME )
@@ -524,17 +510,14 @@ class MaxClusterer(SubClusterer):
         retcode = ample_util.run_command( cmd, logfile=log_name )
 
         if retcode != 0:
-            msg = "non-zero return code for maxcluster in generate_distance_matrix!\nSee logfile: {0}".format(log_name)
-            logging.critical(msg)
-            raise RuntimeError(msg)
+            raise RuntimeError("non-zero return code for maxcluster in generate_distance_matrix!\nSee logfile: {0}".format(log_name))
 
         # Create a square distance_matrix no_models in size filled with None
         parity = 0.0
         self.distance_matrix = numpy.full([num_models, num_models], parity)
 
         #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
-        #max_log = open(cur_dir+'/MAX_LOG')
-        max_log = open( log_name, 'r')
+        max_log = open(log_name, 'r')
         pattern = re.compile('INFO  \: Model')
         for line in max_log:
             if re.match(pattern, line):
@@ -558,4 +541,3 @@ class MaxClusterer(SubClusterer):
         for x in range(len(self.distance_matrix)):
             for y in range(len(self.distance_matrix)):
                 self.distance_matrix[y][x] = self.distance_matrix[x][y]
-        return
