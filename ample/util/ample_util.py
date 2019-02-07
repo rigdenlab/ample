@@ -1,5 +1,4 @@
 """Various miscellaneous functions"""
-
 __author__ = "Jens Thomas, and Felix Simkovic"
 __date__ = "01 Jan 2016"
 __version__ = "1.0"
@@ -8,6 +7,7 @@ import pickle
 import glob
 import logging
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -70,6 +70,8 @@ def amoptd_fix_path(optd, newroot):
                     r[k] = new
     return optd
 
+
+
 def extract_and_validate_models(amoptd, sequence=None, single=True, allsame=True):
     """Extract models given to AMPLE from arguments in the amoptd and validate
     that they are suitable
@@ -87,35 +89,54 @@ def extract_and_validate_models(amoptd, sequence=None, single=True, allsame=True
        only extract a file if the suffix is in the list
 
     """
+    
+    def is_tar_archive(filename):
+        tar_suffixes = ['.tar.gz', '.tgz', '.tar.bz', '.tar.bz2', '.tbz']
+        return any(map(lambda x: filename.endswith(x), tar_suffixes))
+
+    def is_zip_archive(filename):
+        zip_suffixes = ['.zip']
+        return any(map(lambda x: filename.endswith(x), zip_suffixes))
+    
+    def is_pdb_file(filename):
+        return any(map(lambda x: filename.endswith(x), pdb_suffixes))
+
+    def path_to_quark_alldecoy(pdb_files):
+        QUARK_DECOY_NAME = 'alldecoy.pdb'
+        for pdb in pdb_files:
+            if os.path.basename(pdb) == QUARK_DECOY_NAME:
+                return pdb
+        return None
 
     filepath = amoptd['models']
     models_dir = amoptd['models_dir']
-
-    filenames = None
-    quark_models = False
+    pdb_suffixes = ['.pdb', '.PDB']
 
     if os.path.isfile(filepath):
-        basename = os.path.basename(filepath)
-        if basename in ['result.tar.bz2', 'decoys.tar.gz']:
-            logger.info('Assuming QUARK models in file: %s', filepath)
-            quark_models = True
-            filenames = ['alldecoy.pdb']
-        try:
-            extract_models_from_archive(filepath,
-                                        models_dir,
-                                        suffixes=['.pdb', '.PDB'],
-                                        filenames=filenames)
-        except Exception as e:
-            exit_util.exit_error("Error extracting models from file: {0}\n{1}".format(filepath, e))
+        basename = os.path.basename(filepath).lower()
+        models_dir_tmp = os.path.join(amoptd['work_dir'], 'models.tmp')
+        os.mkdir(models_dir_tmp)
+        # Extract /copy any pdb files into models_dir_tmp
+        if is_tar_archive(basename):
+            pdb_files = extract_tar(filepath, models_dir_tmp, suffixes=pdb_suffixes)
+        elif is_tar_archive(basename):
+            pdb_files = extract_zip(filepath, models_dir_tmp, suffixes=pdb_suffixes)
+        elif is_pdb_file(basename):
+            shutil.copy2(filepath, models_dir_tmp)
+            pdb_files = [os.path.join(models_dir_tmp, filepath)]
+        else:
+            raise RuntimeError("Do not know how to handle input models file: {}".format(filepath))
+        # See if we have an alldecoy.pdb file
+        quark_decoy = path_to_quark_alldecoy(pdb_files)
+        if quark_decoy:
+            split_quark_alldecoy(quark_decoy, models_dir)
+            amoptd['quark_models'] = True
+            shutil.rmtree(models_dir_tmp) # delete as contains uneeded files extracted from archive
+        else:
+            # Rename models directory as it now contains our pdb files
+            os.rename(models_dir_tmp, models_dir)
     elif os.path.isdir(filepath):
         models_dir = filepath
-
-    if quark_models:
-        try:
-            split_quark(models_dir)
-        except Exception as e:
-            exit_util.exit_error("Error splitting QUARK models from file: {0}\n{1}".format(filepath, e))
-        amoptd['quark_models'] = True
 
     if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
         msg = "Problem importing pdb files - please check the log for more information"
@@ -123,50 +144,6 @@ def extract_and_validate_models(amoptd, sequence=None, single=True, allsame=True
 
     amoptd['models_dir'] = models_dir
     return glob.glob(os.path.join(models_dir, "*.pdb"))
-
-
-def extract_models_from_archive(archive, models_dir, suffixes=None, filenames=None):
-    """Extract models from file archive into directory models_dir
-
-    Parameters
-    ----------
-    archive : str
-       tar archive to extract from
-    models_dir : str
-       directory to extract files into
-    filenames : list
-       a list of files to extract from the archive
-    suffixes : list
-       only extract a file if the suffix is in the list
-    """
-    if not os.path.isfile(archive):
-        raise RuntimeError("Cannot find models file: {0}".format(archive))
-
-    # we need a models_dir to extract into
-    if not os.path.isdir(models_dir):
-        os.mkdir(models_dir)
-
-    # See what sort of file this is:
-    name, suffix = os.path.splitext(archive)
-    if suffix in ['.gz', '.bz', '.bz2']:
-        name, suffix2 = os.path.splitext(name)
-        if suffix2 == '.tar':
-            suffix = suffix2  + suffix
-
-    tar_suffixes = ['.tar.gz', '.tgz', '.tar.bz', '.tar.bz2', '.tbz']
-    ar_suffixes = tar_suffixes + ['.zip']
-    if suffix not in ar_suffixes:
-        msg = "Do not know how to extract files from file: {0}\n " \
-              "Acceptable file types are: {1}".format(archive, ar_suffixes)
-        raise RuntimeError(msg)
-
-    if suffix in tar_suffixes:
-        files = extract_tar(archive, models_dir, filenames=filenames, suffixes=suffixes)
-    else:
-        files = extract_zip(archive, models_dir)
-    if not files:
-        raise RuntimeError("Could not extract any files from archive: %s" % archive)
-    return
 
 
 def extract_tar(archive, directory=None, filenames=None, suffixes=None):
@@ -191,8 +168,8 @@ def extract_tar(archive, directory=None, filenames=None, suffixes=None):
     """
 
     def extract_me(member, filenames, suffixes):
-        """If filenames is given, only extract files in filenames
-        Otherwise, only extract those with given suffixes"""
+        """If filenames or suffixes is given, only extract files with those filenames or suffixes,
+        otherwise extract all files."""
         if filenames:
             if os.path.basename(member.name) in filenames:
                 return True
@@ -224,7 +201,7 @@ def extract_tar(archive, directory=None, filenames=None, suffixes=None):
     return files
 
 
-def extract_zip(filename, directory, suffixes=['.pdb']):
+def extract_zip(filename, directory, suffixes=None):
     # zip file extraction
     logger.info('Extracting files from zipfile: %s', filename)
     if not zipfile.is_zipfile(filename):
@@ -535,33 +512,13 @@ def save_amoptd(amoptd):
         logger.info("Saved state as file: %s\n", amoptd['results_path'])
 
 
-def split_quark(models_dir):
-    """Given a models_dir containing a single QUARK PDB, split the PDB into constituent
-    models and then delete the original QUARK PDB
-    """
-    pdbs = glob.glob(os.path.join(models_dir, "*.pdb"))
-    if not len(pdbs) == 1:
-        raise RuntimeError('More then one PDB file was found in QUARK models_dir: {0}'.format(models_dir))
-
-    filepath = pdbs[0]
-    basename = os.path.basename(filepath)
-    quark_filename = 'alldecoy.pdb'
-    if basename != quark_filename:
-        raise RuntimeError('Filename {0} did not match expected QUARK filename: {1}'.format(basename, quark_filename))
-
-    models = split_models(filepath, models_dir)
-    os.unlink(filepath)  # We delete the original quark file as otherwise we'll try and model it
-    logger.info('Found %d QUARK models in file: %s', len(models), filepath)
-    return
-
-
-def split_models(dfile, directory):
-    """Split a single PDB with multiple models in individual PDB files
+def split_quark_alldecoy(alldecoy, directory):
+    """Split a single QUARK PDB with multiple models into individual PDB files
 
     Parameters
     ----------
-    dfile : str
-       Single PDB file with multiple model entries
+    alldecoy : str
+       Single QUARK PDB file with multiple model entries
     directory : str
        Directory to extract the PDB files to
 
@@ -570,14 +527,10 @@ def split_models(dfile, directory):
     extracted_models : list
        List of PDB files for all models
 
-    TODO
-    ----
-    * Use the CCTBX library to perform this step
-
     """
-    logger.info("Extracting decoys from: %s into %s", dfile, directory)
+    logger.info("Extracting decoys from: %s into %s", alldecoy, directory)
     smodels = []
-    with open(dfile, 'r') as f:
+    with open(alldecoy, 'r') as f:
         m = []
         for line in f:
             if line.startswith("ENDMDL"):
@@ -588,7 +541,7 @@ def split_models(dfile, directory):
                 m.append(line)
 
     if not len(smodels):
-        raise RuntimeError("Could not extract any models from: {0}".format(dfile))
+        raise RuntimeError("Could not extract any models from: {0}".format(alldecoy))
 
     extracted_models = []
     for i, m in enumerate(smodels):
