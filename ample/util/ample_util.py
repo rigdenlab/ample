@@ -119,7 +119,7 @@ def extract_and_validate_models(amoptd, sequence=None, single=True, allsame=True
         # Extract /copy any pdb files into models_dir_tmp
         if is_tar_archive(basename):
             pdb_files = extract_tar(filepath, models_dir_tmp, suffixes=pdb_suffixes)
-        elif is_tar_archive(basename):
+        elif is_zip_archive(basename):
             pdb_files = extract_zip(filepath, models_dir_tmp, suffixes=pdb_suffixes)
         elif is_pdb_file(basename):
             shutil.copy2(filepath, models_dir_tmp)
