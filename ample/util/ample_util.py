@@ -90,14 +90,6 @@ def extract_and_validate_models(amoptd, sequence=None, single=True, allsame=True
 
     """
     
-    def is_tar_archive(filename):
-        tar_suffixes = ['.tar.gz', '.tgz', '.tar.bz', '.tar.bz2', '.tbz']
-        return any(map(lambda x: filename.endswith(x), tar_suffixes))
-
-    def is_zip_archive(filename):
-        zip_suffixes = ['.zip']
-        return any(map(lambda x: filename.endswith(x), zip_suffixes))
-    
     def is_pdb_file(filename):
         return any(map(lambda x: filename.endswith(x), pdb_suffixes))
 
@@ -113,15 +105,15 @@ def extract_and_validate_models(amoptd, sequence=None, single=True, allsame=True
     pdb_suffixes = ['.pdb', '.PDB']
 
     if os.path.isfile(filepath):
-        basename = os.path.basename(filepath).lower()
         models_dir_tmp = os.path.join(amoptd['work_dir'], 'models.tmp')
-        os.mkdir(models_dir_tmp)
+        if not os.path.isdir(models_dir_tmp):
+            os.mkdir(models_dir_tmp)
         # Extract /copy any pdb files into models_dir_tmp
-        if is_tar_archive(basename):
+        if tarfile.is_tarfile(filepath):
             pdb_files = extract_tar(filepath, models_dir_tmp, suffixes=pdb_suffixes)
-        elif is_zip_archive(basename):
+        elif zipfile.is_zipfile(filepath):
             pdb_files = extract_zip(filepath, models_dir_tmp, suffixes=pdb_suffixes)
-        elif is_pdb_file(basename):
+        elif is_pdb_file(filepath):
             shutil.copy2(filepath, models_dir_tmp)
             pdb_files = [os.path.join(models_dir_tmp, filepath)]
         else:
