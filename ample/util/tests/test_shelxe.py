@@ -23,7 +23,7 @@ class Test(unittest.TestCase):
         mrPdb = os.path.join(self.testfiles_dir,
                             "1BYZ_phaser_loc0_ALL_poly_ala_trunc_0.486615_rad_1_UNMOD.1.pdb")
         mrinfo = shelxe.MRinfo(shelxe_exe, pdb, mtz)
-        mrinfo.analyse(mrPdb)
+        mrinfo.analyse(mrPdb, cleanup=True)
 
         self.assertEqual(mrinfo.originShift,[0.326, 0.19, 0.275])
         # Need MRBUMP to be updated

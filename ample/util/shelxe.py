@@ -12,9 +12,13 @@ import uuid
 from ample.util import ample_util
 from ample.util import mtz_util
 
-mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
-sys.path.insert(0,mrbumpd)
-import parse_shelxe
+
+try:
+    from mrbump.parsers import parse_shelxe
+except ImportError:
+    mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
+    sys.path.insert(0,mrbumpd)
+    import parse_shelxe
 
 
 class MRinfo(object):
@@ -75,7 +79,7 @@ class MRinfo(object):
         mtz_util.to_hkl(native_mtz, hkl_file=os.path.join(self.work_dir, self.stem + ".hkl"))
         shutil.copyfile(native_pdb, os.path.join(self.work_dir, self.stem + ".ent"))
 
-    def analyse(self, mr_pdb):
+    def analyse(self, mr_pdb, cleanup=True):
         """Use SHELXE to analyse an MR pdb file to determine the origin shift and phase error
 
         This function sets the ``MPE``, ``wMPE`` and ``originShift`` attributes.
@@ -104,12 +108,13 @@ class MRinfo(object):
         self.wMPE = sp.wMPE
         self.originShift = [ o*-1 for o in sp.originShift ]
 
-        for ext in ['.hkl', '.ent', '.pda','.pdo','.phs','.lst','_trace.ps']:
-            try:
-                os.unlink(self.stem + ext)
-            except:
-                pass
-        os.unlink(logfile)
+        if cleanup:
+            for ext in ['.hkl', '.ent', '.pda','.pdo','.phs','.lst','_trace.ps']:
+                try:
+                    os.unlink(self.stem + ext)
+                except:
+                    pass
+            os.unlink(logfile)
 
 if __name__ == "__main__":
 

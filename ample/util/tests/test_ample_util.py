@@ -42,18 +42,42 @@ class Test(unittest.TestCase):
 
     def test_extract_and_validate_models_quark(self):
         temp_dir = tempfile.mkdtemp(dir=os.getcwd())
-        amoptd = {'models': os.path.join(self.testfiles_dir, 'result.tar.bz2'),
-                  'models_dir': temp_dir}
+        amoptd = {'models' : os.path.join(self.testfiles_dir, 'result.tar.bz2'),
+                  'models_dir' : temp_dir,
+                  'work_dir' : '.'}
         sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
         models = ample_util.extract_and_validate_models(amoptd=amoptd, sequence=sequence, single=True)
         self.assertTrue(amoptd['quark_models'])
         self.assertEqual(len(models), 200)
         shutil.rmtree(temp_dir)
+        
+    def test_extract_and_validate_models_quark_zip(self):
+        temp_dir = tempfile.mkdtemp(dir=os.getcwd())
+        amoptd = {'models' : os.path.join(self.testfiles_dir, 'result.zip'),
+                  'models_dir' : temp_dir,
+                  'work_dir' : '.'}
+        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+        models = ample_util.extract_and_validate_models(amoptd=amoptd, sequence=sequence, single=True)
+        self.assertTrue(amoptd['quark_models'])
+        self.assertEqual(len(models), 200)
+        shutil.rmtree(temp_dir)
+        
+    def test_extract_and_validate_models_quark_file(self):
+        temp_dir = tempfile.mkdtemp(dir=os.getcwd())
+        amoptd = {'models' : os.path.join(self.testfiles_dir, 'alldecoy.pdb'),
+                  'models_dir' : temp_dir,
+                  'work_dir' : '.'}
+        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+        models = ample_util.extract_and_validate_models(amoptd=amoptd, sequence=sequence, single=True)
+        self.assertTrue(amoptd['quark_models'])
+        self.assertEqual(len(models), 10)
+        shutil.rmtree(temp_dir)
 
     def test_extract_and_validate_models_quark_old(self):
         temp_dir = tempfile.mkdtemp(dir=os.getcwd())
-        amoptd = {'models': os.path.join(self.testfiles_dir, 'decoys.tar.gz'),
-                  'models_dir': temp_dir}
+        amoptd = {'models' : os.path.join(self.testfiles_dir, 'decoys.tar.gz'),
+                  'models_dir' : temp_dir,
+                  'work_dir' : '.'}
         sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
         models = ample_util.extract_and_validate_models(amoptd=amoptd, sequence=sequence, single=True)
         self.assertTrue(amoptd['quark_models'])
