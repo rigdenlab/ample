@@ -137,6 +137,8 @@ def add_mr_options(parser=None):
     mr_group.add_argument('-do_mr', metavar='True/False', help='Run or skip the Molecular Replacement step')
     mr_group.add_argument('-domain_all_chains_pdb', help='Fixed input to mr bump')
     mr_group.add_argument('-domain_termini_distance', help='distance between termini for insert domains')
+    mr_group.add_argument('-early_teminate_SHELXE_CC', help='SHELXE_CC criteria for when a job has succeeeded')
+    mr_group.add_argument('-early_teminate_SHELXE_ACL', help='SHELXE_ACL criteria for when a job has succeeeded')
     mr_group.add_argument('-molrep_only', metavar='True/False', help='Only use Molrep for Molecular Replacement step in MRBUMP')
     mr_group.add_argument('-mrbump_dir', help='Path to a directory of MRBUMP jobs (see restart_pkl)')
     mr_group.add_argument('-mr_keys', nargs='+', action='append', help='Additional keywords for MRBUMP - are passed through without editing')

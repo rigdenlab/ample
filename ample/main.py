@@ -361,7 +361,7 @@ class Ample(object):
         ample_util.save_amoptd(optd)
 
     def molecular_replacement(self, optd):
-
+        mrbump_util.set_success_criteria(optd)
         if not optd['mrbump_scripts']:
             # MRBUMP analysis of the ensembles
             logger.info('----- Running MRBUMP on ensembles--------\n\n')
