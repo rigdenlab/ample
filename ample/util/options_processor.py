@@ -364,8 +364,8 @@ def process_mr_options(optd):
     if optd['use_shelxe']:
         if optd['mtz_min_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
             logger.warn("Disabling use of SHELXE as min resolution of %f is < accepted limit of %f",
-                            optd['mtz_min_resolution'],
-                            mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION)
+                        optd['mtz_min_resolution'],
+                        mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION)
             optd['use_shelxe'] = False
             optd['shelxe_rebuild'] = False
     if optd['use_shelxe']:

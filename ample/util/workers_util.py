@@ -21,6 +21,7 @@ class JobServer(object):
         self.inqueue = None
         self.outqueue = None
         logger.info("Running jobs on a local machine")
+        logger.info("To stop jobs gracefully create an empty file located at: %s" % os.path.abspath(KILL_FILE))
     
     def empty_job_queue(self):
         logger.info("emptying job queue" )
