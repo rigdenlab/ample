@@ -4,7 +4,6 @@ __author__ = "Felix Simkovic, and Jens Thomas"
 __date__ = "16 Feb 2016"
 __version__ = "1.0"
 
-import csv
 import logging
 import os
 import pandas as pd
@@ -86,18 +85,16 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         assert len(truncation_scorefile_header) > 1, \
             "At least two column labels are required"
         residue_scores = self._read_scorefile(truncation_scorefile)
-        residue_key = truncation_scorefile_header.pop(0).lower()
+        residue_key = truncation_scorefile_header.pop(0)
         truncation_scorefile_header = map(str.strip,
                                           truncation_scorefile_header)
         assert all(h in residue_scores[0] for h in truncation_scorefile_header), \
             "Not all column labels are in your CSV file"
-
         self.ensembles = []
         for score_key in truncation_scorefile_header:
             zipped_scores = self._generate_residue_scorelist(residue_key,
                                                              score_key,
                                                              residue_scores)
-
             score_truncate_dir = os.path.join(truncate_dir,
                                               "{}".format(score_key))
             if not os.path.isdir(score_truncate_dir):
@@ -153,8 +150,8 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         
         :returns: zipped list of residue index plus score
         """
-        assert residue_key in scores[0], "Cannot find residue key in scoresfile"
-        assert score_key in scores[0], "Cannot find score key in scoresfile"
+        assert residue_key in scores[0], "Cannot find residue key \'{}\' in scoresfile header: {}".format(residue_key, scores[0])
+        assert score_key in scores[0], "Cannot find score key \'{}\' in scoresfile header: {}".format(score_key, scores[0])
         return [(i[residue_key], i[score_key]) for i in scores]
 
     @staticmethod

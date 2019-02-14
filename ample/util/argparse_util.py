@@ -189,13 +189,13 @@ def add_ensembler_options(parser=None):
     # --------------------------------------------------------------------------------------------- #
     # sphinx-argparse ignores Mock imports and thus cannot find iotbx.pdb when generating the docs. #
     try:
-        from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
+        from ample.ensembler.constants import ALLOWED_SIDE_CHAIN_TREATMENTS
         from ample.ensembler.truncation_util import TRUNCATION_METHODS
     except ImportError:
-        side_chain_treatments = ['polyala']
+        allowed_side_chain_treatments = ['polyala', 'reliable', 'allatom', 'unmod']
         truncation_methods = ['percent']
     else:
-        side_chain_treatments = SIDE_CHAIN_TREATMENTS[:]
+        allowed_side_chain_treatments = ALLOWED_SIDE_CHAIN_TREATMENTS[:]
         truncation_methods = [t.value for t in TRUNCATION_METHODS]
     # --------------------------------------------------------------------------------------------- #
     if parser is None:
@@ -216,7 +216,7 @@ def add_ensembler_options(parser=None):
     ensembler_group.add_argument('-percent_fixed_intervals', nargs='+', type=int, help='list of integer percentage intervals for truncation')
     ensembler_group.add_argument('-score_matrix', help='Path to score matrix for spicker')
     ensembler_group.add_argument('-score_matrix_file_list', help='File with list of ordered model names for the score_matrix')
-    ensembler_group.add_argument('-side_chain_treatments', type=str, nargs='+', help='The side chain treatments to use. Default: ' + '|'.join(side_chain_treatments))
+    ensembler_group.add_argument('-side_chain_treatments', type=str, nargs='+', help='The side chain treatments to use. Options: ' + '|'.join(allowed_side_chain_treatments))
     ensembler_group.add_argument('-spicker_exe', help='Path to spicker executable')
     ensembler_group.add_argument('-subcluster_radius_thresholds', type=float, nargs='+', help='The radii to use for subclustering the truncated ensembles')
     ensembler_group.add_argument('-subcluster_program', help='Program for subclustering models [maxcluster]')
