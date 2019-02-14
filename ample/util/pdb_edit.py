@@ -5,7 +5,6 @@ Useful manipulations on PDB files
 
 # Python imports
 from collections import defaultdict
-import copy
 import glob
 import logging
 import os
