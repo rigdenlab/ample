@@ -26,6 +26,7 @@ import parse_phaser
 
 TOP_KEEP = 3 # How many of the top shelxe/phaser results to keep for the gui
 MRBUMP_RUNTIME = 172800 # allow 48 hours for each mrbump job
+REBUILD_MAX_PERMITTED_RESOLUTION = 4.0
 SHELXE_MAX_PERMITTED_RESOLUTION = 3.0
 
 # Values to determine when job has succeeded - required at module level this may be set by AMPLE from

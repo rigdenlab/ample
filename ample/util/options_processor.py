@@ -360,6 +360,19 @@ def process_mr_options(optd):
             exit_util.exit_error(msg)
         else:
             optd['phaser_rms'] = phaser_rms
+            
+            
+    # Disable all rebuilding if the resolution is too poor
+    if optd['mtz_min_resolution'] >= mrbump_util.REBUILD_MAX_PERMITTED_RESOLUTION:
+        logger.warn("!!! Disabling all rebuilding as maximum resolution of %f is too poor!!!".format(optd['mtz_min_resolution']))
+        optd['use_shelxe'] = False
+        optd['shelxe_rebuild'] = False
+        optd['shelxe_rebuild_arpwarp'] = False
+        optd['shelxe_rebuild_buccaneer'] = False
+        optd['refine_rebuild_arpwarp'] = False
+        optd['refine_rebuild_buccaneer'] = False
+        
+            
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     if optd['use_shelxe']:
         if optd['mtz_min_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
