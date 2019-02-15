@@ -19,6 +19,9 @@ from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
 from ample.util import ample_util
 from ample.util import workers_util
 
+# Any modules required when ample results dictionaries are unpickled should be added here
+#import ample.ensembler
+
 logger = logging.getLogger(__name__)
 
 # Available packages. Hard-coded for now to show visually what we have in
@@ -51,7 +54,13 @@ class AMPLEBaseTest(TestCase):
     AMPLE_DICT = None
     def setUp(self):
         self.assertTrue(os.path.isfile(self.RESULTS_PKL), "Missing pkl file: {0}".format(self.RESULTS_PKL))
-        self.AMPLE_DICT = ample_util.read_amoptd(self.RESULTS_PKL)
+        try:
+            self.AMPLE_DICT = ample_util.read_amoptd(self.RESULTS_PKL)
+        except ImportError as e:
+            msg = "Error importing module while unpickling ample results dictionary: \'{}\'. " \
+                  "Add any imports required to the module: {}".format(e, os.path.abspath(__file__))
+            print(msg)
+            raise(e)
 
 
 class AMPLEIntegrationFramework(object):
