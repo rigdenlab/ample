@@ -1072,8 +1072,10 @@ def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
       Only output models of equal length (the most numerous length is selected)
     """
 
-    if directory is None: directory = os.path.dirname(pdbin)
-    if not os.path.isdir(directory): os.mkdir(directory)
+    if directory is None:
+        directory = os.path.dirname(pdbin)
+    if not os.path.isdir(directory):
+        os.mkdir(directory)
 
     # Largely stolen from pdb_split_models.py in phenix
     #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
@@ -1084,8 +1086,6 @@ def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
 
     # Nothing to do
     n_models = hierarchy.models_size()
-    if n_models == 1: 
-        raise RuntimeError("split_pdb {0} only contained 1 model!".format(pdbin))
 
     if same_size: _only_equal_sizes(hierarchy)
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
