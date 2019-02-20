@@ -1087,7 +1087,8 @@ def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
     # Nothing to do
     n_models = hierarchy.models_size()
 
-    if same_size: _only_equal_sizes(hierarchy)
+    if same_size:
+        _only_equal_sizes(hierarchy)
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
     output_files = []
     for k, model in enumerate(hierarchy.models()):
