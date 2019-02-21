@@ -20,7 +20,7 @@ if resolution <= 1.0:
         }
     argd_final = argd.copy()
     argd_final.update({ 'a' : 1,
-                       's' : 0.2 })
+                        's' : 0.2 })
 elif resolution <= 1.3:
     argd = {
         'a' : 8.0,
@@ -47,7 +47,7 @@ elif resolution <= 1.5:
         }
     argd_final = argd.copy()
     argd_final.update({ 'a' : 1,
-                       's' : 0.4 })
+                        's' : 0.4 })
 elif resolution <= 2.0:
     argd = {
         'a' : 8.0,
