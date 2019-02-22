@@ -879,18 +879,22 @@ def reliable_sidechains_cctbx(pdbin=None, pdbout=None):
 def rename_chains(inpdb=None, outpdb=None, fromChain=None, toChain=None):
     """Rename Chains
     """
-
-    assert len(fromChain) == len(toChain)
-
+    if fromChain is None and isinstance(toChain, str):
+        allChain = toChain
+    else:
+        if len(fromChain) != len(toChain):
+            raise RuntimeError("rename_chains either needs a single to_chain or two list of equal length.\n"
+                               "Got fromChain \'{}\' toChain: \'{}\'".format(fromChain, toChain))
+    
     logfile = outpdb + ".log"
     cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
-
-    stdin = ""
-    for i in range(len(fromChain)):
-        stdin += "renchain {0} {1}\n".format(fromChain[i], toChain[i])
-
+    if allChain:
+        stdin = "renchain /*/* {}".format(allChain)
+    else:
+        stdin = ""
+        for i in range(len(fromChain)):
+            stdin += "renchain {0} {1}\n".format(fromChain[i], toChain[i])
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-
     if retcode == 0:
         os.unlink(logfile)
     else:
