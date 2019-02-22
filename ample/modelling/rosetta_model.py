@@ -719,9 +719,7 @@ class RosettaModel(object):
                     proc_map = []
                     for pdb in id_pdbs:
                         for count in jobs_per_proc:
-                            proc_map.append(pdb, count) # We need to split things so that each processor does a chunk of the work
-        
-                        # number of jobs that will be created on each processor
+                            proc_map.append((pdb, count)) # We need to split things so that each processor does a chunk of the work
         return proc_map
 
     def run_scripts(self, job_scripts, job_time=None, job_name=None, monitor=None):
