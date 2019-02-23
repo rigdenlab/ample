@@ -280,7 +280,7 @@ class RosettaModel(object):
         if self.submit_cluster:
             jobs_per_proc = [1] * self.nmodels
         else:
-            jobs_per_proc = self.split_jobs(self.nmodels,self.nproc)
+            jobs_per_proc = self.split_jobs(self.nmodels, self.nproc)
 
         # Generate seeds
         seeds = self.generate_seeds(len(jobs_per_proc))
@@ -542,13 +542,13 @@ class RosettaModel(object):
         """Return command to idealize pdbin"""
         return [self.rosetta_idealize_jd2, "-database", self.rosetta_db, "-s", pdbin]
 
-    def idealize_models(self, models, monitor):
+    def idealize_models(self, models):
         # Loop through each model, idealise them and get an alignment
         owd=os.getcwd()
         idealise_dir = os.path.join(self.work_dir, 'idealised_models')
         os.mkdir(idealise_dir)
         os.chdir(idealise_dir)
-        logger.info("Idealising {0} models in directory: {1}".format(len(models),idealise_dir))
+        logger.info("Idealising {0} models in directory: {1}".format(len(models), idealise_dir))
         id_scripts=[]
         id_pdbs=[]
         job_time=7200
@@ -558,9 +558,9 @@ class RosettaModel(object):
             script = "#!/bin/bash\n"
             script += " ".join(self.idealize_cmd(pdbin=model)) + "\n"
             # Get the name of the pdb that will be output
-            id_pdbs.append(self.idealize_pdbout(pdbin=model,directory=idealise_dir))
-            name=os.path.splitext(os.path.basename(model))[0]
-            sname=os.path.join(idealise_dir,"{0}_idealize.sh".format(name))
+            id_pdbs.append(self.idealize_pdbout(pdbin=model, directory=idealise_dir))
+            name = os.path.splitext(os.path.basename(model))[0]
+            sname = os.path.join(idealise_dir,"{0}_idealize.sh".format(name))
             with open(sname,'w') as w: w.write(script)
             os.chmod(sname, 0o777)
             id_scripts.append(sname)
@@ -612,21 +612,21 @@ class RosettaModel(object):
         cmd = self.cmd_add_restraints(cmd)
         return cmd
     
-    def nmr_remodel(self, models, ntimes=None, alignment_file=None, remodel_fasta=None, monitor=None):
+    def nmr_remodel(self, models, ntimes=None, alignment_file=None, remodel_fasta=None):
         if remodel_fasta:
             assert os.path.isfile(remodel_fasta), "Cannot find remodel_fasta: {0}".format(remodel_fasta)
         if ntimes:
             assert isinstance(ntimes, int), "ntimes is not an int: {0}".format(ntimes)
         num_nmr_models = len(models)
-        if not ntimes: ntimes = 1000 / num_nmr_models
+        if not ntimes:
+            ntimes = 1000 / num_nmr_models
         nmr_process = int(ntimes)
-        logger.info('processing each model {0} times'.format(nmr_process))
         num_models = nmr_process * num_nmr_models
-        logger.info('{0} models will be made'.format(num_models))
+        logger.info('Processing each model {0} times. {0} models will be made'.format(nmr_process, num_models))
         
         # Idealize all the nmr models to have standard bond lengths, angles etc
-        id_pdbs = self.idealize_models(models, monitor=monitor)
-        logger.info('{0} models were successfully idealized'.format(len(id_pdbs)))
+        id_pdbs = self.idealize_models(models)
+        logger.info('{0} models successfully idealized'.format(len(id_pdbs)))
     
         owd = os.getcwd()
         remodel_dir = os.path.join(self.work_dir, 'remodelling')
@@ -643,12 +643,12 @@ class RosettaModel(object):
             alignment_file = align_mafft(remodel_seq, id_seq, logger)
         
         # Remodel each idealized model nmr_process times
-        pdbs_to_return = self.remodel(id_pdbs, ntimes, alignment_file, monitor=monitor)
+        pdbs_to_return = self.remodel(id_pdbs, ntimes, alignment_file)
         
         os.chdir(owd)
         return pdbs_to_return
 
-    def remodel(self, id_pdbs, ntimes, alignment_file, monitor=None):
+    def remodel(self, id_pdbs, ntimes, alignment_file):
         remodel_dir = os.getcwd()
         proc_map = self.remodel_proc_map(id_pdbs, ntimes)
         seeds = self.generate_seeds(len(proc_map))

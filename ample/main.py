@@ -317,8 +317,7 @@ class Ample(object):
                         models=optd['models'],
                         ntimes=optd['nmr_process'],
                         alignment_file=optd['alignment_file'],
-                        remodel_fasta=optd['nmr_remodel_fasta'],
-                        monitor=monitor)
+                        remodel_fasta=optd['nmr_remodel_fasta'])
                 except Exception as e:
                     msg = "Error remodelling NMR ensemble: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
