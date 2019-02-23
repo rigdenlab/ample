@@ -701,8 +701,9 @@ class RosettaModel(object):
         return pdbs_moved
     
     def remodel_proc_map(self, id_pdbs, ntimes):
-        if self.submit_cluster: # For clusters we saturate the queue with single model jobs (ideally in batch mode) so that cluster
-            # can manage the usage for us FIX
+        if self.submit_cluster:
+            # For clusters we saturate the queue with single model jobs (ideally in batch mode) so that cluster
+            # can manage the usage for us
             proc_map = [(pdb, 1) for pdb in id_pdbs for _ in range(ntimes)]
         else:
             len_id_pdbs = len(id_pdbs)
@@ -927,10 +928,12 @@ class RosettaModel(object):
         if optd and optd['transmembrane_old']: 
             self.tm_set_paths(optd)
 
-    def split_jobs(self,njobs,nproc):
+    def split_jobs(self, njobs, nproc):
         """
         Return a list of number of jobs to run on each processor
         """
+        if njobs < nproc:
+            return [1] * njobs
         split_jobs = njobs / nproc  # split jobs between processors
         remainder = njobs % nproc
         jobs = []
