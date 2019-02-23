@@ -48,7 +48,8 @@ class AbinitioEnsembler(_ensembler.Ensembler):
 
     def cluster_models(self, models=None, cluster_method=SPICKER_RMSD, num_clusters=1, cluster_dir=None, max_cluster_size=200):
         """Wrapper function to run clustering of models dependent on the method"""
-
+        if len(models) < 2:
+            raise RuntimeError("Cannot cluster fewer than 2 models!")
         logger.info('Generating %d clusters using method: %s', num_clusters, cluster_method)
 
         if cluster_method != 'import' and not len(models):
