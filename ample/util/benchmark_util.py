@@ -286,16 +286,19 @@ def analyseModels(amoptd):
     refModelPdb = glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))[0]
     
     nativePdbInfo=amoptd['native_pdb_info']
-    
-    resSeqMap = residue_map.residueSequenceMap()
     refModelPdbInfo = pdb_edit.get_info(refModelPdb)
-    resSeqMap.fromInfo( refInfo=refModelPdbInfo,
-                        refChainID=refModelPdbInfo.models[0].chains[0], # Only 1 chain in model
-                        targetInfo=nativePdbInfo,
-                        targetChainID=nativePdbInfo.models[0].chains[0]
-                      )
-    amoptd['res_seq_map']=resSeqMap
     amoptd['ref_model_pdb_info']=refModelPdbInfo
+    try:
+        resSeqMap = residue_map.residueSequenceMap()
+        resSeqMap.fromInfo( refInfo=refModelPdbInfo,
+                            refChainID=refModelPdbInfo.models[0].chains[0], # Only 1 chain in model
+                            targetInfo=nativePdbInfo,
+                            targetChainID=nativePdbInfo.models[0].chains[0]
+                          )
+        amoptd['res_seq_map'] = resSeqMap
+    except Exception as e:
+        logger.critical("Error calculating resSeqMap: %s" % e)
+        amoptd['res_seq_map']  = None # Won't be able to calculate RIO scores
 
     if amoptd['have_tmscore']:
         try:
@@ -440,11 +443,12 @@ def analyseSolution(amoptd, d, mrinfo):
     
         # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
         # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
-        # the native structure.
+        # the native structure - or if we were unable to calculate a res_seq_map
         if not (amoptd['homologs'] or \
                 amoptd['ideal_helices'] or \
                 amoptd['import_ensembles'] or \
-                amoptd['single_model_mode']):
+                amoptd['single_model_mode'] or \
+                amoptd['res_seq_map']):
     
             # Get reforigin info
             rmsder = reforigin.ReforiginRmsd()
@@ -454,14 +458,14 @@ def analyseSolution(amoptd, d, mrinfo):
                                refModelPdbInfo=amoptd['ref_model_pdb_info'],
                                cAlphaOnly=True,
                                workdir=fixpath(amoptd['benchmark_dir']))
-                d['reforigin_RMSD']=rmsder.rmsd
+                d['reforigin_RMSD'] = rmsder.rmsd
             except Exception as e:
                 logger.critical("Error calculating RMSD: {0}".format(e))
-                d['reforigin_RMSD']=999
+                d['reforigin_RMSD'] = 999
     
     
             # Score the origin with all-atom and rio
-            rioData=rio.Rio().scoreOrigin(mrOrigin,
+            rioData = rio.Rio().scoreOrigin(mrOrigin,
                                           mrPdbInfo=mrPdbInfo,
                                           nativePdbInfo=amoptd['native_pdb_info'],
                                           resSeqMap=amoptd['res_seq_map'],
