@@ -67,8 +67,6 @@ class ShelxePlusRebuild:
         shelxe_job.runShelxe(*shelxe_args, **shelxe_kwargs)
 
         # Convert the phs file to an mtz
-        print("GOT ",model.shelxe_phaser_PHSfile,model.shelxe_phaser_PDBfile)
-        print("RES ",os.path.isfile(model.shelxe_phaser_PHSfile) and os.path.isfile(model.shelxe_phaser_PDBfile))
         if os.path.isfile(model.shelxe_phaser_PHSfile) and os.path.isfile(model.shelxe_phaser_PDBfile):
             p2m = MRBUMP_phs2mtz.PHS2MTZ()
             p2m.phs2mtz(
@@ -366,8 +364,8 @@ mstat.results_dict[model.name] = make_dictionary.makeDict(init.search_dir)
 shelxe_dir = os.path.join(model.model_directory, "shelxe")
 os.makedirs(shelxe_dir)
 
-model.refmac_phaser_PDBfile = refmac_mtz
-model.refmac_phaser_MTZINfile = refmac_pdb
+model.refmac_phaser_PDBfile = refmac_pdb
+model.refmac_phaser_MTZINfile = refmac_mtz
 model.shelxe_phaser_PDBfile = os.path.join(shelxe_dir  ,"shelxe_phaser_" + model.name + ".pdb")
 model.shelxe_phaser_PHSfile = os.path.join(shelxe_dir  ,"shelxe_phaser_" + model.name + ".phs")
 model.shelxe_phaser_MTZfile = os.path.join(shelxe_dir  ,"shelxe_phaser_" + model.name + ".mtz")
