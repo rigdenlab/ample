@@ -247,7 +247,7 @@ class RosettaModel(object):
 
         # Domain restraints
         if self.domain_termini_distance > 0:
-            assert not self.restraints_file, "Cannot set up domain restraints with existing restraints file!"
+            assert not self.restraints_file, "Cannot set up domain restraints with existing restraints file: {}!".format(self.restraints_file)
             self.restraints_file = self.setup_domain_restraints()
         
         # Add any restraints
@@ -744,8 +744,8 @@ class RosettaModel(object):
 
     def setup_domain_restraints(self):
         """Create the file for restricting the domain termini and return the path to the file."""
-        logger.info('restricting termini distance: {0}'.format( self.domain_termini_distance ))
-        restraints_file = os.path.join(self.work_dir, 'constraints.txt')
+        logger.info('restricting termini distance: {0}'.format(self.domain_termini_distance))
+        restraints_file = os.path.join(self.work_dir, 'domain_constraints.txt')
         with open(restraints_file, "w") as w:
             w.write('AtomPair CA 1 CA {0} GAUSSIANFUNC {1} 5.0 TAG\n'.format(self.sequence_length, self.domain_termini_distance))
         return restraints_file
