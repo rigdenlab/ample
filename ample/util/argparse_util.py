@@ -65,6 +65,7 @@ def add_general_options(parser=None):
     parser.add_argument('-blast_dir', help='Directory where ncbi blast is installed (binaries in expected in bin subdirectory)')
     parser.add_argument('-classic_mode', metavar='True/False', help='Preset options to run the original AMPLE clustering/truncation options (1 cluster, 3 subclustering radii, 3 sidechains)')
     parser.add_argument('-ccp4i2_xml', help='Path to CCP4I2 XML file - if not None indicates we are running under CCP4I2')
+    parser.add_argument('-coiled_coil', metavar='True/False', help='Turn on Coiled-Coil mode for solving Coiled-Coil structures')
     parser.add_argument('-devel_mode', metavar='devel_mode', help='Preset options to run in development mode - takes longer')
     parser.add_argument('-dry_run', metavar='True/False', help='Check if input files and supplied options are valid.')
     parser.add_argument('-early_terminate', metavar='True/False', help='Stop the run as soon as a success has been found.')

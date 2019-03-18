@@ -130,6 +130,7 @@ class RosettaModel(object):
         self.make_fragments = None
 
         self.fasta = None
+        self.sequence_length = None
         self.all_atom = None
 
         # Fragment variables
@@ -245,7 +246,9 @@ class RosettaModel(object):
             cmd += ['-rg_reweight', "0.5"]
 
         # Domain restraints
-        if self.domain_termini_distance > 0: self.restraints_file = self.setup_domain_restraints()
+        if self.domain_termini_distance > 0:
+            assert not self.restraints_file, "Cannot set up domain restraints with existing restraints file!"
+            self.restraints_file = self.setup_domain_restraints()
         
         # Add any restraints
         cmd = self.cmd_add_restraints(cmd)
@@ -740,23 +743,11 @@ class RosettaModel(object):
                                         submit_max_array=self.submit_max_array)
 
     def setup_domain_restraints(self):
-        """
-        Create the file for restricting the domain termini and return the path to the file
-        """
+        """Create the file for restricting the domain termini and return the path to the file."""
         logger.info('restricting termini distance: {0}'.format( self.domain_termini_distance ))
-        fas = open(self.fasta)
-        seq = ''
-        for line in fas:
-            if not re.search('>', line):
-                seq += line.rstrip('\n')
-        length = 0
-        for x in seq:
-            if re.search('\w', x):
-                length += 1
-                
-        restraints_file = os.path.join(self.work_dir, 'constraints')
-        with open(restraints_file, "w") as conin:
-            conin.write('AtomPair CA 1 CA {0} GAUSSIANFUNC {1} 5.0 TAG\n'.format(length,self.domain_termini_distance))
+        restraints_file = os.path.join(self.work_dir, 'constraints.txt')
+        with open(restraints_file, "w") as w:
+            w.write('AtomPair CA 1 CA {0} GAUSSIANFUNC {1} 5.0 TAG\n'.format(self.sequence_length, self.domain_termini_distance))
         return restraints_file
 
     def set_from_dict(self, optd ):
@@ -766,6 +757,7 @@ class RosettaModel(object):
 
         # Common variables
         self.fasta = optd['fasta']
+        self.sequence_length = optd['fasta_length']
         self.ample_dir = optd['work_dir']
         self.work_dir = os.path.join(self.ample_dir, 'modelling')
         self.name = optd['name']
@@ -848,7 +840,7 @@ class RosettaModel(object):
             if optd['restraints_file']:
                 if not os.path.exists(optd['restraints_file']):
                     raise RuntimeError("Cannot find restraints file: {0}".format(optd['restraints_file']))
-                self.restraints_file=optd['restraints_file']
+                self.restraints_file = optd['restraints_file']
             self.restraints_weight = optd['restraints_weight']
             if optd['disulfide_constraints_file']:
                 if not os.path.exists(optd['disulfide_constraints_file']):

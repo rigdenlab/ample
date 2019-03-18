@@ -209,6 +209,10 @@ def process_options(optd):
         logger.info('Processing missing domain\n')
         if not os.path.exists(optd['domain_all_chains_pdb']):
             raise RuntimeError('Cannot find file domain_all_chains_pdb: {0}'.format(optd['domain_all_chains_pdb']))
+    if optd['coiled_coil']:
+        # Add in Owen's fixes
+        optd['rg_reweight'] = 0.0
+        optd['domain_termini_distance'] = optd['fasta_length'] * 1.5
     process_ensemble_options(optd)
     process_mr_options(optd)
     process_benchmark_options(optd)
