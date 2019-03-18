@@ -270,14 +270,18 @@ class RosettaModel(object):
         # Remember starting directory
         owd = os.getcwd()
         os.chdir(self.work_dir)
-        
-        # Add submit_cluster, submit_queue, submit_qtype
         if not os.path.isdir(self.models_dir):
             os.mkdir(self.models_dir)
+            
         if self.transmembrane_old:
             self.tm_make_files()
         elif self.transmembrane:
             self.tm2_make_patch(self.work_dir)
+
+        if self.domain_termini_distance > 0:
+            assert not self.restraints_file, "Cannot set up domain restraints with existing restraints file: {}!".format(
+                self.restraints_file)
+            self.restraints_file = self.setup_domain_restraints()
     
         # Split jobs onto separate processors - 1 for cluster, as many as will fit for desktop
         if self.submit_cluster:
@@ -310,7 +314,8 @@ class RosettaModel(object):
         success = self.run_scripts(job_scripts, job_time=job_time, job_name='abinitio', monitor=None)
         if not success:
             raise RuntimeError(
-                "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(self.work_dir)
+                "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(
+                    self.work_dir)
             )
 
         # Copy the models into the models directory - need to rename them accordingly
@@ -338,7 +343,7 @@ class RosettaModel(object):
             shutil.copyfile(pdbin, pdbout)
             pdbs_moved.append(pdbout)
 
-        os.chdir(owd)   # Go back to where we came from
+        os.chdir(owd)  # Go back to where we came from
         return pdbs_moved
     
     def cmd_add_restraints(self, cmd):
