@@ -245,11 +245,6 @@ class RosettaModel(object):
         else:
             cmd += ['-rg_reweight', "0.5"]
 
-        # Domain restraints
-        if self.domain_termini_distance > 0:
-            assert not self.restraints_file, "Cannot set up domain restraints with existing restraints file: {}!".format(self.restraints_file)
-            self.restraints_file = self.setup_domain_restraints()
-        
         # Add any restraints
         cmd = self.cmd_add_restraints(cmd)
                 
