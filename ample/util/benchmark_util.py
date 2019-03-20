@@ -370,7 +370,7 @@ def analysePdb(amoptd):
         nativeChain1  = ample_util.filename_append( filename=nativePdbInfo.pdb,
                                                        astr="chain1", 
                                                        directory=fixpath(amoptd['work_dir']))
-        pdb_edit.to_single_chain( nativePdbInfo.pdb, nativeChain1 )
+        pdb_edit.merge_chains(nativePdbInfo.pdb, nativeChain1)
     else:
         nativeChain1 = nativePdbInfo.pdb
     

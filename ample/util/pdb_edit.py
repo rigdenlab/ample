@@ -687,6 +687,82 @@ def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None):
 
             out.write(line)
 
+def merge_chains(pdbin, pdbout, chains=None):
+    """Merge pdb chains.
+    
+    If no chains argument is given merge all chains into the first chain, otherwise merge
+    all but the first chain in chains into the first chain in chains.
+    
+     Parameters
+    ----------
+    pdbin : file
+       Source pdb to merge chains from
+    pdbout : file
+       pdb output file for single chain pdb
+    chains : list
+       list of chain ids - if provided all chains in the list will be merged into the first.
+
+    Returns
+    -------
+    pdbout : file
+       pdb output file for single chain pdb
+    """
+
+    hin = iotbx.pdb.pdb_input(file_name=pdbin).construct_hierarchy()
+    hout = _merge_chains(hin, chains=chains)
+    with open(pdbout, 'w') as f:
+        f.write("REMARK Original file:{}\n".format(pdbin))
+        f.write(hout.as_pdb_string(anisou=False))    
+        
+    return pdbout
+
+def _merge_chains(hierarchy, chains=None):
+    """Merge pdb chains in hierarchy.
+    
+     Parameters
+    ----------
+    hierarchy : cctbx_pdb_hierarchy
+       The original CCTBX PDB hierarchy
+    chains : list
+       list of chain ids - if provided all chains in the list will be merged into the first.
+
+    Returns
+    -------
+    hierarchy : cctbx_pdb_hierarchy
+        New hierarchhy   
+    """
+
+    # Make sure we can find the required chain ids
+    chain_ids = [chain.id for chain in hierarchy.models()[0].chains()]
+    if chains:
+        assert isinstance(chains, list) and len(chains) > 1, "Need list of more than one chain {}".format(chains)
+        root_chain_id = chains.pop(0)
+        if root_chain_id not in chain_ids:
+            raise RuntimeError("Cannot find root_chain_id {} in chain ids {}".format(root_chain_id, chain_ids))
+        if not set(chains).issubset(set(chain_ids)):
+            raise RuntimeError("Cannot find all chains {} in {}".format(chains, chain_ids))
+    else:
+        # append all chains to the first chain
+        root_chain_id = hierarchy.models()[0].chains()[0].id
+    
+    root_chain_idx = chain_ids.index(root_chain_id)
+    root_chain = hierarchy.models()[0].chains()[root_chain_idx].detached_copy()
+    for i, chain in enumerate(hierarchy.models()[0].chains()):
+        if i == root_chain_idx:
+            continue
+        if chains and chain.id not in chains:
+            continue
+        if not chain.is_protein():
+            continue
+        for r in chain.residue_groups():
+            root_chain.append_residue_group(r.detached_copy())
+
+    new_model = iotbx.pdb.hierarchy.model()
+    new_model.append_chain(root_chain)
+    new_hierarchy = iotbx.pdb.hierarchy.root()
+    new_hierarchy.append_model((new_model))     
+        
+    return new_hierarchy
 
 def merge(pdb1=None, pdb2=None, pdbout=None):
     """Merge two pdb files into one"""
@@ -1288,72 +1364,6 @@ def _strip(hierachy, hetatm=False, hydrogen=False, atom_types=[]):
                         atom_group.remove_atom(atom)
     return
 
-
-def to_single_chain(inpath, outpath):
-    """Condense a single-model multi-chain pdb to a single-chain pdb"""
-
-    o = open(outpath, 'w')
-
-    firstChainID = None
-    currentResSeq = None  # current residue we are reading - assume it always starts from 1
-    globalResSeq = None
-    globalSerial = -1
-    for line in open(inpath):
-
-        # Remove any HETATOM lines and following ANISOU lines
-        if line.startswith("HETATM") or line.startswith("MODEL") or line.startswith("ANISOU"):
-            raise RuntimeError("Cant cope with the line: {0}".format(line))
-
-        # Skip any TER lines
-        if line.startswith("TER"):
-            continue
-
-        if line.startswith("ATOM"):
-            changed = False
-
-            atom = pdb_model.PdbAtom(line)
-
-            # First atom/residue
-            if globalSerial == -1:
-                globalSerial = atom.serial
-                firstChainID = atom.chainID
-                globalResSeq = atom.resSeq
-                currentResSeq = atom.resSeq
-            else:
-                # Change residue numbering and chainID
-                if atom.chainID != firstChainID:
-                    atom.chainID = firstChainID
-                    changed = True
-
-                # Catch each change in residue
-                if atom.resSeq != currentResSeq:
-                    # Change of residue
-                    currentResSeq = atom.resSeq
-                    globalResSeq += 1
-
-                # Only change if don't match global
-                if atom.resSeq != globalResSeq:
-                    atom.resSeq = globalResSeq
-                    changed = True
-
-                # Catch each change in numbering
-                if atom.serial != globalSerial + 1:
-                    atom.serial = globalSerial + 1
-                    changed = True
-
-                if changed:
-                    line = atom.toLine() + "\n"
-
-                # Increment counter for all atoms
-                globalSerial += 1
-
-        o.write(line)
-
-    o.close()
-
-    return
-
-
 def translate(inpdb=None, outpdb=None, ftranslate=None):
     """translate pdb
     args:
@@ -1373,7 +1383,6 @@ def translate(inpdb=None, outpdb=None, ftranslate=None):
     else:
         raise RuntimeError("Error translating PDB")
 
-
 def xyz_coordinates(pdbin):
     ''' Extract xyz for all atoms '''
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
@@ -1392,7 +1401,6 @@ def _xyz_coordinates(hierarchy):
             tmp = []
 
     return res_lst
-
 
 def xyz_cb_coordinates(pdbin):
     ''' Extract xyz for CA/CB atoms '''
