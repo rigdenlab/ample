@@ -170,19 +170,8 @@ class RosettaModel(object):
         return
 
     def ab_initio_cmd(self):
-        """
-        Return the command to run rosetta as a list suitable for subprocess
-        wdir: directory to run in
-        nstruct: number of structures to process
-        seed: seed for this processor"""
-
-        # Set executable
-        if self.transmembrane_old:
-            cmd = [self.transmembrane_exe]
-        else:
-            cmd = [self.rosetta_AbinitioRelax]
-
-        cmd += [
+        """Return the command to run rosetta as a list suitable for subprocess"""
+        cmd = [
             '-database', self.rosetta_db,
             '-in::file::fasta', self.fasta,
             '-in:file:frag3', self.frags_3mers,
@@ -255,6 +244,11 @@ class RosettaModel(object):
 
     def ab_initio_model(self):
         """Run the ab initio modelling and return a list of models."""
+
+        if self.transmembrane_old:
+            rosetta_binary = self.transmembrane_exe
+        else:
+            rosetta_binary = self.rosetta_AbinitioRelax
         
         if self.rosetta_flagsfile:
             # Hack for modelling with AMPLE-supplied flagsfile
@@ -273,11 +267,11 @@ class RosettaModel(object):
         
             # create the flags file with the rosetta directives
             flagsfile = os.path.join(self.work_dir, 'rosetta.flags')
-            flags = os.linesep.join(self.ab_initio_cmd())
+            flags = self.process_cmd_list(self.ab_initio_cmd())
             with open(flagsfile, 'w') as w:
                 w.write(flags)
 
-        return self.model_from_flagsfile(flagsfile)
+        return self.model_from_flagsfile(flagsfile, rosetta_binary=rosetta_binary)
     
     def cmd_add_restraints(self, cmd):
         """Add any restraints and files to the ROSETTA command-line options"""
@@ -542,7 +536,6 @@ class RosettaModel(object):
             d = os.path.join(self.work_dir, "job_{0}".format(i))
             os.mkdir(d)
             dir_list.append(d)
-            
             script = """#!/bin/bash
 {} \
 @{} \
@@ -652,6 +645,16 @@ class RosettaModel(object):
         
         os.chdir(owd)
         return pdbs_to_return
+
+    @staticmethod
+    def process_cmd_list(cmds):
+        """Create a string from a list of commands"""
+        cmd_str = ""
+        for i, c in enumerate(cmds):
+            if c.startswith('-') and i > 0:
+                 cmd_str += os.linesep
+            cmd_str += c + " "
+        return cmd_str
 
     def remodel(self, id_pdbs, ntimes, alignment_file):
         remodel_dir = os.getcwd()
