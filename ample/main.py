@@ -324,7 +324,7 @@ class Ample(object):
             else:
                 logger.info('making %s models...', optd['nmodels'])
                 try:
-                    optd['models'] = rosetta_modeller.ab_initio_model(monitor=monitor)
+                    optd['models'] = rosetta_modeller.ab_initio_model()
                 except Exception as e:
                     msg = "Error running ROSETTA to create models: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
