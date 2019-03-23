@@ -19,6 +19,9 @@ from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
 from ample.util import ample_util
 from ample.util import workers_util
 
+ENSEMBLER = 'ensembler'
+MODELLING = 'modelling'
+
 # Any modules required when ample results dictionaries are unpickled should be added here
 #import ample.ensembler
 
@@ -173,16 +176,22 @@ class AMPLEIntegrationFramework(object):
                 args = self._update_args(args, EXTRA_ARGS)
             
             # We track different modules using the name of the test case
-            ensembler = True if name.startswith('ensembler') else False
-            if ensembler and sys.platform.startswith('win'):
-                logger.critical("Cannot run ensemble module on windows due to multiprocessing bug")
+            if name.startswith(ENSEMBLER):
+                testcase_type = ENSEMBLER
+            elif name.startswith(MODELLING):
+                testcase_type = MODELLING
+            else:
+                testcase_type = 'ample'
+                
+            if testcase_type != 'ample' and sys.platform.startswith('win'):
+                logger.critical("Cannot run module testcases on windows due to multiprocessing bug")
                 continue
-            
-            script = self.write_script(work_dir,  args + [['-work_dir', work_dir]], ensembler=ensembler)
+
+            script = self.write_script(work_dir,  args + [['-work_dir', work_dir]], testcase_type)
             scripts.append(script)
             # Set path to the results pkl file we will use to run the tests
             self.test_dict[name]['resultsd'] = os.path.join(work_dir, AMPLE_PKL)
-            os.chdir(owd)            # Back to where we started
+            os.chdir(owd) # Back to where we started
         return scripts
     
     def _is_in_args(self, argt, args):
@@ -235,17 +244,18 @@ class AMPLEIntegrationFramework(object):
             suite.addTests(_suite)  
         TextTestRunner(verbosity=2).run(suite)
     
-    def write_script(self, work_dir, args, ensembler):
+    def write_script(self, work_dir, args, testcase_type):
         """Write script"""
         linechar = "^" if sys.platform.startswith('win') else "\\"
         script = work_dir + ample_util.SCRIPT_EXT
 
         test_exe = os.path.join(os.environ["CCP4"], "bin", "ample")
         test_exe = test_exe + ample_util.SCRIPT_EXT if sys.platform.startswith("win") else test_exe
-        if ensembler:
-            if sys.platform.startswith("win"): raise RuntimeError("Cannot run ensemble module on windows due to multiprocessing bug")
+        if testcase_type == ENSEMBLER:
             test_exe = '{0} -m ample.ensembler'.format(os.path.join(os.environ["CCP4"], "bin", "ccp4-python"))
-
+        elif testcase_type == MODELLING:
+            test_exe = '{0} -m ample.modelling'.format(os.path.join(os.environ["CCP4"], "bin", "ccp4-python"))
+        
         # All arguments need to be strings
         args = [ map(str,a) for a in args ]
         with open(script, 'w') as f:

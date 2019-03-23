@@ -864,7 +864,7 @@ class RosettaModel(object):
 
     def set_paths(self, optd=None, rosetta_dir=None):
         if rosetta_dir and os.path.isdir(rosetta_dir):
-            self.rosetta_dir=rosetta_dir
+            self.rosetta_dir = rosetta_dir
         elif 'rosetta_dir' not in optd or not optd['rosetta_dir']:
             raise RuntimeError("rosetta_dir not set - please use the -rosetta_dir flag to point at the directory where ROSETTA is installed")
         elif not os.path.isdir(optd['rosetta_dir']):
@@ -874,7 +874,7 @@ class RosettaModel(object):
 
         # Determine version
         if optd and 'rosetta_version' in optd and optd['rosetta_version'] is not None:
-            logger.debug( 'Using user-supplied Rosetta version: {0}'.format(optd['rosetta_version']))
+            logger.debug('Using user-supplied Rosetta version: {0}'.format(optd['rosetta_version']))
             version = optd['rosetta_version']
         else:
             version = self.get_version()
@@ -884,7 +884,7 @@ class RosettaModel(object):
         self.rosetta_version = version
 
         # Find the path to the binary directory
-        self.rosetta_bin=self.get_bin_dir()
+        self.rosetta_bin = self.get_bin_dir()
 
         # Now set all relevant paths
 

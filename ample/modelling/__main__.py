@@ -24,11 +24,9 @@ args = parser.parse_args()
 
 if args.rosetta_flagsfile is None:
     raise RuntimeError("Need to supply a ROSETTA flagsfile with the -rosetta_flagsfile argument")
-flagsfile = args.rosetta_flagsfile
-if args.rosetta_AbinitioRelax is None:
-    raise RuntimeError("Need to supply a ROSETTA binary with the -rosetta_AbinitioRelax argument")
 flagsfile = os.path.abspath(args.rosetta_flagsfile)
 rosetta_binary = args.rosetta_AbinitioRelax
+
 
 nproc = args.nproc
 if nproc is None:
@@ -44,7 +42,7 @@ submit_array = args.submit_array
 if submit_array is None:
     submit_array = True
 submit_max_array = args.submit_max_array
-
+rosetta_dir = args.rosetta_dir
 
 nmodels = args.nmodels
 if nmodels is None:
@@ -57,6 +55,9 @@ if not os.path.isdir(work_dir):
 models_dir = os.path.join(work_dir, "models")
 
 rm = RosettaModel()
+if rosetta_dir and os.path.isdir(rosetta_dir):
+    rm.set_paths(rosetta_dir=rosetta_dir)
+
 rm.nmodels = nmodels
 rm.work_dir = work_dir
 rm.models_dir = models_dir
