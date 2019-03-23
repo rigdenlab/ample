@@ -1,6 +1,6 @@
--in:file:fasta ./input_files/toxd_.fasta
+-in:file:fasta ../../toxd-example/input/toxd_.fasta
 -in:file:frag3 ../../toxd-example/input/aat000_03_05.200_v1_3
--in:file:frag9 ../../toxd-example/input/aat000_06_05.200_v1_3
+-in:file:frag9 ../../toxd-example/input/aat000_09_05.200_v1_3
 -abinitio:relax
 -out:pdb
 -use_filters true
