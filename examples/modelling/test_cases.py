@@ -21,8 +21,9 @@ TEST_DICT = {}
 
 # Specify the arguments to the ensembler module to run this test case
 args_default =  [
-                   [ '-rosetta_flagsfile', os.path.join(SHARE_DIR, "examples", "modelling", "input", "flags") ],
-                   [ '-nmodels', '3' ]
+    [ '-rosetta_dir', '/opt/rosetta-3.5' ],
+    [ '-rosetta_flagsfile', os.path.join(SHARE_DIR, "examples", "modelling", "input", "flags") ],
+    [ '-nmodels', '3' ]
 ]
 
 class AMPLETest(AMPLEBaseTest):
