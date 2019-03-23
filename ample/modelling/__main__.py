@@ -33,7 +33,7 @@ if nproc is None:
     nproc = 1
 submit_cluster = args.submit_cluster
 if submit_cluster is None:
-    submit_cluster = True
+    submit_cluster = False
 submit_qtype = args.submit_qtype
 if submit_qtype is None:
     submit_qtype = 'SGE'

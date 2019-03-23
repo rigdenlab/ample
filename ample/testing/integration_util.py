@@ -182,15 +182,18 @@ class AMPLEIntegrationFramework(object):
                 testcase_type = MODELLING
             else:
                 testcase_type = 'ample'
-                
             if testcase_type != 'ample' and sys.platform.startswith('win'):
                 logger.critical("Cannot run module testcases on windows due to multiprocessing bug")
                 continue
-
             script = self.write_script(work_dir,  args + [['-work_dir', work_dir]], testcase_type)
             scripts.append(script)
             # Set path to the results pkl file we will use to run the tests
             self.test_dict[name]['resultsd'] = os.path.join(work_dir, AMPLE_PKL)
+            
+            # Run the setup function if one is provided
+            if 'setup' in self.test_dict[name] and callable(self.test_dict[name]['setup']):
+                self.test_dict[name]['setup'](work_dir)
+            
             os.chdir(owd) # Back to where we started
         return scripts
     
