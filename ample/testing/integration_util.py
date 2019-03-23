@@ -192,7 +192,7 @@ class AMPLEIntegrationFramework(object):
             
             # Run the setup function if one is provided
             if 'setup' in self.test_dict[name] and callable(self.test_dict[name]['setup']):
-                self.test_dict[name]['setup'](work_dir)
+                self.test_dict[name]['setup'](self.run_dir)
             
             os.chdir(owd) # Back to where we started
         return scripts

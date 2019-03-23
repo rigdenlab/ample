@@ -537,11 +537,12 @@ class RosettaModel(object):
             os.mkdir(d)
             dir_list.append(d)
             script = """#!/bin/bash
-{} \
-@{} \
--run:constant_seed \
+{} \\
+@{} \\
+-out:nstruct {} \\
+-run:constant_seed \\
 -run:jran {}
-""".format(rosetta_binary, flagsfile, seeds[i])
+""".format(rosetta_binary, flagsfile, njobs, seeds[i])
             sname = os.path.join(d, "model_{0}.sh".format(i))
             with open(sname, 'w') as w:
                 w.write(script)
