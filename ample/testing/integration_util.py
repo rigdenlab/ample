@@ -23,7 +23,7 @@ ENSEMBLER = 'ensembler'
 MODELLING = 'modelling'
 
 # Any modules required when ample results dictionaries are unpickled should be added here
-#import ample.ensembler
+import ample.ensembler
 
 logger = logging.getLogger(__name__)
 
