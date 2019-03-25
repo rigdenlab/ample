@@ -32,7 +32,7 @@ if not sys.platform.startswith('win'):
         [ '-percent_fixed_intervals', 20 ],
         [ '-frags_3mers', os.path.join(INPUT_DIR, '1t00.200.3mers') ],
         [ '-frags_9mers', os.path.join(INPUT_DIR, '1t00.200.9mers') ],
-        [ '-nmr_process', '1' ]
+        [ '-nmr_process', '1' ],
         [ '-do_mr', 'False' ]
     ]
     
