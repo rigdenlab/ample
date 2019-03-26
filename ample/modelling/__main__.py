@@ -6,6 +6,7 @@ __version__ = "1.0"
 
 import argparse
 import os
+import logging
 
 from ample.util import argparse_util
 from ample.util import logging_util
@@ -18,6 +19,9 @@ argparse_util.add_cluster_submit_options(parser)
 
 # Start logging to the console
 logging_util.setup_console_logging()
+
+logger = logging.getLogger()
+logger.info("*** AMPLE ROSETTA modelling package ***")
 
 # Get cmdline options or set defaults
 args = parser.parse_args()
@@ -69,4 +73,5 @@ rm.submit_queue = submit_queue
 rm.submit_array = submit_array
 rm.submit_max_array = submit_max_array
 
+logger.info("Running binary {} with flagsfile: {}".format(rosetta_binary, flagsfile))
 rm.model_from_flagsfile(flagsfile, rosetta_binary)
