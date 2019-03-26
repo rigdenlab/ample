@@ -1,0 +1,8 @@
+-in:file:fasta ../../toxd_.fasta
+-in:file:frag3 ../../aat000_03_05.200_v1_3
+-in:file:frag9 ../../aat000_09_05.200_v1_3
+-abinitio:relax
+-out:pdb
+-use_filters true
+-abinitio::increase_cycles 1
+-relax::fast

@@ -10,7 +10,6 @@ import glob
 import logging
 import os
 import random
-import re
 import shutil
 
 # Our modules
@@ -110,7 +109,6 @@ class RosettaModel(object):
     def __init__(self, optd=None, rosetta_dir=None):
         
         self.debug=None
-        
         self.nproc = None
         self.nmodels = None
         self.work_dir = None # Where the modelling happens - can be deleted on exit
@@ -154,50 +152,33 @@ class RosettaModel(object):
         self.spanfile = None
         self.lipofile = None
 
-        # List of seeds
-        self.seeds = None
-
         # Extra options
         self.psipred_ss2 = None
         self.domain_termini_distance = None
         self.rad_gyr_reweight = None
         self.improve_template = None
         self.nativePdbStd = None
+        self.rosetta_flagsfile = None
         self.restraints_file = None
         self.restraints_weight = None
         self.disulfide_constraints_file = None
-        
-        self.set_paths(optd=optd, rosetta_dir=rosetta_dir)
         if optd:
+            self.set_paths(optd=optd, rosetta_dir=rosetta_dir)
             self.set_from_dict(optd)
-        if not os.path.isdir(self.work_dir):
+        if self.work_dir and not os.path.isdir(self.work_dir):
             os.mkdir(self.work_dir)
         return
 
-    def ab_initio_cmd(self, wdir, nstruct, seed):
-        """
-        Return the command to run rosetta as a list suitable for subprocess
-        wdir: directory to run in
-        nstruct: number of structures to process
-        seed: seed for this processor"""
-
-        # Set executable
-        if self.transmembrane_old:
-            cmd = [self.transmembrane_exe]
-        else:
-            cmd = [self.rosetta_AbinitioRelax]
-
-        cmd += [
+    def ab_initio_cmd(self):
+        """Return the command to run rosetta as a list suitable for subprocess"""
+        cmd = [
             '-database', self.rosetta_db,
             '-in::file::fasta', self.fasta,
             '-in:file:frag3', self.frags_3mers,
             '-in:file:frag9', self.frags_9mers,
-            '-out:path', wdir,
             '-out:pdb',
-            '-out:nstruct', str(nstruct),
-            '-out:file:silent', os.path.join(wdir, 'silent.out'),
+            '-out:file:silent', 'silent.out',
             '-run:constant_seed',
-            '-run:jran', str(seed),
             '-abinitio:relax',
             '-relax::fast'
         ]
@@ -261,85 +242,36 @@ class RosettaModel(object):
         #if self.benchmark: cmd += ['-in:file:native', self.native_pdb]
         return cmd
 
-    def ab_initio_model(self, monitor):
-        # Remember starting directory
-        owd = os.getcwd()
-        os.chdir(self.work_dir)
-        if not os.path.isdir(self.models_dir):
-            os.mkdir(self.models_dir)
-            
+    def ab_initio_model(self):
+        """Run the ab initio modelling and return a list of models."""
+
         if self.transmembrane_old:
-            self.tm_make_files()
-        elif self.transmembrane:
-            self.tm2_make_patch(self.work_dir)
-
-        if self.domain_termini_distance > 0:
-            assert not self.restraints_file, "Cannot set up domain restraints with existing restraints file: {}!".format(
-                self.restraints_file)
-            self.restraints_file = self.setup_domain_restraints()
-    
-        # Split jobs onto separate processors - 1 for cluster, as many as will fit for desktop
-        if self.submit_cluster:
-            jobs_per_proc = [1] * self.nmodels
+            rosetta_binary = self.transmembrane_exe
         else:
-            jobs_per_proc = self.split_jobs(self.nmodels, self.nproc)
-
-        # Generate seeds
-        seeds = self.generate_seeds(len(jobs_per_proc))
+            rosetta_binary = self.rosetta_AbinitioRelax
         
-        job_scripts = []
-        dir_list = []
-        job_time = 43200
-        for i, njobs in enumerate(jobs_per_proc):
-            if njobs < 1:
-                continue
-            d = os.path.join(self.work_dir, "job_{0}".format(i))
-            os.mkdir(d)
-            dir_list.append(d)
-            
-            script = "#!/bin/bash" + os.linesep
-            cmd = " ".join(self.ab_initio_cmd(d, njobs, seeds[i]))
-            script += cmd + os.linesep
-            sname = os.path.join(d, "model_{0}.sh".format(i))
-            with open(sname, 'w') as w:
-                w.write(script)
-            os.chmod(sname, 0o777)
-            job_scripts.append(sname)
-            
-        success = self.run_scripts(job_scripts, job_time=job_time, job_name='abinitio', monitor=None)
-        if not success:
-            raise RuntimeError(
-                "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(
-                    self.work_dir)
-            )
-
-        # Copy the models into the models directory - need to rename them accordingly
-        pdbs = []
-        for d in dir_list:
-            ps = glob.glob(os.path.join(d, "*.pdb"))
-            pdbs += ps
+        if self.rosetta_flagsfile:
+            # Hack for modelling with AMPLE-supplied flagsfile
+            flagsfile = self.rosetta_flagsfile
+        else:
+            # Run any setup requried
+            if self.transmembrane_old:
+                self.tm_make_files()
+            elif self.transmembrane:
+                self.tm2_make_patch(self.work_dir)
+    
+            if self.domain_termini_distance > 0:
+                assert not self.restraints_file, "Cannot set up domain restraints with existing restraints file: {}!".format(
+                    self.restraints_file)
+                self.restraints_file = self.setup_domain_restraints()
         
-        if not pdbs:
-            msg = "No models created after modelling!" + os.linesep \
-                  + "Please check the log files in the directory {0} " \
-                  + "for more information."
-            raise RuntimeError(msg.format(self.work_dir))
+            # create the flags file with the rosetta directives
+            flagsfile = os.path.join(self.work_dir, 'rosetta.flags')
+            flags = self.process_cmd_list(self.ab_initio_cmd())
+            with open(flagsfile, 'w') as w:
+                w.write(flags)
 
-        if len(pdbs) != self.nmodels:
-            msg = "Expected to create {0} models but found {1}." + os.linesep \
-                  + "Please check the log files in the directory {2} " \
-                    "for more information."
-            raise RuntimeError(msg.format(self.nmodels, len(pdbs), self.work_dir))
-
-        # Copy files into the models directory
-        pdbs_moved = []
-        for i, pdbin in enumerate(pdbs):
-            pdbout = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
-            shutil.copyfile(pdbin, pdbout)
-            pdbs_moved.append(pdbout)
-
-        os.chdir(owd)  # Go back to where we came from
-        return pdbs_moved
+        return self.model_from_flagsfile(flagsfile, rosetta_binary=rosetta_binary)
     
     def cmd_add_restraints(self, cmd):
         """Add any restraints and files to the ROSETTA command-line options"""
@@ -375,29 +307,23 @@ class RosettaModel(object):
             return binary
         return False
 
-    def generate_seeds(self, nseeds):
+    def generate_seeds(self, nseeds, start=1000000, end=4000000):
         """Generate a list of nseed seeds
 
         Parameters
         ----------
         nseeds : int
            The number of seeds required
-
-        """
-        start = 1000000
-        end = 4000000
+        start : int
+           Beginning of random range
+        nseeds : int
+           End of random range
+            """
         assert 0 < nseeds < end-start, "Invalid seed count: {0}".format(nseeds)
-        seed_list = set()
-        # Generate the list of random seeds
-        while len(seed_list) < nseeds:
-            seed_list.add(random.randint(start, end))
-        # Keep a log of the seeds
-        with open(os.path.join(self.work_dir, 'seedlist'), "w") as f_out:
-            for seed in seed_list:
-                f_out.write(str(seed) + os.linesep)
-        seed_list = list(seed_list)
-        self.seeds = seed_list
-        return seed_list
+        seeds = set()
+        while len(seeds) < nseeds:
+            seeds.add(random.randint(start, end))
+        return list(seeds)
 
     def fragment_cmd(self):
         """
@@ -585,9 +511,80 @@ class RosettaModel(object):
         name,ext=os.path.splitext(fname)
         return os.path.join(directory,"{0}_0001{1}".format(name,ext))
 
-
+    def model_from_flagsfile(self, flagsfile, rosetta_binary=None, job_time=43200):
+        """Run ROSETTA modelling from a flagsfile"""
+        assert os.path.isfile(flagsfile), "Cannot find ROSETTA flagsfile: {}".format(flagsfile)
+        # Remember starting directory
+        owd = os.getcwd()
+        os.chdir(self.work_dir)
+        if not os.path.isdir(self.models_dir):
+            os.mkdir(self.models_dir)
     
-    def mr_cmd(self,template,alignment,nstruct,seed):
+        # Split jobs onto separate processors - 1 for cluster, as many as will fit for desktop
+        if self.submit_cluster:
+            jobs_per_proc = [1] * self.nmodels
+        else:
+            jobs_per_proc = self.split_jobs(self.nmodels, self.nproc)
+        if rosetta_binary is None:
+            rosetta_binary = self.rosetta_AbinitioRelax
+        seeds = self.generate_seeds(len(jobs_per_proc))
+        job_scripts = []
+        dir_list = []
+        for i, njobs in enumerate(jobs_per_proc):
+            if njobs < 1:
+                continue
+            d = os.path.join(self.work_dir, "job_{0}".format(i))
+            os.mkdir(d)
+            dir_list.append(d)
+            script = """#!/bin/bash
+{} \\
+@{} \\
+-out:nstruct {} \\
+-run:constant_seed \\
+-run:jran {}
+""".format(rosetta_binary, flagsfile, njobs, seeds[i])
+            sname = os.path.join(d, "model_{0}.sh".format(i))
+            with open(sname, 'w') as w:
+                w.write(script)
+            os.chmod(sname, 0o777)
+            job_scripts.append(sname)
+            
+        success = self.run_scripts(job_scripts, job_time=job_time, job_name='abinitio')
+        if not success:
+            raise RuntimeError(
+                "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(
+                    self.work_dir)
+            )
+
+        # Copy the models into the models directory - need to rename them accordingly
+        pdbs = []
+        for d in dir_list:
+            ps = glob.glob(os.path.join(d, "*.pdb"))
+            pdbs += ps
+        
+        if not pdbs:
+            msg = "No models created after modelling!" + os.linesep \
+                  + "Please check the log files in the directory {0} " \
+                  + "for more information."
+            raise RuntimeError(msg.format(self.work_dir))
+
+        if len(pdbs) != self.nmodels:
+            msg = "Expected to create {0} models but found {1}." + os.linesep \
+                  + "Please check the log files in the directory {2} " \
+                    "for more information."
+            raise RuntimeError(msg.format(self.nmodels, len(pdbs), self.work_dir))
+
+        # Copy files into the models directory
+        pdbs_moved = []
+        for i, pdbin in enumerate(pdbs):
+            pdbout = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
+            shutil.copyfile(pdbin, pdbout)
+            pdbs_moved.append(pdbout)
+
+        os.chdir(owd)  # Go back to where we came from
+        return pdbs_moved
+
+    def mr_cmd(self, template,alignment, nstruct,seed):
         cmd = [ self.rosetta_mr_protocols,
                '-database ', self.rosetta_db,
                '-MR:mode', 'cm',
@@ -611,7 +608,6 @@ class RosettaModel(object):
                '-overwrite',
                '-run:constant_seed',
                '-run:jran', str(seed) ]
-
         cmd = self.cmd_add_restraints(cmd)
         return cmd
     
@@ -650,6 +646,16 @@ class RosettaModel(object):
         
         os.chdir(owd)
         return pdbs_to_return
+
+    @staticmethod
+    def process_cmd_list(cmds):
+        """Create a string from a list of commands"""
+        cmd_str = ""
+        for i, c in enumerate(cmds):
+            if c.startswith('-') and i > 0:
+                 cmd_str += os.linesep
+            cmd_str += c + " "
+        return cmd_str
 
     def remodel(self, id_pdbs, ntimes, alignment_file):
         remodel_dir = os.getcwd()
@@ -846,6 +852,8 @@ class RosettaModel(object):
                 if not os.path.exists(optd['disulfide_constraints_file']):
                     raise RuntimeError("Cannot find disulfide constraints file: {0}".format(optd['disulfide_constraints_file']))
                 self.disulfide_constraints_file = optd["disulfide_constraints_file"]
+            if optd['rosetta_flagsfile']:
+                self.rosetta_flagsfile = optd['rosetta_flagsfile']
             
             # Cluster submission stuff
             self.submit_cluster = optd['submit_cluster']
@@ -855,9 +863,9 @@ class RosettaModel(object):
             self.submit_max_array = optd['submit_max_array']
         return
 
-    def set_paths(self,optd=None,rosetta_dir=None):
+    def set_paths(self, optd=None, rosetta_dir=None):
         if rosetta_dir and os.path.isdir(rosetta_dir):
-            self.rosetta_dir=rosetta_dir
+            self.rosetta_dir = rosetta_dir
         elif 'rosetta_dir' not in optd or not optd['rosetta_dir']:
             raise RuntimeError("rosetta_dir not set - please use the -rosetta_dir flag to point at the directory where ROSETTA is installed")
         elif not os.path.isdir(optd['rosetta_dir']):
@@ -867,7 +875,7 @@ class RosettaModel(object):
 
         # Determine version
         if optd and 'rosetta_version' in optd and optd['rosetta_version'] is not None:
-            logger.debug( 'Using user-supplied Rosetta version: {0}'.format(optd['rosetta_version']))
+            logger.debug('Using user-supplied Rosetta version: {0}'.format(optd['rosetta_version']))
             version = optd['rosetta_version']
         else:
             version = self.get_version()
@@ -877,7 +885,7 @@ class RosettaModel(object):
         self.rosetta_version = version
 
         # Find the path to the binary directory
-        self.rosetta_bin=self.get_bin_dir()
+        self.rosetta_bin = self.get_bin_dir()
 
         # Now set all relevant paths
 

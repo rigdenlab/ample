@@ -176,6 +176,7 @@ def add_rosetta_options(parser=None):
     rosetta_group.add_argument('-rosetta_db', help='Path to the Rosetta database directory')
     rosetta_group.add_argument('-rosetta_dir', help='The Rosetta install directory')
     rosetta_group.add_argument('-rosetta_fragments_exe', help='Location of the Rosetta make_fragments.pl script')
+    rosetta_group.add_argument('-rosetta_flagsfile', help='Location of file with Rosetta modelling commands')
     rosetta_group.add_argument('-rosetta_version', type=float, help='The version number of Rosetta')
     rosetta_group.add_argument('-transmembrane', metavar='True/False', help='Do Rosetta modelling for transmembrane proteins (Ovchinnikov protocol)')
     rosetta_group.add_argument('-transmembrane_old', metavar='True/False', help='Do Rosetta modelling for transmembrane proteins (Yarov-Yarovoy protocol)')
