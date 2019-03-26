@@ -7,10 +7,34 @@ __version__ = "1.0"
 import argparse
 import os
 import logging
+import multiprocessing
 
 from ample.util import argparse_util
 from ample.util import logging_util
 from ample.modelling.rosetta_model import RosettaModel
+
+def set_defaults(args):
+    if args.rosetta_flagsfile is None:
+        raise RuntimeError("Need to supply a ROSETTA flagsfile with the -rosetta_flagsfile argument")
+    args.rosetta_flagsfile = os.path.abspath(args.rosetta_flagsfile)
+    
+    if args.submit_cluster is None:
+        args.submit_cluster = False
+    if args.nproc is None:
+        if args.submit_cluster:
+            args.nproc = 1
+        else:
+            args.nproc = multiprocessing.cpu_count()
+    if args.submit_qtype is None:
+        args.submit_qtype = 'SGE'
+    if args.submit_array is None:
+        args.submit_array = True
+    if args.nmodels is None:
+        args.nmodels = 1000
+    if args.work_dir is None:
+        args.work_dir = os.path.abspath('rosetta_modelling')
+    args.models_dir = os.path.join(args.work_dir, "models")
+
 
 parser = argparse.ArgumentParser(description="AMPLE Modelling Module")
 argparse_util.add_core_options(parser)
@@ -23,55 +47,27 @@ logging_util.setup_console_logging()
 logger = logging.getLogger()
 logger.info("*** AMPLE ROSETTA modelling package ***")
 
-# Get cmdline options or set defaults
+# Get cmdline options and set defaults
 args = parser.parse_args()
+set_defaults(args)
 
-if args.rosetta_flagsfile is None:
-    raise RuntimeError("Need to supply a ROSETTA flagsfile with the -rosetta_flagsfile argument")
-flagsfile = os.path.abspath(args.rosetta_flagsfile)
-rosetta_binary = args.rosetta_AbinitioRelax
-
-
-nproc = args.nproc
-if nproc is None:
-    nproc = 1
-submit_cluster = args.submit_cluster
-if submit_cluster is None:
-    submit_cluster = False
-submit_qtype = args.submit_qtype
-if submit_qtype is None:
-    submit_qtype = 'SGE'
-submit_queue = args.submit_queue
-submit_array = args.submit_array
-if submit_array is None:
-    submit_array = True
-submit_max_array = args.submit_max_array
-rosetta_dir = args.rosetta_dir
-
-nmodels = args.nmodels
-if nmodels is None:
-    nmodels = 1000
-work_dir = args.work_dir
-if work_dir is None:
-    work_dir = os.path.abspath('rosetta_modelling')
-if not os.path.isdir(work_dir):
-    os.mkdir(work_dir)
-models_dir = os.path.join(work_dir, "models")
+if not os.path.isdir(args.work_dir):
+    os.mkdir(args.work_dir)
 
 rm = RosettaModel()
-if rosetta_dir and os.path.isdir(rosetta_dir):
-    rm.set_paths(rosetta_dir=rosetta_dir)
+if args.rosetta_dir and os.path.isdir(args.rosetta_dir):
+    rm.set_paths(rosetta_dir=args.rosetta_dir)
 
-rm.nmodels = nmodels
-rm.work_dir = work_dir
-rm.models_dir = models_dir
+rm.nmodels = args.nmodels
+rm.work_dir = args.work_dir
+rm.models_dir = args.models_dir
 
-rm.nproc = nproc
-rm.submit_cluster = submit_cluster
-rm.submit_qtype = submit_qtype
-rm.submit_queue = submit_queue
-rm.submit_array = submit_array
-rm.submit_max_array = submit_max_array
+rm.nproc = args.nproc
+rm.submit_cluster = args.submit_cluster
+rm.submit_qtype = args.submit_qtype
+rm.submit_queue = args.submit_queue
+rm.submit_array = args.submit_array
+rm.submit_max_array = args.submit_max_array
 
-logger.info("Running binary {} with flagsfile: {}".format(rosetta_binary, flagsfile))
-rm.model_from_flagsfile(flagsfile, rosetta_binary)
+logger.info("Running binary {} with flagsfile: {}".format(args.rosetta_AbinitioRelax, args.rosetta_flagsfile))
+rm.model_from_flagsfile(args.rosetta_flagsfile, args.rosetta_AbinitioRelax)
