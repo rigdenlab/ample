@@ -1,4 +1,5 @@
 #!/usr/bin/env ccp4-python
+from cctbx.maptbx.tst_ccp import pdb_str
 __author__ = "Jens Thomas"
 
 import glob
@@ -16,7 +17,7 @@ class CheckModelsResult():
     def __init__(self):
         self.created_updated_models = False
         self.error = None
-        self.homolog = False
+        self.homologs = False
         self.nmr = False
         self.merged_chains = False
         self.models_dir = None
@@ -33,9 +34,9 @@ class CheckModelsResult():
 
 def check_models_dir(models_in_dir, models_out_dir):
     """Examine a directory of PDB files to determine their suitablilty for running with AMPLE."""
+    assert os.path.isdir(models_in_dir)
     pdb_structures = glob.glob(os.path.join(models_in_dir, "*.pdb"))
     pdb_structures += glob.glob(os.path.join(models_in_dir, "*.PDB"))
-    
     results = CheckModelsResult()
     results.models_dir = models_out_dir
     
@@ -49,12 +50,14 @@ def check_models_dir(models_in_dir, models_out_dir):
 
 def check_models(pdb_structures, results):
     """Examine PDB files to determine their suitablilty for running with AMPLE."""
+    assert len(pdb_structures) > 0
     assert results.models_dir is not None
     updated = False
     hierarchies = []
     if len(pdb_structures) == 1:
         pdb = pdb_structures[0]
         hierarchy = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
+        logger.debug("Processing a single input PDB file: {}".format(pdb))
         if len(hierarchy.models()) > 1:
             # Assume NMR model so make sure all have 1 chain with the same sequence
             if not single_chain_models_with_same_sequence(hierarchy):
@@ -62,7 +65,7 @@ def check_models(pdb_structures, results):
                 "Supplied with a single pdb file that contained multiple models with multiple or unmatching chains: {}"\
                     .format(pdb)
                 return results
-            logger.info("check_models found a single pdb with multiple models - assuming an NMR ensemble")
+            logger.debug("Found a single pdb with multiple models - assuming an NMR ensemble")
             results.nmr = True
         else:
             logger.info("check_models found a single pdb with a single model")
@@ -78,12 +81,15 @@ def check_models(pdb_structures, results):
     else:
         # multiple pdb structures - get a list of chain_ids and sequences for all members
         ref_data = None
-        multiple = [False] * len(pdb_structures) # tracks if there are multiple chains in the models
+        num_pdbs = len(pdb_structures)
+        multiple = [False] * num_pdbs # tracks if there are multiple chains in the models
+        chains_match_across_pdbs = [False] * num_pdbs # do chains with the same index have the same sequence across pdbs?
+        logger.debug("Processing {} input PDB files".format(num_pdbs))
         for idx_pdb, pdb in enumerate(pdb_structures):
             h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
-            if len(h.models) > 1:
-                # Assume an NMR ensemble so just extract the first member
-                logger.debug("Multiple models in pdb {} so extracting first model".format(pdb))
+            if len(h.models()) > 1:
+                # Assume an NMR ensemble so just extract the first member as representative of all
+                logger.info("Multiple models in pdb {}. Assuming NMR ensemble so extracting first model".format(pdb))
                 h = iotbx.pdb.hierarchy.root()
                 h.append_model((h.models()[0].detached_copy()))
                 updated = True
@@ -91,26 +97,42 @@ def check_models(pdb_structures, results):
             seq_data = pdb_edit._sequence_data(h)
             if ref_data is None:
                 ref_data = seq_data
+                if len(ref_data) > 1:
+                    multiple[idx_pdb] = True
                 continue
+            # Check sequences match across chains with the first structure
+            all_chains_match = 0
             for i, (rd, sd) in enumerate(zip(ref_data, seq_data)):
                 ref_seq = ref_data[rd][0]
                 seq = seq_data[sd][0]
-                if ref_seq != seq:
-                    results.error = "check_models: pdb {} chain number {} has different sequence from chain {} in first pdb {}"\
-                        .format(pdb, i, i, pdb_structures[0])
-                    return results
+                if ref_seq == seq:
+                    all_chains_match += 1
+            if all_chains_match == len(ref_data):
+                chains_match_across_pdbs[idx_pdb] = True
+                if idx_pdb == 1:
+                    # if the second chain matches the first then the first matches 
+                    chains_match_across_pdbs[0] = True
             if i > 0:
                 multiple[idx_pdb] = True
-        # We now have a list of pdbs with 1 or more chains, but with chain sequences that match across all structures
         if any(multiple):
+            logger.debug("Processing multichain pdbs")
             if sum(multiple) != len(multiple):
                 results.error = "check_models: given multiple models, but not all had multiple chains"
+                return results
+            if sum(chains_match_across_pdbs) != len(chains_match_across_pdbs):
+                results.error = "check_models: given multiple models with multiple chains, but chains did not match across pdbs"
                 return results
             # merge all chains
             for i, h in enumerate(hierarchies):
                 hierarchies[i] = pdb_edit._merge_chains(h)
             results.merged_chains = True
             updated = True
+        else:
+            # multiple single-chain pdbs - are they homologs?
+            logger.debug("Processing single-chain pdbs")
+            if sum(chains_match_across_pdbs) != len(chains_match_across_pdbs):
+                logger.debug("Chains don't match across pdbs so assuming homologs")
+                results.homologs = True
         # We now have multiple structures, each with one chain - make sure they all have a chain.id
         chains_updated = pdb_edit.add_missing_single_chain_ids(hierarchies)
         updated = chains_updated | updated # see if anything has been updated

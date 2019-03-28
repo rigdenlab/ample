@@ -51,6 +51,7 @@ one2three = dict((v, k) for (k, v) in three2one.items())
 
 logger = logging.getLogger(__name__)
 
+
 def add_missing_single_chain_ids(hierarchies, chain_id='A'):
     """Add any missing chain ids
     
