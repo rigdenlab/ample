@@ -30,8 +30,25 @@ class Test(unittest.TestCase):
         self.assertFalse(results.merged_chains)
         self.assertFalse(results.single_structure)
 
-    def Xtest_check_models_nmr(self):
-        pdbin = os.path.join(self.ample_share, 'examples', 'nmr-truncate', 'input', '2LC9.pdb')
+    def test_check_models_single_structure(self):
+        pdbin = os.path.join(self.testfiles_dir, '1K33_S_00000001.pdb')
+        results = check_models.CheckModelsResult()
+        check_models.check_models([pdbin], results)
+        self.assertTrue(results.single_structure)
+        self.assertIsNone(results.error)
+        self.assertFalse(results.homolog)
+        self.assertFalse(results.merged_chains)
+        self.assertFalse(results.nmr)
+
+    def test_check_models_single_structure_fail(self):
+        """Should fail as has a non-protein chain present"""
+        pdbin = os.path.join(self.testfiles_dir, '1K33.pdb')
+        results = check_models.CheckModelsResult()
+        check_models.check_models([pdbin], results)
+        self.assertTrue(results.error)
+
+    def Xtest_check_models_single_structure(self):
+        pdbin = os.path.join(self.testfiles_dir, '1K33.pdb')
         outdir = tempfile.mkdtemp(dir=os.path.abspath(os.curdir))
         print("GOT OUTDIR ",os.path.abspath(outdir))
         results = check_models.CheckModelsResult()
@@ -44,7 +61,6 @@ class Test(unittest.TestCase):
         self.assertFalse(results.single_structure)
         print("GOT %s" % results)
         os.rmdir(outdir)
-        
 
 
 if __name__ == "__main__":
