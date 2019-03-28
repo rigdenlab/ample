@@ -63,7 +63,6 @@ def amoptd_fix_path(optd, newroot):
         for r in optd['mrbump_results']:
             for k in MRBUMP_FILE_KEYS:
                 if k in r and isinstance(r[k], str):
-                    old = r[k]
                     warnings.warn("FIX MRBUMP BUG buccaneer refine.pdb vs refined.pdb")
                     new = r[k].replace(oldroot, newroot)
                     #logger.info('Changing amopt entry %s from: %s to: %s', k, old, new)

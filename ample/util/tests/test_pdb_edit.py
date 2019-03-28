@@ -552,13 +552,6 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
         self.assertEqual(after, b4.difference(set(to_delete)))
         os.unlink(pdbout)
 
-    def testSequence1(self):
-        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
-        ref = {'A': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
-               'B': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
-               'C': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY'}
-        s = pdb_edit.sequence(pdbin)
-        self.assertEqual(ref, s, "Bad _sequecne: {0}".format(s))
 
     def test_split_pdb_1(self):
         pdbin = os.path.join(self.testfiles_dir, "1GU8.pdb")
@@ -686,6 +679,320 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
                         continue
         self.assertEqual(data, reference_data)
         os.unlink(pdbout)
+
+    def testGetInfo1(self):
+        """"""
+
+        pdbfile = os.path.join(self.testfiles_dir, "1GU8.pdb")
+
+        info = pdb_edit.get_info(pdbfile)
+
+        self.assertEqual(info.pdbCode, "1GU8")
+        self.assertEqual(len(info.models), 2)
+
+        m1 = info.models[0]
+        self.assertEqual(m1.chains[0], 'A')
+        self.assertEqual(m1.resSeqs[0], [
+            2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+            31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
+            58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+            85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108,
+            109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129,
+            130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150,
+            151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171,
+            172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192,
+            193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213,
+            214, 215, 216, 217, 218, 219
+        ])
+        self.assertEqual(
+            m1.sequences[0],
+            'VGLTTLFWLGAIGMLVGTLAFAWAGRDAGSGERRYYVTLVGISGIAAVAYVVMALGVGWVPVAERTVFAPRYIDWILTTPLIVYFLGLLAGLDSREFGIVITLNTVVMLAGFAGAMVPGIERYALFGMGAVAFLGLVYYLVGPMTESASQRSSGIKSLYVRLRNLTVILWAIYPFIWLLGPPGVALLTPTVDVALIVYLDLVTKVGFGFIALDAAATL'
+        )
+
+        self.assertEqual(m1.caMask[0], [False] * 218)
+        self.assertEqual(m1.bbMask[0], [
+            False, True, False, False, False, False, False, False, False, True, False, False, True, False, False, False,
+            True, False, False, False, False, False, False, False, True, False, False, False, True, False, True, False,
+            False, False, False, False, False, False, False, False, True, False, False, True, False, False, False,
+            False, False, False, False, False, False, False, False, True, False, True, False, False, False, False,
+            False, False, False, False, False, False, False, False, False, False, False, False, False, False, False,
+            False, False, False, False, False, False, False, False, False, True, False, False, False, True, False,
+            False, False, False, False, False, True, False, False, False, False, False, False, False, False, False,
+            False, False, False, True, False, False, True, False, False, False, False, True, False, False, False, False,
+            False, False, False, True, False, True, False, False, False, False, False, True, False, False, False, False,
+            False, False, True, False, False, False, False, False, False, False, False, False, False, False, True,
+            False, False, False, False, False, False, False, False, False, False, False, False, False, False, False,
+            False, False, False, False, False, False, False, False, False, False, True, False, False, True, False,
+            False, False, False, False, False, False, False, False, False, False, False, False, False, False, False,
+            False, False, False, False, False, False, True, False, True, False, False, False, False, False, False,
+            False, False, False, True
+        ])
+
+        self.assertEqual(info.numAtoms(modelIdx=0), 1621)
+        self.assertEqual(info.numCalpha(modelIdx=0), 218)
+
+        m2 = info.models[1]
+        self.assertEqual(m2.chains[0], 'A')
+        self.assertEqual(m2.resSeqs[0], [
+            2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+            31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57,
+            58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84,
+            85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108,
+            109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129,
+            130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150,
+            151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171,
+            172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192,
+            193, 194, 195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 213,
+            214, 215, 216, 217, 218, 219
+        ])
+        self.assertEqual(
+            m2.sequences[0],
+            'VGLTTLFWLGAIGMLVGTLAFAWAGRDAGSGERRYYVTLVGISGIAAVAYVVMALGVGWVPVAERTVFAPRYIDWILTTPLIVYFLGLLAGLDSREFGIVITLNTVVMLAGFAGAMVPGIERYALFGMGAVAFLGLVYYLVGPMTESASQRSSGIKSLYVRLRNLTVILWAIYPFIWLLGPPGVALLTPTVDVALIVYLDLVTKVGFGFIALDAAATL'
+        )
+
+        self.assertEqual(info.numAtoms(modelIdx=1), 1621)
+        self.assertEqual(info.numCalpha(modelIdx=1), 218)
+
+        return
+
+    def testGetInfo2(self):
+        """"""
+
+        pdbfile = os.path.join(self.testfiles_dir, "2UUI.pdb")
+
+        info = pdb_edit.get_info(pdbfile)
+
+        self.assertEqual(len(info.models), 1)
+
+        m1 = info.models[0]
+        self.assertEqual(m1.chains[0], 'A')
+        self.assertEqual(m1.resSeqs[0], [i for i in range(-5, 150)])
+        self.assertEqual(
+            m1.sequences[0],
+            'MHHHHHHKDEVALLAAVTLLGVLLQAYFSLQVISARRAFRVSPPLTTGPPEFERVYRAQVNCSEYFPLFLATLWVAGIFFHEGAAALCGLVYLFARLRYFQGYARSAQLRLAPLYASARALWLLVALAALGLLAHFLPAALRAALLGRLRTLLPW'
+        )
+        self.assertEqual(m1.caMask[0], [False] * 154 + [True])
+        self.assertEqual(m1.bbMask[0], [
+            False, False, False, False, False, False, False, False, False, False, False, False, False, False, False,
+            False, False, False, False, False, True, False, False, False, False, False, False, False, False, False,
+            False, False, False, False, False, False, False, False, False, False, False, False, False, False, False,
+            False, False, True, False, False, False, False, False, False, False, False, False, False, False, False,
+            False, False, False, False, False, False, False, False, False, False, False, False, False, False, False,
+            False, True, False, False, False, False, False, True, False, False, False, False, False, True, False, False,
+            False, False, False, False, False, False, False, False, False, False, True, False, False, False, False,
+            False, False, False, False, False, False, False, False, False, False, False, False, False, False, False,
+            False, False, False, False, False, False, False, False, False, True, False, False, False, False, False,
+            False, False, False, False, False, False, False, False, False, False, True, False, False, False, False,
+            True, True, True, True
+        ])
+
+        self.assertEqual(info.numAtoms(modelIdx=0), 1263)
+
+        return
+
+    def testCheckPdbs(self):
+        pdbs = glob.glob(os.path.join(self.testfiles_dir, "models", "*.pdb"))
+        self.assertTrue(pdb_edit.check_pdbs(pdbs))
+
+        self.assertFalse(pdb_edit.check_pdbs(pdbs, single=True, sequence="AABBCC"))
+
+        pdbs += [os.path.join(self.testfiles_dir, "1GU8.pdb")]
+        self.assertFalse(pdb_edit.check_pdbs(pdbs, single=True, sequence="AABBCC"))
+
+        return
+
+    def testSelectResidues(self):
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        pdbout = "testSelectResidues1.pdb"
+        to_delete = [5, 10, 15, 20]
+
+        b4 = set(pdb_edit.resseq(pdbin)['A'])
+
+        pdb_edit.select_residues(pdbin=pdbin, pdbout=pdbout, delete=to_delete)
+
+        after = set(pdb_edit.resseq(pdbout)['A'])
+        self.assertEqual(after, b4.difference(set(to_delete)))
+
+        os.unlink(pdbout)
+
+        return
+
+    def testSelectResiduesKeepIdxs(self):
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        pdbout = "testSelectResidues2.pdb"
+        tokeep_idx = [0, 5, 6, 7, 8, 9, 10, 15, 20]
+
+        b4 = [r for i, r in enumerate(pdb_edit.resseq(pdbin)['A']) if i in tokeep_idx]
+        pdb_edit.select_residues(pdbin=pdbin, pdbout=pdbout, tokeep_idx=tokeep_idx)
+
+        after = pdb_edit.resseq(pdbout)['A']
+        self.assertEqual(after, b4)
+
+        os.unlink(pdbout)
+
+    def testSequence1(self):
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        ref = {
+            'A': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
+            'B': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
+            'C': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY'
+        }
+        s = pdb_edit.sequence(pdbin)
+        self.assertEqual(ref, s, "Bad _sequecne: {0}".format(s))
+        return
+
+    def testStdResidues(self):
+
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        pdbout = "std.pdb"
+
+        pdb_edit.std_residues_cctbx(pdbin, pdbout)
+
+        # Check it's valid
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+
+        #Get list of all the residue names in chain 1
+        resnames = [g.unique_resnames()[0] for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
+        ref = [
+            'ACE', 'GLY', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS',
+            'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN',
+            'GLY', 'TYR', 'TYR'
+        ]
+        self.assertEqual(resnames, ref)
+
+        os.unlink(pdbout)
+
+        return
+
+    def testStdResiduesCctbx(self):
+
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        pdbout = "std.pdb"
+
+        pdb_edit.std_residues_cctbx(pdbin, pdbout)
+
+        # Check it's valid
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+
+        #Get list of all the residue names in chain 1
+        resnames = [g.unique_resnames()[0] for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
+        ref = [
+            'ACE', 'GLY', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS',
+            'LYS', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'PHE', 'GLU', 'ILE', 'ALA', 'ALA', 'LEU', 'LYS', 'GLN',
+            'GLY', 'TYR', 'TYR'
+        ]
+        self.assertEqual(resnames, ref)
+
+        os.unlink(pdbout)
+
+        return
+
+    def testStripHetatm(self):
+        pdbin = os.path.join(self.testfiles_dir, "1BYZ.pdb")
+        pdbout = 'strip_het.pdb'
+        hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+        pdb_edit._strip(hierachy, hetatm=True, hydrogen=False)
+        hierachy.write_pdb_file(pdbout, anisou=False)
+        with open(pdbout) as f:
+            got = any([True for l in f.readlines() if l.startswith('HETATM')])
+        self.assertFalse(got, "Found HETATMS")
+        os.unlink(pdbout)
+        return
+
+    def testStripHydrogen(self):
+        pdbin = os.path.join(self.testfiles_dir, "1BYZ.pdb")
+        pdbout = 'strip_H.pdb'
+        hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+        pdb_edit._strip(hierachy, hetatm=False, hydrogen=True)
+        hierachy.write_pdb_file(pdbout, anisou=False)
+        with open(pdbout) as f:
+            got = any([True for l in f.readlines() if l.startswith('ATOM') and l[13] == 'H'])
+        self.assertFalse(got, "Found Hydrogens")
+        os.unlink(pdbout)
+        return
+
+    def testStripAtomTypes(self):
+        pdbin = os.path.join(self.testfiles_dir, "1BYZ.pdb")
+        pdbout = 'strip_types.pdb'
+        hierachy = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+        pdb_edit._strip(hierachy, hetatm=False, hydrogen=False, atom_types=['CB'])
+        hierachy.write_pdb_file(pdbout, anisou=False)
+        with open(pdbout) as f:
+            got = any([True for l in f.readlines() if l.startswith('ATOM') and l[12:15].strip() == 'CB'])
+        self.assertFalse(got, "Found Atom Types")
+        os.unlink(pdbout)
+        return
+
+    def testReliableSidechains(self):
+
+        pdbin = os.path.join(self.testfiles_dir, "1GU8.pdb")
+        pdbout = "std.pdb"
+
+        pdb_edit.reliable_sidechains(pdbin, pdbout)
+
+        # Check it's valid
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+
+        #Get list of all the residue names in chain 1
+        resnames = [g.unique_resnames()[0] for g in pdb_obj.hierarchy.models()[0].chains()[0].residue_groups()]
+        ref = [
+            'VAL', 'GLY', 'LEU', 'THR', 'THR', 'LEU', 'PHE', 'TRP', 'LEU', 'GLY', 'ALA', 'ILE', 'GLY', 'MET', 'LEU',
+            'VAL', 'GLY', 'THR', 'LEU', 'ALA', 'PHE', 'ALA', 'TRP', 'ALA', 'GLY', 'ARG', 'ASP', 'ALA', 'GLY', 'SER',
+            'GLY', 'GLU', 'ARG', 'ARG', 'TYR', 'TYR', 'VAL', 'THR', 'LEU', 'VAL', 'GLY', 'ILE', 'SER', 'GLY', 'ILE',
+            'ALA', 'ALA', 'VAL', 'ALA', 'TYR', 'VAL', 'VAL', 'MET', 'ALA', 'LEU', 'GLY', 'VAL', 'GLY', 'TRP', 'VAL',
+            'PRO', 'VAL', 'ALA', 'GLU', 'ARG', 'THR', 'VAL', 'PHE', 'ALA', 'PRO', 'ARG', 'TYR', 'ILE', 'ASP', 'TRP',
+            'ILE', 'LEU', 'THR', 'THR', 'PRO', 'LEU', 'ILE', 'VAL', 'TYR', 'PHE', 'LEU', 'GLY', 'LEU', 'LEU', 'ALA',
+            'GLY', 'LEU', 'ASP', 'SER', 'ARG', 'GLU', 'PHE', 'GLY', 'ILE', 'VAL', 'ILE', 'THR', 'LEU', 'ASN', 'THR',
+            'VAL', 'VAL', 'MET', 'LEU', 'ALA', 'GLY', 'PHE', 'ALA', 'GLY', 'ALA', 'MET', 'VAL', 'PRO', 'GLY', 'ILE',
+            'GLU', 'ARG', 'TYR', 'ALA', 'LEU', 'PHE', 'GLY', 'MET', 'GLY', 'ALA', 'VAL', 'ALA', 'PHE', 'LEU', 'GLY',
+            'LEU', 'VAL', 'TYR', 'TYR', 'LEU', 'VAL', 'GLY', 'PRO', 'MET', 'THR', 'GLU', 'SER', 'ALA', 'SER', 'GLN',
+            'ARG', 'SER', 'SER', 'GLY', 'ILE', 'LYS', 'SER', 'LEU', 'TYR', 'VAL', 'ARG', 'LEU', 'ARG', 'ASN', 'LEU',
+            'THR', 'VAL', 'ILE', 'LEU', 'TRP', 'ALA', 'ILE', 'TYR', 'PRO', 'PHE', 'ILE', 'TRP', 'LEU', 'LEU', 'GLY',
+            'PRO', 'PRO', 'GLY', 'VAL', 'ALA', 'LEU', 'LEU', 'THR', 'PRO', 'THR', 'VAL', 'ASP', 'VAL', 'ALA', 'LEU',
+            'ILE', 'VAL', 'TYR', 'LEU', 'ASP', 'LEU', 'VAL', 'THR', 'LYS', 'VAL', 'GLY', 'PHE', 'GLY', 'PHE', 'ILE',
+            'ALA', 'LEU', 'ASP', 'ALA', 'ALA', 'ALA', 'THR', 'LEU'
+        ]
+
+        self.assertEqual(resnames, ref)
+
+        pdb_edit.reliable_sidechains_cctbx(pdbin, pdbout)
+        pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbout)
+        self.assertEqual(resnames, ref)
+        os.unlink(pdbout)
+
+        return
+
+    def testXyzCoordinates(self):
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        test_hierarchy = iotbx.pdb.pdb_input(file_name=pdbin).construct_hierarchy()
+        xyz_lst = pdb_edit._xyz_coordinates(test_hierarchy)
+
+        ref_data_start = [(0, [(25.199, 11.913, -9.25), (25.201, 10.666, -9.372),
+                               (26.454, 12.702, -9.001)]), (1, [(24.076, 12.643, -9.179), (22.806, 12.124, -9.698),
+                                                                (22.170, 11.067, -8.799), (22.404, 11.024, -7.580)]),
+                          (2, [(21.377, 10.190, -9.397), (20.675, 9.156, -8.637), (21.614, 8.106, -7.996),
+                               (21.337, 7.619, -6.898), (19.625, 8.485, -9.531), (18.637, 7.595, -8.790),
+                               (17.652, 8.361, -7.951), (17.724, 9.603, -7.887), (16.786, 7.706, -7.365)])]
+
+        for idx in xrange(len(ref_data_start)):  # Stuff that needs to be true
+            self.assertEqual(ref_data_start[idx][0], xyz_lst[idx][0])
+            self.assertSequenceEqual(ref_data_start[idx][1], xyz_lst[idx][1])
+        nr_atoms = sum(len(i[1]) for i in xyz_lst)
+        self.assertEqual(252, nr_atoms)
+        self.assertEqual(35, len(xyz_lst))
+
+    def testXyzCbCoordinates(self):
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        test_hierarchy = iotbx.pdb.pdb_input(file_name=pdbin).construct_hierarchy()
+        xyz_cb_lst = pdb_edit._xyz_cb_coordinates(test_hierarchy)
+
+        ref_data_start = [(0, (float('inf'), float('inf'), float('inf'))), (1, (22.806, 12.124,
+                                                                                -9.698)), (2, (19.625, 8.485, -9.531)),
+                          (3, (24.783, 6.398, -9.051)), (4, (25.599, 10.846, -6.036)), (5, (20.430, 10.143, -4.644))]
+
+        self.assertSequenceEqual(ref_data_start[1], xyz_cb_lst[1][:6])
+        self.assertEqual(35, len(xyz_cb_lst))
+
 
 
 if __name__ == "__main__":
