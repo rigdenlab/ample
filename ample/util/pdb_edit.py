@@ -4,7 +4,7 @@ Useful manipulations on PDB files
 '''
 
 # Python imports
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import glob
 import logging
 import os
@@ -85,6 +85,140 @@ def calpha_only(inpdb, outpdb):
         os.unlink(logfile)
     else:
         raise RuntimeError("Error stripping PDB to c-alpha atoms")
+
+def add_missing_single_chain_ids(hierarchies):
+    """Add any missing chain ids using"""
+    if not isinstance(hierarchies, list):
+        hierarchies = [hierarchies]
+    # Determine the chain_id for all non-named chains
+    chain = hierarchies[0].models()[0].only_chain()
+    if not (isinstance(chain.id, str) and len(chain.id) > 0):
+        chain_id = 'A'
+    else:
+        chain_id = chain.id
+
+    # Ensure all chains have an id and return whether any were updated
+    updated = False
+    for h in hierarchies:
+        for model in h.models():
+            chain = model.only_chain()
+            if not (isinstance(chain.id, str) and len(chain.id) > 0):
+                chain.id = chain_id
+                updated = True
+    return updated
+
+
+def single_chain_models_with_same_sequence(hierarchy):
+    root_seq = None
+    for model in hierarchy.models():
+        try:
+            chain = model.only_chain()
+        except AssertionError:
+            return False
+        seq = chain_sequence(chain)
+        if root_seq is None:
+            root_seq = seq
+            continue
+        if seq != root_seq:
+            return False
+    return True
+
+class CheckModelsResult():
+    def __init__(self):
+        self.homolog = False
+        self.nmr = False
+        self.single_structure = False
+        self.models_dir = None
+        self.merged_chains = False
+        self.error = None
+
+
+def check_models(models_in_dir, models_out_dir):
+    """
+    Look at models and determine if acceptable and what needs to be done
+    
+    """
+    pdb_structures = glob.glob(os.path.join(models_in_dir, "*.pdb"))
+    pdb_structures += glob.glob(os.path.join(models_in_dir, "*.PDB"))
+    results = CheckModelsResult()
+    results.models_dir = models_out_dir
+    updated = False
+    hierarchies = []
+    if len(pdb_structures) == 1:
+        pdb = pdb_structures[0]
+        hierarchy = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
+        if len(hierarchy.models()) > 1:
+            # Assume NMR model so make sure all have 1 chain with the same sequence
+            if not single_chain_models_with_same_sequence(hierarchy):
+                results.error = \
+                "Supplied with a single pdb file that contained multiple models with multiple or unmatching chains: {}"\
+                    .format(pdb)
+                return results
+            logger.info("check_models found a single pdb with multiple models - assuming an NMR ensemble")
+            results.nmr = True
+        else:
+            logger.info("check_models found a single pdb with a single model")
+            if not len(hierarchy.only_model().chains()) == 1:
+                results.error = \
+                    "Supplied with a single pdb file that contained a single model with multiple chains: {}"\
+                    .format(pdb)
+                return results
+            results.single_structure = True
+        updated = add_missing_single_chain_ids(hierarchy)
+        if updated:
+            hierarchies.append(hierarchy)
+    else:
+        # multiple pdb structures - get a list of chain_ids and sequences for all members
+        ref_data = None
+        multiple = [False] * len(pdb_structures) # tracks if there are multiple chains in the models
+        for idx_pdb, pdb in enumerate(pdb_structures):
+            h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
+            if len(h.models) > 1:
+                # Assume an NMR ensemble so just extract the first member
+                logger.debug("Multiple models in pdb {} so extracting first model".format(pdb))
+                h = iotbx.pdb.hierarchy.root()
+                h.append_model((h.models()[0].detached_copy()))
+                updated = True
+            hierarchies.append(h)
+            seq_data = _sequence_data(h)
+            if ref_data is None:
+                ref_data = seq_data
+                continue
+            for i, (rd, sd) in enumerate(zip(ref_data, seq_data)):
+                ref_seq = ref_data[rd][0]
+                seq = seq_data[sd][0]
+                if ref_seq != seq:
+                    results.error = "check_models: pdb {} chain number {} has different sequence from chain {} in first pdb {}"\
+                        .format(pdb, i, i, pdb_structures[0])
+                    return results
+            if i > 0:
+                multiple[idx_pdb] = True
+        # We now have a list of pdbs with 1 or more chains, but with chain sequences that match across all structures
+        if any(multiple):
+            if sum(multiple) != len(multiple):
+                results.error = "check_models: given multiple models, but not all had multiple chains"
+                return results
+            # merge all chains
+            for i, h in enumerate(hierarchies):
+                hierarchies[i] = _merge_chains(h)
+            results.merged_chains = True
+            updated = True
+        # We now have multiple structures, each with one chain - make sure they all have a chain.id
+        chains_updated = add_missing_single_chain_ids(hierarchies)
+        updated = chains_updated | updated # see if anything has been updated
+    if updated:
+        # Need to write out new files
+        for pdb, h in zip(pdb_structures, hierarchies):
+            basename = os.path.basename(pdb)
+            pdbout = os.path.join(models_out_dir, basename)
+            with open(pdbout, 'w') as f:
+                f.write("REMARK Original file:{}\n".format(pdb))
+                f.write(h.as_pdb_string(anisou=False))  
+    else:
+        # all files are ok rename models to new directory
+        results.models_dir = models_in_dir
+    return results
+    
 
 
 def check_pdb_directory(directory, single=True, allsame=True, sequence=None):
@@ -1120,21 +1254,30 @@ def sequence_data(pdbin):
 
 def _sequence_data(hierarchy):
     """Extract the sequence of residues and resseqs from a pdb file."""
-    chain2data = {}
-    for chain in set(hierarchy.models()[0].chains()):  # only the first model
-        if not chain.is_protein(): continue
-        got = False
-        seq = ""
-        resseq = []
-        for residue in chain.conformers()[0].residues():  # Just look at the first conformer
-            # See if any of the atoms are non-hetero - if so we add this residue
-            if any([not atom.hetero for atom in residue.atoms()]):
-                got = True
-                seq += three2one[residue.resname]
-                #resseq.append(int(residue.resseq.strip()))
-                resseq.append(residue.resseq_as_int())
-        if got: chain2data[chain.id] = (seq, resseq)
+    chain2data = OrderedDict()
+    for chain in hierarchy.models()[0].chains():  # only the first model
+        if not chain.is_protein():
+            continue
+        seq, resseq = chain_data(chain)
+        chain2data[chain.id] = (seq, resseq)
     return chain2data
+
+
+def chain_data(chain):
+    seq = ""
+    resseq = []
+    for residue in chain.conformers()[0].residues():  # Just look at the first conformer
+        # See if any of the atoms are non-hetero - if so we add this residue
+        if any([not atom.hetero for atom in residue.atoms()]):
+            seq += three2one[residue.resname]
+            resseq.append(residue.resseq_as_int())
+    return seq, resseq
+
+
+def chain_sequence(chain):
+    if not chain.is_protein():
+        return None
+    return chain_data(chain)[0]
 
 
 def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
