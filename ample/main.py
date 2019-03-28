@@ -96,9 +96,9 @@ class Ample(object):
 
         # Modelling business happens here
         self.modelling(amopt.d, rosetta_modeller)
-        ample_util.save_amoptd(amopt)
+        ample_util.save_amoptd(amopt.d)
         amopt.write_config_file()
-        self.process_models(amopt)
+        self.process_models(amopt.d)
 
         # Ensembling business next
         if amopt.d['make_ensembles']:

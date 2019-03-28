@@ -58,6 +58,8 @@ def extract_and_validate_models(amoptd):
         return None
 
     models_arg = amoptd['models'] # command-line arg from user
+    if models_arg is None:
+        return
     models_dir_final = amoptd['models_dir'] # the directory where the models need to end up
     pdb_suffixes = ['.pdb', '.PDB']
 
