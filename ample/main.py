@@ -21,6 +21,7 @@ from ample.util import logging_util
 from ample.util import mrbump_util
 from ample.util import options_processor
 from ample.util import pdb_edit
+from ample.util import process_models
 from ample.util import pyrvapi_results
 from ample.util import reference_manager
 from ample.util import workers_util
@@ -194,7 +195,7 @@ class Ample(object):
             if optd['cluster_method'] is 'import':
                 # HACK - this is certainly not how we want to do it. One flag for all (-models) in future
                 optd['models'] = optd['cluster_dir']
-                optd['models'] = ample_util.extract_and_validate_models(optd)
+                optd['models'] = process_models.extract_and_validate_models(optd)
 
             # Check we have some models to work with
             if not (optd['single_model_mode'] or optd['models']):
@@ -328,7 +329,8 @@ class Ample(object):
                 except Exception as e:
                     msg = "Error running ROSETTA to create models: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
-                if not pdb_edit.check_pdb_directory(optd['models_dir'], sequence=optd['sequence']):
+                if not process_models.check_models_dir(optd['models_dir'], sequence=optd['sequence']):
+                    FPP
                     msg = "Problem with rosetta pdb files - please check the log for more information"
                     exit_util.exit_error(msg)
                 logger.info('Modelling complete - models stored in: %s\n', optd['models_dir'])
@@ -336,9 +338,9 @@ class Ample(object):
         elif optd['import_models']:
             logger.info('Importing models from directory: %s\n', optd['models_dir'])
             if optd['homologs']:
-                optd['models'] = ample_util.extract_and_validate_models(optd, sequence=None, single=True, allsame=False)
+                optd['models'] = process_models.extract_and_validate_models(optd)
             else:
-                optd['models'] = ample_util.extract_and_validate_models(optd)
+                optd['models'] = process_models.extract_and_validate_models(optd)
                 # Need to check if Quark and handle things accordingly
                 if optd['quark_models']:
                     # We always add sidechains to QUARK models if SCWRL is installed

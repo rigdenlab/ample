@@ -4,10 +4,15 @@ __author__ = "Jens Thomas"
 import glob
 import logging
 import os
+import shutil
+import tarfile
+import zipfile
 
 import iotbx.pdb
 
+from ample.util import ample_util
 from ample.util import pdb_edit
+from ample.util import exit_util
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +34,74 @@ class CheckModelsResult():
         for a in sorted(attrs):
             out_str += INDENT + "{} : {}\n".format(a, self.__dict__[a])
         return out_str
+
+
+def extract_and_validate_models(amoptd):
+    """Extract models given to AMPLE from arguments in the amoptd and validate
+    that they are suitable
+
+    Parameters
+    ----------
+    amoptd : dict
+       AMPLE options dictionary
+    """
+    
+    def is_pdb_file(filename):
+        return any(map(lambda x: filename.endswith(x), pdb_suffixes))
+
+    def path_to_quark_alldecoy(pdb_files):
+        QUARK_DECOY_NAME = 'alldecoy.pdb'
+        for pdb in pdb_files:
+            if os.path.basename(pdb) == QUARK_DECOY_NAME:
+                return pdb
+        return None
+
+    models_arg = amoptd['models'] # command-line arg from user
+    models_dir_final = amoptd['models_dir'] # the directory where the models need to end up
+    pdb_suffixes = ['.pdb', '.PDB']
+
+    if os.path.isfile(models_arg):
+        filepath = models_arg
+        models_dir_tmp = os.path.join(amoptd['work_dir'], 'models.tmp')
+        if not os.path.isdir(models_dir_tmp):
+            os.mkdir(models_dir_tmp)
+        # Extract /copy any pdb files into models_dir_tmp
+        if tarfile.is_tarfile(filepath):
+            pdb_files = ample_util.extract_tar(filepath, models_dir_tmp, suffixes=pdb_suffixes)
+        elif zipfile.is_zipfile(filepath):
+            pdb_files = ample_util.extract_zip(filepath, models_dir_tmp, suffixes=pdb_suffixes)
+        elif is_pdb_file(filepath):
+            shutil.copy2(filepath, models_dir_tmp)
+            pdb_files = [os.path.join(models_dir_tmp, filepath)]
+        else:
+            raise RuntimeError("Do not know how to handle input models file: {}".format(filepath))
+        # See if we have an alldecoy.pdb file
+        quark_decoy = path_to_quark_alldecoy(pdb_files)
+        if quark_decoy:
+            # Quark decoys are processed by us so go straight into final directory without checking
+            split_quark_alldecoy(quark_decoy, models_dir_final)
+            amoptd['quark_models'] = True
+            shutil.rmtree(models_dir_tmp) # delete as contains uneeded files extracted from archive
+    elif os.path.isdir(models_arg):
+        models_dir_tmp = models_arg
+
+    if not amoptd['quark_models']:
+        results = check_models_dir(models_dir_tmp, models_dir_final)
+        handle_model_import(amoptd, results)
+
+    amoptd['models_dir'] = models_dir_final
+    return glob.glob(os.path.join(models_dir_final, "*.pdb"))
+
+def handle_model_import(amoptd, results):
+    """Handle any errors flagged up by importing the models."""
+    error_msg = None
+    if results.error:
+        error_msg = "Error importing models: {}".format(results.error)
+    elif results.homologs and not amoptd['homologs']:
+        error_msg = "Imported models were not sequence identical, but homologs mode wasn't selected"
+
+    if error_msg:
+        exit_util.exit_error(error_msg)
 
 
 def check_models_dir(models_in_dir, models_out_dir):
@@ -169,3 +242,49 @@ def single_chain_models_with_same_sequence(hierarchy):
         if seq != root_seq:
             return False
     return True
+
+def split_quark_alldecoy(alldecoy, directory):
+    """Split a single QUARK PDB with multiple models into individual PDB files
+
+    Parameters
+    ----------
+    alldecoy : str
+       Single QUARK PDB file with multiple model entries
+    directory : str
+       Directory to extract the PDB files to
+
+    Returns
+    -------
+    extracted_models : list
+       List of PDB files for all models
+
+    """
+    logger.info("Extracting decoys from: %s into %s", alldecoy, directory)
+    smodels = []
+    with open(alldecoy, 'r') as f:
+        m = []
+        for line in f:
+            if line.startswith("ENDMDL"):
+                m.append(line)
+                smodels.append(m)
+                m = []
+            else:
+                m.append(line)
+
+    if not len(smodels):
+        raise RuntimeError("Could not extract any models from: {0}".format(alldecoy))
+
+    extracted_models = []
+    for i, m in enumerate(smodels):
+        fpath = os.path.join(directory, "quark_{0}.pdb".format(i))
+        with open(fpath, 'w') as f:
+            for line in m:
+                #  Reconstruct something sensible as from the coordinates on it's all quark-specific
+                # and there is no chain ID
+                if line.startswith("ATOM"):
+                    line = line[:21] + 'A' + line[22:54] + "  1.00  0.00              \n"
+                f.write(line)
+            extracted_models.append(fpath)
+            logger.debug("Wrote: %s", fpath)
+
+    return extracted_models

@@ -10,8 +10,7 @@ import tempfile
 import unittest
 
 from ample import constants
-from ample.util import pdb_edit
-from ample.util import check_models
+from ample.util import process_models
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -26,9 +25,9 @@ class Test(unittest.TestCase):
 
     def test_check_models_nmr(self):
         pdbin = os.path.join(self.ample_share, 'examples', 'nmr-truncate', 'input', '2LC9.pdb')
-        results = check_models.CheckModelsResult()
+        results = process_models.CheckModelsResult()
         results.models_dir = os.curdir
-        check_models.check_models([pdbin], results)
+        process_models.check_models([pdbin], results)
         
         self.assertIsNone(results.error)
         self.assertTrue(results.nmr)
@@ -40,9 +39,9 @@ class Test(unittest.TestCase):
 
     def test_check_models_single_structure(self):
         pdbin = os.path.join(self.testfiles_dir, '1K33_S_00000001.pdb')
-        results = check_models.CheckModelsResult()
+        results = process_models.CheckModelsResult()
         results.models_dir = os.curdir
-        check_models.check_models([pdbin], results)
+        process_models.check_models([pdbin], results)
         
         self.assertIsNone(results.error)
         self.assertTrue(results.single_structure)
@@ -55,9 +54,9 @@ class Test(unittest.TestCase):
     def test_check_models_single_structure_fail(self):
         """Should fail as has a non-protein chain present"""
         pdbin = os.path.join(self.testfiles_dir, '1K33.pdb')
-        results = check_models.CheckModelsResult()
+        results = process_models.CheckModelsResult()
         results.models_dir = os.curdir
-        check_models.check_models([pdbin], results)
+        process_models.check_models([pdbin], results)
         self.assertIsNotNone(results.error)
         
 
@@ -76,9 +75,9 @@ class Test(unittest.TestCase):
             f.write(h.as_pdb_string(anisou=False))
         pdbin = pdbout
         
-        results = check_models.CheckModelsResult()
+        results = process_models.CheckModelsResult()
         results.models_dir = outdir
-        check_models.check_models([pdbin], results)
+        process_models.check_models([pdbin], results)
         
         self.assertIsNone(results.error)
         self.assertTrue(results.single_structure)
@@ -94,7 +93,7 @@ class Test(unittest.TestCase):
         pdbdir = os.path.join(self.testfiles_dir, 'models')
         outdir = tempfile.mkdtemp(dir=os.path.abspath(os.curdir))
         
-        results = check_models.check_models_dir(pdbdir, outdir)
+        results = process_models.check_models_dir(pdbdir, outdir)
 
         self.assertIsNone(results.error)
         self.assertFalse(results.created_updated_models)
@@ -122,7 +121,7 @@ class Test(unittest.TestCase):
                 f.write("REMARK Original file:{}\n".format(pdbin))
                 f.write(h.as_pdb_string(anisou=False))
 
-        results = check_models.check_models_dir(indir, outdir)
+        results = process_models.check_models_dir(indir, outdir)
  
         self.assertIsNone(results.error)
         self.assertTrue(results.created_updated_models)
@@ -146,7 +145,7 @@ class Test(unittest.TestCase):
             pdb = os.path.join(indir, name)
             shutil.copy(pdbroot, pdb)
 
-        results = check_models.check_models_dir(indir, outdir)
+        results = process_models.check_models_dir(indir, outdir)
    
         self.assertIsNone(results.error)
         self.assertTrue(results.created_updated_models)
@@ -163,7 +162,7 @@ class Test(unittest.TestCase):
         pdbdir = os.path.join(self.ample_share, 'examples', 'homologs', 'input')
         outdir = os.curdir
         
-        results = check_models.check_models_dir(pdbdir, outdir)
+        results = process_models.check_models_dir(pdbdir, outdir)
         
         self.assertIsNone(results.error)
         self.assertTrue(results.homologs)
