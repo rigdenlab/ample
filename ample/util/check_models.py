@@ -1,5 +1,4 @@
 #!/usr/bin/env ccp4-python
-from cctbx.maptbx.tst_ccp import pdb_str
 __author__ = "Jens Thomas"
 
 import glob
@@ -54,7 +53,9 @@ def check_models(pdb_structures, results):
     assert results.models_dir is not None
     updated = False
     hierarchies = []
-    if len(pdb_structures) == 1:
+    ref_data = None
+    num_pdbs = len(pdb_structures)
+    if num_pdbs == 1:
         pdb = pdb_structures[0]
         hierarchy = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
         logger.debug("Processing a single input PDB file: {}".format(pdb))
@@ -80,8 +81,6 @@ def check_models(pdb_structures, results):
             hierarchies.append(hierarchy)
     else:
         # multiple pdb structures - get a list of chain_ids and sequences for all members
-        ref_data = None
-        num_pdbs = len(pdb_structures)
         multiple = [False] * num_pdbs # tracks if there are multiple chains in the models
         chains_match_across_pdbs = [False] * num_pdbs # do chains with the same index have the same sequence across pdbs?
         logger.debug("Processing {} input PDB files".format(num_pdbs))
@@ -96,24 +95,13 @@ def check_models(pdb_structures, results):
             hierarchies.append(h)
             seq_data = pdb_edit._sequence_data(h)
             if ref_data is None:
+                # Get sequence data for first pdb
                 ref_data = seq_data
                 if len(ref_data) > 1:
                     multiple[idx_pdb] = True
                 continue
-            # Check sequences match across chains with the first structure
-            all_chains_match = 0
-            for i, (rd, sd) in enumerate(zip(ref_data, seq_data)):
-                ref_seq = ref_data[rd][0]
-                seq = seq_data[sd][0]
-                if ref_seq == seq:
-                    all_chains_match += 1
-            if all_chains_match == len(ref_data):
-                chains_match_across_pdbs[idx_pdb] = True
-                if idx_pdb == 1:
-                    # if the second chain matches the first then the first matches 
-                    chains_match_across_pdbs[0] = True
-            if i > 0:
-                multiple[idx_pdb] = True
+            else:
+                check_sequences_match(ref_data, seq_data, idx_pdb, chains_match_across_pdbs, multiple)
         if any(multiple):
             logger.debug("Processing multichain pdbs")
             if sum(multiple) != len(multiple):
@@ -136,6 +124,7 @@ def check_models(pdb_structures, results):
         # We now have multiple structures, each with one chain - make sure they all have a chain.id
         chains_updated = pdb_edit.add_missing_single_chain_ids(hierarchies)
         updated = chains_updated | updated # see if anything has been updated
+
     if updated:
         # write out new files
         results.created_updated_models = True
@@ -146,6 +135,23 @@ def check_models(pdb_structures, results):
                 f.write("REMARK Original file:{}\n".format(pdb))
                 f.write(h.as_pdb_string(anisou=False))  
     return results
+
+
+def check_sequences_match(ref_data, seq_data, idx_pdb, chains_match_across_pdbs, multiple):
+    """Check whether chains with the same index across multiple pdbs have matching sequences."""
+    all_chains_match = 0
+    for i, (rd, sd) in enumerate(zip(ref_data, seq_data)):
+        ref_seq = ref_data[rd][0]
+        seq = seq_data[sd][0]
+        if ref_seq == seq:
+            all_chains_match += 1
+    if all_chains_match == len(ref_data):
+        chains_match_across_pdbs[idx_pdb] = True
+        if idx_pdb == 1:
+            # if the second chain matches the first then the first matches 
+            chains_match_across_pdbs[0] = True
+    if i > 0:
+        multiple[idx_pdb] = True
 
 
 def single_chain_models_with_same_sequence(hierarchy):
