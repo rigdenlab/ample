@@ -26,6 +26,7 @@ class CheckModelsResult():
         self.merged_chains = False
         self.models_dir = None
         self.single_structure = False
+        self.sequence = None # not used yet
 
     def __str__(self):
         attrs = [k for k in self.__dict__.keys() if not k.startswith('_')]
@@ -85,12 +86,13 @@ def extract_and_validate_models(amoptd):
     elif os.path.isdir(models_arg):
         models_dir_tmp = models_arg
 
-    if not amoptd['quark_models']:
+    if not ('quark_models' in amoptd and amoptd['quark_models']):
         results = check_models_dir(models_dir_tmp, models_dir_final)
         handle_model_import(amoptd, results)
 
     amoptd['models_dir'] = models_dir_final
-    return glob.glob(os.path.join(models_dir_final, "*.pdb"))
+    amoptd['models'] = glob.glob(os.path.join(models_dir_final, "*.pdb"))
+    return 
 
 def handle_model_import(amoptd, results):
     """Handle any errors flagged up by importing the models."""

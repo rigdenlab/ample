@@ -96,7 +96,9 @@ class Ample(object):
 
         # Modelling business happens here
         self.modelling(amopt.d, rosetta_modeller)
+        ample_util.save_amoptd(amopt)
         amopt.write_config_file()
+        self.process_models(amopt)
 
         # Ensembling business next
         if amopt.d['make_ensembles']:
@@ -253,7 +255,7 @@ class Ample(object):
         return
 
     def modelling(self, optd, rosetta_modeller=None):
-        if not (optd['import_models'] or optd['make_frags'] or optd['make_models'] or optd['nmr_remodel']):
+        if not (optd['make_frags'] or optd['make_models'] or optd['nmr_remodel']):
             return
         # Set the direcotry where the final models will end up
         optd['models_dir'] = os.path.join(optd['work_dir'], 'models')
@@ -329,28 +331,7 @@ class Ample(object):
                 except Exception as e:
                     msg = "Error running ROSETTA to create models: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
-                if not process_models.check_models_dir(optd['models_dir'], sequence=optd['sequence']):
-                    FPP
-                    msg = "Problem with rosetta pdb files - please check the log for more information"
-                    exit_util.exit_error(msg)
                 logger.info('Modelling complete - models stored in: %s\n', optd['models_dir'])
-
-        elif optd['import_models']:
-            logger.info('Importing models from directory: %s\n', optd['models_dir'])
-            if optd['homologs']:
-                optd['models'] = process_models.extract_and_validate_models(optd)
-            else:
-                optd['models'] = process_models.extract_and_validate_models(optd)
-                # Need to check if Quark and handle things accordingly
-                if optd['quark_models']:
-                    # We always add sidechains to QUARK models if SCWRL is installed
-                    if ample_util.is_exe(optd['scwrl_exe']):
-                        optd['use_scwrl'] = True
-                    else:
-                        # No SCWRL so don't do owt with the side chains
-                        logger.info('Using QUARK models but SCWRL is not installed '
-                                    'so only using %s sidechains', UNMODIFIED)
-                        optd['side_chain_treatments'] = [UNMODIFIED]
 
         # Sub-select the decoys using contact information
         if con_util and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
@@ -358,8 +339,6 @@ class Ample(object):
             subselect_data = con_util.subselect_decoys(optd['models'], 'pdb', mode=optd['subselect_mode'], **optd)
             optd['models'] = zip(*subselect_data)[0]
             optd['subselect_data'] = dict(subselect_data)
-            
-        ample_util.save_amoptd(optd)
 
     def molecular_replacement(self, optd):
         mrbump_util.set_success_criteria(optd)
@@ -443,6 +422,20 @@ class Ample(object):
         ample_util.save_amoptd(optd)
         summary = mrbump_util.finalSummary(optd)
         logger.info(summary)
+        
+    def process_models(self, optd):
+        process_models.extract_and_validate_models(optd)
+        # Need to check if Quark and handle things accordingly
+        if optd['quark_models']:
+            # We always add sidechains to QUARK models if SCWRL is installed
+            if ample_util.is_exe(optd['scwrl_exe']):
+                optd['use_scwrl'] = True
+            else:
+                # No SCWRL so don't do owt with the side chains
+                logger.info('Using QUARK models but SCWRL is not installed '
+                            'so only using %s sidechains', UNMODIFIED)
+                optd['side_chain_treatments'] = [UNMODIFIED]
+        ample_util.save_amoptd(optd)
 
     def setup(self, optd):
         """We take and return an ample dictionary as an argument.

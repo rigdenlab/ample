@@ -173,5 +173,68 @@ class Test(unittest.TestCase):
         self.assertFalse(results.single_structure)
 
 
+    def test_extract_and_validate_models(self):
+        mdir = os.path.join(self.testfiles_dir, 'models')
+        amoptd = {'models': mdir,
+                  'models_dir': mdir}
+        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+        process_models.extract_and_validate_models(amoptd)
+        models = amoptd['models']
+        self.assertEqual(len(models), 30)
+        self.assertEqual(amoptd['models_dir'], mdir)
+
+
+    def test_extract_and_validate_models_quark(self):
+        temp_dir = tempfile.mkdtemp(dir=os.getcwd())
+        amoptd = {'models' : os.path.join(self.testfiles_dir, 'result.tar.bz2'),
+                  'models_dir' : temp_dir,
+                  'work_dir' : '.'}
+        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+        process_models.extract_and_validate_models(amoptd)
+        models = amoptd['models']
+        self.assertTrue(amoptd['quark_models'])
+        self.assertEqual(len(models), 200)
+        shutil.rmtree(temp_dir)
+
+        
+    def test_extract_and_validate_models_quark_zip(self):
+        temp_dir = tempfile.mkdtemp(dir=os.getcwd())
+        amoptd = {'models' : os.path.join(self.testfiles_dir, 'result.zip'),
+                  'models_dir' : temp_dir,
+                  'work_dir' : '.'}
+        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+        process_models.extract_and_validate_models(amoptd)
+        models = amoptd['models']
+        self.assertTrue(amoptd['quark_models'])
+        self.assertEqual(len(models), 200)
+        shutil.rmtree(temp_dir)
+
+        
+    def test_extract_and_validate_models_quark_file(self):
+        temp_dir = tempfile.mkdtemp(dir=os.getcwd())
+        amoptd = {'models' : os.path.join(self.testfiles_dir, 'alldecoy.pdb'),
+                  'models_dir' : temp_dir,
+                  'work_dir' : '.'}
+        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+        process_models.extract_and_validate_models(amoptd)
+        models = amoptd['models']
+        self.assertTrue(amoptd['quark_models'])
+        self.assertEqual(len(models), 10)
+        shutil.rmtree(temp_dir)
+
+
+    def test_extract_and_validate_models_quark_old(self):
+        temp_dir = tempfile.mkdtemp(dir=os.getcwd())
+        amoptd = {'models' : os.path.join(self.testfiles_dir, 'decoys.tar.gz'),
+                  'models_dir' : temp_dir,
+                  'work_dir' : '.'}
+        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+        process_models.extract_and_validate_models(amoptd)
+        models = amoptd['models']
+        self.assertTrue(amoptd['quark_models'])
+        self.assertEqual(len(models), 200)
+        shutil.rmtree(temp_dir)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
