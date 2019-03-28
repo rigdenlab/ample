@@ -49,6 +49,7 @@ def check_models_dir(models_in_dir, models_out_dir):
 
 def check_models(pdb_structures, results):
     """Examine PDB files to determine their suitablilty for running with AMPLE."""
+    assert results.models_dir is not None
     updated = False
     hierarchies = []
     if len(pdb_structures) == 1:

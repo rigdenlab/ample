@@ -69,7 +69,7 @@ def add_missing_single_chain_ids(hierarchies, chain_id='A'):
     for h in hierarchies:
         for model in h.models():
             chain = model.only_chain()
-            if not (isinstance(chain.id, str) and len(chain.id) > 0):
+            if chain_id_is_blank(chain):
                 chain.id = chain_id
                 updated = True
     return updated
@@ -237,6 +237,10 @@ def check_pdbs(models, single=True, allsame=True, sequence=None):
 
     logger.critical(s)
     return False
+
+
+def chain_id_is_blank(chain):
+    return (isinstance(chain.id, str) and len(chain.id.strip()) == 0)
 
 
 def extract_chain(inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False, renumber=True):

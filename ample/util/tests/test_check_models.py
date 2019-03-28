@@ -5,6 +5,7 @@ __author__ = "Jens Thomas"
 import glob
 import iotbx.pdb
 import os
+import shutil
 import tempfile
 import unittest
 
@@ -25,7 +26,9 @@ class Test(unittest.TestCase):
         results = check_models.CheckModelsResult()
         check_models.check_models([pdbin], results)
         self.assertTrue(results.nmr)
+        
         self.assertIsNone(results.error)
+        self.assertFalse(results.created_updated_models)
         self.assertFalse(results.homolog)
         self.assertFalse(results.merged_chains)
         self.assertFalse(results.single_structure)
@@ -35,7 +38,9 @@ class Test(unittest.TestCase):
         results = check_models.CheckModelsResult()
         check_models.check_models([pdbin], results)
         self.assertTrue(results.single_structure)
+        
         self.assertIsNone(results.error)
+        self.assertFalse(results.created_updated_models)
         self.assertFalse(results.homolog)
         self.assertFalse(results.merged_chains)
         self.assertFalse(results.nmr)
@@ -45,7 +50,35 @@ class Test(unittest.TestCase):
         pdbin = os.path.join(self.testfiles_dir, '1K33.pdb')
         results = check_models.CheckModelsResult()
         check_models.check_models([pdbin], results)
-        self.assertTrue(results.error)
+        self.assertIsNotNone(results.error)
+        
+
+    def test_check_models_single_structure_merge_chains(self):
+        pdbin = os.path.join(self.testfiles_dir, '1K33_S_00000001.pdb')
+        outdir = tempfile.mkdtemp(dir=os.path.abspath(os.curdir))
+        
+        # write out pdb with no chain
+        h = iotbx.pdb.pdb_input(pdbin).construct_hierarchy()
+        for m in h.models():
+            for c in m.chains():
+                c.id = ''
+        pdbout = os.path.join(outdir, 'nochain_id.pdb')
+        with open(pdbout, 'w') as f:
+            f.write("REMARK Original file:{}\n".format(pdbin))
+            f.write(h.as_pdb_string(anisou=False))
+        pdbin = pdbout
+        
+        results = check_models.CheckModelsResult()
+        results.models_dir = outdir
+        check_models.check_models([pdbin], results)
+        self.assertTrue(results.single_structure)
+        self.assertTrue(results.created_updated_models)
+        
+        self.assertIsNone(results.error)
+        self.assertFalse(results.homolog)
+        self.assertFalse(results.merged_chains)
+        self.assertFalse(results.nmr)
+        shutil.rmtree(outdir)
 
     def Xtest_check_models_single_structure(self):
         pdbin = os.path.join(self.testfiles_dir, '1K33.pdb')
