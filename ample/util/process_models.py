@@ -23,10 +23,11 @@ class CheckModelsResult():
         self.error = None
         self.homologs = False
         self.nmr = False
+        self.num_models = 0
         self.merged_chains = False
         self.models_dir = None
         self.single_structure = False
-        self.sequence = None # not used yet
+        self.sequence = None
 
     def __str__(self):
         attrs = [k for k in self.__dict__.keys() if not k.startswith('_')]
@@ -62,6 +63,8 @@ def extract_and_validate_models(amoptd):
         return
     models_dir_final = amoptd['models_dir'] # the directory where the models need to end up
     pdb_suffixes = ['.pdb', '.PDB']
+    quark_models = False
+    num_quark_models = 0
 
     if os.path.isfile(models_arg):
         filepath = models_arg
@@ -82,19 +85,24 @@ def extract_and_validate_models(amoptd):
         quark_decoy = path_to_quark_alldecoy(pdb_files)
         if quark_decoy:
             # Quark decoys are processed by us so go straight into final directory without checking
-            split_quark_alldecoy(quark_decoy, models_dir_final)
-            amoptd['quark_models'] = True
+            num_quark_models = split_quark_alldecoy(quark_decoy, models_dir_final)
+            quark_models = True
+            amoptd['quark_models'] = quark_models
             shutil.rmtree(models_dir_tmp) # delete as contains uneeded files extracted from archive
     elif os.path.isdir(models_arg):
         models_dir_tmp = models_arg
 
-    if not ('quark_models' in amoptd and amoptd['quark_models']):
+    if quark_models:
+        # Null result - we extracted the models so assume are ok
+        results = CheckModelsResult()
+        results.num_models = num_quark_models
+    else:
         results = check_models_dir(models_dir_tmp, models_dir_final)
         handle_model_import(amoptd, results)
 
-    amoptd['models_dir'] = models_dir_final
-    amoptd['models'] = glob.glob(os.path.join(models_dir_final, "*.pdb"))
-    return 
+    amoptd['models_dir'] = results.models_dir
+    amoptd['models'] = glob.glob(os.path.join(results.models_dir, "*.pdb"))
+    return results
 
 def handle_model_import(amoptd, results):
     """Handle any errors flagged up by importing the models."""
@@ -103,9 +111,12 @@ def handle_model_import(amoptd, results):
         error_msg = "Error importing models: {}".format(results.error)
     elif results.homologs and not amoptd['homologs']:
         error_msg = "Imported models were not sequence identical, but homologs mode wasn't selected"
-
     if error_msg:
         exit_util.exit_error(error_msg)
+    
+    if results.nmr and results.num_models == 1 and amoptd['webserver_uri']:
+        logger.info("** Webserver mode got single NMR model so turning on NMR mode **")
+        amoptd['nmr_model_in'] = amoptd['models']
 
 
 def check_models_dir(models_in_dir, models_out_dir):
@@ -120,7 +131,7 @@ def check_models_dir(models_in_dir, models_out_dir):
     if not results.created_updated_models:
         # if the models were ok, we can just use as is
         results.models_dir = models_in_dir
-
+    logger.info("Using models from directory: %s" % results.models_dir )
     return results
     
 
@@ -202,6 +213,7 @@ def check_models(pdb_structures, results):
         chains_updated = pdb_edit.add_missing_single_chain_ids(hierarchies)
         updated = chains_updated | updated # see if anything has been updated
 
+    results.num_models = num_pdbs
     if updated:
         # write out new files
         results.created_updated_models = True
@@ -278,7 +290,6 @@ def split_quark_alldecoy(alldecoy, directory):
     if not len(smodels):
         raise RuntimeError("Could not extract any models from: {0}".format(alldecoy))
 
-    extracted_models = []
     for i, m in enumerate(smodels):
         fpath = os.path.join(directory, "quark_{0}.pdb".format(i))
         with open(fpath, 'w') as f:
@@ -288,7 +299,7 @@ def split_quark_alldecoy(alldecoy, directory):
                 if line.startswith("ATOM"):
                     line = line[:21] + 'A' + line[22:54] + "  1.00  0.00              \n"
                 f.write(line)
-            extracted_models.append(fpath)
             logger.debug("Wrote: %s", fpath)
-
-    return extracted_models
+    num_models = i + 1
+    logger.info("Extracted %d models from quark archive" % num_models)
+    return num_models

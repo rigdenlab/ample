@@ -80,7 +80,11 @@ class Ample(object):
                 return self.ample_output.display_results(amopt.d)
         else:
             monitor = None
-
+            
+        # Process any files we may have been given
+        model_results = process_models.extract_and_validate_models(amopt.d)
+        process_models.handle_model_import(amopt.d, model_results)
+        
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
             benchmark_util.analysePdb(amopt.d)
@@ -95,10 +99,10 @@ class Ample(object):
             logger.info('NMR ensemble contained {0} models'.format(len(amopt.d['models'])))
 
         # Modelling business happens here
-        self.modelling(amopt.d, rosetta_modeller)
-        ample_util.save_amoptd(amopt.d)
-        amopt.write_config_file()
-        self.process_models(amopt.d)
+        if self.modelling_required(amopt.d):
+            self.modelling(amopt.d, rosetta_modeller)
+            ample_util.save_amoptd(amopt.d)
+            amopt.write_config_file()
 
         # Ensembling business next
         if amopt.d['make_ensembles']:
@@ -185,7 +189,10 @@ class Ample(object):
         if purge_level >= 2:
             mrbump_util.purge_MRBUMP(optd)
         return
-        
+    
+    def modelling_required(self, optd):
+        return (optd['make_frags'] or optd['make_models'] or optd['nmr_remodel'])
+    
     def ensembling(self, optd):
         if optd['import_ensembles']:
             ensembler.import_ensembles(optd)
