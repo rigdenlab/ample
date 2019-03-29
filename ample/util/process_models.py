@@ -98,7 +98,6 @@ def extract_and_validate_models(amoptd):
         results.num_models = num_quark_models
     else:
         results = check_models_dir(models_dir_tmp, models_dir_final)
-        handle_model_import(amoptd, results)
 
     amoptd['models_dir'] = results.models_dir
     amoptd['models'] = glob.glob(os.path.join(results.models_dir, "*.pdb"))

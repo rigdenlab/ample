@@ -83,7 +83,8 @@ class Ample(object):
             
         # Process any files we may have been given
         model_results = process_models.extract_and_validate_models(amopt.d)
-        process_models.handle_model_import(amopt.d, model_results)
+        if model_results:
+            process_models.handle_model_import(amopt.d, model_results)
         
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
