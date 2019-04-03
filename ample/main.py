@@ -201,12 +201,6 @@ class Ample(object):
             ample_util.ideal_helices(optd)
             logger.info("*** Using ideal helices to solve structure ***")
         else:
-            # Import the models here instead of cluster_util.
-            if optd['cluster_method'] is 'import':
-                # HACK - this is certainly not how we want to do it. One flag for all (-models) in future
-                optd['models'] = optd['cluster_dir']
-                optd['models'] = process_models.extract_and_validate_models(optd)
-
             # Check we have some models to work with
             if not (optd['single_model_mode'] or optd['models']):
                 ample_util.save_amoptd(optd)

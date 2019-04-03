@@ -498,9 +498,6 @@ class RosettaModel(object):
         success = self.run_scripts(job_scripts=id_scripts, job_time=job_time, job_name='idealize', monitor=None)
         if not success:
             raise RuntimeError("Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(idealise_dir))
-        # Check all the pdbs were produced - don't check with the NMR sequence as idealise can remove some residues (eg. HIS - see examples/nmr.remodel)
-        if not pdb_edit.check_pdbs(id_pdbs, single=True, allsame=True):
-            raise RuntimeError("Error idealising models in directory: {0}\nInvalid models were produced!".format(idealise_dir))
         os.chdir(owd)
         return id_pdbs
 

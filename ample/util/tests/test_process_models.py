@@ -30,12 +30,16 @@ class Test(unittest.TestCase):
         process_models.check_models([pdbin], results)
         
         self.assertIsNone(results.error)
-        self.assertTrue(results.nmr)
+        self.assertTrue(results.ensemble)
+        self.assertEquals(results.sequence,
+                          'MNIFEMLRIDEGLRLKIYKDTEGYYTIGIGHLLTKSPSLNAAKSELDKAIGRNTNGVITKDEAEKLFNQDVDAAVRGILRNAKLKPVYDSLDAVRRAAAINMVFQMGETGVAAFTNSLPMLQQKRWDEAAVNLAKSRWYNQTPNRAKRVITTFRTGTWDAYKNL')
+        self.assertEqual(results.num_models, 10)
+        self.assertEqual(results.num_structures, 1)
+        self.assertEqual(results.single_ensemble, True)
         
         self.assertFalse(results.created_updated_models)
         self.assertFalse(results.homologs)
         self.assertFalse(results.merged_chains)
-        self.assertFalse(results.single_structure)
 
     def test_check_models_single_structure(self):
         pdbin = os.path.join(self.testfiles_dir, '1K33_S_00000001.pdb')
@@ -44,12 +48,13 @@ class Test(unittest.TestCase):
         process_models.check_models([pdbin], results)
         
         self.assertIsNone(results.error)
-        self.assertTrue(results.single_structure)
+        self.assertEqual(results.num_models, 1)
+        self.assertEqual(results.num_structures, 1)
         
         self.assertFalse(results.created_updated_models)
         self.assertFalse(results.homologs)
         self.assertFalse(results.merged_chains)
-        self.assertFalse(results.nmr)
+        self.assertFalse(results.ensemble)
 
     def test_check_models_single_structure_fail(self):
         """Should fail as has a non-protein chain present"""
@@ -80,12 +85,13 @@ class Test(unittest.TestCase):
         process_models.check_models([pdbin], results)
         
         self.assertIsNone(results.error)
-        self.assertTrue(results.single_structure)
+        self.assertEqual(results.num_models, 1)
+        self.assertEqual(results.num_structures, 1)
         self.assertTrue(results.created_updated_models)
         
         self.assertFalse(results.homologs)
         self.assertFalse(results.merged_chains)
-        self.assertFalse(results.nmr)
+        self.assertFalse(results.ensemble)
         shutil.rmtree(outdir)
 
 
@@ -94,13 +100,15 @@ class Test(unittest.TestCase):
         outdir = tempfile.mkdtemp(dir=os.path.abspath(os.curdir))
         
         results = process_models.check_models_dir(pdbdir, outdir)
+        self.assertEqual(results.num_models, 30)
+        self.assertEqual(results.num_structures, 30)
+        self.assertEquals(results.sequence, 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG')
 
         self.assertIsNone(results.error)
         self.assertFalse(results.created_updated_models)
         self.assertFalse(results.homologs)
         self.assertFalse(results.merged_chains)
-        self.assertFalse(results.nmr)
-        self.assertFalse(results.single_structure)
+        self.assertFalse(results.ensemble)
         os.rmdir(outdir)
         
 
@@ -124,12 +132,13 @@ class Test(unittest.TestCase):
         results = process_models.check_models_dir(indir, outdir)
  
         self.assertIsNone(results.error)
+        self.assertEqual(results.num_models, 30)
+        self.assertEqual(results.num_structures, 30)
         self.assertTrue(results.created_updated_models)
 
         self.assertFalse(results.homologs)
         self.assertFalse(results.merged_chains)
-        self.assertFalse(results.nmr)
-        self.assertFalse(results.single_structure)
+        self.assertFalse(results.ensemble)
         shutil.rmtree(indir)        
         shutil.rmtree(outdir)        
 
@@ -150,10 +159,11 @@ class Test(unittest.TestCase):
         self.assertIsNone(results.error)
         self.assertTrue(results.created_updated_models)
         self.assertTrue(results.merged_chains)
+        self.assertEqual(results.num_models, 3)
+        self.assertEqual(results.num_structures, 3)
 
         self.assertFalse(results.homologs)
-        self.assertFalse(results.nmr)
-        self.assertFalse(results.single_structure)
+        self.assertFalse(results.ensemble)
         shutil.rmtree(indir)        
         shutil.rmtree(outdir) 
 
@@ -166,11 +176,12 @@ class Test(unittest.TestCase):
         
         self.assertIsNone(results.error)
         self.assertTrue(results.homologs)
+        self.assertEqual(results.num_models, 3)
+        self.assertEqual(results.num_structures, 3)
 
         self.assertFalse(results.created_updated_models)
         self.assertFalse(results.merged_chains)
-        self.assertFalse(results.nmr)
-        self.assertFalse(results.single_structure)
+        self.assertFalse(results.ensemble)
 
 
     def test_extract_and_validate_models(self):

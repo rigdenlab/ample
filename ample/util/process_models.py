@@ -22,12 +22,16 @@ class CheckModelsResult():
         self.created_updated_models = False
         self.error = None
         self.homologs = False
-        self.nmr = False
-        self.num_models = 0
+        self.ensemble = False
         self.merged_chains = False
         self.models_dir = None
-        self.single_structure = False
+        self.num_structures = 0
+        self.num_models = 0
         self.sequence = None
+        
+    @property
+    def single_ensemble(self):
+        return self.num_structures == 1 and self.num_models > 1 and self.ensemble
 
     def __str__(self):
         attrs = [k for k in self.__dict__.keys() if not k.startswith('_')]
@@ -62,6 +66,10 @@ def extract_and_validate_models(amoptd):
     if models_arg is None:
         return
     models_dir_final = amoptd['models_dir'] # the directory where the models need to end up
+    if models_dir_final is None:
+        models_dir_final = os.path.join(amoptd['work_dir'], 'models')
+        logger.debug("Setting models_dir_final to: %s", models_dir_final)
+        amoptd['models_dir'] = models_dir_final
     pdb_suffixes = ['.pdb', '.PDB']
     quark_models = False
     num_quark_models = 0
@@ -91,11 +99,16 @@ def extract_and_validate_models(amoptd):
             shutil.rmtree(models_dir_tmp) # delete as contains uneeded files extracted from archive
     elif os.path.isdir(models_arg):
         models_dir_tmp = models_arg
+    elif isinstance(models_arg, list):
+        # Assume all models are in the same directory
+        models_dir = os.path.dirname(models_arg[0])
 
     if quark_models:
         # Null result - we extracted the models so assume are ok
         results = CheckModelsResult()
+        results.num_structures = num_quark_models
         results.num_models = num_quark_models
+        results.models_dir = models_dir_final
     else:
         results = check_models_dir(models_dir_tmp, models_dir_final)
 
@@ -113,13 +126,13 @@ def handle_model_import(amoptd, results):
     if error_msg:
         exit_util.exit_error(error_msg)
     
-    if results.nmr and results.num_models == 1 and amoptd['webserver_uri']:
+    if results.single_ensemble and amoptd['webserver_uri']:
         logger.info("** Webserver mode got single NMR model so turning on NMR mode **")
         amoptd['nmr_model_in'] = amoptd['models']
 
 
 def check_models_dir(models_in_dir, models_out_dir):
-    """Examine a directory of PDB files to determine their suitablilty for running with AMPLE."""
+    """Examine a directory of PDB files to determine their suitability for running with AMPLE."""
     assert os.path.isdir(models_in_dir)
     pdb_structures = glob.glob(os.path.join(models_in_dir, "*.pdb"))
     pdb_structures += glob.glob(os.path.join(models_in_dir, "*.PDB"))
@@ -141,20 +154,22 @@ def check_models(pdb_structures, results):
     updated = False
     hierarchies = []
     ref_data = None
-    num_pdbs = len(pdb_structures)
-    if num_pdbs == 1:
+    num_structures = len(pdb_structures)
+    if num_structures == 1:
         pdb = pdb_structures[0]
-        hierarchy = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
         logger.debug("Processing a single input PDB file: {}".format(pdb))
-        if len(hierarchy.models()) > 1:
-            # Assume NMR model so make sure all have 1 chain with the same sequence
+        hierarchy = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
+        num_models = len(hierarchy.models())
+        results.num_models = num_models
+        if num_models > 1:
             if not single_chain_models_with_same_sequence(hierarchy):
                 results.error = \
                 "Supplied with a single pdb file that contained multiple models with multiple or unmatching chains: {}"\
                     .format(pdb)
                 return results
             logger.debug("Found a single pdb with multiple models - assuming an NMR ensemble")
-            results.nmr = True
+            results.ensemble = True
+            results.sequence = pdb_edit.chain_sequence(hierarchy.models()[0].only_chain())
         else:
             logger.info("check_models found a single pdb with a single model")
             if not len(hierarchy.only_model().chains()) == 1:
@@ -162,15 +177,14 @@ def check_models(pdb_structures, results):
                     "Supplied with a single pdb file that contained a single model with multiple chains: {}"\
                     .format(pdb)
                 return results
-            results.single_structure = True
         updated = pdb_edit.add_missing_single_chain_ids(hierarchy)
         if updated:
             hierarchies.append(hierarchy)
     else:
         # multiple pdb structures - get a list of chain_ids and sequences for all members
-        multiple = [False] * num_pdbs # tracks if there are multiple chains in the models
-        chains_match_across_pdbs = [False] * num_pdbs # do chains with the same index have the same sequence across pdbs?
-        logger.debug("Processing {} input PDB files".format(num_pdbs))
+        multiple = [False] * num_structures # tracks if there are multiple chains in the models
+        chains_match_across_pdbs = [False] * num_structures # do chains with the same index have the same sequence across pdbs?
+        logger.debug("Processing {} input PDB files".format(num_structures))
         for idx_pdb, pdb in enumerate(pdb_structures):
             h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
             if len(h.models()) > 1:
@@ -189,6 +203,8 @@ def check_models(pdb_structures, results):
                 continue
             else:
                 check_sequences_match(ref_data, seq_data, idx_pdb, chains_match_across_pdbs, multiple)
+            # We now have a list of single-model structures
+            results.num_models = num_structures
         if any(multiple):
             logger.debug("Processing multichain pdbs")
             if sum(multiple) != len(multiple):
@@ -208,11 +224,14 @@ def check_models(pdb_structures, results):
             if sum(chains_match_across_pdbs) != len(chains_match_across_pdbs):
                 logger.debug("Chains don't match across pdbs so assuming homologs")
                 results.homologs = True
+            else:
+                # All have the same sequence
+                results.sequence = pdb_edit.chain_sequence(hierarchies[0].only_model().only_chain())
         # We now have multiple structures, each with one chain - make sure they all have a chain.id
         chains_updated = pdb_edit.add_missing_single_chain_ids(hierarchies)
         updated = chains_updated | updated # see if anything has been updated
 
-    results.num_models = num_pdbs
+    results.num_structures = num_structures
     if updated:
         # write out new files
         results.created_updated_models = True
@@ -275,6 +294,8 @@ def split_quark_alldecoy(alldecoy, directory):
 
     """
     logger.info("Extracting decoys from: %s into %s", alldecoy, directory)
+    if not os.path.isdir(directory):
+        os.mkdir(directory)
     smodels = []
     with open(alldecoy, 'r') as f:
         m = []

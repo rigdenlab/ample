@@ -10,7 +10,7 @@ import sys
 
 from ample.constants import AMPLE_PKL
 from ample import ensembler
-from ample.util import ample_util, config_util, exit_util, logging_util
+from ample.util import ample_util, config_util, exit_util, logging_util, process_models
 from ample.util import argparse_util
 from ample.util.options_processor import process_ensemble_options
 
@@ -69,7 +69,8 @@ assert os.path.isdir(optd['work_dir'])
 logging_util.setup_file_logging(os.path.join(optd['work_dir'], "ensemble.log"))
 try:
     if not restart:
-        optd['models'] = ample_util.extract_and_validate_models(optd)
+        results = process_models.extract_and_validate_models(optd)
+        process_models.handle_model_import(optd, results)
         process_ensemble_options(optd)
         optd['ensemble_ok'] = os.path.join(optd['work_dir'], 'ensemble.ok')
         optd['results_path'] = os.path.join(optd['work_dir'], AMPLE_PKL)

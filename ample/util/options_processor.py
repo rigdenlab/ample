@@ -244,10 +244,12 @@ def process_modelling_options(optd):
     elif optd['cluster_dir']:
         if not os.path.isdir(optd['cluster_dir']):
             raise RuntimeError("Import cluster cannot find directory: {0}".format(optd['cluster_dir']))
-        if not glob.glob(os.path.join(optd['cluster_dir'], "*.pdb")):
+        models = glob.glob(os.path.join(optd['cluster_dir'], "*.pdb"))
+        if not models:
             raise RuntimeError("Import cluster cannot find pdbs in directory: {0}".format(optd['cluster_dir']))
-        logger.info("Importing pre-clustered models from directory: %d\n", optd['cluster_dir'])
+        logger.info("Importing pre-clustered models from directory: %s\n", optd['cluster_dir'])
         optd['cluster_method'] = 'import'
+        optd['models'] = optd['cluster_dir']
         optd['make_frags'] = False
         optd['make_models'] = False
     elif optd['ideal_helices']:

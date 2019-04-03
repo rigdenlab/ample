@@ -319,13 +319,13 @@ def import_ensembles(amoptd):
        A list of absolute files paths of the ensembles
 
     """
-    if not pdb_edit.check_pdb_directory(amoptd['ensembles'], single=False):
-        msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles'])
-        exit_util.exit_error(msg)
 
     logger.info("Importing ensembles from directory: {0}".format(amoptd['ensembles']))
 
     ensembles = glob.glob(os.path.join(amoptd['ensembles'], '*.pdb'))
+    if not len(ensembles):
+        msg = "Cannot import ensembles from the directory: {0}".format(amoptd['ensembles'])
+        exit_util.exit_error(msg)
     amoptd['ensembles'] = ensembles
 
     # get the data on the ensemble
