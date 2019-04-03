@@ -71,8 +71,6 @@ def extract_and_validate_models(amoptd):
         logger.debug("Setting models_dir_final to: %s", models_dir_final)
         amoptd['models_dir'] = models_dir_final
     pdb_suffixes = ['.pdb', '.PDB']
-    quark_models = False
-    num_quark_models = 0
 
     if os.path.isfile(models_arg):
         filepath = models_arg
@@ -94,8 +92,10 @@ def extract_and_validate_models(amoptd):
         if quark_decoy:
             # Quark decoys are processed by us so go straight into final directory without checking
             num_quark_models = split_quark_alldecoy(quark_decoy, models_dir_final)
-            quark_models = True
-            amoptd['quark_models'] = quark_models
+            amoptd['quark_models'] = True
+            results = CheckModelsResult() # Null result - we extracted the models so assume are ok
+            results.models_dir = models_dir_final
+            results.num_models = num_quark_models
             shutil.rmtree(models_dir_tmp) # delete as contains uneeded files extracted from archive
     elif os.path.isdir(models_arg):
         models_dir_tmp = models_arg
