@@ -71,6 +71,8 @@ def extract_and_validate_models(amoptd):
         logger.debug("Setting models_dir_final to: %s", models_dir_final)
         amoptd['models_dir'] = models_dir_final
     pdb_suffixes = ['.pdb', '.PDB']
+    quark_models = False
+    num_quark_models = 0
 
     if os.path.isfile(models_arg):
         filepath = models_arg
@@ -88,10 +90,10 @@ def extract_and_validate_models(amoptd):
         else:
             raise RuntimeError("Do not know how to handle input models file: {}".format(filepath))
         # See if we have an alldecoy.pdb file
-        quark_decoy = path_to_quark_alldecoy(pdb_files)
-        if quark_decoy:
+        quark_models = path_to_quark_alldecoy(pdb_files)
+        if quark_models:
             # Quark decoys are processed by us so go straight into final directory without checking
-            num_quark_models = split_quark_alldecoy(quark_decoy, models_dir_final)
+            num_quark_models = split_quark_alldecoy(quark_models, models_dir_final)
             amoptd['quark_models'] = True
             results = CheckModelsResult() # Null result - we extracted the models so assume are ok
             results.models_dir = models_dir_final
