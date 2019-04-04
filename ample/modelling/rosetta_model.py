@@ -508,7 +508,10 @@ class RosettaModel(object):
         name,ext=os.path.splitext(fname)
         return os.path.join(directory,"{0}_0001{1}".format(name,ext))
 
-    def model_from_flagsfile(self, flagsfile, rosetta_binary=None, job_time=43200):
+    def model_from_flagsfile(self, 
+                             flagsfile,
+                             rosetta_binary=None,
+                             job_time=43200):
         """Run ROSETTA modelling from a flagsfile"""
         assert os.path.isfile(flagsfile), "Cannot find ROSETTA flagsfile: {}".format(flagsfile)
         # Remember starting directory
@@ -535,11 +538,12 @@ class RosettaModel(object):
             dir_list.append(d)
             script = """#!/bin/bash
 {} \\
+-database {} \\
 @{} \\
 -out:nstruct {} \\
 -run:constant_seed \\
 -run:jran {}
-""".format(rosetta_binary, flagsfile, njobs, seeds[i])
+""".format(rosetta_binary, self.rosetta_db, flagsfile, njobs, seeds[i])
             sname = os.path.join(d, "model_{0}.sh".format(i))
             with open(sname, 'w') as w:
                 w.write(script)
