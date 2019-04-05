@@ -17,6 +17,19 @@ from ample.util import exit_util
 logger = logging.getLogger(__name__)
 
 
+"""
+Pipeline
+
+* models come in in 'models' arg
+* process and potentially refactor into 'processed_models'
+* may process those models again (e.g. NMR) - go again into 'processed_models'
+* models may be a cluster
+* models may go forward to ensembling
+* models go into MR
+
+"""
+
+
 class CheckModelsResult():
     def __init__(self):
         self.created_updated_models = False
@@ -115,11 +128,12 @@ def extract_and_validate_models(amoptd):
         results = check_models_dir(models_dir_tmp, models_dir_final)
 
     amoptd['models_dir'] = results.models_dir
-    amoptd['models'] = glob.glob(os.path.join(results.models_dir, "*.pdb"))
+    amoptd['processed_models'] = glob.glob(os.path.join(results.models_dir, "*.pdb"))
     return results
 
+
 def handle_model_import(amoptd, results):
-    """Handle any errors flagged up by importing the models."""
+    """Handle any errors flagged up by importing models and set any options based on the type of models."""
     error_msg = None
     if results.error:
         error_msg = "Error importing models: {}".format(results.error)
@@ -130,7 +144,10 @@ def handle_model_import(amoptd, results):
     
     if results.single_ensemble and amoptd['webserver_uri']:
         logger.info("** Webserver mode got single NMR model so turning on NMR mode **")
-        amoptd['nmr_model_in'] = amoptd['models']
+        amoptd['nmr_model_in'] = amoptd['processed_models']
+    elif results.homologs and amoptd['webserver_uri']:
+        logger.info("** Webserver mode got a directory of homologs so turning on Homolog mode **")
+        amoptd['homologs'] = True
 
 
 def check_models_dir(models_in_dir, models_out_dir):

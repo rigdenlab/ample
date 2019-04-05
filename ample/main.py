@@ -95,9 +95,9 @@ class Ample(object):
             nmr_mdir = os.path.join(amopt.d['work_dir'], 'nmr_models')
             amopt.d['modelling_workdir'] = nmr_mdir
             logger.info('Splitting NMR ensemble into constituent models in directory: {0}'.format(nmr_mdir))
-            amopt.d['models'] = pdb_edit.split_pdb(
+            amopt.d['processed_models'] = pdb_edit.split_pdb(
                 amopt.d['nmr_model_in'], directory=nmr_mdir, strip_hetatm=True, same_size=True)
-            logger.info('NMR ensemble contained {0} models'.format(len(amopt.d['models'])))
+            logger.info('NMR ensemble contained {0} models'.format(len(amopt.d['processed_models'])))
 
         # Modelling business happens here
         if self.modelling_required(amopt.d):
@@ -202,7 +202,7 @@ class Ample(object):
             logger.info("*** Using ideal helices to solve structure ***")
         else:
             # Check we have some models to work with
-            if not (optd['single_model_mode'] or optd['models']):
+            if not (optd['single_model_mode'] or optd['processed_models']):
                 ample_util.save_amoptd(optd)
                 msg = "ERROR! Cannot find any pdb files in: {0}".format(optd['models_dir'])
                 exit_util.exit_error(msg)
@@ -318,8 +318,8 @@ class Ample(object):
             logger.info('----- making Rosetta models--------')
             if optd['nmr_remodel']:
                 try:
-                    optd['models'] = rosetta_modeller.nmr_remodel(
-                        models=optd['models'],
+                    optd['processed_models'] = rosetta_modeller.nmr_remodel(
+                        models=optd['processed_models'],
                         ntimes=optd['nmr_process'],
                         alignment_file=optd['alignment_file'],
                         remodel_fasta=optd['nmr_remodel_fasta'])
@@ -329,7 +329,7 @@ class Ample(object):
             else:
                 logger.info('making %s models...', optd['nmodels'])
                 try:
-                    optd['models'] = rosetta_modeller.ab_initio_model()
+                    optd['processed_models'] = rosetta_modeller.ab_initio_model()
                 except Exception as e:
                     msg = "Error running ROSETTA to create models: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
@@ -339,7 +339,7 @@ class Ample(object):
         if con_util and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
             logger.info('Subselecting models from directory using ' 'provided contact information')
             subselect_data = con_util.subselect_decoys(optd['models'], 'pdb', mode=optd['subselect_mode'], **optd)
-            optd['models'] = zip(*subselect_data)[0]
+            optd['processed_models'] = zip(*subselect_data)[0]
             optd['subselect_data'] = dict(subselect_data)
 
     def molecular_replacement(self, optd):

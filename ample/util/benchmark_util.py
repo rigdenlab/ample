@@ -253,7 +253,7 @@ def analyse(amoptd, newroot=None):
             for centroid_model in centroid_models:
                 n = os.path.splitext(os.path.basename(centroid_model))[0]
                 cm = None
-                for pdb in amoptd['models']:
+                for pdb in amoptd['processed_models']:
                     if n.startswith(os.path.splitext(os.path.basename(pdb))[0]):
                         cm = pdb
                         break

@@ -49,7 +49,7 @@ else:
 logging_util.setup_console_logging()
 
 # Make sure we have models if in standalone mode
-if not restart and not ('models' in optd and optd['models'] and os.path.exists(optd['models'])):
+if not restart and not ('processed_models' in optd and optd['processed_models'] and os.path.exists(optd['processed_models'])):
     msg = 'AMPLE ensembler requires a -models argument with a file/directory of pdbs'
     exit_util.exit_error(msg, sys.exc_info()[2])
 

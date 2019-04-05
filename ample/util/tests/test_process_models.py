@@ -188,10 +188,9 @@ class Test(unittest.TestCase):
         mdir = os.path.join(self.testfiles_dir, 'models')
         amoptd = {'models': mdir,
                   'models_dir': mdir}
-        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+#         sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
         process_models.extract_and_validate_models(amoptd)
-        models = amoptd['models']
-        self.assertEqual(len(models), 30)
+        self.assertEqual(len(amoptd['processed_models']), 30)
         self.assertEqual(amoptd['models_dir'], mdir)
 
 
@@ -200,11 +199,10 @@ class Test(unittest.TestCase):
         amoptd = {'models' : os.path.join(self.testfiles_dir, 'result.tar.bz2'),
                   'models_dir' : temp_dir,
                   'work_dir' : '.'}
-        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+#         sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
         process_models.extract_and_validate_models(amoptd)
-        models = amoptd['models']
         self.assertTrue(amoptd['quark_models'])
-        self.assertEqual(len(models), 200)
+        self.assertEqual(len(amoptd['processed_models']), 200)
         shutil.rmtree(temp_dir)
 
         
@@ -213,11 +211,10 @@ class Test(unittest.TestCase):
         amoptd = {'models' : os.path.join(self.testfiles_dir, 'result.zip'),
                   'models_dir' : temp_dir,
                   'work_dir' : '.'}
-        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+#         sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
         process_models.extract_and_validate_models(amoptd)
-        models = amoptd['models']
         self.assertTrue(amoptd['quark_models'])
-        self.assertEqual(len(models), 200)
+        self.assertEqual(len(amoptd['processed_models']), 200)
         shutil.rmtree(temp_dir)
 
         
@@ -226,11 +223,10 @@ class Test(unittest.TestCase):
         amoptd = {'models' : os.path.join(self.testfiles_dir, 'alldecoy.pdb'),
                   'models_dir' : temp_dir,
                   'work_dir' : '.'}
-        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+#         sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
         process_models.extract_and_validate_models(amoptd)
-        models = amoptd['models']
         self.assertTrue(amoptd['quark_models'])
-        self.assertEqual(len(models), 10)
+        self.assertEqual(len(amoptd['processed_models']), 10)
         shutil.rmtree(temp_dir)
 
 
@@ -239,11 +235,10 @@ class Test(unittest.TestCase):
         amoptd = {'models' : os.path.join(self.testfiles_dir, 'decoys.tar.gz'),
                   'models_dir' : temp_dir,
                   'work_dir' : '.'}
-        sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
+#         sequence = 'QPRRKLCILHRNPGRCYDKIPAFYYNQKKKQCERFDWSGCGGNSNRFKTIEECRRTCIG'
         process_models.extract_and_validate_models(amoptd)
-        models = amoptd['models']
         self.assertTrue(amoptd['quark_models'])
-        self.assertEqual(len(models), 200)
+        self.assertEqual(len(amoptd['processed_models']), 200)
         shutil.rmtree(temp_dir)
 
 
