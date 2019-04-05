@@ -103,7 +103,7 @@ def extract_and_validate_models(amoptd):
         models_dir_tmp = models_arg
     elif isinstance(models_arg, list):
         # Assume all models are in the same directory
-        models_dir = os.path.dirname(models_arg[0])
+        models_dir_tmp = os.path.dirname(models_arg[0])
 
     if quark_models:
         # Null result - we extracted the models so assume are ok
@@ -181,6 +181,7 @@ def check_models(pdb_structures, results):
                 return results
         updated = pdb_edit.add_missing_single_chain_ids(hierarchy)
         if updated:
+            logger.critical("Added missing chain IDs to models")
             hierarchies.append(hierarchy)
     else:
         # multiple pdb structures - get a list of chain_ids and sequences for all members
@@ -191,7 +192,7 @@ def check_models(pdb_structures, results):
             h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
             if len(h.models()) > 1:
                 # Assume an NMR ensemble so just extract the first member as representative of all
-                logger.info("Multiple models in pdb {}. Assuming NMR ensemble so extracting first model".format(pdb))
+                logger.critical("Multiple models in pdb {}. Assuming NMR ensemble so extracting first model".format(pdb))
                 h = iotbx.pdb.hierarchy.root()
                 h.append_model((h.models()[0].detached_copy()))
                 updated = True
@@ -210,10 +211,10 @@ def check_models(pdb_structures, results):
         if any(multiple):
             logger.debug("Processing multichain pdbs")
             if sum(multiple) != len(multiple):
-                results.error = "check_models: given multiple models, but not all had multiple chains"
+                results.error = "check_models: given multiple structures, but only some had multiple chains: need all chains to correspond"
                 return results
             if sum(chains_match_across_pdbs) != len(chains_match_across_pdbs):
-                results.error = "check_models: given multiple models with multiple chains, but chains did not match across pdbs"
+                results.error = "check_models: given multiple structures with multiple chains, but chains did not match across pdbs: need all chains to correspond"
                 return results
             # merge all chains
             for i, h in enumerate(hierarchies):
@@ -231,10 +232,13 @@ def check_models(pdb_structures, results):
                 results.sequence = pdb_edit.chain_sequence(hierarchies[0].only_model().only_chain())
         # We now have multiple structures, each with one chain - make sure they all have a chain.id
         chains_updated = pdb_edit.add_missing_single_chain_ids(hierarchies)
+        if chains_updated:
+            logger.critical("Added missing chain IDs to models")
         updated = chains_updated | updated # see if anything has been updated
 
     results.num_structures = num_structures
     if updated:
+        logger.critical("Updated models have been created to ensure their suitability for running with AMPLE.")
         # write out new files
         results.created_updated_models = True
         for pdb, h in zip(pdb_structures, hierarchies):

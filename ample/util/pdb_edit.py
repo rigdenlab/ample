@@ -646,11 +646,12 @@ def _merge_chains(hierarchy, chains=None):
             continue
         for r in chain.residue_groups():
             root_chain.append_residue_group(r.detached_copy())
-
+        
     new_model = iotbx.pdb.hierarchy.model()
     new_model.append_chain(root_chain)
     new_hierarchy = iotbx.pdb.hierarchy.root()
     new_hierarchy.append_model((new_model))     
+    _renumber(new_hierarchy)
         
     return new_hierarchy
 
@@ -891,10 +892,13 @@ def renumber_residues(pdbin, pdbout, start=1):
     return
 
 
-def _renumber(hierarchy, start):
+def _renumber(hierarchy, start=None):
     for model in hierarchy.models():
         for chain in model.chains():
             for idx, residue_group in enumerate(chain.residue_groups()):
+                if start is None:
+                    start = int(residue_group.resseq)
+                    continue
                 residue_group.resseq = idx + start
     return
 

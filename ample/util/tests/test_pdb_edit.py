@@ -611,30 +611,40 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
 
         # Count up all protein residue groups in source
         chains = ['C', 'A']
-        nres1 = 0
-        nres2 = 0
+        nres_total = 0
+        nres_selected_chains = 0
         for c in h1.only_model().chains():
             if not c.is_protein():
                 continue
             nresidues = c.residue_groups_size()
-            nres1 += nresidues
+            nres_total += nresidues
             if c.id in chains:
-                nres2 += nresidues
+                nres_selected_chains += nresidues
 
         h2 = pdb_edit._merge_chains(h1)
         # Check all have been merged
         self.assertEqual(1, h2.models_size())
         m = h2.only_model()
         self.assertEqual(1, len(m.chains()))
-        self.assertEqual(nres1, m.only_chain().residue_groups_size())
-        
+        self.assertEqual(nres_total, m.only_chain().residue_groups_size())
+                
         
         h2 = pdb_edit._merge_chains(h1, chains=['C', 'A'])
         # Check all have been merged
         self.assertEqual(1, h2.models_size())
         m = h2.only_model()
         self.assertEqual(1, len(m.chains()))
-        self.assertEqual(nres2, m.only_chain().residue_groups_size())
+        self.assertEqual(nres_selected_chains, m.only_chain().residue_groups_size())
+        
+        # Check residues have been renumbered
+        chain = m.only_chain()
+        start = None
+        for idx, residue_group in enumerate(chain.residue_groups()):
+            if start is None:
+                start = int(residue_group.resseq)
+                continue
+            self.assertGreater(residue_group.resseq, idx + start, "Residue numbers dont' increase through chain")
+
         
     def test_translate_1(self):
         ftranslate = [1, 2, -1]
