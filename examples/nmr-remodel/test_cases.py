@@ -39,7 +39,7 @@ if not sys.platform.startswith('win'):
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
     class AMPLETest(AMPLEBaseTest):
         def test_nmr_remodel(self):
-            self.assertEqual(len(self.AMPLE_DICT['models']), 20)
+            self.assertEqual(len(self.AMPLE_DICT['processed_models']), 20)
             self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
             return
             

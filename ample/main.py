@@ -338,7 +338,7 @@ class Ample(object):
         # Sub-select the decoys using contact information
         if con_util and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
             logger.info('Subselecting models from directory using ' 'provided contact information')
-            subselect_data = con_util.subselect_decoys(optd['models'], 'pdb', mode=optd['subselect_mode'], **optd)
+            subselect_data = con_util.subselect_decoys(optd['processed_models'], 'pdb', mode=optd['subselect_mode'], **optd)
             optd['processed_models'] = zip(*subselect_data)[0]
             optd['subselect_data'] = dict(subselect_data)
 

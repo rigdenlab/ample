@@ -51,7 +51,7 @@ if not sys.platform.startswith('win'):
             # Can't guarantee that this case will succeed as it fails ~ 40% of the time
             #self.assertTrue(self.AMPLE_DICT['success'])
             SHELXE_CC = 15 # use lower as we can't guarantee it will succeed but should check something sensible is produced
-            self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], SHEXLE_CC,"SHELXE_CC criteria not met")
+            self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], SHELXE_CC,"SHELXE_CC criteria not met")
 
     TEST_DICT['rosetta_modelling'] = {
         'args': args_rosetta_modelling,
@@ -96,7 +96,7 @@ class AMPLETest(AMPLEBaseTest):
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
         self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
         SHELXE_CC = 15 # use lower as we can't guarantee it will succeed but should check something sensible is produced
-        self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], SHEXLE_CC,"SHELXE_CC criteria not met")
+        self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], SHELXE_CC,"SHELXE_CC criteria not met")
         # Check some random benchmarking data
         self.assertTrue(os.path.isfile(os.path.join(self.AMPLE_DICT['benchmark_dir'],'results.csv')),"Missing benchmark results.csv")
         result = self.AMPLE_DICT['benchmark_results'][0]

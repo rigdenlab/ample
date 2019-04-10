@@ -37,7 +37,7 @@ if not sys.platform.startswith('win'):
     
     class AMPLETest(AMPLEBaseTest):
         def test_missing_domain(self):
-            self.assertEquals(len(self.AMPLE_DICT['models']), 100)
+            self.assertEquals(len(self.AMPLE_DICT['processed_models']), 100)
             return
     
     # Add everything to the test_dict - the key is used to name the script and run directory
