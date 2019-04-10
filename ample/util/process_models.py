@@ -144,7 +144,7 @@ def handle_model_import(amoptd, results):
     
     if results.single_ensemble and amoptd['webserver_uri']:
         logger.info("** Webserver mode got single NMR model so turning on NMR mode **")
-        amoptd['nmr_model_in'] = amoptd['processed_models']
+        amoptd['nmr_model_in'] = amoptd['processed_models'][0]
     elif results.homologs and amoptd['webserver_uri']:
         logger.info("** Webserver mode got a directory of homologs so turning on Homolog mode **")
         amoptd['homologs'] = True
