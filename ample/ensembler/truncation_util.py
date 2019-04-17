@@ -332,8 +332,8 @@ class Truncator(object):
         for tlevel, tvar, tresidues, tresidue_idxs in zip(truncation_levels, truncation_variances, truncation_residues,
                                                           truncation_residue_idxs):
             # Prune singletone/doubletone etc. residues if required
-            logger.debug("truncation_pruning: %s", truncation_pruning)
             if truncation_pruning == 'single':
+                logger.debug("truncation_pruning: %s", truncation_pruning)
                 tresidue_idxs, pruned_residues = prune_residues(tresidue_idxs, chunk_size=1, allowed_gap=2)
                 if pruned_residues:
                     logger.debug("prune_residues removing: %s", pruned_residues)
