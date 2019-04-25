@@ -183,17 +183,17 @@ def check_models(pdb_structures, results):
         if num_models > 1:
             if not single_chain_models_with_same_sequence(hierarchy):
                 results.error = \
-                "Supplied with a single pdb file that contained multiple models with multiple or unmatching chains: {}"\
+                "Supplied with a single PDB file that contained multiple models with multiple or unmatching chains: {}"\
                     .format(pdb)
                 return results
-            logger.debug("Found a single pdb with multiple models - assuming an NMR ensemble")
+            logger.debug("Found a single PDB with multiple models - assuming an NMR ensemble")
             results.ensemble = True
             results.sequence = pdb_edit.chain_sequence(hierarchy.models()[0].only_chain())
         else:
             logger.info("check_models found a single pdb with a single model")
             if not len(hierarchy.only_model().chains()) == 1:
                 results.error = \
-                    "Supplied with a single pdb file that contained a single model with multiple chains: {}"\
+                    "Supplied with a single PDB file that contained a single model with multiple chains: {}"\
                     .format(pdb)
                 return results
         updated = pdb_edit.add_missing_single_chain_ids(hierarchy)
@@ -226,7 +226,7 @@ def check_models(pdb_structures, results):
             # We now have a list of single-model structures
             results.num_models = num_structures
         if any(multiple):
-            logger.debug("Processing multichain pdbs")
+            logger.debug("Processing multichain PDBs")
             if sum(multiple) != len(multiple):
                 results.error = "check_models: given multiple structures, but only some had multiple chains: need all chains to correspond"
                 return results
@@ -237,10 +237,11 @@ def check_models(pdb_structures, results):
             for i, h in enumerate(hierarchies):
                 hierarchies[i] = pdb_edit._merge_chains(h)
             results.merged_chains = True
+            logger.debug("Multi-chain PDB files were merged to a single chain.")
             updated = True
         else:
             # multiple single-chain pdbs - are they homologs?
-            logger.debug("Processing single-chain pdbs")
+            logger.debug("Processing single-chain PDBs")
             if sum(chains_match_across_pdbs) != len(chains_match_across_pdbs):
                 logger.debug("Chains don't match across pdbs so assuming homologs")
                 results.homologs = True
