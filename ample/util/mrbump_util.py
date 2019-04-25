@@ -198,13 +198,22 @@ class ResultsSummary(object):
                 purged_results[d['ensemble_name']] = d
         return purged_results
 
-    def extractResults(self, mrbump_dir, purge=False):
+    def extractResults(self, mrbump_dir, purge=False, debugPrint=False):
         if not mrbump_dir or not os.path.isdir(mrbump_dir):
             raise RuntimeError("Cannot find mrbump_dir: {0}".format(mrbump_dir))
         purged_results = {}
         if purge:
             purged_results = self._extractPurged(mrbump_dir)
+        originalLogLevel = None
+        if not debugPrint:
+            # turn off debug prints as they swamp logfiles when constantly checking MRBUMP directories while running jobs
+            if logger.getEffectiveLevel() <= logging.DEBUG:
+                originalLogLevel = logger.level
+                logger.setLevel(logging.WARNING)
         self._extractResults(mrbump_dir, archived_ensembles=purged_results.keys())
+        if originalLogLevel is not None:
+            # changed loglevel so reset it
+            logger.setLevel(originalLogLevel)
         if purge:
             self._purgeFailed()
             self.results += purged_results.values()
@@ -409,9 +418,9 @@ class ResultsSummary(object):
             results.sort(key=sortf, reverse=reverse)
         return results
 
-    def summariseResults(self, mrbump_dir):
+    def summariseResults(self, mrbump_dir, debugPrint=True):
         """Return a string summarising the results"""
-        results = self.extractResults(mrbump_dir)
+        results = self.extractResults(mrbump_dir, debugPrint=debugPrint)
         if len(results):
             return self.summaryString()
         else:
@@ -683,13 +692,13 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
     return script_path
 
 if __name__ == "__main__":
-    if not len(sys.argv) == 2: 
-        mrbump_dir = os.getcwd()
-    else:
+    if len(sys.argv) >= 2: 
         mrbump_dir = os.path.join(os.getcwd(), sys.argv[1])
+    else:
+        mrbump_dir = os.getcwd()
         
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
     r = ResultsSummary()
-    print(r.summariseResults(mrbump_dir))
+    print(r.summariseResults(mrbump_dir, debugPrint=True))
