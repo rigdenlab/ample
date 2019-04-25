@@ -258,6 +258,8 @@ def check_models(pdb_structures, results):
         logger.critical("Updated models have been created to ensure their suitability for running with AMPLE.")
         # write out new files
         results.created_updated_models = True
+        if not os.path.isdir(results.models_dir):
+            os.mkdir(results.models_dir)
         for pdb, h in zip(pdb_structures, hierarchies):
             basename = os.path.basename(pdb)
             pdbout = os.path.join(results.models_dir, basename)
