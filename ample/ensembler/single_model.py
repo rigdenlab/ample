@@ -150,8 +150,8 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         
         :returns: zipped list of residue index plus score
         """
-        assert residue_key in scores[0], "Cannot find residue key \'{}\' in scoresfile header: {}".format(residue_key, scores[0])
-        assert score_key in scores[0], "Cannot find score key \'{}\' in scoresfile header: {}".format(score_key, scores[0])
+        assert residue_key in scores[0], "Cannot find residue key {} in scoresfile header: {}".format(residue_key, scores[0])
+        assert score_key in scores[0], "Cannot find score key {} in scoresfile header: {}".format(score_key, scores[0])
         return [(i[residue_key], i[score_key]) for i in scores]
 
     @staticmethod

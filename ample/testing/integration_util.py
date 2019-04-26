@@ -60,9 +60,8 @@ class AMPLEBaseTest(TestCase):
         try:
             self.AMPLE_DICT = ample_util.read_amoptd(self.RESULTS_PKL)
         except ImportError as e:
-            msg = "Error importing module while unpickling ample results dictionary: \'{}\'. " \
-                  "Add any imports required to the module: {}".format(e, os.path.abspath(__file__))
-            print(msg)
+            logger.exception("Error importing module while unpickling ample results dictionary: '{}'" \
+                              "Add any imports required to the module: {}".format(e, os.path.abspath(__file__)))
             raise(e)
 
 

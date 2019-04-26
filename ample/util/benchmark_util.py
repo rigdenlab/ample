@@ -297,7 +297,7 @@ def analyseModels(amoptd):
                           )
         amoptd['res_seq_map'] = resSeqMap
     except Exception as e:
-        logger.critical("Error calculating resSeqMap: %s" % e)
+        logger.exception("Error calculating resSeqMap: %s" % e)
         amoptd['res_seq_map']  = None # Won't be able to calculate RIO scores
 
     if amoptd['have_tmscore']:
@@ -309,7 +309,7 @@ def analyseModels(amoptd):
             structure_list = [amoptd['native_pdb_std']]
             amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fastas=[amoptd['fasta']])
         except Exception as e:
-            logger.critical("Unable to run TMscores: %s", e)
+            logger.exception("Unable to run TMscores: %s", e)
     else:
         global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
         _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
@@ -366,7 +366,6 @@ def analysePdb(amoptd):
     
     # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
     if len( nativePdbInfo.models[0].chains ) > 1:
-        chainID = nativePdbInfo.models[0].chains[0]
         nativeChain1  = ample_util.filename_append( filename=nativePdbInfo.pdb,
                                                        astr="chain1", 
                                                        directory=fixpath(amoptd['work_dir']))
