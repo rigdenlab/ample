@@ -5,7 +5,7 @@ Useful manipulations on PDB files
 
 # Python imports
 from collections import defaultdict, OrderedDict
-import glob
+import copy
 import logging
 import os
 import re
@@ -625,6 +625,7 @@ def _merge_chains(hierarchy, chains=None):
     # Make sure we can find the required chain ids
     chain_ids = [chain.id for chain in hierarchy.models()[0].chains()]
     if chains:
+        chains = copy.copy(chains) # Make sure we're not altering the given arg so we can be called multiple times in a loop
         assert isinstance(chains, list) and len(chains) > 1, "Need list of more than one chain {}".format(chains)
         root_chain_id = chains.pop(0)
         if root_chain_id not in chain_ids:
