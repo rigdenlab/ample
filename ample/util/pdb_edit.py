@@ -1396,3 +1396,5 @@ if __name__ == "__main__":
         print(split_pdb(args.input_file))
     elif args.split_chains:
         print(split_into_chains(args.input_file, chain=args.chain))
+    elif args.chain:
+        print(extract_chain(args.input_file, args.output_file, chainID=args.chain))
