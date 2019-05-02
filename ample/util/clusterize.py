@@ -56,7 +56,6 @@ class ClusterRun:
                 newLog = os.path.join(jobDir, "{0}.log".format(jobName))
             else:
                 newLog = os.path.join(logDir, "{0}.log".format(jobName))
-                
             if os.path.isfile(oldLog):
                 logger.debug("Moving {0} to {1}".format(oldLog, newLog))
                 # WARNING: problems with os.rename() call on BADB
@@ -65,7 +64,6 @@ class ClusterRun:
                 shutil.move(oldLog, newLog)
             else:
                 logger.critical("Cannot find logfile {0} to copy to {1}".format(oldLog, newLog))
-        
         return
 
     # Currently unused

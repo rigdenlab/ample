@@ -32,17 +32,15 @@ if not sys.platform.startswith('win'):
         [ '-percent_fixed_intervals', 20 ],
         [ '-frags_3mers', os.path.join(INPUT_DIR, '1t00.200.3mers') ],
         [ '-frags_9mers', os.path.join(INPUT_DIR, '1t00.200.9mers') ],
-        [ '-nmr_process', '1' ]
+        [ '-nmr_process', '1' ],
+        [ '-do_mr', 'False' ]
     ]
     
     # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
     class AMPLETest(AMPLEBaseTest):
         def test_nmr_remodel(self):
+            self.assertEqual(len(self.AMPLE_DICT['processed_models']), 20)
             self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
-            self.assertIn('mrbump_results', self.AMPLE_DICT)
-            self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
-            self.assertTrue(self.AMPLE_DICT['success'])
-            self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
             return
             
     TEST_DICT['nmr_remodel'] = { 'args' : args,

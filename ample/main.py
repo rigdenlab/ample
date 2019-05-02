@@ -21,6 +21,7 @@ from ample.util import logging_util
 from ample.util import mrbump_util
 from ample.util import options_processor
 from ample.util import pdb_edit
+from ample.util import process_models
 from ample.util import pyrvapi_results
 from ample.util import reference_manager
 from ample.util import workers_util
@@ -79,7 +80,12 @@ class Ample(object):
                 return self.ample_output.display_results(amopt.d)
         else:
             monitor = None
-
+            
+        # Process any files we may have been given
+        model_results = process_models.extract_and_validate_models(amopt.d)
+        if model_results:
+            process_models.handle_model_import(amopt.d, model_results)
+        
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
             benchmark_util.analysePdb(amopt.d)
@@ -89,13 +95,15 @@ class Ample(object):
             nmr_mdir = os.path.join(amopt.d['work_dir'], 'nmr_models')
             amopt.d['modelling_workdir'] = nmr_mdir
             logger.info('Splitting NMR ensemble into constituent models in directory: {0}'.format(nmr_mdir))
-            amopt.d['models'] = pdb_edit.split_pdb(
+            amopt.d['processed_models'] = pdb_edit.split_pdb(
                 amopt.d['nmr_model_in'], directory=nmr_mdir, strip_hetatm=True, same_size=True)
-            logger.info('NMR ensemble contained {0} models'.format(len(amopt.d['models'])))
+            logger.info('NMR ensemble contained {0} models'.format(len(amopt.d['processed_models'])))
 
         # Modelling business happens here
-        self.modelling(amopt.d, rosetta_modeller)
-        amopt.write_config_file()
+        if self.modelling_required(amopt.d):
+            self.modelling(amopt.d, rosetta_modeller)
+            ample_util.save_amoptd(amopt.d)
+            amopt.write_config_file()
 
         # Ensembling business next
         if amopt.d['make_ensembles']:
@@ -182,7 +190,10 @@ class Ample(object):
         if purge_level >= 2:
             mrbump_util.purge_MRBUMP(optd)
         return
-        
+    
+    def modelling_required(self, optd):
+        return (optd['make_frags'] or optd['make_models'] or optd['nmr_remodel'])
+    
     def ensembling(self, optd):
         if optd['import_ensembles']:
             ensembler.import_ensembles(optd)
@@ -190,14 +201,8 @@ class Ample(object):
             ample_util.ideal_helices(optd)
             logger.info("*** Using ideal helices to solve structure ***")
         else:
-            # Import the models here instead of cluster_util.
-            if optd['cluster_method'] is 'import':
-                # HACK - this is certainly not how we want to do it. One flag for all (-models) in future
-                optd['models'] = optd['cluster_dir']
-                optd['models'] = ample_util.extract_and_validate_models(optd)
-
             # Check we have some models to work with
-            if not (optd['single_model_mode'] or optd['models']):
+            if not (optd['single_model_mode'] or optd['processed_models']):
                 ample_util.save_amoptd(optd)
                 msg = "ERROR! Cannot find any pdb files in: {0}".format(optd['models_dir'])
                 exit_util.exit_error(msg)
@@ -252,7 +257,7 @@ class Ample(object):
         return
 
     def modelling(self, optd, rosetta_modeller=None):
-        if not (optd['import_models'] or optd['make_frags'] or optd['make_models'] or optd['nmr_remodel']):
+        if not (optd['make_frags'] or optd['make_models'] or optd['nmr_remodel']):
             return
         # Set the direcotry where the final models will end up
         optd['models_dir'] = os.path.join(optd['work_dir'], 'models')
@@ -313,55 +318,32 @@ class Ample(object):
             logger.info('----- making Rosetta models--------')
             if optd['nmr_remodel']:
                 try:
-                    optd['models'] = rosetta_modeller.nmr_remodel(
-                        models=optd['models'],
+                    optd['processed_models'] = rosetta_modeller.nmr_remodel(
+                        models=optd['processed_models'],
                         ntimes=optd['nmr_process'],
                         alignment_file=optd['alignment_file'],
-                        remodel_fasta=optd['nmr_remodel_fasta'],
-                        monitor=monitor)
+                        remodel_fasta=optd['nmr_remodel_fasta'])
                 except Exception as e:
                     msg = "Error remodelling NMR ensemble: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
             else:
                 logger.info('making %s models...', optd['nmodels'])
                 try:
-                    optd['models'] = rosetta_modeller.ab_initio_model(monitor=monitor)
+                    optd['processed_models'] = rosetta_modeller.ab_initio_model()
                 except Exception as e:
                     msg = "Error running ROSETTA to create models: {0}".format(e)
                     exit_util.exit_error(msg, sys.exc_info()[2])
-                if not pdb_edit.check_pdb_directory(optd['models_dir'], sequence=optd['sequence']):
-                    msg = "Problem with rosetta pdb files - please check the log for more information"
-                    exit_util.exit_error(msg)
                 logger.info('Modelling complete - models stored in: %s\n', optd['models_dir'])
-
-        elif optd['import_models']:
-            logger.info('Importing models from directory: %s\n', optd['models_dir'])
-            if optd['homologs']:
-                optd['models'] = ample_util.extract_and_validate_models(optd, sequence=None, single=True, allsame=False)
-            else:
-                optd['models'] = ample_util.extract_and_validate_models(optd)
-                # Need to check if Quark and handle things accordingly
-                if optd['quark_models']:
-                    # We always add sidechains to QUARK models if SCWRL is installed
-                    if ample_util.is_exe(optd['scwrl_exe']):
-                        optd['use_scwrl'] = True
-                    else:
-                        # No SCWRL so don't do owt with the side chains
-                        logger.info('Using QUARK models but SCWRL is not installed '
-                                    'so only using %s sidechains', UNMODIFIED)
-                        optd['side_chain_treatments'] = [UNMODIFIED]
 
         # Sub-select the decoys using contact information
         if con_util and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
             logger.info('Subselecting models from directory using ' 'provided contact information')
-            subselect_data = con_util.subselect_decoys(optd['models'], 'pdb', mode=optd['subselect_mode'], **optd)
-            optd['models'] = zip(*subselect_data)[0]
+            subselect_data = con_util.subselect_decoys(optd['processed_models'], 'pdb', mode=optd['subselect_mode'], **optd)
+            optd['processed_models'] = zip(*subselect_data)[0]
             optd['subselect_data'] = dict(subselect_data)
-            
-        ample_util.save_amoptd(optd)
 
     def molecular_replacement(self, optd):
-
+        mrbump_util.set_success_criteria(optd)
         if not optd['mrbump_scripts']:
             # MRBUMP analysis of the ensembles
             logger.info('----- Running MRBUMP on ensembles--------\n\n')
@@ -442,6 +424,20 @@ class Ample(object):
         ample_util.save_amoptd(optd)
         summary = mrbump_util.finalSummary(optd)
         logger.info(summary)
+        
+    def process_models(self, optd):
+        process_models.extract_and_validate_models(optd)
+        # Need to check if Quark and handle things accordingly
+        if optd['quark_models']:
+            # We always add sidechains to QUARK models if SCWRL is installed
+            if ample_util.is_exe(optd['scwrl_exe']):
+                optd['use_scwrl'] = True
+            else:
+                # No SCWRL so don't do owt with the side chains
+                logger.info('Using QUARK models but SCWRL is not installed '
+                            'so only using %s sidechains', UNMODIFIED)
+                optd['side_chain_treatments'] = [UNMODIFIED]
+        ample_util.save_amoptd(optd)
 
     def setup(self, optd):
         """We take and return an ample dictionary as an argument.

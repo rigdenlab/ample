@@ -253,7 +253,7 @@ def analyse(amoptd, newroot=None):
             for centroid_model in centroid_models:
                 n = os.path.splitext(os.path.basename(centroid_model))[0]
                 cm = None
-                for pdb in amoptd['models']:
+                for pdb in amoptd['processed_models']:
                     if n.startswith(os.path.splitext(os.path.basename(pdb))[0]):
                         cm = pdb
                         break
@@ -286,16 +286,19 @@ def analyseModels(amoptd):
     refModelPdb = glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))[0]
     
     nativePdbInfo=amoptd['native_pdb_info']
-    
-    resSeqMap = residue_map.residueSequenceMap()
     refModelPdbInfo = pdb_edit.get_info(refModelPdb)
-    resSeqMap.fromInfo( refInfo=refModelPdbInfo,
-                        refChainID=refModelPdbInfo.models[0].chains[0], # Only 1 chain in model
-                        targetInfo=nativePdbInfo,
-                        targetChainID=nativePdbInfo.models[0].chains[0]
-                      )
-    amoptd['res_seq_map']=resSeqMap
     amoptd['ref_model_pdb_info']=refModelPdbInfo
+    try:
+        resSeqMap = residue_map.residueSequenceMap()
+        resSeqMap.fromInfo( refInfo=refModelPdbInfo,
+                            refChainID=refModelPdbInfo.models[0].chains[0], # Only 1 chain in model
+                            targetInfo=nativePdbInfo,
+                            targetChainID=nativePdbInfo.models[0].chains[0]
+                          )
+        amoptd['res_seq_map'] = resSeqMap
+    except Exception as e:
+        logger.exception("Error calculating resSeqMap: %s" % e)
+        amoptd['res_seq_map']  = None # Won't be able to calculate RIO scores
 
     if amoptd['have_tmscore']:
         try:
@@ -306,7 +309,7 @@ def analyseModels(amoptd):
             structure_list = [amoptd['native_pdb_std']]
             amoptd['tmComp'] = tm.compare_structures(model_list, structure_list, fastas=[amoptd['fasta']])
         except Exception as e:
-            logger.critical("Unable to run TMscores: %s", e)
+            logger.exception("Unable to run TMscores: %s", e)
     else:
         global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
         _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
@@ -363,11 +366,10 @@ def analysePdb(amoptd):
     
     # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
     if len( nativePdbInfo.models[0].chains ) > 1:
-        chainID = nativePdbInfo.models[0].chains[0]
         nativeChain1  = ample_util.filename_append( filename=nativePdbInfo.pdb,
                                                        astr="chain1", 
                                                        directory=fixpath(amoptd['work_dir']))
-        pdb_edit.to_single_chain( nativePdbInfo.pdb, nativeChain1 )
+        pdb_edit.merge_chains(nativePdbInfo.pdb, nativeChain1)
     else:
         nativeChain1 = nativePdbInfo.pdb
     
@@ -440,11 +442,12 @@ def analyseSolution(amoptd, d, mrinfo):
     
         # We cannot calculate the Reforigin RMSDs or RIO scores for runs where we don't have a full initial model
         # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of 
-        # the native structure.
+        # the native structure - or if we were unable to calculate a res_seq_map
         if not (amoptd['homologs'] or \
                 amoptd['ideal_helices'] or \
                 amoptd['import_ensembles'] or \
-                amoptd['single_model_mode']):
+                amoptd['single_model_mode'] or \
+                amoptd['res_seq_map']):
     
             # Get reforigin info
             rmsder = reforigin.ReforiginRmsd()
@@ -454,14 +457,14 @@ def analyseSolution(amoptd, d, mrinfo):
                                refModelPdbInfo=amoptd['ref_model_pdb_info'],
                                cAlphaOnly=True,
                                workdir=fixpath(amoptd['benchmark_dir']))
-                d['reforigin_RMSD']=rmsder.rmsd
+                d['reforigin_RMSD'] = rmsder.rmsd
             except Exception as e:
                 logger.critical("Error calculating RMSD: {0}".format(e))
-                d['reforigin_RMSD']=999
+                d['reforigin_RMSD'] = 999
     
     
             # Score the origin with all-atom and rio
-            rioData=rio.Rio().scoreOrigin(mrOrigin,
+            rioData = rio.Rio().scoreOrigin(mrOrigin,
                                           mrPdbInfo=mrPdbInfo,
                                           nativePdbInfo=amoptd['native_pdb_info'],
                                           resSeqMap=amoptd['res_seq_map'],

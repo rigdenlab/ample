@@ -5,7 +5,7 @@ __date__ = "05 Dec 2016"
 
 import itertools
 import unittest
-from ample.modelling.energy_functions import DynamicDistances
+from ample.modelling.energy_functions import DynamicDistances, RosettaFunctionConstructs
 
 
 class TestDynamicDistances(unittest.TestCase):
@@ -28,6 +28,18 @@ class TestDynamicDistances(unittest.TestCase):
                 DynamicDistances.percentile(a1, a2)
             )
 
+class TestRosettaFunctionConstructs(unittest.TestCase):
+
+    def test_gaussian(self):
+        optd = { 'atom1': 'CA',
+                 'res1_seq' : 1,
+                 'atom2': 'CA',
+                 'res2_seq' : 100,
+                 'mean' : 6.0,
+                 'stddev' : 5.0 }
+        restraint = RosettaFunctionConstructs().GAUSSIAN.format(**optd)
+        ref = 'AtomPair CA    1 CA  100 GAUSSIANFUNC 6.00 5.00 TAG'
+        self.assertEqual(restraint, ref, "Incorrrect restraint: {} -> {}".format(restraint, ref))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

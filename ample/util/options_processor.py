@@ -209,6 +209,10 @@ def process_options(optd):
         logger.info('Processing missing domain\n')
         if not os.path.exists(optd['domain_all_chains_pdb']):
             raise RuntimeError('Cannot find file domain_all_chains_pdb: {0}'.format(optd['domain_all_chains_pdb']))
+    if optd['coiled_coil']:
+        # Add in Owen's fixes
+        optd['rg_reweight'] = 0.0
+        optd['domain_termini_distance'] = optd['fasta_length'] * 1.5
     process_ensemble_options(optd)
     process_mr_options(optd)
     process_benchmark_options(optd)
@@ -240,10 +244,12 @@ def process_modelling_options(optd):
     elif optd['cluster_dir']:
         if not os.path.isdir(optd['cluster_dir']):
             raise RuntimeError("Import cluster cannot find directory: {0}".format(optd['cluster_dir']))
-        if not glob.glob(os.path.join(optd['cluster_dir'], "*.pdb")):
+        models = glob.glob(os.path.join(optd['cluster_dir'], "*.pdb"))
+        if not models:
             raise RuntimeError("Import cluster cannot find pdbs in directory: {0}".format(optd['cluster_dir']))
-        logger.info("Importing pre-clustered models from directory: %d\n", optd['cluster_dir'])
+        logger.info("Importing pre-clustered models from directory: %s\n", optd['cluster_dir'])
         optd['cluster_method'] = 'import'
+        optd['models'] = optd['cluster_dir']
         optd['make_frags'] = False
         optd['make_models'] = False
     elif optd['ideal_helices']:
@@ -360,12 +366,25 @@ def process_mr_options(optd):
             exit_util.exit_error(msg)
         else:
             optd['phaser_rms'] = phaser_rms
+            
+            
+    # Disable all rebuilding if the resolution is too poor
+    if optd['mtz_min_resolution'] >= mrbump_util.REBUILD_MAX_PERMITTED_RESOLUTION:
+        logger.warn("!!! Disabling all rebuilding as maximum resolution of %f is too poor!!!".format(optd['mtz_min_resolution']))
+        optd['use_shelxe'] = False
+        optd['shelxe_rebuild'] = False
+        optd['shelxe_rebuild_arpwarp'] = False
+        optd['shelxe_rebuild_buccaneer'] = False
+        optd['refine_rebuild_arpwarp'] = False
+        optd['refine_rebuild_buccaneer'] = False
+        
+            
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     if optd['use_shelxe']:
         if optd['mtz_min_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
             logger.warn("Disabling use of SHELXE as min resolution of %f is < accepted limit of %f",
-                            optd['mtz_min_resolution'],
-                            mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION)
+                        optd['mtz_min_resolution'],
+                        mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION)
             optd['use_shelxe'] = False
             optd['shelxe_rebuild'] = False
     if optd['use_shelxe']:

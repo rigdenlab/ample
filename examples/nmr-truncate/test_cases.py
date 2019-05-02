@@ -30,11 +30,8 @@ args =  [
 # Test class that holds the functions to test the RESULTS_PKL file that will be passed in
 class AMPLETest(AMPLEBaseTest):
     def test_nmr_truncate(self):
+        self.assertEquals(len(self.AMPLE_DICT['ensembles']), 2)
         self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
-        self.assertIn('mrbump_results', self.AMPLE_DICT)
-        self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
-        self.assertTrue(self.AMPLE_DICT['success'])
-        self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
         return
         
 TEST_DICT['nmr_truncate'] = { 'args' : args,

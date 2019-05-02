@@ -69,7 +69,7 @@ for i in range(10):
         optd['models_dir'] = "XXXmodelsXXX"
         optd['rosetta_db'] = None
         optd['rosetta_dir'] = "/opt/rosetta3.4"
-        optd['rosetta_AbinitioRelax'] = os.path.join(os.getcwd(),script)
+        optd['rosetta_executable'] = os.path.join(os.getcwd(),script)
         optd['frags_3mers'] = frags3
         optd['frags_9mers'] = frags9
         optd['rosetta_fragments_exe'] = None

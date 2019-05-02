@@ -32,15 +32,12 @@ if not sys.platform.startswith('win'):
            [ '-frags_9mers', os.path.join(INPUT_DIR, 'aa1k04_09_05.200_v1_3') ],
            [ '-rosetta_dir', '/opt/rosetta-3.5' ],
            [ '-nmodels', '100'],
+           [ '-do_mr', 'False']
     ]
     
     class AMPLETest(AMPLEBaseTest):
         def test_missing_domain(self):
-            self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
-            self.assertIn('mrbump_results', self.AMPLE_DICT)
-            self.assertGreater(len(self.AMPLE_DICT['mrbump_results']), 0, "No MRBUMP results")
-            self.assertTrue(self.AMPLE_DICT['success'])
-            self.assertGreater(self.AMPLE_DICT['mrbump_results'][0]['SHELXE_CC'], 25,"SHELXE_CC criteria not met")
+            self.assertEquals(len(self.AMPLE_DICT['processed_models']), 100)
             return
     
     # Add everything to the test_dict - the key is used to name the script and run directory

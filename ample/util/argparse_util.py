@@ -65,6 +65,7 @@ def add_general_options(parser=None):
     parser.add_argument('-blast_dir', help='Directory where ncbi blast is installed (binaries in expected in bin subdirectory)')
     parser.add_argument('-classic_mode', metavar='True/False', help='Preset options to run the original AMPLE clustering/truncation options (1 cluster, 3 subclustering radii, 3 sidechains)')
     parser.add_argument('-ccp4i2_xml', help='Path to CCP4I2 XML file - if not None indicates we are running under CCP4I2')
+    parser.add_argument('-coiled_coil', metavar='True/False', help='Turn on Coiled-Coil mode for solving Coiled-Coil structures')
     parser.add_argument('-devel_mode', metavar='devel_mode', help='Preset options to run in development mode - takes longer')
     parser.add_argument('-dry_run', metavar='True/False', help='Check if input files and supplied options are valid.')
     parser.add_argument('-early_terminate', metavar='True/False', help='Stop the run as soon as a success has been found.')
@@ -137,6 +138,8 @@ def add_mr_options(parser=None):
     mr_group.add_argument('-do_mr', metavar='True/False', help='Run or skip the Molecular Replacement step')
     mr_group.add_argument('-domain_all_chains_pdb', help='Fixed input to mr bump')
     mr_group.add_argument('-domain_termini_distance', help='distance between termini for insert domains')
+    mr_group.add_argument('-early_terminate_SHELXE_CC', type=float, help='SHELXE_CC criteria for when a job has succeeeded')
+    mr_group.add_argument('-early_terminate_SHELXE_ACL', type=int, help='SHELXE_ACL criteria for when a job has succeeeded')
     mr_group.add_argument('-molrep_only', metavar='True/False', help='Only use Molrep for Molecular Replacement step in MRBUMP')
     mr_group.add_argument('-mrbump_dir', help='Path to a directory of MRBUMP jobs (see restart_pkl)')
     mr_group.add_argument('-mr_keys', nargs='+', action='append', help='Additional keywords for MRBUMP - are passed through without editing')
@@ -168,11 +171,11 @@ def add_rosetta_options(parser=None):
     rosetta_group.add_argument('-nmodels', default=1000, metavar='number of models', type=int, help='number of models to make (default: 1000)')
     rosetta_group.add_argument('-nr', metavar='nr', help='Path to the NR non-redundant sequence database')
     rosetta_group.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
-    rosetta_group.add_argument('-rosetta_AbinitioRelax', help='Path to Rosetta AbinitioRelax executable')
-    rosetta_group.add_argument('-ROSETTA_cluster', help='location of rosetta cluster')
+    rosetta_group.add_argument('-rosetta_executable', help='Path to ROSETTA executable for modelling')
     rosetta_group.add_argument('-rosetta_db', help='Path to the Rosetta database directory')
     rosetta_group.add_argument('-rosetta_dir', help='The Rosetta install directory')
     rosetta_group.add_argument('-rosetta_fragments_exe', help='Location of the Rosetta make_fragments.pl script')
+    rosetta_group.add_argument('-rosetta_flagsfile', help='Location of file with Rosetta modelling commands')
     rosetta_group.add_argument('-rosetta_version', type=float, help='The version number of Rosetta')
     rosetta_group.add_argument('-transmembrane', metavar='True/False', help='Do Rosetta modelling for transmembrane proteins (Ovchinnikov protocol)')
     rosetta_group.add_argument('-transmembrane_old', metavar='True/False', help='Do Rosetta modelling for transmembrane proteins (Yarov-Yarovoy protocol)')
@@ -187,13 +190,13 @@ def add_ensembler_options(parser=None):
     # --------------------------------------------------------------------------------------------- #
     # sphinx-argparse ignores Mock imports and thus cannot find iotbx.pdb when generating the docs. #
     try:
-        from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
+        from ample.ensembler.constants import ALLOWED_SIDE_CHAIN_TREATMENTS
         from ample.ensembler.truncation_util import TRUNCATION_METHODS
     except ImportError:
-        side_chain_treatments = ['polyala']
+        allowed_side_chain_treatments = ['polyala', 'reliable', 'allatom', 'unmod']
         truncation_methods = ['percent']
     else:
-        side_chain_treatments = SIDE_CHAIN_TREATMENTS[:]
+        allowed_side_chain_treatments = ALLOWED_SIDE_CHAIN_TREATMENTS[:]
         truncation_methods = [t.value for t in TRUNCATION_METHODS]
     # --------------------------------------------------------------------------------------------- #
     if parser is None:
@@ -214,7 +217,7 @@ def add_ensembler_options(parser=None):
     ensembler_group.add_argument('-percent_fixed_intervals', nargs='+', type=int, help='list of integer percentage intervals for truncation')
     ensembler_group.add_argument('-score_matrix', help='Path to score matrix for spicker')
     ensembler_group.add_argument('-score_matrix_file_list', help='File with list of ordered model names for the score_matrix')
-    ensembler_group.add_argument('-side_chain_treatments', type=str, nargs='+', help='The side chain treatments to use. Default: ' + '|'.join(side_chain_treatments))
+    ensembler_group.add_argument('-side_chain_treatments', type=str, nargs='+', help='The side chain treatments to use. Options: ' + '|'.join(allowed_side_chain_treatments))
     ensembler_group.add_argument('-spicker_exe', help='Path to spicker executable')
     ensembler_group.add_argument('-subcluster_radius_thresholds', type=float, nargs='+', help='The radii to use for subclustering the truncated ensembles')
     ensembler_group.add_argument('-subcluster_program', help='Program for subclustering models [maxcluster]')

@@ -143,7 +143,7 @@ class Test(unittest.TestCase):
         f.write("mustang_exe : mustang.exe" + os.linesep)
         f.write("rosetta_dir : rosetta_directory" + os.linesep)
         f.write("rosetta_fragments_exe : bar.exe" + os.linesep)
-        f.write("rosetta_AbinitioRelax :rosetta_ab_relax" + os.linesep)
+        f.write("rosetta_executable :rosetta_ab_relax" + os.linesep)
         f.write("scwrl_exe : scwrl.exe" + os.linesep)
         f.write("shelxe_exe : shelxe.exe" + os.linesep)
         f.write("spicker_exe : spicker.exe" + os.linesep)
@@ -177,7 +177,7 @@ class Test(unittest.TestCase):
                     'mustang_exe' : os.path.abspath('mustang.exe'),
                     'rosetta_dir' : os.path.abspath('rosetta_directory'),
                     'rosetta_fragments_exe' : os.path.abspath('bar.exe'),
-                    'rosetta_AbinitioRelax' :os.path.abspath('rosetta_ab_relax'),
+                    'rosetta_executable' :os.path.abspath('rosetta_ab_relax'),
                     'scwrl_exe' : os.path.abspath('scwrl.exe'),
                     'shelxe_exe' : os.path.abspath('shelxe.exe'),
                     'spicker_exe' : os.path.abspath('spicker.exe'),

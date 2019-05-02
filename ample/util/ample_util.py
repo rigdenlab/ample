@@ -3,11 +3,10 @@ __author__ = "Jens Thomas, and Felix Simkovic"
 __date__ = "01 Jan 2016"
 __version__ = "1.0"
 
+from contextlib import contextmanager
 import pickle
-import glob
 import logging
 import os
-import shutil
 import subprocess
 import sys
 import tarfile
@@ -17,7 +16,6 @@ import zipfile
 
 import ccp4
 import exit_util
-import pdb_edit
 
 from ample.constants import SHARE_DIR, AMPLEDIR, I2DIR
 
@@ -63,80 +61,33 @@ def amoptd_fix_path(optd, newroot):
         for r in optd['mrbump_results']:
             for k in MRBUMP_FILE_KEYS:
                 if k in r and isinstance(r[k], str):
-                    old = r[k]
                     warnings.warn("FIX MRBUMP BUG buccaneer refine.pdb vs refined.pdb")
                     new = r[k].replace(oldroot, newroot)
                     #logger.info('Changing amopt entry %s from: %s to: %s', k, old, new)
                     r[k] = new
     return optd
 
-
-
-def extract_and_validate_models(amoptd, sequence=None, single=True, allsame=True):
-    """Extract models given to AMPLE from arguments in the amoptd and validate
-    that they are suitable
-
+@contextmanager
+def disable_logging(logger, max_loglevel=logging.CRITICAL):
+    """A context manager to disable logging within a block.
+    
     Parameters
     ----------
-    amoptd : dict
-       AMPLE options dictionary
-    sequence : str
-       single-letter protein sequence - if given a check will be made that all
-       models are of this sequence
-    single : bool
-       if True check each pdb only contains a single model
-    allsame : bool
-       only extract a file if the suffix is in the list
-
+    logger : logging.Logger
+       logger instance
+    highet_level: int
+        loglevel that will be set for the duration of the context
     """
-    
-    def is_pdb_file(filename):
-        return any(map(lambda x: filename.endswith(x), pdb_suffixes))
-
-    def path_to_quark_alldecoy(pdb_files):
-        QUARK_DECOY_NAME = 'alldecoy.pdb'
-        for pdb in pdb_files:
-            if os.path.basename(pdb) == QUARK_DECOY_NAME:
-                return pdb
-        return None
-
-    filepath = amoptd['models']
-    models_dir = amoptd['models_dir']
-    pdb_suffixes = ['.pdb', '.PDB']
-
-    if os.path.isfile(filepath):
-        models_dir_tmp = os.path.join(amoptd['work_dir'], 'models.tmp')
-        if not os.path.isdir(models_dir_tmp):
-            os.mkdir(models_dir_tmp)
-        # Extract /copy any pdb files into models_dir_tmp
-        if tarfile.is_tarfile(filepath):
-            pdb_files = extract_tar(filepath, models_dir_tmp, suffixes=pdb_suffixes)
-        elif zipfile.is_zipfile(filepath):
-            pdb_files = extract_zip(filepath, models_dir_tmp, suffixes=pdb_suffixes)
-        elif is_pdb_file(filepath):
-            shutil.copy2(filepath, models_dir_tmp)
-            pdb_files = [os.path.join(models_dir_tmp, filepath)]
-        else:
-            raise RuntimeError("Do not know how to handle input models file: {}".format(filepath))
-        # See if we have an alldecoy.pdb file
-        quark_decoy = path_to_quark_alldecoy(pdb_files)
-        if quark_decoy:
-            split_quark_alldecoy(quark_decoy, models_dir)
-            amoptd['quark_models'] = True
-            shutil.rmtree(models_dir_tmp) # delete as contains uneeded files extracted from archive
-        else:
-            # Rename models directory as it now contains our pdb files
-            os.rename(models_dir_tmp, models_dir)
-    elif os.path.isdir(filepath):
-        models_dir = filepath
-
-    if not pdb_edit.check_pdb_directory(models_dir, sequence=sequence, single=single, allsame=allsame):
-        msg = "Problem importing pdb files - please check the log for more information"
-        exit_util.exit_error(msg)
-
-    amoptd['models_dir'] = models_dir
-    return glob.glob(os.path.join(models_dir, "*.pdb"))
-
+    previous_level = None
+    if logger.getEffectiveLevel() < max_loglevel:
+        previous_level = logger.level
+        logger.setLevel(max_loglevel)
+    try:
+        yield
+    finally:
+        if previous_level is not None:
+            # changed loglevel so reset it
+            logger.setLevel(previous_level)
 
 def extract_tar(archive, directory=None, filenames=None, suffixes=None):
     """Extract one or more files from a tar file into a specified directory
@@ -502,53 +453,6 @@ def save_amoptd(amoptd):
     with open(amoptd['results_path'], 'w') as f:
         pickle.dump(amoptd, f)
         logger.info("Saved state as file: %s\n", amoptd['results_path'])
-
-
-def split_quark_alldecoy(alldecoy, directory):
-    """Split a single QUARK PDB with multiple models into individual PDB files
-
-    Parameters
-    ----------
-    alldecoy : str
-       Single QUARK PDB file with multiple model entries
-    directory : str
-       Directory to extract the PDB files to
-
-    Returns
-    -------
-    extracted_models : list
-       List of PDB files for all models
-
-    """
-    logger.info("Extracting decoys from: %s into %s", alldecoy, directory)
-    smodels = []
-    with open(alldecoy, 'r') as f:
-        m = []
-        for line in f:
-            if line.startswith("ENDMDL"):
-                m.append(line)
-                smodels.append(m)
-                m = []
-            else:
-                m.append(line)
-
-    if not len(smodels):
-        raise RuntimeError("Could not extract any models from: {0}".format(alldecoy))
-
-    extracted_models = []
-    for i, m in enumerate(smodels):
-        fpath = os.path.join(directory, "quark_{0}.pdb".format(i))
-        with open(fpath, 'w') as f:
-            for line in m:
-                #  Reconstruct something sensible as from the coordinates on it's all quark-specific
-                # and there is no chain ID
-                if line.startswith("ATOM"):
-                    line = line[:21] + 'A' + line[22:54] + "  1.00  0.00              \n"
-                f.write(line)
-            extracted_models.append(fpath)
-            logger.debug("Wrote: %s", fpath)
-
-    return extracted_models
 
 
 def tmpFileName():

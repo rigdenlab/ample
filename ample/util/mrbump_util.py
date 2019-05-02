@@ -26,7 +26,17 @@ import parse_phaser
 
 TOP_KEEP = 3 # How many of the top shelxe/phaser results to keep for the gui
 MRBUMP_RUNTIME = 172800 # allow 48 hours for each mrbump job
+REBUILD_MAX_PERMITTED_RESOLUTION = 4.0
 SHELXE_MAX_PERMITTED_RESOLUTION = 3.0
+
+# Values to determine when job has succeeded - required at module level this may be set by AMPLE from
+# the command line
+SUCCESS_PHASER_TFZ = 8.0
+SUCCESS_PHASER_LLG = 120
+SUCCESS_RFREE = 0.4
+SUCCESS_SHELXE_CC = 25.0
+SUCCESS_SHELXE_ACL = 10
+
 
 # We need a null logger so that we can be used without requiring a logger
 class NullHandler(logging.Handler):
@@ -95,6 +105,8 @@ class ResultsSummary(object):
             result["SXRARP_final_Rfact"] = ap.finalRfact
             result["SXRARP_final_Rfree"] = ap.finalRfree
         return
+
+
 
     def createDict(self):
         d = {}
@@ -186,18 +198,19 @@ class ResultsSummary(object):
                 purged_results[d['ensemble_name']] = d
         return purged_results
 
-    def extractResults(self, mrbump_dir, purge=False):
+    def extractResults(self, mrbump_dir, purge=False, max_loglevel=logging.INFO):
         if not mrbump_dir or not os.path.isdir(mrbump_dir):
             raise RuntimeError("Cannot find mrbump_dir: {0}".format(mrbump_dir))
         purged_results = {}
         if purge:
             purged_results = self._extractPurged(mrbump_dir)
-        self._extractResults(mrbump_dir, archived_ensembles=purged_results.keys())
+        with ample_util.disable_logging(logger, max_loglevel=max_loglevel):
+            self._extractResults(mrbump_dir, archived_ensembles=purged_results.keys())
         if purge:
             self._purgeFailed()
             self.results += purged_results.values()
         self.sortResults()
-        self.success = any([jobSucceeded(r) for r in self.results])
+        self.success = any([self.jobSucceeded(r) for r in self.results])
         return self.results
 
     def _extractResults(self, mrbump_dir, archived_ensembles=None):
@@ -257,6 +270,23 @@ class ResultsSummary(object):
             logger.warn("Could not extract any results from directory: {0}".format(mrbump_dir))
         self.results = results
         return
+
+    @staticmethod
+    def jobSucceeded(job_dict):
+        success = False
+        if 'SHELXE_CC' in job_dict and job_dict['SHELXE_CC'] and float(job_dict['SHELXE_CC']) >= SUCCESS_SHELXE_CC and \
+           'SHELXE_ACL' in job_dict and job_dict['SHELXE_ACL'] and float(job_dict['SHELXE_ACL']) >= SUCCESS_SHELXE_ACL:
+            success = True
+        elif 'BUCC_final_Rfree' in job_dict and job_dict['BUCC_final_Rfree'] and float(job_dict['BUCC_final_Rfree']) <= SUCCESS_RFREE:
+            success = True
+        elif 'ARP_final_Rfree' in job_dict and job_dict['ARP_final_Rfree'] and float(job_dict['ARP_final_Rfree']) <= SUCCESS_RFREE:
+            success = True
+        elif 'REFMAC_Rfree' in job_dict and job_dict['REFMAC_Rfree'] and float(job_dict['REFMAC_Rfree']) <= SUCCESS_RFREE:
+            success = True
+        elif 'PHASER_LLG' in job_dict and 'PHASER_TFZ' in job_dict and job_dict['PHASER_LLG'] and job_dict['PHASER_TFZ'] and \
+        float(job_dict['PHASER_LLG']) >= SUCCESS_PHASER_LLG and float(job_dict['PHASER_TFZ']) >= SUCCESS_PHASER_TFZ:
+            success = True
+        return success
 
     def processMrbumpPkl(self, resultsPkl):
         """Process dictionary
@@ -335,6 +365,7 @@ class ResultsSummary(object):
         for r in results:
             resultsTable.append([r[k] for k in keys])
         return resultsTable
+    
 
     def sortResults(self, prioritise=False):
         """Wrapper function to allow calls with self"""
@@ -379,9 +410,9 @@ class ResultsSummary(object):
             results.sort(key=sortf, reverse=reverse)
         return results
 
-    def summariseResults(self, mrbump_dir):
+    def summariseResults(self, mrbump_dir, max_loglevel=logging.INFO):
         """Return a string summarising the results"""
-        results = self.extractResults(mrbump_dir)
+        results = self.extractResults(mrbump_dir, max_loglevel=max_loglevel)
         if len(results):
             return self.summaryString()
         else:
@@ -492,7 +523,7 @@ def checkSuccess(script_path):
     if os.path.isfile(rfile):
         results = ResultsSummary().processMrbumpPkl(rfile)
         best = ResultsSummary.sortResultsStatic(results)[0]
-        return jobSucceeded(best)
+        return ResultsSummary.jobSucceeded(best)
     else:
         return False
 
@@ -543,28 +574,6 @@ def finalSummary(amoptd):
     return r
 
 
-def jobSucceeded(job_dict):
-    PHASER_TFZ = 8.0
-    PHASER_LLG = 120
-    RFREE = 0.4
-    SHELXE_CC = 25.0
-    SHELXE_ACL = 10
-    success = False
-    if 'SHELXE_CC' in job_dict and job_dict['SHELXE_CC'] and float(job_dict['SHELXE_CC']) >= SHELXE_CC and \
-       'SHELXE_ACL' in job_dict and job_dict['SHELXE_ACL'] and float(job_dict['SHELXE_ACL']) >= SHELXE_ACL:
-        success = True
-    elif 'BUCC_final_Rfree' in job_dict and job_dict['BUCC_final_Rfree'] and float(job_dict['BUCC_final_Rfree']) <= RFREE:
-        success = True
-    elif 'ARP_final_Rfree' in job_dict and job_dict['ARP_final_Rfree'] and float(job_dict['ARP_final_Rfree']) <= RFREE:
-        success = True
-    elif 'REFMAC_Rfree' in job_dict and job_dict['REFMAC_Rfree'] and float(job_dict['REFMAC_Rfree']) <= RFREE:
-        success = True
-    elif 'PHASER_LLG' in job_dict and 'PHASER_TFZ' in job_dict and job_dict['PHASER_LLG'] and job_dict['PHASER_TFZ'] and \
-    float(job_dict['PHASER_LLG']) >= PHASER_LLG and float(job_dict['PHASER_TFZ']) >= PHASER_TFZ:
-        success = True
-    return success
-
-
 def job_unfinished(job_dict):
     if not 'Solution_Type' in job_dict: return True
     return job_dict['Solution_Type'] == "unfinished" or job_dict['Solution_Type'] == "no_job_directory"
@@ -584,6 +593,18 @@ def purge_MRBUMP(amoptd):
                 os.remove(os.path.join(mrbump_dir, f))
     return
 
+
+def set_success_criteria(amoptd):
+    """Set the module-level success criteria from an AMPLE job dictionary"""
+    for criteria in ['SHELXE_CC', 'SHELXE_ACL']:
+        amopt_prefix = 'early_terminate_'
+        module_prefix = 'SUCCESS_'
+        amopt_key = amopt_prefix + criteria
+        if amopt_key in amoptd and amoptd[amopt_key] is not None:
+            module_criteria = module_prefix + criteria
+            logger.debug('Updating MRBUMP success criteria \'%s\' to: %s', module_criteria, amoptd[amopt_key])
+            globals()[module_criteria] = amoptd[amopt_key]
+        
 
 def unfinished_scripts(amoptd):
     """See if there are any unfinished mrbump jobs in a mrbump directory and return a list of the scripts"""
@@ -663,13 +684,13 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
     return script_path
 
 if __name__ == "__main__":
-    if not len(sys.argv) == 2: 
-        mrbump_dir = os.getcwd()
-    else:
+    if len(sys.argv) >= 2: 
         mrbump_dir = os.path.join(os.getcwd(), sys.argv[1])
+    else:
+        mrbump_dir = os.getcwd()
         
     logging.basicConfig()
     logging.getLogger().setLevel(logging.DEBUG)
 
     r = ResultsSummary()
-    print(r.summariseResults(mrbump_dir))
+    print(r.summariseResults(mrbump_dir, max_loglevel=logging.DEBUG))

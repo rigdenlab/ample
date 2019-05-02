@@ -70,7 +70,7 @@ if not sys.platform.startswith('win'):
             nr_restraints = parse_restraints(m_file)
             self.assertGreaterEqual(nr_restraints, 0, "Restraints not read")
             self.assertEqual(nr_restraints, 59, "Different number read")
-            nmodels = len(self.AMPLE_DICT['models'])
+            nmodels = len(self.AMPLE_DICT['processed_models'])
             self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
 
     TEST_DICT['rosetta_contacts'] = {
@@ -95,10 +95,10 @@ if not sys.platform.startswith('win'):
     class AMPLETest(AMPLEBaseTest):
         def test_rosetta_contacts_subselect(self):
             self.assertTrue(self.AMPLE_DICT['AMPLE_finished'])
-            self.assertIn('models', self.AMPLE_DICT)
+            self.assertIn('processed_models', self.AMPLE_DICT)
             nmodels = len(glob.glob(os.path.join(self.AMPLE_DICT['models_dir'], '*pdb')))
             self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
-            nmodels_sub = len(self.AMPLE_DICT['models'])
+            nmodels_sub = len(self.AMPLE_DICT['processed_models'])
             self.assertEqual(nmodels_sub, 15, "Only {0} models produced".format(nmodels))
 
     TEST_DICT['rosetta_contacts_subselect'] = {
@@ -125,7 +125,7 @@ if not sys.platform.startswith('win'):
             nr_restraints = parse_restraints(m_file)
             self.assertGreaterEqual(nr_restraints, 0, "Restraints not read")
             self.assertEqual(nr_restraints, 49, "Different number read")
-            nmodels = len(self.AMPLE_DICT['models'])
+            nmodels = len(self.AMPLE_DICT['processed_models'])
             self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
 
     TEST_DICT['rosetta_restraints'] = {
