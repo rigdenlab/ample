@@ -3,6 +3,7 @@ __author__ = "Jens Thomas, and Felix Simkovic"
 __date__ = "01 Jan 2016"
 __version__ = "1.0"
 
+from contextlib import contextmanager
 import pickle
 import logging
 import os
@@ -66,6 +67,27 @@ def amoptd_fix_path(optd, newroot):
                     r[k] = new
     return optd
 
+@contextmanager
+def disable_logging(logger, max_loglevel=logging.CRITICAL):
+    """A context manager to disable logging within a block.
+    
+    Parameters
+    ----------
+    logger : logging.Logger
+       logger instance
+    highet_level: int
+        loglevel that will be set for the duration of the context
+    """
+    previous_level = None
+    if logger.getEffectiveLevel() < max_loglevel:
+        previous_level = logger.level
+        logger.setLevel(max_loglevel)
+    try:
+        yield
+    finally:
+        if previous_level is not None:
+            # changed loglevel so reset it
+            logger.setLevel(previous_level)
 
 def extract_tar(archive, directory=None, filenames=None, suffixes=None):
     """Extract one or more files from a tar file into a specified directory
