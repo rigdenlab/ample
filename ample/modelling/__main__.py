@@ -13,43 +13,38 @@ from ample.util import argparse_util
 from ample.util import logging_util
 from ample.modelling.rosetta_model import RosettaModel
 
-def set_defaults(args):
+def process_args(args):
     if args.rosetta_flagsfile is None:
         raise RuntimeError("Need to supply a ROSETTA flagsfile with the -rosetta_flagsfile argument")
     args.rosetta_flagsfile = os.path.abspath(args.rosetta_flagsfile)
-    
-    if args.submit_cluster is None:
-        args.submit_cluster = False
     if args.nproc is None:
         if args.submit_cluster:
             args.nproc = 1
         else:
             args.nproc = multiprocessing.cpu_count()
-    if args.submit_qtype is None:
-        args.submit_qtype = 'SGE'
-    if args.submit_array is None:
-        args.submit_array = True
-    if args.nmodels is None:
-        args.nmodels = 1000
-    if args.work_dir is None:
-        args.work_dir = os.path.abspath('rosetta_modelling')
-    args.models_dir = os.path.join(args.work_dir, "models")
 
 
+# Handle the command-line
 parser = argparse.ArgumentParser(description="AMPLE Modelling Module")
 argparse_util.add_core_options(parser)
 argparse_util.add_rosetta_options(parser)
 argparse_util.add_cluster_submit_options(parser)
+
+work_dir = os.path.abspath('rosetta_modelling')
+parser.set_defaults(submit_cluster = False,
+                    submit_qtype = 'SGE',
+                    submit_array = True,
+                    nmodels = 1000,
+                    work_dir = work_dir,
+                    models_dir = os.path.join(work_dir, "models"))
+args = parser.parse_args()
+process_args(args)
 
 # Start logging to the console
 logging_util.setup_console_logging()
 
 logger = logging.getLogger()
 logger.info("*** AMPLE ROSETTA modelling package ***")
-
-# Get cmdline options and set defaults
-args = parser.parse_args()
-set_defaults(args)
 
 if not os.path.isdir(args.work_dir):
     os.mkdir(args.work_dir)
