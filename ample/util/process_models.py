@@ -1,4 +1,3 @@
-#!/usr/bin/env ccp4-python
 __author__ = "Jens Thomas"
 
 import glob
@@ -49,7 +48,7 @@ class CheckModelsResult():
     def __str__(self):
         attrs = [k for k in self.__dict__.keys() if not k.startswith('_')]
         INDENT = "  "
-        out_str = "Class: {}\nData:\n".format(self.__class__)
+        out_str = "Class: {}\nData:\n".format(self.__class__.__name__)
         for a in sorted(attrs):
             out_str += INDENT + "{} : {}\n".format(a, self.__dict__[a])
         return out_str
