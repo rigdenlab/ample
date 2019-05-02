@@ -117,7 +117,6 @@ class RosettaModel(object):
         self.rosetta_dir = None
         self.rosetta_bin = None
         self.rosetta_AbinitioRelax = None
-        self.rosetta_cluster = None
         self.rosetta_mr_protocols = None
         self.rosetta_idealize_jd2 = None
         self.rosetta_db = None
@@ -246,9 +245,9 @@ class RosettaModel(object):
         """Run the ab initio modelling and return a list of models."""
 
         if self.transmembrane_old:
-            rosetta_binary = self.transmembrane_exe
+            rosetta_executable = self.transmembrane_exe
         else:
-            rosetta_binary = self.rosetta_AbinitioRelax
+            rosetta_executable = self.rosetta_AbinitioRelax
         
         if self.rosetta_flagsfile:
             # Hack for modelling with AMPLE-supplied flagsfile
@@ -271,7 +270,7 @@ class RosettaModel(object):
             with open(flagsfile, 'w') as w:
                 w.write(flags)
 
-        return self.model_from_flagsfile(flagsfile, rosetta_binary=rosetta_binary)
+        return self.model_from_flagsfile(flagsfile, rosetta_executable=rosetta_executable)
     
     def cmd_add_restraints(self, cmd):
         """Add any restraints and files to the ROSETTA command-line options"""
@@ -510,7 +509,7 @@ class RosettaModel(object):
 
     def model_from_flagsfile(self, 
                              flagsfile,
-                             rosetta_binary=None,
+                             rosetta_executable=None,
                              job_time=43200):
         """Run ROSETTA modelling from a flagsfile"""
         assert os.path.isfile(flagsfile), "Cannot find ROSETTA flagsfile: {}".format(flagsfile)
@@ -525,8 +524,8 @@ class RosettaModel(object):
             jobs_per_proc = [1] * self.nmodels
         else:
             jobs_per_proc = self.split_jobs(self.nmodels, self.nproc)
-        if rosetta_binary is None:
-            rosetta_binary = self.rosetta_AbinitioRelax
+        if rosetta_executable is None:
+            rosetta_executable = self.rosetta_AbinitioRelax
         seeds = self.generate_seeds(len(jobs_per_proc))
         job_scripts = []
         dir_list = []
@@ -543,7 +542,7 @@ class RosettaModel(object):
 -out:nstruct {} \\
 -run:constant_seed \\
 -run:jran {}
-""".format(rosetta_binary, self.rosetta_db, flagsfile, njobs, seeds[i])
+""".format(rosetta_executable, self.rosetta_db, flagsfile, njobs, seeds[i])
             sname = os.path.join(d, "model_{0}.sh".format(i))
             with open(sname, 'w') as w:
                 w.write(script)
@@ -910,8 +909,8 @@ class RosettaModel(object):
             raise RuntimeError('cannot find Rosetta DB: {0}'.format(self.rosetta_db))
 
         # relax
-        if optd and optd['rosetta_AbinitioRelax'] and os.path.isfile(optd['rosetta_AbinitioRelax']):
-            self.rosetta_AbinitioRelax = optd['rosetta_AbinitioRelax']
+        if optd and optd['rosetta_executable'] and os.path.isfile(optd['rosetta_executable']):
+            self.rosetta_AbinitioRelax = optd['rosetta_executable']
         else:
             self.rosetta_AbinitioRelax = self.find_binary('AbinitioRelax')
         if not self.rosetta_AbinitioRelax:
@@ -929,7 +928,6 @@ class RosettaModel(object):
                 self.fragments_exe = os.path.join(self.rosetta_dir,'tools','fragment_tools','make_fragments.pl')
 
         # for nmr
-        self.rosetta_cluster = self.find_binary('cluster')
         self.rosetta_mr_protocols = self.find_binary('mr_protocols')
         self.rosetta_idealize_jd2 = self.find_binary('idealize_jd2')
         

@@ -64,5 +64,5 @@ rm.submit_queue = args.submit_queue
 rm.submit_array = args.submit_array
 rm.submit_max_array = args.submit_max_array
 
-logger.info("Running binary {} with flagsfile: {}".format(args.rosetta_AbinitioRelax, args.rosetta_flagsfile))
-rm.model_from_flagsfile(args.rosetta_flagsfile, args.rosetta_AbinitioRelax)
+logger.info("Running binary {} with flagsfile: {}".format(args.rosetta_executable, args.rosetta_flagsfile))
+rm.model_from_flagsfile(args.rosetta_flagsfile, args.rosetta_executable)
