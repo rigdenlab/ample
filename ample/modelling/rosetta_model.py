@@ -13,7 +13,7 @@ import random
 import shutil
 
 # Our modules
-from ample.modelling import octopus_predict
+from ample.modelling import energy_functions, octopus_predict
 from ample.parsers import psipred_parser
 from ample.util import ample_util
 from ample.util import pdb_edit
@@ -753,8 +753,15 @@ class RosettaModel(object):
         """Create the file for restricting the domain termini and return the path to the file."""
         logger.info('restricting termini distance: {0}'.format(self.domain_termini_distance))
         restraints_file = os.path.join(self.work_dir, 'domain_constraints.txt')
+        optd = { 'atom1': 'CA',
+                 'res1_seq' : 1,
+                 'atom2': 'CA',
+                 'res3_seq' : self.sequence_length,
+                 'mean' : self.domain_termini_distance,
+                 'stddev' : 5.0 }
+        restraint = energy_functions.RosettaFunctionConstructs().GAUSSIAN.format(**optd)
         with open(restraints_file, "w") as w:
-            w.write('AtomPair CA 1 CA {0} GAUSSIANFUNC {1} 5.0 TAG\n'.format(self.sequence_length, self.domain_termini_distance))
+            w.write(restraint + os.linesep)
         return restraints_file
 
     def set_from_dict(self, optd ):

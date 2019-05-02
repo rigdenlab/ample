@@ -260,6 +260,13 @@ class RosettaFunctionConstructs(object):
         return construct
 
     @property
+    def GAUSSIAN(self):
+        """Simple Gaussian energy function"""
+        construct = RosettaFunctionConstructs._ATOMPAIR \
+                    + "GAUSSIANFUNC {mean: >.2f} {stddev: >.2f} TAG"
+        return construct
+
+    @property
     def SIGMOID_default(self):
         """Simple sigmoidal energy function"""
         construct = RosettaFunctionConstructs._ATOMPAIR \
