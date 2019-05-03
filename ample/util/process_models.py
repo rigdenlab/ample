@@ -77,8 +77,8 @@ def extract_and_validate_models(amoptd):
     models_arg = amoptd['models'] # command-line arg from user
     if models_arg is None:
         return
-   if not os.path.exists(models_arg):
-       raise RuntimeError("Cannot find models: {}".format(models_arg))
+    if not os.path.exists(models_arg):
+        raise RuntimeError("Cannot find models: {}".format(models_arg))
     models_dir_final = amoptd['models_dir'] # the directory where the models need to end up
     if models_dir_final is None:
         models_dir_final = os.path.join(amoptd['work_dir'], 'models')

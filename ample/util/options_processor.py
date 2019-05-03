@@ -16,7 +16,6 @@ from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import contact_util
 from ample.util import exit_util
-from ample.util import maxcluster
 from ample.util import mrbump_util
 from ample.util import mtz_util
 from ample.util import pdb_edit
@@ -84,7 +83,6 @@ def process_benchmark_options(optd):
             optd['tmscore_exe'] = ample_util.find_exe(optd['tmscore_exe'])
         except ample_util.FileNotFoundError:
             logger.warning("Cannot find TMScore executable: %s", optd['tmscore_exe'])
-            optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
             optd['have_tmscore'] = False
         else:
             optd['have_tmscore'] = True
@@ -104,10 +102,7 @@ def process_ensemble_options(optd):
                                                                                             [e.value for e in TRUNCATION_METHODS]))
         
     # Check we can find all the required programs
-    # Maxcluster handled differently as we may need to download the binary
-    if optd['subcluster_program'] == 'maxcluster':
-        optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
-    elif optd['subcluster_program'] == 'gesamt':
+    if optd['subcluster_program'] == 'gesamt':
         if not optd['gesamt_exe']:
             optd['gesamt_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
         try:

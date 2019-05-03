@@ -239,8 +239,6 @@ class Ensembler(object):
         Path to an executable
     lsqkab_exe : str
         Path to an executable
-    maxcluster_exe : str
-        Path to an executable
     mustang_exe : str
         Path to an executable
     scwrl_exe : str
@@ -260,7 +258,6 @@ class Ensembler(object):
                  gesamt_exe=None,
                  fast_protein_cluster_exe=None,
                  lsqkab_exe=None,
-                 maxcluster_exe=None,
                  mustang_exe=None,
                  scwrl_exe=None,
                  spicker_exe=None,
@@ -291,8 +288,6 @@ class Ensembler(object):
             Path to an executable
         lsqkab_exe : str
             Path to an executable
-        maxcluster_exe : str
-            Path to an executable
         mustang_exe : str
             Path to an executable
         scwrl_exe : str
@@ -318,7 +313,6 @@ class Ensembler(object):
         self.gesamt_exe = gesamt_exe
         self.fast_protein_cluster_exe = fast_protein_cluster_exe
         self.lsqkab_exe = lsqkab_exe
-        self.maxcluster_exe = maxcluster_exe
         self.mustang_exe = mustang_exe
         self.scwrl_exe = scwrl_exe
         self.spicker_exe = spicker_exe

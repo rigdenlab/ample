@@ -114,7 +114,7 @@ class SubClusterer(object):
 
 
 class CctbxClusterer(SubClusterer):
-    """Class to cluster files with maxcluster"""
+    """Class to cluster files with CCTBX"""
 
     def generate_distance_matrix(self, pdb_list):
         """Run cctbx to generate the distance distance_matrix"""
@@ -477,67 +477,3 @@ end""".format(nresidues, 'A')
                 if l.startswith("          RMS     XYZ DISPLACEMENT ="):
                     return float(l.split()[4])
         assert False
-
-
-class MaxClusterer(SubClusterer):
-    """Class to cluster files with maxcluster"""
-
-    def generate_distance_matrix(self, pdb_list):
-        """Run maxcluster to generate the distance distance_matrix"""
-
-        num_models = len(pdb_list)
-        if not num_models:
-            raise RuntimeError("generate_distance_matrix got empty pdb_list!")
-
-        self.index2pdb=[0] * num_models
-
-        # Maxcluster arguments
-        # -l [file]   File containing a list of PDB model fragments
-        # -L [n]      Log level (default is 4 for single MaxSub, 1 for lists)
-        # -d [f]      The distance cut-off for search (default auto-calibrate)
-        # -bb         Perform RMSD fit using backbone atoms
-        #     -C [n]      Cluster method: 0 - No clustering
-        # -rmsd ???
-
-        # Create the list of files for maxcluster
-        fname = os.path.join(os.getcwd(), FILE_LIST_NAME )
-        with open( fname, 'w' ) as f:
-            f.write( "\n".join( pdb_list )+"\n" )
-
-        #log_name = "maxcluster_radius_{0}.log".format(radius)
-        log_name = os.path.abspath("maxcluster.log")
-        cmd = [ self.executable, "-l", fname, "-L", "4", "-rmsd", "-d", "1000", "-bb", "-C0" ]
-        retcode = ample_util.run_command( cmd, logfile=log_name )
-
-        if retcode != 0:
-            raise RuntimeError("non-zero return code for maxcluster in generate_distance_matrix!\nSee logfile: {0}".format(log_name))
-
-        # Create a square distance_matrix no_models in size filled with None
-        parity = 0.0
-        self.distance_matrix = numpy.full([num_models, num_models], parity)
-
-        #jmht Save output for parsing - might make more sense to use one of the dedicated maxcluster output formats
-        max_log = open(log_name, 'r')
-        pattern = re.compile('INFO  \: Model')
-        for line in max_log:
-            if re.match(pattern, line):
-
-                # Split so that we get a list with
-                # 0: model 1 index
-                # 1: path to model 1 without .pdb suffix
-                # 2: model 2 index
-                # 3: path to model 2 without .pdb suffix
-                # 4: distance metric
-                split = re.split('INFO  \: Model\s*(\d*)\s*(.*)\.pdb\s*vs\. Model\s*(\d*)\s*(.*)\.pdb\s*=\s*(\d*\.\d*)', line)
-                self.distance_matrix[  int(split[1]) -1 ][  int(split[3]) -1]  = float(split[5])
-
-                if split[2]+'.pdb' not  in self.index2pdb:
-                    self.index2pdb[int(split[1]) -1]  =  split[2]+'.pdb'
-
-                if split[4]+'.pdb' not  in self.index2pdb:
-                    self.index2pdb[int(split[3]) -1]  =  split[4]+'.pdb'
-
-        # Copy in other half of matrix - we use a full matrix as it's easier to scan for clusters
-        for x in range(len(self.distance_matrix)):
-            for y in range(len(self.distance_matrix)):
-                self.distance_matrix[y][x] = self.distance_matrix[x][y]

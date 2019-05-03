@@ -16,7 +16,6 @@ import sys
 # Our imports
 from ample.util import ample_util
 from ample.util import csymmatch
-from ample.util import maxcluster
 from ample.util import mtz_util
 from ample.util import pdb_edit
 from ample.util import pdb_model
@@ -30,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 _oldroot = None
 _newroot = None
-_MAXCLUSTERER = None
 SHELXE_STEM = 'shelxe'
 
 _CSV_KEYLIST = [
@@ -246,28 +244,8 @@ def analyse(amoptd, newroot=None):
             tm_results = tm.compare_structures(centroid_models, [native_pdb_std], [fasta])
             centroid_tmscores = [r['tmscore'] for r in tm_results]
             centroid_rmsds = [r['rmsd'] for r in tm_results]
-
         else:
-            # Use maxcluster
-            centroid_tmscores = []
-            for centroid_model in centroid_models:
-                n = os.path.splitext(os.path.basename(centroid_model))[0]
-                cm = None
-                for pdb in amoptd['processed_models']:
-                    if n.startswith(os.path.splitext(os.path.basename(pdb))[0]):
-                        cm = pdb
-                        break
-                if cm:
-                    centroid_tmscores.append(_MAXCLUSTERER.tm(cm))
-                else:
-                    msg = "Cannot find model for subcluster_centroid_model {0}".format(
-                        dframe[0, 'subcluster_centroid_model']
-                    )
-                    raise RuntimeError(msg)
-
-            # There is an issue here as this is the RMSD over the TM-aligned residues
-            # NOT the global RMSD, which it is for the tm_util results
-            centroid_rmsds = [None for _ in centroid_index]
+            raise RuntimeError("No program to calculate tmscores!")
 
         dframe['subcluster_centroid_model_TM'] = pd.Series(centroid_tmscores, index=centroid_index)
         dframe['subcluster_centroid_model_RMSD'] = pd.Series(centroid_rmsds, index=centroid_index)
@@ -311,13 +289,7 @@ def analyseModels(amoptd):
         except Exception as e:
             logger.exception("Unable to run TMscores: %s", e)
     else:
-        global _MAXCLUSTERER # setting a module-level variable so need to use global keyword to it doesn't become a local variable
-        _MAXCLUSTERER = maxcluster.Maxcluster(amoptd['maxcluster_exe'])
-        logger.info("Analysing Rosetta models with Maxcluster")
-        _MAXCLUSTERER.compareDirectory(
-            nativePdbInfo=nativePdbInfo, resSeqMap=resSeqMap,
-            modelsDirectory=amoptd['models_dir'], workdir=fixpath(amoptd['benchmark_dir'])
-        )
+        raise RuntimeError("No program to calculate TMSCORES")
 
 
 def analysePdb(amoptd):
@@ -364,7 +336,7 @@ def analysePdb(amoptd):
     # Get the new Info about the native
     nativePdbInfo = pdb_edit.get_info( nativePdb )
     
-    # For maxcluster comparsion of shelxe model we need a single chain from the native so we get this here
+    # For comparsion of shelxe model we need a single chain from the native so we get this here
     if len( nativePdbInfo.models[0].chains ) > 1:
         nativeChain1  = ample_util.filename_append( filename=nativePdbInfo.pdb,
                                                        astr="chain1", 
