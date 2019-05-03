@@ -277,6 +277,8 @@ def process_modelling_options(optd):
                               "Please supply the models with the -models flag")
         optd['import_models'] = True
     elif optd['models']:
+        if not os.path.exists(optd['models']):
+            raise RuntimeError("Cannot find -models path: {}".format(optd['models']))
         optd['import_models'] = True
         optd['make_frags'] = False
         optd['make_models'] = False

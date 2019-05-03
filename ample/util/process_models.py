@@ -77,6 +77,8 @@ def extract_and_validate_models(amoptd):
     models_arg = amoptd['models'] # command-line arg from user
     if models_arg is None:
         return
+   if not os.path.exists(models_arg):
+       raise RuntimeError("Cannot find models: {}".format(models_arg))
     models_dir_final = amoptd['models_dir'] # the directory where the models need to end up
     if models_dir_final is None:
         models_dir_final = os.path.join(amoptd['work_dir'], 'models')
@@ -116,6 +118,8 @@ def extract_and_validate_models(amoptd):
     elif isinstance(models_arg, list):
         # Assume all models are in the same directory
         models_dir_tmp = os.path.dirname(models_arg[0])
+    else:
+        raise RuntimeError("Dosdn't know how to process -models flag: {}".format(models_arg))
 
     if quark_models:
         # Null result - we extracted the models so assume are ok
