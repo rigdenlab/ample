@@ -190,7 +190,7 @@ def add_ensembler_options(parser=None):
     # --------------------------------------------------------------------------------------------- #
     # sphinx-argparse ignores Mock imports and thus cannot find iotbx.pdb when generating the docs. #
     try:
-        from ample.ensembler.constants import ALLOWED_SIDE_CHAIN_TREATMENTS
+        from ample.ensembler.constants import ALLOWED_SIDE_CHAIN_TREATMENTS, SPICKER_RMSD, SPICKER_TM
         from ample.ensembler.truncation_util import TRUNCATION_METHODS
     except ImportError:
         allowed_side_chain_treatments = ['polyala', 'reliable', 'allatom', 'unmod']
@@ -200,11 +200,10 @@ def add_ensembler_options(parser=None):
         truncation_methods = [t.value for t in TRUNCATION_METHODS]
     # --------------------------------------------------------------------------------------------- #
     if parser is None:
-        import argparse
         parser = argparse.ArgumentParser()
     ensembler_group = parser.add_argument_group('Ensemble Options')
     ensembler_group.add_argument('-cluster_dir', help='Path to directory of pre-clustered models to import')
-    ensembler_group.add_argument('-cluster_method', help='How to cluster the models for ensembling (spicker|fast_protein_cluster')
+    ensembler_group.add_argument('-cluster_method', help='How to cluster the models for ensembling. Options: ' + '|'.join([SPICKER_RMSD, SPICKER_TM]))
     ensembler_group.add_argument('-ensembler_timeout', type=int, help='Time in seconds before timing out ensembling')
     ensembler_group.add_argument('-gesamt_exe', metavar='gesamt_exe', help='Path to the gesamt executable')
     ensembler_group.add_argument('-homologs', metavar='True/False', help='Generate ensembles from homologs models (requires -alignment_file)')
