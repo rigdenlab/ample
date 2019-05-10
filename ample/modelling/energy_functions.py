@@ -258,6 +258,14 @@ class RosettaFunctionConstructs(object):
         construct = RosettaFunctionConstructs._ATOMPAIR \
                      + "FADE -10 19 10 -15.00 0"
         return construct
+    
+
+    @property
+    def FLAT_HARMONIC(self):
+        """ROSETTA FLAT HARMONIC energy function"""
+        construct = RosettaFunctionConstructs._ATOMPAIR \
+                     + "FLAT HARMONIC {x0: >.2f} {stddev: >.2f} {tol: >.2f}"
+        return construct
 
     @property
     def GAUSSIAN(self):

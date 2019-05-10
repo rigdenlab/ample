@@ -191,6 +191,46 @@ class Ample(object):
             mrbump_util.purge_MRBUMP(optd)
         return
     
+    def handle_contacts(self, optd):
+        if optd["use_contacts"] and not optd['restraints_file']:
+            con_util = contact_util.ContactUtil(
+                optd['fasta'],
+                'fasta',
+                contact_file=optd['contact_file'],
+                contact_format=optd['contact_format'],
+                bbcontacts_file=optd['bbcontacts_file'],
+                bbcontacts_format=optd["bbcontacts_format"],
+                cutoff_factor=optd['restraints_factor'],
+                distance_to_neighbor=optd['distance_to_neighbour'])
+    
+            optd["contacts_dir"] = os.path.join(optd["work_dir"], "contacts")
+            if not os.path.isdir(optd["contacts_dir"]):
+                os.mkdir(optd["contacts_dir"])
+            if con_util.require_contact_prediction:
+                if con_util.found_ccmpred_contact_prediction_deps:
+                    con_util.predict_contacts_from_sequence(wdir=optd["contacts_dir"])
+                    optd["contact_file"] = con_util.contact_file
+                    optd["contact_format"] = con_util.contact_format
+    
+            if con_util.do_contact_analysis:
+                plot_file = os.path.join(optd['contacts_dir'], optd['name'] + ".cm.png")
+                if optd['native_pdb'] and optd['native_pdb_std']:
+                    structure_file = optd['native_pdb_std']
+                elif optd["native_pdb"]:
+                    structure_file = optd['native_std']
+                else:
+                    structure_file = None
+                optd['contact_map'], optd['contact_ppv'] = con_util.summarize(plot_file, structure_file, 'pdb',
+                                                                              optd['native_cutoff'])
+    
+                restraints_file = os.path.join(optd['contacts_dir'], optd['name'] + ".cst")
+                optd['restraints_file'] = con_util.write_restraints(restraints_file, optd['restraints_format'],
+                                                                    optd['energy_function'])
+            else:
+                con_util = None
+        else:
+            con_util = None
+        
     def modelling_required(self, optd):
         return (optd['make_frags'] or optd['make_models'] or optd['nmr_remodel'])
     
@@ -272,68 +312,19 @@ class Ample(object):
             optd['frags_9mers'] = rosetta_modeller.frags_9mers
             optd['psipred_ss2'] = rosetta_modeller.psipred_ss2
 
-        if optd["use_contacts"] and not optd['restraints_file']:
-            con_util = contact_util.ContactUtil(
-                optd['fasta'],
-                'fasta',
-                contact_file=optd['contact_file'],
-                contact_format=optd['contact_format'],
-                bbcontacts_file=optd['bbcontacts_file'],
-                bbcontacts_format=optd["bbcontacts_format"],
-                cutoff_factor=optd['restraints_factor'],
-                distance_to_neighbor=optd['distance_to_neighbour'])
-
-            optd["contacts_dir"] = os.path.join(optd["work_dir"], "contacts")
-            if not os.path.isdir(optd["contacts_dir"]):
-                os.mkdir(optd["contacts_dir"])
-            if con_util.require_contact_prediction:
-                if con_util.found_ccmpred_contact_prediction_deps:
-                    con_util.predict_contacts_from_sequence(wdir=optd["contacts_dir"])
-                    optd["contact_file"] = con_util.contact_file
-                    optd["contact_format"] = con_util.contact_format
-
-            if con_util.do_contact_analysis:
-                plot_file = os.path.join(optd['contacts_dir'], optd['name'] + ".cm.png")
-                if optd['native_pdb'] and optd['native_pdb_std']:
-                    structure_file = optd['native_pdb_std']
-                elif optd["native_pdb"]:
-                    structure_file = optd['native_std']
-                else:
-                    structure_file = None
-                optd['contact_map'], optd['contact_ppv'] = con_util.summarize(plot_file, structure_file, 'pdb',
-                                                                              optd['native_cutoff'])
-
-                restraints_file = os.path.join(optd['contacts_dir'], optd['name'] + ".cst")
-                optd['restraints_file'] = con_util.write_restraints(restraints_file, optd['restraints_format'],
-                                                                    optd['energy_function'])
-            else:
-                con_util = None
-        else:
-            con_util = None
-
+        con_util = self.handle_contacts(optd)
         if optd['make_models'] and optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
 
         if optd['make_models']:
             logger.info('----- making Rosetta models--------')
-            if optd['nmr_remodel']:
-                try:
-                    optd['processed_models'] = rosetta_modeller.nmr_remodel(
-                        models=optd['processed_models'],
-                        ntimes=optd['nmr_process'],
-                        alignment_file=optd['alignment_file'],
-                        remodel_fasta=optd['nmr_remodel_fasta'])
-                except Exception as e:
-                    msg = "Error remodelling NMR ensemble: {0}".format(e)
-                    exit_util.exit_error(msg, sys.exc_info()[2])
-            else:
-                logger.info('making %s models...', optd['nmodels'])
-                try:
-                    optd['processed_models'] = rosetta_modeller.ab_initio_model()
-                except Exception as e:
-                    msg = "Error running ROSETTA to create models: {0}".format(e)
-                    exit_util.exit_error(msg, sys.exc_info()[2])
-                logger.info('Modelling complete - models stored in: %s\n', optd['models_dir'])
+            logger.info('Making %s models...', optd['nmodels'])
+            try:
+                optd['processed_models'] = rosetta_modeller.ab_initio_model(processed_models = optd['processed_models'])
+            except Exception as e:
+                msg = "Error running ROSETTA to create models: {0}".format(e)
+                exit_util.exit_error(msg, sys.exc_info()[2])
+            logger.info('Modelling complete - models stored in: %s\n', optd['models_dir'])
 
         # Sub-select the decoys using contact information
         if con_util and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
