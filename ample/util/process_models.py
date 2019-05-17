@@ -16,19 +16,6 @@ from ample.util import exit_util
 logger = logging.getLogger(__name__)
 
 
-"""
-Pipeline
-
-* models come in in 'models' arg
-* process and potentially refactor into 'processed_models'
-* may process those models again (e.g. NMR) - go again into 'processed_models'
-* models may be a cluster
-* models may go forward to ensembling
-* models go into MR
-
-"""
-
-
 class CheckModelsResult():
     def __init__(self):
         self.created_updated_models = False

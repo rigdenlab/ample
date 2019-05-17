@@ -19,7 +19,6 @@ from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import sequence_util
 from ample.util import workers_util
-from util.spicker import models
 
 logger = logging.getLogger(__name__)
 
@@ -155,6 +154,7 @@ class RosettaModel(object):
         self.rad_gyr_reweight = None
         self.improve_template = None
         self.multimer_modelling = None
+        self.num_chains = None
         self.nativePdbStd = None
         self.rosetta_flagsfile = None
         self.restraints_file = None
@@ -296,11 +296,6 @@ class RosettaModel(object):
         return cmd
     
     def do_multimer_modelling(self):
-        """
-        write out symmetry file
-        create constraints files
-        create flagsfile
-        """
         symmetry_file = self.create_multimer_symmetry_file()
         constraints_file = self.create_multimer_constraints_file()
         broker_file = self.create_broker_definition_file()
@@ -308,8 +303,23 @@ class RosettaModel(object):
                                                    symmetry_file=symmetry_file,
                                                    constraints_file=constraints_file)
         models = self.model_from_flagsfile(flagsfile=flagsfile,
-                                         rosetta_executable=self.rosetta_minirosetta_exe)
-        need to join models
+                                           rosetta_executable=self.rosetta_minirosetta_exe,
+                                           consolidate_pdbs=False)
+        return self.process_multimer_models(models)
+    
+    def process_multimer_models(self, modelsin):
+        """Merge the multi-chain pdbs into a single chain"""
+        # Work out how many chains we're using
+        chaind = pdb_edit.sequence_data(modelsin[0])
+        chains = None
+        if self.num_chains and self.num_chains < len(chaind):
+            # for now we just assume we want continguous ones
+            chains = list(chaind.keys())[:self.num_chains]
+        models = []
+        for i, pdbin in enumerate(modelsin):
+            pdbout = os.path.join(self.models_dir, "multimermodel_{}.pdb".format(i))
+            pdb_edit.merge_chains(pdbin, pdbout, chains=chains)
+            models.append(pdbout)
         return models
         
     def create_broker_definition_file(self):
@@ -396,7 +406,8 @@ class RosettaModel(object):
         separate from object as it's currently used by the NMR stuff - which is in dire need of refactoring.
 
         """
-        assert self.rosetta_bin and os.path.isdir(self.rosetta_bin)
+        if not self.rosetta_bin and os.path.isdir(self.rosetta_bin):
+            raise RuntimeError("Cannot find rosetta_bin directory: {}".format(self.rosetta_bin))
         binaries = glob.glob(os.path.join(self.rosetta_bin, "{0}.*".format(name)))
         if not len(binaries):
             return False
@@ -533,9 +544,9 @@ class RosettaModel(object):
         else:
             # Version file is absent in 3.5, so we need to use the directory name
             logger.debug('Version file for Rosetta not found - checking to see if its 3.5 or 3.6')
-            if self.rosetta_dir.endswith(os.sep): self.rosetta_dir = self.rosetta_dir[:-1]
+            self.rosetta_dir = self.rosetta_dir.rstrip(os.sep)
             if self.rosetta_dir.endswith("3.5"):
-                version=3.5
+                version = 3.5
             # 3.6 bundles seem to look like: rosetta_2014.30.57114_bundle
             # elif re.search("rosetta_\d{4}\.\d{2}\.\d{5}_bundle",dirname):
             # Ignore as people change the directory names - just check for the presence of the folders:
@@ -610,7 +621,8 @@ class RosettaModel(object):
     def model_from_flagsfile(self, 
                              flagsfile,
                              rosetta_executable=None,
-                             job_time=43200):
+                             job_time=43200,
+                             consolidate_pdbs=True):
         """Run ROSETTA modelling from a flagsfile"""
         assert os.path.isfile(flagsfile), "Cannot find ROSETTA flagsfile: {}".format(flagsfile)
         # Remember starting directory
@@ -657,10 +669,20 @@ class RosettaModel(object):
             )
 
         # Copy the models into the models directory - need to rename them accordingly
-        pdbs = []
+        _pdbs = []
         for d in dir_list:
             ps = glob.glob(os.path.join(d, "*.pdb"))
-            pdbs += ps
+            _pdbs += ps
+        
+        if consolidate_pdbs:
+            # Copy files into the models directory
+            pdbs = []
+            for i, pdbin in enumerate(_pdbs):
+                pdbout = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
+                shutil.copyfile(pdbin, pdbout)
+                pdbs.append(pdbout)
+        else:
+            pdbs = _pdbs
         
         if not pdbs:
             msg = "No models created after modelling!" + os.linesep \
@@ -674,15 +696,8 @@ class RosettaModel(object):
                     "for more information."
             raise RuntimeError(msg.format(self.nmodels, len(pdbs), self.work_dir))
 
-        # Copy files into the models directory
-        pdbs_moved = []
-        for i, pdbin in enumerate(pdbs):
-            pdbout = os.path.join(self.models_dir, "model_{0}.pdb".format(i))
-            shutil.copyfile(pdbin, pdbout)
-            pdbs_moved.append(pdbout)
-
         os.chdir(owd)  # Go back to where we came from
-        return pdbs_moved
+        return pdbs
 
     def mr_cmd(self, template,alignment, nstruct,seed):
         cmd = [ self.rosetta_mr_protocols,
@@ -863,24 +878,76 @@ class RosettaModel(object):
         return restraints_file
 
     def set_from_dict(self, optd ):
-        """
-        Set the values from a dictionary
-        """
+        """Set the values from a dictionary"""
 
         # Common variables
         self.fasta = optd['fasta']
         self.sequence_length = optd['fasta_length']
+        self.name = optd['name']
+        self.nmodels = optd['nmodels']
+        
+        # Directories
         self.ample_dir = optd['work_dir']
         self.work_dir = os.path.join(self.ample_dir, 'modelling')
-        self.name = optd['name']
+        if not optd['models_dir']:
+            self.models_dir = os.path.join(self.ample_dir, "models")
+        else:
+            self.models_dir = optd['models_dir']
 
         # psipred secondary structure prediction
-        if optd['psipred_ss2'] is not None and os.path.isfile(optd['psipred_ss2']):
+        if optd['psipred_ss2']:
+            if not os.path.isfile(optd['psipred_ss2']):
+                raise RuntimeError("Cannot find psipred_ss2 file: {}".format(optd['psipred_ss2']))
             self.psipred_ss2 = optd['psipred_ss2']
 
-        # Fragment variables
-        self.use_homs = optd['use_homs']
-        self.fragments_directory = os.path.join(self.work_dir, "rosetta_fragments")
+        if not optd['make_frags']:
+            self.frags_3mers = optd['frags_3mers']
+            self.frags_9mers = optd['frags_9mers']
+            if not (os.path.exists(self.frags_3mers) and os.path.exists(self.frags_9mers)):
+                raise RuntimeError("Cannot find both fragment files:\n{0}\n{1}\n".format(self.frags_3mers,self.frags_9mers))
+        else:
+            # Fragment variables
+            self.use_homs = optd['use_homs']
+            self.fragments_directory = os.path.join(self.work_dir, 'rosetta_fragments')
+
+        # Extra modelling options
+        self.all_atom = optd['all_atom']
+        self.domain_termini_distance = optd['domain_termini_distance']
+        self.rad_gyr_reweight = optd['rg_reweight']
+
+        if optd['improve_template']:
+            if not os.path.exists(optd['improve_template']):
+                raise RuntimeError('cant find template to improve')
+            self.improve_template = optd['improve_template']
+        if optd['restraints_file']:
+            if not os.path.exists(optd['restraints_file']):
+                raise RuntimeError("Cannot find restraints file: {0}".format(optd['restraints_file']))
+            self.restraints_file = optd['restraints_file']
+        self.restraints_weight = optd['restraints_weight']
+        if optd['disulfide_constraints_file']:
+            if not os.path.exists(optd['disulfide_constraints_file']):
+                raise RuntimeError("Cannot find disulfide constraints file: {0}".format(optd['disulfide_constraints_file']))
+            self.disulfide_constraints_file = optd['disulfide_constraints_file']
+        if optd['rosetta_flagsfile']:
+            self.rosetta_flagsfile = optd['rosetta_flagsfile']
+
+        # NMR options
+        self.nmr_remodel = optd['nmr_remodel']
+        self.nmr_process_ntimes = optd['nmr_process']
+        self.nmr_alignment_file = optd['alignment_file']
+        self.mnr_remodel_fasta = optd['nmr_remodel_fasta']
+        
+        # Multimer modelling
+        self.multimer_modelling = optd['multimeric_modelling']
+        self.nchains = optd['nmasu']
+        
+        # Runtime options
+        self.nproc = optd['nproc']
+        self.submit_cluster = optd['submit_cluster']
+        self.submit_qtype = optd['submit_qtype']
+        self.submit_queue = optd['submit_queue']
+        self.submit_array = optd['submit_array']
+        self.submit_max_array = optd['submit_max_array']
 
         if optd['transmembrane_old']:
             self.transmembrane_old = True
@@ -892,9 +959,11 @@ class RosettaModel(object):
 
             # nr database
             if optd['nr']:
-                if not os.path.exists(optd['nr']+".pal"):
-                    msg = "Cannot find the nr database: {0}\nPlease give the location with the nr argument to the script.".format(optd['nr'])
-                    raise RuntimeError(msg)
+                if not os.path.exists(optd['nr'] + ".pal"):
+                    raise RuntimeError(
+                        "Cannot find the nr database: {0}\n"
+                        "Please give the location with the nr argument to the script.".format(optd['nr'])
+                        )
                 else:
                     self.nr = optd['nr']
                     if self.nr:
@@ -909,7 +978,7 @@ class RosettaModel(object):
                 msg = "Cannot find provided transmembrane octopus topology prediction: {0}".format(self.octopusTopology)
                 raise RuntimeError(msg)
 
-            if  self.spanfile and not (os.path.isfile(self.spanfile)):
+            if  self.spanfile and not os.path.isfile(self.spanfile):
                 msg = "Cannot find provided transmembrane spanfile: {0}".format(self.spanfile)
                 raise RuntimeError(msg)
 
@@ -923,55 +992,7 @@ class RosettaModel(object):
         elif optd['transmembrane']:
             self.transmembrane = True
         # End transmembrane checks
-
-        # Modelling variables
-        if optd['make_models'] or optd['nmr_remodel']:
-            if not optd['make_frags']:
-                self.frags_3mers = optd['frags_3mers']
-                self.frags_9mers = optd['frags_9mers']
-                if not os.path.exists(self.frags_3mers) or not os.path.exists(self.frags_9mers):
-                    raise RuntimeError("Cannot find both fragment files:\n{0}\n{1}\n".format(self.frags_3mers,self.frags_9mers))
-
-            self.nproc = optd['nproc']
-            self.nmodels = optd['nmodels']
-            # Set models directory
-            if not optd['models_dir']:
-                self.models_dir = os.path.join(self.ample_dir, "models")
-            else:
-                self.models_dir = optd['models_dir']
-
-            # Extra modelling options
-            self.all_atom = optd['all_atom']
-            self.domain_termini_distance = optd['domain_termini_distance']
-            self.rad_gyr_reweight = optd['rg_reweight']
-
-            if optd['improve_template'] and not os.path.exists( optd['improve_template'] ):
-                raise RuntimeError('cant find template to improve')
-            self.improve_template = optd['improve_template']
-            if optd['restraints_file']:
-                if not os.path.exists(optd['restraints_file']):
-                    raise RuntimeError("Cannot find restraints file: {0}".format(optd['restraints_file']))
-                self.restraints_file = optd['restraints_file']
-            self.restraints_weight = optd['restraints_weight']
-            if optd['disulfide_constraints_file']:
-                if not os.path.exists(optd['disulfide_constraints_file']):
-                    raise RuntimeError("Cannot find disulfide constraints file: {0}".format(optd['disulfide_constraints_file']))
-                self.disulfide_constraints_file = optd["disulfide_constraints_file"]
-            if optd['rosetta_flagsfile']:
-                self.rosetta_flagsfile = optd['rosetta_flagsfile']
-
-            # NMR options
-            self.nmr_remodel = optd['nmr_remodel']
-            self.nmr_process_ntimes = optd['nmr_process']
-            self.nmr_alignment_file = optd['alignment_file']
-            self.mnr_remodel_fasta = optd['nmr_remodel_fasta']
-            
-            # Cluster submission stuff
-            self.submit_cluster = optd['submit_cluster']
-            self.submit_qtype = optd['submit_qtype']
-            self.submit_queue = optd['submit_queue']
-            self.submit_array = optd['submit_array']
-            self.submit_max_array = optd['submit_max_array']
+        
         return
 
     def set_paths(self, optd=None, rosetta_dir=None):
@@ -1030,7 +1051,6 @@ class RosettaModel(object):
         # for nmr
         self.rosetta_mr_protocols = self.find_binary('mr_protocols')
         self.rosetta_idealize_jd2 = self.find_binary('idealize_jd2')
-        
         self.rosetta_minirosetta_exe = self.find_binary('minirosetta')
         
         if optd and optd['transmembrane_old']: 
@@ -1045,7 +1065,7 @@ class RosettaModel(object):
         split_jobs = njobs / nproc  # split jobs between processors
         remainder = njobs % nproc
         jobs = []
-        for i in range(nproc):
+        for _ in range(nproc):
             njobs = split_jobs
             # Separate out remainder over jobs
             if remainder > 0:

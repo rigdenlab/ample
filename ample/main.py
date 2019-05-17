@@ -324,7 +324,7 @@ class Ample(object):
             except Exception as e:
                 msg = "Error running ROSETTA to create models: {0}".format(e)
                 exit_util.exit_error(msg, sys.exc_info()[2])
-            logger.info('Modelling complete - models stored in: %s\n', optd['models_dir'])
+            logger.info('Modelling complete - models stored in: %s', optd['models_dir'])
 
         # Sub-select the decoys using contact information
         if con_util and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):

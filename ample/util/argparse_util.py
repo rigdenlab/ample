@@ -26,6 +26,7 @@ __date__ = "03 Apr 2016"
 __version__ = "1.0"
 
 import argparse
+from ample.modelling.multimer_definitions import MULTIMER_MODES
 
 
 def add_core_options(parser=None):
@@ -168,6 +169,7 @@ def add_rosetta_options(parser=None):
     rosetta_group.add_argument('-frags_3mers', help='Path to file with pre-existing Rosetta 3mer fragments')
     rosetta_group.add_argument('-frags_9mers', help='Path to file with pre-existing Rosetta 3mer fragments')
     rosetta_group.add_argument('-make_frags', metavar='True/False', help='set True to generate Rosetta 3mers and 9mers locally, False to import fragments')
+    rosetta_group.add_argument('-multimeric_modelling', help='Generate multimeric models. Accepted values: {}'.format(MULTIMER_MODES))
     rosetta_group.add_argument('-nmodels', default=1000, metavar='number of models', type=int, help='number of models to make (default: 1000)')
     rosetta_group.add_argument('-nr', metavar='nr', help='Path to the NR non-redundant sequence database')
     rosetta_group.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')

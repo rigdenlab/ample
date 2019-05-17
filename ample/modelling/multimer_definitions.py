@@ -1,6 +1,7 @@
 DIMER = 'dimer'
 TRIMER = 'trimer'
 TETRAMER = 'tetramer'
+MULTIMER_MODES = [DIMER, TRIMER, TETRAMER]
 
 SYMFILE_DIMER = """symmetry_name c3
 subunits 3
