@@ -15,13 +15,17 @@ from ample.testing import test_funcs
 
 TEST_DICT = {}
 
-###############################################################################
+##################################################################################
 #
 # Modelling module
 #
-###############################################################################
+# REM: all test cases must begin with the name modelling to be run by the module
+#
+##################################################################################
 
-# Specify the arguments to the ensembler module to run this test case
+#
+# Run an arbitrary flagsfile
+#
 test_name = 'modelling_default'
 args_default =  [
     [ '-rosetta_dir', '/opt/rosetta-3.5' ],
@@ -47,15 +51,9 @@ TEST_DICT[test_name] = {'args' : args_default,
                         'test' :  AMPLETest,
                         'setup' :  copy_files
                        }
-
-###############################################################################
 #
 # Multimer Modelling
 #
-###############################################################################
-
-
-# Specify the arguments to the ensembler module to run this test case
 test_name = 'modelling_multimer'
 args_multimer =  [
     [ '-rosetta_dir', '/opt/rosetta-3.5' ],
