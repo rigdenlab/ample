@@ -102,7 +102,6 @@ class AMPLETest(AMPLEBaseTest):
         result = self.AMPLE_DICT['benchmark_results'][0]
         self.assertTrue(result['MR_program'], 'PHASER')
         self.assertTrue(result['native_pdb_solvent_content'], 47.67)
-        self.assertGreater(result['PHASER_TFZ'], 5.0, "Low PHASER_TFZ: {0}".format(result['PHASER_TFZ']))
 
 TEST_DICT['from_existing_models'] = {
     'args': args_from_existing_models,
