@@ -36,8 +36,8 @@ args_default =  [
 class AMPLETest(TestCase):
     def test_modelling_default(self):
         models_dir = os.path.join(os.getcwd(), test_name, "models")
-        models = glob.glob(os.path.join(models_dir, "*.pdb"))
-        self.assertEqual(len(models), 3)
+        nmodels = len(glob.glob(os.path.join(models_dir, "*.pdb")))
+        self.assertEqual(nmodels, 3, "Only {} models in directory {}".format(nmodels, models_dir))
         return
     
 def copy_files(run_dir):
